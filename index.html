@@ -2,12 +2,51 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tchubi</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Tchubi | Conteúdo ao Vivo</title>
+  <style>
+    body { background: #0d0d0d; color: white; font-family: sans-serif; margin: 0; padding: 20px; text-align: center; }
+    h1 { font-size: 2.5em; color: #a855f7; }
+    .grid { display: flex; gap: 20px; overflow-x: auto; padding: 20px 0; }
+    iframe { border: none; border-radius: 10px; }
+    a { color: #a855f7; text-decoration: none; margin: 0 10px; }
+  </style>
 </head>
-<body style="background:black;color:white;text-align:center;">
-  <h1>Site React do Tchubi</h1>
-  <p>Site compilado e pronto para subir no GitHub Pages!</p>
+<body>
+  <h1>Tchubi</h1>
+  <p>🎮 Conteúdo de FPS, Sobrevivência e Entretenimento 🔥</p>
+
+  <section>
+    <h2>📺 Últimos vídeos no YouTube</h2>
+    <div class="grid">
+      <iframe width="300" height="180" src="https://www.youtube.com/embed/3Vq4PWEG1z0" allowfullscreen></iframe>
+      <iframe width="300" height="180" src="https://www.youtube.com/embed/TOz_gQ-v5hA" allowfullscreen></iframe>
+      <iframe width="300" height="180" src="https://www.youtube.com/embed/BuUtHbQTFrc" allowfullscreen></iframe>
+    </div>
+  </section>
+
+  <section>
+    <h2>🟣 Twitch - Ao Vivo ou Última Live</h2>
+    <iframe src="https://player.twitch.tv/?channel=tchubi&parent=tchubi.org" width="700" height="400" allowfullscreen></iframe>
+  </section>
+
+  <section>
+    <h2>🎬 TikToks Recentes</h2>
+    <div class="grid">
+      <iframe src="https://www.tiktok.com/embed/v2/7353600346588247298" width="300" height="500" allowfullscreen></iframe>
+      <iframe src="https://www.tiktok.com/embed/v2/7350282434206559489" width="300" height="500" allowfullscreen></iframe>
+      <iframe src="https://www.tiktok.com/embed/v2/7222026890532408582" width="300" height="500" allowfullscreen></iframe>
+    </div>
+  </section>
+
+  <footer style="margin-top:40px; color:gray;">
+    <p>© 2025 Tchubi - Todos os direitos reservados</p>
+    <p>
+      <a href="https://twitch.tv/tchubi" target="_blank">Twitch</a> |
+      <a href="https://www.youtube.com/c/Tchubi" target="_blank">YouTube</a> |
+      <a href="https://www.tiktok.com/@tchubi.rs" target="_blank">TikTok</a>
+    </p>
+  </footer>
 </body>
 </html>
