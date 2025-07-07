@@ -1,98 +1,50 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Tchubi | Oficial</title>
-  <style>
-    body { background: #0d0d0d; color: white; font-family: sans-serif; margin: 0; padding: 20px; text-align: center; }
-    h1 { font-size: 2.5em; color: #a855f7; }
-    .grid { display: flex; gap: 20px; overflow-x: auto; padding: 20px 0; justify-content: center; }
-    iframe { border: none; border-radius: 10px; }
-    a { color: #a855f7; text-decoration: none; margin: 0 10px; }
-    section { margin-bottom: 60px; }
-    form { max-width: 400px; margin: auto; text-align: left; }
-    input, textarea { width: 100%; margin-bottom: 10px; padding: 10px; border-radius: 6px; border: none; }
-    button { background: #a855f7; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tchubi - Streamer</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h1>Tchubi</h1>
-  <p>🎮 Criador de conteúdo focado em FPS, Sobrevivência e Entretenimento</p>
+  <div class="overlay">
+    <header>
+      <h1>Site do Tchubi</h1>
+      <p>Acompanhe os vídeos, lives e redes sociais</p>
+      <div class="social-links">
+        <a href="https://twitch.tv/tchubi" target="_blank">Twitch</a>
+        <a href="https://www.youtube.com/c/Tchubi" target="_blank">YouTube</a>
+        <a href="https://www.tiktok.com/@tchubi.rs" target="_blank">TikTok</a>
+        <a href="https://x.com/TchubiRS" target="_blank">Twitter</a>
+      </div>
+    </header>
 
-  <section>
-    <h2>📺 Últimos vídeos no YouTube</h2>
-    <div class="grid">
-      <iframe width="300" height="180" src="https://www.youtube.com/embed/3Vq4PWEG1z0" allowfullscreen></iframe>
-      <iframe width="300" height="180" src="https://www.youtube.com/embed/BuUtHbQTFrc" allowfullscreen></iframe>
-      <iframe width="300" height="180" src="https://www.youtube.com/embed/lqRAplcX8iQ" allowfullscreen></iframe>
-    </div>
-  </section>
+    <main>
+      <section>
+        <h2>Últimos vídeos do YouTube</h2>
+        <iframe width="560" height="315" src="https://www.youtube.com/embed?listType=user_uploads&list=UCVWeo7G9daOvWgwAqEcf5uw" allowfullscreen></iframe>
+      </section>
 
-  <section>
-    <h2>🟣 Twitch - Ao Vivo ou Última Live</h2>
-    <iframe src="https://player.twitch.tv/?channel=tchubi&parent=tchubi.org" width="700" height="400" allowfullscreen></iframe>
-  </section>
+      <section>
+        <h2>Live na Twitch</h2>
+        <iframe src="https://player.twitch.tv/?channel=tchubi&parent=tchubi.org" width="700" height="400" allowfullscreen></iframe>
+      </section>
 
-  <section>
-    <h2>🔥 Clipes Populares da Twitch</h2>
-    <div class="grid">
-      <iframe src="https://clips.twitch.tv/embed?clip=AgilePunchyDadCopyThis&parent=tchubi.org" width="300" height="180" allowfullscreen></iframe>
-    </div>
-  </section>
+      <section>
+        <h2>Clipes Populares</h2>
+        <iframe src="https://clips.twitch.tv/embed?clip=AgilePunchyDadCopyThis&parent=tchubi.org" width="480" height="270" allowfullscreen></iframe>
+      </section>
 
-  <section>
-    <h2>🎮 VODs Recentes da Twitch</h2>
-    <div class="grid">
-      <iframe src="https://player.twitch.tv/?video=v2011048021&parent=tchubi.org" width="400" height="225" allowfullscreen></iframe>
-      <iframe src="https://player.twitch.tv/?video=v2006942718&parent=tchubi.org" width="400" height="225" allowfullscreen></iframe>
-    </div>
-  </section>
+      <section>
+        <h2>Vídeos do TikTok</h2>
+        <iframe src="https://www.tiktok.com/embed/v2/7181314098859199749" width="300" height="550" allowfullscreen></iframe>
+        <iframe src="https://www.tiktok.com/embed/v2/7194563223469690117" width="300" height="550" allowfullscreen></iframe>
+      </section>
+    </main>
 
-  <section>
-    <h2>🎬 TikToks Recentes</h2>
-    <div class="grid">
-      <iframe src="https://www.tiktok.com/embed/v2/7181314098859199749" width="300" height="500" allowfullscreen></iframe>
-      <iframe src="https://www.tiktok.com/embed/v2/7194563223469690117" width="300" height="500" allowfullscreen></iframe>
-      <iframe src="https://www.tiktok.com/embed/v2/7206009584916548870" width="300" height="500" allowfullscreen></iframe>
-    </div>
-  </section>
-
-  <section>
-    <h2>🐦 Últimos Tweets</h2>
-    <div class="grid">
-      <a class="twitter-timeline" data-theme="dark" data-width="400" data-height="500" href="https://twitter.com/TchubiRS">Tweets by TchubiRS</a>
-    </div>
-  </section>
-
-  <section>
-    <h2>👤 Sobre Mim</h2>
-    <p style="max-width: 600px; margin: auto;">
-      Olá! Sou o Tchubi, streamer e criador de conteúdo tryhard. Trago jogadas intensas, estratégia e diversão nos principais jogos de sobrevivência e FPS. Acompanhe minhas lives e redes sociais e junte-se à comunidade!
-    </p>
-  </section>
-
-  <section>
-    <h2>📬 Contato</h2>
-    <form action="mailto:tchubicontato@gmail.com" method="post" enctype="text/plain">
-      <input type="text" name="Nome" placeholder="Seu nome" required>
-      <input type="email" name="Email" placeholder="Seu e-mail" required>
-      <textarea name="Mensagem" placeholder="Escreva sua mensagem" rows="4" required></textarea>
-      <button type="submit">Enviar</button>
-    </form>
-  </section>
-
-  <footer style="margin-top:40px; color:gray;">
-    <p>© 2025 Tchubi - Todos os direitos reservados</p>
-    <p>
-      <a href="https://twitch.tv/tchubi" target="_blank">Twitch</a> |
-      <a href="https://www.youtube.com/c/Tchubi" target="_blank">YouTube</a> |
-      <a href="https://www.tiktok.com/@tchubi.rs" target="_blank">TikTok</a> |
-      <a href="https://x.com/TchubiRS" target="_blank">Twitter</a>
-    </p>
-  </footer>
-
-  <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+    <footer>
+      <p>© 2025 Tchubi - Todos os direitos reservados</p>
+    </footer>
+  </div>
 </body>
 </html>
