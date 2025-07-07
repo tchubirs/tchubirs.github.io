@@ -1,1 +1,2 @@
-console.log('Site React do Tchubi carregado com sucesso!');
+
+document.getElementById("root").innerHTML = "Site Tchubi carregado com React compilado!";
