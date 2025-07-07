@@ -1,0 +1,1 @@
+console.log('Site React do Tchubi carregado com sucesso!');
