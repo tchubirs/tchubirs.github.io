@@ -1,18 +1,50 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>tchubi.org</title>
+  <title>Tchubi - Streamer</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="overlay">
-    <h1>Site do Tchubi</h1>
-    <p>Acompanhe os vídeos, lives e redes sociais</p>
-    <div id="videos"></div>
+    <header>
+      <h1>Site do Tchubi</h1>
+      <p>Acompanhe os vídeos, lives e redes sociais</p>
+      <div class="social-links">
+        <a href="https://twitch.tv/tchubi" target="_blank">Twitch</a>
+        <a href="https://www.youtube.com/c/Tchubi" target="_blank">YouTube</a>
+        <a href="https://www.tiktok.com/@tchubi.rs" target="_blank">TikTok</a>
+        <a href="https://x.com/TchubiRS" target="_blank">Twitter</a>
+      </div>
+    </header>
+
+    <main>
+      <section>
+        <h2>Últimos vídeos do YouTube</h2>
+        <iframe width="560" height="315" src="https://www.youtube.com/embed?listType=user_uploads&list=UCVWeo7G9daOvWgwAqEcf5uw" allowfullscreen></iframe>
+      </section>
+
+      <section>
+        <h2>Live na Twitch</h2>
+        <iframe src="https://player.twitch.tv/?channel=tchubi&parent=tchubi.org" width="700" height="400" allowfullscreen></iframe>
+      </section>
+
+      <section>
+        <h2>Clipes Populares</h2>
+        <iframe src="https://clips.twitch.tv/embed?clip=AgilePunchyDadCopyThis&parent=tchubi.org" width="480" height="270" allowfullscreen></iframe>
+      </section>
+
+      <section>
+        <h2>Vídeos do TikTok</h2>
+        <iframe src="https://www.tiktok.com/embed/v2/7181314098859199749" width="300" height="550" allowfullscreen></iframe>
+        <iframe src="https://www.tiktok.com/embed/v2/7194563223469690117" width="300" height="550" allowfullscreen></iframe>
+      </section>
+    </main>
+
+    <footer>
+      <p>© 2025 Tchubi - Todos os direitos reservados</p>
+    </footer>
   </div>
-  <script src="main.js"></script>
 </body>
 </html>
