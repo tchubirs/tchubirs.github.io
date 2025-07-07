@@ -1,1 +1,0 @@
-console.log('Tchubi site loaded');
