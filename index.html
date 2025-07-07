@@ -1,18 +1,143 @@
+// Projeto React com integração automática via APIs (YouTube + Twitch + TikTok + Detecção ao vivo + SEO + Sobre)
+import React, { useEffect, useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { motion } from "framer-motion";
 
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>tchubi.org</title>
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-  <div class="overlay">
-    <h1>Site do Tchubi</h1>
-    <p>Acompanhe os vídeos, lives e redes sociais</p>
-    <div id="videos"></div>
-  </div>
-  <script src="main.js"></script>
-</body>
-</html>
+const YOUTUBE_API_KEY = "AIzaSyCg_BvIRq_qYARTBwI8-q0nrhVRWDd4sHI";
+const CHANNEL_ID = "UCVWeo7G9daOvWgwAqEcf5uw";
+const MAX_RESULTS = 5;
+const TWITCH_CHANNEL = "tchubi";
+const TWITCH_PARENT = "tchubi.org";
+
+export default function Home() {
+  const [videos, setVideos] = useState([]);
+  const [isLive, setIsLive] = useState(false);
+
+  useEffect(() => {
+    fetch(
+      `https://www.googleapis.com/youtube/v3/search?key=${YOUTUBE_API_KEY}&channelId=${CHANNEL_ID}&part=snippet,id&order=date&maxResults=${MAX_RESULTS}`
+    )
+      .then((res) => res.json())
+      .then((data) => {
+        const videoItems = data.items.filter((item) => item.id.videoId);
+        setVideos(videoItems);
+      });
+
+    fetch(`https://api.twitch.tv/helix/streams?user_login=${TWITCH_CHANNEL}`, {
+      headers: {
+        "Client-ID": "",
+        Authorization: "Bearer "
+      }
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.data && data.data.length > 0) {
+          setIsLive(true);
+        }
+      });
+  }, []);
+
+  return (
+    <div className="bg-cover bg-center text-white min-h-screen p-6" style={{ backgroundImage: "url('https://static-cdn.jtvnw.net/jtv_user_pictures/cdb36cfb-2a7e-4198-87b3-8b75a22ed176-profile_image-300x300.png')" }}>
+      <div className="bg-black bg-opacity-80 p-6 rounded-lg">
+        <header className="text-center mb-10">
+          <img
+            src="https://static-cdn.jtvnw.net/jtv_user_pictures/cdb36cfb-2a7e-4198-87b3-8b75a22ed176-profile_image-300x300.png"
+            alt="Tchubi"
+            className="mx-auto rounded-full w-32 border-4 border-purple-500"
+          />
+          <h1 className="text-4xl font-bold mt-4">Tchubi</h1>
+          <p className="text-gray-400">Streamer de FPS e sobrevivência</p>
+          <div className="mt-4 flex justify-center gap-4 flex-wrap">
+            <a href="https://twitch.tv/tchubi" target="_blank" className="bg-purple-600 px-4 py-2 rounded-md hover:bg-purple-700">Twitch</a>
+            <a href="https://www.youtube.com/c/Tchubi" target="_blank" className="bg-red-600 px-4 py-2 rounded-md hover:bg-red-700">YouTube</a>
+            <a href="https://www.tiktok.com/@tchubi.rs" target="_blank" className="bg-pink-500 px-4 py-2 rounded-md hover:bg-pink-600">TikTok</a>
+            <a href="https://x.com/TchubiRS" target="_blank" className="bg-blue-500 px-4 py-2 rounded-md hover:bg-blue-600">Twitter</a>
+          </div>
+        </header>
+
+        <section className="mb-10">
+          <h2 className="text-2xl font-semibold mb-4">Sobre Mim</h2>
+          <p className="text-gray-300 max-w-3xl mx-auto text-center">
+            Olá! Eu sou o Tchubi, criador de conteúdo focado em jogos de sobrevivência e FPS. Meu estilo é tryhard, sempre buscando o máximo em performance e entretenimento para minha comunidade. Acompanhe minhas lives, vídeos e clipes nas plataformas que você mais curte!
+          </p>
+        </section>
+
+        <section className="mb-10">
+          <h2 className="text-2xl font-semibold mb-4">Últimos vídeos no YouTube</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
+            {videos.map((video) => (
+              <Card key={video.id.videoId} className="w-full">
+                <CardContent>
+                  <iframe
+                    width="100%"
+                    height="200"
+                    src={`https://www.youtube.com/embed/${video.id.videoId}`}
+                    allowFullScreen
+                  ></iframe>
+                  <p className="mt-2 text-sm font-medium">
+                    {video.snippet.title}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
+
+        <section className="mb-10">
+          <h2 className="text-2xl font-semibold mb-4">
+            {isLive ? "AO VIVO AGORA NA TWITCH" : "Última live na Twitch"}
+          </h2>
+          <div className="flex justify-center">
+            <iframe
+              src={`https://player.twitch.tv/?channel=${TWITCH_CHANNEL}&parent=${TWITCH_PARENT}`}
+              height="400"
+              width="700"
+              allowFullScreen
+            ></iframe>
+          </div>
+        </section>
+
+        <section className="mb-10">
+          <h2 className="text-2xl font-semibold mb-4">Clipes populares da Twitch</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <iframe
+              src={`https://clips.twitch.tv/embed?clip=AgilePunchyDadCopyThis&parent=${TWITCH_PARENT}`}
+              width="100%"
+              height="360"
+              allowFullScreen
+            ></iframe>
+          </div>
+        </section>
+
+        <section className="mb-10">
+          <h2 className="text-2xl font-semibold mb-4">Vídeos recentes do TikTok</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
+            <iframe className="w-full h-[500px]" src="https://www.tiktok.com/embed/v2/7181314098859199749" allowFullScreen></iframe>
+            <iframe className="w-full h-[500px]" src="https://www.tiktok.com/embed/v2/7194563223469690117" allowFullScreen></iframe>
+            <iframe className="w-full h-[500px]" src="https://www.tiktok.com/embed/v2/7206009584916548870" allowFullScreen></iframe>
+          </div>
+        </section>
+
+        <section className="mb-10 text-center">
+          <h2 className="text-2xl font-semibold mb-4">Últimos Tweets</h2>
+          <div className="flex justify-center">
+            <blockquote className="twitter-timeline" data-theme="dark" data-width="400" data-height="600" data-chrome="nofooter noborders transparent" href="https://twitter.com/TchubiRS?ref_src=twsrc%5Etfw">Tweets by TchubiRS</blockquote>
+            <script async src="https://platform.twitter.com/widgets.js" charSet="utf-8"></script>
+          </div>
+        </section>
+
+        <section className="mb-10 text-center">
+          <h2 className="text-2xl font-semibold mb-2">Contato</h2>
+          <p className="text-gray-400">Para parcerias, colaborações ou dúvidas, envie um e-mail para:</p>
+          <p className="text-purple-400 font-medium">tchubicontato@gmail.com</p>
+        </section>
+
+        <footer className="text-center text-gray-500 mt-16">
+          © 2025 Tchubi. Todos os direitos reservados.
+        </footer>
+      </div>
+    </div>
+  );
+}
