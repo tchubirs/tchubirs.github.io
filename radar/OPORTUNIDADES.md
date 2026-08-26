@@ -21,6 +21,10 @@ Se um item não tem número com fonte, ele fica em "a verificar" até ter.
   - ⚠️ **`youtube.com/@tchubi` (com arroba) NÃO é dele** — é o canal `sh0cker`.
     O ID em `index.html` (`UCVWeo7G9daOvWgwAqEcf5uw`) está morto. Errei os dois
     antes de acertar; sempre cruze com os links de "Siga-me em" dele.
+  - **TikTok `@tchubi.rs`: 1.550 seguidores, 144 vídeos, 18.700 curtidas** —
+    144 vídeos publicados e só 1.550 seguidores é evidência forte de que
+    **formato curto não converte para ele**. Não construa plano que dependa do
+    algoritmo de Shorts/TikTok funcionar; a audiência dele é ao vivo, na Twitch.
   - Transferência Twitch → YouTube é de ~5%. Ter 40k não significa começar em 40k.
 - **Não é programador.** Construiu software real dirigindo uma IA, mas **não
   passa em prova de código ao vivo**. Nunca o mande a uma triagem técnica de
@@ -42,8 +46,15 @@ Se um item não tem número com fonte, ele fica em "a verificar" até ter.
 | **Mindrift** (treinar IA) | US$10–35/h | escrever bem | medido 26/08 |
 | **Alignerr** | US$7–30/h | idem | medido 26/08 |
 | **Treinar IA em português** | acima da média por idioma nativo | ser nativo | medido 26/08 |
+| **Patrocínio na Twitch** ⭐ | **US$ 50–1.000/hora** conforme o ACV; retainer US$ 200–4.000/mês | 40k seguidores (tem) + achar o ACV no painel | medido 27/08 |
 
-**Teto realista do conjunto: €200–600/mês.** Paga rápido, mas não muda a vida.
+**Teto do conjunto de microtarefas: €200–600/mês.** Paga rápido, não muda a vida.
+
+**Patrocínio é outra ordem de grandeza** e é o único caminho aqui onde o ativo
+real dele (40.005 seguidores na Twitch + participação no Rust Kick Off 2, torneio
+de US$ 100 mil com 150 criadores) vira dinheiro direto. Marca paga por **média de
+espectadores ao vivo**, não por seguidor — o ACV está no painel dele e é o único
+número que faltava. Material pronto em `patrocinio/`.
 
 ---
 
