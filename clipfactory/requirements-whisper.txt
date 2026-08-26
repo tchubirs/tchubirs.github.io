@@ -1,0 +1,3 @@
+# Fallback de transcrição. Pesado (~200MB com o modelo base).
+# Só instale se suas fontes de campanha vierem sem legenda.
+faster-whisper>=1.0.3
