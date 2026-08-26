@@ -89,3 +89,6 @@ conseguir falar sobre o que foi entregue.
 4. **Nunca recomende algo que exija habilidade que ele não tem.** Reler o
    perfil no topo antes de escrever qualquer recomendação.
 5. **Nunca gaste o dinheiro dele** sem confiança alta e sem avisar antes.
+6. **Sempre mande o link.** Toda vez que você citar um site onde ele precisa
+   entrar ou se cadastrar, cole o endereço junto — e **confira antes que ele
+   responde 200**, não mande link quebrado. Ele pediu isso explicitamente.
