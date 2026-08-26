@@ -3,14 +3,25 @@
 Atualizado por uma rotina semanal. Toda linha aqui foi **medida**, não deduzida.
 Se um item não tem número com fonte, ele fica em "a verificar" até ter.
 
-**Última varredura:** 26/08/2026
+**Última varredura:** 27/08/2026
 
 ---
 
 ## Perfil do operador (não viole isto ao recomendar)
 
 - Reside na **França**. Cidadania **portuguesa**. **Nativo em português**, e isso
-  é um ativo que vale dinheiro em treinamento de IA.
+  é um ativo que vale dinheiro em treinamento de IA. Fala também ES, EN, FR.
+- **TEM AUDIÊNCIA.** Isto foi excluído do escopo por engano durante um dia
+  inteiro de pesquisa, e foi o maior erro cometido aqui. Números verificados
+  em 27/08/2026:
+  - **Twitch `tchubi`: 40.005 seguidores**, ativo (confirmado via decapi.me)
+  - **Kick: 3.000 seguidores**, ativo
+  - **YouTube `youtube.com/tchubi`** (ID real `UCC7SvNOLL84jTdP-xpcs_Hg`):
+    mediana de **2.205 views**, máximo 7.020, **parado desde 16/06/2026**
+  - ⚠️ **`youtube.com/@tchubi` (com arroba) NÃO é dele** — é o canal `sh0cker`.
+    O ID em `index.html` (`UCVWeo7G9daOvWgwAqEcf5uw`) está morto. Errei os dois
+    antes de acertar; sempre cruze com os links de "Siga-me em" dele.
+  - Transferência Twitch → YouTube é de ~5%. Ter 40k não significa começar em 40k.
 - **Não é programador.** Construiu software real dirigindo uma IA, mas **não
   passa em prova de código ao vivo**. Nunca o mande a uma triagem técnica de
   engenheiro, e nunca escreva um perfil que ele não consiga defender numa
@@ -40,7 +51,8 @@ Se um item não tem número com fonte, ele fica em "a verificar" até ter.
 
 | Item | Estado | Próxima data |
 |---|---|---|
-| **fedimod → NLnet Open Social Fund** | Marco 1 construído, 20 testes verdes, repo público | **submeter até 3/nov/2026** |
+| **fedimod → NLnet Open Social Fund** | Marcos 1 e 2 construídos, 34 testes verdes, repo público | **submeter até 3/nov/2026** |
+| **SERIE RUST IA** | bíblia visual, roteiro do piloto de 45s e decisão de gerador prontos em `serie-rust-ia/` | ele executa |
 
 Valor: €5.000–50.000. Aceita pessoa física. **Risco conhecido:** a revisão de
 marco é feita por uma pessoa que conversa sobre o projeto — ele precisa
@@ -74,6 +86,9 @@ conseguir falar sobre o que foi entregue.
 - **Programas de idioma** — demanda por português brasileiro em datasets.
 - **Micro-entreprise / SIRET** — destrava recebimento recorrente na França.
   Grátis e online. Ainda não feito.
+- **Sinais do piloto da SERIE RUST IA** — retenção de 3s (meta >70%) e
+  comentários "isso é real?" (meta ≥3). Se a retenção ficar abaixo de 50%, o
+  problema é o clipe 1, não o formato.
 
 ---
 
@@ -89,6 +104,11 @@ conseguir falar sobre o que foi entregue.
 4. **Nunca recomende algo que exija habilidade que ele não tem.** Reler o
    perfil no topo antes de escrever qualquer recomendação.
 5. **Nunca gaste o dinheiro dele** sem confiança alta e sem avisar antes.
-6. **Sempre mande o link.** Toda vez que você citar um site onde ele precisa
+6. **Confirme de quem é a conta antes de usar o número.** Três medições
+   erradas em um dia: canal alheio confundido com o dele, contador de canal
+   recomendado lido como o dele, e print do Kick lido como Twitch. Cruze sempre
+   com os links declarados por ele, e prefira fonte independente (decapi.me
+   para Twitch, feed RSS público para YouTube).
+7. **Sempre mande o link.** Toda vez que você citar um site onde ele precisa
    entrar ou se cadastrar, cole o endereço junto — e **confira antes que ele
    responde 200**, não mande link quebrado. Ele pediu isso explicitamente.
