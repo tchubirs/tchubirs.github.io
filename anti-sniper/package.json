@@ -3,7 +3,19 @@
   "version": "0.1.0",
   "description": "Live stream-sniper detection: cross-reference who is on the server with who is watching, in the moment",
   "license": "AGPL-3.0-or-later",
-  "engines": { "node": ">=20" },
-  "scripts": { "test": "node --test test/*.test.js" },
-  "dependencies": {}
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node bin/comecar.js",
+    "agente": "node agente/agente.js",
+    "servico": "node servico/iniciar.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "playwright": "^1.47.0"
+  },
+  "devDependencies": {
+    "linkedom": "^0.18.0"
+  }
 }

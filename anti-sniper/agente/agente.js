@@ -31,11 +31,22 @@ const INTERVALO_MS = Number(process.env.DETETIVE_INTERVALO || 90) * 1000;
 const FIDELIDADE = process.env.DETETIVE_FIDELIDADE;   // ex: https://botrix.live/pt/dashboard/kick/tchubi/points
 
 async function abrirNavegador() {
-  const { chromium } = require('playwright');
-  return chromium.launchPersistentContext(PERFIL, {
+  let chromium;
+  try { ({ chromium } = require('playwright')); }
+  catch {
+    // Erro de dependência tem que virar instrução, não pilha de chamadas.
+    console.error('\n  Falta instalar o navegador. Rode uma vez:\n');
+    console.error('    npm install\n    npx playwright install chromium\n');
+    process.exit(3);
+  }
+  const op = {
     headless: process.env.DETETIVE_VISIVEL !== '1',
     viewport: { width: 1280, height: 900 },
-  });
+  };
+  // Se a máquina já tem um Chromium do Playwright, usa. Poupa 150 MB de
+  // download para quem só quer ver a coisa funcionando.
+  if (process.env.DETETIVE_CHROME) op.executablePath = process.env.DETETIVE_CHROME;
+  return chromium.launchPersistentContext(PERFIL, op);
 }
 
 /** Roda o parser DENTRO da página e devolve o resultado já pronto. */
