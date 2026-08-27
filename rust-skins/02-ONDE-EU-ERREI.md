@@ -75,3 +75,62 @@ sem audiência, a divisão é natural: o artista faz a arte, ele entra com os
 43 mil votos e a conta do Steam, e dividem.
 
 Se não houver, o caminho morre e a varredura segue.
+
+---
+
+# Segunda rodada — o teste do AK, 27/08/2026
+
+Ele pediu uma skin de AK neon e julgou. Veredito dele, duas frases:
+
+> *"todas skins tem um significado, não é só feita a toa tem que se basear em algo"*
+> *"não adianta colar um papel de parede em cima de uma ak não vai dar certo,
+> a ak tem que ser desenhada detalhadamente"*
+
+Os dois pontos fecham o caso, e nenhum se resolve com mais iteração.
+
+## 1. Skin é conceito, não superfície
+
+Olhando os nomes das aceitas isso fica óbvio, e eu tinha a lista o tempo todo:
+**AK From Hell, Anubis, Scarecrow, Nightmare, Midnight Dream, X-RAY,
+Apotheosis of War, Salvation, Young Dragon, Valkyrie.**
+
+Cada uma é uma **ideia** executada. Nenhuma é um acabamento bonito.
+Eu estava produzindo material — carbono, plasma, ferrugem — quando o
+produto do mercado é **tema**.
+
+## 2. A arma tem que ser desenhada peça por peça
+
+Receptor, carregador, coronha, punho, guarda-mato e alça têm cada um a sua
+área no UV, e nas skins boas cada área recebe arte própria que respeita a
+forma daquela peça. Padrão de fundo esticado por cima do quadrado inteiro
+não vira skin — vira papel de parede, exatamente como ele disse.
+
+## Por que isto não é questão de tentar mais
+
+Ruído procedural gera **campo**: material contínuo, sem começo nem fim, sem
+assunto. Conceito desenhado sobre geometria específica é **ilustração**.
+São duas coisas diferentes, e código não atravessa essa ponte.
+
+E não existe gerador de imagem neste ambiente — só Python. Mesmo que
+existisse, ainda faltaria o UV do item e o julgamento de arte para dividir
+o desenho pelas peças.
+
+**Não é um limite da minha tentativa. É um limite do que eu sou capaz de
+produzir aqui.**
+
+## Conclusão
+
+O caminho não morreu por falta de mercado. Os números seguem bons e estão
+todos em `00-O-PLANO.md`: 1,8% de aceitação, mediana de 10 dias, mediana de
+351 votos numa aceita, maior criador com só 6,9%, e **48% dos criadores com
+uma única skin aceita**.
+
+Esse último número é o mais interessante que sobrou: **existem dezenas de
+artistas com talento e sem alcance.** Ele é o oposto exato — alcance de 43
+mil jogadores de Rust, conta Steam, e uma cena com 150 criadores do Kick Off
+ao alcance de uma mensagem.
+
+**Este caminho precisa de um artista humano.** Achar essa pessoa é a única
+parte que não é minha, e não dá pra fingir que é.
+
+**Estado: PARADO, esperando artista.** Não ressuscitar sem um.

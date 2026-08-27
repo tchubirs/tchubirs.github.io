@@ -51,7 +51,7 @@ Se um item não tem número com fonte, ele fica em "a verificar" até ter.
 
 ## ✅ VIVO — pode agir hoje
 
-### ⚠️ Skins de Rust no Steam Workshop — BLOQUEADO EM ARTE
+### ⏸️ Skins de Rust no Steam Workshop — PARADO, FALTA ARTISTA
 
 Detalhes em `rust-skins/00-O-PLANO.md`. Ele executa por `rust-skins/01-O-QUE-VOCE-FAZ.md`.
 
@@ -81,10 +81,22 @@ está marcada **"Updated: A Long Time Ago"**. O que está sendo aceito em agosto
 o oposto: anime, vitral, runas acesas, caveira, neon, coleções temáticas.
 Ver `rust-skins/aceitas-agosto-2026.png` e `rust-skins/02-ONDE-EU-ERREI.md`.
 
-**O gargalo não é o mercado — é arte, e arte ali é ofício.** Não há gerador de imagem
-neste ambiente. O caminho só volta a andar se ele encontrar um artista de skin sem
-audiência para dividir: o artista faz a arte, ele entra com os 43 mil votos e a conta
-do Steam.
+**Teste do AK feito em 27/08 e reprovado por ele**, com dois motivos que não se
+resolvem iterando:
+1. *"todas skins tem um significado"* — os nomes provam (AK From Hell, Anubis,
+   Scarecrow, Valkyrie, Apotheosis of War). O produto é **tema executado**, não
+   acabamento bonito. Eu estava gerando material.
+2. *"a ak tem que ser desenhada detalhadamente"* — cada peça tem sua área no UV e
+   recebe arte própria. Padrão esticado por cima vira papel de parede.
+
+Ruído procedural gera **campo**; skin é **ilustração sobre geometria**. Código não
+atravessa essa ponte, e não há gerador de imagem neste ambiente.
+
+**O gargalo não é o mercado — é um artista humano.** O dado mais útil que sobrou:
+**48% dos criadores aceitos têm uma única skin**, ou seja, existem dezenas de
+artistas com talento e sem alcance. Ele é o oposto: 43 mil jogadores de Rust, conta
+Steam, e 150 criadores do Kick Off a uma mensagem de distância. A divisão é óbvia —
+falta a pessoa, e achar a pessoa é a parte que não é minha.
 
 ---
 
@@ -193,3 +205,8 @@ conseguir falar sobre o que foi entregue.
 10. **Fonte primária desatualizada é pior que fonte secundária atual**, porque
    carrega a autoridade de ser oficial. A wiki da Facepunch dizia "Updated: A Long
    Time Ago" no rodapé e eu passei batido. **Sempre leia a data da página.**
+11. **Pergunte qual é o produto antes de escolher a técnica.** Gastei duas rodadas
+   gerando material procedural para um mercado que compra **conceito ilustrado**.
+   Os nomes das skins aceitas diziam isso desde o começo — Anubis, Scarecrow,
+   Valkyrie, From Hell — e eu tinha a lista inteira na mão antes de escrever a
+   primeira linha de código.
