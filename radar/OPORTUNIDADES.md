@@ -292,3 +292,13 @@ conseguir falar sobre o que foi entregue.
    Não era um bloqueio do mundo: era um bloqueio meu, para uma conta que eu
    não tinha e ele tinha. Uma linha — *"você já tem acesso a isso?"* —
    valia mais que toda a pesquisa que fiz para provar que não dava.
+
+17. **Nunca pendure dado inventado no nome de uma pessoa real.** Numa
+   demonstração, gerei um nome de jogo e uma linha do tempo para uma
+   espectadora real dele. Ele leu as duas como descoberta e corrigiu as
+   duas: o nome dela no jogo é outro, sem uma letra em comum, e ela entrou
+   e saiu rápido, não ficou 84 minutos. Um dado simulado com cara de
+   medição é indistinguível de uma acusação falsa — e numa ferramenta que
+   existe para apontar pessoas, essa é a falha que destrói o produto
+   inteiro. Dado de exemplo usa gente que não existe, com nome que se
+   anuncia como exemplo.

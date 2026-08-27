@@ -30,55 +30,43 @@ const limpar = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8')
   .trim();
 
 /**
- * Uma noite plausível a partir do tempo assistido real de cada um.
+ * O exemplo de como a tela fica quando estiver gravando.
  *
- * Determinístico de propósito: recarregar a página não pode mudar quem
- * estava onde, senão ele testa uma coisa e vê outra.
+ * REGRA, aprendida errando duas vezes na cara dele: nunca pendurar dado
+ * inventado no nome de uma pessoa real.
+ *
+ * A primeira versão inventou um nome no jogo para uma espectadora dele e
+ * ele leu como descoberta — o nome real era outro, sem uma letra em comum.
+ * A segunda inventou os horários dela: ele sabia que ela entrou e saiu
+ * rápido, e a tela mostrava 84 minutos. Cada uma dessas telas é um inocente
+ * acusado com dado que eu produzi.
+ *
+ * Então o exemplo usa gente que não existe, com nome que se anuncia, e a
+ * audiência real aparece só com o que foi MEDIDO: nome e tempo total.
  */
-function noite(audiencia, agora) {
+function exemplo(agora) {
   const H = 3600000; const M = 60000;
-  const inicioLive = agora - 4 * H;
-  const pessoas = audiencia.map((p, i) => {
-    const semente = (p.nome.length * 37 + i * 91) % 100;
-    const entra = Math.floor((semente / 100) * 170);              // min após o início
-    const dura = Math.max(15, Math.min(235 - entra, Math.round((p.minutosAssistidos || 30) / 12) + 20));
-    // Medido num canal ao vivo: de 47 pessoas detectadas, 45 nunca falaram.
-    // Uma demonstração cheia de "falou" mostraria o contrário da realidade
-    // e do motivo de o produto existir.
-    const fonte = semente % 7 === 0 ? 'chat' : 'tempo';
-    // Último sinal escalonado: todo mundo com "há 5 min" idêntico entrega
-    // que é cenário montado, e esconde a diferença entre quem acabou de
-    // dar sinal e quem está no limite da janela.
-    const calada = semente % 13;
-    // "Ainda está lá" tem que ser a MESMA conta que a página usa para
-    // montar a lista da live (último sinal dentro do gap de 15 min).
-    // Critérios diferentes fariam alguém aparecer em "nos dois" sem estar
-    // em "na live agora" — uma tela impossível na vida real.
-    const fim = Math.min(inicioLive + (entra + dura) * M, agora - (semente % 13) * M);
-    const aindaLa = agora - fim <= 15 * M;
-    return {
-      ...p,
-      naLive: [{ de: inicioLive + entra * M, ate: Math.min(inicioLive + (entra + dura) * M, agora - calada * M), fonte }],
-      aindaLa,
-    };
+  const inicio = agora - 3 * H;
+  const p = (nome, deMin, ateMin, fonte) => ({
+    nome, de: inicio + deMin * M, ate: inicio + ateMin * M, fonte,
   });
-  // Dois deles também estão no servidor agora — é o caso que o produto existe
-  // para mostrar, e sem ninguém na tela ele não daria para ver.
-  const noServidor = pessoas.filter((p) => p.aindaLa).slice(0, 2).map((p, i) => ({
-    // Nome NO JOGO, que não é o do chat — é justamente por isso que o
-    // cruzamento existe. E o id do BattleMetrics, que é o que responde
-    // "quem é esse cara": de lá saem o histórico de nomes e a SteamID.
-    // Disfarces que acontecem de verdade: decoração em volta do nome
-    // INTEIRO, e maiúsculas com leet. Cortar o nome no meio também
-    // acontece, mas aí o cruzamento honestamente não acha — e é a busca
-    // por SteamID que resolve, não um exemplo escolhido para parecer bom.
-    nome: [`xX_${p.nome}_Xx`, p.nome.toUpperCase().replace(/I/g, '1').replace(/O/g, '0')][i % 2],
-    chat: p.nome,
-    bmId: String(1263079000 + (p.nome.length * 731 + i * 97) % 9000),
-    servidor: 'Rustoria.co - US Main',
-    de: p.naLive[0].de + 20 * M, ate: agora,
-  }));
-  return { inicioLive, pessoas, noServidor };
+  return {
+    inicioLive: inicio,
+    // Uma pessoa que entra e sai várias vezes, uma que fica calada a live
+    // toda, e uma que passou rápido — as três formas que o log precisa
+    // mostrar diferente.
+    naLive: {
+      'ESPECTADOR-A': [p('ESPECTADOR-A', 12, 47, 'tempo'), p('ESPECTADOR-A', 96, 174, 'tempo')],
+      'ESPECTADOR-B': [p('ESPECTADOR-B', 5, 176, 'chat')],
+      'ESPECTADOR-C': [p('ESPECTADOR-C', 130, 141, 'tempo')],
+    },
+    noServidor: {
+      'ESPECTADOR-A': [{ de: inicio + 104 * M, ate: inicio + 178 * M, nome: 'JOGADOR-A' }],
+      'ESPECTADOR-C': [{ de: inicio + 128 * M, ate: inicio + 179 * M, nome: 'JOGADOR-C' }],
+    },
+    // O minuto da morte, para a linha do tempo ter o que marcar.
+    morte: inicio + 136 * M,
+  };
 }
 
 (async () => {
@@ -96,7 +84,7 @@ function noite(audiencia, agora) {
   let html = fs.readFileSync(path.join(__dirname, 'demo-modelo.html'), 'utf8');
   html = trocar(html, '/*MOTOR*/', motor);
   html = trocar(html, '/*DADOS*/', JSON.stringify(dados));
-  html = trocar(html, '/*NOITE*/', noite.toString());
+  html = trocar(html, '/*NOITE*/', exemplo.toString());
 
   fs.writeFileSync(SAIDA, html);
   console.log(`gerado ${SAIDA} — ${(html.length / 1024).toFixed(0)} KB, ${audiencia.length} pessoas reais`);

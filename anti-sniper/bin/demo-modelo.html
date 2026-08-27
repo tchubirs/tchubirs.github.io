@@ -149,132 +149,143 @@ h2 em{font-style:normal; color:var(--alerta)}
         border-top:1px solid var(--line); padding-top:16px}
 .rodape b{color:var(--ink2)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
-</style>
 
-<div class="topo">
+  .marcaR,.marcaS{display:inline-block; font-size:10px; letter-spacing:.08em; font-weight:700;
+    border-radius:4px; padding:2px 7px; vertical-align:2px; margin-right:6px}
+  .marcaR{background:rgba(83,252,24,.1); border:1px solid rgba(83,252,24,.35); color:var(--vivo)}
+  .marcaS{background:var(--morno-bg); border:1px solid var(--morno-line); color:var(--morno)}
+  h2 .marcaR,h2 .marcaS{vertical-align:1px}
+  .pessoa.larga{width:100%; margin-bottom:8px; display:block}
+  .fraco{color:var(--ink3)}
+  .achou{background:var(--alerta-bg); border:1px solid var(--alerta-line);
+    border-left:3px solid var(--alerta); border-radius:10px; padding:13px 15px}
+  .achou .par{font-weight:600; font-size:15.5px; display:flex; align-items:baseline; gap:8px; flex-wrap:wrap}
+  .seta{color:var(--ink3)}
+  .quem{margin-top:9px; padding-top:9px; border-top:1px solid var(--line);
+    font-size:12.5px; color:var(--ink2); line-height:1.55}
+  .quem b{color:var(--ink); font-weight:600}
+  .log .quem{margin-top:13px}
+  .dois .par .pc{font-size:12.5px}
+</style><div class="topo">
   <h1>Detetive</h1>
   <span class="canal mono">tchubi · kick</span>
-  <div class="dir">
-    <span class="ponto"></span><span class="estado">ao vivo</span>
-    <button class="tema" id="tema" type="button">tema</button>
-  </div>
+  <div class="dir"><button class="tema" id="tema" type="button">tema</button></div>
 </div>
 
 <main>
   <div class="aviso">
-    <b>Isto é o painel para você clicar, não o serviço rodando.</b><br>
-    Os <b>20 nomes e o tempo assistido são reais</b>, vindos agora da rota pública
-    da BotRix do seu canal. A presença no servidor de Rust é <b>simulada</b>, porque
-    ela depende do agente rodando na sua máquina.<br>
-    O cruzamento de nomes é o <b>mesmo código</b> que roda no serviço — gerado de
-    <span class="mono">src/</span>, não reescrito para a demonstração.
+    <b>Duas coisas nesta página, e elas não se misturam.</b><br>
+    <span class="marcaR">MEDIDO</span> os 20 nomes e o tempo total assistido, puxados agora
+    da rota pública da BotRix do seu canal.<br>
+    <span class="marcaS">EXEMPLO</span> a tela de como fica quando estiver gravando, com
+    gente que <b>não existe</b>.<br>
+    <b>Nenhum horário inventado aparece no nome de alguém de verdade.</b> Eu fiz isso duas
+    vezes antes e as duas vezes a tela mentiu: inventei o nome no jogo de uma espectadora
+    sua, e inventei quanto tempo ela ficou.
   </div>
 
-  <h2>No servidor <em>E</em> na sua live — agora <span class="qtd" id="q-dois"></span></h2>
-  <div id="nosdois"></div>
+  <h2><span class="marcaR">MEDIDO</span> Sua audiência na Kick <span class="qtd" id="q-aud"></span></h2>
+  <p class="dica">O que a BotRix entrega hoje, sem login: quem acumulou tempo assistido, e
+    quanto no <b>total</b>. Não é por sessão — o serviço rodando é que grava entrada e saída.</p>
+  <div id="audiencia"></div>
 
-  <h2>Procurar um jogador</h2>
-  <p class="dica">Cole o <b>nome</b> que apareceu na tela quando você morreu, e a hora.
-    No serviço de verdade você também cola a SteamID ou o link do perfil, e eu confiro
-    todos os nomes antigos daquela conta.</p>
+  <h2><span class="marcaR">MEDIDO</span> O cruzamento de nomes</h2>
+  <p class="dica">Este é o código de verdade, gerado de <span class="mono">src/</span>.
+    Digite um nome como ele apareceria <b>no jogo</b> — com maiúsculas, leet, tag de clã —
+    e veja se ele acha a pessoa na sua audiência.</p>
   <div class="busca">
-    <input id="q" placeholder="nome de quem te matou" autocomplete="off" spellcheck="false">
-    <input id="quando" class="hora mono" placeholder="que horas?" autocomplete="off">
-    <button id="ir" type="button">Procurar</button>
+    <input id="q" placeholder="ex: [BR] HA1_SUZY" autocomplete="off" spellcheck="false">
+    <button id="ir" type="button">Cruzar</button>
   </div>
   <div class="atalhos" id="atalhos"></div>
   <div id="resultado"></div>
 
-  <h2>Na sua live agora <span class="qtd" id="q-agora"></span></h2>
-  <p class="dica">Clique em alguém para ver o <b>log completo</b>: entrou, saiu, entrou de novo.
-    O selo <span class="selo calado">calado</span> é quem <b>nunca escreveu no chat</b> — e sniper não escreve.</p>
-  <div id="agora"></div>
+  <h2><span class="marcaS">EXEMPLO</span> Como fica quando estiver gravando</h2>
+  <p class="dica">Gente inventada, de propósito: <b>ESPECTADOR-A</b>, <b>-B</b>, <b>-C</b>.
+    É a forma da tela, não um achado. Clique para ver o log.</p>
+  <div id="exemplo"></div>
+  <div id="logex"></div>
 
   <div class="rodape">
     Assistir não é crime. Isto mostra <b>presença, não culpa</b> — quem julga o contexto é
     você, que jogou a partida.<br>
-    Ninguém aparecer aqui <b>não inocenta</b>: a pessoa pode usar nome diferente nos dois
-    lados, e quem assiste <b>deslogado</b> não aparece em fonte nenhuma.
+    Ninguém aparecer <b>não inocenta</b>: o nome no jogo quase nunca parece com o do chat, e
+    quem assiste <b>deslogado</b> não aparece em fonte nenhuma.
   </div>
 </main>
 
 <script>
-/* ── motor de cruzamento, gerado de src/ ─────────────────────────────── */
 /*MOTOR*/
 
-/* ── a noite simulada, mesma função do gerador ───────────────────────── */
 /*NOITE*/
 
 const DADOS = /*DADOS*/;
 const AGORA = Date.now();
 const M = 60000;
-const cenario = noite(DADOS.audiencia, AGORA);
+const EX = exemplo(AGORA);
 
 const esc = (s) => String(s).replace(/[<>&"]/g, (c) => ({ '<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;' }[c]));
 const hora = (ms) => new Date(ms).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
 const hhmm = (m) => `${Math.floor(m/60)}h${String(Math.round(m%60)).padStart(2,'0')}`;
-const GAP = 15 * M;
 
-const porNome = new Map(cenario.pessoas.map((p) => [p.nome, p]));
-const naLiveAgora = cenario.pessoas.filter((p) => AGORA - p.naLive[0].ate <= GAP);
-const idxLive = new Indice(naLiveAgora.map((p) => ({ nome: p.nome })));
+/* ── MEDIDO: a audiência real, só com o que a BotRix entrega ──────────── */
+function desenharAudiencia() {
+  const l = [...DADOS.audiencia].sort((a,b) => (b.minutosAssistidos||0) - (a.minutosAssistidos||0));
+  document.getElementById('q-aud').textContent = `· ${l.length}`;
+  document.getElementById('audiencia').innerHTML =
+    `<div class="pessoas">${l.map(p => `<div class="pessoa">
+      <b>${esc(p.nome)}</b>
+      <span class="mono">${p.minutosAssistidos ? hhmm(p.minutosAssistidos) : 'sem tempo'} assistidos</span>
+      <span class="mono fraco">nível ${p.nivel} · ${p.pontos} pontos</span>
+    </div>`).join('')}</div>`;
+}
 
-/* Quem está nos dois AO MESMO TEMPO. Cruza só o nome de agora — histórico é
-   uma ida à rede por pessoa, e é por isso que ele fica na busca de um só. */
-function nosDois() {
-  const fora = [];
-  for (const s of cenario.noServidor) {
-    const r = idxLive.procurar(s.nome);
-    if (!r) continue;
-    const p = porNome.get(r.entrada.nome);
-    fora.push({ jogador: s.nome, bmId: s.bmId, servidor: s.servidor,
-      espectador: r.entrada.nome, confianca: r.confianca, motivo: r.motivo,
-      naLiveDesde: p.naLive[0].de, naLiveMin: Math.round((p.naLive[0].ate - p.naLive[0].de)/M),
-      calada: Math.round((AGORA - p.naLive[0].ate)/M),
-      srvDesde: s.de, srvMin: Math.round((s.ate - s.de)/M) });
+/* ── MEDIDO: o cruzamento, contra os nomes reais ──────────────────────── */
+const idxReal = new Indice(DADOS.audiencia.map(p => ({ nome: p.nome, min: p.minutosAssistidos })));
+
+function cruzar() {
+  const q = document.getElementById('q').value.trim();
+  const onde = document.getElementById('resultado');
+  if (!q) { onde.innerHTML = ''; return; }
+  const r = idxReal.procurar(q);
+  if (!r) {
+    onde.innerHTML = `<div class="vazio">Nenhum dos ${DADOS.audiencia.length} nomes da sua audiência
+      bate com <b>${esc(q)}</b>.<br><br>Isso <b>não inocenta</b>. O nome no jogo quase nunca
+      parece com o do chat — foi exatamente o que aconteceu quando você me corrigiu.
+      Para esses casos, o serviço confere a <b>SteamID</b>: todos os nomes que a conta já usou,
+      não só o de agora.</div>`;
+    return;
   }
-  return fora.sort((a,b) => b.confianca - a.confianca);
+  onde.innerHTML = `<div class="achou">
+    <div class="par">${esc(q)} <span class="seta">&#8596;</span> ${esc(r.entrada.nome)}
+      <span class="pc mono">${Math.round(r.confianca*100)}%</span></div>
+    <div class="det">${esc(r.motivo)} · assistiu
+      <b class="mono">${r.entrada.min ? hhmm(r.entrada.min) : '?'}</b> no total</div>
+    <div class="quem">Isto é tudo que eu sei hoje sobre essa pessoa: que ela está na sua
+      audiência e o tempo <b>total</b>. <b>Não sei a que horas ela entrou nem saiu</b> — isso
+      só existe depois que o serviço estiver gravando na sua máquina.</div>
+  </div>`;
 }
 
-function desenharDois() {
-  const l = nosDois();
-  document.getElementById('q-dois').textContent = l.length ? `· ${l.length}` : '';
-  const onde = document.getElementById('nosdois');
-  if (!l.length) { onde.innerHTML = '<div class="vazio">Ninguém no servidor bate, <b>pelo nome de agora</b>, com quem está na live.</div>'; return; }
-  onde.innerHTML = l.map((a) => `<button class="dois" type="button" data-nome="${esc(a.espectador)}">
-    <div class="par">${esc(a.jogador)} <span style="color:var(--ink3)">&#8596;</span> ${esc(a.espectador)}
-      <span class="pc mono">${Math.round(a.confianca*100)}%</span></div>
-    <div class="det">${esc(a.motivo)} · na live desde <b class="mono">${hora(a.naLiveDesde)}</b>
-      (${a.naLiveMin} min, <span class="${a.calada<=2?'agoraz':''}">${a.calada<=2?'falando agora':'calado há '+a.calada+' min'}</span>)
-      · no servidor desde <b class="mono">${hora(a.srvDesde)}</b> (${a.srvMin} min)</div>
-    <div class="quem">no jogo: <b>${esc(a.jogador)}</b> · ${esc(a.servidor)} ·
-      <span class="link">ver quem é no BattleMetrics &#8599;</span></div>
-  </button>`).join('');
-  for (const b of onde.querySelectorAll('.dois')) b.onclick = () => abrirLog(b.dataset.nome);
-}
-
-function desenharAgora() {
-  document.getElementById('q-agora').textContent = `· ${naLiveAgora.length}`;
-  const onde = document.getElementById('agora');
-  onde.innerHTML = `<div class="pessoas">${naLiveAgora.map((p) => {
-    const e = p.naLive[0];
-    const calada = Math.round((AGORA - e.ate)/M);
-    return `<button class="pessoa" type="button" data-nome="${esc(p.nome)}">
-      <b>${esc(p.nome)}<span class="selo ${e.fonte==='tempo'?'calado':''}">${e.fonte==='tempo'?'calado':'falou'}</span></b>
-      <span class="mono">desde ${hora(e.de)} · ${Math.round((e.ate-e.de)/M)} min</span>
-      <span class="${calada<=2?'agoraz':''}">${calada<=2?'sinal agora':'último sinal há '+calada+' min'}</span>
-    </button>`; }).join('')}</div>`;
-  for (const b of onde.querySelectorAll('.pessoa')) b.onclick = () => abrirLog(b.dataset.nome);
-}
-
-/* Três estados, e a diferença entre eles importa: sim / provável / não visto.
-   "Não visto" NUNCA vira "não estava" — quem assiste calado não gera sinal. */
-function momento(p, quando) {
-  const e = p.naLive[0];
-  if (quando >= e.de && quando <= e.ate) return { estado:'sim', e };
-  const d = quando < e.de ? e.de - quando : quando - e.ate;
-  if (d <= GAP) return { estado:'provavel', e, min: Math.round(d/M), antes: quando > e.ate };
-  return { estado:'nao', e, min: Math.round(d/M), antes: quando > e.ate };
+/* ── EXEMPLO: gente que não existe ────────────────────────────────────── */
+function desenharExemplo() {
+  const nomes = Object.keys(EX.naLive);
+  document.getElementById('exemplo').innerHTML = nomes.map(n => {
+    const faixas = EX.naLive[n];
+    const srv = EX.noServidor[n] || [];
+    const ultima = faixas[faixas.length-1];
+    const dentro = srv.length && EX.morte >= srv[0].de && EX.morte <= srv[0].ate
+      && faixas.some(f => EX.morte >= f.de && EX.morte <= f.ate);
+    const total = faixas.reduce((a,f) => a + (f.ate-f.de)/M, 0);
+    return `<button class="${dentro?'dois':'pessoa larga'}" type="button" data-n="${esc(n)}">
+      <div class="par">${esc(n)}${srv.length ? ` <span class="seta">&#8596;</span> ${esc(srv[0].nome)}` : ''}
+        ${dentro ? '<span class="pc">nos dois às ' + hora(EX.morte) + '</span>' : ''}</div>
+      <div class="det">${faixas.length} ${faixas.length>1?'entradas':'entrada'} na live ·
+        ${Math.round(total)} min no total · ${ultima.fonte==='tempo'?'nunca escreveu no chat':'escreveu no chat'}
+        ${srv.length ? ' · esteve no servidor' : ' · não apareceu no servidor'}</div>
+    </button>`;
+  }).join('');
+  for (const b of document.querySelectorAll('#exemplo [data-n]')) b.onclick = () => logEx(b.dataset.n);
 }
 
 function fita(naLive, srv, quando) {
@@ -293,93 +304,62 @@ function fita(naLive, srv, quando) {
   </div>`;
 }
 
-function procurar() {
-  const q = document.getElementById('q').value.trim();
-  const onde = document.getElementById('resultado');
-  if (!q) { onde.innerHTML = ''; return; }
+function logEx(n) {
+  const faixas = EX.naLive[n];
+  const srv = EX.noServidor[n] || [];
+  const linhas = [...faixas.map(x=>({onde:'live',...x})), ...srv.map(x=>({onde:'servidor',...x}))]
+    .sort((a,b) => b.de - a.de);
+  const naHora = faixas.find(f => EX.morte >= f.de && EX.morte <= f.ate);
+  const srvNaHora = srv.find(s => EX.morte >= s.de && EX.morte <= s.ate);
 
-  const idxTudo = new Indice(cenario.pessoas.map(p => ({ nome: p.nome })));
-  const r = idxTudo.procurar(q);
-  if (!r) {
-    onde.innerHTML = `<div class="vazio">Nenhum dos ${cenario.pessoas.length} nomes da sua audiência bate com
-      <b>${esc(q)}</b>.<br><br>Isso <b>não inocenta</b> — a pessoa pode usar nome diferente nos dois lados.
-      No serviço de verdade, colar a SteamID confere <b>todos os nomes antigos</b> daquela conta.</div>`;
-    return;
+  let v;
+  if (naHora && srvNaHora) v = { c:' sim', t:`<b>Às ${hora(EX.morte)}: ESTAVA na sua live</b> — visto das ${hora(naHora.de)} às ${hora(naHora.ate)}. E estava no servidor.` };
+  else if (naHora) v = { c:' sim', t:`<b>Às ${hora(EX.morte)}: ESTAVA na sua live</b> — visto das ${hora(naHora.de)} às ${hora(naHora.ate)}.` };
+  else {
+    const perto = faixas.map(f => Math.min(Math.abs(EX.morte-f.ate), Math.abs(f.de-EX.morte))).sort((a,b)=>a-b)[0];
+    v = { c: perto <= 15*M ? ' provavel' : '',
+      t: perto <= 15*M
+        ? `<b>Às ${hora(EX.morte)}: provável</b> — visto ${Math.round(perto/M)} min de distância.`
+        : `<b>Às ${hora(EX.morte)}: não visto na live nesse horário.</b> A vez mais próxima foi ${Math.round(perto/M)} min de distância.` };
   }
-  const p = porNome.get(r.entrada.nome);
-  const t = document.getElementById('quando').value.trim();
-  let quando = null;
-  const rl = t.match(/^(\d{1,2})\s*[:h.]?\s*(\d{2})$/);
-  if (rl) { const d = new Date(); d.setHours(+rl[1], +rl[2], 0, 0);
-    if (d.getTime() > AGORA + M) d.setDate(d.getDate()-1); quando = d.getTime(); }
 
-  const srv = cenario.noServidor.filter(s => idxLive.procurar(s.nome)?.entrada.nome === p.nome);
-  let topo = '';
-  if (quando != null) {
-    const m = momento(p, quando);
-    const h = hora(quando);
-    let cls = '', txt;
-    if (m.estado === 'sim') { cls = ' sim';
-      txt = `<b>Às ${h}: ESTAVA na sua live</b> — visto das ${hora(m.e.de)} às ${hora(m.e.ate)}.`; }
-    else if (m.estado === 'provavel') { cls = ' provavel';
-      txt = `<b>Às ${h}: provável</b> — visto ${m.min} min ${m.antes?'antes':'depois'} (${hora(m.e.de)}–${hora(m.e.ate)}).`; }
-    else { txt = `<b>Às ${h}: não visto na live nesse horário.</b> A vez mais próxima foi ${m.min} min de distância.`; }
-    topo = `<div class="veredito${cls}"><div class="t">${txt}</div>
-      <div class="obs">Quem assiste calado não gera mensagem — <b>ausência aqui não é prova de ausência</b>.</div>
-      ${fita(p.naLive, srv, quando)}</div>`;
-  }
-  onde.innerHTML = topo + `<button class="dois" type="button" data-nome="${esc(p.nome)}">
-    <div class="par">${esc(q)} <span style="color:var(--ink3)">&#8596;</span> ${esc(p.nome)}
-      <span class="pc mono">${Math.round(r.confianca*100)}%</span></div>
-    <div class="det">${esc(r.motivo)} · assistiu <b class="mono">${hhmm(p.minutosAssistidos)}</b> no total
-      · clique para o log completo</div></button>`;
-  for (const b of onde.querySelectorAll('.dois')) b.onclick = () => abrirLog(b.dataset.nome);
-}
-
-function abrirLog(nome) {
-  const p = porNome.get(nome);
-  if (!p) return;
-  const srv = cenario.noServidor.filter(s => idxLive.procurar(s.nome)?.entrada.nome === nome);
-  const linhas = [
-    ...p.naLive.map(x => ({ onde:'live', ...x })),
-    ...srv.map(x => ({ onde:'servidor', ...x })),
-  ].sort((a,b) => b.de - a.de);
-  const noJogo = srv[0];
-  const onde = document.getElementById('resultado');
+  const onde = document.getElementById('logex');
   onde.innerHTML = `<div class="log"><button class="fechar" type="button">&times;</button>
-    <h3>${esc(nome)}</h3>
-    <div class="resumo">${linhas.length} entradas · <b class="mono">${hhmm(p.minutosAssistidos)}</b> assistidos no total
-      · nível ${p.nivel} · horários em ${esc(Intl.DateTimeFormat().resolvedOptions().timeZone)}</div>
-    ${noJogo ? `<div class="quem">No jogo se chama <b>${esc(noJogo.nome)}</b>, em ${esc(noJogo.servidor)}.
-      No serviço de verdade, <span class="link">este link abre o perfil dele no BattleMetrics</span> —
-      é de lá que saem o histórico de nomes e a SteamID.</div>` : ''}
+    <h3>${esc(n)} <span class="marcaS">EXEMPLO</span></h3>
+    <div class="resumo">${linhas.length} entradas · horários em
+      ${esc(Intl.DateTimeFormat().resolvedOptions().timeZone)}</div>
+    <div class="veredito${v.c}"><div class="t">${v.t}</div>
+      <div class="obs">Quem assiste calado não gera mensagem — <b>ausência aqui não é prova de ausência</b>.</div></div>
     <table><tbody>${linhas.map(l => `<tr>
       <td class="onde ${l.onde}">&#9679; ${l.onde}</td>
       <td class="mono">${hora(l.de)} <span class="seta">&#8594;</span> ${hora(l.ate)}</td>
       <td class="dur mono">${Math.round((l.ate-l.de)/M)} min</td>
-      <td class="dur">${l.onde==='servidor'
-        ? `<span class="link">quem é &#8599;</span>` : (l.fonte==='tempo' ? '&times; tempo assistido' : 'mensagens no chat')}</td>
+      <td class="dur">${l.onde==='servidor' ? esc(l.nome) : (l.fonte==='tempo' ? 'tempo assistido' : 'mensagens')}</td>
     </tr>`).join('')}</tbody></table>
-    ${fita(p.naLive, srv, AGORA)}</div>`;
+    ${fita(faixas, srv, EX.morte)}
+    <div class="quem">No serviço de verdade, a coluna do servidor traz o <b>nome no jogo</b> e um
+      link para o perfil no BattleMetrics — de onde saem o histórico de nomes e a SteamID.</div>
+  </div>`;
   onde.querySelector('.fechar').onclick = () => { onde.innerHTML = ''; };
   onde.scrollIntoView({ behavior:'smooth', block:'nearest' });
 }
 
-/* atalhos de horário, derivados da noite que está na tela */
-const alvos = [0, 30, 60, 120, 180];
-document.getElementById('atalhos').innerHTML = alvos.map(min => {
-  const d = new Date(AGORA - min*M);
-  const hm = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-  return `<button type="button" data-h="${hm}">${min===0?'agora':min+' min atrás'}</button>`;
-}).join('');
+/* atalhos: disfarces reais aplicados a nomes reais da audiência */
+const base = [...DADOS.audiencia].sort((a,b)=>(b.minutosAssistidos||0)-(a.minutosAssistidos||0))[0].nome;
+const disfarces = [
+  base,
+  `[BR] ${base.toUpperCase().replace(/I/g,'1').replace(/O/g,'0')}`,
+  `xX_${base}_Xx`,
+  'tchubita',
+];
+document.getElementById('atalhos').innerHTML = disfarces.map(d =>
+  `<button type="button" data-d="${esc(d)}">${esc(d)}</button>`).join('');
 for (const b of document.querySelectorAll('.atalhos button')) {
-  b.onclick = () => { document.getElementById('quando').value = b.dataset.h; procurar(); };
+  b.onclick = () => { document.getElementById('q').value = b.dataset.d; cruzar(); };
 }
 
-document.getElementById('ir').onclick = procurar;
-for (const id of ['q','quando']) {
-  document.getElementById(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') procurar(); });
-}
+document.getElementById('ir').onclick = cruzar;
+document.getElementById('q').addEventListener('keydown', (e) => { if (e.key === 'Enter') cruzar(); });
 
 const raiz = document.documentElement;
 document.getElementById('tema').onclick = () => {
@@ -389,6 +369,7 @@ document.getElementById('tema').onclick = () => {
   raiz.dataset.theme = escuroAgora ? 'light' : 'dark';
 };
 
-desenharDois();
-desenharAgora();
+desenharAudiencia();
+desenharExemplo();
+
 </script>
