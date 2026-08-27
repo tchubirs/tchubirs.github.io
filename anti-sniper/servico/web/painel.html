@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Detetive</title>
+<style>
+  :root{color-scheme:dark;--fundo:#0f1113;--caixa:#16191c;--linha:#262b30;
+        --texto:#e8e8e8;--fraco:#8b949e;--alerta:#ff5f56;--ok:#53fc18}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--fundo);color:var(--texto);
+       font:15px/1.6 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  .topo{border-bottom:1px solid var(--linha);padding:16px 22px;display:flex;
+        align-items:baseline;gap:12px}
+  .topo h1{margin:0;font-size:17px;letter-spacing:.3px}
+  .topo .estado{margin-left:auto;font-size:13px;color:var(--fraco)}
+  .ponto{display:inline-block;width:8px;height:8px;border-radius:50%;
+         background:#444;margin-right:6px;vertical-align:middle}
+  .ponto.vivo{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+  main{max-width:860px;margin:0 auto;padding:22px}
+  .cartoes{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+           gap:10px;margin-bottom:20px}
+  .cartao{background:var(--caixa);border:1px solid var(--linha);border-radius:11px;padding:13px 15px}
+  .cartao b{display:block;font-size:26px;font-weight:600;font-variant-numeric:tabular-nums}
+  .cartao span{color:var(--fraco);font-size:12px}
+  .cartao.velho b{color:#f0a35e}
+  h2{font-size:14px;color:var(--fraco);font-weight:600;text-transform:uppercase;
+     letter-spacing:.7px;margin:26px 0 10px}
+  .alerta{background:#1a1214;border:1px solid #4a2226;border-left:3px solid var(--alerta);
+          border-radius:10px;padding:12px 14px;margin-bottom:8px}
+  .alerta .par{font-weight:600;font-size:15px}
+  .alerta .det{color:var(--fraco);font-size:13px;margin-top:4px}
+  .pc{color:#ff8a7a;font-variant-numeric:tabular-nums;font-weight:600}
+  .vazio{background:var(--caixa);border:1px solid var(--linha);border-radius:11px;
+         padding:20px;color:var(--fraco);font-size:14px}
+  .busca{display:flex;gap:8px;margin-bottom:8px}
+  .busca input{flex:1;background:var(--caixa);border:1px solid var(--linha);
+               border-radius:9px;padding:11px 13px;color:var(--texto);font-size:14px}
+  .busca button{background:var(--ok);color:#07160a;border:0;border-radius:9px;
+                padding:11px 20px;font-weight:600;font-size:14px;cursor:pointer}
+  .rodape{color:#6f7a84;font-size:12px;margin-top:26px;line-height:1.6;
+          border-top:1px solid var(--linha);padding-top:16px}
+</style>
+</head>
+<body>
+  <div class="topo">
+    <h1>Detetive</h1>
+    <span style="color:var(--fraco);font-size:13px" id="canal"></span>
+    <span class="estado"><span class="ponto" id="ponto"></span><span id="estado">ligando…</span></span>
+  </div>
+  <main>
+    <div class="cartoes">
+      <div class="cartao" id="c-servidor"><b>—</b><span>no servidor</span></div>
+      <div class="cartao" id="c-audiencia"><b>—</b><span>já assistiram</span></div>
+      <div class="cartao" id="c-alertas"><b>—</b><span>coincidências</span></div>
+    </div>
+
+    <h2>Procurar um jogador</h2>
+    <div class="busca">
+      <input id="nome" placeholder="nome de quem te matou, como aparece no jogo" autocomplete="off">
+      <button id="ir">Procurar</button>
+    </div>
+    <div id="resultado"></div>
+
+    <h2>Quem está no servidor agora e já assistiu</h2>
+    <div id="alertas"><div class="vazio">carregando…</div></div>
+
+    <div class="rodape">
+      Assistir não é crime. Isto mostra presença, não culpa — quem julga o
+      contexto é você, que jogou a partida.<br>
+      Ninguém aparecer aqui <b>não inocenta</b>: a pessoa pode usar nome
+      diferente nos dois lados.
+    </div>
+  </main>
+<script src="painel.js"></script>
+</body>
+</html>

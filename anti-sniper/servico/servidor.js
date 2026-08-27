@@ -9,6 +9,8 @@
  */
 
 const http = require('node:http');
+const fs = require('node:fs');
+const path = require('node:path');
 const { createVerify, createPublicKey } = require('node:crypto');
 const { abrir } = require('./banco');
 const { normalizar, comparar } = require('../src/nomes');
@@ -228,7 +230,27 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
     if (req.method === 'GET' && url.pathname === '/api/alertas') {
       const canalId = url.searchParams.get('canal');
       if (!canalId) return responder(400, { erro: 'informe canal' });
-      return responder(200, { alertas: cruzarAgora(canalId) });
+      const noServidor = listarNoServidor.all(canalId);
+      const maisRecente = noServidor.reduce((m, x) => Math.max(m, x.visto_em || 0), 0);
+      return responder(200, {
+        alertas: cruzarAgora(canalId),
+        noServidor: noServidor.length,
+        audiencia: listarPresenca.all(canalId).length,
+        // Dado velho tem que aparecer como velho no painel: acusar com
+        // informação de meia hora atrás é o erro mais fácil de não notar.
+        servidorVelho: maisRecente > 0 && agora() - maisRecente > 15 * 60 * 1000,
+        servidorVistoEm: maisRecente || null,
+      });
+    }
+
+    if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '/painel.js')) {
+      const arquivo = url.pathname === '/' ? 'painel.html' : 'painel.js';
+      const tipo = arquivo.endsWith('.html') ? 'text/html' : 'application/javascript';
+      try {
+        const corpo = fs.readFileSync(path.join(__dirname, 'web', arquivo));
+        res.writeHead(200, { 'Content-Type': `${tipo}; charset=utf-8` });
+        return res.end(corpo);
+      } catch { return responder(404, { erro: 'painel não encontrado' }); }
     }
 
     if (req.method === 'GET' && url.pathname === '/saude') {
