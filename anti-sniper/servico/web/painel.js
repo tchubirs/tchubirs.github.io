@@ -64,7 +64,9 @@ function desenharAgora(lista, onde) {
   }
   onde.innerHTML = `<div class="pessoas">${lista.map((p) => `
     <button class="pessoa" data-nome="${esc(p.nome)}">
-      <b>${esc(p.nome)}</b>
+      <b>${esc(p.nome)}${p.fonte === 'tempo' ? '<span class="selo tempo">calado</span>'
+        : p.fonte === 'ambos' ? '<span class="selo">msg + tempo</span>'
+        : '<span class="selo">falou</span>'}</b>
       <span>desde ${hora(p.desde)} · ${p.minutos} min</span><br>
       <span class="${p.calada <= 2 ? 'viva' : ''}">${
         p.calada <= 2 ? 'falando agora' : `calado há ${p.calada} min`}</span>
@@ -122,11 +124,20 @@ async function atualizar() {
     const da = await ra.json();
     desenharAgora(da.naLive || [], document.getElementById('agora'));
     desenharDois(da.nosDois || [], document.getElementById('nosdois'));
-    document.getElementById('cobertura').innerHTML = da.coleta?.ligada
-      ? 'Contando também <b>quem assiste calado</b>, pelo StreamElements '
-        + `(<code>${esc(da.coleta.fonte)}</code>).`
-      : 'Só aparece quem <b>escreveu</b> no chat. Para pegar quem assiste calado, '
+    const cob = document.getElementById('cobertura');
+    // A frase dele, que muda o produto inteiro: "nenhum stream sniper fala
+    // no chat". Deixar isso implícito seria vender cegueira como cobertura.
+    if (da.coleta?.ligada) {
+      cob.className = 'cobertura';
+      cob.innerHTML = 'Contando <b>quem assiste calado</b> pelo tempo assistido do StreamElements'
+        + ` (<code>${esc(da.coleta.fonte)}</code>). Quem só aparece por mensagem vem marcado.`
+        + '<br>Ainda invisível: quem assiste <b>deslogado</b>. Isso nenhuma fonte vê.';
+    } else {
+      cob.className = 'cobertura cego';
+      cob.innerHTML = '<b>Atenção:</b> aqui só aparece quem <b>escreveu</b> no chat — '
+        + 'e sniper normalmente não escreve.<br>Para enxergar quem assiste calado, '
         + 'ligue a Fidelidade no StreamElements e conecte o canal.';
+    }
     document.getElementById('ponto').className = 'ponto vivo';
     document.getElementById('estado').textContent = 'ao vivo';
     cartao('c-servidor', d.noServidor ?? '—', d.servidorVelho);

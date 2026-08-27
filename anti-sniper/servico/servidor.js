@@ -202,6 +202,7 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
       ultimoSinal: e.fim_em,
       minutos: Math.max(1, Math.round((e.fim_em - e.inicio_em) / 60000)),
       sinais: e.amostras,
+      fonte: e.fonte || 'chat',
       // Quanto tempo faz que ela não dá sinal. Alguém 12 min calado ainda
       // conta como presente, mas quem olha precisa ver a diferença.
       calada: Math.round((tMs - e.fim_em) / 60000),
@@ -627,8 +628,12 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
         nosDois: nosDois(canalId, t),
         // Cobertura, dita na cara: sem coleta ligada só existe quem
         // escreve, e o painel não pode deixar isso implícito.
+        // Cobertura, dita na cara. Ele apontou o que derruba o produto se
+        // ficar implícito: "nenhum stream sniper fala no chat". O chat vê
+        // só quem escreve, e o sniper é justamente quem não escreve.
         coleta: {
-          ligada: coletores.get(canalId)?.ligado === true,
+          ligada: coletores.get(canalId)?.ligado === true
+            || coletores.get(`alvos:${canalId}`)?.ligado === true,
           fonte: c?.se_canal || null,
         },
       });

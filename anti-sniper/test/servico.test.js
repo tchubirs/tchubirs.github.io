@@ -635,3 +635,17 @@ test('nos dois AO MESMO TEMPO — não "já assistiu algum dia"', () => {
   // FINIK aparece no cruzamento histórico, mas não no "agora".
   assert.ok(s.cruzarAgora('c1').some((a) => a.jogador === 'FINIK'));
 });
+
+test('o "agora" separa quem falou de quem só foi medido', () => {
+  // "Nenhum stream sniper fala no chat" — então a lista precisa deixar claro
+  // qual das duas coisas cada linha é. Misturar esconderia a cegueira.
+  const s = bancada();
+  s.ingerir('c1', 'chat.message', msg('falante', 1), T - 2 * MIN);
+  s.ver('c1', 'live', 'calado', T - 8 * MIN, null, 'tempo');
+  s.ver('c1', 'live', 'calado', T - 2 * MIN, null, 'tempo');
+
+  const a = s.agoraNa('c1', 'live', T);
+  const por = Object.fromEntries(a.map((p) => [p.nome, p.fonte]));
+  assert.equal(por.falante, 'chat');
+  assert.equal(por.calado, 'tempo');
+});
