@@ -14,6 +14,8 @@ const path = require('node:path');
 const { createVerify, createPublicKey } = require('node:crypto');
 const { abrir } = require('./banco');
 const { normalizar, comparar } = require('../src/nomes');
+const { resolverEntrada, chavesDeIdentidade } = require('../src/steam');
+const { verificarDiscord, tratar } = require('./discord');
 
 const CHAVE_KICK = `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAq/+l1WnlRrGSolDMA+A8
@@ -49,7 +51,10 @@ function verificar(cabecalhos, corpoBruto, chavePem = CHAVE_KICK, agoraMs = Date
   return { ok: true, id, tipo: pega('Kick-Event-Type'), em: t };
 }
 
-function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Date.now } = {}) {
+function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Date.now,
+                 chaveDiscord = process.env.DISCORD_PUBLIC_KEY,
+                 appDiscord = process.env.DISCORD_APP_ID,
+                 canalDoServidor, buscar = globalThis.fetch } = {}) {
   const db = abrir(caminhoBanco);
 
   const jaVisto = db.prepare('SELECT 1 FROM evento_visto WHERE id = ?');
@@ -152,6 +157,50 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
     return achados;
   }
 
+  /**
+   * Uma entrada, dois caminhos.
+   *
+   * Se veio SteamID ou link, busca TODOS os nomes que a conta já usou e
+   * cruza cada um. Se veio um nome solto, cruza direto — é o caso de quem
+   * acabou de morrer e só tem o nome que apareceu na tela.
+   */
+  async function procurar(canalId, entrada, { minimo = 0.7, buscar } = {}) {
+    const steamId = await resolverEntrada(entrada, buscar).catch(() => null);
+    if (!steamId) return { ...consultar(canalId, entrada, { minimo }), tipo: 'nome' };
+
+    const hist = await chavesDeIdentidade(steamId, buscar);
+    // Perfil privado NÃO é perfil limpo: não se olhou nada, e dizer
+    // "não encontrado" aqui soaria como inocência.
+    if (hist.perfil?.privado) {
+      return {
+        tipo: 'steamid', steamId, jogador: steamId, historico: [],
+        conclusao: 'inconclusivo',
+        motivo: 'perfil PRIVADO — não dá para ver nome nem histórico. Isso não é sinal de nada, nem a favor nem contra',
+        evidencias: [],
+      };
+    }
+    // URL personalizada só de dígitos ou lixo aleatório não é apelido de
+    // ninguém, e cruzá-la só produziria falso positivo.
+    const util = (c) => c && !/^[0-9]{6,}$/.test(c) && !/^[0-9a-z]{12,}$/i.test(c);
+    const nomes = (hist.chaves || []).filter(util);
+
+    const vistos = new Map();
+    for (const n of nomes) {
+      for (const e of consultar(canalId, n, { minimo }).evidencias) {
+        const antes = vistos.get(e.espectador);
+        if (!antes || antes.confianca < e.confianca) vistos.set(e.espectador, { ...e, nomeSteamQueBateu: n });
+      }
+    }
+    const evidencias = [...vistos.values()].sort((a, b) => b.confianca - a.confianca);
+    return {
+      tipo: 'steamid', steamId,
+      jogador: hist.perfil?.nome || steamId,
+      historico: nomes,
+      conclusao: evidencias.length ? 'esteve na sua live' : 'não encontrado na sua audiência',
+      evidencias,
+    };
+  }
+
   /** Cruza um nome de jogador contra tudo que já foi gravado do canal. */
   function consultar(canalId, nomeJogador, { minimo = 0.7 } = {}) {
     const achados = [];
@@ -220,11 +269,56 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
       return;
     }
 
+    if (req.method === 'POST' && url.pathname === '/discord') {
+      const pedacos = [];
+      req.on('data', (c) => pedacos.push(c));
+      req.on('end', async () => {
+        const bruto = Buffer.concat(pedacos);
+        // O Discord TESTA com assinatura inválida ao cadastrar o bot;
+        // responder 401 aqui é obrigatório para o cadastro passar.
+        if (!verificarDiscord(req.headers, bruto, chaveDiscord)) {
+          res.writeHead(401); return res.end('assinatura inválida');
+        }
+        let corpo;
+        try { corpo = JSON.parse(bruto.toString('utf8')); } catch { return responder(400, { erro: 'json inválido' }); }
+
+        const mapear = canalDoServidor
+          || ((g) => db.prepare('SELECT id FROM canal WHERE discord_guild = ?').get(g)?.id ?? null);
+        let r;
+        try { r = tratar(corpo, { canalDoServidor: mapear }); }
+        catch { return responder(500, { erro: 'falha ao tratar interação' }); }
+
+        responder(200, r.resposta);
+        // Edita a mensagem depois de responder: o prazo de 3s do Discord já
+        // foi cumprido, e a consulta à Steam pode levar o tempo que levar.
+        if (r.seguir) {
+          const dados = await r.seguir((c, q) => procurar(c, q, { buscar }));
+          await buscar(`https://discord.com/api/v10/webhooks/${appDiscord}/${corpo.token}/messages/@original`,
+            { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) })
+            .catch((e) => console.error('[discord] não consegui editar a resposta:', e.message));
+        }
+      });
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/api/consultar') {
       const canalId = url.searchParams.get('canal');
       const nome = url.searchParams.get('nome');
       if (!canalId || !nome) return responder(400, { erro: 'informe canal e nome' });
       return responder(200, consultar(canalId, nome));
+    }
+
+    // Uma caixa de busca só, porque é uma pergunta só. O que o streamer tem
+    // na mão varia — às vezes o nome de quem matou, às vezes o link do
+    // perfil — e obrigar a escolher a aba certa antes de perguntar é o tipo
+    // de atrito que faz a ferramenta não ser aberta no momento da suspeita.
+    if (req.method === 'GET' && url.pathname === '/api/procurar') {
+      const canalId = url.searchParams.get('canal');
+      const q = (url.searchParams.get('q') || '').trim();
+      if (!canalId || !q) return responder(400, { erro: 'informe canal e q' });
+      procurar(canalId, q).then((r) => responder(200, r),
+        (e) => responder(502, { erro: String(e.message || e) }));
+      return;
     }
 
     // A audiência crua, para quem quer cruzar do lado de fora — é assim que
@@ -275,7 +369,7 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
     responder(404, { erro: 'não encontrado' });
   });
 
-  return { servidor, db, ingerir, consultar, registrarPresenca, verificar,
+  return { servidor, db, ingerir, consultar, procurar, registrarPresenca, verificar,
            guardarServidor, cruzarAgora };
 }
 

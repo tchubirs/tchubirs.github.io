@@ -20,8 +20,12 @@ function abrir(caminho = 'detetive.db') {
       id           TEXT PRIMARY KEY,
       plataforma   TEXT NOT NULL,
       slug         TEXT NOT NULL,
-      criado_em    INTEGER NOT NULL
+      criado_em    INTEGER NOT NULL,
+      -- Qual servidor do Discord fala com este canal. Sem isso, o /detetive
+      -- não sabe de quem é a audiência que ele deve consultar.
+      discord_guild TEXT
     );
+    CREATE INDEX IF NOT EXISTS idx_canal_guild ON canal (discord_guild);
 
     -- Uma linha por pessoa por canal. 'blocos' conta presença creditada,
     -- não mensagens: contar mensagem premiaria quem fala muito e ignoraria
@@ -68,6 +72,13 @@ function abrir(caminho = 'detetive.db') {
       visto_em INTEGER NOT NULL
     );
   `);
+
+  // Banco criado antes da coluna existir: acrescenta sem perder nada.
+  const colunas = db.prepare('PRAGMA table_info(canal)').all().map((c) => c.name);
+  if (!colunas.includes('discord_guild')) {
+    db.exec('ALTER TABLE canal ADD COLUMN discord_guild TEXT');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_canal_guild ON canal (discord_guild)');
+  }
   return db;
 }
 

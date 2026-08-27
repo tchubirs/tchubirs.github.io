@@ -12,7 +12,8 @@ const PUB = publicKey.export({ type: 'spki', format: 'pem' });
 
 function bancada() {
   const s = criar({ caminhoBanco: ':memory:', chavePem: PUB, agora: () => T });
-  s.db.prepare('INSERT INTO canal VALUES (?,?,?,?)').run('c1', 'kick', 'tchubi', T);
+  s.db.prepare('INSERT INTO canal (id,plataforma,slug,criado_em,discord_guild) VALUES (?,?,?,?,?)')
+    .run('c1', 'kick', 'tchubi', T, 'g1');
   return s;
 }
 function assinado(corpoObj, { id = 'ev1', ts = new Date(T).toISOString() } = {}) {
@@ -91,25 +92,48 @@ test('a resposta NUNCA diz que a pessoa é sniper', () => {
 });
 
 test('resposta do Discord é privada — acusação pública vira linchamento', () => {
-  const s = bancada();
-  s.ingerir('c1', 'chat.message', msg('FINIK', 1), T);
   const r = d.tratar(
-    { type: 2, guild_id: 'g1', data: { name: 'detetive', options: [{ name: 'nome', value: 'FINIK' }] } },
-    { consultar: (c, n) => s.consultar(c, n), canalDoServidor: () => 'c1' },
+    { type: 2, guild_id: 'g1', data: { name: 'detetive', options: [{ name: 'quem', value: 'FINIK' }] } },
+    { canalDoServidor: () => 'c1' },
   );
-  assert.equal(r.data.flags, 64, 'sem flags:64 a resposta aparece para o servidor inteiro');
+  assert.equal(r.resposta.data.flags, 64, 'sem flags:64 a resposta aparece para o servidor inteiro');
 });
 
 test('Discord responde ao PING de verificação', () => {
-  assert.deepEqual(d.tratar({ type: 1 }, {}), { type: 1 });
+  assert.deepEqual(d.tratar({ type: 1 }, {}).resposta, { type: 1 });
 });
 
 test('servidor do Discord sem canal ligado avisa em vez de quebrar', () => {
   const r = d.tratar(
-    { type: 2, guild_id: 'gX', data: { name: 'detetive', options: [{ name: 'nome', value: 'X' }] } },
-    { consultar: () => { throw new Error('não deveria chegar aqui'); }, canalDoServidor: () => null },
+    { type: 2, guild_id: 'gX', data: { name: 'detetive', options: [{ name: 'quem', value: 'X' }] } },
+    { canalDoServidor: () => null },
   );
-  assert.match(r.data.content, /não está ligado/);
+  assert.match(r.resposta.data.content, /não está ligado/);
+  assert.equal(r.seguir, undefined, 'sem canal não vale gastar consulta nenhuma');
+});
+
+test('o Discord recebe resposta ANTES da consulta terminar', async () => {
+  // O Discord derruba a interação em 3s. Se a Steam demorar 5, a resposta
+  // tem que já ter saído — senão o comando some da tela do usuário.
+  const s = bancada();
+  s.ingerir('c1', 'chat.message', msg('FINIK', 1), T);
+  const r = d.tratar(
+    { type: 2, guild_id: 'g1', data: { name: 'detetive', options: [{ name: 'quem', value: 'FINIK' }] } },
+    { canalDoServidor: () => 'c1' },
+  );
+  assert.equal(r.resposta.type, 5, 'type 5 = "pensando", reserva a resposta');
+  const final = await r.seguir((c, q) => s.procurar(c, q, { buscar: async () => { throw new Error('rede'); } }));
+  assert.match(final.content, /FINIK/);
+  assert.match(final.content, /esteve na sua live/);
+});
+
+test('consulta que falha vira aviso, não comando quebrado', async () => {
+  const r = d.tratar(
+    { type: 2, guild_id: 'g1', data: { name: 'detetive', options: [{ name: 'quem', value: 'X' }] } },
+    { canalDoServidor: () => 'c1' },
+  );
+  const final = await r.seguir(async () => { throw new Error('Steam fora do ar'); });
+  assert.match(final.content, /Steam fora do ar/);
 });
 
 test('assinatura do Discord: válida passa, inválida é recusada', () => {
@@ -223,6 +247,61 @@ test('o índice do PeekRust acha na audiência do serviço o mesmo que /api/cons
     const achado = new Indice(lista).procurar('D1per');
     assert.equal(achado.entrada.nome, 'diper');
     assert.equal(achado.entrada.minutosAssistidos, s.consultar('c1', 'D1per').evidencias[0].minutosAssistidos);
+  } finally {
+    await new Promise((ok) => s.servidor.close(ok));
+  }
+});
+
+test('/discord: assinatura confere, responde na hora e edita depois', async () => {
+  const { publicKey: pk, privateKey: sk } = generateKeyPairSync('ed25519');
+  const bruta = pk.export({ type: 'spki', format: 'der' });
+  const hexPub = bruta.subarray(bruta.length - 32).toString('hex');
+
+  const editadas = [];
+  const s = criar({
+    caminhoBanco: ':memory:', chavePem: PUB, agora: () => T,
+    chaveDiscord: hexPub, appDiscord: 'app1',
+    // Steam de mentira: devolve um histórico com um nome que está na audiência.
+    buscar: async (url, op) => {
+      if (op?.method === 'PATCH') { editadas.push(JSON.parse(op.body)); return { ok: true }; }
+      if (url.includes('ajaxaliases')) {
+        return { ok: true, json: async () => [{ newname: 'D1per', timechanged: 'x' }] };
+      }
+      return { ok: true, text: async () => '<profile><steamID>Killer</steamID><privacyState>public</privacyState></profile>' };
+    },
+  });
+  s.db.prepare('INSERT INTO canal (id,plataforma,slug,criado_em,discord_guild) VALUES (?,?,?,?,?)')
+    .run('c1', 'kick', 'tchubi', T, 'g1');
+  s.ingerir('c1', 'chat.message', msg('diper', 2), T);
+
+  await new Promise((ok) => s.servidor.listen(0, '127.0.0.1', ok));
+  const base = `http://127.0.0.1:${s.servidor.address().port}/discord`;
+  const enviar = (obj, assinar = true) => {
+    const corpo = Buffer.from(JSON.stringify(obj), 'utf8');
+    const ts = String(Math.floor(T / 1000));
+    const assin = assinar
+      ? sign(null, Buffer.concat([Buffer.from(ts), corpo]), sk).toString('hex')
+      : 'aa'.repeat(64);
+    return fetch(base, { method: 'POST', body: corpo,
+      headers: { 'X-Signature-Ed25519': assin, 'X-Signature-Timestamp': ts } });
+  };
+
+  try {
+    // O Discord testa com assinatura inválida ao cadastrar o bot.
+    assert.equal((await enviar({ type: 1 }, false)).status, 401);
+    assert.deepEqual(await (await enviar({ type: 1 })).json(), { type: 1 });
+
+    const r = await enviar({ type: 2, guild_id: 'g1', token: 'tok',
+      data: { name: 'detetive', options: [{ name: 'quem', value: '76561198000000001' }] } });
+    assert.deepEqual(await r.json(), { type: 5, data: { flags: 64 } });
+
+    // A edição sai depois da resposta; espera ela chegar.
+    for (let i = 0; i < 50 && !editadas.length; i++) await new Promise((ok) => setTimeout(ok, 20));
+    assert.equal(editadas.length, 1, 'a mensagem tem que ser editada com o resultado');
+    assert.match(editadas[0].content, /esteve na sua live/);
+    assert.match(editadas[0].content, /diper/);
+    assert.match(editadas[0].content, /quando se chamava "D1per"/);
+    assert.doesNotMatch(editadas[0].content, /sniper|culpad|banir/i);
   } finally {
     await new Promise((ok) => s.servidor.close(ok));
   }

@@ -116,4 +116,31 @@ async function chavesDeIdentidade(steamId64, buscar = globalThis.fetch) {
   return { steamId: steamId64, chaves: [...chaves], perfil, historico: hist.nomes };
 }
 
-module.exports = { ehSteamId64, historicoDeNomes, perfilPublico, chavesDeIdentidade };
+/**
+ * Aceita o que a pessoa tiver na mão e devolve a SteamID64.
+ *
+ * Ninguém tem a SteamID decorada. O que se tem é o link do perfil, copiado
+ * do Steam ou do BattleMetrics — e exigir "só os 17 dígitos" transformaria
+ * o produto num quebra-cabeça antes da primeira pergunta.
+ *
+ * Aceita: 17 dígitos · /profiles/<id> · /id/<apelido> (resolve pelo XML).
+ */
+async function resolverEntrada(texto, buscar = globalThis.fetch) {
+  const t = String(texto || '').trim();
+  if (ehSteamId64(t)) return t;
+
+  const porPerfil = t.match(/steamcommunity\.com\/profiles\/(7656119\d{10})/);
+  if (porPerfil) return porPerfil[1];
+
+  // /id/<apelido> não tem a SteamID no link; o XML do próprio perfil tem.
+  const m = t.match(/steamcommunity\.com\/id\/([A-Za-z0-9_.\-]+)/);
+  const apelido = m ? m[1] : (/^[A-Za-z0-9_.\-]{2,32}$/.test(t) && !/^\d+$/.test(t) ? null : null);
+  if (!apelido) return null;
+  const r = await buscar(`https://steamcommunity.com/id/${encodeURIComponent(apelido)}?xml=1`,
+    { headers: { 'User-Agent': UA } });
+  if (!r.ok) return null;
+  const id = (await r.text()).match(/<steamID64>(7656119\d{10})<\/steamID64>/);
+  return id ? id[1] : null;
+}
+
+module.exports = { ehSteamId64, resolverEntrada, historicoDeNomes, perfilPublico, chavesDeIdentidade };
