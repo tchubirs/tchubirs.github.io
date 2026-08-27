@@ -3,14 +3,20 @@
 Atualizado por uma rotina semanal. Toda linha aqui foi **medida**, não deduzida.
 Se um item não tem número com fonte, ele fica em "a verificar" até ter.
 
-**Última varredura:** 27/08/2026
+**Última varredura:** 27/08/2026 (2ª rodada)
 
 ---
 
 ## Perfil do operador (não viole isto ao recomendar)
 
-- Reside na **França**. Cidadania **portuguesa**. **Nativo em português**, e isso
-  é um ativo que vale dinheiro em treinamento de IA. Fala também ES, EN, FR.
+- Reside na **França**. Cidadania **portuguesa**. **Nativo em português.**
+  ⚠️ **NÃO fala francês** — o brief dele dizia PT/ES/EN/FR, mas ele corrigiu em
+  27/08. Não proponha nada que dependa de francês.
+- ⚠️ **O português dele é precificado no mercado BARATO.** Tradução PT-BR paga
+  US$ 0,06–0,08/palavra, das mais baixas do mercado, porque ele competiria com
+  tradutores morando no Brasil enquanto paga custo de vida na França. O mesmo
+  vale para locução. **Ser nativo em PT só compensa onde o pagamento é por hora
+  em USD (treinamento de IA), não onde é por palavra.**
 - **TEM AUDIÊNCIA.** Isto foi excluído do escopo por engano durante um dia
   inteiro de pesquisa, e foi o maior erro cometido aqui. Números verificados
   em 27/08/2026:
@@ -46,15 +52,12 @@ Se um item não tem número com fonte, ele fica em "a verificar" até ter.
 | **Mindrift** (treinar IA) | US$10–35/h | escrever bem | medido 26/08 |
 | **Alignerr** | US$7–30/h | idem | medido 26/08 |
 | **Treinar IA em português** | acima da média por idioma nativo | ser nativo | medido 26/08 |
-| **Patrocínio na Twitch** ⭐ | **US$ 50–1.000/hora** conforme o ACV; retainer US$ 200–4.000/mês | 40k seguidores (tem) + achar o ACV no painel | medido 27/08 |
+| **DataAnnotation** | US$ 15–40/h | teste de escrita na entrada | medido 26/08 |
 
 **Teto do conjunto de microtarefas: €200–600/mês.** Paga rápido, não muda a vida.
 
-**Patrocínio é outra ordem de grandeza** e é o único caminho aqui onde o ativo
-real dele (40.005 seguidores na Twitch + participação no Rust Kick Off 2, torneio
-de US$ 100 mil com 150 criadores) vira dinheiro direto. Marca paga por **média de
-espectadores ao vivo**, não por seguidor — o ACV está no painel dele e é o único
-número que faltava. Material pronto em `patrocinio/`.
+**Candidaturas prontas para colar em `candidaturas/COLAR-E-ENVIAR.md`.**
+~1h08 de trabalho dele para 6 cadastros. Nada disso foi feito ainda.
 
 ---
 
@@ -83,6 +86,11 @@ conseguir falar sobre o que foi entregue.
 | **pSEO / sites com IA** | política de spam do Google define *scaled content abuse* como exatamente isso | ago/2026 |
 | **Música IA no Spotify** | piso de 1.000 streams por faixa/12 meses ou zero | ago/2026 |
 | **Mercor / Malt como engenheiro** | exige prova de código que ele não passa. Fingir seria fraude | 26/08/2026 |
+| **Patrocínio na Twitch** | **80 espectadores médios, US$ 2/hora na Kick — dado dele, vivido.** As faixas de US$ 50–1.000/h que eu tinha citado são preço de mercado que ninguém está oferecendo a ele nesse tamanho. Fluxo de propostas não existe num nicho de Rust em PT com 80 ACV | 27/08/2026 |
+| **Clipes / vídeo curto** | Shorts de gaming pagam **US$ 0,01–0,07 por mil views**; mediana dele é 2.205 views = **~US$ 0,05 por clipe**. Streaming a US$2/h paga ~100× mais. E 144 vídeos no TikTok → 1.550 seguidores já era a prova | 27/08/2026 |
+| **Coaching de Rust** | Ele é elite de verdade (venceu o Kick Off 1, 3× Twitch Rivals), mas a audiência dele é brasileira e **não tem poder de compra** para €20–40/h | 27/08/2026 |
+| **Localização / locução PT-BR** | PT-BR é dos idiomas que **menos** pagam; competiria com quem mora no Brasil. Entrada ainda exige 1–3 anos de experiência e teste | 27/08/2026 |
+| **Qualquer caminho em francês** | Ele não fala francês | 27/08/2026 |
 
 ---
 
