@@ -98,8 +98,7 @@ h2 .qtd{color:var(--ink3);font-weight:400;font-size:14px}
 .vazio{background:var(--surf);border:1px solid var(--line);border-radius:10px;
   padding:16px;color:var(--ink2);font-size:13.5px;line-height:1.6;margin-top:10px}
 .vazio b{color:var(--ink)}
-</style>
-<div class="topo">
+</style><div class="topo">
   <h1>Detetive</h1>
   <span class="canal mono">tchubi · kick</span>
   <div class="dir"><button class="tema" id="tema" type="button">tema</button></div>
@@ -108,7 +107,7 @@ h2 .qtd{color:var(--ink3);font-weight:400;font-size:14px}
 <main>
   <h2>Quem você quer conferir?</h2>
   <div class="busca">
-    <input id="q" placeholder="nome, SteamID ou link do perfil" autocomplete="off" spellcheck="false">
+    <input id="q" placeholder="clique num dos exemplos abaixo" autocomplete="off" spellcheck="false">
     <button id="ir" type="button">Ver</button>
   </div>
   <div class="atalhos" id="atalhos"></div>
@@ -147,8 +146,18 @@ function procurar() {
   if (!q) { onde.innerHTML = ''; return; }
   const achou = Object.keys(EX.naLive).find((n) => n.toLowerCase() === q.toLowerCase());
   if (!achou) {
-    onde.innerHTML = `<div class="vazio">Sem registro de <b>${esc(q)}</b> na sua live.<br>
-      Isso <b>não inocenta</b>: pode ter assistido deslogado, ou com outro nome.</div>`;
+    // NUNCA responder "sem registro" sobre alguém de verdade.
+    //
+    // Ele colou a SteamID do dilanzito, sabendo com certeza que ele entrou
+    // na live hoje, e a página respondeu "sem registro". Foi uma falsa
+    // negativa se passando por resposta — o mesmo defeito de antes, ao
+    // contrário. Esta página não tem dado nenhum da live dele: só conhece
+    // os três exemplos. Então é isso que ela tem que dizer.
+    onde.innerHTML = `<div class="vazio"><b>Esta página não sabe responder por
+      "${esc(q)}"</b> — ela só tem os três exemplos inventados acima, nenhuma
+      gravação da sua live.<br><br>
+      Não confunda com "não assistiu": aqui não existe dado para consultar.
+      Quem responde isso é o serviço rodando na sua máquina.</div>`;
     return;
   }
   onde.innerHTML = cartao(achou, true);

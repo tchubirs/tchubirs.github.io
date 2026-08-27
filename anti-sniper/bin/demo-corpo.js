@@ -15,8 +15,18 @@ function procurar() {
   if (!q) { onde.innerHTML = ''; return; }
   const achou = Object.keys(EX.naLive).find((n) => n.toLowerCase() === q.toLowerCase());
   if (!achou) {
-    onde.innerHTML = `<div class="vazio">Sem registro de <b>${esc(q)}</b> na sua live.<br>
-      Isso <b>não inocenta</b>: pode ter assistido deslogado, ou com outro nome.</div>`;
+    // NUNCA responder "sem registro" sobre alguém de verdade.
+    //
+    // Ele colou a SteamID do dilanzito, sabendo com certeza que ele entrou
+    // na live hoje, e a página respondeu "sem registro". Foi uma falsa
+    // negativa se passando por resposta — o mesmo defeito de antes, ao
+    // contrário. Esta página não tem dado nenhum da live dele: só conhece
+    // os três exemplos. Então é isso que ela tem que dizer.
+    onde.innerHTML = `<div class="vazio"><b>Esta página não sabe responder por
+      "${esc(q)}"</b> — ela só tem os três exemplos inventados acima, nenhuma
+      gravação da sua live.<br><br>
+      Não confunda com "não assistiu": aqui não existe dado para consultar.
+      Quem responde isso é o serviço rodando na sua máquina.</div>`;
     return;
   }
   onde.innerHTML = cartao(achou, true);
