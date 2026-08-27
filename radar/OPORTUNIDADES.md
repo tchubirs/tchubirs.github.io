@@ -9,6 +9,12 @@ Se um item não tem número com fonte, ele fica em "a verificar" até ter.
 
 ## Perfil do operador (não viole isto ao recomendar)
 
+- **Recebe dinheiro em qualquer lugar.** Tem **Wise** e **Revolut** além da conta
+  francesa (declarado por ele em 27/08). Isso remove a fricção de recebimento de
+  quase todo caminho. ⚠️ **Mas a Wise não é banco** — é instituição de moeda
+  eletrônica, e plataformas que exigem "bank-to-bank" (o Steam exige) podem recusar.
+  **Revolut tem licença bancária do BCE** e é a aposta segura. E receber fora da
+  França **não muda a residência fiscal dele** — declarar país errado é fraude, não atalho.
 - Reside na **França**. Cidadania **portuguesa**. **Nativo em português.**
   ⚠️ **NÃO fala francês** — o brief dele dizia PT/ES/EN/FR, mas ele corrigiu em
   27/08. Não proponha nada que dependa de francês.

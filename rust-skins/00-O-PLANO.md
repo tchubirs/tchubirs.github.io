@@ -121,15 +121,52 @@ Fonte: https://wiki.facepunch.com/rust/Getting_Skin_Accepted
 
 ---
 
-## Pagamento — verificado
+## Pagamento — VERIFICADO na fonte oficial
 
-- **IBAN funciona.** Conta em nome dele, e o nome do titular tem que bater com o
-  nome legal do cadastro.
-- **Entrevista fiscal obrigatória** (W-8BEN, por ser fora dos EUA). 5–10 minutos.
-- **Mínimo de US$100 no mês** para o Steam disparar o pagamento. Uma skin aceita
-  passa disso na primeira semana de loja.
-- Fora dos EUA o Steam manda **SWIFT em USD** — o banco francês cobra taxa de
-  ~€10–20 por transferência. Não mata, mas está aqui pra não ser surpresa.
+Fonte: https://steamcommunity.com/workshop/workshoppaymentinfofaq/
+
+### As regras, texto exato da Valve
+
+- **Só transferência banco-a-banco.**
+  > *"Q. Can I receive payments in my PayPal account or other similar non-bank
+  > accounts? A. **No. Payments can only be received via bank-to-bank transfers.**"*
+- **Só em dólar.**
+  > *"We pay in US dollars only... Please check with your bank to ensure that they
+  > can receive USD — **some banks will not accept USD**."*
+- **Nome do titular igual ao nome legal, sem variação.**
+  > *"Any variations (Mr J Smith vs. Joseph Smith) will not be accepted... this means
+  > you **cannot use someone else's bank account**."*
+- **Nada de conta intermediária.**
+  > *"Q. Can I enter a FFB (for further benefit) or FFC (for further credit) account?
+  > A. **No, your bank account information needs to be in your name directly. We cannot
+  > process payments that require additional instructions to complete.**"*
+- **Nada de conta conjunta.** O nome do titular tem que ser só o dele.
+- **Mínimo de US$100 no mês** para disparar o pagamento.
+- **Sem dados bancários, não dá pra fechar a divisão de receita.**
+  > *"You will not be able to finalize revenue splits on items in Steam Workshop prior
+  > to providing us with valid contact, banking and tax information."*
+  Publicar no workshop e receber votos **não** exige isso. O cadastro precisa estar
+  pronto antes de a skin ser **aceita** — a mediana de 10 dias dá folga de sobra.
+- **Mudança de país de residência obriga a refazer a entrevista fiscal.**
+  Ele mora na França. Declara França. Receber numa conta de outro país **não muda**
+  residência fiscal, e declarar país errado é fraude fiscal — não é atalho.
+
+### Ele tem Wise e Revolut. O que serve
+
+| Conta | Serve? | Por quê |
+|---|---|---|
+| **Revolut** | **Provável que sim** | O Revolut Bank UAB tem **licença bancária plena** do BCE, passaportada no EEE. Emite IBAN real com BIC. É banco de verdade, e guarda USD nativamente — resolve o problema de "alguns bancos não aceitam USD" |
+| **Wise** | **Risco real** | A Wise **não é banco** — é instituição de moeda eletrônica (EMI). Ela mesma diz isso. A regra da Valve é *bank-to-bank only*, e recebimento em USD na Wise passa por banco parceiro, o que se parece com o "further credit" que a Valve recusa |
+| **Banco francês normal** | Sim, mas caro | Aceita, se o banco receber USD. SWIFT em USD custa ~€10–20 e a conversão é ruim |
+
+**Ordem recomendada:** tentar **Revolut** primeiro. Se o Steam recusar, banco francês.
+**Não usar a Wise como primeira opção** — se der problema, ele descobre depois de já
+ter uma skin aceita, e trocar dado bancário no meio é dor de cabeça.
+
+⚠️ **NÃO MEDIDO:** não achei caso confirmado de Steam aceitando ou recusando Revolut
+ou Wise especificamente. A classificação acima vem da **regra publicada** cruzada com
+o **estatuto jurídico** de cada uma, não de um teste real. Ele descobre na prática ao
+cadastrar — e o cadastro é gratuito e reversível antes da primeira skin aceita.
 
 ---
 

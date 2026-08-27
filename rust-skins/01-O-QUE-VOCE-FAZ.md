@@ -57,13 +57,20 @@ seguidores que jogam Rust. Isso é o passo que decide.
 
 ## Uma vez só — receber o dinheiro
 
-Quando publicar a primeira skin, o Steam vai pedir:
+O Steam vai pedir:
 - **entrevista fiscal** (formulário W-8BEN, porque você não mora nos EUA) — 5 a 10 min
-- **IBAN** da sua conta na França — o nome do titular tem que ser igual ao seu nome legal
+- **dados bancários** — nome do titular igual, letra por letra, ao seu nome legal
 
-Faz isso uma vez e nunca mais.
+**Use o Revolut.** Ele é banco de verdade (licença do BCE) e guarda dólar nativamente.
 
-O Steam só transfere quando passa de **US$100 no mês**.
+**Não use a Wise.** A regra do Steam é banco-a-banco, e a Wise não é banco — é
+instituição de pagamento. Pode ser recusada.
+
+Faz isso uma vez e nunca mais. O Steam só transfere quando passa de **US$100 no mês**,
+e paga **só em dólar**.
+
+Não precisa fazer agora. Publicar a skin e receber voto não exige nada disso.
+Precisa estar pronto antes de a skin ser **aceita** — e isso leva uns 10 dias.
 
 ---
 
