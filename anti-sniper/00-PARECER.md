@@ -243,3 +243,69 @@ que o parecer dava como impossível **é viável**.
 - **Nada disso ressuscita a camada de identidade.** Descobrir Discord, Twitter,
   e-mail e IP continua sendo o art. 226-18 do código penal francês. A correção
   é sobre presença no próprio canal, que é dado do streamer sobre o canal dele.
+
+
+---
+
+# ⚠️ SEGUNDA CORREÇÃO — o produto inteiro estava errado
+
+> *"Streamsniper é pego na hora do ato, não horas depois."*
+
+**Isso reescreve o projeto.** Tudo acima foi desenhado como perícia: coletar,
+analisar com correção de multiplicidade, gerar score, revisar. Isso é laudo.
+
+**Ninguém paga por laudo da terça passada.** Quando o relatório fica pronto, a
+base já foi raidada. O valor está no instante em que o streamer sente que algo
+está errado — e o que falta a ele nesse instante não é *se* houve sniper.
+É **quem**.
+
+## O que muda
+
+| Desenho velho (errado) | Desenho certo |
+|---|---|
+| Relatório depois da sessão | **Alerta durante a live** |
+| Score estatístico acumulado | **Duas checagens instantâneas** |
+| Correção de multiplicidade, nulo por suspeito | nada disso — não há tempo |
+| Revisão humana depois | o streamer decide **na hora** |
+| Vendido como análise | vendido como **overlay ao vivo** |
+
+E some a parte mais cara: **visão computacional para achar "eventos de
+revelação" não é mais necessária.** Aquilo existia para reconstruir o passado.
+
+## Os dois sinais que dá para calcular no instante
+
+1. **O nome bate.** O jogador que está no servidor está também no seu chat.
+   É exatamente o que ele descreveu ter visto funcionando: *"a gente pegava o
+   nome da pessoa no jogo e procurava na stream e seus nomes batiam."*
+2. **Entrou logo depois de você.** Entrou no servidor dentro de 90 s depois de
+   você ficar ao vivo.
+
+**Os dois juntos = urgência alta.** Um só = média.
+
+## O que está construído
+
+- **`src/nomes.js`** — cruza nome do jogo com nome do chat. Ninguém usa o
+  mesmo nome exato nos dois lados: a pessoa é `xX_Ma7ador_Xx` no Rust e
+  `matador` na Twitch. Normaliza tag de clã, emoji, acento, leet e repetição,
+  e devolve **confiança de 0 a 1, nunca veredito**.
+  Guarda de falso positivo: nome com menos de 5 letras não casa por conter —
+  senão "ana" casaria com "banana".
+- **`src/vigia.js`** — roda durante a live e dispara na hora. Sem estatística
+  acumulada, sem modelo.
+- 16 testes.
+
+**Bug que a primeira execução mostrou:** todo mundo que já estava no servidor
+levava alerta de "entrou 0s depois de você ficar ao vivo". Isso spammaria o
+streamer no primeiro segundo e ele pararia de olhar os alertas. Corrigido com
+**linha de base**: a primeira varredura depois de ficar ao vivo é só retrato
+de quem já estava lá.
+
+## O que continua valendo do parecer velho
+
+- Sniper esperto usa outro nome no jogo e não abre a página do chat. **Pega o
+  descuidado.** Nada aqui muda isso.
+- A camada de identidade (Discord, Twitter, e-mail, IP) continua sendo o
+  art. 226-18 do código penal francês. **O vigia não precisa dela** — cruza
+  nome do jogo com nome do chat do próprio canal, e nada mais.
+- Falta o lado do jogo: lista de jogadores do servidor, via RCON ou
+  `A2S_PLAYER`. Continua sendo o teste de 30 minutos que ninguém fez.

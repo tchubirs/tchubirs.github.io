@@ -1,0 +1,9 @@
+{
+  "name": "anti-sniper",
+  "version": "0.1.0",
+  "description": "Live stream-sniper detection: cross-reference who is on the server with who is watching, in the moment",
+  "license": "AGPL-3.0-or-later",
+  "engines": { "node": ">=20" },
+  "scripts": { "test": "node --test test/*.test.js" },
+  "dependencies": {}
+}
