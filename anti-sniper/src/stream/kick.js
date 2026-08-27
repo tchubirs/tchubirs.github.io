@@ -83,6 +83,54 @@ async function assinarEventos({ token, urlDoWebhook, eventos }, buscar = globalT
   return r.json();
 }
 
+/** Token de APLICAÇÃO — não representa nenhum usuário e não precisa que
+ *  ninguém autorize nada. Vale 60 dias. Descoberto testando: ele já alcança
+ *  estado do canal e lista de lives, que é tudo que o sinal de âncora precisa. */
+async function tokenDeAplicacao({ clientId, clientSecret }, buscar = globalThis.fetch) {
+  const corpo = new URLSearchParams({
+    grant_type: 'client_credentials', client_id: clientId, client_secret: clientSecret,
+  });
+  const r = await buscar(TOKEN, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: corpo.toString(),
+  });
+  if (!r.ok) throw new Error(`token de aplicação falhou: ${r.status}`);
+  return r.json();
+}
+
+/**
+ * Estado do canal: está ao vivo, e desde quando.
+ *
+ * `inicioMs` é a peça central do sinal "entrou no servidor logo depois de
+ * você ficar ao vivo". Sem ela o sinal não existe — e ela sai daqui de
+ * graça, sem webhook e sem autorização de usuário.
+ */
+async function estadoDoCanal(slug, { token, buscar = globalThis.fetch } = {}) {
+  const r = await buscar(
+    `${API}/channels?slug=${encodeURIComponent(slug)}`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  if (!r.ok) throw new Error(`consulta de canal falhou: ${r.status}`);
+  const c = (await r.json())?.data?.[0];
+  if (!c) throw new Error(`canal não encontrado: ${slug}`);
+
+  const inicio = c.stream?.start_time;
+  // A Kick devolve o ano 0001 quando nunca transmitiu / não está ao vivo.
+  // Tratar isso como data real produziria "ao vivo há 2 milhões de horas".
+  const inicioMs = inicio && !inicio.startsWith('0001') ? Date.parse(inicio) : null;
+
+  return {
+    slug: c.slug,
+    canalId: c.broadcaster_user_id,
+    aoVivo: c.stream?.is_live === true,
+    inicioMs,
+    espectadores: c.stream?.viewer_count ?? 0,
+    categoria: c.category?.name || null,
+    inscritosAtivos: c.active_subscribers_count ?? null,
+  };
+}
+
 /**
  * Grava presença a partir dos eventos de chat.
  *
@@ -144,4 +192,7 @@ class Gravador {
   }
 }
 
-module.exports = { ESCOPOS, gerarPkce, urlDeAutorizacao, trocarCodigoPorToken, assinarEventos, Gravador };
+module.exports = {
+  ESCOPOS, gerarPkce, urlDeAutorizacao, trocarCodigoPorToken,
+  tokenDeAplicacao, estadoDoCanal, assinarEventos, Gravador,
+};

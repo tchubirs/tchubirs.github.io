@@ -96,3 +96,64 @@ test('sai ordenado por tempo, maior primeiro', () => {
   g.ingerir(...msg('muito', 2), T + 60 * MIN);
   assert.equal(g.audiencia()[0].nome, 'muito');
 });
+
+const canal = (over = {}) => ({ ok: true, status: 200, json: async () => ({
+  data: [{
+    broadcaster_user_id: 557419, slug: 'tchubi',
+    stream: { is_live: true, start_time: '2026-08-27T10:07:55Z', viewer_count: 1084 },
+    category: { name: 'Rust' }, active_subscribers_count: 1, ...over,
+  }],
+}) });
+
+test('estado do canal traz a âncora de quando a live começou', async () => {
+  const e = await k.estadoDoCanal('tchubi', { token: 'x', buscar: async () => canal() });
+  assert.equal(e.aoVivo, true);
+  assert.equal(e.inicioMs, Date.parse('2026-08-27T10:07:55Z'));
+  assert.equal(e.espectadores, 1084);
+  assert.equal(e.categoria, 'Rust');
+  assert.equal(e.canalId, 557419);
+});
+
+test('canal offline: a Kick devolve o ano 0001 e isso NÃO pode virar data', async () => {
+  // Sem este tratamento o sistema diria "ao vivo há 2 milhões de horas"
+  // e o sinal de "entrou logo depois" dispararia para todo mundo.
+  const e = await k.estadoDoCanal('tchubi', {
+    token: 'x',
+    buscar: async () => canal({
+      stream: { is_live: false, start_time: '0001-01-01T00:00:00Z', viewer_count: 0 },
+    }),
+  });
+  assert.equal(e.aoVivo, false);
+  assert.equal(e.inicioMs, null);
+});
+
+test('canal inexistente falha com o slug no erro', async () => {
+  const vazio = { ok: true, status: 200, json: async () => ({ data: [] }) };
+  await assert.rejects(
+    () => k.estadoDoCanal('naoexiste', { token: 'x', buscar: async () => vazio }),
+    /naoexiste/,
+  );
+});
+
+test('erro da Kick vira erro com status, não estado falso', async () => {
+  const ruim = { ok: false, status: 401, json: async () => ({}) };
+  await assert.rejects(
+    () => k.estadoDoCanal('tchubi', { token: 'x', buscar: async () => ruim }),
+    /401/,
+  );
+});
+
+test('token de aplicação usa client_credentials, sem usuário', async () => {
+  let corpo = null;
+  const b = async (_u, op) => { corpo = op.body; return { ok: true, json: async () => ({ access_token: 'T', expires_in: 5184000 }) }; };
+  const t = await k.tokenDeAplicacao({ clientId: 'ID', clientSecret: 'S' }, b);
+  assert.equal(t.access_token, 'T');
+  assert.match(corpo, /grant_type=client_credentials/);
+  // não pode haver code nem redirect: isto não representa nenhum usuário
+  assert.doesNotMatch(corpo, /code|redirect/);
+});
+
+test('falha de token não devolve token vazio', async () => {
+  const b = async () => ({ ok: false, status: 400, json: async () => ({}) });
+  await assert.rejects(() => k.tokenDeAplicacao({ clientId: 'ID', clientSecret: 'S' }, b), /400/);
+});
