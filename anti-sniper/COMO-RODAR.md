@@ -75,6 +75,70 @@ Medido contra um canal ao vivo em 27/08/2026, 22 minutos:
 **96% de quem o sensor detectou estava calado.** É exatamente essa a
 população que interessa.
 
+## Como saber se está bom
+
+### 1. A conferência automática — 20 segundos
+
+```
+npm run conferir
+```
+
+Roda o caminho inteiro contra os **seus dados reais** e dá um veredito.
+Rodado em 27/08/2026 no seu canal:
+
+```
+  ✓ BotRix responde: 20 pessoas, 20 com tempo assistido
+      mais assistiu: gabriel_uy_mvd (50 min)
+  ✓ Steam entrega histórico de nomes: 10 nomes numa conta de teste
+  ✓ Link de perfil vira SteamID
+  ✓ O cruzamento acha alguém disfarçado
+      "[BR] GABR1EL_UY_MVD" → gabriel_uy_mvd (90%, idêntico tratando leet)
+  ✓ Não inventa casamento para quem não está na audiência
+  ✓ Grava presença de quem SUBIU o tempo assistido
+      2 de 20, sem ninguém falar nada
+  ✓ O log mostra entrada e saída, marcado como "calado"
+  ✓ Responde "estava na live NAQUELE minuto?"
+  ✓ Quem não tem registro fica "sem-registro", nunca "não estava"
+  ✓ A resposta mostra presença, nunca acusa
+  ○ Sem battlemetricsJogador no config
+  ○ Quem assiste DESLOGADO — nenhuma fonte vê. Não existe jeito.
+
+  ESTÁ BOM. 10 checagens passaram, 2 pontos cegos conhecidos.
+```
+
+`✓` funciona · `○` ponto cego conhecido · `✗` quebrado.
+
+**Não é `npm test`.** Aquele prova que o código faz o que eu escrevi. Este
+prova que o produto responde a sua pergunta, hoje, com a internet e as
+contas de verdade.
+
+### 2. O teste ao vivo — 20 minutos, e é o que vale
+
+O único jeito de ter certeza é com uma pessoa de verdade assistindo calada.
+
+1. `npm start`, deixe rodando.
+2. Entre ao vivo na Kick.
+3. Peça a alguém (ou use outra conta sua, **logada**) para abrir a live e
+   **não escrever nada**. Deixe aberta **20 minutos** — o crédito vem em
+   blocos de 10 min, então menos que isso pode não aparecer.
+4. Abra `http://127.0.0.1:8790/?canal=tchubi`.
+
+**Está bom se:** o nome aparece em *"na sua live agora"* com o selo
+**`calado`**, e clicando nele o log mostra o intervalo com
+`× tempo assistido` — não `msg`.
+
+**Se não aparecer**, na ordem:
+- essa conta chegou a ganhar ponto? Confira o ranking na BotRix.
+- passaram 20 minutos de verdade? Menos que um bloco não credita.
+- a fidelidade está ligada para essa plataforma na BotRix?
+
+### 3. Se você lembra de uma noite em que foi snipado
+
+Depois de alguns dias gravando, pegue a SteamID de quem você desconfia,
+cole na busca com a **hora da morte**, e veja a linha do tempo. Antes de
+ter dias de gravação isso não responde nada — é gravação contínua, não
+consulta mágica.
+
 ## O que roda, e a cada quanto
 
 | | |

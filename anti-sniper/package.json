@@ -10,7 +10,9 @@
     "start": "node bin/comecar.js",
     "agente": "node agente/agente.js",
     "servico": "node servico/iniciar.js",
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "conferir": "node bin/conferir.js",
+    "fontes": "node bin/checar-fontes.js"
   },
   "dependencies": {
     "playwright": "^1.47.0"
