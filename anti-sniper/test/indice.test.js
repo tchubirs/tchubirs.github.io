@@ -73,3 +73,46 @@ test('aguenta a escala real de um servidor cheio', () => {
   const ms = Date.now() - t0;
   assert.ok(ms < 5000, `levou ${ms} ms — precisa caber numa rodada de 90 s`);
 });
+
+// ── A máscara de letras ───────────────────────────────────────────────────
+// Existe porque provar que alguém NÃO casa custava caro: medido, 750 nomes
+// que não casam levavam 1.790ms contra 6ms dos 750 que casam. A rejeição
+// tem que ser SEGURA — descartar um casamento de verdade seria pior que
+// lento.
+const { mascara, bits } = require('../src/indice');
+
+test('a máscara nunca descarta um casamento de verdade', () => {
+  const pares = [
+    ['finik', 'finik'], ['diper', 'd1per'], ['arin', 'arinzinho'],
+    ['killer', 'xxkillerxx'], ['sniper', 'snipper'], ['medusa', 'medusaa'],
+    ['pedro', 'pedr0'], ['bruno', 'brunno'], ['lucas', 'lucaz'],
+  ];
+  for (const [a, b] of pares) {
+    // A regra: 2 edições mudam no máximo 4 bits. Se a máscara descartasse
+    // algum destes, o índice passaria a perder gente de verdade.
+    assert.ok(bits(mascara(a) ^ mascara(b)) <= 4, `${a} × ${b} foi descartado por engano`);
+  }
+});
+
+test('a máscara descarta o que é obviamente diferente', () => {
+  assert.ok(bits(mascara('finik') ^ mascara('caraxes')) > 4);
+  assert.ok(bits(mascara('zlucas') ^ mascara('medusa')) > 4);
+});
+
+test('o índice com máscara acha o MESMO que sem ela', () => {
+  // A prova que importa: a otimização não pode mudar nenhum resultado.
+  const nomes = ['FINIK', 'diper', 'arin', 'MEDUSA', 'xX_Killer_Xx', 'zLucas',
+    'Опасный Поцык', 'merfy', 'bobsburgers', 'Caraxes', 'sniper'];
+  const i = new Indice(nomes.map((nome) => ({ nome })));
+  const consultas = ['finik_ttv', 'D1per', 'arinzinho', 'medusaa', 'killer', 'zlucaz',
+    'ana', 'MF | Dr | Merfy', 'bob', 'snipper', 'joaozinho', '322'];
+  for (const q of consultas) {
+    const r = i.procurar(q);
+    let esperado = null;
+    for (const nome of nomes) {
+      const c = comparar(q, nome);
+      if (c.confianca >= 0.7 && (!esperado || c.confianca > esperado.confianca)) esperado = { nome, ...c };
+    }
+    assert.equal(r ? r.confianca : 0, esperado ? esperado.confianca : 0, `divergiu em "${q}"`);
+  }
+});
