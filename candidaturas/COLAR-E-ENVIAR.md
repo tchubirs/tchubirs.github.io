@@ -1,3 +1,19 @@
+> # ❌ MORTO — 27/08/2026
+>
+> **Decisão dele:** *"Não quero mais já falei que não tenho tempo pra pagar pouco"*.
+>
+> Ele passou 1 hora no Testbirds sem conseguir fazer nada — lá não existe lista de
+> testes, só convite, e convite só chega depois de cadastrar os aparelhos e esperar
+> dias. O DataAnnotation caiu numa triagem por idioma que não tinha português.
+>
+> O teto do conjunto era €200–600/mês. Não vale o tempo dele.
+>
+> **Caminho vivo agora: `rust-skins/01-O-QUE-VOCE-FAZ.md`.**
+>
+> Mantido aqui só como registro. **Não mande ele de volta pra cá.**
+
+---
+
 # Candidaturas — copiar, colar, enviar
 
 Tudo pronto. Você não escreve nada, só cola e clica.

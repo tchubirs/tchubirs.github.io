@@ -3,7 +3,7 @@
 Atualizado por uma rotina semanal. Toda linha aqui foi **medida**, não deduzida.
 Se um item não tem número com fonte, ele fica em "a verificar" até ter.
 
-**Última varredura:** 27/08/2026 (2ª rodada)
+**Última varredura:** 27/08/2026 (3ª rodada)
 
 ---
 
@@ -45,19 +45,40 @@ Se um item não tem número com fonte, ele fica em "a verificar" até ter.
 
 ## ✅ VIVO — pode agir hoje
 
-| Opção | Pagamento | Exige | Fonte |
-|---|---|---|---|
-| **Testbirds** (testar sites) | €5–50/teste, ~€20 típico por 20 min → **€15–25/h** real | nada além de PC + microfone | medido 26/08 |
-| **UserTesting** | US$30–40/h durante o teste; €15–25/h com triagem | idem | medido 26/08 |
-| **Mindrift** (treinar IA) | US$10–35/h | escrever bem | medido 26/08 |
-| **Alignerr** | US$7–30/h | idem | medido 26/08 |
-| **Treinar IA em português** | acima da média por idioma nativo | ser nativo | medido 26/08 |
-| **DataAnnotation** | US$ 15–40/h | teste de escrita na entrada | medido 26/08 |
+### 🎯 Skins de Rust no Steam Workshop — o melhor achado do estudo
 
-**Teto do conjunto de microtarefas: €200–600/mês.** Paga rápido, não muda a vida.
+Detalhes em `rust-skins/00-O-PLANO.md`. Ele executa por `rust-skins/01-O-QUE-VOCE-FAZ.md`.
 
-**Candidaturas prontas para colar em `candidaturas/COLAR-E-ENVIAR.md`.**
-~1h08 de trabalho dele para 6 cadastros. Nada disso foi feito ainda.
+**Por que é o melhor:** é o primeiro caminho em que a audiência dele vira dinheiro.
+O público brasileiro não tem poder de compra — mas aqui o que decide é **voto**, e
+voto é de graça. A mediana de votos numa skin **aceita** é **351**; ele tem 43 mil
+seguidores que jogam Rust.
+
+| Medido em 27/08/2026 | Número |
+|---|---|
+| Taxa de aceitação | **~1,8%** (670 aceitas/ano ÷ ~36.500 enviadas/ano) |
+| Dias de envio até aceite | **mediana 10** |
+| Votos numa skin aceita | **mediana 351**, p25 96 |
+| Concentração do maior criador | **6,9%** (a Apify tinha 69% — este mercado é aberto) |
+| Criadores com uma skin só | **48%** |
+| Pagamento por skin aceita | **US$ 2.700–6.600** *(SUPOSTO — ver o plano)* |
+| Custo dele | **€0** — já tem o jogo |
+| Ferramentas | nenhuma. Sem Unity, sem Photoshop, sem 3D |
+
+**Trabalho dele: ~8 min por skin.** Baixar a textura original no jogo, carregar meu
+PNG, screenshot, publicar. Eu faço o resto.
+
+**Honesto:** loteria de variância alta. 40 envios ≈ 52% de chance de emplacar uma.
+Pode dar zero.
+
+---
+
+### Ainda de pé, mas parado
+
+| Opção | Estado |
+|---|---|
+| **fedimod → NLnet** | pronto, submeter até 3/nov/2026 |
+| **SERIE RUST IA** | bíblia e piloto prontos, ele executa |
 
 ---
 
@@ -91,6 +112,10 @@ conseguir falar sobre o que foi entregue.
 | **Coaching de Rust** | Ele é elite de verdade (venceu o Kick Off 1, 3× Twitch Rivals), mas a audiência dele é brasileira e **não tem poder de compra** para €20–40/h | 27/08/2026 |
 | **Localização / locução PT-BR** | PT-BR é dos idiomas que **menos** pagam; competiria com quem mora no Brasil. Entrada ainda exige 1–3 anos de experiência e teste | 27/08/2026 |
 | **Qualquer caminho em francês** | Ele não fala francês | 27/08/2026 |
+| **Microtarefas (Testbirds, UserTesting, Userbrain, Mindrift, Alignerr, DataAnnotation)** | **Decisão dele, 27/08:** *"não tenho tempo pra pagar pouco"*. Teto do conjunto era €200–600/mês, com 3–14 dias até a primeira tarefa e triagem por idioma/currículo em quase todas. Ele passou 1h no Testbirds e não conseguiu fazer nada — lá não existe lista de testes, só convite | 27/08/2026 |
+| **Prototype Fund (DE)** | Exige **residência na Alemanha** para pessoa física. Em equipe, exige fundar uma GbR com sede na Alemanha. Ele mora na França | 27/08/2026 |
+| **Sovereign Tech Fellowship / Standards** | Inscrições fecharam em abril e maio de 2026 | 27/08/2026 |
+| **GitHub Security Lab Fellowship** | Prazo era 18/08/2026, passou. E exige perfil técnico | 27/08/2026 |
 
 ---
 
@@ -105,6 +130,15 @@ conseguir falar sobre o que foi entregue.
 - **Programas de idioma** — demanda por português brasileiro em datasets.
 - **Micro-entreprise / SIRET** — destrava recebimento recorrente na França.
   Grátis e online. Ainda não feito.
+- **OTF Internet Freedom Fund** — https://www.opentech.fund/funds/internet-freedom-fund/
+  **Inscrição em fluxo contínuo, sem prazo.** US$10 mil a 900 mil, contrato assinado
+  direto com a pessoa física, pago em USD por entrega. Texto oficial: *"OTF prioritizes
+  projects coming from individuals or organizations who are applying for the first time."*
+  **Encaixe do fedimod é duvidoso** — o OTF financia liberdade na internet e
+  anticensura, e uma ferramenta de moderação pode ser lida como o oposto. Precisa de
+  um projeto próprio pra este fundo antes de submeter.
+- **Política da Facepunch sobre arte gerada por IA** — não achei regra publicada.
+  Sem proibição conhecida, mas sem confirmação. Se perguntarem, responder a verdade.
 - **Sinais do piloto da SERIE RUST IA** — retenção de 3s (meta >70%) e
   comentários "isso é real?" (meta ≥3). Se a retenção ficar abaixo de 50%, o
   problema é o clipe 1, não o formato.
@@ -131,3 +165,8 @@ conseguir falar sobre o que foi entregue.
 7. **Sempre mande o link.** Toda vez que você citar um site onde ele precisa
    entrar ou se cadastrar, cole o endereço junto — e **confira antes que ele
    responde 200**, não mande link quebrado. Ele pediu isso explicitamente.
+8. **Antes de matar um caminho por "a audiência dele não tem dinheiro", pergunte o
+   que está sendo comprado.** Coaching e patrocínio morreram porque exigem que o
+   público brasileiro **pague**. As skins de Rust vivem porque só exigem que ele
+   **vote** — e voto é de graça. Um público sem poder de compra ainda tem atenção,
+   e atenção às vezes é a moeda certa.

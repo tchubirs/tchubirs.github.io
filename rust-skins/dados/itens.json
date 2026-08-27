@@ -1,0 +1,806 @@
+[
+ {
+  "item": "Beach Chair",
+  "skins": 1,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Spray Can",
+  "skins": 1,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "High External Wooden Wall",
+  "skins": 1,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Tank Top",
+  "skins": 1,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Skin Container",
+  "skins": 1,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Generator",
+  "skins": 1,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Rug Bear Skin",
+  "skins": 1,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Wooden Spear",
+  "skins": 1,
+  "na_loja_26sem": 1,
+  "bruto_mediano": 22399.86
+ },
+ {
+  "item": "Computer Station",
+  "skins": 1,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Mace",
+  "skins": 1,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Torch",
+  "skins": 1,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Festive Window Garland",
+  "skins": 1,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Roadsign Horse Armor",
+  "skins": 1,
+  "na_loja_26sem": 1,
+  "bruto_mediano": 4908.06
+ },
+ {
+  "item": "Candle Hat",
+  "skins": 1,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Headset",
+  "skins": 1,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Sandbag Barricade",
+  "skins": 2,
+  "na_loja_26sem": 1,
+  "bruto_mediano": 7712.24
+ },
+ {
+  "item": "Tool Cupboard",
+  "skins": 2,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Wallpaper Ceiling",
+  "skins": 2,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Underwear",
+  "skins": 3,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Hide Halterneck",
+  "skins": 3,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Flooring",
+  "skins": 3,
+  "na_loja_26sem": 3,
+  "bruto_mediano": 2242.5
+ },
+ {
+  "item": "Resource",
+  "skins": 3,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Hide Skirt",
+  "skins": 3,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Breakable",
+  "skins": 3,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Reactive Target",
+  "skins": 4,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Water Purifier",
+  "skins": 4,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Table",
+  "skins": 4,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Acoustic Guitar",
+  "skins": 4,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Container",
+  "skins": 4,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Burlap Shoes",
+  "skins": 4,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Small Backpack",
+  "skins": 5,
+  "na_loja_26sem": 5,
+  "bruto_mediano": 38382.4
+ },
+ {
+  "item": "Spinning Wheel",
+  "skins": 5,
+  "na_loja_26sem": 2,
+  "bruto_mediano": 22753.625
+ },
+ {
+  "item": "Misc",
+  "skins": 5,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Longsword",
+  "skins": 6,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Shorts",
+  "skins": 6,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Shirt",
+  "skins": 7,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Hazmat Suit",
+  "skins": 7,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Hide Boots",
+  "skins": 7,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Wolf Headdress",
+  "skins": 8,
+  "na_loja_26sem": 4,
+  "bruto_mediano": 10360.35
+ },
+ {
+  "item": "Beenie Hat",
+  "skins": 8,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "F1 Grenade",
+  "skins": 8,
+  "na_loja_26sem": 1,
+  "bruto_mediano": 13050.42
+ },
+ {
+  "item": "Metal Shop Front",
+  "skins": 8,
+  "na_loja_26sem": 8,
+  "bruto_mediano": 32589.85
+ },
+ {
+  "item": "Building Skin",
+  "skins": 8,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Bone Helmet",
+  "skins": 8,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Hide Pants",
+  "skins": 8,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Miners Hat",
+  "skins": 8,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Bone Knife",
+  "skins": 9,
+  "na_loja_26sem": 1,
+  "bruto_mediano": 64359.030000000006
+ },
+ {
+  "item": "Bear Skin Rug",
+  "skins": 9,
+  "na_loja_26sem": 1,
+  "bruto_mediano": 40094.52
+ },
+ {
+  "item": "Hide Vest",
+  "skins": 9,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Wallpaper",
+  "skins": 10,
+  "na_loja_26sem": 6,
+  "bruto_mediano": 1647.4900000000002
+ },
+ {
+  "item": "Bone Club",
+  "skins": 10,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Snow Jacket",
+  "skins": 11,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Chair",
+  "skins": 11,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Concrete Barricade",
+  "skins": 12,
+  "na_loja_26sem": 2,
+  "bruto_mediano": 11154.82
+ },
+ {
+  "item": "Salvaged Axe",
+  "skins": 13,
+  "na_loja_26sem": 11,
+  "bruto_mediano": 30651.9
+ },
+ {
+  "item": "Barbeque",
+  "skins": 13,
+  "na_loja_26sem": 12,
+  "bruto_mediano": 23485.68
+ },
+ {
+  "item": "Salvaged Icepick",
+  "skins": 14,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Auto Turret",
+  "skins": 14,
+  "na_loja_26sem": 12,
+  "bruto_mediano": 31806.125000000004
+ },
+ {
+  "item": "Electric Furnace",
+  "skins": 14,
+  "na_loja_26sem": 13,
+  "bruto_mediano": 43134.270000000004
+ },
+ {
+  "item": "M39 Rifle",
+  "skins": 16,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Wood Double Door",
+  "skins": 16,
+  "na_loja_26sem": 1,
+  "bruto_mediano": 82901.46
+ },
+ {
+  "item": "Riot Helmet",
+  "skins": 16,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "HMLMG",
+  "skins": 17,
+  "na_loja_26sem": 4,
+  "bruto_mediano": 19894.515
+ },
+ {
+  "item": "Tactical Gloves",
+  "skins": 17,
+  "na_loja_26sem": 6,
+  "bruto_mediano": 29802.235
+ },
+ {
+  "item": "SKS",
+  "skins": 17,
+  "na_loja_26sem": 11,
+  "bruto_mediano": 29141.56
+ },
+ {
+  "item": "Baseball Cap",
+  "skins": 18,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Longsleeve T-Shirt",
+  "skins": 18,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Bucket Helmet",
+  "skins": 19,
+  "na_loja_26sem": 5,
+  "bruto_mediano": 9279.72
+ },
+ {
+  "item": "Combat Knife",
+  "skins": 22,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Eoka Pistol",
+  "skins": 22,
+  "na_loja_26sem": 2,
+  "bruto_mediano": 25729.705
+ },
+ {
+  "item": "T-Shirt",
+  "skins": 23,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Burlap Trousers",
+  "skins": 24,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Vending Machine",
+  "skins": 24,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Burlap Headwrap",
+  "skins": 24,
+  "na_loja_26sem": 3,
+  "bruto_mediano": 6892.74
+ },
+ {
+  "item": "Improvised Balaclava",
+  "skins": 25,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Jackhammer",
+  "skins": 25,
+  "na_loja_26sem": 4,
+  "bruto_mediano": 27233.225000000002
+ },
+ {
+  "item": "Waterpipe Shotgun",
+  "skins": 25,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Boonie Hat",
+  "skins": 26,
+  "na_loja_26sem": 1,
+  "bruto_mediano": 31097.88
+ },
+ {
+  "item": "Armored Double Door",
+  "skins": 27,
+  "na_loja_26sem": 7,
+  "bruto_mediano": 50339.64000000001
+ },
+ {
+  "item": "Miscellanous",
+  "skins": 28,
+  "na_loja_26sem": 3,
+  "bruto_mediano": 3117.6
+ },
+ {
+  "item": "L96 Rifle",
+  "skins": 29,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Satchel Charge",
+  "skins": 30,
+  "na_loja_26sem": 2,
+  "bruto_mediano": 17444.280000000002
+ },
+ {
+  "item": "M249",
+  "skins": 31,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Burlap Shirt",
+  "skins": 34,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Bed",
+  "skins": 37,
+  "na_loja_26sem": 9,
+  "bruto_mediano": 21414.39
+ },
+ {
+  "item": "Rocket Launcher",
+  "skins": 38,
+  "na_loja_26sem": 1,
+  "bruto_mediano": 50090.76
+ },
+ {
+  "item": "Stone Pickaxe",
+  "skins": 39,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Fridge",
+  "skins": 41,
+  "na_loja_26sem": 4,
+  "bruto_mediano": 20046.885000000002
+ },
+ {
+  "item": "Salvaged Sword",
+  "skins": 42,
+  "na_loja_26sem": 2,
+  "bruto_mediano": 13531.905000000002
+ },
+ {
+  "item": "Leather Gloves",
+  "skins": 42,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Pump Shotgun",
+  "skins": 43,
+  "na_loja_26sem": 5,
+  "bruto_mediano": 29924.820000000003
+ },
+ {
+  "item": "Bolt Action Rifle",
+  "skins": 45,
+  "na_loja_26sem": 4,
+  "bruto_mediano": 28080.770000000004
+ },
+ {
+  "item": "Rug",
+  "skins": 45,
+  "na_loja_26sem": 5,
+  "bruto_mediano": 20195.46
+ },
+ {
+  "item": "Hammer",
+  "skins": 48,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Large Backpack",
+  "skins": 48,
+  "na_loja_26sem": 4,
+  "bruto_mediano": 27127.385000000002
+ },
+ {
+  "item": "Jacket",
+  "skins": 49,
+  "na_loja_26sem": 3,
+  "bruto_mediano": 28785.52
+ },
+ {
+  "item": "Stone Hatchet",
+  "skins": 50,
+  "na_loja_26sem": 0,
+  "bruto_mediano": null
+ },
+ {
+  "item": "Locker",
+  "skins": 52,
+  "na_loja_26sem": 5,
+  "bruto_mediano": 22957.800000000003
+ },
+ {
+  "item": "Bandana Mask",
+  "skins": 53,
+  "na_loja_26sem": 1,
+  "bruto_mediano": 22071.37
+ },
+ {
+  "item": "Revolver",
+  "skins": 56,
+  "na_loja_26sem": 1,
+  "bruto_mediano": 90516.27
+ },
+ {
+  "item": "Hide Poncho",
+  "skins": 56,
+  "na_loja_26sem": 2,
+  "bruto_mediano": 13345.224999999999
+ },
+ {
+  "item": "Road Sign Gloves",
+  "skins": 63,
+  "na_loja_26sem": 5,
+  "bruto_mediano": 20632.59
+ },
+ {
+  "item": "Custom SMG",
+  "skins": 65,
+  "na_loja_26sem": 3,
+  "bruto_mediano": 18890.82
+ },
+ {
+  "item": "Pickaxe",
+  "skins": 76,
+  "na_loja_26sem": 1,
+  "bruto_mediano": 14714.06
+ },
+ {
+  "item": "Armored Door",
+  "skins": 77,
+  "na_loja_26sem": 10,
+  "bruto_mediano": 25783.18
+ },
+ {
+  "item": "Sheet Metal Double Door",
+  "skins": 81,
+  "na_loja_26sem": 1,
+  "bruto_mediano": 49359.270000000004
+ },
+ {
+  "item": "Double Barrel Shotgun",
+  "skins": 81,
+  "na_loja_26sem": 3,
+  "bruto_mediano": 19334.84
+ },
+ {
+  "item": "Thompson",
+  "skins": 83,
+  "na_loja_26sem": 3,
+  "bruto_mediano": 52983.21000000001
+ },
+ {
+  "item": "Python Revolver",
+  "skins": 86,
+  "na_loja_26sem": 2,
+  "bruto_mediano": 19452.945
+ },
+ {
+  "item": "Crossbow",
+  "skins": 88,
+  "na_loja_26sem": 2,
+  "bruto_mediano": 17070.22
+ },
+ {
+  "item": "Rock",
+  "skins": 89,
+  "na_loja_26sem": 3,
+  "bruto_mediano": 17875.710000000003
+ },
+ {
+  "item": "Miscellaneous",
+  "skins": 89,
+  "na_loja_26sem": 33,
+  "bruto_mediano": 9436.19
+ },
+ {
+  "item": "Hunting Bow",
+  "skins": 91,
+  "na_loja_26sem": 5,
+  "bruto_mediano": 24073.320000000003
+ },
+ {
+  "item": "Semi-Automatic Pistol",
+  "skins": 94,
+  "na_loja_26sem": 5,
+  "bruto_mediano": 29249.02
+ },
+ {
+  "item": "Wooden Door",
+  "skins": 98,
+  "na_loja_26sem": 1,
+  "bruto_mediano": 32882.94
+ },
+ {
+  "item": "Boots",
+  "skins": 98,
+  "na_loja_26sem": 6,
+  "bruto_mediano": 15063.84
+ },
+ {
+  "item": "MP5A4",
+  "skins": 101,
+  "na_loja_26sem": 5,
+  "bruto_mediano": 19432.35
+ },
+ {
+  "item": "LR300",
+  "skins": 103,
+  "na_loja_26sem": 2,
+  "bruto_mediano": 44363.48
+ },
+ {
+  "item": "Hatchet",
+  "skins": 105,
+  "na_loja_26sem": 1,
+  "bruto_mediano": 15882.19
+ },
+ {
+  "item": "Wood Storage Box",
+  "skins": 120,
+  "na_loja_26sem": 7,
+  "bruto_mediano": 23513.070000000003
+ },
+ {
+  "item": "Coffee Can Helmet",
+  "skins": 122,
+  "na_loja_26sem": 6,
+  "bruto_mediano": 17696.73
+ },
+ {
+  "item": "Sleeping Bag",
+  "skins": 127,
+  "na_loja_26sem": 4,
+  "bruto_mediano": 26196.425000000003
+ },
+ {
+  "item": "Road Sign Jacket",
+  "skins": 129,
+  "na_loja_26sem": 6,
+  "bruto_mediano": 23122.805
+ },
+ {
+  "item": "Road Sign Kilt",
+  "skins": 135,
+  "na_loja_26sem": 6,
+  "bruto_mediano": 24315.809999999998
+ },
+ {
+  "item": "Metal Chest Plate",
+  "skins": 164,
+  "na_loja_26sem": 7,
+  "bruto_mediano": 30914.65
+ },
+ {
+  "item": "Furnace",
+  "skins": 173,
+  "na_loja_26sem": 5,
+  "bruto_mediano": 34633.170000000006
+ },
+ {
+  "item": "Pants",
+  "skins": 181,
+  "na_loja_26sem": 4,
+  "bruto_mediano": 27713.85
+ },
+ {
+  "item": "Semi-Automatic Rifle",
+  "skins": 182,
+  "na_loja_26sem": 3,
+  "bruto_mediano": 31821.820000000003
+ },
+ {
+  "item": "Metal Facemask",
+  "skins": 202,
+  "na_loja_26sem": 7,
+  "bruto_mediano": 33774.28
+ },
+ {
+  "item": "Hoodie",
+  "skins": 224,
+  "na_loja_26sem": 4,
+  "bruto_mediano": 28274.535
+ },
+ {
+  "item": "Garage Door",
+  "skins": 239,
+  "na_loja_26sem": 12,
+  "bruto_mediano": 55276.825000000004
+ },
+ {
+  "item": "Sheet Metal Door",
+  "skins": 292,
+  "na_loja_26sem": 10,
+  "bruto_mediano": 34015.89000000001
+ },
+ {
+  "item": "Large Wood Box",
+  "skins": 293,
+  "na_loja_26sem": 2,
+  "bruto_mediano": 23922.35
+ },
+ {
+  "item": "Assault Rifle",
+  "skins": 334,
+  "na_loja_26sem": 11,
+  "bruto_mediano": 67465.19
+ }
+]
