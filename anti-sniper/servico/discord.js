@@ -12,6 +12,7 @@
  */
 
 const { verify } = require('node:crypto');
+const { relogio } = require('../src/tempo');
 
 const PING = 1;
 const COMANDO = 2;
@@ -50,8 +51,41 @@ function horas(min) {
   return `${Math.floor(min / 60)}h${String(min % 60).padStart(2, '0')}`;
 }
 
+/**
+ * A resposta que o produto existe para dar.
+ *
+ * "Assistiu 20h" não diz nada sobre o minuto em que te mataram. Isto diz.
+ * E o fuso vai escrito junto de propósito: um fuso errado tem que aparecer
+ * na cara, não mentir calado por duas horas.
+ */
+function naquelaHora(r, fuso) {
+  if (r.quando == null) return '';
+  const hora = relogio(r.quando, fuso);
+  const m = r.evidencias.find((e) => e.momento)?.momento;
+  const srv = r.noServidor;
+  const noServidor = srv?.estado === 'sim'
+    ? ` E estava no servidor (${relogio(srv.estada.de, fuso)}–${relogio(srv.estada.ate, fuso)}).` : '';
+
+  if (!m || m.estado === 'sem-registro') {
+    return `\n\n⚪ **Às ${hora} (${fuso})**: sem registro dela na live nesse horário.` +
+      '\n_Quem assiste calado não gera mensagem — silêncio aqui não é ausência._' + noServidor;
+  }
+  if (m.estado === 'sim') {
+    return `\n\n🔴 **Às ${hora} (${fuso}): ESTAVA na sua live** ` +
+      `(${relogio(m.estada.de, fuso)}–${relogio(m.estada.ate, fuso)}).` + noServidor;
+  }
+  if (m.estado === 'provavel') {
+    const borda = m.antes && m.antes.ate < r.quando ? m.antes : m.depois;
+    return `\n\n🟠 **Às ${hora} (${fuso}): provável** — vista ${m.minutosDaBorda} min ` +
+      `${m.antes === borda ? 'antes' : 'depois'} (${relogio(borda.de, fuso)}–${relogio(borda.ate, fuso)}).` + noServidor;
+  }
+  const perto = m.minutosDaBorda != null ? ` A vez mais próxima foi ${m.minutosDaBorda} min de distância.` : '';
+  return `\n\n⚪ **Às ${hora} (${fuso})**: não vista na live nesse horário.${perto}` +
+    '\n_Isso não inocenta: quem assiste calado não aparece._' + noServidor;
+}
+
 /** Monta a resposta que aparece no Discord. */
-function formatar(r) {
+function formatar(r, fuso = 'UTC') {
   // Perfil privado não é perfil limpo: não se olhou nada.
   if (r.conclusao === 'inconclusivo') {
     return { content: `⚪ **${r.jogador}** — ${r.motivo}.` };
@@ -73,8 +107,9 @@ function formatar(r) {
            `  assistiu **${horas(e.minutosAssistidos)}**`;
   });
   return {
-    content: `🔴 **${r.jogador}** esteve na sua live:${conferidos}\n\n${linhas.join('\n')}\n\n` +
-      '_Assistir não é crime. Quem julga o contexto é você, que jogou a partida._',
+    content: `🔴 **${r.jogador}** esteve na sua live:${conferidos}\n\n${linhas.join('\n')}` +
+      naquelaHora(r, fuso) +
+      '\n\n_Assistir não é crime. Quem julga o contexto é você, que jogou a partida._',
   };
 }
 
@@ -93,6 +128,7 @@ function tratar(corpo, { canalDoServidor } = {}) {
 
   if (corpo.type === COMANDO && corpo.data?.name === 'detetive') {
     const alvo = corpo.data.options?.find((o) => o.name === 'quem' || o.name === 'nome')?.value;
+    const quando = corpo.data.options?.find((o) => o.name === 'quando')?.value ?? null;
     if (!alvo) {
       return { resposta: { type: RESPONDER, data: { content: 'Uso: `/detetive nome, SteamID ou link do perfil`', flags: 64 } } };
     }
@@ -108,7 +144,10 @@ function tratar(corpo, { canalDoServidor } = {}) {
     return {
       resposta: { type: PENSANDO, data: { flags: 64 } },
       seguir: async (procurar) => {
-        try { return formatar(await procurar(canalId, alvo)); }
+        try {
+          const { resultado, fuso } = await procurar(canalId, alvo, quando);
+          return formatar(resultado, fuso);
+        }
         catch (e) { return { content: `⚠️ Não consegui consultar agora (${e.message}). Tente de novo.` }; }
       },
     };
@@ -120,8 +159,14 @@ function tratar(corpo, { canalDoServidor } = {}) {
 const COMANDO_DETETIVE = {
   name: 'detetive',
   description: 'Verifica se um jogador esteve assistindo sua live',
-  options: [{ type: 3, name: 'quem',
-    description: 'Nome no jogo, SteamID, ou link do perfil da Steam', required: true }],
+  options: [
+    { type: 3, name: 'quem',
+      description: 'Nome no jogo, SteamID, ou link do perfil da Steam', required: true },
+    // O horário é a pergunta de verdade: não é "ele já assistiu", é "ele
+    // estava assistindo na hora que me matou".
+    { type: 3, name: 'quando',
+      description: 'Que horas foi? Ex: 22:47, "10 min atrás", "agora"', required: false },
+  ],
 };
 
-module.exports = { verificarDiscord, tratar, formatar, COMANDO_DETETIVE };
+module.exports = { verificarDiscord, tratar, formatar, naquelaHora, COMANDO_DETETIVE };

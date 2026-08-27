@@ -16,6 +16,7 @@ const { abrir } = require('./banco');
 const { normalizar, comparar } = require('../src/nomes');
 const { resolverEntrada, chavesDeIdentidade } = require('../src/steam');
 const { verificarDiscord, tratar } = require('./discord');
+const { interpretarQuando, relogio } = require('../src/tempo');
 
 const CHAVE_KICK = `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAq/+l1WnlRrGSolDMA+A8
@@ -29,6 +30,15 @@ twIDAQAB
 
 const BLOCO_MS = 10 * 60 * 1000;
 const JANELA_MS = 10 * 60 * 1000;
+
+/**
+ * Quanto silêncio ainda conta como "continua ali".
+ *
+ * No chat, o sinal é a mensagem: quem fala 21h00 e 21h14 estava ali o tempo
+ * todo, mas quem some por meia hora virou outra sessão. 15 min é o meio.
+ * No servidor, o agente lê a cada ~90s, então 5 min já é ausência de verdade.
+ */
+const GAP = { live: 15 * 60 * 1000, servidor: 5 * 60 * 1000 };
 
 function verificar(cabecalhos, corpoBruto, chavePem = CHAVE_KICK, agoraMs = Date.now()) {
   const pega = (n) => cabecalhos[n] ?? cabecalhos[n.toLowerCase()];
@@ -70,10 +80,94 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
   const fecharLive = db.prepare(
     'UPDATE live SET fim_em = ? WHERE canal_id = ? AND fim_em IS NULL');
 
+  const ultimaEstada = db.prepare(
+    'SELECT * FROM estada WHERE canal_id = ? AND onde = ? AND nome_norm = ? ORDER BY fim_em DESC LIMIT 1');
+  const abrirEstada = db.prepare(
+    'INSERT INTO estada (canal_id, onde, nome_norm, nome, inicio_em, fim_em, amostras, onde_extra) VALUES (?,?,?,?,?,?,1,?)');
+  const esticarEstada = db.prepare(
+    'UPDATE estada SET fim_em = ?, nome = ?, amostras = amostras + 1 WHERE id = ?');
+
+  /**
+   * Registra que a pessoa foi VISTA em `onde` no instante `tMs`.
+   *
+   * Estica o intervalo aberto se ela ainda estava ali; abre um novo se ficou
+   * tempo demais sem aparecer. Assim uma noite inteira vira duas ou três
+   * linhas, não dez mil.
+   */
+  function ver(canalId, onde, nome, tMs, extra = null) {
+    const norm = normalizar(nome);
+    if (!norm) return;
+    const u = ultimaEstada.get(canalId, onde, norm);
+    if (u && tMs >= u.fim_em && tMs - u.fim_em <= GAP[onde]) {
+      esticarEstada.run(Math.max(u.fim_em, tMs), nome, u.id);
+      return;
+    }
+    // Evento fora de ordem dentro de um intervalo já conhecido: não abre
+    // sessão nova, senão a linha do tempo ganha buracos que não existiram.
+    if (u && tMs >= u.inicio_em && tMs <= u.fim_em) return;
+    abrirEstada.run(canalId, onde, norm, nome, tMs, tMs, extra);
+  }
+
+  const pegarCanal = db.prepare('SELECT * FROM canal WHERE id = ?');
+  const fusoDoCanal = (canalId) => pegarCanal.get(canalId)?.fuso || 'UTC';
+
+  const listarEstadas = db.prepare(
+    'SELECT * FROM estada WHERE canal_id = ? AND onde = ? AND nome_norm = ? ORDER BY inicio_em');
+
+  /** Todos os intervalos conhecidos de uma pessoa num lugar. */
+  function estadas(canalId, onde, nome) {
+    const norm = normalizar(nome);
+    if (!norm) return [];
+    return listarEstadas.all(canalId, onde, norm).map((e) => ({
+      de: e.inicio_em, ate: e.fim_em,
+      minutos: Math.max(1, Math.round((e.fim_em - e.inicio_em) / 60000)),
+      amostras: e.amostras, servidor: e.onde_extra,
+    }));
+  }
+
+  /**
+   * A pergunta do produto: **ela estava ali NAQUELE minuto?**
+   *
+   * Três respostas possíveis, e a diferença entre elas importa:
+   *   sim      — o instante cai dentro de um intervalo observado
+   *   provavel — cai perto da borda; ela foi vista pouco antes ou pouco
+   *              depois, e ninguém fecha a live para reabrir 4 min depois
+   *   nao      — não foi vista por perto. NÃO é prova de ausência: quem
+   *              assiste calado não gera mensagem nenhuma
+   */
+  function momento(canalId, onde, nome, quandoMs) {
+    const lista = estadas(canalId, onde, nome);
+    if (!lista.length) return { estado: 'sem-registro', estadas: [] };
+
+    const dentro = lista.find((e) => quandoMs >= e.de && quandoMs <= e.ate);
+    if (dentro) return { estado: 'sim', estada: dentro, estadas: lista };
+
+    let antes = null; let depois = null;
+    for (const e of lista) {
+      if (e.ate < quandoMs && (!antes || e.ate > antes.ate)) antes = e;
+      if (e.de > quandoMs && (!depois || e.de < depois.de)) depois = e;
+    }
+    const dAntes = antes ? quandoMs - antes.ate : Infinity;
+    const dDepois = depois ? depois.de - quandoMs : Infinity;
+    const perto = Math.min(dAntes, dDepois);
+    if (perto <= GAP[onde]) {
+      return {
+        estado: 'provavel', minutosDaBorda: Math.round(perto / 60000),
+        antes, depois, estadas: lista,
+      };
+    }
+    return {
+      estado: 'nao',
+      minutosDaBorda: Number.isFinite(perto) ? Math.round(perto / 60000) : null,
+      antes, depois, estadas: lista,
+    };
+  }
+
   function registrarPresenca(canalId, nome, usuarioId, tMs) {
     if (!nome) return;
     const norm = normalizar(nome);
     if (!norm) return;
+    ver(canalId, 'live', nome, tMs);
     const p = pegarPresenca.get(canalId, norm);
     if (!p) {
       inserirPresenca.run(canalId, nome, norm, usuarioId ?? null, tMs, tMs, tMs);
@@ -127,6 +221,7 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
       const norm = normalizar(j.nome);
       if (!norm) continue;
       inserirNoServidor.run(canalId, j.nome, norm, j.minutosNoServidor ?? null, nome, tMs);
+      ver(canalId, 'servidor', j.nome, tMs, nome);
     }
     return cruzarAgora(canalId);
   }
@@ -164,9 +259,9 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
    * cruza cada um. Se veio um nome solto, cruza direto — é o caso de quem
    * acabou de morrer e só tem o nome que apareceu na tela.
    */
-  async function procurar(canalId, entrada, { minimo = 0.7, buscar } = {}) {
+  async function procurar(canalId, entrada, { minimo = 0.7, quando = null, buscar } = {}) {
     const steamId = await resolverEntrada(entrada, buscar).catch(() => null);
-    if (!steamId) return { ...consultar(canalId, entrada, { minimo }), tipo: 'nome' };
+    if (!steamId) return { ...consultar(canalId, entrada, { minimo, quando }), tipo: 'nome' };
 
     const hist = await chavesDeIdentidade(steamId, buscar);
     // Perfil privado NÃO é perfil limpo: não se olhou nada, e dizer
@@ -185,15 +280,18 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
     const nomes = (hist.chaves || []).filter(util);
 
     const vistos = new Map();
+    let noServidor = null;
     for (const n of nomes) {
-      for (const e of consultar(canalId, n, { minimo }).evidencias) {
+      const r = consultar(canalId, n, { minimo, quando });
+      if (quando != null && (!noServidor || noServidor.estado === 'sem-registro')) noServidor = r.noServidor;
+      for (const e of r.evidencias) {
         const antes = vistos.get(e.espectador);
         if (!antes || antes.confianca < e.confianca) vistos.set(e.espectador, { ...e, nomeSteamQueBateu: n });
       }
     }
     const evidencias = [...vistos.values()].sort((a, b) => b.confianca - a.confianca);
     return {
-      tipo: 'steamid', steamId,
+      tipo: 'steamid', steamId, quando, noServidor,
       jogador: hist.perfil?.nome || steamId,
       historico: nomes,
       conclusao: evidencias.length ? 'esteve na sua live' : 'não encontrado na sua audiência',
@@ -202,7 +300,7 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
   }
 
   /** Cruza um nome de jogador contra tudo que já foi gravado do canal. */
-  function consultar(canalId, nomeJogador, { minimo = 0.7 } = {}) {
+  function consultar(canalId, nomeJogador, { minimo = 0.7, quando = null } = {}) {
     const achados = [];
     for (const p of listarPresenca.all(canalId)) {
       const c = comparar(nomeJogador, p.nome);
@@ -214,12 +312,19 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
           minutosAssistidos: Math.round((p.blocos * BLOCO_MS) / 60000),
           primeiraVezEm: p.primeira_em,
           ultimaVezEm: p.ultima_em,
+          naLive: estadas(canalId, 'live', p.nome),
+          // Só faz sentido responder "estava lá?" quando alguém perguntou
+          // por um instante. Sem `quando`, isto fica de fora.
+          momento: quando != null ? momento(canalId, 'live', p.nome, quando) : null,
         });
       }
     }
     achados.sort((a, b) => b.confianca - a.confianca);
     return {
       jogador: nomeJogador,
+      quando,
+      // Quem estava no servidor naquele instante — é o outro lado do cruzamento.
+      noServidor: quando != null ? momento(canalId, 'servidor', nomeJogador, quando) : null,
       // Nunca "é sniper": mostra presença, não culpa.
       conclusao: achados.length ? 'esteve na sua live' : 'não encontrado na sua audiência',
       evidencias: achados,
@@ -292,7 +397,14 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
         // Edita a mensagem depois de responder: o prazo de 3s do Discord já
         // foi cumprido, e a consulta à Steam pode levar o tempo que levar.
         if (r.seguir) {
-          const dados = await r.seguir((c, q) => procurar(c, q, { buscar }));
+          const dados = await r.seguir(async (c, q, quandoTexto) => {
+            const fuso = fusoDoCanal(c);
+            const quando = interpretarQuando(quandoTexto, agora(), fuso);
+            if (quando === undefined) {
+              throw new Error('não entendi o horário — use 22:47, "10 min atrás" ou "agora"');
+            }
+            return { resultado: await procurar(c, q, { quando, buscar }), fuso };
+          });
           await buscar(`https://discord.com/api/v10/webhooks/${appDiscord}/${corpo.token}/messages/@original`,
             { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) })
             .catch((e) => console.error('[discord] não consegui editar a resposta:', e.message));
@@ -316,7 +428,12 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
       const canalId = url.searchParams.get('canal');
       const q = (url.searchParams.get('q') || '').trim();
       if (!canalId || !q) return responder(400, { erro: 'informe canal e q' });
-      procurar(canalId, q).then((r) => responder(200, r),
+      const fuso = fusoDoCanal(canalId);
+      const quando = interpretarQuando(url.searchParams.get('quando'), agora(), fuso);
+      if (quando === undefined) {
+        return responder(400, { erro: 'não entendi o horário — use 22:47, "10 min atrás" ou "agora"' });
+      }
+      procurar(canalId, q, { quando }).then((r) => responder(200, { ...r, fuso }),
         (e) => responder(502, { erro: String(e.message || e) }));
       return;
     }
@@ -370,7 +487,7 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
   });
 
   return { servidor, db, ingerir, consultar, procurar, registrarPresenca, verificar,
-           guardarServidor, cruzarAgora };
+           guardarServidor, cruzarAgora, ver, estadas, momento, fusoDoCanal };
 }
 
 module.exports = { criar, verificar, CHAVE_KICK, BLOCO_MS };

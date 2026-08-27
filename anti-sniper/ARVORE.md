@@ -41,6 +41,7 @@ anti-sniper/
 │
 ├── src/
 │   ├── unicode.js          ✅ dobras seguras (𝚊𝚛𝚒𝚗 → arin)
+│   ├── tempo.js            ✅ "22:47" no fuso DELE, não em UTC
 │   ├── nomes.js            ✅ cruzamento — a fonte única de verdade
 │   ├── indice.js           ✅ 1.500 jogadores × 5.000 espectadores: 147s → 0,09s
 │   ├── steam.js            ✅ histórico de nomes (teto de 5) + perfil público
@@ -56,7 +57,7 @@ anti-sniper/
 │       └── streamelements.js ✅
 │
 ├── bin/                    ✅ consulta, autorização, teste de servidor
-└── test/                   ✅ 151 testes
+└── test/                   ✅ 174 testes
 ```
 
 ## Por que extensão, e não copiar e colar
@@ -134,6 +135,33 @@ não é crime, e quem julga o contexto é quem jogou a partida.
 
 Existe um teste que verifica isso: a saída não pode conter as palavras
 *sniper*, *culpado* ou *banir*.
+
+## A pergunta é QUANDO, não QUANTO
+
+Ele derrubou a primeira versão em uma frase: *"se eu não sei a hora que
+entrou e saiu não funciona — não sei se ele estava na live na hora que me
+matou."*
+
+Estava certo. Eu guardava **total assistido**. "Assistiu 20h" não diz nada
+sobre o minuto da morte.
+
+Agora o banco guarda **estada**: de quando até quando cada pessoa esteve em
+cada lugar, na live e no servidor. Não avistamento solto — intervalo. O
+agente lê 1.500 jogadores a cada 90s, e uma linha por leitura seriam 60 mil
+linhas por hora.
+
+A resposta tem três estados, e a diferença entre eles importa:
+
+| | Quer dizer |
+|---|---|
+| **sim** | o instante cai dentro de um intervalo observado |
+| **provável** | cai perto da borda — ninguém fecha a live e reabre em 4 min |
+| **não visto** | não apareceu por perto. **Não é prova de ausência** |
+
+E o fuso vai escrito junto de propósito. O serviço roda em UTC, ele mora na
+França: duas horas de erro trocariam a resposta sem ninguém perceber. O site
+manda o instante absoluto (o navegador sabe o fuso); o Discord escreve
+`(Europe/Paris)` na resposta, para um fuso errado aparecer na cara.
 
 ## Onde o produto é entregue
 

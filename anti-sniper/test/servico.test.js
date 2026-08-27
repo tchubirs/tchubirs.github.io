@@ -122,7 +122,10 @@ test('o Discord recebe resposta ANTES da consulta terminar', async () => {
     { canalDoServidor: () => 'c1' },
   );
   assert.equal(r.resposta.type, 5, 'type 5 = "pensando", reserva a resposta');
-  const final = await r.seguir((c, q) => s.procurar(c, q, { buscar: async () => { throw new Error('rede'); } }));
+  const final = await r.seguir(async (c, q) => ({
+    resultado: await s.procurar(c, q, { buscar: async () => { throw new Error('rede'); } }),
+    fuso: 'UTC',
+  }));
   assert.match(final.content, /FINIK/);
   assert.match(final.content, /esteve na sua live/);
 });
@@ -305,4 +308,135 @@ test('/discord: assinatura confere, responde na hora e edita depois', async () =
   } finally {
     await new Promise((ok) => s.servidor.close(ok));
   }
+});
+
+// ── QUANDO ────────────────────────────────────────────────────────────────
+// "Assistiu 20h" não responde nada. "Estava na live às 22:47, quando você
+// morreu" responde tudo. Estes testes protegem essa diferença.
+
+test('intervalos: quem fala de 10 em 10 min é UMA estada, não dez', () => {
+  const s = bancada();
+  for (let i = 0; i <= 60; i += 10) s.ingerir('c1', 'chat.message', msg('FINIK', 1), T + i * MIN);
+  const e = s.estadas('c1', 'live', 'FINIK');
+  assert.equal(e.length, 1);
+  assert.equal(e[0].de, T);
+  assert.equal(e[0].ate, T + 60 * MIN);
+  assert.equal(e[0].minutos, 60);
+});
+
+test('sumiu por meia hora: vira estada nova, não um bloco esticado', () => {
+  const s = bancada();
+  s.ingerir('c1', 'chat.message', msg('FINIK', 1), T);
+  s.ingerir('c1', 'chat.message', msg('FINIK', 1), T + 5 * MIN);
+  s.ingerir('c1', 'chat.message', msg('FINIK', 1), T + 90 * MIN);   // voltou depois
+  s.ingerir('c1', 'chat.message', msg('FINIK', 1), T + 95 * MIN);
+  const e = s.estadas('c1', 'live', 'FINIK');
+  assert.equal(e.length, 2, 'esticar por 90 min inventaria presença que não houve');
+  assert.deepEqual([e[0].de, e[0].ate], [T, T + 5 * MIN]);
+  assert.deepEqual([e[1].de, e[1].ate], [T + 90 * MIN, T + 95 * MIN]);
+});
+
+test('a pergunta do produto: estava na live NAQUELE minuto?', () => {
+  const s = bancada();
+  for (let i = 0; i <= 120; i += 10) s.ingerir('c1', 'chat.message', msg('FINIK', 1), T + i * MIN);
+
+  const dentro = s.momento('c1', 'live', 'FINIK', T + 47 * MIN);
+  assert.equal(dentro.estado, 'sim');
+  assert.equal(dentro.estada.de, T);
+
+  // 8 min depois do último sinal: ninguém fecha a live e reabre em 8 min.
+  const borda = s.momento('c1', 'live', 'FINIK', T + 128 * MIN);
+  assert.equal(borda.estado, 'provavel');
+  assert.equal(borda.minutosDaBorda, 8);
+
+  const longe = s.momento('c1', 'live', 'FINIK', T + 300 * MIN);
+  assert.equal(longe.estado, 'nao');
+  assert.equal(longe.minutosDaBorda, 180);
+});
+
+test('"não vi" nunca vira "não estava"', () => {
+  // Quem assiste calado não gera mensagem nenhuma. Se este teste cair, a
+  // ferramenta passou a inocentar gente sem ter olhado nada.
+  const s = bancada();
+  const semNada = s.momento('c1', 'live', 'NinguemAssim', T);
+  assert.equal(semNada.estado, 'sem-registro');
+  assert.deepEqual(semNada.estadas, []);
+  assert.notEqual(semNada.estado, 'nao');
+});
+
+test('o servidor também vira linha do tempo, com gap mais curto', () => {
+  const s = bancada();
+  // O agente lê a cada ~90s; 5 min de silêncio já é ausência de verdade.
+  for (let i = 0; i <= 6; i++) s.guardarServidor('c1', { nome: 'Rustoria' }, [{ nome: 'MEDUSA' }], T + i * 90000);
+  s.guardarServidor('c1', { nome: 'Rustoria' }, [{ nome: 'MEDUSA' }], T + 40 * MIN);
+  const e = s.estadas('c1', 'servidor', 'MEDUSA');
+  assert.equal(e.length, 2);
+  assert.equal(e[0].servidor, 'Rustoria');
+  assert.equal(s.momento('c1', 'servidor', 'MEDUSA', T + 3 * MIN).estado, 'sim');
+});
+
+test('o cruzamento que interessa: na live E no servidor no mesmo minuto', () => {
+  const s = bancada();
+  for (let i = 0; i <= 120; i += 10) s.ingerir('c1', 'chat.message', msg('diper', 2), T + i * MIN);
+  for (let i = 0; i <= 120; i += 2) s.guardarServidor('c1', { nome: 'Rustoria' }, [{ nome: 'D1per' }], T + i * MIN);
+
+  const r = s.consultar('c1', 'D1per', { quando: T + 47 * MIN });
+  assert.equal(r.evidencias[0].espectador, 'diper');
+  assert.equal(r.evidencias[0].momento.estado, 'sim', 'estava na live às 22:47');
+  assert.equal(r.noServidor.estado, 'sim', 'e no servidor no mesmo minuto');
+});
+
+test('sem perguntar horário, nada de momento é inventado', () => {
+  const s = bancada();
+  s.ingerir('c1', 'chat.message', msg('FINIK', 1), T);
+  const r = s.consultar('c1', 'FINIK');
+  assert.equal(r.quando, null);
+  assert.equal(r.noServidor, null);
+  assert.equal(r.evidencias[0].momento, null);
+  assert.ok(r.evidencias[0].naLive.length, 'a linha do tempo vem sempre');
+});
+
+test('evento fora de ordem não abre buraco na linha do tempo', () => {
+  const s = bancada();
+  s.ingerir('c1', 'chat.message', msg('FINIK', 1), T);
+  s.ingerir('c1', 'chat.message', msg('FINIK', 1), T + 10 * MIN);
+  s.ingerir('c1', 'chat.message', msg('FINIK', 1), T + 5 * MIN);  // chegou atrasado
+  assert.equal(s.estadas('c1', 'live', 'FINIK').length, 1);
+});
+
+test('/api/procurar aceita horário e responde o momento', async () => {
+  const s = bancada();
+  s.db.prepare('UPDATE canal SET fuso = ? WHERE id = ?').run('Europe/Paris', 'c1');
+  for (let i = 0; i <= 120; i += 10) s.ingerir('c1', 'chat.message', msg('FINIK', 1), T + i * MIN);
+
+  await new Promise((ok) => s.servidor.listen(0, '127.0.0.1', ok));
+  const base = `http://127.0.0.1:${s.servidor.address().port}`;
+  try {
+    const alvo = T + 47 * MIN;
+    const d = await (await fetch(`${base}/api/procurar?canal=c1&q=FINIK&quando=${alvo}`)).json();
+    assert.equal(d.fuso, 'Europe/Paris');
+    assert.equal(d.quando, alvo);
+    assert.equal(d.evidencias[0].momento.estado, 'sim');
+
+    // Horário que não dá para entender é erro explícito, nunca um chute.
+    const ruim = await fetch(`${base}/api/procurar?canal=c1&q=FINIK&quando=banana`);
+    assert.equal(ruim.status, 400);
+    assert.match((await ruim.json()).erro, /horário/);
+  } finally {
+    await new Promise((ok) => s.servidor.close(ok));
+  }
+});
+
+test('o Discord diz a hora E o fuso — fuso errado tem que aparecer', () => {
+  const s = bancada();
+  for (let i = 0; i <= 120; i += 10) s.ingerir('c1', 'chat.message', msg('FINIK', 1), T + i * MIN);
+  const r = s.consultar('c1', 'FINIK', { quando: T + 47 * MIN });
+  const texto = d.formatar(r, 'Europe/Paris').content;
+  assert.match(texto, /ESTAVA na sua live/);
+  assert.match(texto, /Europe\/Paris/, 'sem o fuso escrito, 2h de erro passa despercebido');
+  assert.doesNotMatch(texto, /sniper|culpad|banir/i);
+
+  const fora = d.formatar(s.consultar('c1', 'FINIK', { quando: T + 400 * MIN }), 'Europe/Paris').content;
+  assert.match(fora, /não vista na live nesse horário/);
+  assert.match(fora, /não inocenta/);
 });

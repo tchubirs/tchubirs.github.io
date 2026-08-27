@@ -46,6 +46,28 @@
   .nomes i{font-style:normal;background:#20252a;border:1px solid var(--linha);
            border-radius:6px;padding:2px 8px;font-size:12.5px;color:#c3ccd4}
   .nomes i.bateu{background:#3a1a1c;border-color:#6b2b30;color:#ffb3a8;font-weight:600}
+  .busca .hora{flex:0 0 150px}
+  .atalhos{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+  .atalhos button{background:#1b2025;color:#9fb0bd;border:1px solid var(--linha);
+                  border-radius:7px;padding:5px 11px;font-size:12.5px;cursor:pointer}
+  .atalhos button:hover{border-color:#3a444d;color:var(--texto)}
+  .veredito{border-radius:11px;padding:14px 16px;margin-bottom:10px;font-size:15px;
+            border:1px solid var(--linha);background:var(--caixa)}
+  .veredito.sim{background:#1a1214;border-color:#4a2226;border-left:3px solid var(--alerta)}
+  .veredito.provavel{background:#1d1810;border-color:#4d3a1c;border-left:3px solid #f0a35e}
+  .veredito b{font-size:16px}
+  .veredito .obs{color:var(--fraco);font-size:13px;margin-top:6px}
+  .fita{margin-top:12px}
+  .fita .rot{color:var(--fraco);font-size:11.5px;text-transform:uppercase;
+             letter-spacing:.6px;margin:9px 0 4px}
+  .trilho{position:relative;height:16px;background:#1b2025;border:1px solid var(--linha);
+          border-radius:5px;overflow:hidden}
+  .trilho i{position:absolute;top:0;bottom:0;background:#2f7d3a;border-radius:3px}
+  .trilho.srv i{background:#2b5f8f}
+  .marca{position:absolute;top:-5px;bottom:-5px;width:2px;background:#fff;
+         box-shadow:0 0 6px rgba(255,255,255,.8);z-index:2}
+  .reguas{display:flex;justify-content:space-between;color:#6f7a84;
+          font-size:11px;margin-top:3px;font-variant-numeric:tabular-nums}
   .rodape{color:#6f7a84;font-size:12px;margin-top:26px;line-height:1.6;
           border-top:1px solid var(--linha);padding-top:16px}
 </style>
@@ -67,7 +89,14 @@
     <p style="color:var(--fraco);font-size:13px;margin:0 0 9px">Cole o <b>nome</b> que apareceu na tela, a <b>SteamID</b>, ou o <b>link do perfil</b>. Com o perfil eu confiro <b>todos os nomes</b> que a conta já usou.</p>
     <div class="busca">
       <input id="nome" placeholder="nome de quem te matou, a SteamID, ou o link do perfil" autocomplete="off">
+      <input id="quando" class="hora" placeholder="que horas? 22:47" autocomplete="off">
       <button id="ir">Procurar</button>
+    </div>
+    <div class="atalhos">
+      <button data-min="0">agora</button>
+      <button data-min="5">5 min atrás</button>
+      <button data-min="15">15 min atrás</button>
+      <button data-min="60">1 h atrás</button>
     </div>
     <div id="resultado"></div>
 

@@ -4,7 +4,8 @@
  * servidor de banco para manter no ar.
  *
  * O que fica guardado, e nada além disso:
- *   - quem apareceu no chat de cada canal, e quando
+ *   - quem apareceu no chat de cada canal, e QUANDO — em intervalos
+ *   - quem esteve no servidor, e QUANDO — nos mesmos intervalos
  *   - nomes de jogadores vistos, para o cruzamento
  * Nunca IP, nunca e-mail, nunca nada de fora da plataforma.
  */
@@ -23,7 +24,10 @@ function abrir(caminho = 'detetive.db') {
       criado_em    INTEGER NOT NULL,
       -- Qual servidor do Discord fala com este canal. Sem isso, o /detetive
       -- não sabe de quem é a audiência que ele deve consultar.
-      discord_guild TEXT
+      discord_guild TEXT,
+      -- Fuso do streamer. Quando ele digita "22:47", é 22:47 DELE. Errar
+      -- isto por duas horas transforma "estava na live" em "não estava".
+      fuso          TEXT NOT NULL DEFAULT 'UTC'
     );
     CREATE INDEX IF NOT EXISTS idx_canal_guild ON canal (discord_guild);
 
@@ -65,6 +69,30 @@ function abrir(caminho = 'detetive.db') {
       PRIMARY KEY (canal_id, nome_norm)
     );
 
+    -- ESTADA: de quando até quando a pessoa esteve em cada lugar.
+    --
+    -- Total assistido não responde a pergunta do produto. "Ele assistiu 20h"
+    -- não diz nada sobre o minuto em que te mataram; "ele estava na sua live
+    -- das 21h10 às 23h05, e você morreu às 22h47" diz tudo.
+    --
+    -- Guarda INTERVALO, não avistamento solto: o agente lê 1.500 jogadores a
+    -- cada 90s, e uma linha por leitura seriam 60 mil linhas por hora.
+    CREATE TABLE IF NOT EXISTS estada (
+      id         INTEGER PRIMARY KEY,
+      canal_id   TEXT NOT NULL,
+      onde       TEXT NOT NULL,        -- 'live' ou 'servidor'
+      nome_norm  TEXT NOT NULL,
+      nome       TEXT NOT NULL,
+      inicio_em  INTEGER NOT NULL,
+      fim_em     INTEGER NOT NULL,
+      amostras   INTEGER NOT NULL DEFAULT 1,
+      onde_extra TEXT                  -- nome do servidor, quando for o caso
+    );
+    CREATE INDEX IF NOT EXISTS idx_estada_pessoa
+      ON estada (canal_id, onde, nome_norm, fim_em);
+    CREATE INDEX IF NOT EXISTS idx_estada_tempo
+      ON estada (canal_id, onde, inicio_em, fim_em);
+
     -- Idempotência de webhook: a Kick reentrega evento quando não recebe
     -- 200 a tempo. Sem isto, uma reentrega contaria presença duas vezes.
     CREATE TABLE IF NOT EXISTS evento_visto (
@@ -78,6 +106,9 @@ function abrir(caminho = 'detetive.db') {
   if (!colunas.includes('discord_guild')) {
     db.exec('ALTER TABLE canal ADD COLUMN discord_guild TEXT');
     db.exec('CREATE INDEX IF NOT EXISTS idx_canal_guild ON canal (discord_guild)');
+  }
+  if (!colunas.includes('fuso')) {
+    db.exec("ALTER TABLE canal ADD COLUMN fuso TEXT NOT NULL DEFAULT 'UTC'");
   }
   return db;
 }
