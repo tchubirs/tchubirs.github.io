@@ -1,5 +1,44 @@
 # Radar de oportunidades — lista viva
 
+## ⛔ A REGRA — leia antes de qualquer coisa neste arquivo
+
+**O dinheiro tem que vir do que EU construo. Não de quem ele é, não do que ele
+faz, não do que ele tem.**
+
+Palavras dele, 27/08/2026, ao reinstaurar a regra em definitivo:
+
+> *"esquece quem sou eu e oque eu faço é oque eu tenho meu foco é você e sempre.
+> Foi mas agora é regra"*
+
+**Isto está FORA do escopo. Não proponha, não pesquise, não volte ao assunto:**
+
+| Fora | Por quê |
+|---|---|
+| Os 40 mil seguidores da Twitch, a Kick, o YouTube, o TikTok | é o que ele TEM |
+| O nível de elite em Rust, o Kick Off, os Twitch Rivals | é quem ele É |
+| A rede de 150 criadores da cena | é o que ele tem |
+| O inventário Steam dele | é o que ele tem — e sugerir vender foi ofensivo, com razão |
+| Currículo, diploma, histórico, entrevista de emprego | ele recusou, e não é ativo dele |
+| Repositórios, contas e trabalho antigos dele | regra desde o primeiro dia |
+| Vender o tempo dele por hora | não é o objetivo |
+
+**O que sobra, e é só isto:** eu construo software de verdade, funcionando e
+testado; ele entra como a pessoa física que assina e recebe. O trabalho humano
+dele é o mínimo legalmente inevitável — nome, IBAN, enviar o formulário.
+
+**Por que a regra existe:** eu derrapei. Passei horas propondo caminhos que
+dependiam da audiência, da fama e das coisas dele, até chegar ao ponto de sugerir
+que vendesse os próprios itens. Ele estava falando de trabalho. A regra é a
+correção disso, e vale para sempre.
+
+**Consequência estratégica direta:** o único formato que sobrevive à regra é
+**fundo que paga por software entregue**. Não há cliente para convencer, não há
+audiência para construir, não há credencial para provar. O trabalho é meu, o
+julgamento é sobre a entrega, e a parte dele são 30 minutos.
+Por isso o portfólio de candidaturas é a estratégia inteira, não um plano B.
+
+---
+
 Atualizado por uma rotina semanal. Toda linha aqui foi **medida**, não deduzida.
 Se um item não tem número com fonte, ele fica em "a verificar" até ter.
 
@@ -59,7 +98,7 @@ Se um item não tem número com fonte, ele fica em "a verificar" até ter.
 
 ## ✅ VIVO — pode agir hoje
 
-### ⏸️ Skins de Rust no Steam Workshop — PARADO, FALTA ARTISTA
+### ❌ Skins de Rust — MORTO PELA REGRA (além de faltar artista)
 
 Detalhes em `rust-skins/00-O-PLANO.md`. Ele executa por `rust-skins/01-O-QUE-VOCE-FAZ.md`.
 
