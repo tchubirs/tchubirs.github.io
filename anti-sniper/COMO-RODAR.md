@@ -15,13 +15,18 @@ Na primeira vez ele cria `detetive.config.json` e pede duas linhas:
   "canal": "tchubi",
   "fuso": "Europe/Paris",
   "battlemetricsJogador": "",   ← o número em battlemetrics.com/players/NUMERO
-  "botrixFidelidade": ""        ← o endereço da sua página de fidelidade no BotRix
+  "botrixFidelidade": "https://botrix.live/panel/loyalty"   ← já vem preenchido
 }
 ```
 
 Preencha e rode `npm start` de novo. Abre uma janela do navegador: **faça
 login no BattleMetrics e no BotRix**. A sessão fica salva em
 `~/.detetive-navegador` e não pede nunca mais.
+
+> Parte disso já funciona **sem login nenhum**: a BotRix tem uma rota
+> pública que devolve os 20 primeiros da fidelidade do seu canal, com tempo
+> assistido por pessoa. O serviço usa ela sozinho. O login serve para a
+> lista **completa**, que só o dono do canal enxerga.
 
 Painel: **http://127.0.0.1:8790/?canal=tchubi**
 

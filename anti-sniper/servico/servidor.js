@@ -20,6 +20,7 @@ const { verificarDiscord, tratar } = require('./discord');
 const { interpretarQuando, relogio } = require('../src/tempo');
 const { criarColetor, criarColetorDeAlvos } = require('../src/stream/coletor');
 const se = require('../src/stream/streamelements');
+const botrix = require('../src/stream/botrix-api');
 
 const CHAVE_KICK = `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAq/+l1WnlRrGSolDMA+A8
@@ -113,6 +114,7 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
 
   const pegarCanal = db.prepare('SELECT * FROM canal WHERE id = ?');
   const canaisComSE = db.prepare("SELECT * FROM canal WHERE se_canal IS NOT NULL AND se_canal != ''");
+  const canaisKick = db.prepare("SELECT * FROM canal WHERE plataforma = 'kick'");
 
   // ── Presença de quem assiste CALADO ────────────────────────────────────
   // O webhook da Kick só entrega mensagem, e a API pública dela não tem
@@ -197,6 +199,33 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
       vistos += 1;
     }
     return { base: false, total: agora_.size, vistos };
+  }
+
+  /**
+   * Coleta pela rota pública da BotRix — sem login, sem navegador.
+   *
+   * Vem capada em 20 pessoas (medido: limit, count, size, page, offset e
+   * top todos devolvem 20), então é o piso e não o teto: pega o topo da
+   * fidelidade hoje, e o agente logado traz a lista inteira quando roda.
+   */
+  function ligarBotrixPublico({ intervaloMs = 5 * 60 * 1000, placarDe } = {}) {
+    for (const c of canaisKick.all()) {
+      const chave = `botrix:${c.id}`;
+      if (coletores.has(chave)) continue;
+      const col = criarColetor({
+        placar: placarDe
+          ? () => placarDe(c)
+          : () => botrix.placarPublico(c.slug, 'kick', buscar),
+        // O placar da BotRix traz minutos assistidos; o coletor compara
+        // pontos, então o que sobe é o mesmo sinal por outro nome.
+        aoVer: (nome, t) => registrarPresenca(c.id, nome, null, t, 'tempo'),
+        agora,
+        aoErro: (e) => console.error(`[botrix ${c.id}]`, e.message),
+      });
+      coletores.set(chave, col);
+      col.ligar(intervaloMs);
+    }
+    return coletores;
   }
 
   function pararColeta() {
@@ -743,7 +772,7 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
 
   return { servidor, db, ingerir, consultar, procurar, registrarPresenca, verificar,
            guardarServidor, cruzarAgora, ver, estadas, momento, agoraNa, nosDois, log, fusoDoCanal,
-           ligarColeta, ligarAlvos, pararColeta, coletores, receberFidelidade };
+           ligarColeta, ligarAlvos, ligarBotrixPublico, pararColeta, coletores, receberFidelidade };
 }
 
 module.exports = { criar, verificar, CHAVE_KICK, BLOCO_MS };

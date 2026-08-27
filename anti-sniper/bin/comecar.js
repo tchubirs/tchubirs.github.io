@@ -37,9 +37,9 @@ const MODELO = {
   // Seu id de jogador no BattleMetrics. Abra seu perfil lá e copie o número
   // do endereço: battlemetrics.com/players/SEU_ID
   battlemetricsJogador: '',
-  // A página de fidelidade do seu canal no BotRix. É a fonte que enxerga
-  // quem assiste CALADO — sem ela, só aparece quem escreve no chat.
-  botrixFidelidade: '',
+  // O painel de fidelidade da BotRix. É a fonte que enxerga quem assiste
+  // CALADO — sem ela, só aparece quem escreve no chat.
+  botrixFidelidade: 'https://botrix.live/panel/loyalty',
   intervaloSegundos: 90,
 };
 

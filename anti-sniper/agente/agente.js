@@ -18,7 +18,8 @@
 
 const path = require('node:path');
 const os = require('node:os');
-const { lerJogadores, lerServidorAtual, lerFidelidade } = require('./ler-pagina');
+const { lerJogadores, lerServidorAtual } = require('./ler-pagina');
+const { normalizarPlacar } = require('../src/stream/botrix-api');
 
 const PERFIL = process.env.DETETIVE_PERFIL
   || path.join(os.homedir(), '.detetive-navegador');
@@ -26,9 +27,9 @@ const SERVICO = process.env.DETETIVE_SERVICO || 'http://127.0.0.1:8790';
 const JOGADOR = process.env.DETETIVE_JOGADOR;   // id do seu perfil no BattleMetrics
 const CANAL = process.env.DETETIVE_CANAL;       // id do canal no serviço
 const INTERVALO_MS = Number(process.env.DETETIVE_INTERVALO || 90) * 1000;
-// Página de fidelidade do BotRix — a fonte de quem assiste CALADO na Kick.
+// Painel de fidelidade da BotRix — a fonte de quem assiste CALADO na Kick.
 // O webhook da Kick só entrega mensagem, e sniper não escreve no chat.
-const FIDELIDADE = process.env.DETETIVE_FIDELIDADE;   // ex: https://botrix.live/pt/dashboard/kick/tchubi/points
+const FIDELIDADE = process.env.DETETIVE_FIDELIDADE;   // https://botrix.live/panel/loyalty
 
 async function abrirNavegador() {
   let chromium;
@@ -70,12 +71,31 @@ function funcaoParaTexto(nome) {
  */
 async function umaRodadaFidelidade(ctx, aviso) {
   if (!FIDELIDADE) return null;
+  // Pede a API, não a tela. O painel da BotRix é uma aplicação de página
+  // única: raspar a tabela renderizada quebra no próximo deploy deles e o
+  // usuário só descobre quando a ferramenta para de achar gente, calada.
+  // O endereço saiu do pacote JavaScript deles (chunk 2346): o painel chama
+  // GET /api/loyalty/get, e aqui a chamada sai com o cookie da sessão dele.
   const p = await ctx.newPage();
   try {
+    // Passar pelo painel primeiro deixa a sessão pronta e o Referer certo.
     await p.goto(FIDELIDADE, { waitUntil: 'domcontentloaded', timeout: 45000 });
-    await p.waitForTimeout(3000);
-    const lista = await extrair(p, lerFidelidade);
-    if (!lista?.length) { aviso('sem tabela de fidelidade (confira o link, ou faça login)'); return null; }
+    await p.waitForTimeout(1500);
+
+    const bruto = await p.evaluate(async () => {
+      const r = await fetch('/api/loyalty/get', {
+        credentials: 'include',
+        headers: { Accept: 'application/json' },
+      });
+      if (!r.ok) return { erro: `HTTP ${r.status}` };
+      try { return { dados: await r.json() }; }
+      catch { return { erro: 'resposta não era JSON — provavelmente a tela de login' }; }
+    }).catch((e) => ({ erro: e.message }));
+
+    if (bruto?.erro) { aviso(`fidelidade: ${bruto.erro} (faça login com DETETIVE_VISIVEL=1)`); return null; }
+    const lista = normalizarPlacar(bruto?.dados);
+    if (!lista?.length) { aviso('fidelidade veio vazia — confira se o canal certo está selecionado'); return null; }
+
     const r = await fetch(`${SERVICO}/api/fidelidade`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

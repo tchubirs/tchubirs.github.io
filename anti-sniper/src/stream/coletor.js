@@ -57,7 +57,12 @@ function criarColetor({ placar, aoVer, agora = Date.now, aoErro = () => {} }) {
     const t = agora();
     const atual = new Map();
     for (const u of lista || []) {
-      if (u && u.nome != null) atual.set(u.nome, Number(u.pontos) || 0);
+      if (!u || u.nome == null) continue;
+      // Tempo assistido é o sinal preferido: sobe só por estar com a live
+      // aberta. Ponto também sobe por seguir, dar sub ou resgatar prêmio —
+      // serve de reserva quando a fonte não expõe tempo.
+      const v = u.minutosAssistidos != null ? Number(u.minutosAssistidos) : Number(u.pontos);
+      atual.set(u.nome, Number.isFinite(v) ? v : 0);
     }
 
     if (!anterior) {
