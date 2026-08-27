@@ -13,6 +13,8 @@
  */
 
 /** Decoração que gente põe no nome e que não carrega identidade nenhuma. */
+const { dobrar } = require('./unicode');
+
 const TAG_CLA = /^[\[\(\{<|][^\]\)\}>|]{1,6}[\]\)\}>|]\s*/;
 const SO_DECORACAO = /[ -㌀\uD83C-􏰀-\uDFFF←-⇿☀-➿]/g;
 
@@ -27,7 +29,10 @@ function tirarAcento(s) {
 
 function normalizar(nome, { agressivo = false } = {}) {
   if (typeof nome !== 'string') return '';
-  let s = nome.trim();
+  // Dobrar ANTES de qualquer coisa. Se apagar decoração primeiro, 𝚊𝚛𝚒𝚗
+  // vira string vazia em vez de virar "arin" — foi o que acontecia antes,
+  // e era o pior resultado possível: não casava e não avisava.
+  let s = dobrar(nome).trim();
   s = s.replace(TAG_CLA, '');          // [BR] Fulano -> Fulano
   s = s.replace(SO_DECORACAO, '');     // emoji e símbolos
   s = tirarAcento(s).toLowerCase();
@@ -39,6 +44,11 @@ function normalizar(nome, { agressivo = false } = {}) {
   // xX_nome_Xx e nomeee -> nome. Repetição é enfeite, não identidade.
   s = s.replace(/^(x+)(.+?)\1$/, '$2');
   s = s.replace(/(.)\1{2,}/g, '$1$1');
+  // Sufixo e prefixo de divulgação: gente põe o canal no nome do jogo o
+  // tempo todo. `arin_tv` e `arin` são a mesma pessoa, e sem tirar isto a
+  // comparação falha justamente no caso mais comum.
+  s = s.replace(/^(ttv|twitch|yt|youtube|kick)/, '');
+  s = s.replace(/(ttv|tv|twitch|yt|youtube|kick|live|stream)$/, '');
   return s;
 }
 
@@ -78,8 +88,13 @@ function comparar(nomeJogo, nomeChat) {
   if (ag === bg) return { confianca: 0.90, motivo: 'idêntico tratando leet' };
 
   // Nome curto demais é armadilha: "ana" dentro de "banana" não é sinal.
+  // Mas exigir 5 letras cortava `arin`, que é nome real. A regra certa não
+  // é tamanho absoluto: é QUANTO do nome maior o menor ocupa.
+  //   "arin" em "arintv"  -> 4/6 = 67%  ✓ mesma pessoa
+  //   "ana"  em "banana"  -> 3/6 = 50%  ✗ coincidência
   const curto = Math.min(a.length, b.length);
-  if (curto >= 5 && (a.includes(b) || b.includes(a))) {
+  const longo = Math.max(a.length, b.length);
+  if (curto >= 4 && curto / longo >= 0.6 && (a.includes(b) || b.includes(a))) {
     return { confianca: 0.75, motivo: 'um contém o outro' };
   }
 
@@ -118,4 +133,23 @@ function cruzar(noServidor, noChat, minimo = 0.55) {
   return achados.sort((x, y) => y.confianca - x.confianca);
 }
 
-module.exports = { normalizar, distancia, comparar, cruzar };
+/**
+ * Compara TODO o histórico de nomes de um jogador contra um nome de chat.
+ *
+ * Ninguém usa o mesmo nome na Steam e na Twitch — comparar só o nome atual
+ * acha quase nada. Mas a pessoa trocou de nome muitas vezes ao longo dos
+ * anos, e **basta um** desses nomes bater. É o histórico que faz o
+ * cruzamento funcionar; o nome de hoje é só a linha mais recente dele.
+ */
+function compararHistorico(historicoDeNomes, nomeChat) {
+  let melhor = { confianca: 0, motivo: 'nenhum nome do histórico bate', nomeUsado: null };
+  for (const antigo of historicoDeNomes || []) {
+    const r = comparar(antigo, nomeChat);
+    if (r.confianca > melhor.confianca) {
+      melhor = { ...r, nomeUsado: antigo };
+    }
+  }
+  return melhor;
+}
+
+module.exports = { normalizar, distancia, comparar, compararHistorico, cruzar };

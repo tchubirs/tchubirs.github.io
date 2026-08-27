@@ -1,80 +1,91 @@
 # A árvore do projeto
 
+> **Corrigida em 27/08/2026.** A primeira versão punha RCON no centro e
+> desenhava um monitor preso a um servidor. Ele derrubou: *"rust rcon esquece
+> isso, é pra todos os servidores no geral, não é pra ver dentro do jogo e em
+> nenhum local, é pra pesquisar — ex: desconfiei de alguém, pego a steam id da
+> pessoa e verifico se é ou não sniper."*
+>
+> Isso muda o produto de **monitor** para **consulta**, e o efeito é enorme:
+> com RCON, só servia para quem tem servidor próprio. Sem RCON, serve para
+> qualquer streamer, em qualquer servidor, sem pedir nada a ninguém.
+
 ```
 anti-sniper/
 │
 ├── src/
-│   ├── nomes.js            ✅ cruza nome do jogo com nome do chat
-│   ├── vigia.js            ✅ decide e dispara o alerta, na hora
+│   ├── unicode.js          ✅ dobra letra disfarçada de volta ao alfabeto
+│   ├── nomes.js            ✅ cruza histórico de nomes com nome de chat
+│   ├── steam.js            ✅ histórico de nomes, do perfil público
+│   ├── consulta.js         ✅ SteamID entra, evidência sai   ← O PRODUTO
 │   │
-│   ├── jogo/               ← A PORTA DOS OUTROS JOGOS
-│   │   ├── fonte.js        ✅ contrato: devolve [{nome, id?, entrouHa?}]
-│   │   ├── rust-a2s.js     ⬜ consulta pública UDP, sem senha    ← próximo
-│   │   ├── rust-rcon.js    ⬜ WebSocket, precisa ser admin
-│   │   └── (outro-jogo.js) ⬜ um arquivo por jogo, e nada mais muda
+│   ├── stream/             ← de onde vem "quem assistiu"
+│   │   ├── fonte.js        ✅ contrato
+│   │   ├── twitch.js       ⬜ Get Chatters + histórico
+│   │   ├── streamelements.js ⬜ tempo assistido que ELE JÁ TEM guardado
+│   │   ├── kick.js         ⬜
+│   │   └── youtube.js      ⬜
 │   │
-│   ├── stream/             ← A PORTA DAS OUTRAS PLATAFORMAS
-│   │   ├── fonte.js        ✅ contrato: devolve [{nome, id?}]
-│   │   ├── twitch.js       ⬜ Get Chatters + EventSub stream.online
-│   │   ├── kick.js         ⬜ webhooks (chat.message, livestream.status)
-│   │   └── youtube.js      ⬜ liveChatMessages
+│   ├── vigia.js            ✅ modo ao vivo — depende de fonte do jogo,
+│   │                          que hoje não existe sem RCON. Fica guardado.
+│   ├── jogo/fonte.js       ✅ contrato, para quando existir
 │   │
-│   ├── overlay/            ← COMO VOCÊ VÊ, DENTRO DO JOGO
-│   │   ├── servidor.js     ⬜ HTTP + WebSocket local
-│   │   └── pagina.html     ⬜ fonte de navegador do OBS
-│   │
-│   ├── laco.js             ⬜ o laço: pergunta às fontes, alimenta o vigia
-│   └── config.js           ⬜ qual servidor, qual canal, quais limites
+│   ├── overlay/            ⬜ como aparece na hora da suspeita
+│   └── config.js           ⬜
 │
-├── bin/
-│   └── anti-sniper.js      ⬜ o executável que o streamer roda
-│
-└── test/
-    └── vigia.test.js       ✅ 16 testes
+├── bin/anti-sniper.js      ⬜ o que ele roda
+└── test/                   ✅ 31 testes
 ```
 
-## As duas decisões que a árvore toma
+## Por que o histórico de nomes é a peça central
 
-### 1. Duas portas, e só duas
+**Ninguém usa o mesmo nome na Steam e na Twitch.** Comparar o nome de hoje
+acha quase nada — e foi o erro da primeira versão.
 
-`src/jogo/` e `src/stream/` existem para uma coisa: **jogo novo é um arquivo
-novo, plataforma nova é um arquivo novo, e nada mais no projeto muda.**
+Mas a Steam guarda todos os nomes anteriores, em endereço público:
 
-Sem isso, "migrar para todos os jogos" vira reescrever tudo a cada jogo. Com
-isso, o `vigia.js` nunca fica sabendo se é Rust ou outra coisa.
+```
+https://steamcommunity.com/profiles/STEAMID64/ajaxaliases
+```
 
-### 2. Fonte declara o que consegue entregar
+Sem login, sem chave. **Basta UM desses nomes bater.**
 
-Nem toda fonte dá o mesmo. A consulta pública provavelmente dá só **nome**;
-o RCON dá **nome, id, tempo de conexão e posição**.
+E o dado real mostrou o problema que ninguém teria previsto. Um perfil de
+verdade tinha estes quatro nomes, trocados em dois minutos:
 
-Então cada fonte declara suas capacidades — `NOMES`, `IDENTIDADE`, `ENTRADA`,
-`POSICAO` — e o vigia liga só os sinais que a fonte sustenta. Sem isso, o
-sinal "entrou logo depois de você" falharia calado com uma fonte que não sabe
-horário de entrada. **Melhor dizer "esse sinal está desligado porque sua fonte
-não dá o dado" do que não alertar e o streamer achar que está protegido.**
+```
+arin        🇦 🇷 🇮 🇳        ᴀʀɪɴ        𝚊𝚛𝚒𝚗
+```
 
-## Por que o overlay é peça de primeira, não enfeite
+**São o mesmo nome para um humano e bytes sem nada em comum para um
+computador.** É exatamente o que alguém faz para não ser achado. Por isso
+`unicode.js` existe e vem antes de tudo: dobra matemáticos, versalete,
+largura inteira, cercados, bandeiras, e cirílico disfarçado de latino
+(`ѕniрer` → `sniper`).
 
-Sniper se pega no ato. Se o alerta aparece numa janela atrás do jogo, chegou
-tarde. Tem que aparecer **por cima do jogo**, onde o olho já está.
+Sem essa camada o normalizador apagava esses nomes e sobrava string vazia —
+o pior resultado possível: não casava e não avisava que não tinha casado.
 
-O jeito que streamer entende: **fonte de navegador do OBS**. Ele cola uma URL
-e pronto — sem instalar, sem configurar, sem ser programador. Por isso o
-overlay é um servidor HTTP local que serve uma página, e não uma janela de
-aplicativo.
+## Escopo, e por que ele para aqui
 
-## Ordem de construção
+**Só perfil público da Steam + audiência do próprio canal dele.**
 
-| # | O quê | Por quê nessa ordem |
-|---|---|---|
-| 1 | `rust-a2s.js` | **decide o produto**: se a consulta pública devolver nomes, qualquer streamer usa sem precisar do dono do servidor. Se não devolver, só serve para quem tem RCON, e o cliente muda |
-| 2 | `twitch.js` | o outro lado do cruzamento |
-| 3 | `laco.js` + `overlay/` | vira produto que dá para usar |
-| 4 | `kick.js` | a plataforma onde ele está agora |
-| 5 | `rust-rcon.js` | sinais melhores para quem tem servidor |
-| 6 | `youtube.js` | por último |
+Nada de Discord, Twitter, e-mail ou IP. Além de ser o art. 226-18 do código
+penal francês (5 anos, 300 mil euros, e pune a COLETA, não só a divulgação),
+**não é necessário**: a pergunta "essa pessoa estava me assistindo?" se
+responde inteira com esses dois dados.
 
-**O passo 1 é um teste de 30 minutos e ninguém fez.** É a coisa mais barata
-que existe capaz de mudar o produto inteiro — precisa só do IP e da porta de
-um servidor de Rust.
+## A conclusão nunca é "é sniper"
+
+A ferramenta diz **"esteve na sua live"** e mostra qual nome bateu. Assistir
+não é crime, e quem julga o contexto é quem jogou a partida.
+
+Existe um teste que verifica isso: a saída não pode conter as palavras
+*sniper*, *culpado* ou *banir*.
+
+## Próximo passo
+
+`streamelements.js` — porque ele **já usa StreamElements nos três canais**, e
+isso significa que **meses de tempo assistido por pessoa já estão guardados**.
+Dá para testar a tese contra uma noite passada em que ele sabe que foi
+snipado, sem esperar dado novo.

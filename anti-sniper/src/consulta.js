@@ -1,0 +1,82 @@
+'use strict';
+/**
+ * A consulta.
+ *
+ * Forma do produto, corrigida por ele: **não é monitor preso a um servidor,
+ * é ferramenta de pesquisa.** Você desconfia de alguém, pega a SteamID dessa
+ * pessoa (do combat log, de quem te matou) e pergunta: essa pessoa está me
+ * assistindo?
+ *
+ * Isso funciona em QUALQUER servidor, sem RCON, sem ser admin, sem o dono do
+ * servidor cooperar. O desenho anterior exigia RCON e por isso só servia para
+ * quem tem servidor próprio — o que matava o produto para 99% dos streamers.
+ *
+ * Devolve EVIDÊNCIA, nunca veredito. Quem decide é a pessoa.
+ */
+
+const { compararHistorico } = require('./nomes');
+const { historicoDeNomes, ehSteamId64 } = require('./steam');
+
+/**
+ * @param {string} steamId64 de quem se desconfia
+ * @param {Array<{nome:string,id?:string,minutosAssistidos?:number}>} audiencia
+ *        quem esteve no seu chat — do Get Chatters agora, ou do histórico de
+ *        tempo assistido que o StreamElements já guardou
+ * @param {object} [op]
+ */
+async function consultar(steamId64, audiencia, op = {}) {
+  const { buscar, minimo = 0.7 } = op;
+  if (!ehSteamId64(steamId64)) throw new Error(`SteamID64 inválido: ${steamId64}`);
+
+  const hist = await historicoDeNomes(steamId64, buscar);
+
+  if (hist.nomes.length === 0) {
+    return {
+      steamId: steamId64,
+      conclusao: 'inconclusivo',
+      motivo: 'perfil sem histórico de nomes público — pode estar privado',
+      historico: [],
+      evidencias: [],
+    };
+  }
+
+  const evidencias = [];
+  for (const v of audiencia || []) {
+    const r = compararHistorico(hist.nomes, v.nome);
+    if (r.confianca >= minimo) {
+      evidencias.push({
+        espectador: v.nome,
+        espectadorId: v.id,
+        nomeSteamQueBateu: r.nomeUsado,
+        confianca: r.confianca,
+        motivo: r.motivo,
+        minutosAssistidos: v.minutosAssistidos,
+      });
+    }
+  }
+  evidencias.sort((a, b) => b.confianca - a.confianca);
+
+  return {
+    steamId: steamId64,
+    // Nunca "é sniper". A ferramenta mostra que a pessoa estava assistindo;
+    // assistir não é crime, e quem julga o contexto é quem jogou a partida.
+    conclusao: evidencias.length ? 'esteve na sua live' : 'não encontrado na sua audiência',
+    historico: hist.nomes,
+    trocas: hist.trocas,
+    evidencias,
+  };
+}
+
+/** Texto pronto para mostrar na tela, no instante da suspeita. */
+function emTexto(r) {
+  if (r.conclusao === 'inconclusivo') return `⚪ ${r.motivo}`;
+  if (!r.evidencias.length) {
+    return `⚪ Nenhum dos ${r.historico.length} nomes dessa conta bate com quem assistiu.`;
+  }
+  const e = r.evidencias[0];
+  const min = e.minutosAssistidos != null ? `, ${e.minutosAssistidos} min assistidos` : '';
+  return `🔴 Essa conta já se chamou "${e.nomeSteamQueBateu}" — e "${e.espectador}" ` +
+         `esteve na sua live${min}. (${Math.round(e.confianca * 100)}% de semelhança: ${e.motivo})`;
+}
+
+module.exports = { consultar, emTexto };
