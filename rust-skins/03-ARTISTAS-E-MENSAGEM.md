@@ -10,18 +10,51 @@ em cima. Falta a elas exatamente o que sobra nele: **alcance**.
 
 Lista completa em `dados/artistas.json`.
 
-## Os 5 primeiros a procurar
+## ⚠️ CORREÇÃO — ele derrubou a primeira lista
 
-| Votos na melhor | Skins | Ativo desde | Artista |
+A primeira versão colocava **`NotHolly`, `Monstera` e `Davix`** no topo. Os três
+fizeram **Twitch drop**, não skin de loja.
+
+Drop é feito para a campanha de um criador específico: é combinado, não é enviar
+e torcer. E **não é vendido**, então não existe divisão de receita. A proposta de
+"eu levo votos, a gente divide" não faz sentido nenhum para eles.
+
+Pior: eu **ordenei por votos**. Drop é empurrado para a audiência inteira de um
+criador, então junta voto fácil. **O ranking estava sistematicamente puxando drop
+para o topo.** O campo `isTwitchDrop` estava na base desde o começo e eu não usei.
+
+### O que a base realmente diz
+
+| Tipo | Quantas | Fatia |
+|---|---|---|
+| **Loot crate** | 3.149 | 51,1% |
+| **Loja (vendida de verdade)** | **2.358** | **38,2%** |
+| Twitch drop | 592 | 9,6% |
+| Publisher drop | 22 | 0,4% |
+
+**Só 38% das skins aceitas são realmente vendidas.** Falar em "6.166 skins
+aceitas" superestimava a oportunidade de loja. (A conta de receita por skin não
+muda: ela usou as rotações semanais da loja, que já eram só de itens vendidos.)
+
+## Os primeiros a procurar — só quem VENDE na loja
+
+71 artistas de loja, ativos em 2025-2026, com no máximo 4 skins. Os mais fortes:
+
+| Votos | Skins | Aceita em | Artista |
 |---|---|---|---|
-| **2.070** | **1** | 31/07/2025 | `NotHolly` — Vaybae AR |
-| **1.975** | 4 | 30/07/2026 | `arin` — Hazma Sheet Metal Door |
-| **1.213** | 2 | 25/12/2025 | `Fried Chicken` — Dragon Launcher |
-| 799 | 2 | 20/03/2025 | `🔥Creatorius🔥` — Beauty Industry Double Door |
-| 578 | 2 | 31/07/2025 | `Monstera` — Drizza Rug |
+| **4.958** | 4 | 2025-12-18 | `SLIMEface v.2` — Atomic Garage Door |
+| **1.975** | 4 | 2026-07-30 | `arin` — Hazma Sheet Metal Door |
+| **1.773** | 4 | 2025-10-30 | `🔥MDemon` — Cobalt Personal Locker |
+| **799** | 2 | 2025-03-20 | `🔥Creatorius🔥` — Beauty Industry Double Door |
+| **797** | 2 | 2026-02-26 | `Ariata 👉👈🥺` — Howling Double Door |
+| **503** | 1 | 2025-05-15 | `John_Richsoon` — BamBOOM AR |
+| **485** | 4 | 2025-01-23 | `HEWOK` — The Spell Garage Door |
+| **359** | 3 | 2026-07-30 | `Graphy` — Amethyst Geode Rock |
 
-`NotHolly` é o caso mais claro: **2.070 votos numa única skin**, e nunca mais
-apareceu. Talento alto, escala zero.
+`arin` é a melhor aposta: **1.975 votos, aceite em 30/07/2026** — talento alto e
+ativo agora. `SLIMEface v.2` tem mais votos mas é de dezembro.
+
+Lista completa dos 71 em `dados/artistas.json`.
 
 ## Por que eles aceitariam
 

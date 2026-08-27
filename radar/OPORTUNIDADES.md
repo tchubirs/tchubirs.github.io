@@ -265,3 +265,11 @@ conseguir falar sobre o que foi entregue.
    **conectado** ao chat, não quem falou. Bastava consultar de tempos em
    tempos. A pergunta certa não é "existe endpoint X", é "como quem já faz
    isso faz".
+13. **Antes de ranquear, pergunte se todas as linhas são a mesma coisa.**
+   Montei uma lista de artistas de skin ordenada por votos e o topo inteiro era
+   **Twitch drop** — que é combinado com um criador, não é vendido, e junta voto
+   fácil porque é empurrado para a audiência dele. Só 38% das skins aceitas são
+   vendidas na loja; 51% são de caixa. Os campos `isTwitchDrop`,
+   `isLootCrateDrop` e `isPublisherDrop` estavam na base desde o primeiro
+   download e eu não usei nenhum. Ranquear coisas de naturezas diferentes numa
+   métrica só produz um ranking do viés, não do mérito.
