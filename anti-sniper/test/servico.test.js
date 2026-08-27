@@ -552,3 +552,33 @@ test('/api/agora diz a verdade sobre a COBERTURA', () => {
   const c = s.db.prepare('SELECT * FROM canal WHERE id = ?').get('c1');
   assert.equal(c.se_canal, null, 'canal sem fonte de presença configurada');
 });
+
+test('alvos: mede só quem está no servidor E casou com a audiência', async () => {
+  // Varrer o placar inteiro não escala. Aqui a lista de alvos sai sozinha do
+  // cruzamento, e é meia dúzia de nomes em vez de centenas de milhares.
+  const s = criar({ caminhoBanco: ':memory:', chavePem: PUB, agora: () => T });
+  s.db.prepare('INSERT INTO canal (id,plataforma,slug,criado_em,se_canal) VALUES (?,?,?,?,?)')
+    .run('c1', 'kick', 'tchubi', T, 'tchubi');
+  s.ingerir('c1', 'chat.message', msg('diper', 2), T);
+  s.ingerir('c1', 'chat.message', msg('ninguem_procura', 3), T);
+  s.guardarServidor('c1', { nome: 'Rustoria' }, [{ nome: 'D1per' }, { nome: 'Caraxes' }], T);
+
+  const perguntados = [];
+  let n = 0;
+  const cols = s.ligarAlvos({
+    intervaloMs: 10 ** 9,
+    medirDe: (_c, nome) => {
+      perguntados.push(nome);
+      return Promise.resolve({ pontos: 100 + n * 10, segundosAssistidos: 600 + n * 120 });
+    },
+  });
+  const col = cols.get('alvos:c1');
+  n = 0; await col.passada();
+  n = 1; const r = await col.passada();
+  s.pararColeta();
+
+  assert.deepEqual([...new Set(perguntados)], ['diper'],
+    'não pergunta por quem ninguém procurou nem por quem não casou');
+  assert.equal(r.vistos, 1);
+  assert.equal(s.log('c1', 'diper').total, 1, 'virou estada mesmo sem falar de novo');
+});

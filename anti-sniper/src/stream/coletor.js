@@ -10,10 +10,23 @@
  *
  * A saída é indireta e funciona: **qualquer contador que sobe por assistir
  * é um sinal de presença.** O StreamElements dá ponto de fidelidade por
- * tempo assistido, a quem está conectado — falando ou não. Quem ganhou
- * ponto entre duas leituras estava lá naquele intervalo.
+ * tempo assistido, a quem está conectado — falando ou não. Quem subiu entre
+ * duas leituras estava lá naquele intervalo.
  *
- * Não é preciso lista de espectadores. Basta ver o placar mudar.
+ * Não é preciso lista de espectadores. Basta ver o contador mudar.
+ *
+ * Duas formas, e a segunda é a que escala:
+ *
+ *   - PLACAR: lê a lista inteira e credita quem subiu. Simples, mas o
+ *     placar vem ordenado por pontos de TODOS OS TEMPOS — quem está
+ *     assistindo agora pode estar em qualquer posição de uma lista com
+ *     centenas de milhares de nomes. Medido em 27/08/2026 contra um canal
+ *     real: **zero em 300**. Serve só para canal pequeno.
+ *
+ *   - ALVOS: pergunta pelos poucos que interessam — os que casaram com
+ *     alguém que está no servidor agora. Uma consulta por pessoa, e o
+ *     endpoint por pessoa ainda devolve `watchtime`, que o placar não
+ *     devolve.
  */
 
 /**
@@ -90,4 +103,61 @@ function criarColetor({ placar, aoVer, agora = Date.now, aoErro = () => {} }) {
   return { passada, ligar, desligar, zerar, get ligado() { return rodando; } };
 }
 
-module.exports = { criarColetor };
+/**
+ * Coletor por ALVOS: pergunta só por quem interessa.
+ *
+ * Quem interessa são os poucos nomes que casaram com alguém do servidor.
+ * Perguntar por 8 pessoas a cada 2 min é barato; varrer o placar inteiro
+ * atrás delas não é.
+ *
+ * @param {(nome:string)=>Promise<null|{pontos:number,segundosAssistidos:number|null}>} dep.medir
+ * @param {()=>Iterable<string>} dep.alvos quem vigiar agora — muda sozinho
+ *        conforme entra e sai gente do servidor
+ */
+function criarColetorDeAlvos({ medir, alvos, aoVer, agora = Date.now, aoErro = () => {} }) {
+  const anterior = new Map();
+  let rodando = false;
+  let temporizador = null;
+
+  async function passada() {
+    const t = agora();
+    let vistos = 0; let base = 0; let perguntados = 0;
+    for (const nome of alvos() || []) {
+      perguntados += 1;
+      let m;
+      try { m = await medir(nome); }
+      catch (e) { aoErro(e); continue; }
+      // null = essa pessoa nunca pontuou no canal. Não dá para medir
+      // presença dela por aqui, e isso não é ausência.
+      if (!m) { anterior.delete(nome); continue; }
+
+      const antes = anterior.get(nome);
+      anterior.set(nome, m);
+      if (!antes) { base += 1; continue; }
+      const subiu = (m.segundosAssistidos != null && antes.segundosAssistidos != null
+        ? m.segundosAssistidos > antes.segundosAssistidos
+        : false) || m.pontos > antes.pontos;
+      if (subiu) { aoVer(nome, t); vistos += 1; }
+    }
+    return { perguntados, base, vistos };
+  }
+
+  function ligar(intervaloMs = 2 * 60 * 1000) {
+    if (rodando) return;
+    rodando = true;
+    const passo = () => passada().finally(() => {
+      if (rodando) temporizador = setTimeout(passo, intervaloMs);
+    });
+    passo();
+  }
+  function desligar() {
+    rodando = false;
+    if (temporizador) clearTimeout(temporizador);
+    temporizador = null;
+  }
+  function esquecer(nome) { if (nome == null) anterior.clear(); else anterior.delete(nome); }
+
+  return { passada, ligar, desligar, esquecer, get ligado() { return rodando; } };
+}
+
+module.exports = { criarColetor, criarColetorDeAlvos };

@@ -112,3 +112,106 @@ test('ligar e desligar de verdade', async () => {
   c.desligar();
   assert.equal(c.ligado, false);
 });
+
+// ── Coletor por ALVOS ─────────────────────────────────────────────────────
+// Varrer o placar inteiro não escala: medido contra canal real deu zero em
+// 300, porque a lista vem ordenada por pontos de todos os tempos e quem
+// assiste agora está espalhado em centenas de milhares de nomes. Aqui só se
+// pergunta pelos poucos que casaram com alguém do servidor.
+const { criarColetorDeAlvos } = require('../src/stream/coletor');
+
+function bancadaAlvos(leituras, alvos) {
+  let i = -1;
+  const vistos = []; const erros = [];
+  const c = criarColetorDeAlvos({
+    alvos: () => alvos,
+    medir: async (nome) => {
+      const l = leituras[Math.min(i, leituras.length - 1)][nome];
+      if (l instanceof Error) throw l;
+      return l ?? null;
+    },
+    aoVer: (nome, t) => vistos.push({ nome, t }),
+    agora: () => 1000 + i * 60000,
+    aoErro: (e) => erros.push(e),
+  });
+  return { c, vistos, erros, passar: () => { i += 1; return c.passada(); } };
+}
+
+test('alvos: watchtime que sobe é presença, mesmo sem falar nada', async () => {
+  const { c, vistos, passar } = bancadaAlvos([
+    { finik: { pontos: 100, segundosAssistidos: 3600 }, diper: { pontos: 50, segundosAssistidos: 900 } },
+    { finik: { pontos: 110, segundosAssistidos: 3900 }, diper: { pontos: 50, segundosAssistidos: 900 } },
+  ], ['finik', 'diper']);
+  const b = await passar();
+  assert.equal(b.base, 2);
+  assert.equal(b.vistos, 0, 'a primeira leitura nunca credita');
+  const r = await passar();
+  assert.equal(r.vistos, 1);
+  assert.deepEqual(vistos.map((v) => v.nome), ['finik']);
+});
+
+test('alvos: só o ponto subir já basta quando não há watchtime', async () => {
+  const { vistos, passar } = bancadaAlvos([
+    { finik: { pontos: 100, segundosAssistidos: null } },
+    { finik: { pontos: 108, segundosAssistidos: null } },
+  ], ['finik']);
+  await passar();
+  const r = await passar();
+  assert.equal(r.vistos, 1);
+  assert.equal(vistos.length, 1);
+});
+
+test('alvos: quem nunca pontuou no canal não vira ausência', async () => {
+  // 404 do StreamElements quer dizer "não dá para medir por aqui",
+  // não "não estava assistindo".
+  const { vistos, passar } = bancadaAlvos([
+    { fantasma: null }, { fantasma: null },
+  ], ['fantasma']);
+  await passar();
+  const r = await passar();
+  assert.equal(r.vistos, 0);
+  assert.equal(r.base, 0);
+  assert.equal(vistos.length, 0);
+});
+
+test('alvos: erro num alvo não impede os outros', async () => {
+  const { c, vistos, erros, passar } = bancadaAlvos([
+    { a: { pontos: 1, segundosAssistidos: 10 }, b: { pontos: 1, segundosAssistidos: 10 } },
+    { a: new Error('502'), b: { pontos: 2, segundosAssistidos: 70 } },
+  ], ['a', 'b']);
+  await passar();
+  const r = await passar();
+  assert.equal(erros.length, 1);
+  assert.equal(r.vistos, 1);
+  assert.equal(vistos[0].nome, 'b');
+});
+
+test('alvos: a lista muda sozinha conforme entra e sai gente', async () => {
+  const alvos = ['a'];
+  let i = -1;
+  const vistos = [];
+  const c = criarColetorDeAlvos({
+    alvos: () => alvos,
+    medir: async (n) => ({ pontos: 100 + i * 10, segundosAssistidos: 600 + i * 60, nome: n }),
+    aoVer: (n) => vistos.push(n),
+    agora: () => 1000,
+  });
+  i = 0; await c.passada();
+  alvos.push('b');                       // entrou alguém no servidor
+  i = 1; const r = await c.passada();
+  assert.equal(r.perguntados, 2);
+  assert.equal(r.base, 1, 'o novo entra como base, não como visto');
+  assert.deepEqual(vistos, ['a']);
+});
+
+test('alvos: esquecer() derruba a base de quem saiu', async () => {
+  const { c, vistos, passar } = bancadaAlvos([
+    { a: { pontos: 1, segundosAssistidos: 10 } },
+    { a: { pontos: 9, segundosAssistidos: 90 } },
+  ], ['a']);
+  await passar();
+  c.esquecer('a');
+  const r = await passar();
+  assert.equal(r.base, 1);
+  assert.equal(vistos.length, 0);
+});

@@ -100,4 +100,35 @@ async function audiencia(nomeOuId, { buscar, limite = 1000, porPagina = 100 } = 
   return fora;
 }
 
-module.exports = { idDoCanal, estaGravando, audiencia };
+/**
+ * Os números de UMA pessoa. É este o caminho que escala.
+ *
+ * O placar completo vem ordenado por pontos de todos os tempos, então quem
+ * está assistindo AGORA pode estar em qualquer posição de uma lista com
+ * centenas de milhares de nomes — varrer tudo a cada 5 min é inviável, e
+ * medindo deu zero em 300 pessoas. Aqui pergunta-se só por quem interessa:
+ * os poucos que casaram com alguém que está no servidor.
+ *
+ * E este endpoint devolve `watchtime`, que o placar NÃO devolve (vem null
+ * lá). É segundo assistido, sobe sozinho enquanto a pessoa está com a live
+ * aberta — falando ou não.
+ */
+async function pessoa(nomeOuId, usuario, buscar) {
+  const id = await idDoCanal(nomeOuId, buscar);
+  try {
+    const u = await pegar(`/points/${id}/${encodeURIComponent(usuario)}`, buscar);
+    return {
+      nome: u.username ?? usuario,
+      pontos: u.points ?? 0,
+      // Vem em segundos.
+      segundosAssistidos: u.watchtime ?? null,
+      posicao: u.rank ?? null,
+    };
+  } catch (e) {
+    // 404 = essa pessoa nunca pontuou neste canal. Não é erro, é resposta.
+    if (e.status === 404) return null;
+    throw e;
+  }
+}
+
+module.exports = { idDoCanal, estaGravando, audiencia, pessoa };

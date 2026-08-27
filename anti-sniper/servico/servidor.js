@@ -17,7 +17,7 @@ const { normalizar, comparar } = require('../src/nomes');
 const { resolverEntrada, chavesDeIdentidade } = require('../src/steam');
 const { verificarDiscord, tratar } = require('./discord');
 const { interpretarQuando, relogio } = require('../src/tempo');
-const { criarColetor } = require('../src/stream/coletor');
+const { criarColetor, criarColetorDeAlvos } = require('../src/stream/coletor');
 const se = require('../src/stream/streamelements');
 
 const CHAVE_KICK = `-----BEGIN PUBLIC KEY-----
@@ -132,6 +132,33 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
         aoErro: (e) => console.error(`[coleta ${c.id}]`, e.message),
       });
       coletores.set(c.id, col);
+      col.ligar(intervaloMs);
+    }
+    return coletores;
+  }
+
+  /**
+   * Coleta fina, só em quem interessa.
+   *
+   * Os alvos são quem está no servidor AGORA e casou com alguém da
+   * audiência — meia dúzia de nomes, não a lista inteira. Para esses vale
+   * perguntar de 2 em 2 minutos, e é isso que dá a hora de entrada e de
+   * saída com precisão, mesmo de quem assiste calado.
+   */
+  function ligarAlvos({ intervaloMs = 2 * 60 * 1000, medirDe } = {}) {
+    for (const c of canaisComSE.all()) {
+      const chave = `alvos:${c.id}`;
+      if (coletores.has(chave)) continue;
+      const col = criarColetorDeAlvos({
+        alvos: () => new Set(cruzarAgora(c.id).map((a) => a.espectador)),
+        medir: medirDe
+          ? (nome) => medirDe(c, nome)
+          : (nome) => se.pessoa(c.se_canal, nome, buscar),
+        aoVer: (nome, t) => { ver(c.id, 'live', nome, t); registrarPresenca(c.id, nome, null, t); },
+        agora,
+        aoErro: (e) => console.error(`[alvos ${c.id}]`, e.message),
+      });
+      coletores.set(chave, col);
       col.ligar(intervaloMs);
     }
     return coletores;
@@ -593,7 +620,7 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
 
   return { servidor, db, ingerir, consultar, procurar, registrarPresenca, verificar,
            guardarServidor, cruzarAgora, ver, estadas, momento, agoraNa, log, fusoDoCanal,
-           ligarColeta, pararColeta, coletores };
+           ligarColeta, ligarAlvos, pararColeta, coletores };
 }
 
 module.exports = { criar, verificar, CHAVE_KICK, BLOCO_MS };
