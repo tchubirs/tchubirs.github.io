@@ -1,0 +1,9 @@
+{
+  "name": "kick-engage",
+  "version": "0.1.0",
+  "description": "Measure and grow the metrics that gate Kick creator payouts: unique chatters, new followers, subs, hours",
+  "license": "AGPL-3.0-or-later",
+  "engines": { "node": ">=20" },
+  "scripts": { "test": "node --test test/*.test.js" },
+  "dependencies": {}
+}
