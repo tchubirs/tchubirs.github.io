@@ -77,3 +77,36 @@ test('watchtime ausente vira null, não zero', async () => {
   // zero diria "assistiu nada"; null diz "não sei" — são coisas diferentes
   assert.equal(a[0].minutosAssistidos, null);
 });
+
+test('conta antiga nunca configurada é sinalizada, não confundida com desligada', async () => {
+  // Registro real que me enganou: criado em 2020, updatedAt idêntico,
+  // moeda "points", bônus todos zero.
+  const b = falso({
+    '/channels/': { _id: ID },
+    '/loyalty/': {
+      loyalty: { enabled: false, name: 'points', amount: 5,
+                 bonuses: { raid: 0, follow: 0, tip: 0, subscriber: 0, cheer: 0 } },
+      createdAt: '2020-06-16T22:36:21.757Z',
+      updatedAt: '2020-06-16T22:36:21.757Z',
+    },
+  });
+  const r = await se.estaGravando(ID, b);
+  assert.equal(r.provavelContaAbandonada, true);
+  assert.match(r.motivo, /nunca foi configurada/);
+  assert.match(r.motivo, /id do canal é o certo/);
+});
+
+test('conta configurada e desligada NÃO é confundida com abandonada', async () => {
+  const b = falso({
+    '/channels/': { _id: ID },
+    '/loyalty/': {
+      loyalty: { enabled: false, name: 'C4', amount: 10,
+                 bonuses: { follow: 50, subscriber: 600, tip: 100, cheer: 10, raid: 0 } },
+      createdAt: '2020-06-16T22:36:21.757Z',
+      updatedAt: '2026-08-20T10:00:00.000Z',
+    },
+  });
+  const r = await se.estaGravando(ID, b);
+  assert.equal(r.provavelContaAbandonada, false);
+  assert.match(r.motivo, /DESLIGADO/);
+});

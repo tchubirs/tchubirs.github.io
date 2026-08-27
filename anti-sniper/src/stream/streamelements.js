@@ -43,14 +43,35 @@ async function idDoCanal(nomeOuId, buscar) {
 async function estaGravando(nomeOuId, buscar) {
   const id = await idDoCanal(nomeOuId, buscar);
   const l = await pegar(`/loyalty/${id}`, buscar);
-  const ligado = l?.loyalty?.enabled === true;
+  const cfg = l?.loyalty ?? {};
+  const ligado = cfg.enabled === true;
+
+  // Detecta CONTA MORTA. Custou um diagnóstico errado: eu li um registro de
+  // 2020 com enabled=false e disse a ele que a gravação estava desligada.
+  // Estava ligada — em OUTRA conta. Aquele registro nunca tinha sido tocado
+  // desde a criação, e todos os valores eram o padrão de fábrica.
+  //
+  // Um `updatedAt` igual ao `createdAt` significa que ninguém nunca abriu
+  // essas configurações. Isso quase sempre é conta abandonada, não conta
+  // desligada — e a diferença muda completamente o que dizer ao usuário.
+  const nuncaMexida = !!(l?.createdAt && l?.updatedAt && l.createdAt === l.updatedAt);
+  const padraoDeFabrica =
+    cfg.name === 'points' &&
+    Object.values(cfg.bonuses ?? {}).every((v) => !v);
+
   return {
     canalId: id,
     gravando: ligado,
-    nomeDosPontos: l?.loyalty?.name ?? 'points',
+    nomeDosPontos: cfg.name ?? 'points',
+    configuradaEm: l?.updatedAt ?? null,
+    provavelContaAbandonada: nuncaMexida && padraoDeFabrica,
     motivo: ligado
       ? undefined
-      : 'sistema de pontos DESLIGADO — nada está sendo gravado, e não existe histórico para consultar',
+      : nuncaMexida && padraoDeFabrica
+        ? `esta conta nunca foi configurada (criada em ${String(l.createdAt).slice(0, 10)} ` +
+          'e nunca mais tocada, tudo no padrão). Provavelmente é uma conta antiga ' +
+          'abandonada — confira se o id do canal é o certo antes de concluir qualquer coisa'
+        : 'sistema de pontos DESLIGADO — nada está sendo gravado, e não existe histórico para consultar',
   };
 }
 
