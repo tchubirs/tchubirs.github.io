@@ -167,8 +167,11 @@ class Gravador {
     // mais participativo.
     const decorrido = tMs - p.ultimoCredito;
     if (decorrido >= this.intervaloMs) {
-      p.blocos += Math.floor(decorrido / this.intervaloMs);
-      p.ultimoCredito = tMs;
+      const novos = Math.floor(decorrido / this.intervaloMs);
+      p.blocos += novos;
+      // Avança por blocos inteiros; zerar em tMs descarta o resto e o erro
+      // acumula ao longo de uma live de horas.
+      p.ultimoCredito += novos * this.intervaloMs;
     }
     p.ultimaEm = tMs;
   }
