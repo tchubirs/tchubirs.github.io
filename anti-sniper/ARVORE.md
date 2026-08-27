@@ -13,29 +13,63 @@
 ```
 anti-sniper/
 │
-├── src/
-│   ├── unicode.js          ✅ dobra letra disfarçada de volta ao alfabeto
-│   ├── nomes.js            ✅ cruza histórico de nomes com nome de chat
-│   ├── steam.js            ✅ histórico de nomes, do perfil público
-│   ├── consulta.js         ✅ SteamID entra, evidência sai   ← O PRODUTO
-│   │
-│   ├── stream/             ← de onde vem "quem assistiu"
-│   │   ├── fonte.js        ✅ contrato
-│   │   ├── twitch.js       ⬜ Get Chatters + histórico
-│   │   ├── streamelements.js ⬜ tempo assistido que ELE JÁ TEM guardado
-│   │   ├── kick.js         ⬜
-│   │   └── youtube.js      ⬜
-│   │
-│   ├── vigia.js            ✅ modo ao vivo — depende de fonte do jogo,
-│   │                          que hoje não existe sem RCON. Fica guardado.
-│   ├── jogo/fonte.js       ✅ contrato, para quando existir
-│   │
-│   ├── overlay/            ⬜ como aparece na hora da suspeita
-│   └── config.js           ⬜
+├── extensao/               ← O PRODUTO. Automático, sem colar nada.
+│   ├── manifest.json       ✅ só 2 sites, só permissão de storage
+│   ├── comum.js            ✅ lê tabela por CABEÇALHO, não por classe CSS
+│   ├── ler-battlemetrics.js ✅ pega a lista do servidor que você já abriu
+│   ├── ler-botrix.js       ✅ pega a audiência, acumulando entre páginas
+│   ├── painel.html/.js     ✅ cruza tudo sozinho e mostra
+│   ├── construir.js        ✅ gera nomes.js a partir de src/
+│   └── nomes.js            ✅ GERADO — nunca editar à mão
 │
-├── bin/anti-sniper.js      ⬜ o que ele roda
-└── test/                   ✅ 31 testes
+├── src/
+│   ├── unicode.js          ✅ dobras seguras (𝚊𝚛𝚒𝚗 → arin)
+│   ├── nomes.js            ✅ cruzamento — a fonte única de verdade
+│   ├── steam.js            ✅ histórico de nomes (teto de 5)
+│   ├── consulta.js         ✅ SteamID → evidência
+│   ├── vigia.js            ✅ modo ao vivo
+│   ├── jogo/
+│   │   ├── fonte.js        ✅ contrato
+│   │   └── rust-a2s.js     ⚠️  feito, mas A2S não serve pro Rust
+│   └── stream/
+│       ├── fonte.js        ✅ contrato
+│       ├── kick.js         ✅ app próprio, 2 escopos, token 60d
+│       ├── botrix.js       ✅ lê tabela colada (o modo manual)
+│       └── streamelements.js ✅
+│
+├── bin/                    ✅ consulta, autorização, teste de servidor
+└── test/                   ✅ 91 testes
 ```
+
+## Por que extensão, e não copiar e colar
+
+Colar tabela é demonstração, não produto. Ninguém copia duas tabelas no meio
+de uma raid.
+
+A extensão lê **as páginas que você já tem abertas e logadas**. Não consulta
+a API do BattleMetrics e não redistribui nada — é a sua tela, que só você vê.
+Ela apenas evita o copiar e colar. É o mesmo padrão que o concorrente já usa:
+o RustWho vende "Extension paid features".
+
+## Duas decisões que sustentam a extensão
+
+**Lê por cabeçalho, nunca por classe de CSS.** Um seletor tipo `.sc-hKgILt`
+quebra sozinho no próximo deploy do site, e o usuário só descobre quando a
+ferramenta silenciosamente para de achar gente. Procurar pela coluna
+("Name", "Play time") aguenta redesign, porque o texto do cabeçalho é o que o
+site precisa manter legível para o próprio usuário.
+
+**O código do navegador é GERADO a partir de `src/`.** Ter duas versões do
+cruzamento — uma testada e outra em uso — é a pior falha possível aqui: os
+testes continuariam verdes enquanto o usuário usa outra regra. Um teste roda
+o gerador e falha se o pacote estiver velho.
+
+## Dado velho aparece como velho
+
+Passados 15 minutos, o painel marca a fonte em laranja. Acusar alguém com
+informação de ontem é o erro mais fácil de cometer e o mais difícil de
+perceber.
+
 
 ## Por que o histórico de nomes é a peça central
 

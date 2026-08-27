@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "Detetive — anti stream sniper",
+  "version": "0.1.0",
+  "description": "Cruza quem está no servidor com quem está assistindo sua live.",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://www.battlemetrics.com/*",
+    "https://botrix.live/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://www.battlemetrics.com/servers/*"],
+      "js": ["comum.js", "ler-battlemetrics.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://botrix.live/*"],
+      "js": ["comum.js", "ler-botrix.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": { "default_popup": "painel.html", "default_title": "Detetive" }
+}

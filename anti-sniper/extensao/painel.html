@@ -1,0 +1,39 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Detetive</title>
+<style>
+  :root { color-scheme: dark; }
+  body { width:420px; margin:0; padding:14px; background:#0f1113; color:#e8e8e8;
+         font:14px/1.5 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  h1 { margin:0 0 2px; font-size:15px; letter-spacing:.2px; }
+  .sub { color:#8b949e; font-size:12px; margin-bottom:12px; }
+  .fontes { display:flex; gap:8px; margin-bottom:12px; }
+  .fonte { flex:1; background:#16191c; border:1px solid #262b30; border-radius:9px;
+           padding:9px 10px; font-size:12px; }
+  .fonte b { display:block; font-size:17px; color:#e8e8e8; font-weight:600; }
+  .fonte span { color:#8b949e; }
+  .fonte.velho b { color:#f0a35e; }
+  .achado { background:#1a1214; border:1px solid #4a2226; border-left:3px solid #ff5f56;
+            border-radius:9px; padding:10px 12px; margin-bottom:8px; }
+  .achado .par { font-weight:600; }
+  .achado .det { color:#9aa4ad; font-size:12px; margin-top:3px; }
+  .pc { color:#ff8a7a; font-variant-numeric:tabular-nums; }
+  .vazio { background:#16191c; border:1px solid #262b30; border-radius:9px;
+           padding:14px; color:#8b949e; font-size:13px; }
+  .aviso { margin-top:12px; color:#6f7a84; font-size:11px; line-height:1.5; }
+</style>
+<body>
+  <h1>Detetive</h1>
+  <div class="sub">quem está no servidor e também na sua live</div>
+  <div class="fontes">
+    <div class="fonte" id="f-servidor"><b>—</b><span>servidor</span></div>
+    <div class="fonte" id="f-audiencia"><b>—</b><span>audiência</span></div>
+  </div>
+  <div id="saida"></div>
+  <div class="aviso">
+    Assistir não é crime. Isto mostra presença, não culpa — quem julga o
+    contexto é você, que jogou a partida.
+  </div>
+<script src="nomes.js"></script>
+<script src="painel.js"></script>
+</body>
