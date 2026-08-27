@@ -32,7 +32,18 @@ def _grade(shape, freq, rng):
 
 def fbm(shape, octaves=5, freq=64.0, gain=0.5, lacunarity=2.0, seed=0):
     """Ruído fractal: soma de oitavas, cada uma com o dobro da frequência
-    e metade da amplitude. É o que dá aparência natural em vez de borrão."""
+    e metade da amplitude. É o que dá aparência natural em vez de borrão.
+
+    ⚠️ ATENÇÃO AO SENTIDO DE `freq`. Aqui `freq` é o **tamanho da célula**
+    da grade, não a frequência no sentido usual:
+
+        freq ALTO  (150) -> poucas células -> MANCHA GRANDE e macia
+        freq BAIXO (4)   -> muitas células -> DETALHE FINO
+
+    Isso já custou um bug visível: arranhões finos pedidos com freq=150
+    saíram como bolhas turquesa de 200 px na skin do AK. Quando quiser
+    detalhe fino, use freq entre 3 e 10.
+    """
     rng = np.random.default_rng(seed)
     out = np.zeros(shape)
     amp, f, norm = 1.0, freq, 0.0
