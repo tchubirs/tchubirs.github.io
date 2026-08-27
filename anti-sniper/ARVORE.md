@@ -13,7 +13,24 @@
 ```
 anti-sniper/
 │
-├── extensao/               ← O PRODUTO. Automático, sem colar nada.
+├── servico/                ← O PRODUTO. Roda sozinho, 24h, sem você.
+│   ├── servidor.js         ✅ webhook da Kick + /api/consultar, /api/alertas,
+│   │                          /api/audiencia, /api/servidor, painel em /
+│   ├── banco.js            ✅ SQLite nativo (node:sqlite), zero dependência
+│   ├── discord.js          ✅ /detetive <nome>, resposta privada (flags 64)
+│   └── web/painel.*        ✅ painel no navegador
+│
+├── agente/                 ← A ponte com o BattleMetrics
+│   ├── ler-pagina.js       ✅ lê pela SUA sessão logada, sem API paga
+│   └── agente.js           ✅ acha o servidor atual e manda pro serviço
+│
+├── peekrust/               ← Encaixe no bot que ele JÁ TEM
+│   ├── stream-check.js     ✅ "essa pessoa está assistindo sua live?"
+│   ├── construir.js        ✅ gera o pacote ESM a partir de src/
+│   ├── anti-sniper.mjs     ✅ GERADO — 1 arquivo, 0 dependências
+│   └── COMO-ENCAIXAR.md    ✅ 3 edições nos arquivos dele
+│
+├── extensao/               ← Alternativa sem servidor, no navegador
 │   ├── manifest.json       ✅ só 2 sites, só permissão de storage
 │   ├── comum.js            ✅ lê tabela por CABEÇALHO, não por classe CSS
 │   ├── ler-battlemetrics.js ✅ pega a lista do servidor que você já abriu
@@ -25,7 +42,8 @@ anti-sniper/
 ├── src/
 │   ├── unicode.js          ✅ dobras seguras (𝚊𝚛𝚒𝚗 → arin)
 │   ├── nomes.js            ✅ cruzamento — a fonte única de verdade
-│   ├── steam.js            ✅ histórico de nomes (teto de 5)
+│   ├── indice.js           ✅ 1.500 jogadores × 5.000 espectadores: 147s → 0,09s
+│   ├── steam.js            ✅ histórico de nomes (teto de 5) + perfil público
 │   ├── consulta.js         ✅ SteamID → evidência
 │   ├── vigia.js            ✅ modo ao vivo
 │   ├── jogo/
@@ -38,7 +56,7 @@ anti-sniper/
 │       └── streamelements.js ✅
 │
 ├── bin/                    ✅ consulta, autorização, teste de servidor
-└── test/                   ✅ 91 testes
+└── test/                   ✅ 151 testes
 ```
 
 ## Por que extensão, e não copiar e colar
@@ -117,9 +135,29 @@ não é crime, e quem julga o contexto é quem jogou a partida.
 Existe um teste que verifica isso: a saída não pode conter as palavras
 *sniper*, *culpado* ou *banir*.
 
+## Onde o produto é entregue
+
+Três portas para a mesma resposta, porque o momento em que a pergunta aparece
+não é o mesmo em que dá para abrir um site:
+
+| Porta | Quando serve |
+|---|---|
+| Chat de equipe do Rust (via PeekRust + Rust+) | No meio da partida, sem tirar a mão |
+| Discord `/detetive` | Depois, com espaço para o porquê |
+| Painel web | Para olhar a live inteira de uma vez |
+
+## O encaixe no PeekRust muda o alcance do histórico
+
+O `battlemetrics.js` dele usa
+`/players/{id}/relationships/sessions` — que devolve o **histórico completo de
+nomes por sessão**, não o teto de 5 nomes da Steam. Eu tinha dado esse caminho
+como fechado ("API paga, e os termos proíbem usar num produto pago de
+terceiro"). Ele já tinha o token funcionando.
+
+Com isso, `xX_Killer_Xx` no jogo — que não bate com ninguém — vira
+`D1per` no histórico, que bate com `diper` na audiência a 90%.
+
 ## Próximo passo
 
-`streamelements.js` — porque ele **já usa StreamElements nos três canais**, e
-isso significa que **meses de tempo assistido por pessoa já estão guardados**.
-Dá para testar a tese contra uma noite passada em que ele sabe que foi
-snipado, sem esperar dado novo.
+Hospedar o serviço num endereço público, para o webhook da Kick chegar. É a
+única peça que falta para tudo rodar sozinho.

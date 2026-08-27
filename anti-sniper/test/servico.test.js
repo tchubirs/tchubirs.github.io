@@ -185,3 +185,45 @@ test('jogador sem nome utilizável é ignorado, não vira linha fantasma', () =>
   const n = s.db.prepare('SELECT COUNT(*) c FROM no_servidor').get().c;
   assert.equal(n, 1);
 });
+
+test('/api/audiencia entrega a lista crua que o PeekRust cruza do lado de fora', async () => {
+  const s = bancada();
+  for (let i = 0; i <= 120; i += 3) s.ingerir('c1', 'chat.message', msg('FINIK', 1), T + i * MIN);
+  s.ingerir('c1', 'chat.message', msg('D1per', 2), T);
+
+  await new Promise((ok) => s.servidor.listen(0, '127.0.0.1', ok));
+  const base = `http://127.0.0.1:${s.servidor.address().port}`;
+  try {
+    const res = await fetch(`${base}/api/audiencia?canal=c1`);
+    assert.equal(res.status, 200);
+    const dados = await res.json();
+    const porNome = Object.fromEntries(dados.audiencia.map((p) => [p.nome, p.minutosAssistidos]));
+    // Mesmos minutos que /api/consultar devolve — uma conta só, dois caminhos.
+    assert.equal(porNome.FINIK, 130);
+    assert.equal(porNome.D1per, 10);
+
+    // Sem canal é erro do cliente, não lista de outro canal por engano.
+    assert.equal((await fetch(`${base}/api/audiencia`)).status, 400);
+    const vazio = await (await fetch(`${base}/api/audiencia?canal=nao-existe`)).json();
+    assert.deepEqual(vazio.audiencia, []);
+  } finally {
+    await new Promise((ok) => s.servidor.close(ok));
+  }
+});
+
+test('o índice do PeekRust acha na audiência do serviço o mesmo que /api/consultar', async () => {
+  const { Indice } = require('../src/indice');
+  const s = bancada();
+  s.ingerir('c1', 'chat.message', msg('diper', 2), T);
+  await new Promise((ok) => s.servidor.listen(0, '127.0.0.1', ok));
+  try {
+    const porta = s.servidor.address().port;
+    const { audienciaDoServico } = require('../peekrust/stream-check');
+    const lista = await audienciaDoServico(`http://127.0.0.1:${porta}`, 'c1')();
+    const achado = new Indice(lista).procurar('D1per');
+    assert.equal(achado.entrada.nome, 'diper');
+    assert.equal(achado.entrada.minutosAssistidos, s.consultar('c1', 'D1per').evidencias[0].minutosAssistidos);
+  } finally {
+    await new Promise((ok) => s.servidor.close(ok));
+  }
+});

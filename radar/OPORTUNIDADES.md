@@ -284,3 +284,11 @@ conseguir falar sobre o que foi entregue.
    a Steam devolve 5. A diferença é oito anos consultando toda semana. Onde um
    concorrente tem anos de coleta, não dá para alcançar — procure o vão que a
    coleta dele não cobre.
+16. **Pergunte o que ele já tem antes de declarar um caminho fechado.** Eu
+   escrevi que o histórico de sessões do BattleMetrics era inalcançável —
+   "API paga, e os termos proíbem usar num produto pago de terceiro". Ele
+   mandou os arquivos do PeekRust e lá estava `BATTLEMETRICS_TOKEN`
+   funcionando, chamando `/players/{id}/relationships/sessions`, há meses.
+   Não era um bloqueio do mundo: era um bloqueio meu, para uma conta que eu
+   não tinha e ele tinha. Uma linha — *"você já tem acesso a isso?"* —
+   valia mais que toda a pesquisa que fiz para provar que não dava.

@@ -227,6 +227,22 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
       return responder(200, consultar(canalId, nome));
     }
 
+    // A audiência crua, para quem quer cruzar do lado de fora — é assim que
+    // o PeekRust entra sem precisar do banco, só de uma URL.
+    if (req.method === 'GET' && url.pathname === '/api/audiencia') {
+      const canalId = url.searchParams.get('canal');
+      if (!canalId) return responder(400, { erro: 'informe canal' });
+      return responder(200, {
+        canal: canalId,
+        audiencia: listarPresenca.all(canalId).map((p) => ({
+          nome: p.nome,
+          minutosAssistidos: Math.round((p.blocos * BLOCO_MS) / 60000),
+          primeiraVezEm: p.primeira_em,
+          ultimaVezEm: p.ultima_em,
+        })),
+      });
+    }
+
     if (req.method === 'GET' && url.pathname === '/api/alertas') {
       const canalId = url.searchParams.get('canal');
       if (!canalId) return responder(400, { erro: 'informe canal' });
