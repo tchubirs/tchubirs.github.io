@@ -143,3 +143,45 @@ test('nome que normaliza para vazio não vira espectador fantasma', () => {
   s.ingerir('c1', 'chat.message', msg(undefined, 9), T);
   assert.equal(s.db.prepare('SELECT COUNT(*) c FROM presenca').get().c, 0);
 });
+
+test('o retrato do servidor SUBSTITUI, não acumula', () => {
+  const s = bancada();
+  s.guardarServidor('c1', { nome: 'Srv' }, [{ nome: 'FINIK' }, { nome: 'Caraxes' }], T);
+  s.guardarServidor('c1', { nome: 'Srv' }, [{ nome: 'FINIK' }], T + MIN);
+  const n = s.db.prepare('SELECT COUNT(*) c FROM no_servidor WHERE canal_id = ?').get('c1').c;
+  // Alertar sobre quem já desconectou é pior que não alertar.
+  assert.equal(n, 1, 'quem saiu do servidor não pode continuar listado');
+});
+
+test('cruza sozinho: alerta sem ninguém perguntar', () => {
+  const s = bancada();
+  for (let i = 0; i <= 120; i += 8) s.ingerir('c1', 'chat.message', msg('FINIK', 1), T + i * MIN);
+  s.ingerir('c1', 'chat.message', msg('diper', 2), T);
+  const alertas = s.guardarServidor('c1', { nome: 'Srv' },
+    [{ nome: 'FINIK', minutosNoServidor: 275 }, { nome: 'D1per' }, { nome: 'Caraxes' }], T);
+  assert.equal(alertas.length, 2);
+  assert.equal(alertas[0].jogador, 'FINIK');
+  assert.equal(alertas[0].minutosNoServidor, 275);
+  assert.ok(alertas.every((a) => a.jogador !== 'Caraxes'), 'Caraxes não assistiu');
+});
+
+test('sem audiência gravada, nenhum alerta é inventado', () => {
+  const s = bancada();
+  const alertas = s.guardarServidor('c1', { nome: 'Srv' }, [{ nome: 'FINIK' }], T);
+  assert.deepEqual(alertas, []);
+});
+
+test('alertas saem ordenados por confiança', () => {
+  const s = bancada();
+  s.ingerir('c1', 'chat.message', msg('FINIK', 1), T);
+  s.ingerir('c1', 'chat.message', msg('diper', 2), T);
+  const a = s.guardarServidor('c1', { nome: 'Srv' }, [{ nome: 'D1per' }, { nome: 'FINIK' }], T);
+  assert.ok(a[0].confianca >= a.at(-1).confianca);
+});
+
+test('jogador sem nome utilizável é ignorado, não vira linha fantasma', () => {
+  const s = bancada();
+  s.guardarServidor('c1', { nome: 'Srv' }, [{ nome: '' }, { nome: '🔥🔥' }, { nome: 'FINIK' }], T);
+  const n = s.db.prepare('SELECT COUNT(*) c FROM no_servidor').get().c;
+  assert.equal(n, 1);
+});

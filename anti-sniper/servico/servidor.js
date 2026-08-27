@@ -101,6 +101,55 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
     }
   }
 
+  const limparServidor = db.prepare('DELETE FROM no_servidor WHERE canal_id = ?');
+  const inserirNoServidor = db.prepare(
+    'INSERT OR REPLACE INTO no_servidor VALUES (?,?,?,?,?,?)');
+  const listarNoServidor = db.prepare('SELECT * FROM no_servidor WHERE canal_id = ?');
+
+  /**
+   * Guarda o retrato do servidor e devolve os alertas já cruzados.
+   *
+   * Substitui em vez de acumular: quem saiu do servidor não pode continuar
+   * aparecendo como se estivesse lá. Alerta sobre alguém que já
+   * desconectou é pior que alerta nenhum.
+   */
+  function guardarServidor(canalId, servidor, jogadores, tMs) {
+    limparServidor.run(canalId);
+    const nome = servidor?.nome ?? null;
+    for (const j of jogadores) {
+      const norm = normalizar(j.nome);
+      if (!norm) continue;
+      inserirNoServidor.run(canalId, j.nome, norm, j.minutosNoServidor ?? null, nome, tMs);
+    }
+    return cruzarAgora(canalId);
+  }
+
+  /**
+   * Cruza QUEM ESTÁ NO SERVIDOR AGORA contra toda a audiência gravada.
+   * É isto que permite avisar sem ninguém perguntar.
+   */
+  function cruzarAgora(canalId, { minimo = 0.7 } = {}) {
+    const audiencia = listarPresenca.all(canalId);
+    const achados = [];
+    for (const j of listarNoServidor.all(canalId)) {
+      let melhor = null;
+      for (const e of audiencia) {
+        const c = comparar(j.nome, e.nome);
+        if (c.confianca >= minimo && (!melhor || c.confianca > melhor.confianca)) {
+          melhor = {
+            espectador: e.nome,
+            confianca: c.confianca,
+            motivo: c.motivo,
+            minutosAssistidos: Math.round((e.blocos * BLOCO_MS) / 60000),
+          };
+        }
+      }
+      if (melhor) achados.push({ ...melhor, jogador: j.nome, minutosNoServidor: j.minutos, servidor: j.servidor });
+    }
+    achados.sort((a, b) => b.confianca - a.confianca);
+    return achados;
+  }
+
   /** Cruza um nome de jogador contra tudo que já foi gravado do canal. */
   function consultar(canalId, nomeJogador, { minimo = 0.7 } = {}) {
     const achados = [];
@@ -153,11 +202,33 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
       return;
     }
 
+    if (req.method === 'POST' && url.pathname === '/api/servidor') {
+      const pedacos = [];
+      req.on('data', (c) => pedacos.push(c));
+      req.on('end', () => {
+        let corpo;
+        try { corpo = JSON.parse(Buffer.concat(pedacos).toString('utf8')); }
+        catch { return responder(400, { erro: 'json inválido' }); }
+        if (!corpo?.canal || !Array.isArray(corpo.jogadores)) {
+          return responder(400, { erro: 'informe canal e jogadores' });
+        }
+        guardarServidor(corpo.canal, corpo.servidor, corpo.jogadores, agora());
+        responder(200, { ok: true, jogadores: corpo.jogadores.length });
+      });
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/api/consultar') {
       const canalId = url.searchParams.get('canal');
       const nome = url.searchParams.get('nome');
       if (!canalId || !nome) return responder(400, { erro: 'informe canal e nome' });
       return responder(200, consultar(canalId, nome));
+    }
+
+    if (req.method === 'GET' && url.pathname === '/api/alertas') {
+      const canalId = url.searchParams.get('canal');
+      if (!canalId) return responder(400, { erro: 'informe canal' });
+      return responder(200, { alertas: cruzarAgora(canalId) });
     }
 
     if (req.method === 'GET' && url.pathname === '/saude') {
@@ -166,7 +237,8 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
     responder(404, { erro: 'não encontrado' });
   });
 
-  return { servidor, db, ingerir, consultar, registrarPresenca, verificar };
+  return { servidor, db, ingerir, consultar, registrarPresenca, verificar,
+           guardarServidor, cruzarAgora };
 }
 
 module.exports = { criar, verificar, CHAVE_KICK, BLOCO_MS };

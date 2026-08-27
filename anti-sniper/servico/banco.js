@@ -49,6 +49,18 @@ function abrir(caminho = 'detetive.db') {
       PRIMARY KEY (canal_id, inicio_em)
     );
 
+    -- Retrato do servidor onde o streamer está agora. Uma linha por
+    -- jogador visto, substituída a cada rodada do agente.
+    CREATE TABLE IF NOT EXISTS no_servidor (
+      canal_id    TEXT NOT NULL,
+      nome        TEXT NOT NULL,
+      nome_norm   TEXT NOT NULL,
+      minutos     INTEGER,
+      servidor    TEXT,
+      visto_em    INTEGER NOT NULL,
+      PRIMARY KEY (canal_id, nome_norm)
+    );
+
     -- Idempotência de webhook: a Kick reentrega evento quando não recebe
     -- 200 a tempo. Sem isto, uma reentrega contaria presença duas vezes.
     CREATE TABLE IF NOT EXISTS evento_visto (
