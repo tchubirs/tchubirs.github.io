@@ -42,6 +42,14 @@ Se um item não tem número com fonte, ele fica em "a verificar" até ter.
   passa em prova de código ao vivo**. Nunca o mande a uma triagem técnica de
   engenheiro, e nunca escreva um perfil que ele não consiga defender numa
   entrevista.
+- ⛔ **CURRÍCULO NÃO É ATIVO DELE. Nunca proponha nada que dependa de currículo,
+  diploma, histórico profissional ou entrevista de contratação.** Palavras dele em
+  27/08: *"Meu currículo não vale de nada esquece isso"*. Ele já reclamou antes que
+  *"todo lugar que eu entro precisa idioma ou currículo"*. Todo caminho que passa por
+  triagem de RH está morto por decisão dele, não por medição.
+  **Os ativos reais dele são:** 40 mil seguidores na Twitch, nível de elite em Rust
+  (venceu o Kick Off 1, 3× Twitch Rivals), rede com 150 criadores da cena, nativo em
+  português, conta bancária europeia (Revolut) — e eu. Construa em cima disso.
 - **Piso: €15/hora.** Abaixo disso não interessa, por decisão dele.
 - Sem audiência, sem capital em risco (teto €100 e só com confiança alta),
   sem usar contas/código/arquivos antigos dele.
