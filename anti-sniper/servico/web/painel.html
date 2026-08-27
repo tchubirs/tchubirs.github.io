@@ -93,6 +93,12 @@
   .fechar{float:right;background:none;border:0;color:var(--fraco);font-size:20px;
           cursor:pointer;line-height:1;padding:0 2px}
   .fechar:hover{color:var(--texto)}
+  .dois{background:#1a1214;border:1px solid #4a2226;border-left:3px solid var(--alerta);
+        border-radius:10px;padding:12px 14px;margin-bottom:8px;cursor:pointer}
+  .dois:hover{border-color:#6b2b30}
+  .dois .par{font-weight:600;font-size:15.5px}
+  .dois .det{color:var(--fraco);font-size:13px;margin-top:4px}
+  .dois .agora{color:var(--ok)}
   .rodape{color:#6f7a84;font-size:12px;margin-top:26px;line-height:1.6;
           border-top:1px solid var(--linha);padding-top:16px}
 </style>
@@ -124,6 +130,10 @@
       <button data-min="60">1 h atrás</button>
     </div>
     <div id="resultado"></div>
+
+    <h2 id="t-dois">No servidor <b style="color:var(--alerta)">E</b> na sua live — agora
+      <span id="qtd-dois" class="qtd"></span></h2>
+    <div id="nosdois"><div class="vazio">carregando…</div></div>
 
     <h2>Na sua live agora <span id="qtd-agora" class="qtd"></span></h2>
     <p class="nota">Clique em alguém para ver o <b>log completo</b>: entrou, saiu,

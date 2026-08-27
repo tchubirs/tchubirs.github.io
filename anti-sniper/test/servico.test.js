@@ -184,8 +184,12 @@ test('cruza sozinho: alerta sem ninguém perguntar', () => {
   const s = bancada();
   for (let i = 0; i <= 120; i += 8) s.ingerir('c1', 'chat.message', msg('FINIK', 1), T + i * MIN);
   s.ingerir('c1', 'chat.message', msg('diper', 2), T);
-  const alertas = s.guardarServidor('c1', { nome: 'Srv' },
+  // guardarServidor só GRAVA; cruzar é caro (5,6s a 1.500 × 5.000) e quem
+  // grava é o agente, que não usa o resultado. O cruzamento é sob demanda.
+  const r = s.guardarServidor('c1', { nome: 'Srv' },
     [{ nome: 'FINIK', minutosNoServidor: 275 }, { nome: 'D1per' }, { nome: 'Caraxes' }], T);
+  assert.equal(r.jogadores, 3);
+  const alertas = s.cruzarAgora('c1');
   assert.equal(alertas.length, 2);
   assert.equal(alertas[0].jogador, 'FINIK');
   assert.equal(alertas[0].minutosNoServidor, 275);
@@ -194,15 +198,16 @@ test('cruza sozinho: alerta sem ninguém perguntar', () => {
 
 test('sem audiência gravada, nenhum alerta é inventado', () => {
   const s = bancada();
-  const alertas = s.guardarServidor('c1', { nome: 'Srv' }, [{ nome: 'FINIK' }], T);
-  assert.deepEqual(alertas, []);
+  s.guardarServidor('c1', { nome: 'Srv' }, [{ nome: 'FINIK' }], T);
+  assert.deepEqual(s.cruzarAgora('c1'), []);
 });
 
 test('alertas saem ordenados por confiança', () => {
   const s = bancada();
   s.ingerir('c1', 'chat.message', msg('FINIK', 1), T);
   s.ingerir('c1', 'chat.message', msg('diper', 2), T);
-  const a = s.guardarServidor('c1', { nome: 'Srv' }, [{ nome: 'D1per' }, { nome: 'FINIK' }], T);
+  s.guardarServidor('c1', { nome: 'Srv' }, [{ nome: 'D1per' }, { nome: 'FINIK' }], T);
+  const a = s.cruzarAgora('c1');
   assert.ok(a[0].confianca >= a.at(-1).confianca);
 });
 
@@ -597,4 +602,36 @@ test('o log diz se o sinal foi mensagem ou tempo assistido', () => {
   // Quem fala E é medido fica marcado como os dois.
   s.ingerir('c1', 'chat.message', msg('calado', 2), T + 4 * MIN);
   assert.equal(s.log('c1', 'calado').linhas[0].fonte, 'ambos');
+});
+
+test('o cruzamento é cacheado até o servidor mudar', () => {
+  // Medido: 5,6s com 1.500 jogadores × 5.000 espectadores. O painel pergunta
+  // a cada 15s e o agente grava a cada 90s — sem cache seriam 4 cruzamentos
+  // completos para cada um que teria resultado novo.
+  const s = bancada();
+  s.ingerir('c1', 'chat.message', msg('FINIK', 1), T);
+  s.guardarServidor('c1', { nome: 'Srv' }, [{ nome: 'FINIK' }], T);
+  const a = s.cruzarAgora('c1');
+  assert.equal(s.cruzarAgora('c1'), a, 'mesma referência = não recalculou');
+
+  s.guardarServidor('c1', { nome: 'Srv' }, [{ nome: 'FINIK' }, { nome: 'diper' }], T + MIN);
+  assert.notEqual(s.cruzarAgora('c1'), a, 'servidor mudou, tem que recalcular');
+});
+
+test('nos dois AO MESMO TEMPO — não "já assistiu algum dia"', () => {
+  const s = bancada();
+  // Um que está na live agora e no servidor agora.
+  for (const i of [30, 20, 10, 2]) s.ingerir('c1', 'chat.message', msg('diper', 2), T - i * MIN);
+  // Um que assistiu ontem e está no servidor agora — NÃO é o mesmo caso.
+  s.ingerir('c1', 'chat.message', msg('FINIK', 1), T - 20 * 60 * MIN);
+  s.guardarServidor('c1', { nome: 'Srv' }, [{ nome: 'D1per' }, { nome: 'FINIK' }], T - MIN);
+
+  const d = s.nosDois('c1', T);
+  assert.deepEqual(d.map((x) => x.jogador), ['D1per']);
+  assert.equal(d[0].espectador, 'diper');
+  assert.equal(d[0].caladaHa, 2);
+  assert.equal(d[0].naLiveDesde, T - 30 * MIN);
+
+  // FINIK aparece no cruzamento histórico, mas não no "agora".
+  assert.ok(s.cruzarAgora('c1').some((a) => a.jogador === 'FINIK'));
 });

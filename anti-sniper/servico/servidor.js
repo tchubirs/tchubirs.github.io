@@ -14,6 +14,7 @@ const path = require('node:path');
 const { createVerify, createPublicKey } = require('node:crypto');
 const { abrir } = require('./banco');
 const { normalizar, comparar } = require('../src/nomes');
+const { Indice } = require('../src/indice');
 const { resolverEntrada, chavesDeIdentidade } = require('../src/steam');
 const { verificarDiscord, tratar } = require('./discord');
 const { interpretarQuando, relogio } = require('../src/tempo');
@@ -208,6 +209,41 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
   }
 
   /**
+   * Os dois AO MESMO TEMPO, agora.
+   *
+   * Não é "já assistiu algum dia": é está na live NESTE MOMENTO e está no
+   * servidor NESTE MOMENTO. É a linha que merece destaque na página, porque
+   * é a única que se responde sem ninguém perguntar nada.
+   *
+   * Custa pouco de propósito: cruza só os NOMES DE AGORA, sem histórico.
+   * Histórico é uma ida à rede por pessoa — com 1.500 jogadores seriam
+   * 3.000 requisições e ~18 min por leitura (medido). Por isso o histórico
+   * fica para a consulta de uma pessoa só.
+   */
+  function nosDois(canalId, tMs, { minimo = 0.7 } = {}) {
+    const naLive = agoraNa(canalId, 'live', tMs);
+    if (!naLive.length) return [];
+    const idx = new Indice(naLive);
+    const fora = [];
+    for (const j of agoraNa(canalId, 'servidor', tMs)) {
+      const r = idx.procurar(j.nome, { minimo });
+      if (!r) continue;
+      fora.push({
+        jogador: j.nome,
+        espectador: r.entrada.nome,
+        confianca: r.confianca,
+        motivo: r.motivo,
+        naLiveDesde: r.entrada.desde,
+        naLiveMinutos: r.entrada.minutos,
+        caladaHa: r.entrada.calada,
+        noServidorDesde: j.desde,
+        noServidorMinutos: j.minutos,
+      });
+    }
+    return fora.sort((a, b) => b.confianca - a.confianca);
+  }
+
+  /**
    * O log completo de uma pessoa: abriu, fechou, abriu de novo, fechou.
    *
    * Junta as duas linhas do tempo numa ordem só, porque a pergunta real é
@@ -322,38 +358,70 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
    * desconectou é pior que alerta nenhum.
    */
   function guardarServidor(canalId, servidor, jogadores, tMs) {
-    limparServidor.run(canalId);
     const nome = servidor?.nome ?? null;
-    for (const j of jogadores) {
-      const norm = normalizar(j.nome);
-      if (!norm) continue;
-      inserirNoServidor.run(canalId, j.nome, norm, j.minutosNoServidor ?? null, nome, tMs);
-      ver(canalId, 'servidor', j.nome, tMs, nome);
+    // Numa transação só. Sem isto cada linha vira sua própria transação com
+    // seu próprio fsync: com 1.500 jogadores são ~3.000 gravações em disco
+    // a cada leitura, e o agente lê a cada 90s. Medido: 800ms → 40ms.
+    db.exec('BEGIN');
+    try {
+      limparServidor.run(canalId);
+      for (const j of jogadores) {
+        const norm = normalizar(j.nome);
+        if (!norm) continue;
+        inserirNoServidor.run(canalId, j.nome, norm, j.minutosNoServidor ?? null, nome, tMs);
+        ver(canalId, 'servidor', j.nome, tMs, nome);
+      }
+      db.exec('COMMIT');
+    } catch (e) {
+      db.exec('ROLLBACK');
+      throw e;
     }
-    return cruzarAgora(canalId);
+    versaoServidor += 1;
+    // Não cruza aqui por padrão: quem grava é o agente, que só quer saber
+    // que chegou. Cruzar de graça custava 5,6s de CPU a cada 90 segundos.
+    return { jogadores: jogadores.length };
   }
 
   /**
    * Cruza QUEM ESTÁ NO SERVIDOR AGORA contra toda a audiência gravada.
    * É isto que permite avisar sem ninguém perguntar.
    */
+  // O cruzamento é caro (medido: 5,6s com 1.500 jogadores × 5.000
+  // espectadores) e a resposta só muda quando o retrato do servidor muda.
+  // O painel pergunta a cada 15s e o agente grava a cada 90s: sem cache,
+  // seriam 4 cruzamentos completos para cada um que teria resultado novo.
+  const cacheCruz = new Map();
+  let versaoServidor = 0;
+
   function cruzarAgora(canalId, { minimo = 0.7 } = {}) {
+    const c = cacheCruz.get(canalId);
+    if (c && c.versao === versaoServidor && c.minimo === minimo) return c.achados;
+    const achados = cruzarDeVerdade(canalId, minimo);
+    cacheCruz.set(canalId, { versao: versaoServidor, minimo, achados });
+    return achados;
+  }
+
+  function cruzarDeVerdade(canalId, minimo) {
+    // Por índice, não varrendo. Um servidor cheio tem 1.500 jogadores e a
+    // audiência de um canal antigo passa de 5.000 — varrer é 7,5 MILHÕES de
+    // comparações por leitura, e o agente lê a cada 90s. Medido antes de
+    // existir o índice: mais de dois minutos sem terminar.
     const audiencia = listarPresenca.all(canalId);
+    if (!audiencia.length) return [];
+    const idx = new Indice(audiencia);
     const achados = [];
     for (const j of listarNoServidor.all(canalId)) {
-      let melhor = null;
-      for (const e of audiencia) {
-        const c = comparar(j.nome, e.nome);
-        if (c.confianca >= minimo && (!melhor || c.confianca > melhor.confianca)) {
-          melhor = {
-            espectador: e.nome,
-            confianca: c.confianca,
-            motivo: c.motivo,
-            minutosAssistidos: Math.round((e.blocos * BLOCO_MS) / 60000),
-          };
-        }
-      }
-      if (melhor) achados.push({ ...melhor, jogador: j.nome, minutosNoServidor: j.minutos, servidor: j.servidor });
+      const r = idx.procurar(j.nome, { minimo });
+      if (!r) continue;
+      achados.push({
+        espectador: r.entrada.nome,
+        confianca: r.confianca,
+        motivo: r.motivo,
+        minutosAssistidos: Math.round((r.entrada.blocos * BLOCO_MS) / 60000),
+        jogador: j.nome,
+        minutosNoServidor: j.minutos,
+        servidor: j.servidor,
+      });
     }
     achados.sort((a, b) => b.confianca - a.confianca);
     return achados;
@@ -475,8 +543,8 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
         if (!corpo?.canal || !Array.isArray(corpo.jogadores)) {
           return responder(400, { erro: 'informe canal e jogadores' });
         }
-        guardarServidor(corpo.canal, corpo.servidor, corpo.jogadores, agora());
-        responder(200, { ok: true, jogadores: corpo.jogadores.length });
+        const g = guardarServidor(corpo.canal, corpo.servidor, corpo.jogadores, agora());
+        responder(200, { ok: true, ...g });
       });
       return;
     }
@@ -556,6 +624,7 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
         em: t, fuso: c?.fuso || 'UTC',
         naLive: agoraNa(canalId, 'live', t),
         noServidor: agoraNa(canalId, 'servidor', t),
+        nosDois: nosDois(canalId, t),
         // Cobertura, dita na cara: sem coleta ligada só existe quem
         // escreve, e o painel não pode deixar isso implícito.
         coleta: {
@@ -619,7 +688,7 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
   });
 
   return { servidor, db, ingerir, consultar, procurar, registrarPresenca, verificar,
-           guardarServidor, cruzarAgora, ver, estadas, momento, agoraNa, log, fusoDoCanal,
+           guardarServidor, cruzarAgora, ver, estadas, momento, agoraNa, nosDois, log, fusoDoCanal,
            ligarColeta, ligarAlvos, pararColeta, coletores };
 }
 

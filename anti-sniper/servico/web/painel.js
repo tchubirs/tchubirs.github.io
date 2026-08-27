@@ -30,6 +30,31 @@ function desenharAlertas(lista, onde) {
     </div>`).join('');
 }
 
+/**
+ * Nos dois AO MESMO TEMPO. É a linha que merece destaque.
+ *
+ * Cruza só os nomes de AGORA, sem histórico — histórico é uma ida à rede
+ * por pessoa, e com 1.500 jogadores seriam ~18 min por leitura. Por isso a
+ * lista aqui é uma pista, e o log completo vem ao clicar.
+ */
+function desenharDois(lista, onde) {
+  document.getElementById('qtd-dois').textContent = lista.length ? `· ${lista.length}` : '';
+  if (!lista.length) {
+    onde.innerHTML = '<div class="vazio">Ninguém no servidor bate, <b>pelo nome de agora</b>, '
+      + 'com quem está na live.<br><br>Isso <b>não inocenta</b>: aqui eu comparo só o nome atual. '
+      + 'Para conferir todos os nomes antigos de alguém, procure a pessoa acima.</div>';
+    return;
+  }
+  onde.innerHTML = lista.map((a) => `<div class="dois" data-nome="${esc(a.espectador)}">
+      <div class="par">${esc(a.jogador)} <span style="color:#6f7a84">↔</span> ${esc(a.espectador)}
+        <span class="pc">${Math.round(a.confianca * 100)}%</span></div>
+      <div class="det">na live desde <b>${hora(a.naLiveDesde)}</b> (${a.naLiveMinutos} min,
+        <span class="${a.caladaHa <= 2 ? 'agora' : ''}">${a.caladaHa <= 2 ? 'falando agora' : `calado há ${a.caladaHa} min`}</span>)
+        · no servidor desde <b>${hora(a.noServidorDesde)}</b> (${a.noServidorMinutos} min)</div>
+    </div>`).join('');
+  for (const b of onde.querySelectorAll('.dois')) b.onclick = () => abrirLog(b.dataset.nome);
+}
+
 /** Quem está na live agora — a resposta que a página dá sem ninguém perguntar. */
 function desenharAgora(lista, onde) {
   document.getElementById('qtd-agora').textContent = lista.length ? `· ${lista.length}` : '';
@@ -96,6 +121,7 @@ async function atualizar() {
     const d = await r.json();
     const da = await ra.json();
     desenharAgora(da.naLive || [], document.getElementById('agora'));
+    desenharDois(da.nosDois || [], document.getElementById('nosdois'));
     document.getElementById('cobertura').innerHTML = da.coleta?.ligada
       ? 'Contando também <b>quem assiste calado</b>, pelo StreamElements '
         + `(<code>${esc(da.coleta.fonte)}</code>).`
