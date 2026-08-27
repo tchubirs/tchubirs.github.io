@@ -128,7 +128,7 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
         : () => se.audiencia(c.se_canal, { buscar, limite: 2000 });
       const col = criarColetor({
         placar: ler,
-        aoVer: (nome, t) => { ver(c.id, 'live', nome, t, null, 'tempo'); registrarPresenca(c.id, nome, null, t); },
+        aoVer: (nome, t) => registrarPresenca(c.id, nome, null, t, 'tempo'),
         agora,
         aoErro: (e) => console.error(`[coleta ${c.id}]`, e.message),
       });
@@ -155,7 +155,7 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
         medir: medirDe
           ? (nome) => medirDe(c, nome)
           : (nome) => se.pessoa(c.se_canal, nome, buscar),
-        aoVer: (nome, t) => { ver(c.id, 'live', nome, t, null, 'tempo'); registrarPresenca(c.id, nome, null, t); },
+        aoVer: (nome, t) => registrarPresenca(c.id, nome, null, t, 'tempo'),
         agora,
         aoErro: (e) => console.error(`[alvos ${c.id}]`, e.message),
       });
@@ -163,6 +163,40 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
       col.ligar(intervaloMs);
     }
     return coletores;
+  }
+
+  // Fidelidade que chega de fora (o agente lendo o BotRix pela sessão dele).
+  // O agente não guarda estado de propósito: manda a lista inteira e quem
+  // compara é aqui, para uma reinicialização no meio da live não perder nada.
+  const anteriorFidelidade = new Map();
+
+  /**
+   * Recebe a tabela de fidelidade e credita presença a quem SUBIU.
+   *
+   * É a única fonte que enxerga quem assiste sem escrever — e sniper não
+   * escreve. A primeira leitura nunca credita: sem um "antes" não existe
+   * diferença, e tratá-la como presença marcaria a audiência inteira de
+   * meses atrás como estando na live agora.
+   */
+  function receberFidelidade(canalId, pessoas, tMs) {
+    const antes = anteriorFidelidade.get(canalId);
+    const agora_ = new Map();
+    for (const p of pessoas || []) {
+      if (p && p.nome != null) agora_.set(p.nome, Number(p.minutosAssistidos) || 0);
+    }
+    anteriorFidelidade.set(canalId, agora_);
+    if (!antes) return { base: true, total: agora_.size, vistos: 0 };
+
+    let vistos = 0;
+    for (const [nome, min] of agora_) {
+      const m0 = antes.get(nome);
+      // Quem só aparece agora na tabela pode ser gente nova de verdade, mas
+      // pode ser paginação. Na dúvida, não credita.
+      if (m0 == null || min <= m0) continue;
+      registrarPresenca(canalId, nome, null, tMs, 'tempo');
+      vistos += 1;
+    }
+    return { base: false, total: agora_.size, vistos };
   }
 
   function pararColeta() {
@@ -307,11 +341,11 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
     };
   }
 
-  function registrarPresenca(canalId, nome, usuarioId, tMs) {
+  function registrarPresenca(canalId, nome, usuarioId, tMs, fonte = 'chat') {
     if (!nome) return;
     const norm = normalizar(nome);
     if (!norm) return;
-    ver(canalId, 'live', nome, tMs);
+    ver(canalId, 'live', nome, tMs, null, fonte);
     const p = pegarPresenca.get(canalId, norm);
     if (!p) {
       inserirPresenca.run(canalId, nome, norm, usuarioId ?? null, tMs, tMs, tMs);
@@ -646,6 +680,21 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
       return responder(200, { ...log(canalId, nome), fuso: fusoDoCanal(canalId) });
     }
 
+    if (req.method === 'POST' && url.pathname === '/api/fidelidade') {
+      const pedacos = [];
+      req.on('data', (c) => pedacos.push(c));
+      req.on('end', () => {
+        let corpo;
+        try { corpo = JSON.parse(Buffer.concat(pedacos).toString('utf8')); }
+        catch { return responder(400, { erro: 'json inválido' }); }
+        if (!corpo?.canal || !Array.isArray(corpo.pessoas)) {
+          return responder(400, { erro: 'informe canal e pessoas' });
+        }
+        responder(200, receberFidelidade(corpo.canal, corpo.pessoas, agora()));
+      });
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/api/audiencia') {
       const canalId = url.searchParams.get('canal');
       if (!canalId) return responder(400, { erro: 'informe canal' });
@@ -694,7 +743,7 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
 
   return { servidor, db, ingerir, consultar, procurar, registrarPresenca, verificar,
            guardarServidor, cruzarAgora, ver, estadas, momento, agoraNa, nosDois, log, fusoDoCanal,
-           ligarColeta, ligarAlvos, pararColeta, coletores };
+           ligarColeta, ligarAlvos, pararColeta, coletores, receberFidelidade };
 }
 
 module.exports = { criar, verificar, CHAVE_KICK, BLOCO_MS };

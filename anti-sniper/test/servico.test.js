@@ -649,3 +649,86 @@ test('o "agora" separa quem falou de quem só foi medido', () => {
   assert.equal(por.falante, 'chat');
   assert.equal(por.calado, 'tempo');
 });
+
+// ── Fidelidade: a fonte que vê quem NÃO fala ──────────────────────────────
+// "Nenhum stream sniper fala no chat." O webhook da Kick só entrega
+// mensagem, e a API pública dela não tem lista de conectados. O tempo
+// assistido do BotRix sobe para quem está com a live aberta, calado ou não.
+
+test('fidelidade: a primeira leitura NUNCA credita ninguém', () => {
+  // Sem um "antes" não existe diferença, e tratar a base como presença
+  // marcaria a audiência inteira de meses atrás como estando na live agora.
+  const s = bancada();
+  const r = s.receberFidelidade('c1', [
+    { nome: 'lurker', minutosAssistidos: 600 },
+    { nome: 'outro', minutosAssistidos: 40 },
+  ], T);
+  assert.equal(r.base, true);
+  assert.equal(r.vistos, 0);
+  assert.equal(s.log('c1', 'lurker').total, 0);
+});
+
+test('fidelidade: quem subiu estava assistindo, sem escrever nada', () => {
+  const s = bancada();
+  s.receberFidelidade('c1', [
+    { nome: 'lurker', minutosAssistidos: 600 },
+    { nome: 'saiu', minutosAssistidos: 40 },
+  ], T);
+  const r = s.receberFidelidade('c1', [
+    { nome: 'lurker', minutosAssistidos: 610 },
+    { nome: 'saiu', minutosAssistidos: 40 },
+  ], T + 10 * MIN);
+
+  assert.equal(r.vistos, 1);
+  const l = s.log('c1', 'lurker');
+  assert.equal(l.total, 1);
+  assert.equal(l.linhas[0].fonte, 'tempo', 'marcado como calado, não como mensagem');
+  assert.equal(s.log('c1', 'saiu').total, 0, 'quem não subiu não estava lá');
+
+  // E entra no cruzamento igual a quem falou.
+  assert.equal(s.consultar('c1', 'lurker').evidencias.length, 1);
+});
+
+test('fidelidade: quem só aparece agora na tabela não é creditado', () => {
+  // Pode ser gente nova de verdade, mas pode ser a página seguinte da lista.
+  const s = bancada();
+  s.receberFidelidade('c1', [{ nome: 'a', minutosAssistidos: 10 }], T);
+  const r = s.receberFidelidade('c1', [
+    { nome: 'a', minutosAssistidos: 10 },
+    { nome: 'novato', minutosAssistidos: 5 },
+  ], T + 10 * MIN);
+  assert.equal(r.vistos, 0);
+  assert.equal(s.log('c1', 'novato').total, 0);
+});
+
+test('fidelidade: a linha do tempo sai com a resolução do intervalo', () => {
+  // BotRix e StreamElements creditam em blocos (medido: 10 min é o padrão,
+  // 5 min o mais curto que achei em canal real). O log tem que refletir isso
+  // em vez de fingir precisão de minuto.
+  const s = bancada();
+  let m = 100;
+  for (let i = 0; i <= 4; i++) {
+    s.receberFidelidade('c1', [{ nome: 'lurker', minutosAssistidos: m }], T + i * 10 * MIN);
+    m += 10;
+  }
+  const l = s.log('c1', 'lurker');
+  assert.equal(l.total, 1, '4 blocos seguidos são UMA estada');
+  assert.equal(l.linhas[0].de, T + 10 * MIN, 'a base não conta, então começa no 2º');
+  assert.equal(l.linhas[0].ate, T + 40 * MIN);
+});
+
+test('/api/fidelidade recebe do agente pelo HTTP', async () => {
+  const s = bancada();
+  await new Promise((ok) => s.servidor.listen(0, '127.0.0.1', ok));
+  const base = `http://127.0.0.1:${s.servidor.address().port}/api/fidelidade`;
+  const post = (b) => fetch(base, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(b) });
+  try {
+    const a = await (await post({ canal: 'c1', pessoas: [{ nome: 'x', minutosAssistidos: 10 }] })).json();
+    assert.equal(a.base, true);
+    const b = await (await post({ canal: 'c1', pessoas: [{ nome: 'x', minutosAssistidos: 20 }] })).json();
+    assert.equal(b.vistos, 1);
+    assert.equal((await post({ canal: 'c1' })).status, 400);
+  } finally {
+    await new Promise((ok) => s.servidor.close(ok));
+  }
+});

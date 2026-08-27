@@ -18,7 +18,7 @@
 
 const path = require('node:path');
 const os = require('node:os');
-const { lerJogadores, lerServidorAtual } = require('./ler-pagina');
+const { lerJogadores, lerServidorAtual, lerFidelidade } = require('./ler-pagina');
 
 const PERFIL = process.env.DETETIVE_PERFIL
   || path.join(os.homedir(), '.detetive-navegador');
@@ -26,6 +26,9 @@ const SERVICO = process.env.DETETIVE_SERVICO || 'http://127.0.0.1:8790';
 const JOGADOR = process.env.DETETIVE_JOGADOR;   // id do seu perfil no BattleMetrics
 const CANAL = process.env.DETETIVE_CANAL;       // id do canal no serviço
 const INTERVALO_MS = Number(process.env.DETETIVE_INTERVALO || 90) * 1000;
+// Página de fidelidade do BotRix — a fonte de quem assiste CALADO na Kick.
+// O webhook da Kick só entrega mensagem, e sniper não escreve no chat.
+const FIDELIDADE = process.env.DETETIVE_FIDELIDADE;   // ex: https://botrix.live/pt/dashboard/kick/tchubi/points
 
 async function abrirNavegador() {
   const { chromium } = require('playwright');
@@ -45,6 +48,33 @@ async function extrair(pagina, funcao) {
 }
 function funcaoParaTexto(nome) {
   return require('./ler-pagina')[nome].toString();
+}
+
+/**
+ * Lê a fidelidade e manda para o serviço.
+ *
+ * Manda a lista inteira; quem decide o que virou presença é o serviço, que
+ * compara com a leitura anterior. O agente não guarda estado de propósito:
+ * se ele reiniciar no meio da live, nada se perde.
+ */
+async function umaRodadaFidelidade(ctx, aviso) {
+  if (!FIDELIDADE) return null;
+  const p = await ctx.newPage();
+  try {
+    await p.goto(FIDELIDADE, { waitUntil: 'domcontentloaded', timeout: 45000 });
+    await p.waitForTimeout(3000);
+    const lista = await extrair(p, lerFidelidade);
+    if (!lista?.length) { aviso('sem tabela de fidelidade (confira o link, ou faça login)'); return null; }
+    const r = await fetch(`${SERVICO}/api/fidelidade`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ canal: CANAL, pessoas: lista }),
+    });
+    if (!r.ok) throw new Error(`serviço respondeu ${r.status}`);
+    return await r.json();
+  } finally {
+    await p.close().catch(() => {});
+  }
 }
 
 async function umaRodada(ctx, aviso) {
@@ -90,6 +120,12 @@ async function main() {
     try {
       const r = await umaRodada(ctx, aviso);
       if (r) console.log(`  ✓ ${r.n} jogadores em "${r.servidor}"`);
+      const f = await umaRodadaFidelidade(ctx, aviso);
+      if (f) {
+        console.log(f.base
+          ? `  ✓ fidelidade: ${f.total} pessoas (primeira leitura, base)`
+          : `  ✓ fidelidade: ${f.vistos} assistindo agora, de ${f.total}`);
+      }
     } catch (e) {
       // Nunca derruba o agente: rede cai, Cloudflare implica, o site muda.
       // Parar por um erro significa o streamer descobrir de madrugada que
@@ -101,4 +137,4 @@ async function main() {
 }
 
 if (require.main === module) main().catch((e) => { console.error(e); process.exit(1); });
-module.exports = { umaRodada };
+module.exports = { umaRodada, umaRodadaFidelidade };

@@ -20,9 +20,9 @@ anti-sniper/
 │   ├── discord.js          ✅ /detetive <nome>, resposta privada (flags 64)
 │   └── web/painel.*        ✅ painel no navegador
 │
-├── agente/                 ← A ponte com o BattleMetrics
+├── agente/                 ← A ponte com BattleMetrics e BotRix
 │   ├── ler-pagina.js       ✅ lê pela SUA sessão logada, sem API paga
-│   └── agente.js           ✅ acha o servidor atual e manda pro serviço
+│   └── agente.js           ✅ servidor atual + fidelidade (quem assiste calado)
 │
 ├── peekrust/               ← Encaixe no bot que ele JÁ TEM
 │   ├── stream-check.js     ✅ "essa pessoa está assistindo sua live?"
@@ -57,7 +57,7 @@ anti-sniper/
 │       └── streamelements.js ✅
 │
 ├── bin/                    ✅ consulta, autorização, teste de servidor
-└── test/                   ✅ 174 testes
+└── test/                   ✅ 208 testes
 ```
 
 ## Por que extensão, e não copiar e colar
@@ -162,6 +162,27 @@ E o fuso vai escrito junto de propósito. O serviço roda em UTC, ele mora na
 França: duas horas de erro trocariam a resposta sem ninguém perceber. O site
 manda o instante absoluto (o navegador sabe o fuso); o Discord escreve
 `(Europe/Paris)` na resposta, para um fuso errado aparecer na cara.
+
+## Sniper não fala no chat
+
+Ele derrubou a premissa central numa frase: *"nenhum stream sniper fala no
+chat"*. Está certo, e isso muda o peso das fontes.
+
+| Fonte | Vê quem | Serve para sniper? |
+|---|---|---|
+| Webhook da Kick (chat) | só quem **escreve** | **não** |
+| Tempo assistido (BotRix / StreamElements) | qualquer um **logado** | **sim** |
+| — | ninguém vê quem assiste **deslogado** | — |
+
+Medido na especificação da própria Kick: a API pública dela **não tem lista
+de conectados**, só `viewer_count`. E o StreamElements não cobre Kick — a
+conta dele lá é `provider: twitch`. Para Kick, quem conta tempo assistido é
+o BotRix, que também não tem API pública. Por isso essa leitura vem pelo
+agente, na sessão logada dele.
+
+Resolução: o crédito vem em blocos. Medido em 9 canais reais, o intervalo
+padrão é **10 min**, e `loud_coringa` usa **5 min** — então 5 é possível.
+O log reflete isso em vez de fingir precisão de minuto.
 
 ## Onde o produto é entregue
 

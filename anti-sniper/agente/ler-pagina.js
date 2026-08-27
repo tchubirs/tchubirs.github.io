@@ -78,4 +78,42 @@ function lerServidorAtual(doc) {
   return null;
 }
 
-module.exports = { acharTabela, paraMinutos, lerJogadores, lerServidorAtual };
+/**
+ * Fidelidade do BotRix: quem assistiu e por quanto tempo.
+ *
+ * Essa é a fonte que enxerga QUEM NÃO FALA. O webhook da Kick só entrega
+ * mensagem, e a API pública dela não tem lista de conectados — e sniper não
+ * escreve no chat. O BotRix conta tempo assistido de quem está com a live
+ * aberta, falando ou não, e a Kick não tem StreamElements.
+ *
+ * Não tem API pública (conferido: botrix.live/docs não publica nenhuma), por
+ * isso vem daqui — a sessão dele lendo a tela dele.
+ *
+ * Lê por CABEÇALHO, nunca por classe de CSS: classe muda a cada deploy e o
+ * parser quebraria em silêncio.
+ */
+function lerFidelidade(doc) {
+  const a = acharTabela(doc, ['user', 'watch'])
+    || acharTabela(doc, ['name', 'watch'])
+    || acharTabela(doc, ['usuário', 'tempo'])
+    || acharTabela(doc, ['user', 'time']);
+  if (!a) return null;
+
+  const col = Object.values(a.idx);
+  const iNome = col[0];
+  const iTempo = col[1];
+  const fora = [];
+  for (const tr of a.tabela.querySelectorAll('tbody tr')) {
+    const c = tr.querySelectorAll('td');
+    const nome = (c[iNome]?.textContent || '').trim();
+    if (!nome) continue;
+    const minutos = paraMinutos((c[iTempo]?.textContent || '').trim());
+    // Sem tempo legível a linha não serve: o que interessa é o número subir
+    // entre duas leituras, e um null não sobe nunca.
+    if (minutos == null) continue;
+    fora.push({ nome, minutosAssistidos: minutos });
+  }
+  return fora.length ? fora : null;
+}
+
+module.exports = { acharTabela, paraMinutos, lerJogadores, lerServidorAtual, lerFidelidade };
