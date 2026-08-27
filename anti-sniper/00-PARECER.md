@@ -309,3 +309,76 @@ de quem já estava lá.
   nome do jogo com nome do chat do próprio canal, e nada mais.
 - Falta o lado do jogo: lista de jogadores do servidor, via RCON ou
   `A2S_PLAYER`. Continua sendo o teste de 30 minutos que ninguém fez.
+
+---
+
+# ⚠️ TERCEIRA CORREÇÃO — o mercado NÃO está vazio
+
+Ele mandou **https://www.rustwho.com/**. O produto já existe, já está no ar e
+já cobra.
+
+## O que eu tinha dito, e estava errado
+
+> *"O mercado não mostra um único sinal de demanda paga."*
+> *"US$ 5/mês como produto avulso não é sustentado por nada no dossiê."*
+
+**Errado nos dois.** Preços medidos em 27/08/2026, na página deles:
+
+| Plano | Preço | Por mês |
+|---|---|---|
+| **Strategist** | US$ 99,99/ano | ~US$ 8,33 |
+| **Detective** | US$ 149,99/ano | ~US$ 12,50 |
+| Avulso | US$ 1,49 (5 buscas) · 2,49 (10) · 3,49 (15) | — |
+| **"Profile opt-out"** | **US$ 4,99/mês para sumir da base deles** | — |
+
+O mercado paga **US$ 8 a 12 por mês**, não 5. Minha pesquisa mediu o
+marketplace de plugins e o GitHub, e nunca achou o produto que já estava
+vendendo. Falha de busca, não de mercado.
+
+## O que eles entregam
+
+Busca por **SteamID, e-mail ou Discord**. Histórico de banimento por servidor
+com motivo e data. **Histórico de nomes com 140 entradas** — contra as 5 da
+Steam. In-game Informer, alerta de raid offline, Private Hours, Alt Checker,
+extensão de navegador, "Detective OSINT v2.4", "Email Checker OSINT".
+
+## De onde vem histórico de 140 nomes
+
+**Não vem de consulta. Vem de gravação.**
+
+A Steam só devolve os últimos 5. Mas quem consulta o mesmo perfil toda semana
+durante 8 anos **acumula todos**. O steamid.uk faz igual. O BattleMetrics tem
+por outro caminho: recebe direto dos servidores conectados ao RCON deles.
+
+**Ninguém compra esse histórico. Quem tem, gravou.** E isso é o mais
+importante desta página inteira: **não dá para alcançá-los no que eles têm.
+Anos de coleta não se recuperam.**
+
+## Mas eles NÃO fazem o cruzamento com a stream
+
+Varri o site inteiro: `stream` aparece **1 vez**, `twitch` **2 vezes** — e
+`youtube`/`kick` são links de rodapé.
+
+**Não existe nada ali sobre "essa pessoa estava assistindo sua live".**
+E eles não conseguem construir isso, porque exigiria a audiência de cada
+streamer, um por um, com autorização de cada um.
+
+## A conclusão que muda o projeto
+
+**Parar de competir onde eles estão na frente.** Histórico de jogador é deles;
+são anos de coleta.
+
+**O vão é o cruzamento jogo × stream** — e é exatamente o que ele descreveu
+querendo desde o começo. É a peça que:
+- eles estruturalmente não têm
+- ele tem, e poucos têm
+- **não precisa de e-mail, Discord nem IP** para funcionar
+
+## E o jurídico não muda porque o concorrente faz
+
+Eles vendem busca por e-mail e Discord. **Isso não torna legal na França.**
+O art. 226-18 continua punindo a coleta, e responsabilidade penal é pessoal.
+
+Sinal de que eles operam em zona cinzenta: cobram **US$ 4,99/mês para a
+pessoa sair da base**. No RGPD, exercer o direito de apagamento é gratuito —
+cobrar por isso é, por si só, irregular. **Não é modelo para copiar.**

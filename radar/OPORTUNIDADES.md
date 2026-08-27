@@ -273,3 +273,14 @@ conseguir falar sobre o que foi entregue.
    `isLootCrateDrop` e `isPublisherDrop` estavam na base desde o primeiro
    download e eu não usei nenhum. Ranquear coisas de naturezas diferentes numa
    métrica só produz um ranking do viés, não do mérito.
+14. **"Não achei" não é "não existe".** Escrevi que o mercado anti-sniping não
+   tinha um único sinal de demanda paga. O dono mandou rustwho.com em dez
+   segundos: produto no ar, US$ 99,99 a 149,99 por ano, avulso e até
+   assinatura para sair da base. Minha varredura mediu marketplace de plugin e
+   GitHub, e nunca procurou o produto direto. Antes de declarar mercado vazio,
+   procure o produto pelo NOME DO PROBLEMA que ele resolve, não pelas
+   plataformas onde eu esperaria encontrá-lo.
+15. **Histórico não se compra, se grava.** RustWho tem 140 nomes por jogador e
+   a Steam devolve 5. A diferença é oito anos consultando toda semana. Onde um
+   concorrente tem anos de coleta, não dá para alcançar — procure o vão que a
+   coleta dele não cobre.
