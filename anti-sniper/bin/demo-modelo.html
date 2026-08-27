@@ -1,0 +1,386 @@
+<meta charset="utf-8">
+<title>Detetive de Sniper</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Painel escuro por natureza: é console de operação, olhado no meio de uma
+   partida. O tema claro existe e é cuidado, mas o escuro é o original. */
+:root{
+  --ground:#0e1013; --surf:#161a1e; --surf2:#1c2126; --line:#252b32;
+  --ink:#e7ecef; --ink2:#8d9aa6; --ink3:#5f6b76;
+  --alerta:#ff6257; --alerta-bg:#1c1214; --alerta-line:#4a2226;
+  --vivo:#53fc18; --morno:#f0a35e; --morno-bg:#1d1810; --morno-line:#4a3820;
+  --live:#3f9d54; --srv:#3d7fb8;
+  --sombra:0 1px 2px rgba(0,0,0,.4);
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --ground:#f4f6f7; --surf:#ffffff; --surf2:#eef1f3; --line:#dde2e6;
+    --ink:#12171b; --ink2:#5c6873; --ink3:#8b98a3;
+    --alerta:#c8362c; --alerta-bg:#fdf1f0; --alerta-line:#f0cdc9;
+    --vivo:#2f9d10; --morno:#a86a12; --morno-bg:#fdf6ec; --morno-line:#eddcc0;
+    --live:#2f7d42; --srv:#2b5f8f;
+    --sombra:0 1px 2px rgba(16,24,32,.06);
+  }
+}
+:root[data-theme="light"]{
+  --ground:#f4f6f7; --surf:#ffffff; --surf2:#eef1f3; --line:#dde2e6;
+  --ink:#12171b; --ink2:#5c6873; --ink3:#8b98a3;
+  --alerta:#c8362c; --alerta-bg:#fdf1f0; --alerta-line:#f0cdc9;
+  --vivo:#2f9d10; --morno:#a86a12; --morno-bg:#fdf6ec; --morno-line:#eddcc0;
+  --live:#2f7d42; --srv:#2b5f8f;
+  --sombra:0 1px 2px rgba(16,24,32,.06);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font:15px/1.55 "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.mono{font-family:"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-variant-numeric:tabular-nums}
+
+.topo{border-bottom:1px solid var(--line); background:var(--surf);
+      padding:14px 20px; display:flex; align-items:center; gap:12px; flex-wrap:wrap}
+.topo h1{margin:0; font-size:16px; font-weight:600; letter-spacing:-.01em}
+.topo .canal{color:var(--ink2); font-size:13px}
+.topo .dir{margin-left:auto; display:flex; align-items:center; gap:10px}
+.ponto{width:7px; height:7px; border-radius:50%; background:var(--vivo);
+       box-shadow:0 0 7px var(--vivo); display:inline-block}
+.estado{font-size:12.5px; color:var(--ink2)}
+button.tema{background:var(--surf2); border:1px solid var(--line); color:var(--ink2);
+            border-radius:7px; padding:5px 10px; font:inherit; font-size:12.5px; cursor:pointer}
+button.tema:hover{color:var(--ink); border-color:var(--ink3)}
+
+main{max-width:880px; margin:0 auto; padding:20px 20px 60px}
+
+.aviso{background:var(--surf); border:1px solid var(--line); border-left:3px solid var(--morno);
+       border-radius:10px; padding:12px 14px; margin-bottom:22px; font-size:13.5px; color:var(--ink2); line-height:1.6}
+.aviso b{color:var(--ink)}
+
+h2{font-size:12px; font-weight:600; color:var(--ink2); text-transform:uppercase;
+   letter-spacing:.09em; margin:26px 0 9px; display:flex; align-items:baseline; gap:8px}
+h2 .qtd{color:var(--ink3); letter-spacing:0; text-transform:none; font-weight:400}
+h2 em{font-style:normal; color:var(--alerta)}
+.dica{color:var(--ink2); font-size:13px; margin:0 0 11px; line-height:1.55}
+
+.dois{background:var(--alerta-bg); border:1px solid var(--alerta-line);
+      border-left:3px solid var(--alerta); border-radius:10px; padding:13px 15px;
+      margin-bottom:8px; cursor:pointer; width:100%; text-align:left; color:inherit; font:inherit}
+.dois:hover{border-color:var(--alerta)}
+.dois .par{font-weight:600; font-size:15.5px; display:flex; align-items:baseline; gap:8px; flex-wrap:wrap}
+.pc{color:var(--alerta); font-weight:600}
+.det{color:var(--ink2); font-size:13px; margin-top:5px}
+.det b{color:var(--ink); font-weight:500}
+.agoraz{color:var(--vivo)}
+
+.busca{display:flex; gap:8px; margin-bottom:8px; flex-wrap:wrap}
+.busca input{flex:1 1 240px; min-width:0; background:var(--surf); border:1px solid var(--line);
+             border-radius:8px; padding:10px 12px; color:var(--ink); font:inherit; font-size:14px}
+.busca input.hora{flex:0 0 132px}
+.busca input:focus{outline:2px solid var(--alerta); outline-offset:1px; border-color:transparent}
+.busca button{background:var(--alerta); color:#fff; border:0; border-radius:8px;
+              padding:10px 20px; font:inherit; font-weight:600; font-size:14px; cursor:pointer}
+.busca button:hover{filter:brightness(1.08)}
+.atalhos{display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap}
+.atalhos button{background:var(--surf); color:var(--ink2); border:1px solid var(--line);
+                border-radius:7px; padding:5px 11px; font:inherit; font-size:12.5px; cursor:pointer}
+.atalhos button:hover{color:var(--ink); border-color:var(--ink3)}
+
+.pessoas{display:grid; grid-template-columns:repeat(auto-fill,minmax(216px,1fr)); gap:8px}
+.pessoa{background:var(--surf); border:1px solid var(--line); border-radius:10px;
+        padding:11px 13px; cursor:pointer; text-align:left; color:var(--ink); font:inherit;
+        box-shadow:var(--sombra)}
+.pessoa:hover{border-color:var(--ink3); background:var(--surf2)}
+.pessoa b{display:block; font-size:14.5px; font-weight:600; margin-bottom:3px}
+.pessoa > span{color:var(--ink2); font-size:12.5px; display:block}
+/* Sobe a especificidade de propósito: `.pessoa span` é (0,1,1) e venceria
+   um `.selo` solto (0,1,0), transformando o selo em bloco de largura
+   inteira. Colisão de cascata não avisa — só aparece torto na tela. */
+.pessoa b .selo, .selo{display:inline-block; font-size:10px; letter-spacing:.06em; text-transform:uppercase;
+      border-radius:4px; padding:2px 6px; margin-left:6px; vertical-align:1px; font-weight:600;
+      background:var(--surf2); border:1px solid var(--line); color:var(--ink2)}
+.selo.calado{background:rgba(83,252,24,.09); border-color:rgba(83,252,24,.32); color:var(--vivo)}
+
+.vazio{background:var(--surf); border:1px solid var(--line); border-radius:10px;
+       padding:18px; color:var(--ink2); font-size:13.5px; line-height:1.6}
+.vazio b{color:var(--ink)}
+
+.veredito{border-radius:10px; padding:14px 16px; margin-bottom:10px;
+          border:1px solid var(--line); background:var(--surf)}
+.veredito.sim{background:var(--alerta-bg); border-color:var(--alerta-line); border-left:3px solid var(--alerta)}
+.veredito.provavel{background:var(--morno-bg); border-color:var(--morno-line); border-left:3px solid var(--morno)}
+.veredito .t{font-size:15.5px; font-weight:600}
+.veredito .obs{color:var(--ink2); font-size:12.5px; margin-top:7px; line-height:1.55}
+.veredito .obs b{color:var(--ink)}
+
+.fita{margin-top:13px}
+.rot{color:var(--ink3); font-size:10.5px; text-transform:uppercase; letter-spacing:.09em; margin:9px 0 4px}
+.trilho{position:relative; height:15px; background:var(--surf2);
+        border:1px solid var(--line); border-radius:5px; overflow:hidden}
+.trilho i{position:absolute; top:0; bottom:0; background:var(--live); border-radius:3px}
+.trilho.srv i{background:var(--srv)}
+.marca{position:absolute; top:-4px; bottom:-4px; width:2px; background:var(--ink);
+       box-shadow:0 0 5px var(--ground); z-index:2}
+.reguas{display:flex; justify-content:space-between; color:var(--ink3); font-size:11px; margin-top:4px}
+
+.log{background:var(--surf); border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin-bottom:10px}
+.log h3{margin:0 0 3px; font-size:17px; font-weight:600}
+.log .resumo{color:var(--ink2); font-size:13px; margin-bottom:13px}
+.log .resumo b{color:var(--ink)}
+.log table{width:100%; border-collapse:collapse; font-size:13.5px}
+.log td{padding:7px 8px; border-bottom:1px solid var(--line)}
+.log tr:last-child td{border-bottom:0}
+.log .onde{width:1%; white-space:nowrap; font-weight:600; font-size:12.5px}
+.log .onde.live{color:var(--live)}
+.log .onde.servidor{color:var(--srv)}
+.log .dur{color:var(--ink2); text-align:right; white-space:nowrap}
+.log .seta{color:var(--ink3); padding:0 3px}
+.fechar{float:right; background:none; border:0; color:var(--ink3); font-size:22px;
+        cursor:pointer; line-height:1; padding:0 3px}
+.fechar:hover{color:var(--ink)}
+.nomes{display:flex; flex-wrap:wrap; gap:5px; margin-top:9px}
+.nomes i{font-style:normal; background:var(--surf2); border:1px solid var(--line);
+         border-radius:5px; padding:2px 8px; font-size:12.5px; color:var(--ink2)}
+.nomes i.bateu{background:var(--alerta-bg); border-color:var(--alerta-line); color:var(--alerta); font-weight:600}
+
+.rodape{color:var(--ink3); font-size:12.5px; margin-top:32px; line-height:1.65;
+        border-top:1px solid var(--line); padding-top:16px}
+.rodape b{color:var(--ink2)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
+</style>
+
+<div class="topo">
+  <h1>Detetive</h1>
+  <span class="canal mono">tchubi · kick</span>
+  <div class="dir">
+    <span class="ponto"></span><span class="estado">ao vivo</span>
+    <button class="tema" id="tema" type="button">tema</button>
+  </div>
+</div>
+
+<main>
+  <div class="aviso">
+    <b>Isto é o painel para você clicar, não o serviço rodando.</b><br>
+    Os <b>20 nomes e o tempo assistido são reais</b>, vindos agora da rota pública
+    da BotRix do seu canal. A presença no servidor de Rust é <b>simulada</b>, porque
+    ela depende do agente rodando na sua máquina.<br>
+    O cruzamento de nomes é o <b>mesmo código</b> que roda no serviço — gerado de
+    <span class="mono">src/</span>, não reescrito para a demonstração.
+  </div>
+
+  <h2>No servidor <em>E</em> na sua live — agora <span class="qtd" id="q-dois"></span></h2>
+  <div id="nosdois"></div>
+
+  <h2>Procurar um jogador</h2>
+  <p class="dica">Cole o <b>nome</b> que apareceu na tela quando você morreu, e a hora.
+    No serviço de verdade você também cola a SteamID ou o link do perfil, e eu confiro
+    todos os nomes antigos daquela conta.</p>
+  <div class="busca">
+    <input id="q" placeholder="nome de quem te matou" autocomplete="off" spellcheck="false">
+    <input id="quando" class="hora mono" placeholder="que horas?" autocomplete="off">
+    <button id="ir" type="button">Procurar</button>
+  </div>
+  <div class="atalhos" id="atalhos"></div>
+  <div id="resultado"></div>
+
+  <h2>Na sua live agora <span class="qtd" id="q-agora"></span></h2>
+  <p class="dica">Clique em alguém para ver o <b>log completo</b>: entrou, saiu, entrou de novo.
+    O selo <span class="selo calado">calado</span> é quem <b>nunca escreveu no chat</b> — e sniper não escreve.</p>
+  <div id="agora"></div>
+
+  <div class="rodape">
+    Assistir não é crime. Isto mostra <b>presença, não culpa</b> — quem julga o contexto é
+    você, que jogou a partida.<br>
+    Ninguém aparecer aqui <b>não inocenta</b>: a pessoa pode usar nome diferente nos dois
+    lados, e quem assiste <b>deslogado</b> não aparece em fonte nenhuma.
+  </div>
+</main>
+
+<script>
+/* ── motor de cruzamento, gerado de src/ ─────────────────────────────── */
+/*MOTOR*/
+
+/* ── a noite simulada, mesma função do gerador ───────────────────────── */
+/*NOITE*/
+
+const DADOS = /*DADOS*/;
+const AGORA = Date.now();
+const M = 60000;
+const cenario = noite(DADOS.audiencia, AGORA);
+
+const esc = (s) => String(s).replace(/[<>&"]/g, (c) => ({ '<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;' }[c]));
+const hora = (ms) => new Date(ms).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+const hhmm = (m) => `${Math.floor(m/60)}h${String(Math.round(m%60)).padStart(2,'0')}`;
+const GAP = 15 * M;
+
+const porNome = new Map(cenario.pessoas.map((p) => [p.nome, p]));
+const naLiveAgora = cenario.pessoas.filter((p) => AGORA - p.naLive[0].ate <= GAP);
+const idxLive = new Indice(naLiveAgora.map((p) => ({ nome: p.nome })));
+
+/* Quem está nos dois AO MESMO TEMPO. Cruza só o nome de agora — histórico é
+   uma ida à rede por pessoa, e é por isso que ele fica na busca de um só. */
+function nosDois() {
+  const fora = [];
+  for (const s of cenario.noServidor) {
+    const r = idxLive.procurar(s.nome);
+    if (!r) continue;
+    const p = porNome.get(r.entrada.nome);
+    fora.push({ jogador: s.nome, espectador: r.entrada.nome, confianca: r.confianca, motivo: r.motivo,
+      naLiveDesde: p.naLive[0].de, naLiveMin: Math.round((p.naLive[0].ate - p.naLive[0].de)/M),
+      calada: Math.round((AGORA - p.naLive[0].ate)/M),
+      srvDesde: s.de, srvMin: Math.round((s.ate - s.de)/M) });
+  }
+  return fora.sort((a,b) => b.confianca - a.confianca);
+}
+
+function desenharDois() {
+  const l = nosDois();
+  document.getElementById('q-dois').textContent = l.length ? `· ${l.length}` : '';
+  const onde = document.getElementById('nosdois');
+  if (!l.length) { onde.innerHTML = '<div class="vazio">Ninguém no servidor bate, <b>pelo nome de agora</b>, com quem está na live.</div>'; return; }
+  onde.innerHTML = l.map((a) => `<button class="dois" type="button" data-nome="${esc(a.espectador)}">
+    <div class="par">${esc(a.jogador)} <span style="color:var(--ink3)">&#8596;</span> ${esc(a.espectador)}
+      <span class="pc mono">${Math.round(a.confianca*100)}%</span></div>
+    <div class="det">${esc(a.motivo)} · na live desde <b class="mono">${hora(a.naLiveDesde)}</b>
+      (${a.naLiveMin} min, <span class="${a.calada<=2?'agoraz':''}">${a.calada<=2?'falando agora':'calado há '+a.calada+' min'}</span>)
+      · no servidor desde <b class="mono">${hora(a.srvDesde)}</b> (${a.srvMin} min)</div>
+  </button>`).join('');
+  for (const b of onde.querySelectorAll('.dois')) b.onclick = () => abrirLog(b.dataset.nome);
+}
+
+function desenharAgora() {
+  document.getElementById('q-agora').textContent = `· ${naLiveAgora.length}`;
+  const onde = document.getElementById('agora');
+  onde.innerHTML = `<div class="pessoas">${naLiveAgora.map((p) => {
+    const e = p.naLive[0];
+    const calada = Math.round((AGORA - e.ate)/M);
+    return `<button class="pessoa" type="button" data-nome="${esc(p.nome)}">
+      <b>${esc(p.nome)}<span class="selo ${e.fonte==='tempo'?'calado':''}">${e.fonte==='tempo'?'calado':'falou'}</span></b>
+      <span class="mono">desde ${hora(e.de)} · ${Math.round((e.ate-e.de)/M)} min</span>
+      <span class="${calada<=2?'agoraz':''}">${calada<=2?'sinal agora':'último sinal há '+calada+' min'}</span>
+    </button>`; }).join('')}</div>`;
+  for (const b of onde.querySelectorAll('.pessoa')) b.onclick = () => abrirLog(b.dataset.nome);
+}
+
+/* Três estados, e a diferença entre eles importa: sim / provável / não visto.
+   "Não visto" NUNCA vira "não estava" — quem assiste calado não gera sinal. */
+function momento(p, quando) {
+  const e = p.naLive[0];
+  if (quando >= e.de && quando <= e.ate) return { estado:'sim', e };
+  const d = quando < e.de ? e.de - quando : quando - e.ate;
+  if (d <= GAP) return { estado:'provavel', e, min: Math.round(d/M), antes: quando > e.ate };
+  return { estado:'nao', e, min: Math.round(d/M), antes: quando > e.ate };
+}
+
+function fita(naLive, srv, quando) {
+  const todos = [...naLive, ...srv];
+  let de = Math.min(...todos.map(x=>x.de), quando);
+  let ate = Math.max(...todos.map(x=>x.ate), quando);
+  const folga = Math.max((ate-de)*0.06, 5*M); de -= folga; ate += folga;
+  const pos = (t) => ((t-de)/(ate-de))*100;
+  const trilha = (l, cls) => l.length ? `<div class="trilho ${cls}">${
+    l.map(x=>`<i style="left:${pos(x.de)}%;width:${Math.max(pos(x.ate)-pos(x.de),0.8)}%"></i>`).join('')
+  }<div class="marca" style="left:${pos(quando)}%"></div></div>` : '';
+  return `<div class="fita">
+    ${naLive.length?`<div class="rot">na sua live</div>${trilha(naLive,'')}`:''}
+    ${srv.length?`<div class="rot">no servidor</div>${trilha(srv,'srv')}`:''}
+    <div class="reguas mono"><span>${hora(de)}</span><span>&#8593; ${hora(quando)}</span><span>${hora(ate)}</span></div>
+  </div>`;
+}
+
+function procurar() {
+  const q = document.getElementById('q').value.trim();
+  const onde = document.getElementById('resultado');
+  if (!q) { onde.innerHTML = ''; return; }
+
+  const idxTudo = new Indice(cenario.pessoas.map(p => ({ nome: p.nome })));
+  const r = idxTudo.procurar(q);
+  if (!r) {
+    onde.innerHTML = `<div class="vazio">Nenhum dos ${cenario.pessoas.length} nomes da sua audiência bate com
+      <b>${esc(q)}</b>.<br><br>Isso <b>não inocenta</b> — a pessoa pode usar nome diferente nos dois lados.
+      No serviço de verdade, colar a SteamID confere <b>todos os nomes antigos</b> daquela conta.</div>`;
+    return;
+  }
+  const p = porNome.get(r.entrada.nome);
+  const t = document.getElementById('quando').value.trim();
+  let quando = null;
+  const rl = t.match(/^(\d{1,2})\s*[:h.]?\s*(\d{2})$/);
+  if (rl) { const d = new Date(); d.setHours(+rl[1], +rl[2], 0, 0);
+    if (d.getTime() > AGORA + M) d.setDate(d.getDate()-1); quando = d.getTime(); }
+
+  const srv = cenario.noServidor.filter(s => idxLive.procurar(s.nome)?.entrada.nome === p.nome);
+  let topo = '';
+  if (quando != null) {
+    const m = momento(p, quando);
+    const h = hora(quando);
+    let cls = '', txt;
+    if (m.estado === 'sim') { cls = ' sim';
+      txt = `<b>Às ${h}: ESTAVA na sua live</b> — visto das ${hora(m.e.de)} às ${hora(m.e.ate)}.`; }
+    else if (m.estado === 'provavel') { cls = ' provavel';
+      txt = `<b>Às ${h}: provável</b> — visto ${m.min} min ${m.antes?'antes':'depois'} (${hora(m.e.de)}–${hora(m.e.ate)}).`; }
+    else { txt = `<b>Às ${h}: não visto na live nesse horário.</b> A vez mais próxima foi ${m.min} min de distância.`; }
+    topo = `<div class="veredito${cls}"><div class="t">${txt}</div>
+      <div class="obs">Quem assiste calado não gera mensagem — <b>ausência aqui não é prova de ausência</b>.</div>
+      ${fita(p.naLive, srv, quando)}</div>`;
+  }
+  onde.innerHTML = topo + `<button class="dois" type="button" data-nome="${esc(p.nome)}">
+    <div class="par">${esc(q)} <span style="color:var(--ink3)">&#8596;</span> ${esc(p.nome)}
+      <span class="pc mono">${Math.round(r.confianca*100)}%</span></div>
+    <div class="det">${esc(r.motivo)} · assistiu <b class="mono">${hhmm(p.minutosAssistidos)}</b> no total
+      · clique para o log completo</div></button>`;
+  for (const b of onde.querySelectorAll('.dois')) b.onclick = () => abrirLog(b.dataset.nome);
+}
+
+function abrirLog(nome) {
+  const p = porNome.get(nome);
+  if (!p) return;
+  const srv = cenario.noServidor.filter(s => idxLive.procurar(s.nome)?.entrada.nome === nome);
+  const linhas = [
+    ...p.naLive.map(x => ({ onde:'live', ...x })),
+    ...srv.map(x => ({ onde:'servidor', ...x })),
+  ].sort((a,b) => b.de - a.de);
+  const onde = document.getElementById('resultado');
+  onde.innerHTML = `<div class="log"><button class="fechar" type="button">&times;</button>
+    <h3>${esc(nome)}</h3>
+    <div class="resumo">${linhas.length} entradas · <b class="mono">${hhmm(p.minutosAssistidos)}</b> assistidos no total
+      · nível ${p.nivel} · horários em ${esc(Intl.DateTimeFormat().resolvedOptions().timeZone)}</div>
+    <table><tbody>${linhas.map(l => `<tr>
+      <td class="onde ${l.onde}">&#9679; ${l.onde}</td>
+      <td class="mono">${hora(l.de)} <span class="seta">&#8594;</span> ${hora(l.ate)}</td>
+      <td class="dur mono">${Math.round((l.ate-l.de)/M)} min</td>
+      <td class="dur">${l.onde==='servidor' ? 'leituras do agente' : (l.fonte==='tempo' ? '&times; tempo assistido' : 'mensagens no chat')}</td>
+    </tr>`).join('')}</tbody></table>
+    ${fita(p.naLive, srv, AGORA)}</div>`;
+  onde.querySelector('.fechar').onclick = () => { onde.innerHTML = ''; };
+  onde.scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+
+/* atalhos de horário, derivados da noite que está na tela */
+const alvos = [0, 30, 60, 120, 180];
+document.getElementById('atalhos').innerHTML = alvos.map(min => {
+  const d = new Date(AGORA - min*M);
+  const hm = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  return `<button type="button" data-h="${hm}">${min===0?'agora':min+' min atrás'}</button>`;
+}).join('');
+for (const b of document.querySelectorAll('.atalhos button')) {
+  b.onclick = () => { document.getElementById('quando').value = b.dataset.h; procurar(); };
+}
+
+document.getElementById('ir').onclick = procurar;
+for (const id of ['q','quando']) {
+  document.getElementById(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') procurar(); });
+}
+
+const raiz = document.documentElement;
+document.getElementById('tema').onclick = () => {
+  const escuroAgora = raiz.dataset.theme
+    ? raiz.dataset.theme === 'dark'
+    : !window.matchMedia('(prefers-color-scheme: light)').matches;
+  raiz.dataset.theme = escuroAgora ? 'light' : 'dark';
+};
+
+desenharDois();
+desenharAgora();
+</script>

@@ -12,7 +12,8 @@
     "servico": "node servico/iniciar.js",
     "test": "node --test test/*.test.js",
     "conferir": "node bin/conferir.js",
-    "fontes": "node bin/checar-fontes.js"
+    "fontes": "node bin/checar-fontes.js",
+    "demo": "node bin/gerar-demo.js"
   },
   "dependencies": {
     "playwright": "^1.47.0"
