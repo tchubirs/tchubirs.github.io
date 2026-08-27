@@ -38,21 +38,40 @@ const MODELO = {
   // do endereço: battlemetrics.com/players/SEU_ID
   battlemetricsJogador: '',
   // O painel de fidelidade da BotRix. É a fonte que enxerga quem assiste
-  // CALADO — sem ela, só aparece quem escreve no chat.
+  // CALADO — sem ela, só aparece quem escreve no chat. Traz a lista
+  // COMPLETA, da plataforma que estiver selecionada lá dentro.
   botrixFidelidade: 'https://botrix.live/panel/loyalty',
+  // As mesmas listas pela rota pública: sem login, uma por plataforma, e
+  // sem mexer na plataforma que você deixou selecionada no painel. Vem
+  // capada em 20 pessoas — é piso, não teto.
+  // Descubra quais das suas têm dado com: node bin/checar-fontes.js tchubi
+  fontes: [{ plataforma: 'kick', usuario: 'tchubi' }],
   intervaloSegundos: 90,
 };
 
 function lerConfig() {
   if (!fs.existsSync(CONFIG)) {
     fs.writeFileSync(CONFIG, JSON.stringify(MODELO, null, 2) + '\n');
-    console.log(`\nCriei ${path.basename(CONFIG)}. Preencha duas linhas e rode de novo:\n`);
+    console.log(`\nCriei ${path.basename(CONFIG)}. Falta UMA linha:\n`);
     console.log('  battlemetricsJogador  → o número em battlemetrics.com/players/NUMERO');
-    console.log('  botrixFidelidade      → o endereço da sua página de fidelidade no BotRix\n');
-    console.log('O resto já vem preenchido. Depois: npm start\n');
+    console.log('\nO resto já vem preenchido. Depois: npm start');
+    console.log('Para conferir quais plataformas suas têm dado:');
+    console.log('  node bin/checar-fontes.js tchubi\n');
     process.exit(0);
   }
   return { ...MODELO, ...JSON.parse(fs.readFileSync(CONFIG, 'utf8')) };
+}
+
+function garantirFontes(db, cfg) {
+  const guardar = db.prepare(
+    'INSERT OR IGNORE INTO fonte (canal_id, servico, plataforma, usuario, criado_em) VALUES (?,?,?,?,?)');
+  let n = 0;
+  for (const f of cfg.fontes || []) {
+    if (!f?.plataforma || !f?.usuario) continue;
+    guardar.run(cfg.canal, 'botrix', f.plataforma, f.usuario, Date.now());
+    n += 1;
+  }
+  return n;
 }
 
 function garantirCanal(db, cfg) {
@@ -71,22 +90,41 @@ function garantirCanal(db, cfg) {
 function main() {
   const cfg = lerConfig();
   const { criar } = require('../servico/servidor');
-  const { servidor, db } = criar({
+  const srv = criar({
     caminhoBanco: path.join(RAIZ, 'detetive.db'),
     agora: Date.now,
   });
+  const { servidor, db } = srv;
 
   const estado = garantirCanal(db, cfg);
+  const nFontes = garantirFontes(db, cfg);
   const url = `http://127.0.0.1:${cfg.porta}/?canal=${encodeURIComponent(cfg.canal)}`;
 
   servidor.listen(cfg.porta, '127.0.0.1', () => {
     console.log(`\n  Detetive no ar — canal "${cfg.canal}" (${estado})`);
     console.log(`  PAINEL:  ${url}\n`);
 
+    // A coleta pública não depende de navegador nem de login: começa a
+    // gravar no primeiro segundo, mesmo que o agente nunca suba.
+    if (nFontes) {
+      const cols = srv.ligarBotrixPublico({ intervaloMs: 5 * 60 * 1000 });
+      console.log(`  Coletando tempo assistido de ${nFontes} fonte(s) pública(s) da BotRix,`);
+      console.log(`  a cada 5 min — ${cols.size} coletor(es) ligado(s). Sem login.\n`);
+    } else {
+      console.log('  ⚠ Nenhuma fonte pública no config: quem assiste CALADO não será visto.');
+      console.log('    Descubra as suas com: node bin/checar-fontes.js <seu-nome>\n');
+    }
+
+    // Sem nada para o agente fazer, não adianta subir e ficar reiniciando:
+    // um laço de erro na tela esconde o que importa e não conserta nada.
     if (!cfg.battlemetricsJogador && !cfg.botrixFidelidade) {
-      console.log('  ⚠ Sem battlemetricsJogador nem botrixFidelidade no config:');
-      console.log('    o painel abre, mas nada é gravado. Preencha e rode de novo.\n');
+      console.log('  · agente não sobe: falta battlemetricsJogador ou botrixFidelidade.');
+      console.log('    A coleta pública acima continua gravando.\n');
       return;
+    }
+    if (!cfg.battlemetricsJogador) {
+      console.log('  · sem battlemetricsJogador: o agente só lê a fidelidade,');
+      console.log('    então não dá para saber quem está NO SERVIDOR agora.\n');
     }
 
     // O agente vai num processo separado de propósito: se o navegador
@@ -142,4 +180,4 @@ function main() {
 }
 
 if (require.main === module) main();
-module.exports = { lerConfig, garantirCanal, MODELO };
+module.exports = { lerConfig, garantirCanal, garantirFontes, MODELO };

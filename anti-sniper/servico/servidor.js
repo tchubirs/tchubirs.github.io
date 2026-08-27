@@ -114,7 +114,9 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
 
   const pegarCanal = db.prepare('SELECT * FROM canal WHERE id = ?');
   const canaisComSE = db.prepare("SELECT * FROM canal WHERE se_canal IS NOT NULL AND se_canal != ''");
-  const canaisKick = db.prepare("SELECT * FROM canal WHERE plataforma = 'kick'");
+  const listarFontes = db.prepare("SELECT * FROM fonte WHERE servico = 'botrix'");
+  const guardarFonte = db.prepare(
+    'INSERT OR IGNORE INTO fonte (canal_id, servico, plataforma, usuario, criado_em) VALUES (?,?,?,?,?)');
 
   // ── Presença de quem assiste CALADO ────────────────────────────────────
   // O webhook da Kick só entrega mensagem, e a API pública dela não tem
@@ -209,18 +211,18 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
    * fidelidade hoje, e o agente logado traz a lista inteira quando roda.
    */
   function ligarBotrixPublico({ intervaloMs = 5 * 60 * 1000, placarDe } = {}) {
-    for (const c of canaisKick.all()) {
-      const chave = `botrix:${c.id}`;
+    for (const f of listarFontes.all()) {
+      const chave = `botrix:${f.canal_id}:${f.plataforma}:${f.usuario}`;
       if (coletores.has(chave)) continue;
       const col = criarColetor({
         placar: placarDe
-          ? () => placarDe(c)
-          : () => botrix.placarPublico(c.slug, 'kick', buscar),
-        // O placar da BotRix traz minutos assistidos; o coletor compara
-        // pontos, então o que sobe é o mesmo sinal por outro nome.
-        aoVer: (nome, t) => registrarPresenca(c.id, nome, null, t, 'tempo'),
+          ? () => placarDe(f)
+          : () => botrix.placarPublico(f.usuario, f.plataforma, buscar),
+        // Todas as fontes caem na MESMA audiência: a pergunta é "essa
+        // pessoa estava me assistindo", não "em qual site ela estava".
+        aoVer: (nome, t) => registrarPresenca(f.canal_id, nome, null, t, 'tempo'),
         agora,
-        aoErro: (e) => console.error(`[botrix ${c.id}]`, e.message),
+        aoErro: (e) => console.error(`[botrix ${f.plataforma}/${f.usuario}]`, e.message),
       });
       coletores.set(chave, col);
       col.ligar(intervaloMs);
@@ -772,7 +774,8 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
 
   return { servidor, db, ingerir, consultar, procurar, registrarPresenca, verificar,
            guardarServidor, cruzarAgora, ver, estadas, momento, agoraNa, nosDois, log, fusoDoCanal,
-           ligarColeta, ligarAlvos, ligarBotrixPublico, pararColeta, coletores, receberFidelidade };
+           ligarColeta, ligarAlvos, ligarBotrixPublico, pararColeta, coletores, receberFidelidade,
+           listarFontes, guardarFonte };
 }
 
 module.exports = { criar, verificar, CHAVE_KICK, BLOCO_MS };

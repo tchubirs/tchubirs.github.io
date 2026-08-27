@@ -8,16 +8,42 @@ npx playwright install chromium
 npm start
 ```
 
-Na primeira vez ele cria `detetive.config.json` e pede duas linhas:
+Na primeira vez ele cria `detetive.config.json` e pede **uma linha**:
 
 ```json
 {
   "canal": "tchubi",
   "fuso": "Europe/Paris",
   "battlemetricsJogador": "",   ← o número em battlemetrics.com/players/NUMERO
-  "botrixFidelidade": "https://botrix.live/panel/loyalty"   ← já vem preenchido
+  "botrixFidelidade": "https://botrix.live/panel/loyalty",
+  "fontes": [{ "plataforma": "kick", "usuario": "tchubi" }]
 }
 ```
+
+## Qual das suas plataformas tem dado
+
+```
+node bin/checar-fontes.js tchubi
+```
+
+Medido em 27/08/2026:
+
+```
+  kick      ✓ 20 pessoas, 20 com tempo assistido  (topo: gabriel_uy_mvd, 50 min)
+  twitch    — existe, mas veio VAZIO
+  youtube   — existe, mas veio VAZIO
+  trovo     · sem canal com esse nome
+```
+
+A BotRix tem fidelidade nas quatro, e as quatro caem na **mesma audiência**:
+a pergunta é *"essa pessoa estava me assistindo"*, não *"em qual site"*. Hoje
+só a Kick tem o que entregar — o painel da BotRix diz o mesmo ("você ainda
+não tem dados do seu canal" na Twitch).
+
+**Sobre a plataforma selecionada:** o painel guarda isso na sessão, não na
+URL. O agente lê a lista COMPLETA da que estiver selecionada lá. A rota
+pública lê as outras sem mexer na sua escolha — por isso as duas coisas
+existem.
 
 Preencha e rode `npm start` de novo. Abre uma janela do navegador: **faça
 login no BattleMetrics e no BotRix**. A sessão fica salva em

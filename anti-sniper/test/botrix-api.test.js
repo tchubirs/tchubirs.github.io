@@ -61,3 +61,18 @@ test('o teto de 20 está escrito no código, não escondido', () => {
   // Quem usa isto precisa saber que é o topo da lista, não a lista.
   assert.equal(TETO_PUBLICO, 20);
 });
+
+test('{"error":true} com 200 é "não existe", não formato quebrado', async () => {
+  // A BotRix responde assim quando o par plataforma+usuário não existe.
+  // Tratar como quebra assustaria à toa e esconderia a causa real.
+  const buscar = async () => ({ ok: true, json: async () => ({ error: true }) });
+  await assert.rejects(placarPublico('tchubi', 'trovo', buscar),
+    (e) => e.naoExiste === true && /trovo/.test(e.message));
+});
+
+test('lista vazia é lista vazia — canal existe, fidelidade sem dado', async () => {
+  // Diferente de "não existe": aqui o canal está lá e não tem nada gravado.
+  // Confundir os dois esconderia uma fidelidade desligada.
+  const buscar = async () => ({ ok: true, json: async () => [] });
+  assert.deepEqual(await placarPublico('tchubi', 'twitch', buscar), []);
+});

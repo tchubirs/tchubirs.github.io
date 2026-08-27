@@ -100,6 +100,20 @@ function abrir(caminho = 'detetive.db') {
     CREATE INDEX IF NOT EXISTS idx_estada_tempo
       ON estada (canal_id, onde, inicio_em, fim_em);
 
+    -- De onde vem a audiência de um canal. Uma pessoa que assiste no
+    -- YouTube e joga no mesmo servidor é o mesmo caso de quem assiste na
+    -- Kick — a pergunta é "essa pessoa estava me assistindo", não "em qual
+    -- site". Por isso um canal pode ter várias fontes, e todas caem na
+    -- mesma audiência.
+    CREATE TABLE IF NOT EXISTS fonte (
+      canal_id   TEXT NOT NULL,
+      servico    TEXT NOT NULL,        -- 'botrix'
+      plataforma TEXT NOT NULL,        -- kick | twitch | youtube | trovo
+      usuario    TEXT NOT NULL,
+      criado_em  INTEGER NOT NULL,
+      PRIMARY KEY (canal_id, servico, plataforma, usuario)
+    );
+
     -- Idempotência de webhook: a Kick reentrega evento quando não recebe
     -- 200 a tempo. Sem isto, uma reentrega contaria presença duas vezes.
     CREATE TABLE IF NOT EXISTS evento_visto (

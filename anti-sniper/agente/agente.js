@@ -71,30 +71,45 @@ function funcaoParaTexto(nome) {
  */
 async function umaRodadaFidelidade(ctx, aviso) {
   if (!FIDELIDADE) return null;
-  // Pede a API, não a tela. O painel da BotRix é uma aplicação de página
-  // única: raspar a tabela renderizada quebra no próximo deploy deles e o
-  // usuário só descobre quando a ferramenta para de achar gente, calada.
-  // O endereço saiu do pacote JavaScript deles (chunk 2346): o painel chama
-  // GET /api/loyalty/get, e aqui a chamada sai com o cookie da sessão dele.
+  // ESCUTA o que a própria página pede, em vez de montar a requisição.
+  //
+  // O painel da BotRix guarda a plataforma escolhida na SESSÃO — não vai em
+  // parâmetro nem em cabeçalho — e o interceptor deles ainda carimba
+  // X-CSRF-TOKEN e X-SUBUSER-WORKSPACE. Montar a chamada à mão significaria
+  // reproduzir tudo isso e quebrar quando qualquer peça mudar. Escutando, o
+  // que chega é exatamente o que o painel dele mostra, da plataforma que
+  // ele deixou selecionada.
   const p = await ctx.newPage();
+  const capturado = [];
+  p.on('response', async (r) => {
+    if (!/\/api\/loyalty\/get/.test(r.url())) return;
+    try { capturado.push(await r.json()); } catch { /* não era JSON */ }
+  });
+
   try {
-    // Passar pelo painel primeiro deixa a sessão pronta e o Referer certo.
     await p.goto(FIDELIDADE, { waitUntil: 'domcontentloaded', timeout: 45000 });
-    await p.waitForTimeout(1500);
+    // A lista chega por requisição assíncrona depois que a tela monta.
+    for (let i = 0; i < 20 && !capturado.length; i++) await p.waitForTimeout(500);
 
-    const bruto = await p.evaluate(async () => {
-      const r = await fetch('/api/loyalty/get', {
-        credentials: 'include',
-        headers: { Accept: 'application/json' },
-      });
-      if (!r.ok) return { erro: `HTTP ${r.status}` };
-      try { return { dados: await r.json() }; }
-      catch { return { erro: 'resposta não era JSON — provavelmente a tela de login' }; }
-    }).catch((e) => ({ erro: e.message }));
+    let lista = capturado.length ? normalizarPlacar(capturado[capturado.length - 1]) : null;
 
-    if (bruto?.erro) { aviso(`fidelidade: ${bruto.erro} (faça login com DETETIVE_VISIVEL=1)`); return null; }
-    const lista = normalizarPlacar(bruto?.dados);
-    if (!lista?.length) { aviso('fidelidade veio vazia — confira se o canal certo está selecionado'); return null; }
+    // Se a página não pediu (cache dela, ou tela diferente), pergunta direto
+    // de dentro dela — assim os cookies e o CSRF do próprio site vão junto.
+    if (!lista?.length) {
+      const bruto = await p.evaluate(async () => {
+        const r = await fetch('/api/loyalty/get', { credentials: 'include', headers: { Accept: 'application/json' } });
+        if (!r.ok) return { erro: `HTTP ${r.status}` };
+        try { return { dados: await r.json() }; }
+        catch { return { erro: 'resposta não era JSON — provavelmente a tela de login' }; }
+      }).catch((e) => ({ erro: e.message }));
+      if (bruto?.erro) { aviso(`fidelidade: ${bruto.erro} (rode com DETETIVE_VISIVEL=1 e faça login)`); return null; }
+      lista = normalizarPlacar(bruto?.dados);
+    }
+
+    if (!lista?.length) {
+      aviso('fidelidade veio vazia — na BotRix, deixe selecionada a plataforma que tem dado');
+      return null;
+    }
 
     const r = await fetch(`${SERVICO}/api/fidelidade`, {
       method: 'POST',
@@ -109,6 +124,7 @@ async function umaRodadaFidelidade(ctx, aviso) {
 }
 
 async function umaRodada(ctx, aviso) {
+  if (!JOGADOR) return null;
   const p = await ctx.newPage();
   try {
     await p.goto(`https://www.battlemetrics.com/players/${JOGADOR}`,
@@ -138,8 +154,13 @@ async function umaRodada(ctx, aviso) {
 }
 
 async function main() {
-  for (const [k, v] of Object.entries({ DETETIVE_JOGADOR: JOGADOR, DETETIVE_CANAL: CANAL })) {
-    if (!v) { console.error(`falta a variável ${k}`); process.exit(2); }
+  if (!CANAL) { console.error('falta a variável DETETIVE_CANAL'); process.exit(2); }
+  // As duas leituras são independentes: dá para ter só a fidelidade (quem
+  // assiste calado) sem o BattleMetrics, ou o contrário. Exigir as duas
+  // travaria quem só quer começar por uma.
+  if (!JOGADOR && !FIDELIDADE) {
+    console.error('nada a fazer: defina DETETIVE_JOGADOR e/ou DETETIVE_FIDELIDADE');
+    process.exit(2);
   }
   const ctx = await abrirNavegador();
   const aviso = (m) => console.log(`  · ${m}`);

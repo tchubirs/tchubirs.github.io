@@ -78,7 +78,16 @@ async function placarPublico(canal, plataforma = 'kick', buscar = globalThis.fet
     e.status = r.status;
     throw e;
   }
-  const lista = normalizarPlacar(await r.json());
+  const bruto = await r.json();
+  // A BotRix responde 200 com {"error":true} quando o par
+  // plataforma+usuário não existe lá. Tratar isso como formato quebrado
+  // assustaria à toa; é só uma resposta.
+  if (bruto && bruto.error) {
+    const e = new Error(`BotRix não tem "${canal}" em ${plataforma}`);
+    e.naoExiste = true;
+    throw e;
+  }
+  const lista = normalizarPlacar(bruto);
   if (lista === null) throw new Error('BotRix devolveu um formato inesperado');
   return lista;
 }
