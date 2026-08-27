@@ -50,4 +50,70 @@ async function historicoDeNomes(steamId64, buscar = globalThis.fetch) {
   };
 }
 
-module.exports = { ehSteamId64, historicoDeNomes };
+/**
+ * Perfil público em XML — sem chave de API e sem login.
+ *
+ * A peça que vale mais aqui é o `customURL`, a URL personalizada. O nome de
+ * exibição de um jogador muda centenas de vezes (medi um perfil com ~200
+ * trocas), mas a URL personalizada é **escolhida uma vez e quase nunca
+ * mexida** — e costuma ser o mesmo apelido que a pessoa usa na Twitch, no
+ * Discord e no Kick. Como chave de cruzamento ela vale mais que o histórico
+ * inteiro de nomes.
+ *
+ * Bônus medido: fontes diferentes guardam a URL de épocas diferentes. O
+ * `steamid.io` devolveu uma URL antiga de um perfil cuja URL atual já era
+ * outra — juntas viram um pequeno histórico que nenhuma delas tem sozinha.
+ */
+async function perfilPublico(steamId64, buscar = globalThis.fetch) {
+  if (!ehSteamId64(steamId64)) throw new Error(`SteamID64 inválido: ${steamId64}`);
+  const r = await buscar(`https://steamcommunity.com/profiles/${steamId64}?xml=1`,
+    { headers: { 'User-Agent': UA } });
+  if (!r.ok) throw new Error(`Steam respondeu ${r.status}`);
+  const xml = await r.text();
+
+  const campo = (nome) => {
+    const m = xml.match(new RegExp(`<${nome}>(?:<!\\[CDATA\\[)?([\\s\\S]*?)(?:\\]\\]>)?</${nome}>`));
+    if (!m) return null;
+    const v = m[1].replace(/<[^>]+>/g, '').trim();
+    return v || null;
+  };
+
+  const bio = campo('summary') || '';
+  // Redes que a própria pessoa publicou no perfil. É dado autopublicado,
+  // não investigação: se está escrito na bio, ela quis que fosse visto.
+  const redes = [...new Set(
+    (bio.match(/https?:\/\/(?:www\.)?(?:twitch\.tv|kick\.com|youtube\.com|twitter\.com|x\.com)\/[A-Za-z0-9_\-]+/g) || []),
+  )];
+
+  return {
+    steamId: steamId64,
+    nome: campo('steamID'),
+    vanity: campo('customURL'),
+    privado: campo('privacyState') !== 'public',
+    criadoEm: campo('memberSince'),
+    vacBanido: campo('vacBanned') === '1',
+    redes,
+  };
+}
+
+/**
+ * Junta tudo que dá para saber do perfil, sem chave e sem login:
+ * histórico de nomes (teto de 5 na Steam) + URL personalizada + redes que a
+ * própria pessoa publicou. É a lista de chaves para cruzar com a audiência.
+ */
+async function chavesDeIdentidade(steamId64, buscar = globalThis.fetch) {
+  const [hist, perfil] = await Promise.all([
+    historicoDeNomes(steamId64, buscar).catch(() => ({ nomes: [] })),
+    perfilPublico(steamId64, buscar).catch(() => null),
+  ]);
+  const chaves = new Set(hist.nomes);
+  if (perfil?.nome) chaves.add(perfil.nome);
+  if (perfil?.vanity) chaves.add(perfil.vanity);
+  for (const u of perfil?.redes ?? []) {
+    const apelido = u.split('/').pop();
+    if (apelido) chaves.add(apelido);
+  }
+  return { steamId: steamId64, chaves: [...chaves], perfil, historico: hist.nomes };
+}
+
+module.exports = { ehSteamId64, historicoDeNomes, perfilPublico, chavesDeIdentidade };

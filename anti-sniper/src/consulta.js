@@ -15,7 +15,7 @@
  */
 
 const { compararHistorico } = require('./nomes');
-const { historicoDeNomes, ehSteamId64 } = require('./steam');
+const { chavesDeIdentidade, ehSteamId64 } = require('./steam');
 
 /**
  * @param {string} steamId64 de quem se desconfia
@@ -28,13 +28,14 @@ async function consultar(steamId64, audiencia, op = {}) {
   const { buscar, minimo = 0.7 } = op;
   if (!ehSteamId64(steamId64)) throw new Error(`SteamID64 inválido: ${steamId64}`);
 
-  const hist = await historicoDeNomes(steamId64, buscar);
+  const hist = await chavesDeIdentidade(steamId64, buscar);
+  hist.nomes = hist.chaves;
 
   if (hist.nomes.length === 0) {
     return {
       steamId: steamId64,
       conclusao: 'inconclusivo',
-      motivo: 'perfil sem histórico de nomes público — pode estar privado',
+      motivo: 'perfil sem nome, URL personalizada nem histórico público — provavelmente privado',
       historico: [],
       evidencias: [],
     };
@@ -62,7 +63,8 @@ async function consultar(steamId64, audiencia, op = {}) {
     // assistir não é crime, e quem julga o contexto é quem jogou a partida.
     conclusao: evidencias.length ? 'esteve na sua live' : 'não encontrado na sua audiência',
     historico: hist.nomes,
-    trocas: hist.trocas,
+    urlPersonalizada: hist.perfil?.vanity ?? null,
+    redesPublicadas: hist.perfil?.redes ?? [],
     evidencias,
   };
 }

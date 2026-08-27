@@ -132,3 +132,63 @@ test('evidência mais forte vem primeiro', async () => {
     { buscar: falso(RESPOSTA_ARIN), minimo: 0.5 });
   assert.ok(r.evidencias[0].confianca >= r.evidencias.at(-1).confianca);
 });
+
+const { perfilPublico, chavesDeIdentidade } = require('../src/steam');
+
+const XML = (over = {}) => {
+  const c = { steamID: 'SLIMEface v.2', customURL: 'SLIMEface', privacyState: 'public',
+              summary: '', vacBanned: '0', memberSince: 'June 29, 2012', ...over };
+  return `<?xml version="1.0"?><profile>${Object.entries(c)
+    .map(([k, v]) => `<${k}><![CDATA[${v}]]></${k}>`).join('')}</profile>`;
+};
+const buscarMisto = (xml, aliases) => async (url) => ({
+  ok: true, status: 200,
+  json: async () => aliases,
+  text: async () => xml,
+});
+
+test('a URL personalizada é lida sem chave de API', async () => {
+  const p = await perfilPublico('76561198027456808', buscarMisto(XML(), []));
+  assert.equal(p.vanity, 'SLIMEface');
+  assert.equal(p.privado, false);
+  assert.equal(p.nome, 'SLIMEface v.2');
+});
+
+test('perfil privado é marcado como privado', async () => {
+  const p = await perfilPublico('76561198027456808',
+    buscarMisto(XML({ privacyState: 'private' }), []));
+  assert.equal(p.privado, true);
+});
+
+test('redes publicadas na própria bio são coletadas', async () => {
+  // Dado AUTOPUBLICADO: se a pessoa escreveu na bio, quis que fosse visto.
+  const p = await perfilPublico('76561198027456808',
+    buscarMisto(XML({ summary: 'live em https://twitch.tv/fulano e https://kick.com/fulano' }), []));
+  assert.deepEqual(p.redes, ['https://twitch.tv/fulano', 'https://kick.com/fulano']);
+});
+
+test('as chaves juntam histórico, URL personalizada e redes', async () => {
+  const r = await chavesDeIdentidade('76561198046896466', buscarMisto(
+    XML({ steamID: '🔥MDemon', customURL: 'MDemon', summary: 'https://twitch.tv/mdemontv' }),
+    [{ newname: '🔥MDemon (<3 Valvo)', timechanged: 'x' }],
+  ));
+  assert.ok(r.chaves.includes('MDemon'), 'a URL personalizada tem que virar chave');
+  assert.ok(r.chaves.includes('mdemontv'), 'o apelido da rede publicada também');
+  assert.ok(r.chaves.includes('🔥MDemon (<3 Valvo)'));
+});
+
+test('a URL personalizada acha quem o histórico sozinho perderia', async () => {
+  // O histórico do MDemon é todo com emoji; a URL personalizada é limpa.
+  const { compararHistorico } = require('../src/nomes');
+  const soHistorico = ['🔥MDemon - please pick me🔥', '🔥MDemon (<3 Valvo)'];
+  const comVanity = [...soHistorico, 'MDemon'];
+  assert.ok(compararHistorico(comVanity, 'mdemon').confianca >= 0.9);
+});
+
+test('Steam fora do ar em uma das duas fontes não derruba a outra', async () => {
+  const meioQuebrado = async (url) => (String(url).includes('ajaxaliases')
+    ? { ok: false, status: 503, json: async () => ({}), text: async () => '' }
+    : { ok: true, status: 200, json: async () => [], text: async () => XML() });
+  const r = await chavesDeIdentidade('76561198027456808', meioQuebrado);
+  assert.ok(r.chaves.includes('SLIMEface'), 'a URL personalizada tem que sobreviver');
+});
