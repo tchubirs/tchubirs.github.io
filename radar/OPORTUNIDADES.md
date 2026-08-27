@@ -51,7 +51,7 @@ Se um item não tem número com fonte, ele fica em "a verificar" até ter.
 
 ## ✅ VIVO — pode agir hoje
 
-### 🎯 Skins de Rust no Steam Workshop — o melhor achado do estudo
+### ⚠️ Skins de Rust no Steam Workshop — BLOQUEADO EM ARTE
 
 Detalhes em `rust-skins/00-O-PLANO.md`. Ele executa por `rust-skins/01-O-QUE-VOCE-FAZ.md`.
 
@@ -74,8 +74,17 @@ seguidores que jogam Rust.
 **Trabalho dele: ~8 min por skin.** Baixar a textura original no jogo, carregar meu
 PNG, screenshot, publicar. Eu faço o resto.
 
-**Honesto:** loteria de variância alta. 40 envios ≈ 52% de chance de emplacar uma.
-Pode dar zero.
+**⚠️ BLOQUEIO, 27/08:** os números acima seguem válidos, mas eu errei o estilo.
+Construí um gerador procedural de madeira envelhecida baseado na wiki oficial
+(*"dirty and worn"*, *"advise against colourful, even glowing"*) — e aquela página
+está marcada **"Updated: A Long Time Ago"**. O que está sendo aceito em agosto/2026 é
+o oposto: anime, vitral, runas acesas, caveira, neon, coleções temáticas.
+Ver `rust-skins/aceitas-agosto-2026.png` e `rust-skins/02-ONDE-EU-ERREI.md`.
+
+**O gargalo não é o mercado — é arte, e arte ali é ofício.** Não há gerador de imagem
+neste ambiente. O caminho só volta a andar se ele encontrar um artista de skin sem
+audiência para dividir: o artista faz a arte, ele entra com os 43 mil votos e a conta
+do Steam.
 
 ---
 
@@ -176,3 +185,11 @@ conseguir falar sobre o que foi entregue.
    público brasileiro **pague**. As skins de Rust vivem porque só exigem que ele
    **vote** — e voto é de graça. Um público sem poder de compra ainda tem atenção,
    e atenção às vezes é a moeda certa.
+9. **Meça o produto, não só o mercado.** Medi taxa de aceitação, prazo, votos,
+   concentração e faturamento das skins de Rust — tudo certo — e construí a coisa
+   errada porque nunca **olhei uma skin aceita**. Os `iconUrl` estavam no mesmo
+   conjunto de dados que gerou todas as outras contas. Antes de construir qualquer
+   coisa para um mercado, baixe e **olhe** o que esse mercado está comprando agora.
+10. **Fonte primária desatualizada é pior que fonte secundária atual**, porque
+   carrega a autoridade de ser oficial. A wiki da Facepunch dizia "Updated: A Long
+   Time Ago" no rodapé e eu passei batido. **Sempre leia a data da página.**
