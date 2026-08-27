@@ -17,6 +17,8 @@ const { normalizar, comparar } = require('../src/nomes');
 const { resolverEntrada, chavesDeIdentidade } = require('../src/steam');
 const { verificarDiscord, tratar } = require('./discord');
 const { interpretarQuando, relogio } = require('../src/tempo');
+const { criarColetor } = require('../src/stream/coletor');
+const se = require('../src/stream/streamelements');
 
 const CHAVE_KICK = `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAq/+l1WnlRrGSolDMA+A8
@@ -109,6 +111,37 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
   }
 
   const pegarCanal = db.prepare('SELECT * FROM canal WHERE id = ?');
+  const canaisComSE = db.prepare("SELECT * FROM canal WHERE se_canal IS NOT NULL AND se_canal != ''");
+
+  // ── Presença de quem assiste CALADO ────────────────────────────────────
+  // O webhook da Kick só entrega mensagem, e a API pública dela não tem
+  // lista de conectados. O ponto de fidelidade sobe por tempo assistido,
+  // para quem está lá — falando ou não. Quem subiu, estava.
+  const coletores = new Map();
+
+  function ligarColeta({ intervaloMs = 5 * 60 * 1000, placarDe } = {}) {
+    for (const c of canaisComSE.all()) {
+      if (coletores.has(c.id)) continue;
+      const ler = placarDe
+        ? () => placarDe(c)
+        : () => se.audiencia(c.se_canal, { buscar, limite: 2000 });
+      const col = criarColetor({
+        placar: ler,
+        aoVer: (nome, t) => { ver(c.id, 'live', nome, t); registrarPresenca(c.id, nome, null, t); },
+        agora,
+        aoErro: (e) => console.error(`[coleta ${c.id}]`, e.message),
+      });
+      coletores.set(c.id, col);
+      col.ligar(intervaloMs);
+    }
+    return coletores;
+  }
+
+  function pararColeta() {
+    for (const c of coletores.values()) c.desligar();
+    coletores.clear();
+  }
+
   const fusoDoCanal = (canalId) => pegarCanal.get(canalId)?.fuso || 'UTC';
 
   const listarEstadas = db.prepare(
@@ -491,10 +524,17 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
       const canalId = url.searchParams.get('canal');
       if (!canalId) return responder(400, { erro: 'informe canal' });
       const t = agora();
+      const c = pegarCanal.get(canalId);
       return responder(200, {
-        em: t, fuso: fusoDoCanal(canalId),
+        em: t, fuso: c?.fuso || 'UTC',
         naLive: agoraNa(canalId, 'live', t),
         noServidor: agoraNa(canalId, 'servidor', t),
+        // Cobertura, dita na cara: sem coleta ligada só existe quem
+        // escreve, e o painel não pode deixar isso implícito.
+        coleta: {
+          ligada: coletores.get(canalId)?.ligado === true,
+          fonte: c?.se_canal || null,
+        },
       });
     }
 
@@ -552,7 +592,8 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
   });
 
   return { servidor, db, ingerir, consultar, procurar, registrarPresenca, verificar,
-           guardarServidor, cruzarAgora, ver, estadas, momento, agoraNa, log, fusoDoCanal };
+           guardarServidor, cruzarAgora, ver, estadas, momento, agoraNa, log, fusoDoCanal,
+           ligarColeta, pararColeta, coletores };
 }
 
 module.exports = { criar, verificar, CHAVE_KICK, BLOCO_MS };

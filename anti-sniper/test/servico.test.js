@@ -514,3 +514,41 @@ test('/api/agora e /api/log respondem pelo HTTP', async () => {
     await new Promise((ok) => s.servidor.close(ok));
   }
 });
+
+test('coleta: quem assiste CALADO entra na linha do tempo', async () => {
+  // O buraco que ele apontou. Ninguém aqui escreve uma mensagem sequer —
+  // a presença vem do ponto de fidelidade subindo.
+  const s = criar({ caminhoBanco: ':memory:', chavePem: PUB, agora: () => T });
+  s.db.prepare('INSERT INTO canal (id,plataforma,slug,criado_em,se_canal) VALUES (?,?,?,?,?)')
+    .run('c1', 'kick', 'tchubi', T, 'tchubi');
+
+  let n = 0;
+  const placares = [
+    [{ nome: 'lurker', pontos: 100 }, { nome: 'outro', pontos: 50 }],
+    [{ nome: 'lurker', pontos: 110 }, { nome: 'outro', pontos: 50 }],
+    [{ nome: 'lurker', pontos: 120 }, { nome: 'outro', pontos: 50 }],
+  ];
+  const cols = s.ligarColeta({ intervaloMs: 10 ** 9, placarDe: () => placares[Math.min(n++, 2)] });
+  const col = cols.get('c1');
+  await col.passada();  // base, não credita
+  await col.passada();
+  await col.passada();
+  s.pararColeta();
+
+  const l = s.log('c1', 'lurker');
+  assert.equal(l.total, 1, 'virou uma estada, mesmo sem nenhuma mensagem');
+  assert.equal(s.agoraNa('c1', 'live', T).map((p) => p.nome).join(), 'lurker');
+  assert.equal(s.log('c1', 'outro').total, 0, 'quem não subiu não é inventado');
+
+  // E entra no cruzamento igual a quem falou.
+  assert.equal(s.consultar('c1', 'lurker').evidencias.length, 1);
+});
+
+test('/api/agora diz a verdade sobre a COBERTURA', () => {
+  // Sem coleta ligada, o painel não pode deixar implícito que enxerga todo
+  // mundo: quem assiste calado continua invisível, e isso tem que aparecer.
+  const s = bancada();
+  assert.equal(s.coletores.get('c1'), undefined);
+  const c = s.db.prepare('SELECT * FROM canal WHERE id = ?').get('c1');
+  assert.equal(c.se_canal, null, 'canal sem fonte de presença configurada');
+});

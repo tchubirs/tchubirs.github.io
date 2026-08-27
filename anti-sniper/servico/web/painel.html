@@ -70,6 +70,7 @@
           font-size:11px;margin-top:3px;font-variant-numeric:tabular-nums}
   .qtd{color:var(--fraco);font-weight:400;letter-spacing:0}
   .nota{color:var(--fraco);font-size:13px;margin:0 0 10px}
+  .nota code{background:#1b2025;border:1px solid var(--linha);border-radius:4px;padding:1px 5px}
   .pessoas{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
   .pessoa{background:var(--caixa);border:1px solid var(--linha);border-radius:10px;
           padding:11px 13px;cursor:pointer;text-align:left;color:var(--texto);font:inherit}
@@ -126,8 +127,7 @@
 
     <h2>Na sua live agora <span id="qtd-agora" class="qtd"></span></h2>
     <p class="nota">Clique em alguém para ver o <b>log completo</b>: entrou, saiu,
-      entrou de novo. Só aparece quem <b>escreveu</b> no chat — quem assiste
-      calado não gera sinal nenhum.</p>
+      entrou de novo.<br><span id="cobertura">…</span></p>
     <div id="agora"><div class="vazio">carregando…</div></div>
 
     <h2>Quem está no servidor agora e já assistiu</h2>

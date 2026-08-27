@@ -27,7 +27,10 @@ function abrir(caminho = 'detetive.db') {
       discord_guild TEXT,
       -- Fuso do streamer. Quando ele digita "22:47", é 22:47 DELE. Errar
       -- isto por duas horas transforma "estava na live" em "não estava".
-      fuso          TEXT NOT NULL DEFAULT 'UTC'
+      fuso          TEXT NOT NULL DEFAULT 'UTC',
+      -- Canal no StreamElements, de onde sai a presença de quem assiste
+      -- CALADO. Sem isto, só existe quem escreve no chat.
+      se_canal      TEXT
     );
     CREATE INDEX IF NOT EXISTS idx_canal_guild ON canal (discord_guild);
 
@@ -109,6 +112,9 @@ function abrir(caminho = 'detetive.db') {
   }
   if (!colunas.includes('fuso')) {
     db.exec("ALTER TABLE canal ADD COLUMN fuso TEXT NOT NULL DEFAULT 'UTC'");
+  }
+  if (!colunas.includes('se_canal')) {
+    db.exec('ALTER TABLE canal ADD COLUMN se_canal TEXT');
   }
   return db;
 }

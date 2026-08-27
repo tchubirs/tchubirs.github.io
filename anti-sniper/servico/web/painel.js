@@ -85,7 +85,13 @@ async function atualizar() {
     ]);
     if (!r.ok) throw new Error(r.status);
     const d = await r.json();
-    desenharAgora((await ra.json()).naLive || [], document.getElementById('agora'));
+    const da = await ra.json();
+    desenharAgora(da.naLive || [], document.getElementById('agora'));
+    document.getElementById('cobertura').innerHTML = da.coleta?.ligada
+      ? 'Contando também <b>quem assiste calado</b>, pelo StreamElements '
+        + `(<code>${esc(da.coleta.fonte)}</code>).`
+      : 'Só aparece quem <b>escreveu</b> no chat. Para pegar quem assiste calado, '
+        + 'ligue a Fidelidade no StreamElements e conecte o canal.';
     document.getElementById('ponto').className = 'ponto vivo';
     document.getElementById('estado').textContent = 'ao vivo';
     cartao('c-servidor', d.noServidor ?? '—', d.servidorVelho);
