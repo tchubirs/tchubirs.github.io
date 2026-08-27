@@ -89,7 +89,11 @@ function abrir(caminho = 'detetive.db') {
       inicio_em  INTEGER NOT NULL,
       fim_em     INTEGER NOT NULL,
       amostras   INTEGER NOT NULL DEFAULT 1,
-      onde_extra TEXT                  -- nome do servidor, quando for o caso
+      onde_extra TEXT,                 -- nome do servidor, quando for o caso
+      -- De onde veio o sinal: 'chat' (escreveu), 'tempo' (o contador de
+      -- tempo assistido subiu, mesmo calado) ou 'servidor'. Quem lê o log
+      -- precisa saber se aquilo é uma mensagem ou uma medição.
+      fonte      TEXT NOT NULL DEFAULT 'chat'
     );
     CREATE INDEX IF NOT EXISTS idx_estada_pessoa
       ON estada (canal_id, onde, nome_norm, fim_em);
@@ -115,6 +119,10 @@ function abrir(caminho = 'detetive.db') {
   }
   if (!colunas.includes('se_canal')) {
     db.exec('ALTER TABLE canal ADD COLUMN se_canal TEXT');
+  }
+  const colEstada = db.prepare('PRAGMA table_info(estada)').all().map((c) => c.name);
+  if (colEstada.length && !colEstada.includes('fonte')) {
+    db.exec("ALTER TABLE estada ADD COLUMN fonte TEXT NOT NULL DEFAULT 'chat'");
   }
   return db;
 }

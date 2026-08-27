@@ -59,6 +59,15 @@ async function abrirLog(nome) {
   } catch { onde.innerHTML = '<div class="vazio">falhou ao carregar o log</div>'; }
 }
 
+/** O que sustenta aquele intervalo. Ver "8 msg" ou "6× tempo assistido"
+ *  muda o quanto se confia na linha — e a segunda pega quem nunca fala. */
+function rotuloFonte(l) {
+  if (l.onde === 'servidor') return `${l.amostras} leituras`;
+  if (l.fonte === 'tempo') return `${l.amostras}× tempo assistido`;
+  if (l.fonte === 'ambos') return `${l.amostras} sinais (msg + tempo)`;
+  return `${l.amostras} msg`;
+}
+
 function desenharLog(d) {
   if (!d.total) {
     return `<div class="log"><button class="fechar">×</button><h3>${esc(d.nome)}</h3>
@@ -68,7 +77,7 @@ function desenharLog(d) {
       <td class="onde ${l.onde}">${l.onde === 'live' ? '● live' : '● servidor'}</td>
       <td>${hora(l.de)} <span class="seta">→</span> ${hora(l.ate)}</td>
       <td class="dur">${l.minutos} min</td>
-      <td class="dur">${l.onde === 'live' ? `${l.amostras} msg` : `${l.amostras} leituras`}</td>
+      <td class="dur">${rotuloFonte(l)}</td>
     </tr>`).join('');
   return `<div class="log"><button class="fechar">×</button>
     <h3>${esc(d.nome)}</h3>

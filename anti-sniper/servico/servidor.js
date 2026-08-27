@@ -85,9 +85,9 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
   const ultimaEstada = db.prepare(
     'SELECT * FROM estada WHERE canal_id = ? AND onde = ? AND nome_norm = ? ORDER BY fim_em DESC LIMIT 1');
   const abrirEstada = db.prepare(
-    'INSERT INTO estada (canal_id, onde, nome_norm, nome, inicio_em, fim_em, amostras, onde_extra) VALUES (?,?,?,?,?,?,1,?)');
+    'INSERT INTO estada (canal_id, onde, nome_norm, nome, inicio_em, fim_em, amostras, onde_extra, fonte) VALUES (?,?,?,?,?,?,1,?,?)');
   const esticarEstada = db.prepare(
-    'UPDATE estada SET fim_em = ?, nome = ?, amostras = amostras + 1 WHERE id = ?');
+    "UPDATE estada SET fim_em = ?, nome = ?, amostras = amostras + 1, fonte = CASE WHEN fonte = ? THEN fonte ELSE 'ambos' END WHERE id = ?");
 
   /**
    * Registra que a pessoa foi VISTA em `onde` no instante `tMs`.
@@ -96,18 +96,18 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
    * tempo demais sem aparecer. Assim uma noite inteira vira duas ou três
    * linhas, não dez mil.
    */
-  function ver(canalId, onde, nome, tMs, extra = null) {
+  function ver(canalId, onde, nome, tMs, extra = null, fonte = onde === 'servidor' ? 'servidor' : 'chat') {
     const norm = normalizar(nome);
     if (!norm) return;
     const u = ultimaEstada.get(canalId, onde, norm);
     if (u && tMs >= u.fim_em && tMs - u.fim_em <= GAP[onde]) {
-      esticarEstada.run(Math.max(u.fim_em, tMs), nome, u.id);
+      esticarEstada.run(Math.max(u.fim_em, tMs), nome, fonte, u.id);
       return;
     }
     // Evento fora de ordem dentro de um intervalo já conhecido: não abre
     // sessão nova, senão a linha do tempo ganha buracos que não existiram.
     if (u && tMs >= u.inicio_em && tMs <= u.fim_em) return;
-    abrirEstada.run(canalId, onde, norm, nome, tMs, tMs, extra);
+    abrirEstada.run(canalId, onde, norm, nome, tMs, tMs, extra, fonte);
   }
 
   const pegarCanal = db.prepare('SELECT * FROM canal WHERE id = ?');
@@ -127,7 +127,7 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
         : () => se.audiencia(c.se_canal, { buscar, limite: 2000 });
       const col = criarColetor({
         placar: ler,
-        aoVer: (nome, t) => { ver(c.id, 'live', nome, t); registrarPresenca(c.id, nome, null, t); },
+        aoVer: (nome, t) => { ver(c.id, 'live', nome, t, null, 'tempo'); registrarPresenca(c.id, nome, null, t); },
         agora,
         aoErro: (e) => console.error(`[coleta ${c.id}]`, e.message),
       });
@@ -154,7 +154,7 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
         medir: medirDe
           ? (nome) => medirDe(c, nome)
           : (nome) => se.pessoa(c.se_canal, nome, buscar),
-        aoVer: (nome, t) => { ver(c.id, 'live', nome, t); registrarPresenca(c.id, nome, null, t); },
+        aoVer: (nome, t) => { ver(c.id, 'live', nome, t, null, 'tempo'); registrarPresenca(c.id, nome, null, t); },
         agora,
         aoErro: (e) => console.error(`[alvos ${c.id}]`, e.message),
       });
@@ -181,7 +181,7 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
     return listarEstadas.all(canalId, onde, norm).map((e) => ({
       de: e.inicio_em, ate: e.fim_em,
       minutos: Math.max(1, Math.round((e.fim_em - e.inicio_em) / 60000)),
-      amostras: e.amostras, servidor: e.onde_extra,
+      amostras: e.amostras, servidor: e.onde_extra, fonte: e.fonte || 'chat',
     }));
   }
 

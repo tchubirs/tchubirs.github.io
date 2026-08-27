@@ -582,3 +582,19 @@ test('alvos: mede só quem está no servidor E casou com a audiência', async ()
   assert.equal(r.vistos, 1);
   assert.equal(s.log('c1', 'diper').total, 1, 'virou estada mesmo sem falar de novo');
 });
+
+test('o log diz se o sinal foi mensagem ou tempo assistido', () => {
+  // "8 msg" e "6× tempo assistido" pesam diferente para quem lê, e a segunda
+  // é a única que pega quem nunca escreve nada.
+  const s = bancada();
+  s.ingerir('c1', 'chat.message', msg('falante', 1), T);
+  s.ver('c1', 'live', 'calado', T, null, 'tempo');
+  s.ver('c1', 'live', 'calado', T + 2 * MIN, null, 'tempo');
+
+  assert.equal(s.log('c1', 'falante').linhas[0].fonte, 'chat');
+  assert.equal(s.log('c1', 'calado').linhas[0].fonte, 'tempo');
+
+  // Quem fala E é medido fica marcado como os dois.
+  s.ingerir('c1', 'chat.message', msg('calado', 2), T + 4 * MIN);
+  assert.equal(s.log('c1', 'calado').linhas[0].fonte, 'ambos');
+});
