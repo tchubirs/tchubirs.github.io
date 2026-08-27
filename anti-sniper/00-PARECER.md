@@ -180,3 +180,66 @@ jogo, ou escrever uma linha de visão computacional.
    **[N/M]**. Vendendo só na UE o risco pode ser bem menor.
 6. **Isto não é aconselhamento jurídico.** E a primeira versão continha uma
    recomendação acionável falsa — a de que só a divulgação gerava risco.
+
+---
+
+# ⚠️ CORREÇÃO — 27/08/2026, apontada por ele
+
+**O parecer acima está ERRADO no ponto 1.** Ele perguntou: *"essa pessoa que
+entrou e saiu não ganhou pontos lá no StreamElements? com o [tempo] dá pra
+descobrir."* Está certo, e é uma correção que muda o desenho do produto.
+
+## O que eu disse de errado
+
+> "Quem só assiste é estruturalmente invisível nas três plataformas."
+
+**Falso para a Twitch.** Texto oficial do endpoint `Get Chatters`
+(dev.twitch.tv/docs/api/reference):
+
+> *"Gets the list of users that are **connected to** the broadcaster's chat
+> session."*
+
+**Conectados — não "que falaram".** Quem abre a página do canal e fica calado
+está nessa lista. É por isso que StreamElements, StreamLabs e afins conseguem
+dar ponto de fidelidade por tempo assistido: eles **consultam essa lista de
+tempos em tempos** e acumulam presença. Não existe endpoint mágico; existe
+polling de presença no chat.
+
+**Consequência:** o histórico de "entrou às X, saiu às Y, ficou Z minutos"
+**é construível**, com API oficial, escopo oficial (`moderator:read:chatters`),
+no canal do próprio streamer. Era exatamente o sistema que ele tinha visto.
+
+## Por que meu processo falhou
+
+O agente procurou por "lista de espectadores" na API, não achou, e concluiu
+que o dado não existe. **Nunca perguntou como os produtos que já fazem isso
+fazem.** A pergunta certa não era "existe endpoint de espectador" — era
+"como o StreamElements sabe quanto tempo cada um assistiu".
+
+Regra nova: **quando um produto existente claramente já faz algo, o dado
+existe. Ache o mecanismo antes de declarar impossível.**
+
+## O que isso muda no produto
+
+**Antes (errado):** sem visão da audiência, o produto só podia ser server-side,
+vendido ao dono do servidor.
+
+**Agora:** o streamer consegue, sozinho e legalmente, o lado do stream —
+quem esteve conectado ao chat dele, e quando. Falta só o lado do jogo
+(lista de jogadores no servidor) para cruzar. O sinal de co-presença
+que o parecer dava como impossível **é viável**.
+
+## Limites que continuam valendo — não superestimar
+
+- A própria Twitch avisa: *"There is a delay between when users join and leave
+  a chat and when the list is updated accordingly."* Presença tem granularidade
+  grossa, não é ao segundo.
+- Quem assiste por **embed, app em segundo plano ou site espelho** pode não
+  estar conectado ao chat. **Sniper determinado escapa.** Pega o descuidado —
+  mesma conclusão de antes, por outro caminho.
+- Estar conectado ao chat não prova que está assistindo.
+- **Kick e YouTube continuam sem equivalente medido.** A correção vale para a
+  Twitch. Para as outras duas, ainda é [N/M].
+- **Nada disso ressuscita a camada de identidade.** Descobrir Discord, Twitter,
+  e-mail e IP continua sendo o art. 226-18 do código penal francês. A correção
+  é sobre presença no próprio canal, que é dado do streamer sobre o canal dele.

@@ -257,3 +257,11 @@ conseguir falar sobre o que foi entregue.
    Os nomes das skins aceitas diziam isso desde o começo — Anubis, Scarecrow,
    Valkyrie, From Hell — e eu tinha a lista inteira na mão antes de escrever a
    primeira linha de código.
+12. **Se um produto já faz aquilo, o dado existe — ache o mecanismo antes de
+   declarar impossível.** Um parecer meu concluiu que "espectador é invisível
+   na API" porque procurou endpoint de espectador e não achou. O dono
+   perguntou como o StreamElements dá ponto por tempo assistido, e a resposta
+   estava na descrição oficial do `Get Chatters`: ele devolve quem está
+   **conectado** ao chat, não quem falou. Bastava consultar de tempos em
+   tempos. A pergunta certa não é "existe endpoint X", é "como quem já faz
+   isso faz".
