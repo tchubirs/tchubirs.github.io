@@ -117,6 +117,61 @@ async function chavesDeIdentidade(steamId64, buscar = globalThis.fetch) {
 }
 
 /**
+ * A ponte que faltava: do nome na LIVE para o nome no JOGO.
+ *
+ * Ele mostrou o caso que quebrava tudo: `hai_suzy` na Kick é `Tchubita` no
+ * Rust. Nenhum cruzamento de nome liga os dois — não têm uma letra em
+ * comum. E o caminho que eu tinha construído (SteamID → histórico) não
+ * resolve, porque o perfil dela é privado e a Steam não entrega a URL
+ * personalizada nesse caso.
+ *
+ * Mas funciona no sentido inverso: muita gente usa o MESMO apelido como URL
+ * personalizada da Steam. Conferido nela em 27/08/2026:
+ *
+ *     hai_suzy  →  steamcommunity.com/id/haisuzy  →  "Tchubita"
+ *
+ * Uma requisição por espectador, uma vez na vida — a URL personalizada
+ * quase nunca muda. E funciona mesmo com o perfil PRIVADO, porque o nome
+ * de exibição sai no XML de qualquer jeito.
+ *
+ * @returns {Promise<null|{vanity,steamId,nomeNaSteam}>}
+ */
+async function pelaVanity(nome, buscar = globalThis.fetch) {
+  if (typeof nome !== 'string' || nome.trim().length < 3) return null;
+  const cru = nome.trim();
+  // A Steam não aceita "_" nem maiúsculas de forma confiável na URL, e a
+  // pessoa raramente repete a pontuação nos dois lugares.
+  const tentativas = [...new Set([
+    cru,
+    cru.replace(/[^a-z0-9_-]/gi, ''),
+    cru.replace(/[^a-z0-9]/gi, ''),
+    cru.toLowerCase().replace(/[^a-z0-9]/g, ''),
+  ])].filter((v) => v.length >= 3 && v.length <= 32);
+
+  for (const v of tentativas) {
+    let r;
+    try { r = await buscar(`https://steamcommunity.com/id/${encodeURIComponent(v)}?xml=1`,
+      { headers: { 'User-Agent': UA } }); } catch { continue; }
+    if (!r?.ok) continue;
+    const xml = await r.text();
+    const id = xml.match(/<steamID64>(7656119\d{10})<\/steamID64>/);
+    if (!id) continue;
+    const nm = xml.match(/<steamID><!\[CDATA\[([\s\S]*?)\]\]><\/steamID>/)
+      || xml.match(/<steamID>([\s\S]*?)<\/steamID>/);
+    return {
+      vanity: v,
+      steamId: id[1],
+      // O nome de exibição da Steam — que é o nome que aparece NO JOGO.
+      nomeNaSteam: nm ? nm[1].trim() : null,
+      // Privado ou não, o nome sai. Mas o histórico não, e quem lê precisa
+      // saber que viu uma linha só e não a vida inteira da conta.
+      privado: /<privacyState>(?!public)/.test(xml),
+    };
+  }
+  return null;
+}
+
+/**
  * Aceita o que a pessoa tiver na mão e devolve a SteamID64.
  *
  * Ninguém tem a SteamID decorada. O que se tem é o link do perfil, copiado
@@ -143,4 +198,4 @@ async function resolverEntrada(texto, buscar = globalThis.fetch) {
   return id ? id[1] : null;
 }
 
-module.exports = { ehSteamId64, resolverEntrada, historicoDeNomes, perfilPublico, chavesDeIdentidade };
+module.exports = { ehSteamId64, resolverEntrada, historicoDeNomes, perfilPublico, chavesDeIdentidade, pelaVanity };

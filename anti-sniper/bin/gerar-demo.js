@@ -82,8 +82,6 @@ function exemplo(agora) {
   // versão por string o pacote saía truncado no meio de uma linha.
   const trocar = (texto, marca, valor) => texto.replace(marca, () => valor);
   let html = fs.readFileSync(path.join(__dirname, 'demo-modelo.html'), 'utf8');
-  html = trocar(html, '/*MOTOR*/', motor);
-  html = trocar(html, '/*DADOS*/', JSON.stringify(dados));
   html = trocar(html, '/*NOITE*/', exemplo.toString());
 
   fs.writeFileSync(SAIDA, html);

@@ -5,43 +5,23 @@
 </div>
 
 <main>
-  <div class="aviso">
-    <b>Duas coisas nesta página, e elas não se misturam.</b><br>
-    <span class="marcaR">MEDIDO</span> os 20 nomes e o tempo total assistido, puxados agora
-    da rota pública da BotRix do seu canal.<br>
-    <span class="marcaS">EXEMPLO</span> a tela de como fica quando estiver gravando, com
-    gente que <b>não existe</b>.<br>
-    <b>Nenhum horário inventado aparece no nome de alguém de verdade.</b> Eu fiz isso duas
-    vezes antes e as duas vezes a tela mentiu: inventei o nome no jogo de uma espectadora
-    sua, e inventei quanto tempo ela ficou.
-  </div>
-
-  <h2><span class="marcaR">MEDIDO</span> Sua audiência na Kick <span class="qtd" id="q-aud"></span></h2>
-  <p class="dica">O que a BotRix entrega hoje, sem login: quem acumulou tempo assistido, e
-    quanto no <b>total</b>. Não é por sessão — o serviço rodando é que grava entrada e saída.</p>
-  <div id="audiencia"></div>
-
-  <h2><span class="marcaR">MEDIDO</span> O cruzamento de nomes</h2>
-  <p class="dica">Este é o código de verdade, gerado de <span class="mono">src/</span>.
-    Digite um nome como ele apareceria <b>no jogo</b> — com maiúsculas, leet, tag de clã —
-    e veja se ele acha a pessoa na sua audiência.</p>
+  <h2>Quem você quer conferir?</h2>
   <div class="busca">
-    <input id="q" placeholder="ex: [BR] HA1_SUZY" autocomplete="off" spellcheck="false">
-    <button id="ir" type="button">Cruzar</button>
+    <input id="q" placeholder="nome, SteamID ou link do perfil" autocomplete="off" spellcheck="false">
+    <button id="ir" type="button">Ver</button>
   </div>
   <div class="atalhos" id="atalhos"></div>
-  <div id="resultado"></div>
+  <div id="alvo"></div>
 
-  <h2><span class="marcaS">EXEMPLO</span> Como fica quando estiver gravando</h2>
-  <p class="dica">Gente inventada, de propósito: <b>ESPECTADOR-A</b>, <b>-B</b>, <b>-C</b>.
-    É a forma da tela, não um achado. Clique para ver o log.</p>
-  <div id="exemplo"></div>
-  <div id="logex"></div>
+  <h2 class="seg">Red flags <span class="qtd" id="q-flags"></span></h2>
+  <p class="dica">Quem está no servidor <b>e</b> entrou na sua live, sem você ter perguntado.</p>
+  <div class="lista" id="flags"></div>
+  <div id="detalhe"></div>
 
   <div class="rodape">
-    Assistir não é crime. Isto mostra <b>presença, não culpa</b> — quem julga o contexto é
-    você, que jogou a partida.<br>
-    Ninguém aparecer <b>não inocenta</b>: o nome no jogo quase nunca parece com o do chat, e
-    quem assiste <b>deslogado</b> não aparece em fonte nenhuma.
+    <span class="marcaS">EXEMPLO</span> gente inventada — ainda não existe gravação da sua
+    live. O serviço rodando é que grava isto.<br>
+    Mostra <b>presença, não culpa</b>. Não aparecer <b>não inocenta</b>: quem assiste
+    deslogado não entra em fonte nenhuma.
   </div>
 </main>

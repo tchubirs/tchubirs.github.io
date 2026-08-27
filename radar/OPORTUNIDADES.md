@@ -302,3 +302,18 @@ conseguir falar sobre o que foi entregue.
    existe para apontar pessoas, essa é a falha que destrói o produto
    inteiro. Dado de exemplo usa gente que não existe, com nome que se
    anuncia como exemplo.
+
+18. **A ponte pode existir no sentido que você não tentou.** Ele mostrou que
+   `hai_suzy` na Kick é `Tchubita` no Rust — nomes sem uma letra em comum. O
+   caminho que eu tinha (SteamID → histórico) não resolve: o perfil dela é
+   privado e a Steam não devolve a URL personalizada nesse caso. Mas o
+   inverso funciona: `hai_suzy` → tira o "_" → `steamcommunity.com/id/haisuzy`
+   → nome de exibição `Tchubita`. Uma requisição, e funciona **mesmo com o
+   perfil privado**. Eu tinha declarado o caso perdido depois de tentar uma
+   direção só.
+
+19. **A ordem da tela é o produto.** Eu empilhei lista de audiência, busca,
+   faixas coloridas e dois vereditos. Ele disse: *"tá muito confuso, muito
+   bagunçado, não dá pra entender nada"* — e depois: *"o foco tem que ser os
+   que eu estou pesquisando primeiro"*. A informação estava lá; a ordem é
+   que enterrava a pergunta que ele veio fazer.

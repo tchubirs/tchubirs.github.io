@@ -4,372 +4,246 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
 <style>
-/* Painel escuro por natureza: é console de operação, olhado no meio de uma
-   partida. O tema claro existe e é cuidado, mas o escuro é o original. */
 :root{
   --ground:#0e1013; --surf:#161a1e; --surf2:#1c2126; --line:#252b32;
   --ink:#e7ecef; --ink2:#8d9aa6; --ink3:#5f6b76;
   --alerta:#ff6257; --alerta-bg:#1c1214; --alerta-line:#4a2226;
-  --vivo:#53fc18; --morno:#f0a35e; --morno-bg:#1d1810; --morno-line:#4a3820;
-  --live:#3f9d54; --srv:#3d7fb8;
-  --sombra:0 1px 2px rgba(0,0,0,.4);
+  --entrou:#53c86a; --saiu:#e0705f; --morno:#f0a35e; --morno-bg:#1d1810; --morno-line:#4a3820;
 }
-@media (prefers-color-scheme: light){
-  :root:not([data-theme="dark"]){
-    --ground:#f4f6f7; --surf:#ffffff; --surf2:#eef1f3; --line:#dde2e6;
-    --ink:#12171b; --ink2:#5c6873; --ink3:#8b98a3;
-    --alerta:#c8362c; --alerta-bg:#fdf1f0; --alerta-line:#f0cdc9;
-    --vivo:#2f9d10; --morno:#a86a12; --morno-bg:#fdf6ec; --morno-line:#eddcc0;
-    --live:#2f7d42; --srv:#2b5f8f;
-    --sombra:0 1px 2px rgba(16,24,32,.06);
-  }
-}
-:root[data-theme="light"]{
-  --ground:#f4f6f7; --surf:#ffffff; --surf2:#eef1f3; --line:#dde2e6;
+@media (prefers-color-scheme: light){ :root:not([data-theme="dark"]){
+  --ground:#f5f7f8; --surf:#ffffff; --surf2:#eef1f3; --line:#dce1e5;
   --ink:#12171b; --ink2:#5c6873; --ink3:#8b98a3;
   --alerta:#c8362c; --alerta-bg:#fdf1f0; --alerta-line:#f0cdc9;
-  --vivo:#2f9d10; --morno:#a86a12; --morno-bg:#fdf6ec; --morno-line:#eddcc0;
-  --live:#2f7d42; --srv:#2b5f8f;
-  --sombra:0 1px 2px rgba(16,24,32,.06);
+  --entrou:#1f8a3b; --saiu:#c0472f; --morno:#a86a12; --morno-bg:#fdf6ec; --morno-line:#eddcc0;
+}}
+:root[data-theme="light"]{
+  --ground:#f5f7f8; --surf:#ffffff; --surf2:#eef1f3; --line:#dce1e5;
+  --ink:#12171b; --ink2:#5c6873; --ink3:#8b98a3;
+  --alerta:#c8362c; --alerta-bg:#fdf1f0; --alerta-line:#f0cdc9;
+  --entrou:#1f8a3b; --saiu:#c0472f; --morno:#a86a12; --morno-bg:#fdf6ec; --morno-line:#eddcc0;
 }
-
 *{box-sizing:border-box}
-body{
-  margin:0; background:var(--ground); color:var(--ink);
-  font:15px/1.55 "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  -webkit-font-smoothing:antialiased;
-}
-.mono{font-family:"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-variant-numeric:tabular-nums}
+body{margin:0;background:var(--ground);color:var(--ink);
+  font:15px/1.55 "IBM Plex Sans",ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased}
+.mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums}
 
-.topo{border-bottom:1px solid var(--line); background:var(--surf);
-      padding:14px 20px; display:flex; align-items:center; gap:12px; flex-wrap:wrap}
-.topo h1{margin:0; font-size:16px; font-weight:600; letter-spacing:-.01em}
-.topo .canal{color:var(--ink2); font-size:13px}
-.topo .dir{margin-left:auto; display:flex; align-items:center; gap:10px}
-.ponto{width:7px; height:7px; border-radius:50%; background:var(--vivo);
-       box-shadow:0 0 7px var(--vivo); display:inline-block}
-.estado{font-size:12.5px; color:var(--ink2)}
-button.tema{background:var(--surf2); border:1px solid var(--line); color:var(--ink2);
-            border-radius:7px; padding:5px 10px; font:inherit; font-size:12.5px; cursor:pointer}
-button.tema:hover{color:var(--ink); border-color:var(--ink3)}
+.topo{border-bottom:1px solid var(--line);background:var(--surf);padding:14px 20px;
+  display:flex;align-items:center;gap:12px}
+.topo h1{margin:0;font-size:16px;font-weight:600}
+.topo .canal{color:var(--ink2);font-size:13px}
+.topo .dir{margin-left:auto}
+button.tema{background:var(--surf2);border:1px solid var(--line);color:var(--ink2);
+  border-radius:7px;padding:5px 10px;font:inherit;font-size:12.5px;cursor:pointer}
+button.tema:hover{color:var(--ink)}
 
-main{max-width:880px; margin:0 auto; padding:20px 20px 60px}
+main{max-width:620px;margin:0 auto;padding:26px 20px 60px}
+h2{font-size:19px;font-weight:600;margin:0 0 6px;letter-spacing:-.01em}
+.dica{color:var(--ink2);font-size:13.5px;margin:0 0 18px;line-height:1.55}
+.marcaS{display:inline-block;font-size:10px;letter-spacing:.08em;font-weight:700;
+  border-radius:4px;padding:2px 7px;background:var(--morno-bg);
+  border:1px solid var(--morno-line);color:var(--morno)}
 
-.aviso{background:var(--surf); border:1px solid var(--line); border-left:3px solid var(--morno);
-       border-radius:10px; padding:12px 14px; margin-bottom:22px; font-size:13.5px; color:var(--ink2); line-height:1.6}
-.aviso b{color:var(--ink)}
+.lista{display:flex;flex-direction:column;gap:6px}
+.linha{display:flex;align-items:baseline;gap:12px;width:100%;text-align:left;
+  background:var(--surf);border:1px solid var(--line);border-radius:9px;
+  padding:13px 15px;color:var(--ink);font:inherit;cursor:pointer}
+.linha:hover{border-color:var(--ink3);background:var(--surf2)}
+.linha .nome{font-weight:600;font-size:15px}
+.linha .resumo{color:var(--ink2);font-size:13px}
+.linha .tag{margin-left:auto;color:var(--ink3);font-size:12px;white-space:nowrap}
 
-h2{font-size:12px; font-weight:600; color:var(--ink2); text-transform:uppercase;
-   letter-spacing:.09em; margin:26px 0 9px; display:flex; align-items:baseline; gap:8px}
-h2 .qtd{color:var(--ink3); letter-spacing:0; text-transform:none; font-weight:400}
-h2 em{font-style:normal; color:var(--alerta)}
-.dica{color:var(--ink2); font-size:13px; margin:0 0 11px; line-height:1.55}
-
-.dois{background:var(--alerta-bg); border:1px solid var(--alerta-line);
-      border-left:3px solid var(--alerta); border-radius:10px; padding:13px 15px;
-      margin-bottom:8px; cursor:pointer; width:100%; text-align:left; color:inherit; font:inherit}
-.dois:hover{border-color:var(--alerta)}
-.dois .par{font-weight:600; font-size:15.5px; display:flex; align-items:baseline; gap:8px; flex-wrap:wrap}
-.pc{color:var(--alerta); font-weight:600}
-.det{color:var(--ink2); font-size:13px; margin-top:5px}
-.det b{color:var(--ink); font-weight:500}
-.agoraz{color:var(--vivo)}
-
-.busca{display:flex; gap:8px; margin-bottom:8px; flex-wrap:wrap}
-.busca input{flex:1 1 240px; min-width:0; background:var(--surf); border:1px solid var(--line);
-             border-radius:8px; padding:10px 12px; color:var(--ink); font:inherit; font-size:14px}
-.busca input.hora{flex:0 0 132px}
-.busca input:focus{outline:2px solid var(--alerta); outline-offset:1px; border-color:transparent}
-.busca button{background:var(--alerta); color:#fff; border:0; border-radius:8px;
-              padding:10px 20px; font:inherit; font-weight:600; font-size:14px; cursor:pointer}
-.busca button:hover{filter:brightness(1.08)}
-.atalhos{display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap}
-.atalhos button{background:var(--surf); color:var(--ink2); border:1px solid var(--line);
-                border-radius:7px; padding:5px 11px; font:inherit; font-size:12.5px; cursor:pointer}
-.atalhos button:hover{color:var(--ink); border-color:var(--ink3)}
-
-.pessoas{display:grid; grid-template-columns:repeat(auto-fill,minmax(216px,1fr)); gap:8px}
-.pessoa{background:var(--surf); border:1px solid var(--line); border-radius:10px;
-        padding:11px 13px; cursor:pointer; text-align:left; color:var(--ink); font:inherit;
-        box-shadow:var(--sombra)}
-.pessoa:hover{border-color:var(--ink3); background:var(--surf2)}
-.pessoa b{display:block; font-size:14.5px; font-weight:600; margin-bottom:3px}
-.pessoa > span{color:var(--ink2); font-size:12.5px; display:block}
-/* Sobe a especificidade de propósito: `.pessoa span` é (0,1,1) e venceria
-   um `.selo` solto (0,1,0), transformando o selo em bloco de largura
-   inteira. Colisão de cascata não avisa — só aparece torto na tela. */
-.pessoa b .selo, .selo{display:inline-block; font-size:10px; letter-spacing:.06em; text-transform:uppercase;
-      border-radius:4px; padding:2px 6px; margin-left:6px; vertical-align:1px; font-weight:600;
-      background:var(--surf2); border:1px solid var(--line); color:var(--ink2)}
-.selo.calado{background:rgba(83,252,24,.09); border-color:rgba(83,252,24,.32); color:var(--vivo)}
-
-.vazio{background:var(--surf); border:1px solid var(--line); border-radius:10px;
-       padding:18px; color:var(--ink2); font-size:13.5px; line-height:1.6}
-.vazio b{color:var(--ink)}
-
-.veredito{border-radius:10px; padding:14px 16px; margin-bottom:10px;
-          border:1px solid var(--line); background:var(--surf)}
-.veredito.sim{background:var(--alerta-bg); border-color:var(--alerta-line); border-left:3px solid var(--alerta)}
-.veredito.provavel{background:var(--morno-bg); border-color:var(--morno-line); border-left:3px solid var(--morno)}
-.veredito .t{font-size:15.5px; font-weight:600}
-.veredito .obs{color:var(--ink2); font-size:12.5px; margin-top:7px; line-height:1.55}
-.veredito .obs b{color:var(--ink)}
-
-.fita{margin-top:13px}
-.rot{color:var(--ink3); font-size:10.5px; text-transform:uppercase; letter-spacing:.09em; margin:9px 0 4px}
-.trilho{position:relative; height:15px; background:var(--surf2);
-        border:1px solid var(--line); border-radius:5px; overflow:hidden}
-.trilho i{position:absolute; top:0; bottom:0; background:var(--live); border-radius:3px}
-.trilho.srv i{background:var(--srv)}
-.marca{position:absolute; top:-4px; bottom:-4px; width:2px; background:var(--ink);
-       box-shadow:0 0 5px var(--ground); z-index:2}
-.reguas{display:flex; justify-content:space-between; color:var(--ink3); font-size:11px; margin-top:4px}
-
-.log{background:var(--surf); border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin-bottom:10px}
-.log h3{margin:0 0 3px; font-size:17px; font-weight:600}
-.log .resumo{color:var(--ink2); font-size:13px; margin-bottom:13px}
-.log .resumo b{color:var(--ink)}
-.log table{width:100%; border-collapse:collapse; font-size:13.5px}
-.log td{padding:7px 8px; border-bottom:1px solid var(--line)}
-.log tr:last-child td{border-bottom:0}
-.log .onde{width:1%; white-space:nowrap; font-weight:600; font-size:12.5px}
-.log .onde.live{color:var(--live)}
-.log .onde.servidor{color:var(--srv)}
-.log .dur{color:var(--ink2); text-align:right; white-space:nowrap}
-.log .seta{color:var(--ink3); padding:0 3px}
-.fechar{float:right; background:none; border:0; color:var(--ink3); font-size:22px;
-        cursor:pointer; line-height:1; padding:0 3px}
+.cartao{background:var(--surf);border:1px solid var(--line);border-radius:11px;
+  padding:18px 20px;margin-top:14px;position:relative}
+.cartao h3{margin:0 0 16px;font-size:18px;font-weight:600}
+.fechar{position:absolute;top:12px;right:14px;background:none;border:0;
+  color:var(--ink3);font-size:24px;line-height:1;cursor:pointer;padding:0 4px}
 .fechar:hover{color:var(--ink)}
-.nomes{display:flex; flex-wrap:wrap; gap:5px; margin-top:9px}
-.nomes i{font-style:normal; background:var(--surf2); border:1px solid var(--line);
-         border-radius:5px; padding:2px 8px; font-size:12.5px; color:var(--ink2)}
-.nomes i.bateu{background:var(--alerta-bg); border-color:var(--alerta-line); color:var(--alerta); font-weight:600}
+.bloco{margin-bottom:18px}
+.rot{color:var(--ink3);font-size:11px;text-transform:uppercase;letter-spacing:.09em;margin-bottom:7px}
+table{width:100%;border-collapse:collapse}
+td{padding:8px 0;border-bottom:1px solid var(--line);font-size:15px}
+tr:last-child td{border-bottom:0}
+td.e{color:var(--entrou);font-weight:600;width:38%}
+td.s{color:var(--saiu);font-weight:600;width:32%}
+td.d{color:var(--ink2);width:18%}
+td.obs{color:var(--alerta);font-size:12.5px;white-space:nowrap;font-weight:600}
+tr.marcada td{background:var(--alerta-bg)}
 
-.rodape{color:var(--ink3); font-size:12.5px; margin-top:32px; line-height:1.65;
-        border-top:1px solid var(--line); padding-top:16px}
+.veredito{border:1px solid var(--line);border-radius:9px;padding:13px 15px;
+  background:var(--surf2);font-size:14.5px}
+.veredito.sim{background:var(--alerta-bg);border-color:var(--alerta-line)}
+.veredito.meio{background:var(--morno-bg);border-color:var(--morno-line)}
+.obs2{color:var(--ink2);font-size:12.5px;margin-top:7px;line-height:1.5}
+.obs2 b{color:var(--ink)}
+
+.rodape{color:var(--ink3);font-size:12.5px;margin-top:30px;line-height:1.6;
+  border-top:1px solid var(--line);padding-top:15px}
 .rodape b{color:var(--ink2)}
-@media (prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 
-  .marcaR,.marcaS{display:inline-block; font-size:10px; letter-spacing:.08em; font-weight:700;
-    border-radius:4px; padding:2px 7px; vertical-align:2px; margin-right:6px}
-  .marcaR{background:rgba(83,252,24,.1); border:1px solid rgba(83,252,24,.35); color:var(--vivo)}
-  .marcaS{background:var(--morno-bg); border:1px solid var(--morno-line); color:var(--morno)}
-  h2 .marcaR,h2 .marcaS{vertical-align:1px}
-  .pessoa.larga{width:100%; margin-bottom:8px; display:block}
-  .fraco{color:var(--ink3)}
-  .achou{background:var(--alerta-bg); border:1px solid var(--alerta-line);
-    border-left:3px solid var(--alerta); border-radius:10px; padding:13px 15px}
-  .achou .par{font-weight:600; font-size:15.5px; display:flex; align-items:baseline; gap:8px; flex-wrap:wrap}
-  .seta{color:var(--ink3)}
-  .quem{margin-top:9px; padding-top:9px; border-top:1px solid var(--line);
-    font-size:12.5px; color:var(--ink2); line-height:1.55}
-  .quem b{color:var(--ink); font-weight:600}
-  .log .quem{margin-top:13px}
-  .dois .par .pc{font-size:12.5px}
-</style><div class="topo">
+h2.seg{margin-top:34px;padding-top:22px;border-top:1px solid var(--line);font-size:16px}
+h2 .qtd{color:var(--ink3);font-weight:400;font-size:14px}
+.busca{display:flex;gap:8px;margin-bottom:8px}
+.busca input{flex:1;min-width:0;background:var(--surf);border:1px solid var(--line);
+  border-radius:8px;padding:11px 13px;color:var(--ink);font:inherit;font-size:14.5px}
+.busca input:focus{outline:2px solid var(--alerta);outline-offset:1px;border-color:transparent}
+.busca button{background:var(--alerta);color:#fff;border:0;border-radius:8px;
+  padding:11px 22px;font:inherit;font-weight:600;font-size:14.5px;cursor:pointer}
+.atalhos{display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap}
+.atalhos button{background:var(--surf);color:var(--ink2);border:1px solid var(--line);
+  border-radius:7px;padding:5px 11px;font:inherit;font-size:12.5px;cursor:pointer}
+.atalhos button:hover{color:var(--ink);border-color:var(--ink3)}
+.cartao.alvo{border-color:var(--alerta-line);border-left:3px solid var(--alerta)}
+.vazio{background:var(--surf);border:1px solid var(--line);border-radius:10px;
+  padding:16px;color:var(--ink2);font-size:13.5px;line-height:1.6;margin-top:10px}
+.vazio b{color:var(--ink)}
+</style>
+<div class="topo">
   <h1>Detetive</h1>
   <span class="canal mono">tchubi · kick</span>
   <div class="dir"><button class="tema" id="tema" type="button">tema</button></div>
 </div>
 
 <main>
-  <div class="aviso">
-    <b>Duas coisas nesta página, e elas não se misturam.</b><br>
-    <span class="marcaR">MEDIDO</span> os 20 nomes e o tempo total assistido, puxados agora
-    da rota pública da BotRix do seu canal.<br>
-    <span class="marcaS">EXEMPLO</span> a tela de como fica quando estiver gravando, com
-    gente que <b>não existe</b>.<br>
-    <b>Nenhum horário inventado aparece no nome de alguém de verdade.</b> Eu fiz isso duas
-    vezes antes e as duas vezes a tela mentiu: inventei o nome no jogo de uma espectadora
-    sua, e inventei quanto tempo ela ficou.
-  </div>
-
-  <h2><span class="marcaR">MEDIDO</span> Sua audiência na Kick <span class="qtd" id="q-aud"></span></h2>
-  <p class="dica">O que a BotRix entrega hoje, sem login: quem acumulou tempo assistido, e
-    quanto no <b>total</b>. Não é por sessão — o serviço rodando é que grava entrada e saída.</p>
-  <div id="audiencia"></div>
-
-  <h2><span class="marcaR">MEDIDO</span> O cruzamento de nomes</h2>
-  <p class="dica">Este é o código de verdade, gerado de <span class="mono">src/</span>.
-    Digite um nome como ele apareceria <b>no jogo</b> — com maiúsculas, leet, tag de clã —
-    e veja se ele acha a pessoa na sua audiência.</p>
+  <h2>Quem você quer conferir?</h2>
   <div class="busca">
-    <input id="q" placeholder="ex: [BR] HA1_SUZY" autocomplete="off" spellcheck="false">
-    <button id="ir" type="button">Cruzar</button>
+    <input id="q" placeholder="nome, SteamID ou link do perfil" autocomplete="off" spellcheck="false">
+    <button id="ir" type="button">Ver</button>
   </div>
   <div class="atalhos" id="atalhos"></div>
-  <div id="resultado"></div>
+  <div id="alvo"></div>
 
-  <h2><span class="marcaS">EXEMPLO</span> Como fica quando estiver gravando</h2>
-  <p class="dica">Gente inventada, de propósito: <b>ESPECTADOR-A</b>, <b>-B</b>, <b>-C</b>.
-    É a forma da tela, não um achado. Clique para ver o log.</p>
-  <div id="exemplo"></div>
-  <div id="logex"></div>
+  <h2 class="seg">Red flags <span class="qtd" id="q-flags"></span></h2>
+  <p class="dica">Quem está no servidor <b>e</b> entrou na sua live, sem você ter perguntado.</p>
+  <div class="lista" id="flags"></div>
+  <div id="detalhe"></div>
 
   <div class="rodape">
-    Assistir não é crime. Isto mostra <b>presença, não culpa</b> — quem julga o contexto é
-    você, que jogou a partida.<br>
-    Ninguém aparecer <b>não inocenta</b>: o nome no jogo quase nunca parece com o do chat, e
-    quem assiste <b>deslogado</b> não aparece em fonte nenhuma.
+    <span class="marcaS">EXEMPLO</span> gente inventada — ainda não existe gravação da sua
+    live. O serviço rodando é que grava isto.<br>
+    Mostra <b>presença, não culpa</b>. Não aparecer <b>não inocenta</b>: quem assiste
+    deslogado não entra em fonte nenhuma.
   </div>
 </main>
 
 <script>
-/*MOTOR*/
-
 /*NOITE*/
 
-const DADOS = /*DADOS*/;
 const AGORA = Date.now();
 const M = 60000;
 const EX = exemplo(AGORA);
 
 const esc = (s) => String(s).replace(/[<>&"]/g, (c) => ({ '<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;' }[c]));
 const hora = (ms) => new Date(ms).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
-const hhmm = (m) => `${Math.floor(m/60)}h${String(Math.round(m%60)).padStart(2,'0')}`;
 
-/* ── MEDIDO: a audiência real, só com o que a BotRix entrega ──────────── */
-function desenharAudiencia() {
-  const l = [...DADOS.audiencia].sort((a,b) => (b.minutosAssistidos||0) - (a.minutosAssistidos||0));
-  document.getElementById('q-aud').textContent = `· ${l.length}`;
-  document.getElementById('audiencia').innerHTML =
-    `<div class="pessoas">${l.map(p => `<div class="pessoa">
-      <b>${esc(p.nome)}</b>
-      <span class="mono">${p.minutosAssistidos ? hhmm(p.minutosAssistidos) : 'sem tempo'} assistidos</span>
-      <span class="mono fraco">nível ${p.nivel} · ${p.pontos} pontos</span>
-    </div>`).join('')}</div>`;
-}
-
-/* ── MEDIDO: o cruzamento, contra os nomes reais ──────────────────────── */
-const idxReal = new Indice(DADOS.audiencia.map(p => ({ nome: p.nome, min: p.minutosAssistidos })));
-
-function cruzar() {
+/* A ORDEM é a coisa: primeiro quem ele perguntou, depois o resto.
+   Ele foi explícito — "pode ter red flag de outros caras, porém o foco tem
+   que ser os que eu estou pesquisando primeiro". Uma lista geral no topo
+   enterra a pergunta que ele veio fazer. */
+function procurar() {
   const q = document.getElementById('q').value.trim();
-  const onde = document.getElementById('resultado');
+  const onde = document.getElementById('alvo');
   if (!q) { onde.innerHTML = ''; return; }
-  const r = idxReal.procurar(q);
-  if (!r) {
-    onde.innerHTML = `<div class="vazio">Nenhum dos ${DADOS.audiencia.length} nomes da sua audiência
-      bate com <b>${esc(q)}</b>.<br><br>Isso <b>não inocenta</b>. O nome no jogo quase nunca
-      parece com o do chat — foi exatamente o que aconteceu quando você me corrigiu.
-      Para esses casos, o serviço confere a <b>SteamID</b>: todos os nomes que a conta já usou,
-      não só o de agora.</div>`;
+  const achou = Object.keys(EX.naLive).find((n) => n.toLowerCase() === q.toLowerCase());
+  if (!achou) {
+    onde.innerHTML = `<div class="vazio">Sem registro de <b>${esc(q)}</b> na sua live.<br>
+      Isso <b>não inocenta</b>: pode ter assistido deslogado, ou com outro nome.</div>`;
     return;
   }
-  onde.innerHTML = `<div class="achou">
-    <div class="par">${esc(q)} <span class="seta">&#8596;</span> ${esc(r.entrada.nome)}
-      <span class="pc mono">${Math.round(r.confianca*100)}%</span></div>
-    <div class="det">${esc(r.motivo)} · assistiu
-      <b class="mono">${r.entrada.min ? hhmm(r.entrada.min) : '?'}</b> no total</div>
-    <div class="quem">Isto é tudo que eu sei hoje sobre essa pessoa: que ela está na sua
-      audiência e o tempo <b>total</b>. <b>Não sei a que horas ela entrou nem saiu</b> — isso
-      só existe depois que o serviço estiver gravando na sua máquina.</div>
-  </div>`;
+  onde.innerHTML = cartao(achou, true);
+  ligarFechar('alvo');
 }
 
-/* ── EXEMPLO: gente que não existe ────────────────────────────────────── */
-function desenharExemplo() {
-  const nomes = Object.keys(EX.naLive);
-  document.getElementById('exemplo').innerHTML = nomes.map(n => {
-    const faixas = EX.naLive[n];
+/* Red flags: os que ele NÃO perguntou, e que estão nos dois. */
+function desenharLista() {
+  const nomes = Object.keys(EX.naLive).filter((n) => (EX.noServidor[n] || []).length);
+  document.getElementById('q-flags').textContent = nomes.length ? `· ${nomes.length}` : '';
+  document.getElementById('flags').innerHTML = nomes.map((n) => {
+    const f = EX.naLive[n];
     const srv = EX.noServidor[n] || [];
-    const ultima = faixas[faixas.length-1];
-    const dentro = srv.length && EX.morte >= srv[0].de && EX.morte <= srv[0].ate
-      && faixas.some(f => EX.morte >= f.de && EX.morte <= f.ate);
-    const total = faixas.reduce((a,f) => a + (f.ate-f.de)/M, 0);
-    return `<button class="${dentro?'dois':'pessoa larga'}" type="button" data-n="${esc(n)}">
-      <div class="par">${esc(n)}${srv.length ? ` <span class="seta">&#8596;</span> ${esc(srv[0].nome)}` : ''}
-        ${dentro ? '<span class="pc">nos dois às ' + hora(EX.morte) + '</span>' : ''}</div>
-      <div class="det">${faixas.length} ${faixas.length>1?'entradas':'entrada'} na live ·
-        ${Math.round(total)} min no total · ${ultima.fonte==='tempo'?'nunca escreveu no chat':'escreveu no chat'}
-        ${srv.length ? ' · esteve no servidor' : ' · não apareceu no servidor'}</div>
+    const total = Math.round(f.reduce((a, x) => a + (x.ate - x.de) / M, 0));
+    return `<button class="linha" type="button" data-n="${esc(n)}">
+      <span class="nome">${esc(n)}</span>
+      <span class="resumo mono">${f.length} ${f.length > 1 ? 'vezes' : 'vez'} · ${total} min</span>
+      <span class="tag">${srv.length ? 'também no servidor' : 'só na live'}</span>
     </button>`;
   }).join('');
-  for (const b of document.querySelectorAll('#exemplo [data-n]')) b.onclick = () => logEx(b.dataset.n);
+  for (const b of document.querySelectorAll('.linha')) b.onclick = () => abrir(b.dataset.n);
 }
 
-function fita(naLive, srv, quando) {
-  const todos = [...naLive, ...srv];
-  let de = Math.min(...todos.map(x=>x.de), quando);
-  let ate = Math.max(...todos.map(x=>x.ate), quando);
-  const folga = Math.max((ate-de)*0.06, 5*M); de -= folga; ate += folga;
-  const pos = (t) => ((t-de)/(ate-de))*100;
-  const trilha = (l, cls) => l.length ? `<div class="trilho ${cls}">${
-    l.map(x=>`<i style="left:${pos(x.de)}%;width:${Math.max(pos(x.ate)-pos(x.de),0.8)}%"></i>`).join('')
-  }<div class="marca" style="left:${pos(quando)}%"></div></div>` : '';
-  return `<div class="fita">
-    ${naLive.length?`<div class="rot">na sua live</div>${trilha(naLive,'')}`:''}
-    ${srv.length?`<div class="rot">no servidor</div>${trilha(srv,'srv')}`:''}
-    <div class="reguas mono"><span>${hora(de)}</span><span>&#8593; ${hora(quando)}</span><span>${hora(ate)}</span></div>
-  </div>`;
+function abrir(n) {
+  document.getElementById('detalhe').innerHTML = cartao(n, false);
+  ligarFechar('detalhe');
+  document.getElementById('detalhe').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-function logEx(n) {
-  const faixas = EX.naLive[n];
-  const srv = EX.noServidor[n] || [];
-  const linhas = [...faixas.map(x=>({onde:'live',...x})), ...srv.map(x=>({onde:'servidor',...x}))]
-    .sort((a,b) => b.de - a.de);
-  const naHora = faixas.find(f => EX.morte >= f.de && EX.morte <= f.ate);
-  const srvNaHora = srv.find(s => EX.morte >= s.de && EX.morte <= s.ate);
-
-  let v;
-  if (naHora && srvNaHora) v = { c:' sim', t:`<b>Às ${hora(EX.morte)}: ESTAVA na sua live</b> — visto das ${hora(naHora.de)} às ${hora(naHora.ate)}. E estava no servidor.` };
-  else if (naHora) v = { c:' sim', t:`<b>Às ${hora(EX.morte)}: ESTAVA na sua live</b> — visto das ${hora(naHora.de)} às ${hora(naHora.ate)}.` };
-  else {
-    const perto = faixas.map(f => Math.min(Math.abs(EX.morte-f.ate), Math.abs(f.de-EX.morte))).sort((a,b)=>a-b)[0];
-    v = { c: perto <= 15*M ? ' provavel' : '',
-      t: perto <= 15*M
-        ? `<b>Às ${hora(EX.morte)}: provável</b> — visto ${Math.round(perto/M)} min de distância.`
-        : `<b>Às ${hora(EX.morte)}: não visto na live nesse horário.</b> A vez mais próxima foi ${Math.round(perto/M)} min de distância.` };
-  }
-
-  const onde = document.getElementById('logex');
-  onde.innerHTML = `<div class="log"><button class="fechar" type="button">&times;</button>
-    <h3>${esc(n)} <span class="marcaS">EXEMPLO</span></h3>
-    <div class="resumo">${linhas.length} entradas · horários em
-      ${esc(Intl.DateTimeFormat().resolvedOptions().timeZone)}</div>
-    <div class="veredito${v.c}"><div class="t">${v.t}</div>
-      <div class="obs">Quem assiste calado não gera mensagem — <b>ausência aqui não é prova de ausência</b>.</div></div>
-    <table><tbody>${linhas.map(l => `<tr>
-      <td class="onde ${l.onde}">&#9679; ${l.onde}</td>
-      <td class="mono">${hora(l.de)} <span class="seta">&#8594;</span> ${hora(l.ate)}</td>
-      <td class="dur mono">${Math.round((l.ate-l.de)/M)} min</td>
-      <td class="dur">${l.onde==='servidor' ? esc(l.nome) : (l.fonte==='tempo' ? 'tempo assistido' : 'mensagens')}</td>
-    </tr>`).join('')}</tbody></table>
-    ${fita(faixas, srv, EX.morte)}
-    <div class="quem">No serviço de verdade, a coluna do servidor traz o <b>nome no jogo</b> e um
-      link para o perfil no BattleMetrics — de onde saem o histórico de nomes e a SteamID.</div>
-  </div>`;
-  onde.querySelector('.fechar').onclick = () => { onde.innerHTML = ''; };
-  onde.scrollIntoView({ behavior:'smooth', block:'nearest' });
+function ligarFechar(id) {
+  const el = document.getElementById(id).querySelector('.fechar');
+  if (el) el.onclick = () => { document.getElementById(id).innerHTML = ''; };
 }
 
-/* atalhos: disfarces reais aplicados a nomes reais da audiência */
-const base = [...DADOS.audiencia].sort((a,b)=>(b.minutosAssistidos||0)-(a.minutosAssistidos||0))[0].nome;
-const disfarces = [
-  base,
-  `[BR] ${base.toUpperCase().replace(/I/g,'1').replace(/O/g,'0')}`,
-  `xX_${base}_Xx`,
-  'tchubita',
-];
-document.getElementById('atalhos').innerHTML = disfarces.map(d =>
-  `<button type="button" data-d="${esc(d)}">${esc(d)}</button>`).join('');
-for (const b of document.querySelectorAll('.atalhos button')) {
-  b.onclick = () => { document.getElementById('q').value = b.dataset.d; cruzar(); };
-}
+function cartao(n, alvo) {
+  const f = [...EX.naLive[n]].sort((a, b) => a.de - b.de);
+  const srv = [...(EX.noServidor[n] || [])].sort((a, b) => a.de - b.de);
+  const morte = EX.morte;
 
-document.getElementById('ir').onclick = cruzar;
-document.getElementById('q').addEventListener('keydown', (e) => { if (e.key === 'Enter') cruzar(); });
+  const linha = (x, cls) => {
+    const dentro = morte >= x.de && morte <= x.ate;
+    return `<tr class="${cls}${dentro ? ' marcada' : ''}">
+      <td class="mono e">entrou ${hora(x.de)}</td>
+      <td class="mono s">saiu ${hora(x.ate)}</td>
+      <td class="mono d">${Math.round((x.ate - x.de) / M)} min</td>
+      <td class="obs">${dentro ? '← você morreu aqui' : ''}</td>
+    </tr>`;
+  };
+
+  const naHora = f.some((x) => morte >= x.de && morte <= x.ate);
+  const srvNaHora = srv.some((x) => morte >= x.de && morte <= x.ate);
+
+  return `
+    <div class="cartao${alvo ? ' alvo' : ''}">
+      <button class="fechar" type="button">&times;</button>
+      <h3>${esc(n)}</h3>
+
+      <div class="bloco">
+        <div class="rot">na sua live</div>
+        <table><tbody>${f.map((x) => linha(x, 'live')).join('')}</tbody></table>
+      </div>
+
+      ${srv.length ? `<div class="bloco">
+        <div class="rot">no servidor de Rust</div>
+        <table><tbody>${srv.map((x) => linha(x, 'srv')).join('')}</tbody></table>
+      </div>` : ''}
+
+      <div class="veredito ${naHora && srvNaHora ? 'sim' : naHora ? 'meio' : ''}">
+        ${naHora && srvNaHora
+          ? `<b>Às ${hora(morte)} estava nos dois ao mesmo tempo.</b>`
+          : naHora
+            ? `<b>Às ${hora(morte)} estava na sua live</b>, mas não apareceu no servidor.`
+            : `<b>Às ${hora(morte)} não estava na sua live.</b>`}
+        <div class="obs2">Quem assiste calado não gera mensagem — não aparecer aqui
+          <b>não é prova de que não estava</b>.</div>
+      </div>
+    </div>`;
+}
 
 const raiz = document.documentElement;
 document.getElementById('tema').onclick = () => {
-  const escuroAgora = raiz.dataset.theme
+  const escuro = raiz.dataset.theme
     ? raiz.dataset.theme === 'dark'
     : !window.matchMedia('(prefers-color-scheme: light)').matches;
-  raiz.dataset.theme = escuroAgora ? 'light' : 'dark';
+  raiz.dataset.theme = escuro ? 'light' : 'dark';
 };
 
-desenharAudiencia();
-desenharExemplo();
+document.getElementById('atalhos').innerHTML = Object.keys(EX.naLive)
+  .map((n) => `<button type="button" data-n="${esc(n)}">${esc(n)}</button>`).join('');
+for (const b of document.querySelectorAll('.atalhos button')) {
+  b.onclick = () => { document.getElementById('q').value = b.dataset.n; procurar(); };
+}
+document.getElementById('ir').onclick = procurar;
+document.getElementById('q').addEventListener('keydown', (e) => { if (e.key === 'Enter') procurar(); });
+
+desenharLista();
 
 </script>
