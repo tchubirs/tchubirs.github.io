@@ -125,6 +125,53 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
     }));
   }
 
+  const naJanela = db.prepare(
+    'SELECT * FROM estada WHERE canal_id = ? AND onde = ? AND fim_em >= ? ORDER BY fim_em DESC');
+
+  /**
+   * Quem está na live AGORA — visto dentro do gap.
+   *
+   * É a lista da página principal: o que dá para responder antes de alguém
+   * perguntar qualquer coisa.
+   */
+  function agoraNa(canalId, onde, tMs) {
+    return naJanela.all(canalId, onde, tMs - GAP[onde]).map((e) => ({
+      nome: e.nome,
+      desde: e.inicio_em,
+      ultimoSinal: e.fim_em,
+      minutos: Math.max(1, Math.round((e.fim_em - e.inicio_em) / 60000)),
+      sinais: e.amostras,
+      // Quanto tempo faz que ela não dá sinal. Alguém 12 min calado ainda
+      // conta como presente, mas quem olha precisa ver a diferença.
+      calada: Math.round((tMs - e.fim_em) / 60000),
+    }));
+  }
+
+  /**
+   * O log completo de uma pessoa: abriu, fechou, abriu de novo, fechou.
+   *
+   * Junta as duas linhas do tempo numa ordem só, porque a pergunta real é
+   * sobre a relação entre elas — entrou no servidor logo depois de abrir a
+   * live? saiu da live no minuto em que a partida acabou?
+   */
+  function log(canalId, nome, { limite = 200 } = {}) {
+    const linhas = [];
+    for (const onde of ['live', 'servidor']) {
+      for (const e of estadas(canalId, onde, nome)) {
+        linhas.push({ onde, ...e });
+      }
+    }
+    linhas.sort((a, b) => a.de - b.de);
+    return {
+      nome,
+      total: linhas.length,
+      // Do mais recente para trás: é o que se quer ver primeiro.
+      linhas: linhas.slice(-limite).reverse(),
+      minutosNaLive: linhas.filter((l) => l.onde === 'live').reduce((t, l) => t + l.minutos, 0),
+      minutosNoServidor: linhas.filter((l) => l.onde === 'servidor').reduce((t, l) => t + l.minutos, 0),
+    };
+  }
+
   /**
    * A pergunta do produto: **ela estava ali NAQUELE minuto?**
    *
@@ -440,6 +487,24 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
 
     // A audiência crua, para quem quer cruzar do lado de fora — é assim que
     // o PeekRust entra sem precisar do banco, só de uma URL.
+    if (req.method === 'GET' && url.pathname === '/api/agora') {
+      const canalId = url.searchParams.get('canal');
+      if (!canalId) return responder(400, { erro: 'informe canal' });
+      const t = agora();
+      return responder(200, {
+        em: t, fuso: fusoDoCanal(canalId),
+        naLive: agoraNa(canalId, 'live', t),
+        noServidor: agoraNa(canalId, 'servidor', t),
+      });
+    }
+
+    if (req.method === 'GET' && url.pathname === '/api/log') {
+      const canalId = url.searchParams.get('canal');
+      const nome = url.searchParams.get('nome');
+      if (!canalId || !nome) return responder(400, { erro: 'informe canal e nome' });
+      return responder(200, { ...log(canalId, nome), fuso: fusoDoCanal(canalId) });
+    }
+
     if (req.method === 'GET' && url.pathname === '/api/audiencia') {
       const canalId = url.searchParams.get('canal');
       if (!canalId) return responder(400, { erro: 'informe canal' });
@@ -487,7 +552,7 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
   });
 
   return { servidor, db, ingerir, consultar, procurar, registrarPresenca, verificar,
-           guardarServidor, cruzarAgora, ver, estadas, momento, fusoDoCanal };
+           guardarServidor, cruzarAgora, ver, estadas, momento, agoraNa, log, fusoDoCanal };
 }
 
 module.exports = { criar, verificar, CHAVE_KICK, BLOCO_MS };

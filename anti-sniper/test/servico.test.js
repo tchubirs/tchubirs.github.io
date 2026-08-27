@@ -440,3 +440,77 @@ test('o Discord diz a hora E o fuso — fuso errado tem que aparecer', () => {
   assert.match(fora, /não vista na live nesse horário/);
   assert.match(fora, /não inocenta/);
 });
+
+test('quem está na live AGORA — e há quanto tempo está calado', () => {
+  const s = bancada();
+  for (const i of [40, 35, 30, 25, 20, 15, 10, 5, 3]) s.ingerir('c1', 'chat.message', msg('FINIK', 1), T - i * MIN);
+  s.ingerir('c1', 'chat.message', msg('velho', 2), T - 90 * MIN);  // foi embora
+
+  const agora = s.agoraNa('c1', 'live', T);
+  assert.deepEqual(agora.map((p) => p.nome), ['FINIK'], 'quem sumiu há 90 min não está "agora"');
+  assert.equal(agora[0].calada, 3);
+  assert.equal(agora[0].desde, T - 40 * MIN);
+  assert.equal(agora[0].minutos, 37);
+});
+
+test('37 min calado é sessão NOVA, não uma esticada', () => {
+  // O contrário inventaria 37 min de presença que ninguém observou.
+  const s = bancada();
+  s.ingerir('c1', 'chat.message', msg('FINIK', 1), T - 40 * MIN);
+  s.ingerir('c1', 'chat.message', msg('FINIK', 1), T - 3 * MIN);
+  const l = s.log('c1', 'FINIK');
+  assert.equal(l.total, 2);
+  assert.equal(s.agoraNa('c1', 'live', T)[0].desde, T - 3 * MIN);
+});
+
+test('o log é o que ele pediu: entrou, saiu, entrou de novo, saiu', () => {
+  const s = bancada();
+  // Duas sessões na live, separadas por uma hora fora.
+  for (let i = 0; i <= 30; i += 5) s.ingerir('c1', 'chat.message', msg('diper', 2), T + i * MIN);
+  for (let i = 90; i <= 120; i += 5) s.ingerir('c1', 'chat.message', msg('diper', 2), T + i * MIN);
+  // E uma passagem pelo servidor no meio.
+  for (let i = 20; i <= 100; i += 2) s.guardarServidor('c1', { nome: 'Rustoria' }, [{ nome: 'diper' }], T + i * MIN);
+
+  const l = s.log('c1', 'diper');
+  assert.equal(l.total, 3);
+  // Mais recente primeiro: é o que se quer ver ao abrir.
+  assert.deepEqual(l.linhas.map((x) => x.onde), ['live', 'servidor', 'live']);
+  const [ultima, servidor, primeira] = l.linhas;
+  assert.deepEqual([primeira.de, primeira.ate], [T, T + 30 * MIN]);
+  assert.deepEqual([ultima.de, ultima.ate], [T + 90 * MIN, T + 120 * MIN]);
+  assert.deepEqual([servidor.de, servidor.ate], [T + 20 * MIN, T + 100 * MIN]);
+  assert.equal(l.minutosNaLive, 60);
+  assert.equal(l.minutosNoServidor, 80);
+});
+
+test('log de quem nunca apareceu não vira acusação nem vazio mudo', () => {
+  const s = bancada();
+  const l = s.log('c1', 'NinguemAssim');
+  assert.equal(l.total, 0);
+  assert.deepEqual(l.linhas, []);
+  assert.equal(l.minutosNaLive, 0);
+});
+
+test('/api/agora e /api/log respondem pelo HTTP', async () => {
+  const s = bancada();
+  s.db.prepare('UPDATE canal SET fuso = ? WHERE id = ?').run('Europe/Paris', 'c1');
+  for (let i = 0; i <= 30; i += 5) s.ingerir('c1', 'chat.message', msg('FINIK', 1), T + i * MIN);
+
+  await new Promise((ok) => s.servidor.listen(0, '127.0.0.1', ok));
+  const base = `http://127.0.0.1:${s.servidor.address().port}`;
+  try {
+    const a = await (await fetch(`${base}/api/agora?canal=c1`)).json();
+    assert.ok(Array.isArray(a.naLive));
+    assert.equal(a.fuso, 'Europe/Paris');
+
+    const l = await (await fetch(`${base}/api/log?canal=c1&nome=FINIK`)).json();
+    assert.equal(l.total, 1);
+    assert.equal(l.linhas[0].onde, 'live');
+    assert.equal(l.linhas[0].amostras, 7, '7 mensagens sustentam esse intervalo');
+    assert.equal(l.fuso, 'Europe/Paris');
+
+    assert.equal((await fetch(`${base}/api/log?canal=c1`)).status, 400);
+  } finally {
+    await new Promise((ok) => s.servidor.close(ok));
+  }
+});

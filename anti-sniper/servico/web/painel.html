@@ -68,6 +68,30 @@
          box-shadow:0 0 6px rgba(255,255,255,.8);z-index:2}
   .reguas{display:flex;justify-content:space-between;color:#6f7a84;
           font-size:11px;margin-top:3px;font-variant-numeric:tabular-nums}
+  .qtd{color:var(--fraco);font-weight:400;letter-spacing:0}
+  .nota{color:var(--fraco);font-size:13px;margin:0 0 10px}
+  .pessoas{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
+  .pessoa{background:var(--caixa);border:1px solid var(--linha);border-radius:10px;
+          padding:11px 13px;cursor:pointer;text-align:left;color:var(--texto);font:inherit}
+  .pessoa:hover{border-color:#3a444d;background:#1b2025}
+  .pessoa b{display:block;font-size:15px;margin-bottom:2px}
+  .pessoa span{color:var(--fraco);font-size:12.5px}
+  .pessoa .viva{color:var(--ok)}
+  .log{background:var(--caixa);border:1px solid var(--linha);border-radius:11px;
+       padding:14px 16px;margin-bottom:10px}
+  .log h3{margin:0 0 3px;font-size:17px}
+  .log .resumo{color:var(--fraco);font-size:13px;margin-bottom:12px}
+  .log table{width:100%;border-collapse:collapse;font-size:13.5px}
+  .log td{padding:6px 8px;border-bottom:1px solid #1e2328;font-variant-numeric:tabular-nums}
+  .log tr:last-child td{border-bottom:0}
+  .log .onde{width:1%;white-space:nowrap;font-weight:600}
+  .log .onde.live{color:#5fd06e}
+  .log .onde.servidor{color:#6aa6e0}
+  .log .dur{color:var(--fraco);text-align:right}
+  .log .seta{color:#54606a;padding:0 2px}
+  .fechar{float:right;background:none;border:0;color:var(--fraco);font-size:20px;
+          cursor:pointer;line-height:1;padding:0 2px}
+  .fechar:hover{color:var(--texto)}
   .rodape{color:#6f7a84;font-size:12px;margin-top:26px;line-height:1.6;
           border-top:1px solid var(--linha);padding-top:16px}
 </style>
@@ -99,6 +123,12 @@
       <button data-min="60">1 h atrás</button>
     </div>
     <div id="resultado"></div>
+
+    <h2>Na sua live agora <span id="qtd-agora" class="qtd"></span></h2>
+    <p class="nota">Clique em alguém para ver o <b>log completo</b>: entrou, saiu,
+      entrou de novo. Só aparece quem <b>escreveu</b> no chat — quem assiste
+      calado não gera sinal nenhum.</p>
+    <div id="agora"><div class="vazio">carregando…</div></div>
 
     <h2>Quem está no servidor agora e já assistiu</h2>
     <div id="alertas"><div class="vazio">carregando…</div></div>

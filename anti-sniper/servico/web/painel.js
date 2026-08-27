@@ -5,6 +5,8 @@ document.getElementById('canal').textContent = CANAL;
 
 const esc = (s) => String(s).replace(/[<>&"]/g,
   (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
+const hora = (ms) => ms == null ? '—'
+  : new Date(ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 const hhmm = (m) => m == null ? 'tempo desconhecido'
   : `${Math.floor(m / 60)}h${String(m % 60).padStart(2, '0')}`;
 
@@ -28,11 +30,62 @@ function desenharAlertas(lista, onde) {
     </div>`).join('');
 }
 
+/** Quem está na live agora — a resposta que a página dá sem ninguém perguntar. */
+function desenharAgora(lista, onde) {
+  document.getElementById('qtd-agora').textContent = lista.length ? `· ${lista.length}` : '';
+  if (!lista.length) {
+    onde.innerHTML = '<div class="vazio">Ninguém escreveu no chat nos últimos 15 min.</div>';
+    return;
+  }
+  onde.innerHTML = `<div class="pessoas">${lista.map((p) => `
+    <button class="pessoa" data-nome="${esc(p.nome)}">
+      <b>${esc(p.nome)}</b>
+      <span>desde ${hora(p.desde)} · ${p.minutos} min</span><br>
+      <span class="${p.calada <= 2 ? 'viva' : ''}">${
+        p.calada <= 2 ? 'falando agora' : `calado há ${p.calada} min`}</span>
+    </button>`).join('')}</div>`;
+  for (const b of onde.querySelectorAll('.pessoa')) b.onclick = () => abrirLog(b.dataset.nome);
+}
+
+/** O log completo: abriu, fechou, abriu de novo, fechou. */
+async function abrirLog(nome) {
+  const onde = document.getElementById('resultado');
+  onde.innerHTML = '<div class="vazio">carregando log…</div>';
+  onde.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  try {
+    const d = await (await fetch(`/api/log?canal=${encodeURIComponent(CANAL)}&nome=${encodeURIComponent(nome)}`)).json();
+    onde.innerHTML = desenharLog(d);
+    onde.querySelector('.fechar').onclick = () => { onde.innerHTML = ''; };
+  } catch { onde.innerHTML = '<div class="vazio">falhou ao carregar o log</div>'; }
+}
+
+function desenharLog(d) {
+  if (!d.total) {
+    return `<div class="log"><button class="fechar">×</button><h3>${esc(d.nome)}</h3>
+      <div class="resumo">Nenhum registro. Isso <b>não inocenta</b> — quem assiste calado não aparece.</div></div>`;
+  }
+  const linhas = d.linhas.map((l) => `<tr>
+      <td class="onde ${l.onde}">${l.onde === 'live' ? '● live' : '● servidor'}</td>
+      <td>${hora(l.de)} <span class="seta">→</span> ${hora(l.ate)}</td>
+      <td class="dur">${l.minutos} min</td>
+      <td class="dur">${l.onde === 'live' ? `${l.amostras} msg` : `${l.amostras} leituras`}</td>
+    </tr>`).join('');
+  return `<div class="log"><button class="fechar">×</button>
+    <h3>${esc(d.nome)}</h3>
+    <div class="resumo">${d.total} entradas · <b>${hhmm(d.minutosNaLive)}</b> na live ·
+      <b>${hhmm(d.minutosNoServidor)}</b> no servidor · horários em ${esc(d.fuso)}</div>
+    <table>${linhas}</table></div>`;
+}
+
 async function atualizar() {
   try {
-    const r = await fetch(`/api/alertas?canal=${encodeURIComponent(CANAL)}`);
+    const [r, ra] = await Promise.all([
+      fetch(`/api/alertas?canal=${encodeURIComponent(CANAL)}`),
+      fetch(`/api/agora?canal=${encodeURIComponent(CANAL)}`),
+    ]);
     if (!r.ok) throw new Error(r.status);
     const d = await r.json();
+    desenharAgora((await ra.json()).naLive || [], document.getElementById('agora'));
     document.getElementById('ponto').className = 'ponto vivo';
     document.getElementById('estado').textContent = 'ao vivo';
     cartao('c-servidor', d.noServidor ?? '—', d.servidorVelho);
@@ -44,9 +97,6 @@ async function atualizar() {
     document.getElementById('estado').textContent = 'sem conexão com o serviço';
   }
 }
-
-const hora = (ms) => ms == null ? '—'
-  : new Date(ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
 document.getElementById('ir').onclick = async () => {
   const q = document.getElementById('nome').value.trim();
