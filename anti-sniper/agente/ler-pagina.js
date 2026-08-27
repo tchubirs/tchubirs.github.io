@@ -45,10 +45,21 @@ function lerJogadores(doc) {
   for (const tr of a.tabela.querySelectorAll('tbody tr')) {
     const tds = [...tr.querySelectorAll('td')];
     if (!tds.length) continue;
-    const nome = (tds[a.idx.name ?? a.idx.nome]?.textContent || '').trim();
+    const celaNome = tds[a.idx.name ?? a.idx.nome];
+    const nome = (celaNome?.textContent || '').trim();
     if (!nome) continue;
+    // O ID do jogador no BattleMetrics, do link da própria linha.
+    //
+    // Sem isto o painel diz "fulano está no servidor" e não dá para saber
+    // QUEM é: o nome do chat não abre perfil nenhum, e um nome de Rust se
+    // troca em dez segundos. Com o id, é um clique até o perfil, o
+    // histórico de nomes e a SteamID.
+    const link = celaNome?.querySelector('a[href*="/players/"]')
+      || tr.querySelector('a[href*="/players/"]');
+    const m = (link?.getAttribute('href') || '').match(/\/players\/(\d+)/);
     fora.push({
       nome,
+      bmId: m ? m[1] : null,
       minutosNoServidor: paraMinutos((tds[a.idx['play time'] ?? a.idx.tempo]?.textContent || '').trim()),
     });
   }

@@ -87,9 +87,9 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
   const ultimaEstada = db.prepare(
     'SELECT * FROM estada WHERE canal_id = ? AND onde = ? AND nome_norm = ? ORDER BY fim_em DESC LIMIT 1');
   const abrirEstada = db.prepare(
-    'INSERT INTO estada (canal_id, onde, nome_norm, nome, inicio_em, fim_em, amostras, onde_extra, fonte) VALUES (?,?,?,?,?,?,1,?,?)');
+    'INSERT INTO estada (canal_id, onde, nome_norm, nome, inicio_em, fim_em, amostras, onde_extra, fonte, ref) VALUES (?,?,?,?,?,?,1,?,?,?)');
   const esticarEstada = db.prepare(
-    "UPDATE estada SET fim_em = ?, nome = ?, amostras = amostras + 1, fonte = CASE WHEN fonte = ? THEN fonte ELSE 'ambos' END WHERE id = ?");
+    "UPDATE estada SET fim_em = ?, nome = ?, amostras = amostras + 1, ref = COALESCE(?, ref), fonte = CASE WHEN fonte = ? THEN fonte ELSE 'ambos' END WHERE id = ?");
 
   /**
    * Registra que a pessoa foi VISTA em `onde` no instante `tMs`.
@@ -98,18 +98,21 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
    * tempo demais sem aparecer. Assim uma noite inteira vira duas ou três
    * linhas, não dez mil.
    */
-  function ver(canalId, onde, nome, tMs, extra = null, fonte = onde === 'servidor' ? 'servidor' : 'chat') {
+  function ver(canalId, onde, nome, tMs, extra = null, fonte = onde === 'servidor' ? 'servidor' : 'chat', ref = null) {
     const norm = normalizar(nome);
     if (!norm) return;
     const u = ultimaEstada.get(canalId, onde, norm);
     if (u && tMs >= u.fim_em && tMs - u.fim_em <= GAP[onde]) {
-      esticarEstada.run(Math.max(u.fim_em, tMs), nome, fonte, u.id);
+      // COALESCE no ref: uma leitura sem o id não pode APAGAR o id que já
+      // se sabia. Perder a identidade da pessoa no meio da sessão é o mesmo
+      // que nunca ter tido.
+      esticarEstada.run(Math.max(u.fim_em, tMs), nome, ref, fonte, u.id);
       return;
     }
     // Evento fora de ordem dentro de um intervalo já conhecido: não abre
     // sessão nova, senão a linha do tempo ganha buracos que não existiram.
     if (u && tMs >= u.inicio_em && tMs <= u.fim_em) return;
-    abrirEstada.run(canalId, onde, norm, nome, tMs, tMs, extra, fonte);
+    abrirEstada.run(canalId, onde, norm, nome, tMs, tMs, extra, fonte, ref);
   }
 
   const pegarCanal = db.prepare('SELECT * FROM canal WHERE id = ?');
@@ -248,6 +251,8 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
       de: e.inicio_em, ate: e.fim_em,
       minutos: Math.max(1, Math.round((e.fim_em - e.inicio_em) / 60000)),
       amostras: e.amostras, servidor: e.onde_extra, fonte: e.fonte || 'chat',
+      bmId: e.ref || null,
+      perfil: e.ref ? `https://www.battlemetrics.com/players/${e.ref}` : null,
     }));
   }
 
@@ -263,6 +268,9 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
   function agoraNa(canalId, onde, tMs) {
     return naJanela.all(canalId, onde, tMs - GAP[onde]).map((e) => ({
       nome: e.nome,
+      bmId: e.ref || null,
+      perfil: e.ref ? `https://www.battlemetrics.com/players/${e.ref}` : null,
+      servidor: e.onde_extra || null,
       desde: e.inicio_em,
       ultimoSinal: e.fim_em,
       minutos: Math.max(1, Math.round((e.fim_em - e.inicio_em) / 60000)),
@@ -295,7 +303,14 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
       const r = idx.procurar(j.nome, { minimo });
       if (!r) continue;
       fora.push({
+        // O nome NO JOGO e o link do perfil: sem isso o painel diz que
+        // alguém está no servidor e não dá para saber quem, porque o nome
+        // do chat não abre perfil nenhum e nome de Rust se troca em dez
+        // segundos.
         jogador: j.nome,
+        bmId: j.bmId,
+        perfil: j.perfil,
+        servidor: j.servidor,
         espectador: r.entrada.nome,
         confianca: r.confianca,
         motivo: r.motivo,
@@ -413,7 +428,7 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
 
   const limparServidor = db.prepare('DELETE FROM no_servidor WHERE canal_id = ?');
   const inserirNoServidor = db.prepare(
-    'INSERT OR REPLACE INTO no_servidor VALUES (?,?,?,?,?,?)');
+    'INSERT OR REPLACE INTO no_servidor (canal_id,nome,nome_norm,minutos,servidor,visto_em,bm_id) VALUES (?,?,?,?,?,?,?)');
   const listarNoServidor = db.prepare('SELECT * FROM no_servidor WHERE canal_id = ?');
 
   /**
@@ -434,8 +449,8 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
       for (const j of jogadores) {
         const norm = normalizar(j.nome);
         if (!norm) continue;
-        inserirNoServidor.run(canalId, j.nome, norm, j.minutosNoServidor ?? null, nome, tMs);
-        ver(canalId, 'servidor', j.nome, tMs, nome);
+        inserirNoServidor.run(canalId, j.nome, norm, j.minutosNoServidor ?? null, nome, tMs, j.bmId ?? null);
+        ver(canalId, 'servidor', j.nome, tMs, nome, 'servidor', j.bmId ?? null);
       }
       db.exec('COMMIT');
     } catch (e) {
@@ -487,6 +502,8 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
         jogador: j.nome,
         minutosNoServidor: j.minutos,
         servidor: j.servidor,
+        bmId: j.bm_id || null,
+        perfil: j.bm_id ? `https://www.battlemetrics.com/players/${j.bm_id}` : null,
       });
     }
     achados.sort((a, b) => b.confianca - a.confianca);

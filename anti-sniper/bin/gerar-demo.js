@@ -64,8 +64,19 @@ function noite(audiencia, agora) {
   });
   // Dois deles também estão no servidor agora — é o caso que o produto existe
   // para mostrar, e sem ninguém na tela ele não daria para ver.
-  const noServidor = pessoas.filter((p) => p.aindaLa).slice(0, 2).map((p) => ({
-    nome: p.nome, de: p.naLive[0].de + 20 * M, ate: agora,
+  const noServidor = pessoas.filter((p) => p.aindaLa).slice(0, 2).map((p, i) => ({
+    // Nome NO JOGO, que não é o do chat — é justamente por isso que o
+    // cruzamento existe. E o id do BattleMetrics, que é o que responde
+    // "quem é esse cara": de lá saem o histórico de nomes e a SteamID.
+    // Disfarces que acontecem de verdade: decoração em volta do nome
+    // INTEIRO, e maiúsculas com leet. Cortar o nome no meio também
+    // acontece, mas aí o cruzamento honestamente não acha — e é a busca
+    // por SteamID que resolve, não um exemplo escolhido para parecer bom.
+    nome: [`xX_${p.nome}_Xx`, p.nome.toUpperCase().replace(/I/g, '1').replace(/O/g, '0')][i % 2],
+    chat: p.nome,
+    bmId: String(1263079000 + (p.nome.length * 731 + i * 97) % 9000),
+    servidor: 'Rustoria.co - US Main',
+    de: p.naLive[0].de + 20 * M, ate: agora,
   }));
   return { inicioLive, pessoas, noServidor };
 }

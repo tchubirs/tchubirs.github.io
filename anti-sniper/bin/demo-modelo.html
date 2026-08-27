@@ -227,7 +227,8 @@ function nosDois() {
     const r = idxLive.procurar(s.nome);
     if (!r) continue;
     const p = porNome.get(r.entrada.nome);
-    fora.push({ jogador: s.nome, espectador: r.entrada.nome, confianca: r.confianca, motivo: r.motivo,
+    fora.push({ jogador: s.nome, bmId: s.bmId, servidor: s.servidor,
+      espectador: r.entrada.nome, confianca: r.confianca, motivo: r.motivo,
       naLiveDesde: p.naLive[0].de, naLiveMin: Math.round((p.naLive[0].ate - p.naLive[0].de)/M),
       calada: Math.round((AGORA - p.naLive[0].ate)/M),
       srvDesde: s.de, srvMin: Math.round((s.ate - s.de)/M) });
@@ -246,6 +247,8 @@ function desenharDois() {
     <div class="det">${esc(a.motivo)} · na live desde <b class="mono">${hora(a.naLiveDesde)}</b>
       (${a.naLiveMin} min, <span class="${a.calada<=2?'agoraz':''}">${a.calada<=2?'falando agora':'calado há '+a.calada+' min'}</span>)
       · no servidor desde <b class="mono">${hora(a.srvDesde)}</b> (${a.srvMin} min)</div>
+    <div class="quem">no jogo: <b>${esc(a.jogador)}</b> · ${esc(a.servidor)} ·
+      <span class="link">ver quem é no BattleMetrics &#8599;</span></div>
   </button>`).join('');
   for (const b of onde.querySelectorAll('.dois')) b.onclick = () => abrirLog(b.dataset.nome);
 }
@@ -341,16 +344,21 @@ function abrirLog(nome) {
     ...p.naLive.map(x => ({ onde:'live', ...x })),
     ...srv.map(x => ({ onde:'servidor', ...x })),
   ].sort((a,b) => b.de - a.de);
+  const noJogo = srv[0];
   const onde = document.getElementById('resultado');
   onde.innerHTML = `<div class="log"><button class="fechar" type="button">&times;</button>
     <h3>${esc(nome)}</h3>
     <div class="resumo">${linhas.length} entradas · <b class="mono">${hhmm(p.minutosAssistidos)}</b> assistidos no total
       · nível ${p.nivel} · horários em ${esc(Intl.DateTimeFormat().resolvedOptions().timeZone)}</div>
+    ${noJogo ? `<div class="quem">No jogo se chama <b>${esc(noJogo.nome)}</b>, em ${esc(noJogo.servidor)}.
+      No serviço de verdade, <span class="link">este link abre o perfil dele no BattleMetrics</span> —
+      é de lá que saem o histórico de nomes e a SteamID.</div>` : ''}
     <table><tbody>${linhas.map(l => `<tr>
       <td class="onde ${l.onde}">&#9679; ${l.onde}</td>
       <td class="mono">${hora(l.de)} <span class="seta">&#8594;</span> ${hora(l.ate)}</td>
       <td class="dur mono">${Math.round((l.ate-l.de)/M)} min</td>
-      <td class="dur">${l.onde==='servidor' ? 'leituras do agente' : (l.fonte==='tempo' ? '&times; tempo assistido' : 'mensagens no chat')}</td>
+      <td class="dur">${l.onde==='servidor'
+        ? `<span class="link">quem é &#8599;</span>` : (l.fonte==='tempo' ? '&times; tempo assistido' : 'mensagens no chat')}</td>
     </tr>`).join('')}</tbody></table>
     ${fita(p.naLive, srv, AGORA)}</div>`;
   onde.querySelector('.fechar').onclick = () => { onde.innerHTML = ''; };

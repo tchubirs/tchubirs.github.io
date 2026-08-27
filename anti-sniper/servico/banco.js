@@ -69,6 +69,7 @@ function abrir(caminho = 'detetive.db') {
       minutos     INTEGER,
       servidor    TEXT,
       visto_em    INTEGER NOT NULL,
+      bm_id       TEXT,
       PRIMARY KEY (canal_id, nome_norm)
     );
 
@@ -90,6 +91,10 @@ function abrir(caminho = 'detetive.db') {
       fim_em     INTEGER NOT NULL,
       amostras   INTEGER NOT NULL DEFAULT 1,
       onde_extra TEXT,                 -- nome do servidor, quando for o caso
+      -- Quem é essa pessoa fora daqui. Hoje é o id no BattleMetrics, que
+      -- abre o perfil, o histórico de nomes e a SteamID. Sem isso o painel
+      -- diz "fulano está no servidor" e não dá para saber quem é.
+      ref        TEXT,
       -- De onde veio o sinal: 'chat' (escreveu), 'tempo' (o contador de
       -- tempo assistido subiu, mesmo calado) ou 'servidor'. Quem lê o log
       -- precisa saber se aquilo é uma mensagem ou uma medição.
@@ -123,6 +128,11 @@ function abrir(caminho = 'detetive.db') {
   `);
 
   // Banco criado antes da coluna existir: acrescenta sem perder nada.
+  const colNoServidor = db.prepare('PRAGMA table_info(no_servidor)').all().map((c) => c.name);
+  if (colNoServidor.length && !colNoServidor.includes('bm_id')) {
+    db.exec('ALTER TABLE no_servidor ADD COLUMN bm_id TEXT');
+  }
+
   const colunas = db.prepare('PRAGMA table_info(canal)').all().map((c) => c.name);
   if (!colunas.includes('discord_guild')) {
     db.exec('ALTER TABLE canal ADD COLUMN discord_guild TEXT');
@@ -137,6 +147,9 @@ function abrir(caminho = 'detetive.db') {
   const colEstada = db.prepare('PRAGMA table_info(estada)').all().map((c) => c.name);
   if (colEstada.length && !colEstada.includes('fonte')) {
     db.exec("ALTER TABLE estada ADD COLUMN fonte TEXT NOT NULL DEFAULT 'chat'");
+  }
+  if (colEstada.length && !colEstada.includes('ref')) {
+    db.exec('ALTER TABLE estada ADD COLUMN ref TEXT');
   }
   return db;
 }

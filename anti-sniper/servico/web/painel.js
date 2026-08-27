@@ -51,8 +51,27 @@ function desenharDois(lista, onde) {
       <div class="det">na live desde <b>${hora(a.naLiveDesde)}</b> (${a.naLiveMinutos} min,
         <span class="${a.caladaHa <= 2 ? 'agora' : ''}">${a.caladaHa <= 2 ? 'falando agora' : `calado há ${a.caladaHa} min`}</span>)
         · no servidor desde <b>${hora(a.noServidorDesde)}</b> (${a.noServidorMinutos} min)</div>
+      ${quemE(a)}
     </div>`).join('');
   for (const b of onde.querySelectorAll('.dois')) b.onclick = () => abrirLog(b.dataset.nome);
+}
+
+/**
+ * "Quem é esse cara no servidor?"
+ *
+ * O nome do chat não abre perfil nenhum, e nome de Rust se troca em dez
+ * segundos. O que identifica é o perfil no BattleMetrics — de lá saem o
+ * histórico de nomes e a SteamID. Sem esta linha o painel acusa uma
+ * coincidência e deixa quem lê sem saber de quem está falando.
+ */
+function quemE(a) {
+  if (!a.perfil) {
+    return '<div class="quem sem">Sem link do perfil nesta leitura — '
+      + 'a tabela do BattleMetrics veio sem ele.</div>';
+  }
+  return `<div class="quem">no jogo: <b>${esc(a.jogador)}</b>${
+    a.servidor ? ` · ${esc(a.servidor)}` : ''} · <a href="${esc(a.perfil)}" target="_blank"
+    rel="noopener noreferrer">ver quem é no BattleMetrics ↗</a></div>`;
 }
 
 /** Quem está na live agora — a resposta que a página dá sem ninguém perguntar. */
@@ -104,7 +123,9 @@ function desenharLog(d) {
       <td class="onde ${l.onde}">${l.onde === 'live' ? '● live' : '● servidor'}</td>
       <td>${hora(l.de)} <span class="seta">→</span> ${hora(l.ate)}</td>
       <td class="dur">${l.minutos} min</td>
-      <td class="dur">${rotuloFonte(l)}</td>
+      <td class="dur">${l.perfil
+        ? `<a href="${esc(l.perfil)}" target="_blank" rel="noopener noreferrer">quem é ↗</a>`
+        : rotuloFonte(l)}</td>
     </tr>`).join('');
   return `<div class="log"><button class="fechar">×</button>
     <h3>${esc(d.nome)}</h3>

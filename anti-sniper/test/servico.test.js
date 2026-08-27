@@ -732,3 +732,36 @@ test('/api/fidelidade recebe do agente pelo HTTP', async () => {
     await new Promise((ok) => s.servidor.close(ok));
   }
 });
+
+test('"quem é esse cara no servidor?" — nome no jogo e link do perfil', () => {
+  // O nome do chat não abre perfil nenhum, e nome de Rust se troca em dez
+  // segundos. Sem o id do BattleMetrics o painel acusa uma coincidência e
+  // deixa o streamer sem saber de quem está falando.
+  const s = bancada();
+  for (const i of [30, 20, 10, 2]) s.ingerir('c1', 'chat.message', msg('diper', 2), T - i * MIN);
+  s.guardarServidor('c1', { nome: 'Rustoria.co - US Main' },
+    [{ nome: 'D1per', bmId: '1263079343', minutosNoServidor: 88 }], T - MIN);
+
+  const d = s.nosDois('c1', T)[0];
+  assert.equal(d.jogador, 'D1per', 'o nome como aparece NO JOGO');
+  assert.equal(d.espectador, 'diper', 'o nome como aparece na live');
+  assert.equal(d.bmId, '1263079343');
+  assert.equal(d.perfil, 'https://www.battlemetrics.com/players/1263079343');
+  assert.equal(d.servidor, 'Rustoria.co - US Main');
+
+  const a = s.cruzarAgora('c1')[0];
+  assert.equal(a.perfil, 'https://www.battlemetrics.com/players/1263079343');
+
+  const log = s.log('c1', 'D1per').linhas.find((l) => l.onde === 'servidor');
+  assert.equal(log.perfil, 'https://www.battlemetrics.com/players/1263079343');
+  assert.equal(log.servidor, 'Rustoria.co - US Main');
+});
+
+test('leitura sem o id não APAGA o id que já se sabia', () => {
+  // A tabela do BattleMetrics às vezes vem sem o link. Perder a identidade
+  // no meio da sessão é o mesmo que nunca ter tido.
+  const s = bancada();
+  s.guardarServidor('c1', { nome: 'Srv' }, [{ nome: 'D1per', bmId: '999' }], T);
+  s.guardarServidor('c1', { nome: 'Srv' }, [{ nome: 'D1per' }], T + MIN);
+  assert.equal(s.log('c1', 'D1per').linhas[0].bmId, '999');
+});
