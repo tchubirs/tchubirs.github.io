@@ -113,10 +113,15 @@ test('ninguém batendo não vira acusação', async () => {
   assert.match(emTexto(r), /⚪/);
 });
 
-test('perfil privado é inconclusivo, não inocente nem culpado', async () => {
-  const r = await consultar('76561198395102990', [{ nome: 'arin' }], { buscar: falso([]) });
+test('sem nada para cruzar é inconclusivo, não inocente nem culpado', async () => {
+  // Duas situações diferentes, e agora separadas: perfil marcado como
+  // PRIVADO, e perfil público mas sem nome, URL nem histórico. As duas
+  // são inconclusivas; nenhuma pode sair como "não encontrado".
+  const semNada = async () => ({ ok: true, status: 200, json: async () => [], text: async () => '' });
+  const r = await consultar('76561198395102990', [{ nome: 'arin' }], { buscar: semNada });
   assert.equal(r.conclusao, 'inconclusivo');
-  assert.match(r.motivo, /privado/);
+  assert.match(r.motivo, /sem nome|PRIVADO/);
+  assert.deepEqual(r.evidencias, []);
 });
 
 test('a conclusão nunca diz que a pessoa é sniper', async () => {
@@ -191,4 +196,28 @@ test('Steam fora do ar em uma das duas fontes não derruba a outra', async () =>
     : { ok: true, status: 200, json: async () => [], text: async () => XML() });
   const r = await chavesDeIdentidade('76561198027456808', meioQuebrado);
   assert.ok(r.chaves.includes('SLIMEface'), 'a URL personalizada tem que sobreviver');
+});
+
+test('perfil PRIVADO é inconclusivo, nunca "não encontrado"', async () => {
+  // Dizer "não encontrado" para um perfil privado é mentir por omissão:
+  // soa como inocência quando na verdade não se olhou nada.
+  const b = buscarMisto(XML({ privacyState: 'private' }), []);
+  const r = await consultar('76561198066116229', [{ nome: 'tchubi' }], { buscar: b });
+  assert.equal(r.conclusao, 'inconclusivo');
+  assert.match(r.motivo, /PRIVADO/);
+  assert.match(r.motivo, /nem a favor nem contra/);
+});
+
+test('URL personalizada aleatória é descartada, não usada para casar', async () => {
+  // A dele é "23333213254r256t1". Casar isso produziria falso positivo.
+  const b = buscarMisto(XML({ steamID: 'Tchubi', customURL: '23333213254r256t1' }), []);
+  const r = await consultar('76561198066116229',
+    [{ nome: '23333213254r256t1' }], { buscar: b });
+  assert.equal(r.evidencias.length, 0, 'não pode casar por identificador aleatório');
+});
+
+test('mas a URL personalizada de verdade continua valendo', async () => {
+  const b = buscarMisto(XML({ steamID: 'Tchubi', customURL: 'TchubiRS' }), []);
+  const r = await consultar('76561198066116229', [{ nome: 'tchubirs' }], { buscar: b });
+  assert.equal(r.evidencias.length, 1);
 });

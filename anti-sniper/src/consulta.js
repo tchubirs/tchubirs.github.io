@@ -31,12 +31,34 @@ async function consultar(steamId64, audiencia, op = {}) {
   const hist = await chavesDeIdentidade(steamId64, buscar);
   hist.nomes = hist.chaves;
 
+  // Perfil privado NÃO é perfil limpo. Sem chaves não há o que cruzar, e
+  // dizer "não encontrado" aqui seria mentir por omissão: soaria como
+  // inocência quando na verdade não se olhou nada.
+  if (hist.perfil?.privado || hist.nomes.length === 0) {
+    return {
+      steamId: steamId64,
+      conclusao: 'inconclusivo',
+      motivo: hist.perfil?.privado
+        ? 'perfil PRIVADO — não dá para ver nome, histórico nem URL. Isso não é sinal de nada, nem a favor nem contra'
+        : 'perfil sem nome, URL personalizada nem histórico público',
+      historico: hist.nomes ?? [],
+      urlPersonalizada: hist.perfil?.vanity ?? null,
+      evidencias: [],
+    };
+  }
+
+  // URL personalizada que é só dígitos ou lixo aleatório não é apelido de
+  // ninguém — é ruído, e casá-la produziria falso positivo. Ele mesmo usa
+  // "23333213254r256t1".
+  const util = (c) => c && !/^[0-9]{6,}$/.test(c) && !/^[0-9a-z]{12,}$/i.test(c);
+  hist.nomes = hist.nomes.filter(util);
   if (hist.nomes.length === 0) {
     return {
       steamId: steamId64,
       conclusao: 'inconclusivo',
-      motivo: 'perfil sem nome, URL personalizada nem histórico público — provavelmente privado',
+      motivo: 'os identificadores dessa conta são aleatórios e não servem para cruzar',
       historico: [],
+      urlPersonalizada: hist.perfil?.vanity ?? null,
       evidencias: [],
     };
   }
