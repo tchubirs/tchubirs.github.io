@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Detetive — autorização</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin:0; min-height:100vh; display:grid; place-items:center;
+         background:#0f1113; color:#e8e8e8;
+         font:16px/1.6 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  .caixa { width:min(560px,92vw); background:#16191c; border:1px solid #262b30;
+           border-radius:14px; padding:28px 30px; }
+  h1 { margin:0 0 4px; font-size:19px; letter-spacing:.2px; }
+  p  { margin:6px 0 0; color:#9aa4ad; font-size:14px; }
+  code { display:block; margin-top:18px; padding:14px 16px; background:#0b0d0f;
+         border:1px solid #2a3138; border-radius:10px; word-break:break-all;
+         font:14px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; color:#7fe3a1; }
+  button { margin-top:14px; width:100%; padding:12px; font-size:15px; font-weight:600;
+           border:0; border-radius:10px; background:#53fc18; color:#07160a; cursor:pointer; }
+  button:active { transform:translateY(1px); }
+  .erro code { color:#ff8a7a; }
+  .aviso { margin-top:16px; font-size:13px; color:#6f7a84; }
+</style>
+</head>
+<body>
+  <main class="caixa" id="caixa">
+    <h1>Lendo a resposta da Kick…</h1>
+  </main>
+
+<script>
+// A Kick devolve o código na URL. Esta página só mostra o código para você
+// copiar e colar na ferramenta que roda na SUA máquina.
+//
+// Nada é enviado para lugar nenhum: é uma página estática, sem servidor por
+// trás. O código sozinho não abre nada — só vale junto com o Secret, que
+// nunca sai do seu computador.
+(function () {
+  var p = new URLSearchParams(location.search);
+  var codigo = p.get('code');
+  var estado = p.get('state');
+  var erro = p.get('error');
+  var caixa = document.getElementById('caixa');
+
+  if (erro) {
+    caixa.className = 'caixa erro';
+    caixa.innerHTML = '<h1>A Kick recusou</h1>' +
+      '<p>' + (p.get('error_description') || 'Autorização negada.') + '</p>' +
+      '<code>' + erro.replace(/[<>&]/g, '') + '</code>' +
+      '<p style="margin-top:14px">Tente de novo pela ferramenta.</p>';
+    return;
+  }
+  if (!codigo) {
+    caixa.innerHTML = '<h1>Nada para ler aqui</h1>' +
+      '<p>Esta página só funciona quando a Kick te manda para ela ' +
+      'depois de você autorizar o aplicativo.</p>';
+    return;
+  }
+
+  caixa.innerHTML =
+    '<h1>Autorizado ✓</h1>' +
+    '<p>Copie este código e cole na ferramenta. Ele vale por poucos minutos.</p>' +
+    '<code id="cod"></code>' +
+    '<button id="copiar">Copiar código</button>' +
+    (estado ? '<p style="margin-top:14px">estado: <span id="est"></span></p>' : '');
+
+  // textContent e não innerHTML: o valor vem da URL, então não pode ser
+  // interpretado como HTML de jeito nenhum.
+  document.getElementById('cod').textContent = codigo;
+  if (estado) document.getElementById('est').textContent = estado;
+
+  document.getElementById('copiar').onclick = function () {
+    navigator.clipboard.writeText(codigo).then(function () {
+      var b = document.getElementById('copiar');
+      b.textContent = 'Copiado ✓';
+      setTimeout(function () { b.textContent = 'Copiar código'; }, 1800);
+    });
+  };
+
+  // Tira o código da barra de endereços para não ficar no histórico.
+  history.replaceState({}, '', location.pathname);
+})();
+</script>
+</body>
+</html>
