@@ -1,7 +1,7 @@
 'use strict';
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { dobrar } = require('../src/unicode');
+const { dobrar, desdisfarcar } = require('../src/unicode');
 const n = require('../src/nomes');
 const { ehSteamId64, historicoDeNomes } = require('../src/steam');
 const { consultar, emTexto } = require('../src/consulta');
@@ -22,7 +22,13 @@ test('dobra letra disfarçada de volta ao alfabeto', () => {
     assert.equal(dobrar(d).toLowerCase(), 'arin', `falhou em ${d}`);
   }
   assert.equal(dobrar('🇦🇷🇮🇳').toLowerCase(), 'arin');
-  assert.equal(dobrar('ѕniрer'), 'sniper', 'cirílico disfarçado de latino');
+  // `dobrar` faz só as conversões SEGURAS. O cirílico ficou de fora de
+  // propósito: aplicá-lo sempre destruía nome russo legítimo. Quem cuida
+  // do disfarce é `desdisfarcar`, e só quando o cirílico é minoria —
+  // a decisão está em `normalizar`.
+  assert.equal(dobrar('ѕniрer'), 'ѕniрer', 'dobrar não mexe em cirílico');
+  assert.equal(desdisfarcar('ѕniрer'), 'sniper', 'desdisfarcar mexe');
+  assert.equal(n.normalizar('ѕniрer'), 'sniper', 'normalizar decide e aplica');
 });
 
 test('nome disfarçado normaliza igual ao normal', () => {

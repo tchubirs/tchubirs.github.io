@@ -43,17 +43,39 @@ const FAIXAS = [
   [0x1f1e6, 0x1f1ff, 'A'],
 ];
 
-/** Letras soltas que não formam faixa contínua: versalete, fonética,
- *  cirílico e grego que se parecem com latino. */
+/** Letras soltas SEGURAS: versalete e fonética. Estas nunca aparecem num
+ *  alfabeto real — quem as usa está enfeitando o próprio nome latino. */
 const SOLTAS = {
   'ᴀ':'a','ʙ':'b','ᴄ':'c','ᴅ':'d','ᴇ':'e','ꜰ':'f','ɢ':'g','ʜ':'h','ɪ':'i',
   'ᴊ':'j','ᴋ':'k','ʟ':'l','ᴍ':'m','ɴ':'n','ᴏ':'o','ᴘ':'p','ǫ':'q','ʀ':'r',
   'ꜱ':'s','ᴛ':'t','ᴜ':'u','ᴠ':'v','ᴡ':'w','x':'x','ʏ':'y','ᴢ':'z',
+  'ʟ':'l','ɐ':'a','ǝ':'e','ɹ':'r','ʇ':'t','ʞ':'k',
+};
+
+/**
+ * Cirílico e grego que se parecem com latino.
+ *
+ * ⚠️ SEPARADO de propósito, e NÃO faz parte de `dobrar`. Aplicar sempre
+ * destrói nome russo legítimo: `Опасный Поцык` — um jogador real — virava
+ * `опachыйпoцыk`, e `Е.В.П.А.Т.И.Й` virava string vazia.
+ *
+ * Só use quando o cirílico for MINORIA na string. Aí sim é letra latina
+ * disfarçada, como em `ѕniрer`, que é o caso que importa detectar.
+ */
+const DISFARCE_CIRILICO = {
   'а':'a','в':'b','с':'c','е':'e','н':'h','к':'k','м':'m','о':'o','р':'p',
   'т':'t','у':'y','х':'x','і':'i','ѕ':'s','ј':'j',
   'α':'a','β':'b','ε':'e','ι':'i','κ':'k','ν':'v','ο':'o','ρ':'p','τ':'t',
-  'υ':'u','χ':'x','ѵ':'v','ʟ':'l','ɐ':'a','ǝ':'e','ɹ':'r','ʇ':'t','ʞ':'k',
+  'υ':'u','χ':'x','ѵ':'v',
 };
+
+/** Desfaz o disfarce. Só chame quando souber que é disfarce. */
+function desdisfarcar(s) {
+  if (typeof s !== 'string') return '';
+  let out = '';
+  for (const ch of s) out += DISFARCE_CIRILICO[ch] ?? ch;
+  return out;
+}
 
 function dobrarCaractere(ch) {
   if (SOLTAS[ch]) return SOLTAS[ch];
@@ -75,4 +97,4 @@ function dobrar(s) {
   return out;
 }
 
-module.exports = { dobrar, dobrarCaractere };
+module.exports = { dobrar, dobrarCaractere, desdisfarcar, DISFARCE_CIRILICO };

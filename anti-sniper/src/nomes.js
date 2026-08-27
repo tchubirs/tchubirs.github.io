@@ -13,7 +13,7 @@
  */
 
 /** Decoração que gente põe no nome e que não carrega identidade nenhuma. */
-const { dobrar } = require('./unicode');
+const { dobrar, desdisfarcar } = require('./unicode');
 
 const TAG_CLA = /^[\[\(\{<|][^\]\)\}>|]{1,6}[\]\)\}>|]\s*/;
 const SO_DECORACAO = /[ -㌀\uD83C-􏰀-\uDFFF←-⇿☀-➿]/g;
@@ -27,29 +27,59 @@ function tirarAcento(s) {
   return s.normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
 
+/** Quanto da string é cirílico de verdade. Decide se as letras cirílicas
+ *  são um nome russo legítimo ou latinas disfarçadas. */
+function fracaoCirilica(s) {
+  const letras = s.replace(/[^\p{L}]/gu, '');
+  if (!letras) return 0;
+  const cir = letras.replace(/[^\u0400-\u04FF\u0500-\u052F]/g, '');
+  return cir.length / letras.length;
+}
+
+function limpar(s) {
+  return s
+    .replace(/[^\p{L}\p{N}]/gu, '')
+    .replace(/^(x+)(.+?)\1$/u, '$2')
+    .replace(/(.)\1{2,}/gu, '$1$1')
+    .replace(/^(ttv|twitch|yt|youtube|kick)/u, '')
+    .replace(/(ttv|tv|twitch|yt|youtube|kick|live|stream)$/u, '');
+}
+
 function normalizar(nome, { agressivo = false } = {}) {
   if (typeof nome !== 'string') return '';
-  // Dobrar ANTES de qualquer coisa. Se apagar decoração primeiro, 𝚊𝚛𝚒𝚗
-  // vira string vazia em vez de virar "arin" — foi o que acontecia antes,
-  // e era o pior resultado possível: não casava e não avisava.
   let s = dobrar(nome).trim();
-  s = s.replace(TAG_CLA, '');          // [BR] Fulano -> Fulano
-  s = s.replace(SO_DECORACAO, '');     // emoji e símbolos
-  s = tirarAcento(s).toLowerCase();
 
-  const mapa = agressivo ? LEET_AGRESSIVO : LEET_SEGURO;
-  s = s.replace(/./g, (c) => mapa[c] ?? c);
+  // Tag de clã: além de [BR] Fulano, existe "MF | Dr | Merfy" e "CL/Nome".
+  // O nome é o ÚLTIMO pedaço, e é ele que a pessoa usa. Nomes reais do
+  // painel dele quebraram a versão que só tratava colchete.
+  s = s.replace(TAG_CLA, '');
+  const pedacos = s.split(/\s*[|\/]\s*/u).filter((x) => x.trim());
+  if (pedacos.length > 1) s = pedacos[pedacos.length - 1];
 
-  s = s.replace(/[^a-z0-9]/g, '');     // sobra só letra e número
-  // xX_nome_Xx e nomeee -> nome. Repetição é enfeite, não identidade.
-  s = s.replace(/^(x+)(.+?)\1$/, '$2');
-  s = s.replace(/(.)\1{2,}/g, '$1$1');
-  // Sufixo e prefixo de divulgação: gente põe o canal no nome do jogo o
-  // tempo todo. `arin_tv` e `arin` são a mesma pessoa, e sem tirar isto a
-  // comparação falha justamente no caso mais comum.
-  s = s.replace(/^(ttv|twitch|yt|youtube|kick)/, '');
-  s = s.replace(/(ttv|tv|twitch|yt|youtube|kick|live|stream)$/, '');
-  return s;
+  s = s.replace(SO_DECORACAO, '');
+
+  // ⚠️ Cirílico só é dobrado para latino quando é MINORIA na string —
+  // aí sim é letra latina disfarçada, como em `ѕniрer`. Quando a string é
+  // majoritariamente cirílica, é um nome russo de verdade: dobrar destrói.
+  // `Опасный Поцык` virava `achok` e `Е.В.П.А.Т.И.Й` virava string VAZIA.
+  const russoDeVerdade = fracaoCirilica(s) > 0.4;
+  if (!russoDeVerdade) s = tirarAcento(desdisfarcar(s)).toLowerCase();
+  else s = s.toLowerCase();
+
+  // Leet só faz sentido onde há letras. Um nome só de dígitos, como `322`,
+  // não é leet de nada — convertê-lo produzia `e22`.
+  const temLetra = /\p{L}/u.test(s);
+  if (temLetra && !russoDeVerdade) {
+    const mapa = agressivo ? LEET_AGRESSIVO : LEET_SEGURO;
+    s = s.replace(/./gu, (c) => mapa[c] ?? c);
+  }
+
+  const limpo = limpar(s);
+  // Nunca devolver vazio quando havia conteúdo: sem isto o nome some e o
+  // cruzamento diz "sem semelhança" quando na verdade não olhou nada.
+  if (limpo) return limpo;
+  const cru = dobrar(nome).toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+  return cru;
 }
 
 /** Levenshtein com corte: se já passou do limite, para. Numa live isto roda
