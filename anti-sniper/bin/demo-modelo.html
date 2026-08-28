@@ -68,6 +68,8 @@ td.e{color:var(--entrou);font-weight:600;width:38%}
 td.s{color:var(--saiu);font-weight:600;width:32%}
 td.d{color:var(--ink2);width:18%}
 td.obs{color:var(--alerta);font-size:12.5px;white-space:nowrap;font-weight:600}
+/* A régua da linha. Sem ela, um bloco de 10 min lê como medida exata. */
+.regua{color:#7b8892;font-weight:400;font-size:11.5px}
 tr.marcada td{background:var(--alerta-bg)}
 
 .veredito{border:1px solid var(--line);border-radius:9px;padding:13px 15px;
@@ -135,6 +137,26 @@ const EX = exemplo(AGORA);
 
 const esc = (s) => String(s).replace(/[<>&"]/g, (c) => ({ '<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;' }[c]));
 const hora = (ms) => new Date(ms).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+/* Ele olhou o log em blocos de 10 min e disse: "tem que ser mais preciso,
+   exatamente até os segundos se possível, sei que ele ficou 5 minuto
+   maximo na minha live". Com o crédito da fidelidade isso é impossível —
+   5 minutos vira 0 ou vira 10. O canal de presença da Kick avisa entrada e
+   saída no instante, e aí o segundo existe. Mostrar segundo onde a fonte
+   não tem seria inventar, então cada linha diz de onde veio. */
+const AO_SEGUNDO = (f) => f === 'presenca' || f === 'presenca-parcial';
+const quanto = (ms) => {
+  const s = Math.round(ms / 1000);
+  return s < 60 ? `${s}s` : `${Math.floor(s / 60)}min ${String(s % 60).padStart(2, '0')}s`;
+};
+const horaFina = (ms, f) => AO_SEGUNDO(f)
+  ? new Date(ms).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit', second:'2-digit' })
+  : hora(ms);
+const dur = (x) => {
+  const s = Math.round((x.ate - x.de) / 1000);
+  return AO_SEGUNDO(x.fonte)
+    ? `${Math.floor(s / 60)}min ${String(s % 60).padStart(2, '0')}s`
+    : `${Math.round(s / 60)} min`;
+};
 
 /* A ORDEM é a coisa: primeiro quem ele perguntou, depois o resto.
    Ele foi explícito — "pode ter red flag de outros caras, porém o foco tem
@@ -171,10 +193,17 @@ function desenharLista() {
   document.getElementById('flags').innerHTML = nomes.map((n) => {
     const f = EX.naLive[n];
     const srv = EX.noServidor[n] || [];
-    const total = Math.round(f.reduce((a, x) => a + (x.ate - x.de) / M, 0));
+    // Somar em SEGUNDOS e arredondar uma vez, no fim. E só dizer segundos
+    // quando TODAS as visitas vêm de fonte que os tem: uma de bloco no meio
+    // já contamina o total.
+    const seg = Math.round(f.reduce((a, x) => a + (x.ate - x.de), 0) / 1000);
+    const exato = f.every((x) => AO_SEGUNDO(x.fonte));
+    const total = exato && seg < 3600
+      ? `${Math.floor(seg / 60)}min ${String(seg % 60).padStart(2, '0')}s`
+      : `${Math.round(seg / 60)} min`;
     return `<button class="linha" type="button" data-n="${esc(n)}">
       <span class="nome">${esc(n)}</span>
-      <span class="resumo mono">${f.length} ${f.length > 1 ? 'vezes' : 'vez'} · ${total} min</span>
+      <span class="resumo mono">${f.length} ${f.length > 1 ? 'vezes' : 'vez'} · ${total}</span>
       <span class="tag">${srv.length ? 'também no servidor' : 'só na live'}</span>
     </button>`;
   }).join('');
@@ -200,15 +229,25 @@ function cartao(n, alvo) {
   const linha = (x, cls) => {
     const dentro = morte >= x.de && morte <= x.ate;
     return `<tr class="${cls}${dentro ? ' marcada' : ''}">
-      <td class="mono e">entrou ${hora(x.de)}</td>
-      <td class="mono s">saiu ${hora(x.ate)}</td>
-      <td class="mono d">${Math.round((x.ate - x.de) / M)} min</td>
-      <td class="obs">${dentro ? '← você morreu aqui' : ''}</td>
+      <td class="mono e">entrou ${horaFina(x.de, x.fonte)}</td>
+      <td class="mono s">saiu ${horaFina(x.ate, x.fonte)}</td>
+      <td class="mono d">${dur(x)}</td>
+      <td class="obs">${dentro ? '← você morreu aqui'
+        : `<span class="regua">${AO_SEGUNDO(x.fonte) ? 'ao segundo' : 'bloco ~10 min'}</span>`}</td>
     </tr>`;
   };
 
   const naHora = f.some((x) => morte >= x.de && morte <= x.ate);
   const srvNaHora = srv.some((x) => morte >= x.de && morte <= x.ate);
+
+  /* "Não estava na live" é uma resposta pobre quando a pessoa fechou a
+     janela dois minutos antes. Esse é o padrão inteiro: assiste, fecha,
+     ataca. Só dá para dizer isto porque a presença tem a hora da SAÍDA —
+     com bloco de 10 min a distância seria ruído.
+     Só conta a saída ANTES da morte, e só de fonte que observa saída. */
+  const perto = naHora ? 0 : f
+    .filter((x) => AO_SEGUNDO(x.fonte) && x.ate <= morte && morte - x.ate <= 10 * M)
+    .reduce((menor, x) => Math.min(menor, morte - x.ate), Infinity);
 
   return `
     <div class="cartao${alvo ? ' alvo' : ''}">
@@ -225,12 +264,15 @@ function cartao(n, alvo) {
         <table><tbody>${srv.map((x) => linha(x, 'srv')).join('')}</tbody></table>
       </div>` : ''}
 
-      <div class="veredito ${naHora && srvNaHora ? 'sim' : naHora ? 'meio' : ''}">
+      <div class="veredito ${naHora && srvNaHora ? 'sim' : naHora || perto ? 'meio' : ''}">
         ${naHora && srvNaHora
           ? `<b>Às ${hora(morte)} estava nos dois ao mesmo tempo.</b>`
           : naHora
             ? `<b>Às ${hora(morte)} estava na sua live</b>, mas não apareceu no servidor.`
-            : `<b>Às ${hora(morte)} não estava na sua live.</b>`}
+            : perto
+              ? `<b>Às ${hora(morte)} não estava na sua live — tinha fechado
+                 ${quanto(perto)} antes${srvNaHora ? ', e estava no servidor' : ''}.</b>`
+              : `<b>Às ${hora(morte)} não estava na sua live.</b>`}
         <div class="obs2">Quem assiste calado não gera mensagem — não aparecer aqui
           <b>não é prova de que não estava</b>.</div>
       </div>

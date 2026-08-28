@@ -47,8 +47,13 @@ const limpar = (rel) => fs.readFileSync(path.join(RAIZ, rel), 'utf8')
 function exemplo(agora) {
   const H = 3600000; const M = 60000;
   const inicio = agora - 3 * H;
-  const p = (nome, deMin, ateMin, fonte) => ({
-    nome, de: inicio + deMin * M, ate: inicio + ateMin * M, fonte,
+  // `seg` só existe na presença: é a fonte que avisa entrada e saída no
+  // instante em que acontecem. As outras creditam em blocos de ~10 min, e
+  // fingir segundos nelas seria inventar precisão.
+  const p = (nome, deMin, ateMin, fonte, deSeg = 0, ateSeg = 0) => ({
+    nome, fonte,
+    de: inicio + deMin * M + deSeg * 1000,
+    ate: inicio + ateMin * M + ateSeg * 1000,
   });
   return {
     inicioLive: inicio,
@@ -56,9 +61,17 @@ function exemplo(agora) {
     // toda, e uma que passou rápido — as três formas que o log precisa
     // mostrar diferente.
     naLive: {
+      // Bloco de ~10 min: o que a fidelidade sozinha consegue dizer.
       'ESPECTADOR-A': [p('ESPECTADOR-A', 12, 47, 'tempo'), p('ESPECTADOR-A', 96, 174, 'tempo')],
       'ESPECTADOR-B': [p('ESPECTADOR-B', 5, 176, 'chat')],
-      'ESPECTADOR-C': [p('ESPECTADOR-C', 130, 141, 'tempo')],
+      // AO SEGUNDO: a resposta que ele pediu — "sei que ele ficou 5 minuto
+      // maximo na minha live". Entrou 4min51s, saiu, voltou 5min21s. Com
+      // bloco de 10 min essas duas visitas viram 0 ou viram 10; com a
+      // presença viram o horário exato, e é isso que responde a pergunta.
+      'ESPECTADOR-C': [
+        p('ESPECTADOR-C', 130, 134, 'presenca', 22, 13),
+        p('ESPECTADOR-C', 137, 142, 'presenca', 41, 2),
+      ],
     },
     noServidor: {
       'ESPECTADOR-A': [{ de: inicio + 104 * M, ate: inicio + 178 * M, nome: 'JOGADOR-A' }],
