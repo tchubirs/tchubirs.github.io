@@ -229,3 +229,78 @@ test('conta quantos nomes o site entregou cortados', () => {
   assert.equal(r.cortados, 3, '"Gat..", "Pl.." e "Blo.." foram cortados pelo site');
   assert.equal(lerNomesDaPagina(paginaPorAno()).cortados, 0, 'logado, nada vem cortado');
 });
+
+// A página do steamhistory.net, do retrato que ele mandou. Duas coisas que
+// nenhuma outra fonte dá: o DIA E A HORA de cada troca, e a lista sem login.
+//
+//     Persona History (133)
+//     123               28/08/2026, 05:52:04
+//     1                 07/08/2026, 11:46:22
+//     Joaozinho         04/08/2026, 18:10:11
+//     ...
+//     Go to page [1] of 14   Show [10] per page   [Next]  [View All]
+//
+// O ícone de link fica DENTRO da célula do nome. Se o extrator lesse a linha
+// como texto colado, o nome sairia grudado na data.
+const paginaHistorico = (linhas) => parseHTML(`<html><head><title>SteamHistory</title></head>
+  <body><div class="card">
+    <h2 class="title">Persona History <span>(133)</span></h2>
+    <table><tbody>
+      ${linhas.map(([n, d]) => `<tr>
+        <td><span>${n}</span><a href="/x" title="abrir"><svg></svg></a></td>
+        <td class="data">${d}</td></tr>`).join('')}
+    </tbody></table>
+    <div class="pag">Go to page <input value="1"> of 14 Show <select><option>10</option></select> per page</div>
+  </div></body></html>`).document;
+
+const LINHAS = [
+  ['123', '28/08/2026, 05:52:04'],
+  ['1', '07/08/2026, 11:46:22'],
+  ['Joaozinho', '04/08/2026, 18:10:11'],
+  ['Recruta', '30/07/2026, 13:54:00'],
+  ['DeepSea simulator', '28/07/2026, 01:07:31'],
+  ['Renatinho', '25/07/2026, 01:40:04'],
+  ['To nervoso irmão', '24/07/2026, 21:10:00'],
+  ['GatoNet', '16/07/2026, 11:15:00'],
+  ['Pluto', '13/07/2026, 11:21:00'],
+  ['jorge', '11/07/2026, 11:21:00'],
+];
+
+test('lê a tabela do steamhistory.net com nome e data em células separadas', () => {
+  const r = lerNomesDaPagina(paginaHistorico(LINHAS));
+  assert.equal(r.nomes.length, 10);
+  // O ícone dentro da célula não pode grudar no nome nem virar nome.
+  assert.equal(r.nomes[0].nome, '123');
+  assert.equal(r.nomes[0].em, '28/08/2026');
+  // Nome com espaço e com acento inteiro, não partido.
+  assert.ok(r.nomes.some((n) => n.nome === 'DeepSea simulator'));
+  assert.ok(r.nomes.some((n) => n.nome === 'To nervoso irmão'));
+  // Nome que é só um número continua a ser um nome — aqui não há ano nenhum
+  // a confundir, a data está na sua própria célula.
+  assert.ok(r.nomes.some((n) => n.nome === '1'));
+});
+
+test('o total declarado no título é lido, e denuncia a lista paginada', () => {
+  const r = lerNomesDaPagina(paginaHistorico(LINHAS));
+  assert.equal(r.total, 133, '"(133)" é quantos nomes a conta tem');
+  assert.ok(r.nomes.length < r.total, 'a página 1 traz 10 de 133 — é isto que manda ir ao /history/0/');
+});
+
+test('a paginação não vira nome', () => {
+  const r = lerNomesDaPagina(paginaHistorico(LINHAS));
+  for (const n of r.nomes) {
+    assert.ok(!/Go to page|per page|of 14/i.test(n.nome), `"${n.nome}" é o rodapé da tabela`);
+  }
+});
+
+// A data completa é o que o steamhistory dá a mais. "Voltou ao nome" deixa
+// de ser "nalgum ano" e passa a ser datável.
+test('a data com dia sobrevive até a regra do nome principal', () => {
+  const { ordenarPorIdentidade } = require('../src/nome-principal');
+  const r = lerNomesDaPagina(paginaHistorico([
+    ...LINHAS, ['Joaozinho', '11/03/2015, 09:00:00'],
+  ]));
+  const j = ordenarPorIdentidade(r.nomes).find((x) => x.nome === 'Joaozinho');
+  assert.deepEqual(j.anosUsados, [2015, 2026], 'o ano sai da data em dd/mm/aaaa');
+  assert.ok(j.voltou, 'usou em 2015, largou, e voltou em 2026');
+});

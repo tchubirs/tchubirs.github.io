@@ -69,7 +69,12 @@ if (estranha || sobra.length) {
 const FONTES = process.env.DETETIVE_NOMES_URL
   // Endereço fixo para eu poder provar o caminho do navegador contra uma
   // página local, sem depender de alcançar o site de fora.
-  ? [{ nome: 'teste', urls: (id) => [process.env.DETETIVE_NOMES_URL.replace('{id}', id)] }]
+  // Aceita vários endereços separados por vírgula, na mesma ordem em que o
+  // comando os tentaria. É assim que eu provo, com um servidor local, que
+  // ele fica com o melhor dos dois e não com o primeiro que respondeu.
+  ? [{ nome: 'teste',
+    urls: (id) => process.env.DETETIVE_NOMES_URL.split(',')
+      .map((u) => u.trim().replace('{id}', id)).filter(Boolean) }]
   // Duas fontes, porque UMA prova diz que uma só não chega.
   //
   // MEDIDO por mim, na API do steamid.uk com o plano dele ativo:
@@ -96,21 +101,53 @@ const FONTES = process.env.DETETIVE_NOMES_URL
   // não sei o formato do endereço nem se a página mostra a lista. Se der,
   // ótimo; se não, o comando diz o que encontrou em vez de fingir.
   //
-  // steamid.uk primeiro: é onde ele paga, e é a única que eu confirmei ter
-  // os dados (343 nomes na base, ainda que a API não os liste).
+  // steamhistory.net primeiro, e a ordem mudou por MEDIÇÃO dele, não por
+  // gosto. Ele mandou o retrato da página com o endereço certo:
+  //
+  //     /id/<steamid>            → 133 nomes, mas 10 por página (14 páginas)
+  //     /history/0/<steamid>     → a lista inteira, é para onde o "View All" vai
+  //
+  // Eu tinha adivinhado o `/id/` — e por isso vinham só 10. O `/history/0/`
+  // eu não teria descoberto: não é derivável do primeiro.
+  //
+  // Por que passa à frente do steamid.uk, apesar de ele pagar o steamid.uk:
+  //
+  //   - dá o DIA E A HORA ("28/08/2026, 05:52:04"), não só o ano. Isso muda
+  //     a qualidade do sinal: "voltou ao nome" passa a ser datável.
+  //   - não pede login para mostrar a lista inteira.
+  //   - o steamid.uk devolve `optout=1` em 3 das 4 contas de teste dele, e
+  //     pagar não desfaz isso. Nessas contas ele é cego, e esta não é.
+  //
+  // O steamid.uk continua a ser consultado — ver `incompleto()` abaixo: uma
+  // lista cortada não conta como resposta, e o comando segue para a outra
+  // fonte em vez de parar contente com metade.
   : [
-    { nome: 'steamid.uk', urls: (id) => [`https://steamid.uk/profile/${id}`] },
-    // Não sei o formato exato do endereço deles — o Cloudflare me barra e
-    // nunca cheguei a ver. Tento os prováveis e digo qual respondeu, em vez
-    // de fingir que sei.
     { nome: 'steamhistory.net',
       urls: (id) => [
+        // O "View All" da página dele aponta para aqui. Ir direto poupa o
+        // clique e não depende do botão estar escrito em inglês.
+        `https://steamhistory.net/history/0/${id}`,
         `https://steamhistory.net/id/${id}`,
-        `https://steamhistory.net/profile/${id}`,
-        `https://steamhistory.net/steamid/${id}`,
-        `https://steamhistory.net/user/${id}`,
       ] },
+    { nome: 'steamid.uk', urls: (id) => [`https://steamid.uk/profile/${id}`] },
   ];
+
+/**
+ * A resposta chegou pela metade?
+ *
+ * Isto existe porque "achei nomes" não é o mesmo que "achei os nomes". O
+ * steamid.uk deslogado devolve 3 de 344 e, sem esta verificação, o comando
+ * dava-se por satisfeito e nunca tentava a segunda fonte — que tinha a lista
+ * inteira. Meia resposta que interrompe a busca é pior que resposta nenhuma.
+ */
+function incompleto(r) {
+  if (!r?.nomes?.length) return true;
+  if (r.cortados > 0) return true;
+  // A própria página anuncia quantos são. Ler menos que isso é paginação
+  // que eu não segui, ou lista cortada — nos dois casos, falta.
+  if (r.total && r.nomes.length < r.total) return true;
+  return false;
+}
 
 (async () => {
   let chromium;
@@ -271,7 +308,15 @@ const FONTES = process.env.DETETIVE_NOMES_URL
       let r = null;
       try { r = await tentar(url); }
       catch (e) { continue; }                    // endereço errado: próximo
-      if (r?.nomes?.length) { ok = { fonte: fonte.nome, url, ...r }; break; }
+      if (r?.nomes?.length) {
+        const este = { fonte: fonte.nome, url, ...r };
+        // Fico com o melhor entre os endereços da mesma fonte. O `/id/` do
+        // steamhistory dá 10 nomes paginados e o `/history/0/` dá os 133 —
+        // parar no primeiro que responde ficaria com os 10.
+        if (!ok || este.nomes.length > ok.nomes.length) ok = este;
+        if (!incompleto(ok)) break;              // completo: não há melhor
+        continue;                                 // incompleto: tenta o próximo
+      }
       if (r?.cloudflare) { ultimoRetrato = { fonte: fonte.nome, url, ...r }; break; }
       if (r?.limitado) { ultimoRetrato = { fonte: fonte.nome, url, ...r }; break; }
       if (r?.retrato) ultimoRetrato = ultimoRetrato || { fonte: fonte.nome, url, ...r };
@@ -280,9 +325,11 @@ const FONTES = process.env.DETETIVE_NOMES_URL
       console.log(`✓ ${ok.nomes.length} nomes${ok.total ? ` (a página diz ${ok.total})` : ''}${
         ok.cortados ? ` · ${ok.cortados} vieram cortados` : ''}`);
       achados.push(ok);
-      // Sem --tudo, a primeira que responder basta. Com --tudo, sigo para
-      // juntar: são bancos diferentes, e a união é maior que qualquer um.
-      if (!TUDO) break;
+      // Sem --tudo, a primeira que responder INTEIRA basta. Uma lista
+      // cortada não encerra a busca: é justamente quando a segunda fonte
+      // vale mais. Com --tudo sigo sempre, para juntar os dois bancos.
+      if (!TUDO && !incompleto(ok)) break;
+      if (!TUDO) console.log('    (veio incompleta — vou tentar a outra fonte)');
     } else if (ultimoRetrato?.fonte === fonte.nome && ultimoRetrato.limitado) {
       console.log(`⚠ ${ultimoRetrato.erro}${ultimoRetrato.totalDito ? ` — admite ${ultimoRetrato.totalDito} nomes` : ''}`);
     } else if (ultimoRetrato?.fonte === fonte.nome && ultimoRetrato.cloudflare) {
