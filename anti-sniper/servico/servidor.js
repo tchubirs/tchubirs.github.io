@@ -549,6 +549,15 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
     // janela antes de atacar é o comportamento, não a exceção.
     const naLive = esteveNa(canalId, 'live', tMs);
     if (!naLive.length) return [];
+    // Entrar e sair várias vezes em poucos minutos é sinal por si só: é
+    // alguém CONFERINDO a tela, não assistindo. O índice guarda a estada
+    // mais recente de cada pessoa (a lista vem por fim_em DESC), então a
+    // contagem tem de vir daqui, senão a linha em destaque diz "3 min" e
+    // esconde que foram três idas e vindas em catorze minutos.
+    const idasEVindas = new Map();
+    for (const e of naLive) {
+      idasEVindas.set(e.nome, (idasEVindas.get(e.nome) || 0) + 1);
+    }
     const idx = new Indice(naLive);
     const fora = [];
     for (const j of agoraNa(canalId, 'servidor', tMs)) {
@@ -568,6 +577,7 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
         motivo: r.motivo,
         naLiveDesde: r.entrada.desde,
         naLiveMinutos: r.entrada.minutos,
+        naLiveVisitas: idasEVindas.get(r.entrada.nome) || 1,
         // A fonte viaja junto: sem ela o painel não sabe se "12 min" veio
         // do relógio da presença ou de um bloco de 10 min da fidelidade, e
         // acaba dizendo "calado há 12 min" de quem está com a live aberta.

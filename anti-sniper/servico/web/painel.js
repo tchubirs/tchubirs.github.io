@@ -132,6 +132,8 @@ function desenharDois(lista, onde) {
         ? 'esteve' : 'está'} na live desde <b>${hora(a.naLiveDesde)}</b>
         (${a.naLiveMinutos} min, ${estadoDois(a)}) · no servidor desde
         <b>${hora(a.noServidorDesde)}</b> (${a.noServidorMinutos} min)</div>
+      ${a.naLiveVisitas > 1 ? `<div class="duvida vaievem">Entrou e saiu
+        <b>${a.naLiveVisitas}×</b> nos últimos 15 min.</div>` : ''}
       ${a.confianca < 0.95 ? `<div class="duvida">Nome <b>parecido</b>, não idêntico —
         ${esc(a.motivo)}. Pode ser outra pessoa.</div>` : ''}
       ${quemE(a)}

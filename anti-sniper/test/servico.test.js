@@ -1163,3 +1163,24 @@ test('a resposta do Discord diz a régua do tempo, não só o número', () => {
   const bloco = d.formatar(s2.consultar('c1', 'FINIK')).content;
   assert.match(bloco, /bloco de ~10 min/, 'bloco não pode se passar por medida');
 });
+
+// Entrar e sair várias vezes em poucos minutos é sinal por si só: é alguém
+// CONFERINDO a tela, não assistindo.
+test('idas e vindas na janela viram uma linha só, com a contagem', () => {
+  const s = bancada();
+  s.receberPresenca('c1', [
+    { tipo: 'entrou', em: T - 14 * MIN, id: '1', nome: 'diper' },
+    { tipo: 'saiu', em: T - 12 * MIN, id: '1', nome: 'diper' },
+    { tipo: 'entrou', em: T - 9 * MIN, id: '1', nome: 'diper' },
+    { tipo: 'saiu', em: T - 7 * MIN, id: '1', nome: 'diper' },
+    { tipo: 'entrou', em: T - 3 * MIN, id: '1', nome: 'diper' },
+  ]);
+  s.guardarServidor('c1', { nome: 'Srv' }, [{ nome: 'D1per', bmId: '9' }], T);
+  const r = s.nosDois('c1', T);
+  assert.equal(r.length, 1, 'a mesma pessoa não pode virar três linhas');
+  assert.equal(r[0].naLiveVisitas, 3);
+  // A estada mostrada é a MAIS RECENTE — dizer "desde 14 min atrás" quando
+  // ela saiu e voltou duas vezes seria emendar visitas separadas.
+  assert.equal(r[0].naLiveAberta, true);
+  assert.equal(r[0].naLiveDesde, T - 3 * MIN);
+});
