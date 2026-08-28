@@ -44,6 +44,8 @@ const JANELA_MS = 10 * 60 * 1000;
  * No servidor, o agente lê a cada ~90s, então 5 min já é ausência de verdade.
  */
 const GAP = { live: 15 * 60 * 1000, servidor: 5 * 60 * 1000 };
+/** As fontes que observam a SAÍDA. Para as outras, "saiu" é palpite. */
+const PRESENCA_FONTE = new Set(['presenca', 'presenca-parcial']);
 
 function verificar(cabecalhos, corpoBruto, chavePem = CHAVE_KICK, agoraMs = Date.now()) {
   const pega = (n) => cabecalhos[n] ?? cabecalhos[n.toLowerCase()];
@@ -89,7 +91,7 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
   const ultimaEstada = db.prepare(
     'SELECT * FROM estada WHERE canal_id = ? AND onde = ? AND nome_norm = ? ORDER BY fim_em DESC LIMIT 1');
   const abrirEstada = db.prepare(
-    'INSERT INTO estada (canal_id, onde, nome_norm, nome, inicio_em, fim_em, amostras, onde_extra, fonte, ref) VALUES (?,?,?,?,?,?,1,?,?,?)');
+    'INSERT INTO estada (canal_id, onde, nome_norm, nome, inicio_em, fim_em, amostras, onde_extra, fonte, ref, aberta) VALUES (?,?,?,?,?,?,1,?,?,?,?)');
   const esticarEstada = db.prepare(
     "UPDATE estada SET fim_em = ?, nome = ?, amostras = amostras + 1, ref = COALESCE(?, ref), fonte = CASE WHEN fonte = ? THEN fonte ELSE 'ambos' END WHERE id = ?");
 
@@ -114,7 +116,77 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
     // Evento fora de ordem dentro de um intervalo já conhecido: não abre
     // sessão nova, senão a linha do tempo ganha buracos que não existiram.
     if (u && tMs >= u.inicio_em && tMs <= u.fim_em) return;
-    abrirEstada.run(canalId, onde, norm, nome, tMs, tMs, extra, fonte, ref);
+    abrirEstada.run(canalId, onde, norm, nome, tMs, tMs, extra, fonte, ref, 0);
+  }
+
+  const fecharEstadaAberta = db.prepare(
+    'UPDATE estada SET fim_em = ?, amostras = amostras + 1, aberta = ? WHERE id = ?');
+
+  /**
+   * Um intervalo com começo e fim EXATOS, vindo de uma fonte que sabe os
+   * dois — o canal de presença da Kick avisa a entrada e a saída no
+   * instante em que acontecem.
+   *
+   * Diferente de `ver()`, que junta pontos soltos e precisa adivinhar onde
+   * uma visita termina. Aqui não há o que adivinhar, e arredondar para os
+   * blocos da outra fonte jogaria fora justamente a precisão que ele pediu.
+   */
+  function verIntervalo(canalId, onde, nome, de, ate, fonte = 'presenca', ref = null, aberta = 0) {
+    const norm = normalizar(nome);
+    if (!norm || !(ate >= de)) return null;
+    const u = ultimaEstada.get(canalId, onde, norm);
+    // Continuação exata do mesmo intervalo (a saída chegando depois da
+    // entrada já gravada): estica em vez de abrir uma linha nova.
+    if (u && de <= u.fim_em && ate >= u.fim_em && u.fonte === fonte) {
+      fecharEstadaAberta.run(ate, aberta, u.id);
+      return u.id;
+    }
+    abrirEstada.run(canalId, onde, norm, nome, de, ate, null, fonte, ref, aberta);
+    return db.prepare('SELECT last_insert_rowid() AS id').get().id;
+  }
+
+  /**
+   * Recebe os eventos do canal de presença e vira linha do tempo.
+   *
+   * A entrada sozinha já grava um intervalo de duração zero: se a gravação
+   * cair antes da saída, fica registrado que a pessoa esteve ali — melhor
+   * que perder a visita inteira por não ter visto o fim.
+   */
+  const entradasAbertas = new Map();
+
+  function receberPresenca(canalId, eventos) {
+    let entrou = 0; let saiu = 0;
+    for (const e of eventos || []) {
+      if (!e?.nome || !e?.em) continue;
+      const chave = `${canalId}|${e.id ?? e.nome}`;
+      if (e.tipo === 'entrou' || e.tipo === 'ja-estava') {
+        // "já estava" NÃO é entrada: a pessoa pode estar ali há horas, e
+        // fingir que chegou agora inventaria um horário.
+        // aberta = 1: está DENTRO até a saída chegar.
+        const id = verIntervalo(canalId, 'live', e.nome, e.em, e.em,
+          e.tipo === 'entrou' ? 'presenca' : 'presenca-parcial', null, 1);
+        entradasAbertas.set(chave, { id, de: e.em, nome: e.nome, tipo: e.tipo });
+        // Entra na audiência JÁ na entrada, não só na saída. Quem está
+        // assistindo agora e nunca escreveu ficava fora da lista cruzada
+        // até fechar a live — justamente a pessoa que este produto existe
+        // para enxergar. `jaTemEstada`: o intervalo acima já é o registro
+        // bom; aqui só a linha da audiência.
+        registrarPresenca(canalId, e.nome, e.id ?? null, e.em, 'presenca', true);
+        entrou += 1;
+      } else if (e.tipo === 'saiu') {
+        const a = entradasAbertas.get(chave);
+        entradasAbertas.delete(chave);
+        // Saída sem entrada conhecida não vira visita: não sei quando
+        // começou, e chutar um começo é inventar.
+        if (!a) continue;
+        // aberta = 0: a saída foi OBSERVADA, não é palpite.
+        verIntervalo(canalId, 'live', e.nome, a.de, e.em,
+          a.tipo === 'entrou' ? 'presenca' : 'presenca-parcial', null, 0);
+        registrarPresenca(canalId, e.nome, null, e.em, 'presenca', true);
+        saiu += 1;
+      }
+    }
+    return { entrou, saiu, abertas: entradasAbertas.size };
   }
 
   const pegarNomeVisto = db.prepare('SELECT * FROM nome_visto WHERE ref = ? AND nome_norm = ?');
@@ -329,14 +401,80 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
     return listarEstadas.all(canalId, onde, norm).map((e) => ({
       de: e.inicio_em, ate: e.fim_em,
       minutos: Math.max(1, Math.round((e.fim_em - e.inicio_em) / 60000)),
+      // Em segundos também: a fonte de presença sabe o instante exato, e
+      // arredondar para minuto apagaria a resposta que ele pediu.
+      segundos: Math.round((e.fim_em - e.inicio_em) / 1000),
       amostras: e.amostras, servidor: e.onde_extra, fonte: e.fonte || 'chat',
       bmId: e.ref || null,
       perfil: e.ref ? `https://www.battlemetrics.com/players/${e.ref}` : null,
     }));
   }
 
-  const naJanela = db.prepare(
-    'SELECT * FROM estada WHERE canal_id = ? AND onde = ? AND fim_em >= ? ORDER BY fim_em DESC');
+  /**
+   * O tempo assistido MEDIDO, quando existe medida.
+   *
+   * O contador de blocos da fidelidade cresce de 10 em 10 minutos. Para
+   * quem a presença acompanhou, isso é grosseiro a ponto de mentir: uma
+   * visita de 4min22s virava "assistiu 0h10" — mais que o dobro, embaixo do
+   * nome de uma pessoa real. É exatamente o erro que ele me pegou fazendo,
+   * e a medida certa já estava gravada ao lado, em `estada`.
+   *
+   * Devolve `null` quando não há medida nenhuma; quem chama cai no bloco e
+   * DIZ que é bloco. Um número sem a fonte junto é o que produz a leitura
+   * errada.
+   */
+  const somaMedida = db.prepare(`
+    SELECT SUM(CASE WHEN aberta = 1 THEN ? - inicio_em ELSE fim_em - inicio_em END) AS ms,
+           COUNT(*) AS visitas, MIN(inicio_em) AS de, MAX(fim_em) AS ate
+      FROM estada
+     WHERE canal_id = ? AND onde = 'live' AND nome_norm = ?
+       AND fonte IN ('presenca','presenca-parcial')`);
+
+  function tempoAssistido(canalId, nome, blocos, tMs) {
+    const m = somaMedida.get(tMs, canalId, normalizar(nome));
+    if (m?.visitas) {
+      return {
+        minutosAssistidos: Math.round(m.ms / 60000),
+        segundosAssistidos: Math.round(m.ms / 1000),
+        visitas: m.visitas,
+        exato: true,
+      };
+    }
+    return {
+      minutosAssistidos: Math.round((blocos * BLOCO_MS) / 60000),
+      segundosAssistidos: null,
+      visitas: null,
+      exato: false,
+    };
+  }
+
+  /**
+   * Quando chegou o último evento de presença deste canal.
+   *
+   * O painel precisa disto para não repetir o aviso laranja de "só aparece
+   * quem escreveu no chat" numa live em que a presença está gravando ao
+   * segundo — o aviso estaria mentindo, e o aviso errado é pior que aviso
+   * nenhum: ensina a desconfiar do que está certo.
+   */
+  const maxPresenca = db.prepare(`
+    SELECT MAX(fim_em) AS em, COUNT(*) AS n FROM estada
+     WHERE canal_id = ? AND fonte IN ('presenca','presenca-parcial')`);
+
+  function ultimaPresenca(canalId) {
+    const r = maxPresenca.get(canalId);
+    if (!r?.n) return null;
+    return { em: r.em, visitas: r.n };
+  }
+
+  // Fonte que sabe a saída manda; fonte de pontos soltos usa a folga.
+  // Misturar as duas mantinha na tela alguém que já tinha ido embora.
+  const naJanela = db.prepare(`
+    SELECT * FROM estada
+     WHERE canal_id = ? AND onde = ?
+       AND CASE WHEN fonte IN ('presenca','presenca-parcial')
+                THEN aberta = 1
+                ELSE fim_em >= ? END
+     ORDER BY fim_em DESC`);
 
   /**
    * Quem está na live AGORA — visto dentro do gap.
@@ -344,21 +482,54 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
    * É a lista da página principal: o que dá para responder antes de alguém
    * perguntar qualquer coisa.
    */
-  function agoraNa(canalId, onde, tMs) {
-    return naJanela.all(canalId, onde, tMs - GAP[onde]).map((e) => ({
+  // Quem esteve na live há pouco, tenha saído ou não.
+  //
+  // Diferente de `naJanela`: aqui a saída OBSERVADA não elimina a pessoa,
+  // só marca quando foi. É o caso que ele descreveu — "sei que ele ficou 5
+  // minutos no máximo na minha live" —, o sniper que assiste, FECHA a
+  // janela e só então ataca. Exigir que ainda esteja dentro é justamente
+  // deixar passar quem se comporta como sniper.
+  const naJanelaLarga = db.prepare(`
+    SELECT * FROM estada
+     WHERE canal_id = ? AND onde = ?
+       AND (aberta = 1 OR fim_em >= ?)
+     ORDER BY fim_em DESC`);
+
+  function linhaDeEstada(e, tMs) {
+    const aberta = e.aberta === 1;
+    // Uma visita AINDA ABERTA tem fim_em igual ao início: o fim só chega
+    // quando a saída chega. Medir a duração entre os dois dava 1 min para
+    // quem está lá há 12 — o tipo de número errado que ele já me pegou
+    // mostrando. Enquanto está aberta, o fim é AGORA.
+    const ate = aberta ? Math.max(e.fim_em, tMs) : e.fim_em;
+    return {
       nome: e.nome,
       bmId: e.ref || null,
       perfil: e.ref ? `https://www.battlemetrics.com/players/${e.ref}` : null,
       servidor: e.onde_extra || null,
       desde: e.inicio_em,
       ultimoSinal: e.fim_em,
-      minutos: Math.max(1, Math.round((e.fim_em - e.inicio_em) / 60000)),
+      minutos: Math.max(1, Math.round((ate - e.inicio_em) / 60000)),
+      segundos: Math.round((ate - e.inicio_em) / 1000),
       sinais: e.amostras,
       fonte: e.fonte || 'chat',
-      // Quanto tempo faz que ela não dá sinal. Alguém 12 min calado ainda
-      // conta como presente, mas quem olha precisa ver a diferença.
+      aberta,
+      // Quanto tempo faz que ela não dá sinal. Só quer dizer "silêncio"
+      // para as fontes que escutam o chat; a presença não escuta nada,
+      // ela vê a janela abrir e fechar.
       calada: Math.round((tMs - e.fim_em) / 60000),
-    }));
+    };
+  }
+
+  /** Esteve na live nos últimos `janela` ms — inclusive quem já saiu. */
+  function esteveNa(canalId, onde, tMs, janela = GAP[onde]) {
+    return naJanelaLarga.all(canalId, onde, tMs - janela)
+      .map((e) => linhaDeEstada(e, tMs));
+  }
+
+  function agoraNa(canalId, onde, tMs) {
+    return naJanela.all(canalId, onde, tMs - GAP[onde])
+      .map((e) => linhaDeEstada(e, tMs));
   }
 
   /**
@@ -374,7 +545,9 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
    * fica para a consulta de uma pessoa só.
    */
   function nosDois(canalId, tMs, { minimo = 0.7 } = {}) {
-    const naLive = agoraNa(canalId, 'live', tMs);
+    // Quem esteve na live há pouco, e não só quem ainda está: fechar a
+    // janela antes de atacar é o comportamento, não a exceção.
+    const naLive = esteveNa(canalId, 'live', tMs);
     if (!naLive.length) return [];
     const idx = new Indice(naLive);
     const fora = [];
@@ -395,6 +568,16 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
         motivo: r.motivo,
         naLiveDesde: r.entrada.desde,
         naLiveMinutos: r.entrada.minutos,
+        // A fonte viaja junto: sem ela o painel não sabe se "12 min" veio
+        // do relógio da presença ou de um bloco de 10 min da fidelidade, e
+        // acaba dizendo "calado há 12 min" de quem está com a live aberta.
+        naLiveFonte: r.entrada.fonte,
+        naLiveAberta: r.entrada.aberta,
+        // Há quantos minutos fechou a live. `null` = ainda está dentro.
+        // Só a presença sabe disto; para as outras fontes fica null porque
+        // elas não observam saída nenhuma.
+        saiuHa: (!r.entrada.aberta && PRESENCA_FONTE.has(r.entrada.fonte))
+          ? Math.round((tMs - r.entrada.ultimoSinal) / 60000) : null,
         caladaHa: r.entrada.calada,
         noServidorDesde: j.desde,
         noServidorMinutos: j.minutos,
@@ -418,13 +601,28 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
       }
     }
     linhas.sort((a, b) => a.de - b.de);
+    const naLive = linhas.filter((l) => l.onde === 'live');
+    const noServidor = linhas.filter((l) => l.onde === 'servidor');
+    // Somar SEGUNDOS, não minutos já arredondados. Duas visitas de 4min51s
+    // e 4min38s viravam 5 + 5 = "0h10" no resumo, contradizendo as próprias
+    // linhas logo abaixo, que mostravam 9min29s. O arredondamento tem que
+    // acontecer uma vez, no fim — nunca antes da soma.
+    const seg = (l) => l.reduce((t, x) => t + (x.segundos ?? x.minutos * 60), 0);
+    const exatas = naLive.filter((l) => l.fonte === 'presenca' || l.fonte === 'presenca-parcial');
     return {
       nome,
       total: linhas.length,
+      entradasNaLive: naLive.length,
+      vezesNoServidor: noServidor.length,
       // Do mais recente para trás: é o que se quer ver primeiro.
       linhas: linhas.slice(-limite).reverse(),
-      minutosNaLive: linhas.filter((l) => l.onde === 'live').reduce((t, l) => t + l.minutos, 0),
-      minutosNoServidor: linhas.filter((l) => l.onde === 'servidor').reduce((t, l) => t + l.minutos, 0),
+      segundosNaLive: seg(naLive),
+      segundosNoServidor: seg(noServidor),
+      minutosNaLive: Math.round(seg(naLive) / 60),
+      minutosNoServidor: Math.round(seg(noServidor) / 60),
+      // O resumo só pode se dizer exato quando TODAS as visitas são exatas:
+      // uma só vinda de bloco já contamina o total.
+      exatoNaLive: naLive.length > 0 && exatas.length === naLive.length,
     };
   }
 
@@ -466,11 +664,17 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
     };
   }
 
-  function registrarPresenca(canalId, nome, usuarioId, tMs, fonte = 'chat') {
+  /**
+   * @param {boolean} [jaTemEstada] quem já gravou o intervalo por conta
+   *        própria não deve gravar de novo por ponto: a segunda gravação
+   *        marca a estada como vinda de DUAS fontes e o log passa a mentir
+   *        sobre a origem do sinal.
+   */
+  function registrarPresenca(canalId, nome, usuarioId, tMs, fonte = 'chat', jaTemEstada = false) {
     if (!nome) return;
     const norm = normalizar(nome);
     if (!norm) return;
-    ver(canalId, 'live', nome, tMs, null, fonte);
+    if (!jaTemEstada) ver(canalId, 'live', nome, tMs, null, fonte);
     const p = pegarPresenca.get(canalId, norm);
     if (!p) {
       inserirPresenca.run(canalId, nome, norm, usuarioId ?? null, tMs, tMs, tMs);
@@ -557,12 +761,12 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
   function cruzarAgora(canalId, { minimo = 0.7 } = {}) {
     const c = cacheCruz.get(canalId);
     if (c && c.versao === versaoServidor && c.minimo === minimo) return c.achados;
-    const achados = cruzarDeVerdade(canalId, minimo);
+    const achados = cruzarDeVerdade(canalId, minimo, agora());
     cacheCruz.set(canalId, { versao: versaoServidor, minimo, achados });
     return achados;
   }
 
-  function cruzarDeVerdade(canalId, minimo) {
+  function cruzarDeVerdade(canalId, minimo, tMs) {
     // Por índice, não varrendo. Um servidor cheio tem 1.500 jogadores e a
     // audiência de um canal antigo passa de 5.000 — varrer é 7,5 MILHÕES de
     // comparações por leitura, e o agente lê a cada 90s. Medido antes de
@@ -578,7 +782,7 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
         espectador: r.entrada.nome,
         confianca: r.confianca,
         motivo: r.motivo,
-        minutosAssistidos: Math.round((r.entrada.blocos * BLOCO_MS) / 60000),
+        ...tempoAssistido(canalId, r.entrada.nome, r.entrada.blocos, tMs),
         jogador: j.nome,
         minutosNoServidor: j.minutos,
         servidor: j.servidor,
@@ -647,7 +851,7 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
           espectador: p.nome,
           confianca: c.confianca,
           motivo: c.motivo,
-          minutosAssistidos: Math.round((p.blocos * BLOCO_MS) / 60000),
+          ...tempoAssistido(canalId, p.nome, p.blocos, agora()),
           primeiraVezEm: p.primeira_em,
           ultimaVezEm: p.ultima_em,
           naLive: estadas(canalId, 'live', p.nome),
@@ -788,15 +992,19 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
         naLive: agoraNa(canalId, 'live', t),
         noServidor: agoraNa(canalId, 'servidor', t),
         nosDois: nosDois(canalId, t),
-        // Cobertura, dita na cara: sem coleta ligada só existe quem
-        // escreve, e o painel não pode deixar isso implícito.
         // Cobertura, dita na cara. Ele apontou o que derruba o produto se
         // ficar implícito: "nenhum stream sniper fala no chat". O chat vê
         // só quem escreve, e o sniper é justamente quem não escreve.
+        //
+        // `presenca` é MEDIDA, não configurada: é o instante do último
+        // evento que realmente chegou. Uma flag de "liguei o gravador" iria
+        // mentir na hora em que ele mais importa — quando o gravador caiu
+        // no meio da live e ninguém percebeu.
         coleta: {
           ligada: coletores.get(canalId)?.ligado === true
             || coletores.get(`alvos:${canalId}`)?.ligado === true,
           fonte: c?.se_canal || null,
+          presenca: ultimaPresenca(canalId),
         },
       });
     }
@@ -806,6 +1014,21 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
       const nome = url.searchParams.get('nome');
       if (!canalId || !nome) return responder(400, { erro: 'informe canal e nome' });
       return responder(200, { ...log(canalId, nome), fuso: fusoDoCanal(canalId) });
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/presenca') {
+      const pedacos = [];
+      req.on('data', (c) => pedacos.push(c));
+      req.on('end', () => {
+        let corpo;
+        try { corpo = JSON.parse(Buffer.concat(pedacos).toString('utf8')); }
+        catch { return responder(400, { erro: 'json inválido' }); }
+        if (!corpo?.canal || !Array.isArray(corpo.eventos)) {
+          return responder(400, { erro: 'informe canal e eventos' });
+        }
+        responder(200, receberPresenca(corpo.canal, corpo.eventos));
+      });
+      return;
     }
 
     if (req.method === 'POST' && url.pathname === '/api/fidelidade') {
@@ -830,7 +1053,7 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
         canal: canalId,
         audiencia: listarPresenca.all(canalId).map((p) => ({
           nome: p.nome,
-          minutosAssistidos: Math.round((p.blocos * BLOCO_MS) / 60000),
+          ...tempoAssistido(canalId, p.nome, p.blocos, agora()),
           primeiraVezEm: p.primeira_em,
           ultimaVezEm: p.ultima_em,
         })),
@@ -872,7 +1095,8 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
   return { servidor, db, ingerir, consultar, procurar, registrarPresenca, verificar,
            guardarServidor, cruzarAgora, ver, estadas, momento, agoraNa, nosDois, log, fusoDoCanal,
            ligarColeta, ligarAlvos, ligarBotrixPublico, pararColeta, coletores, receberFidelidade,
-           listarFontes, guardarFonte, verNome, nomesDe, quemUsou, importarNomes };
+           listarFontes, guardarFonte, verNome, nomesDe, quemUsou, importarNomes,
+           verIntervalo, receberPresenca };
 }
 
 module.exports = { criar, verificar, CHAVE_KICK, BLOCO_MS };

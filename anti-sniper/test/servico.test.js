@@ -873,3 +873,293 @@ test('importar duas vezes não duplica, e mantém a data mais antiga', () => {
         'ficou com a data mais antiga das duas');
     });
 });
+
+// ── Presença ao segundo ───────────────────────────────────────────────────
+// "Tem que ser mais preciso, exatamente até os segundos, sei que ele ficou 5
+// minutos no máximo." O canal de presença da Kick sabe a entrada E a saída,
+// então aqui não há gap para adivinhar — arredondar jogaria fora a precisão.
+
+const S = 1000;
+
+test('entrada e saída viram intervalo com os segundos exatos', () => {
+  const s = bancada();
+  const de = T; const ate = T + 278 * S;   // 4 min 38 s
+  s.receberPresenca('c1', [
+    { tipo: 'entrou', em: de, id: '99', nome: 'dilanzito' },
+    { tipo: 'saiu', em: ate, id: '99', nome: 'dilanzito' },
+  ]);
+  const l = s.log('c1', 'dilanzito').linhas;
+  assert.equal(l.length, 1);
+  assert.equal(l[0].de, de);
+  assert.equal(l[0].ate, ate);
+  assert.equal(l[0].fonte, 'presenca');
+});
+
+test('a entrada sozinha já grava — gravação que cai não perde a visita', () => {
+  const s = bancada();
+  s.receberPresenca('c1', [{ tipo: 'entrou', em: T, id: '1', nome: 'x' }]);
+  const l = s.log('c1', 'x').linhas;
+  assert.equal(l.length, 1, 'existe registro mesmo sem ter visto a saída');
+  assert.equal(l[0].de, l[0].ate, 'e não inventa uma hora de saída');
+});
+
+test('"já estava" é marcado diferente de "entrou"', () => {
+  // Quem já estava dentro pode estar ali há horas. Tratar como entrada
+  // inventaria o horário — o erro que ele me pegou duas vezes.
+  const s = bancada();
+  s.receberPresenca('c1', [
+    { tipo: 'ja-estava', em: T, id: '1', nome: 'antigo' },
+    { tipo: 'saiu', em: T + 60 * S, id: '1', nome: 'antigo' },
+  ]);
+  assert.equal(s.log('c1', 'antigo').linhas[0].fonte, 'presenca-parcial');
+});
+
+test('saída sem entrada conhecida NÃO vira visita', () => {
+  // Não sei quando começou, e chutar um começo é inventar duração.
+  const s = bancada();
+  const r = s.receberPresenca('c1', [{ tipo: 'saiu', em: T, id: '404', nome: 'fantasma' }]);
+  assert.equal(r.saiu, 0);
+  assert.equal(s.log('c1', 'fantasma').total, 0);
+});
+
+test('entrar e sair várias vezes vira várias linhas, não uma esticada', () => {
+  const s = bancada();
+  const b = T;
+  for (const [e, x] of [[0, 240], [3060, 3540]]) {
+    s.receberPresenca('c1', [
+      { tipo: 'entrou', em: b + e * S, id: '1', nome: 'ele' },
+      { tipo: 'saiu', em: b + x * S, id: '1', nome: 'ele' },
+    ]);
+  }
+  const l = s.log('c1', 'ele').linhas;
+  assert.equal(l.length, 2, '47 min entre uma e outra é visita nova');
+  assert.deepEqual(l.map((x) => Math.round((x.ate - x.de) / 1000)).sort((a, b2) => a - b2), [240, 480]);
+});
+
+test('5 minutos NÃO viram 10 — é o ponto de existir esta fonte', () => {
+  const s = bancada();
+  s.receberPresenca('c1', [
+    { tipo: 'entrou', em: T, id: '1', nome: 'curto' },
+    { tipo: 'saiu', em: T + 290 * S, id: '1', nome: 'curto' },
+  ]);
+  const l = s.log('c1', 'curto').linhas[0];
+  assert.equal(Math.round((l.ate - l.de) / 1000), 290);
+  assert.ok(l.ate - l.de < 10 * 60 * 1000, 'menos que um bloco da BotRix');
+});
+
+test('/api/presenca recebe do gravador pelo HTTP', async () => {
+  const s = bancada();
+  await new Promise((ok) => s.servidor.listen(0, '127.0.0.1', ok));
+  const base = `http://127.0.0.1:${s.servidor.address().port}/api/presenca`;
+  const post = (b) => fetch(base, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(b) });
+  try {
+    const r = await (await post({ canal: 'c1', eventos: [
+      { tipo: 'entrou', em: T, id: '1', nome: 'a' },
+      { tipo: 'saiu', em: T + 60 * S, id: '1', nome: 'a' },
+    ] })).json();
+    assert.equal(r.entrou, 1);
+    assert.equal(r.saiu, 1);
+    assert.equal(s.log('c1', 'a').total, 1);
+    assert.equal((await post({ canal: 'c1' })).status, 400);
+  } finally {
+    await new Promise((ok) => s.servidor.close(ok));
+  }
+});
+
+// Quem AINDA está dentro entra no "na live agora" e no cruzamento.
+test('a presença em aberto entra no "na live agora" e no cruzamento', () => {
+  const s = bancada();
+  s.receberPresenca('c1', [
+    { tipo: 'entrou', em: T - 5 * 60000, id: '1', nome: 'diper' },
+  ]);
+  s.guardarServidor('c1', { nome: 'Srv' }, [{ nome: 'D1per', bmId: '9' }], T);
+  const agora = s.agoraNa('c1', 'live', T);
+  assert.equal(agora[0].nome, 'diper');
+  assert.equal(agora[0].aberta, true);
+  assert.equal(s.nosDois('c1', T)[0].jogador, 'D1per');
+});
+
+// E quem a presença VIU SAIR some da lista na hora.
+//
+// Esta é a diferença entre as fontes, e ela é o produto: as outras só têm
+// pontos soltos, então "ainda está lá" é um palpite pelo tempo desde o
+// último sinal, e o palpite precisa de folga. A presença avisa a saída. Dar
+// a mesma folga a ela seria jogar fora a única fonte que sabe a resposta —
+// e manter na tela alguém que já fechou a janela.
+test('quem a presença viu sair sai do "na live agora" na hora', () => {
+  const s = bancada();
+  s.receberPresenca('c1', [
+    { tipo: 'entrou', em: T - 5 * 60000, id: '1', nome: 'diper' },
+    { tipo: 'saiu', em: T - 60000, id: '1', nome: 'diper' },
+  ]);
+  s.guardarServidor('c1', { nome: 'Srv' }, [{ nome: 'D1per', bmId: '9' }], T);
+  assert.equal(s.agoraNa('c1', 'live', T).length, 0);
+  // Mas a visita continua gravada, ao segundo: saiu não é apagou.
+  const l = s.log('c1', 'diper');
+  assert.equal(l.total, 1);
+  assert.equal(l.linhas[0].segundos, 4 * 60);
+});
+
+// Sair da live não tira a pessoa do cruzamento — é o contrário.
+//
+// "sei que ele ficou 5 minuto maximo na minha live": o sniper assiste,
+// FECHA a janela e só então ataca. Exigir que ainda esteja dentro na hora
+// do cruzamento é filtrar fora exatamente quem se comporta como sniper.
+test('quem saiu há pouco continua no cruzamento, marcado como saiu', () => {
+  const s = bancada();
+  s.receberPresenca('c1', [
+    { tipo: 'entrou', em: T - 5 * MIN, id: '1', nome: 'diper' },
+    { tipo: 'saiu', em: T - MIN, id: '1', nome: 'diper' },
+  ]);
+  s.guardarServidor('c1', { nome: 'Srv' }, [{ nome: 'D1per', bmId: '9' }], T);
+  const d = s.nosDois('c1', T)[0];
+  assert.equal(d.jogador, 'D1per');
+  assert.equal(d.naLiveAberta, false);
+  assert.equal(d.saiuHa, 1, 'fechou a live há 1 min — e está no servidor agora');
+});
+
+test('quem saiu há muito tempo sai do cruzamento', () => {
+  const s = bancada();
+  s.receberPresenca('c1', [
+    { tipo: 'entrou', em: T - 60 * MIN, id: '1', nome: 'diper' },
+    { tipo: 'saiu', em: T - 50 * MIN, id: '1', nome: 'diper' },
+  ]);
+  s.guardarServidor('c1', { nome: 'Srv' }, [{ nome: 'D1per', bmId: '9' }], T);
+  assert.equal(s.nosDois('c1', T).length, 0, 'assistir há uma hora não é estar na live');
+});
+
+test('quem nunca saiu não recebe hora de saída inventada', () => {
+  const s = bancada();
+  s.receberPresenca('c1', [{ tipo: 'entrou', em: T - 5 * MIN, id: '1', nome: 'diper' }]);
+  s.guardarServidor('c1', { nome: 'Srv' }, [{ nome: 'D1per', bmId: '9' }], T);
+  const d = s.nosDois('c1', T)[0];
+  assert.equal(d.naLiveAberta, true);
+  assert.equal(d.saiuHa, null, 'ainda dentro: não existe hora de saída');
+});
+
+
+// ── O tempo assistido não pode ser maior que a medida ────────────────────
+//
+// Ele já me pegou dizendo que alguém "ficou muito tempo" quando a pessoa
+// tinha saído rápido. A causa estava aqui: o contador da fidelidade anda de
+// 10 em 10 min, e uma visita medida em 4min22s era relatada como 10 min —
+// mais que o dobro, embaixo do nome de uma pessoa real.
+
+test('tempo assistido usa a medida ao segundo quando ela existe', () => {
+  const s = bancada();
+  s.receberPresenca('c1', [
+    { tipo: 'entrou', em: T - 9 * MIN, id: '3', nome: 'ESPECTADOR-C' },
+    { tipo: 'saiu', em: T - 4 * MIN - 38000, id: '3', nome: 'ESPECTADOR-C' },
+  ]);
+  s.guardarServidor('c1', { nome: 'Srv' }, [{ nome: 'ESPECTADOR-C', bmId: '9' }], T);
+  const a = s.cruzarAgora('c1')[0];
+  assert.equal(a.exato, true);
+  assert.equal(a.segundosAssistidos, 262, '4min22s — não o bloco de 10 min');
+  assert.equal(a.minutosAssistidos, 4);
+});
+
+test('sem medida, o tempo vem do bloco e vem MARCADO como bloco', () => {
+  const s = bancada();
+  // Só chat: nenhuma visita ao segundo para esta pessoa.
+  s.ingerir('c1', 'chat.message', msg('FINIK', 1), T - 30 * MIN);
+  s.ingerir('c1', 'chat.message', msg('FINIK', 1), T);
+  s.guardarServidor('c1', { nome: 'Srv' }, [{ nome: 'FINIK', bmId: '9' }], T);
+  const a = s.cruzarAgora('c1')[0];
+  assert.equal(a.exato, false, 'bloco não pode se passar por medida');
+  assert.equal(a.segundosAssistidos, null);
+});
+
+test('visita ainda aberta é medida contra AGORA, não contra ela mesma', () => {
+  const s = bancada();
+  s.receberPresenca('c1', [{ tipo: 'entrou', em: T - 12 * MIN, id: '1', nome: 'diper' }]);
+  // Uma visita aberta tem fim_em = início: medir entre os dois dava 1 min
+  // para quem está na live há 12.
+  const p = s.agoraNa('c1', 'live', T)[0];
+  assert.equal(p.minutos, 12);
+  assert.equal(p.aberta, true);
+  s.guardarServidor('c1', { nome: 'Srv' }, [{ nome: 'diper', bmId: '9' }], T);
+  assert.equal(s.cruzarAgora('c1')[0].minutosAssistidos, 12);
+});
+
+test('o painel sabe se a presença está gravando — e é medido, não configurado', async () => {
+  const s = bancada();
+  await new Promise((ok) => s.servidor.listen(0, ok));
+  const porta = s.servidor.address().port;
+  try {
+    const semNada = await (await fetch(`http://127.0.0.1:${porta}/api/agora?canal=c1`)).json();
+    assert.equal(semNada.coleta.presenca, null, 'sem evento nenhum não há o que anunciar');
+
+    s.receberPresenca('c1', [{ tipo: 'entrou', em: T - MIN, id: '1', nome: 'diper' }]);
+    const com = await (await fetch(`http://127.0.0.1:${porta}/api/agora?canal=c1`)).json();
+    assert.equal(com.coleta.presenca.visitas, 1);
+    assert.equal(com.coleta.presenca.em, T - MIN);
+  } finally {
+    await new Promise((ok) => s.servidor.close(ok));
+  }
+});
+
+test('a fonte viaja junto no cruzamento — sem ela o painel inventa a régua', () => {
+  const s = bancada();
+  s.receberPresenca('c1', [{ tipo: 'entrou', em: T - 5 * MIN, id: '1', nome: 'diper' }]);
+  s.guardarServidor('c1', { nome: 'Srv' }, [{ nome: 'D1per', bmId: '9' }], T);
+  const d = s.nosDois('c1', T)[0];
+  assert.equal(d.naLiveFonte, 'presenca');
+  assert.equal(d.naLiveAberta, true);
+});
+
+test('o resumo do log não pode contradizer as linhas dele', () => {
+  const s = bancada();
+  // Duas visitas: 4min38s e 4min51s. Somam 9min29s.
+  s.receberPresenca('c1', [
+    { tipo: 'entrou', em: T - 52 * MIN, id: '3', nome: 'C' },
+    { tipo: 'saiu', em: T - 47 * MIN - 22000, id: '3', nome: 'C' },
+    { tipo: 'entrou', em: T - 8 * MIN, id: '3', nome: 'C' },
+    { tipo: 'saiu', em: T - 3 * MIN - 9000, id: '3', nome: 'C' },
+  ]);
+  const l = s.log('c1', 'C');
+  assert.equal(l.entradasNaLive, 2);
+  // Arredondar cada visita para o minuto e só então somar dava 5+5 = 10, e
+  // o resumo dizia "0h10" com as linhas dizendo 4min38s e 4min51s abaixo.
+  assert.equal(l.segundosNaLive, 4 * 60 + 38 + (4 * 60 + 51));
+  assert.equal(l.segundosNaLive, 569);
+  assert.equal(l.exatoNaLive, true);
+  const somaDasLinhas = l.linhas.filter((x) => x.onde === 'live')
+    .reduce((t, x) => t + x.segundos, 0);
+  assert.equal(somaDasLinhas, l.segundosNaLive, 'resumo e linhas têm que fechar');
+});
+
+test('uma visita de bloco contamina o total e o resumo deixa de ser exato', () => {
+  const s = bancada();
+  s.receberPresenca('c1', [
+    { tipo: 'entrou', em: T - 20 * MIN, id: '1', nome: 'C' },
+    { tipo: 'saiu', em: T - 15 * MIN, id: '1', nome: 'C' },
+  ]);
+  s.ingerir('c1', 'chat.message', msg('C', 1), T);
+  const l = s.log('c1', 'C');
+  assert.equal(l.exatoNaLive, false, 'um bloco no meio já tira a exatidão do total');
+});
+
+test('o servidor é foto, não duração — conta vezes vistas', () => {
+  const s = bancada();
+  s.guardarServidor('c1', { nome: 'Srv' }, [{ nome: 'C', bmId: '9' }], T - 5 * MIN);
+  s.guardarServidor('c1', { nome: 'Srv' }, [{ nome: 'C', bmId: '9' }], T);
+  const l = s.log('c1', 'C');
+  assert.ok(l.vezesNoServidor >= 1);
+  assert.equal(l.entradasNaLive, 0, 'estar no servidor não é estar na live');
+});
+
+test('a resposta do Discord diz a régua do tempo, não só o número', () => {
+  const s = bancada();
+  s.receberPresenca('c1', [
+    { tipo: 'entrou', em: T - 9 * MIN, id: '3', nome: 'diper' },
+    { tipo: 'saiu', em: T - 4 * MIN - 38000, id: '3', nome: 'diper' },
+  ]);
+  const exato = d.formatar(s.consultar('c1', 'D1per')).content;
+  assert.match(exato, /4min 22s/, 'a medida ao segundo não pode virar "0h04"');
+  assert.match(exato, /ao segundo/);
+
+  const s2 = bancada();
+  for (let i = 0; i <= 30; i += 3) s2.ingerir('c1', 'chat.message', msg('FINIK', 1), T + i * MIN);
+  const bloco = d.formatar(s2.consultar('c1', 'FINIK')).content;
+  assert.match(bloco, /bloco de ~10 min/, 'bloco não pode se passar por medida');
+});

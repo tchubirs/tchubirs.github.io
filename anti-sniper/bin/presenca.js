@@ -28,6 +28,11 @@ const RAIZ = path.join(__dirname, '..');
 const CONFIG = path.join(RAIZ, 'detetive.config.json');
 const cfg = fs.existsSync(CONFIG) ? JSON.parse(fs.readFileSync(CONFIG, 'utf8')) : {};
 const CANAL = process.env.PRESENCA_CANAL || cfg.canal || 'tchubi';
+// Manda para o serviço além de gravar em arquivo: sem isso a precisão ao
+// segundo fica num .jsonl que o painel não lê, e o produto continua
+// mostrando blocos de 10 min.
+const SERVICO = process.env.DETETIVE_SERVICO
+  || (cfg.porta ? `http://127.0.0.1:${cfg.porta}` : 'http://127.0.0.1:8790');
 const FUSO = cfg.fuso || 'Europe/Paris';
 const PERFIL = process.env.DETETIVE_PERFIL || path.join(os.homedir(), '.detetive-navegador');
 const ARQUIVO = path.join(RAIZ, 'dados', 'presenca.jsonl');
@@ -125,6 +130,14 @@ async function gravar() {
         return;
       }
       fs.appendFileSync(ARQUIVO, JSON.stringify(e) + '\n');
+      // O arquivo é a verdade de reserva; o serviço é quem alimenta o
+      // painel. Se ele estiver fora do ar, a gravação continua e nada se
+      // perde — dá para reenviar depois com --enviar.
+      fetch(`${SERVICO}/api/presenca`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ canal: CANAL, eventos: [e] }),
+      }).catch(() => {});
       if (e.tipo === 'entrou') { dentro += 1; console.log(`  ${hms(e.em)}  ENTROU  ${e.nome || e.id}   (${dentro} dentro)`); }
       else if (e.tipo === 'saiu') { dentro = Math.max(0, dentro - 1); console.log(`  ${hms(e.em)}  saiu    ${e.nome || e.id}   (${dentro} dentro)`); }
     },
@@ -145,6 +158,21 @@ async function gravar() {
   }
 }
 
+/** Reenvia o arquivo inteiro ao serviço — para quando ele estava fora do ar. */
+async function enviarTudo() {
+  const eventos = lerEventos();
+  if (!eventos.length) { console.log('\n  nada gravado para enviar.\n'); return; }
+  const r = await fetch(`${SERVICO}/api/presenca`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ canal: CANAL, eventos }),
+  }).catch((e) => ({ ok: false, erro: e.message }));
+  if (!r.ok) { console.log(`\n  serviço não recebeu: ${r.erro || r.status}\n`); return; }
+  const d = await r.json();
+  console.log(`\n  enviados ${eventos.length} eventos — ${d.entrou} entradas, ${d.saiu} saídas.\n`);
+}
+
 const args = process.argv.slice(2);
-if (args.includes('--ver')) mostrar(args.find((a) => !a.startsWith('-')));
+if (args.includes('--enviar')) enviarTudo();
+else if (args.includes('--ver')) mostrar(args.find((a) => !a.startsWith('-')));
 else gravar().catch((e) => { console.error('\n  erro:', e.message, '\n'); process.exit(1); });

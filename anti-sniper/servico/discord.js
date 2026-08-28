@@ -52,6 +52,24 @@ function horas(min) {
 }
 
 /**
+ * Quanto assistiu, com a régua junto — igual ao painel.
+ *
+ * O contador de fidelidade anda de 10 em 10 minutos; a presença tem o
+ * segundo. Escrever "0h04" para uma medida de 4min22s joga fora a precisão
+ * que ele pediu, e escrever um bloco sem dizer que é bloco faz uma
+ * estimativa parecer medida.
+ */
+function assistiu(e) {
+  if (e.exato && e.segundosAssistidos != null) {
+    const s = e.segundosAssistidos;
+    const t = s < 60 ? `${s}s`
+      : `${Math.floor(s / 60)}min ${String(s % 60).padStart(2, '0')}s`;
+    return `**${t}** _(ao segundo${e.visitas > 1 ? `, ${e.visitas} visitas` : ''})_`;
+  }
+  return `**${horas(e.minutosAssistidos)}** _(bloco de ~10 min)_`;
+}
+
+/**
  * A resposta que o produto existe para dar.
  *
  * "Assistiu 20h" não diz nada sobre o minuto em que te mataram. Isto diz.
@@ -104,7 +122,7 @@ function formatar(r, fuso = 'UTC') {
   const linhas = r.evidencias.slice(0, 5).map((e) => {
     const como = e.nomeSteamQueBateu ? ` _(quando se chamava "${e.nomeSteamQueBateu}")_` : '';
     return `• **${e.espectador}** — ${Math.round(e.confianca * 100)}% · ${e.motivo}${como}\n` +
-           `  assistiu **${horas(e.minutosAssistidos)}**`;
+           `  assistiu ${assistiu(e)}`;
   });
   return {
     content: `🔴 **${r.jogador}** esteve na sua live:${conferidos}\n\n${linhas.join('\n')}` +

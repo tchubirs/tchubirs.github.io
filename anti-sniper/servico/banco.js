@@ -98,7 +98,13 @@ function abrir(caminho = 'detetive.db') {
       -- De onde veio o sinal: 'chat' (escreveu), 'tempo' (o contador de
       -- tempo assistido subiu, mesmo calado) ou 'servidor'. Quem lê o log
       -- precisa saber se aquilo é uma mensagem ou uma medição.
-      fonte      TEXT NOT NULL DEFAULT 'chat'
+      fonte      TEXT NOT NULL DEFAULT 'chat',
+      -- 1 = a pessoa AINDA está lá. Só a presença da Kick sabe disto: ela
+      -- avisa a saída. As outras fontes são pontos soltos, e para elas
+      -- "ainda está" é sempre um palpite pelo tempo desde o último sinal.
+      -- Sem esta coluna, alguém que a presença viu SAIR continuava
+      -- aparecendo em "na live agora" por mais 15 minutos.
+      aberta     INTEGER NOT NULL DEFAULT 0
     );
     CREATE INDEX IF NOT EXISTS idx_estada_pessoa
       ON estada (canal_id, onde, nome_norm, fim_em);
@@ -171,6 +177,9 @@ function abrir(caminho = 'detetive.db') {
   }
   if (colEstada.length && !colEstada.includes('ref')) {
     db.exec('ALTER TABLE estada ADD COLUMN ref TEXT');
+  }
+  if (colEstada.length && !colEstada.includes('aberta')) {
+    db.exec('ALTER TABLE estada ADD COLUMN aberta INTEGER NOT NULL DEFAULT 0');
   }
   return db;
 }

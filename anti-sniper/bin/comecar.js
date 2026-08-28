@@ -47,6 +47,10 @@ const MODELO = {
   // Descubra quais das suas têm dado com: node bin/checar-fontes.js tchubi
   fontes: [{ plataforma: 'kick', usuario: 'tchubi' }],
   intervaloSegundos: 90,
+  // Entrada e saída AO SEGUNDO, pelo canal de presença do chat da Kick.
+  // É a única fonte que responde "ficou 5 minutos"; as outras vêm em
+  // blocos de ~10 min. Precisa do seu login na Kick, feito uma vez.
+  presencaAoSegundo: true,
 };
 
 function lerConfig() {
@@ -132,8 +136,33 @@ function main() {
     // já foi gravado. Perder a gravação de agora é ruim; perder o histórico
     // inteiro por causa de um navegador é pior.
     let ag = null;
+    let pres = null;
     let parando = false;
     let espera = 5000;
+
+    // A presença vai num processo à parte do agente: são navegadores
+    // diferentes olhando sites diferentes, e um travado não pode calar o
+    // outro. Perder as horas exatas porque o BattleMetrics caiu seria o
+    // pior jeito de perder justamente o dado mais preciso.
+    function subirPresenca() {
+      if (!cfg.presencaAoSegundo) return;
+      pres = spawn(process.execPath, [path.join(RAIZ, 'bin', 'presenca.js')], {
+        stdio: 'inherit',
+        env: {
+          ...process.env,
+          DETETIVE_SERVICO: `http://127.0.0.1:${cfg.porta}`,
+          PRESENCA_CANAL: cfg.canal,
+          DETETIVE_PERFIL: PERFIL,
+          DETETIVE_VISIVEL: process.env.DETETIVE_VISIVEL ?? (fs.existsSync(PERFIL) ? '' : '1'),
+        },
+      });
+      pres.on('exit', (c) => {
+        if (parando) return;
+        if (c === 3) { console.log('  · presença parada até instalar o navegador.'); return; }
+        console.log(`  · presença caiu (código ${c}) — voltando em 30s`);
+        setTimeout(subirPresenca, 30000);
+      });
+    }
 
     function subirAgente() {
       ag = spawn(process.execPath, [path.join(RAIZ, 'agente', 'agente.js')], {
@@ -168,11 +197,17 @@ function main() {
       setTimeout(() => { if (ag && ag.exitCode === null) espera = 5000; }, 30000).unref?.();
     }
     subirAgente();
+    subirPresenca();
+    if (cfg.presencaAoSegundo) {
+      console.log('  Gravando presença AO SEGUNDO pelo chat da Kick.');
+      console.log('  Na primeira vez, faça login na janela que abrir.\n');
+    }
 
     for (const sinal of ['SIGINT', 'SIGTERM']) {
       process.on(sinal, () => {
         parando = true;
         if (ag) ag.kill();
+        if (pres) pres.kill();
         servidor.close(() => process.exit(0));
       });
     }

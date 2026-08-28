@@ -10,22 +10,71 @@ const hora = (ms) => ms == null ? '—'
 const hhmm = (m) => m == null ? 'tempo desconhecido'
   : `${Math.floor(m / 60)}h${String(m % 60).padStart(2, '0')}`;
 
+/**
+ * Quanto tempo assistiu — e de onde saiu esse número.
+ *
+ * As duas fontes têm resoluções muito diferentes, e trocar uma pela outra
+ * mente. O contador da fidelidade anda de 10 em 10 min: 4min22s virava
+ * "0h10". A presença tem o segundo exato. Aqui o número vem com a régua
+ * junto, para ninguém ler bloco como medida.
+ */
+function assistiu(a) {
+  if (a.exato && a.segundosAssistidos != null) {
+    const s = a.segundosAssistidos;
+    const t = s < 60 ? `${s}s`
+      : `${Math.floor(s / 60)}min ${String(s % 60).padStart(2, '0')}s`;
+    return `<b>${t}</b> <span class="regua">ao segundo${
+      a.visitas > 1 ? ` · ${a.visitas} visitas` : ''}</span>`;
+  }
+  return `<b>${hhmm(a.minutosAssistidos)}</b> <span class="regua">bloco de ~10 min</span>`;
+}
+
+/** As duas fontes que sabem a hora da SAÍDA. Todas as outras só têm pontos
+ *  soltos, e para elas "ainda está lá" é palpite. */
+const PRESENCA = (f) => f === 'presenca' || f === 'presenca-parcial';
+
 function cartao(id, valor, velho) {
   const el = document.getElementById(id);
   el.className = 'cartao' + (velho ? ' velho' : '');
   el.querySelector('b').textContent = valor;
 }
 
-function desenharAlertas(lista, onde) {
+/**
+ * O par de nomes. Muita gente usa o MESMO nome na Kick e no Rust, e aí a
+ * seta não liga duas coisas — repete uma. Mostrar "X ↔ X · 100%" faz uma
+ * identidade parecer uma coincidência descoberta.
+ */
+const normalizado = (s) => String(s).toLowerCase().replace(/[^a-z0-9]/g, '');
+const mesmoNome = (a) => normalizado(a.jogador) === normalizado(a.espectador);
+
+function par(a) {
+  // Nome idêntico: a seta não liga duas coisas, repete uma — e a
+  // porcentagem ao lado dizia a mesma coisa uma terceira vez. Quando os
+  // nomes DIFEREM (D1per ↔ diper), a porcentagem é a informação toda.
+  if (mesmoNome(a)) return `${esc(a.jogador)} <span class="mesmo">mesmo nome nos dois</span>`;
+  return `${esc(a.jogador)} <span class="seta">↔</span> ${esc(a.espectador)}`
+    + ` <span class="pc">${Math.round(a.confianca * 100)}%</span>`;
+}
+
+function desenharAlertas(lista, onde, jaEmDestaque = []) {
+  // Quem já está no bloco vermelho de cima não se repete aqui embaixo: a
+  // lista de cima é subconjunto desta, e ver a mesma pessoa duas vezes na
+  // mesma tela é parte do "muito bagunçado, não dá pra entender nada".
+  const emCima = new Set(jaEmDestaque.map((a) => `${a.jogador}|${a.espectador}`));
+  const tinha = lista.length;
+  lista = lista.filter((a) => !emCima.has(`${a.jogador}|${a.espectador}`));
   if (!lista.length) {
-    onde.innerHTML = '<div class="vazio">Ninguém no servidor bate com quem assistiu.<br><br>' +
-      '<b>Isso não inocenta</b> — a pessoa pode usar nome diferente nos dois lados.</div>';
+    // Duas ausências diferentes. Dizer "ninguém bate" com um par vermelho
+    // logo acima seria a tela se contradizendo na mesma rolagem.
+    onde.innerHTML = tinha
+      ? '<div class="vazio">Ninguém <b>além</b> de quem já está em destaque acima.</div>'
+      : '<div class="vazio">Ninguém no servidor bate com quem assistiu.<br><br>'
+        + '<b>Isso não inocenta</b> — a pessoa pode usar nome diferente nos dois lados.</div>';
     return;
   }
   onde.innerHTML = lista.map((a) => `<div class="alerta">
-      <div class="par">${esc(a.jogador)} <span style="color:#6f7a84">↔</span> ${esc(a.espectador)}</div>
-      <div class="det"><span class="pc">${Math.round(a.confianca * 100)}%</span>
-        · ${esc(a.motivo)} · assistiu <b>${hhmm(a.minutosAssistidos)}</b>${
+      <div class="par">${par(a)}</div>
+      <div class="det">${esc(a.motivo)} · assistiu ${assistiu(a)}${
           a.minutosNoServidor != null ? ` · ${a.minutosNoServidor} min no servidor` : ''}</div>
     </div>`).join('');
 }
@@ -37,6 +86,33 @@ function desenharAlertas(lista, onde) {
  * por pessoa, e com 1.500 jogadores seriam ~18 min por leitura. Por isso a
  * lista aqui é uma pista, e o log completo vem ao clicar.
  */
+/**
+ * O estado da pessoa na linha vermelha — a que mais importa da página.
+ *
+ * Tinha o mesmo defeito do cartão: dizia "calado há 12 min" de alguém que a
+ * presença está vendo com a live ABERTA neste instante. A presença não
+ * escuta o chat; ficar calado nela não é sinal de nada.
+ */
+function estadoDois(a) {
+  if (PRESENCA(a.naLiveFonte)) {
+    if (a.naLiveAberta) return '<span class="agora">live aberta agora</span>';
+    // A linha mais pesada da página: fechou a live e está no servidor. É o
+    // padrão que ele descreveu — assiste, fecha, ataca.
+    return `<span class="fechou">fechou a live há ${a.saiuHa} min</span>`;
+  }
+  return `<span class="${a.caladaHa <= 2 ? 'agora' : ''}">${
+    a.caladaHa <= 2 ? 'falando agora' : `calado há ${a.caladaHa} min`}</span>`;
+}
+
+/**
+ * O quanto dá para confiar na linha, na cor.
+ *
+ * `certo` só para nome que bate depois de normalizar — aí não é semelhança,
+ * é o mesmo nome escrito de outro jeito. Abaixo disso é palpite, e palpite
+ * pintado de vermelho vira acusação.
+ */
+const grau = (c) => (c >= 0.95 ? 'certo' : 'talvez');
+
 function desenharDois(lista, onde) {
   document.getElementById('qtd-dois').textContent = lista.length ? `· ${lista.length}` : '';
   if (!lista.length) {
@@ -45,12 +121,19 @@ function desenharDois(lista, onde) {
       + 'Para conferir todos os nomes antigos de alguém, procure a pessoa acima.</div>';
     return;
   }
-  onde.innerHTML = lista.map((a) => `<div class="dois" data-nome="${esc(a.espectador)}">
-      <div class="par">${esc(a.jogador)} <span style="color:#6f7a84">↔</span> ${esc(a.espectador)}
-        <span class="pc">${Math.round(a.confianca * 100)}%</span></div>
-      <div class="det">na live desde <b>${hora(a.naLiveDesde)}</b> (${a.naLiveMinutos} min,
-        <span class="${a.caladaHa <= 2 ? 'agora' : ''}">${a.caladaHa <= 2 ? 'falando agora' : `calado há ${a.caladaHa} min`}</span>)
-        · no servidor desde <b>${hora(a.noServidorDesde)}</b> (${a.noServidorMinutos} min)</div>
+  // Certeza primeiro. Um palpite de 70% pintado do mesmo vermelho de uma
+  // identidade certa é o que faz a tela virar barulho: quem lê não tem como
+  // saber em qual das duas linhas acreditar.
+  const ordenada = [...lista].sort((x, y) => y.confianca - x.confianca);
+  onde.innerHTML = ordenada.map((a) => `<div class="dois ${grau(a.confianca)}"
+      data-nome="${esc(a.espectador)}">
+      <div class="par">${par(a)}</div>
+      <div class="det">${esc(a.espectador)} ${a.naLiveAberta === false && a.saiuHa != null
+        ? 'esteve' : 'está'} na live desde <b>${hora(a.naLiveDesde)}</b>
+        (${a.naLiveMinutos} min, ${estadoDois(a)}) · no servidor desde
+        <b>${hora(a.noServidorDesde)}</b> (${a.noServidorMinutos} min)</div>
+      ${a.confianca < 0.95 ? `<div class="duvida">Nome <b>parecido</b>, não idêntico —
+        ${esc(a.motivo)}. Pode ser outra pessoa.</div>` : ''}
       ${quemE(a)}
     </div>`).join('');
   for (const b of onde.querySelectorAll('.dois')) b.onclick = () => abrirLog(b.dataset.nome);
@@ -74,21 +157,88 @@ function quemE(a) {
     rel="noopener noreferrer">ver quem é no BattleMetrics ↗</a></div>`;
 }
 
+/** O selo diz de ONDE veio a linha — e cada fonte enxerga uma coisa diferente. */
+function seloDe(p) {
+  if (PRESENCA(p.fonte)) return '<span class="selo ao-segundo">ao segundo</span>';
+  if (p.fonte === 'tempo') return '<span class="selo tempo">calado</span>';
+  if (p.fonte === 'ambos') return '<span class="selo">msg + tempo</span>';
+  return '<span class="selo">falou</span>';
+}
+
+/**
+ * A segunda linha do cartão.
+ *
+ * "calado há 12 min" só faz sentido para uma fonte que vê MENSAGEM. Para a
+ * presença o silêncio não quer dizer nada: ela não escuta o chat, ela vê a
+ * janela abrir e fechar. Alguém entrou há 12 minutos e não falou nada não
+ * está "calado há 12 min" — está assistindo há 12 min, que é exatamente o
+ * caso que este produto existe para enxergar.
+ */
+function estadoDe(p) {
+  if (PRESENCA(p.fonte)) {
+    return p.aberta
+      ? '<span class="viva">com a live aberta agora</span>'
+      : `<span>fechou a live às ${hora(p.ultimoSinal)}</span>`;
+  }
+  return `<span class="${p.calada <= 2 ? 'viva' : ''}">${
+    p.calada <= 2 ? 'falando agora' : `calado há ${p.calada} min`}</span>`;
+}
+
+/**
+ * O que esta tela ESTÁ vendo, e o que continua invisível.
+ *
+ * A frase dele muda o produto inteiro: "nenhum stream sniper fala no chat".
+ * Deixar a cobertura implícita seria vender cegueira como cobertura.
+ *
+ * São três estados, não dois. O aviso laranja de "só aparece quem escreveu"
+ * continuava aparecendo com a presença ligada — dizendo que a tela está cega
+ * bem na hora em que ela é mais precisa que nunca.
+ */
+function desenharCobertura(coleta, agoraMs, cob) {
+  const p = coleta?.presenca;
+  // Presença parada há muito tempo não é presença: o gravador caiu e o
+  // painel tem que dizer isso, não fingir cobertura que já não existe.
+  const viva = p && (agoraMs - p.em) < 20 * 60000;
+
+  if (viva) {
+    cob.className = 'cobertura boa';
+    cob.innerHTML = 'Gravando <b>entrada e saída ao segundo</b> pelo canal de presença da Kick — '
+      + 'pega quem <b>nunca escreve</b>.'
+      + (coleta.ligada ? ' Tempo assistido do StreamElements também ligado.' : '')
+      + '<br>Ainda invisível: quem assiste <b>deslogado</b>. Isso nenhuma fonte vê.';
+    return;
+  }
+  if (coleta?.ligada) {
+    cob.className = 'cobertura';
+    cob.innerHTML = 'Contando <b>quem assiste calado</b> pelo tempo assistido do StreamElements'
+      + ` (<code>${esc(coleta.fonte)}</code>). Quem só aparece por mensagem vem marcado.`
+      + '<br>Sem hora exata: o crédito vem em blocos de ~10 min. Para entrada e saída '
+      + 'ao segundo, rode <code>npm run presenca</code>.'
+      + (p ? `<br>A presença gravou até ${hora(p.em)} e parou.` : '');
+    return;
+  }
+  cob.className = 'cobertura cego';
+  cob.innerHTML = '<b>Atenção:</b> aqui só aparece quem <b>escreveu</b> no chat — '
+    + 'e sniper normalmente não escreve.<br>Para enxergar quem assiste calado, '
+    + 'rode <code>npm run presenca</code> (entrada e saída ao segundo) ou '
+    + 'ligue a Fidelidade no StreamElements.'
+    + (p ? `<br>A presença gravou até ${hora(p.em)} e parou.` : '');
+}
+
 /** Quem está na live agora — a resposta que a página dá sem ninguém perguntar. */
-function desenharAgora(lista, onde) {
+function desenharAgora(lista, onde, coleta) {
   document.getElementById('qtd-agora').textContent = lista.length ? `· ${lista.length}` : '';
   if (!lista.length) {
-    onde.innerHTML = '<div class="vazio">Ninguém escreveu no chat nos últimos 15 min.</div>';
+    onde.innerHTML = `<div class="vazio">${coleta?.presenca
+      ? 'Ninguém com a live aberta neste momento.'
+      : 'Ninguém escreveu no chat nos últimos 15 min.'}</div>`;
     return;
   }
   onde.innerHTML = `<div class="pessoas">${lista.map((p) => `
     <button class="pessoa" data-nome="${esc(p.nome)}">
-      <b>${esc(p.nome)}${p.fonte === 'tempo' ? '<span class="selo tempo">calado</span>'
-        : p.fonte === 'ambos' ? '<span class="selo">msg + tempo</span>'
-        : '<span class="selo">falou</span>'}</b>
+      <b>${esc(p.nome)}${seloDe(p)}</b>
       <span>desde ${hora(p.desde)} · ${p.minutos} min</span><br>
-      <span class="${p.calada <= 2 ? 'viva' : ''}">${
-        p.calada <= 2 ? 'falando agora' : `calado há ${p.calada} min`}</span>
+      ${estadoDe(p)}
     </button>`).join('')}</div>`;
   for (const b of onde.querySelectorAll('.pessoa')) b.onclick = () => abrirLog(b.dataset.nome);
 }
@@ -109,9 +259,60 @@ async function abrirLog(nome) {
  *  muda o quanto se confia na linha — e a segunda pega quem nunca fala. */
 function rotuloFonte(l) {
   if (l.onde === 'servidor') return `${l.amostras} leituras`;
+  // A presença sabe a entrada E a saída no segundo. Mostrar "N sinais" aqui
+  // esconderia justamente a diferença de precisão entre as fontes.
+  if (l.fonte === 'presenca') return 'ao segundo';
+  if (l.fonte === 'presenca-parcial') return 'ao segundo (já estava)';
   if (l.fonte === 'tempo') return `${l.amostras}× tempo assistido`;
   if (l.fonte === 'ambos') return `${l.amostras} sinais (msg + tempo)`;
   return `${l.amostras} msg`;
+}
+
+/**
+ * A duração só sai em segundos quando a FONTE tem segundos.
+ *
+ * Mostrar "4min 38s" para um dado que veio em blocos de 10 min seria
+ * inventar precisão — o mesmo erro de inventar horário, com outra cara.
+ */
+function duracao(l) {
+  const exata = l.fonte === 'presenca' || l.fonte === 'presenca-parcial';
+  // Duração zero é uma leitura só, não uma visita de 0 segundos: dizer
+  // "0min 00s" faria parecer que a pessoa entrou e saiu no mesmo instante.
+  if (l.segundos === 0) return exata ? 'entrou agora' : `visto ${l.amostras}×`;
+  if (exata) return `${Math.floor(l.segundos / 60)}min ${String(l.segundos % 60).padStart(2, '0')}s`;
+  return `${l.minutos} min`;
+}
+
+/** Com precisão de segundo, mostrar só HH:MM apagaria a resposta. */
+function horaFina(ms, l) {
+  const exata = l.fonte === 'presenca' || l.fonte === 'presenca-parcial';
+  return new Date(ms).toLocaleTimeString('pt-BR',
+    exata ? { hour: '2-digit', minute: '2-digit', second: '2-digit' }
+      : { hour: '2-digit', minute: '2-digit' });
+}
+
+/**
+ * O resumo do log, dito com a régua da fonte.
+ *
+ * "3 entradas" contava a linha do servidor junto com as da live — e uma
+ * pessoa que entrou DUAS vezes na live lia como três. E o servidor não é
+ * duração: é uma foto a cada 90s, então "0h01 no servidor" era um piso de
+ * arredondamento se passando por medida.
+ */
+function resumoLog(d) {
+  const p = [];
+  if (d.entradasNaLive) {
+    const s = d.segundosNaLive;
+    const t = d.exatoNaLive && s < 3600
+      ? `${Math.floor(s / 60)}min ${String(s % 60).padStart(2, '0')}s`
+      : hhmm(d.minutosNaLive);
+    p.push(`<b>${d.entradasNaLive}</b> ${d.entradasNaLive === 1 ? 'entrada' : 'entradas'} na live`);
+    p.push(`<b>${t}</b> assistindo${d.exatoNaLive ? ' <span class="regua">ao segundo</span>' : ''}`);
+  }
+  if (d.vezesNoServidor) {
+    p.push(`visto <b>${d.vezesNoServidor}×</b> no servidor`);
+  }
+  return p.join(' · ');
 }
 
 function desenharLog(d) {
@@ -121,16 +322,15 @@ function desenharLog(d) {
   }
   const linhas = d.linhas.map((l) => `<tr>
       <td class="onde ${l.onde}">${l.onde === 'live' ? '● live' : '● servidor'}</td>
-      <td>${hora(l.de)} <span class="seta">→</span> ${hora(l.ate)}</td>
-      <td class="dur">${l.minutos} min</td>
+      <td>${horaFina(l.de, l)} <span class="seta">→</span> ${horaFina(l.ate, l)}</td>
+      <td class="dur">${duracao(l)}</td>
       <td class="dur">${l.perfil
         ? `<a href="${esc(l.perfil)}" target="_blank" rel="noopener noreferrer">quem é ↗</a>`
         : rotuloFonte(l)}</td>
     </tr>`).join('');
   return `<div class="log"><button class="fechar">×</button>
     <h3>${esc(d.nome)}</h3>
-    <div class="resumo">${d.total} entradas · <b>${hhmm(d.minutosNaLive)}</b> na live ·
-      <b>${hhmm(d.minutosNoServidor)}</b> no servidor · horários em ${esc(d.fuso)}</div>
+    <div class="resumo">${resumoLog(d)} · horários em ${esc(d.fuso)}</div>
     <table>${linhas}</table></div>`;
 }
 
@@ -143,28 +343,15 @@ async function atualizar() {
     if (!r.ok) throw new Error(r.status);
     const d = await r.json();
     const da = await ra.json();
-    desenharAgora(da.naLive || [], document.getElementById('agora'));
+    desenharAgora(da.naLive || [], document.getElementById('agora'), da.coleta);
     desenharDois(da.nosDois || [], document.getElementById('nosdois'));
-    const cob = document.getElementById('cobertura');
-    // A frase dele, que muda o produto inteiro: "nenhum stream sniper fala
-    // no chat". Deixar isso implícito seria vender cegueira como cobertura.
-    if (da.coleta?.ligada) {
-      cob.className = 'cobertura';
-      cob.innerHTML = 'Contando <b>quem assiste calado</b> pelo tempo assistido do StreamElements'
-        + ` (<code>${esc(da.coleta.fonte)}</code>). Quem só aparece por mensagem vem marcado.`
-        + '<br>Ainda invisível: quem assiste <b>deslogado</b>. Isso nenhuma fonte vê.';
-    } else {
-      cob.className = 'cobertura cego';
-      cob.innerHTML = '<b>Atenção:</b> aqui só aparece quem <b>escreveu</b> no chat — '
-        + 'e sniper normalmente não escreve.<br>Para enxergar quem assiste calado, '
-        + 'ligue a Fidelidade no StreamElements e conecte o canal.';
-    }
+    desenharCobertura(da.coleta, da.em, document.getElementById('cobertura'));
     document.getElementById('ponto').className = 'ponto vivo';
     document.getElementById('estado').textContent = 'ao vivo';
     cartao('c-servidor', d.noServidor ?? '—', d.servidorVelho);
     cartao('c-audiencia', d.audiencia ?? '—');
     cartao('c-alertas', d.alertas.length);
-    desenharAlertas(d.alertas, document.getElementById('alertas'));
+    desenharAlertas(d.alertas, document.getElementById('alertas'), da.nosDois || []);
   } catch {
     document.getElementById('ponto').className = 'ponto';
     document.getElementById('estado').textContent = 'sem conexão com o serviço';
