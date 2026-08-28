@@ -48,19 +48,34 @@ const FONTES = process.env.DETETIVE_NOMES_URL
   // Endereço fixo para eu poder provar o caminho do navegador contra uma
   // página local, sem depender de alcançar o site de fora.
   ? [{ nome: 'teste', urls: (id) => [process.env.DETETIVE_NOMES_URL.replace('{id}', id)] }]
-  // DUAS fontes, e não é redundância: são bancos diferentes, e cada um vê
-  // o que o outro não vê. Medido nas contas dele:
+  // Duas fontes, porque UMA prova diz que uma só não chega.
   //
-  //     76561198155380495   steamid.uk 343 · steamhistory 133
-  //     76561198145264799   steamid.uk   0 (optout!) · steamhistory 196
-  //     76561198178303493   steamid.uk   0 (optout!) · steamhistory  61
+  // MEDIDO por mim, na API do steamid.uk com o plano dele ativo:
   //
-  // `optout=1` quer dizer que a pessoa pediu remoção da base do steamid.uk,
-  // e pagar não desfaz isso — o plano Silver dele está ativo e continua a
-  // devolver zero nessas três. Sem a segunda fonte, a busca ficava cega em
-  // três de cinco casos reais.
+  //     76561198155380495   optout=0 · 343 nomes na base
+  //     76561198145264799   optout=1 · 0        ← cego
+  //     76561198178303493   optout=1 · 0        ← cego
+  //     76561198856715171   optout=1 · 0        ← cego (dilanzito)
   //
-  // steamid.uk primeiro: é onde ele paga, e tem mais nomes quando vê.
+  // `optout=1` é remoção a pedido do titular, e pagar não desfaz: o Silver
+  // está ativo (`patreon: 1`) e continua a devolver zero. Ou seja, o
+  // steamid.uk sozinho é cego em três de quatro casos reais dele — e ISSO
+  // é o que justifica uma segunda fonte.
+  //
+  // ⚠️ O que NÃO é medido: eu nunca vi uma página do steamhistory.net. O
+  // Cloudflare barra-me em tudo (403 "Just a moment") e a API deles recusa
+  // por permissão. Escrevi aqui, num commit anterior, que o steamhistory
+  // tinha 196 e 61 nomes nessas contas — esses números vieram das capturas
+  // de ecrã dele, e eu nem sei se as capturas eram desse site: presumi pelo
+  // desenho ser diferente do steamid.uk. Apresentar isso como medição foi
+  // erro meu, e ele apanhou.
+  //
+  // Então o steamhistory entra como TENTATIVA, não como fonte conhecida:
+  // não sei o formato do endereço nem se a página mostra a lista. Se der,
+  // ótimo; se não, o comando diz o que encontrou em vez de fingir.
+  //
+  // steamid.uk primeiro: é onde ele paga, e é a única que eu confirmei ter
+  // os dados (343 nomes na base, ainda que a API não os liste).
   : [
     { nome: 'steamid.uk', urls: (id) => [`https://steamid.uk/profile/${id}`] },
     // Não sei o formato exato do endereço deles — o Cloudflare me barra e
