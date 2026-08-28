@@ -27,8 +27,19 @@ const { spawn } = require('node:child_process');
 const RAIZ = path.join(__dirname, '..');
 const CONFIG = path.join(RAIZ, 'detetive.config.json');
 
+// DOIS perfis, e não é preferência: o Chromium cria um ProcessSingleton
+// dentro da pasta do perfil e recusa a segunda abertura. Medido:
+//   "Failed to create a ProcessSingleton for your profile directory."
+// Com um perfil só, o agente sobe primeiro e a PRESENÇA nunca sobe —
+// justamente a fonte ao segundo, morrendo calada e tentando de novo a cada
+// 30s para sempre.
+//
+// Separar também é mais certo: são logins de sites diferentes. O agente
+// entra no BattleMetrics, a presença entra na Kick.
 const PERFIL = process.env.DETETIVE_PERFIL
   || path.join(os.homedir(), '.detetive-navegador');
+const PERFIL_KICK = process.env.DETETIVE_PERFIL_KICK
+  || path.join(os.homedir(), '.detetive-navegador-kick');
 
 const MODELO = {
   canal: 'tchubi',
@@ -152,8 +163,8 @@ function main() {
           ...process.env,
           DETETIVE_SERVICO: `http://127.0.0.1:${cfg.porta}`,
           PRESENCA_CANAL: cfg.canal,
-          DETETIVE_PERFIL: PERFIL,
-          DETETIVE_VISIVEL: process.env.DETETIVE_VISIVEL ?? (fs.existsSync(PERFIL) ? '' : '1'),
+          DETETIVE_PERFIL: PERFIL_KICK,
+          DETETIVE_VISIVEL: process.env.DETETIVE_VISIVEL ?? (fs.existsSync(PERFIL_KICK) ? '' : '1'),
         },
       });
       pres.on('exit', (c) => {
@@ -200,7 +211,17 @@ function main() {
     subirPresenca();
     if (cfg.presencaAoSegundo) {
       console.log('  Gravando presença AO SEGUNDO pelo chat da Kick.');
-      console.log('  Na primeira vez, faça login na janela que abrir.\n');
+      // Duas janelas na primeira vez, e cada uma quer um site diferente.
+      // Sem dizer qual é qual, a chance de logar na errada é metade.
+      const faltam = [
+        !fs.existsSync(PERFIL) && 'BattleMetrics',
+        !fs.existsSync(PERFIL_KICK) && 'Kick',
+      ].filter(Boolean);
+      if (faltam.length) {
+        console.log(`  Na primeira vez abre ${faltam.length === 2 ? 'uma janela para cada' : 'uma janela'}:`);
+        for (const q of faltam) console.log(`    · entre na sua conta da ${q}`);
+        console.log('');
+      }
     }
 
     for (const sinal of ['SIGINT', 'SIGTERM']) {

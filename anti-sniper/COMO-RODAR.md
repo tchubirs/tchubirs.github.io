@@ -65,13 +65,48 @@ Medido em 28/08/2026: assinar sem credencial responde **"Auth info required
 to subscribe"** — o canal existe —, e `kick.com/broadcasting/auth` responde
 401, ou seja, autoriza com sessão válida.
 
-A autorização sai de **dentro da página** no navegador do agente, então
-sessão e CSRF vão junto sem ninguém copiar cookie para lugar nenhum.
+A autorização sai de **dentro da página** no navegador, então sessão e
+CSRF vão junto sem ninguém copiar cookie para lugar nenhum.
+
+**Dois navegadores, dois logins.** O agente entra no BattleMetrics, a
+presença entra na Kick — e cada um tem a sua pasta de perfil
+(`~/.detetive-navegador` e `~/.detetive-navegador-kick`). Não é capricho: o
+Chromium tranca a pasta do perfil e recusa a segunda abertura, então com
+uma pasta só o agente subia e **a presença nunca começava** — a fonte mais
+precisa morrendo calada, tentando de novo a cada 30s.
 
 **O que ainda não foi verificado:** se o canal lista **todos** os
 espectadores ou só um subconjunto. Só dá para saber com o seu login. Rode
 uma vez e compare quantos aparecem em "já dentro" com o número de viewers
 na tela — se bater, é todo mundo.
+
+## O que o painel mostra, e por quê
+
+**"Na sua live agora"** é agora de verdade. Quando a presença vê alguém
+sair, a pessoa some da lista no mesmo segundo. As outras fontes só têm
+pontos soltos — elas não avisam saída nenhuma —, então para elas "ainda
+está lá" é palpite pelo tempo desde o último sinal, e o palpite ganha 15
+min de folga. Misturar as duas mantinha na tela quem já tinha fechado a
+janela.
+
+**O cruzamento é mais largo de propósito.** Ele olha quem esteve na live
+nos últimos 15 min, tenha saído ou não, e marca *"fechou a live há 3 min"*.
+Exigir que a pessoa ainda estivesse dentro filtraria fora exatamente quem
+se comporta como sniper: assiste, **fecha**, ataca.
+
+**Cada tempo vem com a régua junto** — `4min 22s ao segundo` ou
+`0h10 bloco de ~10 min`. Um número sem a fonte junto é o que faz uma
+estimativa de bloco ser lida como medida. Uma visita de bloco no meio do
+total já tira o "ao segundo" do resumo inteiro.
+
+**Vermelho é certeza, âmbar é palpite.** Nome que bate depois de
+normalizar (`D1per` = `diper`) é vermelho; abaixo de 95% é âmbar e diz
+"pode ser outra pessoa". Pintar 70% e 100% da mesma cor é o que transforma
+a tela em barulho.
+
+**Entrar e sair várias vezes conta.** Três idas e vindas em quinze minutos
+é alguém conferindo a tela, não assistindo — então a linha diz `3×` em vez
+de mostrar só a última visita.
 
 ## Sem login — `npm run gravar`
 

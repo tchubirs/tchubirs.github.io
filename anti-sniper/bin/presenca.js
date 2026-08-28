@@ -34,7 +34,13 @@ const CANAL = process.env.PRESENCA_CANAL || cfg.canal || 'tchubi';
 const SERVICO = process.env.DETETIVE_SERVICO
   || (cfg.porta ? `http://127.0.0.1:${cfg.porta}` : 'http://127.0.0.1:8790');
 const FUSO = cfg.fuso || 'Europe/Paris';
-const PERFIL = process.env.DETETIVE_PERFIL || path.join(os.homedir(), '.detetive-navegador');
+// Perfil PRÓPRIO, separado do agente. O Chromium recusa duas aberturas da
+// mesma pasta de perfil ("Failed to create a ProcessSingleton"), então
+// compartilhar com o agente fazia esta gravação nunca começar quando os
+// dois rodam juntos. E o login aqui é da Kick; o do agente é do
+// BattleMetrics.
+const PERFIL = process.env.DETETIVE_PERFIL
+  || path.join(os.homedir(), '.detetive-navegador-kick');
 const ARQUIVO = path.join(RAIZ, 'dados', 'presenca.jsonl');
 
 const hms = (ms) => new Intl.DateTimeFormat('pt-BR', {

@@ -130,7 +130,68 @@ async function main() {
     for (const f of [banco, banco + '-wal', banco + '-shm']) fs.rmSync(f, { force: true });
   }
 
-  // ── 5. O que continua cego ──────────────────────────────────────────
+  // ── 5. A fonte AO SEGUNDO ───────────────────────────────────────────
+  //
+  // A mais importante e a que faltava aqui. Não dá para assinar o canal sem
+  // o login dele, mas dá para medir as duas coisas que decidem se o caminho
+  // existe — e medir é melhor que supor.
+  try {
+    const r = await fetch(`https://kick.com/api/v2/channels/${encodeURIComponent(CANAL)}`,
+      { headers: { Accept: 'application/json' } });
+    const j = r.ok ? await r.json() : null;
+    const sala = j?.chatroom?.id;
+    if (!sala) {
+      mau('Não achei a sala de chat da Kick', `kick.com/api/v2/channels/${CANAL} respondeu ${r.status}`);
+    } else {
+      // 401 aqui é a resposta CERTA: quer dizer que a rota autoriza com
+      // sessão válida. 404 ou 200 sem credencial seriam a notícia ruim.
+      const a = await fetch('https://kick.com/broadcasting/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ socket_id: '0.0', channel_name: `presence-chatroom.${sala}` }),
+      });
+      if (a.status === 401 || a.status === 403) {
+        ok(`Canal de presença existe (sala ${sala})`,
+          `a Kick pede login (${a.status}) — é a resposta certa. Rode \`npm run presenca\` logado.`);
+      } else {
+        cego(`Autorização da presença respondeu ${a.status}`,
+          'esperado 401 sem login. Se mudou, o caminho ao segundo precisa ser remedido.');
+      }
+    }
+  } catch (e) {
+    mau('Não deu para checar a presença da Kick', e.message);
+  }
+
+  // O caminho de dentro: evento → intervalo → log. Sintético de propósito,
+  // porque o que se prova aqui é que o SEGUNDO sobrevive até a resposta.
+  {
+    const banco2 = path.join(os.tmpdir(), `conferir-p-${process.pid}.db`);
+    try {
+      const T = Date.now();
+      const s2 = criar({ caminhoBanco: banco2, agora: () => T });
+      s2.db.prepare('INSERT INTO canal (id,plataforma,slug,criado_em) VALUES (?,?,?,?)')
+        .run('x', PLATAFORMA, CANAL, T);
+      s2.receberPresenca('x', [
+        { tipo: 'entrou', em: T - 9 * 60000, id: '1', nome: 'TESTE-PRESENCA' },
+        { tipo: 'saiu', em: T - 4 * 60000 - 38000, id: '1', nome: 'TESTE-PRESENCA' },
+      ]);
+      const l = s2.log('x', 'TESTE-PRESENCA');
+      if (l.segundosNaLive === 262 && l.exatoNaLive) {
+        ok('O segundo sobrevive do evento até o log',
+          `visita de 4min22s registrada como ${l.segundosNaLive}s — não arredondada para o bloco de 10 min`);
+      } else {
+        mau('O segundo se perdeu no caminho',
+          `esperado 262s exatos, veio ${l.segundosNaLive}s (exato=${l.exatoNaLive})`);
+      }
+      s2.db.close();
+    } catch (e) {
+      mau('O caminho da presença quebrou', e.message);
+    } finally {
+      for (const f of [banco2, banco2 + '-wal', banco2 + '-shm']) fs.rmSync(f, { force: true });
+    }
+  }
+
+  // ── 6. O que continua cego ──────────────────────────────────────────
   if (!cfg.battlemetricsJogador) {
     cego('Sem battlemetricsJogador no config',
       'não dá para saber quem está NO SERVIDOR agora — só quem está na live');
