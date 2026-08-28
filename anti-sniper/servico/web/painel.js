@@ -5,8 +5,19 @@ document.getElementById('canal').textContent = CANAL;
 
 const esc = (s) => String(s).replace(/[<>&"]/g,
   (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
+/**
+ * O fuso do CANAL, não o do navegador.
+ *
+ * O resumo do log escrevia "horários em Europe/Paris" enquanto os horários
+ * saíam no fuso de quem abriu a página. Com o painel aberto no celular em
+ * viagem, ou num navegador com fuso errado, a etiqueta afirmava uma coisa e
+ * os números diziam outra — e num produto cuja resposta É a hora, isso não
+ * é detalhe. Preenchido pela primeira resposta do serviço.
+ */
+let FUSO = null;
+const relogio = (op) => new Intl.DateTimeFormat('pt-BR', FUSO ? { ...op, timeZone: FUSO } : op);
 const hora = (ms) => ms == null ? '—'
-  : new Date(ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  : relogio({ hour: '2-digit', minute: '2-digit' }).format(new Date(ms));
 const hhmm = (m) => m == null ? 'tempo desconhecido'
   : `${Math.floor(m / 60)}h${String(m % 60).padStart(2, '0')}`;
 
@@ -301,12 +312,25 @@ function duracao(l) {
   return `${l.minutos} min`;
 }
 
+/**
+ * O fim da linha — e uma visita aberta NÃO tem fim.
+ *
+ * Em visita aberta `ate` é "até agora", para a duração poder crescer. Mas
+ * imprimir isso na coluna da saída afirmaria uma hora que ninguém observou:
+ * "23:25:00 → 23:30:00" lê como "saiu às 23:30", e ela ainda está lá.
+ */
+function fim(l) {
+  if (l.aberta) return '<span class="viva">ainda dentro</span>';
+  if (PRESENCA(l.fonte) && l.segundos === 0) return '<span class="regua">saída não vista</span>';
+  return horaFina(l.ate, l);
+}
+
 /** Com precisão de segundo, mostrar só HH:MM apagaria a resposta. */
 function horaFina(ms, l) {
-  const exata = l.fonte === 'presenca' || l.fonte === 'presenca-parcial';
-  return new Date(ms).toLocaleTimeString('pt-BR',
-    exata ? { hour: '2-digit', minute: '2-digit', second: '2-digit' }
-      : { hour: '2-digit', minute: '2-digit' });
+  const exata = PRESENCA(l.fonte);
+  return relogio(exata
+    ? { hour: '2-digit', minute: '2-digit', second: '2-digit' }
+    : { hour: '2-digit', minute: '2-digit' }).format(new Date(ms));
 }
 
 /**
@@ -340,7 +364,7 @@ function desenharLog(d) {
   }
   const linhas = d.linhas.map((l) => `<tr>
       <td class="onde ${l.onde}">${l.onde === 'live' ? '● live' : '● servidor'}</td>
-      <td>${horaFina(l.de, l)} <span class="seta">→</span> ${horaFina(l.ate, l)}</td>
+      <td>${horaFina(l.de, l)} <span class="seta">→</span> ${fim(l)}</td>
       <td class="dur">${duracao(l)}</td>
       <td class="dur">${l.perfil
         ? `<a href="${esc(l.perfil)}" target="_blank" rel="noopener noreferrer">quem é ↗</a>`
@@ -361,6 +385,9 @@ async function atualizar() {
     if (!r.ok) throw new Error(r.status);
     const d = await r.json();
     const da = await ra.json();
+    // Antes de desenhar qualquer hora: senão o primeiro quadro sai no fuso
+    // do navegador e muda sozinho no segundo.
+    if (da.fuso) FUSO = da.fuso;
     desenharAgora(da.naLive || [], document.getElementById('agora'), da.coleta);
     desenharDois(da.nosDois || [], document.getElementById('nosdois'));
     desenharCobertura(da.coleta, da.em, document.getElementById('cobertura'));

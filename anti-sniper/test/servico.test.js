@@ -1235,15 +1235,28 @@ test('sem nenhum aviso de vida, nada muda — não invento sinal', () => {
   assert.equal(s.agoraNa('c1', 'live', T)[0].nome, 'diper');
 });
 
-test('estada carrega `aberta` — o painel precisa distinguir dois zeros', () => {
+test('o log de uma visita aberta conta até AGORA, igual ao cartão', () => {
+  const s = bancada();
+  s.receberPresenca('c1', [{ tipo: 'entrou', em: T - 5 * MIN, id: '1', nome: 'diper' }]);
+  // O cartão dizia "5 min" e o log da MESMA pessoa dizia "0min 00s": a
+  // correção da visita aberta estava só em `agoraNa`, não em `estadas`.
+  const cartao = s.agoraNa('c1', 'live', T)[0];
+  const linha = s.log('c1', 'diper').linhas[0];
+  assert.equal(cartao.minutos, 5);
+  assert.equal(linha.segundos, 5 * 60);
+  assert.equal(linha.aberta, true);
+  // O fim OBSERVADO continua sendo a entrada: numa visita aberta não
+  // existe hora de saída, e `ate` aqui é "até agora", não "saiu às".
+  assert.equal(linha.ultimoSinal, T - 5 * MIN);
+});
+
+test('visita fechada sem saída vista fica com duração zero, e diz isso', () => {
   const s = bancada();
   s.receberPresenca('c1', [{ tipo: 'entrou', em: T - MIN, id: '1', nome: 'diper' }]);
-  // Duração zero com `aberta` = acabou de entrar.
-  const viva = s.log('c1', 'diper').linhas[0];
-  assert.equal(viva.segundos, 0);
-  assert.equal(viva.aberta, true);
-  // Duração zero SEM `aberta` = a gravação parou antes de ver a saída, e
-  // "entrou agora" sobre uma visita de ontem seria inventar o presente.
+  // É o que sobra de um reinício: fechada no último sinal visto. Duração
+  // zero aqui não é "entrou agora" — é "a saída ninguém viu".
   s.db.prepare('UPDATE estada SET aberta = 0').run();
-  assert.equal(s.log('c1', 'diper').linhas[0].aberta, false);
+  const linha = s.log('c1', 'diper').linhas[0];
+  assert.equal(linha.aberta, false);
+  assert.equal(linha.segundos, 0);
 });

@@ -446,20 +446,30 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
     'SELECT * FROM estada WHERE canal_id = ? AND onde = ? AND nome_norm = ? ORDER BY inicio_em');
 
   /** Todos os intervalos conhecidos de uma pessoa num lugar. */
-  function estadas(canalId, onde, nome) {
+  function estadas(canalId, onde, nome, tMs = agora()) {
     const norm = normalizar(nome);
     if (!norm) return [];
-    return listarEstadas.all(canalId, onde, norm).map((e) => ({
-      de: e.inicio_em, ate: e.fim_em,
-      minutos: Math.max(1, Math.round((e.fim_em - e.inicio_em) / 60000)),
-      // Em segundos também: a fonte de presença sabe o instante exato, e
-      // arredondar para minuto apagaria a resposta que ele pediu.
-      segundos: Math.round((e.fim_em - e.inicio_em) / 1000),
-      amostras: e.amostras, servidor: e.onde_extra, fonte: e.fonte || 'chat',
-      aberta: e.aberta === 1,
-      bmId: e.ref || null,
-      perfil: e.ref ? `https://www.battlemetrics.com/players/${e.ref}` : null,
-    }));
+    return listarEstadas.all(canalId, onde, norm).map((e) => {
+      const aberta = e.aberta === 1;
+      // Visita ainda aberta tem fim_em igual ao início — o fim só chega com
+      // a saída. Sem isto o cartão dizia "5 min" e o log da MESMA pessoa,
+      // logo abaixo, dizia "0min 00s".
+      const ate = aberta ? Math.max(e.fim_em, tMs) : e.fim_em;
+      return {
+        de: e.inicio_em, ate,
+        // `ultimoSinal` é o fim OBSERVADO. Numa visita aberta ele é a
+        // entrada, e é o que o painel usa para não afirmar uma saída.
+        ultimoSinal: e.fim_em,
+        minutos: Math.max(1, Math.round((ate - e.inicio_em) / 60000)),
+        // Em segundos também: a fonte de presença sabe o instante exato, e
+        // arredondar para minuto apagaria a resposta que ele pediu.
+        segundos: Math.round((ate - e.inicio_em) / 1000),
+        amostras: e.amostras, servidor: e.onde_extra, fonte: e.fonte || 'chat',
+        aberta,
+        bmId: e.ref || null,
+        perfil: e.ref ? `https://www.battlemetrics.com/players/${e.ref}` : null,
+      };
+    });
   }
 
   /**
