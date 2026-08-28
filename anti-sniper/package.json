@@ -16,7 +16,8 @@
     "demo": "node bin/gerar-demo.js",
     "gravar": "node bin/gravar.js --loop",
     "visitas": "node bin/gravar.js --ver",
-    "presenca": "node bin/presenca.js"
+    "presenca": "node bin/presenca.js",
+    "nomes": "node bin/nomes.js"
   },
   "dependencies": {
     "playwright": "^1.47.0"
