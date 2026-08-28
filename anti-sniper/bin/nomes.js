@@ -25,6 +25,7 @@ const path = require('node:path');
 const os = require('node:os');
 const { resolverEntrada } = require('../src/steam');
 const { lerNomesDaPagina, lerAgrupadoPorAno } = require('../src/nomes-pagina');
+const { nomesQueValem } = require('../src/nome-principal');
 
 const RAIZ = path.join(__dirname, '..');
 const PERFIL = process.env.DETETIVE_PERFIL_NOMES
@@ -206,7 +207,8 @@ const FONTES = process.env.DETETIVE_NOMES_URL
       if (r?.retrato) ultimoRetrato = ultimoRetrato || { fonte: fonte.nome, url, ...r };
     }
     if (ok) {
-      console.log(`✓ ${ok.nomes.length} nomes${ok.total ? ` (a página diz ${ok.total})` : ''}`);
+      console.log(`✓ ${ok.nomes.length} nomes${ok.total ? ` (a página diz ${ok.total})` : ''}${
+        ok.cortados ? ` · ${ok.cortados} vieram cortados` : ''}`);
       achados.push(ok);
       // Sem --tudo, a primeira que responder basta. Com --tudo, sigo para
       // juntar: são bancos diferentes, e a união é maior que qualquer um.
@@ -234,6 +236,7 @@ const FONTES = process.env.DETETIVE_NOMES_URL
       url: achados.map((a) => a.url).join(' , '),
       nomes: [...vistos.values()],
       total: achados.reduce((t, a) => Math.max(t, a.total || 0), 0) || null,
+      cortados: achados.reduce((t, a) => t + (a.cortados || 0), 0),
       precisao: achados.every((a) => a.precisao === 'ano') ? 'ano' : undefined,
       porFonte: achados.map((a) => `${a.fonte}: ${a.nomes.length}`),
     };
@@ -257,8 +260,52 @@ const FONTES = process.env.DETETIVE_NOMES_URL
     // Aviso quando peguei menos do que a própria página anuncia: metade da
     // lista entregue como se fosse inteira é pior que erro nenhum.
     if (resultado.total && resultado.nomes.length < resultado.total) {
-      console.log(`\n  ⚠ a página diz ${resultado.total} e eu li ${resultado.nomes.length} — falta paginação`);
+      console.log(`\n  ⚠ a página diz ${resultado.total} e eu li ${resultado.nomes.length} — ${
+        resultado.cortados ? 'o site cortou a lista' : 'falta paginação'}`);
     }
+    // Nomes que o site entregou pela metade ("Gat..", "Pl..").
+    //
+    // Isto não é detalhe de leitura: é o sinal de que a sessão não está
+    // logada. O steamid.uk corta a lista para visitante, e o plano que ele
+    // pagou promete exatamente o contrário — "Unrestricted Previous names
+    // (Not cut short)" — mas só dentro da sessão. Sem este aviso a saída
+    // mostra 2 nomes num ano que declara 18 e parece que a conta teve 2.
+    // São coisas opostas, e calar a diferença é o pior dos dois.
+    if (resultado.cortados) {
+      console.log(`\n  ⚠ ${resultado.cortados} nomes vieram cortados pelo site ("Gat..", "Pl..") e eu descartei:`);
+      console.log('    meio nome casaria com meia palavra no cruzamento.');
+      console.log('    É assim que o steamid.uk trata quem NÃO está logado. O teu plano Silver');
+      console.log('    ("Unrestricted Previous names") só vale dentro da sessão. Loga uma vez:\n');
+      console.log(`      npm run nomes -- ${id} --ver`);
+      console.log('\n    Faz login na janela que abrir e carrega ENTER aqui.');
+      console.log('    Fica guardado no perfil — nas próximas já corre sozinho.');
+    }
+
+    // Qual destes é o nome DA PESSOA — pela regra dele:
+    //
+    //   *"normalmente o nome principal da pessoa é o que ela usa mais de uma
+    //   vez e uns dos primeiros da conta"*
+    //
+    // Sem este passo a saída são 344 nomes achatados, todos com o mesmo peso,
+    // e o nome verdadeiro afoga no meio de trezentas piadas. É esta lista
+    // curta que vai cruzar com a audiência da Kick, não a lista inteira:
+    // cruzar 344 nomes é garantir um acerto por acaso.
+    const provaveis = nomesQueValem(resultado.nomes, { teto: 8 });
+    const comSinal = provaveis.filter((n) => n.pontos > 0);
+    if (comSinal.length) {
+      console.log('\n  provável nome da pessoa — pela tua regra (volta ao nome + está no começo da conta)\n');
+      for (const n of comSinal.slice(0, 5)) {
+        console.log(`    ${String(n.pontos).padStart(2)} pt  ${String(n.nome).padEnd(24)} ${n.porque.join(', ')}`);
+      }
+      // Sem este aviso o topo da lista lê-se como veredito. Não é: é o melhor
+      // palpite. Quem confunde as duas coisas acusa inocente.
+      console.log('\n  ⚠ isto é probabilidade, não identidade.');
+    } else {
+      console.log('\n  nenhum nome se destaca: nenhum foi repetido nem retomado anos depois.');
+      console.log('  Sem sinal, escolher um seria escolher a esmo — então não escolho.');
+    }
+    resultado.provaveis = provaveis;
+
     fs.mkdirSync(SAIDA, { recursive: true });
     const arq = path.join(SAIDA, `nomes-${id}.json`);
     fs.writeFileSync(arq, JSON.stringify(resultado, null, 2));

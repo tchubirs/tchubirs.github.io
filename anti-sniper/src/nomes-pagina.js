@@ -243,29 +243,75 @@ function lerAgrupadoPorAno(doc, texto) {
   const ANO = /^(19[89]\d|20[0-4]\d)$/;
   const ANO_COM_CONTA = /^(19[89]\d|20[0-4]\d)\s+(\d{1,4})$/;
 
+  // Onde a lista de nomes ACABA. Sem isto o extrator seguia página abaixo e
+  // trazia títulos de secção, o histórico de visibilidade ("Public", "Oct
+  // 14, 2018") e até código JavaScript solto — tudo etiquetado como nome de
+  // pessoa. Medido na página real dele.
+  //
+  // Duas listas, e a diferença importa: um título de várias palavras não é
+  // apelido de ninguém, então basta começar por ele. Já "Groups" é uma
+  // palavra que alguém pode ter usado como nome — aí exijo o texto INTEIRO,
+  // senão um apelido cortava a leitura no meio e engolia o resto da lista.
+  const FIM_FRASE = /^(First name seen by SteamID|Steam Level History|Historic Groups|Profile Visibility History|Avatar History|Profile Comments|Steam Friends|Historic Friends|Previous Community URLs?)/i;
+  const FIM_EXATO = /^(Groups)$/i;
+
   const nomes = [];
   let ano = null;
   let total = 0;
+  let esperaContagem = false;
+  // Quantos o site entregou pela metade. Contar em vez de só descartar: é
+  // este número que distingue "esta conta teve 2 nomes" de "o site mostrou-me
+  // 2 de 18 porque não estou logado". Sem ele a saída fica idêntica nos dois
+  // casos, e são casos opostos.
+  let cortados = 0;
 
-  // Percorro as folhas em ordem: um marcador de ano muda o ano corrente,
-  // tudo o que vem depois é nome daquele ano.
   const folhas = [...secao.querySelectorAll('*')].filter((e) => !e.children.length);
   for (const el of folhas) {
+    // Código não é nome. A página traz <script> inline no meio do conteúdo.
+    const tag = String(el.tagName || '').toUpperCase();
+    if (tag === 'SCRIPT' || tag === 'STYLE') { continue; }
+
     const t = texto(el);
     if (!t) continue;
+
+    // Chegou noutra secção: acabou a lista. Parar é a única saída certa —
+    // continuar traz o resto da página como se fossem nomes.
+    if (FIM_FRASE.test(t) || FIM_EXATO.test(t)) break;
+
     const m = t.match(ANO_COM_CONTA);
-    if (m) { ano = m[1]; total += Number(m[2]) || 0; continue; }
-    if (ANO.test(t)) { ano = t; continue; }
+    if (m) { ano = m[1]; total += Number(m[2]) || 0; esperaContagem = false; continue; }
+    if (ANO.test(t)) {
+      ano = t;
+      // A página põe o ano e a contagem em elementos SEPARADOS: <div>2026</div>
+      // <div>18</div>. Sem esperar por ela, o "18" entrava na lista como se
+      // fosse o nome de alguém — foi o que aconteceu.
+      esperaContagem = true;
+      continue;
+    }
+    if (esperaContagem && /^\d{1,4}$/.test(t)) {
+      total += Number(t) || 0;
+      esperaContagem = false;
+      continue;
+    }
+    esperaContagem = false;
+
     if (!ano) continue;
     // Nome cortado pelo site ("Gat..", "Pl..") não é nome: é um pedaço, e
     // guardá-lo faria o cruzamento casar com metade de uma palavra.
-    if (/\.\.$/.test(t) || t === '..') continue;
+    if (/\.\.$/.test(t) || t === '..') { cortados += 1; continue; }
+    // Data solta ("Oct 14, 2018", "28/08/2026") é do histórico de
+    // visibilidade, não um apelido.
+    if (/^[A-Z][a-z]{2}\s+\d{1,2},\s*\d{4}$/.test(t)) continue;
+    if (/^\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4}/.test(t)) continue;
+    // Sobra de código: a página tem jQuery inline solto entre os blocos.
+    if (/[{};]|\$\(|function\s*\(|html\(/.test(t)) continue;
     if (t.length > 64) continue;
+
     nomes.push({ nome: t, em: ano, precisao: 'ano' });
   }
 
   if (nomes.length < 3) return null;
-  return { nomes, total: total || null, comoAchei: 'agrupado por ano', precisao: 'ano' };
+  return { nomes, total: total || null, cortados, comoAchei: 'agrupado por ano', precisao: 'ano' };
 }
 
 module.exports = { lerNomesDaPagina, lerAgrupadoPorAno };

@@ -17,3 +17,8 @@ demo.html
 # As leituras são de quem roda — cada máquina grava a sua live.
 dados/leituras.jsonl
 dados/presenca.jsonl
+
+# Histórico de nomes lido das páginas: são dados de PESSOAS REAIS, com nome,
+# ano e SteamID. Isso não entra num repositório público — o produto ajuda a
+# investigar uma live, não a publicar um dossiê de quem passou por ela.
+dados/nomes-*.json

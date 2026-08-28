@@ -159,3 +159,73 @@ test('sem a âncora do título, não inventa anos a partir de números soltos', 
   const r = lerNomesDaPagina(doc);
   assert.equal(r.nomes, undefined);
 });
+
+// A página REAL dele, com o que ela realmente trouxe em 28/08/2026. Três
+// coisas que o extrator não previa e que entraram na lista como se fossem
+// nomes de pessoa:
+//
+//     2026   18                                  ← a contagem, em elemento
+//                                                  separado do ano
+//     2015   First name seen by SteamID          ← título de outra secção
+//     2015   $('#pd-groupcount').html('0 Grou…   ← jQuery solto no meio
+//     2015   Public / Oct 14, 2018               ← histórico de visibilidade
+//
+// Reproduzo o desenho aqui para o erro não voltar em silêncio.
+const paginaReal = () => parseHTML(`<html><head><title>SteamID</title></head><body>
+  <div class="card">
+    <h3>Previous Persona Names</h3>
+    <div class="bloco">
+      <div class="y">2026</div><div class="c">18</div>
+      <a href="#">Joaozinho</a><a href="#">Recruta</a><a href="#">Gatinho</a>
+      <div class="y">2015</div><div class="c">7</div>
+      <a href="#">Tufao</a><a href="#">Pluto</a>
+    </div>
+    <h3>First name seen by SteamID</h3>
+    <div>Zezinho</div>
+    <script>$('#pd-groupcount').html('0 Groups <br>12 Previous groups');</script>
+    <h3>Profile Visibility History</h3>
+    <div>Public</div><div>Oct 14, 2018</div>
+  </div></body></html>`).document;
+
+test('a contagem do ano vem em elemento separado e não vira nome', () => {
+  const r = lerNomesDaPagina(paginaReal());
+  assert.ok(!r.nomes.some((n) => n.nome === '18'), '"18" é quantos nomes há em 2026');
+  assert.ok(!r.nomes.some((n) => n.nome === '7'));
+  assert.equal(r.total, 25, 'a contagem separada ainda soma no total');
+  assert.equal(r.nomes.find((n) => n.nome === 'Gatinho').em, '2026');
+  assert.equal(r.nomes.find((n) => n.nome === 'Pluto').em, '2015');
+});
+
+test('a leitura para no fim da secção — nada depois dela é nome', () => {
+  const r = lerNomesDaPagina(paginaReal());
+  assert.equal(r.nomes.length, 5, 'só os 5 apelidos reais');
+  for (const lixo of ['First name seen by SteamID', 'Zezinho', 'Public', 'Oct 14, 2018']) {
+    assert.ok(!r.nomes.some((n) => n.nome === lixo), `"${lixo}" não é apelido de ninguém`);
+  }
+  assert.ok(!r.nomes.some((n) => /\$\(|html\(/.test(n.nome)), 'código não é nome');
+});
+
+// "Groups" é título de secção, mas também pode ser o apelido de alguém. Por
+// isso o corte exige o texto INTEIRO: começar por "Groups" cortaria a lista
+// no meio e engoliria todos os nomes seguintes.
+test('só o título exato corta a lista, não um apelido parecido', () => {
+  const pag = (ultimo) => parseHTML(`<html><body><div class="card">
+    <h3>Previous Persona Names</h3><div>
+    <div>2026</div><div>4</div>
+    <a>Joaozinho</a><a>${ultimo}</a><a>Recruta</a><a>Pluto</a>
+    </div></div></body></html>`).document;
+  const comApelido = lerNomesDaPagina(pag('Groupsito'));
+  assert.equal(comApelido.nomes.length, 4, 'um apelido parecido não corta nada');
+  assert.ok(comApelido.nomes.some((n) => n.nome === 'Groupsito'));
+  const comTitulo = lerNomesDaPagina(pag('Groups'));
+  assert.ok(comTitulo === null || comTitulo.nomes === undefined
+    || comTitulo.nomes.length === 1, 'o título exato corta ali');
+});
+
+// Este número é o que separa "a conta teve 2 nomes" de "o site mostrou-me 2
+// de 18". Sem ele a saída é idêntica nos dois casos.
+test('conta quantos nomes o site entregou cortados', () => {
+  const r = lerNomesDaPagina(paginaPorAno({ cortados: true }));
+  assert.equal(r.cortados, 3, '"Gat..", "Pl.." e "Blo.." foram cortados pelo site');
+  assert.equal(lerNomesDaPagina(paginaPorAno()).cortados, 0, 'logado, nada vem cortado');
+});
