@@ -33,6 +33,9 @@ const SAIDA = path.join(RAIZ, 'dados');
 
 const args = process.argv.slice(2);
 const VISIVEL = args.includes('--ver') || process.env.DETETIVE_VISIVEL === '1';
+// `--tudo` consulta as duas fontes e junta. Sem ele, para na primeira
+// que responder — que é o que serve no dia a dia.
+const TUDO = args.includes('--tudo');
 const alvo = args.find((a) => !a.startsWith('-'));
 
 if (!alvo) {
@@ -44,12 +47,33 @@ if (!alvo) {
 const FONTES = process.env.DETETIVE_NOMES_URL
   // Endereço fixo para eu poder provar o caminho do navegador contra uma
   // página local, sem depender de alcançar o site de fora.
-  ? [{ nome: 'teste', url: (id) => process.env.DETETIVE_NOMES_URL.replace('{id}', id) }]
-  // Só o steamid.uk: é o plano que ele assinou (Silver), e o Silver dá
-  // exatamente o que faltava — "Unrestricted Previous names (Not cut
-  // short)" e "Timestamps on previous names". Deslogado a página corta os
-  // nomes ("Gat..", "Pl..") e diz "Results limited"; logado, mostra os 344.
-  : [{ nome: 'steamid.uk', url: (id) => `https://steamid.uk/profile/${id}` }];
+  ? [{ nome: 'teste', urls: (id) => [process.env.DETETIVE_NOMES_URL.replace('{id}', id)] }]
+  // DUAS fontes, e não é redundância: são bancos diferentes, e cada um vê
+  // o que o outro não vê. Medido nas contas dele:
+  //
+  //     76561198155380495   steamid.uk 343 · steamhistory 133
+  //     76561198145264799   steamid.uk   0 (optout!) · steamhistory 196
+  //     76561198178303493   steamid.uk   0 (optout!) · steamhistory  61
+  //
+  // `optout=1` quer dizer que a pessoa pediu remoção da base do steamid.uk,
+  // e pagar não desfaz isso — o plano Silver dele está ativo e continua a
+  // devolver zero nessas três. Sem a segunda fonte, a busca ficava cega em
+  // três de cinco casos reais.
+  //
+  // steamid.uk primeiro: é onde ele paga, e tem mais nomes quando vê.
+  : [
+    { nome: 'steamid.uk', urls: (id) => [`https://steamid.uk/profile/${id}`] },
+    // Não sei o formato exato do endereço deles — o Cloudflare me barra e
+    // nunca cheguei a ver. Tento os prováveis e digo qual respondeu, em vez
+    // de fingir que sei.
+    { nome: 'steamhistory.net',
+      urls: (id) => [
+        `https://steamhistory.net/id/${id}`,
+        `https://steamhistory.net/profile/${id}`,
+        `https://steamhistory.net/steamid/${id}`,
+        `https://steamhistory.net/user/${id}`,
+      ] },
+  ];
 
 (async () => {
   let chromium;
@@ -70,58 +94,87 @@ const FONTES = process.env.DETETIVE_NOMES_URL
   const ctx = await chromium.launchPersistentContext(PERFIL, op);
   const p = await ctx.newPage();
 
-  let resultado = null;
-  for (const fonte of FONTES) {
-    const url = fonte.url(id);
-    process.stdout.write(`  ${fonte.nome.padEnd(18)} `);
-    try {
-      await p.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
-      // O Cloudflare pode segurar alguns segundos antes de soltar a página.
-      // Espero pelo título mudar em vez de dormir um tempo fixo.
-      for (let i = 0; i < 20; i++) {
-        const t = await p.title().catch(() => '');
-        if (!/just a moment|attention required|checking your browser/i.test(t)) break;
-        await p.waitForTimeout(1000);
-      }
-      await p.waitForTimeout(2500);
+  /** Uma tentativa numa URL. Devolve o que a página deu, sem julgar. */
+  async function tentar(url) {
+    await p.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    // O Cloudflare pode segurar alguns segundos antes de soltar a página.
+    // Espero o título mudar em vez de dormir um tempo fixo.
+    for (let i = 0; i < 20; i++) {
+      const t = await p.title().catch(() => '');
+      if (!/just a moment|attention required|checking your browser/i.test(t)) break;
+      await p.waitForTimeout(1000);
+    }
+    await p.waitForTimeout(2500);
 
-      // Se a página pagina a lista, tento pedir tudo de uma vez antes de ler.
-      for (const texto of ['View All', 'Ver tudo', 'Show all']) {
-        const b = p.locator(`text="${texto}"`).first();
-        if (await b.count().catch(() => 0)) {
-          await b.click({ timeout: 5000 }).catch(() => {});
-          await p.waitForTimeout(2500);
-          break;
-        }
-      }
-
-      // As DUAS funções vão para dentro da página. `lerNomesDaPagina`
-      // chama `lerAgrupadoPorAno`, e mandar só a primeira dava
-      // "ReferenceError: lerAgrupadoPorAno is not defined" — em produção,
-      // na máquina dele, sem eu ver. `toString()` não leva as dependências
-      // junto: quem serializa uma função tem de serializar o que ela chama.
-      // `evaluate` com texto espera uma EXPRESSÃO, não declarações soltas —
-      // duas `function` seguidas dão "SyntaxError: Unexpected token
-      // 'function'". Daí o embrulho que devolve o resultado.
-      const r = await p.evaluate(`(() => {
-        ${lerAgrupadoPorAno.toString()}
-        ${lerNomesDaPagina.toString()}
-        return lerNomesDaPagina(document);
-      })()`);
-      if (r?.nomes?.length) {
-        console.log(`✓ ${r.nomes.length} nomes${r.total ? ` (a página diz ${r.total})` : ''}`);
-        resultado = { fonte: fonte.nome, url, ...r };
+    // Se a página pagina a lista, peço tudo antes de ler.
+    for (const texto of ['View All', 'Ver tudo', 'Show all']) {
+      const b = p.locator(`text="${texto}"`).first();
+      if (await b.count().catch(() => 0)) {
+        await b.click({ timeout: 5000 }).catch(() => {});
+        await p.waitForTimeout(2500);
         break;
       }
-      // "Escondido" é diferente de "não achei": vale dizer qual dos dois,
-      // e quanto a página admite ter.
-      console.log(r?.limitado
-        ? `⚠ ${r.erro}${r.totalDito ? ` — a página admite ${r.totalDito} nomes` : ''}`
-        : `— ${r?.erro || 'nada'}`);
-      if (r) resultado = resultado || { fonte: fonte.nome, url, ...r };
-    } catch (e) {
-      console.log(`✗ ${String(e.message).split('\n')[0].slice(0, 70)}`);
     }
+
+    // As DUAS funções vão para dentro da página: `lerNomesDaPagina` chama
+    // `lerAgrupadoPorAno`, e `toString()` não leva dependências junto.
+    // E `evaluate` com texto quer uma EXPRESSÃO, daí o embrulho.
+    return p.evaluate(`(() => {
+      ${lerAgrupadoPorAno.toString()}
+      ${lerNomesDaPagina.toString()}
+      return lerNomesDaPagina(document);
+    })()`);
+  }
+
+  const achados = [];
+  let ultimoRetrato = null;
+
+  for (const fonte of FONTES) {
+    process.stdout.write(`  ${fonte.nome.padEnd(18)} `);
+    let ok = null;
+    for (const url of fonte.urls(id)) {
+      let r = null;
+      try { r = await tentar(url); }
+      catch (e) { continue; }                    // endereço errado: próximo
+      if (r?.nomes?.length) { ok = { fonte: fonte.nome, url, ...r }; break; }
+      if (r?.limitado) { ultimoRetrato = { fonte: fonte.nome, url, ...r }; break; }
+      if (r?.retrato) ultimoRetrato = ultimoRetrato || { fonte: fonte.nome, url, ...r };
+    }
+    if (ok) {
+      console.log(`✓ ${ok.nomes.length} nomes${ok.total ? ` (a página diz ${ok.total})` : ''}`);
+      achados.push(ok);
+      // Sem --tudo, a primeira que responder basta. Com --tudo, sigo para
+      // juntar: são bancos diferentes, e a união é maior que qualquer um.
+      if (!TUDO) break;
+    } else if (ultimoRetrato?.fonte === fonte.nome && ultimoRetrato.limitado) {
+      console.log(`⚠ ${ultimoRetrato.erro}${ultimoRetrato.totalDito ? ` — admite ${ultimoRetrato.totalDito} nomes` : ''}`);
+    } else {
+      console.log('— nada');
+    }
+  }
+
+  // Junta as fontes. Mesmo nome no mesmo ano é a mesma coisa; o resto soma.
+  let resultado = null;
+  if (achados.length === 1) resultado = achados[0];
+  else if (achados.length > 1) {
+    const vistos = new Map();
+    for (const a of achados) {
+      for (const n of a.nomes) {
+        const k = `${String(n.nome).toLowerCase()}|${n.em}`;
+        if (!vistos.has(k)) vistos.set(k, { ...n, fonte: a.fonte });
+      }
+    }
+    resultado = {
+      fonte: achados.map((a) => a.fonte).join(' + '),
+      url: achados.map((a) => a.url).join(' , '),
+      nomes: [...vistos.values()],
+      total: achados.reduce((t, a) => Math.max(t, a.total || 0), 0) || null,
+      precisao: achados.every((a) => a.precisao === 'ano') ? 'ano' : undefined,
+      porFonte: achados.map((a) => `${a.fonte}: ${a.nomes.length}`),
+    };
+    console.log(`\n  juntando as fontes → ${resultado.nomes.length} nomes distintos (${resultado.porFonte.join(' · ')})`);
+  } else {
+    resultado = ultimoRetrato;
   }
 
   await ctx.close().catch(() => {});
