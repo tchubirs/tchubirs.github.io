@@ -13,3 +13,6 @@ detetive.db-wal
 detetive.db-shm
 detetive.config.json
 demo.html
+
+# As leituras são de quem roda — cada máquina grava a sua live.
+dados/leituras.jsonl
