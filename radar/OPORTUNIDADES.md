@@ -317,3 +317,12 @@ conseguir falar sobre o que foi entregue.
    bagunçado, não dá pra entender nada"* — e depois: *"o foco tem que ser os
    que eu estou pesquisando primeiro"*. A informação estava lá; a ordem é
    que enterrava a pergunta que ele veio fazer.
+
+20. **Antes de começar a gravar, veja quem já gravou.** Eu ia construir um
+   histórico de nomes do zero — o que só valeria daqui a um ano. Ele cortou:
+   *"como assim você tá gravando nome se é pra você acessar algum lugar que
+   grava nome no meio de tantos"*. O BattleMetrics guarda uma sessão por
+   entrada em servidor, cada uma com o nome daquele momento, e no Rust o
+   nome no jogo é o nome de exibição da Steam. São anos de histórico que já
+   existem, e ele já tinha o token. Gravar por conta própria continua
+   valendo — mas como continuação, não como começo.

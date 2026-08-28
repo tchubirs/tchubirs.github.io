@@ -21,6 +21,7 @@ const { interpretarQuando, relogio } = require('../src/tempo');
 const { criarColetor, criarColetorDeAlvos } = require('../src/stream/coletor');
 const se = require('../src/stream/streamelements');
 const botrix = require('../src/stream/botrix-api');
+const bm = require('../src/battlemetrics');
 
 const CHAVE_KICK = `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAq/+l1WnlRrGSolDMA+A8
@@ -66,6 +67,7 @@ function verificar(cabecalhos, corpoBruto, chavePem = CHAVE_KICK, agoraMs = Date
 }
 
 function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Date.now,
+                 tokenBM = process.env.BATTLEMETRICS_TOKEN,
                  chaveDiscord = process.env.DISCORD_PUBLIC_KEY,
                  appDiscord = process.env.DISCORD_APP_ID,
                  canalDoServidor, buscar = globalThis.fetch } = {}) {
@@ -138,6 +140,41 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
     if (!norm) return;
     if (pegarNomeVisto.get(ref, norm)) tocarNomeVisto.run(tMs, nome, ref, norm);
     else inserirNomeVisto.run(ref, nome, norm, tMs, tMs);
+  }
+
+  /**
+   * Puxa os anos de histórico que o BattleMetrics JÁ tem e guarda aqui.
+   *
+   * Ele cortou a ideia de gravar do zero: "é pra você acessar algum lugar
+   * que grava nome no meio de tantos". Está certo — gravar do zero só
+   * valeria daqui a um ano. Isto importa o que já existe, uma vez por
+   * pessoa, e a gravação própria vira só a continuação daí para frente.
+   */
+  async function importarNomes(ref, { token = tokenBM, buscar: b = buscar } = {}) {
+    if (!ref) return { importados: 0, motivo: 'sem id do BattleMetrics' };
+    if (!token) return { importados: 0, motivo: 'sem BATTLEMETRICS_TOKEN' };
+    let r;
+    try { r = await bm.nomesPorSessao(ref, token, { buscar: b }); }
+    catch (e) { return { importados: 0, motivo: e.message }; }
+
+    let n = 0;
+    for (const x of r.nomes) {
+      const norm = normalizar(x.nome);
+      if (!norm) continue;
+      const ja = pegarNomeVisto.get(ref, norm);
+      if (ja) {
+        // Guarda a data MAIS ANTIGA das duas: o valor do histórico está em
+        // quanto ele alcança para trás.
+        if (x.de && x.de < ja.primeira_em) {
+          db.prepare('UPDATE nome_visto SET primeira_em = ? WHERE ref = ? AND nome_norm = ?')
+            .run(x.de, ref, norm);
+        }
+        continue;
+      }
+      inserirNomeVisto.run(ref, x.nome, norm, x.de || agora(), x.ate || agora());
+      n += 1;
+    }
+    return { importados: n, sessoes: r.sessoes, total: r.nomes.length };
   }
 
   /** Todos os nomes que essa conta já usou, do mais recente para trás. */
@@ -835,7 +872,7 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
   return { servidor, db, ingerir, consultar, procurar, registrarPresenca, verificar,
            guardarServidor, cruzarAgora, ver, estadas, momento, agoraNa, nosDois, log, fusoDoCanal,
            ligarColeta, ligarAlvos, ligarBotrixPublico, pararColeta, coletores, receberFidelidade,
-           listarFontes, guardarFonte, verNome, nomesDe, quemUsou };
+           listarFontes, guardarFonte, verNome, nomesDe, quemUsou, importarNomes };
 }
 
 module.exports = { criar, verificar, CHAVE_KICK, BLOCO_MS };

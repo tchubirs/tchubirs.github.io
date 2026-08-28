@@ -822,3 +822,54 @@ test('sem id do BattleMetrics não grava nome — não teria a que prender', () 
   s.guardarServidor('c1', { nome: 'Srv' }, [{ nome: 'SemId' }], T);
   assert.deepEqual(s.quemUsou('SemId'), []);
 });
+
+test('importa os anos de histórico que o BattleMetrics já tem', () => {
+  // Não gravar do zero: ele cortou essa ideia, e com razão. Isto traz o que
+  // já existe, e a gravação própria vira a continuação daí para frente.
+  const T2024 = Date.parse('2024-04-01T20:00:00Z');
+  const s = criar({ caminhoBanco: ':memory:', chavePem: PUB, agora: () => T,
+    tokenBM: 'tok',
+    buscar: async () => ({ ok: true, json: async () => ({ data: [
+      { attributes: { name: 'Tchubita', start: '2026-08-01T20:00:00Z', stop: '2026-08-01T23:00:00Z' } },
+      { attributes: { name: 'hai suzy', start: '2024-04-01T20:00:00Z', stop: '2024-04-01T23:00:00Z' } },
+    ] }) }),
+  });
+
+  return s.importarNomes('777').then((r) => {
+    assert.equal(r.importados, 2);
+    const nomes = s.nomesDe('777');
+    assert.deepEqual(nomes.map((n) => n.nome), ['Tchubita', 'hai suzy']);
+    assert.equal(nomes.find((n) => n.nome === 'hai suzy').de, T2024,
+      'a data de 2024 vem junto — o valor está em alcançar para trás');
+
+    // E é isto que resolve o caso: a pergunta "quem é hai_suzy" acha a conta.
+    assert.equal(s.quemUsou('hai_suzy')[0].ref, '777');
+  });
+});
+
+test('sem token, diz o motivo em vez de devolver histórico vazio', () => {
+  const s = criar({ caminhoBanco: ':memory:', chavePem: PUB, agora: () => T, tokenBM: '' });
+  return s.importarNomes('777').then((r) => {
+    assert.equal(r.importados, 0);
+    assert.match(r.motivo, /BATTLEMETRICS_TOKEN/);
+  });
+});
+
+test('importar duas vezes não duplica, e mantém a data mais antiga', () => {
+  let n = 0;
+  const s = criar({ caminhoBanco: ':memory:', chavePem: PUB, agora: () => T, tokenBM: 'tok',
+    buscar: async () => ({ ok: true, json: async () => ({ data: [
+      // A segunda leitura traz a MESMA pessoa com uma sessão mais antiga.
+      { attributes: { name: 'hai suzy', start: n++ ? '2022-01-01T20:00:00Z' : '2024-04-01T20:00:00Z',
+        stop: '2024-04-01T23:00:00Z' } },
+    ] }) }),
+  });
+  return s.importarNomes('777')
+    .then(() => s.importarNomes('777'))
+    .then((r) => {
+      assert.equal(r.importados, 0, 'não duplica');
+      assert.equal(s.nomesDe('777').length, 1);
+      assert.equal(s.nomesDe('777')[0].de, Date.parse('2022-01-01T20:00:00Z'),
+        'ficou com a data mais antiga das duas');
+    });
+});

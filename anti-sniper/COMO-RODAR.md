@@ -110,9 +110,30 @@ Tchubita    nome na Steam "Tchubita" → não bate           não
 Por isso o serviço faz os dois: cruza o nome de exibição e o histórico, **e**
 testa o apelido de cada espectador como URL personalizada da Steam.
 
+## Os nomes antigos — de onde vêm
+
+A Steam entrega **1 nome** quando o perfil é privado. Um concorrente mostra
+**32** da mesma conta. A diferença não é técnica: eles gravam há anos.
+
+Só que não é preciso esperar um ano gravando. O **BattleMetrics já gravou**:
+ele guarda uma sessão por vez que a pessoa entrou num servidor, e cada
+sessão carrega o nome usado naquele momento. Como o Rust usa o nome de
+exibição da Steam, isso É o histórico de nomes da Steam, ano a ano.
+
+```
+BATTLEMETRICS_TOKEN=seu_token   ← o mesmo do seu PeekRust
+```
+
+Com ele, o serviço importa os anos de histórico de uma conta de uma vez. A
+gravação própria vira só a continuação daí para frente.
+
+> **Detalhe que muda o resultado:** a rota é paginada. Sem seguir as páginas
+> vem só o pedaço mais recente — foi por isso que você viu *"só aparece 1
+> nome, cadê os outros 200 dos outros anos"*.
+
 ## O que continua invisível
 
 - **Quem assiste deslogado.** Nenhuma fonte vê. Não existe jeito.
-- **Nomes antigos.** A Steam entrega 1 nome de perfil privado; um
-  concorrente tem 32 da mesma conta porque grava há anos. A partir de agora
-  nós gravamos também — mas só começa a valer com o tempo.
+- **Nomes na Kick.** O BattleMetrics tem o histórico do lado do JOGO. Do
+  lado da live, quem trocar de nome na Kick só é ligado ao antigo se eu
+  tiver visto os dois.
