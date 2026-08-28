@@ -39,6 +39,12 @@ function ordenarPorIdentidade(ocorrencias) {
   const lista = (ocorrencias || []).filter((o) => o && o.nome);
   if (!lista.length) return [];
 
+  // O ano, venha de onde vier. As fontes escrevem a data de três jeitos:
+  //   steamid.uk   "2026"                         (só o ano)
+  //   Steam        "May 7, 2019 @ 11:04pm"        (por extenso)
+  //   tabelas      "27/08/2026, 08:45:00"         (dia/mês/ano)
+  // Aqui só interessa o ano, e procurá-lo em qualquer posição cobre os três
+  // sem eu ter de saber de antemão de qual fonte veio a lista.
   const ano = (o) => {
     const m = String(o.em ?? '').match(/(19[89]\d|20[0-4]\d)/);
     return m ? Number(m[1]) : null;
@@ -49,16 +55,21 @@ function ordenarPorIdentidade(ocorrencias) {
   const maisNovo = anos.length ? Math.max(...anos) : null;
   const span = (maisNovo != null && maisAntigo != null) ? maisNovo - maisAntigo : 0;
 
+  // Ordem cronológica, do mais antigo para o mais novo. "Uns dos primeiros
+  // da conta" é POSIÇÃO, não período — e a lista chega do mais recente
+  // para trás, então tem de ser invertida antes de contar posição.
+  const cronologica = [...lista].sort((a, b) => (ano(a) ?? 9999) - (ano(b) ?? 9999));
+
   const por = new Map();
-  for (const o of lista) {
+  cronologica.forEach((o, i) => {
     const chave = String(o.nome).trim().toLowerCase();
-    if (!chave) continue;
-    if (!por.has(chave)) por.set(chave, { nome: o.nome, vezes: 0, anos: new Set() });
+    if (!chave) return;
+    if (!por.has(chave)) por.set(chave, { nome: o.nome, vezes: 0, anos: new Set(), posicao: i });
     const g = por.get(chave);
     g.vezes += 1;
     const a = ano(o);
     if (a != null) g.anos.add(a);
-  }
+  });
 
   const fora = [];
   for (const g of por.values()) {
@@ -70,9 +81,17 @@ function ordenarPorIdentidade(ocorrencias) {
     // 2024 e 2025 — isso é continuidade. Voltar é 2019 e depois 2024.
     const voltou = usados.length >= 2 && (ultimo - primeiro) >= 2;
 
-    // CEDO: no primeiro terço da vida da conta. Com span pequeno todo
-    // mundo é "cedo", então aí o sinal não conta.
-    const cedo = span >= 3 && primeiro != null && (primeiro - maisAntigo) <= span / 3;
+    // CEDO: entre os PRIMEIROS nomes da conta, por posição.
+    //
+    // Media isto por ano antes, e numa conta real com os nomes amontoados
+    // em 2010-2011 marcou 7 de 10 como "cedo" — o que não separa nada. Ele
+    // disse "uns dos primeiros", e "uns" é um punhado, não um terço da
+    // vida da conta. Cinco no máximo, e nunca mais de um quinto da lista.
+    // E só vale quando há linha do tempo. Com todos os nomes no MESMO ano,
+    // a posição é a ordem que a fonte devolveu, não a verdade — eleger o
+    // primeiro daí seria escolher um vencedor ao acaso e chamar-lhe sinal.
+    const quantosContam = Math.max(1, Math.min(5, Math.ceil(por.size / 5)));
+    const cedo = span >= 1 && g.posicao < quantosContam;
 
     const repetiu = g.vezes > 1;
 
@@ -97,7 +116,7 @@ function ordenarPorIdentidade(ocorrencias) {
       porque: [
         voltou && `voltou a usar depois de ${ultimo - primeiro} anos`,
         repetiu && `usou ${g.vezes}×`,
-        cedo && 'está no começo da conta',
+        cedo && `é o ${g.posicao + 1}º nome da conta`,
       ].filter(Boolean),
     });
   }

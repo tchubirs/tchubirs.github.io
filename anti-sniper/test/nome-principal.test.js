@@ -79,3 +79,30 @@ test('lista vazia não quebra', () => {
   assert.deepEqual(ordenarPorIdentidade([]), []);
   assert.deepEqual(ordenarPorIdentidade(null), []);
 });
+
+// "Uns dos primeiros da conta" é POSIÇÃO, não período. Medi por ano antes,
+// e numa conta real com os nomes amontoados em 2010-2011 marcou 7 de 10
+// como "cedo" — o que não separa nada.
+test('"cedo" é um punhado de nomes, não um terço da vida da conta', () => {
+  const amontoados = [
+    { nome: 'Bob', em: '2010' }, { nome: 'Brocephales', em: '2010' },
+    { nome: 'Brobin', em: '2010' }, { nome: 'vipz', em: '2011' },
+    { nome: 'tastee', em: '2011' }, { nome: 'Aeo', em: '2011' },
+    { nome: 'Juggernaut', em: '2011' }, { nome: 'frase longa', em: '2015' },
+    { nome: 'Robin', em: '2019' }, { nome: 'Sekiro', em: '2019' },
+  ];
+  const cedos = ordenarPorIdentidade(amontoados).filter((x) => x.cedo);
+  assert.ok(cedos.length <= 2, `esperava um punhado, marcou ${cedos.length}`);
+  assert.equal(cedos[0].nome, 'Bob');
+});
+
+// Sem linha do tempo não existe "primeiro": a ordem dentro de um ano é a
+// que a fonte devolveu, e eleger um daí é escolher ao acaso.
+test('todos no mesmo ano: ninguém é "o primeiro"', () => {
+  const mesmoAno = [
+    { nome: 'a', em: '2025' }, { nome: 'b', em: '2025' }, { nome: 'c', em: '2025' },
+  ];
+  const r = ordenarPorIdentidade(mesmoAno);
+  assert.ok(r.every((x) => !x.cedo));
+  assert.ok(r.every((x) => x.pontos === 0));
+});
