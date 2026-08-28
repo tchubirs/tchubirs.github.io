@@ -1260,3 +1260,56 @@ test('visita fechada sem saída vista fica com duração zero, e diz isso', () =
   assert.equal(linha.aberta, false);
   assert.equal(linha.segundos, 0);
 });
+
+
+// ── Perfil privado não é perfil cego ─────────────────────────────────────
+//
+// O caso real dele: a conta da Tchubita é privada, e mesmo assim a Steam
+// entrega o nome de exibição no XML. "Tchubita" estava na audiência dele,
+// batendo 100%. O atalho antigo saía antes de cruzar e respondia "não dá
+// para ver nome nem histórico" — com o nome na mão e a resposta pronta.
+
+const steamFalsa = ({ nome, privado, apelidos = [] }) => async (url) => {
+  if (String(url).includes('ajaxaliases')) {
+    return { ok: true, json: async () => apelidos.map((n) => ({ newname: n })) };
+  }
+  return {
+    ok: true,
+    text: async () => `<profile><steamID64>76561198162800675</steamID64>`
+      + `<steamID>${nome}</steamID>`
+      + `<privacyState>${privado ? 'private' : 'public'}</privacyState></profile>`,
+  };
+};
+
+test('perfil privado com nome visível ainda cruza — e avisa que é limitado', async () => {
+  const s = bancada();
+  s.receberPresenca('c1', [
+    { tipo: 'entrou', em: T - 9 * MIN, id: '1', nome: 'Tchubita' },
+    { tipo: 'saiu', em: T - 4 * MIN, id: '1', nome: 'Tchubita' },
+  ]);
+  const r = await s.procurar('c1', '76561198162800675',
+    { buscar: steamFalsa({ nome: 'Tchubita', privado: true }) });
+  assert.equal(r.conclusao, 'esteve na sua live');
+  assert.equal(r.evidencias[0].espectador, 'Tchubita');
+  assert.equal(r.evidencias[0].confianca, 1);
+  // E a tela precisa saber que o histórico ficou escondido: "1 nome
+  // conferido" não vale o mesmo que "32 conferidos".
+  assert.equal(r.privado, true);
+});
+
+test('privado e SEM nome nenhum é inconclusivo — aí não se olhou nada', async () => {
+  const s = bancada();
+  const r = await s.procurar('c1', '76561198162800675',
+    { buscar: steamFalsa({ nome: '', privado: true }) });
+  assert.equal(r.conclusao, 'inconclusivo');
+  assert.match(r.motivo, /não há o que cruzar/);
+  assert.deepEqual(r.evidencias, []);
+});
+
+test('perfil aberto sem achar nada não vem marcado como privado', async () => {
+  const s = bancada();
+  const r = await s.procurar('c1', '76561198162800675',
+    { buscar: steamFalsa({ nome: 'DiLANZiTO', privado: false }) });
+  assert.equal(r.conclusao, 'não encontrado na sua audiência');
+  assert.equal(r.privado, false);
+});

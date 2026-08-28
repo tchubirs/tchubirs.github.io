@@ -534,10 +534,16 @@ function desenharBusca(d, onde) {
     const bateram = new Set((d.evidencias || []).map((e) => e.nomeSteamQueBateu));
     const fichas = (d.historico || []).map((n) =>
       `<i class="${bateram.has(n) ? 'bateu' : ''}">${esc(n)}</i>`).join('');
+    const quantos = (d.historico || []).length;
     topo = `<div class="cabeca">
       <div class="quem">${esc(d.jogador)}</div>
-      <div class="sub">SteamID ${esc(d.steamId)} · ${(d.historico || []).length} nomes conferidos</div>
+      <div class="sub">SteamID ${esc(d.steamId)} · ${quantos}
+        ${quantos === 1 ? 'nome conferido' : 'nomes conferidos'}</div>
       ${fichas ? `<div class="nomes">${fichas}</div>` : ''}
+      ${d.privado ? `<div class="privado">Perfil <b>privado</b>: a Steam mostra o nome de
+        hoje, mas esconde os antigos. ${d.evidencias?.length ? 'O que bateu, bateu pelo nome atual.'
+        : `<b>Não achar aqui vale pouco</b> — conferi ${quantos === 1 ? 'um nome só' : `${quantos} nomes`},
+        e essa conta pode ter usado outros.`}</div>` : ''}
     </div>`;
     if (d.conclusao === 'inconclusivo') {
       onde.innerHTML = topo + `<div class="vazio">⚪ ${esc(d.motivo)}</div>`;

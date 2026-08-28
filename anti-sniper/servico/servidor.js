@@ -892,20 +892,29 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
     if (!steamId) return { ...consultar(canalId, entrada, { minimo, quando }), tipo: 'nome' };
 
     const hist = await chavesDeIdentidade(steamId, buscar);
-    // Perfil privado NÃO é perfil limpo: não se olhou nada, e dizer
-    // "não encontrado" aqui soaria como inocência.
-    if (hist.perfil?.privado) {
-      return {
-        tipo: 'steamid', steamId, jogador: steamId, historico: [],
-        conclusao: 'inconclusivo',
-        motivo: 'perfil PRIVADO — não dá para ver nome nem histórico. Isso não é sinal de nada, nem a favor nem contra',
-        evidencias: [],
-      };
-    }
     // URL personalizada só de dígitos ou lixo aleatório não é apelido de
     // ninguém, e cruzá-la só produziria falso positivo.
     const util = (c) => c && !/^[0-9]{6,}$/.test(c) && !/^[0-9a-z]{12,}$/i.test(c);
     const nomes = (hist.chaves || []).filter(util);
+
+    // Perfil privado NÃO é perfil limpo: dizer "não encontrado" soaria como
+    // inocência quando ninguém olhou nada.
+    //
+    // Mas privado também não quer dizer CEGO. O caso real dele: a conta da
+    // Tchubita é privada e mesmo assim a Steam entrega o nome de exibição
+    // no XML — e "Tchubita" estava na audiência, batendo 100%. O atalho
+    // antigo saía aqui e respondia "não dá para ver nome nem histórico"
+    // com o nome na mão e a resposta pronta. Só é inconclusivo de verdade
+    // quando não sobrou nome nenhum para cruzar.
+    if (hist.perfil?.privado && !nomes.length) {
+      return {
+        tipo: 'steamid', steamId, jogador: steamId, historico: [],
+        conclusao: 'inconclusivo',
+        privado: true,
+        motivo: 'perfil PRIVADO e sem nome visível — não há o que cruzar. Isso não é sinal de nada, nem a favor nem contra',
+        evidencias: [],
+      };
+    }
 
     const vistos = new Map();
     let noServidor = null;
@@ -922,6 +931,12 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
       tipo: 'steamid', steamId, quando, noServidor,
       jogador: hist.perfil?.nome || steamId,
       historico: nomes,
+      // Com o perfil privado a Steam esconde o HISTÓRICO, então o que sobra
+      // é o nome de hoje. Achar nada aqui vale muito menos que achar nada
+      // num perfil aberto, e a tela precisa dizer isso — senão "não
+      // encontrado" com um nome conferido lê como "não encontrado" com
+      // trinta e dois.
+      privado: hist.perfil?.privado === true,
       conclusao: evidencias.length ? 'esteve na sua live' : 'não encontrado na sua audiência',
       evidencias,
     };
