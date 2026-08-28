@@ -44,6 +44,27 @@ if (!alvo) {
   process.exit(2);
 }
 
+// Bandeira que eu não conheço é ERRO, não coisa para ignorar.
+//
+// Aconteceu de verdade: no PowerShell dele o comando colou-se ao texto que
+// já estava na linha e saiu `--vergit pull`. Isso não é `--ver` — a janela
+// nunca abriu, o Chrome correu escondido, o Cloudflare barrou, e a saída
+// disse "nada" como se a conta não tivesse nomes. Sete minutos à espera de
+// um erro de digitação. Um aviso aqui apanha isso no primeiro segundo.
+const CONHECIDAS = new Set(['--ver', '--tudo']);
+const estranha = args.find((a) => a.startsWith('-') && !CONHECIDAS.has(a));
+const sobra = args.filter((a) => !a.startsWith('-')).slice(1);
+if (estranha || sobra.length) {
+  console.error(`\n  não conheço ${estranha ? `"${estranha}"` : `"${sobra[0]}"`}.`);
+  console.error('  As únicas são --ver (abre a janela) e --tudo (consulta as duas fontes).');
+  if (estranha && estranha.startsWith('--ver') && estranha !== '--ver') {
+    console.error(`\n  Parece "--ver" com texto colado atrás: "${estranha}".`);
+    console.error('  No PowerShell, carrega Esc para limpar a linha ANTES de colar.');
+  }
+  console.error(`\n  uso: npm run nomes -- ${alvo} --ver\n`);
+  process.exit(2);
+}
+
 /** As páginas que mostram histórico de nomes, na ordem em que vale tentar. */
 const FONTES = process.env.DETETIVE_NOMES_URL
   // Endereço fixo para eu poder provar o caminho do navegador contra uma
@@ -152,7 +173,11 @@ const FONTES = process.env.DETETIVE_NOMES_URL
     // Até 45s: o desafio pode demorar, e desistir cedo é o erro que já
     // aconteceu. Sair assim que a página real chega mantém o caso normal
     // rápido.
-    for (let i = 0; i < 45; i++) {
+    // Com a janela aberta vale esperar: o desafio resolve-se. Escondido, ele
+    // quase nunca passa — e 45s × 5 endereços são quase quatro minutos à
+    // espera de um "não". Foi o que aconteceu na máquina dele.
+    const paciencia = VISIVEL ? 45 : 12;
+    for (let i = 0; i < paciencia; i++) {
       if (!(await naVerificacao())) break;
       await p.waitForTimeout(1000);
     }
@@ -260,6 +285,11 @@ const FONTES = process.env.DETETIVE_NOMES_URL
       if (!TUDO) break;
     } else if (ultimoRetrato?.fonte === fonte.nome && ultimoRetrato.limitado) {
       console.log(`⚠ ${ultimoRetrato.erro}${ultimoRetrato.totalDito ? ` — admite ${ultimoRetrato.totalDito} nomes` : ''}`);
+    } else if (ultimoRetrato?.fonte === fonte.nome && ultimoRetrato.cloudflare) {
+      // "nada" aqui era mentira por omissão: dizia o mesmo que "esta conta
+      // não tem nomes", quando o que houve foi um muro à porta. São coisas
+      // opostas, e a linha tem de as separar.
+      console.log(`⚠ o Cloudflare barrou${VISIVEL ? '' : ' — escondido ele barra quase sempre; usa --ver'}`);
     } else {
       console.log('— nada');
     }
