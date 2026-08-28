@@ -198,9 +198,17 @@ function estadoDe(p) {
  */
 function desenharCobertura(coleta, agoraMs, cob) {
   const p = coleta?.presenca;
-  // Presença parada há muito tempo não é presença: o gravador caiu e o
-  // painel tem que dizer isso, não fingir cobertura que já não existe.
-  const viva = p && (agoraMs - p.em) < 20 * 60000;
+  // Presença parada não é presença: o gravador caiu e o painel tem que
+  // dizer isso, não fingir cobertura que já não existe.
+  //
+  // Quem manda é o AVISO DE VIDA, não o último evento: numa live com
+  // público estável ninguém entra nem sai por dezenas de minutos, e olhar
+  // só para o evento anunciaria "parou" no meio de uma live funcionando.
+  // Sem aviso nenhum (arquivo reenviado com --enviar), cai no evento.
+  const viva = p && (p.vivoEm != null
+    ? (agoraMs - p.vivoEm) < 5 * 60000
+    : p.em != null && (agoraMs - p.em) < 20 * 60000);
+  const parouEm = p?.vivoEm ?? p?.em;
 
   if (viva) {
     cob.className = 'cobertura boa';
@@ -216,7 +224,7 @@ function desenharCobertura(coleta, agoraMs, cob) {
       + ` (<code>${esc(coleta.fonte)}</code>). Quem só aparece por mensagem vem marcado.`
       + '<br>Sem hora exata: o crédito vem em blocos de ~10 min. Para entrada e saída '
       + 'ao segundo, rode <code>npm run presenca</code>.'
-      + (p ? `<br>A presença gravou até ${hora(p.em)} e parou.` : '');
+      + (p ? `<br>A presença gravou até ${hora(parouEm)} e parou.` : '');
     return;
   }
   cob.className = 'cobertura cego';
@@ -224,7 +232,7 @@ function desenharCobertura(coleta, agoraMs, cob) {
     + 'e sniper normalmente não escreve.<br>Para enxergar quem assiste calado, '
     + 'rode <code>npm run presenca</code> (entrada e saída ao segundo) ou '
     + 'ligue a Fidelidade no StreamElements.'
-    + (p ? `<br>A presença gravou até ${hora(p.em)} e parou.` : '');
+    + (p ? `<br>A presença gravou até ${hora(parouEm)} e parou.` : '');
 }
 
 /** Quem está na live agora — a resposta que a página dá sem ninguém perguntar. */
@@ -277,10 +285,18 @@ function rotuloFonte(l) {
  * inventar precisão — o mesmo erro de inventar horário, com outra cara.
  */
 function duracao(l) {
-  const exata = l.fonte === 'presenca' || l.fonte === 'presenca-parcial';
+  const exata = PRESENCA(l.fonte);
   // Duração zero é uma leitura só, não uma visita de 0 segundos: dizer
   // "0min 00s" faria parecer que a pessoa entrou e saiu no mesmo instante.
-  if (l.segundos === 0) return exata ? 'entrou agora' : `visto ${l.amostras}×`;
+  //
+  // E na presença "zero" tem dois significados opostos. Aberta: acabou de
+  // entrar. Fechada: a gravação parou antes de ver a saída — a hora de
+  // saída não existe, e dizer "entrou agora" sobre uma visita de ontem
+  // seria inventar o presente.
+  if (l.segundos === 0) {
+    if (!exata) return `visto ${l.amostras}×`;
+    return l.aberta ? 'entrou agora' : 'saída não vista';
+  }
   if (exata) return `${Math.floor(l.segundos / 60)}min ${String(l.segundos % 60).padStart(2, '0')}s`;
   return `${l.minutos} min`;
 }

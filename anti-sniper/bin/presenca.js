@@ -154,8 +154,25 @@ async function gravar() {
   console.log('  Ctrl+C para parar. Depois: npm run presenca -- --ver\n');
   await s.abrir();
 
+  // Sinal de vida a cada minuto.
+  //
+  // Sem ele, se esta gravação morrer com gente dentro, o serviço continua
+  // mostrando essas pessoas como "na live agora" — por horas. E não dá para
+  // deduzir isto da frequência dos eventos: uma live com público estável
+  // fica dezenas de minutos sem ninguém entrar nem sair, e sumir com todo
+  // mundo nesse caso trocaria uma mentira por outra.
+  const bater = () => fetch(`${SERVICO}/api/presenca`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ canal: CANAL, eventos: [{ tipo: 'vivo', em: Date.now() }] }),
+  }).catch(() => {});
+  bater();
+  const pulso = setInterval(bater, 60000);
+  pulso.unref?.();
+
   for (const sinal of ['SIGINT', 'SIGTERM']) {
     process.on(sinal, async () => {
+      clearInterval(pulso);
       s.fechar();
       await ctx.close().catch(() => {});
       mostrar();

@@ -75,6 +75,26 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
                  canalDoServidor, buscar = globalThis.fetch } = {}) {
   const db = abrir(caminhoBanco);
 
+  /**
+   * Fecha as visitas que ficaram abertas de uma execução anterior.
+   *
+   * `aberta = 1` quer dizer "a presença viu entrar e ainda não viu sair", e
+   * quem sabia disso era um Map na memória deste processo. Depois de um
+   * reinício esse Map começa vazio, mas as linhas continuam no banco — e
+   * uma pessoa que entrou ontem aparecia como "na live agora, 1440 min",
+   * para sempre. Medido antes desta linha existir. Pior: ela entrava no
+   * cruzamento, virando red flag permanente no nome de alguém de verdade.
+   *
+   * Fechar em `fim_em` é a verdade disponível: "parei de ver esta pessoa
+   * aqui". Dizer que ela continua dentro seria afirmar o que ninguém
+   * observou. E conserta sozinho — quando a gravação reconecta, o
+   * `ja-estava` reabre quem ainda estiver lá de verdade.
+   */
+  const fecharOrfas = db.prepare(
+    "UPDATE estada SET aberta = 0 WHERE aberta = 1 AND fonte IN ('presenca','presenca-parcial')");
+  const orfas = fecharOrfas.run().changes;
+  if (orfas) console.log(`[detetive] ${orfas} visita(s) aberta(s) de antes fechadas no último sinal visto`);
+
   const jaVisto = db.prepare('SELECT 1 FROM evento_visto WHERE id = ?');
   const marcarVisto = db.prepare('INSERT OR IGNORE INTO evento_visto (id, visto_em) VALUES (?, ?)');
   const pegarPresenca = db.prepare('SELECT * FROM presenca WHERE canal_id = ? AND nome_norm = ?');
@@ -154,10 +174,41 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
    */
   const entradasAbertas = new Map();
 
+  /**
+   * Até quando a gravação disse que estava viva, por canal.
+   *
+   * Serve para o outro jeito de a tela mentir: o serviço de pé e a gravação
+   * morta. As visitas ficam `aberta = 1` e a pessoa aparece "na live agora"
+   * por horas depois de ter ido embora.
+   *
+   * A frequência dos EVENTOS não serve de sinal de vida: uma live com
+   * público estável não gera entrada nem saída por dezenas de minutos, e
+   * apagar todo mundo por causa disso seria trocar uma mentira por outra.
+   * Por isso quem avisa que está viva é a gravação, com `tipo: 'vivo'`.
+   *
+   * Enquanto nenhum aviso chegar, nada muda — não invento sinal de vida que
+   * ninguém mandou.
+   */
+  const gravacaoViva = new Map();
+  const LIMITE_VIVO = 5 * 60000;
+
+  function presencaConfiavel(canalId, tMs) {
+    const v = gravacaoViva.get(canalId);
+    return v == null ? true : (tMs - v) <= LIMITE_VIVO;
+  }
+
   function receberPresenca(canalId, eventos) {
     let entrou = 0; let saiu = 0;
     for (const e of eventos || []) {
+      if (e?.tipo === 'vivo' && e.em) {
+        gravacaoViva.set(canalId, e.em);
+        continue;
+      }
       if (!e?.nome || !e?.em) continue;
+      // NÃO marco sinal de vida a partir do horário do evento: uma entrada
+      // de 12 min atrás sem nada depois é público estável, não gravação
+      // morta — e tratar como morta apagaria da tela quem está lá. Só o
+      // aviso explícito conta.
       const chave = `${canalId}|${e.id ?? e.nome}`;
       if (e.tipo === 'entrou' || e.tipo === 'ja-estava') {
         // "já estava" NÃO é entrada: a pessoa pode estar ali há horas, e
@@ -405,6 +456,7 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
       // arredondar para minuto apagaria a resposta que ele pediu.
       segundos: Math.round((e.fim_em - e.inicio_em) / 1000),
       amostras: e.amostras, servidor: e.onde_extra, fonte: e.fonte || 'chat',
+      aberta: e.aberta === 1,
       bmId: e.ref || null,
       perfil: e.ref ? `https://www.battlemetrics.com/players/${e.ref}` : null,
     }));
@@ -462,8 +514,17 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
 
   function ultimaPresenca(canalId) {
     const r = maxPresenca.get(canalId);
-    if (!r?.n) return null;
-    return { em: r.em, visitas: r.n };
+    const vivo = gravacaoViva.get(canalId) ?? null;
+    if (!r?.n && vivo == null) return null;
+    return {
+      em: r?.em ?? null,
+      visitas: r?.n ?? 0,
+      // O aviso de vida é separado do último evento de propósito: uma live
+      // com público estável fica dezenas de minutos sem ninguém entrar nem
+      // sair, e nesse silêncio a gravação está viva. Sem separar os dois, o
+      // painel anunciaria "parou" no meio de uma live funcionando.
+      vivoEm: vivo,
+    };
   }
 
   // Fonte que sabe a saída manda; fonte de pontos soltos usa a folga.
@@ -528,7 +589,12 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
   }
 
   function agoraNa(canalId, onde, tMs) {
+    const confia = onde !== 'live' || presencaConfiavel(canalId, tMs);
     return naJanela.all(canalId, onde, tMs - GAP[onde])
+      // Gravação sem dar sinal de vida: o que ela deixou aberto não é
+      // "ainda está lá", é "parei de olhar". Mostrar como presente seria
+      // pendurar uma hora que ninguém observou no nome de uma pessoa.
+      .filter((e) => confia || !(e.aberta === 1 && PRESENCA_FONTE.has(e.fonte)))
       .map((e) => linhaDeEstada(e, tMs));
   }
 

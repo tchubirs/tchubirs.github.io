@@ -1184,3 +1184,66 @@ test('idas e vindas na janela viram uma linha só, com a contagem', () => {
   assert.equal(r[0].naLiveAberta, true);
   assert.equal(r[0].naLiveDesde, T - 3 * MIN);
 });
+
+
+// ── A tela não pode mentir quando a gravação para ────────────────────────
+
+test('visita aberta de antes do reinício não vira "na live agora"', () => {
+  const banco = require('node:path').join(require('node:os').tmpdir(), `t-${process.pid}-rein.db`);
+  const fs = require('node:fs');
+  for (const f of [banco, banco + '-wal', banco + '-shm']) fs.rmSync(f, { force: true });
+  try {
+    const ontem = T - 24 * 60 * MIN;
+    let s = criar({ caminhoBanco: banco, chavePem: PUB, agora: () => ontem });
+    s.db.prepare('INSERT INTO canal (id,plataforma,slug,criado_em) VALUES (?,?,?,?)')
+      .run('c1', 'kick', 't', ontem);
+    s.receberPresenca('c1', [{ tipo: 'entrou', em: ontem, id: '1', nome: 'diper' }]);
+    s.db.close();
+
+    // O Map que sabia quem estava dentro morre com o processo; as linhas
+    // ficam. Antes disto, quem entrou ontem aparecia "na live agora, 1440
+    // min" para sempre — e entrava no cruzamento como red flag permanente.
+    s = criar({ caminhoBanco: banco, chavePem: PUB, agora: () => T });
+    assert.equal(s.agoraNa('c1', 'live', T).length, 0);
+    // Mas a visita não some do histórico: fechada no último sinal visto.
+    assert.equal(s.log('c1', 'diper').total, 1);
+    s.db.close();
+  } finally {
+    for (const f of [banco, banco + '-wal', banco + '-shm']) fs.rmSync(f, { force: true });
+  }
+});
+
+test('gravação que parou de dar sinal deixa de sustentar "está dentro"', () => {
+  const s = bancada();
+  s.receberPresenca('c1', [
+    { tipo: 'vivo', em: T - 30 * MIN },
+    { tipo: 'entrou', em: T - 30 * MIN, id: '1', nome: 'diper' },
+  ]);
+  // A gravação avisou que estava viva há 30 min e nunca mais. O que ela
+  // deixou aberto não é "ainda está lá", é "parei de olhar".
+  assert.equal(s.agoraNa('c1', 'live', T).length, 0);
+  // Com o aviso recente, a mesma visita conta normalmente.
+  s.receberPresenca('c1', [{ tipo: 'vivo', em: T - MIN }]);
+  assert.equal(s.agoraNa('c1', 'live', T)[0].nome, 'diper');
+});
+
+test('sem nenhum aviso de vida, nada muda — não invento sinal', () => {
+  const s = bancada();
+  // Só eventos, nenhum 'vivo': é o caso de quem reenvia um arquivo com
+  // `--enviar`. Inventar que a gravação está morta apagaria a importação.
+  s.receberPresenca('c1', [{ tipo: 'entrou', em: T - 30 * MIN, id: '1', nome: 'diper' }]);
+  assert.equal(s.agoraNa('c1', 'live', T)[0].nome, 'diper');
+});
+
+test('estada carrega `aberta` — o painel precisa distinguir dois zeros', () => {
+  const s = bancada();
+  s.receberPresenca('c1', [{ tipo: 'entrou', em: T - MIN, id: '1', nome: 'diper' }]);
+  // Duração zero com `aberta` = acabou de entrar.
+  const viva = s.log('c1', 'diper').linhas[0];
+  assert.equal(viva.segundos, 0);
+  assert.equal(viva.aberta, true);
+  // Duração zero SEM `aberta` = a gravação parou antes de ver a saída, e
+  // "entrou agora" sobre uma visita de ontem seria inventar o presente.
+  s.db.prepare('UPDATE estada SET aberta = 0').run();
+  assert.equal(s.log('c1', 'diper').linhas[0].aberta, false);
+});
