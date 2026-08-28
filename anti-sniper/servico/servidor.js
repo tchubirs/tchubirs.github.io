@@ -115,6 +115,48 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
     abrirEstada.run(canalId, onde, norm, nome, tMs, tMs, extra, fonte, ref);
   }
 
+  const pegarNomeVisto = db.prepare('SELECT * FROM nome_visto WHERE ref = ? AND nome_norm = ?');
+  const inserirNomeVisto = db.prepare(
+    'INSERT INTO nome_visto (ref, nome, nome_norm, primeira_em, ultima_em, vezes) VALUES (?,?,?,?,?,1)');
+  const tocarNomeVisto = db.prepare(
+    'UPDATE nome_visto SET ultima_em = ?, vezes = vezes + 1, nome = ? WHERE ref = ? AND nome_norm = ?');
+  const listarNomesVistos = db.prepare(
+    'SELECT * FROM nome_visto WHERE ref = ? ORDER BY ultima_em DESC');
+  const acharPorNome = db.prepare(
+    'SELECT * FROM nome_visto WHERE nome_norm = ? ORDER BY ultima_em DESC');
+
+  /**
+   * Registra que esta conta usou este nome.
+   *
+   * Começa vazio e vale pouco hoje; em um ano é o ativo do produto. O
+   * concorrente que ele mostrou tem 32 nomes de uma conta porque grava
+   * desde sempre — e o que resolvia o caso dele estava entre os 32.
+   */
+  function verNome(ref, nome, tMs) {
+    if (!ref || !nome) return;
+    const norm = normalizar(nome);
+    if (!norm) return;
+    if (pegarNomeVisto.get(ref, norm)) tocarNomeVisto.run(tMs, nome, ref, norm);
+    else inserirNomeVisto.run(ref, nome, norm, tMs, tMs);
+  }
+
+  /** Todos os nomes que essa conta já usou, do mais recente para trás. */
+  function nomesDe(ref) {
+    return listarNomesVistos.all(ref).map((n) => ({
+      nome: n.nome, de: n.primeira_em, ate: n.ultima_em, vezes: n.vezes,
+    }));
+  }
+
+  /** O caminho inverso: quem já se chamou assim? */
+  function quemUsou(nome) {
+    const norm = normalizar(nome);
+    if (!norm) return [];
+    return acharPorNome.all(norm).map((n) => ({
+      ref: n.ref, nome: n.nome, de: n.primeira_em, ate: n.ultima_em,
+      perfil: `https://www.battlemetrics.com/players/${n.ref}`,
+    }));
+  }
+
   const pegarCanal = db.prepare('SELECT * FROM canal WHERE id = ?');
   const canaisComSE = db.prepare("SELECT * FROM canal WHERE se_canal IS NOT NULL AND se_canal != ''");
   const listarFontes = db.prepare("SELECT * FROM fonte WHERE servico = 'botrix'");
@@ -451,6 +493,7 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
         if (!norm) continue;
         inserirNoServidor.run(canalId, j.nome, norm, j.minutosNoServidor ?? null, nome, tMs, j.bmId ?? null);
         ver(canalId, 'servidor', j.nome, tMs, nome, 'servidor', j.bmId ?? null);
+        verNome(j.bmId, j.nome, tMs);
       }
       db.exec('COMMIT');
     } catch (e) {
@@ -792,7 +835,7 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
   return { servidor, db, ingerir, consultar, procurar, registrarPresenca, verificar,
            guardarServidor, cruzarAgora, ver, estadas, momento, agoraNa, nosDois, log, fusoDoCanal,
            ligarColeta, ligarAlvos, ligarBotrixPublico, pararColeta, coletores, receberFidelidade,
-           listarFontes, guardarFonte };
+           listarFontes, guardarFonte, verNome, nomesDe, quemUsou };
 }
 
 module.exports = { criar, verificar, CHAVE_KICK, BLOCO_MS };

@@ -119,6 +119,27 @@ function abrir(caminho = 'detetive.db') {
       PRIMARY KEY (canal_id, servico, plataforma, usuario)
     );
 
+    -- HISTÓRICO DE NOMES, gravado por nós.
+    --
+    -- Ele mostrou um concorrente com 32 nomes de uma conta, incluindo o que
+    -- resolvia o caso. A Steam me entrega 1, porque o perfil é privado.
+    -- A diferença não é técnica: eles gravam há anos e nós não gravávamos
+    -- nada. Histórico não se compra, se grava — e só começa a existir a
+    -- partir do dia em que se liga.
+    --
+    -- A chave é o id do BattleMetrics, não o nome: é ele que sobrevive à
+    -- troca de nome, que é justamente o evento que interessa registrar.
+    CREATE TABLE IF NOT EXISTS nome_visto (
+      ref        TEXT NOT NULL,        -- id no BattleMetrics
+      nome       TEXT NOT NULL,
+      nome_norm  TEXT NOT NULL,
+      primeira_em INTEGER NOT NULL,
+      ultima_em   INTEGER NOT NULL,
+      vezes       INTEGER NOT NULL DEFAULT 1,
+      PRIMARY KEY (ref, nome_norm)
+    );
+    CREATE INDEX IF NOT EXISTS idx_nome_visto_norm ON nome_visto (nome_norm);
+
     -- Idempotência de webhook: a Kick reentrega evento quando não recebe
     -- 200 a tempo. Sem isto, uma reentrega contaria presença duas vezes.
     CREATE TABLE IF NOT EXISTS evento_visto (

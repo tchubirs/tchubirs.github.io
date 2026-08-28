@@ -765,3 +765,60 @@ test('leitura sem o id não APAGA o id que já se sabia', () => {
   s.guardarServidor('c1', { nome: 'Srv' }, [{ nome: 'D1per' }], T + MIN);
   assert.equal(s.log('c1', 'D1per').linhas[0].bmId, '999');
 });
+
+// ── Histórico de nomes, gravado por nós ───────────────────────────────────
+// Ele mostrou um concorrente com 32 nomes de uma conta — incluindo "hai suzy",
+// que resolvia o caso. A Steam me entrega 1, porque o perfil é privado. A
+// diferença é só tempo de gravação, e ela só começa quando se liga.
+
+test('grava cada nome novo da mesma conta', () => {
+  const s = bancada();
+  s.guardarServidor('c1', { nome: 'Srv' }, [{ nome: 'Tchubita', bmId: '777' }], T);
+  s.guardarServidor('c1', { nome: 'Srv' }, [{ nome: 'hai suzy', bmId: '777' }], T + 30 * MIN);
+  s.guardarServidor('c1', { nome: 'Srv' }, [{ nome: '[BR] Suzy', bmId: '777' }], T + 60 * MIN);
+
+  const nomes = s.nomesDe('777');
+  assert.equal(nomes.length, 3, 'a conta é a mesma; os nomes é que mudaram');
+  assert.deepEqual(nomes.map((n) => n.nome), ['[BR] Suzy', 'hai suzy', 'Tchubita'],
+    'do mais recente para trás');
+});
+
+test('o mesmo nome de novo não vira linha nova — conta as vezes', () => {
+  const s = bancada();
+  for (const i of [0, 5, 10]) {
+    s.guardarServidor('c1', { nome: 'Srv' }, [{ nome: 'Tchubita', bmId: '777' }], T + i * MIN);
+  }
+  const n = s.nomesDe('777');
+  assert.equal(n.length, 1);
+  assert.equal(n[0].vezes, 3);
+  assert.equal(n[0].de, T, 'a primeira vez fica guardada');
+  assert.equal(n[0].ate, T + 10 * MIN);
+});
+
+test('nomes diferentes que normalizam igual são o MESMO nome', () => {
+  // "hai suzy" e "hai_suzy" são a mesma pessoa se chamando a mesma coisa —
+  // guardar as duas encheria o histórico de ruído.
+  const s = bancada();
+  s.guardarServidor('c1', { nome: 'Srv' }, [{ nome: 'hai suzy', bmId: '777' }], T);
+  s.guardarServidor('c1', { nome: 'Srv' }, [{ nome: 'hai_suzy', bmId: '777' }], T + MIN);
+  assert.equal(s.nomesDe('777').length, 1);
+});
+
+test('o caminho inverso: quem já se chamou assim?', () => {
+  // É este que resolve o caso dele. Se em algum momento eu tiver visto a
+  // conta dela usando "hai suzy", a pergunta "quem é hai_suzy" acha a conta.
+  const s = bancada();
+  s.guardarServidor('c1', { nome: 'Srv' }, [{ nome: 'hai suzy', bmId: '777' }], T);
+  s.guardarServidor('c1', { nome: 'Srv' }, [{ nome: 'Tchubita', bmId: '777' }], T + 60 * MIN);
+
+  const r = s.quemUsou('hai_suzy');
+  assert.equal(r.length, 1);
+  assert.equal(r[0].ref, '777');
+  assert.equal(r[0].perfil, 'https://www.battlemetrics.com/players/777');
+});
+
+test('sem id do BattleMetrics não grava nome — não teria a que prender', () => {
+  const s = bancada();
+  s.guardarServidor('c1', { nome: 'Srv' }, [{ nome: 'SemId' }], T);
+  assert.deepEqual(s.quemUsou('SemId'), []);
+});

@@ -15,7 +15,8 @@
     "fontes": "node bin/checar-fontes.js",
     "demo": "node bin/gerar-demo.js",
     "gravar": "node bin/gravar.js --loop",
-    "visitas": "node bin/gravar.js --ver"
+    "visitas": "node bin/gravar.js --ver",
+    "presenca": "node bin/presenca.js"
   },
   "dependencies": {
     "playwright": "^1.47.0"

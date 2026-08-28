@@ -42,6 +42,7 @@ anti-sniper/
 ├── src/
 │   ├── unicode.js          ✅ dobras seguras (𝚊𝚛𝚒𝚗 → arin)
 │   ├── tempo.js            ✅ "22:47" no fuso DELE, não em UTC
+│   ├── identidade.js       ✅ os DOIS caminhos: nome da Steam e URL personalizada
 │   ├── nomes.js            ✅ cruzamento — a fonte única de verdade
 │   ├── indice.js           ✅ 1.500 jogadores × 5.000 espectadores: 147s → 0,09s
 │   ├── steam.js            ✅ histórico de nomes (teto de 5) + perfil público
@@ -57,7 +58,7 @@ anti-sniper/
 │       └── streamelements.js ✅
 │
 ├── bin/                    ✅ consulta, autorização, teste de servidor
-└── test/                   ✅ 208 testes
+└── test/                   ✅ 253 testes
 ```
 
 ## Por que extensão, e não copiar e colar
@@ -162,6 +163,42 @@ E o fuso vai escrito junto de propósito. O serviço roda em UTC, ele mora na
 França: duas horas de erro trocariam a resposta sem ninguém perceber. O site
 manda o instante absoluto (o navegador sabe o fuso); o Discord escreve
 `(Europe/Paris)` na resposta, para um fuso errado aparecer na cara.
+
+## A precisão é da fonte, não do código
+
+Ele olhou um log de blocos de 10 min e disse: *"tem que ser mais preciso,
+exatamente até os segundos se possível, sei que ele ficou 5 minutos no
+máximo"*. Com tempo assistido isso é impossível — o crédito vem em blocos, e
+5 minutos vira 0 ou vira 10.
+
+| Fonte | Precisão | Vê quem |
+|---|---|---|
+| **Presença da Kick** (Pusher) | **ao segundo** | quem abre a live |
+| Tempo assistido (BotRix) | ~10 min | quem está logado |
+| Chat (webhook) | ao segundo | só quem **escreve** |
+
+Medido em 28/08/2026: assinar `presence-chatroom.<id>` sem credencial
+responde **"Auth info required to subscribe"** — o canal existe —, e
+`kick.com/broadcasting/auth` responde 401, ou seja, autoriza com sessão
+válida. A autorização sai de dentro da página no navegador do agente, então
+sessão e CSRF vão junto sem copiar cookie para lugar nenhum.
+
+## Quem é a pessoa: dois caminhos, nenhum sozinho basta
+
+Medido nos dois espectadores reais dele:
+
+```
+dilanzito   nome na Steam "DiLANZiTO" → bate direto        OK
+            URL personalizada "8888888899977" → lixo       não
+
+Tchubita    nome na Steam "Tchubita" → não bate            não
+            URL personalizada "haisuzy" → é a conta dela   OK
+```
+
+Cada um quebra o caminho do outro. E o histórico resolveria os dois — mas a
+Steam entrega 1 nome de perfil privado, enquanto um concorrente tem 32 da
+mesma conta. A diferença é tempo de gravação, não técnica: por isso a tabela
+`nome_visto` existe e começa a gravar agora.
 
 ## Sniper não fala no chat
 
