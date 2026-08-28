@@ -165,8 +165,13 @@
     </div>
     <div id="resultado"></div>
 
-    <h2 id="t-dois">No servidor <b style="color:var(--alerta)">E</b> na sua live — agora
-      <span id="qtd-dois" class="qtd"></span></h2>
+    <!-- "ou há pouco" não é folga: fechar a live antes de atacar é o
+         comportamento que se procura, e exigir "agora" filtraria fora
+         exatamente quem se comporta como sniper. -->
+    <h2 id="t-dois">No servidor <b style="color:var(--alerta)">E</b> na sua live —
+      agora ou há pouco <span id="qtd-dois" class="qtd"></span></h2>
+    <p class="nota">Inclui quem <b>fechou a live</b> nos últimos 15 min — e a linha diz
+      há quanto tempo fechou.</p>
     <div id="nosdois"><div class="vazio">carregando…</div></div>
 
     <h2>Na sua live agora <span id="qtd-agora" class="qtd"></span></h2>
