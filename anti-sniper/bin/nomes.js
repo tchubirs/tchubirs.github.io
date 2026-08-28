@@ -102,11 +102,28 @@ const FONTES = process.env.DETETIVE_NOMES_URL
   if (!id) { console.error(`\n  não consegui virar "${alvo}" em SteamID.\n`); process.exit(2); }
   console.log(`\n  SteamID: ${id}`);
 
-  const op = { headless: !VISIVEL, viewport: { width: 1280, height: 1000 } };
+  const op = {
+    headless: !VISIVEL,
+    viewport: { width: 1280, height: 1000 },
+    // O Chromium do Playwright anuncia que é automatizado, e o Cloudflare
+    // recusa por isso — foi o que travou a primeira tentativa dele, com o
+    // desafio a nunca resolver em 45s. Esta bandeira tira o sinal mais
+    // óbvio (`navigator.webdriver`).
+    args: ['--disable-blink-features=AutomationControlled'],
+  };
   if (process.env.DETETIVE_CHROME) op.executablePath = process.env.DETETIVE_CHROME;
   // Perfil próprio: o Chromium recusa duas aberturas da mesma pasta, e
   // partilhar com o agente faria um dos dois nunca subir.
-  const ctx = await chromium.launchPersistentContext(PERFIL, op);
+
+  // O Chrome INSTALADO na máquina passa onde o Chromium do Playwright é
+  // barrado: tem as mesmas impressões digitais de um navegador de pessoa,
+  // e o Cloudflare trata-o como tal. Se não existir, cai no Chromium.
+  let ctx = null;
+  if (!process.env.DETETIVE_CHROME) {
+    try { ctx = await chromium.launchPersistentContext(PERFIL, { ...op, channel: 'chrome' }); }
+    catch { /* sem Chrome instalado */ }
+  }
+  if (!ctx) ctx = await chromium.launchPersistentContext(PERFIL, op);
   const p = await ctx.newPage();
 
   /** Uma tentativa numa URL. Devolve o que a página deu, sem julgar. */
@@ -138,6 +155,19 @@ const FONTES = process.env.DETETIVE_NOMES_URL
       if (!(await naVerificacao())) break;
       await p.waitForTimeout(1000);
     }
+
+    // Ainda no desafio com a janela aberta? Então peço ajuda em vez de
+    // desistir. É UMA vez: a verificação e o login ficam guardados no
+    // perfil, e as próximas execuções correm sozinhas.
+    if (VISIVEL && await naVerificacao()) {
+      console.log('\n  ⏸  O Cloudflare está a pedir verificação na janela que abriu.');
+      console.log('     Resolve lá (costuma ser uma caixa para marcar) e, se for');
+      console.log('     a primeira vez, faz login no site também.');
+      console.log('     Depois volta aqui e carrega ENTER.\n');
+      await new Promise((ok) => process.stdin.once('data', ok));
+      for (let i = 0; i < 20 && await naVerificacao(); i++) await p.waitForTimeout(1000);
+    }
+
     await p.waitForTimeout(3000);
 
     // Se a página pagina a lista, peço tudo antes de ler.
