@@ -171,24 +171,69 @@ const FONTES = process.env.DETETIVE_NOMES_URL
 
     await p.waitForTimeout(3000);
 
-    // Se a página pagina a lista, peço tudo antes de ler.
-    for (const texto of ['View All', 'Ver tudo', 'Show all']) {
-      const b = p.locator(`text="${texto}"`).first();
-      if (await b.count().catch(() => 0)) {
-        await b.click({ timeout: 5000 }).catch(() => {});
-        await p.waitForTimeout(2500);
-        break;
+    /** Uma leitura da página como ela está agora. */
+    const ler = async () => {
+      // Se a página pagina a lista, peço tudo antes de ler.
+      for (const texto of ['View All', 'Ver tudo', 'Show all']) {
+        const b = p.locator(`text="${texto}"`).first();
+        if (await b.count().catch(() => 0)) {
+          await b.click({ timeout: 5000 }).catch(() => {});
+          await p.waitForTimeout(2500);
+          break;
+        }
+      }
+      // As DUAS funções vão para dentro da página: `lerNomesDaPagina` chama
+      // `lerAgrupadoPorAno`, e `toString()` não leva dependências junto.
+      // E `evaluate` com texto quer uma EXPRESSÃO, daí o embrulho.
+      return p.evaluate(`(() => {
+        ${lerAgrupadoPorAno.toString()}
+        ${lerNomesDaPagina.toString()}
+        return lerNomesDaPagina(document);
+      })()`);
+    };
+
+    let r = await ler();
+
+    // Deslogado? Então a janela está aberta à toa.
+    //
+    // Este era um buraco real: a pausa só acontecia se o Cloudflare ainda
+    // estivesse a desafiar. Só que a verificação fica GUARDADA no perfil —
+    // da segunda vez em diante o desafio não aparece, o script não pausa, e
+    // lê a página de visitante em três segundos. Ou seja, `--ver` existia
+    // para ele poder fazer login e não dava tempo nenhum de o fazer.
+    //
+    // Agora quem manda é o resultado: se a lista veio cortada ou escondida e
+    // a janela está aberta, paro, peço o login e leio OUTRA VEZ. Se já
+    // estiver logado, nada disto acontece e o comando corre direto.
+    const faltaLogin = Boolean(r && (r.limitado || r.cortados > 0));
+    if (VISIVEL && faltaLogin) {
+      console.log('');
+      if (r.cortados) {
+        console.log(`  ⏸  O site cortou ${r.cortados} nomes ("Gat..", "Pl..") — é o que ele faz com visitante.`);
+      } else {
+        console.log('  ⏸  O site está a esconder a lista — é o que ele faz com visitante.');
+      }
+      console.log('     Na janela que abriu: faz login no steamid.uk (botão "Login" / "Sign in');
+      console.log('     through Steam", no topo). É o teu plano Silver que destranca a lista.');
+      console.log('     Depois volta aqui e carrega ENTER — eu leio de novo já logado.\n');
+      await new Promise((ok) => process.stdin.once('data', ok));
+      // Recarrega: o login muda a sessão, e a página velha continua a ser a
+      // do visitante mesmo depois de autenticado noutro separador.
+      await p.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(() => {});
+      await p.waitForTimeout(3000);
+      const depois = await ler();
+      // Só troco se melhorou. Se o login não pegou, ficar com a leitura pior
+      // seria perder o pouco que eu já tinha.
+      const melhor = (a, b) => (a?.nomes?.length || 0) >= (b?.nomes?.length || 0) ? a : b;
+      r = melhor(depois, r);
+      if (depois?.nomes?.length && !depois.cortados) {
+        console.log('  ✓ agora a lista veio inteira — o login pegou.\n');
+      } else if ((depois?.cortados || 0) > 0) {
+        console.log(`  ⚠ ainda vieram ${depois.cortados} cortados — o login pode não ter pegado.\n`);
       }
     }
 
-    // As DUAS funções vão para dentro da página: `lerNomesDaPagina` chama
-    // `lerAgrupadoPorAno`, e `toString()` não leva dependências junto.
-    // E `evaluate` com texto quer uma EXPRESSÃO, daí o embrulho.
-    return p.evaluate(`(() => {
-      ${lerAgrupadoPorAno.toString()}
-      ${lerNomesDaPagina.toString()}
-      return lerNomesDaPagina(document);
-    })()`);
+    return r;
   }
 
   const achados = [];
