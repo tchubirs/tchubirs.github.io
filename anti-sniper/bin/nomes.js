@@ -24,7 +24,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const { resolverEntrada } = require('../src/steam');
-const { lerNomesDaPagina } = require('../src/nomes-pagina');
+const { lerNomesDaPagina, lerAgrupadoPorAno } = require('../src/nomes-pagina');
 
 const RAIZ = path.join(__dirname, '..');
 const PERFIL = process.env.DETETIVE_PERFIL_NOMES
@@ -45,15 +45,11 @@ const FONTES = process.env.DETETIVE_NOMES_URL
   // Endereço fixo para eu poder provar o caminho do navegador contra uma
   // página local, sem depender de alcançar o site de fora.
   ? [{ nome: 'teste', url: (id) => process.env.DETETIVE_NOMES_URL.replace('{id}', id) }]
-  : [
-    // steamhistory.net primeiro: é de lá que vêm as capturas com a lista
-    // limpa e paginada ("Persona History (133)", "View All").
-    { nome: 'steamhistory.net', url: (id) => `https://steamhistory.net/id/${id}` },
-    // steamid.uk tem MAIS nomes (344 contra 133 na mesma conta), mas
-    // deslogado corta: "Results limited" e nomes pela metade. Fica como
-    // segunda opção, e vale muito depois de fazer login uma vez.
-    { nome: 'steamid.uk', url: (id) => `https://steamid.uk/profile/${id}` },
-  ];
+  // Só o steamid.uk: é o plano que ele assinou (Silver), e o Silver dá
+  // exatamente o que faltava — "Unrestricted Previous names (Not cut
+  // short)" e "Timestamps on previous names". Deslogado a página corta os
+  // nomes ("Gat..", "Pl..") e diz "Results limited"; logado, mostra os 344.
+  : [{ nome: 'steamid.uk', url: (id) => `https://steamid.uk/profile/${id}` }];
 
 (async () => {
   let chromium;
@@ -99,7 +95,19 @@ const FONTES = process.env.DETETIVE_NOMES_URL
         }
       }
 
-      const r = await p.evaluate(`(${lerNomesDaPagina.toString()})(document)`);
+      // As DUAS funções vão para dentro da página. `lerNomesDaPagina`
+      // chama `lerAgrupadoPorAno`, e mandar só a primeira dava
+      // "ReferenceError: lerAgrupadoPorAno is not defined" — em produção,
+      // na máquina dele, sem eu ver. `toString()` não leva as dependências
+      // junto: quem serializa uma função tem de serializar o que ela chama.
+      // `evaluate` com texto espera uma EXPRESSÃO, não declarações soltas —
+      // duas `function` seguidas dão "SyntaxError: Unexpected token
+      // 'function'". Daí o embrulho que devolve o resultado.
+      const r = await p.evaluate(`(() => {
+        ${lerAgrupadoPorAno.toString()}
+        ${lerNomesDaPagina.toString()}
+        return lerNomesDaPagina(document);
+      })()`);
       if (r?.nomes?.length) {
         console.log(`✓ ${r.nomes.length} nomes${r.total ? ` (a página diz ${r.total})` : ''}`);
         resultado = { fonte: fonte.nome, url, ...r };
@@ -119,11 +127,15 @@ const FONTES = process.env.DETETIVE_NOMES_URL
   await ctx.close().catch(() => {});
 
   if (resultado?.nomes?.length) {
-    console.log(`\n  ${resultado.nomes.length} nomes de ${id} — via ${resultado.fonte}\n`);
-    for (const n of resultado.nomes.slice(0, 40)) {
-      console.log(`    ${n.em.padEnd(22)} ${n.nome}`);
+    console.log(`\n  ${resultado.nomes.length} nomes de ${id} — via ${resultado.fonte}`);
+    // A página do steamid.uk agrupa por ANO e não dá o dia. Imprimir um dia
+    // que ela não deu seria inventar precisão, então a coluna diz o que é.
+    if (resultado.precisao === 'ano') console.log('  (a página dá o ano, não o dia)');
+    console.log('');
+    for (const n of resultado.nomes.slice(0, 60)) {
+      console.log(`    ${String(n.em).padEnd(22)} ${n.nome}`);
     }
-    if (resultado.nomes.length > 40) console.log(`    … e mais ${resultado.nomes.length - 40}`);
+    if (resultado.nomes.length > 60) console.log(`    … e mais ${resultado.nomes.length - 60}`);
     // Aviso quando peguei menos do que a própria página anuncia: metade da
     // lista entregue como se fosse inteira é pior que erro nenhum.
     if (resultado.total && resultado.nomes.length < resultado.total) {

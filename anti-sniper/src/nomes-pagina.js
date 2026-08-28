@@ -121,7 +121,24 @@ function lerNomesDaPagina(doc) {
     }
   }
 
-  // 3. Não achei lista. Antes de desistir: a página pode estar ESCONDENDO,
+  // 3. O formato do steamid.uk: agrupado por ANO, nomes em linha.
+  //
+  //    Não é linha-com-data. O HTML que ele colou mostra:
+  //
+  //        Previous Persona Names
+  //        344 persona's.
+  //        2026 18
+  //        Joaozinho Recruta Gatinho Pluto Bloco2A Picture Cdi Tufao
+  //        2025 49
+  //        ...
+  //
+  //    Um ano, quantos nomes naquele ano, e os nomes. A data exata de cada
+  //    nome não existe aqui — existe o ANO, e dizer mais que isso seria
+  //    inventar precisão. Então cada nome sai com o ano, e só.
+  const porAno = lerAgrupadoPorAno(doc, texto);
+  if (porAno) return { ...porAno, total: Number.isFinite(totalDito) ? totalDito : porAno.total };
+
+  // 4. Não achei lista. Antes de desistir: a página pode estar ESCONDENDO,
   //    e esconder não é não ter.
   //
   //    O steamid.uk deslogado mostra "344 persona's. Results limited." e os
@@ -178,4 +195,60 @@ function lerNomesDaPagina(doc) {
   };
 }
 
-module.exports = { lerNomesDaPagina };
+/**
+ * O formato do steamid.uk: agrupado por ANO, com os nomes em linha.
+ *
+ * Trabalha nos ELEMENTOS, não no texto achatado. Dividir o texto por espaço
+ * partiria "Balloon Enjoyer" em dois nomes — e nome de Steam tem espaço,
+ * emoji e pontuação. No HTML cada nome é o seu próprio elemento (ele mostra
+ * um ícone de link ao lado de cada um), então a fronteira já existe: basta
+ * não a destruir.
+ *
+ * Devolve `null` quando não reconhece o formato, para quem chama seguir
+ * para o próximo caminho.
+ */
+function lerAgrupadoPorAno(doc, texto) {
+  const corpo = texto(doc.body);
+  // Âncora: sem ela, "2026 18" casaria com qualquer par de números da
+  // página. Só entro neste formato se a página se anunciar assim.
+  if (!/Previous Persona Names|Persona History from Steam/i.test(corpo)) return null;
+
+  // A secção começa no cabeçalho que diz "Previous Persona Names".
+  let secao = null;
+  for (const el of doc.querySelectorAll('h1,h2,h3,h4,h5,div,span,p,legend')) {
+    if (!/^Previous Persona Names/i.test(texto(el))) continue;
+    if (el.children.length > 3) continue;      // é o cabeçalho, não o bloco
+    secao = el.parentElement;
+    break;
+  }
+  if (!secao) return null;
+
+  const ANO = /^(19[89]\d|20[0-4]\d)$/;
+  const ANO_COM_CONTA = /^(19[89]\d|20[0-4]\d)\s+(\d{1,4})$/;
+
+  const nomes = [];
+  let ano = null;
+  let total = 0;
+
+  // Percorro as folhas em ordem: um marcador de ano muda o ano corrente,
+  // tudo o que vem depois é nome daquele ano.
+  const folhas = [...secao.querySelectorAll('*')].filter((e) => !e.children.length);
+  for (const el of folhas) {
+    const t = texto(el);
+    if (!t) continue;
+    const m = t.match(ANO_COM_CONTA);
+    if (m) { ano = m[1]; total += Number(m[2]) || 0; continue; }
+    if (ANO.test(t)) { ano = t; continue; }
+    if (!ano) continue;
+    // Nome cortado pelo site ("Gat..", "Pl..") não é nome: é um pedaço, e
+    // guardá-lo faria o cruzamento casar com metade de uma palavra.
+    if (/\.\.$/.test(t) || t === '..') continue;
+    if (t.length > 64) continue;
+    nomes.push({ nome: t, em: ano, precisao: 'ano' });
+  }
+
+  if (nomes.length < 3) return null;
+  return { nomes, total: total || null, comoAchei: 'agrupado por ano', precisao: 'ano' };
+}
+
+module.exports = { lerNomesDaPagina, lerAgrupadoPorAno };

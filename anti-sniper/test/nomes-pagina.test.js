@@ -102,3 +102,60 @@ test('página normal continua sendo lida — o aviso não engole o caminho bom',
   assert.equal(r.nomes.length, 6);
   assert.equal(r.limitado, undefined);
 });
+
+// ── O formato REAL do steamid.uk ─────────────────────────────────────────
+//
+// Não é linha-com-data. O HTML que ele colou agrupa por ANO:
+//   Previous Persona Names
+//   344 persona's.
+//   2026 18  Joaozinho Recruta Gatinho Pluto ...
+//   2025 49  ...
+// Cada nome é o seu próprio elemento (o site mostra um ícone ao lado).
+const paginaPorAno = ({ cortados = false } = {}) => {
+  const ano = (a, n, ns) => `<div class="y">${a} ${n}</div>` +
+    ns.map((x) => `<a href="#">${x.replace('<','&lt;')}</a>`).join('');
+  return parseHTML(`<html><head><title>SteamID</title></head><body><div class="card">
+    <h3>Previous Persona Names</h3>
+    <div class="bloco">
+      ${ano('2026', 18, cortados
+        ? ['Joaozinho','Recruta','Gat..','Pl..','Blo..']
+        : ['Joaozinho','Recruta','Gatinho','Balloon Enjoyer','Bloco2A'])}
+      ${ano('2025', 49, ['Rogerinho do beco','ze polvinho','Kleberson'])}
+      ${ano('2024', 41, ['игрок 03','no.tc.no.problem'])}
+    </div></div></body></html>`).document;
+};
+
+test('lê o formato agrupado por ano do steamid.uk', () => {
+  const r = lerNomesDaPagina(paginaPorAno());
+  assert.equal(r.comoAchei, 'agrupado por ano');
+  assert.equal(r.nomes.length, 10);
+  assert.equal(r.total, 18 + 49 + 41, 'o total soma as contagens declaradas por ano');
+  // Nome com espaço não pode virar dois nomes.
+  assert.ok(r.nomes.some((n) => n.nome === 'Balloon Enjoyer'));
+  assert.ok(r.nomes.some((n) => n.nome === 'Rogerinho do beco'));
+  assert.ok(r.nomes.some((n) => n.nome === 'игрок 03'));
+});
+
+test('cada nome carrega o ANO, e diz que a precisão é o ano', () => {
+  const r = lerNomesDaPagina(paginaPorAno());
+  const j = r.nomes.find((n) => n.nome === 'Joaozinho');
+  assert.equal(j.em, '2026');
+  assert.equal(j.precisao, 'ano', 'a página não dá o dia — afirmar um seria inventar');
+  assert.equal(r.nomes.find((n) => n.nome === 'Kleberson').em, '2025');
+});
+
+// Deslogado o site corta os nomes. Metade de uma palavra não é um nome, e
+// guardá-la faria o cruzamento casar com um pedaço.
+test('nome cortado pelo site ("Gat..") é descartado, não guardado', () => {
+  const r = lerNomesDaPagina(paginaPorAno({ cortados: true }));
+  assert.ok(r.nomes.every((n) => !n.nome.endsWith('..')));
+  assert.ok(r.nomes.some((n) => n.nome === 'Joaozinho'));
+});
+
+test('sem a âncora do título, não inventa anos a partir de números soltos', () => {
+  const doc = parseHTML(`<html><body><div>
+    <div>2026 18</div><a>coisa</a><div>2025 49</div><a>outra</a><a>mais</a>
+  </div></body></html>`).document;
+  const r = lerNomesDaPagina(doc);
+  assert.equal(r.nomes, undefined);
+});
