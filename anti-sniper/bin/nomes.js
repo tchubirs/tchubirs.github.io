@@ -46,8 +46,13 @@ const FONTES = process.env.DETETIVE_NOMES_URL
   // página local, sem depender de alcançar o site de fora.
   ? [{ nome: 'teste', url: (id) => process.env.DETETIVE_NOMES_URL.replace('{id}', id) }]
   : [
-    { nome: 'steamid.uk', url: (id) => `https://steamid.uk/profile/${id}` },
+    // steamhistory.net primeiro: é de lá que vêm as capturas com a lista
+    // limpa e paginada ("Persona History (133)", "View All").
     { nome: 'steamhistory.net', url: (id) => `https://steamhistory.net/id/${id}` },
+    // steamid.uk tem MAIS nomes (344 contra 133 na mesma conta), mas
+    // deslogado corta: "Results limited" e nomes pela metade. Fica como
+    // segunda opção, e vale muito depois de fazer login uma vez.
+    { nome: 'steamid.uk', url: (id) => `https://steamid.uk/profile/${id}` },
   ];
 
 (async () => {
@@ -100,8 +105,12 @@ const FONTES = process.env.DETETIVE_NOMES_URL
         resultado = { fonte: fonte.nome, url, ...r };
         break;
       }
-      console.log(`— ${r?.erro || 'nada'}`);
-      if (r?.retrato) resultado = resultado || { fonte: fonte.nome, url, ...r };
+      // "Escondido" é diferente de "não achei": vale dizer qual dos dois,
+      // e quanto a página admite ter.
+      console.log(r?.limitado
+        ? `⚠ ${r.erro}${r.totalDito ? ` — a página admite ${r.totalDito} nomes` : ''}`
+        : `— ${r?.erro || 'nada'}`);
+      if (r) resultado = resultado || { fonte: fonte.nome, url, ...r };
     } catch (e) {
       console.log(`✗ ${String(e.message).split('\n')[0].slice(0, 70)}`);
     }
@@ -127,6 +136,15 @@ const FONTES = process.env.DETETIVE_NOMES_URL
     return;
   }
 
+  if (resultado?.limitado) {
+    console.log(`\n  A página tem os nomes mas não os mostra${
+      resultado.totalDito ? ` (admite ${resultado.totalDito})` : ''}.`);
+    console.log(`  ${resultado.dica}\n`);
+    console.log(`    npm run nomes -- ${id} --ver`);
+    console.log('\n  A janela abre; faz login no site e deixa a janela aberta.');
+    console.log('  O login fica guardado — nas próximas vezes já roda sozinho.\n');
+    process.exit(1);
+  }
   console.log('\n  Não consegui ler a lista. O retrato da página, para eu acertar o extrator:\n');
   console.log(JSON.stringify(resultado?.retrato ?? { nada: 'nenhuma fonte respondeu' }, null, 2));
   console.log('\n  Cola isto aqui e eu corrijo.\n');

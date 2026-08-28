@@ -121,8 +121,35 @@ function lerNomesDaPagina(doc) {
     }
   }
 
-  // 3. Não achei. Em vez de devolver lista vazia — que se leria como "essa
-  //    conta não tem nomes" —, devolvo o que a página tem, para eu acertar
+  // 3. Não achei lista. Antes de desistir: a página pode estar ESCONDENDO,
+  //    e esconder não é não ter.
+  //
+  //    O steamid.uk deslogado mostra "344 persona's. Results limited." e os
+  //    nomes cortados ao meio ("Gat..", "Pl.."), com a maioria dos anos
+  //    vazia. Devolver esses 18 pedaços como se fossem a lista seria o pior
+  //    resultado possível: uma resposta que parece completa e não é.
+  const corpo = (doc.body?.textContent || '').replace(/\s+/g, ' ');
+  const limite = corpo.match(/(\d[\d,]*)\s*(?:persona'?s?|stored names|names?)\b[^.]*\.\s*Results limited/i)
+    || corpo.match(/Results limited/i);
+  const pedeLogin = /log\s*in to view|login to view|please log in/i.test(corpo);
+  if (limite || pedeLogin) {
+    const total = Number(String(limite?.[1] ?? '').replace(/,/g, '')) || null;
+    return {
+      erro: pedeLogin
+        ? 'a página esconde a lista para quem não está logado'
+        : 'a página diz "Results limited" — a lista vem cortada',
+      limitado: true,
+      totalDito: total,
+      // Sem isto, quem lê a saída não sabe se a conta tem poucos nomes ou
+      // se o site é que não mostrou. São coisas opostas.
+      dica: pedeLogin
+        ? 'rode com --ver e faça login no site nessa janela; o perfil fica guardado'
+        : 'tente outra fonte, ou logue-se para ver a lista inteira',
+      retrato: { titulo: doc.title, amostraTexto: corpo.trim().slice(0, 600) },
+    };
+  }
+
+  //    Sem sinal de bloqueio: devolvo o que a página tem, para eu acertar
   //    o extrator com o desenho real em vez de com o meu palpite.
   return {
     erro: 'não achei a lista de nomes nesta página',

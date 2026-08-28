@@ -58,3 +58,47 @@ test('poucas linhas não viram lista — 2 datas soltas é coincidência', () =>
   </tbody></table></body></html>`).document;
   assert.ok(lerNomesDaPagina(doc).erro);
 });
+
+// ── Esconder não é não ter ───────────────────────────────────────────────
+//
+// O steamid.uk deslogado mostra "344 persona's. Results limited." com os
+// nomes cortados ("Gat..", "Pl..") e a maioria dos anos vazia. Devolver
+// esses pedaços como se fossem a lista é o pior resultado possível: uma
+// resposta que parece completa e não é.
+const paginaLimitada = () => parseHTML(`<html><head><title>SteamID</title></head><body>
+  <div>344 Stored names</div>
+  <h3>Previous Community URLS</h3><div>6 previous URLs, login to view.</div>
+  <h3>Previous Persona Names</h3>
+  <div>344 persona's. Results limited.</div>
+  <div>2026 18 Joaozinho Recruta Gat.. Pl.. Blo.. Pic.. C.. Tu.. Bag..</div>
+  <div>2025 49 .. jo..</div>
+  <div>2024 41</div><div>2023 48</div><div>2022 35</div>
+  <h3>Avatar History</h3><div>21 avatar's logged, please log in to view</div>
+</body></html>`).document;
+
+test('página que corta a lista é reportada, não entregue pela metade', () => {
+  const r = lerNomesDaPagina(paginaLimitada());
+  assert.equal(r.nomes, undefined, '18 pedaços de 344 não podem sair como "a lista"');
+  assert.equal(r.limitado, true);
+  assert.equal(r.totalDito, 344);
+  assert.match(r.dica, /login|logue/i);
+});
+
+test('a dica muda conforme o motivo — login escondendo vs lista cortada', () => {
+  const soLimitada = parseHTML(`<html><body>
+    <h3>Previous Persona Names</h3><div>344 persona's. Results limited.</div>
+  </body></html>`).document;
+  const r = lerNomesDaPagina(soLimitada);
+  assert.equal(r.limitado, true);
+  assert.doesNotMatch(r.erro, /logado/);
+});
+
+test('página normal continua sendo lida — o aviso não engole o caminho bom', () => {
+  const doc = parseHTML(`<html><body><h2>Persona History (6)</h2><table><tbody>
+    ${['giB Star','RATS','BIG Rats','sh0cker','D10S','HyHo']
+      .map((n,i)=>`<tr><td>${n}</td><td>1${i}/05/2024, 01:00:00</td></tr>`).join('')}
+  </tbody></table></body></html>`).document;
+  const r = lerNomesDaPagina(doc);
+  assert.equal(r.nomes.length, 6);
+  assert.equal(r.limitado, undefined);
+});
