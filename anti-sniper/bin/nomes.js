@@ -41,10 +41,14 @@ if (!alvo) {
 }
 
 /** As páginas que mostram histórico de nomes, na ordem em que vale tentar. */
-const FONTES = [
-  { nome: 'steamid.uk', url: (id) => `https://steamid.uk/profile/${id}` },
-  { nome: 'steamhistory.net', url: (id) => `https://steamhistory.net/id/${id}` },
-];
+const FONTES = process.env.DETETIVE_NOMES_URL
+  // Endereço fixo para eu poder provar o caminho do navegador contra uma
+  // página local, sem depender de alcançar o site de fora.
+  ? [{ nome: 'teste', url: (id) => process.env.DETETIVE_NOMES_URL.replace('{id}', id) }]
+  : [
+    { nome: 'steamid.uk', url: (id) => `https://steamid.uk/profile/${id}` },
+    { nome: 'steamhistory.net', url: (id) => `https://steamhistory.net/id/${id}` },
+  ];
 
 (async () => {
   let chromium;
