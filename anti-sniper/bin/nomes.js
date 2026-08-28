@@ -112,14 +112,33 @@ const FONTES = process.env.DETETIVE_NOMES_URL
   /** Uma tentativa numa URL. Devolve o que a página deu, sem julgar. */
   async function tentar(url) {
     await p.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
-    // O Cloudflare pode segurar alguns segundos antes de soltar a página.
-    // Espero o título mudar em vez de dormir um tempo fixo.
-    for (let i = 0; i < 20; i++) {
-      const t = await p.title().catch(() => '');
-      if (!/just a moment|attention required|checking your browser/i.test(t)) break;
+
+    // Esperar o Cloudflare sair — detetado pelo CONTEÚDO, não pelo título.
+    //
+    // Olhava o título antes, procurando "just a moment". Na máquina dele o
+    // Windows está em português e o título vinha "Um momento…": a condição
+    // não bateu, o código achou que já tinha passado e leu a página do
+    // desafio. O retrato que ele colou dizia, em português, "Verificação
+    // bem-sucedida. Esperando a resposta de steamid.uk" — tinha passado
+    // mesmo, eu é que li cedo.
+    //
+    // `window._cf_chl_opt` é o objeto que o Cloudflare injeta na página do
+    // desafio. Existe igual em qualquer idioma, e some quando a página real
+    // chega. Título é tradução; isto é mecanismo.
+    const naVerificacao = () => p.evaluate(`Boolean(
+      window._cf_chl_opt
+      || document.getElementById('challenge-error-text')
+      || document.querySelector('#cf-chl-widget, [id^="cf-chl"], #challenge-running')
+    )`).catch(() => false);
+
+    // Até 45s: o desafio pode demorar, e desistir cedo é o erro que já
+    // aconteceu. Sair assim que a página real chega mantém o caso normal
+    // rápido.
+    for (let i = 0; i < 45; i++) {
+      if (!(await naVerificacao())) break;
       await p.waitForTimeout(1000);
     }
-    await p.waitForTimeout(2500);
+    await p.waitForTimeout(3000);
 
     // Se a página pagina a lista, peço tudo antes de ler.
     for (const texto of ['View All', 'Ver tudo', 'Show all']) {
@@ -152,6 +171,7 @@ const FONTES = process.env.DETETIVE_NOMES_URL
       try { r = await tentar(url); }
       catch (e) { continue; }                    // endereço errado: próximo
       if (r?.nomes?.length) { ok = { fonte: fonte.nome, url, ...r }; break; }
+      if (r?.cloudflare) { ultimoRetrato = { fonte: fonte.nome, url, ...r }; break; }
       if (r?.limitado) { ultimoRetrato = { fonte: fonte.nome, url, ...r }; break; }
       if (r?.retrato) ultimoRetrato = ultimoRetrato || { fonte: fonte.nome, url, ...r };
     }
@@ -216,6 +236,13 @@ const FONTES = process.env.DETETIVE_NOMES_URL
     return;
   }
 
+  if (resultado?.cloudflare) {
+    console.log('\n  A página ainda estava na verificação do Cloudflare quando eu li.');
+    console.log('  Não é bloqueio — é demora. Corre outra vez:\n');
+    console.log(`    npm run nomes -- ${id} --ver`);
+    console.log('\n  O navegador guarda a verificação, então a segunda vez costuma passar.\n');
+    process.exit(1);
+  }
   if (resultado?.limitado) {
     console.log(`\n  A página tem os nomes mas não os mostra${
       resultado.totalDito ? ` (admite ${resultado.totalDito})` : ''}.`);

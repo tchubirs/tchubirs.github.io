@@ -146,6 +146,23 @@ function lerNomesDaPagina(doc) {
   //    vazia. Devolver esses 18 pedaços como se fossem a lista seria o pior
   //    resultado possível: uma resposta que parece completa e não é.
   const corpo = (doc.body?.textContent || '').replace(/\s+/g, ' ');
+
+  // Ainda no Cloudflare? Isto NÃO é "a página não tem a lista" — é "a
+  // página ainda não chegou". Confundir os dois custou uma ida e volta:
+  // o retrato dizia "não achei a lista" quando o que estava ali era o
+  // desafio a correr. Detetado pelo objeto que o Cloudflare injeta, que é
+  // igual em qualquer idioma — o título vem traduzido ("Um momento…").
+  const noDesafio = typeof window !== 'undefined'
+    && Boolean(window._cf_chl_opt || doc.getElementById('challenge-error-text'));
+  if (noDesafio) {
+    return {
+      erro: 'a página ainda estava na verificação do Cloudflare quando eu li',
+      cloudflare: true,
+      dica: 'não é bloqueio — é demora. Corre outra vez; o navegador guarda a verificação.',
+      retrato: { titulo: doc.title, amostraTexto: corpo.trim().slice(0, 300) },
+    };
+  }
+
   const limite = corpo.match(/(\d[\d,]*)\s*(?:persona'?s?|stored names|names?)\b[^.]*\.\s*Results limited/i)
     || corpo.match(/Results limited/i);
   const pedeLogin = /log\s*in to view|login to view|please log in/i.test(corpo);
