@@ -83,10 +83,16 @@ function desenharAlertas(lista, onde, jaEmDestaque = []) {
         + '<b>Isso não inocenta</b> — a pessoa pode usar nome diferente nos dois lados.</div>';
     return;
   }
-  onde.innerHTML = lista.map((a) => `<div class="alerta">
+  // Certeza primeiro, e palpite com cara de palpite — igual ao bloco de
+  // cima. Procurar por "ESPECTADOR-C" trazia o nome exato e mais dois de
+  // 70% com a mesma aparência: três respostas empatadas para uma pergunta
+  // que tinha uma.
+  onde.innerHTML = [...lista].sort((x, y) => y.confianca - x.confianca)
+    .map((a) => `<div class="alerta ${grau(a.confianca)}">
       <div class="par">${par(a)}</div>
       <div class="det">${esc(a.motivo)} · assistiu ${assistiu(a)}${
           a.minutosNoServidor != null ? ` · ${a.minutosNoServidor} min no servidor` : ''}</div>
+      ${a.confianca < 0.95 ? '<div class="duvida">Nome <b>parecido</b>, não idêntico. Pode ser outra pessoa.</div>' : ''}
     </div>`).join('');
 }
 
@@ -408,18 +414,17 @@ document.getElementById('ir').onclick = async () => {
   const onde = document.getElementById('resultado');
   if (!q) { onde.innerHTML = ''; return; }
   onde.innerHTML = '<div class="vazio">procurando…</div>';
-  // Manda o instante ABSOLUTO, não "22:47": o navegador sabe o fuso de quem
-  // está olhando, e o serviço não precisa adivinhar. Fuso errado aqui vira
-  // duas horas de diferença e uma resposta trocada.
+  // Manda o instante ABSOLUTO, não "22:47" — mas lido no fuso do CANAL, que
+  // é o fuso em que a tela escreve todas as horas. Ler no fuso do navegador
+  // faria "22:47" significar um instante e a tela mostrar outro, e a
+  // resposta viria do minuto errado sem nada na tela denunciando.
   let quando = '';
   const t = document.getElementById('quando').value.trim();
   if (t) {
     const rl = t.match(/^(\d{1,2})\s*[:h.]?\s*(\d{2})$/);
     if (rl) {
-      const d = new Date();
-      d.setHours(Number(rl[1]), Number(rl[2]), 0, 0);
-      if (d.getTime() > Date.now() + 60000) d.setDate(d.getDate() - 1);  // live que virou a noite
-      quando = String(d.getTime());
+      const ms = instanteNoFuso(Number(rl[1]), Number(rl[2]));
+      quando = String(ms);
     } else { quando = t; }
   }
   try {
@@ -431,11 +436,43 @@ document.getElementById('ir').onclick = async () => {
   } catch { onde.innerHTML = '<div class="vazio">falhou ao consultar</div>'; }
 };
 
+/**
+ * "22:47" no fuso do canal → instante absoluto.
+ *
+ * Sem fuso conhecido cai no do navegador, que é o que dava antes.
+ * `formatToParts` dá o deslocamento REAL daquele dia — somar um número
+ * fixo de horas erraria em toda troca de horário de verão, e erraria
+ * justamente nas datas em que ninguém desconfia.
+ */
+function instanteNoFuso(hh, mm) {
+  const agora = Date.now();
+  if (!FUSO) {
+    const d = new Date();
+    d.setHours(hh, mm, 0, 0);
+    if (d.getTime() > agora + 60000) d.setDate(d.getDate() - 1);
+    return d.getTime();
+  }
+  const f = new Intl.DateTimeFormat('en-CA', {
+    timeZone: FUSO, year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+  });
+  const parte = (d) => Object.fromEntries(f.formatToParts(d).map((x) => [x.type, x.value]));
+  // Quanto o fuso do canal está adiantado em relação ao UTC, hoje.
+  const p = parte(new Date(agora));
+  const comoUTC = Date.UTC(+p.year, +p.month - 1, +p.day,
+    +(p.hour === '24' ? '00' : p.hour), +p.minute, +p.second);
+  const desloc = comoUTC - Math.floor(agora / 1000) * 1000;
+  let ms = Date.UTC(+p.year, +p.month - 1, +p.day, hh, mm, 0) - desloc;
+  // Live que virou a noite: "00:20" pedido às 00:05 é de ontem.
+  if (ms > agora + 60000) ms -= 24 * 3600000;
+  return ms;
+}
+
 for (const b of document.querySelectorAll('.atalhos button')) {
   b.onclick = () => {
-    const d = new Date(Date.now() - Number(b.dataset.min) * 60000);
+    // O atalho escreve no campo o que a tela mostraria — mesmo fuso.
     document.getElementById('quando').value =
-      `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+      hora(Date.now() - Number(b.dataset.min) * 60000);
     document.getElementById('ir').click();
   };
 }
