@@ -303,7 +303,7 @@ function lerSteamidUk(doc, texto) {
   let total = 0;
   let ano = null;
   let secao = null;
-  let comData = 0; let comAno = 0;
+  let comData = 0; let comAno = 0; let semData = 0;
 
   for (const el of caixa.children) {
     const t = texto(el);
@@ -325,7 +325,24 @@ function lerSteamidUk(doc, texto) {
       const quando = bruto.replace(/\(seen\)/ig, '').trim()
         .replace(/^[A-Za-z]{3},\s*/, '').trim();
 
-      if (quando) comData += 1; else if (ano) comAno += 1;
+      // "First name seen by SteamID" é um RESUMO, não mais uma utilização.
+      //
+      // O nome que aparece ali costuma já estar numa secção de ano, com a sua
+      // data. Empurrá-lo outra vez fazia duas coisas erradas ao mesmo tempo: a
+      // CLI anunciava mais um nome do que a página tem, e o sinal REPETIU dava
+      // "usou 2×" a um nome que a página mostra uma vez só. Um crachá de
+      // resumo a virar prova de repetição.
+      //
+      // Então quando já existe, MARCA-SE o que existe. A informação do resumo
+      // — "este foi o primeiro" — é guardada; a utilização inventada, não.
+      if (secao === 'primeiro-nome') {
+        const jaLa = nomes.find((n) => n.nome.toLowerCase() === nome.toLowerCase());
+        if (jaLa) { jaLa.secao = 'primeiro-nome'; continue; }
+      }
+
+      if (quando) comData += 1;
+      else if (ano) comAno += 1;
+      else semData += 1;
       nomes.push({
         nome,
         em: quando || ano || null,
@@ -365,6 +382,11 @@ function lerSteamidUk(doc, texto) {
     precisao: comData === nomes.length ? 'dia'
       : comAno === nomes.length ? 'ano'
         : 'mista',
+    // E as três contagens saem em separado, para a CLI poder dizer a verdade
+    // em vez de "uns com o dia, outros com o ano" quando nenhum tem só o ano.
+    comData,
+    soAno: comAno,
+    semData,
     cortados: 0,
   };
 }
@@ -456,10 +478,16 @@ function lerAgrupadoPorAno(doc, texto) {
     // Nome cortado pelo site ("Gat..", "Pl..") não é nome: é um pedaço, e
     // guardá-lo faria o cruzamento casar com metade de uma palavra.
     if (/\.\.$/.test(t) || t === '..') { cortados += 1; continue; }
-    // Data solta ("Oct 14, 2018", "28/08/2026") é do histórico de
-    // visibilidade, não um apelido.
-    if (/^[A-Z][a-z]{2}\s+\d{1,2},\s*\d{4}$/.test(t)) continue;
-    if (/^\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4}/.test(t)) continue;
+    // Data solta é do histórico de visibilidade, não um apelido.
+    //
+    // Faltava aqui o formato da página LOGADA do steamid.uk — "(seen) Wed, 05
+    // Aug 2026". Este caminho só corre quando o leitor preciso desiste (menos
+    // de 3 nomes), e é justamente aí que uma conta pequena tem a data a ser
+    // impressa na coluna dos nomes, como se alguém se chamasse "05 Aug 2026".
+    if (/^[A-Z][a-z]{2}\s+\d{1,2},\s*\d{4}$/.test(t)) continue;      // Oct 14, 2018
+    if (/^\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4}/.test(t)) continue;      // 28/08/2026
+    if (/^(\(seen\)\s*)?([A-Za-z]{3},\s*)?\d{1,2}\s+[A-Za-z]{3}\s+\d{4}\b/.test(t)) continue;
+    if (/^\(seen\)/i.test(t)) continue;                              // "(seen)" sozinho
     // Sobra de código: a página tem jQuery inline solto entre os blocos.
     if (/[{};]|\$\(|function\s*\(|html\(/.test(t)) continue;
     if (t.length > 64) continue;

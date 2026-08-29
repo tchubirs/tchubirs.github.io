@@ -475,11 +475,19 @@ function incompleto(r) {
       // A precisão do conjunto é a PIOR das partes, nunca a melhor: juntar
       // uma fonte com o dia e outra só com o ano dá uma lista onde metade
       // tem dia. Chamar isso de "dia" seria prometer o que a coluna não tem.
+      // Precisão AUSENTE é a pior de todas, não é "não conta".
+      //
+      // O `.filter(Boolean)` deitava fora a fonte que não declara precisão, e
+      // então uma fonte com dia mais uma sem declaração davam "dia" — a
+      // promessa da coluna vinha de quem falou, não de quem tem menos.
       precisao: (() => {
-        const ps = new Set(achados.map((a) => a.precisao).filter(Boolean));
+        const ps = new Set(achados.map((a) => a.precisao ?? 'desconhecida'));
         if (ps.size === 1) return [...ps][0];
-        return ps.size ? 'mista' : undefined;
+        return 'mista';
       })(),
+      comData: achados.reduce((t, a) => t + (a.comData || 0), 0),
+      soAno: achados.reduce((t, a) => t + (a.soAno || 0), 0),
+      semData: achados.reduce((t, a) => t + (a.semData || 0), 0),
       porFonte: achados.map((a) => `${a.fonte}: ${a.nomes.length}`),
     };
     console.log(`\n  juntando as fontes → ${resultado.nomes.length} nomes distintos (${resultado.porFonte.join(' · ')})`);
@@ -502,8 +510,20 @@ function incompleto(r) {
     // aparecer numa leitura do steamid.uk, é porque a sessão não está logada.
     if (resultado.precisao === 'ano') {
       console.log('  (a coluna é o ANO — sem login o site não dá o dia)');
-    } else if (resultado.precisao === 'mista') {
-      console.log('  (a coluna mistura: uns nomes com a data, outros com o ano ou sem data)');
+    } else if (resultado.precisao === 'mista' || resultado.precisao === 'desconhecida') {
+      // Diz o que ESTÁ lá, contado.
+      //
+      // A linha antiga dizia "uns com o dia, outros com o ano" mesmo quando
+      // nenhum nome tinha só o ano — os sem-dia eram as duas secções do fim,
+      // que não têm data nenhuma. Descrever o que não está lá é do mesmo
+      // tamanho que esconder o que está.
+      const partes = [];
+      if (resultado.comData) partes.push(`${resultado.comData} com a data`);
+      if (resultado.soAno) partes.push(`${resultado.soAno} só com o ano`);
+      if (resultado.semData) partes.push(`${resultado.semData} sem data`);
+      console.log(partes.length > 1
+        ? `  (a coluna mistura: ${partes.join(', ')})`
+        : '  (a coluna mistura precisões)');
     }
     console.log('');
     // Nem todo nome tem data, e escrever "null" na coluna é o pior de dois

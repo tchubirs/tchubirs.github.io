@@ -425,3 +425,74 @@ test('separador de milhar no total continua a ser lido', () => {
     <table><tbody>${linhas}</tbody></table></body></html>`).document;
   assert.equal(lerNomesDaPagina(doc).total, 1234);
 });
+
+// O caminho de recurso corre quando o leitor preciso desiste (menos de 3
+// nomes) — ou seja, justamente nas contas pequenas. Faltava-lhe o formato de
+// data da página LOGADA, e a data ia parar à coluna dos nomes, como se alguém
+// se chamasse "05 Aug 2026".
+test('a data do steamid.uk logado não vira nome no caminho de recurso', () => {
+  const doc = parseHTML(`<html><body>
+    <div class="card"><h3>Previous Persona Names</h3>
+      <div class="bloco">
+        <div class="y">2026</div><div class="c">2</div>
+        <div>Klaus</div><div>(seen) Wed, 05 Aug 2026</div>
+        <div>zeca</div><div>(seen) Mon, 03 Feb 2026</div>
+        <div class="y">2025</div><div class="c">2</div>
+        <div>Bolt</div><div>Sat, 14 Sep 2025</div>
+        <div>MangaVerde</div><div>05 Jun 2025</div>
+      </div>
+    </div></body></html>`).document;
+  const r = lerNomesDaPagina(doc);
+  const nomes = r.nomes.map((n) => n.nome);
+  assert.deepEqual(nomes, ['Klaus', 'zeca', 'Bolt', 'MangaVerde']);
+  for (const n of nomes) {
+    assert.doesNotMatch(n, /\d{4}/, `"${n}" tem um ano dentro — é data, não nome`);
+    assert.doesNotMatch(n, /seen/i);
+  }
+});
+
+// O crachá "First name seen by SteamID" repete um nome que já está numa secção
+// de ano. Empurrá-lo outra vez anunciava mais um nome do que a página tem, e
+// dava "usou 2×" a um nome que a página mostra uma vez só.
+test('o crachá de resumo marca o nome que já existe, não acrescenta outro', () => {
+  // O caso real do HTML dele: "Trynitythegod" está na secção de 2015 COM data,
+  // e outra vez no fim sob "First name seen by SteamID", sem data.
+  const doc = parseHTML(`<html><body><div class="namehistory-names">
+    ${ukAno(2026, 2)}
+    ${ukNome('Joaozinho', '(seen) Wed, 05 Aug 2026')}
+    ${ukNome('Recruta', 'Thu, 30 Jul 2026')}
+    ${ukAno(2015, 2)}
+    ${ukNome('Trynitythegod', 'Fri, 08 May 2015')}
+    ${ukNome('Fefeufumafuma', 'Thu, 29 Jan 2015')}
+    ${ukTitulo('First name seen by SteamID')}
+    ${ukNome('Trynitythegod', '')}
+    ${ukTitulo('Unknown')}
+    ${ukNome('Recrutáxi', '')}
+  </div></body></html>`).document;
+  const r = lerNomesDaPagina(doc);
+
+  const trynity = r.nomes.filter((n) => /^Trynitythegod$/i.test(n.nome));
+  assert.equal(trynity.length, 1, 'uma entrada só, não duas');
+  assert.equal(trynity[0].secao, 'primeiro-nome', 'mas guarda a marca');
+  assert.equal(trynity[0].em, '08 May 2015', 'e mantém a data que a página lhe deu');
+  assert.equal(r.nomes.length, 5, '4 nomes datados + o "Unknown"');
+});
+
+// Mas quando o crachá traz um nome que não está em lado nenhum, ele ENTRA:
+// é a única forma de o ver, e deitá-lo fora perdia o nome mais antigo.
+test('o crachá de resumo com nome novo continua a entrar', () => {
+  const r = lerNomesDaPagina(paginaUk());
+  const t = r.nomes.filter((n) => n.nome === 'Trynitythegod');
+  assert.equal(t.length, 1);
+  assert.equal(t[0].secao, 'primeiro-nome');
+  assert.equal(t[0].em, null, 'sem data, porque a página não lhe deu nenhuma');
+});
+
+// A CLI escrevia "uns com o dia, outros com o ano" mesmo quando nenhum nome
+// tinha só o ano — os sem-dia eram as secções do fim, sem data nenhuma.
+test('conta os três casos em separado, para a saída poder dizer a verdade', () => {
+  const r = lerNomesDaPagina(paginaUk());
+  assert.equal(r.comData + r.soAno + r.semData, r.nomes.length);
+  assert.equal(r.soAno, 0, 'nesta página nenhum nome tem SÓ o ano');
+  assert.ok(r.semData >= 1, 'mas há pelo menos um sem data nenhuma');
+});
