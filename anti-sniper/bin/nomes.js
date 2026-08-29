@@ -37,10 +37,12 @@ const VISIVEL = args.includes('--ver') || process.env.DETETIVE_VISIVEL === '1';
 // `--tudo` consulta as duas fontes e junta. Sem ele, para na primeira
 // que responder — que é o que serve no dia a dia.
 const TUDO = args.includes('--tudo');
-const alvo = args.find((a) => !a.startsWith('-'));
+// Vários alvos numa corrida só: `npm run nomes -- ID1 ID2 ID3 --ver`.
+const ALVOS = args.filter((a) => !a.startsWith('-'));
+const alvo = ALVOS[0];
 
 if (!alvo) {
-  console.error('\n  uso: npm run nomes -- <SteamID64 | link do perfil>\n');
+  console.error('\n  uso: npm run nomes -- <SteamID64 | link do perfil> [mais IDs] [--ver]\n');
   process.exit(2);
 }
 
@@ -51,11 +53,14 @@ if (!alvo) {
 // nunca abriu, o Chrome correu escondido, o Cloudflare barrou, e a saída
 // disse "nada" como se a conta não tivesse nomes. Sete minutos à espera de
 // um erro de digitação. Um aviso aqui apanha isso no primeiro segundo.
+//
+// Já os IDs a mais são bem-vindos: `npm run nomes -- ID1 ID2 ID3 --ver` corre
+// as três com um só login. Antes eu recusava o segundo ID como se fosse erro,
+// e ele ficou a mandar um de cada vez — a repetir o login a cada corrida.
 const CONHECIDAS = new Set(['--ver', '--tudo']);
 const estranha = args.find((a) => a.startsWith('-') && !CONHECIDAS.has(a));
-const sobra = args.filter((a) => !a.startsWith('-')).slice(1);
-if (estranha || sobra.length) {
-  console.error(`\n  não conheço ${estranha ? `"${estranha}"` : `"${sobra[0]}"`}.`);
+if (estranha) {
+  console.error(`\n  não conheço "${estranha}".`);
   console.error('  As únicas são --ver (abre a janela) e --tudo (consulta as duas fontes).');
   if (estranha && estranha.startsWith('--ver') && estranha !== '--ver') {
     console.error(`\n  Parece "--ver" com texto colado atrás: "${estranha}".`);
@@ -222,10 +227,6 @@ function incompleto(r) {
     process.exit(3);
   }
 
-  const id = await resolverEntrada(alvo).catch(() => null);
-  if (!id) { console.error(`\n  não consegui virar "${alvo}" em SteamID.\n`); process.exit(2); }
-  console.log(`\n  SteamID: ${id}`);
-
   const op = {
     headless: !VISIVEL,
     viewport: { width: 1280, height: 1000 },
@@ -379,6 +380,27 @@ function incompleto(r) {
     return r;
   }
 
+  // Várias contas numa corrida só.
+  //
+  // Ele estava a mandar-me um SteamID de cada vez e a correr o comando outra
+  // vez para cada um. Com `--ver` isso é pior do que parece: cada corrida abre
+  // uma janela nova e ele teria de confirmar o login de novo. Uma janela, um
+  // login, todas as contas — é o mesmo trabalho da máquina e nenhum dele.
+  let pior = 0;
+  for (const [i, alvo] of ALVOS.entries()) {
+    if (i > 0) console.log(`\n${'─'.repeat(64)}`);
+    const codigo = await umaConta(alvo);
+    if (codigo > pior) pior = codigo;
+  }
+  await ctx.close().catch(() => {});
+  process.exit(pior);
+
+  /** Uma conta, do SteamID à saída. Devolve o código de saída dela. */
+  async function umaConta(alvo) {
+  const id = await resolverEntrada(alvo).catch(() => null);
+  if (!id) { console.error(`\n  não consegui virar "${alvo}" em SteamID.\n`); return 2; }
+  console.log(`\n  SteamID: ${id}`);
+
   const achados = [];
   let ultimoRetrato = null;
 
@@ -455,7 +477,7 @@ function incompleto(r) {
     resultado = ultimoRetrato;
   }
 
-  await ctx.close().catch(() => {});
+
 
   if (resultado?.nomes?.length) {
     console.log(`\n  ${resultado.nomes.length} nomes de ${id} — via ${resultado.fonte}`);
@@ -542,13 +564,29 @@ function incompleto(r) {
     const provaveis = nomesQueValem(resultado.nomes, { teto: 8, porRaiz: true });
     const comSinal = provaveis.filter((n) => n.pontos > 0);
     if (comSinal.length) {
-      console.log('\n  provável nome da pessoa — pela tua regra (volta ao nome + está no começo da conta)\n');
+      // Sinal FORTE é o que aponta para uma pessoa: a raiz que se repete, o
+      // nome retomado anos depois, o nome usado mais de uma vez. Estar em
+      // primeiro na lista NÃO é sinal forte — numa conta com quatro nomes
+      // soltos, alguém tem de ser o primeiro, e esse alguém não é ninguém.
+      //
+      // Foi assim que a saída chegou a apontar "Juice Fruit". O erro não foi
+      // só de contagem: foi pôr um palpite fraco debaixo de um título forte.
+      // Título e prova têm de dizer a mesma coisa.
+      const forte = comSinal.some((n) => n.raiz || n.voltou || n.repetiu);
+      if (forte) {
+        console.log('\n  provável nome da pessoa — pela tua regra (volta ao nome + está no começo da conta)\n');
+      } else {
+        console.log('\n  sinal fraco — nenhum nome se repete nem partilha raiz com outro.');
+        console.log('  O que há é só posição na conta, e isso sozinho não nomeia ninguém:\n');
+      }
       for (const n of comSinal.slice(0, 5)) {
         console.log(`    ${String(n.pontos).padStart(2)} pt  ${String(n.nome).padEnd(24)} ${n.porque.join(', ')}`);
       }
       // Sem este aviso o topo da lista lê-se como veredito. Não é: é o melhor
       // palpite. Quem confunde as duas coisas acusa inocente.
-      console.log('\n  ⚠ isto é probabilidade, não identidade.');
+      console.log(forte
+        ? '\n  ⚠ isto é probabilidade, não identidade.'
+        : '\n  ⚠ com este material eu não apontaria para ninguém.');
     } else {
       console.log('\n  nenhum nome se destaca: nenhum foi repetido nem retomado anos depois.');
       console.log('  Sem sinal, escolher um seria escolher a esmo — então não escolho.');
@@ -559,7 +597,7 @@ function incompleto(r) {
     const arq = path.join(SAIDA, `nomes-${id}.json`);
     fs.writeFileSync(arq, JSON.stringify(resultado, null, 2));
     console.log(`\n  gravado em ${arq}\n`);
-    return;
+    return 0;
   }
 
   if (resultado?.cloudflare) {
@@ -567,7 +605,7 @@ function incompleto(r) {
     console.log('  Não é bloqueio — é demora. Corre outra vez:\n');
     console.log(`    npm run nomes -- ${id} --ver`);
     console.log('\n  O navegador guarda a verificação, então a segunda vez costuma passar.\n');
-    process.exit(1);
+    return 1;
   }
   if (resultado?.limitado) {
     console.log(`\n  A página tem os nomes mas não os mostra${
@@ -576,10 +614,11 @@ function incompleto(r) {
     console.log(`    npm run nomes -- ${id} --ver`);
     console.log('\n  A janela abre; faz login no site e deixa a janela aberta.');
     console.log('  O login fica guardado — nas próximas vezes já roda sozinho.\n');
-    process.exit(1);
+    return 1;
   }
   console.log('\n  Não consegui ler a lista. O retrato da página, para eu acertar o extrator:\n');
   console.log(JSON.stringify(resultado?.retrato ?? { nada: 'nenhuma fonte respondeu' }, null, 2));
   console.log('\n  Cola isto aqui e eu corrijo.\n');
-  process.exit(1);
+  return 1;
+  }
 })().catch((e) => { console.error('\n  erro:', e.message, '\n'); process.exit(1); });
