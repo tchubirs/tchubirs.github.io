@@ -34,6 +34,53 @@ const PERFIL = process.env.DETETIVE_PERFIL_NOMES
 const SAIDA = path.join(RAIZ, 'dados');
 
 const args = process.argv.slice(2);
+
+// A auto-actualização é a PRIMEIRA coisa que corre. Antes de ler argumentos,
+// antes de tudo.
+//
+// Ela estava mais abaixo, dentro do corpo assíncrono, e isso tinha um buraco
+// que só se vê quando morde: a leitura dos argumentos acontecia ANTES. Ele
+// correu `npm run nomes -- ID1 ID2 ID3 --ver` com código velho, que ainda
+// recusava o segundo ID, e o comando saiu com erro sem nunca chegar à parte
+// que se actualiza. Ou seja: a coisa que existe para corrigir defeitos não
+// conseguia corrigir nenhum defeito anterior a ela própria.
+//
+// Aqui em cima, corrige.
+if (process.env.DETETIVE_JA_ATUALIZEI !== '1') {
+  // A PRIMEIRA saída do comando, e é de propósito que é esta.
+  //
+  // "nada acontece", escreveu ele — e não estava enganado: antes, a primeira
+  // linha só aparecia depois da verificação de versão e do arranque do
+  // navegador. Um comando que arranca em silêncio é indistinguível de um
+  // comando que não arrancou.
+  process.stdout.write('\n  ⟳ a ver se há versão nova… ');
+  const { verificarAtualizacao } = require('../src/atualizar');
+  const v = verificarAtualizacao();
+  console.log(v.estado === 'trouxe' ? '' : v.estado === 'atualizado' ? 'em dia.'
+    : v.estado === 'sem-git' ? 'não deu para saber — sigo.' : '');
+  if (v.estado === 'trouxe') {
+    console.log(`\n  ⟳ atualizei sozinho: ${v.atras} ${v.atras === 1 ? 'versão nova' : 'versões novas'}. A correr com o código novo.`);
+    // Recomeçar é obrigatório, não é zelo: os módulos já foram carregados
+    // para a memória ANTES do merge. Sem isto o código velho é que corria,
+    // e a mensagem em cima seria uma promessa por cumprir.
+    const { spawnSync } = require('node:child_process');
+    const r = spawnSync(process.execPath, [__filename, ...args], {
+      stdio: 'inherit',
+      env: { ...process.env, DETETIVE_JA_ATUALIZEI: '1' },
+    });
+    process.exit(r.status ?? 0);
+  }
+  if (v.estado === 'sujo') {
+    console.log(`\n  ⚠ há ${v.atras} ${v.atras === 1 ? 'versão nova' : 'versões novas'}, mas tens ${v.detalhe} por gravar.`);
+    console.log('    Não mexo no teu trabalho. O que vais ver a seguir é da versão VELHA.');
+    console.log('    Para atualizar:  git stash  &&  git pull');
+  }
+  if (v.estado === 'divergiu') {
+    console.log(`\n  ⚠ estás ${v.atras} atrás e o teu ramo seguiu outro caminho — não puxo por cima.`);
+    console.log('    O que vais ver a seguir pode ser da versão VELHA.');
+  }
+}
+
 const VISIVEL = args.includes('--ver') || process.env.DETETIVE_VISIVEL === '1';
 // `--tudo` consulta as duas fontes e junta. Sem ele, para na primeira
 // que responder — que é o que serve no dia a dia.
@@ -70,6 +117,8 @@ if (estranha) {
   console.error(`\n  uso: npm run nomes -- ${alvo} --ver\n`);
   process.exit(2);
 }
+
+console.log(`  ${ALVOS.length} ${ALVOS.length === 1 ? 'conta' : 'contas'} a ler…`);
 
 /** As páginas que mostram histórico de nomes, na ordem em que vale tentar. */
 const FONTES = process.env.DETETIVE_NOMES_URL
@@ -201,36 +250,6 @@ function incompleto(r) {
   // eu imprimia vinha depois da verificação de versão e do arranque do
   // navegador, o que pode ser meia dúzia de segundos de ecrã vazio. Um comando
   // que arranca em silêncio é indistinguível de um comando que não arrancou.
-  console.log(`\n  a ler ${ALVOS.length} ${ALVOS.length === 1 ? 'conta' : 'contas'}…`);
-
-  if (process.env.DETETIVE_JA_ATUALIZEI !== '1') {
-    process.stdout.write('  ⟳ a ver se há versão nova… ');
-    const { verificarAtualizacao } = require('../src/atualizar');
-    const v = verificarAtualizacao();
-    console.log(v.estado === 'trouxe' ? '' : v.estado === 'atualizado' ? 'em dia.'
-      : v.estado === 'sem-git' ? 'não deu para saber — sigo.' : '');
-    if (v.estado === 'trouxe') {
-      console.log(`\n  ⟳ atualizei sozinho: ${v.atras} ${v.atras === 1 ? 'versão nova' : 'versões novas'}. A correr com o código novo.`);
-      // Recomeçar é obrigatório, não é zelo: os módulos já foram carregados
-      // para a memória ANTES do merge. Sem isto o código velho é que corria,
-      // e a mensagem em cima seria uma promessa por cumprir.
-      const { spawnSync } = require('node:child_process');
-      const r = spawnSync(process.execPath, [__filename, ...args], {
-        stdio: 'inherit',
-        env: { ...process.env, DETETIVE_JA_ATUALIZEI: '1' },
-      });
-      process.exit(r.status ?? 0);
-    }
-    if (v.estado === 'sujo') {
-      console.log(`\n  ⚠ há ${v.atras} ${v.atras === 1 ? 'versão nova' : 'versões novas'}, mas tens ${v.detalhe} por gravar.`);
-      console.log('    Não mexo no teu trabalho. O que vais ver a seguir é da versão VELHA.');
-      console.log('    Para atualizar:  git stash  &&  git pull');
-    }
-    if (v.estado === 'divergiu') {
-      console.log(`\n  ⚠ estás ${v.atras} atrás e o teu ramo seguiu outro caminho — não puxo por cima.`);
-      console.log('    O que vais ver a seguir pode ser da versão VELHA.');
-    }
-  }
 
   let chromium;
   try { ({ chromium } = require('playwright')); }
