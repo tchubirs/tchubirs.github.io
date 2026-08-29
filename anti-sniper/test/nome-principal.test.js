@@ -265,3 +265,25 @@ test('entre variações da mesma raiz, a mais curta fica à frente', () => {
   ]);
   assert.equal(r[0].nome, 'Capitao');
 });
+
+// Juntar as famílias DEPOIS de cortar pelo tecto é cortar informação: as nove
+// variações de uma raiz enchem a lista e empurram para fora um nome que tinha
+// sinal próprio. Foi o que aconteceu ao primeiro nome da conta.
+test('porRaiz junta as famílias ANTES do tecto, não depois', () => {
+  const lista = [
+    ...['Capitao', 'C4pitaoTV', '[YT] Capitao Nave', '[BDM]capitao', 'Capitãozinho',
+      'Capitao do mar', 'SenhorCapitao', '[BR] Capitao', 'Capitao Zero']
+      .map((nome, i) => ({ nome, em: `0${(i % 9) + 1} Jan 201${i % 6}` })),
+    { nome: 'Alicerce', em: null, secao: 'primeiro-nome' },
+    { nome: 'Melancia', em: '01 Jan 2020' },
+  ];
+  const cru = nomesQueValem(lista, { teto: 5 });
+  assert.ok(!cru.some((n) => n.nome === 'Alicerce'),
+    'sem porRaiz, as variações enchem a lista — é o defeito que isto documenta');
+
+  const junto = nomesQueValem(lista, { teto: 5, porRaiz: true });
+  assert.ok(junto.some((n) => n.nome === 'Alicerce'),
+    'com porRaiz, o primeiro nome da conta cabe');
+  assert.equal(junto.filter((n) => n.raiz === 'capitao').length, 1,
+    'a família inteira vale um candidato');
+});

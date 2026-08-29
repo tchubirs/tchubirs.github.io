@@ -538,7 +538,8 @@ function incompleto(r) {
       }
     }
 
-    const provaveis = nomesQueValem(resultado.nomes, { teto: 8 });
+    // `porRaiz`: as nove variações de "recruta" são um candidato, não nove.
+    const provaveis = nomesQueValem(resultado.nomes, { teto: 8, porRaiz: true });
     const comSinal = provaveis.filter((n) => n.pontos > 0);
     if (comSinal.length) {
       console.log('\n  provável nome da pessoa — pela tua regra (volta ao nome + está no começo da conta)\n');

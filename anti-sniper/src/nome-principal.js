@@ -249,10 +249,27 @@ function ordenarPorIdentidade(ocorrencias) {
  * os que têm sinal — e devolve TODOS quando não há sinal nenhum, porque aí
  * escolher seria escolher a esmo.
  */
-function nomesQueValem(ocorrencias, { teto = 12 } = {}) {
+function nomesQueValem(ocorrencias, { teto = 12, porRaiz = false } = {}) {
   const ord = ordenarPorIdentidade(ocorrencias);
   const comSinal = ord.filter((n) => n.pontos > 0);
-  return (comSinal.length ? comSinal : ord).slice(0, teto);
+  let fila = comSinal.length ? comSinal : ord;
+
+  // `porRaiz`: uma família conta como UM candidato, não como nove.
+  //
+  // A ordem importa e foi onde eu me enganei primeiro: se o tecto cortar antes
+  // de juntar as famílias, as nove variações de "recruta" ocupam a lista toda
+  // e empurram para fora o "Trynitythegod", que tinha sinal PRÓPRIO — é o
+  // primeiro nome da conta. Juntar depois de cortar é cortar a informação.
+  if (porRaiz) {
+    const vistas = new Set();
+    fila = fila.filter((n) => {
+      if (!n.raiz) return true;
+      if (vistas.has(n.raiz)) return false;
+      vistas.add(n.raiz);
+      return true;
+    });
+  }
+  return fila.slice(0, teto);
 }
 
 module.exports = { ordenarPorIdentidade, nomesQueValem, raizesRepetidas };
