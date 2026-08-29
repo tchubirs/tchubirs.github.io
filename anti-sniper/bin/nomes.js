@@ -351,7 +351,14 @@ function incompleto(r) {
     // a janela está aberta, paro, peço o login e leio OUTRA VEZ. Se já
     // estiver logado, nada disto acontece e o comando corre direto.
     const faltaLogin = Boolean(r && (r.limitado || r.cortados > 0));
-    if (VISIVEL && faltaLogin) {
+    // UMA vez por corrida, não uma por conta.
+    //
+    // Com três SteamIDs de seguida isto podia parar três vezes — e nas contas
+    // com `optout=1` o site continua a esconder a lista MESMO logado, portanto
+    // ele voltaria a ver o pedido de login já estando logado. Pedir o que já
+    // foi feito ensina a ignorar o pedido.
+    if (VISIVEL && faltaLogin && !jaPediuLogin) {
+      jaPediuLogin = true;
       console.log('');
       if (r.cortados) {
         console.log(`  ⏸  O site cortou ${r.cortados} nomes ("Gat..", "Pl..") — é o que ele faz com visitante.`);
@@ -360,7 +367,15 @@ function incompleto(r) {
       }
       console.log('     Na janela que abriu: faz login no steamid.uk (botão "Login" / "Sign in');
       console.log('     through Steam", no topo). É o teu plano Silver que destranca a lista.');
-      console.log('     Depois volta aqui e carrega ENTER — eu leio de novo já logado.\n');
+      console.log('     Depois volta aqui e carrega ENTER — eu leio de novo já logado.');
+      // Dizer que está PARADO, e não só o que fazer.
+      //
+      // O terminal dele encheu-se de comandos que nunca correram: o processo
+      // estava aqui à espera e engolia tudo o que ele escrevia. Da janela dele
+      // isso lê-se como "travou", não como "está à espera de mim".
+      console.log('');
+      console.log('     ⌨  ESTOU PARADO AQUI. Nada do que escreveres corre até carregares ENTER.');
+      console.log('        (se te arrependeste: Ctrl+C)\n');
       await new Promise((ok) => process.stdin.once('data', ok));
       // Recarrega: o login muda a sessão, e a página velha continua a ser a
       // do visitante mesmo depois de autenticado noutro separador.
@@ -380,6 +395,10 @@ function incompleto(r) {
 
     return r;
   }
+
+  // O pedido de login é uma vez por corrida, não uma por conta — a bandeira
+  // vive aqui fora de propósito, para atravessar todos os SteamIDs.
+  let jaPediuLogin = false;
 
   // Várias contas numa corrida só.
   //
