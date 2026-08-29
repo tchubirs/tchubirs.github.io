@@ -28,6 +28,8 @@ const { lerNomesDaPagina, lerAgrupadoPorAno, lerSteamidUk } = require('../src/no
 const { nomesQueValem, raizesRepetidas } = require('../src/nome-principal');
 const { chaveDoDia } = require('../src/data');
 const { janelaFoiFechada, resumoDoErro } = require('../src/erros');
+const { perfil } = require('../src/steamid-api');
+const { conta } = require('../src/steamid-uk');
 
 const RAIZ = path.join(__dirname, '..');
 const PERFIL = process.env.DETETIVE_PERFIL_NOMES
@@ -217,8 +219,12 @@ const FONTES = process.env.DETETIVE_NOMES_URL
 // destes é quase sempre um teto, não o fim dos dados.
 const TETOS = new Set([10, 20, 25, 50, 100, 150, 200, 250, 500, 1000]);
 
-function incompleto(r) {
+function incompleto(r, totalDaApi = null) {
   if (!r?.nomes?.length) return true;
+  // O total que a API dá manda mais que o da página: vem de quem tem os dados,
+  // não do HTML. É o que permite dizer "li 100 de 343" quando a página não
+  // anuncia nada — e sem isso, uma lista cortada passa por inteira.
+  if (totalDaApi && r.nomes.length < totalDaApi) return true;
   if (r.cortados > 0) return true;
   // A própria página anuncia quantos são. Ler menos que isso é paginação
   // que eu não segui, ou lista cortada — nos dois casos, falta.
@@ -395,7 +401,7 @@ function incompleto(r) {
     // com `optout=1` o site continua a esconder a lista MESMO logado, portanto
     // ele voltaria a ver o pedido de login já estando logado. Pedir o que já
     // foi feito ensina a ignorar o pedido.
-    if (VISIVEL && faltaLogin && !jaPediuLogin) {
+    if (VISIVEL && faltaLogin && !jaPediuLogin && !daApi?.optout) {
       jaPediuLogin = true;
       console.log('');
       if (r.cortados) {
@@ -491,6 +497,30 @@ function incompleto(r) {
   if (!id) { console.error(`\n  não consegui virar "${alvo}" em SteamID.\n`); return 2; }
   console.log(`\n  SteamID: ${id}`);
 
+  // Perguntar à API ANTES de abrir o navegador.
+  //
+  // Ela não dá os nomes — está medido, ver `src/steamid-api.js`. Dá duas
+  // coisas que poupam tempo real: se a conta está invisível para o site
+  // (`optout`), e quantos nomes existem de facto.
+  //
+  // O optout importa muito: sem ele, uma conta que o site nunca vai mostrar
+  // custava-lhe quatro minutos de espera pelo login, para no fim não aparecer
+  // nada. Saber isso em 200 ms é a diferença entre esperar e desistir cedo.
+  let daApi = null;
+  const cc = conta();
+  if (cc.ligado) {
+    daApi = await perfil(id, cc).catch(() => null);
+    if (daApi) {
+      console.log(`  API (${daApi.plano})     ${daApi.total} nomes na base`
+        + `${daApi.optout ? ' · ⚠ optout: o site esconde esta conta de TODOS' : ''}`
+        + `${daApi.restam != null ? ` · restam ${daApi.restam} consultas hoje` : ''}`);
+      if (daApi.optout) {
+        console.log('    Pediram remoção ao steamid.uk. Nem o login mostra — pagar não desfaz.');
+        console.log('    Vou direto à outra fonte.');
+      }
+    }
+  }
+
   const achados = [];
   let ultimoRetrato = null;
   let janelaMorreu = false;
@@ -520,7 +550,7 @@ function incompleto(r) {
         // steamhistory dá 10 nomes paginados e o `/history/0/` dá os 133 —
         // parar no primeiro que responde ficaria com os 10.
         if (!ok || este.nomes.length > ok.nomes.length) ok = este;
-        if (!incompleto(ok)) break;              // completo: não há melhor
+        if (!incompleto(ok, daApi?.total)) break;              // completo: não há melhor
         continue;                                 // incompleto: tenta o próximo
       }
       if (r?.cloudflare) { ultimoRetrato = { fonte: fonte.nome, url, ...r }; break; }
@@ -534,7 +564,7 @@ function incompleto(r) {
       // Sem --tudo, a primeira que responder INTEIRA basta. Uma lista
       // cortada não encerra a busca: é justamente quando a segunda fonte
       // vale mais. Com --tudo sigo sempre, para juntar os dois bancos.
-      if (!TUDO && !incompleto(ok)) break;
+      if (!TUDO && !incompleto(ok, daApi?.total)) break;
       // Só prometer o que ainda vou fazer. Esta linha saía mesmo quando a
       // fonte era a ÚLTIMA da lista — anunciava uma tentativa que não existia.
       const restam = FONTES.indexOf(fonte) < FONTES.length - 1;
@@ -707,11 +737,12 @@ function incompleto(r) {
     // initialization": eu tinha posto o aviso aqui e a declaração lá em baixo,
     // ao pé de quem a usava a seguir. Erro de estreante — e nenhum teste o
     // apanhou, porque nenhum teste chegava a correr esta parte da saída.
-    const completa = !incompleto(resultado);
+    const completa = !incompleto(resultado, daApi?.total);
 
     if (!completa) {
+      const quantosSao = daApi?.total || resultado.total;
       console.log(`\n  ⚠ esta lista está INCOMPLETA${
-        resultado.total ? ` (li ${resultado.nomes.length} de ${resultado.total})` : ''} — o palpite abaixo`);
+        quantosSao ? ` (li ${resultado.nomes.length} de ${quantosSao})` : ''} — o palpite abaixo`);
       console.log('    só conhece estes nomes. Com --ver e login no steamid.uk vês a conta toda.');
     }
 
