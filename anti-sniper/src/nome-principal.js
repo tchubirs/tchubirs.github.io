@@ -35,9 +35,24 @@
  *        a lista crua, COM repetições — é delas que sai o sinal
  * @returns {Array<object>} do mais provável para o menos
  */
+const { raizesRepetidas, normalizar } = require('./raiz');
+
 function ordenarPorIdentidade(ocorrencias) {
   const lista = (ocorrencias || []).filter((o) => o && o.nome);
   if (!lista.length) return [];
+
+  // A raiz por baixo dos nomes, antes de tudo o resto.
+  //
+  // Foi ele que apanhou: *"tem um nome muito similar que aparece muitas
+  // vezes"*. Quem troca de nome trezentas vezes não repete a string, repete a
+  // IDEIA — muda o prefixo do canal, troca uma letra por um número, junta um
+  // sufixo. Contar só repetição exacta via dez nomes diferentes com sinal
+  // zero, e a saída ia buscar um nome ao acaso.
+  const raizes = raizesRepetidas(lista);
+  const raizDe = (nome) => {
+    const junto = normalizar(nome).replace(/ /g, '');
+    return raizes.find((r) => junto.includes(r.raiz)) || null;
+  };
 
   // O ano, venha de onde vier. As fontes escrevem a data de três jeitos:
   //   steamid.uk   "2026"                         (só o ano)
@@ -160,6 +175,9 @@ function ordenarPorIdentidade(ocorrencias) {
 
     const repetiu = g.vezes > 1;
 
+    // RAIZ: partilha o miolo com outros nomes da mesma conta.
+    const raiz = raizDe(g.nome);
+
     // Os pesos são ordinais, não medidos: eu não tenho dados para calibrar
     // isto, e fingir que tenho seria inventar precisão. O que a ordem
     // garante é que voltar > repetir > ser cedo, que é a regra dele.
@@ -167,6 +185,11 @@ function ordenarPorIdentidade(ocorrencias) {
     if (voltou) pontos += 5;
     if (repetiu) pontos += 2 + Math.min(g.vezes - 1, 3);
     if (cedo) pontos += 2;
+    // A raiz pesa MAIS que voltar ao nome, e isto é uma mudança à regra dele
+    // que eu faço de olhos abertos: nove variações da mesma ideia espalhadas
+    // por dez anos são mais prova que um regresso único à mesma string. A
+    // ordem entre os três sinais antigos fica intacta.
+    if (raiz) pontos += 2 + Math.min(raiz.quantos - 1, 6);
 
     fora.push({
       nome: g.nome,
@@ -183,9 +206,12 @@ function ordenarPorIdentidade(ocorrencias) {
       voltou,
       repetiu,
       cedo,
+      raiz: raiz ? raiz.raiz : null,
+      raizEm: raiz ? raiz.quantos : 0,
       primeiroDaConta: g.primeiroDaConta,
       pontos,
       porque: [
+        raiz && `partilha a raiz "${raiz.raiz}" com ${raiz.quantos - 1} outros nomes`,
         voltou && `voltou a usar depois de ${ultimo - primeiro} anos`,
         repetiu && `usou ${g.vezes}×`,
         // A frase distingue as duas: uma é o site a afirmar, a outra sou eu
@@ -205,7 +231,14 @@ function ordenarPorIdentidade(ocorrencias) {
   return fora.sort((a, b) => b.pontos - a.pontos
     || (b.primeiroDaConta === true) - (a.primeiroDaConta === true)
     || (a.primeiroEm ?? 9999) - (b.primeiroEm ?? 9999)
-    || b.vezes - a.vezes);
+    || b.vezes - a.vezes
+    // Entre variações DA MESMA RAIZ, a mais curta é o nome e as outras são
+    // moldura: "Recruta" antes de "[BDM]Senhor recruta". Fora da família isto
+    // não vale nada — premiar o nome curto entre dois estranhos empatados
+    // seria escolher por sorteio e chamar-lhe critério.
+    || (a.raiz && a.raiz === b.raiz ? String(a.nome).length - String(b.nome).length : 0)
+    // E o último desempate é a cronologia: mais antigo à frente.
+    || a.posicao - b.posicao);
 }
 
 /**
@@ -222,4 +255,4 @@ function nomesQueValem(ocorrencias, { teto = 12 } = {}) {
   return (comSinal.length ? comSinal : ord).slice(0, teto);
 }
 
-module.exports = { ordenarPorIdentidade, nomesQueValem };
+module.exports = { ordenarPorIdentidade, nomesQueValem, raizesRepetidas };

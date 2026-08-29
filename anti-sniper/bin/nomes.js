@@ -25,7 +25,7 @@ const path = require('node:path');
 const os = require('node:os');
 const { resolverEntrada } = require('../src/steam');
 const { lerNomesDaPagina, lerAgrupadoPorAno, lerSteamidUk } = require('../src/nomes-pagina');
-const { nomesQueValem } = require('../src/nome-principal');
+const { nomesQueValem, raizesRepetidas } = require('../src/nome-principal');
 
 const RAIZ = path.join(__dirname, '..');
 const PERFIL = process.env.DETETIVE_PERFIL_NOMES
@@ -521,6 +521,23 @@ function incompleto(r) {
     // e o nome verdadeiro afoga no meio de trezentas piadas. É esta lista
     // curta que vai cruzar com a audiência da Kick, não a lista inteira:
     // cruzar 344 nomes é garantir um acerto por acaso.
+    // A raiz vem primeiro porque é a resposta; a lista por nome é o detalhe.
+    //
+    // Sem este bloco a saída mostrava nove linhas a dizer o mesmo — "Recrutáxi",
+    // "[BDM]Senhor recruta", "[YT]Senhor recruta"… — quando o que ele quer
+    // saber cabe numa: a pessoa volta sempre a "Recruta".
+    const raizes = raizesRepetidas(resultado.nomes);
+    if (raizes.length) {
+      console.log('\n  a raiz que se repete — é o sinal mais forte que estes nomes dão\n');
+      for (const r of raizes.slice(0, 3)) {
+        const periodo = r.anos.length >= 2 ? `, de ${r.anos[0]} a ${r.anos[r.anos.length - 1]}`
+          : r.anos.length === 1 ? `, em ${r.anos[0]}` : '';
+        console.log(`    "${r.raiz}" — em ${r.quantos} nomes${periodo}`);
+        const mostra = r.nomes.slice(0, 8).join(' · ');
+        console.log(`        ${mostra}${r.nomes.length > 8 ? ` … e mais ${r.nomes.length - 8}` : ''}`);
+      }
+    }
+
     const provaveis = nomesQueValem(resultado.nomes, { teto: 8 });
     const comSinal = provaveis.filter((n) => n.pontos > 0);
     if (comSinal.length) {

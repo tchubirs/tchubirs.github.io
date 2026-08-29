@@ -230,3 +230,38 @@ test('só com o ano, a ordem da página é invertida', () => {
   const pos = (n) => r.find((x) => x.nome === n).posicao;
   assert.ok(pos('primeiro') < pos('meio') && pos('meio') < pos('ultimo'));
 });
+
+// O erro que ele apanhou na saída: nove nomes com a mesma raiz davam sinal
+// ZERO, porque eu só contava repetição exacta. Sem sinal nenhum, o desempate
+// escolhia um nome ao acaso — e a saída apontava para quem não era.
+test('a raiz partilhada ganha ao nome de uso único', () => {
+  const lista = [
+    { nome: 'Capitao', em: '01 Jan 2016' },
+    { nome: 'C4pitaoTV', em: '02 Feb 2019' },
+    { nome: '[YT] Capitao Nave', em: '03 Mar 2022' },
+    { nome: '[BDM]capitao', em: '04 Apr 2024' },
+    { nome: 'Capitãozinho', em: '05 May 2026' },
+    { nome: 'Melancia', em: '06 Jun 2020' },
+    { nome: 'Owl', em: '07 Jul 2020' },
+    { nome: 'Milk', em: '08 Aug 2020' },
+    { nome: 'Monster', em: '09 Sep 2020' },
+  ];
+  const r = ordenarPorIdentidade(lista);
+  assert.ok(/capit/i.test(r[0].nome), `o topo devia ser da família Capitao, veio "${r[0].nome}"`);
+  assert.equal(r[0].raizEm, 5);
+  assert.ok(r[0].porque.some((p) => p.startsWith('partilha a raiz')));
+  // E os nomes de uso único continuam sem sinal, em vez de subirem por sorteio.
+  assert.equal(r.find((x) => x.nome === 'Melancia').pontos, 0);
+});
+
+// Entre variações, a mais curta é o nome; as outras são moldura.
+test('entre variações da mesma raiz, a mais curta fica à frente', () => {
+  const r = ordenarPorIdentidade([
+    { nome: '[BDM]Senhor capitao', em: '2016' },
+    { nome: 'Capitao', em: '2016' },
+    { nome: '[YT CANAL] Senhor capitao', em: '2016' },
+    { nome: 'Melancia', em: '2016' }, { nome: 'Owl', em: '2016' },
+    { nome: 'Milk', em: '2016' }, { nome: 'Monster', em: '2016' },
+  ]);
+  assert.equal(r[0].nome, 'Capitao');
+});
