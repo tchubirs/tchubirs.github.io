@@ -301,9 +301,16 @@ function incompleto(r) {
       console.log('\n  ⏸  O Cloudflare está a pedir verificação na janela que abriu.');
       console.log('     Resolve lá (costuma ser uma caixa para marcar) e, se for');
       console.log('     a primeira vez, faz login no site também.');
-      console.log('     Depois volta aqui e carrega ENTER.\n');
-      await new Promise((ok) => process.stdin.once('data', ok));
-      for (let i = 0; i < 20 && await naVerificacao(); i++) await p.waitForTimeout(1000);
+      console.log('     Não precisas de voltar aqui — eu vejo quando passar.\n');
+      // Também aqui: espero, não prendo. Ver o comentário longo na pausa do
+      // login, mais abaixo — o motivo é o mesmo e o estrago era o mesmo.
+      for (let i = 0; i < 120 && await naVerificacao(); i++) {
+        await p.waitForTimeout(1000);
+        if (i % 10 === 0 && i && process.stdout.isTTY) {
+          process.stdout.write(`\r     … ainda na verificação (${120 - i}s)   `);
+        }
+      }
+      if (process.stdout.isTTY) process.stdout.write('\r' + ' '.repeat(46) + '\r');
     }
 
     await p.waitForTimeout(3000);
@@ -367,29 +374,57 @@ function incompleto(r) {
       }
       console.log('     Na janela que abriu: faz login no steamid.uk (botão "Login" / "Sign in');
       console.log('     through Steam", no topo). É o teu plano Silver que destranca a lista.');
-      console.log('     Depois volta aqui e carrega ENTER — eu leio de novo já logado.');
-      // Dizer que está PARADO, e não só o que fazer.
+      console.log('     Não precisas de voltar aqui: eu vou espreitando a página sozinho.\n');
+
+      // NÃO toco no teclado. E é de propósito.
       //
-      // O terminal dele encheu-se de comandos que nunca correram: o processo
-      // estava aqui à espera e engolia tudo o que ele escrevia. Da janela dele
-      // isso lê-se como "travou", não como "está à espera de mim".
-      console.log('');
-      console.log('     ⌨  ESTOU PARADO AQUI. Nada do que escreveres corre até carregares ENTER.');
-      console.log('        (se te arrependeste: Ctrl+C)\n');
-      await new Promise((ok) => process.stdin.once('data', ok));
-      // Recarrega: o login muda a sessão, e a página velha continua a ser a
-      // do visitante mesmo depois de autenticado noutro separador.
-      await p.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(() => {});
-      await p.waitForTimeout(3000);
-      const depois = await ler();
+      // Antes eu esperava por um ENTER (`process.stdin.once('data')`). O
+      // resultado, na máquina dele: o processo ficava a segurar a entrada, tudo
+      // o que ele escrevia era engolido, e quando o processo acabava o
+      // PowerShell despejava a fila e corria as linhas todas de uma vez. O
+      // terminal encheu-se de comandos que nunca correram — e um deles era um
+      // `curl` de outra tarefa qualquer. Pedir uma tecla para continuar
+      // transformou-se num alçapão.
+      //
+      // A pergunta "ele já fez login?" tem resposta na PÁGINA. Então pergunto à
+      // página, de dez em dez segundos, e calo-me. Ele faz o login quando puder;
+      // eu noto sozinho. É a diferença entre esperar e prender.
+      // 4 minutos dá para fazer login com calma. Encurtável por ambiente para
+      // eu poder PROVAR esta espera a correr, em vez de a afirmar.
+      const ESPERA_MAX = Number(process.env.DETETIVE_ESPERA_LOGIN) || 240;
+      const DE_CADA = Math.min(10, Math.max(2, Math.floor(ESPERA_MAX / 4)));
+      let depois = null;
+      for (let esperou = 0; esperou < ESPERA_MAX; esperou += DE_CADA) {
+        await p.waitForTimeout(DE_CADA * 1000);
+        // Recarrega: o login muda a sessão, e a página velha continua a ser a
+        // do visitante mesmo depois de autenticado noutro separador.
+        await p.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(() => {});
+        await p.waitForTimeout(2000);
+        depois = await ler();
+        if (depois?.nomes?.length && !depois.cortados) break;
+        const faltam = ESPERA_MAX - esperou - DE_CADA;
+        // Só num terminal a sério. O `\r` reescreve a linha quando há ecrã;
+        // canalizado para um ficheiro, empilha tudo numa linha ilegível.
+        if (faltam > 0 && process.stdout.isTTY) {
+          process.stdout.write(`\r     … ainda escondida — volto a espreitar (${faltam}s)   `);
+        }
+      }
+      if (process.stdout.isTTY) process.stdout.write('\r' + ' '.repeat(58) + '\r');
       // Só troco se melhorou. Se o login não pegou, ficar com a leitura pior
       // seria perder o pouco que eu já tinha.
       const melhor = (a, b) => (a?.nomes?.length || 0) >= (b?.nomes?.length || 0) ? a : b;
       r = melhor(depois, r);
       if (depois?.nomes?.length && !depois.cortados) {
-        console.log('  ✓ agora a lista veio inteira — o login pegou.\n');
+        console.log('  ✓ o login pegou — a lista veio inteira.\n');
       } else if ((depois?.cortados || 0) > 0) {
         console.log(`  ⚠ ainda vieram ${depois.cortados} cortados — o login pode não ter pegado.\n`);
+      } else {
+        // Sem isto o comando seguia calado e ele ficava sem saber se falhou o
+        // login ou se a conta é daquelas que o site esconde de qualquer forma.
+        const quanto = ESPERA_MAX >= 90 ? `${Math.round(ESPERA_MAX / 60)} min` : `${ESPERA_MAX}s`;
+        console.log(`  ⚠ passaram ${quanto} e a página continua a esconder a lista.`);
+        console.log('    Ou o login não pegou, ou esta conta pediu remoção ao site');
+        console.log('    (optout) — e aí pagar não desfaz. Sigo para a outra fonte.\n');
       }
     }
 
