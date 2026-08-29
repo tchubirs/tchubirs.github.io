@@ -308,3 +308,34 @@ test('a família elege o nome que É a raiz, mesmo sendo o mais recente', () => 
   assert.equal(r[0].ehARaiz, true);
   assert.ok(r[0].porque.some((p) => p.startsWith('é a raiz que')));
 });
+
+// A auditoria apanhou isto: eu exigia que o histórico atravessasse a virada do
+// CALENDÁRIO para aceitar posição. A regra fazia sentido quando a fonte só
+// dava o ano; desde que leio o dia, deixou de fazer. Uma conta com dez meses
+// de datas exactas perdia o sinal inteiro, e empurrar UM nome para Janeiro
+// seguinte fazia-o aparecer — o calendário a decidir o que os dados já diziam.
+test('dez meses de datas exactas no mesmo ano contam como linha do tempo', () => {
+  const dentroDeUmAno = [
+    { nome: 'Outubro', em: '29 Oct 2016' }, { nome: 'Setembro', em: '03 Sep 2016' },
+    { nome: 'Junho', em: '27 Jun 2016' }, { nome: 'Maio', em: '20 May 2016' },
+    { nome: 'Marco', em: '17 Mar 2016' }, { nome: 'Janeiro', em: '01 Jan 2016' },
+  ];
+  const cedos = ordenarPorIdentidade(dentroDeUmAno).filter((x) => x.cedo);
+  assert.ok(cedos.length, 'com dias distintos há cronologia, mesmo sem virar o ano');
+  assert.equal(cedos[0].nome, 'Janeiro', 'o de 01 Jan é o primeiro');
+
+  // E o resultado não pode depender do calendário: empurrar o mais recente
+  // para o ano seguinte não muda quem é o primeiro.
+  const atravessando = dentroDeUmAno.map((o, i) => (i ? o : { ...o, em: '29 Oct 2017' }));
+  const cedos2 = ordenarPorIdentidade(atravessando).filter((x) => x.cedo);
+  assert.equal(cedos2[0].nome, 'Janeiro');
+});
+
+// Mas a razão original continua de pé: sem dias distintos não há posição a
+// deduzir — a ordem é a que a fonte devolveu, e eleger um daí é sorteio.
+test('fonte só-ano com um único ano continua sem "primeiro"', () => {
+  const r = ordenarPorIdentidade([
+    { nome: 'a', em: '2025' }, { nome: 'b', em: '2025' }, { nome: 'c', em: '2025' },
+  ]);
+  assert.ok(r.every((x) => !x.cedo));
+});

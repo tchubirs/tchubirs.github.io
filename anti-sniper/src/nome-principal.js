@@ -36,6 +36,7 @@
  * @returns {Array<object>} do mais provável para o menos
  */
 const { raizesRepetidas, normalizar } = require('./raiz');
+const { momento, ano, chaveDoDia } = require('./data');
 
 function ordenarPorIdentidade(ocorrencias) {
   const lista = (ocorrencias || []).filter((o) => o && o.nome);
@@ -54,66 +55,24 @@ function ordenarPorIdentidade(ocorrencias) {
     return raizes.find((r) => junto.includes(r.raiz)) || null;
   };
 
-  // O ano, venha de onde vier. As fontes escrevem a data de três jeitos:
-  //   steamid.uk   "2026"                         (só o ano)
-  //   Steam        "May 7, 2019 @ 11:04pm"        (por extenso)
-  //   tabelas      "27/08/2026, 08:45:00"         (dia/mês/ano)
-  // Aqui só interessa o ano, e procurá-lo em qualquer posição cobre os três
-  // sem eu ter de saber de antemão de qual fonte veio a lista.
-  const ano = (o) => {
-    const m = String(o.em ?? '').match(/(19[89]\d|20[0-4]\d)/);
-    return m ? Number(m[1]) : null;
-  };
-
-  // A chave da cronologia — e não é o ano sozinho.
-  //
-  // O steamid.uk logado diz, com todas as letras, qual foi o PRIMEIRO nome
-  // da conta: a secção "First name seen by SteamID". Essa secção vem SEM ano.
-  // Ordenar por `ano ?? 9999` mandava justamente esse nome para o fim da
-  // linha do tempo — o lugar oposto ao que ele ocupa. Ou seja: a fonte
-  // entregava de graça a resposta ao "uns dos primeiros da conta" e eu
-  // arquivava-a como se fosse o mais recente de todos.
-  //
-  // "Unknown" continua no fim, e isso está certo: não ter data é ignorância,
-  // não é antiguidade. Fingir que um nome sem data é antigo seria inventar.
-  // A DATA inteira, como número comparável (20161029 para 29 Oct 2016).
-  //
-  // Ordenar só pelo ano era o erro que ele apanhou no ecrã. `sort` é ESTÁVEL,
-  // e a página chega do mais recente para o mais antigo — então dois nomes do
-  // mesmo ano ficavam na ordem em que vieram, que é a ordem INVERTIDA. Com os
-  // sete nomes de 2015 dele, o programa dizia que o primeiro nome da conta era
-  // "Trynity Blood" (06 Dez, o mais NOVO do ano) quando o mais antigo é
-  // "em procura do fefeufumafuma" (26 Jan). A informação para acertar estava
-  // lá — eu é que estava a deitar o dia fora e a ficar só com o ano.
-  const MES = {
-    jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
-    jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12,
-  };
-  const momento = (o) => {
-    if (o.secao === 'primeiro-nome') return -Infinity;
-    const s = String(o.em ?? '');
-    let m;
-    // "28/08/2026, 05:52:04" — steamhistory.net, dia/mês/ano
-    if ((m = s.match(/\b(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})\b/))) {
-      return Number(m[3]) * 10000 + Number(m[2]) * 100 + Number(m[1]);
-    }
-    // "05 Aug 2026" — steamid.uk logado
-    if ((m = s.match(/\b(\d{1,2})\s+([A-Za-z]{3})[a-z]*\.?\s+(\d{4})\b/)) && MES[m[2].toLowerCase()]) {
-      return Number(m[3]) * 10000 + MES[m[2].toLowerCase()] * 100 + Number(m[1]);
-    }
-    // "May 7, 2019 @ 11:04pm" — a Steam
-    if ((m = s.match(/\b([A-Za-z]{3})[a-z]*\.?\s+(\d{1,2}),?\s+(\d{4})\b/)) && MES[m[1].toLowerCase()]) {
-      return Number(m[3]) * 10000 + MES[m[1].toLowerCase()] * 100 + Number(m[2]);
-    }
-    // Só o ano (a página deslogada): o ano vale, o dia não existe.
-    const a = ano(o);
-    return a != null ? a * 10000 : Infinity;
-  };
-
+  // A leitura da data vive em `src/data.js`: é a MESMA que a junção das
+  // fontes usa para deduplicar. Duas cópias da regra seriam duas regras.
   const anos = lista.map(ano).filter(Number.isFinite);
   const maisAntigo = anos.length ? Math.min(...anos) : null;
   const maisNovo = anos.length ? Math.max(...anos) : null;
-  const span = (maisNovo != null && maisAntigo != null) ? maisNovo - maisAntigo : 0;
+
+  // Há linha do tempo? A pergunta é sobre DIAS distintos, não sobre anos.
+  //
+  // Eu exigia `span >= 1` — ou seja, o histórico tinha de atravessar a virada
+  // do calendário. A razão era boa quando a fonte só dava o ano: com tudo no
+  // mesmo ano, a posição era a ordem que o site devolveu, não a verdade. Só
+  // que desde que leio o dia isso deixou de ser assim. Uma conta com trinta
+  // nomes de 01 Jan a 29 Out do mesmo ano tem dez meses de cronologia exacta,
+  // e mesmo assim perdia o sinal inteiro. Empurrar UM desses nomes para
+  // Janeiro seguinte fazia o sinal aparecer — o calendário a decidir o que os
+  // dados já diziam.
+  const carimbos = new Set(lista.map(momento).filter(Number.isFinite));
+  const temLinhaDoTempo = carimbos.size > 1;
 
   // Ordem cronológica, do mais antigo para o mais novo. "Uns dos primeiros
   // da conta" é POSIÇÃO, não período.
@@ -137,6 +96,16 @@ function ordenarPorIdentidade(ocorrencias) {
       });
     }
     const g = por.get(chave);
+    // Aqui conta-se LINHA a linha, e é o correcto — desde que quem chama já
+    // tenha juntado as fontes como deve ser.
+    //
+    // A tentação era desduplicar por dia aqui dentro. Seria errado: numa
+    // página só-ano, quatro crachás debaixo de "2019" são quatro usos que a
+    // fonte só soube datar até ao ano, e colapsá-los deitaria fora sinal
+    // verdadeiro. O que não pode acontecer é a MESMA troca de nome, lida em
+    // dois sites, contar duas vezes — e esse é problema da junção, que é onde
+    // ele se resolve (ver a chave em bin/nomes.js). Um sítio a desduplicar,
+    // não dois.
     g.vezes += 1;
     if (o.secao === 'primeiro-nome') g.primeiroDaConta = true;
     const a = ano(o);
@@ -151,7 +120,7 @@ function ordenarPorIdentidade(ocorrencias) {
   // conta era a PESSOA — a forma que ela usou nesse dia é acidente. Se qualquer
   // membro da família é dos primeiros, a família é.
   const quantosContam = Math.max(1, Math.min(5, Math.ceil(por.size / 5)));
-  const cedoDaForma = (g) => g.primeiroDaConta || (span >= 1 && g.posicao < quantosContam);
+  const cedoDaForma = (g) => g.primeiroDaConta || (temLinhaDoTempo && g.posicao < quantosContam);
   const familiaCedo = new Set();
   for (const g of por.values()) {
     const r = raizDe(g.nome);
@@ -189,8 +158,8 @@ function ordenarPorIdentidade(ocorrencias) {
     //
     // A marca "First name seen by SteamID" é o próprio site a dizer qual foi o
     // primeiro: não há nada a deduzir, e a exigência de linha do tempo não se
-    // aplica. Por posição é dedução minha, e por isso exige `span`: com todos
-    // os nomes no mesmo ano a posição é a ordem que a fonte devolveu, não a
+    // aplica. Por posição é dedução minha, e por isso exige linha do tempo:
+    // sem dias distintos a posição é a ordem que a fonte devolveu, não a
     // verdade. E por família é herdado: outra forma do mesmo nome estava lá no
     // começo, logo esta identidade estava.
     const proprio = cedoDaForma(g);

@@ -26,6 +26,7 @@ const os = require('node:os');
 const { resolverEntrada } = require('../src/steam');
 const { lerNomesDaPagina, lerAgrupadoPorAno, lerSteamidUk } = require('../src/nomes-pagina');
 const { nomesQueValem, raizesRepetidas } = require('../src/nome-principal');
+const { chaveDoDia } = require('../src/data');
 
 const RAIZ = path.join(__dirname, '..');
 const PERFIL = process.env.DETETIVE_PERFIL_NOMES
@@ -452,7 +453,16 @@ function incompleto(r) {
     const vistos = new Map();
     for (const a of achados) {
       for (const n of a.nomes) {
-        const k = `${String(n.nome).toLowerCase()}|${n.em}`;
+        // A chave usa a data NORMALIZADA, não o texto do site.
+        //
+        // Era aqui o buraco: o steamid.uk escreve "29 Oct 2016" e o
+        // steamhistory escreve "29/10/2016" para o MESMO dia. As duas linhas
+        // nunca batiam certo, o evento entrava duas vezes, e a partir daí o
+        // sinal REPETIU dizia "usou 2×" sobre quase todos os nomes — não
+        // porque a pessoa voltou ao nome, mas porque eu li a mesma coisa em
+        // dois sítios. O sinal mais forte do programa a medir quantas fontes
+        // consultei em vez de medir a pessoa.
+        const k = `${String(n.nome).toLowerCase()}|${chaveDoDia(n)}`;
         if (!vistos.has(k)) vistos.set(k, { ...n, fonte: a.fonte });
       }
     }
