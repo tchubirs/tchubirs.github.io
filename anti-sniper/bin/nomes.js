@@ -27,6 +27,7 @@ const { resolverEntrada } = require('../src/steam');
 const { lerNomesDaPagina, lerAgrupadoPorAno, lerSteamidUk } = require('../src/nomes-pagina');
 const { nomesQueValem, raizesRepetidas } = require('../src/nome-principal');
 const { chaveDoDia } = require('../src/data');
+const { janelaFoiFechada, resumoDoErro } = require('../src/erros');
 
 const RAIZ = path.join(__dirname, '..');
 const PERFIL = process.env.DETETIVE_PERFIL_NOMES
@@ -404,7 +405,11 @@ function incompleto(r) {
       }
       console.log('     Na janela que abriu: faz login no steamid.uk (botão "Login" / "Sign in');
       console.log('     through Steam", no topo). É o teu plano Silver que destranca a lista.');
-      console.log('     Não precisas de voltar aqui: eu vou espreitando a página sozinho.\n');
+      console.log('     Não precisas de voltar aqui: eu vou espreitando a página sozinho.');
+      // Este aviso nasceu da corrida dele: as três contas saíram "— nada" em
+      // ambas as fontes porque a janela desapareceu a meio. A janela não é
+      // uma janela de aviso — é a ferramenta.
+      console.log('     ⚠ NÃO FECHES essa janela. É por ela que eu leio. Minimiza, se atrapalhar.\n');
 
       // NÃO toco no teclado. E é de propósito.
       //
@@ -488,14 +493,27 @@ function incompleto(r) {
 
   const achados = [];
   let ultimoRetrato = null;
+  let janelaMorreu = false;
 
   for (const fonte of FONTES) {
+    if (janelaMorreu) break;
     process.stdout.write(`  ${fonte.nome.padEnd(18)} `);
     let ok = null;
+    let falhou = null;
     for (const url of fonte.urls(id)) {
       let r = null;
       try { r = await tentar(url); }
-      catch (e) { continue; }                    // endereço errado: próximo
+      catch (e) {
+        // Engolir o erro aqui foi o que produziu a saída mais enganadora de
+        // todas: as três contas dele saíram com "— nada" em ambas as fontes,
+        // como se nenhuma tivesse nomes. O que houve foi outra coisa — a
+        // janela do navegador tinha ido embora, e a partir daí todo o `goto`
+        // e todo o `evaluate` rebentam. "Nada" e "não consegui perguntar" são
+        // opostos, e eu estava a escrever o mesmo para os dois.
+        falhou = resumoDoErro(e);
+        if (janelaFoiFechada(e)) { janelaMorreu = true; break; }
+        continue;                                // endereço errado: próximo
+      }
       if (r?.nomes?.length) {
         const este = { fonte: fonte.nome, url, ...r };
         // Fico com o melhor entre os endereços da mesma fonte. O `/id/` do
@@ -525,9 +543,25 @@ function incompleto(r) {
       // não tem nomes", quando o que houve foi um muro à porta. São coisas
       // opostas, e a linha tem de as separar.
       console.log(`⚠ o Cloudflare barrou${VISIVEL ? '' : ' — escondido ele barra quase sempre; usa --ver'}`);
+    } else if (janelaMorreu) {
+      console.log('✗ a janela do navegador foi fechada — sem ela não leio nada');
+    } else if (falhou) {
+      // Diz o erro. Um erro escrito é uma coisa que eu posso corrigir; um
+      // "nada" é uma coisa que ele fica a olhar sem saber o que fazer.
+      console.log(`✗ ${falhou}`);
     } else {
       console.log('— nada');
     }
+  }
+
+  // A janela morreu: o resto das contas ia sair "— nada" em cadeia, e cada
+  // linha dessas seria uma afirmação falsa sobre uma conta que eu nem cheguei
+  // a abrir. Melhor parar e dizer porquê.
+  if (janelaMorreu) {
+    console.log('\n  ✗ Perdi o navegador a meio.');
+    console.log('    A janela que abre faz parte da ferramenta — se a fechares, eu fico cego.');
+    console.log('    Deixa-a aberta (podes minimizá-la) e corre outra vez.\n');
+    return 1;
   }
 
   // Junta as fontes. Mesmo nome no mesmo ano é a mesma coisa; o resto soma.
