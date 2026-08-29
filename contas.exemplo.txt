@@ -1,0 +1,11 @@
+# Um SteamID (ou link de perfil) por linha.
+#
+# Copia este ficheiro para "contas.txt" ao lado do nomes.cmd e o duplo-clique
+# passa a ler estas contas todas de uma vez, com um login só.
+#
+# O "contas.txt" fica FORA do repositório de propósito: são as contas que tu
+# investigas, e isso não é coisa para andar num sítio público.
+#
+# Linhas com # são ignoradas.
+
+76561198155380495
