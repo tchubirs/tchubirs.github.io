@@ -61,7 +61,39 @@ function ordenarPorIdentidade(ocorrencias) {
   //
   // "Unknown" continua no fim, e isso está certo: não ter data é ignorância,
   // não é antiguidade. Fingir que um nome sem data é antigo seria inventar.
-  const quando = (o) => (o.secao === 'primeiro-nome' ? -Infinity : (ano(o) ?? 9999));
+  // A DATA inteira, como número comparável (20161029 para 29 Oct 2016).
+  //
+  // Ordenar só pelo ano era o erro que ele apanhou no ecrã. `sort` é ESTÁVEL,
+  // e a página chega do mais recente para o mais antigo — então dois nomes do
+  // mesmo ano ficavam na ordem em que vieram, que é a ordem INVERTIDA. Com os
+  // sete nomes de 2015 dele, o programa dizia que o primeiro nome da conta era
+  // "Trynity Blood" (06 Dez, o mais NOVO do ano) quando o mais antigo é
+  // "em procura do fefeufumafuma" (26 Jan). A informação para acertar estava
+  // lá — eu é que estava a deitar o dia fora e a ficar só com o ano.
+  const MES = {
+    jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
+    jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12,
+  };
+  const momento = (o) => {
+    if (o.secao === 'primeiro-nome') return -Infinity;
+    const s = String(o.em ?? '');
+    let m;
+    // "28/08/2026, 05:52:04" — steamhistory.net, dia/mês/ano
+    if ((m = s.match(/\b(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})\b/))) {
+      return Number(m[3]) * 10000 + Number(m[2]) * 100 + Number(m[1]);
+    }
+    // "05 Aug 2026" — steamid.uk logado
+    if ((m = s.match(/\b(\d{1,2})\s+([A-Za-z]{3})[a-z]*\.?\s+(\d{4})\b/)) && MES[m[2].toLowerCase()]) {
+      return Number(m[3]) * 10000 + MES[m[2].toLowerCase()] * 100 + Number(m[1]);
+    }
+    // "May 7, 2019 @ 11:04pm" — a Steam
+    if ((m = s.match(/\b([A-Za-z]{3})[a-z]*\.?\s+(\d{1,2}),?\s+(\d{4})\b/)) && MES[m[1].toLowerCase()]) {
+      return Number(m[3]) * 10000 + MES[m[1].toLowerCase()] * 100 + Number(m[2]);
+    }
+    // Só o ano (a página deslogada): o ano vale, o dia não existe.
+    const a = ano(o);
+    return a != null ? a * 10000 : Infinity;
+  };
 
   const anos = lista.map(ano).filter(Number.isFinite);
   const maisAntigo = anos.length ? Math.min(...anos) : null;
@@ -69,9 +101,16 @@ function ordenarPorIdentidade(ocorrencias) {
   const span = (maisNovo != null && maisAntigo != null) ? maisNovo - maisAntigo : 0;
 
   // Ordem cronológica, do mais antigo para o mais novo. "Uns dos primeiros
-  // da conta" é POSIÇÃO, não período — e a lista chega do mais recente
-  // para trás, então tem de ser invertida antes de contar posição.
-  const cronologica = [...lista].sort((a, b) => quando(a) - quando(b));
+  // da conta" é POSIÇÃO, não período.
+  //
+  // O desempate `b.i - a.i` é a outra metade da correcção: quando duas datas
+  // dão o mesmo número — mesmo dia, ou só o ano de ambos —, a ordem que resta
+  // é a da página, que vem ao contrário. Invertê-la aqui é o que o comentário
+  // antigo prometia e o código nunca fazia.
+  const cronologica = [...lista]
+    .map((o, i) => ({ o, i }))
+    .sort((a, b) => momento(a.o) - momento(b.o) || b.i - a.i)
+    .map((x) => x.o);
 
   const por = new Map();
   cronologica.forEach((o, i) => {
@@ -132,6 +171,12 @@ function ordenarPorIdentidade(ocorrencias) {
     fora.push({
       nome: g.nome,
       vezes: g.vezes,
+      // Onde a PRIMEIRA aparição deste nome cai na linha do tempo. Já era
+      // usada aqui dentro para escrever "é o Nº nome da conta"; sai agora
+      // também no resultado, porque é o único jeito de um teste conferir a
+      // ordem cronológica — e foi exactamente aí que o erro do dia se
+      // escondeu, sem ninguém a poder apanhar de fora.
+      posicao: g.posicao,
       anosUsados: usados,
       primeiroEm: primeiro,
       ultimoEm: ultimo,

@@ -84,12 +84,15 @@ test('lista vazia não quebra', () => {
 // e numa conta real com os nomes amontoados em 2010-2011 marcou 7 de 10
 // como "cedo" — o que não separa nada.
 test('"cedo" é um punhado de nomes, não um terço da vida da conta', () => {
+  // Na ordem em que a página os dá: do MAIS RECENTE para o mais antigo.
+  // Antes eu tinha escrito este fixture ao contrário, com os anos a subir, e
+  // por isso ele não apanhava nada — a ordenação por ano deixava-o quieto.
   const amontoados = [
-    { nome: 'Bob', em: '2010' }, { nome: 'Brocephales', em: '2010' },
-    { nome: 'Brobin', em: '2010' }, { nome: 'vipz', em: '2011' },
-    { nome: 'tastee', em: '2011' }, { nome: 'Aeo', em: '2011' },
-    { nome: 'Juggernaut', em: '2011' }, { nome: 'frase longa', em: '2015' },
-    { nome: 'Robin', em: '2019' }, { nome: 'Sekiro', em: '2019' },
+    { nome: 'Sekiro', em: '2019' }, { nome: 'Robin', em: '2019' },
+    { nome: 'frase longa', em: '2015' }, { nome: 'Juggernaut', em: '2011' },
+    { nome: 'Aeo', em: '2011' }, { nome: 'tastee', em: '2011' },
+    { nome: 'vipz', em: '2011' }, { nome: 'Brobin', em: '2010' },
+    { nome: 'Brocephales', em: '2010' }, { nome: 'Bob', em: '2010' },
   ];
   const cedos = ordenarPorIdentidade(amontoados).filter((x) => x.cedo);
   assert.ok(cedos.length <= 2, `esperava um punhado, marcou ${cedos.length}`);
@@ -168,4 +171,62 @@ test('em empate de pontos, o marcado pelo site fica à frente', () => {
   ]);
   assert.equal(r[0].nome, 'Trynity');
   assert.equal(r[0].pontos, r[1].pontos, 'o teste só vale se houver mesmo empate');
+});
+
+// O erro que ele viu no ecrã: o programa tinha o DIA e ordenava pelo ANO.
+// `sort` é estável, a página vem do mais recente para o mais antigo, e por
+// isso dois nomes do mesmo ano saíam na ordem invertida. Nos sete nomes de
+// 2015 dele, dava "Trynity Blood" (06 Dez) como primeiro nome da conta
+// quando o primeiro é "em procura do fefeufumafuma" (26 Jan).
+test('dentro do mesmo ano, quem manda é o DIA — não a ordem da página', () => {
+  const dele = [
+    { nome: 'Carlos Hatchock', em: '29 Oct 2016' },
+    { nome: '[BDM]Senhor recruta', em: '01 Jan 2016' },
+    { nome: 'Trynity Blood', em: '06 Dec 2015' },
+    { nome: 'VL Sniper', em: '22 May 2015' },
+    { nome: 'Trynitythegod', em: '08 May 2015' },
+    { nome: 'o futuro matador de gringo', em: '03 May 2015' },
+    { nome: 'o futuro Sambr', em: '28 Apr 2015' },
+    { nome: 'Fefeufumafuma', em: '29 Jan 2015' },
+    { nome: 'em procura do fefeufumafuma', em: '26 Jan 2015' },
+  ];
+  const cedos = ordenarPorIdentidade(dele).filter((x) => x.cedo);
+  assert.equal(cedos[0].nome, 'em procura do fefeufumafuma',
+    'o primeiro nome da conta é o de 26 Jan, não o de 06 Dez');
+  assert.ok(!cedos.some((x) => x.nome === 'Trynity Blood'),
+    '"Trynity Blood" é o mais NOVO de 2015 — não pode ser dos primeiros');
+});
+
+// As três fontes escrevem a data de maneiras diferentes. Se a ordenação só
+// entender uma delas, a lista junta sai baralhada sem dar erro nenhum.
+test('lê o dia nos três formatos das fontes', () => {
+  const misto = [
+    { nome: 'novo', em: '28/08/2026, 05:52:04' },  // steamhistory.net
+    { nome: 'meio', em: '05 Aug 2026' },           // steamid.uk logado
+    { nome: 'velho', em: 'May 7, 2019 @ 11:04pm' },// Steam
+  ];
+  const cedos = ordenarPorIdentidade(misto).filter((x) => x.cedo);
+  assert.equal(cedos[0].nome, 'velho', '2019 é anterior a 2026 em qualquer formato');
+
+  // E dentro do MESMO mês, o dia tem de separar os dois formatos com dia.
+  const mesmoMes = ordenarPorIdentidade([
+    { nome: 'dia28', em: '28/08/2026, 05:52:04' },
+    { nome: 'dia05', em: '05 Aug 2026' },
+    { nome: 'ancora', em: '01 Jan 2020' },
+  ]);
+  const pos = (n) => mesmoMes.find((x) => x.nome === n).posicao;
+  assert.ok(pos('dia05') < pos('dia28'), '05 Aug vem antes de 28 Aug');
+});
+
+// Sem dia, o que resta é a ordem da página — e essa vem ao contrário.
+test('só com o ano, a ordem da página é invertida', () => {
+  const soAno = [
+    { nome: 'ultimo', em: '2015' },
+    { nome: 'meio', em: '2015' },
+    { nome: 'primeiro', em: '2015' },
+    { nome: 'ancora', em: '2010' },
+  ];
+  const r = ordenarPorIdentidade(soAno);
+  const pos = (n) => r.find((x) => x.nome === n).posicao;
+  assert.ok(pos('primeiro') < pos('meio') && pos('meio') < pos('ultimo'));
 });
