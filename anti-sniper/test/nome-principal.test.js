@@ -249,7 +249,9 @@ test('a raiz partilhada ganha ao nome de uso único', () => {
   const r = ordenarPorIdentidade(lista);
   assert.ok(/capit/i.test(r[0].nome), `o topo devia ser da família Capitao, veio "${r[0].nome}"`);
   assert.equal(r[0].raizEm, 5);
-  assert.ok(r[0].porque.some((p) => p.startsWith('partilha a raiz')));
+  // "Capitao" é a forma limpa, por isso a frase é a da raiz e não a de quem
+  // apenas a partilha — as duas dizem a mesma coisa por lados diferentes.
+  assert.ok(r[0].porque.some((p) => /^(é a raiz que|partilha a raiz)/.test(p)));
   // E os nomes de uso único continuam sem sinal, em vez de subirem por sorteio.
   assert.equal(r.find((x) => x.nome === 'Melancia').pontos, 0);
 });
@@ -286,4 +288,23 @@ test('porRaiz junta as famílias ANTES do tecto, não depois', () => {
     'com porRaiz, o primeiro nome da conta cabe');
   assert.equal(junto.filter((n) => n.raiz === 'capitao').length, 1,
     'a família inteira vale um candidato');
+});
+
+// Ele confirmou a olhar para os dados: "recruta é o correto". As outras formas
+// da família são esta com moldura por cima — prefixo de canal, sufixo, leet.
+// E o desempate tem de vir ANTES da data: a forma limpa costuma ser recente e
+// a forma com moldura antiga, e a data sozinha elegia sempre a errada.
+test('a família elege o nome que É a raiz, mesmo sendo o mais recente', () => {
+  const r = ordenarPorIdentidade([
+    { nome: 'SenhorCapitao', em: '05 Oct 2016' },
+    { nome: '[YT] Senhor Capitao', em: '18 Apr 2016' },
+    { nome: '[BDM]Senhor capitao', em: '01 Jan 2016' },
+    { nome: 'C4pitaoTV', em: '03 Dec 2025' },
+    { nome: 'Capitao', em: '30 Jul 2026' },
+    { nome: 'Melancia', em: '01 Jan 2020' }, { nome: 'Owl', em: '02 Jan 2020' },
+    { nome: 'Milk', em: '03 Jan 2020' }, { nome: 'Monster', em: '04 Jan 2020' },
+  ]);
+  assert.equal(r[0].nome, 'Capitao', 'o nome sem moldura é a resposta');
+  assert.equal(r[0].ehARaiz, true);
+  assert.ok(r[0].porque.some((p) => p.startsWith('é a raiz que')));
 });

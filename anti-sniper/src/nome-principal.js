@@ -143,6 +143,21 @@ function ordenarPorIdentidade(ocorrencias) {
     if (a != null) g.anos.add(a);
   });
 
+  // "Cedo" é da IDENTIDADE, não da forma.
+  //
+  // Sem isto a família partia-se ao meio: "[BDM]Senhor capitao" de 2016 apanhava
+  // o bónus de estar no começo e "Capitao" de 2026 não, e a resposta passava a
+  // ser a forma com moldura por ser a mais velha. Mas quem estava no começo da
+  // conta era a PESSOA — a forma que ela usou nesse dia é acidente. Se qualquer
+  // membro da família é dos primeiros, a família é.
+  const quantosContam = Math.max(1, Math.min(5, Math.ceil(por.size / 5)));
+  const cedoDaForma = (g) => g.primeiroDaConta || (span >= 1 && g.posicao < quantosContam);
+  const familiaCedo = new Set();
+  for (const g of por.values()) {
+    const r = raizDe(g.nome);
+    if (r && cedoDaForma(g)) familiaCedo.add(r.raiz);
+  }
+
   const fora = [];
   for (const g of por.values()) {
     const usados = [...g.anos].sort((a, b) => a - b);
@@ -162,21 +177,27 @@ function ordenarPorIdentidade(ocorrencias) {
     // E só vale quando há linha do tempo. Com todos os nomes no MESMO ano,
     // a posição é a ordem que a fonte devolveu, não a verdade — eleger o
     // primeiro daí seria escolher um vencedor ao acaso e chamar-lhe sinal.
-    const quantosContam = Math.max(1, Math.min(5, Math.ceil(por.size / 5)));
+    // RAIZ: partilha o miolo com outros nomes da mesma conta.
+    const raiz = raizDe(g.nome);
+    // E há um caso especial dentro da família: o nome que É a raiz, sem mais
+    // nada à volta. Ele confirmou-o a olhar para os dados — "recruta é o
+    // correto", não "SenhorRecruta" nem "[BDM]Senhor recruta". Faz sentido:
+    // as outras formas são esta com moldura por cima.
+    const ehARaiz = Boolean(raiz) && normalizar(g.nome).replace(/ /g, '') === raiz.raiz;
 
-    // Duas maneiras de ser "cedo", e uma é muito melhor que a outra.
+    // Três maneiras de ser "cedo", da melhor para a pior.
     //
-    // Por posição é dedução minha, e por isso exige linha do tempo: com todos
+    // A marca "First name seen by SteamID" é o próprio site a dizer qual foi o
+    // primeiro: não há nada a deduzir, e a exigência de linha do tempo não se
+    // aplica. Por posição é dedução minha, e por isso exige `span`: com todos
     // os nomes no mesmo ano a posição é a ordem que a fonte devolveu, não a
-    // verdade. Já a marca "First name seen by SteamID" é o próprio site a
-    // dizer qual foi o primeiro — aí não há nada a deduzir, e a exigência do
-    // `span` deixa de fazer sentido.
-    const cedo = g.primeiroDaConta || (span >= 1 && g.posicao < quantosContam);
+    // verdade. E por família é herdado: outra forma do mesmo nome estava lá no
+    // começo, logo esta identidade estava.
+    const proprio = cedoDaForma(g);
+    const cedo = proprio || Boolean(raiz && familiaCedo.has(raiz.raiz));
 
     const repetiu = g.vezes > 1;
 
-    // RAIZ: partilha o miolo com outros nomes da mesma conta.
-    const raiz = raizDe(g.nome);
 
     // Os pesos são ordinais, não medidos: eu não tenho dados para calibrar
     // isto, e fingir que tenho seria inventar precisão. O que a ordem
@@ -208,17 +229,22 @@ function ordenarPorIdentidade(ocorrencias) {
       cedo,
       raiz: raiz ? raiz.raiz : null,
       raizEm: raiz ? raiz.quantos : 0,
+      ehARaiz,
       primeiroDaConta: g.primeiroDaConta,
       pontos,
       porque: [
-        raiz && `partilha a raiz "${raiz.raiz}" com ${raiz.quantos - 1} outros nomes`,
+        raiz && (ehARaiz
+          ? `é a raiz que ${raiz.quantos - 1} outros nomes repetem`
+          : `partilha a raiz "${raiz.raiz}" com ${raiz.quantos - 1} outros nomes`),
         voltou && `voltou a usar depois de ${ultimo - primeiro} anos`,
         repetiu && `usou ${g.vezes}×`,
         // A frase distingue as duas: uma é o site a afirmar, a outra sou eu
         // a contar posições. Dar-lhes o mesmo texto escondia dele qual é qual.
         cedo && (g.primeiroDaConta
           ? 'é o primeiro nome que a Steam registou'
-          : `é o ${g.posicao + 1}º nome da conta`),
+          : proprio
+            ? `é o ${g.posicao + 1}º nome da conta`
+            : 'esta identidade já estava no começo da conta, noutra forma'),
       ].filter(Boolean),
     });
   }
@@ -230,12 +256,17 @@ function ordenarPorIdentidade(ocorrencias) {
   // (`primeiroEm` fica null → 9999, ou seja, o mais recente de todos).
   return fora.sort((a, b) => b.pontos - a.pontos
     || (b.primeiroDaConta === true) - (a.primeiroDaConta === true)
+    // Dentro da família, o nome que É a raiz vem primeiro — e tem de vir ANTES
+    // da data, senão nunca chega a correr: "SenhorRecruta" é de 2016 e
+    // "Recruta" de 2026, e a data sozinha elegia o de 2016. Só que a resposta
+    // à pergunta "quem é esta pessoa" é o nome sem moldura, não o mais antigo
+    // com moldura — foi ele que o disse a olhar para os dados.
+    || (a.raiz && a.raiz === b.raiz ? (b.ehARaiz === true) - (a.ehARaiz === true) : 0)
     || (a.primeiroEm ?? 9999) - (b.primeiroEm ?? 9999)
     || b.vezes - a.vezes
     // Entre variações DA MESMA RAIZ, a mais curta é o nome e as outras são
-    // moldura: "Recruta" antes de "[BDM]Senhor recruta". Fora da família isto
-    // não vale nada — premiar o nome curto entre dois estranhos empatados
-    // seria escolher por sorteio e chamar-lhe critério.
+    // moldura. Fora da família isto não vale nada — premiar o nome curto entre
+    // dois estranhos empatados seria escolher por sorteio e chamar-lhe critério.
     || (a.raiz && a.raiz === b.raiz ? String(a.nome).length - String(b.nome).length : 0)
     // E o último desempate é a cronologia: mais antigo à frente.
     || a.posicao - b.posicao);
