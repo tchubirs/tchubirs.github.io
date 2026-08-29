@@ -50,6 +50,19 @@ function ordenarPorIdentidade(ocorrencias) {
     return m ? Number(m[1]) : null;
   };
 
+  // A chave da cronologia — e não é o ano sozinho.
+  //
+  // O steamid.uk logado diz, com todas as letras, qual foi o PRIMEIRO nome
+  // da conta: a secção "First name seen by SteamID". Essa secção vem SEM ano.
+  // Ordenar por `ano ?? 9999` mandava justamente esse nome para o fim da
+  // linha do tempo — o lugar oposto ao que ele ocupa. Ou seja: a fonte
+  // entregava de graça a resposta ao "uns dos primeiros da conta" e eu
+  // arquivava-a como se fosse o mais recente de todos.
+  //
+  // "Unknown" continua no fim, e isso está certo: não ter data é ignorância,
+  // não é antiguidade. Fingir que um nome sem data é antigo seria inventar.
+  const quando = (o) => (o.secao === 'primeiro-nome' ? -Infinity : (ano(o) ?? 9999));
+
   const anos = lista.map(ano).filter(Number.isFinite);
   const maisAntigo = anos.length ? Math.min(...anos) : null;
   const maisNovo = anos.length ? Math.max(...anos) : null;
@@ -58,15 +71,20 @@ function ordenarPorIdentidade(ocorrencias) {
   // Ordem cronológica, do mais antigo para o mais novo. "Uns dos primeiros
   // da conta" é POSIÇÃO, não período — e a lista chega do mais recente
   // para trás, então tem de ser invertida antes de contar posição.
-  const cronologica = [...lista].sort((a, b) => (ano(a) ?? 9999) - (ano(b) ?? 9999));
+  const cronologica = [...lista].sort((a, b) => quando(a) - quando(b));
 
   const por = new Map();
   cronologica.forEach((o, i) => {
     const chave = String(o.nome).trim().toLowerCase();
     if (!chave) return;
-    if (!por.has(chave)) por.set(chave, { nome: o.nome, vezes: 0, anos: new Set(), posicao: i });
+    if (!por.has(chave)) {
+      por.set(chave, {
+        nome: o.nome, vezes: 0, anos: new Set(), posicao: i, primeiroDaConta: false,
+      });
+    }
     const g = por.get(chave);
     g.vezes += 1;
+    if (o.secao === 'primeiro-nome') g.primeiroDaConta = true;
     const a = ano(o);
     if (a != null) g.anos.add(a);
   });
@@ -91,7 +109,15 @@ function ordenarPorIdentidade(ocorrencias) {
     // a posição é a ordem que a fonte devolveu, não a verdade — eleger o
     // primeiro daí seria escolher um vencedor ao acaso e chamar-lhe sinal.
     const quantosContam = Math.max(1, Math.min(5, Math.ceil(por.size / 5)));
-    const cedo = span >= 1 && g.posicao < quantosContam;
+
+    // Duas maneiras de ser "cedo", e uma é muito melhor que a outra.
+    //
+    // Por posição é dedução minha, e por isso exige linha do tempo: com todos
+    // os nomes no mesmo ano a posição é a ordem que a fonte devolveu, não a
+    // verdade. Já a marca "First name seen by SteamID" é o próprio site a
+    // dizer qual foi o primeiro — aí não há nada a deduzir, e a exigência do
+    // `span` deixa de fazer sentido.
+    const cedo = g.primeiroDaConta || (span >= 1 && g.posicao < quantosContam);
 
     const repetiu = g.vezes > 1;
 
@@ -112,18 +138,27 @@ function ordenarPorIdentidade(ocorrencias) {
       voltou,
       repetiu,
       cedo,
+      primeiroDaConta: g.primeiroDaConta,
       pontos,
       porque: [
         voltou && `voltou a usar depois de ${ultimo - primeiro} anos`,
         repetiu && `usou ${g.vezes}×`,
-        cedo && `é o ${g.posicao + 1}º nome da conta`,
+        // A frase distingue as duas: uma é o site a afirmar, a outra sou eu
+        // a contar posições. Dar-lhes o mesmo texto escondia dele qual é qual.
+        cedo && (g.primeiroDaConta
+          ? 'é o primeiro nome que a Steam registou'
+          : `é o ${g.posicao + 1}º nome da conta`),
       ].filter(Boolean),
     });
   }
 
   // Empate desfeito pelo mais antigo: entre dois nomes igualmente pontuados,
-  // o que veio primeiro é o mais provável de ser o original.
+  // o que veio primeiro é o mais provável de ser o original. O nome marcado
+  // pelo site como primeiro da conta entra à frente disso — sem esta linha
+  // ele perdia todos os empates por não ter ano a que agarrar-se
+  // (`primeiroEm` fica null → 9999, ou seja, o mais recente de todos).
   return fora.sort((a, b) => b.pontos - a.pontos
+    || (b.primeiroDaConta === true) - (a.primeiroDaConta === true)
     || (a.primeiroEm ?? 9999) - (b.primeiroEm ?? 9999)
     || b.vezes - a.vezes);
 }

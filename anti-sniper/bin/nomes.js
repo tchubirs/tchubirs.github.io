@@ -24,7 +24,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const { resolverEntrada } = require('../src/steam');
-const { lerNomesDaPagina, lerAgrupadoPorAno } = require('../src/nomes-pagina');
+const { lerNomesDaPagina, lerAgrupadoPorAno, lerSteamidUk } = require('../src/nomes-pagina');
 const { nomesQueValem } = require('../src/nome-principal');
 
 const RAIZ = path.join(__dirname, '..');
@@ -244,10 +244,18 @@ function incompleto(r) {
           break;
         }
       }
-      // As DUAS funções vão para dentro da página: `lerNomesDaPagina` chama
-      // `lerAgrupadoPorAno`, e `toString()` não leva dependências junto.
+      // As TRÊS funções vão para dentro da página. `lerNomesDaPagina` chama
+      // `lerSteamidUk` e `lerAgrupadoPorAno`, e `toString()` não leva as
+      // dependências junto: sai o corpo da função e mais nada.
+      //
+      // Esquecer uma aqui não dá erro nenhum à vista. A página estoura com
+      // "lerSteamidUk is not defined" lá dentro, o `catch` de fora engole, e
+      // a fonte sai como "— nada". O leitor ficava escrito no repositório e
+      // nunca corria uma única vez.
+      //
       // E `evaluate` com texto quer uma EXPRESSÃO, daí o embrulho.
       return p.evaluate(`(() => {
+        ${lerSteamidUk.toString()}
         ${lerAgrupadoPorAno.toString()}
         ${lerNomesDaPagina.toString()}
         return lerNomesDaPagina(document);
@@ -359,7 +367,14 @@ function incompleto(r) {
       nomes: [...vistos.values()],
       total: achados.reduce((t, a) => Math.max(t, a.total || 0), 0) || null,
       cortados: achados.reduce((t, a) => t + (a.cortados || 0), 0),
-      precisao: achados.every((a) => a.precisao === 'ano') ? 'ano' : undefined,
+      // A precisão do conjunto é a PIOR das partes, nunca a melhor: juntar
+      // uma fonte com o dia e outra só com o ano dá uma lista onde metade
+      // tem dia. Chamar isso de "dia" seria prometer o que a coluna não tem.
+      precisao: (() => {
+        const ps = new Set(achados.map((a) => a.precisao).filter(Boolean));
+        if (ps.size === 1) return [...ps][0];
+        return ps.size ? 'mista' : undefined;
+      })(),
       porFonte: achados.map((a) => `${a.fonte}: ${a.nomes.length}`),
     };
     console.log(`\n  juntando as fontes → ${resultado.nomes.length} nomes distintos (${resultado.porFonte.join(' · ')})`);
@@ -371,12 +386,33 @@ function incompleto(r) {
 
   if (resultado?.nomes?.length) {
     console.log(`\n  ${resultado.nomes.length} nomes de ${id} — via ${resultado.fonte}`);
-    // A página do steamid.uk agrupa por ANO e não dá o dia. Imprimir um dia
-    // que ela não deu seria inventar precisão, então a coluna diz o que é.
-    if (resultado.precisao === 'ano') console.log('  (a página dá o ano, não o dia)');
+    // O que a coluna da esquerda é, de facto.
+    //
+    // Eu andei a imprimir "a página dá o ano, não o dia" como se fosse
+    // sempre verdade. Não é — era o site DESLOGADO. O HTML da sessão dele
+    // mostrou "(seen) Wed, 05 Aug 2026": logado, o steamid.uk dá o dia. A
+    // linha antiga tirava precisão real da vista dele.
+    //
+    // Agora a linha diz o que veio, e "ano" passa a ser um sinal útil: se
+    // aparecer numa leitura do steamid.uk, é porque a sessão não está logada.
+    if (resultado.precisao === 'ano') {
+      console.log('  (a coluna é o ANO — sem login o site não dá o dia)');
+    } else if (resultado.precisao === 'mista') {
+      console.log('  (a coluna mistura: uns nomes com a data, outros com o ano ou sem data)');
+    }
     console.log('');
+    // Nem todo nome tem data, e escrever "null" na coluna é o pior de dois
+    // mundos: parece defeito e não diz nada. Os dois casos sem data têm
+    // nome próprio na página — "First name seen by SteamID" e "Unknown" — e
+    // o primeiro deles é informação forte, não buraco. Então diz-se o que é.
+    const quando = (n) => {
+      if (n.em) return String(n.em);
+      if (n.secao === 'primeiro-nome') return '1º da conta';
+      if (n.secao === 'sem-data') return 'sem data';
+      return '—';
+    };
     for (const n of resultado.nomes.slice(0, 60)) {
-      console.log(`    ${String(n.em).padEnd(22)} ${n.nome}`);
+      console.log(`    ${quando(n).padEnd(22)} ${n.nome}`);
     }
     if (resultado.nomes.length > 60) console.log(`    … e mais ${resultado.nomes.length - 60}`);
     // Aviso quando peguei menos do que a própria página anuncia: metade da

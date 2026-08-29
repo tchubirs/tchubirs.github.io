@@ -106,3 +106,66 @@ test('todos no mesmo ano: ninguém é "o primeiro"', () => {
   assert.ok(r.every((x) => !x.cedo));
   assert.ok(r.every((x) => x.pontos === 0));
 });
+
+// O steamid.uk logado diz qual foi o PRIMEIRO nome da conta, numa secção sem
+// ano ("First name seen by SteamID"). Antes disto, ordenar por `ano ?? 9999`
+// mandava esse nome para o FIM da linha do tempo — o lugar oposto ao dele.
+// A fonte dava a resposta de graça e eu arquivava-a como a mais recente.
+test('o nome marcado como primeiro da conta é o mais antigo, não o mais novo', () => {
+  const lista = [
+    { nome: 'Joaozinho', em: '05 Aug 2026' },
+    { nome: 'Pluto', em: '14 Apr 2025' },
+    { nome: 'Cdi', em: '02 Mar 2024' },
+    { nome: 'Trynity', em: null, secao: 'primeiro-nome' },
+  ];
+  const r = ordenarPorIdentidade(lista);
+  const t = r.find((x) => x.nome === 'Trynity');
+  assert.equal(t.cedo, true, 'o primeiro nome da conta tem de contar como "cedo"');
+  assert.equal(t.primeiroDaConta, true);
+  assert.ok(t.porque.includes('é o primeiro nome que a Steam registou'));
+  // E o "Cdi", que era o mais antigo COM data, deixa de ser o 1º da conta.
+  const cdi = r.find((x) => x.nome === 'Cdi');
+  assert.ok(!cdi.porque.some((p) => p.startsWith('é o 1º')),
+    'com a marca presente, o mais antigo com data não é mais o primeiro');
+});
+
+// "Unknown" é ignorância, não antiguidade. Tratá-lo como antigo seria inventar.
+test('"Unknown" não vira nome antigo por não ter data', () => {
+  const lista = [
+    { nome: 'Joaozinho', em: '2026' },
+    { nome: 'Pluto', em: '2025' },
+    { nome: 'Fantasma', em: null, secao: 'sem-data' },
+  ];
+  const r = ordenarPorIdentidade(lista);
+  const f = r.find((x) => x.nome === 'Fantasma');
+  assert.equal(f.cedo, false);
+  assert.equal(f.pontos, 0);
+});
+
+// A marca vem do site; a posição é dedução minha. Com todos os nomes no mesmo
+// ano a posição não vale nada — mas a marca continua a valer, porque não há
+// nada a deduzir nela.
+test('a marca do site vale mesmo sem linha do tempo', () => {
+  const r = ordenarPorIdentidade([
+    { nome: 'a', em: '2025' }, { nome: 'b', em: '2025' },
+    { nome: 'Trynity', em: null, secao: 'primeiro-nome' },
+  ]);
+  assert.equal(r[0].nome, 'Trynity');
+  assert.equal(r[0].pontos, 2);
+  assert.ok(r.slice(1).every((x) => x.pontos === 0));
+});
+
+// Empate: sem esta regra o nome marcado perdia sempre, por `primeiroEm` ser
+// null e cair para 9999 na desempate — ou seja, o mais recente de todos.
+test('em empate de pontos, o marcado pelo site fica à frente', () => {
+  // 5 pontos cada: o Zeca por ter sido usado 4× (2+3), a Trynity por 2×
+  // (2+1) mais a marca do site (+2).
+  const r = ordenarPorIdentidade([
+    { nome: 'Zeca', em: '2019' }, { nome: 'Zeca', em: '2019' },
+    { nome: 'Zeca', em: '2019' }, { nome: 'Zeca', em: '2019' },
+    { nome: 'Trynity', em: null, secao: 'primeiro-nome' },
+    { nome: 'Trynity', em: null, secao: 'primeiro-nome' },
+  ]);
+  assert.equal(r[0].nome, 'Trynity');
+  assert.equal(r[0].pontos, r[1].pontos, 'o teste só vale se houver mesmo empate');
+});

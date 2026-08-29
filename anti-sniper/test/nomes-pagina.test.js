@@ -304,3 +304,88 @@ test('a data com dia sobrevive até a regra do nome principal', () => {
   assert.deepEqual(j.anosUsados, [2015, 2026], 'o ano sai da data em dd/mm/aaaa');
   assert.ok(j.voltou, 'usou em 2015, largou, e voltou em 2026');
 });
+
+// A estrutura REAL do steamid.uk logado, do HTML que ele colou. Os nomes
+// aqui são inventados de propósito: o que estou a testar é o DESENHO da
+// página, e o histórico de uma pessoa real não tem que viver no repositório.
+const { lerSteamidUk } = require('../src/nomes-pagina');
+
+const ukAno = (ano, quantos) => `<div class="row mt-3 mb-2"><strong>` +
+  `<span class="badge bg-secondary me-1">${ano} </span>` +
+  `<span class="badge bg-info">${quantos}</span></strong></div>`;
+const ukTitulo = (t) => `<div class="row mt-3 mb-2"><strong>` +
+  `<span class="badge bg-secondary me-1">${t} </span></strong></div>`;
+const ukNome = (n, quando) => `<span class="namehistory-name-badge badge bg-secondary m-1">` +
+  `<a style="color: var(--si-accent);" href="/advanced_player_search.php?playername=${encodeURIComponent(n)}">${n}</a>` +
+  `<br><small style="color: var(--si-text-muted); font-size: 0.75rem;">${quando}</small></span>`;
+
+const paginaUk = () => parseHTML(`<html><head><title>SteamID.uk</title></head><body>
+  <div class="card">
+    <div class="card-header"><h5 class="mb-0 d-inline">Previous Persona Names</h5>
+      <span class="ms-2">Currently showing all gamer persona history</span></div>
+    <div class="card-body"><div class="container-fluid"><ul class="list-group">
+    <div class="row"><div class="col-sm-12"><div class="namehistory-names">
+      ${ukAno(2026, 4)}
+      ${ukNome('Joaozinho', '(seen) Wed, 05 Aug 2026')}
+      ${ukNome('Recruta', 'Thu, 30 Jul 2026')}
+      ${ukNome('Balloon Enjoyer', 'Thu, 02 Jul 2026')}
+      ${ukNome('( ͡° ͜ʖ ͡°)', 'Wed, 02 Jul 2026')}
+      ${ukAno(2015, 2)}
+      ${ukNome('Joaozinho', 'Fri, 22 May 2015')}
+      ${ukNome('o futuro matador de gringo', 'Sun, 03 May 2015')}
+      ${ukTitulo('First name seen by SteamID')}
+      ${ukNome('Trynitythegod', '')}
+      ${ukTitulo('Unknown')}
+      ${ukNome('Recrutáxi', '')}
+    </div></div></div>
+    </ul></div></div>
+  </div>
+  <div class="card"><div class="card-header"><h5>Steam Level History</h5></div>
+    <div class="card-body">Biggest Jump +21 <small>(2019-07-16)</small></div></div>
+  </body></html>`).document;
+
+test('lê a estrutura real do steamid.uk pelas classes, não por parecença', () => {
+  const r = lerNomesDaPagina(paginaUk());
+  assert.equal(r.comoAchei, 'steamid.uk (namehistory-names)');
+  assert.equal(r.nomes.length, 8);
+  assert.equal(r.total, 6, 'o total soma as contagens dos anos');
+  // Nome com espaço, com acento e com kaomoji tem de sair inteiro.
+  assert.ok(r.nomes.some((n) => n.nome === 'Balloon Enjoyer'));
+  assert.ok(r.nomes.some((n) => n.nome === 'o futuro matador de gringo'));
+  assert.ok(r.nomes.some((n) => n.nome === '( ͡° ͜ʖ ͡°)'));
+});
+
+// Eu andei a escrever "a página dá o ano, não o dia". Estava a descrever o
+// site DESLOGADO. Logado, a data é completa.
+test('logado, a data é o dia — não o ano', () => {
+  const r = lerNomesDaPagina(paginaUk());
+  const j = r.nomes.find((n) => n.nome === 'Joaozinho');
+  assert.equal(j.em, '05 Aug 2026', 'sem "(seen)" e sem o dia da semana');
+  assert.equal(j.precisao, 'dia');
+  assert.equal(j.visto, true, '"(seen)" = o site viu o perfil com este nome');
+  assert.equal(r.nomes.find((n) => n.nome === 'Recruta').visto, undefined);
+});
+
+// Estas duas secções não têm ano. Deitá-las fora perdia justamente o nome
+// mais antigo da conta.
+test('"First name seen by SteamID" e "Unknown" entram marcados, não descartados', () => {
+  const r = lerNomesDaPagina(paginaUk());
+  const t = r.nomes.find((n) => n.nome === 'Trynitythegod');
+  assert.equal(t.secao, 'primeiro-nome', 'a própria página diz que é o mais antigo');
+  assert.equal(t.em, null, 'e não inventa data para ele');
+  assert.equal(r.nomes.find((n) => n.nome === 'Recrutáxi').secao, 'sem-data');
+  assert.equal(r.precisao, 'mista', 'uns com dia, dois sem data — não prometo "dia"');
+});
+
+// A página tem outras tabelas com datas: níveis da Steam, contas com o mesmo
+// nome. O caminho genérico podia apanhá-las; o preciso não olha para elas.
+test('não apanha as outras tabelas da mesma página', () => {
+  const r = lerNomesDaPagina(paginaUk());
+  for (const n of r.nomes) {
+    assert.ok(!/Biggest Jump|Steam Level|2019-07-16/.test(n.nome), `"${n.nome}" é de outra secção`);
+  }
+});
+
+test('sem a estrutura do steamid.uk, o leitor preciso sai de cena', () => {
+  assert.equal(lerSteamidUk(paginaHistorico(LINHAS), (el) => (el?.textContent || '').trim()), null);
+});

@@ -45,6 +45,17 @@ function lerNomesDaPagina(doc) {
 
   const texto = (el) => (el?.textContent || '').replace(/\s+/g, ' ').trim();
 
+  // 0. A estrutura exata do steamid.uk, quando ela está lá.
+  //
+  //    Vem primeiro de propósito: casa por classe, não por parecença, então
+  //    quando acerta não há dúvida. Os caminhos genéricos abaixo existem
+  //    para páginas que eu não conheço — usá-los numa que eu conheço é
+  //    trocar certeza por palpite. E esta página tem outras tabelas com
+  //    datas (níveis da Steam, contas com o mesmo nome) que um caminho
+  //    genérico podia apanhar por engano.
+  const uk = lerSteamidUk(doc, texto);
+  if (uk) return uk;
+
   // 1. O cabeçalho do bloco. O total costuma vir entre parênteses ao lado:
   //    "Persona History (61)" — e esse número é a conferência de que peguei
   //    a lista inteira, não só a primeira página.
@@ -132,9 +143,13 @@ function lerNomesDaPagina(doc) {
   //        2025 49
   //        ...
   //
-  //    Um ano, quantos nomes naquele ano, e os nomes. A data exata de cada
-  //    nome não existe aqui — existe o ANO, e dizer mais que isso seria
-  //    inventar precisão. Então cada nome sai com o ano, e só.
+  //    Um ano, quantos nomes naquele ano, e os nomes. Aqui a data exata não
+  //    existe — existe o ANO, e dizer mais que isso seria inventar precisão.
+  //    Então cada nome sai com o ano, e só.
+  //
+  //    Isto é o site DESLOGADO. Logado ele dá o dia inteiro, e quem o lê é
+  //    o passo 0 acima. Se a leitura cair aqui e a fonte for o steamid.uk,
+  //    o "ano" na coluna é o sintoma de que a sessão não tem login.
   const porAno = lerAgrupadoPorAno(doc, texto);
   if (porAno) return { ...porAno, total: Number.isFinite(totalDito) ? totalDito : porAno.total };
 
@@ -209,6 +224,117 @@ function lerNomesDaPagina(doc) {
       })(),
       amostraTexto: (doc.body?.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 600),
     },
+  };
+}
+
+/**
+ * O steamid.uk logado, lido pela estrutura REAL da página.
+ *
+ * Ele colou o HTML. Isto deixa de ser adivinhação:
+ *
+ *     <div class="namehistory-names">
+ *       <div class="row"><strong>
+ *         <span class="badge">2026 </span><span class="badge">18</span>
+ *       </strong></div>
+ *       <span class="namehistory-name-badge">
+ *         <a href="/advanced_player_search.php?playername=Joaozinho">Joaozinho</a>
+ *         <br><small>(seen) Wed, 05 Aug 2026</small>
+ *       </span>
+ *       ...
+ *       <div class="row"><strong><span>First name seen by SteamID </span></strong></div>
+ *       <span class="namehistory-name-badge"><a>Trynitythegod</a><br><small></small></span>
+ *       <div class="row"><strong><span>Unknown </span></strong></div>
+ *
+ * Duas coisas que eu tinha errado e que só o HTML dele mostrou:
+ *
+ *   1. Logado, a data é COMPLETA — "Wed, 05 Aug 2026", não só o ano. Eu andei
+ *      a escrever "a página dá o ano, não o dia" com base na versão cortada
+ *      que se vê sem login. Estava a descrever o site deslogado.
+ *   2. Há duas secções no fim sem ano: "First name seen by SteamID" (o
+ *      primeiro nome que a Steam registou — o sinal mais forte que existe
+ *      para "cedo") e "Unknown". Deitá-las fora perdia justamente o nome
+ *      mais antigo da conta.
+ *
+ * O `(seen)` também não é enfeite: marca os nomes que o site VIU no perfil,
+ * em vez de deduzir. Fica guardado.
+ *
+ * Devolve `null` se a página não tem esta estrutura — aí quem chama segue
+ * para os caminhos genéricos.
+ */
+function lerSteamidUk(doc, texto) {
+  const caixa = doc.querySelector('.namehistory-names');
+  if (!caixa) return null;
+
+  const ANO_CONTA = /^(19[89]\d|20[0-4]\d)\s+(\d{1,4})$/;
+  const ANO_SO = /^(19[89]\d|20[0-4]\d)$/;
+
+  const nomes = [];
+  let total = 0;
+  let ano = null;
+  let secao = null;
+  let comData = 0; let comAno = 0;
+
+  for (const el of caixa.children) {
+    const t = texto(el);
+
+    // Um nome.
+    if (el.classList && el.classList.contains('namehistory-name-badge')) {
+      const a = el.querySelector('a');
+      // O nome vem do <a>. Ler o elemento inteiro colaria a data no fim.
+      const nome = texto(a);
+      if (!nome) continue;
+
+      const bruto = texto(el.querySelector('small'));
+      const visto = /\(seen\)/i.test(bruto);
+      // "(seen) Wed, 05 Aug 2026" -> "05 Aug 2026". O dia da semana não
+      // acrescenta nada e só atrapalha a leitura da coluna.
+      // O `.trim()` no meio não é enfeite: sem ele a string fica " Wed, 05
+      // Aug 2026" com espaço à frente, o `^` não casa, e o dia da semana
+      // sobrevivia colado no campo da data.
+      const quando = bruto.replace(/\(seen\)/ig, '').trim()
+        .replace(/^[A-Za-z]{3},\s*/, '').trim();
+
+      if (quando) comData += 1; else if (ano) comAno += 1;
+      nomes.push({
+        nome,
+        em: quando || ano || null,
+        precisao: quando ? 'dia' : (ano ? 'ano' : null),
+        ...(visto ? { visto: true } : {}),
+        ...(secao ? { secao } : {}),
+      });
+      continue;
+    }
+
+    // Um cabeçalho.
+    const m = t.match(ANO_CONTA);
+    if (m) { ano = m[1]; total += Number(m[2]) || 0; secao = null; continue; }
+    if (ANO_SO.test(t)) { ano = t; secao = null; continue; }
+    if (/^First name seen by SteamID/i.test(t)) {
+      // Marcado, não descartado: a própria página está a dizer qual é o
+      // nome mais antigo da conta. Isso é a regra dele ("uns dos primeiros")
+      // respondida pela fonte, sem eu ter de inferir posição.
+      ano = null; secao = 'primeiro-nome'; continue;
+    }
+    if (/^Unknown/i.test(t)) { ano = null; secao = 'sem-data'; continue; }
+    // Cabeçalho que eu não reconheço: não mexo no estado. Zerar o ano aqui
+    // faria os nomes seguintes perderem a data por causa de um <div> extra.
+  }
+
+  if (nomes.length < 3) return null;
+  return {
+    nomes,
+    total: total || null,
+    comoAchei: 'steamid.uk (namehistory-names)',
+    // A precisão é do conjunto, e é a PIOR das partes: dizer "dia" quando
+    // metade veio sem data seria prometer mais do que a página deu.
+    //
+    // "mista" e não "dia-e-ano" porque os nomes sem dia aqui costumam não ter
+    // ano NENHUM — são as duas secções do fim, "First name seen by SteamID"
+    // e "Unknown". Chamar-lhes "ano" seria dizer que têm um ano.
+    precisao: comData === nomes.length ? 'dia'
+      : comAno === nomes.length ? 'ano'
+        : 'mista',
+    cortados: 0,
   };
 }
 
@@ -314,4 +440,4 @@ function lerAgrupadoPorAno(doc, texto) {
   return { nomes, total: total || null, cortados, comoAchei: 'agrupado por ano', precisao: 'ano' };
 }
 
-module.exports = { lerNomesDaPagina, lerAgrupadoPorAno };
+module.exports = { lerNomesDaPagina, lerAgrupadoPorAno, lerSteamidUk };
