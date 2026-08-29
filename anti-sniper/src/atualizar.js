@@ -27,10 +27,27 @@ const path = require('node:path');
 const RAIZ = path.resolve(__dirname, '..', '..');
 
 /** Corre um git e devolve o texto, ou null se falhar por qualquer razão. */
-function git(args, { timeout = 20000 } = {}) {
+function git(args, { timeout = 12000 } = {}) {
   try {
     return execFileSync('git', args, {
-      cwd: RAIZ, timeout, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
+      cwd: RAIZ,
+      timeout,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: {
+        ...process.env,
+        // Falhar depressa em vez de perguntar.
+        //
+        // No Windows dele o `git fetch` pode chamar o gestor de credenciais e
+        // abrir uma caixa — ou simplesmente ficar à espera de uma palavra-passe
+        // que ninguém vai escrever. Da janela dele isso lê-se como "nada
+        // acontece". Uma verificação de versão nunca pode ser a coisa que
+        // trava o comando: se não dá para saber a versão hoje, segue-se.
+        GIT_TERMINAL_PROMPT: '0',
+        GCM_INTERACTIVE: 'never',
+        GIT_ASKPASS: '',
+        SSH_ASKPASS: '',
+      },
     }).trim();
   } catch {
     return null;

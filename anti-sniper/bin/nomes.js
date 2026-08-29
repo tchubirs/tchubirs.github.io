@@ -195,9 +195,20 @@ function incompleto(r) {
   //
   // Puxa sozinho quando é seguro, porque "faz git pull" é um passo que a
   // máquina faz melhor — e que ele não tem de carregar.
+  // A PRIMEIRA coisa: dizer que arrancou.
+  //
+  // Ele escreveu "nada acontece". E não estava enganado — a primeira linha que
+  // eu imprimia vinha depois da verificação de versão e do arranque do
+  // navegador, o que pode ser meia dúzia de segundos de ecrã vazio. Um comando
+  // que arranca em silêncio é indistinguível de um comando que não arrancou.
+  console.log(`\n  a ler ${ALVOS.length} ${ALVOS.length === 1 ? 'conta' : 'contas'}…`);
+
   if (process.env.DETETIVE_JA_ATUALIZEI !== '1') {
+    process.stdout.write('  ⟳ a ver se há versão nova… ');
     const { verificarAtualizacao } = require('../src/atualizar');
     const v = verificarAtualizacao();
+    console.log(v.estado === 'trouxe' ? '' : v.estado === 'atualizado' ? 'em dia.'
+      : v.estado === 'sem-git' ? 'não deu para saber — sigo.' : '');
     if (v.estado === 'trouxe') {
       console.log(`\n  ⟳ atualizei sozinho: ${v.atras} ${v.atras === 1 ? 'versão nova' : 'versões novas'}. A correr com o código novo.`);
       // Recomeçar é obrigatório, não é zelo: os módulos já foram carregados
