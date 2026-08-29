@@ -121,7 +121,25 @@ const FONTES = process.env.DETETIVE_NOMES_URL
   // O steamid.uk continua a ser consultado — ver `incompleto()` abaixo: uma
   // lista cortada não conta como resposta, e o comando segue para a outra
   // fonte em vez de parar contente com metade.
+  //
+  // A ORDEM voltou atrás, e desta vez com medição das duas, na mesma conta,
+  // na máquina dele:
+  //
+  //     steamid.uk (logado)          344 nomes, com o DIA
+  //     steamhistory /history/0/     100 nomes  (o site anuncia 133)
+  //     steamhistory /id/             10 nomes  (paginado)
+  //
+  // Eu tinha posto o steamhistory à frente com o argumento de que dava o dia
+  // e não pedia login. O primeiro argumento caiu quando o HTML dele mostrou
+  // que o steamid.uk LOGADO também dá o dia; o segundo caiu quando o
+  // /history/0/ parou nos 100. Uma fonte que entrega 100 de 133 não é a mais
+  // completa — e ele paga o Silver justamente para destrancar a outra.
+  //
+  // Deslogado o steamid.uk esconde tudo, e aí `incompleto()` manda seguir
+  // para o steamhistory na mesma. Ou seja, pôr o pago à frente não perde
+  // nada: perde-se sim quando o teto de 100 encerra a busca.
   : [
+    { nome: 'steamid.uk', urls: (id) => [`https://steamid.uk/profile/${id}`] },
     { nome: 'steamhistory.net',
       urls: (id) => [
         // O "View All" da página dele aponta para aqui. Ir direto poupa o
@@ -129,7 +147,6 @@ const FONTES = process.env.DETETIVE_NOMES_URL
         `https://steamhistory.net/history/0/${id}`,
         `https://steamhistory.net/id/${id}`,
       ] },
-    { nome: 'steamid.uk', urls: (id) => [`https://steamid.uk/profile/${id}`] },
   ];
 
 /**
@@ -140,12 +157,24 @@ const FONTES = process.env.DETETIVE_NOMES_URL
  * dava-se por satisfeito e nunca tentava a segunda fonte — que tinha a lista
  * inteira. Meia resposta que interrompe a busca é pior que resposta nenhuma.
  */
+// Tamanhos de página que os sites usam. Uma lista que acaba EXATAMENTE num
+// destes é quase sempre um teto, não o fim dos dados.
+const TETOS = new Set([10, 20, 25, 50, 100, 150, 200, 250, 500, 1000]);
+
 function incompleto(r) {
   if (!r?.nomes?.length) return true;
   if (r.cortados > 0) return true;
   // A própria página anuncia quantos são. Ler menos que isso é paginação
   // que eu não segui, ou lista cortada — nos dois casos, falta.
   if (r.total && r.nomes.length < r.total) return true;
+  // Contagem redonda sem total anunciado: desconfia.
+  //
+  // Na corrida dele o /history/0/ devolveu exatamente 100 quando o site
+  // anuncia 133, e o total do cabeçalho era impróprio (o SteamID). Sem esta
+  // linha o comando dava-se por satisfeito com 100 e nunca chegava aos 344
+  // do steamid.uk. Consultar a outra fonte custa segundos; ficar 244 nomes
+  // abaixo custa o caso. Na dúvida, olha-se as duas.
+  if (!r.total && TETOS.has(r.nomes.length)) return true;
   return false;
 }
 
@@ -219,7 +248,15 @@ function incompleto(r) {
     catch { /* sem Chrome instalado */ }
   }
   if (!ctx) ctx = await chromium.launchPersistentContext(PERFIL, op);
-  const p = await ctx.newPage();
+
+  // Reaproveita a aba que o navegador JÁ abriu, em vez de abrir outra.
+  //
+  // Ele reparou: "tem sempre uma aba sem nada". Tinha. Um contexto persistente
+  // nasce com uma página em branco, e `newPage()` acrescentava uma segunda —
+  // ficava o about:blank órfão ao lado. Não estragava a leitura, mas na janela
+  // dele parecia defeito. E era: quando a ferramenta abre coisas que não usa,
+  // ele deixa de saber o que é normal e o que é problema.
+  const p = ctx.pages()[0] || await ctx.newPage();
 
   /** Uma tentativa numa URL. Devolve o que a página deu, sem julgar. */
   async function tentar(url) {

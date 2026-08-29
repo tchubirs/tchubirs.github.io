@@ -389,3 +389,39 @@ test('não apanha as outras tabelas da mesma página', () => {
 test('sem a estrutura do steamid.uk, o leitor preciso sai de cena', () => {
   assert.equal(lerSteamidUk(paginaHistorico(LINHAS), (el) => (el?.textContent || '').trim()), null);
 });
+
+// O título do steamhistory traz DOIS números entre parênteses:
+//   "Historic Persona for 123 (76561198155380495) (123)"
+// O primeiro é o SteamID, o segundo é o total. Ficar pelo primeiro dava um
+// total impróprio — e pior: 17 dígitos não cabem num inteiro seguro do
+// JavaScript, então na tela dele apareceu "a página diz 76561198155380500".
+// Repara no fim: o SteamID acaba em 495. O 500 era invenção do Number().
+test('o total é o parêntese certo, não o SteamID do título', () => {
+  const linhas = Array.from({ length: 5 }, (_, i) =>
+    `<tr><td>nome${i}</td><td>1${i}/05/2024, 01:00:00</td></tr>`).join('');
+  const doc = parseHTML(`<html><body>
+    <h2>Historic Persona for 123 (76561198155380495) (123)</h2>
+    <table><tbody>${linhas}</tbody></table></body></html>`).document;
+  assert.equal(lerNomesDaPagina(doc).total, 123);
+});
+
+test('sem um parêntese plausível, o total fica vazio em vez de errado', () => {
+  const linhas = Array.from({ length: 5 }, (_, i) =>
+    `<tr><td>nome${i}</td><td>1${i}/05/2024, 01:00:00</td></tr>`).join('');
+  for (const titulo of [
+    'Persona History (76561198155380495)',   // só o SteamID
+    'Persona History (999999999)',           // grande de mais para ser nomes
+  ]) {
+    const doc = parseHTML(`<html><body><h2>${titulo}</h2>
+      <table><tbody>${linhas}</tbody></table></body></html>`).document;
+    assert.equal(lerNomesDaPagina(doc).total, null, titulo);
+  }
+});
+
+test('separador de milhar no total continua a ser lido', () => {
+  const linhas = Array.from({ length: 5 }, (_, i) =>
+    `<tr><td>nome${i}</td><td>1${i}/05/2024, 01:00:00</td></tr>`).join('');
+  const doc = parseHTML(`<html><body><h2>Persona History (1,234)</h2>
+    <table><tbody>${linhas}</tbody></table></body></html>`).document;
+  assert.equal(lerNomesDaPagina(doc).total, 1234);
+});

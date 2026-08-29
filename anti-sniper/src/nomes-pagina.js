@@ -65,9 +65,40 @@ function lerNomesDaPagina(doc) {
     if (t.length < 60 && TITULO.test(t)) { cabecalho = el; break; }
   }
 
-  const totalDito = cabecalho
-    ? Number((texto(cabecalho).match(/\((\d+)\)/) || [])[1] ?? NaN)
-    : NaN;
+  // O número entre parênteses no título — mas só quando é mesmo um total.
+  //
+  // No steamhistory.net o título traz o SteamID entre parênteses, não a
+  // contagem, e a saída dele mostrou o estrago: "a página diz
+  // 76561198155380500". Repara no fim: o SteamID acaba em ...495. O ...500 é
+  // o `Number()` a perder precisão, porque 17 dígitos não cabem num inteiro
+  // seguro do JavaScript. Ou seja, o programa inventou um total que nem
+  // sequer é o número que estava escrito na página.
+  //
+  // Duas travas, e a primeira é a que importa: se o número não volta a ser a
+  // MESMA string de onde saiu, não é um número — é um palpite arredondado.
+  // E são TODOS os parênteses, não o primeiro.
+  //
+  //     Historic Persona for 123 (76561198155380495) (123)
+  //                               ^ o SteamID          ^ o total a sério
+  //
+  // Ficar pelo primeiro dava o SteamID e deitava fora o número que interessa.
+  // Agora percorre-se tudo e fica-se com o primeiro que passa nas travas.
+  const TOTAL_MAX = 100000;
+  const totalDito = (() => {
+    if (!cabecalho) return NaN;
+    for (const m of texto(cabecalho).matchAll(/\((\d[\d,.\s]*)\)/g)) {
+      const limpo = m[1].replace(/[,.\s]/g, '').replace(/^0+(?=\d)/, '');
+      const n = Number(limpo);
+      // Se o número não volta a ser a MESMA string de onde saiu, não é um
+      // número — é um palpite arredondado. Foi assim que 76561198155380495
+      // apareceu na tela dele como 76561198155380500.
+      if (!Number.isSafeInteger(n) || String(n) !== limpo) continue;
+      // Nenhuma conta trocou de nome cem mil vezes.
+      if (n > TOTAL_MAX) continue;
+      return n;
+    }
+    return NaN;
+  })();
 
   // 2. A partir do cabeçalho, sobe até o container que realmente tem as
   //    linhas. Subir é mais confiável que adivinhar a classe do container.
