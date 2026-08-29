@@ -150,6 +150,42 @@ function incompleto(r) {
 }
 
 (async () => {
+  // Antes de tudo: esta cópia está em dia?
+  //
+  // Ele correu o comando cinco commits atrasado e recebeu uma saída ERRADA
+  // sem um único aviso — a ordem das fontes trocada e 10 nomes em vez de 133,
+  // que eram exatamente os defeitos já corrigidos no repositório. Passou tempo
+  // a desconfiar do programa quando o programa já estava certo. Um comando que
+  // sabe estar velho e não diz nada está a mentir por omissão.
+  //
+  // Puxa sozinho quando é seguro, porque "faz git pull" é um passo que a
+  // máquina faz melhor — e que ele não tem de carregar.
+  if (process.env.DETETIVE_JA_ATUALIZEI !== '1') {
+    const { verificarAtualizacao } = require('../src/atualizar');
+    const v = verificarAtualizacao();
+    if (v.estado === 'trouxe') {
+      console.log(`\n  ⟳ atualizei sozinho: ${v.atras} ${v.atras === 1 ? 'versão nova' : 'versões novas'}. A correr com o código novo.`);
+      // Recomeçar é obrigatório, não é zelo: os módulos já foram carregados
+      // para a memória ANTES do merge. Sem isto o código velho é que corria,
+      // e a mensagem em cima seria uma promessa por cumprir.
+      const { spawnSync } = require('node:child_process');
+      const r = spawnSync(process.execPath, [__filename, ...args], {
+        stdio: 'inherit',
+        env: { ...process.env, DETETIVE_JA_ATUALIZEI: '1' },
+      });
+      process.exit(r.status ?? 0);
+    }
+    if (v.estado === 'sujo') {
+      console.log(`\n  ⚠ há ${v.atras} ${v.atras === 1 ? 'versão nova' : 'versões novas'}, mas tens ${v.detalhe} por gravar.`);
+      console.log('    Não mexo no teu trabalho. O que vais ver a seguir é da versão VELHA.');
+      console.log('    Para atualizar:  git stash  &&  git pull');
+    }
+    if (v.estado === 'divergiu') {
+      console.log(`\n  ⚠ estás ${v.atras} atrás e o teu ramo seguiu outro caminho — não puxo por cima.`);
+      console.log('    O que vais ver a seguir pode ser da versão VELHA.');
+    }
+  }
+
   let chromium;
   try { ({ chromium } = require('playwright')); }
   catch {
