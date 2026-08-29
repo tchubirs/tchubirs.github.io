@@ -700,6 +700,15 @@ function incompleto(r) {
     // Sem este bloco a saída mostrava nove linhas a dizer o mesmo — "Recrutáxi",
     // "[BDM]Senhor recruta", "[YT]Senhor recruta"… — quando o que ele quer
     // saber cabe numa: a pessoa volta sempre a "Recruta".
+    // A lista está inteira? A resposta muda o que eu posso AFIRMAR, e por isso
+    // tem de ser sabida antes de eu escrever a primeira linha sobre ela.
+    //
+    // Isto rebentou na máquina dele com "Cannot access 'completa' before
+    // initialization": eu tinha posto o aviso aqui e a declaração lá em baixo,
+    // ao pé de quem a usava a seguir. Erro de estreante — e nenhum teste o
+    // apanhou, porque nenhum teste chegava a correr esta parte da saída.
+    const completa = !incompleto(resultado);
+
     if (!completa) {
       console.log(`\n  ⚠ esta lista está INCOMPLETA${
         resultado.total ? ` (li ${resultado.nomes.length} de ${resultado.total})` : ''} — o palpite abaixo`);
@@ -719,9 +728,7 @@ function incompleto(r) {
     }
 
     // `porRaiz`: as nove variações de "recruta" são um candidato, não nove.
-    // A lista está inteira? A resposta muda o que eu posso afirmar: com 100 de
-    // 344 nomes, "é o 1º nome da conta" é o 1º do meu balde, não da conta.
-    const completa = !incompleto(resultado);
+    // Com 100 de 344 nomes, "é o 1º nome da conta" é o 1º do meu balde.
     const provaveis = nomesQueValem(resultado.nomes, { teto: 8, porRaiz: true, listaCompleta: completa });
     const comSinal = provaveis.filter((n) => n.pontos > 0);
     if (comSinal.length) {

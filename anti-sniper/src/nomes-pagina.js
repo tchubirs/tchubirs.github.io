@@ -353,7 +353,25 @@ function lerSteamidUk(doc, texto) {
       continue;
     }
 
-    // Um cabeçalho.
+    // Um cabeçalho de ano. Primeiro pela ESTRUTURA, depois pelo texto.
+    //
+    // O ano e a contagem vivem em dois `<span class="badge">` separados. Ler o
+    // texto da linha inteira só funciona porque o site põe espaço entre eles —
+    // sem esse espaço, "2026" e "30" colam-se em "202630", a expressão não
+    // casa, e o `total` fica nulo SEM UM ERRO.
+    //
+    // E um total nulo não é um detalhe: é o `incompleto()` a deixar de
+    // disparar, e a saída a voltar a dizer "é o 1º nome da conta" sobre meia
+    // lista. Uma minificação do lado deles bastaria. Por isso: se houver dois
+    // crachás, leem-se os dois, e o espaço deixa de ter voto.
+    const crachas = el.querySelectorAll ? el.querySelectorAll('.badge') : [];
+    if (crachas.length >= 2 && ANO_SO.test(texto(crachas[0]))) {
+      ano = texto(crachas[0]);
+      total += Number(texto(crachas[1]).replace(/[^\d]/g, '')) || 0;
+      secao = null;
+      continue;
+    }
+
     const m = t.match(ANO_CONTA);
     if (m) { ano = m[1]; total += Number(m[2]) || 0; secao = null; continue; }
     if (ANO_SO.test(t)) { ano = t; secao = null; continue; }

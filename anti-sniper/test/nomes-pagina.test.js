@@ -496,3 +496,26 @@ test('conta os três casos em separado, para a saída poder dizer a verdade', ()
   assert.equal(r.soAno, 0, 'nesta página nenhum nome tem SÓ o ano');
   assert.ok(r.semData >= 1, 'mas há pelo menos um sem data nenhuma');
 });
+
+// O ano e a contagem vivem em dois crachás separados. Ler o texto da linha
+// inteira só funciona porque o site põe espaço entre eles — sem espaço,
+// "2026" e "30" colam-se em "202630" e o total fica NULO, sem um erro.
+//
+// E um total nulo não é um detalhe: é o `incompleto()` a deixar de disparar e
+// a saída a voltar a dizer "é o 1º nome da conta" sobre meia lista. Uma
+// minificação do lado deles bastaria para isso acontecer sozinho.
+test('o total do ano sai mesmo com o HTML colado, sem espaços', () => {
+  const semEspaco = parseHTML(`<html><body><div class="namehistory-names">`
+    + `<div class="row"><strong><span class="badge">2026</span></strong>`
+    + `<strong><span class="badge">30</span></strong></div>`
+    + ukNome('Capitao', '(seen) Wed, 05 Aug 2026')
+    + ukNome('C4pitaoTV', 'Mon, 14 Jul 2026')
+    + `<div class="row"><strong><span class="badge">2025</span></strong>`
+    + `<strong><span class="badge">30</span></strong></div>`
+    + ukNome('Melancia', 'Sun, 06 Dec 2025')
+    + `</div></body></html>`).document;
+  const r = lerNomesDaPagina(semEspaco);
+  assert.equal(r.total, 60, 'a página anuncia 30+30 mesmo sem espaço entre os crachás');
+  assert.equal(r.nomes.length, 3);
+  assert.equal(r.nomes[0].em, '05 Aug 2026', 'e o ano continua a aplicar-se aos nomes');
+});
