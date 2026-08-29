@@ -32,7 +32,19 @@ function conta({ caminho = CONFIG } = {}) {
   try { cfg = JSON.parse(fs.readFileSync(caminho, 'utf8')); } catch { /* sem config */ }
 
   const chave = process.env.STEAMID_UK_CHAVE || cfg.steamidUk?.chave || '';
-  const meuId = process.env.STEAMID_UK_MEUID || cfg.meuSteamId || '';
+  // O SteamID dele fica AQUI, e não num ficheiro que ele tenha de editar.
+  //
+  // Ele passou meia hora à procura do `detetive.config.json` no GitHub — onde
+  // ele nunca esteve, porque é ignorado de propósito (guarda a chave). Depois
+  // achou que tinha estragado alguma coisa. Não tinha; mas o passo em si é que
+  // estava errado: pedir a alguém que edite JSON à mão para o programa saber
+  // uma coisa que eu já sei.
+  //
+  // Isto não é segredo nenhum — é o número do perfil público dele na Steam,
+  // o mesmo que aparece no endereço do perfil. O segredo é a CHAVE, e essa
+  // continua fora do repositório.
+  const MEU_ID_PADRAO = '76561198066116229';
+  const meuId = process.env.STEAMID_UK_MEUID || cfg.meuSteamId || MEU_ID_PADRAO;
 
   return {
     chave,

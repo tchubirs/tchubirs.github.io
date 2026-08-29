@@ -36,9 +36,21 @@ test('diz exatamente o que falta, em vez de só "não ligado"', () => semAmbient
   assert.equal(conta({ caminho: so }).ligado, false);
   assert.match(conta({ caminho: so }).falta, /chave/);
 
+  // Sem ficheiro nenhum, o SteamID dele vem do código — é público e eu já o
+  // sei. O que pode faltar é só a chave, que é o segredo. Antes isto pedia-lhe
+  // duas coisas; pedir o que eu já sei é passo a mais.
   const nada = comArquivo({});
-  assert.match(conta({ caminho: nada }).falta, /chave e o teu SteamID/);
+  assert.equal(conta({ caminho: nada }).meuId, '76561198066116229');
+  assert.match(conta({ caminho: nada }).falta, /chave/);
+  assert.doesNotMatch(conta({ caminho: nada }).falta, /SteamID/);
   for (const f of [so, nada]) fs.rmSync(f, { force: true });
+}));
+
+// E o ficheiro dele continua a mandar, se lá tiver outro.
+test('um SteamID no ficheiro ganha ao que está no código', () => semAmbiente(() => {
+  const f = comArquivo({ meuSteamId: '76561190000000001' });
+  assert.equal(conta({ caminho: f }).meuId, '76561190000000001');
+  fs.rmSync(f, { force: true });
 }));
 
 test('o ambiente ganha do arquivo — dá para testar sem mexer na config dele', () => {

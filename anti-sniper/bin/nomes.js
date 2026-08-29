@@ -108,7 +108,29 @@ if (!alvo) {
 // Já os IDs a mais são bem-vindos: `npm run nomes -- ID1 ID2 ID3 --ver` corre
 // as três com um só login. Antes eu recusava o segundo ID como se fosse erro,
 // e ele ficou a mandar um de cada vez — a repetir o login a cada corrida.
-const CONHECIDAS = new Set(['--ver', '--tudo']);
+// `--chave XXX` grava a chave da API e sai. Uma vez, e nunca mais.
+//
+// A alternativa era ele abrir um JSON no Bloco de Notas e acertar nas vírgulas.
+// Já lhe custou uma volta ao GitHub à procura de um ficheiro que só existe na
+// máquina dele, e a impressão de ter partido alguma coisa.
+const iChave = args.indexOf('--chave');
+if (iChave >= 0) {
+  const valor = args[iChave + 1];
+  if (!valor || valor.startsWith('-')) {
+    console.error('\n  uso: npm run nomes -- --chave A_TUA_CHAVE\n');
+    process.exit(2);
+  }
+  const alvo = path.join(RAIZ, 'detetive.config.json');
+  let cfg = {};
+  try { cfg = JSON.parse(fs.readFileSync(alvo, 'utf8')); } catch { /* ainda não existe */ }
+  cfg.steamidUk = { ...(cfg.steamidUk || {}), chave: valor, ligado: true };
+  fs.writeFileSync(alvo, `${JSON.stringify(cfg, null, 2)}\n`);
+  console.log(`\n  ✓ chave gravada em ${alvo}`);
+  console.log('    Não volta a ser precisa. Corre o nomes.cmd normalmente.\n');
+  process.exit(0);
+}
+
+const CONHECIDAS = new Set(['--ver', '--tudo', '--chave']);
 const estranha = args.find((a) => a.startsWith('-') && !CONHECIDAS.has(a));
 if (estranha) {
   console.error(`\n  não conheço "${estranha}".`);
