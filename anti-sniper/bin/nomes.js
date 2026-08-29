@@ -535,7 +535,11 @@ function incompleto(r) {
       // cortada não encerra a busca: é justamente quando a segunda fonte
       // vale mais. Com --tudo sigo sempre, para juntar os dois bancos.
       if (!TUDO && !incompleto(ok)) break;
-      if (!TUDO) console.log('    (veio incompleta — vou tentar a outra fonte)');
+      // Só prometer o que ainda vou fazer. Esta linha saía mesmo quando a
+      // fonte era a ÚLTIMA da lista — anunciava uma tentativa que não existia.
+      const restam = FONTES.indexOf(fonte) < FONTES.length - 1;
+      if (!TUDO && restam) console.log('    (veio incompleta — vou tentar a outra fonte)');
+      if (!TUDO && !restam) console.log('    (veio incompleta, e já não há outra fonte para tentar)');
     } else if (ultimoRetrato?.fonte === fonte.nome && ultimoRetrato.limitado) {
       console.log(`⚠ ${ultimoRetrato.erro}${ultimoRetrato.totalDito ? ` — admite ${ultimoRetrato.totalDito} nomes` : ''}`);
     } else if (ultimoRetrato?.fonte === fonte.nome && ultimoRetrato.cloudflare) {
@@ -696,6 +700,12 @@ function incompleto(r) {
     // Sem este bloco a saída mostrava nove linhas a dizer o mesmo — "Recrutáxi",
     // "[BDM]Senhor recruta", "[YT]Senhor recruta"… — quando o que ele quer
     // saber cabe numa: a pessoa volta sempre a "Recruta".
+    if (!completa) {
+      console.log(`\n  ⚠ esta lista está INCOMPLETA${
+        resultado.total ? ` (li ${resultado.nomes.length} de ${resultado.total})` : ''} — o palpite abaixo`);
+      console.log('    só conhece estes nomes. Com --ver e login no steamid.uk vês a conta toda.');
+    }
+
     const raizes = raizesRepetidas(resultado.nomes);
     if (raizes.length) {
       console.log('\n  a raiz que se repete — é o sinal mais forte que estes nomes dão\n');
@@ -709,7 +719,10 @@ function incompleto(r) {
     }
 
     // `porRaiz`: as nove variações de "recruta" são um candidato, não nove.
-    const provaveis = nomesQueValem(resultado.nomes, { teto: 8, porRaiz: true });
+    // A lista está inteira? A resposta muda o que eu posso afirmar: com 100 de
+    // 344 nomes, "é o 1º nome da conta" é o 1º do meu balde, não da conta.
+    const completa = !incompleto(resultado);
+    const provaveis = nomesQueValem(resultado.nomes, { teto: 8, porRaiz: true, listaCompleta: completa });
     const comSinal = provaveis.filter((n) => n.pontos > 0);
     if (comSinal.length) {
       // Sinal FORTE é o que aponta para uma pessoa: a raiz que se repete, o

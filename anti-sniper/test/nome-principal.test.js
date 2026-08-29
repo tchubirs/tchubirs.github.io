@@ -339,3 +339,31 @@ test('fonte só-ano com um único ano continua sem "primeiro"', () => {
   ]);
   assert.ok(r.every((x) => !x.cedo));
 });
+
+// "É o 1º nome da conta" é uma afirmação sobre a CONTA. Com 100 de 344 nomes
+// lidos, o mais antigo do meu balde não é o mais antigo da conta — os de 2015
+// ficaram nos 244 que não vieram. Na corrida dele isto apontou "Juice Fruit".
+test('com a lista incompleta, não digo "1º nome da conta"', () => {
+  const cem = [
+    { nome: 'novo', em: '28 Aug 2026' }, { nome: 'meio', em: '14 Jun 2026' },
+    { nome: 'JuiceFruit', em: '09 Jan 2025' },
+  ];
+  const completa = ordenarPorIdentidade(cem);
+  assert.ok(completa.some((x) => x.cedo), 'com a lista inteira, a posição vale');
+
+  const parcial = ordenarPorIdentidade(cem, { listaCompleta: false });
+  assert.ok(parcial.every((x) => !x.cedo), 'com metade da conta, não vale');
+  assert.ok(parcial.every((x) => !x.porque.some((p) => /nome da conta/.test(p))));
+});
+
+// Mas a marca do site continua a valer: aí quem afirma é a fonte, não a minha
+// contagem — e ela sabe da conta toda, mesmo que eu só tenha lido um pedaço.
+test('a marca do site vale mesmo com a lista incompleta', () => {
+  const r = ordenarPorIdentidade([
+    { nome: 'novo', em: '28 Aug 2026' }, { nome: 'meio', em: '14 Jun 2026' },
+    { nome: 'Alicerce', em: null, secao: 'primeiro-nome' },
+  ], { listaCompleta: false });
+  const a = r.find((x) => x.nome === 'Alicerce');
+  assert.equal(a.cedo, true);
+  assert.ok(a.porque.includes('é o primeiro nome que a Steam registou'));
+});

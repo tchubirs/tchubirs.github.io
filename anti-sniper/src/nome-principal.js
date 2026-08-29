@@ -38,7 +38,7 @@
 const { raizesRepetidas, normalizar } = require('./raiz');
 const { momento, ano, chaveDoDia } = require('./data');
 
-function ordenarPorIdentidade(ocorrencias) {
+function ordenarPorIdentidade(ocorrencias, { listaCompleta = true } = {}) {
   const lista = (ocorrencias || []).filter((o) => o && o.nome);
   if (!lista.length) return [];
 
@@ -120,7 +120,18 @@ function ordenarPorIdentidade(ocorrencias) {
   // conta era a PESSOA — a forma que ela usou nesse dia é acidente. Se qualquer
   // membro da família é dos primeiros, a família é.
   const quantosContam = Math.max(1, Math.min(5, Math.ceil(por.size / 5)));
-  const cedoDaForma = (g) => g.primeiroDaConta || (temLinhaDoTempo && g.posicao < quantosContam);
+  // "É o 1º nome da conta" só se pode dizer sobre a conta INTEIRA.
+  //
+  // Na corrida dele o steamhistory devolveu 100 de 344 nomes, e a saída dizia
+  //     2 pt  Juice Fruit   é o 1º nome da conta
+  // O "Juice Fruit" é o mais antigo dos CEM que eu li. Os nomes verdadeiramente
+  // antigos são de 2015 e estavam nos 244 que ficaram de fora. Ou seja: eu
+  // pegava no fundo do meu balde e chamava-lhe o fundo do poço.
+  //
+  // A marca do site ("First name seen by SteamID") continua a valer, porque
+  // aí quem afirma é a fonte e não a minha contagem.
+  const cedoDaForma = (g) => g.primeiroDaConta
+    || (listaCompleta && temLinhaDoTempo && g.posicao < quantosContam);
   const familiaCedo = new Set();
   for (const g of por.values()) {
     const r = raizDe(g.nome);
@@ -249,8 +260,8 @@ function ordenarPorIdentidade(ocorrencias) {
  * os que têm sinal — e devolve TODOS quando não há sinal nenhum, porque aí
  * escolher seria escolher a esmo.
  */
-function nomesQueValem(ocorrencias, { teto = 12, porRaiz = false } = {}) {
-  const ord = ordenarPorIdentidade(ocorrencias);
+function nomesQueValem(ocorrencias, { teto = 12, porRaiz = false, listaCompleta = true } = {}) {
+  const ord = ordenarPorIdentidade(ocorrencias, { listaCompleta });
   const comSinal = ord.filter((n) => n.pontos > 0);
   let fila = comSinal.length ? comSinal : ord;
 

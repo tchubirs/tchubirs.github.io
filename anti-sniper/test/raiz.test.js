@@ -92,3 +92,26 @@ test('lista vazia ou lixo não quebra', () => {
   assert.deepEqual(raizesRepetidas([{ nome: '' }, { nome: null }, {}]), []);
   assert.deepEqual(raizesRepetidas([{ nome: '...' }, { nome: '!!!' }, { nome: '123' }]), []);
 });
+
+// Riso repete-se por definição, o que faz dele o falso positivo perfeito para
+// uma regra que procura repetição. Na primeira corrida a sério o topo da lista
+// saiu "HIHIHIHIHI" — a mecânica funcionou e a conclusão era absurda.
+test('riso e enchimento não viram identidade', () => {
+  const r = raizesRepetidas([
+    'HIHIHIHIHI', 'HIHIHHIHIHIHIHIHI', 'hihihihihihihihihihihihihi',
+    'kkkkkkkkkk', 'kkkkkkkkkkkkkk', 'Kkkkkkkkkkkk',
+    'Melancia', 'jorge', 'Owl', 'Milk', 'Monster', 'Telefone',
+  ].map((nome) => ({ nome })));
+  assert.deepEqual(r, [], 'nenhuma destas é o nome de ninguém');
+});
+
+// Mas um nome curto de verdade não pode cair na mesma rede.
+test('nome curto repetido de propósito não é riso', () => {
+  const { ehRisada } = require('../src/raiz');
+  for (const n of ['lulu', 'coco', 'dodo', 'recruta', 'jorginho', 'senhor']) {
+    assert.equal(ehRisada(n), false, n);
+  }
+  for (const n of ['hihihi', 'kkkk', 'hahahaha', 'rsrsrs', 'ololol']) {
+    assert.equal(ehRisada(n), true, n);
+  }
+});

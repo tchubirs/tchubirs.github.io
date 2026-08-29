@@ -53,6 +53,32 @@ const MIN_LETRAS = 4;    // "grau" conta; "do" não
 const MIN_NOMES = 3;     // duas coincidências são coincidência
 
 /**
+ * Riso e enchimento não são identidade.
+ *
+ * Na primeira corrida a sério, o topo da lista dele saiu assim:
+ *
+ *     4 pt  HIHIHIHIHI   é a raiz que 2 outros nomes repetem
+ *
+ * a partir de "HIHIHIHIHI", "HIHIHHIHIHIHIHIHI" e "hihihihihihihihihihihihihi".
+ * A mecânica funcionou — três nomes, o mesmo miolo. Mas a conclusão é absurda:
+ * ninguém se chama assim. É riso, e riso repete-se por definição, o que faz
+ * dele o falso positivo perfeito para uma regra que procura repetição.
+ *
+ * Uma raiz feita de uma sílaba curta repetida — hihihi, kkkkk, hahaha, rsrsrs —
+ * é isso. O limite de três repetições protege nomes curtos de verdade: "Lulu"
+ * e "Coco" têm quatro letras e passam.
+ */
+function ehRisada(raiz) {
+  for (let n = 1; n <= 3; n++) {
+    if (raiz.length >= n * 3 && raiz.length % n === 0) {
+      const unidade = raiz.slice(0, n);
+      if (unidade.repeat(raiz.length / n) === raiz) return true;
+    }
+  }
+  return false;
+}
+
+/**
  * Acha as raízes que atravessam nomes diferentes.
  *
  * @param {Array<{nome:string, em?:string}>} ocorrencias
@@ -88,7 +114,7 @@ function raizesRepetidas(ocorrencias, { minNomes = MIN_NOMES } = {}) {
   const candidatas = new Set();
   for (const n of nomes) {
     for (const t of n.limpo.split(' ')) {
-      if (t.length >= MIN_LETRAS && !VAZIAS.has(t)) candidatas.add(t);
+      if (t.length >= MIN_LETRAS && !VAZIAS.has(t) && !ehRisada(t)) candidatas.add(t);
     }
   }
 
@@ -151,4 +177,4 @@ function raizesRepetidas(ocorrencias, { minNomes = MIN_NOMES } = {}) {
   return guardadas.sort((a, b) => b.pontos - a.pontos || b.quantos - a.quantos);
 }
 
-module.exports = { raizesRepetidas, normalizar };
+module.exports = { raizesRepetidas, normalizar, ehRisada };
