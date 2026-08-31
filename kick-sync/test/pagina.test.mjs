@@ -829,6 +829,51 @@ test('a regua mostra as horas por baixo das barras, e as kills marcadas nela',
     await p.close();
   });
 
+// "Como e que eu reseto isto?" Nao havia como. E cada ficheiro gerado ficava
+// INTEIRO na memoria: trinta e seis clipes sao quase meio giga de RAM presa.
+test('da para limpar a lista e recomecar, e a memoria e mesmo devolvida',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'vitima1'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi\nvitima1');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 15000 });
+
+    await p.click('#mais1m');
+    await p.click('#marcarKill');
+    await p.locator('#listaMomentos .vit[data-canal="vitima1"]').click();
+    await p.click('#baixarMontagem');
+    await p.waitForFunction(() => document.querySelectorAll('#fila a').length === 2,
+      null, { timeout: 30000 });
+    assert.match(await p.locator('#memoria').innerText(), /2 ficheiros/, 'diz quanto esta preso');
+
+    // Os enderecos tem de ser SOLTOS, e nao so apagados da lista: apagar a
+    // lista deixava os Blobs presos para sempre.
+    const urls = await p.locator('#fila a').evaluateAll((as) => as.map((a) => a.href));
+    await p.click('#limparFila');
+    assert.equal(await p.locator('#fila a').count(), 0);
+    assert.equal(await p.locator('#memoria').innerText(), '');
+    const vivos = await p.evaluate(async (lista) => {
+      let n = 0;
+      for (const u of lista) { try { await fetch(u); n++; } catch { /* solto */ } }
+      return n;
+    }, urls);
+    assert.equal(vivos, 0, 'os ficheiros continuam a ocupar memoria');
+
+    // E as kills continuam la: limpar a lista nao e recomecar.
+    assert.equal(await p.locator('#listaMomentos li[data-ms]').count(), 1);
+
+    // Recomecar apaga tudo e volta ao principio.
+    p.on('dialog', (d) => d.accept());
+    await p.click('#recomecar');
+    await p.waitForFunction(() => document.getElementById('canais').value === '',
+      null, { timeout: 20000 });
+    assert.equal(await p.locator('#listaMomentos li[data-ms]').count(), 0);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
 test('o aviso do leitor aparece quando o hls.js não carrega',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
     const { p } = await abrir();
