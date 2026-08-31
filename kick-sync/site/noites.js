@@ -59,6 +59,9 @@ export function agruparPorNoite(canais, { intervaloMs = SEIS_HORAS } = {}) {
       fim,
       itens,
       canais: new Set(itens.map((i) => i.slug)).size,
+      // Os nomes, e nao so a contagem: quem escolhe uma noite quer saber quem
+      // la esteve, e faltar um canal nunca foi impedimento para nada.
+      quem: [...new Set(itens.map((i) => i.slug))],
       // Quantos começaram mesmo aqui, por oposição aos que já vinham de trás.
       comecaramAqui: new Set(g.inicios.map((i) => i.slug)).size,
     };

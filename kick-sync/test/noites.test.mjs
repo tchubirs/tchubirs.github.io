@@ -42,6 +42,14 @@ test('um VOD de 38 horas nao cola os dias todos numa noite so', () => {
   assert.ok(trinta.fim - trinta.inicio < h(12), `a noite de 30 dura ${(trinta.fim - trinta.inicio) / h(1)}h`);
 });
 
+test('a noite diz quem la esteve, pelo nome', () => {
+  const [n] = agruparPorNoite([
+    canal('a', [['2026-08-30T21:00:00Z', 3]]),
+    canal('b', [['2026-08-30T21:30:00Z', 2]]),
+  ]);
+  assert.deepEqual([...n.quem].sort(), ['a', 'b']);
+});
+
 test('quem so passou pela noite e contado, mas nao a comecou', () => {
   const n = agruparPorNoite([
     canal('semprelive', [['2026-08-29T11:00:00Z', 38]]),
