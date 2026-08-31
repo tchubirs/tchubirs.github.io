@@ -81,6 +81,24 @@
     <span id="estadoAlinhar" class="nota"></span>
   </div>
 
+  <!-- A montagem. O fluxo do dono: marca-se a kill, e a pagina entrega a POV
+       dele longa e as POVs de quem morreu curtinhas, ja numeradas. -->
+  <section id="montagem">
+    <h2>Montagem</h2>
+    <div class="linha">
+      <button id="marcarKill" class="principal">Marcar kill <kbd>M</kbd></button>
+      <label class="pequeno">minha POV <input id="protAntes" type="number" value="5" min="0" max="120" step="1">s antes</label>
+      <label class="pequeno"><input id="protDepois" type="number" value="2" min="0" max="120" step="1">s depois</label>
+      <label class="pequeno">quem morreu <input id="vitAntes" type="number" value="1" min="0" max="60" step="1">s antes</label>
+      <label class="pequeno"><input id="vitDepois" type="number" value="2" min="0" max="60" step="1">s depois</label>
+    </div>
+    <ul id="listaMomentos" class="momentos"></ul>
+    <div class="linha">
+      <button id="baixarMontagem" disabled>Baixar a montagem</button>
+      <span id="estadoMontagem" class="nota"></span>
+    </div>
+  </section>
+
   <section id="corte">
     <h2>Cortar</h2>
     <ul id="listaCorte" class="corte"></ul>

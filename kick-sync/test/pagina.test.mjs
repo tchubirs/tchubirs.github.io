@@ -725,6 +725,53 @@ test('sem áudio nenhum, o alinhamento diz que não deu em vez de rebentar',
     await p.close();
   });
 
+// O fluxo do dono: marca-se a kill, e a pagina entrega a POV dele longa e as
+// POVs de quem morreu curtinhas, ja numeradas para caírem em ordem no editor.
+test('marcar kills gera a montagem, em ordem e com os ficheiros numerados',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    const pedidos = await kickFalsa(p, { canais: ['tchubi', 'vitima1'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi\nvitima1');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 15000 });
+
+    // Duas kills, com um minuto entre elas.
+    await p.click('#mais1m');
+    await p.click('#marcarKill');
+    await p.click('#mais1m');
+    await p.keyboard.press('m');                       // a tecla, como no uso real
+    await p.waitForFunction(() => document.querySelectorAll('#listaMomentos li[data-ms]').length === 2,
+      null, { timeout: 10000 });
+
+    // Carregar depressa nao pode duplicar a mesma kill.
+    await p.click('#marcarKill');
+    assert.equal(await p.locator('#listaMomentos li[data-ms]').count(), 2, 'a mesma kill conta uma vez');
+    assert.match(await p.locator('#estadoMontagem').innerText(), /2 kills · 4 ficheiros/);
+
+    const antes = pedidos.segmentos;
+    await p.click('#baixarMontagem');
+    await p.waitForFunction(() => document.querySelectorAll('#fila a').length === 4,
+      null, { timeout: 30000 });
+
+    const nomes = await p.locator('#fila a').evaluateAll((as) => as.map((a) => a.getAttribute('download')));
+    // A ordem e a da montagem: a minha POV, depois quem morreu, e so entao a
+    // kill seguinte. O numero no nome e o que faz isso sobreviver ao editor.
+    assert.deepEqual(nomes.map((n) => n.slice(0, 3)), ['01a', '01b', '02a', '02b']);
+    assert.match(nomes[0], /^01a_tchubi_/);
+    assert.match(nomes[1], /^01b_vitima1_/);
+
+    // E a POV do protagonista tem de ser mais longa do que a de quem morreu.
+    const linhas = await p.locator('#fila li').allInnerTexts();
+    assert.match(linhas[0], /a tua POV/);
+    assert.match(linhas[1], /quem morreu/);
+
+    const baixados = pedidos.segmentos - antes;
+    assert.ok(baixados > 0 && baixados <= 24, `pediu ${baixados} segmentos — devia ser poucos`);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
 test('o aviso do leitor aparece quando o hls.js não carrega',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
     const { p } = await abrir();
