@@ -9,11 +9,14 @@
 # A cura é o nome mudar quando o conteúdo muda: cada import leva ?v=<hash do
 # conteúdo>. Igual em duas publicações iguais, diferente assim que algo muda.
 set -euo pipefail
+# Resolver o destino ANTES do cd. Com `cd` primeiro, um caminho relativo passa
+# a ser relativo a esta pasta: um `./publicar.sh replay` a partir da raiz do
+# repositorio escrevia em kick-sync/replay/ e ninguem dava por nada — o script
+# dizia "publicado" e o site ficava igual.
+DESTINO="$(mkdir -p "${1:-replay}" && cd "${1:-replay}" && pwd)"
 cd "$(dirname "$0")"
-DESTINO="${1:-../replay}"
 
 V=$(cat site/*.js site/*.css site/index.html | sha1sum | cut -c1-10)
-mkdir -p "$DESTINO"
 cp site/*.html site/*.js site/*.css "$DESTINO/"
 
 for f in "$DESTINO"/*.js "$DESTINO"/index.html; do
