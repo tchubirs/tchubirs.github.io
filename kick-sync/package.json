@@ -1,0 +1,11 @@
+{
+  "name": "kick-sync",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Sincronizador multi-angulo de VODs da Kick. Corre no browser, sem servidor.",
+  "scripts": {
+    "test": "node --test test/*.mjs",
+    "sonda": "node probes/clock-probe.mjs"
+  }
+}

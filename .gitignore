@@ -1,3 +1,6 @@
 
 # As contas que ele investiga. Não é coisa para um repositório público.
 /contas.txt
+
+# Dependencias. O kick-sync usa as do anti-sniper por link simbolico.
+node_modules/
