@@ -1,7 +1,7 @@
 # Os testes do Replay, a cada push.
 #
-# Sem isto, os 176 testes só corriam quando alguém se lembrava — e a única
-# maneira de saber que o site tinha partido era o dono abri-lo e ver.
+# Sem isto, os testes só corriam quando alguém se lembrava — e a única maneira
+# de saber que o site tinha partido era o dono abri-lo e ver.
 #
 # Os testes de browser correm de verdade: um Chromium a sério, contra uma Kick
 # falsa servida em memória. Sem isso metade da suite não corre e o verde
@@ -22,9 +22,9 @@ jobs:
       run:
         working-directory: kick-sync
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
 
@@ -36,25 +36,38 @@ jobs:
           npm install --no-save playwright@1.56.1
           npx playwright install --with-deps chromium
 
-      - name: Correr os testes
+      # O caminho do Chromium muda a cada versão do Playwright; perguntar em
+      # vez de escrever um número que envelhece em silêncio. Vai para o
+      # GITHUB_ENV e não para um `export`: um `export` morre com o step, e foi
+      # exactamente assim que o passo de verificação se enganou a si próprio.
+      - name: Encontrar o Chromium
         run: |
-          # O caminho do Chromium muda a cada versão do Playwright; perguntar
-          # em vez de escrever um número que envelhece em silêncio.
-          export DETETIVE_CHROME="$(node -e "
+          caminho="$(node -e "
             const { chromium } = require('playwright');
             process.stdout.write(chromium.executablePath());
           ")"
-          echo "chromium: $DETETIVE_CHROME"
-          node --test --test-timeout=120000 test/*.mjs
+          test -x "$caminho" || { echo "::error::o Chromium não está em $caminho"; exit 1; }
+          echo "chromium: $caminho"
+          echo "DETETIVE_CHROME=$caminho" >> "$GITHUB_ENV"
 
+      # Uma corrida só. A verificação lê a saída dessa corrida — correr a suite
+      # duas vezes custava o dobro e testava a mesma coisa.
+      #
       # Um teste de browser que não corre é um teste que não existe. Se o
       # Chromium faltar, a suite fica verde a testar metade — e é assim que um
       # bug de interface chega ao ar com 176 verdes por trás.
-      - name: Garantir que os testes de browser correram mesmo
+      - name: Correr os testes
         run: |
-          saida="$(node --test --test-timeout=120000 test/pagina.test.mjs 2>&1 || true)"
-          if echo "$saida" | grep -q 'sem navegador'; then
-            echo "$saida" | tail -20
+          set -o pipefail
+          node --test --test-timeout=120000 test/*.mjs 2>&1 | tee /tmp/saida.txt
+        shell: bash
+
+      - name: Garantir que os testes de browser correram mesmo
+        if: always()
+        run: |
+          if grep -q 'sem navegador' /tmp/saida.txt; then
+            grep -c 'sem navegador' /tmp/saida.txt
             echo "::error::os testes de browser foram saltados — o Chromium não foi encontrado"
             exit 1
           fi
+          echo "nenhum teste saltado por falta de browser"

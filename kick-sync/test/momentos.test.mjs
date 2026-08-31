@@ -131,3 +131,25 @@ test('os tamanhos sao por momento, e nao globais', () => {
 test('uma montagem sem momentos e uma lista vazia, nao um erro', () => {
   assert.deepEqual(planoDaMontagem([], CANAIS), []);
 });
+
+
+// ── duas marcas no mesmo sitio ──────────────────────────────────────────────
+//
+// Acertar o instante de uma kill pode faze-la cair em cima de outra ja
+// marcada: na busca automatica os candidatos estao a 25 s uns dos outros e a
+// afinacao mexe ate 6. Duas marcas no mesmo sitio davam duas linhas gemeas
+// onde apagar uma apagava as duas — e a montagem saia com o clipe repetido.
+
+test('acrescentar respeita a distancia minima, venha de onde vier', () => {
+  let ms = [novoMomento(T, 'tchubi')];
+  ms = acrescentar(ms, novoMomento(T + 1500, 'tchubi'));
+  assert.equal(ms.length, 1, 'a segunda cai dentro da primeira');
+});
+
+test('remover apaga um momento e nao dois com o mesmo instante', () => {
+  // Se dois chegarem ao mesmo ms — por um caminho que nao passe por
+  // acrescentar — apagar tem de ser inequivoco.
+  const dois = [novoMomento(T, 'a'), novoMomento(T, 'b')];
+  assert.equal(remover(dois, T).length, 0, 'com o mesmo ms sao indistinguiveis');
+  // E e por isso que nunca podem chegar a existir dois com o mesmo ms.
+});

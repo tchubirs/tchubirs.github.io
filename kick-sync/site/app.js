@@ -1110,43 +1110,68 @@ async function verQuemMorreu(ms, { silencioso = false } = {}) {
   const apanhador = criarApanhador({ linhas: estado.linhas, nudges: estado.nudges });
   const notas = {};
   const imagens = {};
+  let sugeridos = [];
+  let ordenados = [];
+  let afinado = null;
+
+  // `finally` a fechar o apanhador, e não uma chamada no fim do caminho feliz.
+  // São seis `<video>` por instante, e a busca automática faz isto vinte vezes
+  // seguidas: uma bissecção que rebentasse deixava cento e vinte leitores
+  // vivos e a página ia ficando pesada sem razão à vista.
   try {
     for (const l of estado.linhas) {
       if (!silencioso) caixa.innerHTML = `<span class="nota">${t('montagem.aOlharCanal', { canal: l.slug })}</span>`;
-      const antes = await apanhador.frame(l.slug, ms - 2000);
-      const depois = await apanhador.frame(l.slug, ms + 2500);
-      imagens[l.slug] = depois?.imagem || null;
-      notas[l.slug] = antes && depois ? notaDeMorte(antes.pixeis, depois.pixeis) : null;
+      try {
+        const antes = await apanhador.frame(l.slug, ms - 2000);
+        const depois = await apanhador.frame(l.slug, ms + 2500);
+        imagens[l.slug] = depois?.imagem || null;
+        notas[l.slug] = antes && depois ? notaDeMorte(antes.pixeis, depois.pixeis) : null;
+      } catch {
+        // Um ângulo que não se lê é um cartão sem imagem, e não o fim da
+        // medição para os outros cinco.
+        notas[l.slug] = null;
+      }
     }
-  } catch { /* um ângulo que não se lê é um cartão sem imagem, não um erro */ }
-  const apanhador2 = apanhador;
 
-  const { sugeridos, ordenados } = quemMorreu(notas);
-  // Marcar já os sugeridos: o objectivo é ele não ter de escolher nada quando
-  // a página acertou.
-  if (sugeridos.length) {
-    estado.momentos = estado.momentos.map((m) => {
-      if (m.ms !== ms) return m;
-      const juntos = [...new Set([...(m.vitimas || []), ...sugeridos])];
-      return { ...m, vitimas: juntos.filter((v) => v !== m.protagonista) };
-    });
-    guardar();
-  }
+    ({ sugeridos, ordenados } = quemMorreu(notas));
+    // Marcar já os sugeridos: o objectivo é ele não ter de escolher nada
+    // quando a página acertou.
+    if (sugeridos.length) {
+      estado.momentos = estado.momentos.map((m) => {
+        if (m.ms !== ms) return m;
+        const juntos = [...new Set([...(m.vitimas || []), ...sugeridos])];
+        return { ...m, vitimas: juntos.filter((v) => v !== m.protagonista) };
+      });
 
-  // O instante certo, agora que se sabe quem morreu.
-  //
-  // Ele marca a kill à volta do sítio, porque não sabe o timing — e não tem de
-  // saber. O ecrã do morto vira num instante só, e essa fronteira encontra-se
-  // por bissecção: seis ou sete imagens em vez de cem.
-  let afinado = null;
-  if (sugeridos.length) {
-    afinado = await afinarInstante(apanhador2, sugeridos[0], ms);
-    if (afinado != null && afinado !== ms) {
-      estado.momentos = estado.momentos.map((m) => (m.ms === ms ? { ...m, ms: afinado } : m));
+      // O instante certo, agora que se sabe quem morreu. Ele marca a kill à
+      // volta do sítio porque não sabe o timing — e não tem de saber. O ecrã
+      // do morto vira num instante só, e essa fronteira encontra-se por
+      // bissecção: seis ou sete imagens em vez de cem.
+      afinado = await afinarInstante(apanhador, sugeridos[0], ms);
+      if (afinado != null && afinado !== ms) {
+        // Acertar o instante pode fazê-lo cair em cima de outra kill já
+        // marcada — na busca automática os candidatos estão a 25 s uns dos
+        // outros e a afinação mexe até 6. Duas marcas no mesmo sítio davam
+        // duas linhas gémeas onde apagar uma apagava as duas.
+        const colide = estado.momentos.some((m) => m.ms !== ms && Math.abs(m.ms - afinado) < 2000);
+        if (colide) {
+          const meu = estado.momentos.find((m) => m.ms === ms);
+          estado.momentos = estado.momentos
+            .filter((m) => m.ms !== ms)
+            .map((m) => (Math.abs(m.ms - afinado) < 2000
+              ? { ...m, vitimas: [...new Set([...(m.vitimas || []), ...(meu?.vitimas || [])])] }
+              : m));
+          afinado = estado.momentos.find((m) => Math.abs(m.ms - afinado) < 2000)?.ms ?? afinado;
+        } else {
+          estado.momentos = estado.momentos.map((m) => (m.ms === ms ? { ...m, ms: afinado } : m));
+        }
+      }
       guardar();
     }
+  } finally {
+    apanhador.fechar();
   }
-  apanhador2.fechar();
+
   const msFinal = afinado ?? ms;
 
   // Redesenhar a lista PRIMEIRO, e só depois pôr os cartões.
