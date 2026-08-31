@@ -134,9 +134,25 @@ kbd {
 .palcoFoco.dois .tile { aspect-ratio: 16/9; min-height: 140px; }
 .palcoFoco:empty { display: none; }
 .tile.foco { border-color: var(--acento); }
+/* O som no canto de baixo a esquerda, e o cursor de volume a abrir ao lado —
+   o mesmo sitio e o mesmo gesto da Twitch, da Kick e do YouTube. */
 .tile .som {
-  position: absolute; right: 40px; top: 6px; padding: 1px 7px; font-size: 12px;
-  background: #000a; border-radius: 5px;
+  position: absolute; left: 6px; bottom: 6px; display: flex; align-items: center; gap: 0;
+  background: #000a; border-radius: 6px; padding: 2px;
+}
+.tile .somBtn, .tile .pausa {
+  padding: 1px 7px; font-size: 13px; background: transparent; border: 0; line-height: 1.4;
+}
+.tile .vol {
+  width: 0; min-width: 0; opacity: 0; margin: 0; accent-color: var(--acento);
+  /* Fechado nao pode apanhar cliques. Com largura zero o browser ainda lhe da
+     area de toque, e ela cai por cima do proprio botao do som — o botao ficava
+     impossivel de carregar sem que nada no ecra o explicasse. */
+  pointer-events: none;
+  transition: width .18s ease, opacity .18s ease, margin .18s ease;
+}
+.tile .som:hover .vol, .tile .som:focus-within .vol {
+  width: 72px; opacity: 1; margin: 0 6px 0 2px; pointer-events: auto;
 }
 .tile.principal { border-color: var(--acento); box-shadow: 0 0 0 1px var(--acento); }
 .tile .par {
@@ -174,12 +190,10 @@ kbd {
 
 /* Onde cada ângulo está dentro do vídeo dele. Aparece antes da imagem, e é o
    que mostra o avanço e o atraso quando o quadrado ainda está preto. */
-.tile .posicao {
-  position: absolute; left: 6px; bottom: 6px; background: #000a; padding: 1px 6px;
-  border-radius: 5px; font-size: 11px; color: var(--fraco); font-variant-numeric: tabular-nums;
-}
+/* A posicao vive dentro do rotulo: o canto de baixo a esquerda passou a ser do
+   som, que e o sitio onde toda a gente ja o procura. */
+.tile .posicao { color: var(--fraco); font-weight: 400; font-variant-numeric: tabular-nums; }
 .tile.vazio .posicao { display: none; }
-.tile.foco .posicao { color: var(--texto); }
 
 .relogio { background: var(--caixa); border: 1px solid var(--borda); border-radius: 10px; padding: 12px; }
 /* Os saltos. Grelha de quatro colunas iguais em vez de uma linha flex: numa
@@ -236,6 +250,7 @@ kbd {
 }
 
 .tempo { font-variant-numeric: tabular-nums; font-size: 18px; min-width: 100px; }
+.tempo.parado { color: var(--fraco); }
 
 /* A lista de momentos da montagem. */
 .momentos { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 5px; }
@@ -254,6 +269,22 @@ kbd {
 .momentos .vit { border-radius: 999px; opacity: .5; }
 .momentos .vit.sim { opacity: 1; border-color: var(--acento); color: var(--acento); }
 .momentos .vit:disabled { opacity: .2; }
+
+/* Os seis ecrãs, lado a lado, no instante do tiro. */
+.olhar { flex-basis: 100%; display: flex; gap: 6px; flex-wrap: wrap; align-items: flex-start; margin-top: 4px; }
+.olhar .nota { flex-basis: 100%; }
+.cartao {
+  display: grid; gap: 2px; padding: 4px; width: 118px; text-align: center;
+  background: var(--fundo); border: 1px solid var(--borda); border-radius: 8px;
+}
+.cartao img { width: 108px; height: 61px; object-fit: cover; border-radius: 4px; display: block; }
+.cartao .semImagem {
+  width: 108px; height: 61px; display: grid; place-items: center;
+  background: #000; border-radius: 4px; font-size: 10px; color: var(--fraco);
+}
+.cartao b { font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
+.cartao.morreu { border-color: var(--acento); }
+.cartao.morreu b { color: var(--acento); }
 label.pequeno { display: inline-flex; gap: 5px; align-items: center; margin: 0; font-size: 13px; }
 label.pequeno input {
   width: 54px; background: var(--fundo); color: var(--texto); border: 1px solid var(--borda);
@@ -281,6 +312,8 @@ label.pequeno input {
   font-variant-numeric: tabular-nums;
 }
 .fila a { color: var(--acento); }
+.fila li { display: flex; gap: 8px; align-items: baseline; }
+.fila .apagarUm { margin-left: auto; padding: 2px 9px; font-size: 12px; line-height: 1.2; }
 
 footer { margin-top: 32px; border-top: 1px solid var(--borda); padding-top: 12px; }
 

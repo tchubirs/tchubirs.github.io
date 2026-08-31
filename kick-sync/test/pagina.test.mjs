@@ -590,11 +590,11 @@ test('o som e de cada quadrado: pode estar nos dois, num, ou em nenhum',
     assert.equal((await comSom()).length, 1, 'por omissao so um fala');
     const calado = await p.locator('#palcoFoco .tile:not(.principal)').getAttribute('data-slug');
 
-    await p.locator(`#palcoFoco .tile[data-slug="${calado}"] .som`).click();
+    await p.locator(`#palcoFoco .tile[data-slug="${calado}"] .somBtn`).click();
     await p.waitForTimeout(200);
     assert.equal((await comSom()).length, 2, 'os dois podem falar ao mesmo tempo');
 
-    for (const t of await p.locator('#palcoFoco .tile .som').all()) await t.click();
+    for (const t of await p.locator('#palcoFoco .tile .somBtn').all()) await t.click();
     await p.waitForTimeout(200);
     assert.equal((await comSom()).length, 0, 'e os dois podem estar calados');
     assert.deepEqual(erros, []);
@@ -760,9 +760,13 @@ test('marcar kills gera a montagem, em ordem e com os ficheiros numerados',
     assert.match(await p.locator('#estadoMontagem').innerText(), /2 kills · 2 ficheiros/);
     assert.match(await p.locator('#estadoMontagem').innerText(), /2 sem ninguém marcado/);
 
-    // Marcar quem morreu em cada uma.
-    for (const li of await p.locator('#listaMomentos li[data-ms]').all()) {
-      await li.locator('.vit[data-canal="vitima1"]').click();
+    // Marcar quem morreu em cada uma. A lista e reconstruida a cada clique,
+    // por isso o elemento tem de ser procurado outra vez — guardar a
+    // referencia dava um segundo clique num no que ja nao existe.
+    const quantas = await p.locator('#listaMomentos li[data-ms]').count();
+    for (let i = 0; i < quantas; i++) {
+      await p.locator('#listaMomentos li[data-ms]').nth(i)
+        .locator('.vit[data-canal="vitima1"]').click();
     }
     assert.match(await p.locator('#estadoMontagem').innerText(), /2 kills · 4 ficheiros/);
 
@@ -870,6 +874,76 @@ test('da para limpar a lista e recomecar, e a memoria e mesmo devolvida',
     await p.waitForFunction(() => document.getElementById('canais').value === '',
       null, { timeout: 20000 });
     assert.equal(await p.locator('#listaMomentos li[data-ms]').count(), 0);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+// "Escolher quem morreu e para ser a funcao do app — nao faco ideia de quem
+// matei, por isso e que ia ver o ecra de todos." O botao existe, olha por
+// todos, e diz o que conseguiu ou nao conseguiu ver.
+test('o botao de quem morreu olha por todos e nunca finge ter visto',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'vitima1'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi\nvitima1');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 15000 });
+
+    await p.click('#mais1m');
+    await p.click('#marcarKill');
+    await p.waitForSelector('#listaMomentos .verMortes', { timeout: 10000 });
+    await p.click('#listaMomentos .verMortes');
+
+    // Um cartao por canal, sempre — mesmo quando o video nao se consegue ler.
+    await p.waitForFunction(() => document.querySelectorAll('#listaMomentos .cartao').length === 2,
+      null, { timeout: 60000 });
+    const texto = await p.locator('#listaMomentos .olhar .nota').first().innerText();
+
+    // Este Chromium nao traz H.264, por isso nao ha frames. O que se exige e
+    // que a pagina DIGA isso, em vez de apontar alguem sem ter visto nada.
+    if (/não consegui ver/.test(texto)) {
+      assert.equal(await p.locator('#listaMomentos .cartao.morreu').count(), 0,
+        'sem imagens nao se aponta ninguem');
+      assert.equal(await p.locator('#listaMomentos .semImagem').count(), 2);
+    } else {
+      assert.match(texto, /morreu|ninguém se destacou/);
+      assert.ok(await p.locator('#listaMomentos .cartao.morreu').count() <= 2);
+    }
+
+    // E clicar num cartao marca-o como morto, de uma maneira ou de outra.
+    await p.locator('#listaMomentos .cartao[data-canal="vitima1"]').click();
+    await p.waitForSelector('#listaMomentos .vit[data-canal="vitima1"].sim', { timeout: 10000 });
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+// O pause e global de proposito: o valor desta pagina e os angulos andarem
+// juntos, e parar so um quadrado desfazia isso sem dizer nada.
+test('o pause para tudo, e a barra de espaco faz o mesmo',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'outro'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi\noutro');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile.foco .pausa', { timeout: 15000 });
+
+    assert.equal(await p.locator('.tile.foco .pausa').innerText(), '⏸');
+    await p.click('.tile.foco .pausa');
+    await p.waitForFunction(() => document.querySelector('.tile.foco .pausa').textContent === '▶',
+      null, { timeout: 5000 });
+    const parados = await p.evaluate(() => [...document.querySelectorAll('.tile video')].every((v) => v.paused));
+    assert.equal(parados, true, 'parar e parar tudo');
+
+    // E andar no tempo durante a pausa nao pode fazer o video voltar a andar:
+    // o botao dizia parado e o quadrado andava.
+    await p.click('#mais10s');
+    assert.equal(await p.locator('.tile.foco .pausa').innerText(), '▶');
+
+    await p.keyboard.press(' ');
+    await p.waitForFunction(() => document.querySelector('.tile.foco .pausa').textContent === '⏸',
+      null, { timeout: 5000 });
     assert.deepEqual(erros, []);
     await p.close();
   });

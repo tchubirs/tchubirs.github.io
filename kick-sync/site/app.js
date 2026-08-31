@@ -14,6 +14,8 @@ import {
   novoMomento, acrescentar, remover, planoDaMontagem, ordenar, alternarVitima,
 } from './momentos.js';
 import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js';
+import { criarApanhador } from './frames.js';
+import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js';
 
 const $ = (id) => document.getElementById(id);
 const estado = {
@@ -27,6 +29,8 @@ const estado = {
   mudo: {},
   momentos: [],
   restaurar: null,
+  volume: {},
+  parado: false,
   players: new Map(),
   // Cada ficheiro gerado fica INTEIRO na memória enquanto o endereço existir.
   // Trinta e seis clipes de doze megas sao quase meio giga de RAM presa, e
@@ -71,6 +75,7 @@ function guardar() {
         focos: estado.focos,
         margens: estado.margens,
         mudo: estado.mudo,
+        volume: estado.volume,
         momentos: estado.momentos,
       }));
     } catch { /* janela privada, quota, o que for — nunca partir a pagina por isto */ }
@@ -469,6 +474,24 @@ const ehPrincipal = (slug) => estado.focos[0] === slug;
  * Por omissão só o principal fala — dois áudios de surpresa é barulho. Mas
  * assim que alguém carrega no altifalante, a escolha é dele e mantém-se.
  */
+/**
+ * Parar tudo, ou voltar a andar.
+ *
+ * É global de propósito: o valor desta página é os ângulos andarem juntos, e
+ * um pause que parasse só um quadrado desfazia isso sem dizer nada.
+ */
+function alternarPausa() {
+  estado.parado = !estado.parado;
+  for (const linha of estado.linhas) {
+    const v = tileDe(linha.slug)?.querySelector('video');
+    if (!v) continue;
+    if (estado.parado) v.pause?.();
+    else if (ehFoco(linha.slug)) v.play?.().catch(() => {});
+  }
+  for (const b of document.querySelectorAll('.tile .pausa')) b.textContent = estado.parado ? '▶' : '⏸';
+  $('agora').classList.toggle('parado', estado.parado);
+}
+
 function temSom(slug) {
   if (slug in estado.mudo) return !estado.mudo[slug];
   return ehPrincipal(slug);
@@ -546,14 +569,19 @@ function aplicarFoco() {
     // Muda no instante do clique e não no carregamento diferido: ficar com dois
     // a falar por cima até os pedidos de vídeo acabarem é insuportável.
     const cala = temSom(slug) === false;
+    const nivel = estado.volume[slug] ?? 1;
     const v = tile.querySelector('video');
     v.muted = cala;
     v.toggleAttribute('muted', cala);
+    v.volume = Math.min(1, Math.max(0, nivel));
 
     const som = tile.querySelector('.som');
     som.hidden = !foco;
-    som.textContent = cala ? '🔇' : '🔊';
-    som.title = cala ? 'ligar o som deste' : 'calar este';
+    const botao = som.querySelector('.somBtn');
+    botao.textContent = cala || nivel === 0 ? '🔇' : nivel < 0.5 ? '🔉' : '🔊';
+    botao.title = cala ? 'ligar o som deste' : 'calar este';
+    som.querySelector('.vol').value = String(Math.round(nivel * 100));
+    som.querySelector('.pausa').textContent = estado.parado ? '▶' : '⏸';
   }
   $('palcoFoco').classList.toggle('dois', estado.focos.length > 1);
   marcarFaixas();
@@ -571,9 +599,9 @@ function montarGrade() {
     tile.dataset.slug = linha.slug;
     tile.innerHTML = '<video muted playsinline preload="none"></video>'
       + `<span class="rotulo">${linha.slug}`
-      + `${linha.relogio !== 'exato' ? ' <b class="aviso" title="relógio incerto">≈</b>' : ''}</span>`
+      + `${linha.relogio !== 'exato' ? ' <b class="aviso" title="relógio incerto">≈</b>' : ''}`
+      + ' <b class="posicao"></b></span>'
       + '<span class="estadoTile"></span>'
-      + '<span class="posicao"></span>'
       // O relógio da Kick põe cada ângulo dentro de um segmento da verdade, o
       // que já está dentro do que o dono pediu. Isto é para o resto: um stream
       // com mais buffer, ou um olho que diz "este está meio segundo à frente".
@@ -582,7 +610,14 @@ function montarGrade() {
       + '<b class="nudge">0.0s</b>'
       + '<button data-passo="1" title="adiantar 1s (Shift: 10s)">+</button>'
       + '</span>'
-      + '<button class="som" hidden>🔇</button>'
+      // O som no canto de baixo à esquerda, com o cursor de volume ao lado —
+      // o mesmo sítio da Twitch, da Kick e do YouTube. Um controlo que toda a
+      // gente já sabe usar não se põe noutro sítio só porque dá jeito.
+      + '<span class="som" hidden>'
+      + '<button class="pausa" title="parar / continuar (barra de espaço)">⏸</button>'
+      + '<button class="somBtn">🔇</button>'
+      + '<input class="vol" type="range" min="0" max="100" value="100" aria-label="volume">'
+      + '</span>'
       + '<button class="par" title="ver dois ao mesmo tempo">⧉</button>';
 
     tile.onclick = () => {
@@ -600,7 +635,19 @@ function montarGrade() {
       };
     }
     tile.querySelector('.par').onclick = (e) => { e.stopPropagation(); alternarPar(linha.slug); };
-    tile.querySelector('.som').onclick = (e) => { e.stopPropagation(); alternarSom(linha.slug); };
+    tile.querySelector('.pausa').onclick = (e) => { e.stopPropagation(); alternarPausa(); };
+    tile.querySelector('.somBtn').onclick = (e) => { e.stopPropagation(); alternarSom(linha.slug); };
+    const vol = tile.querySelector('.vol');
+    vol.onclick = (e) => e.stopPropagation();
+    vol.oninput = (e) => {
+      e.stopPropagation();
+      estado.volume[linha.slug] = Number(vol.value) / 100;
+      // Mexer no volume LIGA o som: ninguém arrasta o cursor de um canal
+      // calado à espera de continuar a não ouvir nada.
+      if (Number(vol.value) > 0) estado.mudo[linha.slug] = false;
+      aplicarFoco();
+      guardar();
+    };
     $('grade').append(tile);
   }
   aplicarFoco();
@@ -764,7 +811,9 @@ function tocar(linha, r, video, { alta = false, correr = false, comSom = false }
   // `play()` devolve uma promessa que rejeita se o browser recusar tocar sem
   // um clique. Ignorada de propósito: o utilizador carrega no quadrado e
   // resolve-se sozinho — rebentar aqui deixava a página sem grelha nenhuma.
-  if (correr) video.play?.().catch(() => {});
+  // Um `irPara` durante uma pausa não pode fazer o vídeo voltar a andar: o
+  // botão diz parado e o quadrado andava, que é a pior das duas coisas.
+  if (correr && !estado.parado) video.play?.().catch(() => {});
   else video.pause?.();
 }
 
@@ -859,6 +908,141 @@ function marcarKill() {
   guardar();
 }
 
+/**
+ * Olhar pelos seis ao mesmo tempo e dizer quem morreu.
+ *
+ * "Não faço ideia de quem eu matei, por isso é que ia ver o ecrã de todos."
+ * Perguntar-lhe quem morreu era devolver-lhe o trabalho todo — e este era o
+ * trabalho.
+ *
+ * Vai buscar um frame antes do tiro e outro depois, a cada canal, e compara.
+ * Quem morreu foi para um ecrã cinzento e escuro; quem não morreu continua a
+ * ver o jogo. A sugestão fica marcada, e as imagens ficam à vista para ele
+ * corrigir num clique — porque uma sugestão que não se pode ver nem corrigir
+ * é pior do que não existir.
+ */
+async function verQuemMorreu(ms) {
+  const li = $('listaMomentos').querySelector(`li[data-ms="${ms}"]`);
+  if (!li) return;
+  const caixa = li.querySelector('.olhar');
+  const botao = li.querySelector('.verMortes');
+  botao.disabled = true;
+  caixa.hidden = false;
+  caixa.innerHTML = '<span class="nota">a olhar para todos os ângulos…</span>';
+
+  const apanhador = criarApanhador({ linhas: estado.linhas, nudges: estado.nudges });
+  const notas = {};
+  const imagens = {};
+  try {
+    for (const l of estado.linhas) {
+      caixa.innerHTML = `<span class="nota">a olhar — ${l.slug}…</span>`;
+      const antes = await apanhador.frame(l.slug, ms - 2000);
+      const depois = await apanhador.frame(l.slug, ms + 2500);
+      imagens[l.slug] = depois?.imagem || null;
+      notas[l.slug] = antes && depois ? notaDeMorte(antes.pixeis, depois.pixeis) : null;
+    }
+  } catch { /* um ângulo que não se lê é um cartão sem imagem, não um erro */ }
+  const apanhador2 = apanhador;
+
+  const { sugeridos, ordenados } = quemMorreu(notas);
+  // Marcar já os sugeridos: o objectivo é ele não ter de escolher nada quando
+  // a página acertou.
+  if (sugeridos.length) {
+    estado.momentos = estado.momentos.map((m) => {
+      if (m.ms !== ms) return m;
+      const juntos = [...new Set([...(m.vitimas || []), ...sugeridos])];
+      return { ...m, vitimas: juntos.filter((v) => v !== m.protagonista) };
+    });
+    guardar();
+  }
+
+  // O instante certo, agora que se sabe quem morreu.
+  //
+  // Ele marca a kill à volta do sítio, porque não sabe o timing — e não tem de
+  // saber. O ecrã do morto vira num instante só, e essa fronteira encontra-se
+  // por bissecção: seis ou sete imagens em vez de cem.
+  let afinado = null;
+  if (sugeridos.length) {
+    afinado = await afinarInstante(apanhador2, sugeridos[0], ms);
+    if (afinado != null && afinado !== ms) {
+      estado.momentos = estado.momentos.map((m) => (m.ms === ms ? { ...m, ms: afinado } : m));
+      guardar();
+    }
+  }
+  apanhador2.fechar();
+  const msFinal = afinado ?? ms;
+
+  // Redesenhar a lista PRIMEIRO, e só depois pôr os cartões.
+  //
+  // Ao contrário, os cartões apareciam e desapareciam no mesmo instante: o
+  // `pintarMomentos` no fim reconstruía a linha inteira e levava-os com ela.
+  pintarMomentos();
+  const li2 = $('listaMomentos').querySelector(`li[data-ms="${msFinal}"]`);
+  const caixa2 = li2?.querySelector('.olhar');
+  if (!caixa2) return;
+  caixa2.hidden = false;
+
+  const cartoes = estado.linhas.map((l) => {
+    const n = notas[l.slug];
+    const eSugerido = sugeridos.includes(l.slug);
+    const posicao = ordenados.findIndex((o) => o.canal === l.slug);
+    return `<button class="cartao ${eSugerido ? 'morreu' : ''}" data-canal="${l.slug}">`
+      + (imagens[l.slug] ? `<img src="${imagens[l.slug]}" alt="">` : '<span class="semImagem">sem imagem</span>')
+      + `<b>${l.slug}</b>`
+      + `<span class="nota">${n ? `${eSugerido ? 'morreu · ' : ''}${posicao + 1}º` : 'não filmava'}</span>`
+      + '</button>';
+  }).join('');
+
+  const semNada = !Object.values(notas).some(Boolean);
+  const dito = afinado != null && afinado !== ms
+    ? ` · acertei o instante para ${relogioCurto(afinado)}Z`
+    : '';
+  caixa2.innerHTML = (semNada
+    ? '<span class="nota mau">não consegui ver nenhum ângulo — este navegador pode não descodificar o vídeo da Kick</span>'
+    : `<span class="nota">${sugeridos.length
+      ? `parece que morreu: ${sugeridos.join(', ')} — corrige clicando`
+      : 'ninguém se destacou; escolhe tu clicando'}${dito}</span>`) + cartoes;
+
+  for (const b of caixa2.querySelectorAll('.cartao')) {
+    b.onclick = () => {
+      estado.momentos = estado.momentos.map((m) => (m.ms === msFinal ? alternarVitima(m, b.dataset.canal) : m));
+      pintarMomentos();
+      guardar();
+    };
+  }
+  const botao2 = li2.querySelector('.verMortes');
+  if (botao2) botao2.disabled = false;
+}
+
+/**
+ * A bissecção que encontra o instante em que o ecrã do morto vira.
+ *
+ * Meia dúzia de imagens, e não cem: o estado é monótono dentro da janela —
+ * antes está vivo, depois está morto — e é exactamente isso que uma bissecção
+ * precisa para funcionar.
+ */
+async function afinarInstante(apanhador, slug, ms, { janelaS = 6, precisaoMs = 250 } = {}) {
+  const inicio = ms - janelaS * 1000;
+  const fim = ms + janelaS * 1000;
+  const [vivo, morto] = await Promise.all([apanhador.frame(slug, inicio), apanhador.frame(slug, fim)]);
+  if (!vivo || !morto) return null;
+  const lim = limiar(medir(vivo.pixeis), medir(morto.pixeis));
+  // Sem diferença entre as pontas não há fronteira nenhuma a encontrar, e
+  // devolver um número aqui era inventar precisão.
+  if (!lim.utilizavel) return null;
+
+  let a = inicio;
+  let b = fim;
+  while (b - a > precisaoMs) {
+    const meio = Math.round((a + b) / 2);
+    const f = await apanhador.frame(slug, meio);
+    if (!f) return null;
+    if (pareceMorto(medir(f.pixeis), lim)) b = meio;
+    else a = meio;
+  }
+  return b;
+}
+
 function pintarMomentos() {
   const canais = estado.linhas.map((l) => l.slug);
   const lista = ordenar(estado.momentos);
@@ -876,14 +1060,17 @@ function pintarMomentos() {
       + `<b class="n">${String(i + 1).padStart(2, '0')}</b>`
       + `<span>${relogioCurto(m.ms)}Z</span>`
       + `<span class="quem">${m.protagonista || '—'}</span>`
-      + `<button class="ir">ir</button><button class="fora">apagar</button>`
+      + '<button class="ir">ir</button><button class="fora">apagar</button>'
+      + '<button class="verMortes">quem morreu?</button>'
       + `<span class="quantos">${n} clipe${n === 1 ? '' : 's'}</span>`
-      + `<span class="vitimas"><span class="nota">matou</span>${fichas}</span></li>`;
+      + `<span class="vitimas"><span class="nota">matou</span>${fichas}</span>`
+      + '<div class="olhar" hidden></div></li>';
   }).join('') || '<li class="nota">Sem kills marcadas. Vai ao momento e carrega em Marcar kill.</li>';
 
   for (const li of $('listaMomentos').querySelectorAll('li[data-ms]')) {
     const ms = Number(li.dataset.ms);
     li.querySelector('.ir').onclick = () => irPara(ms);
+    li.querySelector('.verMortes').onclick = () => verQuemMorreu(ms);
     li.querySelector('.fora').onclick = () => {
       estado.momentos = remover(estado.momentos, ms);
       pintarMomentos();
@@ -949,10 +1136,12 @@ async function baixarMontagem() {
         continue;
       }
       const nome = `${clipe.prefixo}_${nomeDoFicheiro({ canal: clipe.canal, quandoMs: clipe.deMs })}`;
-      const url = guardarFicheiro(new Blob([r.bytes], { type: r.tipo }));
-      item.innerHTML = `<a href="${url}" download="${nome}">${nome}</a> `
-        + `<span class="nota">${(r.bytes.length / 1048576).toFixed(1)} MB · `
-        + `${clipe.papel === 'protagonista' ? 'a tua POV' : 'quem morreu'}</span>`;
+      linhaDeFicheiro(item, {
+        nome,
+        url: guardarFicheiro(new Blob([r.bytes], { type: r.tipo })),
+        nota: `${(r.bytes.length / 1048576).toFixed(1)} MB · `
+          + `${clipe.papel === 'protagonista' ? 'a tua POV' : 'quem morreu'}`,
+      });
     } catch (e) {
       if (e.name === 'AbortError') break;
       item.innerHTML = `<b>${clipe.prefixo} ${clipe.canal}</b> <span class="nota mau">${e.message}</span>`;
@@ -1057,12 +1246,14 @@ async function baixarUm(slug) {
   $('fila').prepend(item);
 
   if (r.estado === 'pronto') {
-    const url = guardarFicheiro(new Blob([r.bytes], { type: r.tipo }));
-    const mb = (r.bytes.length / 1048576).toFixed(1);
     // A sobra não é um pedido de desculpas — é o número por onde aparar no editor.
-    item.innerHTML = `<a href="${url}" download="${r.nome}">${r.nome}</a> `
-      + `<span class="nota">${mb} MB · ${r.plano.qualidade.altura}p${r.plano.qualidade.fps} · `
-      + `começa ${r.plano.sobraInicioS.toFixed(1)}s antes da tua marca</span>`;
+    linhaDeFicheiro(item, {
+      nome: r.nome,
+      url: guardarFicheiro(new Blob([r.bytes], { type: r.tipo })),
+      nota: `${(r.bytes.length / 1048576).toFixed(1)} MB · `
+        + `${r.plano.qualidade.altura}p${r.plano.qualidade.fps} · `
+        + `começa ${r.plano.sobraInicioS.toFixed(1)}s antes da tua marca`,
+    });
   } else if (r.estado === 'incompleto') {
     nota.classList.add('mau');
     item.innerHTML = `<b>${slug}</b> <span class="nota mau">${r.obtidos}/${r.total} pedaços — `
@@ -1090,6 +1281,26 @@ function guardarFicheiro(blob) {
   estado.ficheiros.push({ url, bytes: blob.size });
   mostrarMemoria();
   return url;
+}
+
+/**
+ * Uma linha de ficheiro pronto, com o seu próprio botão de apagar.
+ *
+ * "Limpar a lista" deitava tudo fora ou nada. Numa montagem de trinta clipes
+ * há sempre dois ou três que não prestam, e apagar os bons com eles é pior do
+ * que não ter botão nenhum.
+ */
+function linhaDeFicheiro(item, { nome, url, nota }) {
+  item.innerHTML = `<a href="${url}" download="${nome}">${nome}</a> `
+    + `<span class="nota">${nota}</span>`
+    + '<button class="apagarUm" title="apagar este">✕</button>';
+  item.querySelector('.apagarUm').onclick = () => {
+    // Soltar ESTE endereço: é o que devolve a memória deste ficheiro.
+    URL.revokeObjectURL(url);
+    estado.ficheiros = estado.ficheiros.filter((f) => f.url !== url);
+    item.remove();
+    mostrarMemoria();
+  };
 }
 
 function mostrarMemoria() {
@@ -1152,6 +1363,7 @@ $('recomecar').onclick = recomecar;
 document.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
   const passo = e.shiftKey ? 10_000 : 1000;
+  if (e.key === ' ') { e.preventDefault(); alternarPausa(); }
   if (e.key === 'm' || e.key === 'M') $('marcarKill').click();
   if (e.key === 'i' || e.key === 'I') $('marcarIn').click();
   if (e.key === 'o' || e.key === 'O') $('marcarOut').click();
@@ -1175,6 +1387,7 @@ if (guardado) {
   estado.nudges = guardado.nudges;
   estado.margens = guardado.margens || {};
   estado.mudo = guardado.mudo || {};
+  estado.volume = guardado.volume || {};
   estado.restaurar = guardado;
   if (guardado.canais.length) carregar();
 }
@@ -1194,6 +1407,7 @@ window.addEventListener('beforeunload', () => {
       focos: estado.focos,
       margens: estado.margens,
       mudo: estado.mudo,
+      volume: estado.volume,
       momentos: estado.momentos,
     }));
   } catch { /* nunca partir a pagina por causa disto */ }
