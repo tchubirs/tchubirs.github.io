@@ -235,7 +235,17 @@ const FONTES = process.env.DETETIVE_NOMES_URL
       urls: (id) => [
         // O "View All" da página dele aponta para aqui. Ir direto poupa o
         // clique e não depende do botão estar escrito em inglês.
+        //
+        // E o `0` cheira a POSIÇÃO, não a nome de rota. A página parou nos 100
+        // exactos — número redondo de mais para ser o fim dos dados. Se o
+        // palpite estiver certo, `/history/100/` traz os seguintes, e ele
+        // chega aos 133 do steamhistory sem login nenhum. Se estiver errado,
+        // estas rotas devolvem o mesmo e a junção deduplica: custa segundos,
+        // não custa correcção.
         `https://steamhistory.net/history/0/${id}`,
+        `https://steamhistory.net/history/100/${id}`,
+        `https://steamhistory.net/history/200/${id}`,
+        `https://steamhistory.net/history/300/${id}`,
         `https://steamhistory.net/id/${id}`,
       ] },
   ];
@@ -614,10 +624,21 @@ function incompleto(r, totalDaApi = null) {
       }
       if (r?.nomes?.length) {
         const este = { fonte: fonte.nome, url, ...r };
-        // Fico com o melhor entre os endereços da mesma fonte. O `/id/` do
-        // steamhistory dá 10 nomes paginados e o `/history/0/` dá os 133 —
-        // parar no primeiro que responde ficaria com os 10.
-        if (!ok || este.nomes.length > ok.nomes.length) ok = este;
+        // JUNTA os endereços da mesma fonte, em vez de ficar com o maior.
+        //
+        // Ficar com o maior era certo enquanto os endereços eram vistas
+        // ALTERNATIVAS da mesma lista. Deixou de ser quando passaram a ser
+        // PEDAÇOS dela: `/history/0/` traz os primeiros 100 e `/history/100/`
+        // os seguintes. Escolher o maior aí seria deitar fora metade.
+        if (!ok) {
+          ok = este;
+        } else {
+          const vistos = new Set(ok.nomes.map((n) => `${String(n.nome).toLowerCase()}|${chaveDoDia(n)}`));
+          const novos = este.nomes.filter((n) => !vistos.has(`${String(n.nome).toLowerCase()}|${chaveDoDia(n)}`));
+          if (novos.length) {
+            ok = { ...ok, nomes: [...ok.nomes, ...novos], total: ok.total || este.total };
+          }
+        }
         if (!incompleto(ok, daApi?.total)) break;              // completo: não há melhor
         continue;                                 // incompleto: tenta o próximo
       }

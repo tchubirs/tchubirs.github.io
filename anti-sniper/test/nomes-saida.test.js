@@ -139,3 +139,43 @@ test('o caminho do --ver também corre inteiro', { skip: !temNavegador ? 'sem pl
   // E tem mesmo de ter passado pela pausa do login, senão não provou nada.
   assert.match(tudo, /escond|Cloudflare/i, 'não chegou ao caminho que interessa');
 });
+
+// `/history/0/` e `/history/100/` são PEDAÇOS da mesma lista, não vistas
+// alternativas dela. Ficar com a maior — que era o que o comando fazia —
+// deitava metade fora, e sem erro nenhum.
+test('junta os pedaços de uma fonte, em vez de ficar com o maior', { skip: !temNavegador && 'sem playwright' }, async () => {
+  const linhas = (nomes) => nomes.map((n, i) => `<tr><td>${n}</td><td>0${(i % 9) + 1}/05/2024, 01:00:00</td></tr>`).join('');
+  const pagina = (nomes) => `<!doctype html><html><body><h2>Historic Persona for X (999) (40)</h2>`
+    + `<table><tbody>${linhas(nomes)}</tbody></table></body></html>`;
+  const A = Array.from({ length: 20 }, (_, i) => `primeiro${i}`);
+  const B = Array.from({ length: 20 }, (_, i) => `segundo${i}`);
+
+  const servidor = http.createServer((req, res) => {
+    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+    res.end(pagina(req.url.includes('/b/') ? B : A));
+  });
+  await new Promise((ok) => servidor.listen(PORTA + 1, '127.0.0.1', ok));
+  const perfil = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'pedacos-')), 'p');
+  try {
+    const { tudo } = await new Promise((ok) => {
+      const f = spawn(process.execPath, [CLI, '76561198155380495'], {
+        env: {
+          ...process.env,
+          DETETIVE_NOMES_URL: `http://127.0.0.1:${PORTA + 1}/a/{id},http://127.0.0.1:${PORTA + 1}/b/{id}`,
+          DETETIVE_PERFIL_NOMES: perfil,
+          DETETIVE_SEM_ATUALIZAR: '1',
+        },
+      });
+      let t = '';
+      f.stdout.on('data', (d) => { t += d; });
+      f.stderr.on('data', (d) => { t += d; });
+      const corta = setTimeout(() => f.kill('SIGKILL'), 120000);
+      f.on('close', () => { clearTimeout(corta); ok({ tudo: t }); });
+    });
+    assert.match(tudo, /✓ 40 nomes/, `esperava 20+20 juntos:\n${tudo.slice(-500)}`);
+    assert.match(tudo, /primeiro0/);
+    assert.match(tudo, /segundo0/, 'o segundo pedaço tem de estar lá');
+  } finally {
+    await new Promise((ok) => servidor.close(ok));
+  }
+});
