@@ -38,13 +38,23 @@
 </section>
 
 <section id="palco" hidden>
+  <!-- Os ângulos em foco vivem aqui, e a grelha fica em baixo. Dois containers
+       em vez de um truque de CSS: com dois em foco lado a lado, "esticar a
+       célula até ao fim da linha" deixa de existir como conceito. -->
+  <div id="palcoFoco" class="palcoFoco"></div>
   <div id="grade" class="grade"></div>
 
   <div class="relogio">
     <input id="barra" type="range" min="0" max="1000" value="0" step="1" aria-label="linha do tempo">
     <div class="linha">
+      <button id="menos1m" title="voltar 1 minuto">&laquo; 1 min</button>
+      <button id="menos10s" title="voltar 10 segundos">&lsaquo; 10s</button>
       <output id="agora" class="tempo">—</output>
+      <button id="mais10s" title="avançar 10 segundos">10s &rsaquo;</button>
+      <button id="mais1m" title="avançar 1 minuto">1 min &raquo;</button>
       <output id="angulos" class="nota">—</output>
+    </div>
+    <div class="linha">
       <button id="marcarIn">Marca início <kbd>I</kbd></button>
       <button id="marcarOut">Marca fim <kbd>O</kbd></button>
       <output id="marca" class="nota"></output>
@@ -65,10 +75,15 @@
     os mesmos ataques — tiros, explosões, vozes — em todos.
   </p>
 
-  <div class="linha">
-    <button id="baixar" class="principal" disabled>Baixar todos os ângulos</button>
-    <span class="nota">qualidade máxima, sempre — o que está no ecrã é 160p só para aguentar a grelha</span>
-  </div>
+  <section id="corte" hidden>
+    <h2>Cortar</h2>
+    <p class="nota">
+      Um ficheiro de cada vez, e cada um com o seu tamanho. Os segundos a mais
+      são somados à tua marca — sempre em qualidade máxima.
+    </p>
+    <ul id="listaCorte" class="corte"></ul>
+  </section>
+
   <ul id="fila" class="fila"></ul>
 </section>
 

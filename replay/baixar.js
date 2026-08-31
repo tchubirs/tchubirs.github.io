@@ -200,16 +200,22 @@ export async function executarCorte(plano, {
  * tool gets itself blocked for everyone on the first night it is posted.
  */
 export async function cortarTodosOsAngulos({
-  linhas, deMs, ateMs, buscar = fetch, sinal, aoProgresso, nudges = {},
+  linhas, deMs, ateMs, buscar = fetch, sinal, aoProgresso, nudges = {}, margens = {},
 }) {
   const cache = new Map();
   const resultados = [];
   for (const [i, linha] of linhas.entries()) {
     if (sinal?.aborted) break;
     const nudge = nudges[linha.slug] || 0;
+    // Cada canal pode ter o seu proprio tamanho: o mesmo momento pede mais
+    // arranque num angulo e mais rabo noutro, e obrigar todos ao mesmo corte
+    // so faz o editor voltar aqui a pedir outra vez.
+    const m = margens[linha.slug] || {};
+    const antes = (m.antesS || 0) * 1000;
+    const depois = (m.depoisS || 0) * 1000;
     aoProgresso?.({ fase: 'planear', canal: linha.slug, feito: i, total: linhas.length });
     const plano = await planearCorte({
-      linha, deMs: deMs + nudge, ateMs: ateMs + nudge, buscar, cache,
+      linha, deMs: deMs + nudge - antes, ateMs: ateMs + nudge + depois, buscar, cache,
     });
     if (plano.estado !== 'ok') { resultados.push({ canal: linha.slug, ...plano }); continue; }
     const r = await executarCorte(plano, {

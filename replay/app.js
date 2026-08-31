@@ -17,7 +17,8 @@ const estado = {
   agoraMs: 0,
   marca: { de: null, ate: null },
   nudges: {},
-  foco: null,
+  focos: [],
+  margens: {},
   players: new Map(),
   cancelar: null,
   timerSecundarios: null,
@@ -163,7 +164,7 @@ async function abrirNoite(noite) {
   estado.agoraMs = estado.janela.haSobreposicao
     ? estado.janela.sobreposicaoInicio
     : estado.janela.inicio;
-  estado.foco = estado.linhas[0]?.slug ?? null;
+  estado.focos = estado.linhas[0] ? [estado.linhas[0].slug] : [];
   $('palco').hidden = false;
   $('resumoNoite').textContent = `${estado.linhas.length} canais · `
     + `${hhmmss(estado.janela.fim - estado.janela.inicio)} de noite · `
@@ -176,45 +177,69 @@ async function abrirNoite(noite) {
 
 // ── grelha ──────────────────────────────────────────────────────────────────
 
+const tileDe = (slug) => document.querySelector(`.tile[data-slug="${CSS.escape(slug)}"]`);
+const ehFoco = (slug) => estado.focos.includes(slug);
+
+/**
+ * Pôr ou tirar um ângulo do par.
+ *
+ * Dois é o limite, e é de propósito: o objectivo é decidir se vale a pena
+ * baixar, e para isso comparam-se dois. Três já é outra vez a grelha toda a
+ * descodificar, que é exactamente o que se estava a evitar.
+ */
+function alternarPar(slug) {
+  if (ehFoco(slug)) {
+    if (estado.focos.length > 1) estado.focos = estado.focos.filter((s) => s !== slug);
+  } else {
+    estado.focos = [...estado.focos, slug].slice(-2);
+  }
+  montarGrade();
+  irPara(estado.agoraMs);
+}
+
 function montarGrade() {
   $('grade').innerHTML = '';
+  $('palcoFoco').innerHTML = '';
   estado.players.forEach((p) => p.destroy?.());
   estado.players.clear();
 
   for (const linha of estado.linhas) {
+    const foco = ehFoco(linha.slug);
     const tile = document.createElement('div');
-    tile.className = 'tile';
+    tile.className = `tile${foco ? ' foco' : ''}`;
     tile.dataset.slug = linha.slug;
     tile.innerHTML = `<video muted playsinline preload="none"></video>`
       + `<span class="rotulo">${linha.slug}`
       + `${linha.relogio !== 'exato' ? ' <b class="aviso" title="relógio incerto">≈</b>' : ''}</span>`
       + `<span class="estadoTile"></span>`
       + `<span class="posicao"></span>`
-      // The relógio da Kick puts every angle within a segment of the truth, which
-      // is already inside what the owner asked for. This is for the rest: a
-      // stream ingested late, or an eye that says "este está meio segundo à
-      // frente". Per channel, because the error is per channel.
+      // O relógio da Kick põe cada ângulo dentro de um segmento da verdade, o
+      // que já está dentro do que o dono pediu. Isto é para o resto: um stream
+      // com mais buffer, ou um olho que diz "este está meio segundo à frente".
       + `<span class="ajuste">`
       + `<button data-passo="-1" title="atrasar 1s (Shift: 10s)">−</button>`
       + `<b class="nudge">0.0s</b>`
       + `<button data-passo="1" title="adiantar 1s (Shift: 10s)">+</button>`
-      + `</span>`;
-    tile.onclick = () => { estado.foco = linha.slug; montarGrade(); irPara(estado.agoraMs); };
+      + `</span>`
+      + `<button class="par" title="ver dois ao mesmo tempo">${foco ? '✓' : '⧉'}</button>`;
+
+    tile.onclick = () => { estado.focos = [linha.slug]; montarGrade(); irPara(estado.agoraMs); };
     for (const b of tile.querySelectorAll('.ajuste button')) {
       b.onclick = (e) => {
-        // Without this the click also lands on the tile and changes the focus,
-        // so nudging an angle would yank it to the big square. Two things at
-        // once, one of which the user did not ask for.
+        // Sem isto o clique também acerta no quadrado e muda o foco, ou seja
+        // duas coisas ao mesmo tempo e uma delas não foi pedida.
         e.stopPropagation();
         empurrar(linha.slug, Number(b.dataset.passo) * (e.shiftKey ? 10_000 : 1000));
       };
     }
-    $('grade').append(tile);
+    tile.querySelector('.par').onclick = (e) => { e.stopPropagation(); alternarPar(linha.slug); };
+
+    (foco ? $('palcoFoco') : $('grade')).append(tile);
   }
-  $('grade').classList.toggle('temFoco', Boolean(estado.foco));
-  const alvo = $('grade').querySelector(`[data-slug="${CSS.escape(estado.foco || '')}"]`);
-  alvo?.classList.add('foco');
-  alvo?.querySelector('video')?.removeAttribute('muted');
+  $('palcoFoco').classList.toggle('dois', estado.focos.length > 1);
+  // Só o primeiro tem som: dois áudios ao mesmo tempo não é comparar, é
+  // barulho, e não se percebe nenhum dos dois.
+  tileDe(estado.focos[0])?.querySelector('video')?.removeAttribute('muted');
 }
 
 /** Ajuste manual de um ângulo — o resto da grelha não se mexe. */
@@ -222,6 +247,9 @@ function empurrar(slug, ms) {
   const { nudges } = comNudge({ nudges: estado.nudges }, slug, (estado.nudges[slug] || 0) + ms);
   estado.nudges = nudges;
   irPara(estado.agoraMs);
+  // O tamanho do corte é por canal, e mexer no relógio de um canal muda quem
+  // aparece na janela marcada. Não repintar deixava a lista a mentir.
+  pintarCorte();
 }
 
 /**
@@ -246,7 +274,7 @@ function irPara(quandoMs) {
 
   const secundarios = [];
   for (const linha of estado.linhas) {
-    const tile = $('grade').querySelector(`[data-slug="${CSS.escape(linha.slug)}"]`);
+    const tile = tileDe(linha.slug);
     if (!tile) continue;
     const video = tile.querySelector('video');
     const nota = tile.querySelector('.estadoTile');
@@ -271,7 +299,7 @@ function irPara(quandoMs) {
     // o atraso, e aparece já — antes de qualquer imagem carregar.
     tile.querySelector('.posicao').textContent = mmss(r.tempoS);
 
-    if (linha.slug === estado.foco) tocar(linha, r, video, { correr: true });
+    if (ehFoco(linha.slug)) tocar(linha, r, video, { correr: true, comSom: linha.slug === estado.focos[0] });
     else secundarios.push([linha, r, video]);
   }
 
@@ -292,7 +320,7 @@ function pararTile(slug, video) {
   video.removeAttribute('src');
 }
 
-function tocar(linha, r, video, { correr } = {}) {
+function tocar(linha, r, video, { correr, comSom = false } = {}) {
   const peca = linha.pecasCompletas.find((p) => p.vod.id === r.peca.vod.id) || r.peca;
   // Focus gets the best rung the ladder has; everything else stays at 160p.
   const alvo = correr ? peca.escada[0] : peca.barato;
@@ -319,7 +347,7 @@ function tocar(linha, r, video, { correr } = {}) {
     video.currentTime = r.tempoS;
     estado.players.set(linha.slug, { url: alvo.url, destroy: () => { video.removeAttribute('src'); } });
   }
-  video.muted = !correr;
+  video.muted = !comSom;
   // `play()` devolve uma promessa que rejeita se o browser recusar tocar sem
   // um clique. Ignorada de propósito: o utilizador carrega no quadrado e
   // resolve-se sozinho — rebentar aqui deixava a página sem grelha nenhuma.
@@ -390,65 +418,112 @@ async function alinhar() {
   botao.disabled = false;
 }
 
-// ── marcar e baixar ─────────────────────────────────────────────────────────
+// ── marcar e cortar ─────────────────────────────────────────────────────────
+
+const mmssCurto = (s) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
 
 function pintarMarca() {
   const { de, ate } = estado.marca;
   $('marca').textContent = de == null ? ''
     : ate == null ? `início ${relogioCurto(de)}Z — falta o fim`
       : `${relogioCurto(de)}Z → ${relogioCurto(ate)}Z (${hhmmss(ate - de)})`;
-  $('baixar').disabled = !(de != null && ate != null && ate > de);
+  pintarCorte();
 }
 
-async function baixarTudo() {
+/**
+ * A lista de corte: um ficheiro de cada vez, e cada um com o seu tamanho.
+ *
+ * Baixar tudo de uma vez era a versão anterior e estava errada — na prática
+ * saem dois ângulos, não trinta, e o mesmo momento pede mais arranque num e
+ * mais rabo noutro. Um botão por canal, e dois campos de segundos.
+ */
+function pintarCorte() {
   const { de, ate } = estado.marca;
+  const valida = de != null && ate != null && ate > de;
+  $('corte').hidden = !valida;
+  if (!valida) return;
+
+  const presentes = estado.linhas.filter((l) => {
+    const nudge = estado.nudges[l.slug] || 0;
+    return onde(l, de, { nudgeMs: nudge }).estado === 'toca'
+      || onde(l, ate, { nudgeMs: nudge }).estado === 'toca';
+  });
+
+  $('listaCorte').innerHTML = presentes.map((l) => {
+    const m = estado.margens[l.slug] || {};
+    return `<li data-slug="${l.slug}">`
+      + `<b>${l.slug}</b>`
+      + `<label>antes <input class="antes" type="number" value="${m.antesS || 0}" min="0" max="120" step="1">s</label>`
+      + `<label>depois <input class="depois" type="number" value="${m.depoisS || 0}" min="0" max="120" step="1">s</label>`
+      + `<span class="dur"></span>`
+      + `<button class="baixarUm">Baixar</button>`
+      + `<span class="estadoCorte nota"></span>`
+      + `</li>`;
+  }).join('')
+    || '<li class="nota">nenhum ângulo estava a filmar nessa janela.</li>';
+
+  for (const li of $('listaCorte').querySelectorAll('li[data-slug]')) {
+    const slug = li.dataset.slug;
+    const ler = () => {
+      const antesS = Math.max(0, Number(li.querySelector('.antes').value) || 0);
+      const depoisS = Math.max(0, Number(li.querySelector('.depois').value) || 0);
+      estado.margens[slug] = { antesS, depoisS };
+      li.querySelector('.dur').textContent = mmssCurto((ate - de) / 1000 + antesS + depoisS);
+    };
+    li.querySelector('.antes').oninput = ler;
+    li.querySelector('.depois').oninput = ler;
+    li.querySelector('.baixarUm').onclick = () => baixarUm(slug);
+    ler();
+  }
+}
+
+async function baixarUm(slug) {
+  const linha = estado.linhas.find((l) => l.slug === slug);
+  const li = $('listaCorte').querySelector(`li[data-slug="${CSS.escape(slug)}"]`);
+  if (!linha || !li) return;
+  const botao = li.querySelector('.baixarUm');
+  const nota = li.querySelector('.estadoCorte');
   const controlo = new AbortController();
   estado.cancelar = () => controlo.abort();
-  $('baixar').disabled = true;
-  $('fila').innerHTML = '';
+  botao.disabled = true;
+  nota.classList.remove('mau');
 
-  const linha = (slug) => {
-    let li = $('fila').querySelector(`[data-slug="${CSS.escape(slug)}"]`);
-    if (!li) {
-      li = document.createElement('li');
-      li.dataset.slug = slug;
-      $('fila').append(li);
-    }
-    return li;
-  };
-
-  const r = await cortarTodosOsAngulos({
-    linhas: estado.linhas,
-    deMs: de,
-    ateMs: ate,
+  const [r] = await cortarTodosOsAngulos({
+    linhas: [linha],
+    deMs: estado.marca.de,
+    ateMs: estado.marca.ate,
     sinal: controlo.signal,
     nudges: estado.nudges,
+    margens: estado.margens,
     aoProgresso: (p) => {
-      linha(p.canal).textContent = p.fase === 'planear'
-        ? `${p.canal}: a preparar…`
-        : `${p.canal}: ${p.prontos}/${p.total} pedaços`;
+      nota.textContent = p.fase === 'planear' ? 'a preparar…' : `${p.prontos}/${p.total} pedaços`;
     },
   });
 
-  for (const x of r) {
-    const li = linha(x.canal);
-    if (x.estado === 'pronto') {
-      const url = URL.createObjectURL(new Blob([x.bytes], { type: x.tipo }));
-      const mb = (x.bytes.length / 1048576).toFixed(1);
-      // The slack is not an apology — it is the number to trim by in the editor.
-      li.innerHTML = `<a href="${url}" download="${x.nome}">${x.nome}</a> `
-        + `<span class="nota">${mb} MB · ${x.plano.qualidade.altura}p${x.plano.qualidade.fps} · `
-        + `começa ${x.plano.sobraInicioS.toFixed(1)}s antes da tua marca</span>`;
-    } else if (x.estado === 'incompleto') {
-      li.innerHTML = `<b>${x.canal}</b> <span class="nota mau">${x.obtidos}/${x.total} pedaços — `
-        + `não gero o ficheiro com um buraco no meio</span>`;
-    } else {
-      const porque = { buraco: 'estava fora do ar', 'fora-da-noite': 'não estava a filmar', 'sem-segmentos': 'sem vídeo nessa janela' };
-      li.innerHTML = `<b>${x.canal}</b> <span class="nota">${porque[x.estado] || x.estado}</span>`;
-    }
-  }
-  $('baixar').disabled = false;
+  botao.disabled = false;
   estado.cancelar = null;
+  nota.textContent = '';
+  const item = document.createElement('li');
+  $('fila').prepend(item);
+
+  if (r.estado === 'pronto') {
+    const url = URL.createObjectURL(new Blob([r.bytes], { type: r.tipo }));
+    const mb = (r.bytes.length / 1048576).toFixed(1);
+    // A sobra não é um pedido de desculpas — é o número por onde aparar no editor.
+    item.innerHTML = `<a href="${url}" download="${r.nome}">${r.nome}</a> `
+      + `<span class="nota">${mb} MB · ${r.plano.qualidade.altura}p${r.plano.qualidade.fps} · `
+      + `começa ${r.plano.sobraInicioS.toFixed(1)}s antes da tua marca</span>`;
+  } else if (r.estado === 'incompleto') {
+    nota.classList.add('mau');
+    item.innerHTML = `<b>${slug}</b> <span class="nota mau">${r.obtidos}/${r.total} pedaços — `
+      + `não gero o ficheiro com um buraco no meio</span>`;
+  } else {
+    const porque = {
+      buraco: 'estava fora do ar', 'fora-da-noite': 'não estava a filmar',
+      'sem-segmentos': 'sem vídeo nessa janela',
+    };
+    item.innerHTML = `<b>${slug}</b> <span class="nota">${porque[r.estado] || r.estado}</span>`;
+  }
 }
 
 // ── ligações ────────────────────────────────────────────────────────────────
@@ -459,9 +534,15 @@ $('barra').oninput = () => {
   if (inicio == null) return;
   irPara(Math.round(inicio + ((fim - inicio) * Number($('barra').value)) / 1000));
 };
+// Os saltos que faltavam. A barra serve para procurar a noite; isto serve para
+// caçar o momento, que é uma coisa diferente e a barra faz mal.
+const saltar = (ms) => () => irPara(estado.agoraMs + ms);
+$('menos1m').onclick = saltar(-60_000);
+$('menos10s').onclick = saltar(-10_000);
+$('mais10s').onclick = saltar(10_000);
+$('mais1m').onclick = saltar(60_000);
 $('marcarIn').onclick = () => { estado.marca = { de: estado.agoraMs, ate: null }; pintarMarca(); };
 $('marcarOut').onclick = () => { estado.marca.ate = estado.agoraMs; pintarMarca(); };
-$('baixar').onclick = baixarTudo;
 $('alinhar').onclick = alinhar;
 
 document.addEventListener('keydown', (e) => {
@@ -472,8 +553,8 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'j' || e.key === 'ArrowLeft') irPara(estado.agoraMs - passo);
   if (e.key === 'l' || e.key === 'ArrowRight') irPara(estado.agoraMs + passo);
   // O ângulo em foco anda sozinho: alinhar à vista, sem tirar a mão do teclado.
-  if (e.key === ',' && estado.foco) empurrar(estado.foco, -passo);
-  if (e.key === '.' && estado.foco) empurrar(estado.foco, passo);
+  if (e.key === ',' && estado.focos[0]) empurrar(estado.focos[0], -passo);
+  if (e.key === '.' && estado.focos[0]) empurrar(estado.focos[0], passo);
 });
 
 // A session survives a refresh and travels in a link.
