@@ -5,17 +5,17 @@
 // bottom rung of Kick's ladder and is what makes thirty tiles a home-connection
 // problem rather than a server problem.
 
-import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=b017582492';
-import { linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink } from './relogio.js?v=b017582492';
-import { cortarTodosOsAngulos } from './baixar.js?v=b017582492';
-import { alinharPeloSom, custoEstimadoMB } from './alinhar.js?v=b017582492';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=b017582492';
+import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=aa4d5658a2';
+import { linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink } from './relogio.js?v=aa4d5658a2';
+import { cortarTodosOsAngulos } from './baixar.js?v=aa4d5658a2';
+import { alinharPeloSom, custoEstimadoMB } from './alinhar.js?v=aa4d5658a2';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=aa4d5658a2';
 import {
   novoMomento, acrescentar, remover, planoDaMontagem, ordenar, alternarVitima,
-} from './momentos.js?v=b017582492';
-import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=b017582492';
-import { criarApanhador } from './frames.js?v=b017582492';
-import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=b017582492';
+} from './momentos.js?v=aa4d5658a2';
+import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=aa4d5658a2';
+import { criarApanhador } from './frames.js?v=aa4d5658a2';
+import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=aa4d5658a2';
 
 const $ = (id) => document.getElementById(id);
 const estado = {
@@ -256,8 +256,19 @@ function pintarCanais(canais) {
     const mau = c.estado !== 'ok';
     return `<li class="${mau ? 'mau' : ''}" data-slug="${c.slug}" data-estado="${c.estado}"><b>${c.slug}</b>`
       + `<span class="nota">${mau ? (rotulo[c.estado] || c.estado) : `${c.vods.length} VOD(s)`}</span>`
-      + `<span class="parecidos"></span></li>`;
+      + '<span class="parecidos"></span>'
+      // Tirar um canal daqui. Um nome mal escrito ficava na lista para sempre,
+      // e a unica saida era ir a caixa de texto apaga-lo a mao.
+      + '<button class="tirar" title="tirar este canal">✕</button></li>';
   }).join('');
+  for (const li of $('listaCanais').querySelectorAll('li[data-slug]')) {
+    li.querySelector('.tirar').onclick = () => {
+      $('canais').value = listaDeCanais().filter((n) => n !== li.dataset.slug).join('\n');
+      guardar();
+      if (listaDeCanais().length) carregar();
+      else { li.remove(); $('estadoCarga').textContent = 'sem canais.'; }
+    };
+  }
   sugerirParecidos(canais.filter((c) => c.estado !== 'ok'));
 }
 
@@ -482,11 +493,28 @@ const ehPrincipal = (slug) => estado.focos[0] === slug;
  */
 function alternarPausa() {
   estado.parado = !estado.parado;
+  // Não chega mandar parar uma vez.
+  //
+  // Um `play()` que já estava a caminho — o hls.js a acabar de encher o
+  // buffer, uma promessa pendente de um `tocar` anterior — chegava DEPOIS do
+  // pause e voltava a pôr tudo a andar. O botão dizia parado e o vídeo
+  // continuava, que foi exactamente o que aconteceu.
+  //
+  // Por isso a pausa fica de guarda: qualquer `play` enquanto estiver parada é
+  // desfeito no instante em que acontece.
   for (const linha of estado.linhas) {
     const v = tileDe(linha.slug)?.querySelector('video');
     if (!v) continue;
-    if (estado.parado) v.pause?.();
-    else if (ehFoco(linha.slug)) v.play?.().catch(() => {});
+    if (estado.parado) {
+      v.pause?.();
+      if (!v.__guarda) {
+        v.__guarda = () => { if (estado.parado) v.pause?.(); };
+        v.addEventListener('play', v.__guarda);
+        v.addEventListener('playing', v.__guarda);
+      }
+    } else if (ehFoco(linha.slug)) {
+      v.play?.().catch(() => {});
+    }
   }
   for (const b of document.querySelectorAll('.tile .pausa')) b.textContent = estado.parado ? '▶' : '⏸';
   $('agora').classList.toggle('parado', estado.parado);
@@ -815,6 +843,13 @@ function tocar(linha, r, video, { alta = false, correr = false, comSom = false }
   // botão diz parado e o quadrado andava, que é a pior das duas coisas.
   if (correr && !estado.parado) video.play?.().catch(() => {});
   else video.pause?.();
+  // Um leitor criado durante a pausa nasce com a mesma guarda: sem isto,
+  // trocar de ângulo com a página parada punha o novo a andar.
+  if (estado.parado && !video.__guarda) {
+    video.__guarda = () => { if (estado.parado) video.pause?.(); };
+    video.addEventListener('play', video.__guarda);
+    video.addEventListener('playing', video.__guarda);
+  }
 }
 
 // ── alinhar pelo som ────────────────────────────────────────────────────────
