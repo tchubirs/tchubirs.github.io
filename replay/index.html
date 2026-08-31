@@ -112,6 +112,23 @@
       <label class="pequeno"><span data-t="montagem.quemMorreu">quem morreu</span> <input id="vitAntes" type="number" value="1" min="0" max="60" step="1">s antes</label>
       <label class="pequeno"><input id="vitDepois" type="number" value="2" min="0" max="60" step="1">s depois</label>
     </div>
+    <!-- A barra de selecao. Uma noite varrida da dezenas de candidatos e a
+         maioria nao e kill; apagar um a um era o trabalho manual que a busca
+         automatica existe para tirar. -->
+    <div class="linha barraSelecao">
+      <label class="pequeno"><span data-t="sel.mostrar">mostrar</span>
+        <select id="filtroMomentos" data-t-aria="sel.mostrar">
+          <option value="todos" data-t="sel.todos">todos</option>
+          <option value="comMorte" data-t="sel.comMorte">só com morte confirmada</option>
+          <option value="semMorte" data-t="sel.semMorte">só os que faltam decidir</option>
+        </select>
+      </label>
+      <button id="selecionarTudo" data-t="sel.tudo">selecionar tudo</button>
+      <button id="selecionarNada" data-t="sel.nada">limpar seleção</button>
+      <button id="apagarSelecionados" data-t="sel.apagar" disabled>apagar selecionados</button>
+      <button id="anularApagar" data-t="sel.anular" hidden>anular</button>
+      <span id="estadoSelecao" class="nota"></span>
+    </div>
     <ul id="listaMomentos" class="momentos"></ul>
     <div class="linha">
       <button id="baixarMontagem" data-t="montagem.baixar" disabled>Baixar a montagem</button>
@@ -168,10 +185,10 @@
   <!-- A versao, a serio e visivel. O GitHub Pages serve com max-age=600 e um
        telemovel guarda o app.js antigo; sem isto, "ja corrigi" e "continua
        igual" sao as duas verdadeiras ao mesmo tempo e ninguem sai dali. -->
-  <p class="nota"><span data-t="app.rodape">Tudo acontece no teu navegador. Os VODs são de quem os gravou.</span> · <span id="versao">4b96fb4575</span></p>
+  <p class="nota"><span data-t="app.rodape">Tudo acontece no teu navegador. Os VODs são de quem os gravou.</span> · <span id="versao">6bed047769</span></p>
 </footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.17/hls.min.js"></script>
-<script type="module" src="app.js?v=4b96fb4575"></script>
+<script type="module" src="app.js?v=6bed047769"></script>
 </body>
 </html>

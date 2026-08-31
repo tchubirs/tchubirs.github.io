@@ -5,21 +5,22 @@
 // bottom rung of Kick's ladder and is what makes thirty tiles a home-connection
 // problem rather than a server problem.
 
-import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=4b96fb4575';
-import { linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink } from './relogio.js?v=4b96fb4575';
-import { cortarTodosOsAngulos } from './baixar.js?v=4b96fb4575';
-import { alinharPeloSom, custoEstimadoMB } from './alinhar.js?v=4b96fb4575';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=4b96fb4575';
+import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=6bed047769';
+import { linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink } from './relogio.js?v=6bed047769';
+import { cortarTodosOsAngulos } from './baixar.js?v=6bed047769';
+import { alinharPeloSom, custoEstimadoMB } from './alinhar.js?v=6bed047769';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=6bed047769';
 import {
-  novoMomento, acrescentar, remover, planoDaMontagem, ordenar, alternarVitima,
-} from './momentos.js?v=4b96fb4575';
-import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=4b96fb4575';
-import { criarApanhador } from './frames.js?v=4b96fb4575';
-import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=4b96fb4575';
-import { somDoCanal } from './alinhar.js?v=4b96fb4575';
-import { MAXIMO_S, mover, janelaInicial, nomeDoClipe } from './clipe.js?v=4b96fb4575';
-import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=4b96fb4575';
-import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=4b96fb4575';
+  novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
+  alternarVitima, filtrar, temMorte,
+} from './momentos.js?v=6bed047769';
+import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=6bed047769';
+import { criarApanhador } from './frames.js?v=6bed047769';
+import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=6bed047769';
+import { somDoCanal } from './alinhar.js?v=6bed047769';
+import { MAXIMO_S, mover, janelaInicial, nomeDoClipe } from './clipe.js?v=6bed047769';
+import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=6bed047769';
+import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=6bed047769';
 
 const $ = (id) => document.getElementById(id);
 const estado = {
@@ -32,6 +33,16 @@ const estado = {
   margens: {},
   mudo: {},
   momentos: [],
+  // A seleccao e o filtro sao a maneira de ele lidar com uma noite varrida:
+  // dezenas de candidatos de que a maioria nao e kill. A seleccao vive so
+  // enquanto a pagina estiver aberta — guardar caixas marcadas de ontem seria
+  // uma surpresa desagradavel. O filtro guarda-se, que e uma preferencia.
+  selecao: new Set(),
+  filtro: 'todos',
+  // O que se apagou da ultima vez, para o "anular". Setenta e oito linhas
+  // apagadas por engano sao uma noite de trabalho perdida, e um `confirm()`
+  // e uma caixa que ele carrega em OK sem ler.
+  apagados: null,
   restaurar: null,
   volume: {},
   parado: false,
@@ -1253,7 +1264,17 @@ async function afinarInstante(apanhador, slug, ms, { janelaS = 6, precisaoMs = 2
 function pintarMomentos() {
   const canais = estado.linhas.map((l) => l.slug);
   const lista = ordenar(estado.momentos);
-  $('listaMomentos').innerHTML = lista.map((m, i) => {
+  const visiveis = filtrar(lista, estado.filtro);
+  // A seleccao nao pode guardar fantasmas: um momento apagado cujo ms ficasse
+  // marcado voltava a contar no "3 seleccionados" para sempre.
+  const vivos = new Set(lista.map((m) => m.ms));
+  for (const ms of estado.selecao) if (!vivos.has(ms)) estado.selecao.delete(ms);
+
+  $('listaMomentos').innerHTML = visiveis.map((m) => {
+    // O numero e a posicao na montagem INTEIRA e nao na lista filtrada: e este
+    // o numero que vai no nome do ficheiro, e duas contagens diferentes para a
+    // mesma kill seriam um erro a espera de acontecer na mesa de montagem.
+    const i = lista.indexOf(m);
     const n = planoDaMontagem([m], canais, { filmava }).length;
     // As fichas de quem morreu. Sem isto a página cortava todos os ângulos em
     // cada kill, e saíam quatro clipes de lixo por cada um bom.
@@ -1263,7 +1284,10 @@ function pintarMomentos() {
       return `<button class="vit ${morreu ? 'sim' : ''}" data-canal="${c}"`
         + `${havia ? '' : ` disabled title="${t('montagem.naoFilmava')}"`}>${c}</button>`;
     }).join('');
-    return `<li data-ms="${m.ms}" class="${Math.abs(m.ms - estado.agoraMs) < 1500 ? 'aqui' : ''}">`
+    return `<li data-ms="${m.ms}" class="${Math.abs(m.ms - estado.agoraMs) < 1500 ? 'aqui' : ''}`
+      + `${temMorte(m) ? ' confirmada' : ''}">`
+      + `<input type="checkbox" class="pega" ${estado.selecao.has(m.ms) ? 'checked' : ''}`
+      + ` aria-label="${relogioCurto(m.ms)}">`
       + `<b class="n">${String(i + 1).padStart(2, '0')}</b>`
       + `<span>${relogioCurto(m.ms)}Z</span>`
       + `<span class="quem">${m.protagonista || '—'}</span>`
@@ -1284,6 +1308,10 @@ function pintarMomentos() {
       pintarMomentos();
       guardar();
     };
+    li.querySelector('.pega').onchange = (e) => {
+      if (e.target.checked) estado.selecao.add(ms); else estado.selecao.delete(ms);
+      pintarSelecao();
+    };
     for (const b of li.querySelectorAll('.vit')) {
       b.onclick = () => {
         estado.momentos = estado.momentos.map((m) => (m.ms === ms ? alternarVitima(m, b.dataset.canal) : m));
@@ -1293,14 +1321,55 @@ function pintarMomentos() {
     }
   }
   pintarRegua();
+  pintarSelecao();
   const total = planoDaMontagem(lista, canais, { filmava }).length;
   $('baixarMontagem').disabled = !total;
-  const semVitima = lista.filter((m) => !(m.vitimas || []).length).length;
+  const semVitima = lista.filter((m) => !temMorte(m)).length;
+  const escondidos = lista.length - visiveis.length;
   $('estadoMontagem').textContent = total
     ? t('montagem.resumo', {
       kills: tn(lista.length, 'montagem.umaKill', 'montagem.kills'), ficheiros: total,
     }) + (semVitima ? t('montagem.semVitima', { n: semVitima }) : '')
+      // O filtro nunca pode esconder trabalho em silencio: a montagem que se
+      // descarrega e a lista INTEIRA, e nao a que esta a ver.
+      + (escondidos ? t('sel.escondidos', { n: escondidos }) : '')
     : '';
+}
+
+/** Os botoes da barra dizem sempre o que fazem sobre quantos. */
+function pintarSelecao() {
+  const n = estado.selecao.size;
+  $('apagarSelecionados').disabled = !n;
+  $('estadoSelecao').textContent = n ? t('sel.quantos', { n }) : '';
+}
+
+/**
+ * Apagar aos molhos, com volta atras.
+ *
+ * Um `confirm()` aqui nao protegia nada — e uma caixa em que ele carrega em OK
+ * sem ler. O que protege e conseguir desfazer depois de ver o estrago.
+ */
+function apagarSelecionados() {
+  if (!estado.selecao.size) return;
+  const fora = [...estado.selecao];
+  estado.apagados = estado.momentos.filter((m) => estado.selecao.has(m.ms));
+  estado.momentos = removerVarios(estado.momentos, fora);
+  estado.selecao.clear();
+  $('anularApagar').hidden = false;
+  pintarMomentos();
+  guardar();
+  $('estadoSelecao').textContent = t('sel.apagados', { n: fora.length });
+}
+
+function anularApagar() {
+  if (!estado.apagados?.length) return;
+  // `acrescentar` um a um, e nao uma concatenacao: se ele entretanto marcou
+  // uma kill no mesmo sitio, a que ja la esta ganha.
+  for (const m of estado.apagados) estado.momentos = acrescentar(estado.momentos, m);
+  estado.apagados = null;
+  $('anularApagar').hidden = true;
+  pintarMomentos();
+  guardar();
 }
 
 /**
@@ -1726,6 +1795,21 @@ $('marcarIn').onclick = () => { estado.marca = { de: estado.agoraMs, ate: null }
 $('marcarOut').onclick = () => { estado.marca.ate = estado.agoraMs; pintarMarca(); guardar(); };
 $('alinhar').onclick = alinhar;
 $('marcarKill').onclick = marcarKill;
+$('apagarSelecionados').onclick = apagarSelecionados;
+$('anularApagar').onclick = anularApagar;
+$('selecionarNada').onclick = () => { estado.selecao.clear(); pintarMomentos(); };
+// "Seleccionar tudo" e tudo o que ESTA A VER. Com o filtro em "faltam decidir"
+// isto mais o apagar e o gesto que limpa uma noite varrida de uma vez, e se
+// seleccionasse tambem o que esta escondido apagava-lhe o trabalho bom.
+$('selecionarTudo').onclick = () => {
+  for (const m of filtrar(estado.momentos, estado.filtro)) estado.selecao.add(m.ms);
+  pintarMomentos();
+};
+$('filtroMomentos').onchange = (e) => {
+  estado.filtro = e.target.value;
+  try { localStorage.setItem('replay.filtro', estado.filtro); } catch { /* janela privada */ }
+  pintarMomentos();
+};
 $('procurarKills').onclick = procurarKills;
 $('baixarMontagem').onclick = baixarMontagem;
 $('limparFila').onclick = limparFila;
@@ -1807,6 +1891,11 @@ $('idioma').onchange = () => trocarIdioma($('idioma').value);
 
 let guardadoIdioma = null;
 try { guardadoIdioma = localStorage.getItem('replay.idioma'); } catch { /* janela privada */ }
+
+// O filtro fica fora do link da sessao de proposito. O link e para partilhar, e
+// mandar a alguem uma montagem com metade escondida seria mandar-lhe um engano.
+try { estado.filtro = localStorage.getItem('replay.filtro') || 'todos'; } catch { /* janela privada */ }
+$('filtroMomentos').value = estado.filtro;
 definirIdioma(guardadoIdioma || idiomaDoBrowser());
 $('idioma').value = idiomaActual();
 aplicarIdioma();
