@@ -17,7 +17,8 @@
     "gravar": "node bin/gravar.js --loop",
     "visitas": "node bin/gravar.js --ver",
     "presenca": "node bin/presenca.js",
-    "nomes": "node bin/nomes.js"
+    "nomes": "node bin/nomes.js",
+    "servir": "node bin/servir.js"
   },
   "dependencies": {
     "playwright": "^1.47.0"

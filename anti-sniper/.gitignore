@@ -22,3 +22,9 @@ dados/presenca.jsonl
 # ano e SteamID. Isso não entra num repositório público — o produto ajuda a
 # investigar uma live, não a publicar um dossiê de quem passou por ela.
 dados/nomes-*.json
+
+# O segredo que tranca o endereço público do `npm run servir`, e o binário do
+# túnel. Nenhum dos dois entra no repositório: o primeiro porque é uma chave,
+# o segundo porque são 50 MB que se voltam a descarregar num segundo.
+.servir-segredo
+cloudflared.exe
