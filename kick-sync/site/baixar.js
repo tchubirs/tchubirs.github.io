@@ -51,6 +51,7 @@ async function pegarSegmento(url, { buscar, sinal, aoTentar }) {
     if (sinal?.aborted) throw new Error('cancelado');
     try {
       const r = await buscar(url, { signal: sinal });
+      if (r.status === 404 || r.status === 403) { const p = new Error(`HTTP ${r.status}`); p.permanente = true; throw p; }
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const b = await r.arrayBuffer();
       if (!b.byteLength) throw new Error('segmento vazio');
@@ -58,12 +59,13 @@ async function pegarSegmento(url, { buscar, sinal, aoTentar }) {
     } catch (e) {
       if (e?.name === 'AbortError' || sinal?.aborted) throw new Error('cancelado');
       ultimo = e;
+      if (e.permanente) break;
       aoTentar?.({ url, tentativa, erro: e.message });
       // Backing off matters more than it looks: thirty channels retrying in
       // lockstep is a small denial of service against the CDN, and the first
       // thing that would get this tool blocked.
       if (tentativa < TENTATIVAS) {
-        await new Promise((ok) => setTimeout(ok, 400 * (2 ** (tentativa - 1))));
+        await new Promise((ok) => setTimeout(ok, 400 * (2 ** (tentativa - 1)) * (0.5 + Math.random())));
       }
     }
   }
