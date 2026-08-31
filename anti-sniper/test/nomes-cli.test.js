@@ -44,3 +44,15 @@ test('vários IDs passam pela leitura dos argumentos', () => {
   assert.match(r.stderr, /não conheço "--nao-existe"/);
   assert.doesNotMatch(r.stderr, /76561199071264320/);
 });
+
+// O acidente do PowerShell, terceira encarnação: `--vergit pull` foi a
+// primeira, `76561198155380495git pullgit pull` a segunda. O comando leu isso
+// como três contas e foi tentar resolver cada uma. Um SteamID tem 17 dígitos e
+// mais nada — dígitos seguidos de letras é sempre a linha por limpar.
+test('SteamID com texto colado atrás é recusado, com a correcção à vista', () => {
+  const r = correr('76561198155380495git', 'pullgit', 'pull');
+  assert.equal(r.status, 2);
+  assert.match(r.stderr, /SteamID com texto colado atrás/);
+  assert.match(r.stderr, /Esc/);
+  assert.match(r.stderr, /npm run nomes -- 76561198155380495\s*$/m, 'tem de mostrar o que ele queria');
+});

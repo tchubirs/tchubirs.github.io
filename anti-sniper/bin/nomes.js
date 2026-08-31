@@ -141,6 +141,20 @@ if (iChave >= 0) {
   process.exit(0);
 }
 
+// SteamID com texto colado atrás — o mesmo acidente, agora sem a bandeira.
+//
+// No PowerShell dele o comando cola-se ao que já estava na linha. Já saiu
+// `--vergit pull`, e agora `76561198155380495git pullgit pull`, que o comando
+// leu como TRÊS contas e foi tentar resolver cada uma. Um SteamID tem 17
+// dígitos e mais nada; dígitos seguidos de letras é sempre isto.
+const colado = args.find((a) => /^\d{17}[A-Za-z]/.test(a));
+if (colado) {
+  console.error(`\n  "${colado}" é um SteamID com texto colado atrás.`);
+  console.error('  No PowerShell, carrega Esc para limpar a linha ANTES de colar.\n');
+  console.error(`  Querias isto:  npm run nomes -- ${colado.match(/^\d{17}/)[0]}\n`);
+  process.exit(2);
+}
+
 const CONHECIDAS = new Set(['--ver', '--tudo', '--chave', '--entrar']);
 const estranha = args.find((a) => a.startsWith('-') && !CONHECIDAS.has(a));
 if (estranha) {
@@ -608,7 +622,22 @@ function incompleto(r, totalDaApi = null) {
     process.stdout.write(`  ${fonte.nome.padEnd(18)} `);
     let ok = null;
     let falhou = null;
+    let anterior = null;
     for (const url of fonte.urls(id)) {
+      // Não pedir o pedaço seguinte quando o anterior já veio incompleto.
+      //
+      // Eu acrescentei quatro endereços de uma vez e o comando passou a fazer
+      // cinco pedidos seguidos ao mesmo site. Resultado imediato na máquina
+      // dele: o Cloudflare barrou as DUAS fontes, numa corrida que antes
+      // tinha lido 100 nomes. Uma tentativa a mais que estraga a que já
+      // funcionava é pior que não tentar.
+      //
+      // Um pedaço com menos de 100 é o fim da lista. Depois dele não há
+      // seguinte, e insistir só chama o muro.
+      if (/\/history\/[1-9]/.test(url) && anterior != null && anterior < 100) break;
+      // E um respiro entre pedidos ao mesmo site.
+      if (anterior != null) await new Promise((ok) => setTimeout(ok, 1500));
+
       let r = null;
       try { r = await tentar(url); }
       catch (e) {
@@ -622,6 +651,7 @@ function incompleto(r, totalDaApi = null) {
         if (janelaFoiFechada(e)) { janelaMorreu = true; break; }
         continue;                                // endereço errado: próximo
       }
+      anterior = r?.nomes?.length || 0;
       if (r?.nomes?.length) {
         const este = { fonte: fonte.nome, url, ...r };
         // JUNTA os endereços da mesma fonte, em vez de ficar com o maior.
