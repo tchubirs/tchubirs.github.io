@@ -948,6 +948,29 @@ test('o pause para tudo, e a barra de espaco faz o mesmo',
     await p.close();
   });
 
+// Um nome mal escrito ficava na lista para sempre: a unica saida era ir a
+// caixa de texto e apaga-lo a mao.
+test('da para tirar um canal da lista com um clique',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'outro'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi\noutro');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 15000 });
+    assert.equal(await p.locator('#listaCanais li[data-slug]').count(), 2);
+
+    await p.locator('#listaCanais li[data-slug="outro"] .tirar').click();
+    await p.waitForFunction(() => document.getElementById('canais').value === 'tchubi',
+      null, { timeout: 10000 });
+    // E recarrega sozinho, senao a grelha ficava a mostrar quem ja nao esta na lista.
+    await p.waitForFunction(() => document.querySelectorAll('.tile').length === 1,
+      null, { timeout: 15000 });
+    assert.equal(await p.locator('#listaCanais li[data-slug]').count(), 1);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
 test('o aviso do leitor aparece quando o hls.js não carrega',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
     const { p } = await abrir();

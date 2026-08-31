@@ -104,6 +104,8 @@ kbd {
 }
 .canais .parecidos { display: inline-flex; gap: 5px; align-items: center; }
 .canais .parecidos button { padding: 2px 8px; font-size: 12px; border-radius: 999px; }
+.canais .tirar { padding: 0 6px; font-size: 11px; line-height: 1.4; border-radius: 999px; opacity: .5; }
+.canais li:hover .tirar { opacity: 1; }
 .canais li.mau { border-color: color-mix(in srgb, var(--mau) 45%, var(--borda)); }
 
 /* The grid. Focus takes the top row on its own; the rest are thumbnails,
