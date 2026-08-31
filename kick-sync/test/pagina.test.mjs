@@ -146,8 +146,8 @@ async function kickFalsa(pagina, { canais = ['tchubi', 'outro'], segmentos = 60,
   return pedidos;
 }
 
-async function abrir() {
-  const p = await navegador.newPage();
+async function abrir({ ecra } = {}) {
+  const p = await navegador.newPage(ecra ? { viewport: ecra } : undefined);
   const erros = [];
   p.on('pageerror', (e) => erros.push(String(e.message)));
   p.on('console', (m) => { if (m.type() === 'error' && !/ERR_|404/.test(m.text())) erros.push(m.text()); });
@@ -221,6 +221,15 @@ test('carrega a noite, mostra a grelha e põe todos no mesmo instante',
 
     assert.equal(await p.locator('.tile').count(), 2);
     assert.equal(await p.locator('.tile.foco').count(), 1, 'um foco, e um só');
+
+    // O quadrado em foco tem de OCUPAR ESPACO, e nao so existir. Ja aconteceu
+    // ficar com altura zero: continuava a tocar e a ter som, e nao se via — e
+    // do lado de quem usa isso parece um canal a faltar, nao um bug de CSS.
+    const caixa = await p.locator('.tile.foco').boundingBox();
+    assert.ok(caixa && caixa.height > 150 && caixa.width > 300,
+      `o foco esta invisivel: ${JSON.stringify(caixa)}`);
+    const v = await p.locator('.tile.foco video').boundingBox();
+    assert.ok(v && v.height > 140, `o video do foco esta invisivel: ${JSON.stringify(v)}`);
     assert.equal(pedidos.api, 2, 'uma chamada por canal, não mais');
     // A grelha lê o degrau BARATO para tocar — o caro fica para o export.
     assert.equal(pedidos.playlist, 2, 'uma playlist por canal');
@@ -264,6 +273,38 @@ test('só o ângulo em foco toca em qualidade; os outros acompanham parados',
     assert.equal(caros(l2).length - caros(l1).length, 1,
       'o novo foco pede uma vez, e mais nada sobe de qualidade');
     assert.equal(await p.locator('.tile.foco').count(), 1);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+// O bug apareceu no telemovel e nao no computador, por isso o teste tem de
+// correr num ecra de telemovel. Um `aspect-ratio` dentro de um flex com base 0
+// colapsa para altura zero em varios browsers moveis: o quadrado toca, tem som
+// e nao se ve.
+test('no ecra de um telemovel o foco continua a ocupar espaco',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir({ ecra: { width: 390, height: 844 } });
+    await kickFalsa(p, { canais: ['tchubi', 'outro', 'terceiro'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi\noutro\nterceiro');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 15000 });
+
+    const um = await p.locator('.tile.foco').boundingBox();
+    assert.ok(um && um.height > 120, `foco invisivel com 1: ${JSON.stringify(um)}`);
+
+    // E com dois lado a lado, que no telemovel passam a ficar empilhados.
+    await p.locator('#grade .tile').first().locator('.par').click();
+    await p.waitForFunction(() => document.querySelectorAll('#palcoFoco .tile').length === 2,
+      null, { timeout: 10000 });
+    for (const caixa of await p.locator('#palcoFoco .tile').all()
+      .then((ts) => Promise.all(ts.map((t) => t.boundingBox())))) {
+      assert.ok(caixa && caixa.height > 100, `foco invisivel com 2: ${JSON.stringify(caixa)}`);
+    }
+    // E a pagina nao pode ficar a andar para o lado num ecra estreito.
+    const largura = await p.evaluate(() => ({
+      corpo: document.documentElement.scrollWidth, ecra: window.innerWidth }));
+    assert.ok(largura.corpo <= largura.ecra + 1, `a pagina passa do ecra: ${JSON.stringify(largura)}`);
     assert.deepEqual(erros, []);
     await p.close();
   });
