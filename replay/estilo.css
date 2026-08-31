@@ -120,6 +120,11 @@ kbd {
 .palcoFoco.dois .tile { aspect-ratio: 16/9; min-height: 140px; }
 .palcoFoco:empty { display: none; }
 .tile.foco { border-color: var(--acento); }
+.tile .som {
+  position: absolute; right: 40px; top: 6px; padding: 1px 7px; font-size: 12px;
+  background: #000a; border-radius: 5px;
+}
+.tile.principal { border-color: var(--acento); box-shadow: 0 0 0 1px var(--acento); }
 .tile .par {
   position: absolute; right: 6px; top: 6px; padding: 1px 7px; font-size: 12px;
   background: #000a; border-radius: 5px; opacity: .35; transition: opacity .15s;

@@ -5,11 +5,11 @@
 // bottom rung of Kick's ladder and is what makes thirty tiles a home-connection
 // problem rather than a server problem.
 
-import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=399d21bfed';
-import { linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink } from './relogio.js?v=399d21bfed';
-import { cortarTodosOsAngulos } from './baixar.js?v=399d21bfed';
-import { alinharPeloSom, custoEstimadoMB } from './alinhar.js?v=399d21bfed';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=399d21bfed';
+import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=e166525c26';
+import { linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink } from './relogio.js?v=e166525c26';
+import { cortarTodosOsAngulos } from './baixar.js?v=e166525c26';
+import { alinharPeloSom, custoEstimadoMB } from './alinhar.js?v=e166525c26';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=e166525c26';
 
 const $ = (id) => document.getElementById(id);
 const estado = {
@@ -22,6 +22,7 @@ const estado = {
   margens: {},
   players: new Map(),
   cancelar: null,
+  geracao: 0,
   sugestoes: [],
   escolhido: -1,
   timerProcura: null,
@@ -290,13 +291,29 @@ async function abrirNoite(noite) {
 
 const tileDe = (slug) => document.querySelector(`.tile[data-slug="${CSS.escape(slug)}"]`);
 const ehFoco = (slug) => estado.focos.includes(slug);
+const ehPrincipal = (slug) => estado.focos[0] === slug;
 
 /**
- * Pôr ou tirar um ângulo do par.
+ * Qual dos dois manda: o principal é o que tem som e o que corre em qualidade.
  *
- * Dois é o limite, e é de propósito: o objectivo é decidir se vale a pena
- * baixar, e para isso comparam-se dois. Três já é outra vez a grelha toda a
- * descodificar, que é exactamente o que se estava a evitar.
+ * Faltava isto. Com dois no ecrã não havia como dizer "agora quero ESTE" — e
+ * como o som segue o principal, também não havia como ouvir o outro.
+ */
+function tornarPrincipal(slug) {
+  if (!ehFoco(slug)) return;
+  estado.focos = [slug, ...estado.focos.filter((s) => s !== slug)];
+  aplicarFoco();
+  irPara(estado.agoraMs);
+  // Este `play()` sai de um clique, e e por isso que existe: o browser so
+  // deixa tocar com som depois de alguem carregar em alguma coisa. Sem ele, o
+  // pedido de som era recusado em silencio e ficava tudo mudo.
+  const v = tileDe(slug)?.querySelector('video');
+  if (v) { v.muted = false; v.removeAttribute('muted'); v.play?.().catch(() => {}); }
+}
+
+/**
+ * Pôr ou tirar um ângulo do par. Dois é o limite, e é de propósito: o objectivo
+ * é decidir se vale a pena baixar, e para isso comparam-se dois.
  */
 function alternarPar(slug) {
   if (ehFoco(slug)) {
@@ -304,8 +321,44 @@ function alternarPar(slug) {
   } else {
     estado.focos = [...estado.focos, slug].slice(-2);
   }
-  montarGrade();
+  aplicarFoco();
   irPara(estado.agoraMs);
+}
+
+/**
+ * Mudar o foco MOVE os quadrados, não os recria.
+ *
+ * A versão anterior deitava a grelha inteira fora e reconstruía tudo — cada
+ * troca de foco matava os leitores todos, e voltava a descarregar o que já
+ * estava carregado. Mover um `<video>` de um sítio para o outro no DOM mantém-
+ * -o vivo, e só quem mudou de papel é que volta a carregar (porque muda de
+ * degrau de qualidade), que são dois quadrados e não trinta.
+ */
+function aplicarFoco() {
+  for (const slug of [...estado.focos, ...estado.linhas.map((l) => l.slug)]) {
+    const tile = tileDe(slug);
+    if (!tile) continue;
+    const foco = ehFoco(slug);
+    const destino = foco ? $('palcoFoco') : $('grade');
+    // `append` de um nó que já lá está reordena-o — que é o que faz o
+    // principal ficar sempre à esquerda.
+    if (tile.parentElement !== destino || foco) destino.append(tile);
+    tile.classList.toggle('foco', foco);
+    tile.classList.toggle('principal', ehPrincipal(slug));
+    tile.querySelector('.par').textContent = foco ? '✓' : '⧉';
+    // O som muda JA, e nao no carregamento diferido: quem carrega no altifalante
+    // do outro quadrado nao pode ficar com os dois a falar por cima ate os
+    // pedidos de video acabarem.
+    const v = tile.querySelector('video');
+    v.muted = !ehPrincipal(slug);
+    v.toggleAttribute('muted', !ehPrincipal(slug));
+
+    const som = tile.querySelector('.som');
+    som.hidden = !foco;
+    som.textContent = ehPrincipal(slug) ? '🔊' : '🔇';
+    som.title = ehPrincipal(slug) ? 'este é o principal' : 'passar o som e a qualidade para este';
+  }
+  $('palcoFoco').classList.toggle('dois', estado.focos.length > 1);
 }
 
 function montarGrade() {
@@ -315,26 +368,31 @@ function montarGrade() {
   estado.players.clear();
 
   for (const linha of estado.linhas) {
-    const foco = ehFoco(linha.slug);
     const tile = document.createElement('div');
-    tile.className = `tile${foco ? ' foco' : ''}`;
+    tile.className = 'tile';
     tile.dataset.slug = linha.slug;
-    tile.innerHTML = `<video muted playsinline preload="none"></video>`
+    tile.innerHTML = '<video muted playsinline preload="none"></video>'
       + `<span class="rotulo">${linha.slug}`
       + `${linha.relogio !== 'exato' ? ' <b class="aviso" title="relógio incerto">≈</b>' : ''}</span>`
-      + `<span class="estadoTile"></span>`
-      + `<span class="posicao"></span>`
+      + '<span class="estadoTile"></span>'
+      + '<span class="posicao"></span>'
       // O relógio da Kick põe cada ângulo dentro de um segmento da verdade, o
       // que já está dentro do que o dono pediu. Isto é para o resto: um stream
       // com mais buffer, ou um olho que diz "este está meio segundo à frente".
-      + `<span class="ajuste">`
-      + `<button data-passo="-1" title="atrasar 1s (Shift: 10s)">−</button>`
-      + `<b class="nudge">0.0s</b>`
-      + `<button data-passo="1" title="adiantar 1s (Shift: 10s)">+</button>`
-      + `</span>`
-      + `<button class="par" title="ver dois ao mesmo tempo">${foco ? '✓' : '⧉'}</button>`;
+      + '<span class="ajuste">'
+      + '<button data-passo="-1" title="atrasar 1s (Shift: 10s)">−</button>'
+      + '<b class="nudge">0.0s</b>'
+      + '<button data-passo="1" title="adiantar 1s (Shift: 10s)">+</button>'
+      + '</span>'
+      + '<button class="som" hidden>🔇</button>'
+      + '<button class="par" title="ver dois ao mesmo tempo">⧉</button>';
 
-    tile.onclick = () => { estado.focos = [linha.slug]; montarGrade(); irPara(estado.agoraMs); };
+    tile.onclick = () => {
+      // Num quadrado que já está em foco, o clique promove-o a principal em vez
+      // de desfazer o par: com dois no ecrã, é isso que se quer dizer.
+      if (ehFoco(linha.slug)) tornarPrincipal(linha.slug);
+      else { estado.focos = [linha.slug]; aplicarFoco(); irPara(estado.agoraMs); }
+    };
     for (const b of tile.querySelectorAll('.ajuste button')) {
       b.onclick = (e) => {
         // Sem isto o clique também acerta no quadrado e muda o foco, ou seja
@@ -344,13 +402,10 @@ function montarGrade() {
       };
     }
     tile.querySelector('.par').onclick = (e) => { e.stopPropagation(); alternarPar(linha.slug); };
-
-    (foco ? $('palcoFoco') : $('grade')).append(tile);
+    tile.querySelector('.som').onclick = (e) => { e.stopPropagation(); tornarPrincipal(linha.slug); };
+    $('grade').append(tile);
   }
-  $('palcoFoco').classList.toggle('dois', estado.focos.length > 1);
-  // Só o primeiro tem som: dois áudios ao mesmo tempo não é comparar, é
-  // barulho, e não se percebe nenhum dos dois.
-  tileDe(estado.focos[0])?.querySelector('video')?.removeAttribute('muted');
+  aplicarFoco();
 }
 
 /** Ajuste manual de um ângulo — o resto da grelha não se mexe. */
@@ -383,6 +438,8 @@ function irPara(quandoMs) {
   const { inicio, fim } = estado.janela;
   $('barra').value = String(Math.round(((quandoMs - inicio) / (fim - inicio)) * 1000));
 
+  const principal = [];
+  const segundo = [];
   const secundarios = [];
   for (const linha of estado.linhas) {
     const tile = tileDe(linha.slug);
@@ -410,17 +467,43 @@ function irPara(quandoMs) {
     // o atraso, e aparece já — antes de qualquer imagem carregar.
     tile.querySelector('.posicao').textContent = mmss(r.tempoS);
 
-    if (ehFoco(linha.slug)) tocar(linha, r, video, { correr: true, comSom: linha.slug === estado.focos[0] });
+    if (ehPrincipal(linha.slug)) principal.push([linha, r, video]);
+    else if (ehFoco(linha.slug)) segundo.push([linha, r, video]);
     else secundarios.push([linha, r, video]);
   }
 
-  // Os parados só saltam quando a barra descansa. Arrastar o cursor pediria um
-  // pedaço de vídeo por pixel, a trinta canais — um ataque ao CDN feito com o
-  // rato, e a primeira coisa que poria isto bloqueado.
+  // O principal primeiro, e sozinho. Trinta pedidos ao mesmo tempo fazem o
+  // quadrado que interessa chegar em último — e quem anda a saltar de dez em
+  // dez segundos está a olhar para esse e mais nenhum.
+  for (const [l, r, v] of principal) tocar(l, r, v, { alta: true, correr: true, comSom: true });
+
+  // Os outros só depois de o principal ter imagem. E só quando a barra
+  // descansa: arrastar o cursor pedia um pedaço de vídeo por pixel, a trinta
+  // canais — um ataque ao CDN feito com o rato.
+  const geracao = ++estado.geracao;
   clearTimeout(estado.timerSecundarios);
-  estado.timerSecundarios = setTimeout(() => {
-    for (const [linha, r, video] of secundarios) tocar(linha, r, video, { correr: false });
+  estado.timerSecundarios = setTimeout(async () => {
+    await primeiroFrame(principal[0]?.[2], 4000);
+    if (geracao !== estado.geracao) return;
+    for (const [l, r, v] of segundo) tocar(l, r, v, { alta: false, correr: true, comSom: false });
+    for (const [l, r, v] of secundarios) tocar(l, r, v, { alta: false, correr: false });
   }, 220);
+}
+
+/**
+ * Esperar que um vídeo tenha mesmo imagem — com desistência.
+ *
+ * Sem o limite, um ângulo que nunca carrega deixava a grelha inteira em branco
+ * para sempre. Melhor tarde e todos do que nunca.
+ */
+function primeiroFrame(video, limiteMs) {
+  if (!video) return Promise.resolve();
+  if (video.readyState >= 2) return Promise.resolve();
+  return new Promise((pronto) => {
+    const acabou = () => { clearTimeout(t); video.removeEventListener('loadeddata', acabou); pronto(); };
+    const t = setTimeout(acabou, limiteMs);
+    video.addEventListener('loadeddata', acabou, { once: true });
+  });
 }
 
 const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
@@ -431,10 +514,13 @@ function pararTile(slug, video) {
   video.removeAttribute('src');
 }
 
-function tocar(linha, r, video, { correr, comSom = false } = {}) {
+function tocar(linha, r, video, { alta = false, correr = false, comSom = false } = {}) {
   const peca = linha.pecasCompletas.find((p) => p.vod.id === r.peca.vod.id) || r.peca;
   // Focus gets the best rung the ladder has; everything else stays at 160p.
-  const alvo = correr ? peca.escada[0] : peca.barato;
+  // A qualidade segue o PRINCIPAL, e não o facto de estar a correr: o segundo
+  // do par corre, mas a 160p — dois degraus de cima ao mesmo tempo era o que
+  // fazia o par demorar o dobro a aparecer.
+  const alvo = alta ? peca.escada[0] : peca.barato;
   const anterior = estado.players.get(linha.slug);
 
   if (anterior && anterior.url === alvo.url) {
@@ -448,7 +534,7 @@ function tocar(linha, r, video, { correr, comSom = false } = {}) {
     // Um ângulo parado precisa do pedaço onde está e de mais nada. Trinta
     // buffers de trinta segundos são trezentos MB de RAM a não servir para
     // coisa nenhuma.
-    const hls = new window.Hls({ startPosition: r.tempoS, maxBufferLength: correr ? 30 : 2 });
+    const hls = new window.Hls({ startPosition: r.tempoS, maxBufferLength: alta ? 30 : correr ? 8 : 2 });
     hls.loadSource(alvo.url);
     hls.attachMedia(video);
     estado.players.set(linha.slug, { url: alvo.url, destroy: () => hls.destroy() });
@@ -458,7 +544,11 @@ function tocar(linha, r, video, { correr, comSom = false } = {}) {
     video.currentTime = r.tempoS;
     estado.players.set(linha.slug, { url: alvo.url, destroy: () => { video.removeAttribute('src'); } });
   }
+  // Propriedade E atributo. A propriedade e que manda no som, mas deixar o
+  // atributo `muted` do HTML para tras faz o quadrado dizer uma coisa e fazer
+  // outra — e foi assim que "nao sai som de nenhum dos dois" passou nos testes.
   video.muted = !comSom;
+  video.toggleAttribute('muted', !comSom);
   // `play()` devolve uma promessa que rejeita se o browser recusar tocar sem
   // um clique. Ignorada de propósito: o utilizador carrega no quadrado e
   // resolve-se sozinho — rebentar aqui deixava a página sem grelha nenhuma.

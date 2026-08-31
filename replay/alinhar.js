@@ -10,10 +10,10 @@
 // carimbo; o quinto estava 5,7 s à frente e as quatro janelas concordaram.
 // Ou seja: o carimbo quase sempre chega, e quando não chega isto apanha.
 
-import { aacDeSegmentos } from './audio-ts.js?v=399d21bfed';
-import { envolvente, desvio, consolidar, resolver, TAXA } from './sinal.js?v=399d21bfed';
-import { segmentosNaJanela } from './kick.js?v=399d21bfed';
-import { onde } from './relogio.js?v=399d21bfed';
+import { aacDeSegmentos } from './audio-ts.js?v=e166525c26';
+import { envolvente, desvio, consolidar, resolver, TAXA } from './sinal.js?v=e166525c26';
+import { segmentosNaJanela } from './kick.js?v=e166525c26';
+import { onde } from './relogio.js?v=e166525c26';
 
 /**
  * Quantos MB isto vai custar, antes de começar.
