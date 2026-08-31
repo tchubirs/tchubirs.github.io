@@ -5,18 +5,19 @@
 // bottom rung of Kick's ladder and is what makes thirty tiles a home-connection
 // problem rather than a server problem.
 
-import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=9e969a7a0b';
-import { linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink } from './relogio.js?v=9e969a7a0b';
-import { cortarTodosOsAngulos } from './baixar.js?v=9e969a7a0b';
-import { alinharPeloSom, custoEstimadoMB } from './alinhar.js?v=9e969a7a0b';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=9e969a7a0b';
+import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=9a1d6926ec';
+import { linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink } from './relogio.js?v=9a1d6926ec';
+import { cortarTodosOsAngulos } from './baixar.js?v=9a1d6926ec';
+import { alinharPeloSom, custoEstimadoMB } from './alinhar.js?v=9a1d6926ec';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=9a1d6926ec';
 import {
   novoMomento, acrescentar, remover, planoDaMontagem, ordenar, alternarVitima,
-} from './momentos.js?v=9e969a7a0b';
-import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=9e969a7a0b';
-import { criarApanhador } from './frames.js?v=9e969a7a0b';
-import { MAXIMO_S, mover, janelaInicial, nomeDoClipe } from './clipe.js?v=9e969a7a0b';
-import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=9e969a7a0b';
+} from './momentos.js?v=9a1d6926ec';
+import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=9a1d6926ec';
+import { criarApanhador } from './frames.js?v=9a1d6926ec';
+import { MAXIMO_S, mover, janelaInicial, nomeDoClipe } from './clipe.js?v=9a1d6926ec';
+import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=9a1d6926ec';
+import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=9a1d6926ec';
 
 const $ = (id) => document.getElementById(id);
 const estado = {
@@ -113,8 +114,9 @@ function pintarSugestoes(canais) {
   $('sugestoes').innerHTML = canais.map((c, i) => {
     const ja = jaLa.includes(c.slug);
     return `<li data-slug="${c.slug}" data-i="${i}" class="${ja ? 'ja' : ''}" role="option">`
-      + `<span>${c.slug}${c.aoVivo ? ' <b class="vivo">ao vivo</b>' : ''}</span>`
-      + `<span class="quantos">${ja ? 'já está' : `${c.seguidores.toLocaleString('pt')} seguidores`}</span></li>`;
+      + `<span>${c.slug}${c.aoVivo ? ` <b class="vivo">${t('procurar.aoVivo')}</b>` : ''}</span>`
+      + `<span class="quantos">${ja ? t('procurar.jaEsta')
+        : t('procurar.seguidores', { n: c.seguidores.toLocaleString(idiomaActual()) })}</span></li>`;
   }).join('');
   $('sugestoes').hidden = !canais.length;
   estado.sugestoes = canais;
@@ -191,8 +193,7 @@ function temPlayer() {
   // Its own element on purpose. The first version wrote this into the progress
   // line and the very next statement overwrote it with "asking Kick…" — the
   // warning existed for about a millisecond, which is the same as not existing.
-  aviso.textContent = 'O leitor de vídeo (hls.js) não carregou — um bloqueador ou a rede '
-    + 'terão travado o CDN. Sem ele os quadrados ficam pretos.';
+  aviso.textContent = t('leitor.aviso');
   aviso.hidden = false;
   return false;
 }
@@ -202,7 +203,7 @@ async function carregar() {
   if (!nomes.length) return;
   temPlayer();
   $('carregar').disabled = true;
-  $('estadoCarga').textContent = 'a perguntar à Kick…';
+  $('estadoCarga').textContent = t('canais.aPerguntar');
 
   const canais = [];
   // Sequential, and that is deliberate: thirty parallel calls from five hundred
@@ -216,7 +217,7 @@ async function carregar() {
 
   pintarCanais(canais);
   const noites = agruparPorNoite(canais);
-  if (!noites.length) { $('estadoCarga').textContent = 'nenhum canal tem VOD utilizável.'; return; }
+  if (!noites.length) { $('estadoCarga').textContent = t('canais.semUtilizavel'); return; }
   pintarNoites(noites);
   // Voltar a noite onde se estava, e nao a mais recente.
   //
@@ -233,7 +234,7 @@ async function carregar() {
 function pintarNoites(noites) {
   $('noites').hidden = false;
   $('noite').innerHTML = noites
-    .map((n, i) => `<option value="${i}">${rotuloDaNoite(n)}</option>`).join('');
+    .map((n, i) => `<option value="${i}">${rotuloDaNoite(n, { t })}</option>`).join('');
   $('noite').onchange = () => abrirNoite(noites[Number($('noite').value)]);
 }
 
@@ -245,34 +246,38 @@ function pintarNoites(noites) {
  * diferentes com a mesma cara, e a segunda não tem conserto enquanto a
  * primeira só precisa de uma letra.
  */
+let ultimosCanais = [];
+
 function pintarCanais(canais) {
+  ultimosCanais = canais;
   $('canaisEstado').hidden = false;
   const rotulo = {
     ok: '',
-    'canal-nao-existe': 'não existe na Kick',
-    'sem-vods': 'existe, mas não tem VODs guardados',
-    'vods-indisponiveis': 'os VODs estão privados ou apagados',
-    'rate-limit': 'a Kick pediu para abrandar',
-    'sem-rede': 'sem rede',
-    'nome-invalido': 'nome inválido',
-    'resposta-ilegivel': 'a Kick respondeu algo que não percebi',
-    'formato-inesperado': 'a Kick mudou o formato da resposta',
+    'canal-nao-existe': t('estado.canalNaoExiste'),
+    'sem-vods': t('estado.semVods'),
+    'vods-indisponiveis': t('estado.vodsIndisponiveis'),
+    'rate-limit': t('estado.rateLimit'),
+    'sem-rede': t('estado.semRede'),
+    'nome-invalido': t('estado.nomeInvalido'),
+    'resposta-ilegivel': t('estado.ilegivel'),
+    'formato-inesperado': t('estado.inesperado'),
   };
   $('listaCanais').innerHTML = canais.map((c) => {
     const mau = c.estado !== 'ok';
     return `<li class="${mau ? 'mau' : ''}" data-slug="${c.slug}" data-estado="${c.estado}"><b>${c.slug}</b>`
-      + `<span class="nota">${mau ? (rotulo[c.estado] || c.estado) : `${c.vods.length} VOD(s)`}</span>`
+      + `<span class="nota">${mau ? (rotulo[c.estado] || c.estado)
+        : t('canais.vods', { n: c.vods.length })}</span>`
       + '<span class="parecidos"></span>'
       // Tirar um canal daqui. Um nome mal escrito ficava na lista para sempre,
       // e a unica saida era ir a caixa de texto apaga-lo a mao.
-      + '<button class="tirar" title="tirar este canal">✕</button></li>';
+      + `<button class="tirar" title="${t('canais.tirar')}">✕</button></li>`;
   }).join('');
   for (const li of $('listaCanais').querySelectorAll('li[data-slug]')) {
     li.querySelector('.tirar').onclick = () => {
       $('canais').value = listaDeCanais().filter((n) => n !== li.dataset.slug).join('\n');
       guardar();
       if (listaDeCanais().length) carregar();
-      else { li.remove(); $('estadoCarga').textContent = 'sem canais.'; }
+      else { li.remove(); $('estadoCarga').textContent = t('canais.semCanais'); }
     };
   }
   sugerirParecidos(canais.filter((c) => c.estado !== 'ok'));
@@ -294,7 +299,7 @@ async function sugerirParecidos(maus) {
       achados = (await procurarCanais(c.slug, { quantos: 4 })).filter((x) => x.slug !== c.slug);
     } catch { /* sem sugestões é um resultado, não um erro a mostrar */ }
     if (!achados.length) continue;
-    li.innerHTML = '<span class="nota">quiseste dizer</span>'
+    li.innerHTML = `<span class="nota">${t('canais.quisesteDizer')}</span>`
       + achados.map((x) => `<button data-slug="${x.slug}">${x.slug}</button>`).join('');
     for (const b of li.querySelectorAll('button')) {
       b.onclick = () => {
@@ -312,7 +317,7 @@ async function sugerirParecidos(maus) {
 
 /** Read the ladders and the clocks for one night, then build the timeline. */
 async function abrirNoite(noite) {
-  $('estadoCarga').textContent = 'a ler os relógios…';
+  $('estadoCarga').textContent = t('canais.aLerRelogios');
   const porCanal = new Map();
   for (const { slug, v } of noite.itens) {
     if (!v.master) continue;
@@ -340,7 +345,7 @@ async function abrirNoite(noite) {
     // encontrava nada para parar e os quadrados respondiam a nada. Uma noite
     // que não abre tem de deixar o ecrã vazio e dizer porquê.
     limparPalco();
-    $('estadoCarga').textContent = 'esta noite não tem nenhum canal com vídeo legível — escolhe outra.';
+    $('estadoCarga').textContent = t('noite.semRelogio');
     return;
   }
 
@@ -398,7 +403,10 @@ async function abrirNoite(noite) {
   // corta-se na mesma com os que la estavam. O que faz falta e saber QUEM.
   $('resumoNoite').textContent = estado.linhas.map((l) => l.slug).join(', ')
     + (estado.janela.haSobreposicao
-      ? ` · todos juntos ${relogioCurto(estado.janela.sobreposicaoInicio)}–${relogioCurto(estado.janela.sobreposicaoFim)}`
+      ? ` · ${t('noite.todosJuntos', {
+        de: relogioCurto(estado.janela.sobreposicaoInicio),
+        ate: relogioCurto(estado.janela.sobreposicaoFim),
+      })}`
       : '');
   montarGrade();
   pintarFaixas();
@@ -648,7 +656,7 @@ function aplicarFoco() {
     som.hidden = !foco;
     const botao = som.querySelector('.somBtn');
     botao.textContent = cala || nivel === 0 ? '🔇' : nivel < 0.5 ? '🔉' : '🔊';
-    botao.title = cala ? 'ligar o som deste' : 'calar este';
+    botao.title = cala ? t('tile.ligarSom') : t('tile.calar');
     som.querySelector('.vol').value = String(Math.round(nivel * 100));
     som.querySelector('.pausa').textContent = estado.parado ? '▶' : '⏸';
   }
@@ -668,26 +676,26 @@ function montarGrade() {
     tile.dataset.slug = linha.slug;
     tile.innerHTML = '<video muted playsinline preload="none"></video>'
       + `<span class="rotulo">${linha.slug}`
-      + `${linha.relogio !== 'exato' ? ' <b class="aviso" title="relógio incerto">≈</b>' : ''}`
+      + `${linha.relogio !== 'exato' ? ` <b class="aviso" title="${t('tile.relogioIncerto')}">≈</b>` : ''}`
       + ' <b class="posicao"></b></span>'
       + '<span class="estadoTile"></span>'
       // O relógio da Kick põe cada ângulo dentro de um segmento da verdade, o
       // que já está dentro do que o dono pediu. Isto é para o resto: um stream
       // com mais buffer, ou um olho que diz "este está meio segundo à frente".
       + '<span class="ajuste">'
-      + '<button data-passo="-1" title="atrasar 1s (Shift: 10s)">−</button>'
+      + `<button data-passo="-1" title="${t('tile.atrasar')}">−</button>`
       + '<b class="nudge">0.0s</b>'
-      + '<button data-passo="1" title="adiantar 1s (Shift: 10s)">+</button>'
+      + `<button data-passo="1" title="${t('tile.adiantar')}">+</button>`
       + '</span>'
       // O som no canto de baixo à esquerda, com o cursor de volume ao lado —
       // o mesmo sítio da Twitch, da Kick e do YouTube. Um controlo que toda a
       // gente já sabe usar não se põe noutro sítio só porque dá jeito.
       + '<span class="som" hidden>'
-      + '<button class="pausa" title="parar / continuar (barra de espaço)">⏸</button>'
+      + `<button class="pausa" title="${t('tile.pausa')}">⏸</button>`
       + '<button class="somBtn">🔇</button>'
       + '<input class="vol" type="range" min="0" max="100" value="100" aria-label="volume">'
       + '</span>'
-      + '<button class="par" title="ver dois ao mesmo tempo">⧉</button>';
+      + `<button class="par" title="${t('tile.par')}">⧉</button>`;
 
     tile.onclick = () => {
       // Num quadrado que já está em foco, o clique promove-o a principal em vez
@@ -754,7 +762,7 @@ function irPara(quandoMs) {
   for (const li of $('listaMomentos').querySelectorAll('li[data-ms]')) {
     li.classList.toggle('aqui', Math.abs(Number(li.dataset.ms) - quandoMs) < 1500);
   }
-  $('angulos').textContent = `${vivos} de ${estado.linhas.length} ângulos`;
+  $('angulos').textContent = t('tempo.angulos', { n: vivos, total: estado.linhas.length });
   $('angulos').classList.toggle('mau', vivos < 2);
   const { inicio, fim } = estado.janela;
   const fraccao = Math.min(1, Math.max(0, (quandoMs - inicio) / (fim - inicio)));
@@ -779,9 +787,9 @@ function irPara(quandoMs) {
     if (r.estado !== 'toca') {
       // Never seek to zero for a moment this angle did not film: that shows a
       // confident, wrong frame, which is worse than showing nothing.
-      nota.textContent = r.estado === 'buraco' ? `fora do ar (${Math.round(r.buraco.segundos)}s)`
-        : r.estado === 'antes' ? 'ainda não tinha começado'
-          : r.estado === 'depois' ? 'já tinha acabado' : 'sem vídeo';
+      nota.textContent = r.estado === 'buraco' ? t('tile.foraDoAr', { s: Math.round(r.buraco.segundos) })
+        : r.estado === 'antes' ? t('tile.antes')
+          : r.estado === 'depois' ? t('tile.depois') : t('tile.semVideo');
       tile.classList.add('vazio');
       pararTile(linha.slug, video);
       continue;
@@ -914,8 +922,7 @@ async function alinhar() {
   // Com trinta ângulos isto passa a ser umas centenas de MB. Perguntar é mais
   // barato do que gastar os dados de alguém e explicar depois.
   const mb = custoEstimadoMB(estado.linhas.length);
-  if (mb > 80 && !confirm(`Ouvir ${estado.linhas.length} ângulos vai baixar cerca de ${mb} MB.\n\n`
-    + 'Em Wi-Fi é rápido; em dados móveis pesa. Continuar?')) return;
+  if (mb > 80 && !confirm(t('alinhar.custo', { n: estado.linhas.length, mb }))) return;
   botao.disabled = true;
 
   try {
@@ -925,8 +932,10 @@ async function alinhar() {
       sinal: controlo.signal,
       aoProgresso: (p) => {
         nota.textContent = p.fase === 'ouvir'
-          ? `a ouvir ${p.canal} — ${p.feito}/${p.total} · ${(p.bytes / 1048576).toFixed(0)} MB`
-          : 'a comparar…';
+          ? t('alinhar.aOuvir', {
+            canal: p.canal, feito: p.feito, total: p.total, mb: (p.bytes / 1048576).toFixed(0),
+          })
+          : t('alinhar.aComparar');
       },
     });
 
@@ -935,23 +944,25 @@ async function alinhar() {
     for (const [slug, ms] of Object.entries(r.ajustesMs)) estado.nudges[slug] = ms;
 
     const mexidos = Object.entries(r.ajustesMs).filter(([, ms]) => Math.abs(ms) >= 250);
-    nota.textContent = `${Object.keys(r.ajustesMs).length} de ${estado.linhas.length} alinhados pelo som`
-      + (mexidos.length ? ` · corrigi ${mexidos.map(([s, ms]) => `${s} ${(ms / 1000).toFixed(1)}s`).join(', ')}` : ' · já estavam certos')
-      + (r.semLigacao.length ? ` · sem som em comum: ${r.semLigacao.join(', ')} (ajusta à mão)` : '')
+    nota.textContent = t('alinhar.feito', { n: Object.keys(r.ajustesMs).length, total: estado.linhas.length })
+      + (mexidos.length
+        ? t('alinhar.corrigi', { lista: mexidos.map(([s, ms]) => `${s} ${(ms / 1000).toFixed(1)}s`).join(', ') })
+        : t('alinhar.jaCertos'))
+      + (r.semLigacao.length ? t('alinhar.semSom', { lista: r.semLigacao.join(', ') }) : '')
       // Um canal que não se conseguiu baixar não é a mesma coisa que um canal
       // que não tem som em comum, e chamar-lhes o mesmo esconde uma falha de
       // rede atrás de uma explicação que soa razoável.
-      + (r.problemas.length ? ` · não consegui ouvir ${[...new Set(r.problemas.map((x) => x.canal))].join(', ')}` : '');
+      + (r.problemas.length
+        ? t('alinhar.naoOuvi', { lista: [...new Set(r.problemas.map((x) => x.canal))].join(', ') })
+        : '');
     nota.classList.toggle('mau', !Object.keys(r.ajustesMs).length);
     montarGrade();
     irPara(estado.agoraMs);
   } catch (e) {
     nota.classList.add('mau');
-    nota.textContent = e.name === 'AbortError' ? 'cancelado'
-      : e.name === 'SEM-DESCODIFICADOR'
-        ? 'este navegador não descodifica o áudio da Kick — usa o Chrome ou o Edge, '
-          + 'ou alinha à mão com o − / + de cada quadrado'
-        : `não deu: ${e.message}`;
+    nota.textContent = e.name === 'AbortError' ? t('alinhar.cancelado')
+      : e.name === 'SEM-DESCODIFICADOR' ? t('alinhar.semCodec')
+        : t('alinhar.erro', { erro: e.message });
   }
   botao.disabled = false;
 }
@@ -1004,14 +1015,14 @@ async function verQuemMorreu(ms) {
   const botao = li.querySelector('.verMortes');
   botao.disabled = true;
   caixa.hidden = false;
-  caixa.innerHTML = '<span class="nota">a olhar para todos os ângulos…</span>';
+  caixa.innerHTML = `<span class="nota">${t('montagem.aOlhar')}</span>`;
 
   const apanhador = criarApanhador({ linhas: estado.linhas, nudges: estado.nudges });
   const notas = {};
   const imagens = {};
   try {
     for (const l of estado.linhas) {
-      caixa.innerHTML = `<span class="nota">a olhar — ${l.slug}…</span>`;
+      caixa.innerHTML = `<span class="nota">${t('montagem.aOlharCanal', { canal: l.slug })}</span>`;
       const antes = await apanhador.frame(l.slug, ms - 2000);
       const depois = await apanhador.frame(l.slug, ms + 2500);
       imagens[l.slug] = depois?.imagem || null;
@@ -1063,21 +1074,23 @@ async function verQuemMorreu(ms) {
     const eSugerido = sugeridos.includes(l.slug);
     const posicao = ordenados.findIndex((o) => o.canal === l.slug);
     return `<button class="cartao ${eSugerido ? 'morreu' : ''}" data-canal="${l.slug}">`
-      + (imagens[l.slug] ? `<img src="${imagens[l.slug]}" alt="">` : '<span class="semImagem">sem imagem</span>')
+      + (imagens[l.slug] ? `<img src="${imagens[l.slug]}" alt="">`
+        : `<span class="semImagem">${t('montagem.semImagem')}</span>`)
       + `<b>${l.slug}</b>`
-      + `<span class="nota">${n ? `${eSugerido ? 'morreu · ' : ''}${posicao + 1}º` : 'não filmava'}</span>`
+      + `<span class="nota">${n ? `${eSugerido ? t('montagem.morreu') : ''}${posicao + 1}º`
+        : t('montagem.naoFilmava')}</span>`
       + '</button>';
   }).join('');
 
   const semNada = !Object.values(notas).some(Boolean);
   const dito = afinado != null && afinado !== ms
-    ? ` · acertei o instante para ${relogioCurto(afinado)}Z`
+    ? t('montagem.acerteiInstante', { hora: `${relogioCurto(afinado)}Z` })
     : '';
   caixa2.innerHTML = (semNada
-    ? '<span class="nota mau">não consegui ver nenhum ângulo — este navegador pode não descodificar o vídeo da Kick</span>'
+    ? `<span class="nota mau">${t('montagem.naoVi')}</span>`
     : `<span class="nota">${sugeridos.length
-      ? `parece que morreu: ${sugeridos.join(', ')} — corrige clicando`
-      : 'ninguém se destacou; escolhe tu clicando'}${dito}</span>`) + cartoes;
+      ? t('montagem.pareceMorreu', { lista: sugeridos.join(', ') })
+      : t('montagem.ninguem')}${dito}</span>`) + cartoes;
 
   for (const b of caixa2.querySelectorAll('.cartao')) {
     b.onclick = () => {
@@ -1130,18 +1143,19 @@ function pintarMomentos() {
       const morreu = (m.vitimas || []).includes(c);
       const havia = filmava(c, m.ms - 3000, m.ms + 3000);
       return `<button class="vit ${morreu ? 'sim' : ''}" data-canal="${c}"`
-        + `${havia ? '' : ' disabled title="não estava a filmar"'}>${c}</button>`;
+        + `${havia ? '' : ` disabled title="${t('montagem.naoFilmava')}"`}>${c}</button>`;
     }).join('');
     return `<li data-ms="${m.ms}" class="${Math.abs(m.ms - estado.agoraMs) < 1500 ? 'aqui' : ''}">`
       + `<b class="n">${String(i + 1).padStart(2, '0')}</b>`
       + `<span>${relogioCurto(m.ms)}Z</span>`
       + `<span class="quem">${m.protagonista || '—'}</span>`
-      + '<button class="ir">ir</button><button class="fora">apagar</button>'
-      + '<button class="verMortes">quem morreu?</button>'
-      + `<span class="quantos">${n} clipe${n === 1 ? '' : 's'}</span>`
-      + `<span class="vitimas"><span class="nota">matou</span>${fichas}</span>`
+      + `<button class="ir">${t('montagem.ir')}</button>`
+      + `<button class="fora">${t('montagem.apagar')}</button>`
+      + `<button class="verMortes">${t('montagem.verMortes')}</button>`
+      + `<span class="quantos">${tn(n, 'montagem.umClipe', 'montagem.clipes')}</span>`
+      + `<span class="vitimas"><span class="nota">${t('montagem.matou')}</span>${fichas}</span>`
       + '<div class="olhar" hidden></div></li>';
-  }).join('') || '<li class="nota">Sem kills marcadas. Vai ao momento e carrega em Marcar kill.</li>';
+  }).join('') || `<li class="nota">${t('montagem.vazia')}</li>`;
 
   for (const li of $('listaMomentos').querySelectorAll('li[data-ms]')) {
     const ms = Number(li.dataset.ms);
@@ -1165,8 +1179,9 @@ function pintarMomentos() {
   $('baixarMontagem').disabled = !total;
   const semVitima = lista.filter((m) => !(m.vitimas || []).length).length;
   $('estadoMontagem').textContent = total
-    ? `${lista.length} kill${lista.length === 1 ? '' : 's'} · ${total} ficheiros`
-      + (semVitima ? ` · ${semVitima} sem ninguém marcado (só a tua POV)` : '')
+    ? t('montagem.resumo', {
+      kills: tn(lista.length, 'montagem.umaKill', 'montagem.kills'), ficheiros: total,
+    }) + (semVitima ? t('montagem.semVitima', { n: semVitima }) : '')
     : '';
 }
 
@@ -1208,7 +1223,7 @@ async function baixarMontagem() {
       const r = await executarCorte(p, { sinal: controlo.signal, jaTemos });
       if (r.estado !== 'pronto') {
         item.innerHTML = `<b>${clipe.prefixo} ${clipe.canal}</b> `
-          + `<span class="nota mau">${r.obtidos ?? 0}/${r.total ?? 0} pedaços — não gero com buraco</span>`;
+          + `<span class="nota mau">${t('corte.incompleto', { obtidos: r.obtidos ?? 0, total: r.total ?? 0 })}</span>`;
         continue;
       }
       const nome = `${clipe.prefixo}_${nomeDoFicheiro({ canal: clipe.canal, quandoMs: clipe.deMs })}`;
@@ -1216,7 +1231,7 @@ async function baixarMontagem() {
         nome,
         url: guardarFicheiro(new Blob([r.bytes], { type: r.tipo })),
         nota: `${(r.bytes.length / 1048576).toFixed(1)} MB · `
-          + `${clipe.papel === 'protagonista' ? 'a tua POV' : 'quem morreu'}`,
+          + `${clipe.papel === 'protagonista' ? t('fila.tuaPov') : t('fila.quemMorreu')}`,
       });
     } catch (e) {
       if (e.name === 'AbortError') break;
@@ -1224,7 +1239,7 @@ async function baixarMontagem() {
     }
   }
 
-  $('estadoMontagem').textContent = `${feitos}/${plano.length} — pronto. Clica em cada ficheiro para guardar.`;
+  $('estadoMontagem').textContent = t('montagem.pronto', { feitos, total: plano.length });
   $('baixarMontagem').disabled = false;
   estado.cancelar = null;
 }
@@ -1236,8 +1251,8 @@ const mmssCurto = (s) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).pad
 function pintarMarca() {
   const { de, ate } = estado.marca;
   $('marca').textContent = de == null ? ''
-    : ate == null ? `início ${relogioCurto(de)}Z — falta o fim`
-      : `${relogioCurto(de)}Z → ${relogioCurto(ate)}Z (${hhmmss(ate - de)})`;
+    : ate == null ? t('marca.faltaFim', { de: `${relogioCurto(de)}Z` })
+      : t('marca.feita', { de: `${relogioCurto(de)}Z`, ate: `${relogioCurto(ate)}Z`, dur: hhmmss(ate - de) });
   pintarCorte();
 }
 
@@ -1253,6 +1268,7 @@ function pintarCorte() {
   const valida = de != null && ate != null && ate > de;
   // A secção fica sempre à vista, e diz o que fazer quando ainda não há marca:
   // escondê-la fazia com que ninguém descobrisse que se podia baixar.
+  $('comoCortar').innerHTML = t('corte.como', { i: '<kbd>I</kbd>', o: '<kbd>O</kbd>' });
   $('comoCortar').hidden = valida;
   $('listaCorte').hidden = !valida;
   if (!valida) { $('listaCorte').innerHTML = ''; return; }
@@ -1267,14 +1283,14 @@ function pintarCorte() {
     const m = estado.margens[l.slug] || {};
     return `<li data-slug="${l.slug}">`
       + `<b>${l.slug}</b>`
-      + `<label>antes <input class="antes" type="number" value="${m.antesS || 0}" min="0" max="120" step="1">s</label>`
-      + `<label>depois <input class="depois" type="number" value="${m.depoisS || 0}" min="0" max="120" step="1">s</label>`
-      + `<span class="dur"></span>`
-      + `<button class="baixarUm">Baixar</button>`
+      + `<label>${t('corte.antes')} <input class="antes" type="number" value="${m.antesS || 0}" min="0" max="120" step="1">s</label>`
+      + `<label>${t('corte.depois')} <input class="depois" type="number" value="${m.depoisS || 0}" min="0" max="120" step="1">s</label>`
+      + '<span class="dur"></span>'
+      + `<button class="baixarUm">${t('corte.baixar')}</button>`
       + `<span class="estadoCorte nota"></span>`
       + `</li>`;
   }).join('')
-    || '<li class="nota">nenhum ângulo estava a filmar nessa janela.</li>';
+    || `<li class="nota">${t('corte.ninguem')}</li>`;
 
   for (const li of $('listaCorte').querySelectorAll('li[data-slug]')) {
     const slug = li.dataset.slug;
@@ -1311,7 +1327,8 @@ async function baixarUm(slug) {
     nudges: estado.nudges,
     margens: estado.margens,
     aoProgresso: (p) => {
-      nota.textContent = p.fase === 'planear' ? 'a preparar…' : `${p.prontos}/${p.total} pedaços`;
+      nota.textContent = p.fase === 'planear' ? t('montagem.aPreparar')
+        : t('montagem.pedacos', { prontos: p.prontos, total: p.total });
     },
   });
 
@@ -1328,16 +1345,17 @@ async function baixarUm(slug) {
       url: guardarFicheiro(new Blob([r.bytes], { type: r.tipo })),
       nota: `${(r.bytes.length / 1048576).toFixed(1)} MB · `
         + `${r.plano.qualidade.altura}p${r.plano.qualidade.fps} · `
-        + `começa ${r.plano.sobraInicioS.toFixed(1)}s antes da tua marca`,
+        + t('corte.comeca', { s: r.plano.sobraInicioS.toFixed(1) }),
     });
   } else if (r.estado === 'incompleto') {
     nota.classList.add('mau');
-    item.innerHTML = `<b>${slug}</b> <span class="nota mau">${r.obtidos}/${r.total} pedaços — `
-      + `não gero o ficheiro com um buraco no meio</span>`;
+    item.innerHTML = `<b>${slug}</b> <span class="nota mau">`
+      + `${t('corte.incompleto', { obtidos: r.obtidos, total: r.total })}</span>`;
   } else {
     const porque = {
-      buraco: 'estava fora do ar', 'fora-da-noite': 'não estava a filmar',
-      'sem-segmentos': 'sem vídeo nessa janela',
+      buraco: t('corte.buraco'),
+      'fora-da-noite': t('corte.foraDaNoite'),
+      'sem-segmentos': t('corte.semSegmentos'),
     };
     item.innerHTML = `<b>${slug}</b> <span class="nota">${porque[r.estado] || r.estado}</span>`;
   }
@@ -1403,8 +1421,9 @@ function pintarClipe() {
   $('barraClipe').querySelector('.pega.de').style.left = `${posClipe(c.deMs)}%`;
   $('barraClipe').querySelector('.pega.ate').style.left = `${posClipe(c.ateMs)}%`;
   const dur = (c.ateMs - c.deMs) / 1000;
-  $('tempoClipe').textContent = `${relogioCurto(c.deMs)} → ${relogioCurto(c.ateMs)}  ·  `
-    + `${dur.toFixed(1)}s de ${MAXIMO_S}`;
+  $('tempoClipe').textContent = t('clipe.tempo', {
+    de: relogioCurto(c.deMs), ate: relogioCurto(c.ateMs), dur: dur.toFixed(1), max: MAXIMO_S,
+  });
   $('tempoClipe').classList.toggle('mau', dur >= MAXIMO_S);
 }
 
@@ -1461,16 +1480,22 @@ async function guardarClipe() {
   const linha = estado.linhas.find((l) => l.slug === c.canal);
   const nudge = estado.nudges[c.canal] || 0;
   $('guardarClipe').disabled = true;
-  $('estadoClipe').textContent = 'a preparar…';
+  $('estadoClipe').textContent = t('montagem.aPreparar');
 
   try {
     const plano = await planearCorte({ linha, deMs: c.deMs + nudge, ateMs: c.ateMs + nudge });
-    if (plano.estado !== 'ok') { $('estadoClipe').textContent = `não deu: ${plano.estado}`; $('guardarClipe').disabled = false; return; }
+    if (plano.estado !== 'ok') {
+      $('estadoClipe').textContent = t('clipe.naoDeu', { erro: plano.estado });
+      $('guardarClipe').disabled = false;
+      return;
+    }
     const r = await executarCorte(plano, {
-      aoProgresso: (p) => { $('estadoClipe').textContent = `${p.prontos}/${p.total} pedaços`; },
+      aoProgresso: (p) => {
+        $('estadoClipe').textContent = t('montagem.pedacos', { prontos: p.prontos, total: p.total });
+      },
     });
     if (r.estado !== 'pronto') {
-      $('estadoClipe').textContent = `${r.obtidos ?? 0}/${r.total ?? 0} pedaços — não gero com buraco`;
+      $('estadoClipe').textContent = t('corte.incompleto', { obtidos: r.obtidos ?? 0, total: r.total ?? 0 });
       $('guardarClipe').disabled = false;
       return;
     }
@@ -1491,7 +1516,7 @@ async function guardarClipe() {
     a.click();
     fecharClipe();
   } catch (e) {
-    $('estadoClipe').textContent = `não deu: ${e.message}`;
+    $('estadoClipe').textContent = t('clipe.naoDeu', { erro: e.message });
     $('guardarClipe').disabled = false;
   }
 }
@@ -1522,7 +1547,7 @@ function guardarFicheiro(blob) {
 function linhaDeFicheiro(item, { nome, url, nota }) {
   item.innerHTML = `<a href="${url}" download="${nome}">${nome}</a> `
     + `<span class="nota">${nota}</span>`
-    + '<button class="apagarUm" title="apagar este">✕</button>';
+    + `<button class="apagarUm" title="${t('fila.apagarUm')}">✕</button>`;
   item.querySelector('.apagarUm').onclick = () => {
     // Soltar ESTE endereço: é o que devolve a memória deste ficheiro.
     URL.revokeObjectURL(url);
@@ -1535,7 +1560,7 @@ function linhaDeFicheiro(item, { nome, url, nota }) {
 function mostrarMemoria() {
   const mb = estado.ficheiros.reduce((s, f) => s + f.bytes, 0) / 1048576;
   $('memoria').textContent = estado.ficheiros.length
-    ? `${estado.ficheiros.length} ficheiros · ${mb.toFixed(0)} MB em memória`
+    ? t('fila.memoria', { n: estado.ficheiros.length, mb: mb.toFixed(0) })
     : '';
   $('memoria').classList.toggle('mau', mb > 500);
 }
@@ -1557,9 +1582,7 @@ function limparFila() {
  */
 function recomecar() {
   const quantas = estado.momentos.length;
-  const aviso = quantas
-    ? `Isto apaga tudo, incluindo ${quantas} kill${quantas === 1 ? '' : 's'} marcada${quantas === 1 ? '' : 's'}.\n\nContinuar?`
-    : 'Isto apaga os canais, a marca e os ajustes.\n\nContinuar?';
+  const aviso = quantas ? t('recomecar.comKills', { n: quantas }) : t('recomecar.semKills');
   if (!confirm(aviso)) return;
   limparFila();
   try { localStorage.removeItem('replay'); } catch { /* janela privada */ }
@@ -1633,6 +1656,41 @@ document.addEventListener('keydown', (e) => {
   if (e.key === ',' && estado.focos[0]) empurrar(estado.focos[0], -passo);
   if (e.key === '.' && estado.focos[0]) empurrar(estado.focos[0], passo);
 });
+
+// ── idioma ──────────────────────────────────────────────────────────────────
+
+/**
+ * O idioma. Do que estiver guardado, senão do browser, senão português.
+ *
+ * Trocar de idioma repinta tudo o que já está no ecrã — não obriga a recarregar
+ * nem perde a noite que estava aberta.
+ */
+function trocarIdioma(codigo) {
+  definirIdioma(codigo);
+  try { localStorage.setItem('replay.idioma', idiomaActual()); } catch { /* janela privada */ }
+  $('idioma').value = idiomaActual();
+  aplicarIdioma();
+  // A lista de canais é repintada a partir do que já foi lido, e não de uma
+  // nova ida à Kick: trocar de idioma não pode custar pedidos a ninguém.
+  if (ultimosCanais.length) pintarCanais(ultimosCanais);
+  if (estado.linhas.length) {
+    montarGrade();
+    pintarFaixas();
+    irPara(estado.agoraMs);
+    pintarMarca();
+    pintarMomentos();
+  }
+}
+
+$('idioma').innerHTML = Object.entries(IDIOMAS)
+  .map(([c, nome]) => `<option value="${c}">${nome}</option>`).join('');
+$('idioma').onchange = () => trocarIdioma($('idioma').value);
+
+let guardadoIdioma = null;
+try { guardadoIdioma = localStorage.getItem('replay.idioma'); } catch { /* janela privada */ }
+definirIdioma(guardadoIdioma || idiomaDoBrowser());
+$('idioma').value = idiomaActual();
+aplicarIdioma();
 
 // ── arranque ────────────────────────────────────────────────────────────────
 //

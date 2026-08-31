@@ -76,13 +76,21 @@ export function agruparPorNoite(canais, { intervaloMs = SEIS_HORAS } = {}) {
   }).sort((a, b) => b.inicio - a.inicio);
 }
 
-/** O rótulo de uma noite: data, hora e quantos ângulos. */
-export function rotuloDaNoite(n) {
-  const d = new Date(n.inicio);
+/**
+ * O rótulo de uma noite: data, hora e quantos ângulos.
+ *
+ * A tradução entra por parâmetro em vez de ser importada: assim este ficheiro
+ * continua a ser puro e testável sem browser nenhum, e a língua é uma escolha
+ * de quem chama e não uma dependência escondida.
+ */
+export function rotuloDaNoite(n, { t } = {}) {
   const hora = (ms) => new Date(ms).toISOString().slice(11, 16);
   const dia = (ms) => new Date(ms).toISOString().slice(0, 10);
   // Uma noite que atravessa a meia-noite tem de dizer os dois dias, senão
   // quem procura o dia 30 não o encontra numa linha que diz 29.
   const ate = dia(n.fim) === dia(n.inicio) ? hora(n.fim) : `${dia(n.fim)} ${hora(n.fim)}`;
-  return `${d.toISOString().slice(0, 10)} · ${hora(n.inicio)}–${ate} — ${n.canais} ${n.canais === 1 ? 'canal' : 'canais'}`;
+  const quantos = t
+    ? t(n.canais === 1 ? 'noite.umCanal' : 'noite.canais', { n: n.canais })
+    : `${n.canais} ${n.canais === 1 ? 'canal' : 'canais'}`;
+  return `${dia(n.inicio)} · ${hora(n.inicio)}–${ate} — ${quantos}`;
 }
