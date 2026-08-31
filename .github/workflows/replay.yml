@@ -1,0 +1,60 @@
+# Os testes do Replay, a cada push.
+#
+# Sem isto, os 176 testes só corriam quando alguém se lembrava — e a única
+# maneira de saber que o site tinha partido era o dono abri-lo e ver.
+#
+# Os testes de browser correm de verdade: um Chromium a sério, contra uma Kick
+# falsa servida em memória. Sem isso metade da suite não corre e o verde
+# passa a ser uma opinião.
+name: replay
+
+on:
+  push:
+    paths: ['kick-sync/**', '.github/workflows/replay.yml']
+  pull_request:
+    paths: ['kick-sync/**', '.github/workflows/replay.yml']
+  workflow_dispatch:
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: kick-sync
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # O Playwright traz o seu próprio Chromium. `--with-deps` porque um
+      # runner limpo não tem as bibliotecas de sistema que ele precisa, e sem
+      # elas o browser arranca e morre sem dizer porquê.
+      - name: Instalar o Playwright
+        run: |
+          npm install --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+
+      - name: Correr os testes
+        run: |
+          # O caminho do Chromium muda a cada versão do Playwright; perguntar
+          # em vez de escrever um número que envelhece em silêncio.
+          export DETETIVE_CHROME="$(node -e "
+            const { chromium } = require('playwright');
+            process.stdout.write(chromium.executablePath());
+          ")"
+          echo "chromium: $DETETIVE_CHROME"
+          node --test --test-timeout=120000 test/*.mjs
+
+      # Um teste de browser que não corre é um teste que não existe. Se o
+      # Chromium faltar, a suite fica verde a testar metade — e é assim que um
+      # bug de interface chega ao ar com 176 verdes por trás.
+      - name: Garantir que os testes de browser correram mesmo
+        run: |
+          saida="$(node --test --test-timeout=120000 test/pagina.test.mjs 2>&1 || true)"
+          if echo "$saida" | grep -q 'sem navegador'; then
+            echo "$saida" | tail -20
+            echo "::error::os testes de browser foram saltados — o Chromium não foi encontrado"
+            exit 1
+          fi
