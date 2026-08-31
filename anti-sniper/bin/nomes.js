@@ -88,12 +88,23 @@ const VISIVEL = args.includes('--ver') || process.env.DETETIVE_VISIVEL === '1';
 // `--tudo` consulta as duas fontes e junta. Sem ele, para na primeira
 // que responder — que é o que serve no dia a dia.
 const TUDO = args.includes('--tudo');
+// `--entrar` abre o navegador DO PROGRAMA na página de login e espera.
+//
+// Existe por causa de uma confusão que custou horas: ele fazia login no Chrome
+// DELE, e o programa usa um Chrome próprio, com perfil separado (senão o
+// Chromium recusa abrir duas vezes a mesma pasta). São dois navegadores, e a
+// sessão de um não vale no outro. Da janela dele isso é invisível.
+//
+// E fica AQUI, junto das outras bandeiras, logo a seguir aos argumentos: foi a
+// terceira vez nesta sessão que usei uma constante antes de a declarar.
+const ENTRAR = args.includes('--entrar');
 // Vários alvos numa corrida só: `npm run nomes -- ID1 ID2 ID3 --ver`.
 const ALVOS = args.filter((a) => !a.startsWith('-'));
 const alvo = ALVOS[0];
 
-if (!alvo) {
+if (!alvo && !ENTRAR) {
   console.error('\n  uso: npm run nomes -- <SteamID64 | link do perfil> [mais IDs] [--ver]\n');
+  console.error('       npm run nomes -- --entrar     (faz o login, uma vez)\n');
   process.exit(2);
 }
 
@@ -130,7 +141,7 @@ if (iChave >= 0) {
   process.exit(0);
 }
 
-const CONHECIDAS = new Set(['--ver', '--tudo', '--chave']);
+const CONHECIDAS = new Set(['--ver', '--tudo', '--chave', '--entrar']);
 const estranha = args.find((a) => a.startsWith('-') && !CONHECIDAS.has(a));
 if (estranha) {
   console.error(`\n  não conheço "${estranha}".`);
@@ -143,7 +154,7 @@ if (estranha) {
   process.exit(2);
 }
 
-console.log(`  ${ALVOS.length} ${ALVOS.length === 1 ? 'conta' : 'contas'} a ler…`);
+if (!ENTRAR) console.log(`  ${ALVOS.length} ${ALVOS.length === 1 ? 'conta' : 'contas'} a ler…`);
 
 /** As páginas que mostram histórico de nomes, na ordem em que vale tentar. */
 const FONTES = process.env.DETETIVE_NOMES_URL
@@ -492,6 +503,32 @@ function incompleto(r, totalDaApi = null) {
     }
 
     return r;
+  }
+
+  // `--entrar`: abre a janela CERTA, espera pelo login, e sai.
+  if (ENTRAR) {
+    console.log('\n  Abri o navegador DO PROGRAMA — é esta janela que conta.');
+    console.log('  O teu Chrome normal é outro; o login lá dentro não serve aqui.\n');
+    console.log('  Nela: Sign In → Sign in through Steam. Não feches nada.');
+    console.log('  Eu vejo sozinho quando entrares.\n');
+    await p.goto('https://steamid.uk/login.php', { waitUntil: 'domcontentloaded', timeout: 60000 })
+      .catch(() => {});
+    for (let i = 0; i < 60; i++) {
+      await p.waitForTimeout(5000);
+      const dentro = await p.evaluate(() => {
+        const t = document.body ? document.body.innerText : '';
+        return !/You are not logged in|Sign in through Steam/i.test(t) && /Logout|Sign Out|My Profile/i.test(t);
+      }).catch(() => false);
+      if (dentro) {
+        console.log('  ✓ Login feito. Fica guardado — não precisas de repetir.\n');
+        await ctx.close().catch(() => {});
+        process.exit(0);
+      }
+      if (process.stdout.isTTY) process.stdout.write(`\r  … à espera do login (${300 - i * 5}s)   `);
+    }
+    console.log('\n  Passaram 5 minutos sem login. Corre outra vez quando puderes.\n');
+    await ctx.close().catch(() => {});
+    process.exit(1);
   }
 
   // O pedido de login é uma vez por corrida, não uma por conta — a bandeira
