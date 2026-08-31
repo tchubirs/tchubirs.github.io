@@ -140,9 +140,15 @@ async function kickFalsa(pagina, { canais = ['tchubi', 'outro'], segmentos = 60,
     contentType: 'text/javascript',
     // O stub regista o que lhe mandam carregar. Sem isto não há como ver
     // QUAL degrau da escada cada quadrado pediu — que é a decisão inteira.
+    // O stub regista o que lhe mandam carregar e, ao fim de um instante, diz
+    // que ja tem imagem — como um leitor a serio. Sem esse `loadeddata` a
+    // pagina esperaria pelo limite de desistencia a cada movimento.
     body: 'window.__carregados=[];'
-      + 'window.Hls=function(){this.loadSource=function(u){window.__carregados.push(u);};'
-      + 'this.attachMedia=function(){};this.destroy=function(){};};'
+      + 'window.Hls=function(){var m=null;'
+      + 'this.loadSource=function(u){window.__carregados.push(u);};'
+      + 'this.attachMedia=function(v){m=v;setTimeout(function(){'
+      + 'try{m.dispatchEvent(new Event("loadeddata"));}catch(e){}},30);};'
+      + 'this.destroy=function(){};};'
       + 'window.Hls.isSupported=function(){return true;};',
   }));
   return pedidos;
@@ -353,6 +359,33 @@ test('um nome errado oferece o parecido, e um clique corrige e recarrega',
     await p.close();
   });
 
+// A queixa: "todas as lives carregam ao mesmo tempo e o principal fica lento;
+// eu so quero ver se o principal esta no sitio certo". Entao o principal
+// carrega sozinho, e os outros so depois de ele ter imagem.
+test('o principal carrega primeiro, e sozinho; os outros vao a seguir',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'outro', 'terceiro', 'quarto'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi\noutro\nterceiro\nquarto');
+    await p.click('#carregar');
+    await p.waitForFunction(() => window.__carregados?.length === 1, null, { timeout: 15000 });
+
+    const primeiro = (await p.evaluate(() => window.__carregados[0]));
+    const principal = await p.locator('.tile.principal').getAttribute('data-slug');
+    assert.match(primeiro, new RegExp(`/${principal}/`), 'o primeiro a carregar e o principal');
+    assert.match(primeiro, /1080p60/, 'e vai em qualidade');
+    // E sozinho: os outros tres ainda nao pediram nada.
+    assert.equal((await p.evaluate(() => window.__carregados.length)), 1);
+
+    await p.waitForFunction(() => window.__carregados?.length === 4, null, { timeout: 15000 });
+    const todos = await p.evaluate(() => window.__carregados.slice());
+    assert.equal(todos.filter((u) => u.includes('1080p60')).length, 1,
+      'e so o principal e que sobe de qualidade');
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
 test('um canal que não existe aparece dito, não como quadrado vazio',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
     const { p, erros } = await abrir();
@@ -432,9 +465,23 @@ test('da para ver dois angulos ao mesmo tempo, e so um leva o som',
     await p.waitForFunction(() => document.querySelectorAll('#palcoFoco .tile').length === 2,
       null, { timeout: 10000 });
     assert.equal(await p.locator('#grade .tile').count(), 1, 'o terceiro fica na grelha');
-    // Dois audios ao mesmo tempo nao e comparar, e barulho.
-    assert.equal(await p.locator('#palcoFoco .tile video[muted]').count(), 1,
-      'exactamente um dos dois e que tem som');
+    // Dois audios ao mesmo tempo nao e comparar, e barulho. Pela PROPRIEDADE e
+    // nao pelo atributo: o atributo do HTML fica la depois de o som ligar, e
+    // um teste que olhe para ele da verde com tudo mudo.
+    const comSom = () => p.evaluate(() => [...document.querySelectorAll('#palcoFoco .tile')]
+      .filter((t) => !t.querySelector('video').muted)
+      .map((t) => t.dataset.slug));
+    assert.equal((await comSom()).length, 1, 'exactamente um dos dois e que tem som');
+    assert.deepEqual(await comSom(), await p.locator('#palcoFoco .tile.principal')
+      .getAttribute('data-slug').then((s) => [s]), 'e o som esta no principal');
+
+    // E da para escolher qual e o principal, que era o que faltava com dois.
+    const outro = await p.locator('#palcoFoco .tile:not(.principal)').getAttribute('data-slug');
+    await p.locator(`#palcoFoco .tile[data-slug="${outro}"] .som`).click();
+    await p.waitForTimeout(300);
+    assert.deepEqual(await comSom(), [outro], 'o som passou para o que eu escolhi');
+    assert.equal(await p.locator('#palcoFoco .tile.principal').getAttribute('data-slug'), outro);
+    assert.equal(await p.locator('#palcoFoco .tile').count(), 2, 'e continuam os dois no ecra');
 
     // Tres nao: volta a ser a grelha toda a descodificar.
     await p.locator('#grade .tile').first().locator('.par').click();
