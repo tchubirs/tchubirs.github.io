@@ -64,6 +64,9 @@
          barra as cegas: os buracos e as sobreposicoes so se descobriam batendo
          com o nariz neles. -->
     <div id="faixas" class="faixas"><div id="cursor" class="cursor"></div></div>
+    <!-- A regua, como num editor: as horas por baixo das barras, e as kills
+         marcadas nela. Sem isto sabe-se que se esta "algures no meio". -->
+    <div class="reguaLinha"><span></span><div id="regua" class="regua"></div></div>
     <div class="linha">
       <output id="agora" class="tempo">—</output>
       <output id="angulos" class="nota">—</output>
@@ -119,10 +122,10 @@
   <!-- A versao, a serio e visivel. O GitHub Pages serve com max-age=600 e um
        telemovel guarda o app.js antigo; sem isto, "ja corrigi" e "continua
        igual" sao as duas verdadeiras ao mesmo tempo e ninguem sai dali. -->
-  <p class="nota">Tudo acontece no teu navegador. Os VODs são de quem os gravou. · <span id="versao">676b0a9d07</span></p>
+  <p class="nota">Tudo acontece no teu navegador. Os VODs são de quem os gravou. · <span id="versao">369217feb8</span></p>
 </footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.17/hls.min.js"></script>
-<script type="module" src="app.js?v=676b0a9d07"></script>
+<script type="module" src="app.js?v=369217feb8"></script>
 </body>
 </html>

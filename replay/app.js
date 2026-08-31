@@ -5,15 +5,15 @@
 // bottom rung of Kick's ladder and is what makes thirty tiles a home-connection
 // problem rather than a server problem.
 
-import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=676b0a9d07';
-import { linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink } from './relogio.js?v=676b0a9d07';
-import { cortarTodosOsAngulos } from './baixar.js?v=676b0a9d07';
-import { alinharPeloSom, custoEstimadoMB } from './alinhar.js?v=676b0a9d07';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=676b0a9d07';
+import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=369217feb8';
+import { linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink } from './relogio.js?v=369217feb8';
+import { cortarTodosOsAngulos } from './baixar.js?v=369217feb8';
+import { alinharPeloSom, custoEstimadoMB } from './alinhar.js?v=369217feb8';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=369217feb8';
 import {
   novoMomento, acrescentar, remover, planoDaMontagem, ordenar, alternarVitima,
-} from './momentos.js?v=676b0a9d07';
-import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=676b0a9d07';
+} from './momentos.js?v=369217feb8';
+import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=369217feb8';
 
 const $ = (id) => document.getElementById(id);
 const estado = {
@@ -398,6 +398,47 @@ function pintarFaixas() {
     alvo.append(f);
   }
   marcarFaixas();
+  pintarRegua();
+}
+
+/**
+ * A régua: as horas por baixo das barras, e as kills marcadas nela.
+ *
+ * Sem isto sabe-se que se está "algures no meio" e mais nada. Com ela, olha-se
+ * uma vez e sabe-se que horas são naquele ponto — e onde já se marcou.
+ */
+function pintarRegua() {
+  const { inicio, fim } = estado.janela || {};
+  const alvo = $('regua');
+  if (!alvo) return;
+  if (inicio == null || !(fim > inicio)) { alvo.innerHTML = ''; return; }
+  const total = fim - inicio;
+  const pct = (ms) => ((ms - inicio) / total) * 100;
+
+  // Um passo redondo: cinco minutos numa noite curta, meia hora numa longa.
+  // Escolher pelo número de marcas em vez de um valor fixo é o que faz a régua
+  // continuar legível quer a noite tenha vinte minutos quer tenha dez horas.
+  const PASSOS = [1, 2, 5, 10, 15, 30, 60, 120, 180, 360].map((m) => m * 60_000);
+  // Oito intervalos e nao dez: num telemovel as etiquetas de dez ja se tocam
+  // umas nas outras, e uma regua ilegivel e pior do que regua nenhuma.
+  const passo = PASSOS.find((p) => total / p <= 8) || PASSOS.at(-1);
+
+  const partes = [];
+  const primeiro = Math.ceil(inicio / passo) * passo;
+  for (let t = primeiro; t <= fim; t += passo) {
+    const x = pct(t);
+    partes.push(`<i class="risco" style="left:${x}%"></i>`);
+    partes.push(`<b class="hora" style="left:${x}%">${relogioCurto(t).slice(0, 5)}</b>`);
+  }
+  for (const [i, m] of ordenar(estado.momentos).entries()) {
+    if (m.ms < inicio || m.ms > fim) continue;
+    partes.push(`<button class="kill" data-ms="${m.ms}" style="left:${pct(m.ms)}%" `
+      + `title="kill ${i + 1} — ${relogioCurto(m.ms)}Z"><span>${i + 1}</span></button>`);
+  }
+  alvo.innerHTML = partes.join('');
+  for (const b of alvo.querySelectorAll('.kill')) {
+    b.onclick = () => irPara(Number(b.dataset.ms));
+  }
 }
 
 function marcarFaixas() {
@@ -852,6 +893,7 @@ function pintarMomentos() {
       };
     }
   }
+  pintarRegua();
   const total = planoDaMontagem(lista, canais, { filmava }).length;
   $('baixarMontagem').disabled = !total;
   const semVitima = lista.filter((m) => !(m.vitimas || []).length).length;
