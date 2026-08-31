@@ -80,6 +80,7 @@
       <button id="mais1m" title="avançar 1 minuto">1 min &raquo;</button>
     </div>
     <div class="linha">
+      <button id="clipar" class="principal">Clipar <kbd>C</kbd></button>
       <button id="marcarIn">Marca início <kbd>I</kbd></button>
       <button id="marcarOut">Marca fim <kbd>O</kbd></button>
       <output id="marca" class="nota"></output>
@@ -123,14 +124,45 @@
   <ul id="fila" class="fila"></ul>
 </section>
 
+<!-- Criar clipe: uma janela por cima, com a barra de corte e um limite de
+     180 s. E o caminho para "quero um so, agora" — a montagem e para depois. -->
+<div id="modalClipe" class="modal" hidden>
+  <div class="modalCaixa" role="dialog" aria-modal="true" aria-label="Criar clipe">
+    <div class="modalTopo">
+      <b>Criar clipe</b>
+      <select id="canalClipe" aria-label="ângulo"></select>
+      <button id="fecharClipe" title="fechar">✕</button>
+    </div>
+    <video id="previaClipe" playsinline muted></video>
+    <div id="barraClipe" class="barraClipe">
+      <div class="seleccao"></div>
+      <button class="pega de" aria-label="início do clipe"></button>
+      <button class="pega ate" aria-label="fim do clipe"></button>
+      <div class="cabeca"></div>
+    </div>
+    <div class="linha">
+      <output id="tempoClipe" class="nota"></output>
+      <button id="menosClipe">−1s</button>
+      <button id="maisClipe">+1s</button>
+    </div>
+    <label for="tituloClipe">Título do clipe</label>
+    <input id="tituloClipe" type="text" maxlength="80" placeholder="opcional — entra no nome do ficheiro">
+    <div class="linha fim">
+      <span id="estadoClipe" class="nota"></span>
+      <button id="cancelarClipe">Cancelar</button>
+      <button id="guardarClipe" class="principal">Guardar clipe</button>
+    </div>
+  </div>
+</div>
+
 <footer>
   <!-- A versao, a serio e visivel. O GitHub Pages serve com max-age=600 e um
        telemovel guarda o app.js antigo; sem isto, "ja corrigi" e "continua
        igual" sao as duas verdadeiras ao mesmo tempo e ninguem sai dali. -->
-  <p class="nota">Tudo acontece no teu navegador. Os VODs são de quem os gravou. · <span id="versao">498644878a</span></p>
+  <p class="nota">Tudo acontece no teu navegador. Os VODs são de quem os gravou. · <span id="versao">9e969a7a0b</span></p>
 </footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.17/hls.min.js"></script>
-<script type="module" src="app.js?v=498644878a"></script>
+<script type="module" src="app.js?v=9e969a7a0b"></script>
 </body>
 </html>

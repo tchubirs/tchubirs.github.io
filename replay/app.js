@@ -5,17 +5,18 @@
 // bottom rung of Kick's ladder and is what makes thirty tiles a home-connection
 // problem rather than a server problem.
 
-import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=498644878a';
-import { linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink } from './relogio.js?v=498644878a';
-import { cortarTodosOsAngulos } from './baixar.js?v=498644878a';
-import { alinharPeloSom, custoEstimadoMB } from './alinhar.js?v=498644878a';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=498644878a';
+import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=9e969a7a0b';
+import { linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink } from './relogio.js?v=9e969a7a0b';
+import { cortarTodosOsAngulos } from './baixar.js?v=9e969a7a0b';
+import { alinharPeloSom, custoEstimadoMB } from './alinhar.js?v=9e969a7a0b';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=9e969a7a0b';
 import {
   novoMomento, acrescentar, remover, planoDaMontagem, ordenar, alternarVitima,
-} from './momentos.js?v=498644878a';
-import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=498644878a';
-import { criarApanhador } from './frames.js?v=498644878a';
-import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=498644878a';
+} from './momentos.js?v=9e969a7a0b';
+import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=9e969a7a0b';
+import { criarApanhador } from './frames.js?v=9e969a7a0b';
+import { MAXIMO_S, mover, janelaInicial, nomeDoClipe } from './clipe.js?v=9e969a7a0b';
+import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=9e969a7a0b';
 
 const $ = (id) => document.getElementById(id);
 const estado = {
@@ -31,6 +32,7 @@ const estado = {
   restaurar: null,
   volume: {},
   parado: false,
+  clipe: null,
   players: new Map(),
   // Cada ficheiro gerado fica INTEIRO na memória enquanto o endereço existir.
   // Trinta e seis clipes de doze megas sao quase meio giga de RAM presa, e
@@ -1341,6 +1343,159 @@ async function baixarUm(slug) {
   }
 }
 
+// ── criar clipe ─────────────────────────────────────────────────────────────
+//
+// "Não achei como se baixa um clipe só, um de cada vez." A montagem é para
+// juntar uma noite inteira; isto é para quando se quer UM, agora.
+
+const CONTEXTO_S = 150;   // o que a barra mostra de cada lado do instante
+
+function abrirClipe() {
+  if (!estado.linhas.length) return;
+  const canal = estado.focos[0] || estado.linhas[0].slug;
+  const linha = estado.linhas.find((l) => l.slug === canal) || estado.linhas[0];
+  // Não deixar escolher um pedaço que este ângulo não filmou: os limites são
+  // os do vídeo dele, e não os da noite.
+  const limites = { inicio: linha.inicio, fim: linha.fim };
+  const centro = Math.min(Math.max(estado.agoraMs, limites.inicio), limites.fim);
+
+  estado.clipe = {
+    canal: linha.slug,
+    limites,
+    vista: {
+      inicio: Math.max(limites.inicio, centro - CONTEXTO_S * 1000),
+      fim: Math.min(limites.fim, centro + CONTEXTO_S * 1000),
+    },
+    ...janelaInicial(centro, { limites }),
+    hls: null,
+  };
+
+  $('canalClipe').innerHTML = estado.linhas
+    .map((l) => `<option value="${l.slug}"${l.slug === linha.slug ? ' selected' : ''}>${l.slug}</option>`)
+    .join('');
+  $('tituloClipe').value = '';
+  $('estadoClipe').textContent = '';
+  $('guardarClipe').disabled = false;
+  $('modalClipe').hidden = false;
+  pintarClipe();
+  preverClipe(estado.clipe.deMs);
+}
+
+function fecharClipe() {
+  estado.clipe?.hls?.destroy();
+  const v = $('previaClipe');
+  v.pause?.();
+  v.removeAttribute('src');
+  estado.clipe = null;
+  $('modalClipe').hidden = true;
+}
+
+const posClipe = (ms) => {
+  const { inicio, fim } = estado.clipe.vista;
+  return ((ms - inicio) / Math.max(1, fim - inicio)) * 100;
+};
+
+function pintarClipe() {
+  const c = estado.clipe;
+  if (!c) return;
+  $('barraClipe').querySelector('.seleccao').style.cssText =
+    `left:${posClipe(c.deMs)}%;width:${Math.max(0.5, posClipe(c.ateMs) - posClipe(c.deMs))}%`;
+  $('barraClipe').querySelector('.pega.de').style.left = `${posClipe(c.deMs)}%`;
+  $('barraClipe').querySelector('.pega.ate').style.left = `${posClipe(c.ateMs)}%`;
+  const dur = (c.ateMs - c.deMs) / 1000;
+  $('tempoClipe').textContent = `${relogioCurto(c.deMs)} → ${relogioCurto(c.ateMs)}  ·  `
+    + `${dur.toFixed(1)}s de ${MAXIMO_S}`;
+  $('tempoClipe').classList.toggle('mau', dur >= MAXIMO_S);
+}
+
+/** A prévia: o mesmo ângulo, no ponto onde o clipe começa. */
+function preverClipe(quandoMs) {
+  const c = estado.clipe;
+  if (!c) return;
+  const linha = estado.linhas.find((l) => l.slug === c.canal);
+  const r = onde(linha, quandoMs, { nudgeMs: estado.nudges[c.canal] || 0 });
+  const v = $('previaClipe');
+  $('barraClipe').querySelector('.cabeca').style.left = `${posClipe(quandoMs)}%`;
+  if (r.estado !== 'toca') { v.pause?.(); return; }
+  const peca = linha.pecasCompletas?.find((p) => p.vod.id === r.peca.vod.id) || r.peca;
+  const alvo = peca.escada[0] || peca.barato;
+  if (c.url !== alvo.url) {
+    c.hls?.destroy();
+    c.url = alvo.url;
+    if (window.Hls?.isSupported()) {
+      const hls = new window.Hls({ startPosition: r.tempoS, maxBufferLength: 20 });
+      c.hls = hls;
+      hls.loadSource(alvo.url);
+      hls.attachMedia(v);
+    } else { v.src = alvo.url; }
+  }
+  if (Math.abs(v.currentTime - r.tempoS) > 0.3) v.currentTime = r.tempoS;
+}
+
+function arrastar(qual) {
+  return (ev) => {
+    ev.preventDefault();
+    const barra = $('barraClipe');
+    const mexer = (e) => {
+      const r = barra.getBoundingClientRect();
+      const x = Math.min(Math.max((e.clientX ?? e.touches?.[0]?.clientX) - r.left, 0), r.width);
+      const { inicio, fim } = estado.clipe.vista;
+      const ms = inicio + ((fim - inicio) * x) / r.width;
+      Object.assign(estado.clipe, mover(estado.clipe, qual, ms, { limites: estado.clipe.limites }));
+      pintarClipe();
+      preverClipe(qual === 'de' ? estado.clipe.deMs : estado.clipe.ateMs);
+    };
+    const largar = () => {
+      window.removeEventListener('pointermove', mexer);
+      window.removeEventListener('pointerup', largar);
+    };
+    window.addEventListener('pointermove', mexer);
+    window.addEventListener('pointerup', largar);
+    mexer(ev);
+  };
+}
+
+async function guardarClipe() {
+  const c = estado.clipe;
+  if (!c) return;
+  const linha = estado.linhas.find((l) => l.slug === c.canal);
+  const nudge = estado.nudges[c.canal] || 0;
+  $('guardarClipe').disabled = true;
+  $('estadoClipe').textContent = 'a preparar…';
+
+  try {
+    const plano = await planearCorte({ linha, deMs: c.deMs + nudge, ateMs: c.ateMs + nudge });
+    if (plano.estado !== 'ok') { $('estadoClipe').textContent = `não deu: ${plano.estado}`; $('guardarClipe').disabled = false; return; }
+    const r = await executarCorte(plano, {
+      aoProgresso: (p) => { $('estadoClipe').textContent = `${p.prontos}/${p.total} pedaços`; },
+    });
+    if (r.estado !== 'pronto') {
+      $('estadoClipe').textContent = `${r.obtidos ?? 0}/${r.total ?? 0} pedaços — não gero com buraco`;
+      $('guardarClipe').disabled = false;
+      return;
+    }
+    const nome = nomeDoClipe({ titulo: $('tituloClipe').value, canal: c.canal, quandoMs: c.deMs });
+    const url = guardarFicheiro(new Blob([r.bytes], { type: r.tipo }));
+    const item = document.createElement('li');
+    $('fila').prepend(item);
+    linhaDeFicheiro(item, {
+      nome,
+      url,
+      nota: `${(r.bytes.length / 1048576).toFixed(1)} MB · ${plano.qualidade.altura}p${plano.qualidade.fps}`,
+    });
+    // Guardar já, sem obrigar a caçar o link na lista: quem carregou em
+    // "Guardar clipe" quis o ficheiro, não uma linha para clicar depois.
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nome;
+    a.click();
+    fecharClipe();
+  } catch (e) {
+    $('estadoClipe').textContent = `não deu: ${e.message}`;
+    $('guardarClipe').disabled = false;
+  }
+}
+
 // ── memória e limpeza ───────────────────────────────────────────────────────
 
 /**
@@ -1432,11 +1587,42 @@ $('alinhar').onclick = alinhar;
 $('marcarKill').onclick = marcarKill;
 $('baixarMontagem').onclick = baixarMontagem;
 $('limparFila').onclick = limparFila;
+$('clipar').onclick = abrirClipe;
+$('fecharClipe').onclick = fecharClipe;
+$('cancelarClipe').onclick = fecharClipe;
+$('guardarClipe').onclick = guardarClipe;
+$('canalClipe').onchange = () => {
+  const l = estado.linhas.find((x) => x.slug === $('canalClipe').value);
+  if (!l || !estado.clipe) return;
+  estado.clipe.hls?.destroy();
+  Object.assign(estado.clipe, { canal: l.slug, hls: null, url: null, limites: { inicio: l.inicio, fim: l.fim } });
+  Object.assign(estado.clipe, mover(estado.clipe, 'de', estado.clipe.deMs, { limites: estado.clipe.limites }));
+  pintarClipe();
+  preverClipe(estado.clipe.deMs);
+};
+$('barraClipe').querySelector('.pega.de').onpointerdown = arrastar('de');
+$('barraClipe').querySelector('.pega.ate').onpointerdown = arrastar('ate');
+for (const [id, delta] of [['menosClipe', -1000], ['maisClipe', 1000]]) {
+  $(id).onclick = () => {
+    if (!estado.clipe) return;
+    Object.assign(estado.clipe, mover(estado.clipe, 'ate', estado.clipe.ateMs + delta,
+      { limites: estado.clipe.limites }));
+    pintarClipe();
+  };
+}
+$('modalClipe').onclick = (e) => { if (e.target === $('modalClipe')) fecharClipe(); };
 $('recomecar').onclick = recomecar;
 
 document.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
   const passo = e.shiftKey ? 10_000 : 1000;
+  // Com a janela do clipe aberta, o teclado é dela: Esc fecha, e o resto não
+  // pode andar com o tempo por baixo do que se está a cortar.
+  if (!$('modalClipe').hidden) {
+    if (e.key === 'Escape') fecharClipe();
+    return;
+  }
+  if (e.key === 'c' || e.key === 'C') $('clipar').click();
   if (e.key === ' ') { e.preventDefault(); alternarPausa(); }
   if (e.key === 'm' || e.key === 'M') $('marcarKill').click();
   if (e.key === 'i' || e.key === 'I') $('marcarIn').click();
