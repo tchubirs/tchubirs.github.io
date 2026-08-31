@@ -5,15 +5,15 @@
 // bottom rung of Kick's ladder and is what makes thirty tiles a home-connection
 // problem rather than a server problem.
 
-import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=369217feb8';
-import { linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink } from './relogio.js?v=369217feb8';
-import { cortarTodosOsAngulos } from './baixar.js?v=369217feb8';
-import { alinharPeloSom, custoEstimadoMB } from './alinhar.js?v=369217feb8';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=369217feb8';
+import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=165f522863';
+import { linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink } from './relogio.js?v=165f522863';
+import { cortarTodosOsAngulos } from './baixar.js?v=165f522863';
+import { alinharPeloSom, custoEstimadoMB } from './alinhar.js?v=165f522863';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=165f522863';
 import {
   novoMomento, acrescentar, remover, planoDaMontagem, ordenar, alternarVitima,
-} from './momentos.js?v=369217feb8';
-import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=369217feb8';
+} from './momentos.js?v=165f522863';
+import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=165f522863';
 
 const $ = (id) => document.getElementById(id);
 const estado = {
@@ -28,6 +28,10 @@ const estado = {
   momentos: [],
   restaurar: null,
   players: new Map(),
+  // Cada ficheiro gerado fica INTEIRO na memória enquanto o endereço existir.
+  // Trinta e seis clipes de doze megas sao quase meio giga de RAM presa, e
+  // ninguem os liberta sozinho — foi por aqui que a pagina comecou a travar.
+  ficheiros: [],
   cancelar: null,
   geracao: 0,
   sugestoes: [],
@@ -916,7 +920,7 @@ async function baixarMontagem() {
   const controlo = new AbortController();
   estado.cancelar = () => controlo.abort();
   $('baixarMontagem').disabled = true;
-  $('fila').innerHTML = '';
+  limparFila();
 
   const cache = new Map();
   const jaTemos = new Map();
@@ -945,7 +949,7 @@ async function baixarMontagem() {
         continue;
       }
       const nome = `${clipe.prefixo}_${nomeDoFicheiro({ canal: clipe.canal, quandoMs: clipe.deMs })}`;
-      const url = URL.createObjectURL(new Blob([r.bytes], { type: r.tipo }));
+      const url = guardarFicheiro(new Blob([r.bytes], { type: r.tipo }));
       item.innerHTML = `<a href="${url}" download="${nome}">${nome}</a> `
         + `<span class="nota">${(r.bytes.length / 1048576).toFixed(1)} MB · `
         + `${clipe.papel === 'protagonista' ? 'a tua POV' : 'quem morreu'}</span>`;
@@ -1053,7 +1057,7 @@ async function baixarUm(slug) {
   $('fila').prepend(item);
 
   if (r.estado === 'pronto') {
-    const url = URL.createObjectURL(new Blob([r.bytes], { type: r.tipo }));
+    const url = guardarFicheiro(new Blob([r.bytes], { type: r.tipo }));
     const mb = (r.bytes.length / 1048576).toFixed(1);
     // A sobra não é um pedido de desculpas — é o número por onde aparar no editor.
     item.innerHTML = `<a href="${url}" download="${r.nome}">${r.nome}</a> `
@@ -1070,6 +1074,56 @@ async function baixarUm(slug) {
     };
     item.innerHTML = `<b>${slug}</b> <span class="nota">${porque[r.estado] || r.estado}</span>`;
   }
+}
+
+// ── memória e limpeza ───────────────────────────────────────────────────────
+
+/**
+ * Um ficheiro pronto, e a conta da memória que ele custa.
+ *
+ * `createObjectURL` prende o Blob até alguém o soltar. Sem isto, uma noite de
+ * trabalho enchia a memória do browser com clipes já guardados no disco, e a
+ * página ia ficando lenta sem razão visível.
+ */
+function guardarFicheiro(blob) {
+  const url = URL.createObjectURL(blob);
+  estado.ficheiros.push({ url, bytes: blob.size });
+  mostrarMemoria();
+  return url;
+}
+
+function mostrarMemoria() {
+  const mb = estado.ficheiros.reduce((s, f) => s + f.bytes, 0) / 1048576;
+  $('memoria').textContent = estado.ficheiros.length
+    ? `${estado.ficheiros.length} ficheiros · ${mb.toFixed(0)} MB em memória`
+    : '';
+  $('memoria').classList.toggle('mau', mb > 500);
+}
+
+function limparFila() {
+  // Soltar cada endereço: e isto que devolve a memoria ao browser. Apagar so
+  // a lista deixava os Blobs presos para sempre.
+  for (const f of estado.ficheiros) URL.revokeObjectURL(f.url);
+  estado.ficheiros = [];
+  $('fila').innerHTML = '';
+  mostrarMemoria();
+}
+
+/**
+ * Recomeçar: apaga a sessão guardada e volta ao princípio.
+ *
+ * Pergunta primeiro, porque leva as kills marcadas — que é o que mais custa a
+ * juntar e o que ninguém quer perder por engano.
+ */
+function recomecar() {
+  const quantas = estado.momentos.length;
+  const aviso = quantas
+    ? `Isto apaga tudo, incluindo ${quantas} kill${quantas === 1 ? '' : 's'} marcada${quantas === 1 ? '' : 's'}.\n\nContinuar?`
+    : 'Isto apaga os canais, a marca e os ajustes.\n\nContinuar?';
+  if (!confirm(aviso)) return;
+  limparFila();
+  try { localStorage.removeItem('replay'); } catch { /* janela privada */ }
+  location.href = location.pathname;
 }
 
 // ── ligações ────────────────────────────────────────────────────────────────
@@ -1092,6 +1146,8 @@ $('marcarOut').onclick = () => { estado.marca.ate = estado.agoraMs; pintarMarca(
 $('alinhar').onclick = alinhar;
 $('marcarKill').onclick = marcarKill;
 $('baixarMontagem').onclick = baixarMontagem;
+$('limparFila').onclick = limparFila;
+$('recomecar').onclick = recomecar;
 
 document.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
