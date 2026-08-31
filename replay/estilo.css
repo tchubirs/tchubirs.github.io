@@ -12,6 +12,16 @@
 
 * { box-sizing: border-box; }
 
+/* Dois toques seguidos num botao davam zoom na pagina inteira.
+   `touch-action: manipulation` diz ao browser para nao esperar por um segundo
+   toque — o botao responde ao primeiro e o duplo toque deixa de existir. O
+   zoom por dois dedos continua a funcionar, que e o que alguem quer mesmo. */
+button, .tile, input, select, textarea, label, kbd {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+button { user-select: none; }
+
 body {
   margin: 0;
   padding: 20px;
