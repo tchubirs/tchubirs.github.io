@@ -216,9 +216,13 @@ async function carregar() {
   const noites = agruparPorNoite(canais);
   if (!noites.length) { $('estadoCarga').textContent = 'nenhum canal tem VOD utilizável.'; return; }
   pintarNoites(noites);
-  // Voltar a noite onde se estava, e nao a mais recente: quem deu F5 estava a
-  // meio de uma noite, e mandá-lo para outra e perder o mesmo que perder tudo.
-  const alvo = estado.restaurar?.agora;
+  // Voltar a noite onde se estava, e nao a mais recente.
+  //
+  // Vale para o F5 e vale para acrescentar um canal a meio: quem acrescenta
+  // alguem que esta AO VIVO agora cria uma noite nova, de hoje, que passava a
+  // ser a mais recente e roubava o ecra. Ele ficava sem a noite em que estava
+  // a trabalhar e sem perceber porque.
+  const alvo = estado.restaurar?.agora ?? (estado.linhas.length ? estado.agoraMs : null);
   const i = alvo != null ? noites.findIndex((n) => alvo >= n.inicio && alvo <= n.fim) : -1;
   $('noite').value = String(i >= 0 ? i : 0);
   await abrirNoite(noites[i >= 0 ? i : 0]);
@@ -326,7 +330,17 @@ async function abrirNoite(noite) {
     pecasCompletas: pecas,
   }));
   estado.janela = janelaComum(estado.linhas);
-  if (!estado.janela) { $('estadoCarga').textContent = 'nenhum canal com relógio utilizável.'; return; }
+  if (!estado.janela) {
+    // Limpar o palco, e não só desistir.
+    //
+    // Ficava a grelha da noite anterior no ecrã, órfã: os vídeos continuavam a
+    // tocar mas `estado.linhas` já estava vazio, por isso o pause não
+    // encontrava nada para parar e os quadrados respondiam a nada. Uma noite
+    // que não abre tem de deixar o ecrã vazio e dizer porquê.
+    limparPalco();
+    $('estadoCarga').textContent = 'esta noite não tem nenhum canal com vídeo legível — escolhe outra.';
+    return;
+  }
 
   // Apertar a janela à NOITE escolhida.
   //
@@ -349,9 +363,16 @@ async function abrirNoite(noite) {
   // E o instante de arranque tem de cair dentro da janela, mesmo quando a
   // sobreposição de todos acontece fora desta noite.
   const dentro = (t) => Number.isFinite(t) && t >= estado.janela.inicio && t <= estado.janela.fim;
-  estado.agoraMs = estado.janela.haSobreposicao && dentro(estado.janela.sobreposicaoInicio)
-    ? estado.janela.sobreposicaoInicio
-    : estado.janela.inicio;
+  // Ficar onde já se estava, se esse instante ainda existir nesta janela.
+  //
+  // Acrescentar um canal a meio do trabalho não pode atirar ninguém de volta
+  // para o início da noite: o instante era o que ele tinha acabado de
+  // encontrar, e reencontrá-lo é o trabalho todo outra vez.
+  const ondeEstava = dentro(estado.agoraMs) ? estado.agoraMs : null;
+  estado.agoraMs = ondeEstava
+    ?? (estado.janela.haSobreposicao && dentro(estado.janela.sobreposicaoInicio)
+      ? estado.janela.sobreposicaoInicio
+      : estado.janela.inicio);
   estado.focos = estado.linhas[0] ? [estado.linhas[0].slug] : [];
 
   // O que estava guardado, mas só o que ainda faz sentido nesta noite: um
@@ -383,6 +404,21 @@ async function abrirNoite(noite) {
   pintarMarca();
   pintarMomentos();
   guardar();
+}
+
+/** Deitar fora tudo o que estava no ecrã, sem deixar leitores a tocar sozinhos. */
+function limparPalco() {
+  estado.players.forEach((p) => p.destroy?.());
+  estado.players.clear();
+  for (const v of document.querySelectorAll('#palcoFoco video, #grade video')) v.pause?.();
+  $('palcoFoco').innerHTML = '';
+  $('grade').innerHTML = '';
+  $('faixas').querySelectorAll('.faixa').forEach((f) => f.remove());
+  $('regua').innerHTML = '';
+  $('listaMomentos').innerHTML = '';
+  estado.linhas = [];
+  estado.janela = null;
+  $('angulos').textContent = '';
 }
 
 /**
@@ -502,8 +538,11 @@ function alternarPausa() {
   //
   // Por isso a pausa fica de guarda: qualquer `play` enquanto estiver parada é
   // desfeito no instante em que acontece.
-  for (const linha of estado.linhas) {
-    const v = tileDe(linha.slug)?.querySelector('video');
+  // Pelos quadrados que estão MESMO no ecrã, e não pela lista em memória: era
+  // aí que o pause falhava calado quando as duas deixavam de coincidir.
+  for (const tile of document.querySelectorAll('#palcoFoco .tile, #grade .tile')) {
+    const v = tile.querySelector('video');
+    const slug = tile.dataset.slug;
     if (!v) continue;
     if (estado.parado) {
       v.pause?.();
@@ -512,7 +551,7 @@ function alternarPausa() {
         v.addEventListener('play', v.__guarda);
         v.addEventListener('playing', v.__guarda);
       }
-    } else if (ehFoco(linha.slug)) {
+    } else if (ehFoco(slug)) {
       v.play?.().catch(() => {});
     }
   }

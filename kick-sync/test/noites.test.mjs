@@ -75,6 +75,24 @@ test('sem duracao conhecida o VOD conta como um instante, nao como eterno', () =
   assert.equal(n[0].fim, n[0].inicio);
 });
 
+// Um VOD que ainda esta a decorrer chega sem duracao fiavel. Com um filtro de
+// sobreposicao estrita ficava de fora da SUA PROPRIA noite: a lista dizia
+// "0 canais" e a pagina "nenhum canal com relogio utilizavel", para uma noite
+// que existia e tinha gente la dentro.
+test('quem esta ao vivo agora nao desaparece da propria noite', () => {
+  const [n] = agruparPorNoite([{ slug: 'aovivo', vods: [{ inicioApi: T('2026-08-31T20:59:00Z') }] }]);
+  assert.equal(n.canais, 1, 'a noite tem o canal que a comecou');
+  assert.deepEqual(n.quem, ['aovivo']);
+});
+
+test('e continua a contar quando ha um sem duracao e outro com', () => {
+  const [n] = agruparPorNoite([
+    { slug: 'aovivo', vods: [{ inicioApi: T('2026-08-31T20:59:00Z') }] },
+    canal('outro', [['2026-08-31T21:00:00Z', 0.1]]),
+  ]);
+  assert.equal(n.canais, 2);
+});
+
 test('lixo dentro nao rebenta nem inventa noites', () => {
   assert.deepEqual(agruparPorNoite([]), []);
   assert.deepEqual(agruparPorNoite(null), []);

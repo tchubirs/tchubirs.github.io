@@ -971,6 +971,35 @@ test('da para tirar um canal da lista com um clique',
     await p.close();
   });
 
+// "Adicionei o wowi depois e nao o vejo ai para selecionar." O canal estava la
+// — o que mudou foi a NOITE: acrescentar alguem que esta ao vivo agora criava
+// uma noite nova, de hoje, que passava a ser a mais recente e roubava o ecra.
+test('acrescentar um canal a meio nao muda a noite em que se esta',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'novato'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 15000 });
+
+    await p.click('#mais1m');
+    const onde = await p.locator('#agora').innerText();
+    const noite = await p.locator('#noite').inputValue();
+
+    // Acrescentar outro canal e recarregar.
+    await p.fill('#canais', 'tchubi\nnovato');
+    await p.click('#carregar');
+    await p.waitForFunction(() => document.querySelectorAll('.tile').length === 2,
+      null, { timeout: 20000 });
+
+    assert.equal(await p.locator('#noite').inputValue(), noite, 'a noite tem de ser a mesma');
+    assert.equal(await p.locator('#agora').innerText(), onde, 'e o instante tambem');
+    assert.equal(await p.locator('#listaCanais li[data-slug="novato"]').count(), 1);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
 test('o aviso do leitor aparece quando o hls.js não carrega',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
     const { p } = await abrir();

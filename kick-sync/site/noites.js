@@ -53,7 +53,15 @@ export function agruparPorNoite(canais, { intervaloMs = SEIS_HORAS } = {}) {
     // A janela da noite é a dos que COMEÇARAM nela. Um VOD de 38 h que passa
     // por aqui entra na lista, mas não estica a noite para dois dias.
     const fim = Math.max(...g.inicios.map((p) => p.ate));
-    const itens = pontos.filter((p) => p.de < fim && p.ate > g.inicio);
+    // Quem COMEÇOU nesta noite pertence-lhe sempre, tenha durado o que tiver.
+    //
+    // Um VOD que ainda está a decorrer chega da Kick sem duração fiável, e
+    // então `ate` é igual a `de`. Com um filtro de sobreposição estrita, esse
+    // VOD ficava de fora da sua própria noite: a lista mostrava "0 canais" e
+    // a página dizia "nenhum canal com relógio utilizável" — para uma noite
+    // que existia e tinha gente lá dentro.
+    const daNoite = new Set(g.inicios);
+    const itens = pontos.filter((p) => daNoite.has(p) || (p.de < fim && p.ate > g.inicio));
     return {
       inicio: g.inicio,
       fim,
