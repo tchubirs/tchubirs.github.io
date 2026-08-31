@@ -103,10 +103,20 @@ kbd {
 }
 .tile video { width: 100%; height: 100%; object-fit: cover; display: block; }
 /* Os ângulos em foco, fora da grelha. Um ocupa a largura toda; dois ficam
-   lado a lado, que é o que serve para decidir se vale a pena baixar. */
-.palcoFoco { display: flex; gap: 8px; margin: 16px 0 8px; }
-.palcoFoco .tile { flex: 1 1 0; aspect-ratio: 16/7; }
-.palcoFoco.dois .tile { aspect-ratio: 16/9; }
+   lado a lado, que é o que serve para decidir se vale a pena baixar.
+
+   Grelha e não flex, e com `min-height`: um `aspect-ratio` dentro de um item
+   flex com base 0 colapsa para altura zero em vários browsers de telemóvel. O
+   quadrado continua lá, continua a tocar e continua a ter som — só não se vê.
+   Foi exactamente esse o sintoma: ouvia-se o canal e ele não aparecia em lado
+   nenhum, e do lado de quem usa parece um canal a faltar, não um bug de CSS. */
+.palcoFoco {
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr);
+  gap: 8px; margin: 16px 0 8px;
+}
+.palcoFoco .tile { aspect-ratio: 16/7; min-height: 180px; }
+.palcoFoco.dois .tile { aspect-ratio: 16/9; min-height: 140px; }
+.palcoFoco:empty { display: none; }
 .tile.foco { border-color: var(--acento); }
 .tile .par {
   position: absolute; right: 6px; top: 6px; padding: 1px 7px; font-size: 12px;
@@ -180,7 +190,7 @@ footer { margin-top: 32px; border-top: 1px solid var(--borda); padding-top: 12px
 
 @media (max-width: 620px) {
   .grade { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
-  .palcoFoco { flex-direction: column; }
-  .palcoFoco .tile { aspect-ratio: 16/9; }
+  .palcoFoco { grid-auto-flow: row; }
+  .palcoFoco .tile, .palcoFoco.dois .tile { aspect-ratio: 16/9; min-height: 150px; }
   .corte b { min-width: 0; }
 }
