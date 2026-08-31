@@ -9,6 +9,7 @@ import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js';
 import { linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink } from './relogio.js';
 import { cortarTodosOsAngulos } from './baixar.js';
 import { alinharPeloSom, custoEstimadoMB } from './alinhar.js';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js';
 
 const $ = (id) => document.getElementById(id);
 const estado = {
@@ -172,42 +173,10 @@ async function carregar() {
   await abrirNoite(noites[0]);
 }
 
-/**
- * Which night is which.
- *
- * A "night" is a cluster of VODs whose starts sit near each other. Anything
- * else — asking the user for a date, guessing from the newest VOD — breaks the
- * moment two channels started an hour apart, which is the normal case.
- */
-function agruparPorNoite(canais) {
-  const pontos = [];
-  for (const c of canais) {
-    for (const v of c.vods) if (Number.isFinite(v.inicioApi)) pontos.push({ slug: c.slug, v });
-  }
-  pontos.sort((a, b) => a.v.inicioApi - b.v.inicioApi);
-  const noites = [];
-  const SEIS_HORAS = 6 * 3600_000;
-  for (const p of pontos) {
-    const ultima = noites.at(-1);
-    if (ultima && p.v.inicioApi - ultima.fim < SEIS_HORAS) {
-      ultima.fim = Math.max(ultima.fim, p.v.inicioApi + (p.v.duracaoMs || 0));
-      ultima.itens.push(p);
-    } else {
-      noites.push({ inicio: p.v.inicioApi, fim: p.v.inicioApi + (p.v.duracaoMs || 0), itens: [p] });
-    }
-  }
-  return noites
-    .map((n) => ({ ...n, canais: new Set(n.itens.map((i) => i.slug)).size }))
-    .filter((n) => n.canais >= 1)
-    .sort((a, b) => b.inicio - a.inicio);
-}
-
 function pintarNoites(noites) {
   $('noites').hidden = false;
-  $('noite').innerHTML = noites.map((n, i) => {
-    const d = new Date(n.inicio);
-    return `<option value="${i}">${d.toISOString().slice(0, 10)} · ${relogioCurto(n.inicio)} — ${n.canais} canais</option>`;
-  }).join('');
+  $('noite').innerHTML = noites
+    .map((n, i) => `<option value="${i}">${rotuloDaNoite(n)}</option>`).join('');
   $('noite').onchange = () => abrirNoite(noites[Number($('noite').value)]);
 }
 
@@ -306,11 +275,9 @@ async function abrirNoite(noite) {
     : estado.janela.inicio;
   estado.focos = estado.linhas[0] ? [estado.linhas[0].slug] : [];
   $('palco').hidden = false;
-  $('resumoNoite').textContent = `${estado.linhas.length} canais · `
-    + `${hhmmss(estado.janela.fim - estado.janela.inicio)} de noite · `
-    + (estado.janela.haSobreposicao
-      ? `todos juntos ${relogioCurto(estado.janela.sobreposicaoInicio)}–${relogioCurto(estado.janela.sobreposicaoFim)}`
-      : 'nunca estiveram todos no ar ao mesmo tempo');
+  $('resumoNoite').textContent = estado.janela.haSobreposicao
+    ? `todos juntos ${relogioCurto(estado.janela.sobreposicaoInicio)}–${relogioCurto(estado.janela.sobreposicaoFim)}`
+    : 'nunca estiveram todos no ar ao mesmo tempo';
   montarGrade();
   irPara(estado.agoraMs);
 }
