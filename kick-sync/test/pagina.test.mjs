@@ -531,7 +531,7 @@ test('cada canal baixa sozinho, no seu tamanho, em qualidade maxima',
   });
 
 // Ver dois ao mesmo tempo: e assim que se decide se vale a pena baixar.
-test('da para ver dois angulos ao mesmo tempo, e so um leva o som',
+test('da para ver dois angulos ao mesmo tempo, os dois em qualidade',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
     const { p, erros } = await abrir();
     await kickFalsa(p, { canais: ['tchubi', 'outro', 'terceiro'] });
@@ -545,23 +545,14 @@ test('da para ver dois angulos ao mesmo tempo, e so um leva o som',
     await p.waitForFunction(() => document.querySelectorAll('#palcoFoco .tile').length === 2,
       null, { timeout: 10000 });
     assert.equal(await p.locator('#grade .tile').count(), 1, 'o terceiro fica na grelha');
-    // Dois audios ao mesmo tempo nao e comparar, e barulho. Pela PROPRIEDADE e
-    // nao pelo atributo: o atributo do HTML fica la depois de o som ligar, e
-    // um teste que olhe para ele da verde com tudo mudo.
-    const comSom = () => p.evaluate(() => [...document.querySelectorAll('#palcoFoco .tile')]
-      .filter((t) => !t.querySelector('video').muted)
-      .map((t) => t.dataset.slug));
-    assert.equal((await comSom()).length, 1, 'exactamente um dos dois e que tem som');
-    assert.deepEqual(await comSom(), await p.locator('#palcoFoco .tile.principal')
-      .getAttribute('data-slug').then((s) => [s]), 'e o som esta no principal');
 
-    // E da para escolher qual e o principal, que era o que faltava com dois.
-    const outro = await p.locator('#palcoFoco .tile:not(.principal)').getAttribute('data-slug');
-    await p.locator(`#palcoFoco .tile[data-slug="${outro}"] .som`).click();
-    await p.waitForTimeout(300);
-    assert.deepEqual(await comSom(), [outro], 'o som passou para o que eu escolhi');
-    assert.equal(await p.locator('#palcoFoco .tile.principal').getAttribute('data-slug'), outro);
-    assert.equal(await p.locator('#palcoFoco .tile').count(), 2, 'e continuam os dois no ecra');
+    // Se estao os dois no ecra, e para olhar para os dois: os dois em qualidade.
+    await p.waitForFunction(
+      () => window.__carregados.filter((u) => u.includes('1080p60')).length === 2,
+      null, { timeout: 15000 });
+    const todos = await p.evaluate(() => window.__carregados.slice());
+    assert.equal(todos.filter((u) => u.includes('1080p60')).length, 2);
+    assert.equal(todos.filter((u) => u.includes('160p30')).length, 1, 'e o terceiro fica no 160p');
 
     // Tres nao: volta a ser a grelha toda a descodificar.
     await p.locator('#grade .tile').first().locator('.par').click();
@@ -570,6 +561,78 @@ test('da para ver dois angulos ao mesmo tempo, e so um leva o som',
     assert.deepEqual(erros, []);
     await p.close();
   });
+
+// O som e de cada quadrado. Da para ter os dois a falar, os dois calados, ou
+// um so — que e o que se quer quando se compara um tiro visto de dois sitios.
+test('o som e de cada quadrado: pode estar nos dois, num, ou em nenhum',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'outro'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi\noutro');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 15000 });
+    await p.locator('#grade .tile').first().locator('.par').click();
+    await p.waitForFunction(() => document.querySelectorAll('#palcoFoco .tile').length === 2,
+      null, { timeout: 10000 });
+
+    // Pela PROPRIEDADE e nao pelo atributo: o atributo do HTML fica la depois
+    // de o som ligar, e um teste que olhe para ele da verde com tudo mudo.
+    const comSom = () => p.evaluate(() => [...document.querySelectorAll('#palcoFoco .tile')]
+      .filter((t) => !t.querySelector('video').muted).map((t) => t.dataset.slug));
+
+    assert.equal((await comSom()).length, 1, 'por omissao so um fala');
+    const calado = await p.locator('#palcoFoco .tile:not(.principal)').getAttribute('data-slug');
+
+    await p.locator(`#palcoFoco .tile[data-slug="${calado}"] .som`).click();
+    await p.waitForTimeout(200);
+    assert.equal((await comSom()).length, 2, 'os dois podem falar ao mesmo tempo');
+
+    for (const t of await p.locator('#palcoFoco .tile .som').all()) await t.click();
+    await p.waitForTimeout(200);
+    assert.equal((await comSom()).length, 0, 'e os dois podem estar calados');
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+// "Se travar a pagina e eu tiver que dar um F5, perco tudo."
+test('um F5 devolve os canais, a noite, o instante e a marca',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'outro'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi\noutro');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 15000 });
+
+    await p.click('#mais1m');
+    await p.click('#mais10s');
+    await p.click('#marcarIn');
+    await p.click('#mais10s');
+    await p.click('#marcarOut');
+    await p.locator('#grade .tile').first().locator('.ajuste button[data-passo="1"]').click();
+    await p.waitForSelector('#listaCorte li[data-slug]', { timeout: 10000 });
+    const antes = {
+      agora: await p.locator('#agora').innerText(),
+      marca: await p.locator('#marca').innerText(),
+      nudge: await p.locator('#grade .tile').first().locator('.nudge').innerText(),
+    };
+    await p.waitForTimeout(600);            // a gravacao e adiada, de proposito
+
+    await p.reload({ waitUntil: 'networkidle' });
+    // Volta a carregar sozinha: devolver a caixa preenchida mas sem video
+    // obrigava a repetir a espera toda.
+    await p.waitForSelector('.tile', { timeout: 20000 });
+    assert.equal(await p.locator('#canais').inputValue(), 'tchubi\noutro');
+    assert.equal(await p.locator('#agora').innerText(), antes.agora, 'o instante volta');
+    assert.equal(await p.locator('#marca').innerText(), antes.marca, 'a marca volta');
+    assert.equal(await p.locator('#grade .tile').first().locator('.nudge').innerText(), antes.nudge,
+      'e o ajuste tambem');
+    assert.equal(await p.locator('#listaCorte li[data-slug]').count(), 2, 'e a lista de corte');
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
 
 // O dono disse que 10–20 s de diferença chega, e que talvez tenha de alinhar
 // à mão. Então o alinhar à mão tem de existir no ecrã, ser por canal, e não
