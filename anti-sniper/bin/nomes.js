@@ -498,6 +498,16 @@ function incompleto(r, totalDaApi = null) {
   // vive aqui fora de propósito, para atravessar todos os SteamIDs.
   let jaPediuLogin = false;
 
+  // `daApi` vive AQUI, e não dentro de `umaConta`, porque quem a lê é o
+  // `tentar()` — que é definido cá fora, uma vez só, para todas as contas.
+  //
+  // Declarei-a lá dentro e o comando rebentou na máquina dele com "daApi is
+  // not defined". A suite não apanhou: o teste corre sem `--ver`, e a linha
+  // que a usa está atrás de um `VISIVEL &&` que curto-circuita antes de lá
+  // chegar. Um erro escondido por trás de uma bandeira que os testes não
+  // levantam é um erro que só o utilizador encontra.
+  let daApi = null;
+
   // Várias contas numa corrida só.
   //
   // Ele estava a mandar-me um SteamID de cada vez e a correr o comando outra
@@ -528,7 +538,6 @@ function incompleto(r, totalDaApi = null) {
   // O optout importa muito: sem ele, uma conta que o site nunca vai mostrar
   // custava-lhe quatro minutos de espera pelo login, para no fim não aparecer
   // nada. Saber isso em 200 ms é a diferença entre esperar e desistir cedo.
-  let daApi = null;
   const cc = conta();
   if (cc.ligado) {
     daApi = await perfil(id, cc).catch(() => null);

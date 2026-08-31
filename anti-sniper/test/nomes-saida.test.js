@@ -49,6 +49,20 @@ function paginaIncompleta() {
 // chegava a atender, o navegador esperava 60 segundos e o teste falhava a
 // dizer que faltava um aviso na saída. O teste tinha-se a si próprio como
 // defeito, e a mensagem apontava para o outro lado.
+/** A página como ela é para visitante: anuncia o total e esconde a lista. */
+function paginaEscondida() {
+  return `<!doctype html><html><head><meta charset="utf-8"><title>SteamID.uk</title></head>
+    <body><h2>Previous Persona Names</h2><p>344 persona's. Results limited.</p>
+    <div><span>Gat..</span><span>Pl..</span></div></body></html>`;
+}
+
+/** Há como abrir uma janela de verdade aqui? (no Windows dele, há sempre) */
+const temEcra = (() => {
+  if (process.platform === 'win32' || process.env.DISPLAY) return true;
+  const r = spawnSync('which', ['xvfb-run'], { encoding: 'utf8' });
+  return r.status === 0;
+})();
+
 async function correrContra(html, args, extraEnv = {}) {
   const servidor = http.createServer((_, res) => {
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
@@ -58,7 +72,13 @@ async function correrContra(html, args, extraEnv = {}) {
   const saida = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'nomes-saida-')), 'perfil');
   try {
     return await new Promise((ok) => {
-      const f = spawn(process.execPath, [CLI, ...args], {
+      // `--ver` obriga a uma janela verdadeira. Fora do Windows isso quer
+      // dizer xvfb — e é o único jeito de os testes passarem pelo caminho que
+      // só existe atrás dessa bandeira.
+      const comEcra = args.includes('--ver') && process.platform !== 'win32' && !process.env.DISPLAY;
+      const cmd = comEcra ? 'xvfb-run' : process.execPath;
+      const arg0 = comEcra ? ['-a', process.execPath, CLI, ...args] : [CLI, ...args];
+      const f = spawn(cmd, arg0, {
         env: {
           ...process.env,
           DETETIVE_NOMES_URL: `http://127.0.0.1:${PORTA}/{id}`,
@@ -105,4 +125,17 @@ test('sem alvo, sai a explicar em vez de rebentar', () => {
   });
   assert.equal(r.status, 2);
   assert.doesNotMatch(`${r.stdout}${r.stderr}`, /Cannot access|is not defined/);
+});
+
+// O `daApi is not defined` que rebentou na máquina dele estava atrás de um
+// `VISIVEL &&`. Nenhum teste levantava essa bandeira, por isso o erro passou
+// por 400 testes e foi ele que o encontrou. Um erro escondido atrás de uma
+// bandeira que os testes não levantam é um erro que só o utilizador vê.
+test('o caminho do --ver também corre inteiro', { skip: !temNavegador ? 'sem playwright' : !temEcra && 'sem ecrã nem xvfb' }, async () => {
+  const { tudo } = await correrContra(paginaEscondida(), ['76561198155380495', '--ver']);
+  assert.doesNotMatch(tudo, /is not defined|Cannot access|is not a function/,
+    `a CLI rebentou no caminho do --ver:\n${tudo.slice(-700)}`);
+  assert.doesNotMatch(tudo, /^\s*erro:/m, tudo.slice(-700));
+  // E tem mesmo de ter passado pela pausa do login, senão não provou nada.
+  assert.match(tudo, /escond|Cloudflare/i, 'não chegou ao caminho que interessa');
 });
