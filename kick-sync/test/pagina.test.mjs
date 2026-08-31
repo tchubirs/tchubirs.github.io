@@ -87,8 +87,21 @@ async function kickFalsa(pagina, { canais = ['tchubi', 'outro'], segmentos = 60,
     '1080p60/playlist.m3u8',
   ].join('\n');
 
-  const pedidos = { api: 0, master: 0, playlist: 0, segmentos: 0, caro: 0, barato: 0 };
+  const pedidos = { api: 0, master: 0, playlist: 0, segmentos: 0, caro: 0, barato: 0, busca: 0 };
 
+  await pagina.route('**/api/search?**', async (rota) => {
+    pedidos.busca++;
+    const t = new URL(rota.request().url()).searchParams.get('searched_word') || '';
+    const todos = [...canais, 'tchubizinho', 'outrolado'];
+    await rota.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        channels: todos.filter((c) => c.includes(t.toLowerCase()))
+          .map((slug, i) => ({ slug, followersCount: 1000 - i * 10, is_live: i === 0 })),
+      }),
+    });
+  });
   await pagina.route('**/api/v2/channels/*/videos', async (rota) => {
     pedidos.api++;
     const slug = rota.request().url().match(/channels\/([^/]+)\/videos/)[1];
@@ -149,6 +162,52 @@ test('a página abre sem um único erro de código', { skip: !podeCorrer && 'sem
   assert.equal(await p.locator('#corte').isVisible(), false, 'sem marca, não há o que cortar');
   await p.close();
 });
+
+// O slug da Kick nem sempre e o nome que se ve. Escrever o inicio e escolher
+// e um passo a menos por cada canal, vezes trinta.
+test('escrever o inicio do nome sugere canais e acrescenta-os a lista',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    const pedidos = await kickFalsa(p);
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+
+    await p.fill('#procurar', 't');
+    await p.waitForTimeout(500);
+    assert.equal(pedidos.busca, 0, 'uma letra nao chega para ir a rede');
+
+    await p.fill('#procurar', 'tchubi');
+    await p.waitForSelector('#sugestoes li', { timeout: 10000 });
+    const itens = p.locator('#sugestoes li');
+    assert.ok(await itens.count() >= 2, 'tchubi e tchubizinho');
+    // Mais seguidos primeiro: e o desempate certo quando os nomes sao parecidos.
+    assert.match(await itens.first().innerText(), /tchubi\b/);
+
+    await itens.first().click();
+    assert.equal(await p.locator('#canais').inputValue(), 'tchubi');
+    assert.equal(await p.locator('#sugestoes').isVisible(), false, 'a lista fecha ao escolher');
+
+    // O mesmo canal duas vezes nao pode entrar duas vezes.
+    await p.fill('#procurar', 'tchubi');
+    await p.waitForSelector('#sugestoes li', { timeout: 10000 });
+    assert.equal(await p.locator('#sugestoes li.ja').count(), 1, 'o que ja la esta aparece marcado');
+    await p.locator('#sugestoes li.ja').click();
+    assert.equal(await p.locator('#canais').inputValue(), 'tchubi', 'e clicar nele nao duplica');
+
+    // Setas e Enter, para quem nao tira a mao do teclado.
+    await p.fill('#procurar', 'outro');
+    // Esperar pelo CONTEUDO certo, e nao so por "ha uma lista": a lista da
+    // busca anterior desaparece a seguir, e apanha-la era um teste verde
+    // sobre a coisa errada.
+    await p.waitForFunction(() => {
+      const li = document.querySelector('#sugestoes li');
+      return li && li.textContent.includes('outro');
+    }, null, { timeout: 10000 });
+    await p.keyboard.press('ArrowDown');
+    await p.keyboard.press('Enter');
+    assert.match(await p.locator('#canais').inputValue(), /\noutro/);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
 
 test('carrega a noite, mostra a grelha e põe todos no mesmo instante',
   { skip: !podeCorrer && 'sem navegador' }, async () => {

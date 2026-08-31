@@ -14,6 +14,13 @@
 </header>
 
 <section id="entrada">
+  <label for="procurar">Procurar um canal</label>
+  <div class="procura">
+    <input id="procurar" type="search" autocomplete="off" spellcheck="false"
+      placeholder="escreve o início do nome…">
+    <ul id="sugestoes" class="sugestoes" hidden></ul>
+  </div>
+
   <label for="canais">Canais da Kick, um por linha</label>
   <textarea id="canais" rows="6" spellcheck="false"
     placeholder="tchubi&#10;outrocanal&#10;maisum"></textarea>

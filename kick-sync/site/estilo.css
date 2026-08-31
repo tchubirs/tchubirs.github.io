@@ -41,6 +41,28 @@ textarea, select {
   resize: vertical;
 }
 
+/* A busca. O slug da Kick nem sempre e o nome que se ve, e obrigar alguem a
+   descobri-lo antes de usar isto era um passo a mais por cada canal. */
+.procura { position: relative; margin-bottom: 14px; }
+.procura input {
+  width: 100%; background: var(--caixa); color: var(--texto);
+  border: 1px solid var(--borda); border-radius: 8px; padding: 10px 12px; font: inherit;
+}
+.sugestoes {
+  position: absolute; z-index: 5; left: 0; right: 0; top: calc(100% + 4px);
+  list-style: none; margin: 0; padding: 4px; max-height: 300px; overflow-y: auto;
+  background: var(--caixa); border: 1px solid var(--borda); border-radius: 8px;
+  box-shadow: 0 8px 24px #0008;
+}
+.sugestoes li {
+  padding: 7px 10px; border-radius: 6px; cursor: pointer;
+  display: flex; justify-content: space-between; gap: 12px; align-items: baseline;
+}
+.sugestoes li:hover, .sugestoes li[aria-selected="true"] { background: #ffffff12; }
+.sugestoes li.ja { opacity: .45; cursor: default; }
+.sugestoes .quantos { color: var(--fraco); font-size: 12px; font-variant-numeric: tabular-nums; }
+.sugestoes .vivo { color: var(--acento); font-size: 11px; }
+
 .linha { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
 
 button {
