@@ -186,3 +186,34 @@ export function tempoDeMidia({ segmentos }, quandoMs) {
   }
   return DESCONHECIDO;
 }
+
+/**
+ * Procurar canais pelo nome, para não ser preciso saber o slug de cor.
+ *
+ * Medido em 31/08/2026: `kick.com/api/search` devolve 200 sem autenticação e
+ * reflecte a Origin de volta, por isso a página chama-o directamente. Devolve
+ * até 20 canais; aqui ficam os mais seguidos, que é o desempate certo quando
+ * meia dúzia de pessoas tem um nome parecido.
+ */
+export async function procurarCanais(texto, { buscar = fetch, sinal, quantos = 8 } = {}) {
+  const termo = String(texto || '').trim();
+  // Uma letra devolve o mundo inteiro e não ajuda ninguém a escolher.
+  if (termo.length < 2) return [];
+  let r;
+  try {
+    r = await buscar(`${API.replace('/v2', '')}/search?searched_word=${encodeURIComponent(termo)}`, { signal: sinal });
+  } catch { return []; }
+  if (!r.ok) return [];
+  let j;
+  try { j = await r.json(); } catch { return []; }
+  const canais = Array.isArray(j?.channels) ? j.channels : [];
+  return canais
+    .filter((c) => typeof c?.slug === 'string')
+    .map((c) => ({
+      slug: c.slug,
+      seguidores: Number(c.followersCount ?? c.followers_count) || 0,
+      aoVivo: c.is_live === true,
+    }))
+    .sort((a, b) => b.seguidores - a.seguidores)
+    .slice(0, quantos);
+}

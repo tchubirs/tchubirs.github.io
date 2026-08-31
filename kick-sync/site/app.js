@@ -5,7 +5,7 @@
 // bottom rung of Kick's ladder and is what makes thirty tiles a home-connection
 // problem rather than a server problem.
 
-import { vodsDoCanal, lerMaster, lerPlaylist } from './kick.js';
+import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js';
 import { linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink } from './relogio.js';
 import { cortarTodosOsAngulos } from './baixar.js';
 import { alinharPeloSom, custoEstimadoMB } from './alinhar.js';
@@ -21,6 +21,10 @@ const estado = {
   margens: {},
   players: new Map(),
   cancelar: null,
+  sugestoes: [],
+  escolhido: -1,
+  timerProcura: null,
+  procuraEmCurso: null,
   timerSecundarios: null,
 };
 
@@ -30,6 +34,94 @@ const hhmmss = (ms) => {
   return `${p(Math.floor(s / 3600))}:${p(Math.floor(s / 60) % 60)}:${p(s % 60)}`;
 };
 const relogioCurto = (ms) => new Date(ms).toISOString().slice(11, 19);
+
+// ── procurar canais ─────────────────────────────────────────────────────────
+
+/**
+ * O slug da Kick nem sempre é o nome que se vê no ecrã, e obrigar alguém a
+ * descobri-lo antes de poder usar isto era um passo a mais por cada canal —
+ * multiplicado por trinta.
+ */
+const listaDeCanais = () => $('canais').value.split('\n').map((s) => s.trim()).filter(Boolean);
+
+function acrescentarCanal(slug) {
+  if (listaDeCanais().includes(slug)) return;
+  const v = $('canais').value.replace(/\s*$/, '');
+  $('canais').value = v ? `${v}\n${slug}` : slug;
+  $('procurar').value = '';
+  fecharSugestoes();
+  $('procurar').focus();
+}
+
+function fecharSugestoes() {
+  $('sugestoes').hidden = true;
+  $('sugestoes').innerHTML = '';
+  estado.escolhido = -1;
+}
+
+function pintarSugestoes(canais) {
+  const jaLa = listaDeCanais();
+  $('sugestoes').innerHTML = canais.map((c, i) => {
+    const ja = jaLa.includes(c.slug);
+    return `<li data-slug="${c.slug}" data-i="${i}" class="${ja ? 'ja' : ''}" role="option">`
+      + `<span>${c.slug}${c.aoVivo ? ' <b class="vivo">ao vivo</b>' : ''}</span>`
+      + `<span class="quantos">${ja ? 'já está' : `${c.seguidores.toLocaleString('pt')} seguidores`}</span></li>`;
+  }).join('');
+  $('sugestoes').hidden = !canais.length;
+  estado.sugestoes = canais;
+  estado.escolhido = -1;
+  for (const li of $('sugestoes').querySelectorAll('li:not(.ja)')) {
+    li.onclick = () => acrescentarCanal(li.dataset.slug);
+  }
+}
+
+function realcar(n) {
+  const itens = [...$('sugestoes').querySelectorAll('li')];
+  if (!itens.length) return;
+  estado.escolhido = (n + itens.length) % itens.length;
+  itens.forEach((li, i) => li.setAttribute('aria-selected', String(i === estado.escolhido)));
+  itens[estado.escolhido].scrollIntoView({ block: 'nearest' });
+}
+
+$('procurar').oninput = () => {
+  const termo = $('procurar').value;
+  clearTimeout(estado.timerProcura);
+  // Uma chamada por tecla seria uma busca a cada 80 ms. Espera-se que a mão
+  // pare, e cancela-se a anterior — senão uma resposta lenta chega depois de
+  // uma rápida e a lista mostra o que já não se procura.
+  estado.procuraEmCurso?.abort();
+  // Fechar JÁ. Deixar a lista anterior no ecrã enquanto a nova não chega
+  // deixa escolher da lista errada — e como o nome escolhido até existe,
+  // ninguém percebe que acrescentou o canal que já não estava a procurar.
+  fecharSugestoes();
+  if (termo.trim().length < 2) return;
+  estado.timerProcura = setTimeout(async () => {
+    const controlo = new AbortController();
+    estado.procuraEmCurso = controlo;
+    try {
+      const r = await procurarCanais(termo, { sinal: controlo.signal });
+      if (!controlo.signal.aborted) pintarSugestoes(r);
+    } catch { /* uma busca que falha não é um erro que valha a pena mostrar */ }
+  }, 250);
+};
+
+$('procurar').onkeydown = (e) => {
+  if (e.key === 'ArrowDown') { e.preventDefault(); realcar(estado.escolhido + 1); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); realcar(estado.escolhido - 1); }
+  else if (e.key === 'Escape') fecharSugestoes();
+  else if (e.key === 'Enter') {
+    e.preventDefault();
+    const escolha = estado.sugestoes?.[estado.escolhido] ?? estado.sugestoes?.[0];
+    // Enter sem sugestões escreve o que lá está: quem já sabe o slug não tem
+    // de esperar por uma lista para o confirmar.
+    if (escolha) acrescentarCanal(escolha.slug);
+    else if ($('procurar').value.trim()) acrescentarCanal($('procurar').value.trim().toLowerCase());
+  }
+};
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.procura')) fecharSugestoes();
+});
 
 // ── carregar ────────────────────────────────────────────────────────────────
 
@@ -57,7 +149,7 @@ function temPlayer() {
 }
 
 async function carregar() {
-  const nomes = [...new Set($('canais').value.split('\n').map((s) => s.trim()).filter(Boolean))];
+  const nomes = [...new Set(listaDeCanais())];
   if (!nomes.length) return;
   temPlayer();
   $('carregar').disabled = true;
