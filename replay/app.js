@@ -5,11 +5,11 @@
 // bottom rung of Kick's ladder and is what makes thirty tiles a home-connection
 // problem rather than a server problem.
 
-import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js';
-import { linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink } from './relogio.js';
-import { cortarTodosOsAngulos } from './baixar.js';
-import { alinharPeloSom, custoEstimadoMB } from './alinhar.js';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js';
+import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=51836db792';
+import { linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink } from './relogio.js?v=51836db792';
+import { cortarTodosOsAngulos } from './baixar.js?v=51836db792';
+import { alinharPeloSom, custoEstimadoMB } from './alinhar.js?v=51836db792';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=51836db792';
 
 const $ = (id) => document.getElementById(id);
 const estado = {
