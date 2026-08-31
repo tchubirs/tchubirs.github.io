@@ -5,15 +5,15 @@
 // bottom rung of Kick's ladder and is what makes thirty tiles a home-connection
 // problem rather than a server problem.
 
-import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=3d14951fc6';
-import { linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink } from './relogio.js?v=3d14951fc6';
-import { cortarTodosOsAngulos } from './baixar.js?v=3d14951fc6';
-import { alinharPeloSom, custoEstimadoMB } from './alinhar.js?v=3d14951fc6';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=3d14951fc6';
+import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=f517587fbf';
+import { linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink } from './relogio.js?v=f517587fbf';
+import { cortarTodosOsAngulos } from './baixar.js?v=f517587fbf';
+import { alinharPeloSom, custoEstimadoMB } from './alinhar.js?v=f517587fbf';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=f517587fbf';
 import {
   novoMomento, acrescentar, remover, planoDaMontagem, ordenar,
-} from './momentos.js?v=3d14951fc6';
-import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=3d14951fc6';
+} from './momentos.js?v=f517587fbf';
+import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=f517587fbf';
 
 const $ = (id) => document.getElementById(id);
 const estado = {
@@ -308,11 +308,28 @@ async function abrirNoite(noite) {
   estado.janela = janelaComum(estado.linhas);
   if (!estado.janela) { $('estadoCarga').textContent = 'nenhum canal com relógio utilizável.'; return; }
 
+  // Apertar a janela à NOITE escolhida.
+  //
+  // Sem isto, um canal 24/7 com um VOD de 38 horas manda na barra do tempo:
+  // a noite inteira ficava espremida num canto, todas as outras barras
+  // amontoadas à direita, e o instante de arranque caía FORA da noite — a
+  // página mostrava "1 de 6 ângulos" e cinco quadrados a dizer "ainda não
+  // tinha começado". A noite é a que está escolhida em cima; a barra tem de
+  // ser a dessa noite e de mais nada.
+  if (Number.isFinite(noite?.inicio) && Number.isFinite(noite?.fim) && noite.fim > noite.inicio) {
+    const inicio = Math.max(estado.janela.inicio, noite.inicio);
+    const fim = Math.min(estado.janela.fim, noite.fim);
+    if (fim > inicio) estado.janela = { ...estado.janela, inicio, fim };
+  }
+
   // Start where the most angles are. When everyone overlaps that is the common
   // window; when they do not — one ended at 20:10, another began at 23:30 —
   // there is no such instant, and `sobreposicaoInicio` is null on purpose.
   // Reading it blindly put the whole page at NaN and every tile went black.
-  estado.agoraMs = estado.janela.haSobreposicao
+  // E o instante de arranque tem de cair dentro da janela, mesmo quando a
+  // sobreposição de todos acontece fora desta noite.
+  const dentro = (t) => Number.isFinite(t) && t >= estado.janela.inicio && t <= estado.janela.fim;
+  estado.agoraMs = estado.janela.haSobreposicao && dentro(estado.janela.sobreposicaoInicio)
     ? estado.janela.sobreposicaoInicio
     : estado.janela.inicio;
   estado.focos = estado.linhas[0] ? [estado.linhas[0].slug] : [];
@@ -583,7 +600,7 @@ function irPara(quandoMs) {
   $('barra').value = String(Math.round(fraccao * 1000));
   // O cursor vive por cima das faixas e não dentro de uma delas: é um instante
   // só, partilhado por todos os canais — que é a ideia toda desta página.
-  $('cursor').style.left = `calc(100px + (100% - 100px) * ${fraccao})`;
+  $('cursor').style.left = `calc(var(--coluna) + (100% - var(--coluna)) * ${fraccao})`;
 
   const principal = [];
   const segundo = [];

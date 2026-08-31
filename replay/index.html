@@ -52,7 +52,14 @@
   <div id="grade" class="grade"></div>
 
   <div class="relogio">
-    <input id="barra" type="range" min="0" max="1000" value="0" step="1" aria-label="linha do tempo">
+    <!-- A barra vive na MESMA grelha das faixas, com a mesma coluna vazia à
+         esquerda. Sem isso, a barra media a largura toda e as faixas mediam a
+         largura menos os nomes: o cursor e o puxador ficavam em sítios
+         diferentes para o mesmo instante. -->
+    <div class="barraLinha">
+      <span></span>
+      <input id="barra" type="range" min="0" max="1000" value="0" step="1" aria-label="linha do tempo">
+    </div>
     <!-- Quem esteve no ar, e quando. Sem isto procura-se o momento a arrastar a
          barra as cegas: os buracos e as sobreposicoes so se descobriam batendo
          com o nariz neles. -->
@@ -112,10 +119,10 @@
   <!-- A versao, a serio e visivel. O GitHub Pages serve com max-age=600 e um
        telemovel guarda o app.js antigo; sem isto, "ja corrigi" e "continua
        igual" sao as duas verdadeiras ao mesmo tempo e ninguem sai dali. -->
-  <p class="nota">Tudo acontece no teu navegador. Os VODs são de quem os gravou. · <span id="versao">3d14951fc6</span></p>
+  <p class="nota">Tudo acontece no teu navegador. Os VODs são de quem os gravou. · <span id="versao">f517587fbf</span></p>
 </footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.17/hls.min.js"></script>
-<script type="module" src="app.js?v=3d14951fc6"></script>
+<script type="module" src="app.js?v=f517587fbf"></script>
 </body>
 </html>
