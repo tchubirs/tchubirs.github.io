@@ -23,9 +23,28 @@ export function novoMomento(quandoMs, protagonista, extra = {}) {
   return {
     ms: Math.round(quandoMs),
     protagonista: protagonista || null,
+    // Quem morreu, por nome. Vazio de propósito.
+    //
+    // A primeira versão cortava TODOS os outros ângulos em cada kill. O
+    // resultado, nas palavras do dono: "vejo clipes de pessoas, elas nem
+    // morreram, não acontece nada". Numa kill morre um, às vezes dois — os
+    // outros quatro clipes são lixo que ele tem de apagar à mão, e apagar
+    // lixo é exactamente o trabalho que isto devia estar a poupar.
+    vitimas: [],
     nota: '',
     ...PADRAO,
     ...extra,
+  };
+}
+
+/** Pôr ou tirar alguém da lista de quem morreu neste momento. */
+export function alternarVitima(momento, slug) {
+  const tem = (momento.vitimas || []).includes(slug);
+  return {
+    ...momento,
+    vitimas: tem
+      ? momento.vitimas.filter((v) => v !== slug)
+      : [...(momento.vitimas || []), slug],
   };
 }
 
@@ -78,9 +97,11 @@ export function clipesDoMomento(momento, canais, indice, { filmava = () => true 
   if (momento.protagonista) {
     junta(momento.protagonista, momento.protagonistaAntesS, momento.protagonistaDepoisS, 'protagonista', 'a');
   }
+  // Só quem o dono disse que morreu. Sem ninguém marcado, o momento é só a
+  // POV dele — que é um resultado honesto, e não uma pilha de clipes vazios.
   let letra = 'b';
-  for (const slug of canais) {
-    if (slug === momento.protagonista) continue;
+  for (const slug of momento.vitimas || []) {
+    if (slug === momento.protagonista || !canais.includes(slug)) continue;
     junta(slug, momento.vitimaAntesS, momento.vitimaDepoisS, 'vitima', letra);
     letra = String.fromCharCode(letra.charCodeAt(0) + 1);
   }
