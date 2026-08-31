@@ -54,12 +54,16 @@
   <div class="relogio">
     <input id="barra" type="range" min="0" max="1000" value="0" step="1" aria-label="linha do tempo">
     <div class="linha">
+      <output id="agora" class="tempo">—</output>
+      <output id="angulos" class="nota">—</output>
+    </div>
+    <!-- Os quatro na mesma linha, sempre: em grelha de quatro colunas iguais,
+         que não parte num ecrã estreito como uma linha flex parte. -->
+    <div class="saltos">
       <button id="menos1m" title="voltar 1 minuto">&laquo; 1 min</button>
       <button id="menos10s" title="voltar 10 segundos">&lsaquo; 10s</button>
-      <output id="agora" class="tempo">—</output>
       <button id="mais10s" title="avançar 10 segundos">10s &rsaquo;</button>
       <button id="mais1m" title="avançar 1 minuto">1 min &raquo;</button>
-      <output id="angulos" class="nota">—</output>
     </div>
     <div class="linha">
       <button id="marcarIn">Marca início <kbd>I</kbd></button>
