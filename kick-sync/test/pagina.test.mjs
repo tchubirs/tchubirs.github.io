@@ -238,6 +238,12 @@ test('carrega a noite, mostra a grelha e põe todos no mesmo instante',
       `o foco esta invisivel: ${JSON.stringify(caixa)}`);
     const v = await p.locator('.tile.foco video').boundingBox();
     assert.ok(v && v.height > 140, `o video do foco esta invisivel: ${JSON.stringify(v)}`);
+    // O frame INTEIRO. Com `cover` o topo e o fundo do jogo ficavam de fora —
+    // e e no topo que esta o kill feed.
+    for (const sel of ['.tile.foco video', '#grade .tile video']) {
+      assert.equal(await p.locator(sel).first().evaluate((e) => getComputedStyle(e).objectFit),
+        'contain', `${sel} esta a cortar o video`);
+    }
     assert.equal(pedidos.api, 2, 'uma chamada por canal, não mais');
     // A grelha lê o degrau BARATO para tocar — o caro fica para o export.
     assert.equal(pedidos.playlist, 2, 'uma playlist por canal');

@@ -52,7 +52,14 @@
   <div id="grade" class="grade"></div>
 
   <div class="relogio">
-    <input id="barra" type="range" min="0" max="1000" value="0" step="1" aria-label="linha do tempo">
+    <!-- A barra vive na MESMA grelha das faixas, com a mesma coluna vazia à
+         esquerda. Sem isso, a barra media a largura toda e as faixas mediam a
+         largura menos os nomes: o cursor e o puxador ficavam em sítios
+         diferentes para o mesmo instante. -->
+    <div class="barraLinha">
+      <span></span>
+      <input id="barra" type="range" min="0" max="1000" value="0" step="1" aria-label="linha do tempo">
+    </div>
     <!-- Quem esteve no ar, e quando. Sem isto procura-se o momento a arrastar a
          barra as cegas: os buracos e as sobreposicoes so se descobriam batendo
          com o nariz neles. -->
