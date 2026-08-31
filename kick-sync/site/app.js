@@ -284,7 +284,49 @@ async function abrirNoite(noite) {
       ? ` · todos juntos ${relogioCurto(estado.janela.sobreposicaoInicio)}–${relogioCurto(estado.janela.sobreposicaoFim)}`
       : '');
   montarGrade();
+  pintarFaixas();
   irPara(estado.agoraMs);
+}
+
+/**
+ * Uma barra por canal, com o tempo em que esteve mesmo no ar.
+ *
+ * Sem isto, procurar o momento era arrastar a barra às cegas: os buracos e as
+ * sobreposições só se descobriam batendo com o nariz neles. Aqui vê-se de
+ * relance onde há dois ângulos e onde há um só, e clica-se lá directamente.
+ */
+function pintarFaixas() {
+  const { inicio, fim } = estado.janela || {};
+  const alvo = $('faixas');
+  [...alvo.querySelectorAll('.faixa')].forEach((f) => f.remove());
+  if (inicio == null || !(fim > inicio)) return;
+  const pct = (ms) => ((ms - inicio) / (fim - inicio)) * 100;
+
+  for (const linha of estado.linhas) {
+    const nudge = estado.nudges[linha.slug] || 0;
+    const f = document.createElement('div');
+    f.className = 'faixa';
+    f.dataset.slug = linha.slug;
+    f.innerHTML = `<span class="nome" title="${linha.slug}">${linha.slug}</span>`
+      + `<div class="trilho">${linha.pecas.map((p) => {
+        const de = Math.max(0, pct(p.playlist.inicio - nudge));
+        const ate = Math.min(100, pct(p.playlist.fim - nudge));
+        return `<i style="left:${de}%;width:${Math.max(0.4, ate - de)}%"></i>`;
+      }).join('')}</div>`;
+    // Clicar na faixa vai directo ao instante.
+    f.querySelector('.trilho').onclick = (e) => {
+      const r = e.currentTarget.getBoundingClientRect();
+      irPara(Math.round(inicio + ((fim - inicio) * (e.clientX - r.left)) / r.width));
+    };
+    alvo.append(f);
+  }
+  marcarFaixas();
+}
+
+function marcarFaixas() {
+  for (const f of $('faixas').querySelectorAll('.faixa')) {
+    f.classList.toggle('principal', ehPrincipal(f.dataset.slug));
+  }
 }
 
 // ── grelha ──────────────────────────────────────────────────────────────────
@@ -340,9 +382,20 @@ function aplicarFoco() {
     if (!tile) continue;
     const foco = ehFoco(slug);
     const destino = foco ? $('palcoFoco') : $('grade');
-    // `append` de um nó que já lá está reordena-o — que é o que faz o
-    // principal ficar sempre à esquerda.
-    if (tile.parentElement !== destino || foco) destino.append(tile);
+    // Só mexer no DOM quando o quadrado está mesmo no sítio errado.
+    //
+    // A versão anterior voltava a inserir TODOS os quadrados em foco a cada
+    // passagem, para os reordenar. Reinserir um `<video>` a tocar interrompe-o:
+    // por isso, ao acrescentar um segundo ângulo, o que já estava a correr
+    // congelava até tudo voltar a carregar. Agora um nó que já está na posição
+    // certa não é tocado.
+    const posicao = foco ? estado.focos.indexOf(slug) : -1;
+    const jaCerto = tile.parentElement === destino
+      && (!foco || destino.children[posicao] === tile);
+    if (!jaCerto) {
+      const antes = foco ? destino.children[posicao] : null;
+      destino.insertBefore(tile, antes || null);
+    }
     tile.classList.toggle('foco', foco);
     tile.classList.toggle('principal', ehPrincipal(slug));
     tile.querySelector('.par').textContent = foco ? '✓' : '⧉';
@@ -359,6 +412,7 @@ function aplicarFoco() {
     som.title = ehPrincipal(slug) ? 'este é o principal' : 'passar o som e a qualidade para este';
   }
   $('palcoFoco').classList.toggle('dois', estado.focos.length > 1);
+  marcarFaixas();
 }
 
 function montarGrade() {
@@ -416,6 +470,8 @@ function empurrar(slug, ms) {
   // O tamanho do corte é por canal, e mexer no relógio de um canal muda quem
   // aparece na janela marcada. Não repintar deixava a lista a mentir.
   pintarCorte();
+  // E a faixa desse canal desloca-se com ele, senão mostra o sítio antigo.
+  pintarFaixas();
 }
 
 /**
@@ -436,7 +492,11 @@ function irPara(quandoMs) {
   $('angulos').textContent = `${vivos} de ${estado.linhas.length} ângulos`;
   $('angulos').classList.toggle('mau', vivos < 2);
   const { inicio, fim } = estado.janela;
-  $('barra').value = String(Math.round(((quandoMs - inicio) / (fim - inicio)) * 1000));
+  const fraccao = Math.min(1, Math.max(0, (quandoMs - inicio) / (fim - inicio)));
+  $('barra').value = String(Math.round(fraccao * 1000));
+  // O cursor vive por cima das faixas e não dentro de uma delas: é um instante
+  // só, partilhado por todos os canais — que é a ideia toda desta página.
+  $('cursor').style.left = `calc(100px + (100% - 100px) * ${fraccao})`;
 
   const principal = [];
   const segundo = [];
@@ -641,8 +701,11 @@ function pintarMarca() {
 function pintarCorte() {
   const { de, ate } = estado.marca;
   const valida = de != null && ate != null && ate > de;
-  $('corte').hidden = !valida;
-  if (!valida) return;
+  // A secção fica sempre à vista, e diz o que fazer quando ainda não há marca:
+  // escondê-la fazia com que ninguém descobrisse que se podia baixar.
+  $('comoCortar').hidden = valida;
+  $('listaCorte').hidden = !valida;
+  if (!valida) { $('listaCorte').innerHTML = ''; return; }
 
   const presentes = estado.linhas.filter((l) => {
     const nudge = estado.nudges[l.slug] || 0;

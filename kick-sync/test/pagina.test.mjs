@@ -412,6 +412,60 @@ test('carregar duas vezes depressa num botao nao da zoom',
     await p.close();
   });
 
+// "Aparece que estao online ou offline mas nao sei achar onde e que estao
+// online, tenho de ficar a procurar." Uma barra por canal responde a isso de
+// relance, e leva la com um clique.
+test('cada canal tem uma barra a dizer quando esteve no ar, e clicar nela salta',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'outro'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi\noutro');
+    await p.click('#carregar');
+    await p.waitForSelector('#faixas .faixa', { timeout: 15000 });
+
+    assert.equal(await p.locator('#faixas .faixa').count(), 2, 'uma barra por canal');
+    assert.ok(await p.locator('#faixas .faixa .trilho i').count() >= 2, 'e com o tempo desenhado');
+    assert.equal(await p.locator('#faixas .faixa.principal').count(), 1, 'o principal esta marcado');
+
+    // Clicar perto do fim da barra tem de saltar para perto do fim da noite.
+    const antes = await p.locator('#agora').innerText();
+    const trilho = p.locator('#faixas .faixa .trilho').first();
+    const caixa = await trilho.boundingBox();
+    // Clique pelo elemento e nao por coordenadas soltas: o Playwright faz o
+    // teste de acerto e falha alto se algo estiver por cima, em vez de clicar
+    // no vazio e deixar o teste dizer "nao mudou".
+    await trilho.click({ position: { x: caixa.width * 0.85, y: caixa.height / 2 } });
+    const depois = await p.locator('#agora').innerText();
+    assert.notEqual(depois, antes, 'clicar na barra tem de mudar o instante');
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+// "Ate agora nao sei como e que se baixa, tem algum botao?" Havia, mas so
+// aparecia depois de marcar — ou seja, so o encontrava quem ja sabia.
+test('a seccao de cortar diz o que fazer antes de haver marca',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p);
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 15000 });
+
+    assert.equal(await p.locator('#comoCortar').isVisible(), true, 'sem marca, diz como se marca');
+    assert.match(await p.locator('#comoCortar').innerText(), /I.*O/s);
+
+    await p.click('#marcarIn');
+    await p.click('#mais10s');
+    await p.click('#marcarOut');
+    await p.waitForSelector('#listaCorte li[data-slug]', { timeout: 10000 });
+    assert.equal(await p.locator('#comoCortar').isVisible(), false, 'com marca, sai da frente');
+    assert.equal(await p.locator('#listaCorte .baixarUm').count(), 1);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
 test('um canal que não existe aparece dito, não como quadrado vazio',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
     const { p, erros } = await abrir();

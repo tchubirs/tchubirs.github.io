@@ -186,6 +186,26 @@ kbd {
 .saltos button { padding: 10px 4px; white-space: nowrap; }
 
 #barra { width: 100%; accent-color: var(--acento); }
+/* As faixas: uma linha por canal, com o tempo em que esteve no ar. */
+.faixas { position: relative; margin-top: 10px; display: grid; gap: 3px; }
+.faixa { display: grid; grid-template-columns: 92px 1fr; gap: 8px; align-items: center; }
+.faixa .nome {
+  font-size: 12px; color: var(--fraco); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.faixa.principal .nome { color: var(--acento); }
+.trilho {
+  position: relative; height: 12px; background: #ffffff10;
+  border-radius: 3px; overflow: hidden; cursor: pointer;
+}
+.trilho i { position: absolute; top: 0; bottom: 0; background: var(--fraco); border-radius: 2px; }
+.faixa.principal .trilho i { background: var(--acento); }
+/* A linha do instante actual, por cima de todas as faixas. */
+.cursor {
+  position: absolute; top: 0; bottom: 0; width: 2px; background: var(--texto);
+  pointer-events: none; margin-left: 100px; box-shadow: 0 0 0 1px #0008;
+}
+
 .tempo { font-variant-numeric: tabular-nums; font-size: 18px; min-width: 100px; }
 
 /* A lista de corte: um canal por linha, com o seu próprio tamanho. */
