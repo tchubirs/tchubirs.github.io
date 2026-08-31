@@ -5,7 +5,7 @@
 // an ordered set of VODs plus the gaps, and scrubbing across a gap must either
 // switch VODs by itself or show the hole — never quietly play the wrong moment.
 
-import { tempoDeMidia } from './kick.js?v=2926d43422';
+import { tempoDeMidia } from './kick.js?v=8c9bf155ad';
 
 /**
  * One channel's night: its VODs in order, and the holes between them.
@@ -119,15 +119,25 @@ export function comNudge(sessao, slug, ms) {
   return { ...sessao, nudges: { ...sessao.nudges, [slug]: Math.round(ms) } };
 }
 
-/** A session that survives a refresh, a crash and a shared link. */
+/**
+ * A sessão inteira, num texto — para sobreviver a um F5 e viajar num link.
+ *
+ * Guarda-se o que custou a chegar aqui: os canais, a noite, o instante, os
+ * ajustes, a marca e o tamanho de cada corte. Perder isto por causa de uma
+ * página que travou é perder meia hora de procura.
+ */
 export function paraLink(sessao) {
   const magro = {
-    v: 1,
+    v: 2,
     canais: sessao.canais,
     de: sessao.janela?.inicio ?? null,
     ate: sessao.janela?.fim ?? null,
     nudges: sessao.nudges || {},
     marca: sessao.marca || null,
+    agora: Number.isFinite(sessao.agoraMs) ? sessao.agoraMs : null,
+    focos: Array.isArray(sessao.focos) ? sessao.focos : [],
+    margens: sessao.margens || {},
+    mudo: sessao.mudo || {},
   };
   return btoa(unescape(encodeURIComponent(JSON.stringify(magro))));
 }
@@ -138,11 +148,20 @@ export function doLink(texto) {
     // A link is untrusted input: it can arrive truncated, edited by hand, or
     // from a version that did not exist yet. Anything unreadable is "no
     // session" rather than a half-restored one that looks fine and is not.
-    if (!j || j.v !== 1 || !Array.isArray(j.canais)) return null;
+    //
+    // A v1 continua a ser lida: quem tinha uma sessão guardada antes desta
+    // versão não a perde por causa de um número que mudou.
+    if (!j || (j.v !== 1 && j.v !== 2) || !Array.isArray(j.canais)) return null;
+    const objecto = (x) => (x && typeof x === 'object' && !Array.isArray(x) ? x : {});
     return {
       canais: j.canais.filter((c) => typeof c === 'string').slice(0, 50),
-      nudges: j.nudges && typeof j.nudges === 'object' ? j.nudges : {},
+      nudges: objecto(j.nudges),
       marca: j.marca && Number.isFinite(j.marca.de) && Number.isFinite(j.marca.ate) ? j.marca : null,
+      agora: Number.isFinite(j.agora) ? j.agora : null,
+      focos: (Array.isArray(j.focos) ? j.focos : []).filter((c) => typeof c === 'string').slice(0, 2),
+      margens: objecto(j.margens),
+      mudo: objecto(j.mudo),
+      de: Number.isFinite(j.de) ? j.de : null,
     };
   } catch { return null; }
 }

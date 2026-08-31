@@ -5,11 +5,11 @@
 // bottom rung of Kick's ladder and is what makes thirty tiles a home-connection
 // problem rather than a server problem.
 
-import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=2926d43422';
-import { linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink } from './relogio.js?v=2926d43422';
-import { cortarTodosOsAngulos } from './baixar.js?v=2926d43422';
-import { alinharPeloSom, custoEstimadoMB } from './alinhar.js?v=2926d43422';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=2926d43422';
+import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=8c9bf155ad';
+import { linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink } from './relogio.js?v=8c9bf155ad';
+import { cortarTodosOsAngulos } from './baixar.js?v=8c9bf155ad';
+import { alinharPeloSom, custoEstimadoMB } from './alinhar.js?v=8c9bf155ad';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=8c9bf155ad';
 
 const $ = (id) => document.getElementById(id);
 const estado = {
@@ -20,6 +20,8 @@ const estado = {
   nudges: {},
   focos: [],
   margens: {},
+  mudo: {},
+  restaurar: null,
   players: new Map(),
   cancelar: null,
   geracao: 0,
@@ -36,6 +38,34 @@ const hhmmss = (ms) => {
   return `${p(Math.floor(s / 3600))}:${p(Math.floor(s / 60) % 60)}:${p(s % 60)}`;
 };
 const relogioCurto = (ms) => new Date(ms).toISOString().slice(11, 19);
+
+// ── guardar a sessao ────────────────────────────────────────────────────────
+
+/**
+ * Guardar tudo o que custou a chegar aqui, a cada mudanca.
+ *
+ * A versao anterior so guardava no `beforeunload` — que num telemovel muitas
+ * vezes nunca chega a correr, e nunca corre quando a pagina trava. Um F5 depois
+ * de meia hora a procurar o momento devolvia uma caixa de texto vazia.
+ */
+let timerGuardar = null;
+function guardar() {
+  clearTimeout(timerGuardar);
+  timerGuardar = setTimeout(() => {
+    try {
+      localStorage.setItem('replay', paraLink({
+        canais: estado.linhas.length ? estado.linhas.map((l) => l.slug) : listaDeCanais(),
+        janela: estado.janela,
+        nudges: estado.nudges,
+        marca: estado.marca,
+        agoraMs: estado.agoraMs,
+        focos: estado.focos,
+        margens: estado.margens,
+        mudo: estado.mudo,
+      }));
+    } catch { /* janela privada, quota, o que for — nunca partir a pagina por isto */ }
+  }, 400);
+}
 
 // ── procurar canais ─────────────────────────────────────────────────────────
 
@@ -171,7 +201,12 @@ async function carregar() {
   const noites = agruparPorNoite(canais);
   if (!noites.length) { $('estadoCarga').textContent = 'nenhum canal tem VOD utilizável.'; return; }
   pintarNoites(noites);
-  await abrirNoite(noites[0]);
+  // Voltar a noite onde se estava, e nao a mais recente: quem deu F5 estava a
+  // meio de uma noite, e mandá-lo para outra e perder o mesmo que perder tudo.
+  const alvo = estado.restaurar?.agora;
+  const i = alvo != null ? noites.findIndex((n) => alvo >= n.inicio && alvo <= n.fim) : -1;
+  $('noite').value = String(i >= 0 ? i : 0);
+  await abrirNoite(noites[i >= 0 ? i : 0]);
 }
 
 function pintarNoites(noites) {
@@ -275,6 +310,20 @@ async function abrirNoite(noite) {
     ? estado.janela.sobreposicaoInicio
     : estado.janela.inicio;
   estado.focos = estado.linhas[0] ? [estado.linhas[0].slug] : [];
+
+  // O que estava guardado, mas só o que ainda faz sentido nesta noite: um
+  // instante fora dela ou um canal que já não está aqui restauram nada.
+  const g = estado.restaurar;
+  if (g) {
+    const existe = (c) => estado.linhas.some((l) => l.slug === c);
+    if (g.agora >= estado.janela.inicio && g.agora <= estado.janela.fim) estado.agoraMs = g.agora;
+    const focos = (g.focos || []).filter(existe);
+    if (focos.length) estado.focos = focos;
+    if (g.marca && g.marca.de >= estado.janela.inicio && g.marca.ate <= estado.janela.fim) {
+      estado.marca = g.marca;
+    }
+    estado.restaurar = null;
+  }
   $('palco').hidden = false;
   // Quem esta nesta noite, pelo nome. "Nunca estiveram todos no ar ao mesmo
   // tempo" era um aviso a fingir de problema: nao ter todos nao impede nada,
@@ -286,6 +335,8 @@ async function abrirNoite(noite) {
   montarGrade();
   pintarFaixas();
   irPara(estado.agoraMs);
+  pintarMarca();
+  guardar();
 }
 
 /**
@@ -341,16 +392,33 @@ const ehPrincipal = (slug) => estado.focos[0] === slug;
  * Faltava isto. Com dois no ecrã não havia como dizer "agora quero ESTE" — e
  * como o som segue o principal, também não havia como ouvir o outro.
  */
+/**
+ * Este quadrado tem som?
+ *
+ * Por omissão só o principal fala — dois áudios de surpresa é barulho. Mas
+ * assim que alguém carrega no altifalante, a escolha é dele e mantém-se.
+ */
+function temSom(slug) {
+  if (slug in estado.mudo) return !estado.mudo[slug];
+  return ehPrincipal(slug);
+}
+
+function alternarSom(slug) {
+  estado.mudo[slug] = temSom(slug);
+  aplicarFoco();
+  const v = tileDe(slug)?.querySelector('video');
+  // Este `play()` sai de um clique, e e por isso que existe: o browser so
+  // deixa tocar com som depois de alguem carregar em alguma coisa.
+  if (v && temSom(slug)) v.play?.().catch(() => {});
+  guardar();
+}
+
 function tornarPrincipal(slug) {
   if (!ehFoco(slug)) return;
   estado.focos = [slug, ...estado.focos.filter((s) => s !== slug)];
   aplicarFoco();
   irPara(estado.agoraMs);
-  // Este `play()` sai de um clique, e e por isso que existe: o browser so
-  // deixa tocar com som depois de alguem carregar em alguma coisa. Sem ele, o
-  // pedido de som era recusado em silencio e ficava tudo mudo.
-  const v = tileDe(slug)?.querySelector('video');
-  if (v) { v.muted = false; v.removeAttribute('muted'); v.play?.().catch(() => {}); }
+  guardar();
 }
 
 /**
@@ -365,6 +433,7 @@ function alternarPar(slug) {
   }
   aplicarFoco();
   irPara(estado.agoraMs);
+  guardar();
 }
 
 /**
@@ -399,17 +468,21 @@ function aplicarFoco() {
     tile.classList.toggle('foco', foco);
     tile.classList.toggle('principal', ehPrincipal(slug));
     tile.querySelector('.par').textContent = foco ? '✓' : '⧉';
-    // O som muda JA, e nao no carregamento diferido: quem carrega no altifalante
-    // do outro quadrado nao pode ficar com os dois a falar por cima ate os
-    // pedidos de video acabarem.
+    // O som é de cada quadrado, e não do papel de principal. Assim dá para ter
+    // os dois a falar, os dois calados, ou um só — que é o que se quer quando
+    // se compara um tiro visto de dois sítios.
+    //
+    // Muda no instante do clique e não no carregamento diferido: ficar com dois
+    // a falar por cima até os pedidos de vídeo acabarem é insuportável.
+    const cala = temSom(slug) === false;
     const v = tile.querySelector('video');
-    v.muted = !ehPrincipal(slug);
-    v.toggleAttribute('muted', !ehPrincipal(slug));
+    v.muted = cala;
+    v.toggleAttribute('muted', cala);
 
     const som = tile.querySelector('.som');
     som.hidden = !foco;
-    som.textContent = ehPrincipal(slug) ? '🔊' : '🔇';
-    som.title = ehPrincipal(slug) ? 'este é o principal' : 'passar o som e a qualidade para este';
+    som.textContent = cala ? '🔇' : '🔊';
+    som.title = cala ? 'ligar o som deste' : 'calar este';
   }
   $('palcoFoco').classList.toggle('dois', estado.focos.length > 1);
   marcarFaixas();
@@ -456,7 +529,7 @@ function montarGrade() {
       };
     }
     tile.querySelector('.par').onclick = (e) => { e.stopPropagation(); alternarPar(linha.slug); };
-    tile.querySelector('.som').onclick = (e) => { e.stopPropagation(); tornarPrincipal(linha.slug); };
+    tile.querySelector('.som').onclick = (e) => { e.stopPropagation(); alternarSom(linha.slug); };
     $('grade').append(tile);
   }
   aplicarFoco();
@@ -467,6 +540,7 @@ function empurrar(slug, ms) {
   const { nudges } = comNudge({ nudges: estado.nudges }, slug, (estado.nudges[slug] || 0) + ms);
   estado.nudges = nudges;
   irPara(estado.agoraMs);
+  guardar();
   // O tamanho do corte é por canal, e mexer no relógio de um canal muda quem
   // aparece na janela marcada. Não repintar deixava a lista a mentir.
   pintarCorte();
@@ -485,6 +559,7 @@ function empurrar(slug, ms) {
  */
 function irPara(quandoMs) {
   estado.agoraMs = quandoMs;
+  guardar();
   $('agora').textContent = `${relogioCurto(quandoMs)}Z`;
   // How many angles exist right here. With no common window this is the number
   // that matters: "4 de 6" is useful, "no overlap" is not.
@@ -535,7 +610,7 @@ function irPara(quandoMs) {
   // O principal primeiro, e sozinho. Trinta pedidos ao mesmo tempo fazem o
   // quadrado que interessa chegar em último — e quem anda a saltar de dez em
   // dez segundos está a olhar para esse e mais nenhum.
-  for (const [l, r, v] of principal) tocar(l, r, v, { alta: true, correr: true, comSom: true });
+  for (const [l, r, v] of principal) tocar(l, r, v, { alta: true, correr: true, comSom: temSom(l.slug) });
 
   // Os outros só depois de o principal ter imagem. E só quando a barra
   // descansa: arrastar o cursor pedia um pedaço de vídeo por pixel, a trinta
@@ -545,7 +620,10 @@ function irPara(quandoMs) {
   estado.timerSecundarios = setTimeout(async () => {
     await primeiroFrame(principal[0]?.[2], 4000);
     if (geracao !== estado.geracao) return;
-    for (const [l, r, v] of segundo) tocar(l, r, v, { alta: false, correr: true, comSom: false });
+    // O segundo do par também em qualidade: se estão os dois no ecrã, é para
+    // olhar para os dois. Vem depois do principal, e não ao mesmo tempo — que
+    // era o que fazia o par demorar o dobro a aparecer.
+    for (const [l, r, v] of segundo) tocar(l, r, v, { alta: true, correr: true, comSom: temSom(l.slug) });
     for (const [l, r, v] of secundarios) tocar(l, r, v, { alta: false, correr: false });
   }, 220);
 }
@@ -732,6 +810,7 @@ function pintarCorte() {
       const antesS = Math.max(0, Number(li.querySelector('.antes').value) || 0);
       const depoisS = Math.max(0, Number(li.querySelector('.depois').value) || 0);
       estado.margens[slug] = { antesS, depoisS };
+      guardar();
       li.querySelector('.dur').textContent = mmssCurto((ate - de) / 1000 + antesS + depoisS);
     };
     li.querySelector('.antes').oninput = ler;
@@ -805,8 +884,8 @@ $('menos1m').onclick = saltar(-60_000);
 $('menos10s').onclick = saltar(-10_000);
 $('mais10s').onclick = saltar(10_000);
 $('mais1m').onclick = saltar(60_000);
-$('marcarIn').onclick = () => { estado.marca = { de: estado.agoraMs, ate: null }; pintarMarca(); };
-$('marcarOut').onclick = () => { estado.marca.ate = estado.agoraMs; pintarMarca(); };
+$('marcarIn').onclick = () => { estado.marca = { de: estado.agoraMs, ate: null }; pintarMarca(); guardar(); };
+$('marcarOut').onclick = () => { estado.marca.ate = estado.agoraMs; pintarMarca(); guardar(); };
 $('alinhar').onclick = alinhar;
 
 document.addEventListener('keydown', (e) => {
@@ -821,22 +900,38 @@ document.addEventListener('keydown', (e) => {
   if (e.key === '.' && estado.focos[0]) empurrar(estado.focos[0], passo);
 });
 
-// A session survives a refresh and travels in a link.
-const daUrl = doLink(new URLSearchParams(location.search).get('s') || '');
-if (daUrl) {
-  $('canais').value = daUrl.canais.join('\n');
-  estado.nudges = daUrl.nudges;
-  if (daUrl.marca) estado.marca = daUrl.marca;
+// ── arranque ────────────────────────────────────────────────────────────────
+//
+// A sessao sobrevive a um F5, a um travanco e a um link partilhado. E volta a
+// carregar sozinha: devolver a caixa de texto preenchida mas vazia de video
+// obrigava a repetir a espera toda.
+const guardado = doLink(new URLSearchParams(location.search).get('s') || '')
+  || doLink(localStorage.getItem('replay') || '');
+
+if (guardado) {
+  $('canais').value = guardado.canais.join('\n');
+  estado.nudges = guardado.nudges;
+  estado.margens = guardado.margens || {};
+  estado.mudo = guardado.mudo || {};
+  estado.restaurar = guardado;
+  if (guardado.canais.length) carregar();
 }
+
+// O `beforeunload` fica como ultima rede: num telemovel muitas vezes nunca
+// corre, e por isso e que a gravacao a serio acontece a cada mudanca.
 window.addEventListener('beforeunload', () => {
+  clearTimeout(timerGuardar);
+  timerGuardar = null;
   try {
     localStorage.setItem('replay', paraLink({
-      canais: estado.linhas.map((l) => l.slug), janela: estado.janela,
-      nudges: estado.nudges, marca: estado.marca,
+      canais: estado.linhas.length ? estado.linhas.map((l) => l.slug) : listaDeCanais(),
+      janela: estado.janela,
+      nudges: estado.nudges,
+      marca: estado.marca,
+      agoraMs: estado.agoraMs,
+      focos: estado.focos,
+      margens: estado.margens,
+      mudo: estado.mudo,
     }));
-  } catch { /* private window, quota, whatever — never break the page for this */ }
+  } catch { /* nunca partir a pagina por causa disto */ }
 });
-if (!daUrl) {
-  const guardado = doLink(localStorage.getItem('replay') || '');
-  if (guardado) $('canais').value = guardado.canais.join('\n');
-}
