@@ -20,6 +20,7 @@ const estado = {
   foco: null,
   players: new Map(),
   cancelar: null,
+  timerSecundarios: null,
 };
 
 const hhmmss = (ms) => {
@@ -188,6 +189,7 @@ function montarGrade() {
       + `<span class="rotulo">${linha.slug}`
       + `${linha.relogio !== 'exato' ? ' <b class="aviso" title="relógio incerto">≈</b>' : ''}</span>`
       + `<span class="estadoTile"></span>`
+      + `<span class="posicao"></span>`
       // The relógio da Kick puts every angle within a segment of the truth, which
       // is already inside what the owner asked for. This is for the rest: a
       // stream ingested late, or an eye that says "este está meio segundo à
@@ -222,7 +224,15 @@ function empurrar(slug, ms) {
   irPara(estado.agoraMs);
 }
 
-/** Move every angle to the same instant. */
+/**
+ * Move every angle to the same instant.
+ *
+ * Só UM ângulo toca — o que está em foco. Os outros ficam parados e apenas
+ * saltam para o frame daquele instante, que é uma imagem descodificada de vez
+ * em quando em vez de um vídeo a correr. É o que faz trinta ângulos serem
+ * possíveis: trinta descodificadores a andar ao mesmo tempo derretem qualquer
+ * máquina, e ninguém está a OLHAR para trinta ao mesmo tempo.
+ */
 function irPara(quandoMs) {
   estado.agoraMs = quandoMs;
   $('agora').textContent = `${relogioCurto(quandoMs)}Z`;
@@ -234,6 +244,7 @@ function irPara(quandoMs) {
   const { inicio, fim } = estado.janela;
   $('barra').value = String(Math.round(((quandoMs - inicio) / (fim - inicio)) * 1000));
 
+  const secundarios = [];
   for (const linha of estado.linhas) {
     const tile = $('grade').querySelector(`[data-slug="${CSS.escape(linha.slug)}"]`);
     if (!tile) continue;
@@ -256,9 +267,24 @@ function irPara(quandoMs) {
     }
     nota.textContent = '';
     tile.classList.remove('vazio');
-    tocar(linha, r, video);
+    // Onde cada um está DENTRO do vídeo dele. É o número que mostra o avanço e
+    // o atraso, e aparece já — antes de qualquer imagem carregar.
+    tile.querySelector('.posicao').textContent = mmss(r.tempoS);
+
+    if (linha.slug === estado.foco) tocar(linha, r, video, { correr: true });
+    else secundarios.push([linha, r, video]);
   }
+
+  // Os parados só saltam quando a barra descansa. Arrastar o cursor pediria um
+  // pedaço de vídeo por pixel, a trinta canais — um ataque ao CDN feito com o
+  // rato, e a primeira coisa que poria isto bloqueado.
+  clearTimeout(estado.timerSecundarios);
+  estado.timerSecundarios = setTimeout(() => {
+    for (const [linha, r, video] of secundarios) tocar(linha, r, video, { correr: false });
+  }, 220);
 }
+
+const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
 function pararTile(slug, video) {
   const p = estado.players.get(slug);
@@ -266,21 +292,24 @@ function pararTile(slug, video) {
   video.removeAttribute('src');
 }
 
-function tocar(linha, r, video) {
-  const foco = linha.slug === estado.foco;
+function tocar(linha, r, video, { correr } = {}) {
   const peca = linha.pecasCompletas.find((p) => p.vod.id === r.peca.vod.id) || r.peca;
   // Focus gets the best rung the ladder has; everything else stays at 160p.
-  const alvo = foco ? peca.escada[0] : peca.barato;
+  const alvo = correr ? peca.escada[0] : peca.barato;
   const anterior = estado.players.get(linha.slug);
 
   if (anterior && anterior.url === alvo.url) {
     if (Math.abs(video.currentTime - r.tempoS) > 0.35) video.currentTime = r.tempoS;
+    if (!correr && !video.paused) video.pause();
     return;
   }
   anterior?.destroy();
 
   if (window.Hls?.isSupported()) {
-    const hls = new window.Hls({ startPosition: r.tempoS, maxBufferLength: foco ? 30 : 6 });
+    // Um ângulo parado precisa do pedaço onde está e de mais nada. Trinta
+    // buffers de trinta segundos são trezentos MB de RAM a não servir para
+    // coisa nenhuma.
+    const hls = new window.Hls({ startPosition: r.tempoS, maxBufferLength: correr ? 30 : 2 });
     hls.loadSource(alvo.url);
     hls.attachMedia(video);
     estado.players.set(linha.slug, { url: alvo.url, destroy: () => hls.destroy() });
@@ -290,7 +319,12 @@ function tocar(linha, r, video) {
     video.currentTime = r.tempoS;
     estado.players.set(linha.slug, { url: alvo.url, destroy: () => { video.removeAttribute('src'); } });
   }
-  video.muted = !foco;
+  video.muted = !correr;
+  // `play()` devolve uma promessa que rejeita se o browser recusar tocar sem
+  // um clique. Ignorada de propósito: o utilizador carrega no quadrado e
+  // resolve-se sozinho — rebentar aqui deixava a página sem grelha nenhuma.
+  if (correr) video.play?.().catch(() => {});
+  else video.pause?.();
 }
 
 // ── alinhar pelo som ────────────────────────────────────────────────────────
