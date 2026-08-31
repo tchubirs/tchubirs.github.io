@@ -1,0 +1,502 @@
+// Português, inglês e espanhol — a página inteira, sem texto solto.
+//
+// O dono transmite para um público de língua espanhola e portuguesa, e o resto
+// do mundo lê inglês. Um sítio que só fala uma língua fecha a porta a quem
+// podia usá-lo, e traduzir depois é sempre pior do que traduzir agora: cada
+// frase que fica escrita no meio do código é uma que ninguém volta a encontrar.
+//
+// As chaves descrevem o QUE a frase diz, e não onde ela aparece — assim mover
+// um botão não obriga a renomear nada.
+
+export const IDIOMAS = { pt: 'Português', en: 'English', es: 'Español' };
+
+const TEXTOS = {
+  pt: {
+    'app.titulo': 'Replay — vários ângulos, um relógio',
+    'app.nome': 'Replay',
+    'app.sub': 'Cola os canais que estiveram na mesma noite. Um relógio para todos.',
+    'app.rodape': 'Tudo acontece no teu navegador. Os VODs são de quem os gravou.',
+
+    'procurar.label': 'Procurar um canal',
+    'procurar.ph': 'escreve o início do nome…',
+    'procurar.jaEsta': 'já está',
+    'procurar.seguidores': '{n} seguidores',
+    'procurar.aoVivo': 'ao vivo',
+    'canais.label': 'Canais da Kick, um por linha',
+    'canais.carregar': 'Carregar a noite',
+    'canais.titulo': 'Canais',
+    'canais.tirar': 'tirar este canal',
+    'canais.vods': '{n} VOD(s)',
+    'canais.quisesteDizer': 'quiseste dizer',
+    'canais.aPerguntar': 'a perguntar à Kick…',
+    'canais.aLerRelogios': 'a ler os relógios…',
+    'canais.semUtilizavel': 'nenhum canal tem VOD utilizável.',
+    'canais.semCanais': 'sem canais.',
+    'noite.label': 'Qual noite',
+    'noite.semRelogio': 'esta noite não tem nenhum canal com vídeo legível — escolhe outra.',
+    'noite.todosJuntos': 'todos juntos {de}–{ate}',
+    'noite.umCanal': '{n} canal',
+    'noite.canais': '{n} canais',
+
+    'estado.canalNaoExiste': 'não existe na Kick',
+    'estado.semVods': 'existe, mas não tem VODs guardados',
+    'estado.vodsIndisponiveis': 'os VODs estão privados ou apagados',
+    'estado.rateLimit': 'a Kick pediu para abrandar',
+    'estado.semRede': 'sem rede',
+    'estado.nomeInvalido': 'nome inválido',
+    'estado.ilegivel': 'a Kick respondeu algo que não percebi',
+    'estado.inesperado': 'a Kick mudou o formato da resposta',
+
+    'tile.relogioIncerto': 'relógio incerto',
+    'tile.par': 'ver dois ao mesmo tempo',
+    'tile.pausa': 'parar / continuar (barra de espaço)',
+    'tile.ligarSom': 'ligar o som deste',
+    'tile.calar': 'calar este',
+    'tile.atrasar': 'atrasar 1s (Shift: 10s)',
+    'tile.adiantar': 'adiantar 1s (Shift: 10s)',
+    'tile.foraDoAr': 'fora do ar ({s}s)',
+    'tile.antes': 'ainda não tinha começado',
+    'tile.depois': 'já tinha acabado',
+    'tile.semVideo': 'sem vídeo',
+
+    'tempo.linha': 'linha do tempo',
+    'tempo.menos1m': '« 1 min',
+    'tempo.menos10s': '‹ 10s',
+    'tempo.mais10s': '10s ›',
+    'tempo.mais1m': '1 min »',
+    'tempo.voltar1m': 'voltar 1 minuto',
+    'tempo.voltar10s': 'voltar 10 segundos',
+    'tempo.avancar10s': 'avançar 10 segundos',
+    'tempo.avancar1m': 'avançar 1 minuto',
+    'tempo.angulos': '{n} de {total} ângulos',
+
+    'marca.inicio': 'Marca início',
+    'marca.fim': 'Marca fim',
+    'marca.faltaFim': 'início {de} — falta o fim',
+    'marca.feita': '{de} → {ate} ({dur})',
+
+    'alinhar.botao': 'Alinhar pelo som',
+    'alinhar.ajuda': 'ouve um bocado de cada ângulo e corrige o desvio de cada um',
+    'alinhar.aOuvir': 'a ouvir {canal} — {feito}/{total} · {mb} MB',
+    'alinhar.aComparar': 'a comparar…',
+    'alinhar.custo': 'Ouvir {n} ângulos vai baixar cerca de {mb} MB.\n\nEm Wi-Fi é rápido; em dados móveis pesa. Continuar?',
+    'alinhar.feito': '{n} de {total} alinhados pelo som',
+    'alinhar.corrigi': ' · corrigi {lista}',
+    'alinhar.jaCertos': ' · já estavam certos',
+    'alinhar.semSom': ' · sem som em comum: {lista} (ajusta à mão)',
+    'alinhar.naoOuvi': ' · não consegui ouvir {lista}',
+    'alinhar.cancelado': 'cancelado',
+    'alinhar.semCodec': 'este navegador não descodifica o áudio da Kick — usa o Chrome ou o Edge, ou alinha à mão com o − / + de cada quadrado',
+    'alinhar.erro': 'não deu: {erro}',
+
+    'montagem.titulo': 'Montagem',
+    'montagem.marcar': 'Marcar kill',
+    'montagem.minhaPov': 'minha POV',
+    'montagem.quemMorreu': 'quem morreu',
+    'montagem.antes': 's antes',
+    'montagem.depois': 's depois',
+    'montagem.baixar': 'Baixar a montagem',
+    'montagem.vazia': 'Sem kills marcadas. Vai ao momento e carrega em Marcar kill.',
+    'montagem.ir': 'ir',
+    'montagem.apagar': 'apagar',
+    'montagem.verMortes': 'quem morreu?',
+    'montagem.matou': 'matou',
+    'montagem.naoFilmava': 'não estava a filmar',
+    'montagem.clipes': '{n} clipes',
+    'montagem.umClipe': '1 clipe',
+    'montagem.resumo': '{kills} · {ficheiros} ficheiros',
+    'montagem.umaKill': '1 kill',
+    'montagem.kills': '{n} kills',
+    'montagem.semVitima': ' · {n} sem ninguém marcado (só a tua POV)',
+    'montagem.aOlhar': 'a olhar para todos os ângulos…',
+    'montagem.aOlharCanal': 'a olhar — {canal}…',
+    'montagem.pareceMorreu': 'parece que morreu: {lista} — corrige clicando',
+    'montagem.ninguem': 'ninguém se destacou; escolhe tu clicando',
+    'montagem.acerteiInstante': ' · acertei o instante para {hora}',
+    'montagem.naoVi': 'não consegui ver nenhum ângulo — este navegador pode não descodificar o vídeo da Kick',
+    'montagem.semImagem': 'sem imagem',
+    'montagem.morreu': 'morreu · ',
+    'montagem.aPreparar': 'a preparar…',
+    'montagem.pedacos': '{prontos}/{total} pedaços',
+    'montagem.pronto': '{feitos}/{total} — pronto. Clica em cada ficheiro para guardar.',
+
+    'corte.titulo': 'Cortar',
+    'corte.como': 'Marca o início com {i} e o fim com {o}. Depois aparece aqui um botão por ângulo.',
+    'corte.antes': 'antes',
+    'corte.depois': 'depois',
+    'corte.baixar': 'Baixar',
+    'corte.ninguem': 'nenhum ângulo estava a filmar nessa janela.',
+    'corte.buraco': 'estava fora do ar',
+    'corte.foraDaNoite': 'não estava a filmar',
+    'corte.semSegmentos': 'sem vídeo nessa janela',
+    'corte.incompleto': '{obtidos}/{total} pedaços — não gero o ficheiro com um buraco no meio',
+    'corte.comeca': 'começa {s}s antes da tua marca',
+
+    'fila.limpar': 'Limpar a lista',
+    'fila.recomecar': 'Recomeçar do zero',
+    'fila.apagarUm': 'apagar este',
+    'fila.memoria': '{n} ficheiros · {mb} MB em memória',
+    'fila.tuaPov': 'a tua POV',
+    'fila.quemMorreu': 'quem morreu',
+    'recomecar.comKills': 'Isto apaga tudo, incluindo {n} kills marcadas.\n\nContinuar?',
+    'recomecar.semKills': 'Isto apaga os canais, a marca e os ajustes.\n\nContinuar?',
+
+    'clipe.botao': 'Clipar',
+    'clipe.titulo': 'Criar clipe',
+    'clipe.angulo': 'ângulo',
+    'clipe.fechar': 'fechar',
+    'clipe.inicio': 'início do clipe',
+    'clipe.fim': 'fim do clipe',
+    'clipe.tempo': '{de} → {ate}  ·  {dur}s de {max}',
+    'clipe.tituloLabel': 'Título do clipe',
+    'clipe.tituloPh': 'opcional — entra no nome do ficheiro',
+    'clipe.cancelar': 'Cancelar',
+    'clipe.guardar': 'Guardar clipe',
+    'clipe.naoDeu': 'não deu: {erro}',
+
+    'leitor.aviso': 'O leitor de vídeo (hls.js) não carregou — um bloqueador ou a rede terão travado o CDN. Sem ele os quadrados ficam pretos.',
+  },
+
+  en: {
+    'app.titulo': 'Replay — many angles, one clock',
+    'app.nome': 'Replay',
+    'app.sub': 'Paste the channels that were live the same night. One clock for all of them.',
+    'app.rodape': 'Everything happens in your browser. The VODs belong to whoever recorded them.',
+
+    'procurar.label': 'Find a channel',
+    'procurar.ph': 'start typing a name…',
+    'procurar.jaEsta': 'already added',
+    'procurar.seguidores': '{n} followers',
+    'procurar.aoVivo': 'live',
+    'canais.label': 'Kick channels, one per line',
+    'canais.carregar': 'Load the night',
+    'canais.titulo': 'Channels',
+    'canais.tirar': 'remove this channel',
+    'canais.vods': '{n} VOD(s)',
+    'canais.quisesteDizer': 'did you mean',
+    'canais.aPerguntar': 'asking Kick…',
+    'canais.aLerRelogios': 'reading the clocks…',
+    'canais.semUtilizavel': 'no channel has a usable VOD.',
+    'canais.semCanais': 'no channels.',
+    'noite.label': 'Which night',
+    'noite.semRelogio': 'this night has no channel with readable video — pick another.',
+    'noite.todosJuntos': 'all together {de}–{ate}',
+    'noite.umCanal': '{n} channel',
+    'noite.canais': '{n} channels',
+
+    'estado.canalNaoExiste': 'does not exist on Kick',
+    'estado.semVods': 'exists, but has no saved VODs',
+    'estado.vodsIndisponiveis': 'the VODs are private or deleted',
+    'estado.rateLimit': 'Kick asked us to slow down',
+    'estado.semRede': 'no network',
+    'estado.nomeInvalido': 'invalid name',
+    'estado.ilegivel': 'Kick replied with something I could not read',
+    'estado.inesperado': 'Kick changed the shape of the reply',
+
+    'tile.relogioIncerto': 'clock is uncertain',
+    'tile.par': 'watch two at once',
+    'tile.pausa': 'pause / resume (spacebar)',
+    'tile.ligarSom': 'unmute this one',
+    'tile.calar': 'mute this one',
+    'tile.atrasar': 'delay 1s (Shift: 10s)',
+    'tile.adiantar': 'advance 1s (Shift: 10s)',
+    'tile.foraDoAr': 'off air ({s}s)',
+    'tile.antes': 'had not started yet',
+    'tile.depois': 'had already finished',
+    'tile.semVideo': 'no video',
+
+    'tempo.linha': 'timeline',
+    'tempo.menos1m': '« 1 min',
+    'tempo.menos10s': '‹ 10s',
+    'tempo.mais10s': '10s ›',
+    'tempo.mais1m': '1 min »',
+    'tempo.voltar1m': 'back 1 minute',
+    'tempo.voltar10s': 'back 10 seconds',
+    'tempo.avancar10s': 'forward 10 seconds',
+    'tempo.avancar1m': 'forward 1 minute',
+    'tempo.angulos': '{n} of {total} angles',
+
+    'marca.inicio': 'Mark in',
+    'marca.fim': 'Mark out',
+    'marca.faltaFim': 'in {de} — out missing',
+    'marca.feita': '{de} → {ate} ({dur})',
+
+    'alinhar.botao': 'Align by sound',
+    'alinhar.ajuda': 'listens to a bit of each angle and corrects the offset of each one',
+    'alinhar.aOuvir': 'listening to {canal} — {feito}/{total} · {mb} MB',
+    'alinhar.aComparar': 'comparing…',
+    'alinhar.custo': 'Listening to {n} angles will download about {mb} MB.\n\nFast on Wi-Fi; heavy on mobile data. Continue?',
+    'alinhar.feito': '{n} of {total} aligned by sound',
+    'alinhar.corrigi': ' · corrected {lista}',
+    'alinhar.jaCertos': ' · they were already right',
+    'alinhar.semSom': ' · no sound in common: {lista} (adjust by hand)',
+    'alinhar.naoOuvi': ' · could not listen to {lista}',
+    'alinhar.cancelado': 'cancelled',
+    'alinhar.semCodec': 'this browser cannot decode Kick audio — use Chrome or Edge, or align by hand with the − / + on each tile',
+    'alinhar.erro': 'failed: {erro}',
+
+    'montagem.titulo': 'Edit list',
+    'montagem.marcar': 'Mark kill',
+    'montagem.minhaPov': 'my POV',
+    'montagem.quemMorreu': 'who died',
+    'montagem.antes': 's before',
+    'montagem.depois': 's after',
+    'montagem.baixar': 'Download the edit',
+    'montagem.vazia': 'No kills marked. Go to the moment and press Mark kill.',
+    'montagem.ir': 'go',
+    'montagem.apagar': 'delete',
+    'montagem.verMortes': 'who died?',
+    'montagem.matou': 'killed',
+    'montagem.naoFilmava': 'was not recording',
+    'montagem.clipes': '{n} clips',
+    'montagem.umClipe': '1 clip',
+    'montagem.resumo': '{kills} · {ficheiros} files',
+    'montagem.umaKill': '1 kill',
+    'montagem.kills': '{n} kills',
+    'montagem.semVitima': ' · {n} with nobody marked (your POV only)',
+    'montagem.aOlhar': 'looking at every angle…',
+    'montagem.aOlharCanal': 'looking — {canal}…',
+    'montagem.pareceMorreu': 'looks like {lista} died — click to correct',
+    'montagem.ninguem': 'nobody stood out; pick by clicking',
+    'montagem.acerteiInstante': ' · moved the instant to {hora}',
+    'montagem.naoVi': 'could not see a single angle — this browser may not decode Kick video',
+    'montagem.semImagem': 'no image',
+    'montagem.morreu': 'died · ',
+    'montagem.aPreparar': 'preparing…',
+    'montagem.pedacos': '{prontos}/{total} pieces',
+    'montagem.pronto': '{feitos}/{total} — done. Click each file to save it.',
+
+    'corte.titulo': 'Cut',
+    'corte.como': 'Mark the start with {i} and the end with {o}. A button per angle shows up here.',
+    'corte.antes': 'before',
+    'corte.depois': 'after',
+    'corte.baixar': 'Download',
+    'corte.ninguem': 'no angle was recording in that window.',
+    'corte.buraco': 'was off air',
+    'corte.foraDaNoite': 'was not recording',
+    'corte.semSegmentos': 'no video in that window',
+    'corte.incompleto': '{obtidos}/{total} pieces — I will not build a file with a hole in it',
+    'corte.comeca': 'starts {s}s before your mark',
+
+    'fila.limpar': 'Clear the list',
+    'fila.recomecar': 'Start over',
+    'fila.apagarUm': 'delete this one',
+    'fila.memoria': '{n} files · {mb} MB in memory',
+    'fila.tuaPov': 'your POV',
+    'fila.quemMorreu': 'who died',
+    'recomecar.comKills': 'This deletes everything, including {n} marked kills.\n\nContinue?',
+    'recomecar.semKills': 'This deletes the channels, the mark and the offsets.\n\nContinue?',
+
+    'clipe.botao': 'Clip',
+    'clipe.titulo': 'Create clip',
+    'clipe.angulo': 'angle',
+    'clipe.fechar': 'close',
+    'clipe.inicio': 'clip start',
+    'clipe.fim': 'clip end',
+    'clipe.tempo': '{de} → {ate}  ·  {dur}s of {max}',
+    'clipe.tituloLabel': 'Clip title',
+    'clipe.tituloPh': 'optional — goes into the file name',
+    'clipe.cancelar': 'Cancel',
+    'clipe.guardar': 'Save clip',
+    'clipe.naoDeu': 'failed: {erro}',
+
+    'leitor.aviso': 'The video player (hls.js) did not load — a blocker or the network stopped the CDN. Without it the tiles stay black.',
+  },
+
+  es: {
+    'app.titulo': 'Replay — varios ángulos, un reloj',
+    'app.nome': 'Replay',
+    'app.sub': 'Pega los canales que estuvieron en la misma noche. Un reloj para todos.',
+    'app.rodape': 'Todo ocurre en tu navegador. Los VODs son de quien los grabó.',
+
+    'procurar.label': 'Buscar un canal',
+    'procurar.ph': 'escribe el principio del nombre…',
+    'procurar.jaEsta': 'ya está',
+    'procurar.seguidores': '{n} seguidores',
+    'procurar.aoVivo': 'en vivo',
+    'canais.label': 'Canales de Kick, uno por línea',
+    'canais.carregar': 'Cargar la noche',
+    'canais.titulo': 'Canales',
+    'canais.tirar': 'quitar este canal',
+    'canais.vods': '{n} VOD(s)',
+    'canais.quisesteDizer': 'quisiste decir',
+    'canais.aPerguntar': 'preguntando a Kick…',
+    'canais.aLerRelogios': 'leyendo los relojes…',
+    'canais.semUtilizavel': 'ningún canal tiene VOD utilizable.',
+    'canais.semCanais': 'sin canales.',
+    'noite.label': 'Qué noche',
+    'noite.semRelogio': 'esta noche no tiene ningún canal con vídeo legible — elige otra.',
+    'noite.todosJuntos': 'todos juntos {de}–{ate}',
+    'noite.umCanal': '{n} canal',
+    'noite.canais': '{n} canales',
+
+    'estado.canalNaoExiste': 'no existe en Kick',
+    'estado.semVods': 'existe, pero no tiene VODs guardados',
+    'estado.vodsIndisponiveis': 'los VODs están privados o borrados',
+    'estado.rateLimit': 'Kick pidió que fuéramos más lento',
+    'estado.semRede': 'sin red',
+    'estado.nomeInvalido': 'nombre inválido',
+    'estado.ilegivel': 'Kick respondió algo que no entendí',
+    'estado.inesperado': 'Kick cambió el formato de la respuesta',
+
+    'tile.relogioIncerto': 'reloj incierto',
+    'tile.par': 'ver dos a la vez',
+    'tile.pausa': 'pausar / seguir (barra espaciadora)',
+    'tile.ligarSom': 'activar el sonido de este',
+    'tile.calar': 'silenciar este',
+    'tile.atrasar': 'atrasar 1s (Shift: 10s)',
+    'tile.adiantar': 'adelantar 1s (Shift: 10s)',
+    'tile.foraDoAr': 'fuera del aire ({s}s)',
+    'tile.antes': 'todavía no había empezado',
+    'tile.depois': 'ya había terminado',
+    'tile.semVideo': 'sin vídeo',
+
+    'tempo.linha': 'línea de tiempo',
+    'tempo.menos1m': '« 1 min',
+    'tempo.menos10s': '‹ 10s',
+    'tempo.mais10s': '10s ›',
+    'tempo.mais1m': '1 min »',
+    'tempo.voltar1m': 'volver 1 minuto',
+    'tempo.voltar10s': 'volver 10 segundos',
+    'tempo.avancar10s': 'avanzar 10 segundos',
+    'tempo.avancar1m': 'avanzar 1 minuto',
+    'tempo.angulos': '{n} de {total} ángulos',
+
+    'marca.inicio': 'Marca inicio',
+    'marca.fim': 'Marca fin',
+    'marca.faltaFim': 'inicio {de} — falta el fin',
+    'marca.feita': '{de} → {ate} ({dur})',
+
+    'alinhar.botao': 'Alinear por el sonido',
+    'alinhar.ajuda': 'escucha un poco de cada ángulo y corrige el desfase de cada uno',
+    'alinhar.aOuvir': 'escuchando {canal} — {feito}/{total} · {mb} MB',
+    'alinhar.aComparar': 'comparando…',
+    'alinhar.custo': 'Escuchar {n} ángulos va a descargar unos {mb} MB.\n\nEn Wi-Fi es rápido; con datos móviles pesa. ¿Continuar?',
+    'alinhar.feito': '{n} de {total} alineados por el sonido',
+    'alinhar.corrigi': ' · corregí {lista}',
+    'alinhar.jaCertos': ' · ya estaban bien',
+    'alinhar.semSom': ' · sin sonido en común: {lista} (ajusta a mano)',
+    'alinhar.naoOuvi': ' · no pude escuchar {lista}',
+    'alinhar.cancelado': 'cancelado',
+    'alinhar.semCodec': 'este navegador no descodifica el audio de Kick — usa Chrome o Edge, o alinea a mano con el − / + de cada cuadro',
+    'alinhar.erro': 'no salió: {erro}',
+
+    'montagem.titulo': 'Montaje',
+    'montagem.marcar': 'Marcar kill',
+    'montagem.minhaPov': 'mi POV',
+    'montagem.quemMorreu': 'quién murió',
+    'montagem.antes': 's antes',
+    'montagem.depois': 's después',
+    'montagem.baixar': 'Descargar el montaje',
+    'montagem.vazia': 'Sin kills marcadas. Ve al momento y pulsa Marcar kill.',
+    'montagem.ir': 'ir',
+    'montagem.apagar': 'borrar',
+    'montagem.verMortes': '¿quién murió?',
+    'montagem.matou': 'mató',
+    'montagem.naoFilmava': 'no estaba grabando',
+    'montagem.clipes': '{n} clips',
+    'montagem.umClipe': '1 clip',
+    'montagem.resumo': '{kills} · {ficheiros} archivos',
+    'montagem.umaKill': '1 kill',
+    'montagem.kills': '{n} kills',
+    'montagem.semVitima': ' · {n} sin nadie marcado (solo tu POV)',
+    'montagem.aOlhar': 'mirando todos los ángulos…',
+    'montagem.aOlharCanal': 'mirando — {canal}…',
+    'montagem.pareceMorreu': 'parece que murió: {lista} — corrige haciendo clic',
+    'montagem.ninguem': 'nadie destacó; elige tú haciendo clic',
+    'montagem.acerteiInstante': ' · ajusté el instante a {hora}',
+    'montagem.naoVi': 'no pude ver ningún ángulo — este navegador puede no descodificar el vídeo de Kick',
+    'montagem.semImagem': 'sin imagen',
+    'montagem.morreu': 'murió · ',
+    'montagem.aPreparar': 'preparando…',
+    'montagem.pedacos': '{prontos}/{total} trozos',
+    'montagem.pronto': '{feitos}/{total} — listo. Haz clic en cada archivo para guardarlo.',
+
+    'corte.titulo': 'Cortar',
+    'corte.como': 'Marca el inicio con {i} y el fin con {o}. Después aparece aquí un botón por ángulo.',
+    'corte.antes': 'antes',
+    'corte.depois': 'después',
+    'corte.baixar': 'Descargar',
+    'corte.ninguem': 'ningún ángulo estaba grabando en esa ventana.',
+    'corte.buraco': 'estaba fuera del aire',
+    'corte.foraDaNoite': 'no estaba grabando',
+    'corte.semSegmentos': 'sin vídeo en esa ventana',
+    'corte.incompleto': '{obtidos}/{total} trozos — no genero el archivo con un hueco',
+    'corte.comeca': 'empieza {s}s antes de tu marca',
+
+    'fila.limpar': 'Limpiar la lista',
+    'fila.recomecar': 'Empezar de cero',
+    'fila.apagarUm': 'borrar este',
+    'fila.memoria': '{n} archivos · {mb} MB en memoria',
+    'fila.tuaPov': 'tu POV',
+    'fila.quemMorreu': 'quién murió',
+    'recomecar.comKills': 'Esto borra todo, incluidas {n} kills marcadas.\n\n¿Continuar?',
+    'recomecar.semKills': 'Esto borra los canales, la marca y los ajustes.\n\n¿Continuar?',
+
+    'clipe.botao': 'Clipear',
+    'clipe.titulo': 'Crear clip',
+    'clipe.angulo': 'ángulo',
+    'clipe.fechar': 'cerrar',
+    'clipe.inicio': 'inicio del clip',
+    'clipe.fim': 'fin del clip',
+    'clipe.tempo': '{de} → {ate}  ·  {dur}s de {max}',
+    'clipe.tituloLabel': 'Título del clip',
+    'clipe.tituloPh': 'opcional — entra en el nombre del archivo',
+    'clipe.cancelar': 'Cancelar',
+    'clipe.guardar': 'Guardar clip',
+    'clipe.naoDeu': 'no salió: {erro}',
+
+    'leitor.aviso': 'El reproductor de vídeo (hls.js) no cargó — un bloqueador o la red frenaron el CDN. Sin él los cuadros quedan negros.',
+  },
+};
+
+let actual = 'pt';
+
+/** O idioma do browser, se for um dos três; senão, português. */
+export function idiomaDoBrowser(idiomas = (typeof navigator !== 'undefined' ? navigator.languages : null) || ['pt']) {
+  for (const l of idiomas) {
+    const curto = String(l).slice(0, 2).toLowerCase();
+    if (curto in IDIOMAS) return curto;
+  }
+  return 'pt';
+}
+
+export function definirIdioma(codigo) {
+  actual = codigo in IDIOMAS ? codigo : 'pt';
+  return actual;
+}
+
+export const idiomaActual = () => actual;
+
+/**
+ * O texto de uma chave, com as variáveis já postas.
+ *
+ * Uma chave que não exista devolve a versão portuguesa, e só depois a própria
+ * chave. Assim, uma tradução que falte mostra a frase certa noutra língua em
+ * vez de um código a meio do ecrã.
+ */
+export function t(chave, vars = {}) {
+  const bruto = TEXTOS[actual]?.[chave] ?? TEXTOS.pt[chave] ?? chave;
+  return bruto.replace(/\{(\w+)\}/g, (todo, nome) => (nome in vars ? String(vars[nome]) : todo));
+}
+
+/** Plural sem tabelas: as três línguas fazem-no da mesma maneira aqui. */
+export function tn(n, chaveUm, chaveVarios, vars = {}) {
+  return t(n === 1 ? chaveUm : chaveVarios, { n, ...vars });
+}
+
+/** Pôr a página inteira no idioma actual. */
+export function aplicarIdioma(raiz = document) {
+  for (const el of raiz.querySelectorAll('[data-t]')) el.textContent = t(el.dataset.t);
+  for (const el of raiz.querySelectorAll('[data-t-html]')) el.innerHTML = t(el.dataset.tHtml);
+  for (const el of raiz.querySelectorAll('[data-t-ph]')) el.placeholder = t(el.dataset.tPh);
+  for (const el of raiz.querySelectorAll('[data-t-titulo]')) el.title = t(el.dataset.tTitulo);
+  for (const el of raiz.querySelectorAll('[data-t-aria]')) el.setAttribute('aria-label', t(el.dataset.tAria));
+  if (raiz === document) {
+    document.title = t('app.titulo');
+    document.documentElement.lang = actual;
+  }
+}
+
+/** Todas as chaves, para o teste que garante que nenhuma língua fica para trás. */
+export const _TEXTOS = TEXTOS;

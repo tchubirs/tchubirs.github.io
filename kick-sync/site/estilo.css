@@ -325,3 +325,52 @@ footer { margin-top: 32px; border-top: 1px solid var(--borda); padding-top: 12px
   .palcoFoco .tile, .palcoFoco.dois .tile { aspect-ratio: 16/9; min-height: 150px; }
   .corte b { min-width: 0; }
 }
+
+
+/* ── criar clipe ──────────────────────────────────────────────────────────── */
+
+/* `display: grid` ganha ao `display: none` que o browser da a [hidden], e o
+   modal ficava invisivel mas por cima da pagina toda a apanhar os cliques.
+   Por isso o display so existe quando ele esta mesmo aberto. */
+.modal { display: none; }
+.modal:not([hidden]) {
+  position: fixed; inset: 0; z-index: 50; display: grid; place-items: center;
+  background: #000b; padding: 16px;
+}
+.modalCaixa {
+  background: var(--caixa); border: 1px solid var(--borda); border-radius: 12px;
+  padding: 14px; width: min(820px, 100%); max-height: 92vh; overflow-y: auto;
+  display: grid; gap: 10px;
+}
+.modalTopo { display: flex; gap: 10px; align-items: center; }
+.modalTopo b { font-size: 15px; }
+.modalTopo select { width: auto; flex: 1; }
+.modalTopo button { padding: 3px 10px; }
+#previaClipe {
+  width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 8px;
+  object-fit: contain; display: block;
+}
+
+/* A barra de corte. As pegas sao botoes a serio, para funcionarem com o
+   teclado e com um dedo — nao so com o rato. */
+.barraClipe {
+  position: relative; height: 40px; background: #ffffff10; border-radius: 8px;
+  touch-action: none; user-select: none;
+}
+.barraClipe .seleccao {
+  position: absolute; top: 0; bottom: 0; background: color-mix(in srgb, var(--acento) 22%, transparent);
+  border-left: 2px solid var(--acento); border-right: 2px solid var(--acento);
+}
+.barraClipe .pega {
+  position: absolute; top: 0; bottom: 0; width: 16px; margin-left: -8px; padding: 0;
+  background: var(--acento); border: 0; border-radius: 4px; cursor: ew-resize;
+}
+.barraClipe .cabeca {
+  position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--texto);
+  pointer-events: none;
+}
+.linha.fim { justify-content: flex-end; }
+#tituloClipe {
+  width: 100%; background: var(--fundo); color: var(--texto);
+  border: 1px solid var(--borda); border-radius: 8px; padding: 9px 11px; font: inherit;
+}
