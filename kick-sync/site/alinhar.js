@@ -15,6 +15,19 @@ import { envolvente, desvio, consolidar, resolver, TAXA } from './sinal.js';
 import { segmentosNaJanela } from './kick.js';
 import { onde } from './relogio.js';
 
+/**
+ * Quantos MB isto vai custar, antes de começar.
+ *
+ * Medido: o degrau mais barato da Kick anda nos ~280 kbps reais (é o mais
+ * barato que existe, mas traz vídeo junto — o áudio não se pode pedir
+ * sozinho). Trinta ângulos não é o mesmo que cinco, e quem está com dados
+ * móveis tem o direito de saber ANTES e não a meio.
+ */
+export function custoEstimadoMB(quantosCanais, { janelas = 3, duracaoS = 120 } = {}) {
+  const MARGEM_S = 12;                       // os segmentos das pontas vêm inteiros
+  return Math.round((quantosCanais * janelas * (duracaoS + MARGEM_S) * 280_000) / 8 / 1048576);
+}
+
 /** Onde ir buscar som: instantes com o maior número de ângulos no ar. */
 export function instantesParaOuvir(linhas, janela, { quantos = 3, duracaoS = 120 } = {}) {
   const de = janela.haSobreposicao ? janela.sobreposicaoInicio : janela.inicio;
@@ -130,7 +143,7 @@ function reamostrar(pedacos, de, para) {
  * comparar pares, resolver o grafo) e testavel sem rede e sem codec, e o codec
  * e a unica parte que pertence ao browser e nao a este codigo.
  */
-export async function somDoCanal(linha, quandoMs, duracaoS, { buscar = fetch, sinal, descodificar = descodificarAac } = {}) {
+export async function somDoCanal(linha, quandoMs, duracaoS, { buscar = fetch, sinal, descodificar = descodificarAac, contador } = {}) {
   const r = onde(linha, quandoMs);
   if (r.estado !== 'toca') return null;
   const peca = linha.pecasCompletas?.find((p) => p.vod.id === r.peca.vod.id) || r.peca;
@@ -146,6 +159,7 @@ export async function somDoCanal(linha, quandoMs, duracaoS, { buscar = fetch, si
     partes.push(b);
     total += b.length;
   }
+  contador?.(total);
   const ts = new Uint8Array(total);
   let o = 0;
   for (const p of partes) { ts.set(p, o); o += p.length; }
@@ -177,15 +191,18 @@ export async function alinharPeloSom({
   const instantes = instantesParaOuvir(linhas, janela, { quantos: janelas, duracaoS });
   const envelopes = new Map();
   const problemas = [];
+  let bytes = 0;
   let passo = 0;
   const passos = instantes.length * linhas.length;
 
   for (const t of instantes) {
     for (const linha of linhas) {
       if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
-      aoProgresso({ fase: 'ouvir', canal: linha.slug, feito: ++passo, total: passos });
+      aoProgresso({ fase: 'ouvir', canal: linha.slug, feito: ++passo, total: passos, bytes });
       try {
-        const som = await lerSom(linha, t, duracaoS, { buscar, sinal, descodificar });
+        const som = await lerSom(linha, t, duracaoS, {
+          buscar, sinal, descodificar, contador: (n) => { bytes += n; },
+        });
         if (som) envelopes.set(`${t}|${linha.slug}`, envolvente(som));
       } catch (e) {
         if (e.name === 'AbortError') throw e;
@@ -223,5 +240,6 @@ export async function alinharPeloSom({
     pares: detalhe,
     instantes,
     problemas,
+    bytes,
   };
 }

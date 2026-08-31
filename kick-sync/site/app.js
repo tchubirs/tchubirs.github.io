@@ -8,7 +8,7 @@
 import { vodsDoCanal, lerMaster, lerPlaylist } from './kick.js';
 import { linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink } from './relogio.js';
 import { cortarTodosOsAngulos } from './baixar.js';
-import { alinharPeloSom } from './alinhar.js';
+import { alinharPeloSom, custoEstimadoMB } from './alinhar.js';
 
 const $ = (id) => document.getElementById(id);
 const estado = {
@@ -309,6 +309,13 @@ async function alinhar() {
   const controlo = new AbortController();
   const botao = $('alinhar');
   const nota = $('estadoAlinhar');
+  nota.classList.remove('mau');
+
+  // Com trinta ângulos isto passa a ser umas centenas de MB. Perguntar é mais
+  // barato do que gastar os dados de alguém e explicar depois.
+  const mb = custoEstimadoMB(estado.linhas.length);
+  if (mb > 80 && !confirm(`Ouvir ${estado.linhas.length} ângulos vai baixar cerca de ${mb} MB.\n\n`
+    + 'Em Wi-Fi é rápido; em dados móveis pesa. Continuar?')) return;
   botao.disabled = true;
 
   try {
@@ -318,7 +325,7 @@ async function alinhar() {
       sinal: controlo.signal,
       aoProgresso: (p) => {
         nota.textContent = p.fase === 'ouvir'
-          ? `a ouvir ${p.canal} — ${p.feito}/${p.total}`
+          ? `a ouvir ${p.canal} — ${p.feito}/${p.total} · ${(p.bytes / 1048576).toFixed(0)} MB`
           : 'a comparar…';
       },
     });
