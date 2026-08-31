@@ -98,3 +98,38 @@ node probes/evento-real.mjs wowi dilanzito yopickeosola lautaarg00 kodd
 JANELA_S=420 DIR=/tmp/aud node probes/desvio-real.mjs 2026-08-30T22:00:00Z wowi dilanzito
 node probes/alinhar-offline.mjs /tmp
 ```
+
+## A Twitch — o que dá e o que não dá
+
+Medido em 31/08/2026 com `probes/twitch.mjs`, contra canais reais.
+
+Uma linha de header decide tudo:
+
+| o que peço | de `https://www.twitch.tv` | do nosso site |
+|---|---|---|
+| `gql.twitch.tv` (lista de VODs, horas, procurar canais) | `*` | `*` |
+| `usher.ttvnw.net` (o master m3u8) | reflecte a origem | **nenhum header** |
+| o CDN (`d2nvs31859zcd8.cloudfront.net`) | reflecte a origem | **nenhum header** |
+
+O `Origin` é posto pelo browser e a página não lhe toca. Não há truque do lado
+do cliente. Sem ler os bytes do CDN não há **sincronia pelo som** (faltam as
+amostras), não há **saber quem morreu** (faltam os pixéis) e não há
+**descarregar o clipe** (faltam os segmentos). As três funções automáticas que
+fazem o Replay valer alguma coisa na Kick estão fechadas na Twitch.
+
+O que fica de pé é o player oficial em `iframe`. Com `parent=` no endereço, o
+`player.twitch.tv` responde `Content-Security-Policy: frame-ancestors
+https://tchubirs.github.io` — ou seja, autoriza-nos — e o embed traz uma API
+com `seek`, `play`, `pause` e `getCurrentTime`.
+
+Falta o relógio, e é aí que a coisa se salva. O GQL dá `publishedAt` de cada
+VOD, e a pergunta é quão longe isso está do relógio verdadeiro que está dentro
+do m3u8. Medido em dois canais: **1,93 s e 2,39 s**. Dois segundos de erro,
+igual nos dois — e ele já tinha dito que 10 a 20 s chegava.
+
+Portanto, para a Twitch: **um visualizador multi-POV sincronizado, sim** — a
+dois segundos, automático, sem servidor e sem custo. **Clipagem e busca
+automática de kills, não** — não com um site estático, e um proxy que resolva
+isto teria de passar todos os bytes de vídeo de seis POVs por uma máquina
+nossa. Isso é dinheiro todos os meses para fazer pior do que a Kick já faz de
+graça.
