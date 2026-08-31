@@ -101,6 +101,12 @@
     <h2 data-t="montagem.titulo">Montagem</h2>
     <div class="linha">
       <button id="marcarKill" class="principal"><span data-t="montagem.marcar">Marcar kill</span> <kbd>M</kbd></button>
+      <button id="procurarKills" data-t="auto.botao">Procurar kills sozinho</button>
+      <select id="janelaAuto" aria-label="quanto procurar">
+        <option value="1800" data-t="auto.meiaHora">meia hora</option>
+        <option value="3600" selected data-t="auto.umaHora">uma hora</option>
+        <option value="0" data-t="auto.noiteToda">a noite toda</option>
+      </select>
       <label class="pequeno"><span data-t="montagem.minhaPov">minha POV</span> <input id="protAntes" type="number" value="5" min="0" max="120" step="1">s antes</label>
       <label class="pequeno"><input id="protDepois" type="number" value="2" min="0" max="120" step="1">s depois</label>
       <label class="pequeno"><span data-t="montagem.quemMorreu">quem morreu</span> <input id="vitAntes" type="number" value="1" min="0" max="60" step="1">s antes</label>
@@ -162,10 +168,10 @@
   <!-- A versao, a serio e visivel. O GitHub Pages serve com max-age=600 e um
        telemovel guarda o app.js antigo; sem isto, "ja corrigi" e "continua
        igual" sao as duas verdadeiras ao mesmo tempo e ninguem sai dali. -->
-  <p class="nota"><span data-t="app.rodape">Tudo acontece no teu navegador. Os VODs são de quem os gravou.</span> · <span id="versao">9a1d6926ec</span></p>
+  <p class="nota"><span data-t="app.rodape">Tudo acontece no teu navegador. Os VODs são de quem os gravou.</span> · <span id="versao">3a3ec93d86</span></p>
 </footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.17/hls.min.js"></script>
-<script type="module" src="app.js?v=9a1d6926ec"></script>
+<script type="module" src="app.js?v=3a3ec93d86"></script>
 </body>
 </html>
