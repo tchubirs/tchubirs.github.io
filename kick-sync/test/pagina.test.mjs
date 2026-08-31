@@ -386,6 +386,32 @@ test('o principal carrega primeiro, e sozinho; os outros vao a seguir',
     await p.close();
   });
 
+// Dois toques seguidos num botao davam zoom na pagina inteira. Num sitio onde
+// se anda a carregar em "10s" varias vezes de seguida, isso torna-o inutil no
+// telemovel.
+test('carregar duas vezes depressa num botao nao da zoom',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir({ ecra: { width: 390, height: 844 } });
+    await kickFalsa(p);
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 15000 });
+
+    for (const sel of ['#mais10s', '#menos1m', '#marcarIn', '.tile', '#alinhar']) {
+      const t = await p.locator(sel).first().evaluate((e) => getComputedStyle(e).touchAction);
+      assert.equal(t, 'manipulation', `${sel} ainda espera pelo segundo toque`);
+    }
+
+    // E os cliques rapidos contam todos, em vez de o segundo virar um gesto.
+    const antes = await p.locator('#agora').innerText();
+    for (let i = 0; i < 4; i++) await p.click('#mais10s', { delay: 0 });
+    const depois = await p.locator('#agora').innerText();
+    assert.notEqual(depois, antes, 'quatro toques tem de andar no tempo');
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
 test('um canal que não existe aparece dito, não como quadrado vazio',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
     const { p, erros } = await abrir();
