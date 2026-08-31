@@ -489,7 +489,15 @@ function incompleto(r, totalDaApi = null) {
       // eu noto sozinho. É a diferença entre esperar e prender.
       // 4 minutos dá para fazer login com calma. Encurtável por ambiente para
       // eu poder PROVAR esta espera a correr, em vez de a afirmar.
-      const ESPERA_MAX = Number(process.env.DETETIVE_ESPERA_LOGIN) || 240;
+      // `DETETIVE_ESPERA_LOGIN=0` desliga a espera por completo.
+      //
+      // Serve para o caso dele de hoje: o Steam Guard está no telemóvel que
+      // ele não tem à mão, portanto o login NÃO vai acontecer. A janela ainda
+      // vale a pena — é ela que passa o Cloudflare —, mas esperar quatro
+      // minutos por uma coisa que já sabemos que não vem é tempo deitado fora.
+      const ESPERA_MAX = process.env.DETETIVE_ESPERA_LOGIN === '0'
+        ? 0
+        : Number(process.env.DETETIVE_ESPERA_LOGIN) || 240;
       const DE_CADA = Math.min(10, Math.max(2, Math.floor(ESPERA_MAX / 4)));
       let depois = null;
       for (let esperou = 0; esperou < ESPERA_MAX; esperou += DE_CADA) {

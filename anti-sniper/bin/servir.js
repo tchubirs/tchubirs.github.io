@@ -14,12 +14,16 @@
  * porta, põe um túnel à frente, e imprime um endereço que eu consigo chamar
  * daqui. O trabalho acontece com o IP dele e o login dele; eu só peço.
  *
- * O que ele faz: um comando, uma vez. O resto é meu.
+ * ASSÍNCRONO, e não por elegância: o túnel do Cloudflare corta o pedido aos
+ * ~100 segundos (erro 524), e uma leitura com janela visível leva minutos. A
+ * primeira versão respondia só no fim, e apanhei o 524 na cara. Agora o pedido
+ * ARRANCA a tarefa e devolve um número; eu volto buscar o resultado quando
+ * estiver pronto. Cada chamada dura um piscar de olhos.
  *
  * ⚠️ O endereço fica PÚBLICO enquanto o túnel estiver aberto. Por isso leva um
  * segredo no caminho — sem ele, quem adivinhasse o endereço mandava a máquina
- * dele buscar o que quisesse. O segredo é gerado à primeira e guardado fora do
- * repositório.
+ * dele buscar o que quisesse. Gerado à primeira, guardado fora do repositório,
+ * e comparado em tempo constante.
  */
 const http = require('node:http');
 const { spawn, spawnSync } = require('node:child_process');
@@ -30,6 +34,7 @@ const path = require('node:path');
 const RAIZ = path.join(__dirname, '..');
 const PORTA = Number(process.env.DETETIVE_PORTA_SERVIR) || 8791;
 const SEGREDO_EM = path.join(RAIZ, '.servir-segredo');
+const ID = /^\d{17}$/;
 
 /** Um segredo por máquina, guardado. Não anda no repositório. */
 function segredo() {
@@ -42,54 +47,87 @@ function segredo() {
   return s;
 }
 
-/** Corre o comando dos nomes e devolve o que ele escreveu. */
-function lerNomes(id, comVer) {
-  return new Promise((ok) => {
-    const args = [path.join(__dirname, 'nomes.js'), id];
-    if (comVer) args.push('--ver');
-    const f = spawn(process.execPath, args, {
-      cwd: RAIZ,
+const CHAVE = segredo();
+const tarefas = new Map();
+let proximo = 1;
+
+/** Arranca uma leitura e devolve o número da tarefa, sem esperar por ela. */
+function arrancar(id, op) {
+  const numero = String(proximo++);
+  const args = [path.join(__dirname, 'nomes.js'), id];
+  if (op.ver) args.push('--ver');
+
+  const t = { numero, id, estado: 'a correr', saida: '', comecou: Date.now() };
+  tarefas.set(numero, t);
+
+  const f = spawn(process.execPath, args, {
+    cwd: RAIZ,
+    env: {
+      ...process.env,
       // Sem isto, cada chamada minha ia à rede ver se há versão nova e podia
-      // reiniciar-se a meio de um pedido HTTP.
-      env: { ...process.env, DETETIVE_SEM_ATUALIZAR: '1', DETETIVE_JA_ATUALIZEI: '1' },
-    });
-    let saida = '';
-    f.stdout.on('data', (d) => { saida += d; });
-    f.stderr.on('data', (d) => { saida += d; });
-    const corta = setTimeout(() => f.kill('SIGKILL'), 10 * 60 * 1000);
-    f.on('close', (codigo) => { clearTimeout(corta); ok({ saida, codigo }); });
+      // reiniciar-se a meio.
+      DETETIVE_SEM_ATUALIZAR: '1',
+      DETETIVE_JA_ATUALIZEI: '1',
+      // Quando eu já sei que o login não vem, não faz sentido esperar por ele.
+      ...(op.semEspera ? { DETETIVE_ESPERA_LOGIN: '0' } : {}),
+    },
   });
+  f.stdout.on('data', (d) => { t.saida += d; });
+  f.stderr.on('data', (d) => { t.saida += d; });
+  const corta = setTimeout(() => f.kill('SIGKILL'), 15 * 60 * 1000);
+  f.on('close', (codigo) => {
+    clearTimeout(corta);
+    t.estado = 'pronto';
+    t.codigo = codigo;
+    t.segundos = Math.round((Date.now() - t.comecou) / 1000);
+    console.log(`  ← tarefa ${numero} pronta em ${t.segundos}s (código ${codigo})`);
+  });
+  f.on('error', (e) => { t.estado = 'pronto'; t.saida += `\nerro: ${e.message}\n`; });
+
+  console.log(`  → tarefa ${numero}: ${id}${op.ver ? ' --ver' : ''}${op.semEspera ? ' (sem esperar login)' : ''}`);
+  return t;
 }
 
-const CHAVE = segredo();
-const ID = /^\d{17}$/;
-
-const servidor = http.createServer(async (req, res) => {
-  const [, chave, rota, alvo] = (req.url || '').split('?')[0].split('/');
-  const responder = (n, t) => {
+const servidor = http.createServer((req, res) => {
+  const caminho = (req.url || '').split('?')[0];
+  const query = new URLSearchParams((req.url || '').split('?')[1] || '');
+  const [, chave, rota, alvo] = caminho.split('/');
+  const texto = (n, t) => {
     res.writeHead(n, { 'content-type': 'text/plain; charset=utf-8' });
     res.end(t);
   };
 
-  // Comparação de tempo constante: sem isto, medir quanto demora a resposta
-  // deixa adivinhar o segredo letra a letra.
+  // Tempo constante: sem isto, medir a demora da resposta deixa adivinhar o
+  // segredo letra a letra.
   const certo = Boolean(chave) && chave.length === CHAVE.length
     && crypto.timingSafeEqual(Buffer.from(chave), Buffer.from(CHAVE));
-  if (!certo) return responder(404, 'não\n');
+  if (!certo) return texto(404, 'não\n');
 
-  if (rota === 'vivo') return responder(200, 'sim\n');
-  if (rota !== 'nomes' || !ID.test(alvo || '')) {
-    return responder(400, 'uso: /<chave>/nomes/<steamid64>\n');
+  if (rota === 'vivo') return texto(200, 'sim\n');
+
+  if (rota === 'nomes') {
+    if (!ID.test(alvo || '')) return texto(400, 'uso: /<chave>/nomes/<steamid64>\n');
+    const t = arrancar(alvo, {
+      ver: query.get('ver') === '1',
+      semEspera: query.get('semespera') === '1',
+    });
+    return texto(202, `tarefa ${t.numero}\nvolta em /${'<chave>'}/tarefa/${t.numero}\n`);
   }
 
-  console.log(`  → pedido: ${alvo}`);
-  const { saida, codigo } = await lerNomes(alvo, (req.url || '').includes('ver=1'));
-  console.log(`  ← respondi (${codigo === 0 ? 'ok' : `código ${codigo}`})`);
-  return responder(200, saida);
+  if (rota === 'tarefa') {
+    const t = tarefas.get(alvo);
+    if (!t) return texto(404, 'tarefa não existe\n');
+    if (t.estado !== 'pronto') {
+      return texto(200, `ainda a correr (${Math.round((Date.now() - t.comecou) / 1000)}s)\n`);
+    }
+    return texto(200, t.saida || '(sem saída)\n');
+  }
+
+  return texto(400, 'rotas: /vivo · /nomes/<steamid> · /tarefa/<numero>\n');
 });
 
 servidor.listen(PORTA, '127.0.0.1', () => {
-  console.log(`\n  serviço em http://127.0.0.1:${PORTA}/${CHAVE}/nomes/<steamid>`);
+  console.log(`\n  serviço em http://127.0.0.1:${PORTA}/${CHAVE}/`);
   abrirTunel();
 });
 
