@@ -2,5 +2,9 @@
 # As contas que ele investiga. Não é coisa para um repositório público.
 /contas.txt
 
-# Dependencias. O kick-sync usa as do anti-sniper por link simbolico.
+# Dependencias. O kick-sync usa as do anti-sniper por um link simbolico, e o
+# link nao pode ir para o repositorio: aponta para uma pasta que so existe
+# nesta maquina, e num clone limpo fica pendurado. `node_modules/` sozinho nao
+# o apanhava — a barra so casa com pastas, e um symlink nao e uma pasta.
+node_modules
 node_modules/
