@@ -92,6 +92,22 @@ kbd {
   font-size: 12px; color: var(--fraco); text-align: center; padding: 8px;
 }
 
+/* O ajuste por ângulo. Fica por cima do vídeo, no canto, e só ganha cor
+   quando alguém lhe mexeu — um valor a zero não precisa de chamar a atenção. */
+.tile .ajuste {
+  position: absolute; right: 6px; bottom: 6px; display: flex; gap: 2px; align-items: center;
+  background: #000a; border-radius: 6px; padding: 2px; opacity: .35; transition: opacity .15s;
+}
+.tile:hover .ajuste, .tile .ajuste.ativo, .tile .ajuste:focus-within { opacity: 1; }
+.tile .ajuste button {
+  padding: 0 7px; font-size: 14px; line-height: 20px; border-radius: 4px; background: transparent;
+}
+.tile .ajuste .nudge {
+  font-size: 11px; font-variant-numeric: tabular-nums; min-width: 40px; text-align: center;
+  color: var(--fraco); font-weight: 400;
+}
+.tile .ajuste.ativo .nudge { color: var(--acento); }
+
 .relogio { background: var(--caixa); border: 1px solid var(--borda); border-radius: 10px; padding: 12px; }
 #barra { width: 100%; accent-color: var(--acento); }
 .tempo { font-variant-numeric: tabular-nums; font-size: 18px; min-width: 100px; }

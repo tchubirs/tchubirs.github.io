@@ -6,7 +6,7 @@
 // problem rather than a server problem.
 
 import { vodsDoCanal, lerMaster, lerPlaylist } from './kick.js';
-import { linhaDoCanal, janelaComum, onde, paraLink, doLink } from './relogio.js';
+import { linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink } from './relogio.js';
 import { cortarTodosOsAngulos } from './baixar.js';
 
 const $ = (id) => document.getElementById(id);
@@ -154,10 +154,20 @@ async function abrirNoite(noite) {
   estado.janela = janelaComum(estado.linhas);
   if (!estado.janela) { $('estadoCarga').textContent = 'nenhum canal com relógio utilizável.'; return; }
 
-  estado.agoraMs = estado.janela.sobreposicaoInicio;
+  // Start where the most angles are. When everyone overlaps that is the common
+  // window; when they do not — one ended at 20:10, another began at 23:30 —
+  // there is no such instant, and `sobreposicaoInicio` is null on purpose.
+  // Reading it blindly put the whole page at NaN and every tile went black.
+  estado.agoraMs = estado.janela.haSobreposicao
+    ? estado.janela.sobreposicaoInicio
+    : estado.janela.inicio;
   estado.foco = estado.linhas[0]?.slug ?? null;
   $('palco').hidden = false;
-  $('resumoNoite').textContent = `${estado.linhas.length} canais · ${hhmmss(estado.janela.fim - estado.janela.inicio)} de noite`;
+  $('resumoNoite').textContent = `${estado.linhas.length} canais · `
+    + `${hhmmss(estado.janela.fim - estado.janela.inicio)} de noite · `
+    + (estado.janela.haSobreposicao
+      ? `todos juntos ${relogioCurto(estado.janela.sobreposicaoInicio)}–${relogioCurto(estado.janela.sobreposicaoFim)}`
+      : 'nunca estiveram todos no ar ao mesmo tempo');
   montarGrade();
   irPara(estado.agoraMs);
 }
@@ -176,8 +186,26 @@ function montarGrade() {
     tile.innerHTML = `<video muted playsinline preload="none"></video>`
       + `<span class="rotulo">${linha.slug}`
       + `${linha.relogio !== 'exato' ? ' <b class="aviso" title="relógio incerto">≈</b>' : ''}</span>`
-      + `<span class="estadoTile"></span>`;
+      + `<span class="estadoTile"></span>`
+      // The relógio da Kick puts every angle within a segment of the truth, which
+      // is already inside what the owner asked for. This is for the rest: a
+      // stream ingested late, or an eye that says "este está meio segundo à
+      // frente". Per channel, because the error is per channel.
+      + `<span class="ajuste">`
+      + `<button data-passo="-1" title="atrasar 1s (Shift: 10s)">−</button>`
+      + `<b class="nudge">0.0s</b>`
+      + `<button data-passo="1" title="adiantar 1s (Shift: 10s)">+</button>`
+      + `</span>`;
     tile.onclick = () => { estado.foco = linha.slug; montarGrade(); irPara(estado.agoraMs); };
+    for (const b of tile.querySelectorAll('.ajuste button')) {
+      b.onclick = (e) => {
+        // Without this the click also lands on the tile and changes the focus,
+        // so nudging an angle would yank it to the big square. Two things at
+        // once, one of which the user did not ask for.
+        e.stopPropagation();
+        empurrar(linha.slug, Number(b.dataset.passo) * (e.shiftKey ? 10_000 : 1000));
+      };
+    }
     $('grade').append(tile);
   }
   $('grade').classList.toggle('temFoco', Boolean(estado.foco));
@@ -186,10 +214,22 @@ function montarGrade() {
   alvo?.querySelector('video')?.removeAttribute('muted');
 }
 
+/** Ajuste manual de um ângulo — o resto da grelha não se mexe. */
+function empurrar(slug, ms) {
+  const { nudges } = comNudge({ nudges: estado.nudges }, slug, (estado.nudges[slug] || 0) + ms);
+  estado.nudges = nudges;
+  irPara(estado.agoraMs);
+}
+
 /** Move every angle to the same instant. */
 function irPara(quandoMs) {
   estado.agoraMs = quandoMs;
   $('agora').textContent = `${relogioCurto(quandoMs)}Z`;
+  // How many angles exist right here. With no common window this is the number
+  // that matters: "4 de 6" is useful, "no overlap" is not.
+  const vivos = quantosNoAr(estado.linhas, quandoMs, { nudges: estado.nudges });
+  $('angulos').textContent = `${vivos} de ${estado.linhas.length} ângulos`;
+  $('angulos').classList.toggle('mau', vivos < 2);
   const { inicio, fim } = estado.janela;
   $('barra').value = String(Math.round(((quandoMs - inicio) / (fim - inicio)) * 1000));
 
@@ -198,6 +238,9 @@ function irPara(quandoMs) {
     if (!tile) continue;
     const video = tile.querySelector('video');
     const nota = tile.querySelector('.estadoTile');
+    const empurrao = (estado.nudges[linha.slug] || 0) / 1000;
+    tile.querySelector('.nudge').textContent = `${empurrao > 0 ? '+' : ''}${empurrao.toFixed(1)}s`;
+    tile.querySelector('.ajuste').classList.toggle('ativo', empurrao !== 0);
     const r = onde(linha, quandoMs, { nudgeMs: estado.nudges[linha.slug] || 0 });
 
     if (r.estado !== 'toca') {
@@ -329,6 +372,9 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'o' || e.key === 'O') $('marcarOut').click();
   if (e.key === 'j' || e.key === 'ArrowLeft') irPara(estado.agoraMs - passo);
   if (e.key === 'l' || e.key === 'ArrowRight') irPara(estado.agoraMs + passo);
+  // O ângulo em foco anda sozinho: alinhar à vista, sem tirar a mão do teclado.
+  if (e.key === ',' && estado.foco) empurrar(estado.foco, -passo);
+  if (e.key === '.' && estado.foco) empurrar(estado.foco, passo);
 });
 
 // A session survives a refresh and travels in a link.

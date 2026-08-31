@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { linhaDoCanal, janelaComum, onde, comNudge, paraLink, doLink } from '../site/relogio.js';
+import { linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink } from '../site/relogio.js';
 
 // Helper: a VOD covering [inicio, inicio+segundos) built from 10-second
 // segments, which is what IVS actually emits.
@@ -96,6 +96,45 @@ test('the union and the overlap are different numbers, and both are needed', () 
 
 test('no channel with a usable clock means no window, not a fake one', () => {
   assert.equal(janelaComum([linhaDoCanal('a', [])]), null);
+});
+
+// A noite em que ninguém se cruzou. O max/min ingénuo devolve 23:30 -> 20:10:
+// uma janela ao contrário, que parece uma resposta e não é. A página começava
+// nesse instante e ficava em NaN, com todos os quadrados pretos.
+test('when nobody overlaps there is no common window, and it says so', () => {
+  const j = janelaComum([
+    linhaDoCanal('cedo', [peca(T, 600)]),                 // 21:00 -> 21:10
+    linhaDoCanal('tarde', [peca(T + 7_200_000, 600)]),    // 23:00 -> 23:10
+  ]);
+  assert.equal(j.haSobreposicao, false);
+  assert.equal(j.sobreposicaoInicio, null, 'melhor nada do que uma janela invertida');
+  assert.equal(j.sobreposicaoFim, null);
+  assert.equal(j.inicio, T, 'a união continua a existir — é a barra do tempo');
+  assert.equal(j.fim, T + 7_800_000);
+});
+
+test('two VODs that only touch do not count as an overlap', () => {
+  const j = janelaComum([
+    linhaDoCanal('a', [peca(T, 600)]),
+    linhaDoCanal('b', [peca(T + 600_000, 600)]),
+  ]);
+  assert.equal(j.haSobreposicao, false, 'um instante em comum não dá um clipe');
+});
+
+// Sem janela comum, este é o número que interessa: "4 de 6 ângulos aqui".
+test('how many angles are live at an instant, nudges included', () => {
+  const linhas = [
+    linhaDoCanal('a', [peca(T, 3600)]),
+    linhaDoCanal('b', [peca(T + 600_000, 3600)]),
+    linhaDoCanal('c', [peca(T + 7_200_000, 600)]),
+  ];
+  assert.equal(quantosNoAr(linhas, T + 60_000), 1);
+  assert.equal(quantosNoAr(linhas, T + 900_000), 2);
+  assert.equal(quantosNoAr(linhas, T + 7_260_000), 1, 'só o terceiro filmava às 23:01');
+
+  // Um canal empurrado 30 s para trás deixa de cobrir os primeiros 30 s.
+  assert.equal(quantosNoAr(linhas, T + 5000, { nudges: { a: -30_000 } }), 0);
+  assert.equal(quantosNoAr(linhas, T + 5000, { nudges: { a: 30_000 } }), 1);
 });
 
 test('a session survives a link round trip', () => {

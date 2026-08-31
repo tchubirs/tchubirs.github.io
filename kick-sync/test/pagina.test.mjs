@@ -194,6 +194,35 @@ test('marcar e baixar produz um ficheiro por ângulo, em qualidade máxima',
     await p.close();
   });
 
+// O dono disse que 10–20 s de diferença chega, e que talvez tenha de alinhar
+// à mão. Então o alinhar à mão tem de existir no ecrã, ser por canal, e não
+// pode roubar o foco ao ser clicado.
+test('o ajuste manual existe, é por canal, e não muda o foco',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p);
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi\noutro');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 15000 });
+
+    const segundo = p.locator('.tile:not(.foco)').first();
+    const focoAntes = await p.locator('.tile.foco').getAttribute('data-slug');
+
+    await segundo.locator('.ajuste button[data-passo="1"]').click();
+    await segundo.locator('.ajuste button[data-passo="1"]').click();
+    assert.equal(await segundo.locator('.nudge').innerText(), '+2.0s');
+    assert.equal(await p.locator('.tile.foco').getAttribute('data-slug'), focoAntes,
+      'ajustar um ângulo não o promove a foco');
+    assert.equal(await p.locator('.tile.foco .nudge').innerText(), '0.0s',
+      'o empurrão é só daquele canal');
+
+    await segundo.locator('.ajuste button[data-passo="-1"]').click({ modifiers: ['Shift'] });
+    assert.equal(await segundo.locator('.nudge').innerText(), '-8.0s', 'Shift anda 10 s');
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
 test('o aviso do leitor aparece quando o hls.js não carrega',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
     const { p } = await abrir();
