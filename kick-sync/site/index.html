@@ -101,6 +101,12 @@
     <h2 data-t="montagem.titulo">Montagem</h2>
     <div class="linha">
       <button id="marcarKill" class="principal"><span data-t="montagem.marcar">Marcar kill</span> <kbd>M</kbd></button>
+      <button id="procurarKills" data-t="auto.botao">Procurar kills sozinho</button>
+      <select id="janelaAuto" aria-label="quanto procurar">
+        <option value="1800" data-t="auto.meiaHora">meia hora</option>
+        <option value="3600" selected data-t="auto.umaHora">uma hora</option>
+        <option value="0" data-t="auto.noiteToda">a noite toda</option>
+      </select>
       <label class="pequeno"><span data-t="montagem.minhaPov">minha POV</span> <input id="protAntes" type="number" value="5" min="0" max="120" step="1">s antes</label>
       <label class="pequeno"><input id="protDepois" type="number" value="2" min="0" max="120" step="1">s depois</label>
       <label class="pequeno"><span data-t="montagem.quemMorreu">quem morreu</span> <input id="vitAntes" type="number" value="1" min="0" max="60" step="1">s antes</label>

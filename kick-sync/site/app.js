@@ -15,6 +15,8 @@ import {
 } from './momentos.js';
 import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js';
 import { criarApanhador } from './frames.js';
+import { varrerNoite, custoVarrerMB } from './procurar-momentos.js';
+import { somDoCanal } from './alinhar.js';
 import { MAXIMO_S, mover, janelaInicial, nomeDoClipe } from './clipe.js';
 import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js';
 import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js';
@@ -967,6 +969,92 @@ async function alinhar() {
   botao.disabled = false;
 }
 
+// ── procurar as kills sozinho ───────────────────────────────────────────────
+
+/**
+ * Ouvir a POV do dono à procura de tiroteios, e depois olhar para quem morreu.
+ *
+ * As duas metades juntas são a coisa toda. O som acha as LUTAS — medido, meia
+ * hora de Rust dá oito, e uma noite a rever à mão dá muito mais do que isso em
+ * tempo perdido. Mas uma luta não é uma kill: só é kill se alguém morreu, e
+ * isso vê-se nos ecrãs dos outros. Por isso a seguir a cada tiroteio a página
+ * vai ver os frames de toda a gente e marca quem foi.
+ *
+ * O que sobra sem ninguém marcado fica na lista na mesma: pode ter morrido
+ * alguém que não está entre os canais abertos, e apagar isso por ele seria
+ * decidir uma coisa que não sei.
+ */
+async function procurarKills() {
+  if (!estado.linhas.length || !estado.janela) return;
+  const canal = estado.focos[0] || estado.linhas[0].slug;
+  const linha = estado.linhas.find((l) => l.slug === canal);
+  const botao = $('procurarKills');
+  const nota = $('estadoMontagem');
+
+  const pedido = Number($('janelaAuto').value) * 1000;
+  const deMs = Math.max(linha.inicio, estado.agoraMs);
+  const ateMs = pedido ? Math.min(linha.fim, deMs + pedido) : linha.fim;
+  if (!(ateMs > deMs)) return;
+
+  const mb = custoVarrerMB(ateMs - deMs);
+  if (!confirm(t('auto.custo', { min: Math.round((ateMs - deMs) / 60000), mb }))) return;
+
+  const controlo = new AbortController();
+  estado.cancelar = () => controlo.abort();
+  botao.disabled = true;
+  nota.classList.remove('mau');
+
+  try {
+    const r = await varrerNoite({
+      linha,
+      deMs,
+      ateMs,
+      sinal: controlo.signal,
+      lerSom: (l, quandoMs, duracaoS, opcoes) => somDoCanal(l, quandoMs, duracaoS, opcoes),
+      aoProgresso: (p) => {
+        nota.textContent = t('auto.aOuvir', {
+          feito: p.feito, total: p.total, mb: (p.bytes / 1048576).toFixed(0),
+        });
+      },
+    });
+
+    if (!r.candidatos.length) { nota.textContent = t('auto.nenhum'); return; }
+
+    for (const c of r.candidatos) {
+      estado.momentos = acrescentar(
+        estado.momentos,
+        novoMomento(c.ms, canal, { ...tamanhos(), auto: true, tiros: c.tiros }),
+      );
+    }
+    pintarMomentos();
+    guardar();
+
+    // E agora a outra metade: quem morreu em cada um.
+    let comMorte = 0;
+    for (const [i, c] of r.candidatos.entries()) {
+      if (controlo.signal.aborted) break;
+      nota.textContent = t('auto.aVer', { feito: i + 1, total: r.candidatos.length });
+      const antes = estado.momentos.find((m) => Math.abs(m.ms - c.ms) < 2000);
+      if (!antes) continue;
+      // eslint-disable-next-line no-await-in-loop
+      const houve = await verQuemMorreu(antes.ms, { silencioso: true });
+      if (houve) comMorte++;
+    }
+
+    nota.textContent = t('auto.achei', { n: r.candidatos.length })
+      + (comMorte ? t('auto.comMorte', { n: comMorte }) : '');
+    pintarMomentos();
+    guardar();
+  } catch (e) {
+    nota.classList.add('mau');
+    nota.textContent = e.name === 'AbortError' ? t('alinhar.cancelado')
+      : e.name === 'SEM-DESCODIFICADOR' ? t('auto.semCodec')
+        : t('alinhar.erro', { erro: e.message });
+  }
+  botao.disabled = false;
+  estado.cancelar = null;
+}
+
 // ── montagem ────────────────────────────────────────────────────────────────
 
 const tamanhos = () => ({
@@ -1008,21 +1096,23 @@ function marcarKill() {
  * corrigir num clique — porque uma sugestão que não se pode ver nem corrigir
  * é pior do que não existir.
  */
-async function verQuemMorreu(ms) {
+async function verQuemMorreu(ms, { silencioso = false } = {}) {
   const li = $('listaMomentos').querySelector(`li[data-ms="${ms}"]`);
-  if (!li) return;
+  if (!li) return false;
   const caixa = li.querySelector('.olhar');
   const botao = li.querySelector('.verMortes');
   botao.disabled = true;
-  caixa.hidden = false;
-  caixa.innerHTML = `<span class="nota">${t('montagem.aOlhar')}</span>`;
+  if (!silencioso) {
+    caixa.hidden = false;
+    caixa.innerHTML = `<span class="nota">${t('montagem.aOlhar')}</span>`;
+  }
 
   const apanhador = criarApanhador({ linhas: estado.linhas, nudges: estado.nudges });
   const notas = {};
   const imagens = {};
   try {
     for (const l of estado.linhas) {
-      caixa.innerHTML = `<span class="nota">${t('montagem.aOlharCanal', { canal: l.slug })}</span>`;
+      if (!silencioso) caixa.innerHTML = `<span class="nota">${t('montagem.aOlharCanal', { canal: l.slug })}</span>`;
       const antes = await apanhador.frame(l.slug, ms - 2000);
       const depois = await apanhador.frame(l.slug, ms + 2500);
       imagens[l.slug] = depois?.imagem || null;
@@ -1066,8 +1156,10 @@ async function verQuemMorreu(ms) {
   pintarMomentos();
   const li2 = $('listaMomentos').querySelector(`li[data-ms="${msFinal}"]`);
   const caixa2 = li2?.querySelector('.olhar');
-  if (!caixa2) return;
-  caixa2.hidden = false;
+  if (!caixa2) return sugeridos.length > 0;
+  // Em busca automática os cartões ficam guardados mas fechados: vinte
+  // tiroteios abertos ao mesmo tempo eram uma página de dois metros.
+  caixa2.hidden = silencioso;
 
   const cartoes = estado.linhas.map((l) => {
     const n = notas[l.slug];
@@ -1101,6 +1193,7 @@ async function verQuemMorreu(ms) {
   }
   const botao2 = li2.querySelector('.verMortes');
   if (botao2) botao2.disabled = false;
+  return sugeridos.length > 0;
 }
 
 /**
@@ -1608,6 +1701,7 @@ $('marcarIn').onclick = () => { estado.marca = { de: estado.agoraMs, ate: null }
 $('marcarOut').onclick = () => { estado.marca.ate = estado.agoraMs; pintarMarca(); guardar(); };
 $('alinhar').onclick = alinhar;
 $('marcarKill').onclick = marcarKill;
+$('procurarKills').onclick = procurarKills;
 $('baixarMontagem').onclick = baixarMontagem;
 $('limparFila').onclick = limparFila;
 $('clipar').onclick = abrirClipe;

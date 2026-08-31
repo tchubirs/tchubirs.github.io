@@ -1053,6 +1053,46 @@ test('a pagina fala portugues, ingles e espanhol, e troca sem perder nada',
     await p.close();
   });
 
+// A funcao automatica: ouvir a POV do dono a procura de tiroteios e depois
+// olhar para quem morreu. Neste navegador nao ha codec da Kick, por isso o que
+// se exige e que a pagina o DIGA, e nao que invente kills sem ter ouvido nada.
+test('a busca automatica nunca inventa kills que nao ouviu',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'outro'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi\noutro');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 15000 });
+
+    // O custo e dito ANTES, e da para dizer que nao.
+    const perguntas = [];
+    p.on('dialog', (d) => { perguntas.push(d.message()); d.dismiss(); });
+    await p.click('#procurarKills');
+    await p.waitForTimeout(500);
+    assert.equal(perguntas.length, 1, 'tem de perguntar antes de baixar');
+    assert.match(perguntas[0], /MB/, 'e dizer quantos MB sao');
+    assert.equal(await p.locator('#listaMomentos li[data-ms]').count(), 0, 'e nao fazer nada se disser que nao');
+
+    // E agora a dizer que sim.
+    p.removeAllListeners('dialog');
+    p.on('dialog', (d) => d.accept());
+    await p.click('#procurarKills');
+    await p.waitForFunction(
+      () => /achei|não achei|no firefight|descodifica|não deu/.test(
+        document.getElementById('estadoMontagem').textContent),
+      null, { timeout: 90000 },
+    );
+    const texto = await p.locator('#estadoMontagem').innerText();
+    // Sem codec nao ha audio: o que nao pode e aparecerem kills na lista.
+    if (!/achei \d/.test(texto)) {
+      assert.equal(await p.locator('#listaMomentos li[data-ms]').count(), 0,
+        `disse "${texto}" e mesmo assim marcou kills`);
+    }
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
 test('o aviso do leitor aparece quando o hls.js não carrega',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
     const { p } = await abrir();
