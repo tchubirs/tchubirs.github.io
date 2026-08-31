@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Replay — vários ângulos, um relógio</title>
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+
+<header>
+  <h1>Replay</h1>
+  <p class="sub">Cola os canais que estiveram na mesma noite. Um relógio para todos.</p>
+</header>
+
+<section id="entrada">
+  <label for="canais">Canais da Kick, um por linha</label>
+  <textarea id="canais" rows="6" spellcheck="false"
+    placeholder="tchubi&#10;outrocanal&#10;maisum"></textarea>
+  <div class="linha">
+    <button id="carregar" class="principal">Carregar a noite</button>
+    <span id="estadoCarga" class="nota"></span>
+  </div>
+  <!-- Próprio sítio, e não a linha de progresso: o aviso do leitor tem de
+       sobreviver ao texto que muda a cada canal carregado. -->
+  <p id="avisoPlayer" class="nota mau" hidden></p>
+</section>
+
+<section id="noites" hidden>
+  <label for="noite">Qual noite</label>
+  <select id="noite"></select>
+  <span class="nota" id="resumoNoite"></span>
+</section>
+
+<section id="canaisEstado" hidden>
+  <h2>Canais</h2>
+  <ul id="listaCanais" class="canais"></ul>
+</section>
+
+<section id="palco" hidden>
+  <div id="grade" class="grade"></div>
+
+  <div class="relogio">
+    <input id="barra" type="range" min="0" max="1000" value="0" step="1" aria-label="linha do tempo">
+    <div class="linha">
+      <output id="agora" class="tempo">—</output>
+      <output id="angulos" class="nota">—</output>
+      <button id="marcarIn">Marca início <kbd>I</kbd></button>
+      <button id="marcarOut">Marca fim <kbd>O</kbd></button>
+      <output id="marca" class="nota"></output>
+    </div>
+  </div>
+
+  <div class="linha">
+    <button id="alinhar">Alinhar pelo som</button>
+    <span id="estadoAlinhar" class="nota"></span>
+  </div>
+
+  <p class="nota">
+    Cada ângulo já vem alinhado pelo relógio que a Kick grava dentro do vídeo.
+    Se um deles estiver à frente ou atrás, usa o <b>−</b> / <b>+</b> no canto do
+    quadrado (ou <kbd>,</kbd> <kbd>.</kbd> no que está em foco) — o ajuste é só
+    desse canal e vai junto no download. O <b>Alinhar pelo som</b> faz isso
+    sozinho: ouve um bocado de cada ângulo em três alturas da noite e procura
+    os mesmos ataques — tiros, explosões, vozes — em todos.
+  </p>
+
+  <div class="linha">
+    <button id="baixar" class="principal" disabled>Baixar todos os ângulos</button>
+    <span class="nota">qualidade máxima, sempre — o que está no ecrã é 160p só para aguentar a grelha</span>
+  </div>
+  <ul id="fila" class="fila"></ul>
+</section>
+
+<footer>
+  <p class="nota">
+    Os VODs são dos canais que os gravaram. Esta página lê o que a Kick serve
+    publicamente e não guarda nada — tudo acontece no teu navegador.
+  </p>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.17/hls.min.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>

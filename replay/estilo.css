@@ -1,0 +1,127 @@
+/* Dark by default: this is used at night, next to a game, on a second monitor. */
+:root {
+  --fundo: #0e0f12;
+  --caixa: #16181d;
+  --borda: #262a32;
+  --texto: #e6e8ec;
+  --fraco: #8b929e;
+  --acento: #53fc18;   /* Kick's green — the one colour the audience already reads as "this site" */
+  --mau: #ff6b6b;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 20px;
+  background: var(--fundo);
+  color: var(--texto);
+  font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  max-width: 1400px;
+  margin-inline: auto;
+}
+
+h1 { font-size: 22px; margin: 0; letter-spacing: -.01em; }
+h2 { font-size: 14px; text-transform: uppercase; letter-spacing: .08em; color: var(--fraco); margin: 20px 0 8px; }
+.sub { color: var(--fraco); margin: 4px 0 20px; }
+.nota { color: var(--fraco); font-size: 13px; }
+.mau { color: var(--mau); }
+
+label { display: block; font-size: 13px; color: var(--fraco); margin-bottom: 6px; }
+
+textarea, select {
+  width: 100%;
+  background: var(--caixa);
+  color: var(--texto);
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font: inherit;
+  resize: vertical;
+}
+
+.linha { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+
+button {
+  background: var(--caixa);
+  color: var(--texto);
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  padding: 9px 14px;
+  font: inherit;
+  cursor: pointer;
+}
+button:hover:not(:disabled) { border-color: var(--fraco); }
+button:disabled { opacity: .45; cursor: default; }
+button.principal { background: var(--acento); border-color: var(--acento); color: #0b0d10; font-weight: 600; }
+button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 2px;
+}
+
+kbd {
+  background: #0b0d10; border: 1px solid var(--borda); border-radius: 4px;
+  padding: 0 5px; font-size: 11px; color: var(--fraco);
+}
+
+.canais { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.canais li {
+  background: var(--caixa); border: 1px solid var(--borda); border-radius: 999px;
+  padding: 5px 12px; display: flex; gap: 8px; align-items: baseline;
+}
+.canais li.mau { border-color: color-mix(in srgb, var(--mau) 45%, var(--borda)); }
+
+/* The grid. Focus takes the top row on its own; the rest are thumbnails,
+   because only the focus tile decodes at a real rendition. */
+.grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin: 16px 0; }
+.tile {
+  position: relative; aspect-ratio: 16/9; background: #000;
+  border: 1px solid var(--borda); border-radius: 8px; overflow: hidden; cursor: pointer;
+}
+.tile video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.tile.foco { grid-column: 1 / -1; aspect-ratio: 16/7; border-color: var(--acento); }
+.tile.vazio video { opacity: 0; }
+.tile .rotulo {
+  position: absolute; left: 6px; top: 6px; background: #000a; padding: 2px 7px;
+  border-radius: 5px; font-size: 12px;
+}
+.tile .aviso { color: #ffcc55; }
+.tile .estadoTile {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  font-size: 12px; color: var(--fraco); text-align: center; padding: 8px;
+}
+
+/* O ajuste por ângulo. Fica por cima do vídeo, no canto, e só ganha cor
+   quando alguém lhe mexeu — um valor a zero não precisa de chamar a atenção. */
+.tile .ajuste {
+  position: absolute; right: 6px; bottom: 6px; display: flex; gap: 2px; align-items: center;
+  background: #000a; border-radius: 6px; padding: 2px; opacity: .35; transition: opacity .15s;
+}
+.tile:hover .ajuste, .tile .ajuste.ativo, .tile .ajuste:focus-within { opacity: 1; }
+.tile .ajuste button {
+  padding: 0 7px; font-size: 14px; line-height: 20px; border-radius: 4px; background: transparent;
+}
+.tile .ajuste .nudge {
+  font-size: 11px; font-variant-numeric: tabular-nums; min-width: 40px; text-align: center;
+  color: var(--fraco); font-weight: 400;
+}
+.tile .ajuste.ativo .nudge { color: var(--acento); }
+
+.relogio { background: var(--caixa); border: 1px solid var(--borda); border-radius: 10px; padding: 12px; }
+#barra { width: 100%; accent-color: var(--acento); }
+.tempo { font-variant-numeric: tabular-nums; font-size: 18px; min-width: 100px; }
+
+.fila { list-style: none; padding: 0; margin: 12px 0 0; display: grid; gap: 6px; }
+.fila li {
+  background: var(--caixa); border: 1px solid var(--borda); border-radius: 8px; padding: 8px 12px;
+  font-variant-numeric: tabular-nums;
+}
+.fila a { color: var(--acento); }
+
+footer { margin-top: 32px; border-top: 1px solid var(--borda); padding-top: 12px; }
+
+@media (max-width: 620px) {
+  .grade { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+  .tile.foco { aspect-ratio: 16/9; }
+}
