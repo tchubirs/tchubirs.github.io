@@ -5,7 +5,7 @@
 // an ordered set of VODs plus the gaps, and scrubbing across a gap must either
 // switch VODs by itself or show the hole — never quietly play the wrong moment.
 
-import { tempoDeMidia } from './kick.js?v=8c9bf155ad';
+import { tempoDeMidia } from './kick.js?v=3d14951fc6';
 
 /**
  * One channel's night: its VODs in order, and the holes between them.
@@ -138,6 +138,7 @@ export function paraLink(sessao) {
     focos: Array.isArray(sessao.focos) ? sessao.focos : [],
     margens: sessao.margens || {},
     mudo: sessao.mudo || {},
+    momentos: Array.isArray(sessao.momentos) ? sessao.momentos.slice(0, 300) : [],
   };
   return btoa(unescape(encodeURIComponent(JSON.stringify(magro))));
 }
@@ -161,6 +162,10 @@ export function doLink(texto) {
       focos: (Array.isArray(j.focos) ? j.focos : []).filter((c) => typeof c === 'string').slice(0, 2),
       margens: objecto(j.margens),
       mudo: objecto(j.mudo),
+      // As kills marcadas sao o que mais custa a juntar: uma hora de video
+      // vista a procurar. Perde-las num F5 e perder a tarde.
+      momentos: (Array.isArray(j.momentos) ? j.momentos : [])
+        .filter((m) => m && Number.isFinite(m.ms)).slice(0, 300),
       de: Number.isFinite(j.de) ? j.de : null,
     };
   } catch { return null; }

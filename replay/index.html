@@ -81,6 +81,24 @@
     <span id="estadoAlinhar" class="nota"></span>
   </div>
 
+  <!-- A montagem. O fluxo do dono: marca-se a kill, e a pagina entrega a POV
+       dele longa e as POVs de quem morreu curtinhas, ja numeradas. -->
+  <section id="montagem">
+    <h2>Montagem</h2>
+    <div class="linha">
+      <button id="marcarKill" class="principal">Marcar kill <kbd>M</kbd></button>
+      <label class="pequeno">minha POV <input id="protAntes" type="number" value="5" min="0" max="120" step="1">s antes</label>
+      <label class="pequeno"><input id="protDepois" type="number" value="2" min="0" max="120" step="1">s depois</label>
+      <label class="pequeno">quem morreu <input id="vitAntes" type="number" value="1" min="0" max="60" step="1">s antes</label>
+      <label class="pequeno"><input id="vitDepois" type="number" value="2" min="0" max="60" step="1">s depois</label>
+    </div>
+    <ul id="listaMomentos" class="momentos"></ul>
+    <div class="linha">
+      <button id="baixarMontagem" disabled>Baixar a montagem</button>
+      <span id="estadoMontagem" class="nota"></span>
+    </div>
+  </section>
+
   <section id="corte">
     <h2>Cortar</h2>
     <ul id="listaCorte" class="corte"></ul>
@@ -94,10 +112,10 @@
   <!-- A versao, a serio e visivel. O GitHub Pages serve com max-age=600 e um
        telemovel guarda o app.js antigo; sem isto, "ja corrigi" e "continua
        igual" sao as duas verdadeiras ao mesmo tempo e ninguem sai dali. -->
-  <p class="nota">Tudo acontece no teu navegador. Os VODs são de quem os gravou. · <span id="versao">8c9bf155ad</span></p>
+  <p class="nota">Tudo acontece no teu navegador. Os VODs são de quem os gravou. · <span id="versao">3d14951fc6</span></p>
 </footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.17/hls.min.js"></script>
-<script type="module" src="app.js?v=8c9bf155ad"></script>
+<script type="module" src="app.js?v=3d14951fc6"></script>
 </body>
 </html>

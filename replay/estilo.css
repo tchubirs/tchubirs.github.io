@@ -208,6 +208,24 @@ kbd {
 
 .tempo { font-variant-numeric: tabular-nums; font-size: 18px; min-width: 100px; }
 
+/* A lista de momentos da montagem. */
+.momentos { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 5px; }
+.momentos li {
+  background: var(--caixa); border: 1px solid var(--borda); border-radius: 8px;
+  padding: 7px 12px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  font-variant-numeric: tabular-nums;
+}
+.momentos li.aqui { border-color: var(--acento); }
+.momentos .n { color: var(--fraco); min-width: 26px; }
+.momentos .quem { color: var(--acento); }
+.momentos .quantos { color: var(--fraco); font-size: 12px; margin-left: auto; }
+.momentos button { padding: 3px 9px; font-size: 12px; }
+label.pequeno { display: inline-flex; gap: 5px; align-items: center; margin: 0; font-size: 13px; }
+label.pequeno input {
+  width: 54px; background: var(--fundo); color: var(--texto); border: 1px solid var(--borda);
+  border-radius: 6px; padding: 4px 6px; font: inherit; font-variant-numeric: tabular-nums;
+}
+
 /* A lista de corte: um canal por linha, com o seu próprio tamanho. */
 .corte { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 6px; }
 .corte li {

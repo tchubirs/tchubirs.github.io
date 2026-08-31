@@ -5,11 +5,15 @@
 // bottom rung of Kick's ladder and is what makes thirty tiles a home-connection
 // problem rather than a server problem.
 
-import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=8c9bf155ad';
-import { linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink } from './relogio.js?v=8c9bf155ad';
-import { cortarTodosOsAngulos } from './baixar.js?v=8c9bf155ad';
-import { alinharPeloSom, custoEstimadoMB } from './alinhar.js?v=8c9bf155ad';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=8c9bf155ad';
+import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=3d14951fc6';
+import { linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink } from './relogio.js?v=3d14951fc6';
+import { cortarTodosOsAngulos } from './baixar.js?v=3d14951fc6';
+import { alinharPeloSom, custoEstimadoMB } from './alinhar.js?v=3d14951fc6';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=3d14951fc6';
+import {
+  novoMomento, acrescentar, remover, planoDaMontagem, ordenar,
+} from './momentos.js?v=3d14951fc6';
+import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=3d14951fc6';
 
 const $ = (id) => document.getElementById(id);
 const estado = {
@@ -21,6 +25,7 @@ const estado = {
   focos: [],
   margens: {},
   mudo: {},
+  momentos: [],
   restaurar: null,
   players: new Map(),
   cancelar: null,
@@ -62,6 +67,7 @@ function guardar() {
         focos: estado.focos,
         margens: estado.margens,
         mudo: estado.mudo,
+        momentos: estado.momentos,
       }));
     } catch { /* janela privada, quota, o que for — nunca partir a pagina por isto */ }
   }, 400);
@@ -322,6 +328,8 @@ async function abrirNoite(noite) {
     if (g.marca && g.marca.de >= estado.janela.inicio && g.marca.ate <= estado.janela.fim) {
       estado.marca = g.marca;
     }
+    estado.momentos = (g.momentos || [])
+      .filter((m) => m.ms >= estado.janela.inicio && m.ms <= estado.janela.fim);
     estado.restaurar = null;
   }
   $('palco').hidden = false;
@@ -336,6 +344,7 @@ async function abrirNoite(noite) {
   pintarFaixas();
   irPara(estado.agoraMs);
   pintarMarca();
+  pintarMomentos();
   guardar();
 }
 
@@ -564,6 +573,9 @@ function irPara(quandoMs) {
   // How many angles exist right here. With no common window this is the number
   // that matters: "4 de 6" is useful, "no overlap" is not.
   const vivos = quantosNoAr(estado.linhas, quandoMs, { nudges: estado.nudges });
+  for (const li of $('listaMomentos').querySelectorAll('li[data-ms]')) {
+    li.classList.toggle('aqui', Math.abs(Number(li.dataset.ms) - quandoMs) < 1500);
+  }
   $('angulos').textContent = `${vivos} de ${estado.linhas.length} ângulos`;
   $('angulos').classList.toggle('mau', vivos < 2);
   const { inicio, fim } = estado.janela;
@@ -757,6 +769,120 @@ async function alinhar() {
   botao.disabled = false;
 }
 
+// ── montagem ────────────────────────────────────────────────────────────────
+
+const tamanhos = () => ({
+  protagonistaAntesS: Math.max(0, Number($('protAntes').value) || 0),
+  protagonistaDepoisS: Math.max(0, Number($('protDepois').value) || 0),
+  vitimaAntesS: Math.max(0, Number($('vitAntes').value) || 0),
+  vitimaDepoisS: Math.max(0, Number($('vitDepois').value) || 0),
+});
+
+/** Quem estava mesmo a filmar naquele bocado — o resto não entra. */
+const filmava = (slug, deMs, ateMs) => {
+  const l = estado.linhas.find((x) => x.slug === slug);
+  if (!l) return false;
+  const nudge = estado.nudges[slug] || 0;
+  return onde(l, deMs, { nudgeMs: nudge }).estado === 'toca'
+    || onde(l, ateMs, { nudgeMs: nudge }).estado === 'toca';
+};
+
+function marcarKill() {
+  if (!estado.linhas.length) return;
+  estado.momentos = acrescentar(
+    estado.momentos,
+    novoMomento(estado.agoraMs, estado.focos[0] || estado.linhas[0].slug, tamanhos()),
+  );
+  pintarMomentos();
+  guardar();
+}
+
+function pintarMomentos() {
+  const canais = estado.linhas.map((l) => l.slug);
+  const lista = ordenar(estado.momentos);
+  $('listaMomentos').innerHTML = lista.map((m, i) => {
+    const n = planoDaMontagem([m], canais, { filmava }).length;
+    return `<li data-ms="${m.ms}" class="${Math.abs(m.ms - estado.agoraMs) < 1500 ? 'aqui' : ''}">`
+      + `<b class="n">${String(i + 1).padStart(2, '0')}</b>`
+      + `<span>${relogioCurto(m.ms)}Z</span>`
+      + `<span class="quem">${m.protagonista || '—'}</span>`
+      + `<button class="ir">ir</button><button class="fora">apagar</button>`
+      + `<span class="quantos">${n} clipe${n === 1 ? '' : 's'}</span></li>`;
+  }).join('') || '<li class="nota">Sem kills marcadas. Vai ao momento e carrega em Marcar kill.</li>';
+
+  for (const li of $('listaMomentos').querySelectorAll('li[data-ms]')) {
+    const ms = Number(li.dataset.ms);
+    li.querySelector('.ir').onclick = () => irPara(ms);
+    li.querySelector('.fora').onclick = () => {
+      estado.momentos = remover(estado.momentos, ms);
+      pintarMomentos();
+      guardar();
+    };
+  }
+  const total = planoDaMontagem(lista, canais, { filmava }).length;
+  $('baixarMontagem').disabled = !total;
+  $('estadoMontagem').textContent = total
+    ? `${lista.length} kill${lista.length === 1 ? '' : 's'} · ${total} ficheiros`
+    : '';
+}
+
+/**
+ * A montagem inteira, em ordem e com os nomes numerados.
+ *
+ * Um ficheiro de cada vez e com a cache partilhada: os clipes de uma mesma
+ * kill caem quase todos nos mesmos segundos, e voltar a pedir o mesmo pedaço a
+ * cada ângulo era pagar três vezes o mesmo download.
+ */
+async function baixarMontagem() {
+  const canais = estado.linhas.map((l) => l.slug);
+  const plano = planoDaMontagem(ordenar(estado.momentos), canais, { filmava });
+  const controlo = new AbortController();
+  estado.cancelar = () => controlo.abort();
+  $('baixarMontagem').disabled = true;
+  $('fila').innerHTML = '';
+
+  const cache = new Map();
+  const jaTemos = new Map();
+  let feitos = 0;
+
+  for (const clipe of plano) {
+    if (controlo.signal.aborted) break;
+    const linha = estado.linhas.find((l) => l.slug === clipe.canal);
+    const nudge = estado.nudges[clipe.canal] || 0;
+    $('estadoMontagem').textContent = `${++feitos}/${plano.length} — ${clipe.prefixo} ${clipe.canal}`;
+
+    const item = document.createElement('li');
+    $('fila').append(item);
+    try {
+      const p = await planearCorte({
+        linha, deMs: clipe.deMs + nudge, ateMs: clipe.ateMs + nudge, cache,
+      });
+      if (p.estado !== 'ok') {
+        item.innerHTML = `<b>${clipe.prefixo} ${clipe.canal}</b> <span class="nota">${p.estado}</span>`;
+        continue;
+      }
+      const r = await executarCorte(p, { sinal: controlo.signal, jaTemos });
+      if (r.estado !== 'pronto') {
+        item.innerHTML = `<b>${clipe.prefixo} ${clipe.canal}</b> `
+          + `<span class="nota mau">${r.obtidos ?? 0}/${r.total ?? 0} pedaços — não gero com buraco</span>`;
+        continue;
+      }
+      const nome = `${clipe.prefixo}_${nomeDoFicheiro({ canal: clipe.canal, quandoMs: clipe.deMs })}`;
+      const url = URL.createObjectURL(new Blob([r.bytes], { type: r.tipo }));
+      item.innerHTML = `<a href="${url}" download="${nome}">${nome}</a> `
+        + `<span class="nota">${(r.bytes.length / 1048576).toFixed(1)} MB · `
+        + `${clipe.papel === 'protagonista' ? 'a tua POV' : 'quem morreu'}</span>`;
+    } catch (e) {
+      if (e.name === 'AbortError') break;
+      item.innerHTML = `<b>${clipe.prefixo} ${clipe.canal}</b> <span class="nota mau">${e.message}</span>`;
+    }
+  }
+
+  $('estadoMontagem').textContent = `${feitos}/${plano.length} — pronto. Clica em cada ficheiro para guardar.`;
+  $('baixarMontagem').disabled = false;
+  estado.cancelar = null;
+}
+
 // ── marcar e cortar ─────────────────────────────────────────────────────────
 
 const mmssCurto = (s) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
@@ -887,10 +1013,13 @@ $('mais1m').onclick = saltar(60_000);
 $('marcarIn').onclick = () => { estado.marca = { de: estado.agoraMs, ate: null }; pintarMarca(); guardar(); };
 $('marcarOut').onclick = () => { estado.marca.ate = estado.agoraMs; pintarMarca(); guardar(); };
 $('alinhar').onclick = alinhar;
+$('marcarKill').onclick = marcarKill;
+$('baixarMontagem').onclick = baixarMontagem;
 
 document.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
   const passo = e.shiftKey ? 10_000 : 1000;
+  if (e.key === 'm' || e.key === 'M') $('marcarKill').click();
   if (e.key === 'i' || e.key === 'I') $('marcarIn').click();
   if (e.key === 'o' || e.key === 'O') $('marcarOut').click();
   if (e.key === 'j' || e.key === 'ArrowLeft') irPara(estado.agoraMs - passo);
@@ -932,6 +1061,7 @@ window.addEventListener('beforeunload', () => {
       focos: estado.focos,
       margens: estado.margens,
       mudo: estado.mudo,
+      momentos: estado.momentos,
     }));
   } catch { /* nunca partir a pagina por causa disto */ }
 });
