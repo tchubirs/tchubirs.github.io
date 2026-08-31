@@ -49,6 +49,7 @@ const IGUAIS_DE_PROPOSITO = {
     'procurar.seguidores', 'noite.todosJuntos', 'noite.umCanal',
     'tile.atrasar', 'alinhar.cancelado', 'montagem.antes', 'montagem.ir',
     'corte.titulo', 'corte.antes', 'clipe.cancelar',
+    'sel.mostrar', 'sel.todos',
   ]),
 };
 

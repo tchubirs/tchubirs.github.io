@@ -7,8 +7,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  PADRAO, novoMomento, ordenar, acrescentar, remover, clipesDoMomento, planoDaMontagem,
-  alternarVitima,
+  PADRAO, novoMomento, ordenar, acrescentar, remover, clipesDoMomento, planoDaMontagem, alternarVitima, removerVarios, filtrar, temMorte,
 } from '../site/momentos.js';
 
 const T = Date.parse('2026-08-30T22:00:00.000Z');
@@ -152,4 +151,49 @@ test('remover apaga um momento e nao dois com o mesmo instante', () => {
   const dois = [novoMomento(T, 'a'), novoMomento(T, 'b')];
   assert.equal(remover(dois, T).length, 0, 'com o mesmo ms sao indistinguiveis');
   // E e por isso que nunca podem chegar a existir dois com o mesmo ms.
+});
+
+// ── apagar aos molhos, e ver so o que interessa ─────────────────────────────
+//
+// A busca automatica devolve uma noite inteira de candidatos. Sem estes dois,
+// a funcao que existe para lhe poupar trabalho passa a dar-lhe trabalho: setenta
+// e oito cliques em "apagar" e a leitura de setenta e oito linhas para achar as
+// doze que valem.
+
+test('apagar muitos de uma vez apaga exactamente esses', () => {
+  const ms = [1000, 2000, 3000, 4000];
+  const lista = ms.map((x) => novoMomento(x, 'eu'));
+  const r = removerVarios(lista, [2000, 4000]);
+  assert.deepEqual(r.map((m) => m.ms), [1000, 3000]);
+});
+
+test('apagar uma lista vazia nao apaga nada', () => {
+  const lista = [novoMomento(1000, 'eu')];
+  assert.equal(removerVarios(lista, []).length, 1);
+});
+
+test('apagar um ms que nao existe nao mexe nos outros', () => {
+  const lista = [novoMomento(1000, 'eu'), novoMomento(2000, 'eu')];
+  assert.equal(removerVarios(lista, [9999]).length, 2);
+});
+
+test('o filtro separa o que esta pronto do que falta decidir', () => {
+  const lista = [
+    novoMomento(1000, 'eu', { vitimas: ['a'] }),
+    novoMomento(2000, 'eu'),
+    novoMomento(3000, 'eu', { vitimas: [] }),
+  ];
+  assert.deepEqual(filtrar(lista, 'comMorte').map((m) => m.ms), [1000]);
+  assert.deepEqual(filtrar(lista, 'semMorte').map((m) => m.ms), [2000, 3000]);
+  assert.equal(filtrar(lista, 'todos').length, 3);
+});
+
+// Um filtro que nao se reconhece nao pode esconder trabalho em silencio: se a
+// pagina guardar 'comMorte' e amanha esse nome mudar, ele abria a montagem
+// vazia e concluia que tinha perdido tudo.
+test('um filtro desconhecido mostra tudo, e nao nada', () => {
+  const lista = [novoMomento(1000, 'eu'), novoMomento(2000, 'eu', { vitimas: ['a'] })];
+  assert.equal(filtrar(lista, 'inventado').length, 2);
+  assert.equal(filtrar(lista, undefined).length, 2);
+  assert.equal(filtrar(lista, null).length, 2);
 });

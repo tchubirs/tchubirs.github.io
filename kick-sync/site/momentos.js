@@ -66,6 +66,35 @@ export function remover(momentos, ms) {
   return momentos.filter((m) => m.ms !== ms);
 }
 
+/**
+ * Apagar muitos de uma vez.
+ *
+ * A busca automatica devolve uma noite inteira de candidatos — quinze por
+ * hora — e a maioria nao e kill nenhuma. Apagar um a um e o trabalho manual
+ * que a busca automatica existe para tirar.
+ */
+export function removerVarios(momentos, msLista) {
+  const fora = new Set(msLista);
+  return momentos.filter((m) => !fora.has(m.ms));
+}
+
+/** Um momento so conta como kill confirmada se se viu alguem morrer nele. */
+export const temMorte = (m) => Boolean((m.vitimas || []).length);
+
+/**
+ * A lista que ele quer ver, e nao a lista toda.
+ *
+ * Sao tres perguntas diferentes: "o que ja esta pronto para montar"
+ * (comMorte), "o que falta eu decidir" (semMorte) e "tudo". Um filtro
+ * desconhecido devolve tudo — melhor mostrar a mais do que esconder trabalho
+ * sem ele perceber porque.
+ */
+export function filtrar(momentos, filtro) {
+  if (filtro === 'comMorte') return momentos.filter(temMorte);
+  if (filtro === 'semMorte') return momentos.filter((m) => !temMorte(m));
+  return momentos;
+}
+
 const dois = (n) => String(n).padStart(2, '0');
 
 /**

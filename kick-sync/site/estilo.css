@@ -264,6 +264,15 @@ kbd {
   font-variant-numeric: tabular-nums;
 }
 .momentos li.aqui { border-color: var(--acento); }
+/* Numa noite varrida a lista tem dezenas de linhas e a maioria nao e kill.
+   O risco verde a esquerda diz quais ja estao prontas sem ele ler nada. */
+.momentos li.confirmada { box-shadow: inset 3px 0 0 var(--acento); }
+.momentos .pega { width: 16px; height: 16px; accent-color: var(--acento); cursor: pointer; }
+
+/* A barra que trata da lista toda: filtrar, seleccionar, apagar, desfazer. */
+.barraSelecao { gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.barraSelecao button { padding: 4px 10px; font-size: 12px; }
+#anularApagar { border-color: var(--acento); color: var(--acento); }
 .momentos .n { color: var(--fraco); min-width: 26px; }
 .momentos .quem { color: var(--acento); }
 .momentos .quantos { color: var(--fraco); font-size: 12px; margin-left: auto; }

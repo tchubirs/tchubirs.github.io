@@ -1107,3 +1107,72 @@ test('o aviso do leitor aparece quando o hls.js não carrega',
       'sem isto os quadrados ficam pretos e ninguém sabe porquê');
     await p.close();
   });
+
+// Uma noite varrida da dezenas de candidatos e a maioria nao e kill. Este e o
+// gesto que a limpa: filtrar pelo que falta decidir, seleccionar tudo isso,
+// apagar — e conseguir voltar atras quando o dedo escorrega.
+test('filtrar, seleccionar aos molhos, apagar e anular',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'vitima1'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi\nvitima1');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 15000 });
+
+    for (let i = 0; i < 3; i++) { await p.click('#mais1m'); await p.click('#marcarKill'); }
+    await p.waitForFunction(() => document.querySelectorAll('#listaMomentos li[data-ms]').length === 3,
+      null, { timeout: 10000 });
+
+    // So a do meio tem morte confirmada.
+    await p.locator('#listaMomentos li[data-ms]').nth(1).locator('.vit[data-canal="vitima1"]').click();
+    assert.equal(await p.locator('#listaMomentos li.confirmada').count(), 1,
+      'a lista tem de dizer quais ja estao prontas sem ele ler nada');
+
+    await p.selectOption('#filtroMomentos', 'comMorte');
+    assert.equal(await p.locator('#listaMomentos li[data-ms]').count(), 1);
+    // O filtro nao pode esconder trabalho em silencio: a montagem que se
+    // descarrega continua a ser a lista inteira.
+    assert.match(await p.locator('#estadoMontagem').innerText(), /2 escondidos/);
+
+    await p.selectOption('#filtroMomentos', 'semMorte');
+    assert.equal(await p.locator('#listaMomentos li[data-ms]').count(), 2);
+
+    // "Seleccionar tudo" e tudo o que ESTA A VER. Se apanhasse tambem o que
+    // esta escondido, este clique apagava-lhe a unica kill boa.
+    await p.click('#selecionarTudo');
+    assert.match(await p.locator('#estadoSelecao').innerText(), /2 selecionados/);
+    await p.click('#apagarSelecionados');
+
+    await p.selectOption('#filtroMomentos', 'todos');
+    assert.equal(await p.locator('#listaMomentos li[data-ms]').count(), 1,
+      'sobrou a que tinha morte confirmada, e so essa');
+
+    await p.click('#anularApagar');
+    assert.equal(await p.locator('#listaMomentos li[data-ms]').count(), 3, 'anular devolve as tres');
+    assert.equal(await p.locator('#listaMomentos li.confirmada').count(), 1,
+      'e devolve-as como estavam, com a morte marcada onde estava');
+    assert.equal(await p.locator('#anularApagar').isVisible(), false, 'anular duas vezes nao duplica nada');
+  });
+
+// A numeracao da lista e a que vai no nome do ficheiro. Com o filtro ligado,
+// contar as linhas visiveis dava dois numeros diferentes para a mesma kill —
+// um no ecra e outro na mesa de montagem.
+test('o numero de cada kill nao muda quando o filtro esconde as outras',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'vitima1'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi\nvitima1');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 15000 });
+
+    for (let i = 0; i < 3; i++) { await p.click('#mais1m'); await p.click('#marcarKill'); }
+    await p.waitForFunction(() => document.querySelectorAll('#listaMomentos li[data-ms]').length === 3,
+      null, { timeout: 10000 });
+    await p.locator('#listaMomentos li[data-ms]').nth(2).locator('.vit[data-canal="vitima1"]').click();
+
+    await p.selectOption('#filtroMomentos', 'comMorte');
+    assert.equal(await p.locator('#listaMomentos li[data-ms] .n').first().innerText(), '03',
+      'a terceira kill continua a ser a terceira, mesmo sendo a unica na lista');
+  });
