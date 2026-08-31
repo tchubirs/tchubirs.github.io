@@ -789,6 +789,46 @@ test('marcar kills gera a montagem, em ordem e com os ficheiros numerados',
     await p.close();
   });
 
+// "Podia aparecer a linha do tempo em baixo dessas barras, igual ao Premiere."
+// Sem regua sabe-se que se esta "algures no meio" e mais nada.
+test('a regua mostra as horas por baixo das barras, e as kills marcadas nela',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'outro'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi\noutro');
+    await p.click('#carregar');
+    await p.waitForSelector('#regua .hora', { timeout: 15000 });
+
+    const horas = await p.locator('#regua .hora').allInnerTexts();
+    assert.ok(horas.length >= 2 && horas.length <= 9, `${horas.length} marcas e demais ou de menos`);
+    for (const h of horas) assert.match(h, /^\d{2}:\d{2}$/, `marca ilegivel: ${h}`);
+    // Em ordem, e dentro da noite.
+    assert.deepEqual(horas, [...horas].sort());
+
+    // As kills aparecem na regua, numeradas, e clicar numa salta para la.
+    await p.click('#mais1m');
+    await p.click('#marcarKill');
+    await p.waitForSelector('#regua .kill', { timeout: 10000 });
+    assert.equal(await p.locator('#regua .kill').count(), 1);
+    assert.equal(await p.locator('#regua .kill span').innerText(), '1');
+
+    await p.click('#menos1m');
+    const fora = await p.locator('#agora').innerText();
+    await p.locator('#regua .kill').click();
+    assert.notEqual(await p.locator('#agora').innerText(), fora, 'clicar na kill salta para ela');
+
+    // E a regua alinha com as faixas: a mesma coluna de nomes a esquerda.
+    const [rx, fx] = await Promise.all([
+      p.locator('#regua').boundingBox(),
+      p.locator('#faixas .trilho').first().boundingBox(),
+    ]);
+    assert.ok(Math.abs(rx.x - fx.x) < 2 && Math.abs(rx.width - fx.width) < 2,
+      `regua desalinhada das barras: ${JSON.stringify({ rx, fx })}`);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
 test('o aviso do leitor aparece quando o hls.js não carrega',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
     const { p } = await abrir();

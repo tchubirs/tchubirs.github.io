@@ -208,6 +208,27 @@ kbd {
 }
 .trilho i { position: absolute; top: 0; bottom: 0; background: var(--fraco); border-radius: 2px; }
 .faixa.principal .trilho i { background: var(--acento); }
+/* A regua: as horas por baixo das barras, e as kills marcadas nela. */
+.reguaLinha { display: grid; grid-template-columns: 92px 1fr; gap: 8px; margin-top: 2px; }
+.regua { position: relative; height: 26px; border-top: 1px solid var(--borda); }
+.regua .risco {
+  position: absolute; top: 0; width: 1px; height: 5px; background: var(--borda);
+}
+.regua .hora {
+  position: absolute; top: 7px; font-size: 10px; color: var(--fraco);
+  transform: translateX(-50%); white-space: nowrap; font-variant-numeric: tabular-nums;
+}
+.regua .kill {
+  position: absolute; top: 0; height: 100%; width: 14px; transform: translateX(-50%);
+  background: none; border: 0; padding: 0; cursor: pointer; color: var(--acento);
+  font-size: 11px; line-height: 1; text-align: center;
+}
+.regua .kill::before {
+  content: ''; position: absolute; left: 50%; top: 0; width: 2px; height: 9px;
+  background: var(--acento);
+}
+.regua .kill span { position: absolute; top: 9px; left: 50%; transform: translateX(-50%); }
+
 /* A linha do instante actual, por cima de todas as faixas. */
 .cursor {
   position: absolute; top: 0; bottom: 0; width: 2px; background: var(--texto);
