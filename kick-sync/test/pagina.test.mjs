@@ -146,7 +146,7 @@ test('a página abre sem um único erro de código', { skip: !podeCorrer && 'sem
   await kickFalsa(p);
   await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
   assert.deepEqual(erros, [], 'nada pode rebentar só por abrir');
-  assert.equal(await p.isDisabled('#baixar'), true, 'sem marca, não há o que baixar');
+  assert.equal(await p.locator('#corte').isVisible(), false, 'sem marca, não há o que cortar');
   await p.close();
 });
 
@@ -227,7 +227,9 @@ test('um canal que não existe aparece dito, não como quadrado vazio',
     await p.close();
   });
 
-test('marcar e baixar produz um ficheiro por ângulo, em qualidade máxima',
+// Um ficheiro de cada vez, com o seu proprio tamanho — pedido do dono, que na
+// pratica so baixa dois angulos e quer mais arranque num do que no outro.
+test('cada canal baixa sozinho, no seu tamanho, em qualidade maxima',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
     const { p, erros } = await abrir();
     const pedidos = await kickFalsa(p);
@@ -238,27 +240,62 @@ test('marcar e baixar produz um ficheiro por ângulo, em qualidade máxima',
     await p.waitForSelector('.tile', { timeout: 15000 });
 
     await p.click('#marcarIn');
-    // Anda 25 s para a frente com o teclado, como um utilizador faria.
-    for (let i = 0; i < 25; i++) await p.keyboard.press('l');
+    await p.click('#mais10s');                    // o botao de salto, nao 10 toques
     await p.click('#marcarOut');
-    assert.equal(await p.isDisabled('#baixar'), false, 'com marca válida, o botão liga');
+    await p.waitForSelector('#corte:not([hidden])', { timeout: 10000 });
+
+    const linhas = p.locator('#listaCorte li[data-slug]');
+    assert.equal(await linhas.count(), 2, 'uma linha por angulo presente na marca');
+    assert.equal(await linhas.first().locator('.dur').innerText(), '0:10');
+
+    // Cinco segundos a mais no fim, so neste canal.
+    await linhas.first().locator('.depois').fill('5');
+    await linhas.first().locator('.depois').dispatchEvent('input');
+    assert.equal(await linhas.first().locator('.dur').innerText(), '0:15');
+    assert.equal(await linhas.nth(1).locator('.dur').innerText(), '0:10', 'o outro nao mexeu');
 
     const antes = pedidos.segmentos;
-    await p.click('#baixar');
+    await linhas.first().locator('.baixarUm').click();
     await p.waitForSelector('#fila a', { timeout: 20000 });
 
-    const ligacoes = p.locator('#fila a');
-    assert.equal(await ligacoes.count(), 2, 'um ficheiro por ângulo');
-    const nome = await ligacoes.first().getAttribute('download');
+    assert.equal(await p.locator('#fila a').count(), 1, 'um ficheiro, nao dois');
+    const nome = await p.locator('#fila a').first().getAttribute('download');
     assert.match(nome, /^tchubi__2026\d{4}-\d{6}Z\.ts$/, 'o nome diz o canal e o instante');
 
-    const linha = await p.locator('#fila li').first().innerText();
-    assert.match(linha, /1080p60/, 'exporta o degrau de cima, não o 160p que estava no ecrã');
-    assert.match(linha, /começa .* antes da tua marca/, 'diz onde o corte cai mesmo');
+    const texto = await p.locator('#fila li').first().innerText();
+    assert.match(texto, /1080p60/, 'exporta o degrau de cima, nao o 160p do ecra');
+    assert.match(texto, /come.a .* antes da tua marca/, 'diz onde o corte cai mesmo');
 
     const baixados = pedidos.segmentos - antes;
     assert.ok(baixados > 0 && baixados <= 12,
-      `poucos segmentos, não o VOD: pediu ${baixados} de ${60 * 2}`);
+      `poucos segmentos, nao o VOD: pediu ${baixados} de ${60 * 2}`);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+// Ver dois ao mesmo tempo: e assim que se decide se vale a pena baixar.
+test('da para ver dois angulos ao mesmo tempo, e so um leva o som',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'outro', 'terceiro'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi\noutro\nterceiro');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 15000 });
+    assert.equal(await p.locator('#palcoFoco .tile').count(), 1);
+
+    await p.locator('#grade .tile').first().locator('.par').click();
+    await p.waitForFunction(() => document.querySelectorAll('#palcoFoco .tile').length === 2,
+      null, { timeout: 10000 });
+    assert.equal(await p.locator('#grade .tile').count(), 1, 'o terceiro fica na grelha');
+    // Dois audios ao mesmo tempo nao e comparar, e barulho.
+    assert.equal(await p.locator('#palcoFoco .tile video[muted]').count(), 1,
+      'exactamente um dos dois e que tem som');
+
+    // Tres nao: volta a ser a grelha toda a descodificar.
+    await p.locator('#grade .tile').first().locator('.par').click();
+    await p.waitForTimeout(400);
+    assert.equal(await p.locator('#palcoFoco .tile').count(), 2, 'o par e de dois, nao de tres');
     assert.deepEqual(erros, []);
     await p.close();
   });
