@@ -5,7 +5,7 @@
 // an ordered set of VODs plus the gaps, and scrubbing across a gap must either
 // switch VODs by itself or show the hole — never quietly play the wrong moment.
 
-import { tempoDeMidia } from './kick.js?v=51836db792';
+import { tempoDeMidia } from './kick.js?v=399d21bfed';
 
 /**
  * One channel's night: its VODs in order, and the holes between them.
