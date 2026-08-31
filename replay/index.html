@@ -53,6 +53,10 @@
 
   <div class="relogio">
     <input id="barra" type="range" min="0" max="1000" value="0" step="1" aria-label="linha do tempo">
+    <!-- Quem esteve no ar, e quando. Sem isto procura-se o momento a arrastar a
+         barra as cegas: os buracos e as sobreposicoes so se descobriam batendo
+         com o nariz neles. -->
+    <div id="faixas" class="faixas"><div id="cursor" class="cursor"></div></div>
     <div class="linha">
       <output id="agora" class="tempo">—</output>
       <output id="angulos" class="nota">—</output>
@@ -77,9 +81,10 @@
     <span id="estadoAlinhar" class="nota"></span>
   </div>
 
-  <section id="corte" hidden>
+  <section id="corte">
     <h2>Cortar</h2>
     <ul id="listaCorte" class="corte"></ul>
+    <p id="comoCortar" class="nota">Marca o início com <kbd>I</kbd> e o fim com <kbd>O</kbd>. Depois aparece aqui um botão por ângulo.</p>
   </section>
 
   <ul id="fila" class="fila"></ul>
@@ -89,10 +94,10 @@
   <!-- A versao, a serio e visivel. O GitHub Pages serve com max-age=600 e um
        telemovel guarda o app.js antigo; sem isto, "ja corrigi" e "continua
        igual" sao as duas verdadeiras ao mesmo tempo e ninguem sai dali. -->
-  <p class="nota">Tudo acontece no teu navegador. Os VODs são de quem os gravou. · <span id="versao">9c3d37554a</span></p>
+  <p class="nota">Tudo acontece no teu navegador. Os VODs são de quem os gravou. · <span id="versao">2926d43422</span></p>
 </footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.17/hls.min.js"></script>
-<script type="module" src="app.js?v=9c3d37554a"></script>
+<script type="module" src="app.js?v=2926d43422"></script>
 </body>
 </html>
