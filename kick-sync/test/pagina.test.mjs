@@ -87,7 +87,7 @@ async function kickFalsa(pagina, { canais = ['tchubi', 'outro'], segmentos = 60,
     '1080p60/playlist.m3u8',
   ].join('\n');
 
-  const pedidos = { api: 0, master: 0, playlist: 0, segmentos: 0 };
+  const pedidos = { api: 0, master: 0, playlist: 0, segmentos: 0, caro: 0, barato: 0 };
 
   await pagina.route('**/api/v2/channels/*/videos', async (rota) => {
     pedidos.api++;
@@ -106,7 +106,11 @@ async function kickFalsa(pagina, { canais = ['tchubi', 'outro'], segmentos = 60,
     const u = rota.request().url();
     const slug = u.match(/cdn\.fake\/([^/]+)\//)?.[1] || '';
     if (u.endsWith('master.m3u8')) { pedidos.master++; return rota.fulfill({ status: 200, body: master }); }
-    if (u.endsWith('playlist.m3u8')) { pedidos.playlist++; return rota.fulfill({ status: 200, body: playlist(slug) }); }
+    if (u.endsWith('playlist.m3u8')) {
+      pedidos.playlist++;
+      if (u.includes('1080p60')) pedidos.caro++; else pedidos.barato++;
+      return rota.fulfill({ status: 200, body: playlist(slug) });
+    }
     pedidos.segmentos++;
     const n = Number(u.match(/(\d+)\.ts$/)?.[1] ?? 0);
     const corpo = comSom && SEGS_SOM[n]
@@ -119,8 +123,12 @@ async function kickFalsa(pagina, { canais = ['tchubi', 'outro'], segmentos = 60,
   await pagina.route('**/hls.min.js', (rota) => rota.fulfill({
     status: 200,
     contentType: 'text/javascript',
-    body: 'window.Hls=function(){this.loadSource=function(){};this.attachMedia=function(){};'
-      + 'this.destroy=function(){};};window.Hls.isSupported=function(){return true;};',
+    // O stub regista o que lhe mandam carregar. Sem isto não há como ver
+    // QUAL degrau da escada cada quadrado pediu — que é a decisão inteira.
+    body: 'window.__carregados=[];'
+      + 'window.Hls=function(){this.loadSource=function(u){window.__carregados.push(u);};'
+      + 'this.attachMedia=function(){};this.destroy=function(){};};'
+      + 'window.Hls.isSupported=function(){return true;};',
   }));
   return pedidos;
 }
@@ -157,6 +165,46 @@ test('carrega a noite, mostra a grelha e põe todos no mesmo instante',
     assert.equal(pedidos.api, 2, 'uma chamada por canal, não mais');
     // A grelha lê o degrau BARATO para tocar — o caro fica para o export.
     assert.equal(pedidos.playlist, 2, 'uma playlist por canal');
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+// O pedido do dono, e a razão de trinta ângulos serem possíveis: só um vídeo
+// corre. Os outros ficam parados no frame daquele instante — acompanham, não
+// tocam. Trinta descodificadores a andar ao mesmo tempo derretem a máquina.
+test('só o ângulo em foco toca em qualidade; os outros acompanham parados',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    const pedidos = await kickFalsa(p, { canais: ['tchubi', 'outro', 'terceiro'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi\noutro\nterceiro');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 15000 });
+    // O foco carrega já; os parados só depois de a barra descansar 220 ms.
+    // Esperar pelos três é, em si, a prova de que os secundários são adiados.
+    await p.waitForFunction(() => window.__carregados?.length === 3, null, { timeout: 10000 });
+
+    const carregados = () => p.evaluate(() => window.__carregados.slice());
+    const caros = (l) => l.filter((u) => u.includes('1080p60'));
+
+    // Um só pede o degrau de cima. Os outros ficam no 160p.
+    const l1 = await carregados();
+    assert.equal(l1.length, 3, 'um leitor por quadrado');
+    assert.equal(caros(l1).length, 1, `${caros(l1).length} em alta qualidade — devia ser 1`);
+    assert.equal(await p.locator('.tile.foco').count(), 1);
+
+    // E toda a gente diz onde está dentro do vídeo dela, mesmo parada.
+    for (const t of await p.locator('.tile .posicao').allInnerTexts()) {
+      assert.match(t, /^\d+:\d{2}$/, `posição ilegível: "${t}"`);
+    }
+
+    // Mudar o foco não acumula: continua a haver um só em alta.
+    await p.locator('.tile:not(.foco)').first().click();
+    await p.waitForTimeout(600);
+    const l2 = await carregados();
+    assert.equal(caros(l2).length - caros(l1).length, 1,
+      'o novo foco pede uma vez, e mais nada sobe de qualidade');
+    assert.equal(await p.locator('.tile.foco').count(), 1);
     assert.deepEqual(erros, []);
     await p.close();
   });
