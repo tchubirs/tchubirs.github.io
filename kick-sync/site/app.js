@@ -211,18 +211,66 @@ function pintarNoites(noites) {
   $('noite').onchange = () => abrirNoite(noites[Number($('noite').value)]);
 }
 
+/**
+ * O estado de cada canal pedido — e, quando correu mal, o que fazer a seguir.
+ *
+ * "sem VODs" sozinho não chega: quem escreveu o nome mal fica sem saber se
+ * errou ou se o canal existe mesmo e não tem gravações. São duas situações
+ * diferentes com a mesma cara, e a segunda não tem conserto enquanto a
+ * primeira só precisa de uma letra.
+ */
 function pintarCanais(canais) {
   $('canaisEstado').hidden = false;
   const rotulo = {
-    ok: '', 'canal-nao-existe': 'não existe', 'sem-vods': 'sem VODs',
-    'vods-indisponiveis': 'VODs privados ou apagados', 'rate-limit': 'a Kick pediu para abrandar',
-    'sem-rede': 'sem rede', 'nome-invalido': 'nome inválido',
+    ok: '',
+    'canal-nao-existe': 'não existe na Kick',
+    'sem-vods': 'existe, mas não tem VODs guardados',
+    'vods-indisponiveis': 'os VODs estão privados ou apagados',
+    'rate-limit': 'a Kick pediu para abrandar',
+    'sem-rede': 'sem rede',
+    'nome-invalido': 'nome inválido',
+    'resposta-ilegivel': 'a Kick respondeu algo que não percebi',
+    'formato-inesperado': 'a Kick mudou o formato da resposta',
   };
   $('listaCanais').innerHTML = canais.map((c) => {
     const mau = c.estado !== 'ok';
-    return `<li class="${mau ? 'mau' : ''}"><b>${c.slug}</b>`
-      + `<span class="nota">${mau ? (rotulo[c.estado] || c.estado) : `${c.vods.length} VOD(s)`}</span></li>`;
+    return `<li class="${mau ? 'mau' : ''}" data-slug="${c.slug}" data-estado="${c.estado}"><b>${c.slug}</b>`
+      + `<span class="nota">${mau ? (rotulo[c.estado] || c.estado) : `${c.vods.length} VOD(s)`}</span>`
+      + `<span class="parecidos"></span></li>`;
   }).join('');
+  sugerirParecidos(canais.filter((c) => c.estado !== 'ok'));
+}
+
+/**
+ * Para cada canal que não deu, procurar nomes parecidos e oferecê-los.
+ *
+ * É a resposta à pergunta que a mensagem de erro não responde: "escrevi mal?".
+ * Um clique troca o nome na caixa e volta a carregar.
+ */
+async function sugerirParecidos(maus) {
+  for (const c of maus) {
+    if (c.estado === 'sem-rede' || c.estado === 'rate-limit') continue;
+    const li = $('listaCanais').querySelector(`li[data-slug="${CSS.escape(c.slug)}"] .parecidos`);
+    if (!li) continue;
+    let achados = [];
+    try {
+      achados = (await procurarCanais(c.slug, { quantos: 4 })).filter((x) => x.slug !== c.slug);
+    } catch { /* sem sugestões é um resultado, não um erro a mostrar */ }
+    if (!achados.length) continue;
+    li.innerHTML = '<span class="nota">quiseste dizer</span>'
+      + achados.map((x) => `<button data-slug="${x.slug}">${x.slug}</button>`).join('');
+    for (const b of li.querySelectorAll('button')) {
+      b.onclick = () => {
+        // Trocar o nome na caixa, e não acrescentar: quem escreveu mal quer o
+        // certo no lugar do errado, senão fica a carregar os dois.
+        $('canais').value = listaDeCanais()
+          .map((n) => (n === c.slug ? b.dataset.slug : n))
+          .filter((n, i, a) => a.indexOf(n) === i)
+          .join('\n');
+        carregar();
+      };
+    }
+  }
 }
 
 /** Read the ladders and the clocks for one night, then build the timeline. */

@@ -97,7 +97,9 @@ async function kickFalsa(pagina, { canais = ['tchubi', 'outro'], segmentos = 60,
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        channels: todos.filter((c) => c.includes(t.toLowerCase()))
+        // Como a busca a serio: encontra por pedaco do nome, e nao so por
+        // igualdade — e por isso um nome mal escrito ainda acha o certo.
+        channels: todos.filter((c) => c.includes(t.toLowerCase().slice(0, 4)))
           .map((slug, i) => ({ slug, followersCount: 1000 - i * 10, is_live: i === 0 })),
       }),
     });
@@ -305,6 +307,48 @@ test('no ecra de um telemovel o foco continua a ocupar espaco',
     const largura = await p.evaluate(() => ({
       corpo: document.documentElement.scrollWidth, ecra: window.innerWidth }));
     assert.ok(largura.corpo <= largura.ecra + 1, `a pagina passa do ecra: ${JSON.stringify(largura)}`);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+// Os quatro na mesma linha, sempre. Numa linha flex o quarto cai para baixo
+// assim que o ecra aperta, e ai deixam de se ver como um conjunto.
+test('os quatro botoes de salto ficam na mesma linha, ate no telemovel',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir({ ecra: { width: 390, height: 844 } });
+    await kickFalsa(p);
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 15000 });
+
+    const ys = await Promise.all(['#menos1m', '#menos10s', '#mais10s', '#mais1m']
+      .map(async (id) => (await p.locator(id).boundingBox()).y));
+    assert.ok(Math.max(...ys) - Math.min(...ys) < 2, `botoes em linhas diferentes: ${ys}`);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+// "Sem VODs" sozinho nao chega: quem escreveu mal fica sem saber se errou ou
+// se o canal existe mesmo e nao tem gravacoes.
+test('um nome errado oferece o parecido, e um clique corrige e recarrega',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubixx');
+    await p.click('#carregar');
+
+    await p.waitForSelector('#listaCanais .parecidos button', { timeout: 15000 });
+    const chip = p.locator('#listaCanais .parecidos button').first();
+    assert.equal(await chip.innerText(), 'tchubi');
+    assert.match(await p.locator('#listaCanais li').first().innerText(), /não existe na Kick/);
+
+    await chip.click();
+    await p.waitForSelector('.tile', { timeout: 15000 });
+    // Troca, nao acrescenta: senao ficavam os dois na caixa e carregava ambos.
+    assert.equal(await p.locator('#canais').inputValue(), 'tchubi');
+    assert.equal(await p.locator('.tile').count(), 1);
     assert.deepEqual(erros, []);
     await p.close();
   });

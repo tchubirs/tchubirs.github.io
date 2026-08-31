@@ -92,6 +92,8 @@ kbd {
   background: var(--caixa); border: 1px solid var(--borda); border-radius: 999px;
   padding: 5px 12px; display: flex; gap: 8px; align-items: baseline;
 }
+.canais .parecidos { display: inline-flex; gap: 5px; align-items: center; }
+.canais .parecidos button { padding: 2px 8px; font-size: 12px; border-radius: 999px; }
 .canais li.mau { border-color: color-mix(in srgb, var(--mau) 45%, var(--borda)); }
 
 /* The grid. Focus takes the top row on its own; the rest are thumbnails,
@@ -161,6 +163,13 @@ kbd {
 .tile.foco .posicao { color: var(--texto); }
 
 .relogio { background: var(--caixa); border: 1px solid var(--borda); border-radius: 10px; padding: 12px; }
+/* Os saltos. Grelha de quatro colunas iguais em vez de uma linha flex: numa
+   linha flex o quarto botão cai para baixo assim que o ecrã aperta. */
+.saltos {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 10px;
+}
+.saltos button { padding: 10px 4px; white-space: nowrap; }
+
 #barra { width: 100%; accent-color: var(--acento); }
 .tempo { font-variant-numeric: tabular-nums; font-size: 18px; min-width: 100px; }
 
