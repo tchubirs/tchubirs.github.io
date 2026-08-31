@@ -228,6 +228,11 @@ kbd {
 .momentos .quem { color: var(--acento); }
 .momentos .quantos { color: var(--fraco); font-size: 12px; margin-left: auto; }
 .momentos button { padding: 3px 9px; font-size: 12px; }
+/* Quem morreu nesta kill. Sem marcar ninguem, sai so a POV do dono. */
+.momentos .vitimas { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; flex-basis: 100%; }
+.momentos .vit { border-radius: 999px; opacity: .5; }
+.momentos .vit.sim { opacity: 1; border-color: var(--acento); color: var(--acento); }
+.momentos .vit:disabled { opacity: .2; }
 label.pequeno { display: inline-flex; gap: 5px; align-items: center; margin: 0; font-size: 13px; }
 label.pequeno input {
   width: 54px; background: var(--fundo); color: var(--texto); border: 1px solid var(--borda);

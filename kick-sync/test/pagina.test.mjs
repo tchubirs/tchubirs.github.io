@@ -753,6 +753,17 @@ test('marcar kills gera a montagem, em ordem e com os ficheiros numerados',
     // Carregar depressa nao pode duplicar a mesma kill.
     await p.click('#marcarKill');
     assert.equal(await p.locator('#listaMomentos li[data-ms]').count(), 2, 'a mesma kill conta uma vez');
+
+    // Sem ninguem marcado como morto sai SO a POV do dono. Cortar todos os
+    // angulos em cada kill dava quatro clipes de lixo por cada um bom — foi
+    // exactamente isso que ele apanhou no uso real: 6 kills, 36 ficheiros.
+    assert.match(await p.locator('#estadoMontagem').innerText(), /2 kills · 2 ficheiros/);
+    assert.match(await p.locator('#estadoMontagem').innerText(), /2 sem ninguém marcado/);
+
+    // Marcar quem morreu em cada uma.
+    for (const li of await p.locator('#listaMomentos li[data-ms]').all()) {
+      await li.locator('.vit[data-canal="vitima1"]').click();
+    }
     assert.match(await p.locator('#estadoMontagem').innerText(), /2 kills · 4 ficheiros/);
 
     const antes = pedidos.segmentos;

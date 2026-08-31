@@ -11,7 +11,7 @@ import { cortarTodosOsAngulos } from './baixar.js';
 import { alinharPeloSom, custoEstimadoMB } from './alinhar.js';
 import { agruparPorNoite, rotuloDaNoite } from './noites.js';
 import {
-  novoMomento, acrescentar, remover, planoDaMontagem, ordenar,
+  novoMomento, acrescentar, remover, planoDaMontagem, ordenar, alternarVitima,
 } from './momentos.js';
 import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js';
 
@@ -819,12 +819,21 @@ function pintarMomentos() {
   const lista = ordenar(estado.momentos);
   $('listaMomentos').innerHTML = lista.map((m, i) => {
     const n = planoDaMontagem([m], canais, { filmava }).length;
+    // As fichas de quem morreu. Sem isto a página cortava todos os ângulos em
+    // cada kill, e saíam quatro clipes de lixo por cada um bom.
+    const fichas = canais.filter((c) => c !== m.protagonista).map((c) => {
+      const morreu = (m.vitimas || []).includes(c);
+      const havia = filmava(c, m.ms - 3000, m.ms + 3000);
+      return `<button class="vit ${morreu ? 'sim' : ''}" data-canal="${c}"`
+        + `${havia ? '' : ' disabled title="não estava a filmar"'}>${c}</button>`;
+    }).join('');
     return `<li data-ms="${m.ms}" class="${Math.abs(m.ms - estado.agoraMs) < 1500 ? 'aqui' : ''}">`
       + `<b class="n">${String(i + 1).padStart(2, '0')}</b>`
       + `<span>${relogioCurto(m.ms)}Z</span>`
       + `<span class="quem">${m.protagonista || '—'}</span>`
       + `<button class="ir">ir</button><button class="fora">apagar</button>`
-      + `<span class="quantos">${n} clipe${n === 1 ? '' : 's'}</span></li>`;
+      + `<span class="quantos">${n} clipe${n === 1 ? '' : 's'}</span>`
+      + `<span class="vitimas"><span class="nota">matou</span>${fichas}</span></li>`;
   }).join('') || '<li class="nota">Sem kills marcadas. Vai ao momento e carrega em Marcar kill.</li>';
 
   for (const li of $('listaMomentos').querySelectorAll('li[data-ms]')) {
@@ -835,11 +844,20 @@ function pintarMomentos() {
       pintarMomentos();
       guardar();
     };
+    for (const b of li.querySelectorAll('.vit')) {
+      b.onclick = () => {
+        estado.momentos = estado.momentos.map((m) => (m.ms === ms ? alternarVitima(m, b.dataset.canal) : m));
+        pintarMomentos();
+        guardar();
+      };
+    }
   }
   const total = planoDaMontagem(lista, canais, { filmava }).length;
   $('baixarMontagem').disabled = !total;
+  const semVitima = lista.filter((m) => !(m.vitimas || []).length).length;
   $('estadoMontagem').textContent = total
     ? `${lista.length} kill${lista.length === 1 ? '' : 's'} · ${total} ficheiros`
+      + (semVitima ? ` · ${semVitima} sem ninguém marcado (só a tua POV)` : '')
     : '';
 }
 
