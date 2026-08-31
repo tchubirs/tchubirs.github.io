@@ -154,8 +154,19 @@ async function kickFalsa(pagina, { canais = ['tchubi', 'outro'], segmentos = 60,
   return pedidos;
 }
 
-async function abrir({ ecra } = {}) {
-  const p = await navegador.newPage(ecra ? { viewport: ecra } : undefined);
+async function abrir({ ecra, idioma = 'pt' } = {}) {
+  // Idioma fixo, e nao o do sistema: os testes leem frases, e uma maquina de
+  // CI noutra lingua fazia-os falhar por uma razao que nao e a deles.
+  const p = await navegador.newPage({
+    ...(ecra ? { viewport: ecra } : {}),
+    locale: idioma === 'pt' ? 'pt-PT' : idioma,
+  });
+  await p.addInitScript((l) => {
+    // So quando ainda nao ha escolha: este guiao corre em CADA navegacao, e a
+    // escrever sempre apagava a lingua que o proprio teste tinha acabado de
+    // escolher — e o F5 parecia estar a perde-la.
+    try { if (!localStorage.getItem('replay.idioma')) localStorage.setItem('replay.idioma', l); } catch { /* nada */ }
+  }, idioma);
   const erros = [];
   p.on('pageerror', (e) => erros.push(String(e.message)));
   p.on('console', (m) => { if (m.type() === 'error' && !/ERR_|404/.test(m.text())) erros.push(m.text()); });
@@ -996,6 +1007,48 @@ test('acrescentar um canal a meio nao muda a noite em que se esta',
     assert.equal(await p.locator('#noite').inputValue(), noite, 'a noite tem de ser a mesma');
     assert.equal(await p.locator('#agora').innerText(), onde, 'e o instante tambem');
     assert.equal(await p.locator('#listaCanais li[data-slug="novato"]').count(), 1);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+// Tres linguas, e a pagina inteira em qualquer uma delas — incluindo o que ja
+// esta no ecra. Trocar de lingua nao pode obrigar a recarregar nem perder a
+// noite aberta.
+test('a pagina fala portugues, ingles e espanhol, e troca sem perder nada',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'outro'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi\noutro');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 15000 });
+    await p.click('#mais1m');
+    const instante = await p.locator('#agora').innerText();
+
+    assert.equal(await p.locator('#carregar').innerText(), 'Carregar a noite');
+    assert.equal(await p.locator('html').getAttribute('lang'), 'pt');
+
+    await p.selectOption('#idioma', 'en');
+    await p.waitForFunction(() => document.getElementById('carregar').textContent === 'Load the night',
+      null, { timeout: 5000 });
+    assert.equal(await p.locator('html').getAttribute('lang'), 'en');
+    assert.match(await p.title(), /many angles/);
+    // O que ja estava no ecra tambem muda, e nao so os botoes parados.
+    assert.match(await p.locator('#angulos').innerText(), /of \d+ angles/);
+    assert.match(await p.locator('#comoCortar').innerText(), /Mark the start/);
+    // E nada se perde na troca.
+    assert.equal(await p.locator('#agora').innerText(), instante, 'o instante fica');
+    assert.equal(await p.locator('.tile').count(), 2, 'e a grelha tambem');
+
+    await p.selectOption('#idioma', 'es');
+    await p.waitForFunction(() => document.getElementById('carregar').textContent === 'Cargar la noche',
+      null, { timeout: 5000 });
+    assert.match(await p.locator('#angulos').innerText(), /de \d+ ángulos/);
+
+    // E a escolha sobrevive ao F5.
+    await p.reload({ waitUntil: 'networkidle' });
+    await p.waitForFunction(() => document.getElementById('carregar').textContent === 'Cargar la noche',
+      null, { timeout: 15000 });
     assert.deepEqual(erros, []);
     await p.close();
   });

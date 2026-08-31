@@ -3,29 +3,32 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Replay — vários ângulos, um relógio</title>
+<title data-t="app.titulo">Replay — vários ângulos, um relógio</title>
 <link rel="stylesheet" href="estilo.css">
 </head>
 <body>
 
 <header>
-  <h1>Replay</h1>
-  <p class="sub">Cola os canais que estiveram na mesma noite. Um relógio para todos.</p>
+  <div class="topo">
+    <h1 data-t="app.nome">Replay</h1>
+    <select id="idioma" aria-label="idioma"></select>
+  </div>
+  <p class="sub" data-t="app.sub">Cola os canais que estiveram na mesma noite. Um relógio para todos.</p>
 </header>
 
 <section id="entrada">
-  <label for="procurar">Procurar um canal</label>
+  <label for="procurar" data-t="procurar.label">Procurar um canal</label>
   <div class="procura">
     <input id="procurar" type="search" autocomplete="off" spellcheck="false"
-      placeholder="escreve o início do nome…">
+      data-t-ph="procurar.ph" placeholder="escreve o início do nome…">
     <ul id="sugestoes" class="sugestoes" hidden></ul>
   </div>
 
-  <label for="canais">Canais da Kick, um por linha</label>
+  <label for="canais" data-t="canais.label">Canais da Kick, um por linha</label>
   <textarea id="canais" rows="6" spellcheck="false"
     placeholder="tchubi&#10;outrocanal&#10;maisum"></textarea>
   <div class="linha">
-    <button id="carregar" class="principal">Carregar a noite</button>
+    <button id="carregar" class="principal" data-t="canais.carregar">Carregar a noite</button>
     <span id="estadoCarga" class="nota"></span>
   </div>
   <!-- Próprio sítio, e não a linha de progresso: o aviso do leitor tem de
@@ -34,13 +37,13 @@
 </section>
 
 <section id="noites" hidden>
-  <label for="noite">Qual noite</label>
+  <label for="noite" data-t="noite.label">Qual noite</label>
   <select id="noite"></select>
   <span class="nota" id="resumoNoite"></span>
 </section>
 
 <section id="canaisEstado" hidden>
-  <h2>Canais</h2>
+  <h2 data-t="canais.titulo">Canais</h2>
   <ul id="listaCanais" class="canais"></ul>
 </section>
 
@@ -58,7 +61,7 @@
          diferentes para o mesmo instante. -->
     <div class="barraLinha">
       <span></span>
-      <input id="barra" type="range" min="0" max="1000" value="0" step="1" aria-label="linha do tempo">
+      <input id="barra" type="range" min="0" max="1000" value="0" step="1" data-t-aria="tempo.linha" aria-label="linha do tempo">
     </div>
     <!-- Quem esteve no ar, e quando. Sem isto procura-se o momento a arrastar a
          barra as cegas: os buracos e as sobreposicoes so se descobriam batendo
@@ -74,51 +77,51 @@
     <!-- Os quatro na mesma linha, sempre: em grelha de quatro colunas iguais,
          que não parte num ecrã estreito como uma linha flex parte. -->
     <div class="saltos">
-      <button id="menos1m" title="voltar 1 minuto">&laquo; 1 min</button>
-      <button id="menos10s" title="voltar 10 segundos">&lsaquo; 10s</button>
-      <button id="mais10s" title="avançar 10 segundos">10s &rsaquo;</button>
-      <button id="mais1m" title="avançar 1 minuto">1 min &raquo;</button>
+      <button id="menos1m" data-t="tempo.menos1m" data-t-titulo="tempo.voltar1m" title="voltar 1 minuto">&laquo; 1 min</button>
+      <button id="menos10s" data-t="tempo.menos10s" data-t-titulo="tempo.voltar10s" title="voltar 10 segundos">&lsaquo; 10s</button>
+      <button id="mais10s" data-t="tempo.mais10s" data-t-titulo="tempo.avancar10s" title="avançar 10 segundos">10s &rsaquo;</button>
+      <button id="mais1m" data-t="tempo.mais1m" data-t-titulo="tempo.avancar1m" title="avançar 1 minuto">1 min &raquo;</button>
     </div>
     <div class="linha">
-      <button id="clipar" class="principal">Clipar <kbd>C</kbd></button>
-      <button id="marcarIn">Marca início <kbd>I</kbd></button>
-      <button id="marcarOut">Marca fim <kbd>O</kbd></button>
+      <button id="clipar" class="principal"><span data-t="clipe.botao">Clipar</span> <kbd>C</kbd></button>
+      <button id="marcarIn"><span data-t="marca.inicio">Marca início</span> <kbd>I</kbd></button>
+      <button id="marcarOut"><span data-t="marca.fim">Marca fim</span> <kbd>O</kbd></button>
       <output id="marca" class="nota"></output>
     </div>
   </div>
 
   <div class="linha">
-    <button id="alinhar" title="ouve um bocado de cada ângulo e corrige o desvio de cada um">Alinhar pelo som</button>
+    <button id="alinhar" data-t="alinhar.botao" data-t-titulo="alinhar.ajuda" title="ouve um bocado de cada ângulo e corrige o desvio de cada um">Alinhar pelo som</button>
     <span id="estadoAlinhar" class="nota"></span>
   </div>
 
   <!-- A montagem. O fluxo do dono: marca-se a kill, e a pagina entrega a POV
        dele longa e as POVs de quem morreu curtinhas, ja numeradas. -->
   <section id="montagem">
-    <h2>Montagem</h2>
+    <h2 data-t="montagem.titulo">Montagem</h2>
     <div class="linha">
-      <button id="marcarKill" class="principal">Marcar kill <kbd>M</kbd></button>
-      <label class="pequeno">minha POV <input id="protAntes" type="number" value="5" min="0" max="120" step="1">s antes</label>
+      <button id="marcarKill" class="principal"><span data-t="montagem.marcar">Marcar kill</span> <kbd>M</kbd></button>
+      <label class="pequeno"><span data-t="montagem.minhaPov">minha POV</span> <input id="protAntes" type="number" value="5" min="0" max="120" step="1">s antes</label>
       <label class="pequeno"><input id="protDepois" type="number" value="2" min="0" max="120" step="1">s depois</label>
-      <label class="pequeno">quem morreu <input id="vitAntes" type="number" value="1" min="0" max="60" step="1">s antes</label>
+      <label class="pequeno"><span data-t="montagem.quemMorreu">quem morreu</span> <input id="vitAntes" type="number" value="1" min="0" max="60" step="1">s antes</label>
       <label class="pequeno"><input id="vitDepois" type="number" value="2" min="0" max="60" step="1">s depois</label>
     </div>
     <ul id="listaMomentos" class="momentos"></ul>
     <div class="linha">
-      <button id="baixarMontagem" disabled>Baixar a montagem</button>
+      <button id="baixarMontagem" data-t="montagem.baixar" disabled>Baixar a montagem</button>
       <span id="estadoMontagem" class="nota"></span>
     </div>
   </section>
 
   <section id="corte">
-    <h2>Cortar</h2>
+    <h2 data-t="corte.titulo">Cortar</h2>
     <ul id="listaCorte" class="corte"></ul>
-    <p id="comoCortar" class="nota">Marca o início com <kbd>I</kbd> e o fim com <kbd>O</kbd>. Depois aparece aqui um botão por ângulo.</p>
+    <p id="comoCortar" class="nota"></p>
   </section>
 
   <div class="linha">
-    <button id="limparFila">Limpar a lista</button>
-    <button id="recomecar">Recomeçar do zero</button>
+    <button id="limparFila" data-t="fila.limpar">Limpar a lista</button>
+    <button id="recomecar" data-t="fila.recomecar">Recomeçar do zero</button>
     <span id="memoria" class="nota"></span>
   </div>
   <ul id="fila" class="fila"></ul>
@@ -127,17 +130,17 @@
 <!-- Criar clipe: uma janela por cima, com a barra de corte e um limite de
      180 s. E o caminho para "quero um so, agora" — a montagem e para depois. -->
 <div id="modalClipe" class="modal" hidden>
-  <div class="modalCaixa" role="dialog" aria-modal="true" aria-label="Criar clipe">
+  <div class="modalCaixa" role="dialog" aria-modal="true" data-t-aria="clipe.titulo" aria-label="Criar clipe">
     <div class="modalTopo">
-      <b>Criar clipe</b>
-      <select id="canalClipe" aria-label="ângulo"></select>
-      <button id="fecharClipe" title="fechar">✕</button>
+      <b data-t="clipe.titulo">Criar clipe</b>
+      <select id="canalClipe" data-t-aria="clipe.angulo" aria-label="ângulo"></select>
+      <button id="fecharClipe" data-t-titulo="clipe.fechar" title="fechar">✕</button>
     </div>
     <video id="previaClipe" playsinline muted></video>
     <div id="barraClipe" class="barraClipe">
       <div class="seleccao"></div>
-      <button class="pega de" aria-label="início do clipe"></button>
-      <button class="pega ate" aria-label="fim do clipe"></button>
+      <button class="pega de" data-t-aria="clipe.inicio" aria-label="início do clipe"></button>
+      <button class="pega ate" data-t-aria="clipe.fim" aria-label="fim do clipe"></button>
       <div class="cabeca"></div>
     </div>
     <div class="linha">
@@ -145,12 +148,12 @@
       <button id="menosClipe">−1s</button>
       <button id="maisClipe">+1s</button>
     </div>
-    <label for="tituloClipe">Título do clipe</label>
-    <input id="tituloClipe" type="text" maxlength="80" placeholder="opcional — entra no nome do ficheiro">
+    <label for="tituloClipe" data-t="clipe.tituloLabel">Título do clipe</label>
+    <input id="tituloClipe" type="text" maxlength="80" data-t-ph="clipe.tituloPh" placeholder="opcional — entra no nome do ficheiro">
     <div class="linha fim">
       <span id="estadoClipe" class="nota"></span>
-      <button id="cancelarClipe">Cancelar</button>
-      <button id="guardarClipe" class="principal">Guardar clipe</button>
+      <button id="cancelarClipe" data-t="clipe.cancelar">Cancelar</button>
+      <button id="guardarClipe" class="principal" data-t="clipe.guardar">Guardar clipe</button>
     </div>
   </div>
 </div>
@@ -159,7 +162,7 @@
   <!-- A versao, a serio e visivel. O GitHub Pages serve com max-age=600 e um
        telemovel guarda o app.js antigo; sem isto, "ja corrigi" e "continua
        igual" sao as duas verdadeiras ao mesmo tempo e ninguem sai dali. -->
-  <p class="nota">Tudo acontece no teu navegador. Os VODs são de quem os gravou. · <span id="versao">dev</span></p>
+  <p class="nota"><span data-t="app.rodape">Tudo acontece no teu navegador. Os VODs são de quem os gravou.</span> · <span id="versao">dev</span></p>
 </footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.17/hls.min.js"></script>
