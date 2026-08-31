@@ -8,6 +8,7 @@
 import { vodsDoCanal, lerMaster, lerPlaylist } from './kick.js';
 import { linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink } from './relogio.js';
 import { cortarTodosOsAngulos } from './baixar.js';
+import { alinharPeloSom } from './alinhar.js';
 
 const $ = (id) => document.getElementById(id);
 const estado = {
@@ -292,6 +293,62 @@ function tocar(linha, r, video) {
   video.muted = !foco;
 }
 
+// ── alinhar pelo som ────────────────────────────────────────────────────────
+
+/**
+ * O carimbo da Kick é o instante em que o pedaço CHEGOU ao servidor dela.
+ * Entre a captura de cada um e esse instante há o buffer do OBS, o encoder e a
+ * subida, e isso é diferente em cada casa. Esse resto não se lê em lado
+ * nenhum: mede-se a ouvir.
+ *
+ * Medido num evento real com cinco canais: quatro alinharam a 0,14 s só com o
+ * carimbo, e o quinto estava 5,7 s à frente. Ou seja, isto é para o quinto.
+ */
+async function alinhar() {
+  if (!estado.linhas.length || !estado.janela) return;
+  const controlo = new AbortController();
+  const botao = $('alinhar');
+  const nota = $('estadoAlinhar');
+  botao.disabled = true;
+
+  try {
+    const r = await alinharPeloSom({
+      linhas: estado.linhas,
+      janela: estado.janela,
+      sinal: controlo.signal,
+      aoProgresso: (p) => {
+        nota.textContent = p.fase === 'ouvir'
+          ? `a ouvir ${p.canal} — ${p.feito}/${p.total}`
+          : 'a comparar…';
+      },
+    });
+
+    // Substitui, não soma: correr duas vezes seguidas não pode empurrar o
+    // dobro. E o que foi medido à mão para um canal sem ligação fica de pé.
+    for (const [slug, ms] of Object.entries(r.ajustesMs)) estado.nudges[slug] = ms;
+
+    const mexidos = Object.entries(r.ajustesMs).filter(([, ms]) => Math.abs(ms) >= 250);
+    nota.textContent = `${Object.keys(r.ajustesMs).length} de ${estado.linhas.length} alinhados pelo som`
+      + (mexidos.length ? ` · corrigi ${mexidos.map(([s, ms]) => `${s} ${(ms / 1000).toFixed(1)}s`).join(', ')}` : ' · já estavam certos')
+      + (r.semLigacao.length ? ` · sem som em comum: ${r.semLigacao.join(', ')} (ajusta à mão)` : '')
+      // Um canal que não se conseguiu baixar não é a mesma coisa que um canal
+      // que não tem som em comum, e chamar-lhes o mesmo esconde uma falha de
+      // rede atrás de uma explicação que soa razoável.
+      + (r.problemas.length ? ` · não consegui ouvir ${[...new Set(r.problemas.map((x) => x.canal))].join(', ')}` : '');
+    nota.classList.toggle('mau', !Object.keys(r.ajustesMs).length);
+    montarGrade();
+    irPara(estado.agoraMs);
+  } catch (e) {
+    nota.classList.add('mau');
+    nota.textContent = e.name === 'AbortError' ? 'cancelado'
+      : e.name === 'SEM-DESCODIFICADOR'
+        ? 'este navegador não descodifica o áudio da Kick — usa o Chrome ou o Edge, '
+          + 'ou alinha à mão com o − / + de cada quadrado'
+        : `não deu: ${e.message}`;
+  }
+  botao.disabled = false;
+}
+
 // ── marcar e baixar ─────────────────────────────────────────────────────────
 
 function pintarMarca() {
@@ -364,6 +421,7 @@ $('barra').oninput = () => {
 $('marcarIn').onclick = () => { estado.marca = { de: estado.agoraMs, ate: null }; pintarMarca(); };
 $('marcarOut').onclick = () => { estado.marca.ate = estado.agoraMs; pintarMarca(); };
 $('baixar').onclick = baixarTudo;
+$('alinhar').onclick = alinhar;
 
 document.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;

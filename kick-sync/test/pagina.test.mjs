@@ -53,12 +53,28 @@ after(async () => {
   servidor?.close();
 });
 
-/** A Kick that answers from memory: two channels, one night, ten-second pieces. */
-async function kickFalsa(pagina, { canais = ['tchubi', 'outro'], segmentos = 60 } = {}) {
-  const playlist = () => {
+// Segmentos de áudio verdadeiros, gerados uma vez com o ffmpeg e guardados em
+// probes/fixtures/som/. Servem o teste do alinhamento pelo som: ataques em
+// instantes irregulares, sem nada que se repita — porque com som periódico a
+// correlação tem picos iguais em vários sítios e o teste passaria por sorte.
+const SOM = new URL('../probes/fixtures/som/', import.meta.url).pathname;
+const TEM_SOM = fs.existsSync(SOM);
+const SEGS_SOM = TEM_SOM ? fs.readdirSync(SOM).filter((f) => f.endsWith('.ts')).sort() : [];
+
+/**
+ * A Kick that answers from memory: two channels, one night, ten-second pieces.
+ *
+ * `desviosS` desloca o PROGRAM-DATE-TIME de um canal sem mexer no conteúdo —
+ * exactamente o que acontece a quem tem mais buffer no OBS, e o que o
+ * alinhamento pelo som tem de medir e desfazer.
+ */
+async function kickFalsa(pagina, { canais = ['tchubi', 'outro'], segmentos = 60, comSom = false, desviosS = {} } = {}) {
+  const quantos = comSom ? SEGS_SOM.length : segmentos;
+  const playlist = (slug) => {
     const l = ['#EXTM3U', '#EXT-X-VERSION:3', '#EXT-X-TARGETDURATION:12', '#EXT-X-PLAYLIST-TYPE:EVENT'];
-    for (let i = 0; i < segmentos; i++) {
-      l.push(`#EXT-X-PROGRAM-DATE-TIME:${new Date(T + i * 10000).toISOString()}`);
+    const desvio = (desviosS[slug] || 0) * 1000;
+    for (let i = 0; i < quantos; i++) {
+      l.push(`#EXT-X-PROGRAM-DATE-TIME:${new Date(T + i * 10000 + desvio).toISOString()}`);
       l.push('#EXTINF:10.000,', `${i}.ts`);
     }
     return l.join('\n');
@@ -82,16 +98,21 @@ async function kickFalsa(pagina, { canais = ['tchubi', 'outro'], segmentos = 60 
       contentType: 'application/json',
       body: JSON.stringify([{
         id: 1, session_title: 'noite', start_time: '2026-08-30 21:00:00',
-        duration: segmentos * 10000, source: `https://cdn.fake/${slug}/master.m3u8`, video: {},
+        duration: quantos * 10000, source: `https://cdn.fake/${slug}/master.m3u8`, video: {},
       }]),
     });
   });
   await pagina.route('https://cdn.fake/**', async (rota) => {
     const u = rota.request().url();
+    const slug = u.match(/cdn\.fake\/([^/]+)\//)?.[1] || '';
     if (u.endsWith('master.m3u8')) { pedidos.master++; return rota.fulfill({ status: 200, body: master }); }
-    if (u.endsWith('playlist.m3u8')) { pedidos.playlist++; return rota.fulfill({ status: 200, body: playlist() }); }
+    if (u.endsWith('playlist.m3u8')) { pedidos.playlist++; return rota.fulfill({ status: 200, body: playlist(slug) }); }
     pedidos.segmentos++;
-    return rota.fulfill({ status: 200, contentType: 'video/mp2t', body: Buffer.alloc(4096, 7) });
+    const n = Number(u.match(/(\d+)\.ts$/)?.[1] ?? 0);
+    const corpo = comSom && SEGS_SOM[n]
+      ? fs.readFileSync(path.join(SOM, SEGS_SOM[n]))
+      : Buffer.alloc(4096, 7);
+    return rota.fulfill({ status: 200, contentType: 'video/mp2t', body: corpo });
   });
   // hls.js comes from a CDN this container cannot reach. Stub it: playback is
   // not what this test is about, and a missing global would hide real errors.
@@ -219,6 +240,68 @@ test('o ajuste manual existe, é por canal, e não muda o foco',
 
     await segundo.locator('.ajuste button[data-passo="-1"]').click({ modifiers: ['Shift'] });
     assert.equal(await segundo.locator('.nudge').innerText(), '-8.0s', 'Shift anda 10 s');
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+// O teste que fecha o assunto: um canal com o carimbo desviado 3 s, o mesmo
+// som nos dois, e o botão a repor a diferença sozinho. Prova a ligação toda —
+// baixar, tirar o áudio do MPEG-TS, descodificar no browser, correlacionar e
+// escrever o ajuste na grelha.
+test('o alinhamento pelo som mede um desvio de 3 s e corrige-o',
+  { skip: (!podeCorrer && 'sem navegador') || (!TEM_SOM && 'sem fixture de som') }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { comSom: true, desviosS: { outro: 3 } });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi\noutro');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 15000 });
+
+    await p.click('#alinhar');
+    await p.waitForFunction(
+      () => /alinhados|não deu|não descodifica/.test(document.getElementById('estadoAlinhar').textContent),
+      null, { timeout: 120000 });
+    const texto = await p.locator('#estadoAlinhar').innerText();
+
+    const nudge = async (slug) => Number(
+      (await p.locator(`.tile[data-slug="${slug}"] .nudge`).innerText()).replace('s', ''));
+    const a = await nudge('tchubi');
+    const b = await nudge('outro');
+
+    if (/não descodifica/.test(texto)) {
+      // O Chromium open-source não traz AAC, e sem AAC nem os VODs da Kick
+      // tocam. A conta em si está coberta em test/alinhar.test.mjs e medida
+      // contra áudio verdadeiro; o que se exige aqui é que a página o DIGA e
+      // não invente ajustes nenhuns.
+      assert.equal(a, 0, 'sem descodificador não se inventa um ajuste');
+      assert.equal(b, 0);
+      return p.close();
+    }
+
+    assert.match(texto, /2 de 2 alinhados pelo som/, `deu: ${texto}`);
+    // `outro` diz que os pedaços dele são 3 s mais tarde do que são, logo num
+    // dado carimbo mostra um momento mais antigo: tem de avançar 3 s.
+    assert.ok(Math.abs((b - a) - 3) < 0.4, `esperava 3 s de diferença, deu ${(b - a).toFixed(2)} (${a} / ${b})`);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+test('sem áudio nenhum, o alinhamento diz que não deu em vez de rebentar',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p);                       // segmentos de enchimento, sem faixa de som
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi\noutro');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 15000 });
+
+    await p.click('#alinhar');
+    await p.waitForFunction(
+      () => /alinhados|não deu|não descodifica/.test(document.getElementById('estadoAlinhar').textContent),
+      null, { timeout: 60000 });
+    assert.match(await p.locator('#estadoAlinhar').innerText(), /sem som em comum|0 de 2|não descodifica/);
+    assert.equal(await p.locator('.tile.foco .nudge').innerText(), '0.0s',
+      'não inventa um ajuste quando não mediu nada');
     assert.deepEqual(erros, []);
     await p.close();
   });
