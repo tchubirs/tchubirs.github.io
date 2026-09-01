@@ -609,10 +609,15 @@ button.discreto:hover:not(:disabled) { background: var(--realce); color: var(--t
 }
 /* Etiquetas em maiúsculas com espaçamento: é isto que dá o ar de painel de
    instrumentos, e não a família da letra. */
+/* Os títulos e as etiquetas na face condensada; o resto do texto fica no sans
+   do sistema, que é onde a legibilidade importa mais do que o carácter. */
 h2, .rotuloCampo, .etiqueta {
-  font-size: var(--t-micro); letter-spacing: .1em; text-transform: uppercase;
-  font-family: var(--letra-dados);
+  font-size: var(--t-micro); letter-spacing: .12em; text-transform: uppercase;
+  font-family: var(--letra-titulo); font-weight: 600;
 }
+h1 { font-family: var(--letra-titulo); font-weight: 600; letter-spacing: .01em; }
+.passos li span, .modalTopo b { font-family: var(--letra-titulo); font-weight: 600; letter-spacing: .03em; }
+.passos li span { text-transform: uppercase; font-size: var(--t-menor); }
 h2 { color: var(--texto-3); font-weight: 600; margin: var(--e5) 0 var(--e2); }
 .momentos .n { color: var(--texto-3); }
 

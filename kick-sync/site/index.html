@@ -4,6 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title data-t="app.titulo">Replay — vários ângulos, um relógio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Sem bloquear a primeira pintura. Um `<link rel=stylesheet>` normal para
+     um CDN de fontes atrasa TUDO enquanto a rede não responde, e ele está
+     quase sempre em dados móveis. Com `media=print` o browser descarrega sem
+     esperar, e o `onload` liga-o quando chegar; se nunca chegar, fica a letra
+     do sistema, que é o que havia antes. -->
+<link rel="stylesheet" media="print" onload="this.media='all';this.onload=null"
+  href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600&family=IBM+Plex+Mono:wght@400&display=swap">
+<noscript><link rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600&family=IBM+Plex+Mono:wght@400&display=swap"></noscript>
 <link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="estilo.css">
 </head>

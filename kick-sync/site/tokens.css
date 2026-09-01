@@ -74,7 +74,22 @@
    * lado de vários descodificadores de vídeo, e um webfont é mais um pedido
    * na rede e um salto de letra a meio do arranque. */
   --letra: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --letra-dados: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  /* Duas faces descarregadas, e só duas.
+   *
+   * Rajdhani nos títulos e nas etiquetas: é a face condensada e técnica da
+   * referência que ele mandou, e é dela que vem o carácter. 15,7 KB.
+   *
+   * IBM Plex Mono nos números: a mono do sistema muda de máquina para máquina
+   * — SF Mono no telemóvel dele, Consolas no PC — e o relógio e os desvios
+   * ficavam com desenhos diferentes em cada sítio. 14,7 KB.
+   *
+   * O Inter do site de referência fica de fora: são mais 30 KB para um sans
+   * de interface que ninguém distingue do do sistema. Peso que não se paga.
+   *
+   * As duas com `display=swap` e com a pilha do sistema por trás: um
+   * bloqueador ou uma rede má devolvem exactamente o que havia antes disto. */
+  --letra-titulo: Rajdhani, "Segoe UI Semibold", ui-sans-serif, system-ui, sans-serif;
+  --letra-dados: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   /* ── elevação ────────────────────────────────────────────────────────── */
   --sombra-1: 0 1px 2px #00000059;

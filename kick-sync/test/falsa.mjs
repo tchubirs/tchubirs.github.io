@@ -109,5 +109,12 @@ export async function kickFalsa(pagina, {
       + 'this.destroy=function(){};};'
       + 'window.Hls.isSupported=function(){return true;};',
   }));
+  // As fontes vêm de um CDN, e nos testes essa rede não existe: sem isto o
+  // `networkidle` fica à espera de um pedido que nunca resolve. Bloqueá-las
+  // também testa o caso real de quem tem um bloqueador — a página tem de
+  // funcionar na mesma, com a letra do sistema.
+  await pagina.route('https://fonts.googleapis.com/**', (rota) => rota.abort());
+  await pagina.route('https://fonts.gstatic.com/**', (rota) => rota.abort());
+
   return pedidos;
 }
