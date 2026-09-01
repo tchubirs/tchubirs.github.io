@@ -10,10 +10,10 @@
 // carimbo; o quinto estava 5,7 s à frente e as quatro janelas concordaram.
 // Ou seja: o carimbo quase sempre chega, e quando não chega isto apanha.
 
-import { aacDeSegmentos } from './audio-ts.js?v=9cf237b7f3';
-import { envolvente, desvio, consolidar, resolver, TAXA } from './sinal.js?v=9cf237b7f3';
-import { segmentosNaJanela } from './kick.js?v=9cf237b7f3';
-import { onde } from './relogio.js?v=9cf237b7f3';
+import { aacDeSegmentos } from './audio-ts.js?v=416b743c46';
+import { envolvente, desvio, consolidar, resolver, TAXA } from './sinal.js?v=416b743c46';
+import { segmentosNaJanela } from './kick.js?v=416b743c46';
+import { onde } from './relogio.js?v=416b743c46';
 
 /**
  * Quantos MB isto vai custar, antes de começar.
@@ -143,7 +143,9 @@ function reamostrar(pedacos, de, para) {
  * comparar pares, resolver o grafo) e testavel sem rede e sem codec, e o codec
  * e a unica parte que pertence ao browser e nao a este codigo.
  */
-export async function somDoCanal(linha, quandoMs, duracaoS, { buscar = fetch, sinal, descodificar = descodificarAac, contador } = {}) {
+export async function somDoCanal(linha, quandoMs, duracaoS, {
+  buscar = fetch, sinal, descodificar = descodificarAac, contador, taxa = TAXA,
+} = {}) {
   const r = onde(linha, quandoMs);
   if (r.estado !== 'toca') return null;
   const peca = linha.pecasCompletas?.find((p) => p.vod.id === r.peca.vod.id) || r.peca;
@@ -168,13 +170,16 @@ export async function somDoCanal(linha, quandoMs, duracaoS, { buscar = fetch, si
   // ela produz foi comparado com o ffmpeg amostra a amostra em 500 s: igual.
   const aac = aacDeSegmentos(ts);
   if (!aac) return null;
-  const mono = await descodificar(aac);
+  // A taxa a pedido: alinhar precisa de 8 kHz (barato, e a forma chega), e
+  // procurar tiros precisa de 24 — a 8 kHz o mundo acaba nos 4 kHz, e e para
+  // cima disso que um estouro se distingue de uma voz.
+  const mono = await descodificar(aac, { taxaAlvo: taxa });
 
   // Cortar ate ao instante pedido, para que TODOS os canais comecem no mesmo
   // ponto do relogio. Sem isto mede-se a diferenca dos cortes, nao a dos sons.
-  const salto = Math.max(0, Math.round(((quandoMs - segs[0].inicio) / 1000) * TAXA));
-  const fim = Math.min(mono.length, salto + Math.round(duracaoS * TAXA));
-  return fim - salto > TAXA * 5 ? mono.subarray(salto, fim) : null;
+  const salto = Math.max(0, Math.round(((quandoMs - segs[0].inicio) / 1000) * taxa));
+  const fim = Math.min(mono.length, salto + Math.round(duracaoS * taxa));
+  return fim - salto > taxa * 5 ? mono.subarray(salto, fim) : null;
 }
 
 /**

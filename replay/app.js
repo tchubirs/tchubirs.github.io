@@ -5,25 +5,26 @@
 // bottom rung of Kick's ladder and is what makes thirty tiles a home-connection
 // problem rather than a server problem.
 
-import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=9cf237b7f3';
+import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=416b743c46';
 import {
   linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo,
-} from './relogio.js?v=9cf237b7f3';
-import { cortarTodosOsAngulos } from './baixar.js?v=9cf237b7f3';
-import { alinharPeloSom, custoEstimadoMB } from './alinhar.js?v=9cf237b7f3';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=9cf237b7f3';
+} from './relogio.js?v=416b743c46';
+import { cortarTodosOsAngulos } from './baixar.js?v=416b743c46';
+import { alinharPeloSom, custoEstimadoMB } from './alinhar.js?v=416b743c46';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=416b743c46';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
   alternarVitima, filtrar, temMorte,
-} from './momentos.js?v=9cf237b7f3';
-import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=9cf237b7f3';
-import { criarZip, crc32 } from './zip.js?v=9cf237b7f3';
-import { criarApanhador } from './frames.js?v=9cf237b7f3';
-import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=9cf237b7f3';
-import { somDoCanal } from './alinhar.js?v=9cf237b7f3';
-import { MAXIMO_S, mover, janelaInicial, nomeDoClipe } from './clipe.js?v=9cf237b7f3';
-import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=9cf237b7f3';
-import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=9cf237b7f3';
+} from './momentos.js?v=416b743c46';
+import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=416b743c46';
+import { criarZip, crc32 } from './zip.js?v=416b743c46';
+import { criarApanhador } from './frames.js?v=416b743c46';
+import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=416b743c46';
+import { TAXA_TIROS } from './tiros.js?v=416b743c46';
+import { somDoCanal } from './alinhar.js?v=416b743c46';
+import { MAXIMO_S, mover, janelaInicial, nomeDoClipe } from './clipe.js?v=416b743c46';
+import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=416b743c46';
+import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=416b743c46';
 
 const $ = (id) => document.getElementById(id);
 const estado = {
@@ -1109,7 +1110,8 @@ async function procurarKills() {
       deMs,
       ateMs,
       sinal: controlo.signal,
-      lerSom: (l, quandoMs, duracaoS, opcoes) => somDoCanal(l, quandoMs, duracaoS, opcoes),
+      // 24 kHz, e nao os 8 do alinhamento: o tiro vive no agudo.
+      lerSom: (l, quandoMs, duracaoS, opcoes) => somDoCanal(l, quandoMs, duracaoS, { ...opcoes, taxa: TAXA_TIROS }),
       aoProgresso: (p) => {
         nota.textContent = t('auto.aOuvir', {
           feito: p.feito, total: p.total, mb: (p.bytes / 1048576).toFixed(0),
