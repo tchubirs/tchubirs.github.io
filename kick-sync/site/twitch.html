@@ -1,0 +1,56 @@
+<title>Replay Twitch — os POVs lado a lado</title>
+<link rel="stylesheet" href="estilo.css">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<header>
+  <h1><a href="./" class="voltar">Replay</a> <span class="marca">Twitch</span></h1>
+  <select id="idioma" aria-label="idioma"></select>
+</header>
+
+<!-- O que esta versao nao faz, dito a entrada e nao descoberto ao fim de meia
+     hora. A medicao esta em probes/twitch.mjs. -->
+<p class="aviso" data-t-html="tw.limite"></p>
+
+<section>
+  <h2 data-t="tw.canais">Canais</h2>
+  <div class="linha">
+    <input id="procurar" data-t-ph="tw.procurarPh" placeholder="procurar um canal pelo nome">
+    <button id="botaoProcurar" data-t="tw.procurar">Procurar</button>
+  </div>
+  <div id="sugestoes" class="sugestoes"></div>
+  <textarea id="canais" rows="4" data-t-ph="tw.canaisPh"
+    placeholder="um canal por linha"></textarea>
+  <div class="linha">
+    <button id="carregar" class="principal" data-t="tw.carregar">Carregar os VODs</button>
+    <span id="estado" class="nota"></span>
+  </div>
+</section>
+
+<section id="painelNoite" hidden>
+  <h2 data-t="tw.noite">Noite</h2>
+  <div class="linha">
+    <select id="noites" aria-label="noite"></select>
+    <span id="quemNaNoite" class="nota"></span>
+  </div>
+</section>
+
+<section id="palco" hidden>
+  <div class="linha barraTempo">
+    <button id="tocar" class="principal" data-t="tw.tocar">Tocar tudo</button>
+    <button id="menos1m" data-t="tempo.menos1m">-1 min</button>
+    <button id="menos10s" data-t="tempo.menos10s">-10 s</button>
+    <button id="mais10s" data-t="tempo.mais10s">+10 s</button>
+    <button id="mais1m" data-t="tempo.mais1m">+1 min</button>
+    <span id="relogio" class="tempo"></span>
+    <span id="noAr" class="nota"></span>
+  </div>
+  <input id="barra" type="range" min="0" max="1000" value="0" step="1" aria-label="linha do tempo">
+  <div id="grade" class="grade"></div>
+</section>
+
+<footer class="nota">
+  <span data-t="tw.rodape"></span> · <span id="versao">dev</span>
+</footer>
+
+<script src="https://player.twitch.tv/js/embed/v1.js"></script>
+<script type="module" src="twitch-app.js"></script>

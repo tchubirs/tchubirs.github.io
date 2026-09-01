@@ -19,15 +19,23 @@ cd "$(dirname "$0")"
 V=$(cat site/*.js site/*.css site/index.html | sha1sum | cut -c1-10)
 cp site/*.html site/*.js site/*.css "$DESTINO/"
 
-for f in "$DESTINO"/*.js "$DESTINO"/index.html; do
+for f in "$DESTINO"/*.js "$DESTINO"/*.html; do
   # `from './x.js'` e `src="app.js"` -> mesmos ficheiros, endereço novo.
   # Chavetas a serio nas referencias: `$1` seguido do hash, que comeca por um
   # digito, e lido pelo perl como UMA variavel `$15183...` — o grupo capturado
   # desaparece em silencio e a linha sai vazia. Aconteceu.
   perl -pi -e "s{(from\s+['\"])\./([a-z0-9-]+\.js)(['\"])}{\${1}./\${2}?v=$V\${3}}g" "$f"
-  perl -pi -e "s{(src=\")(app\.js)(\")}{\${1}\${2}?v=$V\${3}}g" "$f"
+  # Qualquer script local, e nao so o app.js: ha duas paginas agora, e a
+  # segunda ficava presa na cache do telemovel durante dez minutos.
+  perl -pi -e "s{(src=\")([a-z0-9-]+\.js)(\")}{\${1}\${2}?v=$V\${3}}g" "$f"
 done
-perl -pi -e "s{(<span id=\"versao\">)[^<]*(</span>)}{\${1}$V\${2}}" "$DESTINO/index.html"
+perl -pi -e "s{(<span id=\"versao\">)[^<]*(</span>)}{\${1}$V\${2}}" "$DESTINO"/*.html
 
 echo "publicado em $DESTINO  ·  versao $V"
-grep -o "v=$V" "$DESTINO/app.js" | head -1
+# Provar que o carimbo entrou mesmo, em vez de confiar. Cada pagina e cada
+# ficheiro de codigo tem de o ter — foi assim que uma vez publiquei para a
+# pasta errada e o script disse "publicado".
+for f in "$DESTINO"/index.html "$DESTINO"/twitch.html "$DESTINO"/app.js "$DESTINO"/twitch-app.js; do
+  grep -q "v=$V" "$f" || { echo "SEM CARIMBO: $f" >&2; exit 1; }
+done
+echo "carimbo v=$V em todas as paginas" 
