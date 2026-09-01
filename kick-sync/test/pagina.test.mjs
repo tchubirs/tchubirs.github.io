@@ -1473,3 +1473,50 @@ test('marcar uma kill a sério faz a página procurar o mesmo som na noite',
     assert.deepEqual(erros, []);
     await p.close();
   });
+
+// "Eu aperto em Rever e o vídeo não toca, nenhum momento o vídeo toca."
+//
+// Não era o telemóvel dele. O iOS recusa o primeiro `play()` de uma página
+// porque não veio de um toque — e a partir daí o vídeo ficava parado para
+// sempre, porque quando o leitor já estava no MESMO vídeo a página acertava o
+// instante e saía sem mandar tocar.
+//
+// Aqui o iOS é imitado à letra: o primeiro `play()` é recusado, como lá.
+test('depois de o browser recusar o primeiro play, Rever volta a mandar tocar',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await p.addInitScript(() => {
+      // O iOS à letra: recusa e o vídeo FICA PARADO. Recusar só a primeira
+      // vez não servia — o Chromium punha `paused` a falso na segunda, e o
+      // caso que interessa é justamente o de um leitor que continua parado.
+      window.__plays = [];
+      HTMLMediaElement.prototype.play = function () {
+        window.__plays.push(Date.now());
+        return Promise.reject(new DOMException('NotAllowedError'));
+      };
+    });
+    await kickFalsa(p, { canais: ['tchubi'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 15000 });
+    await p.click('#mais1m');
+    await p.click('#marcarKill');
+    await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
+
+    // O leitor está mesmo parado, como no telemóvel dele.
+    assert.equal(await p.evaluate(() => document.querySelector('.tile video').paused), true);
+    const antes = await p.evaluate(() => window.__plays.length);
+    await p.locator('#listaMomentos .ver').click();
+    await p.waitForFunction((n) => window.__plays.length > n, antes, { timeout: 5000 });
+    assert.ok(await p.evaluate(() => window.__plays.length) > antes,
+      'Rever tem de mandar tocar mesmo com o leitor já no mesmo vídeo');
+
+    // E saltar no tempo também: cada gesto dele tem de tentar outra vez, senão
+    // um vídeo parado por engano fica parado a noite toda.
+    const meio = await p.evaluate(() => window.__plays.length);
+    await p.click('#mais10s');
+    await p.waitForFunction((n) => window.__plays.length > n, meio, { timeout: 5000 });
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
