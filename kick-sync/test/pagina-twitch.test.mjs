@@ -267,3 +267,22 @@ test('mudar de noite fecha os players da noite anterior',
     assert.deepEqual(erros, []);
     await p.close();
   });
+
+// O titulo do separador. Antes era `app.titulo` a martelo dentro do
+// `aplicarIdioma`, e por isso a segunda pagina ficava com o titulo da
+// primeira — a unica coisa que se ve quando ha dez separadores abertos.
+test('cada página tem o seu próprio título, em qualquer língua',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p } = await abrir();
+    await twitchFalsa(p);
+    await p.goto(`http://127.0.0.1:${PORTA}/twitch.html`, { waitUntil: 'networkidle' });
+    assert.match(await p.title(), /Twitch/);
+
+    await p.selectOption('#idioma', 'en');
+    assert.match(await p.title(), /Twitch/, 'muda de lingua, continua a ser a pagina da Twitch');
+
+    // E a da Kick continua a ser a da Kick.
+    await p.goto(`http://127.0.0.1:${PORTA}/index.html`, { waitUntil: 'networkidle' });
+    assert.ok(!/Twitch/.test(await p.title()), await p.title());
+    await p.close();
+  });

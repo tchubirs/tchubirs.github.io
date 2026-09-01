@@ -92,6 +92,7 @@ const TEXTOS = {
     'montagem.titulo': 'Montagem',
     'app.twitch': 'Versão Twitch',
     'tw.canais': 'Canais',
+    'tw.titulo': 'Replay Twitch — os POVs lado a lado',
     'tw.procurar': 'Procurar',
     'tw.procurarPh': 'procurar um canal pelo nome',
     'tw.canaisPh': 'um canal por linha',
@@ -281,6 +282,7 @@ const TEXTOS = {
     'montagem.titulo': 'Edit list',
     'app.twitch': 'Twitch version',
     'tw.canais': 'Channels',
+    'tw.titulo': 'Replay Twitch — the POVs side by side',
     'tw.procurar': 'Search',
     'tw.procurarPh': 'search a channel by name',
     'tw.canaisPh': 'one channel per line',
@@ -470,6 +472,7 @@ const TEXTOS = {
     'montagem.titulo': 'Montaje',
     'app.twitch': 'Versión Twitch',
     'tw.canais': 'Canales',
+    'tw.titulo': 'Replay Twitch — los POV lado a lado',
     'tw.procurar': 'Buscar',
     'tw.procurarPh': 'buscar un canal por el nombre',
     'tw.canaisPh': 'un canal por línea',
@@ -622,7 +625,11 @@ export function aplicarIdioma(raiz = document) {
   for (const el of raiz.querySelectorAll('[data-t-titulo]')) el.title = t(el.dataset.tTitulo);
   for (const el of raiz.querySelectorAll('[data-t-aria]')) el.setAttribute('aria-label', t(el.dataset.tAria));
   if (raiz === document) {
-    document.title = t('app.titulo');
+    // Cada pagina diz qual e a sua chave de titulo, no proprio <title>. Antes
+    // isto era `app.titulo` a martelo, e a segunda pagina ficava com o titulo
+    // da primeira no separador do browser — que e a unica coisa que se ve
+    // quando ha dez separadores abertos.
+    if (!document.querySelector('title')?.dataset.t) document.title = t('app.titulo');
     document.documentElement.lang = actual;
   }
 }
