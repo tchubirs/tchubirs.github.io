@@ -1,4 +1,5 @@
-import { energia, chao, impulsos, lutas, FPS, TAXA_TIROS } from './tiros.js?v=416b743c46';
+import { energia, chao, impulsos, lutas, FPS, TAXA_TIROS } from './tiros.js?v=c5dc96cb16';
+import { recortar } from './aprender.js?v=c5dc96cb16';
 
 // Achar as kills sozinho — pela forca do som.
 //
@@ -57,7 +58,7 @@ export async function varrerNoite({
     // de disparo, e o pico praticamente mais alto do grafico". A forca ERA o
     // sinal, e eu dividia-a fora antes de olhar.
     const env = som ? energia(som, taxaSom) : new Float32Array(Math.round(duracaoS * FPS));
-    partes.push({ t, env });
+    partes.push({ t, env, som });
     ouvidoMs += duracaoS * 1000;
   }
 
@@ -74,6 +75,22 @@ export async function varrerNoite({
   // passa a ter os seus proprios "picos mais altos", e a lista enche-se de
   // silencio com estalidos.
   const piso = chao(tudo);
+  // Guardar a FORMA de cada estouro, para depois se poder aprender com uma
+  // kill que ele confirme. Sao 60 ms cada um: uma noite inteira cabe em
+  // dezenas de megas, e sem isto aprender obrigava a baixar a noite outra vez.
+  const estouros = [];
+  for (const { t, env, som } of partes) {
+    if (!som) continue;
+    const piso2 = piso;
+    for (const im of impulsos(env, piso2, opcoes)) {
+      const recorte = recortar(som, taxaSom, im.bloco / FPS);
+      if (recorte) estouros.push({ ms: Math.round(t + (im.bloco / FPS) * 1000), altura: im.altura, recorte });
+    }
+  }
+  // Um tecto: numa noite muito barulhenta isto podia crescer sem fim, e o que
+  // interessa sao os mais altos.
+  estouros.sort((a, b) => b.altura - a.altura);
+  estouros.length = Math.min(estouros.length, 4000);
   // Ordenadas pelo tiro mais alto, e cortadas por cima. Numa noite de seis
   // horas cortar as mais baixas e cortar as que ele nao quer ver: o headshot e
   // o som mais alto do jogo. Quinze por hora e o que ele consegue rever.
@@ -87,6 +104,7 @@ export async function varrerNoite({
       pico: g.pico,
       duracaoS: g.duracaoS,
     })),
+    estouros,
     bytes,
     curva: tudo,
   };
