@@ -1,0 +1,85 @@
+/* Os tokens. Depois deste ficheiro, nenhum valor solto no meio das regras.
+ *
+ * Fundo neutro e dessaturado de propósito: num sítio onde se decide o que
+ * cortar, a coisa mais clara do ecrã tem de ser o vídeo. Tudo o resto recua.
+ *
+ * UM acento, e só para duas coisas: a acção principal e a marcação de corte.
+ * Estava a ser usado no botão, na borda do foco, na faixa do tempo, no nome do
+ * canal, na ficha da vítima e no Clipar — seis sítios, o que é o mesmo que
+ * nenhum. As cores de estado (aviso, erro, ok) não são acentos: pertencem à
+ * informação e nunca à decoração.
+ */
+:root {
+  color-scheme: dark;
+
+  /* ── superfícies ─────────────────────────────────────────────────────── */
+  --fundo: #0d0e10;          /* a página */
+  --caixa: #15171a;          /* uma superfície levantada */
+  --caixa-2: #1c1f23;        /* levantada sobre a levantada (dentro de cartões) */
+  --borda: #24272c;
+  --borda-forte: #333941;
+  --realce: #ffffff10;       /* hover sobre superfície */
+  --video-fundo: #000;       /* atrás do vídeo, e só aí */
+  --sobre-video: #000000b3;  /* fundo dos controlos por cima do vídeo */
+  --vidro: #000000c7;        /* o fundo por trás de uma janela modal */
+
+  /* ── texto ───────────────────────────────────────────────────────────── */
+  --texto: #e7e9ed;
+  --texto-2: #a2a9b4;        /* secundário — passa AA sobre --fundo */
+  --texto-3: #7b828d;        /* terciário: só para o que é mesmo acessório */
+
+  /* ── acento (um só) ──────────────────────────────────────────────────── */
+  --acento: #53fc18;         /* o verde da Kick */
+  --acento-fraco: #53fc1826;
+  --sobre-acento: #0b0d10;   /* texto por cima do acento */
+
+  /* ── estado ──────────────────────────────────────────────────────────── */
+  --ok: #4ade80;
+  --aviso: #ffb02e;
+  --aviso-fundo: #ffb02e1a;
+  --erro: #ff7a7a;
+  --erro-fundo: #ff7a7a1a;
+  --marca-twitch: #a970ff;   /* a marca de outra gente, não um acento nosso */
+
+  /* ── espaço ──────────────────────────────────────────────────────────── */
+  --e1: 4px;
+  --e2: 8px;
+  --e3: 12px;
+  --e4: 16px;
+  --e5: 24px;
+  --e6: 32px;
+
+  /* ── raio ────────────────────────────────────────────────────────────── */
+  --r1: 6px;
+  --r2: 10px;
+  --r3: 999px;
+
+  /* ── tipografia: cinco tamanhos, e não oito ──────────────────────────── */
+  --t-micro: 11px;   /* etiquetas, kbd */
+  --t-menor: 13px;   /* secundário, notas */
+  --t-base: 15px;    /* corpo e controlos */
+  --t-maior: 18px;   /* título de secção */
+  --t-titulo: 24px;  /* nome da página */
+  --letra: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* Números de tempo em tabular: sem isto o relógio dança a cada décimo. */
+  --letra-numero: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* ── elevação ────────────────────────────────────────────────────────── */
+  --sombra-1: 0 1px 2px #00000059;
+  --sombra-2: 0 12px 32px #00000080;
+
+  /* ── movimento ───────────────────────────────────────────────────────── */
+  --rapido: 120ms;
+  --lento: 200ms;
+
+  /* Alvo de toque mínimo. Um botão de 28 px num telemóvel é uma aposta. */
+  --toque: 44px;
+}
+
+/* Quem pediu menos movimento não leva nenhum. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
+  }
+}

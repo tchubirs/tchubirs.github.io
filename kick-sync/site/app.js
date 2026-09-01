@@ -203,6 +203,46 @@ document.addEventListener('click', (e) => {
   if (!e.target.closest('.procura')) fecharSugestoes();
 });
 
+/**
+ * Em que passo do caminho ele está.
+ *
+ * Não muda nada do que a página faz: lê o estado que já existe e acende o
+ * passo certo. Quem chega vê duas caixas vazias e um botão, e isto é a única
+ * explicação de que precisa.
+ */
+function pintarPassos() {
+  const passo = estado.momentos.length || estado.marca.de != null ? 3
+    : estado.linhas.length ? 2 : 1;
+  for (const li of document.querySelectorAll('#passos li')) {
+    const n = Number(li.dataset.passo);
+    li.classList.toggle('aqui', n === passo);
+    li.classList.toggle('feito', n < passo);
+  }
+}
+
+/**
+ * Quanto se pode confiar no alinhamento, dito em voz alta.
+ *
+ * Este é o pior caso do produto e não tinha sítio nenhum na interface: um
+ * ângulo desalinhado exporta um clipe errado com ar de certo, e ninguém dá por
+ * nada até estar montado. O dado já existia — `linha.relogio` diz `exato`,
+ * `parcial` ou `nenhum` — e estava numa letra pequena no canto de um quadrado.
+ */
+function pintarConfianca() {
+  const caixa = $('confianca');
+  if (!caixa) return;
+  const linhas = estado.linhas;
+  if (!linhas.length) { caixa.textContent = ''; caixa.className = 'confianca'; return; }
+  const semRelogio = linhas.filter((l) => l.relogio !== 'exato');
+  const ajustados = Object.values(estado.nudges).filter((v) => v).length;
+  const estadoConf = !semRelogio.length ? 'exacto'
+    : semRelogio.length === linhas.length ? 'nenhum' : 'parcial';
+  caixa.className = `confianca ${estadoConf}`;
+  caixa.textContent = t(`confianca.${estadoConf}`, {
+    n: estadoConf === 'exacto' ? linhas.length : semRelogio.length,
+  }) + (ajustados ? t('confianca.ajustado', { n: ajustados }) : '');
+}
+
 // ── carregar ────────────────────────────────────────────────────────────────
 
 /**
@@ -457,6 +497,7 @@ async function abrirNoite(noite) {
   $('margensVitima').hidden = soUmCanal();
   montarGrade();
   seguirVideo();
+  pintarConfianca();
   pintarFaixas();
   irPara(estado.agoraMs);
   pintarMarca();
@@ -854,6 +895,7 @@ function empurrar(slug, ms) {
   const { nudges } = comNudge({ nudges: estado.nudges }, slug, (estado.nudges[slug] || 0) + ms);
   estado.nudges = nudges;
   irPara(estado.agoraMs);
+  pintarConfianca();
   guardar();
   // O tamanho do corte é por canal, e mexer no relógio de um canal muda quem
   // aparece na janela marcada. Não repintar deixava a lista a mentir.
@@ -1103,6 +1145,7 @@ async function alinhar() {
         ? t('alinhar.naoOuvi', { lista: [...new Set(r.problemas.map((x) => x.canal))].join(', ') })
         : '');
     nota.classList.toggle('mau', !Object.keys(r.ajustesMs).length);
+    pintarConfianca();
     montarGrade();
     irPara(estado.agoraMs);
   } catch (e) {
@@ -1502,6 +1545,7 @@ function pintarMomentos() {
   }
   pintarRegua();
   pintarSelecao();
+  pintarPassos();
   const total = planoDaMontagem(lista, canais, { filmava }).length;
   $('baixarMontagem').disabled = !total;
   const semVitima = sozinho ? 0 : lista.filter((m) => !temMorte(m)).length;
@@ -2129,8 +2173,20 @@ for (const [id, delta] of [['menosClipe', -1000], ['maisClipe', 1000]]) {
 $('modalClipe').onclick = (e) => { if (e.target === $('modalClipe')) fecharClipe(); };
 $('recomecar').onclick = recomecar;
 
+const alternarAjuda = (abrir) => { $('modalAjuda').hidden = !abrir; };
+$('ajuda').onclick = () => alternarAjuda(true);
+$('fecharAjuda').onclick = () => alternarAjuda(false);
+$('modalAjuda').onclick = (e) => { if (e.target.id === 'modalAjuda') alternarAjuda(false); };
+
 document.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+  // O ponto de interrogação abre a lista dos atalhos, e o Esc fecha-a. Não
+  // acrescenta comportamento nenhum: torna descobrível o que já existia.
+  if (!$('modalAjuda').hidden) {
+    if (e.key === 'Escape' || e.key === '?') alternarAjuda(false);
+    return;
+  }
+  if (e.key === '?') { alternarAjuda(true); return; }
   const passo = e.shiftKey ? 10_000 : 1000;
   // Com a janela do clipe aberta, o teclado é dela: Esc fecha, e o resto não
   // pode andar com o tempo por baixo do que se está a cortar.

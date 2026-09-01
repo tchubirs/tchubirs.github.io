@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title data-t="app.titulo">Replay — vários ângulos, um relógio</title>
+<link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="estilo.css">
 </head>
 <body>
@@ -12,8 +13,18 @@
   <div class="topo">
     <h1 data-t="app.nome">Replay</h1>
     <a class="paraTwitch" href="twitch.html" data-t="app.twitch">Twitch</a>
+    <button id="ajuda" class="discreto" data-t-aria="ajuda.abrir" aria-haspopup="dialog">?</button>
     <select id="idioma" aria-label="idioma"></select>
   </div>
+  <!-- O caminho todo, em três passos e sem scroll.
+       Quem chega não sabe o que isto faz nem por onde começa; via duas caixas
+       vazias e um botão. O passo em que está fica aceso, e os outros dois
+       dizem o que vem a seguir — que é a única explicação de que precisa. -->
+  <ol id="passos" class="passos">
+    <li data-passo="1" class="aqui"><b>1</b><span data-t="passo.colar">Cola os canais</span></li>
+    <li data-passo="2"><b>2</b><span data-t="passo.rever">Revê alinhado</span></li>
+    <li data-passo="3"><b>3</b><span data-t="passo.exportar">Marca e exporta</span></li>
+  </ol>
 </header>
 
 <section id="entrada">
@@ -34,13 +45,24 @@
   <p id="avisoPlayer" class="nota mau" hidden></p>
 </section>
 
+<!-- A noite e o estado dos canais numa barra só. Eram duas secções com
+     títulos próprios para dois controlos — peso a mais para o que é, no
+     fundo, "qual noite e quem lá estava". -->
 <section id="noites" hidden>
-  <select id="noite" data-t-aria="noite.label"></select>
+  <div class="linha barraSessao">
+    <label class="campo">
+      <span class="rotuloCampo" data-t="noite.label">Noite</span>
+      <select id="noite" data-t-aria="noite.label"></select>
+    </label>
+    <output id="confianca" class="confianca"></output>
+  </div>
   <span class="nota" id="resumoNoite"></span>
 </section>
 
+<!-- Fora do bloco da noite, e não dentro: os avisos de canal ("não existe",
+     "quiseste dizer") aparecem QUANDO NÃO HÁ noite nenhuma para mostrar, e
+     aninhados desapareciam com ela. -->
 <section id="canaisEstado" hidden>
-  <h2 data-t="canais.titulo">Canais</h2>
   <ul id="listaCanais" class="canais"></ul>
 </section>
 
@@ -172,6 +194,27 @@
   <ul id="fila" class="fila"></ul>
   </div><!-- .palcoLado -->
 </section>
+
+<!-- Os atalhos que já existem, num sítio onde se possam descobrir.
+     Não acrescenta tecla nenhuma: lista as que o teclado já responde. Um
+     atalho que ninguém sabe que existe é código morto. -->
+<div id="modalAjuda" class="modal" hidden>
+  <div class="modalCaixa estreita" role="dialog" aria-modal="true" data-t-aria="ajuda.titulo" aria-label="Atalhos">
+    <div class="modalTopo">
+      <b data-t="ajuda.titulo">Atalhos</b>
+      <button id="fecharAjuda" class="discreto" data-t-aria="ajuda.fechar" aria-label="fechar">✕</button>
+    </div>
+    <dl class="atalhos">
+      <dt><kbd>Espaço</kbd></dt><dd data-t="ajuda.pausa">Pausa e continua</dd>
+      <dt><kbd>J</kbd> <kbd>L</kbd></dt><dd data-t="ajuda.andar">Recua e avança 1 s (com Shift, 10 s)</dd>
+      <dt><kbd>I</kbd> <kbd>O</kbd></dt><dd data-t="ajuda.marca">Marca entrada e saída</dd>
+      <dt><kbd>M</kbd></dt><dd data-t="ajuda.kill">Marca kill</dd>
+      <dt><kbd>C</kbd></dt><dd data-t="ajuda.clipe">Abre o clipe</dd>
+      <dt><kbd>,</kbd> <kbd>.</kbd></dt><dd data-t="ajuda.ajuste">Ajusta o ângulo em foco</dd>
+      <dt><kbd>Esc</kbd></dt><dd data-t="ajuda.fecha">Fecha esta janela</dd>
+    </dl>
+  </div>
+</div>
 
 <!-- Criar clipe: uma janela por cima, com a barra de corte e um limite de
      180 s. E o caminho para "quero um so, agora" — a montagem e para depois. -->
