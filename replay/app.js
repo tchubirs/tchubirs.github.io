@@ -5,22 +5,23 @@
 // bottom rung of Kick's ladder and is what makes thirty tiles a home-connection
 // problem rather than a server problem.
 
-import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=6bed047769';
-import { linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink } from './relogio.js?v=6bed047769';
-import { cortarTodosOsAngulos } from './baixar.js?v=6bed047769';
-import { alinharPeloSom, custoEstimadoMB } from './alinhar.js?v=6bed047769';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=6bed047769';
+import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=14a4325fba';
+import { linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink } from './relogio.js?v=14a4325fba';
+import { cortarTodosOsAngulos } from './baixar.js?v=14a4325fba';
+import { alinharPeloSom, custoEstimadoMB } from './alinhar.js?v=14a4325fba';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=14a4325fba';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
   alternarVitima, filtrar, temMorte,
-} from './momentos.js?v=6bed047769';
-import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=6bed047769';
-import { criarApanhador } from './frames.js?v=6bed047769';
-import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=6bed047769';
-import { somDoCanal } from './alinhar.js?v=6bed047769';
-import { MAXIMO_S, mover, janelaInicial, nomeDoClipe } from './clipe.js?v=6bed047769';
-import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=6bed047769';
-import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=6bed047769';
+} from './momentos.js?v=14a4325fba';
+import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=14a4325fba';
+import { criarZip, crc32 } from './zip.js?v=14a4325fba';
+import { criarApanhador } from './frames.js?v=14a4325fba';
+import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=14a4325fba';
+import { somDoCanal } from './alinhar.js?v=14a4325fba';
+import { MAXIMO_S, mover, janelaInicial, nomeDoClipe } from './clipe.js?v=14a4325fba';
+import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=14a4325fba';
+import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=14a4325fba';
 
 const $ = (id) => document.getElementById(id);
 const estado = {
@@ -1389,6 +1390,9 @@ async function baixarMontagem() {
 
   const cache = new Map();
   const jaTemos = new Map();
+  // A soma de controlo calcula-se agora, com os bytes ja na mao. Guardar os
+  // clipes para os reler no fim era pedir meio giga de memoria uma segunda vez.
+  const paraZip = [];
   let feitos = 0;
 
   for (const clipe of plano) {
@@ -1414,9 +1418,11 @@ async function baixarMontagem() {
         continue;
       }
       const nome = `${clipe.prefixo}_${nomeDoFicheiro({ canal: clipe.canal, quandoMs: clipe.deMs })}`;
+      const blob = new Blob([r.bytes], { type: r.tipo });
+      paraZip.push({ nome, blob, crc: crc32(r.bytes), tamanho: r.bytes.length });
       linhaDeFicheiro(item, {
         nome,
-        url: guardarFicheiro(new Blob([r.bytes], { type: r.tipo })),
+        url: guardarFicheiro(blob),
         nota: `${(r.bytes.length / 1048576).toFixed(1)} MB · `
           + `${clipe.papel === 'protagonista' ? t('fila.tuaPov') : t('fila.quemMorreu')}`,
       });
@@ -1427,8 +1433,39 @@ async function baixarMontagem() {
   }
 
   $('estadoMontagem').textContent = t('montagem.pronto', { feitos, total: plano.length });
+  oferecerZip(paraZip);
   $('baixarMontagem').disabled = false;
   estado.cancelar = null;
+}
+
+/**
+ * Trinta e seis ficheiros num so, com um clique em vez de trinta e seis.
+ *
+ * O ZIP nao volta a ler nada: os `Blob` sao os mesmos que ja estao na lista, e
+ * juntar `Blob` nao copia bytes nenhuns — o browser guarda-os em disco. Por
+ * isso isto e quase de graca, mesmo com meio giga de clipes.
+ */
+function oferecerZip(ficheiros) {
+  const caixa = $('zip');
+  caixa.innerHTML = '';
+  // Com um ficheiro so, o ZIP e um passo a mais para chegar ao mesmo sitio.
+  if (ficheiros.length < 2) return;
+  let blob;
+  try {
+    blob = criarZip(ficheiros);
+  } catch (e) {
+    caixa.innerHTML = `<span class="nota mau">${t(e.message === 'ZIP-GRANDE-DEMAIS'
+      ? 'fila.zipGrande' : 'fila.zipErro')}</span>`;
+    return;
+  }
+  const mb = ficheiros.reduce((s, f) => s + f.tamanho, 0) / 1048576;
+  const nome = `montagem-${new Date().toISOString().slice(0, 10)}.zip`;
+  // O endereco do ZIP entra na conta da memoria como os outros: e ele que
+  // segura os bytes enquanto existir.
+  const url = guardarFicheiro(blob, { auxiliar: true });
+  caixa.innerHTML = `<a class="botaoZip" href="${url}" download="${nome}">`
+    + `${t('fila.zip', { n: ficheiros.length })}</a> `
+    + `<span class="nota">${mb.toFixed(0)} MB</span>`;
 }
 
 // ── marcar e cortar ─────────────────────────────────────────────────────────
@@ -1717,9 +1754,16 @@ async function guardarClipe() {
  * trabalho enchia a memória do browser com clipes já guardados no disco, e a
  * página ia ficando lenta sem razão visível.
  */
-function guardarFicheiro(blob) {
+/**
+ * @param {Blob} blob
+ * @param {boolean} auxiliar para um `Blob` que so aponta para outros que ja
+ *   estao na conta. O ZIP da montagem e feito dos mesmos pedacos que ja estao
+ *   na lista: conta-lo dizia-lhe "3 ficheiros, o dobro dos megas" quando estao
+ *   dois na memoria. O endereco entra na lista na mesma — e preciso solta-lo.
+ */
+function guardarFicheiro(blob, { auxiliar = false } = {}) {
   const url = URL.createObjectURL(blob);
-  estado.ficheiros.push({ url, bytes: blob.size });
+  estado.ficheiros.push({ url, bytes: blob.size, auxiliar });
   mostrarMemoria();
   return url;
 }
@@ -1745,9 +1789,10 @@ function linhaDeFicheiro(item, { nome, url, nota }) {
 }
 
 function mostrarMemoria() {
-  const mb = estado.ficheiros.reduce((s, f) => s + f.bytes, 0) / 1048576;
-  $('memoria').textContent = estado.ficheiros.length
-    ? t('fila.memoria', { n: estado.ficheiros.length, mb: mb.toFixed(0) })
+  const reais = estado.ficheiros.filter((f) => !f.auxiliar);
+  const mb = reais.reduce((s, f) => s + f.bytes, 0) / 1048576;
+  $('memoria').textContent = reais.length
+    ? t('fila.memoria', { n: reais.length, mb: mb.toFixed(0) })
     : '';
   $('memoria').classList.toggle('mau', mb > 500);
 }
@@ -1758,6 +1803,9 @@ function limparFila() {
   for (const f of estado.ficheiros) URL.revokeObjectURL(f.url);
   estado.ficheiros = [];
   $('fila').innerHTML = '';
+  // O ZIP tambem: deixar la o link depois de soltar o endereco dava um botao
+  // que parecia bom e descarregava um ficheiro vazio.
+  $('zip').innerHTML = '';
   mostrarMemoria();
 }
 

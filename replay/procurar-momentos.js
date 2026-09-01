@@ -1,4 +1,4 @@
-import { envolvente, TAXA } from './sinal.js?v=6bed047769';
+import { envolvente, TAXA } from './sinal.js?v=14a4325fba';
 
 // Achar as kills sozinho — a conta.
 //

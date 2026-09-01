@@ -385,3 +385,12 @@ footer { margin-top: 32px; border-top: 1px solid var(--borda); padding-top: 12px
   width: 100%; background: var(--fundo); color: var(--texto);
   border: 1px solid var(--borda); border-radius: 8px; padding: 9px 11px; font: inherit;
 }
+
+/* O ZIP da montagem toda. E o unico botao desta zona que faz o trabalho todo
+   de uma vez, e tem de se ver que e esse. */
+#zip:empty { display: none; }
+.botaoZip {
+  display: inline-block; padding: 8px 16px; border-radius: 8px; font-weight: 600;
+  background: var(--acento); color: #000; text-decoration: none;
+}
+.botaoZip:hover { filter: brightness(1.1); }
