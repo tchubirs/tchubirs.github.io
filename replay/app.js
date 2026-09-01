@@ -5,25 +5,25 @@
 // bottom rung of Kick's ladder and is what makes thirty tiles a home-connection
 // problem rather than a server problem.
 
-import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=e8bcdf0223';
+import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=9cf237b7f3';
 import {
   linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo,
-} from './relogio.js?v=e8bcdf0223';
-import { cortarTodosOsAngulos } from './baixar.js?v=e8bcdf0223';
-import { alinharPeloSom, custoEstimadoMB } from './alinhar.js?v=e8bcdf0223';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=e8bcdf0223';
+} from './relogio.js?v=9cf237b7f3';
+import { cortarTodosOsAngulos } from './baixar.js?v=9cf237b7f3';
+import { alinharPeloSom, custoEstimadoMB } from './alinhar.js?v=9cf237b7f3';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=9cf237b7f3';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
   alternarVitima, filtrar, temMorte,
-} from './momentos.js?v=e8bcdf0223';
-import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=e8bcdf0223';
-import { criarZip, crc32 } from './zip.js?v=e8bcdf0223';
-import { criarApanhador } from './frames.js?v=e8bcdf0223';
-import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=e8bcdf0223';
-import { somDoCanal } from './alinhar.js?v=e8bcdf0223';
-import { MAXIMO_S, mover, janelaInicial, nomeDoClipe } from './clipe.js?v=e8bcdf0223';
-import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=e8bcdf0223';
-import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=e8bcdf0223';
+} from './momentos.js?v=9cf237b7f3';
+import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=9cf237b7f3';
+import { criarZip, crc32 } from './zip.js?v=9cf237b7f3';
+import { criarApanhador } from './frames.js?v=9cf237b7f3';
+import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=9cf237b7f3';
+import { somDoCanal } from './alinhar.js?v=9cf237b7f3';
+import { MAXIMO_S, mover, janelaInicial, nomeDoClipe } from './clipe.js?v=9cf237b7f3';
+import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=9cf237b7f3';
+import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=9cf237b7f3';
 
 const $ = (id) => document.getElementById(id);
 const estado = {

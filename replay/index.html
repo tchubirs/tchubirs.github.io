@@ -19,14 +19,14 @@
 <section id="entrada">
   <div class="procura">
     <input id="procurar" type="search" autocomplete="off" spellcheck="false"
-      data-t-aria="procurar.label" data-t-ph="procurar.ph" placeholder="escreve o início do nome…">
+      data-t-aria="procurar.label" data-t-ph="procurar.ph" placeholder="buscar streamer">
     <ul id="sugestoes" class="sugestoes" hidden></ul>
   </div>
 
   <textarea id="canais" rows="4" spellcheck="false" data-t-aria="canais.label"
     data-t-ph="canais.ph" placeholder="canais da Kick, um por linha"></textarea>
   <div class="linha">
-    <button id="carregar" class="principal" data-t="canais.carregar">Carregar a noite</button>
+    <button id="carregar" class="principal" data-t="canais.carregar">Carregar</button>
     <span id="estadoCarga" class="nota"></span>
   </div>
   <!-- Próprio sítio, e não a linha de progresso: o aviso do leitor tem de
@@ -187,10 +187,10 @@
   <!-- A versao, a serio e visivel. O GitHub Pages serve com max-age=600 e um
        telemovel guarda o app.js antigo; sem isto, "ja corrigi" e "continua
        igual" sao as duas verdadeiras ao mesmo tempo e ninguem sai dali. -->
-  <p class="nota"><span data-t="app.rodape">Tudo acontece no teu navegador. Os VODs são de quem os gravou.</span> · <span id="versao">e8bcdf0223</span></p>
+  <p class="nota"><span data-t="app.rodape">Se fechares sem querer, fica tudo guardado neste telemóvel.</span> · <span id="versao">9cf237b7f3</span></p>
 </footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.17/hls.min.js"></script>
-<script type="module" src="app.js?v=e8bcdf0223"></script>
+<script type="module" src="app.js?v=9cf237b7f3"></script>
 </body>
 </html>
