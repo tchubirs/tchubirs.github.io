@@ -13,6 +13,16 @@ button, .tile, input, select, textarea, label, kbd {
 }
 button { user-select: none; }
 
+/* `hidden` esconde. Ponto.
+   Sem isto, qualquer regra com `display` — `.linha` é flex, `.corte` é grid —
+   ganha ao `display: none` que o atributo traz, e o elemento aparece na
+   mesma. Andei a apagar isto um a um (`#modalClipe`, `#palco`, `#entrada`) e
+   ainda havia dois por apagar: `#margensVitima` e `#listaCorte`, que
+   apareciam com a página acabada de carregar. Uma linha resolve todos, os
+   deste ano e os do ano que vem. O `!important` é para isto mesmo: o
+   atributo é uma afirmação, não uma sugestão. */
+[hidden] { display: none !important; }
+
 body {
   margin: 0;
   padding: 20px;
@@ -20,11 +30,36 @@ body {
   color: var(--texto);
   font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   /* 1400 era estreito de mais num ecrã grande: a página ficava uma tira ao
-     meio com metade do monitor vazio de cada lado. */
+     meio com metade do monitor vazio de cada lado. 1760 era o outro extremo:
+     a 1440 não sobrava margem nenhuma e o primeiro rótulo nascia colado ao
+     vidro. A margem resolve-se com padding; a largura fica, porque o palco
+     (vídeo mais montagem) precisa mesmo do monitor todo — e há um teste que
+     o exige. A medida curta é só para o formulário, em baixo. */
   max-width: 1760px;
   margin-inline: auto;
 }
+@media (min-width: 720px) { body { padding: var(--e6); } }
 
+/* ── uma caixa ──────────────────────────────────────────────────────────────
+   O que é um bloco de trabalho tem de parecer um bloco. Os campos do início
+   flutuavam directamente sobre o fundo da página, sem nada a dizer onde
+   começavam nem onde acabavam. */
+/* `.bloco` e nao `.cartao`: `.cartao` ja existia, e e a ficha da vitima —
+   118px de largura e `display: grid`. Chamei-lhe o mesmo nome, e a seccao do
+   inicio encolheu para 118px enquanto a da noite, que devia estar escondida,
+   apareceu: `display` ganha outra vez ao `hidden`. E a terceira. Duas das
+   tres foram nome repetido ou display por cima de hidden — por isso fica
+   escrito aqui tambem. */
+.bloco {
+  background: var(--caixa); border: 1px solid var(--borda);
+  border-radius: var(--r2); padding: var(--e5);
+  /* Um formulário com a largura de um monitor obriga os olhos a atravessá-lo
+     entre o rótulo e a caixa. O palco quer largura; isto não. */
+  max-width: var(--largura-forma);
+}
+@media (max-width: 620px) { .bloco { padding: var(--e4); } }
+
+header { border-bottom: 1px solid var(--borda); margin-bottom: var(--e5); }
 h1 { font-size: var(--t-titulo); margin: 0; letter-spacing: -.01em; }
 .topo { display: flex; align-items: center; gap: 12px; }
 .topo #idioma { width: auto; padding: 5px 8px; font-size: var(--t-menor); margin-left: auto; }
@@ -212,7 +247,13 @@ kbd {
 .saltos {
   display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 10px;
 }
-.saltos button { padding: 10px 4px; white-space: nowrap; }
+.saltos button {
+  padding: 10px 4px; white-space: nowrap;
+  /* Sete botões do mesmo peso em duas filas: nada dizia qual era o trabalho.
+     Andar no tempo é navegação, e a navegação cala-se. */
+  background: transparent; color: var(--texto-2);
+}
+.saltos button:hover { background: var(--realce); color: var(--texto); }
 
 /* Uma coluna de nomes igual à das faixas, para que o mesmo instante caia no
    mesmo x na barra e no cursor. */
@@ -223,7 +264,7 @@ kbd {
 .faixa { display: grid; grid-template-columns: 92px 1fr; gap: 8px; align-items: center; }
 .faixas { --coluna: 100px; }
 .faixa .nome {
-  font-size: var(--t-menor); color: var(--texto-2); white-space: nowrap;
+  font-size: var(--t-menor); font-weight: 600; color: var(--texto-2); white-space: nowrap;
   overflow: hidden; text-overflow: ellipsis;
 }
 .faixa.principal .nome { color: var(--texto); }
@@ -245,12 +286,12 @@ kbd {
 }
 .regua .kill {
   position: absolute; top: 0; height: 100%; width: 14px; transform: translateX(-50%);
-  background: none; border: 0; padding: 0; cursor: pointer; color: var(--acento);
+  background: none; border: 0; padding: 0; cursor: pointer; color: var(--marcador);
   font-size: var(--t-micro); line-height: 1; text-align: center;
 }
 .regua .kill::before {
   content: ''; position: absolute; left: 50%; top: 0; width: 2px; height: 9px;
-  background: var(--acento);
+  background: var(--marcador);
 }
 .regua .kill span { position: absolute; top: 9px; left: 50%; transform: translateX(-50%); }
 
@@ -625,7 +666,7 @@ h2 { color: var(--texto-3); font-weight: 600; margin: var(--e5) 0 var(--e2); }
 .entradaGrelha { display: grid; gap: var(--e3); }
 .entradaGrelha .procura { position: relative; display: block; margin: 0; }
 @media (min-width: 720px) {
-  .entradaGrelha { grid-template-columns: minmax(220px, 1fr) minmax(0, 2fr); gap: var(--e4); }
+  .entradaGrelha { grid-template-columns: minmax(200px, 1fr) minmax(0, 1.4fr); gap: var(--e4); }
   .entradaGrelha .procuraCampo { align-self: start; }
 }
 

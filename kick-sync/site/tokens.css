@@ -43,6 +43,21 @@
   --erro-fundo: #ff7a7a1a;
   --marca-twitch: #a970ff;   /* a marca de outra gente, não um acento nosso */
 
+  /* Ouro, e só para uma coisa: "aqui aconteceu alguma coisa". Nem sempre foi
+     assim — as kills na régua e o cursor do instante eram verdes, a mesma cor
+     dos botões, e o ecrã pedia para carregar em tudo ao mesmo tempo. Verde
+     quer dizer "carrega"; ouro quer dizer "olha". São duas frases diferentes
+     e precisam de duas cores. Isto não é um segundo acento: é informação, da
+     mesma família do aviso e do erro. */
+  --marcador: #ffb407;
+  --marcador-fraco: #ffb40733;
+
+  /* ── largura ─────────────────────────────────────────────────────────── */
+  /* O palco quer o monitor todo: é lá que se compara um ângulo com outro.
+     O formulário não — com 1400px de largura os olhos atravessam o monitor
+     entre o rótulo e a caixa. Por isso só há uma medida aqui, e é a curta. */
+  --largura-forma: 900px;
+
   /* ── espaço ──────────────────────────────────────────────────────────── */
   --e1: 4px;
   --e2: 8px;

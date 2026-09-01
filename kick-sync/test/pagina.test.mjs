@@ -1467,6 +1467,34 @@ test('a prévia de um tiroteio leva o combate inteiro e as margens por fora',
     await p.close();
   });
 
+// `hidden` tem de esconder mesmo. Cai-se nisto sem dar por nada: basta uma
+// regra qualquer com `display` a apanhar o elemento, porque um `display`
+// escrito ganha ao `display: none` que o atributo traz. Aconteceu-me três
+// vezes — no modal do clipe, no palco, e na secção do início, esta última
+// só porque reutilizei um nome de classe que já existia noutro sítio.
+// Em vez de o escrever no CSS uma quarta vez, mede-se.
+test('nada com hidden ocupa espaço na página',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+
+    const visiveis = await p.evaluate(() => [...document.querySelectorAll('[hidden]')]
+      .filter((e) => e.getBoundingClientRect().width > 0 || e.getBoundingClientRect().height > 0)
+      .map((e) => `${e.tagName.toLowerCase()}#${e.id || '?'} (${getComputedStyle(e).display})`));
+    assert.deepEqual(visiveis, [], `escondidos que aparecem: ${visiveis.join(', ')}`);
+
+    // E depois de carregar, o que ficou escondido continua escondido.
+    await p.fill('#canais', 'tchubi');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 20000 });
+    const depois = await p.evaluate(() => [...document.querySelectorAll('[hidden]')]
+      .filter((e) => e.getBoundingClientRect().width > 0 || e.getBoundingClientRect().height > 0)
+      .map((e) => `${e.tagName.toLowerCase()}#${e.id || '?'} (${getComputedStyle(e).display})`));
+    assert.deepEqual(depois, [], `escondidos que aparecem depois de carregar: ${depois.join(', ')}`);
+    assert.deepEqual(erros, []);
+  });
+
 // "A proporção de tela usada está errada pro PC, e tem botões e coisas
 // sobrepondo, mal colocado."
 //
