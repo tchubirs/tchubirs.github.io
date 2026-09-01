@@ -13,25 +13,41 @@
   color-scheme: dark;
 
   /* ── superfícies ─────────────────────────────────────────────────────── */
-  --fundo: #0d0e10;          /* a página */
-  --caixa: #15171a;          /* uma superfície levantada */
-  --caixa-2: #1c1f23;        /* levantada sobre a levantada (dentro de cartões) */
-  --borda: #24272c;
-  --borda-forte: #333941;
+  /* Verdes, e não cinzentas. Estavam puxadas para azul (#0d0e10: o azul é o
+     canal mais alto) e o site inteiro lia-se cinzento por mais verde que eu
+     pusesse nos botões — porque não é nos botões que mora a cor de um sítio,
+     é no chão. Isto é a mesma escuridão de antes, rodada para verde: o
+     contraste do texto sobe em vez de descer (16.5 em vez de 15.9). */
+  --fundo: #0b100d;          /* a página */
+  --caixa: #121815;          /* uma superfície levantada */
+  --caixa-2: #18201b;        /* levantada sobre a levantada (dentro de cartões) */
+  --borda: #233029;
+  --borda-forte: #31423a;
   --realce: #ffffff10;       /* hover sobre superfície */
   --video-fundo: #000;       /* atrás do vídeo, e só aí */
   --sobre-video: #000000b3;  /* fundo dos controlos por cima do vídeo */
   --vidro: #000000c7;        /* o fundo por trás de uma janela modal */
 
   /* ── texto ───────────────────────────────────────────────────────────── */
-  --texto: #e7e9ed;
-  --texto-2: #a2a9b4;        /* secundário — passa AA sobre --fundo */
-  --texto-3: #7b828d;        /* terciário: só para o que é mesmo acessório */
+  --texto: #e9efea;
+  --texto-2: #a4b0a7;        /* secundário — passa AA sobre --fundo (8.5) */
+  --texto-3: #7d8a81;        /* terciário: só para o que é mesmo acessório */
 
   /* ── acento (um só) ──────────────────────────────────────────────────── */
   --acento: #53fc18;         /* o verde da Kick */
   --acento-fraco: #53fc1826;
-  --sobre-acento: #0b0d10;   /* texto por cima do acento */
+  --sobre-acento: #071008;   /* texto por cima do acento */
+  /* O botão principal emite. É a única coisa da página que o faz, e é essa a
+     razão de existir: quando há uma coisa a fazer a seguir, é aquela. */
+  --brilho: 0 0 0 1px #53fc1847, 0 14px 44px -18px #53fc1899;
+  /* A grelha de fundo, no verde e quase invisível. Dá chão à página sem
+     pedir nada a ninguém — sem ela um fundo liso a esta escuridão é um
+     buraco, e tudo o que lá se põe parece a flutuar. */
+  --grelha: #53fc180f;
+  /* O verde apagado do material: onde há imagem, onde houve sinal. Não é uma
+     acção e não pode gritar como o botão — mas cinzento também não é, porque
+     cinzento não quer dizer nada. */
+  --acento-suave: #53fc1859;
 
   /* ── estado ──────────────────────────────────────────────────────────── */
   /* Ciano e não verde: um verde de "confirmado" ao lado do verde do acento
