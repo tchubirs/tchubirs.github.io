@@ -5,23 +5,25 @@
 // bottom rung of Kick's ladder and is what makes thirty tiles a home-connection
 // problem rather than a server problem.
 
-import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=3725e8b6f0';
-import { linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink } from './relogio.js?v=3725e8b6f0';
-import { cortarTodosOsAngulos } from './baixar.js?v=3725e8b6f0';
-import { alinharPeloSom, custoEstimadoMB } from './alinhar.js?v=3725e8b6f0';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=3725e8b6f0';
+import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=e8bcdf0223';
+import {
+  linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo,
+} from './relogio.js?v=e8bcdf0223';
+import { cortarTodosOsAngulos } from './baixar.js?v=e8bcdf0223';
+import { alinharPeloSom, custoEstimadoMB } from './alinhar.js?v=e8bcdf0223';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=e8bcdf0223';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
   alternarVitima, filtrar, temMorte,
-} from './momentos.js?v=3725e8b6f0';
-import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=3725e8b6f0';
-import { criarZip, crc32 } from './zip.js?v=3725e8b6f0';
-import { criarApanhador } from './frames.js?v=3725e8b6f0';
-import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=3725e8b6f0';
-import { somDoCanal } from './alinhar.js?v=3725e8b6f0';
-import { MAXIMO_S, mover, janelaInicial, nomeDoClipe } from './clipe.js?v=3725e8b6f0';
-import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=3725e8b6f0';
-import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=3725e8b6f0';
+} from './momentos.js?v=e8bcdf0223';
+import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=e8bcdf0223';
+import { criarZip, crc32 } from './zip.js?v=e8bcdf0223';
+import { criarApanhador } from './frames.js?v=e8bcdf0223';
+import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=e8bcdf0223';
+import { somDoCanal } from './alinhar.js?v=e8bcdf0223';
+import { MAXIMO_S, mover, janelaInicial, nomeDoClipe } from './clipe.js?v=e8bcdf0223';
+import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=e8bcdf0223';
+import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=e8bcdf0223';
 
 const $ = (id) => document.getElementById(id);
 const estado = {
@@ -38,6 +40,11 @@ const estado = {
   // dezenas de candidatos de que a maioria nao e kill. A seleccao vive so
   // enquanto a pagina estiver aberta — guardar caixas marcadas de ontem seria
   // uma surpresa desagradavel. O filtro guarda-se, que e uma preferencia.
+  // Onde o relogio estava quando mandei tocar, para poder andar sozinho a
+  // partir dai. E a previa: a kill que ele esta a ver em ciclo.
+  ancora: null,
+  previa: null,
+  tique: 0,
   selecao: new Set(),
   filtro: 'todos',
   // O que se apagou da ultima vez, para o "anular". Setenta e oito linhas
@@ -425,7 +432,10 @@ async function abrirNoite(noite) {
   // Alinhar pelo som e uma operacao entre canais. Com um so, o botao existia
   // para nao fazer nada.
   $('alinhar').hidden = soUmCanal();
+  // Os segundos de quem morreu so fazem sentido se houver quem morrer.
+  $('margensVitima').hidden = soUmCanal();
   montarGrade();
+  seguirVideo();
   pintarFaixas();
   irPara(estado.agoraMs);
   pintarMarca();
@@ -584,6 +594,64 @@ function alternarPausa() {
   }
   for (const b of document.querySelectorAll('.tile .pausa')) b.textContent = estado.parado ? '▶' : '⏸';
   $('agora').classList.toggle('parado', estado.parado);
+}
+
+/**
+ * O relogio anda com o video.
+ *
+ * Ele nunca me disse isto, e via-se em qualquer captura de ecra dele: o vídeo
+ * tocava e o risco branco ficava parado no sítio onde ele carregou. A página
+ * parecia congelada mesmo a tocar, e o "21:22:11Z" mentia a partir do segundo
+ * seguinte.
+ *
+ * Não chama `irPara`: isso mandava o leitor saltar para onde já está, sessenta
+ * vezes por segundo. Só pinta.
+ */
+function seguirVideo() {
+  cancelAnimationFrame(estado.tique);
+  const passo = () => {
+    estado.tique = requestAnimationFrame(passo);
+    if (!estado.ancora || estado.parado || !estado.janela) return;
+    const v = tileDe(estado.ancora.slug)?.querySelector('video');
+    const ms = instanteSeguindo(estado.ancora, v);
+    if (ms == null) return;
+    estado.agoraMs = ms;
+    pintarRelogio(ms);
+
+    // A previa: chega ao fim do clipe e volta ao princípio, em ciclo, até ele
+    // desligar. É assim que se vê quinze candidatos sem descarregar nenhum.
+    if (estado.previa && ms >= estado.previa.ate) irPara(estado.previa.de);
+  };
+  passo();
+}
+
+/**
+ * Ver a kill antes de a descarregar.
+ *
+ * "Não consegui ver ainda se os clipes estão bons ou não." A busca pelo som dá
+ * quinze candidatos e a maioria não presta — e até agora a única maneira de
+ * saber era descarregar e abrir no editor. Isto toca exactamente o pedaço que
+ * ia sair no ficheiro, em ciclo, no próprio sítio onde ele decide.
+ */
+function verMomento(ms) {
+  const m = estado.momentos.find((x) => x.ms === ms);
+  if (!m) return;
+  // Se já estava a ver esta, carregar outra vez desliga.
+  if (estado.previa?.ms === ms) {
+    estado.previa = null;
+    pintarMomentos();
+    return;
+  }
+  // A janela é a MESMA que vai para o ficheiro. Uma prévia com outros limites
+  // mostrava-lhe uma coisa e entregava-lhe outra.
+  estado.previa = {
+    ms,
+    de: ms - (m.protagonistaAntesS ?? 5) * 1000,
+    ate: ms + (m.protagonistaDepoisS ?? 2) * 1000,
+  };
+  if (estado.parado) alternarPausa();
+  irPara(estado.previa.de);
+  pintarMomentos();
 }
 
 function temSom(slug) {
@@ -769,12 +837,16 @@ function empurrar(slug, ms) {
  * possíveis: trinta descodificadores a andar ao mesmo tempo derretem qualquer
  * máquina, e ninguém está a OLHAR para trinta ao mesmo tempo.
  */
-function irPara(quandoMs) {
-  estado.agoraMs = quandoMs;
-  guardar();
+/**
+ * O relogio no ecra, sem mandar ninguem saltar.
+ *
+ * Isto e so pintura: o texto das horas, o cursor branco, a barra e a linha que
+ * fica acesa na lista. Existe separado do `irPara` por causa do vídeo a
+ * ANDAR — a cada quadro o relógio avança, e se avançar chamando `irPara`
+ * mandava o leitor saltar para onde ele já está, sessenta vezes por segundo.
+ */
+function pintarRelogio(quandoMs) {
   $('agora').textContent = `${relogioCurto(quandoMs)}Z`;
-  // How many angles exist right here. With no common window this is the number
-  // that matters: "4 de 6" is useful, "no overlap" is not.
   const vivos = quantosNoAr(estado.linhas, quandoMs, { nudges: estado.nudges });
   for (const li of $('listaMomentos').querySelectorAll('li[data-ms]')) {
     li.classList.toggle('aqui', Math.abs(Number(li.dataset.ms) - quandoMs) < 1500);
@@ -789,6 +861,12 @@ function irPara(quandoMs) {
   // O cursor vive por cima das faixas e não dentro de uma delas: é um instante
   // só, partilhado por todos os canais — que é a ideia toda desta página.
   $('cursor').style.left = `calc(var(--coluna) + (100% - var(--coluna)) * ${fraccao})`;
+}
+
+function irPara(quandoMs) {
+  estado.agoraMs = quandoMs;
+  guardar();
+  pintarRelogio(quandoMs);
 
   const principal = [];
   const segundo = [];
@@ -828,6 +906,10 @@ function irPara(quandoMs) {
   // quadrado que interessa chegar em último — e quem anda a saltar de dez em
   // dez segundos está a olhar para esse e mais nenhum.
   for (const [l, r, v] of principal) tocar(l, r, v, { alta: true, correr: true, comSom: temSom(l.slug) });
+  // A ancora do relogio que anda: a que instante do mundo corresponde ESTE
+  // segundo do video principal. O resto e uma subtraccao, e nao ha que
+  // inverter mapa nenhum.
+  estado.ancora = principal.length ? { slug: principal[0][0].slug, ms: quandoMs, tempoS: principal[0][1].tempoS } : null;
 
   // Os outros só depois de o principal ter imagem. E só quando a barra
   // descansa: arrastar o cursor pedia um pedaço de vídeo por pixel, a trinta
@@ -1322,7 +1404,8 @@ function pintarMomentos() {
       + `<b class="n">${String(i + 1).padStart(2, '0')}</b>`
       + `<span>${relogioCurto(m.ms)}Z</span>`
       + `<span class="quem">${m.protagonista || '—'}</span>`
-      + `<button class="ir">${t('montagem.ir')}</button>`
+      + `<button class="ver ${estado.previa?.ms === m.ms ? 'aVer' : ''}">`
+      + `${t(estado.previa?.ms === m.ms ? 'montagem.parar' : 'montagem.ver')}</button>`
       + `<button class="baixarUma" ${n ? '' : 'disabled'}>${t('montagem.baixarUma')}</button>`
       + `<button class="fora">${t('montagem.apagar')}</button>`
       + (sozinho ? '' : `<button class="verMortes">${t('montagem.verMortes')}</button>`)
@@ -1333,7 +1416,7 @@ function pintarMomentos() {
 
   for (const li of $('listaMomentos').querySelectorAll('li[data-ms]')) {
     const ms = Number(li.dataset.ms);
-    li.querySelector('.ir').onclick = () => irPara(ms);
+    li.querySelector('.ver').onclick = () => verMomento(ms);
     li.querySelector('.baixarUma').onclick = () => {
       const m = estado.momentos.find((x) => x.ms === ms);
       if (m) baixarMontagem([m]);
@@ -1872,17 +1955,25 @@ function recomecar() {
   location.href = location.pathname;
 }
 
+// Uma janela para os testes olharem para dentro. Sem isto, verificar que a
+// previa arranca no sitio certo obrigava a adivinhar pelo texto do ecra.
+window.__estado = estado;
+
 // ── ligações ────────────────────────────────────────────────────────────────
 
 $('carregar').onclick = carregar;
+// Qualquer navegacao a mao desliga a previa: se ele foi procurar outra coisa,
+// nao pode ficar a ser puxado de volta para o clipe em ciclo.
+const largarPrevia = () => { if (estado.previa) { estado.previa = null; pintarMomentos(); } };
 $('barra').oninput = () => {
   const { inicio, fim } = estado.janela || {};
   if (inicio == null) return;
+  largarPrevia();
   irPara(Math.round(inicio + ((fim - inicio) * Number($('barra').value)) / 1000));
 };
 // Os saltos que faltavam. A barra serve para procurar a noite; isto serve para
 // caçar o momento, que é uma coisa diferente e a barra faz mal.
-const saltar = (ms) => () => irPara(estado.agoraMs + ms);
+const saltar = (ms) => () => { largarPrevia(); irPara(estado.agoraMs + ms); };
 $('menos1m').onclick = saltar(-60_000);
 $('menos10s').onclick = saltar(-10_000);
 $('mais10s').onclick = saltar(10_000);

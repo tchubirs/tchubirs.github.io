@@ -106,8 +106,10 @@
       </select>
       <label class="pequeno"><span data-t="montagem.minhaPov">minha POV</span> <input id="protAntes" type="number" value="5" min="0" max="120" step="1">s antes</label>
       <label class="pequeno"><input id="protDepois" type="number" value="2" min="0" max="120" step="1">s depois</label>
-      <label class="pequeno"><span data-t="montagem.quemMorreu">quem morreu</span> <input id="vitAntes" type="number" value="1" min="0" max="60" step="1">s antes</label>
-      <label class="pequeno"><input id="vitDepois" type="number" value="2" min="0" max="60" step="1">s depois</label>
+      <span id="margensVitima" class="linha" hidden>
+        <label class="pequeno"><span data-t="montagem.quemMorreu">quem morreu</span> <input id="vitAntes" type="number" value="1" min="0" max="60" step="1">s antes</label>
+        <label class="pequeno"><input id="vitDepois" type="number" value="2" min="0" max="60" step="1">s depois</label>
+      </span>
     </div>
     <!-- A barra de selecao. Uma noite varrida da dezenas de candidatos e a
          maioria nao e kill; apagar um a um era o trabalho manual que a busca
@@ -185,10 +187,10 @@
   <!-- A versao, a serio e visivel. O GitHub Pages serve com max-age=600 e um
        telemovel guarda o app.js antigo; sem isto, "ja corrigi" e "continua
        igual" sao as duas verdadeiras ao mesmo tempo e ninguem sai dali. -->
-  <p class="nota"><span data-t="app.rodape">Tudo acontece no teu navegador. Os VODs são de quem os gravou.</span> · <span id="versao">3725e8b6f0</span></p>
+  <p class="nota"><span data-t="app.rodape">Tudo acontece no teu navegador. Os VODs são de quem os gravou.</span> · <span id="versao">e8bcdf0223</span></p>
 </footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.17/hls.min.js"></script>
-<script type="module" src="app.js?v=3725e8b6f0"></script>
+<script type="module" src="app.js?v=e8bcdf0223"></script>
 </body>
 </html>
