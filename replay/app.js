@@ -5,23 +5,23 @@
 // bottom rung of Kick's ladder and is what makes thirty tiles a home-connection
 // problem rather than a server problem.
 
-import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=14a4325fba';
-import { linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink } from './relogio.js?v=14a4325fba';
-import { cortarTodosOsAngulos } from './baixar.js?v=14a4325fba';
-import { alinharPeloSom, custoEstimadoMB } from './alinhar.js?v=14a4325fba';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=14a4325fba';
+import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=4f47da09ee';
+import { linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink } from './relogio.js?v=4f47da09ee';
+import { cortarTodosOsAngulos } from './baixar.js?v=4f47da09ee';
+import { alinharPeloSom, custoEstimadoMB } from './alinhar.js?v=4f47da09ee';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=4f47da09ee';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
   alternarVitima, filtrar, temMorte,
-} from './momentos.js?v=14a4325fba';
-import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=14a4325fba';
-import { criarZip, crc32 } from './zip.js?v=14a4325fba';
-import { criarApanhador } from './frames.js?v=14a4325fba';
-import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=14a4325fba';
-import { somDoCanal } from './alinhar.js?v=14a4325fba';
-import { MAXIMO_S, mover, janelaInicial, nomeDoClipe } from './clipe.js?v=14a4325fba';
-import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=14a4325fba';
-import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=14a4325fba';
+} from './momentos.js?v=4f47da09ee';
+import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=4f47da09ee';
+import { criarZip, crc32 } from './zip.js?v=4f47da09ee';
+import { criarApanhador } from './frames.js?v=4f47da09ee';
+import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=4f47da09ee';
+import { somDoCanal } from './alinhar.js?v=4f47da09ee';
+import { MAXIMO_S, mover, janelaInicial, nomeDoClipe } from './clipe.js?v=4f47da09ee';
+import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=4f47da09ee';
+import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=4f47da09ee';
 
 const $ = (id) => document.getElementById(id);
 const estado = {
@@ -1131,8 +1131,17 @@ async function verQuemMorreu(ms, { silencioso = false } = {}) {
   // seguidas: uma bissecção que rebentasse deixava cento e vinte leitores
   // vivos e a página ia ficando pesada sem razão à vista.
   try {
-    for (const l of estado.linhas) {
-      if (!silencioso) caixa.innerHTML = `<span class="nota">${t('montagem.aOlharCanal', { canal: l.slug })}</span>`;
+    // Os canais ao mesmo tempo, e nao um de cada vez.
+    //
+    // Cada canal tem o seu proprio <video>: seis leitores a saltar para o
+    // mesmo instante e o mesmo trabalho que a grelha ja faz quando toca. Em
+    // fila indiana isto eram seis esperas somadas por cada kill, e a busca
+    // automatica faz isto vinte vezes — dez minutos que passam a dois.
+    //
+    // Dentro de cada canal continua em fila: sao dois saltos no MESMO leitor,
+    // e pedi-los ao mesmo tempo dava dois frames do mesmo sitio.
+    let vistos = 0;
+    await Promise.all(estado.linhas.map(async (l) => {
       try {
         const antes = await apanhador.frame(l.slug, ms - 2000);
         const depois = await apanhador.frame(l.slug, ms + 2500);
@@ -1143,7 +1152,12 @@ async function verQuemMorreu(ms, { silencioso = false } = {}) {
         // medição para os outros cinco.
         notas[l.slug] = null;
       }
-    }
+      vistos += 1;
+      if (!silencioso) {
+        caixa.innerHTML = `<span class="nota">${t('montagem.aOlharQuantos',
+          { feito: vistos, total: estado.linhas.length })}</span>`;
+      }
+    }));
 
     ({ sugeridos, ordenados } = quemMorreu(notas));
     // Marcar já os sugeridos: o objectivo é ele não ter de escolher nada
