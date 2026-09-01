@@ -70,7 +70,9 @@ const SEGS_SOM = TEM_SOM ? fs.readdirSync(SOM).filter((f) => f.endsWith('.ts')).
  * exactamente o que acontece a quem tem mais buffer no OBS, e o que o
  * alinhamento pelo som tem de medir e desfazer.
  */
-async function kickFalsa(pagina, { canais = ['tchubi', 'outro'], segmentos = 60, comSom = false, desviosS = {} } = {}) {
+async function kickFalsa(pagina, {
+  canais = ['tchubi', 'outro'], segmentos = 60, comSom = false, desviosS = {}, comecosS = {},
+} = {}) {
   const quantos = comSom ? SEGS_SOM.length : segmentos;
   const playlist = (slug) => {
     const l = ['#EXTM3U', '#EXT-X-VERSION:3', '#EXT-X-TARGETDURATION:12', '#EXT-X-PLAYLIST-TYPE:EVENT'];
@@ -114,7 +116,12 @@ async function kickFalsa(pagina, { canais = ['tchubi', 'outro'], segmentos = 60,
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify([{
-        id: 1, session_title: 'noite', start_time: '2026-08-30 21:00:00',
+        // A hora de inicio de cada canal, para o teste poder pedir uma ordem
+        // de chegada diferente da ordem em que ele os escreveu — que e
+        // exactamente o caso que estava errado.
+        id: 1,
+        session_title: 'noite',
+        start_time: new Date(T + (comecosS[slug] || 0) * 1000).toISOString().replace('T', ' ').slice(0, 19),
         duration: quantos * 10000, source: `https://cdn.fake/${slug}/master.m3u8`, video: {},
       }]),
     });
@@ -1557,6 +1564,147 @@ test('a prévia de um tiroteio leva o combate inteiro e as margens por fora',
     // E a lista diz quanto dura, para ele não descobrir o tamanho só depois
     // de exportar.
     assert.match(await p.locator('#listaMomentos .quantos').innerText(), /^27s · /);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+// "A proporção de tela usada está errada pro PC, e tem botões e coisas
+// sobrepondo, mal colocado."
+//
+// A página foi feita ao telemóvel e num monitor grande ficava uma tira ao
+// meio com metade do ecrã vazio dos dois lados. Este teste mede as duas
+// coisas de que ele se queixou: quanta largura é mesmo usada, e se algum
+// controlo cai por cima de outro.
+test('num ecrã de PC a página usa a largura e nada se sobrepõe',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir({ ecra: { width: 1920, height: 1080 } });
+    await kickFalsa(p, { canais: ['tchubi', 'outro', 'terceiro'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi\noutro\nterceiro');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 20000 });
+    await p.click('#mais1m');
+    await p.click('#marcarKill');
+    await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
+
+    // Duas colunas: a montagem fica AO LADO do vídeo, e não a um ecrã de
+    // distância dele. Medido no topo da página: a coluna do lado acompanha o
+    // scroll de propósito, e a meio da página não estaria alinhada com nada.
+    await p.evaluate(() => window.scrollTo(0, 0));
+    const [video, lado] = await p.evaluate(() => ['.palcoVideo', '.palcoLado']
+      .map((s) => document.querySelector(s).getBoundingClientRect())
+      .map((r) => ({ x: Math.round(r.x), largura: Math.round(r.width), y: Math.round(r.y) })));
+    assert.ok(lado.x > video.x + video.largura - 40,
+      `a coluna do lado começa em ${lado.x} e o vídeo acaba em ${video.x + video.largura}`);
+    assert.ok(Math.abs(lado.y - video.y) < 80, 'as duas colunas começam à mesma altura');
+
+    // E o conteúdo usa mesmo o monitor: antes disto ocupava 1400 px de 1920.
+    const usada = video.largura + lado.largura;
+    assert.ok(usada > 1500, `só ${usada} px de 1920 — a página continua uma tira`);
+
+    // Nada por cima de nada. Cada par de controlos visíveis tem de ter
+    // rectângulos disjuntos: foi assim que o botão do som ficou impossível de
+    // carregar, e nada no ecrã o explicava.
+    const sobrepostos = await p.evaluate(() => {
+      const alvos = [...document.querySelectorAll(
+        '#palco button, #palco select, #palco input, #entrada button, #entrada input, #entrada textarea',
+      )].filter((e) => e.offsetParent !== null && e.getBoundingClientRect().width > 0);
+      const maus = [];
+      for (let i = 0; i < alvos.length; i++) {
+        for (let j = i + 1; j < alvos.length; j++) {
+          const a = alvos[i].getBoundingClientRect();
+          const b = alvos[j].getBoundingClientRect();
+          // Um contém o outro (um botão dentro de um label) não é sobreposição.
+          if (alvos[i].contains(alvos[j]) || alvos[j].contains(alvos[i])) continue;
+          const cruza = a.left < b.right - 1 && b.left < a.right - 1
+            && a.top < b.bottom - 1 && b.top < a.bottom - 1;
+          // O nome inteiro, e nao so a classe: "BUTTON x somBtn" nao diz qual
+          // dos vinte botoes da pagina e.
+          const nome = (e) => `${e.tagName.toLowerCase()}${e.id ? `#${e.id}` : ''}`
+            + `${e.className ? `.${String(e.className).split(' ').join('.')}` : ''}`
+            + `[${e.textContent.trim().slice(0, 12) || e.getAttribute('aria-label') || ''}]`
+            + `@${e.closest('[data-slug]')?.dataset.slug ?? e.parentElement?.className ?? ''}`;
+          if (cruza) maus.push(`${nome(alvos[i])} × ${nome(alvos[j])}`);
+        }
+      }
+      return maus;
+    });
+    assert.deepEqual(sobrepostos, [], 'controlos por cima uns dos outros');
+
+    // E a página não pode ganhar uma barra horizontal.
+    assert.equal(await p.evaluate(() => document.documentElement.scrollWidth
+      <= document.documentElement.clientWidth), true, 'a página abana para o lado');
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+// "Os canais deviam ficar na ordem que eu adiciono, igual em cima — ctapp por
+// último e assim vai, porque está difícil achar as POV em baixo."
+//
+// Com vinte e três canais, procurar um nome numa grelha em ordem desconhecida
+// é trabalho a sério. A lista de fichas lá em cima já está na ordem dele; a
+// grelha vinha na ordem por que a Kick respondeu.
+test('a grelha fica na ordem em que ele escreveu os canais',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    // Escritos ao contrário do alfabeto de propósito: assim uma ordenação
+    // alfabética acidental não passa por acaso.
+    const ordem = ['zeta', 'alfa', 'meio'];
+    const { p, erros } = await abrir({ ecra: { width: 1400, height: 900 } });
+    // Cada um comeca a transmitir a uma hora diferente, e ao CONTRARIO da
+    // ordem em que ele os escreve. Sem isto o teste passava por acaso: a
+    // grelha vinha da ordem de CHEGADA, e no falso todos chegavam juntos.
+    await kickFalsa(p, { canais: ordem, comecosS: { zeta: 120, alfa: 60, meio: 0 } });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', ordem.join('\n'));
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 20000 });
+
+    const naTela = await p.evaluate(() => [...document.querySelectorAll('#palcoFoco .tile, #grade .tile')]
+      .map((t) => t.dataset.slug));
+    assert.deepEqual(naTela, ordem);
+    // E a lista de fichas lá em cima diz o mesmo, senão são duas ordens para a
+    // mesma coisa.
+    const fichas = await p.evaluate(() => [...document.querySelectorAll('#listaCanais [data-slug]')]
+      .map((e) => e.dataset.slug));
+    if (fichas.length) assert.deepEqual(fichas, ordem);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+// "Falta a versão mobile aqui." O modal de criar clipe foi desenhado num ecrã
+// grande — 820 px de largura e o vídeo em 16/9 — e num telemóvel em pé isso
+// não cabe: os botões que interessam ficam fora de vista.
+test('o modal de clipe cabe num telemóvel em pé',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir({ ecra: { width: 390, height: 844 } });
+    await kickFalsa(p, { canais: ['tchubi'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 20000 });
+    await p.click('#clipar');
+    await p.waitForSelector('#modalClipe:not([hidden])', { timeout: 10000 });
+
+    // Os dois botões de segundos lado a lado, e não um a cair para a linha de
+    // baixo sozinho — foi assim que ele o viu no telemóvel.
+    const [menos, mais] = await Promise.all([
+      p.locator('#menosClipe').boundingBox(), p.locator('#maisClipe').boundingBox(),
+    ]);
+    assert.ok(Math.abs(menos.y - mais.y) < 6, `−1s em y=${menos.y} e +1s em y=${mais.y}`);
+
+    const caixa = await p.locator('.modalCaixa').boundingBox();
+    assert.ok(caixa.width <= 390, `a caixa tem ${caixa.width} px num ecrã de 390`);
+    assert.ok(caixa.height <= 844, `a caixa tem ${caixa.height} px de altura em 844`);
+
+    // Os dois botões que terminam a tarefa têm de estar à vista, sem procurar.
+    for (const id of ['#guardarClipe', '#cancelarClipe']) {
+      const b = await p.locator(id).boundingBox();
+      assert.ok(b && b.y >= 0 && b.y + b.height <= 844,
+        `${id} está fora do ecrã: y=${b?.y}`);
+      assert.ok(b.x >= 0 && b.x + b.width <= 390, `${id} sai pela lateral`);
+    }
+    assert.equal(await p.evaluate(() => document.documentElement.scrollWidth
+      <= document.documentElement.clientWidth), true, 'a página abana para o lado');
     assert.deepEqual(erros, []);
     await p.close();
   });

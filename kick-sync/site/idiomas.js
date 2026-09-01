@@ -192,6 +192,10 @@ const TEXTOS = {
     'clipe.naoDeu': 'não deu: {erro}',
 
     'auto.botao': 'Deteção automática',
+    'auto.titulo': 'Deteção automática',
+    'auto.teste': 'teste',
+    'auto.quanto': 'quanto procurar',
+    'auto.explica': 'Ouve a tua POV à procura de tiroteios. Acerta na maioria, mas ainda marca menus e inventário — confere sempre com o Rever antes de exportar.',
     'auto.meiaHora': 'meia hora',
     'auto.umaHora': 'uma hora',
     'auto.noiteToda': 'a noite toda',
@@ -389,6 +393,10 @@ const TEXTOS = {
     'clipe.naoDeu': 'failed: {erro}',
 
     'auto.botao': 'Automatic detection',
+    'auto.titulo': 'Automatic detection',
+    'auto.teste': 'test',
+    'auto.quanto': 'how much to search',
+    'auto.explica': 'Listens to your POV for firefights. Right most of the time, but it still marks menus and inventory — always check with Review before exporting.',
     'auto.meiaHora': 'half an hour',
     'auto.umaHora': 'one hour',
     'auto.noiteToda': 'the whole night',
@@ -586,6 +594,10 @@ const TEXTOS = {
     'clipe.naoDeu': 'no salió: {erro}',
 
     'auto.botao': 'Detección automática',
+    'auto.titulo': 'Detección automática',
+    'auto.teste': 'prueba',
+    'auto.quanto': 'cuánto buscar',
+    'auto.explica': 'Escucha tu POV buscando tiroteos. Acierta la mayoría, pero aún marca menús e inventario — comprueba siempre con Revisar antes de exportar.',
     'auto.meiaHora': 'media hora',
     'auto.umaHora': 'una hora',
     'auto.noiteToda': 'toda la noche',

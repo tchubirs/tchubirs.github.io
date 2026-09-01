@@ -361,10 +361,23 @@ async function abrirNoite(noite) {
   }
   $('estadoCarga').textContent = '';
 
-  estado.linhas = [...porCanal].map(([slug, pecas]) => ({
-    ...linhaDoCanal(slug, pecas),
-    pecasCompletas: pecas,
-  }));
+  // Pela ordem em que ELE os escreveu, e não pela ordem por que a Kick os
+  // devolveu. "Está difícil achar as POV em baixo": com vinte e três canais,
+  // procurar um nome numa grelha em ordem desconhecida é trabalho a sério, e a
+  // lista de fichas lá em cima já está na ordem certa.
+  const ordem = listaDeCanais();
+  const posicao = (slug) => {
+    const i = ordem.indexOf(slug);
+    // Um canal que já não está na caixa de texto vai para o fim, e não para o
+    // princípio — que é onde o −1 o punha.
+    return i === -1 ? ordem.length : i;
+  };
+  estado.linhas = [...porCanal]
+    .sort(([a], [b]) => posicao(a) - posicao(b) || a.localeCompare(b))
+    .map(([slug, pecas]) => ({
+      ...linhaDoCanal(slug, pecas),
+      pecasCompletas: pecas,
+    }));
   estado.janela = janelaComum(estado.linhas);
   if (!estado.janela) {
     // Limpar o palco, e não só desistir.
@@ -777,6 +790,21 @@ function montarGrade() {
       + `${linha.relogio !== 'exato' ? ` <b class="aviso" title="${t('tile.relogioIncerto')}">≈</b>` : ''}`
       + ' <b class="posicao"></b></span>'
       + '<span class="estadoTile"></span>'
+      // Os dois grupos numa barra só, e não cada um colado ao seu canto.
+      //
+      // Colados aos cantos batiam um no outro assim que o quadrado ficava
+      // pequeno — e com dezoito canais na grelha todos ficam pequenos. Ele
+      // viu-o: "tem botões e coisas sobrepondo". Numa barra com
+      // `space-between` isso deixa de ser possível.
+      + '<span class="controlos">'
+      // O som à esquerda, com o cursor de volume ao lado — o mesmo sítio da
+      // Twitch, da Kick e do YouTube. Um controlo que toda a gente já sabe
+      // usar não se põe noutro sítio só porque dá jeito.
+      + '<span class="som" hidden>'
+      + `<button class="pausa" title="${t('tile.pausa')}">⏸</button>`
+      + '<button class="somBtn">🔇</button>'
+      + '<input class="vol" type="range" min="0" max="100" value="100" aria-label="volume">'
+      + '</span>'
       // O relógio da Kick põe cada ângulo dentro de um segmento da verdade, o
       // que já está dentro do que o dono pediu. Isto é para o resto: um stream
       // com mais buffer, ou um olho que diz "este está meio segundo à frente".
@@ -785,13 +813,6 @@ function montarGrade() {
       + '<b class="nudge">0.0s</b>'
       + `<button data-passo="1" title="${t('tile.adiantar')}">+</button>`
       + '</span>'
-      // O som no canto de baixo à esquerda, com o cursor de volume ao lado —
-      // o mesmo sítio da Twitch, da Kick e do YouTube. Um controlo que toda a
-      // gente já sabe usar não se põe noutro sítio só porque dá jeito.
-      + '<span class="som" hidden>'
-      + `<button class="pausa" title="${t('tile.pausa')}">⏸</button>`
-      + '<button class="somBtn">🔇</button>'
-      + '<input class="vol" type="range" min="0" max="100" value="100" aria-label="volume">'
       + '</span>'
       + `<button class="par" title="${t('tile.par')}">⧉</button>`;
 

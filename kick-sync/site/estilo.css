@@ -28,7 +28,9 @@ body {
   background: var(--fundo);
   color: var(--texto);
   font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  max-width: 1400px;
+  /* 1400 era estreito de mais num ecrã grande: a página ficava uma tira ao
+     meio com metade do monitor vazio de cada lado. */
+  max-width: 1760px;
   margin-inline: auto;
 }
 
@@ -140,8 +142,23 @@ kbd {
 .tile.foco { border-color: var(--acento); }
 /* O som no canto de baixo a esquerda, e o cursor de volume a abrir ao lado —
    o mesmo sitio e o mesmo gesto da Twitch, da Kick e do YouTube. */
+/* Uma barra só no fundo do quadrado, e não um grupo colado a cada canto.
+   Colados aos cantos batiam um no outro assim que o quadrado ficava pequeno —
+   e com dezoito canais na grelha todos ficam pequenos. */
+.tile .controlos {
+  position: absolute; left: 6px; right: 6px; bottom: 6px;
+  display: flex; align-items: center; justify-content: space-between; gap: 6px;
+  /* O fundo da barra não pode roubar o clique que promove o quadrado a foco. */
+  pointer-events: none;
+}
+.tile .controlos > * { pointer-events: auto; }
+/* O quadrado mede-se a si próprio: num polegar da grelha só cabe o som, e o
+   ajuste fino não faz falta nenhuma ali. */
+.tile { container-type: inline-size; }
+@container (max-width: 230px) { .tile .ajuste { display: none; } }
+
 .tile .som {
-  position: absolute; left: 6px; bottom: 6px; display: flex; align-items: center; gap: 0;
+  display: flex; align-items: center; gap: 0;
   background: #000a; border-radius: 6px; padding: 2px;
 }
 .tile .somBtn, .tile .pausa {
@@ -179,7 +196,7 @@ kbd {
 /* O ajuste por ângulo. Fica por cima do vídeo, no canto, e só ganha cor
    quando alguém lhe mexeu — um valor a zero não precisa de chamar a atenção. */
 .tile .ajuste {
-  position: absolute; right: 6px; bottom: 6px; display: flex; gap: 2px; align-items: center;
+  display: flex; gap: 2px; align-items: center;
   background: #000a; border-radius: 6px; padding: 2px; opacity: .35; transition: opacity .15s;
 }
 .tile:hover .ajuste, .tile .ajuste.ativo, .tile .ajuste:focus-within { opacity: 1; }
@@ -451,3 +468,84 @@ footer { margin-top: 32px; border-top: 1px solid var(--borda); padding-top: 12px
 /* A kill que está a ser vista em ciclo. */
 .momentos .ver.aVer { border-color: var(--acento); color: var(--acento); }
 .momentos li:has(.ver.aVer) { border-color: var(--acento); }
+
+
+/* ── o ecrã grande ──────────────────────────────────────────────────────────
+   Num telemóvel isto empilha e sempre empilhou. Num PC havia largura a mais e
+   altura a menos: o vídeo enorme, a montagem a quilómetros dele, e metade do
+   monitor vazio dos dois lados. Duas colunas resolvem os três de uma vez. */
+/* `:not([hidden])` e nao `#palco` seco. Um `display` qualquer ganha ao
+   `display: none` do atributo `hidden`, e o palco passava a aparecer com a
+   pagina ainda vazia. Ja me aconteceu uma vez com o modal do clipe; e a
+   segunda vez que caio no mesmo sitio, por isso fica escrito. */
+#palco:not([hidden]) { display: grid; gap: 24px; }
+@media (min-width: 1080px) {
+  #palco:not([hidden]) {
+    grid-template-columns: minmax(0, 1.55fr) minmax(400px, 1fr);
+    align-items: start;
+  }
+  /* A coluna do trabalho acompanha a página: rever uma kill e ver o vídeo ao
+     mesmo tempo é o gesto todo, e antes obrigava a andar para cima e para
+     baixo. */
+  .palcoLado {
+    position: sticky; top: 16px;
+    max-height: calc(100vh - 32px); overflow-y: auto;
+    padding-right: 4px;
+  }
+  .palcoLado h2:first-child { margin-top: 0; }
+  /* A entrada também: a caixa de procura ao lado da lista de canais, em vez de
+     duas caixas iguais empilhadas sem nada a separá-las. */
+  #entrada {
+    display: grid; grid-template-columns: minmax(240px, 1fr) minmax(0, 2fr);
+    gap: 0 16px; align-items: start;
+  }
+  #entrada .procura { grid-column: 1; margin-bottom: 0; }
+  #entrada textarea { grid-column: 2; grid-row: 1 / span 2; height: 100%; min-height: 96px; }
+  #entrada .linha, #entrada #avisoPlayer { grid-column: 1 / -1; }
+}
+
+/* Um `select` no meio de uma linha de botões não tem de ocupar a linha toda.
+   O "uma hora" da deteção automática estava com 1200 px de largura. */
+.linha select { width: auto; min-width: 120px; }
+.linha input[type="number"] { width: 68px; }
+
+/* O fim da página estava desarrumado: quatro blocos seguidos, todos com o
+   mesmo peso e sem nada entre eles. Cada um passa a ser uma caixa. */
+.palcoLado > section, .palcoLado > .linha, .palcoLado > #zip {
+  background: var(--caixa); border: 1px solid var(--borda); border-radius: 10px;
+  padding: 12px 14px; margin-bottom: 12px;
+}
+.palcoLado > section > h2 { margin-top: 0; }
+.palcoLado > .linha:empty, .palcoLado > #zip:empty { display: none; }
+.palcoLado .momentos li { background: var(--fundo); }
+
+/* A deteção automática, à parte e no fim. Um botão que acerta em cinco de seis
+   não pode ter o mesmo peso de um que acerta sempre — e ele viu-o antes de mim.
+   A etiqueta "teste" não é enfeite: é o aviso. */
+#automatico { border-color: #4a4020 !important; background: #1a1710 !important; }
+#automatico h2 { display: flex; align-items: center; gap: 8px; }
+.etiqueta {
+  font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+  background: #ffb02e22; color: #ffb02e; border: 1px solid #ffb02e55;
+  border-radius: 999px; padding: 2px 8px; font-weight: 700;
+}
+#automatico .nota { margin: 0 0 10px; line-height: 1.45; }
+
+/* ── o modal de clipe num telemóvel ─────────────────────────────────────────
+   Desenhado num ecrã grande, num telemóvel em pé partia-se: o `+1s` caía
+   sozinho para a linha seguinte e os dois botões que terminam a tarefa
+   ficavam encostados ao canto. */
+.modal .segundos { gap: 8px; }
+.modal .segundos button { flex: 1; padding: 10px; font-size: 15px; }
+@media (max-width: 620px) {
+  /* Uma folha que sobe do fundo, que é o que um telemóvel faz com isto. */
+  .modal:not([hidden]) { place-items: end center; padding: 0; }
+  .modalCaixa {
+    width: 100%; max-height: 94vh; border-radius: 14px 14px 0 0;
+    padding: 14px 14px calc(14px + env(safe-area-inset-bottom));
+  }
+  /* Os dois botões do fim ocupam a linha e são fáceis de acertar com o dedo. */
+  .modal .linha.fim { flex-wrap: wrap; }
+  .modal .linha.fim #estadoClipe { flex-basis: 100%; }
+  .modal .linha.fim button { flex: 1; padding: 12px; font-size: 15px; }
+}
