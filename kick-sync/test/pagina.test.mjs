@@ -1031,11 +1031,11 @@ test('a pagina fala portugues, ingles e espanhol, e troca sem perder nada',
     await p.click('#mais1m');
     const instante = await p.locator('#agora').innerText();
 
-    assert.equal(await p.locator('#carregar').innerText(), 'Carregar a noite');
+    assert.equal(await p.locator('#carregar').innerText(), 'Carregar');
     assert.equal(await p.locator('html').getAttribute('lang'), 'pt');
 
     await p.selectOption('#idioma', 'en');
-    await p.waitForFunction(() => document.getElementById('carregar').textContent === 'Load the night',
+    await p.waitForFunction(() => document.getElementById('carregar').textContent === 'Load',
       null, { timeout: 5000 });
     assert.equal(await p.locator('html').getAttribute('lang'), 'en');
     assert.match(await p.title(), /many angles/);
@@ -1047,13 +1047,13 @@ test('a pagina fala portugues, ingles e espanhol, e troca sem perder nada',
     assert.equal(await p.locator('.tile').count(), 2, 'e a grelha tambem');
 
     await p.selectOption('#idioma', 'es');
-    await p.waitForFunction(() => document.getElementById('carregar').textContent === 'Cargar la noche',
+    await p.waitForFunction(() => document.getElementById('carregar').textContent === 'Cargar',
       null, { timeout: 5000 });
     assert.match(await p.locator('#angulos').innerText(), /de \d+ ángulos/);
 
     // E a escolha sobrevive ao F5.
     await p.reload({ waitUntil: 'networkidle' });
-    await p.waitForFunction(() => document.getElementById('carregar').textContent === 'Cargar la noche',
+    await p.waitForFunction(() => document.getElementById('carregar').textContent === 'Cargar',
       null, { timeout: 15000 });
     assert.deepEqual(erros, []);
     await p.close();

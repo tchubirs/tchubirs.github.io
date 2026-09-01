@@ -50,7 +50,7 @@ const IGUAIS_DE_PROPOSITO = {
     'tile.atrasar', 'alinhar.cancelado', 'montagem.antes', 'montagem.ir',
     'corte.titulo', 'corte.antes', 'clipe.cancelar',
     'sel.mostrar', 'sel.todos',
-    'montagem.ver', 'montagem.parar',
+    'montagem.ver', 'montagem.parar', 'procurar.ph',
   ]),
 };
 
