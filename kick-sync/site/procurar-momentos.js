@@ -100,6 +100,10 @@ export async function varrerNoite({
   return {
     candidatos: achadas.map((g) => ({
       ms: Math.round(deMs + g.inicioS * 1000),
+      // O primeiro e o ultimo disparo do tiroteio. E daqui que sai o clipe:
+      // as margens dele sao POR FORA do combate, e nao a volta de um instante.
+      combateDeMs: Math.round(deMs + g.inicioS * 1000),
+      combateAteMs: Math.round(deMs + g.fimS * 1000),
       tiros: g.tiros,
       pico: g.pico,
       duracaoS: g.duracaoS,

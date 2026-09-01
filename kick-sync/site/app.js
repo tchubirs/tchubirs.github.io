@@ -14,7 +14,7 @@ import { alinharPeloSom, custoEstimadoMB } from './alinhar.js';
 import { agruparPorNoite, rotuloDaNoite } from './noites.js';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
-  alternarVitima, filtrar, temMorte,
+  alternarVitima, filtrar, temMorte, clipesDoMomento,
 } from './momentos.js';
 import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js';
 import { criarZip, crc32 } from './zip.js';
@@ -650,13 +650,13 @@ function verMomento(ms) {
     pintarMomentos();
     return;
   }
-  // A janela é a MESMA que vai para o ficheiro. Uma prévia com outros limites
-  // mostrava-lhe uma coisa e entregava-lhe outra.
-  estado.previa = {
-    ms,
-    de: ms - (m.protagonistaAntesS ?? 5) * 1000,
-    ate: ms + (m.protagonistaDepoisS ?? 2) * 1000,
-  };
+  // A janela é a MESMA que vai para o ficheiro — combate inteiro e margens por
+  // fora. Uma prévia com outros limites mostrava-lhe uma coisa e entregava-lhe
+  // outra, e era assim que ele descobria o corte errado só no editor.
+  const clipe = clipesDoMomento(m, [m.protagonista], 0)[0];
+  estado.previa = clipe
+    ? { ms, de: clipe.deMs, ate: clipe.ateMs }
+    : { ms, de: ms - (m.protagonistaAntesS ?? 5) * 1000, ate: ms + (m.protagonistaDepoisS ?? 2) * 1000 };
   // Sair da pausa antes de saltar, e nao depois: o `irPara` e que manda tocar.
   if (estado.parado) alternarPausa();
   irPara(estado.previa.de);
@@ -1149,7 +1149,10 @@ async function procurarKills() {
     for (const c of r.candidatos) {
       estado.momentos = acrescentar(
         estado.momentos,
-        novoMomento(c.ms, canal, { ...tamanhos(), auto: true, tiros: c.tiros }),
+        novoMomento(c.ms, canal, {
+          ...tamanhos(), auto: true, tiros: c.tiros,
+          combateDeMs: c.combateDeMs, combateAteMs: c.combateAteMs,
+        }),
       );
     }
     pintarMomentos();
@@ -1415,7 +1418,12 @@ function pintarMomentos() {
     // o numero que vai no nome do ficheiro, e duas contagens diferentes para a
     // mesma kill seriam um erro a espera de acontecer na mesa de montagem.
     const i = lista.indexOf(m);
-    const n = planoDaMontagem([m], canais, { filmava }).length;
+    const clipes = planoDaMontagem([m], canais, { filmava });
+    const n = clipes.length;
+    // Quanto dura o clipe dele. Os tiroteios vao de quatro segundos a noventa,
+    // e sem este numero ele so descobre o tamanho depois de exportar.
+    const seg = clipes.find((c) => c.papel === 'protagonista') || clipes[0];
+    const dur = seg ? Math.round((seg.ateMs - seg.deMs) / 1000) : 0;
     // As fichas de quem morreu. Sem isto a página cortava todos os ângulos em
     // cada kill, e saíam quatro clipes de lixo por cada um bom.
     const fichas = sozinho ? '' : canais.filter((c) => c !== m.protagonista).map((c) => {
@@ -1437,7 +1445,8 @@ function pintarMomentos() {
       + (estado.estouros.length ? `<button class="foiKill">${t('auto.foiKill')}</button>` : '')
       + `<button class="fora">${t('montagem.apagar')}</button>`
       + (sozinho ? '' : `<button class="verMortes">${t('montagem.verMortes')}</button>`)
-      + `<span class="quantos">${tn(n, 'montagem.umClipe', 'montagem.clipes')}</span>`
+      + `<span class="quantos">${dur ? `${dur}s · ` : ''}`
+      + `${tn(n, 'montagem.umClipe', 'montagem.clipes')}</span>`
       + (sozinho ? '' : `<span class="vitimas"><span class="nota">${t('montagem.matou')}</span>${fichas}</span>`)
       + '<div class="olhar" hidden></div></li>';
   }).join('') || `<li class="nota">${t('montagem.vazia')}</li>`;

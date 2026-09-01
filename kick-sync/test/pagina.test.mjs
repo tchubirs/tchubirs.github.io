@@ -1520,3 +1520,43 @@ test('depois de o browser recusar o primeiro play, Rever volta a mandar tocar',
     assert.deepEqual(erros, []);
     await p.close();
   });
+
+// "Falta tempo antes e tempo depois... esse tempo extra é FORA o combate
+// completo: antes do primeiro disparo e depois do último."
+//
+// O clipe era cinco segundos antes de um instante e dois depois, e um
+// tiroteio de vinte segundos ficava cortado ao meio. Agora leva o combate
+// inteiro, e as margens dele por fora — e a prévia mostra exactamente isso,
+// senão ele descobria o corte errado só no editor.
+test('a prévia de um tiroteio leva o combate inteiro e as margens por fora',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 15000 });
+    await p.fill('#protAntes', '5');
+    await p.fill('#protDepois', '2');
+    await p.click('#mais1m');
+    await p.click('#marcarKill');
+    await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
+    const ms = Number(await p.locator('#listaMomentos li[data-ms]').getAttribute('data-ms'));
+
+    // Um tiroteio de vinte segundos, como a deteccao automatica o daria.
+    await p.evaluate((m) => {
+      window.__estado.momentos = window.__estado.momentos.map((x) => (x.ms === m
+        ? { ...x, combateDeMs: m, combateAteMs: m + 20_000 } : x));
+    }, ms);
+    await p.selectOption('#filtroMomentos', 'semMorte');
+
+    await p.locator('#listaMomentos .ver').click();
+    const previa = await p.evaluate(() => window.__estado.previa);
+    assert.equal(previa.de - ms, -5000, 'cinco segundos antes do primeiro disparo');
+    assert.equal(previa.ate - ms, 22_000, 'dois segundos depois do último');
+    // E a lista diz quanto dura, para ele não descobrir o tamanho só depois
+    // de exportar.
+    assert.match(await p.locator('#listaMomentos .quantos').innerText(), /^27s · /);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });

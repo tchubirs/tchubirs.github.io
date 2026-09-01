@@ -213,3 +213,49 @@ test('cada clipe sabe a que kill pertence', () => {
   // ele pediu esta sozinha.
   assert.deepEqual(soASegunda.map((c) => c.prefixo), ['02a', '02b']);
 });
+
+// ── o combate inteiro, e as margens por fora ────────────────────────────────
+//
+// "O 8 é o mais próximo de ser um clipe correcto, porém falta tempo antes e
+// tempo depois. No 15 o clipe acaba antes de começar o PvP de verdade. Esse
+// tempo extra de antes e depois é fora o combate completo: antes do primeiro
+// disparo e depois do último."
+
+test('o clipe leva o combate inteiro, com as margens por fora', () => {
+  const m = novoMomento(50_000, 'eu', {
+    combateDeMs: 42_000,          // o primeiro disparo
+    combateAteMs: 61_000,         // o último
+    protagonistaAntesS: 5,
+    protagonistaDepoisS: 2,
+  });
+  const [c] = clipesDoMomento(m, ['eu'], 0);
+  assert.equal(c.deMs, 37_000, 'cinco segundos antes do PRIMEIRO disparo');
+  assert.equal(c.ateMs, 63_000, 'dois segundos depois do ÚLTIMO');
+});
+
+// Uma kill marcada à mão é um instante e não um intervalo: aí as duas pontas
+// são o mesmo número, e nada muda em relação ao que ele já conhecia.
+test('uma kill marcada à mão continua a ser um instante', () => {
+  const m = novoMomento(50_000, 'eu', { protagonistaAntesS: 5, protagonistaDepoisS: 2 });
+  const [c] = clipesDoMomento(m, ['eu'], 0);
+  assert.equal(c.deMs, 45_000);
+  assert.equal(c.ateMs, 52_000);
+});
+
+test('a POV de quem morreu também apanha o combate inteiro', () => {
+  const m = novoMomento(50_000, 'eu', {
+    combateDeMs: 42_000, combateAteMs: 61_000, vitimas: ['x'],
+    vitimaAntesS: 1, vitimaDepoisS: 2,
+  });
+  const vit = clipesDoMomento(m, ['eu', 'x'], 0).find((c) => c.papel === 'vitima');
+  assert.equal(vit.deMs, 41_000);
+  assert.equal(vit.ateMs, 63_000);
+});
+
+// Um combate ao contrário — o fim antes do princípio — não pode dar um clipe
+// de duração negativa, que o cortador aceitaria e devolveria vazio.
+test('um combate com as pontas trocadas não dá um clipe ao contrário', () => {
+  const m = novoMomento(50_000, 'eu', { combateDeMs: 61_000, combateAteMs: 42_000 });
+  const [c] = clipesDoMomento(m, ['eu'], 0);
+  assert.ok(c.ateMs > c.deMs, `${c.deMs} → ${c.ateMs}`);
+});
