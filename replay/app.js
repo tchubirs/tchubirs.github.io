@@ -5,27 +5,28 @@
 // bottom rung of Kick's ladder and is what makes thirty tiles a home-connection
 // problem rather than a server problem.
 
-import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=f2c76cccfe';
+import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=c2af49980f';
 import {
   linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo,
-} from './relogio.js?v=f2c76cccfe';
-import { cortarTodosOsAngulos } from './baixar.js?v=f2c76cccfe';
-import { alinharPeloSom, custoEstimadoMB } from './alinhar.js?v=f2c76cccfe';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=f2c76cccfe';
+} from './relogio.js?v=c2af49980f';
+import { cortarTodosOsAngulos } from './baixar.js?v=c2af49980f';
+import { alinharPeloSom, custoEstimadoMB } from './alinhar.js?v=c2af49980f';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=c2af49980f';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
   alternarVitima, filtrar, temMorte,
-} from './momentos.js?v=f2c76cccfe';
-import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=f2c76cccfe';
-import { criarZip, crc32 } from './zip.js?v=f2c76cccfe';
-import { criarApanhador } from './frames.js?v=f2c76cccfe';
-import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=f2c76cccfe';
-import { TAXA_TIROS } from './tiros.js?v=f2c76cccfe';
-import { parecidos, juntarPerto } from './aprender.js?v=f2c76cccfe';
-import { somDoCanal } from './alinhar.js?v=f2c76cccfe';
-import { MAXIMO_S, mover, janelaInicial, nomeDoClipe } from './clipe.js?v=f2c76cccfe';
-import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=f2c76cccfe';
-import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=f2c76cccfe';
+} from './momentos.js?v=c2af49980f';
+import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=c2af49980f';
+import { criarZip, crc32 } from './zip.js?v=c2af49980f';
+import { queFazerComOLeitor } from './leitor.js?v=c2af49980f';
+import { criarApanhador } from './frames.js?v=c2af49980f';
+import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=c2af49980f';
+import { TAXA_TIROS } from './tiros.js?v=c2af49980f';
+import { parecidos, juntarPerto } from './aprender.js?v=c2af49980f';
+import { somDoCanal } from './alinhar.js?v=c2af49980f';
+import { MAXIMO_S, mover, janelaInicial, nomeDoClipe } from './clipe.js?v=c2af49980f';
+import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=c2af49980f';
+import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=c2af49980f';
 
 const $ = (id) => document.getElementById(id);
 const estado = {
@@ -656,8 +657,13 @@ function verMomento(ms) {
     de: ms - (m.protagonistaAntesS ?? 5) * 1000,
     ate: ms + (m.protagonistaDepoisS ?? 2) * 1000,
   };
+  // Sair da pausa antes de saltar, e nao depois: o `irPara` e que manda tocar.
   if (estado.parado) alternarPausa();
   irPara(estado.previa.de);
+  // E, no fim, um `play()` directo ao angulo principal. No iOS um `play()` so
+  // vale se sair DENTRO do toque que o utilizador deu — e este sai.
+  const v = tileDe(estado.focos[0] || estado.linhas[0]?.slug)?.querySelector('video');
+  aplicar(v, 'tocar');
   pintarMomentos();
 }
 
@@ -958,6 +964,17 @@ function pararTile(slug, video) {
   video.removeAttribute('src');
 }
 
+/**
+ * `play()` devolve uma promessa que rejeita quando o browser recusa tocar sem
+ * um toque. Ignorada de propósito: rebentar aqui deixava a página sem grelha
+ * nenhuma, e o utilizador carrega no quadrado e resolve-se.
+ */
+function aplicar(video, ordem) {
+  if (!video) return;
+  if (ordem === 'tocar') video.play?.().catch(() => {});
+  else if (ordem === 'parar') video.pause?.();
+}
+
 function tocar(linha, r, video, { alta = false, correr = false, comSom = false } = {}) {
   const peca = linha.pecasCompletas.find((p) => p.vod.id === r.peca.vod.id) || r.peca;
   // Focus gets the best rung the ladder has; everything else stays at 160p.
@@ -969,7 +986,7 @@ function tocar(linha, r, video, { alta = false, correr = false, comSom = false }
 
   if (anterior && anterior.url === alvo.url) {
     if (Math.abs(video.currentTime - r.tempoS) > 0.35) video.currentTime = r.tempoS;
-    if (!correr && !video.paused) video.pause();
+    aplicar(video, queFazerComOLeitor({ correr, parado: estado.parado, pausado: video.paused }));
     return;
   }
   anterior?.destroy();
@@ -983,9 +1000,16 @@ function tocar(linha, r, video, { alta = false, correr = false, comSom = false }
     hls.attachMedia(video);
     estado.players.set(linha.slug, { url: alvo.url, destroy: () => hls.destroy() });
   } else {
-    // Safari plays HLS natively and hls.js refuses to load there.
+    // O Safari toca HLS de raiz, e o hls.js recusa-se a trabalhar la — no
+    // iPhone nem sequer ha MediaSource. Por isso este ramo NAO e um caso de
+    // canto: e o unico caminho no telemovel dele.
     video.src = alvo.url;
-    video.currentTime = r.tempoS;
+    // O `currentTime` so aceita um valor depois de haver metadados. Antes
+    // disso e uma atribuicao que nao faz nada, e o video comecava do
+    // principio do VOD em vez do instante pedido.
+    const irAoSitio = () => { try { video.currentTime = r.tempoS; } catch { /* ainda nao */ } };
+    if (video.readyState >= 1) irAoSitio();
+    else video.addEventListener('loadedmetadata', irAoSitio, { once: true });
     estado.players.set(linha.slug, { url: alvo.url, destroy: () => { video.removeAttribute('src'); } });
   }
   // Propriedade E atributo. A propriedade e que manda no som, mas deixar o
@@ -993,13 +1017,7 @@ function tocar(linha, r, video, { alta = false, correr = false, comSom = false }
   // outra — e foi assim que "nao sai som de nenhum dos dois" passou nos testes.
   video.muted = !comSom;
   video.toggleAttribute('muted', !comSom);
-  // `play()` devolve uma promessa que rejeita se o browser recusar tocar sem
-  // um clique. Ignorada de propósito: o utilizador carrega no quadrado e
-  // resolve-se sozinho — rebentar aqui deixava a página sem grelha nenhuma.
-  // Um `irPara` durante uma pausa não pode fazer o vídeo voltar a andar: o
-  // botão diz parado e o quadrado andava, que é a pior das duas coisas.
-  if (correr && !estado.parado) video.play?.().catch(() => {});
-  else video.pause?.();
+  aplicar(video, queFazerComOLeitor({ correr, parado: estado.parado, pausado: video.paused }));
   // Um leitor criado durante a pausa nasce com a mesma guarda: sem isto,
   // trocar de ângulo com a página parada punha o novo a andar.
   if (estado.parado && !video.__guarda) {
