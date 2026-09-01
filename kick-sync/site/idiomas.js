@@ -144,6 +144,9 @@ const TEXTOS = {
     'corte.comeca': 'começa {s}s antes da tua marca',
 
     'fila.limpar': 'Limpar a lista',
+    'fila.zip': 'Baixar os {n} num ficheiro só (.zip)',
+    'fila.zipGrande': 'a montagem passa dos 4 GB — guarda um a um, ou apaga kills antes',
+    'fila.zipErro': 'não consegui juntar os ficheiros; estão todos aí em baixo, um a um',
     'fila.recomecar': 'Recomeçar do zero',
     'fila.apagarUm': 'apagar este',
     'fila.memoria': '{n} ficheiros · {mb} MB em memória',
@@ -312,6 +315,9 @@ const TEXTOS = {
     'corte.comeca': 'starts {s}s before your mark',
 
     'fila.limpar': 'Clear the list',
+    'fila.zip': 'Download all {n} as one file (.zip)',
+    'fila.zipGrande': 'the montage is over 4 GB — save them one by one, or delete kills first',
+    'fila.zipErro': 'could not bundle the files; they are all below, one by one',
     'fila.recomecar': 'Start over',
     'fila.apagarUm': 'delete this one',
     'fila.memoria': '{n} files · {mb} MB in memory',
@@ -480,6 +486,9 @@ const TEXTOS = {
     'corte.comeca': 'empieza {s}s antes de tu marca',
 
     'fila.limpar': 'Limpiar la lista',
+    'fila.zip': 'Bajar los {n} en un solo archivo (.zip)',
+    'fila.zipGrande': 'el montaje pasa de 4 GB — guárdalos uno a uno, o borra kills antes',
+    'fila.zipErro': 'no pude juntar los archivos; están todos abajo, uno a uno',
     'fila.recomecar': 'Empezar de cero',
     'fila.apagarUm': 'borrar este',
     'fila.memoria': '{n} archivos · {mb} MB en memoria',

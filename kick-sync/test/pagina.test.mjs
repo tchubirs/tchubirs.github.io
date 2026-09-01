@@ -15,6 +15,8 @@ import assert from 'node:assert/strict';
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
+import { execFileSync } from 'node:child_process';
 
 const SITE = new URL('../site/', import.meta.url).pathname;
 // Porta escolhida pelo sistema, e não fixa: o `node --test` corre os ficheiros
@@ -861,11 +863,15 @@ test('da para limpar a lista e recomecar, e a memoria e mesmo devolvida',
     await p.click('#baixarMontagem');
     await p.waitForFunction(() => document.querySelectorAll('#fila a').length === 2,
       null, { timeout: 30000 });
+    // Dois, e nao tres: o ZIP e feito dos mesmos pedacos que ja estao na
+    // lista, e soma-lo outra vez dizia-lhe o dobro do que esta mesmo preso.
     assert.match(await p.locator('#memoria').innerText(), /2 ficheiros/, 'diz quanto esta preso');
 
     // Os enderecos tem de ser SOLTOS, e nao so apagados da lista: apagar a
-    // lista deixava os Blobs presos para sempre.
-    const urls = await p.locator('#fila a').evaluateAll((as) => as.map((a) => a.href));
+    // lista deixava os Blobs presos para sempre. O do ZIP conta aqui — nao
+    // entra na conta da memoria, mas segura os mesmos bytes enquanto existir.
+    const urls = await p.evaluate(() => [...document.querySelectorAll('#fila a, #zip a')].map((a) => a.href));
+    assert.equal(urls.length, 3, 'os dois clipes e o ZIP');
     await p.click('#limparFila');
     assert.equal(await p.locator('#fila a').count(), 0);
     assert.equal(await p.locator('#memoria').innerText(), '');
@@ -1175,4 +1181,58 @@ test('o numero de cada kill nao muda quando o filtro esconde as outras',
     await p.selectOption('#filtroMomentos', 'comMorte');
     assert.equal(await p.locator('#listaMomentos li[data-ms] .n').first().innerText(), '03',
       'a terceira kill continua a ser a terceira, mesmo sendo a unica na lista');
+  });
+
+// Trinta e seis cliques para guardar uma montagem eram trinta e cinco a mais.
+// Este teste nao se fica pelo botao aparecer: tira o ZIP de dentro do browser,
+// escreve-o no disco e manda o `unzip` do sistema verifica-lo. E o `unzip` que
+// decide se isto presta, e nao codigo meu a ler codigo meu.
+test('a montagem sai num ZIP so, e o unzip do sistema aceita-o',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'vitima1'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi\nvitima1');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 15000 });
+
+    // Duas kills, e em ambas alguem morreu — sao quatro clipes.
+    for (let i = 0; i < 2; i++) { await p.click('#mais1m'); await p.click('#marcarKill'); }
+    await p.waitForFunction(() => document.querySelectorAll('#listaMomentos li[data-ms]').length === 2,
+      null, { timeout: 10000 });
+    for (let i = 0; i < 2; i++) {
+      await p.locator('#listaMomentos li[data-ms]').nth(i).locator('.vit[data-canal="vitima1"]').click();
+    }
+
+    await p.click('#baixarMontagem');
+    await p.waitForSelector('#zip a', { timeout: 40000 });
+    assert.equal(await p.locator('#fila a').count(), 4, 'quatro clipes na lista, um a um');
+
+    const nome = await p.locator('#zip a').getAttribute('download');
+    assert.match(nome, /^montagem-\d{4}-\d{2}-\d{2}\.zip$/);
+
+    // Os bytes que o browser daria a quem clicasse.
+    const dados = await p.evaluate(async () => {
+      const r = await fetch(document.querySelector('#zip a').href);
+      return [...new Uint8Array(await r.arrayBuffer())];
+    });
+    const f = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'zip-pagina-')), nome);
+    fs.writeFileSync(f, Buffer.from(dados));
+
+    assert.match(execFileSync('unzip', ['-t', f], { encoding: 'utf8' }), /No errors detected/);
+    const dentro = execFileSync('unzip', ['-Z1', f], { encoding: 'utf8' }).trim().split('\n');
+    assert.equal(dentro.length, 4, 'os quatro clipes estao la dentro');
+    // A ordem da montagem — a POV dele primeiro, a de quem morreu a seguir —
+    // e a ordem por que ele monta. Um ZIP que a baralhasse dava-lhe trabalho.
+    assert.deepEqual(dentro.map((n) => n.slice(0, 6)), ['01a_tc', '01b_vi', '02a_tc', '02b_vi']);
+    // E os clipes tem de ter mesmo video la dentro, e nao zero bytes.
+    const tamanhos = execFileSync('unzip', ['-l', f], { encoding: 'utf8' });
+    assert.ok(!/\n\s+0\s+2026/.test(tamanhos), `um clipe saiu vazio:\n${tamanhos}`);
+
+    // "Limpar a lista" solta os enderecos; deixar la o botao do ZIP dava um
+    // link que parecia bom e descarregava nada.
+    await p.click('#limparFila');
+    assert.equal(await p.locator('#zip a').count(), 0);
+    assert.deepEqual(erros, []);
+    await p.close();
   });
