@@ -20,6 +20,7 @@ import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js';
 import { criarZip, crc32 } from './zip.js';
 import { criarApanhador } from './frames.js';
 import { varrerNoite, custoVarrerMB } from './procurar-momentos.js';
+import { TAXA_TIROS } from './tiros.js';
 import { somDoCanal } from './alinhar.js';
 import { MAXIMO_S, mover, janelaInicial, nomeDoClipe } from './clipe.js';
 import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js';
@@ -1109,7 +1110,8 @@ async function procurarKills() {
       deMs,
       ateMs,
       sinal: controlo.signal,
-      lerSom: (l, quandoMs, duracaoS, opcoes) => somDoCanal(l, quandoMs, duracaoS, opcoes),
+      // 24 kHz, e nao os 8 do alinhamento: o tiro vive no agudo.
+      lerSom: (l, quandoMs, duracaoS, opcoes) => somDoCanal(l, quandoMs, duracaoS, { ...opcoes, taxa: TAXA_TIROS }),
       aoProgresso: (p) => {
         nota.textContent = t('auto.aOuvir', {
           feito: p.feito, total: p.total, mb: (p.bytes / 1048576).toFixed(0),

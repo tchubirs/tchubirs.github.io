@@ -10,7 +10,7 @@ import fs from 'node:fs';
 import { vodsDoCanal, lerMaster, lerPlaylist, segmentosNaJanela } from '../site/kick.js';
 import { linhaDoCanal } from '../site/relogio.js';
 import { varrerNoite, custoVarrerMB } from '../site/procurar-momentos.js';
-import { TAXA } from '../site/sinal.js';
+import { TAXA_TIROS as TAXA } from '../site/tiros.js';
 
 const [slug, quando, segundos = '3600'] = process.argv.slice(2);
 const T0 = Date.parse(quando);
@@ -64,5 +64,5 @@ const r = await varrerNoite({
 });
 console.log(`\n\n  ${r.candidatos.length} candidatos, ${(r.bytes / 1048576).toFixed(0)} MB ouvidos:\n`);
 for (const [i, k] of r.candidatos.entries()) {
-  console.log(`   ${String(i + 1).padStart(2)}  ${hora(k.ms)}Z   ${k.tiros} tiros   nota ${k.nota.toFixed(1)}`);
+  console.log(`   ${String(i + 1).padStart(2)}  ${hora(k.ms)}Z   ${String(k.tiros).padStart(3)} tiros em ${k.duracaoS.toFixed(1)}s   pico x${k.pico.toFixed(0)}`);
 }
