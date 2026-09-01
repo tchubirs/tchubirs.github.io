@@ -218,6 +218,10 @@ function pintarPassos() {
     li.classList.toggle('aqui', n === passo);
     li.classList.toggle('feito', n < passo);
   }
+  // Um botão cheio de cor de cada vez. Com a noite já carregada, "Carregar"
+  // deixa de ser a acção principal — e três botões verdes ao mesmo tempo são
+  // o mesmo que nenhum.
+  $('carregar').classList.toggle('principal', passo === 1);
 }
 
 /**

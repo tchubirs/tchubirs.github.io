@@ -34,7 +34,9 @@
   --sobre-acento: #0b0d10;   /* texto por cima do acento */
 
   /* ── estado ──────────────────────────────────────────────────────────── */
-  --ok: #4ade80;
+  /* Ciano e não verde: um verde de "confirmado" ao lado do verde do acento
+     lê-se como a mesma cor, e o acento deixa de querer dizer "carrega aqui". */
+  --ok: #4dd4e8;
   --aviso: #ffb02e;
   --aviso-fundo: #ffb02e1a;
   --erro: #ff7a7a;
@@ -60,9 +62,19 @@
   --t-base: 15px;    /* corpo e controlos */
   --t-maior: 18px;   /* título de secção */
   --t-titulo: 24px;  /* nome da página */
+  /* Duas famílias, e cada uma no que faz melhor.
+   *
+   * Mono em TUDO — como nas ferramentas de torneio que ele mostrou — dá o
+   * registo técnico certo, e cobra caro no texto corrido: é mais largo, e num
+   * ecrã de 390 px uma frase de erro passa a ocupar três linhas. Por isso a
+   * mono fica onde ganha: relógio, durações, desvios, contagens, réguas e
+   * teclas. O texto que se lê fica em sans.
+   *
+   * Nenhuma das duas se descarrega: são as do sistema. Esta página corre ao
+   * lado de vários descodificadores de vídeo, e um webfont é mais um pedido
+   * na rede e um salto de letra a meio do arranque. */
   --letra: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  /* Números de tempo em tabular: sem isto o relógio dança a cada décimo. */
-  --letra-numero: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --letra-dados: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 
   /* ── elevação ────────────────────────────────────────────────────────── */
   --sombra-1: 0 1px 2px #00000059;

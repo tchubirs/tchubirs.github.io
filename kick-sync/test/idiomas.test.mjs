@@ -50,7 +50,7 @@ const IGUAIS_DE_PROPOSITO = {
     'tile.atrasar', 'alinhar.cancelado', 'montagem.antes', 'montagem.ir',
     'corte.titulo', 'corte.antes', 'clipe.cancelar',
     'sel.todos',
-    'montagem.parar', 'procurar.ph', 'ajuda.kill',
+    'montagem.parar', 'ajuda.kill',
     // Palavras que o portugues e o espanhol escrevem exactamente igual.
     'marca.inicio', 'tw.parar', 'montagem.baixarUma', 'montagem.pronto', 'corte.baixar',
   ]),

@@ -830,7 +830,7 @@ test('o botao de quem morreu olha por todos e nunca finge ter visto',
         'sem imagens nao se aponta ninguem');
       assert.equal(await p.locator('#listaMomentos .semImagem').count(), 2);
     } else {
-      assert.match(texto, /morreu|ninguém se destacou/);
+      assert.match(texto, /morreu|ninguém se destacou|não descodificar/);
       assert.ok(await p.locator('#listaMomentos .cartao.morreu').count() <= 2);
     }
 
@@ -1607,3 +1607,102 @@ test('o modal de clipe cabe num telemóvel em pé',
     assert.deepEqual(erros, []);
     await p.close();
   });
+
+// Portões do redesenho: coisas que se medem, e não que se olham.
+test('o caminho de três passos diz onde ele está, e sem scroll',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir({ ecra: { width: 390, height: 844 } });
+    await kickFalsa(p, { canais: ['tchubi'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+
+    // Num telemóvel, os três passos e o botão que os começa cabem no primeiro
+    // ecrã: se for preciso rolar para descobrir o que a página faz, falhou.
+    const passos = await p.locator('#passos').boundingBox();
+    const botao = await p.locator('#carregar').boundingBox();
+    assert.ok(passos.y + passos.height < 844, 'os passos ficam abaixo da dobra');
+    assert.ok(botao.y + botao.height < 844, 'o botão de começar fica abaixo da dobra');
+    assert.equal(await p.locator('#passos li.aqui').getAttribute('data-passo'), '1');
+
+    await p.fill('#canais', 'tchubi');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 25000 });
+    assert.equal(await p.locator('#passos li.aqui').getAttribute('data-passo'), '2');
+    // E com a noite carregada, "Carregar" deixa de ser a acção principal.
+    assert.equal(await p.locator('#carregar.principal').count(), 0);
+
+    await p.click('#marcarKill');
+    await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
+    assert.equal(await p.locator('#passos li.aqui').getAttribute('data-passo'), '3');
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+// O pior caso deste produto não é falhar: é acertar por engano. Um ângulo sem
+// relógio fiável exporta um clipe desalinhado com ar de certo, e ninguém dá
+// por nada até estar montado.
+test('a confiança do alinhamento é dita, e diz o próximo passo',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir({ ecra: { width: 1440, height: 900 } });
+    await kickFalsa(p, { canais: ['tchubi', 'outro'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi\noutro');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 25000 });
+
+    // Com PROGRAM-DATE-TIME nos dois, o relógio é exacto e diz isso.
+    assert.ok(await p.locator('#confianca.exacto').isVisible());
+    assert.match(await p.locator('#confianca').innerText(), /exacto/i);
+
+    // Um ajuste à mão passa a constar: é informação que muda a confiança.
+    await p.locator('.tile[data-slug="outro"] .ajuste button[data-passo="1"]').click();
+    await p.waitForFunction(() => /ajustad/i.test(document.getElementById('confianca').textContent),
+      null, { timeout: 5000 });
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+// Um atalho que ninguém sabe que existe é código morto.
+test('os atalhos que já existem podem ser descobertos',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p);
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    assert.equal(await p.locator('#modalAjuda').isVisible(), false);
+    await p.click('#ajuda');
+    assert.equal(await p.locator('#modalAjuda').isVisible(), true);
+    // As teclas listadas são as que o teclado responde mesmo.
+    const listadas = await p.locator('#modalAjuda kbd').allInnerTexts();
+    for (const k of ['I', 'O', 'M', 'C', 'J', 'L']) {
+      assert.ok(listadas.some((x) => x.trim() === k), `${k} não está na lista`);
+    }
+    await p.keyboard.press('Escape');
+    assert.equal(await p.locator('#modalAjuda').isVisible(), false);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+// "Erro sem próximo passo é bug de interface." Nenhuma mensagem de erro pode
+// ficar-se por dizer o que correu mal.
+test('todas as mensagens de erro dizem o próximo passo', async () => {
+  const { _TEXTOS } = await import('../site/idiomas.js');
+  // As que descrevem uma causa dentro de uma frase maior não contam: são
+  // fragmentos, e quem as usa acrescenta o resto.
+  const fragmentos = new Set(['estado.canalNaoExiste', 'estado.semVods', 'estado.vodsIndisponiveis',
+    'estado.rateLimit', 'estado.semRede', 'estado.nomeInvalido', 'estado.ilegivel',
+    'estado.inesperado', 'alinhar.semSom', 'alinhar.naoOuvi', 'corte.buraco',
+    'corte.foraDaNoite', 'corte.semSegmentos', 'tile.foraDoAr', 'tile.antes',
+    'tile.depois', 'tile.semVideo', 'montagem.naoFilmava', 'montagem.semImagem',
+    // Não são erros: um é o rodapé da página da Twitch (a palavra "erro"
+    // aparece lá a dizer quanto vale a sincronia), o outro é um resumo.
+    'tw.rodape', 'montagem.semVitima']);
+  const curtas = [];
+  for (const [chave, frase] of Object.entries(_TEXTOS.pt)) {
+    if (!/erro|falh|não deu|nenhum|sem |não consegui|inválido|passa dos/i.test(frase)) continue;
+    if (fragmentos.has(chave)) continue;
+    // Um próximo passo é um verbo no imperativo: "tenta", "escolhe", "abre"…
+    if (!/\b(tenta|escolhe|abre|usa|move|encurta|guarda|confere|escreve|verifica|alinha|marca|corre|espera|sincroniza|desliga|recarrega|carrega|vai)\b/i.test(frase)) {
+      curtas.push(chave);
+    }
+  }
+  assert.deepEqual(curtas, [], 'estas mensagens dizem o problema e não o próximo clique');
+});

@@ -48,7 +48,6 @@ textarea, select {
 
 /* A busca. O slug da Kick nem sempre e o nome que se ve, e obrigar alguem a
    descobri-lo antes de usar isto era um passo a mais por cada canal. */
-.procura { position: relative; margin-bottom: 14px; }
 .procura input {
   width: 100%; background: var(--caixa); color: var(--texto);
   border: 1px solid var(--borda); border-radius: 8px; padding: 10px 12px; font: inherit;
@@ -66,7 +65,7 @@ textarea, select {
 .sugestoes li:hover, .sugestoes li[aria-selected="true"] { background: var(--realce); }
 .sugestoes li.ja { opacity: .45; cursor: default; }
 .sugestoes .quantos { color: var(--texto-2); font-size: var(--t-menor); font-variant-numeric: tabular-nums; }
-.sugestoes .vivo { color: var(--acento); font-size: var(--t-micro); }
+.sugestoes .vivo { color: var(--ok); font-size: var(--t-micro); }
 
 .linha { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
 
@@ -130,7 +129,7 @@ kbd {
 .palcoFoco .tile { aspect-ratio: 16/9; min-height: 180px; }
 .palcoFoco.dois .tile { aspect-ratio: 16/9; min-height: 140px; }
 .palcoFoco:empty { display: none; }
-.tile.foco { border-color: var(--acento); }
+.tile.foco { border-color: var(--borda-forte); }
 /* O som no canto de baixo a esquerda, e o cursor de volume a abrir ao lado —
    o mesmo sitio e o mesmo gesto da Twitch, da Kick e do YouTube. */
 /* Uma barra só no fundo do quadrado, e não um grupo colado a cada canto.
@@ -156,7 +155,7 @@ kbd {
   padding: 1px 7px; font-size: var(--t-menor); background: transparent; border: 0; line-height: 1.4;
 }
 .tile .vol {
-  width: 0; min-width: 0; opacity: 0; margin: 0; accent-color: var(--acento);
+  width: 0; min-width: 0; opacity: 0; margin: 0; accent-color: var(--texto);
   /* Fechado nao pode apanhar cliques. Com largura zero o browser ainda lhe da
      area de toque, e ela cai por cima do proprio botao do som — o botao ficava
      impossivel de carregar sem que nada no ecra o explicasse. */
@@ -166,13 +165,13 @@ kbd {
 .tile .som:hover .vol, .tile .som:focus-within .vol {
   width: 72px; opacity: 1; margin: 0 6px 0 2px; pointer-events: auto;
 }
-.tile.principal { border-color: var(--acento); box-shadow: 0 0 0 1px var(--acento); }
+.tile.principal { border-color: var(--texto); box-shadow: 0 0 0 1px var(--texto); }
 .tile .par {
   position: absolute; right: 6px; top: 6px; padding: 1px 7px; font-size: var(--t-menor);
   background: var(--sobre-video); border-radius: 5px; opacity: .35; transition: opacity .15s;
 }
 .tile:hover .par, .tile.foco .par { opacity: 1; }
-.tile.foco .par { color: var(--acento); border-color: var(--acento); }
+.tile.foco .par { color: var(--texto); border-color: var(--borda-forte); }
 .tile.vazio video { opacity: 0; }
 .tile .rotulo {
   position: absolute; left: 6px; top: 6px; background: var(--sobre-video); padding: 2px 7px;
@@ -198,7 +197,7 @@ kbd {
   font-size: var(--t-micro); font-variant-numeric: tabular-nums; min-width: 40px; text-align: center;
   color: var(--texto-2); font-weight: 400;
 }
-.tile .ajuste.ativo .nudge { color: var(--acento); }
+.tile .ajuste.ativo .nudge { color: var(--aviso); }
 
 /* Onde cada ângulo está dentro do vídeo dele. Aparece antes da imagem, e é o
    que mostra o avanço e o atraso quando o quadrado ainda está preto. */
@@ -218,7 +217,7 @@ kbd {
 /* Uma coluna de nomes igual à das faixas, para que o mesmo instante caia no
    mesmo x na barra e no cursor. */
 .barraLinha { display: grid; grid-template-columns: 92px 1fr; gap: 8px; align-items: center; }
-#barra { width: 100%; margin: 0; accent-color: var(--acento); }
+#barra { width: 100%; margin: 0; accent-color: var(--texto); }
 /* As faixas: uma linha por canal, com o tempo em que esteve no ar. */
 .faixas { position: relative; margin-top: 10px; display: grid; gap: 3px; }
 .faixa { display: grid; grid-template-columns: 92px 1fr; gap: 8px; align-items: center; }
@@ -227,13 +226,13 @@ kbd {
   font-size: var(--t-menor); color: var(--texto-2); white-space: nowrap;
   overflow: hidden; text-overflow: ellipsis;
 }
-.faixa.principal .nome { color: var(--acento); }
+.faixa.principal .nome { color: var(--texto); }
 .trilho {
   position: relative; height: 12px; background: var(--realce);
   border-radius: 3px; overflow: hidden; cursor: pointer;
 }
 .trilho i { position: absolute; top: 0; bottom: 0; background: var(--texto-2); border-radius: 2px; }
-.faixa.principal .trilho i { background: var(--acento); }
+.faixa.principal .trilho i { background: var(--texto-3); }
 /* A regua: as horas por baixo das barras, e as kills marcadas nela. */
 .reguaLinha { display: grid; grid-template-columns: 92px 1fr; gap: 8px; margin-top: 2px; }
 .regua { position: relative; height: 26px; border-top: 1px solid var(--borda); }
@@ -271,24 +270,24 @@ kbd {
   padding: 7px 12px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
   font-variant-numeric: tabular-nums;
 }
-.momentos li.aqui { border-color: var(--acento); }
+.momentos li.aqui { border-color: var(--borda-forte); background: var(--caixa-2); }
 /* Numa noite varrida a lista tem dezenas de linhas e a maioria nao e kill.
    O risco verde a esquerda diz quais ja estao prontas sem ele ler nada. */
-.momentos li.confirmada { box-shadow: inset 3px 0 0 var(--acento); }
-.momentos .pega { width: 16px; height: 16px; accent-color: var(--acento); cursor: pointer; }
+.momentos li.confirmada { box-shadow: inset 3px 0 0 var(--ok); }
+.momentos .pega { width: 16px; height: 16px; accent-color: var(--texto-2); cursor: pointer; }
 
 /* A barra que trata da lista toda: filtrar, seleccionar, apagar, desfazer. */
 .barraSelecao { gap: 8px; margin-top: 10px; flex-wrap: wrap; }
 .barraSelecao button { padding: 4px 10px; font-size: var(--t-menor); }
-#anularApagar { border-color: var(--acento); color: var(--acento); }
+#anularApagar { border-color: var(--borda-forte); }
 .momentos .n { color: var(--texto-2); min-width: 26px; }
-.momentos .quem { color: var(--acento); }
+.momentos .quem { color: var(--texto-2); }
 .momentos .quantos { color: var(--texto-2); font-size: var(--t-menor); margin-left: auto; }
 .momentos button { padding: 3px 9px; font-size: var(--t-menor); }
 /* Quem morreu nesta kill. Sem marcar ninguem, sai so a POV do dono. */
 .momentos .vitimas { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; flex-basis: 100%; }
 .momentos .vit { border-radius: 999px; opacity: .5; }
-.momentos .vit.sim { opacity: 1; border-color: var(--acento); color: var(--acento); }
+.momentos .vit.sim { opacity: 1; border-color: var(--ok); color: var(--ok); }
 .momentos .vit:disabled { opacity: .2; }
 
 /* Os seis ecrãs, lado a lado, no instante do tiro. */
@@ -304,8 +303,8 @@ kbd {
   background: var(--video-fundo); border-radius: 4px; font-size: var(--t-micro); color: var(--texto-2);
 }
 .cartao b { font-size: var(--t-menor); overflow: hidden; text-overflow: ellipsis; }
-.cartao.morreu { border-color: var(--acento); }
-.cartao.morreu b { color: var(--acento); }
+.cartao.morreu { border-color: var(--ok); }
+.cartao.morreu b { color: var(--ok); }
 label.pequeno { display: inline-flex; gap: 5px; align-items: center; margin: 0; font-size: var(--t-menor); }
 label.pequeno input {
   width: 54px; background: var(--fundo); color: var(--texto); border: 1px solid var(--borda);
@@ -332,7 +331,7 @@ label.pequeno input {
   background: var(--caixa); border: 1px solid var(--borda); border-radius: 8px; padding: 8px 12px;
   font-variant-numeric: tabular-nums;
 }
-.fila a { color: var(--acento); }
+.fila a { color: var(--texto); text-decoration-color: var(--texto-3); }
 .fila li { display: flex; gap: 8px; align-items: baseline; }
 .fila .apagarUm { margin-left: auto; padding: 2px 9px; font-size: var(--t-menor); line-height: 1.2; }
 
@@ -484,15 +483,6 @@ footer { margin-top: 32px; border-top: 1px solid var(--borda); padding-top: 12px
     padding-right: 4px;
   }
   .palcoLado h2:first-child { margin-top: 0; }
-  /* A entrada também: a caixa de procura ao lado da lista de canais, em vez de
-     duas caixas iguais empilhadas sem nada a separá-las. */
-  #entrada {
-    display: grid; grid-template-columns: minmax(240px, 1fr) minmax(0, 2fr);
-    gap: 0 16px; align-items: start;
-  }
-  #entrada .procura { grid-column: 1; margin-bottom: 0; }
-  #entrada textarea { grid-column: 2; grid-row: 1 / span 2; height: 100%; min-height: 96px; }
-  #entrada .linha, #entrada #avisoPlayer { grid-column: 1 / -1; }
 }
 
 /* Um `select` no meio de uma linha de botões não tem de ocupar a linha toda.
@@ -606,3 +596,39 @@ button.discreto {
   min-width: var(--toque); min-height: 32px;
 }
 button.discreto:hover:not(:disabled) { background: var(--realce); color: var(--texto); }
+
+/* ── mono nos dados ─────────────────────────────────────────────────────────
+   O registo técnico da referência que ele mandou, mas só onde ganha: números
+   que se comparam de linha para linha, e teclas. O texto que se lê fica em
+   sans — mono numa frase de erro a 390 px passa a três linhas. */
+.tempo, .posicao, .nudge, .regua, .quantos, .dur, #tempoClipe, #memoria,
+#confianca, .momentos li > span, .momentos .n, .canais .vods, .fila li,
+.passos li b, kbd, .sugestoes .quantos, .corte .estadoCorte {
+  font-family: var(--letra-dados);
+  font-variant-numeric: tabular-nums;
+}
+/* Etiquetas em maiúsculas com espaçamento: é isto que dá o ar de painel de
+   instrumentos, e não a família da letra. */
+h2, .rotuloCampo, .etiqueta {
+  font-size: var(--t-micro); letter-spacing: .1em; text-transform: uppercase;
+  font-family: var(--letra-dados);
+}
+h2 { color: var(--texto-3); font-weight: 600; margin: var(--e5) 0 var(--e2); }
+.momentos .n { color: var(--texto-3); }
+
+/* A entrada: a procura ao serviço da lista, e não um segundo caminho. */
+.entradaGrelha { display: grid; gap: var(--e3); }
+.entradaGrelha .procura { position: relative; display: block; margin: 0; }
+@media (min-width: 720px) {
+  .entradaGrelha { grid-template-columns: minmax(220px, 1fr) minmax(0, 2fr); gap: var(--e4); }
+  .entradaGrelha .procuraCampo { align-self: start; }
+}
+
+/* A ligação para a Twitch partia-se em duas linhas num telemóvel. */
+.paraTwitch { white-space: nowrap; }
+.topo { flex-wrap: wrap; row-gap: var(--e2); }
+/* Alvo de toque em tudo o que se carrega com o dedo. */
+button, select, input[type="text"], input[type="search"], input[type="number"] { min-height: 36px; }
+.linha button, .barraSelecao button, #carregar, #baixarMontagem { min-height: var(--toque); }
+/* O foco tem de se ver mesmo por cima do vídeo. */
+:focus-visible { outline-offset: 2px; }
