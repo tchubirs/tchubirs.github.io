@@ -1,5 +1,5 @@
-import { energia, chao, impulsos, lutas, FPS, TAXA_TIROS } from './tiros.js?v=c2af49980f';
-import { recortar } from './aprender.js?v=c2af49980f';
+import { energia, chao, impulsos, lutas, FPS, TAXA_TIROS } from './tiros.js?v=7d4572c904';
+import { recortar } from './aprender.js?v=7d4572c904';
 
 // Achar as kills sozinho — pela forca do som.
 //
@@ -100,6 +100,10 @@ export async function varrerNoite({
   return {
     candidatos: achadas.map((g) => ({
       ms: Math.round(deMs + g.inicioS * 1000),
+      // O primeiro e o ultimo disparo do tiroteio. E daqui que sai o clipe:
+      // as margens dele sao POR FORA do combate, e nao a volta de um instante.
+      combateDeMs: Math.round(deMs + g.inicioS * 1000),
+      combateAteMs: Math.round(deMs + g.fimS * 1000),
       tiros: g.tiros,
       pico: g.pico,
       duracaoS: g.duracaoS,

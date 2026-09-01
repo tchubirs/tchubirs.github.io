@@ -108,9 +108,22 @@ const dois = (n) => String(n).padStart(2, '0');
  */
 export function clipesDoMomento(momento, canais, indice, { filmava = () => true } = {}) {
   const saida = [];
+  // O combate INTEIRO, e as margens dele por fora.
+  //
+  // "Falta tempo antes e tempo depois... esse tempo extra é fora o combate
+  // completo: antes do primeiro disparo e depois do último." Antes disto o
+  // clipe era cinco segundos antes do instante e dois depois — e um tiroteio
+  // de vinte segundos ficava cortado ao meio. O que ele marca à mão continua a
+  // ser um instante só, e aí as duas pontas são o mesmo número.
+  const a = Number.isFinite(momento.combateDeMs) ? momento.combateDeMs : momento.ms;
+  const b = Number.isFinite(momento.combateAteMs) ? momento.combateAteMs : momento.ms;
+  // Ordenadas, e nao como vierem: um combate com as pontas trocadas dava um
+  // clipe de duracao negativa, que o cortador aceita e devolve vazio.
+  const combateDe = Math.min(a, b);
+  const combateAte = Math.max(a, b);
   const junta = (slug, antesS, depoisS, papel, letra) => {
-    const deMs = momento.ms - antesS * 1000;
-    const ateMs = momento.ms + depoisS * 1000;
+    const deMs = combateDe - antesS * 1000;
+    const ateMs = combateAte + depoisS * 1000;
     if (!filmava(slug, deMs, ateMs)) return;
     saida.push({
       canal: slug,

@@ -110,15 +110,21 @@ export function impulsos(blocos, piso, { alturaMin = 8, saltoMin = 6 } = {}) {
 /**
  * As lutas: impulsos que andam juntos.
  *
- * Um tiro sozinho a duzentos metros nao e uma luta dele. Quatro em seis
- * segundos e — e "eu contra outra pessoa, ambos a disparar" e o caso que ele
- * descreveu como o mais alto de todos.
+ * Um tiro sozinho a duzentos metros nao e uma luta dele. Quatro juntos sao.
+ *
+ * Os catorze segundos de intervalo foram medidos no som verdadeiro dele. Com
+ * seis — o valor de antes — a duracao mediana de um "tiroteio" dava 4,2 s, e
+ * ele viu o resultado: "no 15 o clipe acaba antes de comecar o PvP de
+ * verdade". Nao acabava: e que um combate era partido em pedacos de quatro
+ * segundos. Com catorze, a mediana passa a 12,8 s e a troca grande das 21:22
+ * volta a ser UMA — cinquenta e dois segundos, setenta e quatro disparos, e o
+ * kill feed do servidor mostra varias mortes nessa janela.
  *
  * Saem ordenadas pelo IMPULSO MAIS ALTO de cada uma, e nao pelo relogio: o
  * headshot e o som mais alto do jogo, por isso a luta com o pico maior e a que
  * ele quer ver primeiro numa lista de trinta.
  */
-export function lutas(imps, { minTiros = 4, juntarS = 6, maxLutaS = 90 } = {}) {
+export function lutas(imps, { minTiros = 4, juntarS = 14, maxLutaS = 90 } = {}) {
   const juntar = juntarS * FPS;
   const grupos = [];
   let atual = null;
