@@ -416,12 +416,15 @@ async function abrirNoite(noite) {
   // tempo" era um aviso a fingir de problema: nao ter todos nao impede nada,
   // corta-se na mesma com os que la estavam. O que faz falta e saber QUEM.
   $('resumoNoite').textContent = estado.linhas.map((l) => l.slug).join(', ')
-    + (estado.janela.haSobreposicao
+    + (estado.janela.haSobreposicao && !soUmCanal()
       ? ` · ${t('noite.todosJuntos', {
         de: relogioCurto(estado.janela.sobreposicaoInicio),
         ate: relogioCurto(estado.janela.sobreposicaoFim),
       })}`
       : '');
+  // Alinhar pelo som e uma operacao entre canais. Com um so, o botao existia
+  // para nao fazer nada.
+  $('alinhar').hidden = soUmCanal();
   montarGrade();
   pintarFaixas();
   irPara(estado.agoraMs);
@@ -776,8 +779,10 @@ function irPara(quandoMs) {
   for (const li of $('listaMomentos').querySelectorAll('li[data-ms]')) {
     li.classList.toggle('aqui', Math.abs(Number(li.dataset.ms) - quandoMs) < 1500);
   }
-  $('angulos').textContent = t('tempo.angulos', { n: vivos, total: estado.linhas.length });
-  $('angulos').classList.toggle('mau', vivos < 2);
+  // Com um canal so isto dizia "1 de 1 angulos" a vermelho, como se faltasse
+  // alguem. Nao falta: e o que ele pediu.
+  $('angulos').textContent = soUmCanal() ? '' : t('tempo.angulos', { n: vivos, total: estado.linhas.length });
+  $('angulos').classList.toggle('mau', !soUmCanal() && vivos < 2);
   const { inicio, fim } = estado.janela;
   const fraccao = Math.min(1, Math.max(0, (quandoMs - inicio) / (fim - inicio)));
   $('barra').value = String(Math.round(fraccao * 1000));
@@ -1276,8 +1281,19 @@ async function afinarInstante(apanhador, slug, ms, { janelaS = 6, precisaoMs = 2
   return b;
 }
 
+/**
+ * Com um canal so, metade desta pagina nao tem nada para dizer.
+ *
+ * "Tem comentario a falar de grupo, e eu so tenho um VOD." E verdade: nao ha
+ * quem morreu para escolher, nao ha nada para alinhar, nao ha "1 de 1
+ * angulos" e nao ha "todos juntos". Sao rotulos que existem por causa de um
+ * caso que nao e o dele naquele momento, e que enchem o ecra de um telemovel.
+ */
+const soUmCanal = () => estado.linhas.length < 2;
+
 function pintarMomentos() {
   const canais = estado.linhas.map((l) => l.slug);
+  const sozinho = soUmCanal();
   const lista = ordenar(estado.momentos);
   const visiveis = filtrar(lista, estado.filtro);
   // A seleccao nao pode guardar fantasmas: um momento apagado cujo ms ficasse
@@ -1293,7 +1309,7 @@ function pintarMomentos() {
     const n = planoDaMontagem([m], canais, { filmava }).length;
     // As fichas de quem morreu. Sem isto a página cortava todos os ângulos em
     // cada kill, e saíam quatro clipes de lixo por cada um bom.
-    const fichas = canais.filter((c) => c !== m.protagonista).map((c) => {
+    const fichas = sozinho ? '' : canais.filter((c) => c !== m.protagonista).map((c) => {
       const morreu = (m.vitimas || []).includes(c);
       const havia = filmava(c, m.ms - 3000, m.ms + 3000);
       return `<button class="vit ${morreu ? 'sim' : ''}" data-canal="${c}"`
@@ -1307,17 +1323,23 @@ function pintarMomentos() {
       + `<span>${relogioCurto(m.ms)}Z</span>`
       + `<span class="quem">${m.protagonista || '—'}</span>`
       + `<button class="ir">${t('montagem.ir')}</button>`
+      + `<button class="baixarUma" ${n ? '' : 'disabled'}>${t('montagem.baixarUma')}</button>`
       + `<button class="fora">${t('montagem.apagar')}</button>`
-      + `<button class="verMortes">${t('montagem.verMortes')}</button>`
+      + (sozinho ? '' : `<button class="verMortes">${t('montagem.verMortes')}</button>`)
       + `<span class="quantos">${tn(n, 'montagem.umClipe', 'montagem.clipes')}</span>`
-      + `<span class="vitimas"><span class="nota">${t('montagem.matou')}</span>${fichas}</span>`
+      + (sozinho ? '' : `<span class="vitimas"><span class="nota">${t('montagem.matou')}</span>${fichas}</span>`)
       + '<div class="olhar" hidden></div></li>';
   }).join('') || `<li class="nota">${t('montagem.vazia')}</li>`;
 
   for (const li of $('listaMomentos').querySelectorAll('li[data-ms]')) {
     const ms = Number(li.dataset.ms);
     li.querySelector('.ir').onclick = () => irPara(ms);
-    li.querySelector('.verMortes').onclick = () => verQuemMorreu(ms);
+    li.querySelector('.baixarUma').onclick = () => {
+      const m = estado.momentos.find((x) => x.ms === ms);
+      if (m) baixarMontagem([m]);
+    };
+    const vm = li.querySelector('.verMortes');
+    if (vm) vm.onclick = () => verQuemMorreu(ms);
     li.querySelector('.fora').onclick = () => {
       estado.momentos = remover(estado.momentos, ms);
       pintarMomentos();
@@ -1339,7 +1361,7 @@ function pintarMomentos() {
   pintarSelecao();
   const total = planoDaMontagem(lista, canais, { filmava }).length;
   $('baixarMontagem').disabled = !total;
-  const semVitima = lista.filter((m) => !temMorte(m)).length;
+  const semVitima = sozinho ? 0 : lista.filter((m) => !temMorte(m)).length;
   const escondidos = lista.length - visiveis.length;
   $('estadoMontagem').textContent = total
     ? t('montagem.resumo', {
@@ -1388,19 +1410,29 @@ function anularApagar() {
 }
 
 /**
- * A montagem inteira, em ordem e com os nomes numerados.
+ * A montagem, em ordem e com os nomes numerados.
  *
  * Um ficheiro de cada vez e com a cache partilhada: os clipes de uma mesma
  * kill caem quase todos nos mesmos segundos, e voltar a pedir o mesmo pedaço a
  * cada ângulo era pagar três vezes o mesmo download.
+ *
+ * @param {object[]|null} soEsta uma kill so, do botão dessa linha. "Só consigo
+ *   baixar todos de uma vez, não consigo baixar um" — e ele tem razão: numa
+ *   noite de quinze kills, querer a terceira e ter de esperar pelas quinze é
+ *   ridículo. Nesse caso a lista NÃO é limpa: ele pode ir buscando uma a uma e
+ *   elas juntam-se em baixo.
  */
-async function baixarMontagem() {
+async function baixarMontagem(soEsta = null) {
   const canais = estado.linhas.map((l) => l.slug);
-  const plano = planoDaMontagem(ordenar(estado.momentos), canais, { filmava });
+  const todas = ordenar(estado.momentos);
+  // A numeração é sempre a da montagem inteira, mesmo a pedir uma só: é este
+  // número que vai no nome do ficheiro, e tem de ser o mesmo nos dois caminhos.
+  const plano = planoDaMontagem(todas, canais, { filmava })
+    .filter((c) => !soEsta || soEsta.some((m) => m.ms === c.ms));
   const controlo = new AbortController();
   estado.cancelar = () => controlo.abort();
   $('baixarMontagem').disabled = true;
-  limparFila();
+  if (!soEsta) limparFila();
 
   const cache = new Map();
   const jaTemos = new Map();
@@ -1447,7 +1479,9 @@ async function baixarMontagem() {
   }
 
   $('estadoMontagem').textContent = t('montagem.pronto', { feitos, total: plano.length });
-  oferecerZip(paraZip);
+  // O ZIP é da montagem inteira. A pedir uma kill só, juntar num ZIP era pôr
+  // ali um botão que só levava a última coisa que ele carregou.
+  if (!soEsta) oferecerZip(paraZip);
   $('baixarMontagem').disabled = false;
   estado.cancelar = null;
 }
@@ -1873,7 +1907,9 @@ $('filtroMomentos').onchange = (e) => {
   pintarMomentos();
 };
 $('procurarKills').onclick = procurarKills;
-$('baixarMontagem').onclick = baixarMontagem;
+// Seta, e nao a funcao directamente: o `onclick` passa o evento como primeiro
+// argumento, e ele ia parar ao `soEsta` como se fosse uma lista de kills.
+$('baixarMontagem').onclick = () => baixarMontagem();
 $('limparFila').onclick = limparFila;
 $('clipar').onclick = abrirClipe;
 $('fecharClipe').onclick = fecharClipe;

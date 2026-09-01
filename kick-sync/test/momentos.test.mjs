@@ -197,3 +197,19 @@ test('um filtro desconhecido mostra tudo, e nao nada', () => {
   assert.equal(filtrar(lista, undefined).length, 2);
   assert.equal(filtrar(lista, null).length, 2);
 });
+
+// "So consigo baixar todos de uma vez, nao consigo baixar um." Para haver um
+// botao por linha, cada clipe tem de saber a que kill pertence — senao o unico
+// jeito de pedir uma so era refazer o plano por fora, com outra numeracao.
+test('cada clipe sabe a que kill pertence', () => {
+  const a = novoMomento(1000, 'eu', { vitimas: ['x'] });
+  const b = novoMomento(9000, 'eu', { vitimas: ['x'] });
+  const plano = planoDaMontagem([a, b], ['eu', 'x']);
+  assert.deepEqual([...new Set(plano.map((c) => c.ms))], [1000, 9000]);
+
+  const soASegunda = plano.filter((c) => c.ms === 9000);
+  assert.equal(soASegunda.length, 2, 'a POV dele e a de quem morreu');
+  // E continua a ser a SEGUNDA: o numero do ficheiro nao pode mudar so porque
+  // ele pediu esta sozinha.
+  assert.deepEqual(soASegunda.map((c) => c.prefixo), ['02a', '02b']);
+});

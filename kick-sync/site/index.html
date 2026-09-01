@@ -14,20 +14,17 @@
     <a class="paraTwitch" href="twitch.html" data-t="app.twitch">Twitch</a>
     <select id="idioma" aria-label="idioma"></select>
   </div>
-  <p class="sub" data-t="app.sub">Cola os canais que estiveram na mesma noite. Um relógio para todos.</p>
 </header>
 
 <section id="entrada">
-  <label for="procurar" data-t="procurar.label">Procurar um canal</label>
   <div class="procura">
     <input id="procurar" type="search" autocomplete="off" spellcheck="false"
-      data-t-ph="procurar.ph" placeholder="escreve o início do nome…">
+      data-t-aria="procurar.label" data-t-ph="procurar.ph" placeholder="escreve o início do nome…">
     <ul id="sugestoes" class="sugestoes" hidden></ul>
   </div>
 
-  <label for="canais" data-t="canais.label">Canais da Kick, um por linha</label>
-  <textarea id="canais" rows="6" spellcheck="false"
-    placeholder="tchubi&#10;outrocanal&#10;maisum"></textarea>
+  <textarea id="canais" rows="4" spellcheck="false" data-t-aria="canais.label"
+    data-t-ph="canais.ph" placeholder="canais da Kick, um por linha"></textarea>
   <div class="linha">
     <button id="carregar" class="principal" data-t="canais.carregar">Carregar a noite</button>
     <span id="estadoCarga" class="nota"></span>
@@ -38,8 +35,7 @@
 </section>
 
 <section id="noites" hidden>
-  <label for="noite" data-t="noite.label">Qual noite</label>
-  <select id="noite"></select>
+  <select id="noite" data-t-aria="noite.label"></select>
   <span class="nota" id="resumoNoite"></span>
 </section>
 

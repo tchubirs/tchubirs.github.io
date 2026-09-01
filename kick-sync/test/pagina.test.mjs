@@ -1041,7 +1041,7 @@ test('a pagina fala portugues, ingles e espanhol, e troca sem perder nada',
     assert.match(await p.title(), /many angles/);
     // O que ja estava no ecra tambem muda, e nao so os botoes parados.
     assert.match(await p.locator('#angulos').innerText(), /of \d+ angles/);
-    assert.match(await p.locator('#comoCortar').innerText(), /Mark the start/);
+    assert.match(await p.locator('#comoCortar').innerText(), /Mark with/);
     // E nada se perde na troca.
     assert.equal(await p.locator('#agora').innerText(), instante, 'o instante fica');
     assert.equal(await p.locator('.tile').count(), 2, 'e a grelha tambem');
@@ -1269,5 +1269,91 @@ test('os seis ângulos são vistos ao mesmo tempo, e não um de cada vez',
     // para não falhar num dia mau da máquina nem deixar passar uma regressão.
     assert.ok(demorou < 4000, `demorou ${demorou} ms — os ângulos voltaram a ser vistos em fila`);
     assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+// "Só consigo baixar todos de uma vez, não consigo baixar um."
+//
+// Numa noite de quinze kills, querer a terceira e ter de esperar pelas quinze
+// é ridículo. E o número do ficheiro tem de continuar a ser o da montagem
+// inteira — senão o mesmo clipe tem um nome quando vem sozinho e outro quando
+// vem com os irmãos.
+test('dá para baixar uma kill só, e o número dela não muda por isso',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'vitima1'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi\nvitima1');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 15000 });
+
+    for (let i = 0; i < 3; i++) { await p.click('#mais1m'); await p.click('#marcarKill'); }
+    await p.waitForFunction(() => document.querySelectorAll('#listaMomentos li[data-ms]').length === 3,
+      null, { timeout: 10000 });
+    await p.locator('#listaMomentos li[data-ms]').nth(1).locator('.vit[data-canal="vitima1"]').click();
+
+    // Só a segunda, e ela tem dois ângulos.
+    await p.locator('#listaMomentos li[data-ms]').nth(1).locator('.baixarUma').click();
+    await p.waitForFunction(() => document.querySelectorAll('#fila a').length === 2,
+      null, { timeout: 40000 });
+    const nomes = await p.locator('#fila a').evaluateAll((as) => as.map((a) => a.getAttribute('download')));
+    assert.deepEqual(nomes.map((n) => n.slice(0, 3)), ['02a', '02b'], 'continua a ser a segunda kill');
+
+    // E a terceira junta-se em baixo, em vez de apagar a que ele já tinha.
+    await p.locator('#listaMomentos li[data-ms]').nth(2).locator('.baixarUma').click();
+    await p.waitForFunction(() => document.querySelectorAll('#fila a').length === 3,
+      null, { timeout: 40000 });
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+// "Tem comentário a falar de grupo, e eu só tenho um VOD."
+//
+// Com um canal só não há quem morreu para escolher, não há nada para alinhar,
+// não há "1 de 1 ângulos" a vermelho como se faltasse alguém, e não há "todos
+// juntos". São rótulos de um caso que não é o dele, a encher um telemóvel.
+test('com um canal só, a página não fala de grupo',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 15000 });
+    await p.click('#mais1m');
+    await p.click('#marcarKill');
+    await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
+
+    assert.equal(await p.locator('#alinhar').isVisible(), false, 'não há nada para alinhar');
+    assert.equal(await p.locator('#angulos').innerText(), '');
+    assert.equal(await p.locator('#listaMomentos .verMortes').count(), 0);
+    assert.equal(await p.locator('#listaMomentos .vitimas').count(), 0);
+    assert.ok(!/todos juntos/.test(await p.locator('#resumoNoite').innerText()));
+    assert.ok(!/sem ninguém marcado/.test(await p.locator('#estadoMontagem').innerText()),
+      await p.locator('#estadoMontagem').innerText());
+    // O que INTERESSA continua lá: ir ao momento e baixá-lo.
+    assert.equal(await p.locator('#listaMomentos .baixarUma').count(), 1);
+    assert.equal(await p.locator('#listaMomentos .ir').count(), 1);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+// E com dois canais tudo isso volta: o que se esconde é por ser inútil naquele
+// momento, e não por ter deixado de existir.
+test('com dois canais, tudo o que é de grupo volta',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'vitima1'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi\nvitima1');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 15000 });
+    await p.click('#mais1m');
+    await p.click('#marcarKill');
+    await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
+
+    assert.equal(await p.locator('#alinhar').isVisible(), true);
+    assert.match(await p.locator('#angulos').innerText(), /de 2/);
+    assert.equal(await p.locator('#listaMomentos .verMortes').count(), 1);
     await p.close();
   });
