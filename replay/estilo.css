@@ -394,3 +394,57 @@ footer { margin-top: 32px; border-top: 1px solid var(--borda); padding-top: 12px
   background: var(--acento); color: #000; text-decoration: none;
 }
 .botaoZip:hover { filter: brightness(1.1); }
+
+/* ── a pagina da Twitch ─────────────────────────────────────────────────────
+   Reaproveita a grelha e os tiles da Kick. O que muda e que dentro de cada
+   tile ha um iframe da Twitch em vez de um <video> nosso: nao lhe podemos
+   tocar por dentro, so dizer-lhe onde saltar. */
+.marca { color: #9146ff; }                 /* o roxo da Twitch, so no titulo */
+.voltar { color: inherit; text-decoration: none; }
+.voltar:hover { text-decoration: underline; }
+
+.aviso {
+  background: var(--caixa); border: 1px solid var(--borda); border-left: 3px solid #9146ff;
+  border-radius: 8px; padding: 10px 14px; margin: 0 0 14px; line-height: 1.5; font-size: 13px;
+}
+.aviso a { color: var(--acento); }
+
+/* O tile da Kick e um quadrado 16:9 com o video a preencher tudo. O da Twitch
+   tem tres andares — nome, quadro, nota — e enfiados naquele 16:9 os de baixo
+   transbordavam e caiam POR CIMA do de cima: a caixa do som ficava impossivel
+   de carregar e nada no ecra o explicava. A proporcao passa para o quadro. */
+.tile.tw {
+  aspect-ratio: auto; cursor: default;
+  display: grid; grid-template-rows: auto auto auto;
+}
+/* `position: static` a serio: a `.nota` dentro de um `.tile` e absoluta na
+   pagina da Kick — e um rotulo por cima do video — e aqui cobria o tile
+   inteiro, incluindo a caixa do som. Herdar uma regra de outra pagina e assim:
+   nada parece errado no ecra e o botao simplesmente nao responde. */
+.tile.tw .estadoTile { position: static; padding: 0 8px 6px; min-height: 1.2em; }
+
+/* O iframe nao aceita `object-fit`, por isso a proporcao tem de ser do quadro. */
+.quadro { aspect-ratio: 16 / 9; background: #000; }
+.quadro iframe { width: 100%; height: 100%; border: 0; display: block; }
+/* A caixa do som desta pagina chama-se `ligarSom` e nao `som`: `.tile .som` ja
+   existe na pagina da Kick, e e `position: absolute` por cima do video. Duas
+   coisas diferentes com o mesmo nome davam um botao que nao se conseguia
+   carregar e nada no ecra a explicar porque. */
+.tile .cabeca { display: flex; gap: 10px; align-items: center; padding: 5px 8px; }
+.tile .cabeca .pequeno { display: flex; gap: 5px; align-items: center; }
+.tile .cabeca b { flex: 1; }
+/* Quem nao estava a transmitir naquele instante. Escurecer diz isso de
+   relance, sem ele ter de ler a nota por baixo. */
+.tile.fora { opacity: .45; }
+
+.sugestoes .sug {
+  display: inline-flex; gap: 7px; align-items: center; margin: 0 6px 6px 0; padding: 4px 10px;
+}
+.sugestoes .sug img { border-radius: 50%; }
+.barraTempo { flex-wrap: wrap; gap: 7px; }
+/* O caminho para a outra pagina, no roxo dela. */
+.paraTwitch {
+  color: #9146ff; text-decoration: none; font-size: 13px; border: 1px solid #9146ff44;
+  border-radius: 999px; padding: 3px 11px;
+}
+.paraTwitch:hover { background: #9146ff22; }
