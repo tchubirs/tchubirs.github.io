@@ -117,6 +117,9 @@ export function clipesDoMomento(momento, canais, indice, { filmava = () => true 
       papel,
       deMs,
       ateMs,
+      // A que kill este clipe pertence. Sem isto nao havia maneira de pedir os
+      // clipes de UMA kill sem refazer o plano todo por fora.
+      ms: momento.ms,
       // O nome carrega a ordem: no editor os ficheiros caem já certos, e
       // ninguém tem de andar a adivinhar qual vem antes de qual.
       prefixo: `${dois(indice + 1)}${letra}`,
