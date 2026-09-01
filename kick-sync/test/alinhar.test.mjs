@@ -164,3 +164,66 @@ test('uma noite curta demais não inventa três janelas iguais', () => {
   const t = instantesParaOuvir(l, janelaComum(l), { quantos: 3, duracaoS: 120 });
   assert.equal(t.length, 1, 'com menos noite do que janela, mede-se uma vez e diz-se o que deu');
 });
+
+// "Sincroniza, adiciona canal novo depois e sincroniza de novo — vai ter que
+//  sincronizar tudo de novo?"
+//
+// Ia. Cada canal custa ~14 MB (3 janelas x 132 s x 280 kbps), por isso
+// acrescentar o trigésimo primeiro a uma noite já medida mandava descarregar
+// 420 MB para medir 14. E é desperdício puro: a forma do som do canal A no
+// minuto 40 não muda por ter chegado o canal Z.
+test('acrescentar um canal só ouve o canal novo, não a noite toda', async () => {
+  const memoria = new Map();
+  const primeiro = montar({ a: 0, b: 0, lento: 6.4 });
+  const contar = (m) => {
+    let n = 0;
+    return {
+      ...m,
+      lerSom: async (...args) => { n++; return m.lerSom(...args); },
+      quantas: () => n,
+    };
+  };
+
+  const um = contar(primeiro);
+  const r1 = await alinharPeloSom({
+    linhas: um.linhas, janela: um.janela, lerSom: um.lerSom, duracaoS: 120, janelas: 3, memoria,
+  });
+  assert.equal(um.quantas(), 9, 'três canais x três janelas');
+  assert.equal(r1.reaproveitados, 0);
+
+  // Agora chega o quarto. A janela é a mesma (todos cobrem a noite inteira),
+  // por isso os instantes são os mesmos e a memória serve.
+  const dois = contar(montar({ a: 0, b: 0, lento: 6.4, novo: 2.1 }));
+  const r2 = await alinharPeloSom({
+    linhas: dois.linhas, janela: dois.janela, lerSom: dois.lerSom, duracaoS: 120, janelas: 3, memoria,
+  });
+  assert.equal(dois.quantas(), 3, `ouviu ${dois.quantas()} vezes; só o canal novo são 3`);
+  assert.equal(r2.reaproveitados, 9);
+
+  // E o resultado tem de ser o mesmo que se tivesse ouvido tudo outra vez.
+  const diferenca = (r2.ajustesMs.novo - r2.ajustesMs.a) / 1000;
+  assert.ok(Math.abs(diferenca - 2.1) < 0.3, `esperava +2,1 s no novo, deu ${diferenca.toFixed(2)}`);
+  const antes = (r1.ajustesMs.lento - r1.ajustesMs.a) / 1000;
+  const depois = (r2.ajustesMs.lento - r2.ajustesMs.a) / 1000;
+  assert.ok(Math.abs(antes - depois) < 0.2, `o lento mudou de ${antes.toFixed(2)} para ${depois.toFixed(2)}`);
+});
+
+test('uma noite diferente não reaproveita medições da anterior', async () => {
+  const memoria = new Map();
+  const a = montar({ a: 0, b: 0 });
+  await alinharPeloSom({ ...a, lerSom: a.lerSom, duracaoS: 120, janelas: 3, memoria });
+  const chavesAntes = [...memoria.keys()];
+
+  // Outra janela: os instantes escolhidos são outros, logo as chaves são
+  // outras, e nenhuma medição da noite passada entra por engano.
+  const H = 3_600_000;
+  const desloca = (j) => Object.fromEntries(Object.entries(j)
+    .map(([k, v]) => [k, typeof v === 'number' && v > 1e12 ? v + H : v]));
+  const outra = { ...a, janela: desloca(a.janela) };
+  const instantes = instantesParaOuvir(outra.linhas, outra.janela, { quantos: 3, duracaoS: 120 });
+  for (const t of instantes) {
+    for (const l of outra.linhas) {
+      assert.ok(!chavesAntes.includes(`${t}|${l.slug}`), `${t}|${l.slug} veio da noite anterior`);
+    }
+  }
+});

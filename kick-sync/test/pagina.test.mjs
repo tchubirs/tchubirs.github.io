@@ -1283,6 +1283,8 @@ test('dá para ver a kill antes de a baixar, e a prévia é o mesmo pedaço do f
     await p.waitForSelector('.tile', { timeout: 15000 });
 
     // Margens diferentes das de origem, para o teste não passar por acaso.
+    // As margens vivem numa gaveta fechada: abre-se como uma pessoa abriria.
+    await p.click('#margens summary');
     await p.fill('#protAntes', '7');
     await p.fill('#protDepois', '3');
     await p.click('#mais1m');
@@ -1442,6 +1444,7 @@ test('a prévia de um tiroteio leva o combate inteiro e as margens por fora',
     await p.fill('#canais', 'tchubi');
     await p.click('#carregar');
     await p.waitForSelector('.tile', { timeout: 15000 });
+    await p.click('#margens summary');
     await p.fill('#protAntes', '5');
     await p.fill('#protDepois', '2');
     await p.click('#mais1m');

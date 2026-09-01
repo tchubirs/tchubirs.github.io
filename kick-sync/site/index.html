@@ -147,14 +147,23 @@
        dele longa e as POVs de quem morreu curtinhas, ja numeradas. -->
   <section id="montagem">
     <h2 data-t="montagem.titulo">Montagem</h2>
+    <!-- As margens vivem fechadas. São quatro caixas de número que se acertam
+         uma vez e nunca mais se tocam, e estavam permanentemente ao lado do
+         botão a ocupar duas filas inteiras num telemóvel. O resumo em cima diz
+         os valores sem ser preciso abrir. -->
     <div class="linha">
       <button id="marcarKill" class="principal"><span data-t="montagem.marcar">Marcar kill</span> <kbd>M</kbd></button>
-      <label class="pequeno"><span data-t="montagem.minhaPov">minha POV</span> <input id="protAntes" type="number" value="5" min="0" max="120" step="1">s antes</label>
-      <label class="pequeno"><input id="protDepois" type="number" value="2" min="0" max="120" step="1">s depois</label>
-      <span id="margensVitima" class="linha" hidden>
-        <label class="pequeno"><span data-t="montagem.quemMorreu">quem morreu</span> <input id="vitAntes" type="number" value="1" min="0" max="60" step="1">s antes</label>
-        <label class="pequeno"><input id="vitDepois" type="number" value="2" min="0" max="60" step="1">s depois</label>
-      </span>
+      <details id="margens" class="margens">
+        <summary><span data-t="montagem.margens">Margens</span> <output id="resumoMargens" class="nota"></output></summary>
+        <div class="linha">
+          <label class="pequeno"><span data-t="montagem.minhaPov">minha POV</span> <input id="protAntes" type="number" value="5" min="0" max="120" step="1">s antes</label>
+          <label class="pequeno"><input id="protDepois" type="number" value="2" min="0" max="120" step="1">s depois</label>
+          <span id="margensVitima" class="linha" hidden>
+            <label class="pequeno"><span data-t="montagem.quemMorreu">quem morreu</span> <input id="vitAntes" type="number" value="1" min="0" max="60" step="1">s antes</label>
+            <label class="pequeno"><input id="vitDepois" type="number" value="2" min="0" max="60" step="1">s depois</label>
+          </span>
+        </div>
+      </details>
     </div>
     <!-- A barra de selecao. Uma noite varrida da dezenas de candidatos e a
          maioria nao e kill; apagar um a um era o trabalho manual que a busca

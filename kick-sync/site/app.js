@@ -10,7 +10,7 @@ import {
   linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo,
 } from './relogio.js';
 import { cortarTodosOsAngulos } from './baixar.js';
-import { alinharPeloSom, custoEstimadoMB } from './alinhar.js';
+import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js';
 import { agruparPorNoite, rotuloDaNoite } from './noites.js';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
@@ -32,6 +32,11 @@ const $ = (id) => document.getElementById(id);
 const estado = {
   linhas: [],
   janela: null,
+  // A forma do som de cada canal em cada instante medido. Vive aqui e não
+  // dentro do alinhamento para sobreviver entre sincronizações: acrescentar
+  // um canal a uma noite já medida passa a ouvir só o canal novo. Com trinta
+  // ângulos, isso é 14 MB em vez de 434.
+  memoriaAlinhar: new Map(),
   agoraMs: 0,
   marca: { de: null, ate: null },
   nudges: {},
@@ -499,6 +504,7 @@ async function abrirNoite(noite) {
   $('alinhar').hidden = soUmCanal();
   // Os segundos de quem morreu so fazem sentido se houver quem morrer.
   $('margensVitima').hidden = soUmCanal();
+  pintarResumoMargens();
   montarGrade();
   seguirVideo();
   pintarConfianca();
@@ -521,6 +527,10 @@ function limparPalco() {
   $('listaMomentos').innerHTML = '';
   estado.linhas = [];
   estado.janela = null;
+  // A memória do som é de UMA noite. As chaves levam o instante absoluto, por
+  // isso outra noite falharia sozinha — mas ficava lá a ocupar memória para
+  // sempre, e ao fim de uma sessão longa são dezenas de MB de Float32.
+  estado.memoriaAlinhar.clear();
   $('angulos').textContent = '';
 }
 
@@ -1094,6 +1104,21 @@ function tocar(linha, r, video, { alta = false, correr = false, comSom = false }
   }
 }
 
+/**
+ * O resumo das margens, para se saber o que lá está sem abrir.
+ *
+ * As quatro caixas de número estavam permanentemente ao lado do "Marcar kill"
+ * e ocupavam duas filas inteiras num telemóvel. Acertam-se uma vez e nunca
+ * mais se tocam — mas quem as fecha tem de continuar a saber o que lá deixou.
+ */
+function pintarResumoMargens() {
+  const n = (id) => Number($(id).value) || 0;
+  const meu = `${n('protAntes')}/${n('protDepois')}s`;
+  $('resumoMargens').textContent = soUmCanal()
+    ? meu
+    : `${meu} · ${n('vitAntes')}/${n('vitDepois')}s`;
+}
+
 // ── alinhar pelo som ────────────────────────────────────────────────────────
 
 /**
@@ -1114,14 +1139,22 @@ async function alinhar() {
 
   // Com trinta ângulos isto passa a ser umas centenas de MB. Perguntar é mais
   // barato do que gastar os dados de alguém e explicar depois.
-  const mb = custoEstimadoMB(estado.linhas.length);
-  if (mb > 80 && !confirm(t('alinhar.custo', { n: estado.linhas.length, mb }))) return;
+  // O que falta OUVIR, e não quantos canais há: perguntar "vais gastar 434 MB?"
+  // para acrescentar um canal a uma noite já medida seria mentira, e ele dizia
+  // que não a uma coisa que custava catorze.
+  const instantes = instantesParaOuvir(estado.linhas, estado.janela);
+  const faltam = estado.linhas.filter(
+    (l) => instantes.some((i) => !estado.memoriaAlinhar.has(`${i}|${l.slug}`)),
+  ).length;
+  const mb = custoEstimadoMB(faltam);
+  if (mb > 80 && !confirm(t('alinhar.custo', { n: faltam, mb }))) return;
   botao.disabled = true;
 
   try {
     const r = await alinharPeloSom({
       linhas: estado.linhas,
       janela: estado.janela,
+      memoria: estado.memoriaAlinhar,
       sinal: controlo.signal,
       aoProgresso: (p) => {
         nota.textContent = p.fase === 'ouvir'
@@ -2131,6 +2164,11 @@ $('marcarIn').onclick = () => { estado.marca = { de: estado.agoraMs, ate: null }
 $('marcarOut').onclick = () => { estado.marca.ate = estado.agoraMs; pintarMarca(); guardar(); };
 $('alinhar').onclick = alinhar;
 $('marcarKill').onclick = marcarKill;
+// O resumo tem de acompanhar as caixas, senão fechá-las mente sobre o que lá está.
+for (const id of ['protAntes', 'protDepois', 'vitAntes', 'vitDepois']) {
+  $(id).addEventListener('input', pintarResumoMargens);
+}
+pintarResumoMargens();
 $('apagarSelecionados').onclick = apagarSelecionados;
 $('anularApagar').onclick = anularApagar;
 $('selecionarNada').onclick = () => { estado.selecao.clear(); pintarMomentos(); };

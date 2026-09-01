@@ -188,20 +188,36 @@ export async function somDoCanal(linha, quandoMs, duracaoS, {
  * Não aplica nada: quem decide é a página. Um alinhamento automático que
  * mexesse sozinho e sem dizer o quê seria pior do que não ter nenhum, porque
  * quando falhasse ninguém saberia que tinha falhado.
+ *
+ * `memoria` guarda a FORMA do som de cada canal em cada instante, e é passada
+ * de fora para sobreviver entre chamadas. Sem ela, acrescentar um canal a uma
+ * noite já sincronizada mandava descarregar tudo outra vez: com trinta
+ * ângulos são ~14 MB por canal, ou seja 420 MB para medir um só. E é
+ * desperdício puro — a forma do som do canal A no minuto 40 não muda por ter
+ * chegado o canal Z. A chave leva o instante, e os instantes mudam quando a
+ * janela muda, por isso uma noite diferente falha a memória sozinha em vez de
+ * devolver medições de outra noite.
  */
 export async function alinharPeloSom({
   linhas, janela, janelas = 3, duracaoS = 120,
   sinal, aoProgresso = () => {}, buscar = fetch, descodificar, lerSom = somDoCanal,
+  memoria = new Map(),
 } = {}) {
   const instantes = instantesParaOuvir(linhas, janela, { quantos: janelas, duracaoS });
-  const envelopes = new Map();
+  const envelopes = memoria;
   const problemas = [];
   let bytes = 0;
   let passo = 0;
-  const passos = instantes.length * linhas.length;
+  // Só conta o que falta MESMO ouvir. Uma barra de progresso que conta o que
+  // já está em memória diz "31 de 31" e demora dois segundos: parece avariada.
+  const porOuvir = instantes.flatMap((t) => linhas
+    .filter((l) => !envelopes.has(`${t}|${l.slug}`))
+    .map((l) => [t, l]));
+  const passos = porOuvir.length;
+  const reaproveitados = instantes.length * linhas.length - passos;
 
-  for (const t of instantes) {
-    for (const linha of linhas) {
+  for (const [t, linha] of porOuvir) {
+    {
       if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
       aoProgresso({ fase: 'ouvir', canal: linha.slug, feito: ++passo, total: passos, bytes });
       try {
@@ -246,5 +262,6 @@ export async function alinharPeloSom({
     instantes,
     problemas,
     bytes,
+    reaproveitados,
   };
 }

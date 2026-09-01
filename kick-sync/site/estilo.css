@@ -23,28 +23,47 @@ button { user-select: none; }
    atributo é uma afirmação, não uma sugestão. */
 [hidden] { display: none !important; }
 
+/* As três listas que passaram a rolar por dentro (canais, faixas, vítimas)
+   traziam a barra branca do sistema, que num fundo escuro grita mais do que
+   o conteúdo. */
+* { scrollbar-width: thin; scrollbar-color: var(--borda-forte) transparent; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: var(--borda-forte); border-radius: 999px; }
+::-webkit-scrollbar-track { background: transparent; }
+
 body {
   margin: 0;
   padding: 20px;
   background: var(--fundo);
   /* A grelha. `background-attachment: fixed` para que não ande com o scroll:
      é o chão da página, e o chão não se mexe. */
-  background-image:
-    repeating-linear-gradient(to right, var(--grelha) 0 1px, transparent 1px 72px),
-    repeating-linear-gradient(to bottom, var(--grelha) 0 1px, transparent 1px 72px);
   background-attachment: fixed;
   color: var(--texto);
   font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   /* 1400 era estreito de mais num ecrã grande: a página ficava uma tira ao
      meio com metade do monitor vazio de cada lado. 1760 era o outro extremo:
-     a 1440 não sobrava margem nenhuma e o primeiro rótulo nascia colado ao
-     vidro. A margem resolve-se com padding; a largura fica, porque o palco
-     (vídeo mais montagem) precisa mesmo do monitor todo — e há um teste que
-     o exige. A medida curta é só para o formulário, em baixo. */
-  max-width: 1760px;
-  margin-inline: auto;
+     a 1440 não sobrava margem nenhuma. Agora não há tecto nenhum: com 31
+     ângulos abertos num monitor de 2560 o tecto de 1760 deixava OITOCENTOS
+     pixels vazios de lado enquanto a grelha só conseguia seis colunas para
+     trinta e um vídeos. Isto é uma ferramenta: usa o monitor. A margem faz-se
+     com padding, e a medida curta é só do formulário. */
+  max-width: none;
 }
 @media (min-width: 720px) { body { padding: var(--e6); } }
+/* O quadriculado é da página inteira, do início ao fim.
+   Tinha-o prendido ao ecrã de entrada por ter lido mal: "na hora de ver os
+   VODs, tira" não é "tira da página", é "não o quero por trás do vídeo". E
+   por trás do vídeo ele nunca esteve — os quadrados e os cartões são opacos.
+   Onde ele aparece é exactamente onde não há nada, que é o sítio onde faz
+   falta: com um formulário de 900px num monitor de 2560 sobram 1600px de
+   preto liso de lado, e preto liso não é desenho nenhum, é ausência. */
+body {
+  background-image:
+    repeating-linear-gradient(to right, var(--grelha) 0 1px, transparent 1px 72px),
+    repeating-linear-gradient(to bottom, var(--grelha) 0 1px, transparent 1px 72px);
+}
+/* Menos um pouco por trás do palco, que é onde vive a imagem. */
+#palco { background: var(--fundo); }
 
 /* ── uma caixa ──────────────────────────────────────────────────────────────
    O que é um bloco de trabalho tem de parecer um bloco. Os campos do início
@@ -148,7 +167,16 @@ kbd {
   padding: 0 5px; font-size: var(--t-micro); color: var(--texto-2);
 }
 
-.canais { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+/* Trinta e um canais davam CINCO filas de chips antes de se ver um vídeo.
+   Duas filas de altura e rola: quem tem trinta ângulos não os lê um a um,
+   e quem tem três continua a vê-los todos sem rolar nada. */
+.canais {
+  list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 8px;
+  /* Duas filas certas: 2 x 48 de chip + 8 de intervalo = 104. Andei a
+     adivinhar a altura do chip (35? 42?) e cortava sempre a segunda fila a
+     meio, o que se lê como avaria e não como limite. Fui medi-la: 48. */
+  max-height: 104px; overflow-y: auto; overscroll-behavior: contain;
+}
 .canais li {
   background: var(--caixa); border: 1px solid var(--borda); border-radius: 999px;
   padding: 5px 12px; display: flex; gap: 8px; align-items: baseline;
@@ -162,6 +190,7 @@ kbd {
 /* The grid. Focus takes the top row on its own; the rest are thumbnails,
    because only the focus tile decodes at a real rendition. */
 .grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin: 16px 0; }
+@media (min-width: 1800px) { .grade { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); } }
 .tile {
   position: relative; aspect-ratio: 16/9; background: var(--video-fundo);
   border: 1px solid var(--borda); border-radius: 8px; overflow: hidden; cursor: pointer;
@@ -282,7 +311,14 @@ kbd {
 .barraLinha { display: grid; grid-template-columns: 92px 1fr; gap: 8px; align-items: center; }
 #barra { width: 100%; margin: 0; accent-color: var(--texto); }
 /* As faixas: uma linha por canal, com o tempo em que esteve no ar. */
-.faixas { position: relative; margin-top: 10px; display: grid; gap: 3px; }
+/* Com trinta e um canais isto eram quinhentos pixels de barras iguais. Fica
+   com tecto e rola por dentro; o cursor continua absoluto sobre elas. */
+.faixas {
+  position: relative; margin-top: 10px; display: grid; gap: 3px;
+  /* Dez faixas certas: 10 x 19,5 + 9 x 3 de intervalo = 222. Medido, como os
+     chips — 210 cortava a décima a um terço. */
+  max-height: 222px; overflow-y: auto; overscroll-behavior: contain;
+}
 .faixa { display: grid; grid-template-columns: 92px 1fr; gap: 8px; align-items: center; }
 .faixas { --coluna: 100px; }
 .faixa .nome {
@@ -355,7 +391,13 @@ kbd {
 .momentos .quantos { color: var(--texto-2); font-size: var(--t-menor); margin-left: auto; }
 .momentos button { padding: 3px 9px; font-size: var(--t-menor); }
 /* Quem morreu nesta kill. Sem marcar ninguem, sai so a POV do dono. */
-.momentos .vitimas { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; flex-basis: 100%; }
+/* Com trinta e um ângulos isto eram QUATRO filas de chips dentro de uma só
+   kill — e uma noite tem dezenas de kills. Duas filas e rola: quem morreu
+   está quase sempre entre os primeiros, e os outros continuam a um dedo. */
+.momentos .vitimas {
+  display: flex; gap: 5px; align-items: center; flex-wrap: wrap; flex-basis: 100%;
+  max-height: 66px; overflow-y: auto; overscroll-behavior: contain;
+}
 .momentos .vit { border-radius: 999px; opacity: .5; }
 .momentos .vit.sim { opacity: 1; border-color: var(--ok); color: var(--ok); }
 .momentos .vit:disabled { opacity: .2; }
@@ -542,6 +584,8 @@ footer { margin-top: 32px; border-top: 1px solid var(--borda); padding-top: 12px
 @media (min-width: 1080px) {
   #palco:not([hidden]) {
     grid-template-columns: minmax(0, 1.55fr) minmax(400px, 1fr);
+    /* Num monitor largo a montagem cabe muito melhor com espaço: os botões
+       de cada kill deixam de partir em quatro linhas. */
     align-items: start;
   }
   /* A coluna do trabalho acompanha a página: rever uma kill e ver o vídeo ao
@@ -624,6 +668,28 @@ footer { margin-top: 32px; border-top: 1px solid var(--borda); padding-top: 12px
 .passos li.aqui b { background: var(--acento); color: var(--sobre-acento); }
 .passos li.feito { color: var(--texto-2); }
 .passos li.feito b { background: var(--acento-fraco); color: var(--acento); }
+
+/* ── as margens, fechadas ───────────────────────────────────────────────────
+   Quatro caixas de número que se acertam uma vez e depois nunca mais. Ficam
+   atrás de um resumo em vez de ocuparem duas filas para sempre. */
+.margens > summary {
+  list-style: none; cursor: pointer; display: inline-flex; align-items: center;
+  gap: var(--e2); padding: 0 var(--e3); min-height: var(--toque);
+  border: 1px solid var(--borda); border-radius: var(--r1);
+  color: var(--texto-2); font-size: var(--t-menor);
+}
+.margens > summary::-webkit-details-marker { display: none; }
+.margens > summary::after { content: '▾'; color: var(--texto-3); }
+.margens[open] > summary::after { content: '▴'; }
+.margens > summary:hover { background: var(--realce); color: var(--texto); }
+.margens[open] > summary { border-color: var(--borda-forte); }
+.margens > .linha { margin-top: var(--e2); }
+/* Um `<details>` fechado esconde os filhos — excepto os que trazem `display`
+   escrito, e `.linha` traz `display: flex`. Os quatro campos ficavam visíveis
+   dentro de uma gaveta fechada, por cima do que estava por baixo. É a mesma
+   história do `hidden`, agora com `[open]`; o teste de sobreposição apanhou-a
+   antes de ir para o ar. */
+.margens:not([open]) > *:not(summary) { display: none; }
 
 /* ── a barra da sessão ──────────────────────────────────────────────────── */
 .barraSessao { margin-top: 0; align-items: end; }
