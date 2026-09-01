@@ -45,6 +45,10 @@
 </section>
 
 <section id="palco" hidden>
+  <!-- Duas colunas num ecrã grande: o vídeo e o relógio de um lado, a montagem
+       e as exportações do outro. Num telemóvel isto empilha, que é como
+       sempre esteve. -->
+  <div class="palcoVideo">
   <!-- Os ângulos em foco vivem aqui, e a grelha fica em baixo. Dois containers
        em vez de um truque de CSS: com dois em foco lado a lado, "esticar a
        célula até ao fim da linha" deixa de existir como conceito. -->
@@ -91,6 +95,9 @@
     <button id="alinhar" data-t="alinhar.botao" data-t-titulo="alinhar.ajuda" title="Analisa o áudio de cada ângulo e corrige o desvio">Sincronizar por áudio</button>
     <span id="estadoAlinhar" class="nota"></span>
   </div>
+  </div><!-- .palcoVideo -->
+
+  <div class="palcoLado">
 
   <!-- A montagem. O fluxo do dono: marca-se a kill, e a pagina entrega a POV
        dele longa e as POVs de quem morreu curtinhas, ja numeradas. -->
@@ -98,12 +105,6 @@
     <h2 data-t="montagem.titulo">Montagem</h2>
     <div class="linha">
       <button id="marcarKill" class="principal"><span data-t="montagem.marcar">Marcar kill</span> <kbd>M</kbd></button>
-      <button id="procurarKills" data-t="auto.botao">Deteção automática</button>
-      <select id="janelaAuto" aria-label="quanto procurar">
-        <option value="1800" data-t="auto.meiaHora">meia hora</option>
-        <option value="3600" selected data-t="auto.umaHora">uma hora</option>
-        <option value="0" data-t="auto.noiteToda">a noite toda</option>
-      </select>
       <label class="pequeno"><span data-t="montagem.minhaPov">minha POV</span> <input id="protAntes" type="number" value="5" min="0" max="120" step="1">s antes</label>
       <label class="pequeno"><input id="protDepois" type="number" value="2" min="0" max="120" step="1">s depois</label>
       <span id="margensVitima" class="linha" hidden>
@@ -135,6 +136,25 @@
     </div>
   </section>
 
+  <!-- A deteção automática à parte, e no fim.
+       "A parte dos clipes automáticos está muito ruim — temos que pôr escrito
+       teste, e puxar um pouco mais para baixo, separada das funções normais."
+       Tem razão: estava no meio dos botões que funcionam, e um botão que
+       acerta em cinco de seis não pode ter o mesmo peso de um que acerta
+       sempre. -->
+  <section id="automatico">
+    <h2><span data-t="auto.titulo">Deteção automática</span> <b class="etiqueta" data-t="auto.teste">teste</b></h2>
+    <p class="nota" data-t="auto.explica">Ouve a tua POV à procura de tiroteios.</p>
+    <div class="linha">
+      <button id="procurarKills" data-t="auto.botao">Deteção automática</button>
+      <select id="janelaAuto" data-t-aria="auto.quanto">
+        <option value="1800" data-t="auto.meiaHora">meia hora</option>
+        <option value="3600" selected data-t="auto.umaHora">uma hora</option>
+        <option value="0" data-t="auto.noiteToda">a noite toda</option>
+      </select>
+    </div>
+  </section>
+
   <section id="corte">
     <h2 data-t="corte.titulo">Cortar</h2>
     <ul id="listaCorte" class="corte"></ul>
@@ -150,6 +170,7 @@
        um clipe pronto — com um clipe so, o ZIP e um passo a mais. -->
   <div id="zip" class="linha"></div>
   <ul id="fila" class="fila"></ul>
+  </div><!-- .palcoLado -->
 </section>
 
 <!-- Criar clipe: uma janela por cima, com a barra de corte e um limite de
@@ -168,8 +189,10 @@
       <button class="pega ate" data-t-aria="clipe.fim" aria-label="fim do clipe"></button>
       <div class="cabeca"></div>
     </div>
-    <div class="linha">
-      <output id="tempoClipe" class="nota"></output>
+    <!-- O tempo numa linha e os dois botões noutra. Juntos, num telemóvel em
+         pé, o `+1s` partia-se para a linha de baixo sozinho. -->
+    <output id="tempoClipe" class="nota"></output>
+    <div class="linha segundos">
       <button id="menosClipe">−1s</button>
       <button id="maisClipe">+1s</button>
     </div>
@@ -187,10 +210,10 @@
   <!-- A versao, a serio e visivel. O GitHub Pages serve com max-age=600 e um
        telemovel guarda o app.js antigo; sem isto, "ja corrigi" e "continua
        igual" sao as duas verdadeiras ao mesmo tempo e ninguem sai dali. -->
-  <p class="nota"><span data-t="app.rodape">A sessão fica guardada neste dispositivo.</span> · <span id="versao">7d4572c904</span></p>
+  <p class="nota"><span data-t="app.rodape">A sessão fica guardada neste dispositivo.</span> · <span id="versao">4e5a1993ac</span></p>
 </footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.17/hls.min.js"></script>
-<script type="module" src="app.js?v=7d4572c904"></script>
+<script type="module" src="app.js?v=4e5a1993ac"></script>
 </body>
 </html>
