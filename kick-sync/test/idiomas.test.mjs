@@ -49,8 +49,10 @@ const IGUAIS_DE_PROPOSITO = {
     'procurar.seguidores', 'noite.todosJuntos', 'noite.umCanal',
     'tile.atrasar', 'alinhar.cancelado', 'montagem.antes', 'montagem.ir',
     'corte.titulo', 'corte.antes', 'clipe.cancelar',
-    'sel.mostrar', 'sel.todos',
-    'montagem.ver', 'montagem.parar', 'procurar.ph',
+    'sel.todos',
+    'montagem.parar', 'procurar.ph',
+    // Palavras que o portugues e o espanhol escrevem exactamente igual.
+    'marca.inicio', 'tw.parar', 'montagem.baixarUma', 'montagem.pronto', 'corte.baixar',
   ]),
 };
 

@@ -81,14 +81,14 @@
     </div>
     <div class="linha">
       <button id="clipar" class="principal"><span data-t="clipe.botao">Clipar</span> <kbd>C</kbd></button>
-      <button id="marcarIn"><span data-t="marca.inicio">Marca início</span> <kbd>I</kbd></button>
-      <button id="marcarOut"><span data-t="marca.fim">Marca fim</span> <kbd>O</kbd></button>
+      <button id="marcarIn"><span data-t="marca.inicio">Marcar entrada</span> <kbd>I</kbd></button>
+      <button id="marcarOut"><span data-t="marca.fim">Marcar saída</span> <kbd>O</kbd></button>
       <output id="marca" class="nota"></output>
     </div>
   </div>
 
   <div class="linha">
-    <button id="alinhar" data-t="alinhar.botao" data-t-titulo="alinhar.ajuda" title="ouve um bocado de cada ângulo e corrige o desvio de cada um">Alinhar pelo som</button>
+    <button id="alinhar" data-t="alinhar.botao" data-t-titulo="alinhar.ajuda" title="Analisa o áudio de cada ângulo e corrige o desvio">Sincronizar por áudio</button>
     <span id="estadoAlinhar" class="nota"></span>
   </div>
 
@@ -98,7 +98,7 @@
     <h2 data-t="montagem.titulo">Montagem</h2>
     <div class="linha">
       <button id="marcarKill" class="principal"><span data-t="montagem.marcar">Marcar kill</span> <kbd>M</kbd></button>
-      <button id="procurarKills" data-t="auto.botao">Procurar kills sozinho</button>
+      <button id="procurarKills" data-t="auto.botao">Deteção automática</button>
       <select id="janelaAuto" aria-label="quanto procurar">
         <option value="1800" data-t="auto.meiaHora">meia hora</option>
         <option value="3600" selected data-t="auto.umaHora">uma hora</option>
@@ -115,22 +115,22 @@
          maioria nao e kill; apagar um a um era o trabalho manual que a busca
          automatica existe para tirar. -->
     <div class="linha barraSelecao">
-      <label class="pequeno"><span data-t="sel.mostrar">mostrar</span>
+      <label class="pequeno"><span data-t="sel.mostrar">Filtrar</span>
         <select id="filtroMomentos" data-t-aria="sel.mostrar">
           <option value="todos" data-t="sel.todos">todos</option>
-          <option value="comMorte" data-t="sel.comMorte">só com morte confirmada</option>
-          <option value="semMorte" data-t="sel.semMorte">só os que faltam decidir</option>
+          <option value="comMorte" data-t="sel.comMorte">Com vítima identificada</option>
+          <option value="semMorte" data-t="sel.semMorte">Por rever</option>
         </select>
       </label>
-      <button id="selecionarTudo" data-t="sel.tudo">selecionar tudo</button>
-      <button id="selecionarNada" data-t="sel.nada">limpar seleção</button>
-      <button id="apagarSelecionados" data-t="sel.apagar" disabled>apagar selecionados</button>
-      <button id="anularApagar" data-t="sel.anular" hidden>anular</button>
+      <button id="selecionarTudo" data-t="sel.tudo">Selecionar tudo</button>
+      <button id="selecionarNada" data-t="sel.nada">Limpar seleção</button>
+      <button id="apagarSelecionados" data-t="sel.apagar" disabled>Remover selecionados</button>
+      <button id="anularApagar" data-t="sel.anular" hidden>Anular</button>
       <span id="estadoSelecao" class="nota"></span>
     </div>
     <ul id="listaMomentos" class="momentos"></ul>
     <div class="linha">
-      <button id="baixarMontagem" data-t="montagem.baixar" disabled>Baixar a montagem</button>
+      <button id="baixarMontagem" data-t="montagem.baixar" disabled>Exportar montagem</button>
       <span id="estadoMontagem" class="nota"></span>
     </div>
   </section>
@@ -142,8 +142,8 @@
   </section>
 
   <div class="linha">
-    <button id="limparFila" data-t="fila.limpar">Limpar a lista</button>
-    <button id="recomecar" data-t="fila.recomecar">Recomeçar do zero</button>
+    <button id="limparFila" data-t="fila.limpar">Limpar exportações</button>
+    <button id="recomecar" data-t="fila.recomecar">Repor sessão</button>
     <span id="memoria" class="nota"></span>
   </div>
   <!-- Trinta e seis ficheiros num so. Aparece sozinho quando ha mais do que
@@ -178,7 +178,7 @@
     <div class="linha fim">
       <span id="estadoClipe" class="nota"></span>
       <button id="cancelarClipe" data-t="clipe.cancelar">Cancelar</button>
-      <button id="guardarClipe" class="principal" data-t="clipe.guardar">Guardar clipe</button>
+      <button id="guardarClipe" class="principal" data-t="clipe.guardar">Exportar clipe</button>
     </div>
   </div>
 </div>
@@ -187,7 +187,7 @@
   <!-- A versao, a serio e visivel. O GitHub Pages serve com max-age=600 e um
        telemovel guarda o app.js antigo; sem isto, "ja corrigi" e "continua
        igual" sao as duas verdadeiras ao mesmo tempo e ninguem sai dali. -->
-  <p class="nota"><span data-t="app.rodape">Se fechares sem querer, fica tudo guardado neste telemóvel.</span> · <span id="versao">dev</span></p>
+  <p class="nota"><span data-t="app.rodape">A sessão fica guardada neste dispositivo.</span> · <span id="versao">dev</span></p>
 </footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.17/hls.min.js"></script>

@@ -1085,7 +1085,10 @@ test('a busca automatica nunca inventa kills que nao ouviu',
     p.on('dialog', (d) => d.accept());
     await p.click('#procurarKills');
     await p.waitForFunction(
-      () => /achei|não achei|no firefight|descodifica|não deu/.test(
+      // Todos os fins possiveis: achou, nao achou, ou o navegador nao
+      // descodifica. Um destes TEM de aparecer — ficar calada era o pior dos
+      // casos, e e isso que este limite de tempo apanha.
+      () => /detetados|Nenhum tiroteio|no firefight|descodifica|não deu/.test(
         document.getElementById('estadoMontagem').textContent),
       null, { timeout: 90000 },
     );
@@ -1139,7 +1142,7 @@ test('filtrar, seleccionar aos molhos, apagar e anular',
     assert.equal(await p.locator('#listaMomentos li[data-ms]').count(), 1);
     // O filtro nao pode esconder trabalho em silencio: a montagem que se
     // descarrega continua a ser a lista inteira.
-    assert.match(await p.locator('#estadoMontagem').innerText(), /2 escondidos/);
+    assert.match(await p.locator('#estadoMontagem').innerText(), /2 ocultos/);
 
     await p.selectOption('#filtroMomentos', 'semMorte');
     assert.equal(await p.locator('#listaMomentos li[data-ms]').count(), 2);
@@ -1260,7 +1263,7 @@ test('os seis ângulos são vistos ao mesmo tempo, e não um de cada vez',
     await p.locator('#listaMomentos .verMortes').click();
     await p.waitForFunction(() => {
       const c = document.querySelector('#listaMomentos .olhar');
-      return c && !/a olhar/.test(c.innerText);
+      return c && !/A identificar|a olhar/.test(c.innerText);
     }, null, { timeout: 60000 });
     const demorou = Date.now() - comecou;
 
@@ -1386,7 +1389,7 @@ test('dá para ver a kill antes de a baixar, e a prévia é o mesmo pedaço do f
     const previa = await p.evaluate(() => window.__estado?.previa ?? null);
     assert.deepEqual(previa && { de: previa.de - ms, ate: previa.ate - ms }, { de: -7000, ate: 3000 });
     assert.equal(await p.locator('#listaMomentos .ver.aVer').count(), 1, 'a linha diz que está a ver');
-    assert.match(await p.locator('#listaMomentos .ver').innerText(), /parar/);
+    assert.match(await p.locator('#listaMomentos .ver').innerText(), /Parar/);
 
     // Carregar outra vez desliga.
     await p.locator('#listaMomentos .ver').click();
@@ -1461,7 +1464,7 @@ test('marcar uma kill a sério faz a página procurar o mesmo som na noite',
     await p.waitForSelector('#listaMomentos .foiKill', { timeout: 5000 });
 
     await p.locator('#listaMomentos .foiKill').first().click();
-    await p.waitForFunction(() => /aprendi/.test(document.getElementById('estadoMontagem').textContent),
+    await p.waitForFunction(() => /Referência guardada/.test(document.getElementById('estadoMontagem').textContent),
       null, { timeout: 10000 });
 
     const marcados = await p.evaluate(() => window.__estado.momentos.map((m) => m.ms).sort((a, b) => a - b));
