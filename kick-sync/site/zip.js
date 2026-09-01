@@ -56,15 +56,21 @@ export function crc32Total(pedacos) {
 const dataDos = (d) => ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
 const horaDos = (d) => (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1);
 
+// Decide pelo TIPO do valor e nao pelo tamanho do campo. A versao anterior
+// decidia pelo tamanho — e um nome de ficheiro com exactamente dois ou quatro
+// bytes caia no ramo dos numeros e saia escrito como zeros. Nenhum nome de
+// clipe e assim curto, por isso nunca teria aparecido a usar; teria aparecido
+// no dia em que alguem la pusesse outra coisa.
 const escrever = (campos) => {
   const n = campos.reduce((s, [t]) => s + t, 0);
   const b = new Uint8Array(n);
   const v = new DataView(b.buffer);
   let o = 0;
   for (const [tamanho, valor] of campos) {
-    if (tamanho === 2) v.setUint16(o, valor, true);
+    if (valor instanceof Uint8Array) b.set(valor, o);
+    else if (tamanho === 2) v.setUint16(o, valor, true);
     else if (tamanho === 4) v.setUint32(o, valor >>> 0, true);
-    else b.set(valor, o);
+    else throw new Error('ZIP-CAMPO-INVALIDO');
     o += tamanho;
   }
   return b;
@@ -117,6 +123,10 @@ export function criarZip(ficheiros, quando = new Date()) {
     deslocamento += cabecalho.length + f.tamanho;
   }
 
+  // O deslocamento de cada ficheiro tambem cabe em quatro bytes. A conta la de
+  // cima soma so os clipes; com os cabecalhos pelo meio o total e um pouco
+  // maior, e e este o numero que o formato guarda.
+  if (deslocamento > LIMITE) throw new Error('ZIP-GRANDE-DEMAIS');
   const tamanhoCentral = central.reduce((s, c) => s + c.length, 0);
   const fim = escrever([
     [4, 0x06054B50], [2, 0], [2, 0], [2, ficheiros.length], [2, ficheiros.length],

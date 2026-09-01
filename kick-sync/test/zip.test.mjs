@@ -130,3 +130,20 @@ test('os deslocamentos aguentam ficheiros de tamanhos diferentes', async () => {
   const l = execFileSync('unzip', ['-l', f], { encoding: 'utf8' });
   for (const n of [1, 500, 3, 70000, 12]) assert.match(l, new RegExp(`\\s${n}\\s`), `faltou ${n}`);
 });
+
+// O escritor de campos decidia pelo TAMANHO do campo: dois bytes era um
+// numero, quatro era outro numero, o resto eram bytes. Um nome de ficheiro com
+// exactamente dois ou quatro bytes caia no ramo errado e saia escrito como
+// zeros. Nenhum nome de clipe e assim curto — este teste existe para o dia em
+// que alguem la puser outra coisa.
+test('um nome de dois ou quatro bytes nao sai escrito como zeros', async () => {
+  const f = await escreverZip([
+    ficheiro('ab', 'nome de dois bytes'),
+    ficheiro('abcd', 'nome de quatro bytes'),
+    ficheiro('a', 'nome de um byte'),
+    ficheiro('abc', 'nome de tres bytes'),
+  ]);
+  assert.match(execFileSync('unzip', ['-t', f], { encoding: 'utf8' }), /No errors detected/);
+  const dentro = execFileSync('unzip', ['-Z1', f], { encoding: 'utf8' }).trim().split('\n');
+  assert.deepEqual(dentro, ['ab', 'abcd', 'a', 'abc']);
+});

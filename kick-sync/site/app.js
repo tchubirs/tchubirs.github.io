@@ -1131,8 +1131,17 @@ async function verQuemMorreu(ms, { silencioso = false } = {}) {
   // seguidas: uma bissecção que rebentasse deixava cento e vinte leitores
   // vivos e a página ia ficando pesada sem razão à vista.
   try {
-    for (const l of estado.linhas) {
-      if (!silencioso) caixa.innerHTML = `<span class="nota">${t('montagem.aOlharCanal', { canal: l.slug })}</span>`;
+    // Os canais ao mesmo tempo, e nao um de cada vez.
+    //
+    // Cada canal tem o seu proprio <video>: seis leitores a saltar para o
+    // mesmo instante e o mesmo trabalho que a grelha ja faz quando toca. Em
+    // fila indiana isto eram seis esperas somadas por cada kill, e a busca
+    // automatica faz isto vinte vezes — dez minutos que passam a dois.
+    //
+    // Dentro de cada canal continua em fila: sao dois saltos no MESMO leitor,
+    // e pedi-los ao mesmo tempo dava dois frames do mesmo sitio.
+    let vistos = 0;
+    await Promise.all(estado.linhas.map(async (l) => {
       try {
         const antes = await apanhador.frame(l.slug, ms - 2000);
         const depois = await apanhador.frame(l.slug, ms + 2500);
@@ -1143,7 +1152,12 @@ async function verQuemMorreu(ms, { silencioso = false } = {}) {
         // medição para os outros cinco.
         notas[l.slug] = null;
       }
-    }
+      vistos += 1;
+      if (!silencioso) {
+        caixa.innerHTML = `<span class="nota">${t('montagem.aOlharQuantos',
+          { feito: vistos, total: estado.linhas.length })}</span>`;
+      }
+    }));
 
     ({ sugeridos, ordenados } = quemMorreu(notas));
     // Marcar já os sugeridos: o objectivo é ele não ter de escolher nada

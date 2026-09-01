@@ -1236,3 +1236,38 @@ test('a montagem sai num ZIP so, e o unzip do sistema aceita-o',
     assert.deepEqual(erros, []);
     await p.close();
   });
+
+// Seis ângulos ao mesmo tempo, e não um de cada vez.
+//
+// Em fila indiana isto eram seis esperas somadas por cada kill, e a busca
+// automática faz isto vinte vezes seguidas. Aqui não há descodificador, por
+// isso cada ângulo desiste ao fim de um tempo fixo — o que torna a diferença
+// entre as duas maneiras mensurável: em fila, seis desistências somadas.
+test('os seis ângulos são vistos ao mesmo tempo, e não um de cada vez',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const canais = ['tchubi', 'c2', 'c3', 'c4', 'c5', 'c6'];
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', canais.join('\n'));
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 20000 });
+    await p.click('#mais1m');
+    await p.click('#marcarKill');
+    await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
+
+    const comecou = Date.now();
+    await p.locator('#listaMomentos .verMortes').click();
+    await p.waitForFunction(() => {
+      const c = document.querySelector('#listaMomentos .olhar');
+      return c && !/a olhar/.test(c.innerText);
+    }, null, { timeout: 60000 });
+    const demorou = Date.now() - comecou;
+
+    // Medido nesta máquina, com seis ângulos: em fila indiana 10,9 s. O limite
+    // está bem abaixo disso e bem acima do que a versão em paralelo demora,
+    // para não falhar num dia mau da máquina nem deixar passar uma regressão.
+    assert.ok(demorou < 4000, `demorou ${demorou} ms — os ângulos voltaram a ser vistos em fila`);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
