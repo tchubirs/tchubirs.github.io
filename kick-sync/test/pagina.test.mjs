@@ -1402,3 +1402,71 @@ test('dá para ver a kill antes de a baixar, e a prévia é o mesmo pedaço do f
     assert.deepEqual(erros, []);
     await p.close();
   });
+
+// "Assisti todos os clipes automáticos e estão todos errados."
+//
+// O problema de fundo era eu estar a adivinhar o que é o som de uma kill. Ele
+// descreveu quatro sons, e três deles são amostras do jogo — o mesmo ficheiro
+// tocado outra vez, sempre igual. Então ele aponta UMA kill que sabe que foi
+// kill, e a página procura essa mesma forma de onda na noite inteira.
+//
+// Aqui o som é posto à mão porque este Chromium não descodifica AAC. O que se
+// testa é a costura: o botão só aparece quando há som guardado, aprende com o
+// estouro certo, e a lista passa a ser o que ele confirmou.
+test('marcar uma kill a sério faz a página procurar o mesmo som na noite',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 15000 });
+    await p.click('#mais1m');
+    await p.click('#marcarKill');
+    await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
+
+    // Sem varredura nao ha som guardado, e o botao nao pode existir: prometia
+    // uma coisa que a pagina nao sabe fazer.
+    assert.equal(await p.locator('#listaMomentos .foiKill').count(), 0);
+
+    const ms = Number(await p.locator('#listaMomentos li[data-ms]').getAttribute('data-ms'));
+    // Uma noite falsa: o MESMO som em quatro instantes, e um som diferente
+    // noutros dois. So os quatro podem sobrar.
+    await p.evaluate(({ ms: m }) => {
+      const n = 1440;
+      const forma = (semente) => {
+        let s = semente >>> 0;
+        const r = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296 - 0.5; };
+        const v = new Float32Array(n);
+        let e = 0;
+        for (let k = 0; k < n; k++) { v[k] = Math.exp(-k / 240) * r(); e += v[k] * v[k]; }
+        for (let k = 0; k < n; k++) v[k] /= Math.sqrt(e);
+        return v;
+      };
+      const acerto = forma(11);
+      const outro = forma(999);
+      window.__estado.estouros = [
+        { ms: m, altura: 40, recorte: acerto },
+        { ms: m + 30_000, altura: 30, recorte: acerto },
+        { ms: m + 90_000, altura: 25, recorte: acerto },
+        { ms: m + 150_000, altura: 20, recorte: acerto },
+        { ms: m + 45_000, altura: 35, recorte: outro },
+        { ms: m + 60_000, altura: 33, recorte: outro },
+      ];
+    }, { ms });
+    // Mexer no filtro redesenha a lista — e uma accao dele, e nao um atalho
+    // de teste. Na vida real quem redesenha e a propria busca automatica,
+    // logo a seguir a guardar os sons.
+    await p.selectOption('#filtroMomentos', 'semMorte');
+    await p.waitForSelector('#listaMomentos .foiKill', { timeout: 5000 });
+
+    await p.locator('#listaMomentos .foiKill').first().click();
+    await p.waitForFunction(() => /aprendi/.test(document.getElementById('estadoMontagem').textContent),
+      null, { timeout: 10000 });
+
+    const marcados = await p.evaluate(() => window.__estado.momentos.map((m) => m.ms).sort((a, b) => a - b));
+    assert.deepEqual(marcados, [ms, ms + 30_000, ms + 90_000, ms + 150_000],
+      'só os instantes com o MESMO som — o outro som não pode entrar');
+    assert.deepEqual(erros, []);
+    await p.close();
+  });

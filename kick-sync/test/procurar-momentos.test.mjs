@@ -105,3 +105,30 @@ test('o custo de varrer e dito antes, e cresce com o tempo', () => {
   assert.ok(custoVarrerMB(3600_000) > 100 && custoVarrerMB(3600_000) < 200,
     `uma hora deu ${custoVarrerMB(3600_000)} MB`);
 });
+
+// Sem os recortes guardados, aprender com uma kill confirmada obrigava a
+// baixar a noite outra vez — meia hora de espera por um clique dele.
+test('a varredura guarda a forma de cada estouro, para depois se aprender', async () => {
+  const T = Date.parse('2026-08-30T22:00:00Z');
+  const som = somComRajadas(400, [100, 250]);
+  const r = await varrerNoite({
+    linha: { slug: 'x' },
+    deMs: T,
+    ateMs: T + 360 * 1000,
+    bocadoS: 180,
+    lerSom: async (linha, quandoMs, duracaoS) => {
+      const de = Math.round(((quandoMs - T) / 1000) * TAXA);
+      return som.subarray(de, de + Math.round(duracaoS * TAXA));
+    },
+  });
+  assert.ok(r.estouros.length >= 10, `so guardou ${r.estouros.length}`);
+  for (const e of r.estouros) {
+    assert.ok(e.recorte instanceof Float32Array && e.recorte.length > 0);
+    assert.ok(e.ms >= T && e.ms <= T + 360_000, `ms fora da noite: ${e.ms}`);
+  }
+  // Os instantes tem de bater com onde os tiros foram postos, e nao ficar
+  // todos colados ao principio de cada bocado.
+  const segundos = r.estouros.map((e) => (e.ms - T) / 1000);
+  assert.ok(segundos.some((s) => Math.abs(s - 100) < 6), 'nenhum recorte na primeira luta');
+  assert.ok(segundos.some((s) => Math.abs(s - 250) < 6), 'nenhum recorte na segunda luta');
+});

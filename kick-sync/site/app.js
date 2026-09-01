@@ -21,6 +21,7 @@ import { criarZip, crc32 } from './zip.js';
 import { criarApanhador } from './frames.js';
 import { varrerNoite, custoVarrerMB } from './procurar-momentos.js';
 import { TAXA_TIROS } from './tiros.js';
+import { parecidos, juntarPerto } from './aprender.js';
 import { somDoCanal } from './alinhar.js';
 import { MAXIMO_S, mover, janelaInicial, nomeDoClipe } from './clipe.js';
 import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js';
@@ -45,6 +46,11 @@ const estado = {
   // partir dai. E a previa: a kill que ele esta a ver em ciclo.
   ancora: null,
   previa: null,
+  // A forma de cada estouro da ultima varredura, e o exemplo que ele
+  // confirmou. Com um exemplo, a busca deixa de ser um palpite meu sobre o que
+  // e um tiro e passa a procurar O MESMO SOM.
+  estouros: [],
+  exemplo: null,
   tique: 0,
   selecao: new Set(),
   filtro: 'todos',
@@ -1119,6 +1125,7 @@ async function procurarKills() {
       },
     });
 
+    estado.estouros = r.estouros || [];
     if (!r.candidatos.length) { nota.textContent = t('auto.nenhum'); return; }
 
     for (const c of r.candidatos) {
@@ -1409,6 +1416,7 @@ function pintarMomentos() {
       + `<button class="ver ${estado.previa?.ms === m.ms ? 'aVer' : ''}">`
       + `${t(estado.previa?.ms === m.ms ? 'montagem.parar' : 'montagem.ver')}</button>`
       + `<button class="baixarUma" ${n ? '' : 'disabled'}>${t('montagem.baixarUma')}</button>`
+      + (estado.estouros.length ? `<button class="foiKill">${t('auto.foiKill')}</button>` : '')
       + `<button class="fora">${t('montagem.apagar')}</button>`
       + (sozinho ? '' : `<button class="verMortes">${t('montagem.verMortes')}</button>`)
       + `<span class="quantos">${tn(n, 'montagem.umClipe', 'montagem.clipes')}</span>`
@@ -1419,6 +1427,8 @@ function pintarMomentos() {
   for (const li of $('listaMomentos').querySelectorAll('li[data-ms]')) {
     const ms = Number(li.dataset.ms);
     li.querySelector('.ver').onclick = () => verMomento(ms);
+    const fk = li.querySelector('.foiKill');
+    if (fk) fk.onclick = () => aprenderCom(ms);
     li.querySelector('.baixarUma').onclick = () => {
       const m = estado.momentos.find((x) => x.ms === ms);
       if (m) baixarMontagem([m]);
@@ -1569,6 +1579,47 @@ async function baixarMontagem(soEsta = null) {
   if (!soEsta) oferecerZip(paraZip);
   $('baixarMontagem').disabled = false;
   estado.cancelar = null;
+}
+
+/**
+ * Aprender com uma kill que ele confirmou.
+ *
+ * "Assisti todos os clipes automaticos e estao todos errados" — e o problema
+ * de fundo e que eu estava a adivinhar o que e o som de uma kill. Ele
+ * descreveu quatro sons, e tres deles sao amostras do jogo: o mesmo ficheiro
+ * tocado outra vez, sempre igual. Entao nao e preciso adivinhar. Ele aponta
+ * UMA kill que sabe que foi kill, e a pagina procura essa mesma forma de onda
+ * na noite inteira.
+ *
+ * Nao volta a baixar nada: os recortes ficaram guardados da varredura.
+ */
+function aprenderCom(ms) {
+  if (!estado.estouros.length) return;
+  // O estouro mais alto ali ao pe: e esse o som da kill, e nao o instante
+  // exacto em que ele carregou no botao.
+  const perto = estado.estouros
+    .filter((e) => Math.abs(e.ms - ms) < 4000)
+    .sort((a, b) => b.altura - a.altura)[0];
+  if (!perto) { $('estadoMontagem').textContent = t('auto.semSom'); return; }
+
+  estado.exemplo = perto.recorte;
+  const iguais = juntarPerto(parecidos(estado.exemplo, estado.estouros));
+  if (!iguais.length) { $('estadoMontagem').textContent = t('auto.semSom'); return; }
+
+  // A lista passa a ser esta. Os candidatos velhos eram o palpite; estes sao o
+  // som que ele confirmou — deitar fora o palpite e o ponto todo.
+  const canal = estado.focos[0] || estado.linhas[0]?.slug;
+  const antigos = estado.momentos.filter((m) => !m.auto);
+  estado.momentos = [...antigos];
+  for (const g of iguais.slice(0, 60)) {
+    estado.momentos = acrescentar(
+      estado.momentos,
+      novoMomento(g.ms, canal, { ...tamanhos(), auto: true, tiros: g.quantos }),
+    );
+  }
+  pintarMomentos();
+  guardar();
+  $('estadoMontagem').textContent = t('auto.aprendi', { n: iguais.length });
 }
 
 /**
