@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink } from '../site/relogio.js';
+import {
+  linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo,
+} from '../site/relogio.js';
 
 // Helper: a VOD covering [inicio, inicio+segundos) built from 10-second
 // segments, which is what IVS actually emits.
@@ -172,4 +174,48 @@ test('comNudge does not mutate the session it was given', () => {
   const novo = comNudge(s, 'b', 250);
   assert.deepEqual(s.nudges, { a: 1 });
   assert.deepEqual(novo.nudges, { a: 1, b: 250 });
+});
+
+// ── o relógio a andar com o vídeo ───────────────────────────────────────────
+//
+// O sítio onde esta regra corre — um requestAnimationFrame com um <video> a
+// descodificar — não se testa num browser sem codecs. Por isso a regra vive
+// aqui fora, e é testada aqui. Errei-a à primeira exactamente como o primeiro
+// destes testes descreve.
+
+const leitor = (extra = {}) => ({ currentTime: 0, readyState: 4, paused: false, ...extra });
+
+test('sem dados descodificados, o relógio não anda para trás', () => {
+  const ancora = { ms: T + 60_000, tempoS: 60 };
+  // `currentTime` zero não quer dizer "o princípio do vídeo": quer dizer que o
+  // salto pedido ainda não aconteceu. A conta ingénua devolvia T aqui, e o
+  // relógio recuava um minuto no instante em que se carregava em play.
+  assert.equal(instanteSeguindo(ancora, leitor({ readyState: 0 })), null);
+  assert.equal(instanteSeguindo(ancora, leitor({ readyState: 1 })), null);
+});
+
+test('parado é parado', () => {
+  assert.equal(instanteSeguindo({ ms: T, tempoS: 0 }, leitor({ paused: true, currentTime: 5 })), null);
+});
+
+test('a andar, o relógio segue o vídeo segundo a segundo', () => {
+  const ancora = { ms: T + 60_000, tempoS: 60 };
+  assert.equal(instanteSeguindo(ancora, leitor({ currentTime: 60 })), T + 60_000);
+  assert.equal(instanteSeguindo(ancora, leitor({ currentTime: 61.5 })), T + 61_500);
+  assert.equal(instanteSeguindo(ancora, leitor({ currentTime: 120 })), T + 120_000);
+});
+
+test('um tempo atrás da âncora é o leitor ainda a caminho, e não uma resposta', () => {
+  const ancora = { ms: T + 60_000, tempoS: 60 };
+  assert.equal(instanteSeguindo(ancora, leitor({ currentTime: 59 })), null);
+});
+
+// Quando o leitor recarrega noutro pedaço o `currentTime` recomeça do zero. Um
+// salto de horas no relógio é pior do que não mexer nele.
+test('um salto absurdo não mexe no relógio', () => {
+  const ancora = { ms: T, tempoS: 0 };
+  assert.equal(instanteSeguindo(ancora, leitor({ currentTime: 99_999 })), null);
+  assert.equal(instanteSeguindo(ancora, leitor({ currentTime: NaN })), null);
+  assert.equal(instanteSeguindo(null, leitor()), null);
+  assert.equal(instanteSeguindo(ancora, null), null);
 });

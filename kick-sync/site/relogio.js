@@ -172,3 +172,28 @@ export function doLink(texto) {
     };
   } catch { return null; }
 }
+/**
+ * O instante do mundo a que o vídeo chegou, ou nada.
+ *
+ * Existe como função à parte porque a regra é fácil de errar e o sítio onde
+ * ela corre — um `requestAnimationFrame` com um `<video>` a descodificar — não
+ * se testa. Errei-a à primeira: sem dados descodificados o `currentTime` é
+ * zero, e zero não quer dizer "o princípio do vídeo", quer dizer "o salto que
+ * pedi ainda não aconteceu". A conta ingénua punha o relógio a andar PARA TRÁS
+ * no instante em que se carregava em play.
+ *
+ * @param {{ms:number, tempoS:number}} ancora onde o relógio estava quando se
+ *   mandou tocar, e a que segundo do vídeo isso correspondia
+ * @param {{currentTime:number, readyState:number, paused:boolean}} video
+ * @returns {number|null} o instante, ou null quando não há resposta honesta
+ */
+export function instanteSeguindo(ancora, video, { limiteMs = 3_600_000 } = {}) {
+  if (!ancora || !video) return null;
+  if (video.paused || video.readyState < 2) return null;
+  if (!Number.isFinite(video.currentTime) || !Number.isFinite(ancora.ms)) return null;
+  const ms = ancora.ms + (video.currentTime - ancora.tempoS) * 1000;
+  // Só para a frente: isto segue a reprodução. Atrás da âncora é o leitor
+  // ainda a caminho; longe demais é um pedaço novo com o tempo recomeçado.
+  if (!Number.isFinite(ms) || ms < ancora.ms || ms - ancora.ms > limiteMs) return null;
+  return ms;
+}

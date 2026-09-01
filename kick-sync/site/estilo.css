@@ -448,3 +448,6 @@ footer { margin-top: 32px; border-top: 1px solid var(--borda); padding-top: 12px
   border-radius: 999px; padding: 3px 11px;
 }
 .paraTwitch:hover { background: #9146ff22; }
+/* A kill que está a ser vista em ciclo. */
+.momentos .ver.aVer { border-color: var(--acento); color: var(--acento); }
+.momentos li:has(.ver.aVer) { border-color: var(--acento); }

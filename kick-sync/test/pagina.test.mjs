@@ -1333,7 +1333,7 @@ test('com um canal só, a página não fala de grupo',
       await p.locator('#estadoMontagem').innerText());
     // O que INTERESSA continua lá: ir ao momento e baixá-lo.
     assert.equal(await p.locator('#listaMomentos .baixarUma').count(), 1);
-    assert.equal(await p.locator('#listaMomentos .ir').count(), 1);
+    assert.equal(await p.locator('#listaMomentos .ver').count(), 1);
     assert.deepEqual(erros, []);
     await p.close();
   });
@@ -1355,5 +1355,50 @@ test('com dois canais, tudo o que é de grupo volta',
     assert.equal(await p.locator('#alinhar').isVisible(), true);
     assert.match(await p.locator('#angulos').innerText(), /de 2/);
     assert.equal(await p.locator('#listaMomentos .verMortes').count(), 1);
+    await p.close();
+  });
+
+// "Não consegui ver ainda se os clipes estão bons ou não."
+//
+// A busca pelo som dá quinze candidatos e a maioria não presta. Até agora a
+// única maneira de saber era descarregar e abrir no editor. O botão "ver" toca
+// exactamente o pedaço que ia sair no ficheiro — os mesmos segundos, senão
+// mostrava-lhe uma coisa e entregava-lhe outra.
+test('dá para ver a kill antes de a baixar, e a prévia é o mesmo pedaço do ficheiro',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 15000 });
+
+    // Margens diferentes das de origem, para o teste não passar por acaso.
+    await p.fill('#protAntes', '7');
+    await p.fill('#protDepois', '3');
+    await p.click('#mais1m');
+    await p.click('#marcarKill');
+    await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
+    const ms = Number(await p.locator('#listaMomentos li[data-ms]').getAttribute('data-ms'));
+
+    await p.locator('#listaMomentos .ver').click();
+    // Saltou para o princípio do clipe: sete segundos antes da kill.
+    const previa = await p.evaluate(() => window.__estado?.previa ?? null);
+    assert.deepEqual(previa && { de: previa.de - ms, ate: previa.ate - ms }, { de: -7000, ate: 3000 });
+    assert.equal(await p.locator('#listaMomentos .ver.aVer').count(), 1, 'a linha diz que está a ver');
+    assert.match(await p.locator('#listaMomentos .ver').innerText(), /parar/);
+
+    // Carregar outra vez desliga.
+    await p.locator('#listaMomentos .ver').click();
+    assert.equal(await p.locator('#listaMomentos .ver.aVer').count(), 0);
+    assert.equal(await p.evaluate(() => window.__estado?.previa ?? null), null);
+
+    // E navegar à mão também: se ele foi procurar outra coisa, não pode ficar
+    // a ser puxado de volta para o clipe em ciclo.
+    await p.locator('#listaMomentos .ver').click();
+    assert.equal(await p.locator('#listaMomentos .ver.aVer').count(), 1);
+    await p.click('#mais10s');
+    assert.equal(await p.locator('#listaMomentos .ver.aVer').count(), 0, 'saltar desliga a prévia');
+    assert.deepEqual(erros, []);
     await p.close();
   });
