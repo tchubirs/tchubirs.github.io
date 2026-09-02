@@ -1569,6 +1569,37 @@ test('o editor do retrato mede-se pelo vídeo e não pela caixa à volta',
       .map((e) => Math.round(e.getBoundingClientRect().y)));
     assert.equal(dois.length, 2);
     assert.ok(dois[1] > dois[0], `o segundo (${dois[1]}) devia ficar abaixo do primeiro (${dois[0]})`);
+
+    // "Mexer na direita afeta directamente os tamanhos na esquerda."
+    //
+    // É o ponto todo do divisor, e é o que se pode partir sem dar por nada: a
+    // barra move-se, o retrato reparte-se, e os rectângulos da esquerda ficam
+    // com a forma antiga. O editor passaria a mostrar um enquadramento que não
+    // é o que sai no ficheiro.
+    await p.waitForSelector('#divisor:not([hidden])', { timeout: 5000 });
+    const antes = await p.evaluate(() => [...document.querySelectorAll('.recorte')]
+      .map((e) => { const r = e.getBoundingClientRect(); return +(r.width / r.height).toFixed(3); }));
+
+    const caixa = await p.locator('#telaRetrato').boundingBox();
+    const pega = await p.locator('#divisor').boundingBox();
+    await p.mouse.move(pega.x + pega.width / 2, pega.y + pega.height / 2);
+    await p.mouse.down();
+    await p.mouse.move(caixa.x + caixa.width / 2, caixa.y + caixa.height * 0.75, { steps: 8 });
+    await p.mouse.up();
+
+    const depois = await p.evaluate(() => [...document.querySelectorAll('.recorte')]
+      .map((e) => { const r = e.getBoundingClientRect(); return +(r.width / r.height).toFixed(3); }));
+    assert.notDeepEqual(depois, antes,
+      `a esquerda não mexeu: ${JSON.stringify(antes)} continua ${JSON.stringify(depois)}`);
+    // Com o quadro de cima a valer três quartos, o recorte de cima fica mais
+    // alto em relação à sua largura, e o de baixo mais achatado.
+    assert.ok(depois[0] < antes[0], `o de cima devia ficar mais alto: ${antes[0]} -> ${depois[0]}`);
+    assert.ok(depois[1] > antes[1], `o de baixo devia ficar mais achatado: ${antes[1]} -> ${depois[1]}`);
+
+    // E o pill acompanha: ficou onde o vídeo passa a partir-se.
+    const pega2 = await p.locator('#divisor').boundingBox();
+    const fraccao = (pega2.y + pega2.height / 2 - caixa.y) / caixa.height;
+    assert.ok(Math.abs(fraccao - 0.75) < 0.05, `o divisor ficou a ${(fraccao * 100).toFixed(0)}%`);
     assert.deepEqual(erros, []);
   });
 

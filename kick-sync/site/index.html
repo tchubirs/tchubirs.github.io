@@ -295,7 +295,14 @@
       </div>
       <div class="clipeRetrato" hidden id="ladoRetrato">
         <span class="rotuloCampo" data-t="retrato.retrato">Versão em retrato</span>
-        <canvas id="telaRetrato" class="telaRetrato" width="1080" height="1920"></canvas>
+        <div id="molduraRetrato" class="molduraRetrato">
+          <canvas id="telaRetrato" class="telaRetrato" width="1080" height="1920"></canvas>
+          <!-- O divisor. Arrasta-se para dar mais altura ao quadro de cima ou
+               ao de baixo, e mexer aqui muda a FORMA dos recortes do lado
+               esquerdo no mesmo instante. -->
+          <button id="divisor" class="divisor" hidden data-t-aria="retrato.divisor"
+            aria-label="repartir entre cima e baixo"><span></span></button>
+        </div>
         <div class="linha modosRetrato">
           <button id="modoUm" class="modoRetrato" data-modo="um" data-t-titulo="retrato.um"
             title="Um enquadramento" aria-pressed="true">

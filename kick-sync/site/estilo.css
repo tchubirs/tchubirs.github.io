@@ -895,3 +895,24 @@ button, select, input[type="text"], input[type="search"], input[type="number"] {
   .clipeRetrato { justify-items: start; width: 100%; }
   .telaRetrato { height: 34vh; }
 }
+
+/* O divisor do retrato: o pill branco que se arrasta para dar mais altura ao
+   quadro de cima ou ao de baixo. Vive por cima da tela, e é a única coisa do
+   lado direito que se mexe — por isso é a única com contraste a sério. */
+.molduraRetrato { position: relative; line-height: 0; }
+.divisor {
+  position: absolute; left: 0; right: 0; height: 26px; transform: translateY(-50%);
+  background: none; border: 0; padding: 0; cursor: ns-resize; touch-action: none;
+  display: grid; place-items: center;
+}
+.divisor::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 2px;
+  background: var(--acento); opacity: .9;
+}
+.divisor span {
+  position: relative; width: 46px; height: 18px; border-radius: 999px;
+  background: var(--texto); box-shadow: var(--sombra-1);
+  background-image: radial-gradient(circle, #0006 1.2px, transparent 1.3px);
+  background-size: 6px 6px; background-position: center;
+}
+.divisor:focus-visible span { outline: 2px solid var(--acento); outline-offset: 2px; }

@@ -8,6 +8,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   RETRATO, enquadramentoInicial, limitar, destinos, desenhar, melhorFormato, extensaoDe,
+  reformar, proporcaoDoQuadro, limparDivisao, DIVISAO_MIN, DIVISAO_MAX,
 } from '../site/retrato.js';
 
 const perto = (a, b, tol = 0.01) => Math.abs(a - b) < tol;
@@ -156,4 +157,87 @@ test('prefere MP4 e cai no WebM', () => {
 test('a extensão combina com o tipo', () => {
   assert.equal(extensaoDe('video/mp4;codecs=avc1.42E01E'), 'mp4');
   assert.equal(extensaoDe('video/webm;codecs=vp9,opus'), 'webm');
+});
+
+// ── o divisor ───────────────────────────────────────────────────────────────
+//
+// "Um controlo para deixar maior a parte de cima, ou arrasta para o outro lado
+//  e fica maior a parte de baixo. Mexer na direita afeta directamente os
+//  tamanhos na esquerda."
+//
+// Afecta, e é essa a parte que tem de estar certa: se o quadro de cima passa a
+// valer 70% da altura, o RECORTE de cima tem de mudar de forma no mesmo
+// instante. Senão o que se vê no editor deixa de ser o que sai no ficheiro.
+
+test('o divisor reparte a altura, e a segunda faixa leva o resto', () => {
+  for (const d of [0.2, 1 / 3, 0.5, 0.7, 0.8]) {
+    const [cima, baixo] = destinos('dois', d);
+    assert.equal(cima.altura + baixo.altura, RETRATO.altura,
+      `divisão ${d}: ${cima.altura} + ${baixo.altura} deixa uma risca preta`);
+    assert.equal(baixo.y, cima.altura, 'o de baixo começa onde o de cima acaba');
+    assert.ok(Math.abs(cima.altura - RETRATO.altura * d) <= 1, `divisão ${d} mal repartida`);
+  }
+});
+
+test('o divisor não passa dos limites', () => {
+  assert.equal(limparDivisao(0), DIVISAO_MIN);
+  assert.equal(limparDivisao(1), DIVISAO_MAX);
+  assert.equal(limparDivisao(-5), DIVISAO_MIN);
+  assert.equal(limparDivisao(NaN), 0.5);
+  assert.equal(limparDivisao(undefined), 0.5);
+  assert.equal(limparDivisao(0.3), 0.3);
+});
+
+test('mexer no divisor muda a FORMA dos dois recortes', () => {
+  const fonte = { largura: 1920, altura: 1080 };
+  const meio = enquadramentoInicial(1920, 1080, 'dois', 0.5);
+  const desigual = reformar(meio, { modo: 'dois', divisao: 0.75, fonte });
+  for (const i of [0, 1]) {
+    const esperada = proporcaoDoQuadro('dois', i, 0.75);
+    assert.ok(Math.abs(desigual[i].largura / desigual[i].altura - esperada) < 0.01,
+      `quadro ${i}: ${desigual[i].largura / desigual[i].altura} em vez de ${esperada}`);
+  }
+  // Com o de cima a valer três quartos, o recorte de cima fica mais ALTO em
+  // relação à sua largura do que o de baixo. É o contrário do meio a meio.
+  assert.ok(desigual[0].altura / desigual[0].largura > desigual[1].altura / desigual[1].largura);
+});
+
+test('reformar mantém o enquadramento onde estava', () => {
+  // Sem isto, arrastar o divisor um pixel atirava o enquadramento escolhido
+  // para o canto, e havia que o voltar a colocar a cada ajuste.
+  const fonte = { largura: 1920, altura: 1080 };
+  const original = [{ x: 1200, y: 400, largura: 400, altura: 355.5 },
+                    { x: 100, y: 100, largura: 400, altura: 355.5 }];
+  const novo = reformar(original, { modo: 'dois', divisao: 0.6, fonte });
+  for (const i of [0, 1]) {
+    const cxA = original[i].x + original[i].largura / 2;
+    const cxB = novo[i].x + novo[i].largura / 2;
+    assert.ok(Math.abs(cxA - cxB) < 60, `quadro ${i} saltou de x=${cxA} para ${cxB}`);
+  }
+});
+
+test('arrastar o divisor de um lado ao outro não faz o recorte crescer sem parar', () => {
+  // Conservar a LARGURA em vez da área fazia cada passo tornar o rectângulo
+  // mais alto, e mais alto, até encher a fonte toda ao fim de meia dúzia.
+  const fonte = { largura: 1920, altura: 1080 };
+  let rects = enquadramentoInicial(1920, 1080, 'dois', 0.5);
+  const areaInicial = rects[0].largura * rects[0].altura;
+  for (const d of [0.6, 0.7, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.5]) {
+    rects = reformar(rects, { modo: 'dois', divisao: d, fonte });
+  }
+  const areaFinal = rects[0].largura * rects[0].altura;
+  assert.ok(areaFinal <= areaInicial * 1.15,
+    `a área cresceu de ${Math.round(areaInicial)} para ${Math.round(areaFinal)}`);
+  assert.ok(rects[0].x >= 0 && rects[0].y >= 0, 'continua dentro da fonte');
+});
+
+test('desenhar reparte a tela pelo divisor', () => {
+  const ctx = ctxFalso();
+  desenhar(ctx, {}, enquadramentoInicial(1920, 1080, 'dois', 0.7), 'dois', 0.7);
+  const imagens = ctx.feito.filter((f) => f[0] === 'img');
+  assert.equal(imagens.length, 2);
+  assert.equal(imagens[0][6], 0, 'o de cima no topo');
+  assert.equal(imagens[0][8], 1344, 'o de cima leva 70% de 1920');
+  assert.equal(imagens[1][6], 1344, 'o de baixo começa onde o outro acaba');
+  assert.equal(imagens[1][8], 576);
 });

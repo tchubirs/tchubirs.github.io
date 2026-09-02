@@ -14,6 +14,7 @@ import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.j
 import { abrirJanela, irAEcraCheio, capacidades } from './janela.js';
 import {
   RETRATO, enquadramentoInicial, limitar, desenhar, gravar, formatoQueFunciona, extensaoDe,
+  reformar, limparDivisao, DIVISAO_OMISSAO,
 } from './retrato.js';
 import { agruparPorNoite, rotuloDaNoite } from './noites.js';
 import {
@@ -2001,6 +2002,8 @@ function abrirClipe() {
     // metadados — antes disso, qualquer enquadramento seria um palpite.
     modo: 'um',
     rects: [],
+    // Quanto do 9:16 fica para o quadro de cima. Só conta no modo de dois.
+    divisao: DIVISAO_OMISSAO,
   };
 
   $('canalClipe').innerHTML = estado.linhas
@@ -2030,10 +2033,11 @@ function prepararRetrato() {
   const ligar = () => {
     const c = estado.clipe;
     if (!c || !(v.videoWidth > 0)) return;
-    c.rects = enquadramentoInicial(v.videoWidth, v.videoHeight, c.modo);
+    c.rects = enquadramentoInicial(v.videoWidth, v.videoHeight, c.modo, c.divisao);
     $('ladoRetrato').hidden = false;
     $('recortes').hidden = false;
     pintarRecortes();
+    pintarDivisor();
     seguirRetrato();
   };
   v.addEventListener('loadedmetadata', ligar);
@@ -2049,7 +2053,7 @@ function pintarRecortes() {
   alvo.innerHTML = c.rects.map((r, i) => `<div class="recorte" data-i="${i}" style="`
     + `left:${(r.x / v.videoWidth) * 100}%;top:${(r.y / v.videoHeight) * 100}%;`
     + `width:${(r.largura / v.videoWidth) * 100}%;height:${(r.altura / v.videoHeight) * 100}%">`
-    + (c.rects.length > 1 ? `<b class="ordem">${i + 1}</b>` : '')
+    + (c.rects.length > 1 ? `<b class="ordem">${i === 0 ? '1' : '2'}</b>` : '')
     + '<span class="puxar"></span></div>').join('');
   for (const caixa of alvo.querySelectorAll('.recorte')) ligarArrasto(caixa);
 }
@@ -2098,13 +2102,82 @@ function ligarArrasto(caixa) {
 }
 
 /** O 9:16 a sério, pintado enquanto o modal estiver aberto. */
+/**
+ * O divisor, à altura certa, e só quando há dois quadros para repartir.
+ *
+ * Mede-se sobre a TELA e não sobre a moldura: a tela é 9:16 e a moldura pode
+ * ser mais larga, e a diferença punha o pill fora da linha por onde o vídeo
+ * parte mesmo.
+ */
+function pintarDivisor() {
+  const c = estado.clipe;
+  const botao = $('divisor');
+  if (!c || c.modo !== 'dois') { botao.hidden = true; return; }
+  const tela = $('telaRetrato');
+  const moldura = $('molduraRetrato');
+  const r = tela.getBoundingClientRect();
+  const m = moldura.getBoundingClientRect();
+  botao.hidden = false;
+  botao.style.top = `${(r.top - m.top) + r.height * c.divisao}px`;
+  botao.style.left = `${r.left - m.left}px`;
+  botao.style.width = `${r.width}px`;
+  botao.setAttribute('aria-valuenow', String(Math.round(c.divisao * 100)));
+}
+
+/**
+ * Arrastar o divisor — e o lado esquerdo muda com ele.
+ *
+ * "Mexer na direita afeta directamente os tamanhos na esquerda." Afecta, e é
+ * obrigatório que afecte: dar 70% da altura ao quadro de cima muda a proporção
+ * do destino, logo muda a proporção do RECORTE. Se o rectângulo da esquerda
+ * ficasse como estava, o editor passaria a mostrar um enquadramento que não é
+ * o que sai no ficheiro.
+ */
+function ligarDivisor() {
+  const botao = $('divisor');
+  const aplicar = (d) => {
+    const c = estado.clipe;
+    const v = $('previaClipe');
+    if (!c || !(v.videoWidth > 0)) return;
+    c.divisao = limparDivisao(d);
+    c.rects = reformar(c.rects, {
+      modo: c.modo,
+      divisao: c.divisao,
+      fonte: { largura: v.videoWidth, altura: v.videoHeight },
+    });
+    pintarRecortes();
+    pintarDivisor();
+  };
+  botao.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    const tela = $('telaRetrato');
+    const mover = (m) => {
+      const r = tela.getBoundingClientRect();
+      aplicar((m.clientY - r.top) / Math.max(1, r.height));
+    };
+    const largar = () => {
+      window.removeEventListener('pointermove', mover);
+      window.removeEventListener('pointerup', largar);
+    };
+    window.addEventListener('pointermove', mover);
+    window.addEventListener('pointerup', largar);
+  });
+  // Também pelo teclado: um controlo que só existe para o rato deixa de fora
+  // quem não usa rato, e isto é um botão, não um enfeite.
+  botao.addEventListener('keydown', (e) => {
+    const passo = e.shiftKey ? 0.1 : 0.02;
+    if (e.key === 'ArrowUp') { e.preventDefault(); aplicar(estado.clipe.divisao - passo); }
+    if (e.key === 'ArrowDown') { e.preventDefault(); aplicar(estado.clipe.divisao + passo); }
+  });
+}
+
 function seguirRetrato() {
   const tela = $('telaRetrato');
   const ctx = tela.getContext('2d');
   const passo = () => {
     const c = estado.clipe;
     if (!c || $('modalClipe').hidden) return;
-    if (c.rects.length) desenhar(ctx, $('previaClipe'), c.rects, c.modo);
+    if (c.rects.length) desenhar(ctx, $('previaClipe'), c.rects, c.modo, c.divisao);
     requestAnimationFrame(passo);
   };
   requestAnimationFrame(passo);
@@ -2115,11 +2188,13 @@ function trocarModo(modo) {
   const v = $('previaClipe');
   if (!c || !(v.videoWidth > 0)) return;
   c.modo = modo;
-  c.rects = enquadramentoInicial(v.videoWidth, v.videoHeight, modo);
+  c.divisao = DIVISAO_OMISSAO;
+  c.rects = enquadramentoInicial(v.videoWidth, v.videoHeight, modo, c.divisao);
   for (const b of document.querySelectorAll('.modoRetrato')) {
     b.setAttribute('aria-pressed', String(b.dataset.modo === modo));
   }
   pintarRecortes();
+  pintarDivisor();
 }
 
 /**
@@ -2149,6 +2224,7 @@ async function guardarRetrato() {
     const { blob, tipo } = await gravar(v, {
       rects: c.rects,
       modo: c.modo,
+      divisao: c.divisao,
       duracaoS,
       formato,
       aoProgresso: ({ feito, total }) => {
@@ -2489,6 +2565,10 @@ $('guardarRetrato').onclick = guardarRetrato;
 for (const b of document.querySelectorAll('.modoRetrato')) {
   b.onclick = () => trocarModo(b.dataset.modo);
 }
+ligarDivisor();
+// O divisor é medido em pixels do ecrã: se a janela muda de tamanho, a conta
+// deixa de bater certo e o pill fica ao lado da linha por onde o vídeo parte.
+window.addEventListener('resize', () => { if (estado.clipe) pintarDivisor(); });
 $('canalClipe').onchange = () => {
   const l = estado.linhas.find((x) => x.slug === $('canalClipe').value);
   if (!l || !estado.clipe) return;
