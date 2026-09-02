@@ -1603,6 +1603,96 @@ test('o editor do retrato mede-se pelo vídeo e não pela caixa à volta',
     assert.deepEqual(erros, []);
   });
 
+// "Quando mudo a data não deveria ter um botão de OK, ou aplicar, ou aplicar
+//  sozinho? Não sei."
+//
+// Aplica sozinho, e sempre aplicou. O que faltava era DIZER: a mensagem "a ler
+// relógios" era escrita no cartão de cima, ao lado do "Carregar", e num
+// telemóvel esse cartão está a um ecrã de distância do selector da noite. Ele
+// mudou a noite, não viu nada a mexer, e concluiu que faltava um botão.
+//
+// E ao ir escrever isto encontrei o problema a sério: nada impedia duas
+// mudanças de correrem ao mesmo tempo. São trinta canais e dois pedidos de
+// rede por cada; quem acaba primeiro é quem tiver menos VODs, e não quem ele
+// escolheu por último.
+test('mudar de noite diz o que está a fazer, e a última escolha é a que fica',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    // A primeira noite responde devagar de propósito: sem isso as duas acabam
+    // pela ordem em que foram pedidas e a corrida nunca chega a acontecer.
+    const { p, erros } = await abrir();
+    // As duas noites têm de dar palcos DIFERENTES, senão o teste não consegue
+    // dizer qual ganhou: a noite 0 tem dois canais, a noite 1 tem um só.
+    await kickFalsa(p, {
+      canais: ['tchubi', 'outro'],
+      noites: 2,
+      // 250 ms por pedido, e não 900: com 900 a noite lenta ainda não tinha
+      // acabado quando eu media, e o teste passava mesmo com a guarda
+      // removida — ou seja, não estava a testar nada. Com 250 ela acaba
+      // DEPOIS da rápida e ANTES da medição, que é o único intervalo em que a
+      // corrida existe.
+      atrasoMsPorNoite: { 0: 250 },
+      canaisPorNoite: { 0: ['tchubi', 'outro'], 1: ['tchubi'] },
+    });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi\noutro');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 25000 });
+    await p.waitForFunction(() => document.querySelectorAll('#noite option').length >= 2,
+      null, { timeout: 10000 });
+
+    const noites = await p.evaluate(() => [...document.querySelectorAll('#noite option')]
+      .map((o) => o.textContent.trim()));
+    assert.equal(noites.length, 2, `esperava duas noites: ${JSON.stringify(noites)}`);
+
+    // 1. Diz o que está a fazer, ao pé do controlo — e fecha o selector
+    //    enquanto lê, para não se poder mudar outra vez a meio.
+    await p.selectOption('#noite', { index: 1 });
+    await p.waitForFunction(() => document.getElementById('estadoNoite').textContent.trim() !== ''
+      || document.getElementById('noite').disabled, null, { timeout: 3000 });
+    const aMeio = await p.evaluate(() => ({
+      diz: document.getElementById('estadoNoite').textContent.trim(),
+      fechado: document.getElementById('noite').disabled,
+    }));
+    assert.ok(aMeio.diz || aMeio.fechado, 'nada dizia que estava a trabalhar');
+
+    // E volta a abrir quando acaba.
+    await p.waitForFunction(() => !document.getElementById('noite').disabled, null, { timeout: 25000 });
+    await p.waitForFunction(() => document.getElementById('estadoNoite').textContent.trim() === '',
+      null, { timeout: 25000 });
+
+    // 2. A corrida: pedir a LENTA e logo a seguir a rápida. Fica a rápida, que
+    //    é a última que ele escolheu.
+    //
+    //    As noites saem da mais recente para a mais antiga, por isso o índice
+    //    1 é a de 30/08 — a que tem dois canais e o atraso — e o índice 0 é a
+    //    de 31/08, com um canal e sem atraso. Enganei-me nisto à primeira e o
+    //    teste falhou a dizer o contrário do que eu esperava, que é
+    //    exactamente para o que ele serve.
+    const rotulo = (i) => noites[i];
+    await p.evaluate(() => {
+      const s = document.getElementById('noite');
+      s.disabled = false;                       // como se ele fosse mais rápido que o ecrã
+      s.value = '1';
+      s.dispatchEvent(new Event('change'));
+      s.disabled = false;
+      s.value = '0';
+      s.dispatchEvent(new Event('change'));
+    });
+    // 2,5 s, medido e não estimado. Numa sonda com a guarda removida o palco
+    // fica com um ângulo até aos 1400 ms e passa a DOIS aos 2000 ms — é aí que
+    // a noite lenta acaba e escreve por cima. O `networkidle` dava por
+    // terminado antes disso, e o teste passava nos dois casos: não estava a
+    // medir nada.
+    await p.waitForTimeout(2500);
+    // O que interessa NÃO é o que o selector diz — é o PALCO. A noite lenta,
+    // se ganhar, traz os dois canais dela; a que ele escolheu tem um só.
+    const quantos = await p.evaluate(() => document.querySelectorAll('.tile').length);
+    assert.equal(quantos, 1,
+      `o palco ficou com ${quantos} ângulos: a noite lenta (${rotulo(1)}) escreveu por cima`
+      + ` da que ele escolheu (${rotulo(0)})`);
+    assert.deepEqual(erros, []);
+  });
+
 // `hidden` tem de esconder mesmo. Cai-se nisto sem dar por nada: basta uma
 // regra qualquer com `display` a apanhar o elemento, porque um `display`
 // escrito ganha ao `display: none` que o atributo traz. Aconteceu-me três

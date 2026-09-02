@@ -403,8 +403,42 @@ async function sugerirParecidos(maus) {
 }
 
 /** Read the ladders and the clocks for one night, then build the timeline. */
+/**
+ * Quantas vezes já se mandou abrir uma noite.
+ *
+ * Sem isto, duas mudanças seguidas correm ao mesmo tempo e a que ACABAR
+ * primeiro não é a que ele escolheu por último: são trinta canais e dois
+ * pedidos de rede por cada, e quem acaba primeiro é quem tiver menos VODs.
+ * O ecrã ficava com a noite errada e nada dizia porquê.
+ */
+let vezNoite = 0;
+
+/**
+ * Abrir uma noite, e garantir que o selector volta a abrir.
+ *
+ * O `finally` não é zelo a mais: se um `fetch` rebentar a meio dos sessenta
+ * pedidos, sem ele o selector ficava trancado e a única saída era recarregar
+ * a página — com a sessão dele lá dentro.
+ */
 async function abrirNoite(noite) {
-  $('estadoCarga').textContent = t('canais.aLerRelogios');
+  try {
+    return await lerNoite(noite);
+  } finally {
+    if (vezNoite === vezNoiteEmCurso) $('noite').disabled = false;
+  }
+}
+
+let vezNoiteEmCurso = 0;
+
+async function lerNoite(noite) {
+  const minhaVez = ++vezNoite;
+  vezNoiteEmCurso = minhaVez;
+  const desactualizada = () => minhaVez !== vezNoite;
+  const dizer = (frase) => { if (!desactualizada()) $('estadoNoite').textContent = frase; };
+  // O selector fecha-se enquanto lê: trinta canais são sessenta pedidos, e
+  // deixá-lo aberto convida a mudar outra vez a meio.
+  $('noite').disabled = true;
+  dizer(t('canais.aLerRelogios'));
   const porCanal = new Map();
   for (const { slug, v } of noite.itens) {
     if (!v.master) continue;
@@ -417,7 +451,12 @@ async function abrirNoite(noite) {
       porCanal.get(slug).push({ vod: v, playlist, escada: master, barato });
     } catch { /* a channel that cannot be read is shown as such below */ }
   }
-  $('estadoCarga').textContent = '';
+  $('noite').disabled = false;
+  // Se ele mudou de noite outra vez enquanto isto lia, esta resposta já não
+  // interessa a ninguém — e escrevê-la no ecrã seria mostrar-lhe a noite
+  // errada com ar de certa.
+  if (desactualizada()) return;
+  dizer('');
 
   // Pela ordem em que ELE os escreveu, e não pela ordem por que a Kick os
   // devolveu. "Está difícil achar as POV em baixo": com vinte e três canais,
@@ -445,7 +484,7 @@ async function abrirNoite(noite) {
     // encontrava nada para parar e os quadrados respondiam a nada. Uma noite
     // que não abre tem de deixar o ecrã vazio e dizer porquê.
     limparPalco();
-    $('estadoCarga').textContent = t('noite.semRelogio');
+    dizer(t('noite.semRelogio'));
     return;
   }
 
