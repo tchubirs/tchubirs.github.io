@@ -507,6 +507,9 @@ async function abrirNoite(noite) {
   // Alinhar pelo som e uma operacao entre canais. Com um so, o botao existia
   // para nao fazer nada.
   $('alinhar').hidden = soUmCanal();
+  // Sem noite aberta não há nada para partilhar, e um botão que copia um link
+  // vazio é pior do que um botão que não está lá.
+  $('partilhar').disabled = !estado.linhas.length || !estado.janela;
   // Os segundos de quem morreu so fazem sentido se houver quem morrer.
   $('margensVitima').hidden = soUmCanal();
   pintarResumoMargens();
@@ -524,7 +527,7 @@ async function abrirNoite(noite) {
 function limparPalco() {
   estado.players.forEach((p) => p.destroy?.());
   estado.players.clear();
-  for (const v of document.querySelectorAll('#palcoFoco video, #grade video')) v.pause?.();
+  for (const tile of tiles()) tile.querySelector('video')?.pause?.();
   $('palcoFoco').innerHTML = '';
   $('grade').innerHTML = '';
   $('faixas').querySelectorAll('.faixa').forEach((f) => f.remove());
@@ -623,7 +626,23 @@ function marcarFaixas() {
 
 // ── grelha ──────────────────────────────────────────────────────────────────
 
-const tileDe = (slug) => document.querySelector(`.tile[data-slug="${CSS.escape(slug)}"]`);
+/**
+ * Todos os quadrados, incluindo o que está noutra janela.
+ *
+ * Um `document.querySelectorAll` deixa de o ver assim que ele muda de janela —
+ * e ele viu-o: "abro uma janela à parte, pauso, e não pausa os outros". Não era
+ * só o pause: o relógio, o volume e o ajuste passavam-lhe todos ao lado, o que
+ * é pior, porque o ângulo ficava a andar sozinho com ar de estar sincronizado.
+ *
+ * Por isso nada aqui procura quadrados por si: procuram-se por aqui.
+ */
+const tiles = () => {
+  const lista = [...document.querySelectorAll('#palcoFoco .tile, #grade .tile')];
+  const fora = estado.aparte?.tile;
+  if (fora && !lista.includes(fora)) lista.push(fora);
+  return lista;
+};
+const tileDe = (slug) => tiles().find((x) => x.dataset.slug === slug) || null;
 const ehFoco = (slug) => estado.focos.includes(slug);
 const ehPrincipal = (slug) => estado.focos[0] === slug;
 
@@ -658,7 +677,7 @@ function alternarPausa() {
   // desfeito no instante em que acontece.
   // Pelos quadrados que estão MESMO no ecrã, e não pela lista em memória: era
   // aí que o pause falhava calado quando as duas deixavam de coincidir.
-  for (const tile of document.querySelectorAll('#palcoFoco .tile, #grade .tile')) {
+  for (const tile of tiles()) {
     const v = tile.querySelector('video');
     const slug = tile.dataset.slug;
     if (!v) continue;
@@ -673,7 +692,10 @@ function alternarPausa() {
       v.play?.().catch(() => {});
     }
   }
-  for (const b of document.querySelectorAll('.tile .pausa')) b.textContent = estado.parado ? '▶' : '⏸';
+  for (const tile of tiles()) {
+    const b = tile.querySelector('.pausa');
+    if (b) b.textContent = estado.parado ? '▶' : '⏸';
+  }
   $('agora').classList.toggle('parado', estado.parado);
 }
 
@@ -803,7 +825,12 @@ function aplicarFoco() {
     const posicao = foco ? estado.focos.indexOf(slug) : -1;
     const jaCerto = tile.parentElement === destino
       && (!foco || destino.children[posicao] === tile);
-    if (!jaCerto) {
+    // O que está na janela à parte fica lá. Sem esta linha, qualquer coisa que
+    // repinta o foco — carregar no som, mudar de ângulo, marcar uma kill —
+    // arrancava-o da janela e trazia-o de volta para a grelha a meio do que
+    // ele estava a ver.
+    const naJanela = tile === estado.aparte?.tile;
+    if (!jaCerto && !naJanela) {
       const antes = foco ? destino.children[posicao] : null;
       destino.insertBefore(tile, antes || null);
     }
@@ -2187,6 +2214,55 @@ window.__estado = estado;
 // ── ligações ────────────────────────────────────────────────────────────────
 
 $('carregar').onclick = carregar;
+
+/**
+ * Passar esta noite pronta a outra pessoa.
+ *
+ * "Queria passar essa configuração pronta assim, com todos esses streamers e
+ *  dia, para outros streamers testarem. Tem como?"
+ *
+ * Tinha — e já tinha antes de ele perguntar: a página lê `?s=` desde sempre,
+ * e era assim que ela se restaurava a si própria. Só nunca houve um botão, o
+ * que na prática é o mesmo que não existir.
+ *
+ * O que vai no link não é a lista de nomes: é o TRABALHO. Colar trinta nomes
+ * é chato mas é um minuto; os dezasseis ajustes que ele acertou um a um
+ * custaram-lhe a noite, e sem eles quem abrir o link vê os mesmos trinta
+ * ângulos desalinhados que ele viu no princípio.
+ *
+ * Vai a noite e vão os ajustes; NÃO vão as kills marcadas, o volume nem o
+ * ângulo em foco. Isso é a sessão dele, não a configuração — e trezentas kills
+ * num endereço fariam um link que não cabe numa mensagem.
+ */
+function linkDaNoite() {
+  if (!estado.linhas.length || !estado.janela) return '';
+  const magro = paraLink({
+    canais: estado.linhas.map((l) => l.slug),
+    janela: estado.janela,
+    nudges: estado.nudges,
+    agoraMs: estado.agoraMs,
+  });
+  const base = `${location.origin}${location.pathname}`;
+  return `${base}?s=${encodeURIComponent(magro)}`;
+}
+
+$('partilhar').onclick = async () => {
+  const u = linkDaNoite();
+  if (!u) return;
+  const nota = $('estadoPartilha');
+  try {
+    await navigator.clipboard.writeText(u);
+    nota.textContent = t('partilha.copiado');
+    nota.classList.remove('mau');
+  } catch {
+    // Sem permissão para a área de transferência — acontece em http e em
+    // alguns telemóveis. Pôr o link na barra de endereço é o plano B honesto:
+    // fica lá para ele copiar à mão em vez de um erro que não resolve nada.
+    history.replaceState(null, '', u);
+    nota.textContent = t('partilha.falhou');
+    nota.classList.add('mau');
+  }
+};
 // Qualquer navegacao a mao desliga a previa: se ele foi procurar outra coisa,
 // nao pode ficar a ser puxado de volta para o clipe em ciclo.
 const largarPrevia = () => { if (estado.previa) { estado.previa = null; pintarMomentos(); } };

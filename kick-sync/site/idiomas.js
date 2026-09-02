@@ -66,6 +66,10 @@ const TEXTOS = {
     'estado.inesperado': 'a Kick mudou o formato da resposta — não é culpa tua; isto precisa de ser corrigido no código',
 
     'tile.relogioIncerto': 'relógio incerto',
+    'partilha.botao': 'Copiar link',
+    'partilha.ajuda': 'Copia um link com estes canais e estes ajustes.',
+    'partilha.copiado': 'Link copiado — cola-o a quem quiser ver esta noite.',
+    'partilha.falhou': 'O link está agora na barra de endereço: copia-o daí.',
     'tile.ecraCheio': 'Ecrã cheio',
     'tile.aparte': 'Janela à parte',
     'tile.par': 'ver dois ao mesmo tempo',
@@ -287,6 +291,10 @@ const TEXTOS = {
     'estado.inesperado': 'Kick changed the shape of the reply — not your fault; this needs a code fix',
 
     'tile.relogioIncerto': 'clock is uncertain',
+    'partilha.botao': 'Copy link',
+    'partilha.ajuda': 'Copies a link with these channels and these offsets.',
+    'partilha.copiado': 'Link copied — send it to whoever should see this night.',
+    'partilha.falhou': 'The link is now in the address bar: copy it from there.',
     'tile.ecraCheio': 'Full screen',
     'tile.aparte': 'Separate window',
     'tile.par': 'watch two at once',
@@ -508,6 +516,10 @@ const TEXTOS = {
     'estado.inesperado': 'Kick cambió el formato de la respuesta — no es culpa tuya; hay que corregirlo en el código',
 
     'tile.relogioIncerto': 'reloj incierto',
+    'partilha.botao': 'Copiar enlace',
+    'partilha.ajuda': 'Copia un enlace con estos canales y estos ajustes.',
+    'partilha.copiado': 'Enlace copiado — pásalo a quien quiera ver esta noche.',
+    'partilha.falhou': 'El enlace está ahora en la barra de direcciones: cópialo de ahí.',
     'tile.ecraCheio': 'Pantalla completa',
     'tile.aparte': 'Ventana aparte',
     'tile.par': 'ver dos a la vez',
