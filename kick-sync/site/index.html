@@ -282,7 +282,34 @@
       <select id="canalClipe" data-t-aria="clipe.angulo" aria-label="ângulo"></select>
       <button id="fecharClipe" data-t-titulo="clipe.fechar" title="fechar">✕</button>
     </div>
-    <video id="previaClipe" playsinline muted></video>
+    <!-- O editor do retrato, ao lado da fonte — como no da Twitch que ele
+         mandou. À esquerda o vídeo deitado com as caixas de enquadramento por
+         cima; à direita o 9:16 a sério, pintado em tempo real. -->
+    <div class="clipeEditor">
+      <div class="clipeFonte">
+        <span class="rotuloCampo" data-t="retrato.horizontal">Versão horizontal</span>
+        <div id="fonteClipe" class="fonteClipe">
+          <video id="previaClipe" playsinline muted></video>
+          <div id="recortes" class="recortes" hidden></div>
+        </div>
+      </div>
+      <div class="clipeRetrato" hidden id="ladoRetrato">
+        <span class="rotuloCampo" data-t="retrato.retrato">Versão em retrato</span>
+        <canvas id="telaRetrato" class="telaRetrato" width="1080" height="1920"></canvas>
+        <div class="linha modosRetrato">
+          <button id="modoUm" class="modoRetrato" data-modo="um" data-t-titulo="retrato.um"
+            title="Um enquadramento" aria-pressed="true">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+              stroke-width="2" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="2"/></svg>
+          </button>
+          <button id="modoDois" class="modoRetrato" data-modo="dois" data-t-titulo="retrato.dois"
+            title="Dois enquadramentos" aria-pressed="false">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+              stroke-width="2" aria-hidden="true"><rect x="7" y="3" width="10" height="8" rx="1.5"/><rect x="7" y="13" width="10" height="8" rx="1.5"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
     <div id="barraClipe" class="barraClipe">
       <div class="seleccao"></div>
       <button class="pega de" data-t-aria="clipe.inicio" aria-label="início do clipe"></button>
@@ -301,6 +328,8 @@
     <div class="linha fim">
       <span id="estadoClipe" class="nota"></span>
       <button id="cancelarClipe" data-t="clipe.cancelar">Cancelar</button>
+      <button id="guardarRetrato" data-t="retrato.exportar"
+        data-t-titulo="retrato.custo" title="Reconverte em tempo real">Exportar retrato</button>
       <button id="guardarClipe" class="principal" data-t="clipe.guardar">Exportar clipe</button>
     </div>
   </div>

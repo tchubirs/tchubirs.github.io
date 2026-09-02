@@ -46,6 +46,8 @@ const IGUAIS_DE_PROPOSITO = {
     'app.nome', 'canais.vods', 'marca.feita', 'clipe.tempo',
     'tempo.menos1m', 'tempo.menos10s', 'tempo.mais10s', 'tempo.mais1m',
     'montagem.umaKill', 'montagem.kills', 'montagem.marcar',
+    // "Exportar retrato" escreve-se exactamente assim nas duas linguas.
+    'retrato.exportar',
     'procurar.seguidores', 'noite.todosJuntos', 'noite.umCanal',
     'tile.atrasar', 'alinhar.cancelado', 'montagem.antes', 'montagem.ir',
     'corte.titulo', 'corte.antes', 'clipe.cancelar',

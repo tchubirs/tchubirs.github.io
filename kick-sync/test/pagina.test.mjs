@@ -1507,6 +1507,71 @@ test('o ângulo em foco sai da grelha: ecrã cheio e janela à parte',
     assert.deepEqual(erros, []);
   });
 
+// O editor do retrato: a zona de corte tem de ser EXACTAMENTE a imagem.
+//
+// Este é o bug que não se vê no editor. Com a caixa das caixas a medir o
+// contentor em vez do vídeo, um 16:9 limitado pela altura ganha barras pretas
+// nos lados: os rectângulos ficam desalinhados da imagem e arrastam à
+// velocidade errada. No ecrã parece bem; descobre-se no ficheiro exportado,
+// com o enquadramento noutro sítio.
+test('o editor do retrato mede-se pelo vídeo e não pela caixa à volta',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 20000 });
+    await p.click('#clipar');
+    await p.waitForSelector('#modalClipe:not([hidden])', { timeout: 10000 });
+
+    // A Kick falsa não serve vídeo a sério e o editor esconde-se de propósito
+    // sem `videoWidth`. Um vídeo verdadeiro, feito aqui, com uma proporção que
+    // NÃO é a da caixa — é aí que o erro aparece.
+    await p.evaluate(async () => {
+      const cv = document.createElement('canvas');
+      cv.width = 1280; cv.height = 720;
+      const cx = cv.getContext('2d');
+      let n = 0;
+      const t = setInterval(() => {
+        cx.fillStyle = `hsl(${(n++ * 9) % 360} 55% 35%)`;
+        cx.fillRect(0, 0, 1280, 720);
+      }, 33);
+      const g = new MediaRecorder(cv.captureStream(30), { mimeType: 'video/webm' });
+      const ps = [];
+      g.ondataavailable = (e) => ps.push(e.data);
+      g.start();
+      await new Promise((k) => setTimeout(k, 1200));
+      await new Promise((k) => { g.onstop = k; g.stop(); });
+      clearInterval(t);
+      const v = document.getElementById('previaClipe');
+      v.src = URL.createObjectURL(new Blob(ps, { type: 'video/webm' }));
+      await new Promise((k) => { v.onloadedmetadata = k; });
+      v.currentTime = 0.3;
+      await new Promise((k) => { v.onseeked = k; });
+    });
+    await p.waitForSelector('#recortes:not([hidden])', { timeout: 10000 });
+
+    const medidas = await p.evaluate(() => {
+      const r = (s) => {
+        const b = document.querySelector(s).getBoundingClientRect();
+        return { x: Math.round(b.x), y: Math.round(b.y), w: Math.round(b.width), h: Math.round(b.height) };
+      };
+      return { video: r('#previaClipe'), zona: r('#recortes'), caixas: document.querySelectorAll('.recorte').length };
+    });
+    assert.deepEqual(medidas.zona, medidas.video,
+      `a zona de corte ${JSON.stringify(medidas.zona)} não é a imagem ${JSON.stringify(medidas.video)}`);
+    assert.equal(medidas.caixas, 1, 'um modo, um enquadramento');
+
+    // Dois enquadramentos: dois rectângulos, e o de baixo por baixo do de cima.
+    await p.click('#modoDois');
+    const dois = await p.evaluate(() => [...document.querySelectorAll('.recorte')]
+      .map((e) => Math.round(e.getBoundingClientRect().y)));
+    assert.equal(dois.length, 2);
+    assert.ok(dois[1] > dois[0], `o segundo (${dois[1]}) devia ficar abaixo do primeiro (${dois[0]})`);
+    assert.deepEqual(erros, []);
+  });
+
 // `hidden` tem de esconder mesmo. Cai-se nisto sem dar por nada: basta uma
 // regra qualquer com `display` a apanhar o elemento, porque um `display`
 // escrito ganha ao `display: none` que o atributo traz. Aconteceu-me três
