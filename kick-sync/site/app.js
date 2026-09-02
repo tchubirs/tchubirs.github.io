@@ -11,6 +11,7 @@ import {
 } from './relogio.js';
 import { cortarTodosOsAngulos } from './baixar.js';
 import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js';
+import { abrirJanela, irAEcraCheio, capacidades } from './janela.js';
 import { agruparPorNoite, rotuloDaNoite } from './noites.js';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
@@ -52,6 +53,10 @@ const estado = {
   // partir dai. E a previa: a kill que ele esta a ver em ciclo.
   ancora: null,
   previa: null,
+  // A janela à parte que está aberta, se houver. Uma de cada vez: duas janelas
+  // com dois ângulos seria bonito e não é o que ele pediu — ele quer UM ângulo
+  // no segundo monitor e a grelha no primeiro.
+  aparte: null,
   // A forma de cada estouro da ultima varredura, e o exemplo que ele
   // confirmou. Com um exemplo, a busca deixa de ser um palpite meu sobre o que
   // e um tiro e passa a procurar O MESMO SOM.
@@ -869,7 +874,22 @@ function montarGrade() {
       + `<button data-passo="1" title="${t('tile.adiantar')}">+</button>`
       + '</span>'
       + '</span>'
-      + `<button class="par" title="${t('tile.par')}">⧉</button>`;
+      // Ecrã cheio e janela à parte, no canto de cima à direita — o mesmo sítio
+      // do YouTube, da Twitch e da Kick. Desenhados e não emoji: um ⛶ sai
+      // diferente em cada sistema, e no iPhone sai a cores.
+      + '<span class="fora">'
+      + `<button class="par" title="${t('tile.par')}">⧉</button>`
+      + `<button class="ecraCheio" title="${t('tile.ecraCheio')}" aria-label="${t('tile.ecraCheio')}">`
+      + '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"'
+      + ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+      + '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/>'
+      + '<path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>'
+      + `<button class="aparte" title="${t('tile.aparte')}" aria-label="${t('tile.aparte')}" hidden>`
+      + '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"'
+      + ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+      + '<rect x="3" y="4" width="18" height="14" rx="2"/>'
+      + '<rect x="11" y="10" width="8" height="6" rx="1" fill="currentColor"/></svg></button>'
+      + '</span>';
 
     tile.onclick = () => {
       // Num quadrado que já está em foco, o clique promove-o a principal em vez
@@ -886,6 +906,29 @@ function montarGrade() {
       };
     }
     tile.querySelector('.par').onclick = (e) => { e.stopPropagation(); alternarPar(linha.slug); };
+    tile.querySelector('.ecraCheio').onclick = async (e) => {
+      e.stopPropagation();
+      // Sair, se já lá está. Um botão que só sabe entrar deixa a pessoa presa
+      // ao Esc, e no telemóvel não há Esc.
+      if (document.fullscreenElement) { await document.exitFullscreen(); return; }
+      await irAEcraCheio(tile).catch(() => {});
+    };
+    const aparte = tile.querySelector('.aparte');
+    // Só aparece onde funciona. Um botão que não faz nada é pior do que não ter
+    // botão nenhum, porque a pessoa carrega, não acontece nada, e fica sem
+    // saber se se enganou ou se a página está avariada.
+    const podeAparte = capacidades();
+    aparte.hidden = !(podeAparte.documentoPiP || podeAparte.videoPiP);
+    aparte.onclick = async (e) => {
+      e.stopPropagation();
+      if (estado.aparte) { estado.aparte.fechar(); return; }
+      // O foco vai com ele: tirar um ângulo para o segundo monitor e deixá-lo
+      // mudo e pequeno seria tirar o ângulo errado.
+      if (!ehFoco(linha.slug)) { estado.focos = [linha.slug]; aplicarFoco(); irPara(estado.agoraMs); }
+      estado.aparte = await abrirJanela(tile, {
+        aoFechar: () => { estado.aparte = null; aplicarFoco(); },
+      }).catch(() => null);
+    };
     tile.querySelector('.pausa').onclick = (e) => { e.stopPropagation(); alternarPausa(); };
     tile.querySelector('.somBtn').onclick = (e) => { e.stopPropagation(); alternarSom(linha.slug); };
     const vol = tile.querySelector('.vol');

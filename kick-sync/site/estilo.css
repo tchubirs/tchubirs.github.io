@@ -232,6 +232,9 @@ kbd {
    ajuste fino não faz falta nenhuma ali. */
 .tile { container-type: inline-size; }
 @container (max-width: 230px) { .tile .ajuste { display: none; } }
+/* Num polegar de 150px, três botões no canto tapam o vídeo. Ficam os do
+   quadrado grande, que é onde se usa isto. */
+@container (max-width: 260px) { .tile .fora .ecraCheio, .tile .fora .aparte { display: none; } }
 
 .tile .som {
   display: flex; align-items: center; gap: 0;
@@ -252,12 +255,23 @@ kbd {
   width: 72px; opacity: 1; margin: 0 6px 0 2px; pointer-events: auto;
 }
 .tile.principal { border-color: var(--texto); box-shadow: 0 0 0 1px var(--texto); }
-.tile .par {
-  position: absolute; right: 6px; top: 6px; padding: 1px 7px; font-size: var(--t-menor);
-  background: var(--sobre-video); border-radius: 5px; opacity: .35; transition: opacity .15s;
+/* Os três do canto de cima à direita: par, ecrã cheio, janela à parte.
+   Numa fila com `gap` e não cada um com o seu `right:` — foi assim que os
+   controlos de baixo deixaram de bater uns nos outros, e a razão é a mesma. */
+.tile .fora {
+  position: absolute; right: 6px; top: 6px; display: flex; gap: 4px; align-items: center;
+  opacity: .35; transition: opacity .15s;
 }
-.tile:hover .par, .tile.foco .par { opacity: 1; }
-.tile.foco .par { color: var(--texto); border-color: var(--borda-forte); }
+.tile:hover .fora, .tile.foco .fora { opacity: 1; }
+.tile .fora button {
+  padding: 1px 7px; font-size: var(--t-menor); background: var(--sobre-video);
+  border-radius: 5px; display: grid; place-items: center; min-height: 26px;
+}
+.tile.foco .fora button { color: var(--texto); border-color: var(--borda-forte); }
+/* Dentro da janela à parte não há grelha para onde voltar nem par que faça
+   sentido: fica só o botão que a fecha. */
+.janelaAparte .tile { position: absolute; inset: 0; aspect-ratio: auto; border: 0; border-radius: 0; }
+.janelaAparte .tile .par { display: none; }
 .tile.vazio video { opacity: 0; }
 .tile .rotulo {
   position: absolute; left: 6px; top: 6px; background: var(--sobre-video); padding: 2px 7px;

@@ -1470,6 +1470,43 @@ test('a prévia de um tiroteio leva o combate inteiro e as margens por fora',
     await p.close();
   });
 
+// "Precisa de um botão igual YouTube/Twitch/Kick para deixar em tela cheia, ou
+//  levar aquela tela para outro monitor."
+//
+// A decisão de QUAL mecanismo usar é testada sem browser em janela.test.mjs.
+// Isto é o resto: os botões existem, estão no quadrado em foco, e o de ecrã
+// cheio entra e sai mesmo.
+test('o ângulo em foco sai da grelha: ecrã cheio e janela à parte',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'outro'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi\noutro');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 20000 });
+
+    const foco = '.tile.foco';
+    await p.waitForSelector(`${foco} .ecraCheio`, { timeout: 10000 });
+    // Os três do canto numa fila, sem se sobreporem — que é como os de baixo
+    // já se partiram uma vez.
+    const cantos = await p.evaluate((sel) => ['.par', '.ecraCheio', '.aparte']
+      .map((s) => document.querySelector(`${sel} ${s}`))
+      .map((e) => (e ? { x: Math.round(e.getBoundingClientRect().x), w: Math.round(e.getBoundingClientRect().width) } : null)), foco);
+    assert.ok(cantos.every(Boolean), `faltou um botão: ${JSON.stringify(cantos)}`);
+    for (let i = 1; i < cantos.length; i++) {
+      assert.ok(cantos[i].x >= cantos[i - 1].x + cantos[i - 1].w,
+        `os botões do canto sobrepõem-se: ${JSON.stringify(cantos)}`);
+    }
+
+    await p.click(`${foco} .ecraCheio`);
+    await p.waitForFunction(() => !!document.fullscreenElement, null, { timeout: 5000 });
+    // E sai. Um botão que só sabe entrar deixa a pessoa presa ao Esc, e no
+    // telemóvel não há Esc.
+    await p.click('.tile.foco .ecraCheio');
+    await p.waitForFunction(() => !document.fullscreenElement, null, { timeout: 5000 });
+    assert.deepEqual(erros, []);
+  });
+
 // `hidden` tem de esconder mesmo. Cai-se nisto sem dar por nada: basta uma
 // regra qualquer com `display` a apanhar o elemento, porque um `display`
 // escrito ganha ao `display: none` que o atributo traz. Aconteceu-me três

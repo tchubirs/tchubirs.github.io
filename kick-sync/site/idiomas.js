@@ -66,6 +66,8 @@ const TEXTOS = {
     'estado.inesperado': 'a Kick mudou o formato da resposta — não é culpa tua; isto precisa de ser corrigido no código',
 
     'tile.relogioIncerto': 'relógio incerto',
+    'tile.ecraCheio': 'Ecrã cheio',
+    'tile.aparte': 'Janela à parte',
     'tile.par': 'ver dois ao mesmo tempo',
     'tile.pausa': 'parar / continuar (barra de espaço)',
     'tile.ligarSom': 'ligar o som deste',
@@ -285,6 +287,8 @@ const TEXTOS = {
     'estado.inesperado': 'Kick changed the shape of the reply — not your fault; this needs a code fix',
 
     'tile.relogioIncerto': 'clock is uncertain',
+    'tile.ecraCheio': 'Full screen',
+    'tile.aparte': 'Separate window',
     'tile.par': 'watch two at once',
     'tile.pausa': 'pause / resume (spacebar)',
     'tile.ligarSom': 'unmute this one',
@@ -504,6 +508,8 @@ const TEXTOS = {
     'estado.inesperado': 'Kick cambió el formato de la respuesta — no es culpa tuya; hay que corregirlo en el código',
 
     'tile.relogioIncerto': 'reloj incierto',
+    'tile.ecraCheio': 'Pantalla completa',
+    'tile.aparte': 'Ventana aparte',
     'tile.par': 'ver dos a la vez',
     'tile.pausa': 'pausar / seguir (barra espaciadora)',
     'tile.ligarSom': 'activar el sonido de este',
