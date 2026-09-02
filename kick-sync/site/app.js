@@ -2083,7 +2083,12 @@ function abrirClipe() {
   $('estadoClipe').textContent = '';
   $('guardarClipe').disabled = false;
   $('modalClipe').hidden = false;
-  $('guardarRetrato').disabled = false;
+  // Fechado até o editor do retrato existir. Estava aberto desde o princípio,
+  // e como o `guardarRetrato` desistia em silêncio quando não havia
+  // enquadramentos, carregar nele não fazia RIGOROSAMENTE NADA — nem uma
+  // mensagem. Ele carregou e veio dizer-mo, e tinha toda a razão.
+  $('guardarRetrato').disabled = true;
+  $('semRetrato').hidden = true;
   pintarClipe();
   preverClipe(estado.clipe.deMs);
   prepararRetrato();
@@ -2106,12 +2111,28 @@ function prepararRetrato() {
     c.rects = enquadramentoInicial(v.videoWidth, v.videoHeight, c.modo, c.divisao);
     $('ladoRetrato').hidden = false;
     $('recortes').hidden = false;
+    $('semRetrato').hidden = true;
+    $('guardarRetrato').disabled = false;
+    clearTimeout(estado.esperaRetrato);
     pintarRecortes();
     pintarDivisor();
     seguirRetrato();
   };
+  // Substituir e não acumular: o modal abre muitas vezes por sessão, e cada
+  // abertura deixava mais um ouvinte pendurado no mesmo `<video>`.
+  v.removeEventListener('loadedmetadata', estado.ouvinteRetrato || (() => {}));
+  estado.ouvinteRetrato = ligar;
   v.addEventListener('loadedmetadata', ligar);
   if (v.videoWidth > 0) ligar();
+
+  // E se não carregar, dizer. Um botão apagado sem explicação é a mesma coisa
+  // que um botão que não faz nada: a pessoa fica sem saber se se enganou.
+  clearTimeout(estado.esperaRetrato);
+  estado.esperaRetrato = setTimeout(() => {
+    if (!estado.clipe || estado.clipe.rects.length) return;
+    $('semRetrato').textContent = t('retrato.semPrevia');
+    $('semRetrato').hidden = false;
+  }, 6000);
 }
 
 /** As caixas por cima do vídeo, em percentagem — para seguirem a fonte. */
@@ -2277,8 +2298,13 @@ function trocarModo(modo) {
 async function guardarRetrato() {
   const c = estado.clipe;
   const v = $('previaClipe');
-  if (!c || !c.rects.length) return;
   const botao = $('guardarRetrato');
+  if (!c || !c.rects.length) {
+    // Nunca em silêncio. Era assim que estava, e "o botão nem fez nada quando
+    // apertava" é exactamente o que se sente do outro lado.
+    $('estadoClipe').textContent = t('retrato.semPrevia');
+    return;
+  }
   botao.disabled = true;
   const duracaoS = (c.ateMs - c.deMs) / 1000;
 
@@ -2326,6 +2352,7 @@ async function guardarRetrato() {
 }
 
 function fecharClipe() {
+  clearTimeout(estado.esperaRetrato);
   estado.clipe?.hls?.destroy();
   const v = $('previaClipe');
   v.pause?.();

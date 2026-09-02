@@ -1741,6 +1741,66 @@ test('a grelha ordena-se como ele escreveu, ou de A a Z, à escolha',
     assert.deepEqual(erros, []);
   });
 
+// "Tentei usar o exportar na outra versão e o botão nem fez nada quando
+//  apertava."
+//
+// Não fazia mesmo. O `guardarRetrato` desistia em silêncio quando ainda não
+// havia enquadramentos — e não há enquadramentos enquanto a pré-visualização
+// não tiver tamanho. O botão ficava aceso desde o princípio, ele carregava, e
+// não acontecia nem uma mensagem.
+//
+// Um botão aceso que não faz nada é o pior de todos: a pessoa fica sem saber
+// se se enganou, se a página está avariada, ou se o ficheiro foi para algum
+// lado. Agora nasce fechado, e ao fim de seis segundos sem prévia DIZ porquê.
+test('o exportar do retrato nunca fica calado',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 20000 });
+    await p.click('#clipar');
+    await p.waitForSelector('#modalClipe:not([hidden])', { timeout: 10000 });
+
+    // A Kick falsa não serve vídeo que decodifique: é exactamente o caso em
+    // que ele estava.
+    assert.equal(await p.evaluate(() => document.getElementById('guardarRetrato').disabled), true,
+      'o botão do retrato tem de nascer fechado');
+
+    // E ao fim da espera, explica-se.
+    await p.waitForSelector('#semRetrato:not([hidden])', { timeout: 12000 });
+    const explica = await p.evaluate(() => document.getElementById('semRetrato').textContent.trim());
+    assert.ok(explica.length > 10, `a explicação estava vazia: ${JSON.stringify(explica)}`);
+
+    // Com uma prévia a sério, abre.
+    await p.evaluate(async () => {
+      const cv = document.createElement('canvas');
+      cv.width = 1280; cv.height = 720;
+      const cx = cv.getContext('2d');
+      let n = 0;
+      const t = setInterval(() => {
+        cx.fillStyle = `hsl(${(n++ * 9) % 360} 55% 35%)`;
+        cx.fillRect(0, 0, 1280, 720);
+      }, 33);
+      const g = new MediaRecorder(cv.captureStream(30), { mimeType: 'video/webm' });
+      const ps = [];
+      g.ondataavailable = (e) => ps.push(e.data);
+      g.start();
+      await new Promise((k) => setTimeout(k, 1200));
+      await new Promise((k) => { g.onstop = k; g.stop(); });
+      clearInterval(t);
+      const v = document.getElementById('previaClipe');
+      v.src = URL.createObjectURL(new Blob(ps, { type: 'video/webm' }));
+      await new Promise((k) => { v.onloadedmetadata = k; });
+    });
+    await p.waitForFunction(() => !document.getElementById('guardarRetrato').disabled,
+      null, { timeout: 10000 });
+    assert.equal(await p.evaluate(() => document.getElementById('semRetrato').hidden), true,
+      'a explicação devia sumir quando o editor abre');
+    assert.deepEqual(erros, []);
+  });
+
 // `hidden` tem de esconder mesmo. Cai-se nisto sem dar por nada: basta uma
 // regra qualquer com `display` a apanhar o elemento, porque um `display`
 // escrito ganha ao `display: none` que o atributo traz. Aconteceu-me três
