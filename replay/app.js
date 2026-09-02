@@ -5,34 +5,34 @@
 // bottom rung of Kick's ladder and is what makes thirty tiles a home-connection
 // problem rather than a server problem.
 
-import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=c4b46468e7';
+import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=d9b44fa5e1';
 import {
   linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo,
-} from './relogio.js?v=c4b46468e7';
-import { cortarTodosOsAngulos } from './baixar.js?v=c4b46468e7';
-import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=c4b46468e7';
-import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=c4b46468e7';
-import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=c4b46468e7';
+} from './relogio.js?v=d9b44fa5e1';
+import { cortarTodosOsAngulos } from './baixar.js?v=d9b44fa5e1';
+import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=d9b44fa5e1';
+import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=d9b44fa5e1';
+import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=d9b44fa5e1';
 import {
   RETRATO, enquadramentoInicial, limitar, desenhar, gravar, formatoQueFunciona, extensaoDe,
   reformar, limparDivisao, DIVISAO_OMISSAO,
-} from './retrato.js?v=c4b46468e7';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=c4b46468e7';
+} from './retrato.js?v=d9b44fa5e1';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=d9b44fa5e1';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
   alternarVitima, filtrar, temMorte, clipesDoMomento,
-} from './momentos.js?v=c4b46468e7';
-import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=c4b46468e7';
-import { criarZip, crc32 } from './zip.js?v=c4b46468e7';
-import { queFazerComOLeitor } from './leitor.js?v=c4b46468e7';
-import { criarApanhador } from './frames.js?v=c4b46468e7';
-import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=c4b46468e7';
-import { TAXA_TIROS } from './tiros.js?v=c4b46468e7';
-import { parecidos, juntarPerto } from './aprender.js?v=c4b46468e7';
-import { somDoCanal } from './alinhar.js?v=c4b46468e7';
-import { MAXIMO_S, mover, janelaInicial, nomeDoClipe } from './clipe.js?v=c4b46468e7';
-import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=c4b46468e7';
-import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=c4b46468e7';
+} from './momentos.js?v=d9b44fa5e1';
+import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=d9b44fa5e1';
+import { criarZip, crc32 } from './zip.js?v=d9b44fa5e1';
+import { queFazerComOLeitor } from './leitor.js?v=d9b44fa5e1';
+import { criarApanhador } from './frames.js?v=d9b44fa5e1';
+import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=d9b44fa5e1';
+import { TAXA_TIROS } from './tiros.js?v=d9b44fa5e1';
+import { parecidos, juntarPerto } from './aprender.js?v=d9b44fa5e1';
+import { somDoCanal } from './alinhar.js?v=d9b44fa5e1';
+import { MAXIMO_S, mover, janelaInicial, nomeDoClipe } from './clipe.js?v=d9b44fa5e1';
+import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=d9b44fa5e1';
+import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=d9b44fa5e1';
 
 const $ = (id) => document.getElementById(id);
 const estado = {
@@ -2083,7 +2083,12 @@ function abrirClipe() {
   $('estadoClipe').textContent = '';
   $('guardarClipe').disabled = false;
   $('modalClipe').hidden = false;
-  $('guardarRetrato').disabled = false;
+  // Fechado até o editor do retrato existir. Estava aberto desde o princípio,
+  // e como o `guardarRetrato` desistia em silêncio quando não havia
+  // enquadramentos, carregar nele não fazia RIGOROSAMENTE NADA — nem uma
+  // mensagem. Ele carregou e veio dizer-mo, e tinha toda a razão.
+  $('guardarRetrato').disabled = true;
+  $('semRetrato').hidden = true;
   pintarClipe();
   preverClipe(estado.clipe.deMs);
   prepararRetrato();
@@ -2106,12 +2111,28 @@ function prepararRetrato() {
     c.rects = enquadramentoInicial(v.videoWidth, v.videoHeight, c.modo, c.divisao);
     $('ladoRetrato').hidden = false;
     $('recortes').hidden = false;
+    $('semRetrato').hidden = true;
+    $('guardarRetrato').disabled = false;
+    clearTimeout(estado.esperaRetrato);
     pintarRecortes();
     pintarDivisor();
     seguirRetrato();
   };
+  // Substituir e não acumular: o modal abre muitas vezes por sessão, e cada
+  // abertura deixava mais um ouvinte pendurado no mesmo `<video>`.
+  v.removeEventListener('loadedmetadata', estado.ouvinteRetrato || (() => {}));
+  estado.ouvinteRetrato = ligar;
   v.addEventListener('loadedmetadata', ligar);
   if (v.videoWidth > 0) ligar();
+
+  // E se não carregar, dizer. Um botão apagado sem explicação é a mesma coisa
+  // que um botão que não faz nada: a pessoa fica sem saber se se enganou.
+  clearTimeout(estado.esperaRetrato);
+  estado.esperaRetrato = setTimeout(() => {
+    if (!estado.clipe || estado.clipe.rects.length) return;
+    $('semRetrato').textContent = t('retrato.semPrevia');
+    $('semRetrato').hidden = false;
+  }, 6000);
 }
 
 /** As caixas por cima do vídeo, em percentagem — para seguirem a fonte. */
@@ -2277,8 +2298,13 @@ function trocarModo(modo) {
 async function guardarRetrato() {
   const c = estado.clipe;
   const v = $('previaClipe');
-  if (!c || !c.rects.length) return;
   const botao = $('guardarRetrato');
+  if (!c || !c.rects.length) {
+    // Nunca em silêncio. Era assim que estava, e "o botão nem fez nada quando
+    // apertava" é exactamente o que se sente do outro lado.
+    $('estadoClipe').textContent = t('retrato.semPrevia');
+    return;
+  }
   botao.disabled = true;
   const duracaoS = (c.ateMs - c.deMs) / 1000;
 
@@ -2326,6 +2352,7 @@ async function guardarRetrato() {
 }
 
 function fecharClipe() {
+  clearTimeout(estado.esperaRetrato);
   estado.clipe?.hls?.destroy();
   const v = $('previaClipe');
   v.pause?.();
