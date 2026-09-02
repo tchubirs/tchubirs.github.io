@@ -12,10 +12,10 @@
  * da Kick, sem uma linha nova: um VOD da Twitch entra la como uma peca de um
  * segmento so.
  */
-import { t, aplicarIdioma, definirIdioma, idiomaActual, idiomaDoBrowser, IDIOMAS } from './idiomas.js?v=e9bea0d3ca';
-import { procurarCanais, vodsDoCanal, pecaDoVod, enderecoDoPlayer } from './twitch.js?v=e9bea0d3ca';
-import { linhaDoCanal, onde, janelaComum, quantosNoAr } from './relogio.js?v=e9bea0d3ca';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=e9bea0d3ca';
+import { t, aplicarIdioma, definirIdioma, idiomaActual, idiomaDoBrowser, IDIOMAS } from './idiomas.js?v=f85397e202';
+import { procurarCanais, vodsDoCanal, pecaDoVod, enderecoDoPlayer } from './twitch.js?v=f85397e202';
+import { linhaDoCanal, onde, janelaComum, quantosNoAr } from './relogio.js?v=f85397e202';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=f85397e202';
 
 const $ = (id) => document.getElementById(id);
 const estado = {

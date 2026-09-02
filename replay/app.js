@@ -5,33 +5,33 @@
 // bottom rung of Kick's ladder and is what makes thirty tiles a home-connection
 // problem rather than a server problem.
 
-import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=e9bea0d3ca';
+import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=f85397e202';
 import {
   linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo,
-} from './relogio.js?v=e9bea0d3ca';
-import { cortarTodosOsAngulos } from './baixar.js?v=e9bea0d3ca';
-import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=e9bea0d3ca';
-import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=e9bea0d3ca';
+} from './relogio.js?v=f85397e202';
+import { cortarTodosOsAngulos } from './baixar.js?v=f85397e202';
+import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=f85397e202';
+import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=f85397e202';
 import {
   RETRATO, enquadramentoInicial, limitar, desenhar, gravar, formatoQueFunciona, extensaoDe,
   reformar, limparDivisao, DIVISAO_OMISSAO,
-} from './retrato.js?v=e9bea0d3ca';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=e9bea0d3ca';
+} from './retrato.js?v=f85397e202';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=f85397e202';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
   alternarVitima, filtrar, temMorte, clipesDoMomento,
-} from './momentos.js?v=e9bea0d3ca';
-import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=e9bea0d3ca';
-import { criarZip, crc32 } from './zip.js?v=e9bea0d3ca';
-import { queFazerComOLeitor } from './leitor.js?v=e9bea0d3ca';
-import { criarApanhador } from './frames.js?v=e9bea0d3ca';
-import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=e9bea0d3ca';
-import { TAXA_TIROS } from './tiros.js?v=e9bea0d3ca';
-import { parecidos, juntarPerto } from './aprender.js?v=e9bea0d3ca';
-import { somDoCanal } from './alinhar.js?v=e9bea0d3ca';
-import { MAXIMO_S, mover, janelaInicial, nomeDoClipe } from './clipe.js?v=e9bea0d3ca';
-import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=e9bea0d3ca';
-import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=e9bea0d3ca';
+} from './momentos.js?v=f85397e202';
+import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=f85397e202';
+import { criarZip, crc32 } from './zip.js?v=f85397e202';
+import { queFazerComOLeitor } from './leitor.js?v=f85397e202';
+import { criarApanhador } from './frames.js?v=f85397e202';
+import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=f85397e202';
+import { TAXA_TIROS } from './tiros.js?v=f85397e202';
+import { parecidos, juntarPerto } from './aprender.js?v=f85397e202';
+import { somDoCanal } from './alinhar.js?v=f85397e202';
+import { MAXIMO_S, mover, janelaInicial, nomeDoClipe } from './clipe.js?v=f85397e202';
+import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=f85397e202';
+import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=f85397e202';
 
 const $ = (id) => document.getElementById(id);
 const estado = {
@@ -403,8 +403,42 @@ async function sugerirParecidos(maus) {
 }
 
 /** Read the ladders and the clocks for one night, then build the timeline. */
+/**
+ * Quantas vezes já se mandou abrir uma noite.
+ *
+ * Sem isto, duas mudanças seguidas correm ao mesmo tempo e a que ACABAR
+ * primeiro não é a que ele escolheu por último: são trinta canais e dois
+ * pedidos de rede por cada, e quem acaba primeiro é quem tiver menos VODs.
+ * O ecrã ficava com a noite errada e nada dizia porquê.
+ */
+let vezNoite = 0;
+
+/**
+ * Abrir uma noite, e garantir que o selector volta a abrir.
+ *
+ * O `finally` não é zelo a mais: se um `fetch` rebentar a meio dos sessenta
+ * pedidos, sem ele o selector ficava trancado e a única saída era recarregar
+ * a página — com a sessão dele lá dentro.
+ */
 async function abrirNoite(noite) {
-  $('estadoCarga').textContent = t('canais.aLerRelogios');
+  try {
+    return await lerNoite(noite);
+  } finally {
+    if (vezNoite === vezNoiteEmCurso) $('noite').disabled = false;
+  }
+}
+
+let vezNoiteEmCurso = 0;
+
+async function lerNoite(noite) {
+  const minhaVez = ++vezNoite;
+  vezNoiteEmCurso = minhaVez;
+  const desactualizada = () => minhaVez !== vezNoite;
+  const dizer = (frase) => { if (!desactualizada()) $('estadoNoite').textContent = frase; };
+  // O selector fecha-se enquanto lê: trinta canais são sessenta pedidos, e
+  // deixá-lo aberto convida a mudar outra vez a meio.
+  $('noite').disabled = true;
+  dizer(t('canais.aLerRelogios'));
   const porCanal = new Map();
   for (const { slug, v } of noite.itens) {
     if (!v.master) continue;
@@ -417,7 +451,12 @@ async function abrirNoite(noite) {
       porCanal.get(slug).push({ vod: v, playlist, escada: master, barato });
     } catch { /* a channel that cannot be read is shown as such below */ }
   }
-  $('estadoCarga').textContent = '';
+  $('noite').disabled = false;
+  // Se ele mudou de noite outra vez enquanto isto lia, esta resposta já não
+  // interessa a ninguém — e escrevê-la no ecrã seria mostrar-lhe a noite
+  // errada com ar de certa.
+  if (desactualizada()) return;
+  dizer('');
 
   // Pela ordem em que ELE os escreveu, e não pela ordem por que a Kick os
   // devolveu. "Está difícil achar as POV em baixo": com vinte e três canais,
@@ -445,7 +484,7 @@ async function abrirNoite(noite) {
     // encontrava nada para parar e os quadrados respondiam a nada. Uma noite
     // que não abre tem de deixar o ecrã vazio e dizer porquê.
     limparPalco();
-    $('estadoCarga').textContent = t('noite.semRelogio');
+    dizer(t('noite.semRelogio'));
     return;
   }
 
