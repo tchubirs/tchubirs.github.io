@@ -35,6 +35,34 @@ export const RETRATO = { largura: 1080, altura: 1920 };
 const preso = (x, min, max) => Math.max(min, Math.min(max, x));
 
 /**
+ * Quanto do 9:16 fica para o quadro de cima, de 0 a 1.
+ *
+ * É o pill branco que se arrasta no meio da pré-visualização — nas quatro
+ * fotos que ele mandou está lá, e eu não o tinha visto: "um controlo para
+ * deixar maior a parte de cima, ou arrasta para o outro lado e fica maior a
+ * parte de baixo; mexer na direita afeta directamente os tamanhos na esquerda".
+ *
+ * Afecta mesmo, e não por acaso: se o quadro de cima passa a valer 70% da
+ * altura, a proporção do RECORTE de cima muda com ele — 1080 por 1344 em vez
+ * de 1080 por 960. O rectângulo na fonte tem de mudar de forma no mesmo
+ * instante, senão o que se vê no editor deixa de ser o que sai no ficheiro.
+ *
+ * Os limites existem porque uma faixa de 5% não é um enquadramento, é uma
+ * risca — e ninguém arrasta até lá de propósito.
+ */
+export const DIVISAO_MIN = 0.15;
+export const DIVISAO_MAX = 0.85;
+export const DIVISAO_OMISSAO = 0.5;
+export const limparDivisao = (d) => preso(Number.isFinite(d) ? d : DIVISAO_OMISSAO, DIVISAO_MIN, DIVISAO_MAX);
+
+/** A proporção que o recorte `i` tem de ter, para encher o seu destino. */
+export function proporcaoDoQuadro(modo, i = 0, divisao = DIVISAO_OMISSAO) {
+  const alvos = destinos(modo, divisao);
+  const a = alvos[Math.min(i, alvos.length - 1)];
+  return a.largura / a.altura;
+}
+
+/**
  * O enquadramento com que isto abre, para uma fonte deitada.
  *
  * 'um': a fita 9:16 mais alta que cabe, ao meio.
@@ -42,29 +70,23 @@ const preso = (x, min, max) => Math.max(min, Math.min(max, x));
  *         é 1080x960, ou seja 9:8. A de cima ao meio em cima, a de baixo ao
  *         meio em baixo, que é onde a cara e o jogo costumam estar.
  */
-export function enquadramentoInicial(largura, altura, modo = 'um') {
+export function enquadramentoInicial(largura, altura, modo = 'um', divisao = DIVISAO_OMISSAO) {
   if (!(largura > 0 && altura > 0)) return [];
   if (modo === 'dois') {
-    const proporcao = RETRATO.largura / (RETRATO.altura / 2);   // 9:8
-    // METADE da altura da fonte, e não a altura toda.
-    //
-    // A primeira versão dava a cada um `altura * proporcao` de largura, o que
-    // numa fonte 16:9 resulta em dois rectângulos com a altura INTEIRA — logo
-    // os dois no mesmo sítio, um em cima do outro, e o editor abria com um
-    // enquadramento só à vista. Foi o teste que o apanhou; a olho, dois
-    // rectângulos sobrepostos ao pixel são indistinguíveis de um.
-    //
-    // Com metade da altura nascem separados, um em cima e outro em baixo, que
-    // é onde a cara e o jogo costumam estar. Sobrepô-los depois é livre: numa
-    // imagem 16:9 a webcam e o centro da acção partilham espaço.
-    let h = altura / 2;
-    let w = h * proporcao;
-    if (w > largura) { w = largura; h = w / proporcao; }
-    const x = (largura - w) / 2;
-    return [
-      { x, y: 0, largura: w, altura: h },
-      { x, y: altura - h, largura: w, altura: h },
-    ];
+    const d = limparDivisao(divisao);
+    return [0, 1].map((i) => {
+      const proporcao = proporcaoDoQuadro('dois', i, d);
+      // Metade da altura da fonte para cada um: assim nascem separados, um em
+      // cima e outro em baixo. A primeira versão dava a altura INTEIRA a cada,
+      // e numa fonte 16:9 os dois nasciam no mesmo sítio — dois rectângulos
+      // sobrepostos ao pixel são indistinguíveis de um, e foi o teste que o
+      // apanhou. Sobrepô-los DEPOIS é livre: numa imagem 16:9 a webcam e o
+      // centro da acção partilham espaço.
+      let h = altura / 2;
+      let w = h * proporcao;
+      if (w > largura) { w = largura; h = w / proporcao; }
+      return { x: (largura - w) / 2, y: i === 0 ? 0 : altura - h, largura: w, altura: h };
+    });
   }
   const proporcao = RETRATO.largura / RETRATO.altura;            // 9:16
   const h = altura;
@@ -97,15 +119,43 @@ export function limitar(rect, fonte) {
  *
  * Um modo, um destino que enche tudo. Dois modos, metade cada.
  */
-export function destinos(modo = 'um') {
+export function destinos(modo = 'um', divisao = DIVISAO_OMISSAO) {
   const { largura, altura } = RETRATO;
   if (modo === 'dois') {
+    // Arredondado ao pixel, e a segunda faixa leva o RESTO — não `altura/2`
+    // outra vez. Com uma divisão de 0,333 duas metades arredondadas deixavam
+    // uma risca preta de um pixel a meio do vídeo exportado.
+    const cima = Math.round(altura * limparDivisao(divisao));
     return [
-      { x: 0, y: 0, largura, altura: altura / 2 },
-      { x: 0, y: altura / 2, largura, altura: altura / 2 },
+      { x: 0, y: 0, largura, altura: cima },
+      { x: 0, y: cima, largura, altura: altura - cima },
     ];
   }
   return [{ x: 0, y: 0, largura, altura }];
+}
+
+/**
+ * Refazer os recortes quando o divisor se mexe.
+ *
+ * Cada rectângulo muda de forma para a nova proporção MAS FICA ONDE ESTAVA:
+ * mantém-se o centro, e só depois se prende à fonte. Sem isso, arrastar o
+ * divisor um pixel atirava o enquadramento cuidadosamente escolhido para o
+ * canto — e a pessoa tinha de o voltar a colocar a cada ajuste.
+ */
+export function reformar(rects, { modo = 'dois', divisao = DIVISAO_OMISSAO, fonte } = {}) {
+  return rects.map((r, i) => {
+    if (!r) return r;
+    const proporcao = proporcaoDoQuadro(modo, i, divisao);
+    const cx = r.x + r.largura / 2;
+    const cy = r.y + r.altura / 2;
+    // A ÁREA é que se conserva, e não a largura: conservar a largura fazia o
+    // rectângulo crescer sem parar à medida que se arrastava o divisor para
+    // um lado, porque cada passo o tornava mais alto e mais alto.
+    const area = r.largura * r.altura;
+    const w = Math.sqrt(area * proporcao);
+    const h = w / proporcao;
+    return limitar({ x: cx - w / 2, y: cy - h / 2, largura: w, altura: h }, fonte);
+  });
 }
 
 /**
@@ -115,8 +165,8 @@ export function destinos(modo = 'um') {
  * seu destino ao pixel deixaria a tira do frame anterior a espreitar na beira,
  * e isso lê-se como um artefacto de compressão em vez de um bug.
  */
-export function desenhar(ctx, fonte, rects, modo = 'um') {
-  const alvos = destinos(modo);
+export function desenhar(ctx, fonte, rects, modo = 'um', divisao = DIVISAO_OMISSAO) {
+  const alvos = destinos(modo, divisao);
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, RETRATO.largura, RETRATO.altura);
   for (let i = 0; i < alvos.length; i++) {
@@ -232,7 +282,7 @@ export const extensaoDe = (tipo) => (String(tipo).startsWith('video/mp4') ? 'mp4
  * @param {AbortSignal} [opcoes.sinal]
  */
 export async function gravar(video, {
-  rects, modo = 'um', duracaoS, aoProgresso = () => {}, sinal, formato,
+  rects, modo = 'um', divisao = DIVISAO_OMISSAO, duracaoS, aoProgresso = () => {}, sinal, formato,
   criarTela = () => document.createElement('canvas'),
   MR = globalThis.MediaRecorder,
 } = {}) {
@@ -271,7 +321,7 @@ export async function gravar(video, {
   // que acontecer, e a duração do ficheiro passa a ser a duração do clipe.
   const pintar = () => {
     if (parar) return;
-    desenhar(ctx, video, rects, modo);
+    desenhar(ctx, video, rects, modo, divisao);
     const feito = Math.max(0, video.currentTime - inicio);
     aoProgresso({ feito, total: duracaoS });
     if (feito >= duracaoS) {

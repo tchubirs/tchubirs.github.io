@@ -295,7 +295,14 @@
       </div>
       <div class="clipeRetrato" hidden id="ladoRetrato">
         <span class="rotuloCampo" data-t="retrato.retrato">Versão em retrato</span>
-        <canvas id="telaRetrato" class="telaRetrato" width="1080" height="1920"></canvas>
+        <div id="molduraRetrato" class="molduraRetrato">
+          <canvas id="telaRetrato" class="telaRetrato" width="1080" height="1920"></canvas>
+          <!-- O divisor. Arrasta-se para dar mais altura ao quadro de cima ou
+               ao de baixo, e mexer aqui muda a FORMA dos recortes do lado
+               esquerdo no mesmo instante. -->
+          <button id="divisor" class="divisor" hidden data-t-aria="retrato.divisor"
+            aria-label="repartir entre cima e baixo"><span></span></button>
+        </div>
         <div class="linha modosRetrato">
           <button id="modoUm" class="modoRetrato" data-modo="um" data-t-titulo="retrato.um"
             title="Um enquadramento" aria-pressed="true">
@@ -339,10 +346,10 @@
   <!-- A versao, a serio e visivel. O GitHub Pages serve com max-age=600 e um
        telemovel guarda o app.js antigo; sem isto, "ja corrigi" e "continua
        igual" sao as duas verdadeiras ao mesmo tempo e ninguem sai dali. -->
-  <p class="nota"><span data-t="app.rodape">A sessão fica guardada neste dispositivo.</span> · <span id="versao">49894d03a9</span></p>
+  <p class="nota"><span data-t="app.rodape">A sessão fica guardada neste dispositivo.</span> · <span id="versao">e9bea0d3ca</span></p>
 </footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.17/hls.min.js"></script>
-<script type="module" src="app.js?v=49894d03a9"></script>
+<script type="module" src="app.js?v=e9bea0d3ca"></script>
 </body>
 </html>
