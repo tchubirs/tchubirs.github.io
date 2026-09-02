@@ -5,29 +5,32 @@
 // bottom rung of Kick's ladder and is what makes thirty tiles a home-connection
 // problem rather than a server problem.
 
-import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=5a503c3ee2';
+import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=49894d03a9';
 import {
   linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo,
-} from './relogio.js?v=5a503c3ee2';
-import { cortarTodosOsAngulos } from './baixar.js?v=5a503c3ee2';
-import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=5a503c3ee2';
-import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=5a503c3ee2';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=5a503c3ee2';
+} from './relogio.js?v=49894d03a9';
+import { cortarTodosOsAngulos } from './baixar.js?v=49894d03a9';
+import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=49894d03a9';
+import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=49894d03a9';
+import {
+  RETRATO, enquadramentoInicial, limitar, desenhar, gravar, formatoQueFunciona, extensaoDe,
+} from './retrato.js?v=49894d03a9';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=49894d03a9';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
   alternarVitima, filtrar, temMorte, clipesDoMomento,
-} from './momentos.js?v=5a503c3ee2';
-import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=5a503c3ee2';
-import { criarZip, crc32 } from './zip.js?v=5a503c3ee2';
-import { queFazerComOLeitor } from './leitor.js?v=5a503c3ee2';
-import { criarApanhador } from './frames.js?v=5a503c3ee2';
-import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=5a503c3ee2';
-import { TAXA_TIROS } from './tiros.js?v=5a503c3ee2';
-import { parecidos, juntarPerto } from './aprender.js?v=5a503c3ee2';
-import { somDoCanal } from './alinhar.js?v=5a503c3ee2';
-import { MAXIMO_S, mover, janelaInicial, nomeDoClipe } from './clipe.js?v=5a503c3ee2';
-import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=5a503c3ee2';
-import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=5a503c3ee2';
+} from './momentos.js?v=49894d03a9';
+import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=49894d03a9';
+import { criarZip, crc32 } from './zip.js?v=49894d03a9';
+import { queFazerComOLeitor } from './leitor.js?v=49894d03a9';
+import { criarApanhador } from './frames.js?v=49894d03a9';
+import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=49894d03a9';
+import { TAXA_TIROS } from './tiros.js?v=49894d03a9';
+import { parecidos, juntarPerto } from './aprender.js?v=49894d03a9';
+import { somDoCanal } from './alinhar.js?v=49894d03a9';
+import { MAXIMO_S, mover, janelaInicial, nomeDoClipe } from './clipe.js?v=49894d03a9';
+import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=49894d03a9';
+import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=49894d03a9';
 
 const $ = (id) => document.getElementById(id);
 const estado = {
@@ -1993,6 +1996,11 @@ function abrirClipe() {
     },
     ...janelaInicial(centro, { limites }),
     hls: null,
+    // O retrato: o modo e os enquadramentos, em pixels do vídeo de origem.
+    // Nascem vazios porque só se sabe o tamanho da fonte depois de ela ter
+    // metadados — antes disso, qualquer enquadramento seria um palpite.
+    modo: 'um',
+    rects: [],
   };
 
   $('canalClipe').innerHTML = estado.linhas
@@ -2002,8 +2010,173 @@ function abrirClipe() {
   $('estadoClipe').textContent = '';
   $('guardarClipe').disabled = false;
   $('modalClipe').hidden = false;
+  $('guardarRetrato').disabled = false;
   pintarClipe();
   preverClipe(estado.clipe.deMs);
+  prepararRetrato();
+}
+
+// ── o retrato ───────────────────────────────────────────────────────────────
+
+/**
+ * Ligar o editor do retrato assim que a fonte tiver tamanho.
+ *
+ * Antes de `loadedmetadata` o vídeo não tem `videoWidth`, e um enquadramento
+ * calculado a partir de zero é uma caixa de zero pixels que não se vê nem se
+ * arrasta — o utilizador via um editor vazio e concluía que estava avariado.
+ */
+function prepararRetrato() {
+  const v = $('previaClipe');
+  const ligar = () => {
+    const c = estado.clipe;
+    if (!c || !(v.videoWidth > 0)) return;
+    c.rects = enquadramentoInicial(v.videoWidth, v.videoHeight, c.modo);
+    $('ladoRetrato').hidden = false;
+    $('recortes').hidden = false;
+    pintarRecortes();
+    seguirRetrato();
+  };
+  v.addEventListener('loadedmetadata', ligar);
+  if (v.videoWidth > 0) ligar();
+}
+
+/** As caixas por cima do vídeo, em percentagem — para seguirem a fonte. */
+function pintarRecortes() {
+  const c = estado.clipe;
+  const v = $('previaClipe');
+  const alvo = $('recortes');
+  if (!c || !(v.videoWidth > 0)) return;
+  alvo.innerHTML = c.rects.map((r, i) => `<div class="recorte" data-i="${i}" style="`
+    + `left:${(r.x / v.videoWidth) * 100}%;top:${(r.y / v.videoHeight) * 100}%;`
+    + `width:${(r.largura / v.videoWidth) * 100}%;height:${(r.altura / v.videoHeight) * 100}%">`
+    + (c.rects.length > 1 ? `<b class="ordem">${i + 1}</b>` : '')
+    + '<span class="puxar"></span></div>').join('');
+  for (const caixa of alvo.querySelectorAll('.recorte')) ligarArrasto(caixa);
+}
+
+/**
+ * Arrastar para mover, e o canto para redimensionar.
+ *
+ * A proporção fica presa de propósito: o destino é 9:16 (ou 9:8 no modo de
+ * dois), e deixar esticar só daria uma imagem espremida com ar de defeito de
+ * codificação. Quem quer outro enquadramento move e faz zoom, não deforma.
+ */
+function ligarArrasto(caixa) {
+  const v = $('previaClipe');
+  const i = Number(caixa.dataset.i);
+  const emPixels = (e) => {
+    const cx = $('fonteClipe').getBoundingClientRect();
+    return { escala: v.videoWidth / cx.width, x: e.clientX, y: e.clientY };
+  };
+  const comecar = (e, redimensionar) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const p0 = emPixels(e);
+    const r0 = { ...estado.clipe.rects[i] };
+    const fonte = { largura: v.videoWidth, altura: v.videoHeight };
+    const mover = (m) => {
+      const dx = (m.clientX - p0.x) * p0.escala;
+      const dy = (m.clientY - p0.y) * p0.escala;
+      const bruto = redimensionar
+        // Só uma dimensão manda; a outra vem da proporção. Com as duas a mandar,
+        // arrastar na diagonal dava saltos.
+        ? { ...r0, largura: r0.largura + dx, altura: (r0.largura + dx) * (r0.altura / r0.largura) }
+        : { ...r0, x: r0.x + dx, y: r0.y + dy };
+      if (bruto.largura < 40) return;
+      estado.clipe.rects[i] = limitar(bruto, fonte);
+      pintarRecortes();
+    };
+    const largar = () => {
+      window.removeEventListener('pointermove', mover);
+      window.removeEventListener('pointerup', largar);
+    };
+    window.addEventListener('pointermove', mover);
+    window.addEventListener('pointerup', largar);
+  };
+  caixa.addEventListener('pointerdown', (e) => comecar(e, false));
+  caixa.querySelector('.puxar').addEventListener('pointerdown', (e) => comecar(e, true));
+}
+
+/** O 9:16 a sério, pintado enquanto o modal estiver aberto. */
+function seguirRetrato() {
+  const tela = $('telaRetrato');
+  const ctx = tela.getContext('2d');
+  const passo = () => {
+    const c = estado.clipe;
+    if (!c || $('modalClipe').hidden) return;
+    if (c.rects.length) desenhar(ctx, $('previaClipe'), c.rects, c.modo);
+    requestAnimationFrame(passo);
+  };
+  requestAnimationFrame(passo);
+}
+
+function trocarModo(modo) {
+  const c = estado.clipe;
+  const v = $('previaClipe');
+  if (!c || !(v.videoWidth > 0)) return;
+  c.modo = modo;
+  c.rects = enquadramentoInicial(v.videoWidth, v.videoHeight, modo);
+  for (const b of document.querySelectorAll('.modoRetrato')) {
+    b.setAttribute('aria-pressed', String(b.dataset.modo === modo));
+  }
+  pintarRecortes();
+}
+
+/**
+ * Gravar o retrato e entregar o ficheiro.
+ *
+ * Em tempo real, e dito antes de começar: um clipe de sete segundos são sete
+ * segundos de espera. É o preço de mudar os pixels de sítio, e o botão do lado
+ * continua a copiar os bytes sem reconverter nada.
+ */
+async function guardarRetrato() {
+  const c = estado.clipe;
+  const v = $('previaClipe');
+  if (!c || !c.rects.length) return;
+  const botao = $('guardarRetrato');
+  botao.disabled = true;
+  const duracaoS = (c.ateMs - c.deMs) / 1000;
+
+  try {
+    const formato = await formatoQueFunciona();
+    if (!formato) {
+      $('estadoClipe').textContent = t('retrato.semGravador');
+      botao.disabled = false;
+      return;
+    }
+    // Do princípio do clipe, e não de onde a pré-visualização parou.
+    await preverClipe(c.deMs);
+    const { blob, tipo } = await gravar(v, {
+      rects: c.rects,
+      modo: c.modo,
+      duracaoS,
+      formato,
+      aoProgresso: ({ feito, total }) => {
+        $('estadoClipe').textContent = t('retrato.aGravar', {
+          feito: feito.toFixed(1), total: total.toFixed(1),
+        });
+      },
+    });
+    const base = nomeDoClipe({ titulo: $('tituloClipe').value, canal: c.canal, quandoMs: c.deMs });
+    const nome = `${base.replace(/\.[a-z0-9]+$/i, '')}-retrato.${extensaoDe(tipo)}`;
+    const url = guardarFicheiro(blob);
+    const item = document.createElement('li');
+    $('fila').prepend(item);
+    linhaDeFicheiro(item, {
+      nome, url,
+      nota: `${(blob.size / 1048576).toFixed(1)} MB · ${RETRATO.largura}x${RETRATO.altura}`,
+    });
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nome;
+    a.click();
+    $('estadoClipe').textContent = t('retrato.pronto');
+  } catch (e) {
+    $('estadoClipe').textContent = e.name === 'SEM-GRAVADOR'
+      ? t('retrato.semGravador')
+      : t('clipe.naoDeu', { erro: e.message });
+  }
+  botao.disabled = false;
 }
 
 function fecharClipe() {
@@ -2312,6 +2485,10 @@ $('clipar').onclick = abrirClipe;
 $('fecharClipe').onclick = fecharClipe;
 $('cancelarClipe').onclick = fecharClipe;
 $('guardarClipe').onclick = guardarClipe;
+$('guardarRetrato').onclick = guardarRetrato;
+for (const b of document.querySelectorAll('.modoRetrato')) {
+  b.onclick = () => trocarModo(b.dataset.modo);
+}
 $('canalClipe').onchange = () => {
   const l = estado.linhas.find((x) => x.slug === $('canalClipe').value);
   if (!l || !estado.clipe) return;

@@ -499,7 +499,9 @@ footer { margin-top: 32px; border-top: 1px solid var(--borda); padding-top: 12px
 }
 .modalCaixa {
   background: var(--caixa); border: 1px solid var(--borda); border-radius: 12px;
-  padding: 14px; width: min(820px, 100%); max-height: 92vh; overflow-y: auto;
+  /* Mais largo desde que o editor do retrato vive aqui: 820 punha a fonte e o
+     9:16 lado a lado com pouca largura para os dois. */
+  padding: 14px; width: min(1040px, 100%); max-height: 92vh; overflow-y: auto;
   display: grid; gap: 10px;
 }
 .modalTopo { display: flex; gap: 10px; align-items: center; }
@@ -529,7 +531,15 @@ footer { margin-top: 32px; border-top: 1px solid var(--borda); padding-top: 12px
   position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--texto);
   pointer-events: none;
 }
-.linha.fim { justify-content: flex-end; }
+/* Os botões de acção ficam sempre à mão, mesmo com o editor aberto e a caixa a
+   rolar por dentro. Antes ficavam por baixo da dobra: quem abria o clipe via o
+   editor e tinha de rolar para encontrar o botão que exporta. */
+.linha.fim {
+  justify-content: flex-end;
+  position: sticky; bottom: calc(var(--e3) * -1);
+  background: var(--caixa); padding: var(--e2) 0;
+  border-top: 1px solid var(--borda); margin-top: var(--e1);
+}
 #tituloClipe {
   width: 100%; background: var(--fundo); color: var(--texto);
   border: 1px solid var(--borda); border-radius: 8px; padding: 9px 11px; font: inherit;
@@ -830,3 +840,58 @@ button, select, input[type="text"], input[type="search"], input[type="number"] {
 .linha button, .barraSelecao button, #carregar, #baixarMontagem { min-height: var(--toque); }
 /* O foco tem de se ver mesmo por cima do vídeo. */
 :focus-visible { outline-offset: 2px; }
+
+/* ── o editor do retrato ────────────────────────────────────────────────────
+   Como o da Twitch que ele mandou: a fonte deitada de um lado com as caixas de
+   enquadramento por cima, e o 9:16 a sério do outro, pintado em tempo real.
+   Ver o resultado enquanto se arrasta é o ponto todo — sem isso é adivinhar. */
+.clipeEditor { display: flex; gap: var(--e4); align-items: flex-start; }
+.clipeFonte { flex: 1 1 auto; min-width: 0; display: grid; gap: var(--e1); }
+.clipeRetrato { flex: 0 0 auto; display: grid; gap: var(--e1); justify-items: center; }
+
+/* O vídeo e as caixas na MESMA caixa: as caixas são posicionadas em
+   percentagem da fonte, e por isso seguem-na quando a janela muda de tamanho
+   sem ser preciso recalcular nada. */
+/* A caixa encolhe até ao vídeo, e não ao contrário.
+   Com `width: 100%` no vídeo, um 16:9 limitado pela altura ficava com barras
+   pretas nos lados — e as caixas de enquadramento, que se posicionam em
+   percentagem do CONTENTOR, ficavam desalinhadas da imagem e arrastavam à
+   velocidade errada. Ninguém vê isso no editor: vê-se no ficheiro exportado,
+   com o enquadramento noutro sítio. */
+.fonteClipe {
+  position: relative; line-height: 0; width: fit-content; margin-inline: auto; max-width: 100%;
+}
+.fonteClipe video {
+  width: auto; max-width: 100%; max-height: 34vh; display: block; background: var(--video-fundo);
+}
+.recortes { position: absolute; inset: 0; }
+.recorte {
+  position: absolute; border: 2px solid var(--acento);
+  box-shadow: 0 0 0 9999px #00000059;   /* escurece tudo o que fica de fora */
+  cursor: move; touch-action: none;
+}
+.recorte .puxar {
+  position: absolute; right: -7px; bottom: -7px; width: 14px; height: 14px;
+  background: var(--acento); border-radius: 3px; cursor: nwse-resize; touch-action: none;
+}
+.recorte .ordem {
+  position: absolute; left: 4px; top: 4px; background: var(--acento); color: var(--sobre-acento);
+  font-family: var(--letra-dados); font-size: var(--t-micro); border-radius: 3px; padding: 0 5px;
+}
+
+.telaRetrato {
+  width: auto; height: 34vh; max-height: 34vh; display: block;
+  background: var(--video-fundo); border: 1px solid var(--borda); border-radius: var(--r1);
+}
+.modosRetrato { justify-content: center; margin-top: var(--e1); }
+.modoRetrato { padding: 6px 10px; display: grid; place-items: center; }
+.modoRetrato[aria-pressed="true"] {
+  border-color: var(--acento); color: var(--acento); background: var(--acento-fraco);
+}
+
+/* Num telemóvel os dois lado a lado não cabem: o retrato passa para baixo. */
+@media (max-width: 720px) {
+  .clipeEditor { flex-direction: column; }
+  .clipeRetrato { justify-items: start; width: 100%; }
+  .telaRetrato { height: 34vh; }
+}
