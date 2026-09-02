@@ -38,55 +38,62 @@
   </ol>
 </header>
 
-<section id="entrada" class="bloco">
-  <!-- Duas caixas iguais e sem rótulo era o que um estranho via nos primeiros
-       dez segundos: nenhuma dizia o que fazia nem qual vinha primeiro. Cada
-       uma passa a ter o seu rótulo, e a procura fica visivelmente ao serviço
-       da lista — é um atalho para a encher, não um segundo caminho. -->
-  <div class="entradaGrelha">
-    <label class="campo procuraCampo">
-      <span class="rotuloCampo" data-t="procurar.label">Procurar um canal</span>
-      <span class="procura">
-        <input id="procurar" type="search" autocomplete="off" spellcheck="false"
-          data-t-aria="procurar.label" data-t-ph="procurar.ph" placeholder="nome do streamer">
-        <ul id="sugestoes" class="sugestoes" hidden></ul>
-      </span>
-    </label>
-    <label class="campo">
-      <span class="rotuloCampo" data-t="canais.label">Canais desta noite</span>
-      <textarea id="canais" rows="4" spellcheck="false" data-t-aria="canais.label"
-        data-t-ph="canais.ph" placeholder="um por linha"></textarea>
-    </label>
-  </div>
-  <div class="linha">
-    <button id="carregar" class="principal" data-t="canais.carregar">Carregar</button>
-    <span id="estadoCarga" class="nota"></span>
-  </div>
-  <!-- Próprio sítio, e não a linha de progresso: o aviso do leitor tem de
-       sobreviver ao texto que muda a cada canal carregado. -->
-  <p id="avisoPlayer" class="nota mau" hidden></p>
-</section>
+<!-- As três coisas do início lado a lado, e não uma por cima da outra.
+     Empilhadas ocupavam 900 px de largura e deixavam mil e seiscentos de
+     preto ao lado — e os nomes dos canais, que são o que ele precisa mesmo de
+     ver todos, ficavam espremidos numa faixa em baixo. Aqui os nomes ficam ao
+     lado e ficam TODOS: a lista cresce em quantas filas precisar. -->
+<div class="topoTrabalho">
+  <section id="entrada" class="bloco">
+    <!-- Duas caixas iguais e sem rótulo era o que um estranho via nos primeiros
+         dez segundos: nenhuma dizia o que fazia nem qual vinha primeiro. Cada
+         uma passa a ter o seu rótulo, e a procura fica visivelmente ao serviço
+         da lista — é um atalho para a encher, não um segundo caminho. -->
+    <div class="entradaGrelha">
+      <label class="campo procuraCampo">
+        <span class="rotuloCampo" data-t="procurar.label">Procurar um canal</span>
+        <span class="procura">
+          <input id="procurar" type="search" autocomplete="off" spellcheck="false"
+            data-t-aria="procurar.label" data-t-ph="procurar.ph" placeholder="nome do streamer">
+          <ul id="sugestoes" class="sugestoes" hidden></ul>
+        </span>
+      </label>
+      <label class="campo">
+        <span class="rotuloCampo" data-t="canais.label">Canais desta noite</span>
+        <textarea id="canais" rows="4" spellcheck="false" data-t-aria="canais.label"
+          data-t-ph="canais.ph" placeholder="um por linha"></textarea>
+      </label>
+    </div>
+    <div class="linha">
+      <button id="carregar" class="principal" data-t="canais.carregar">Carregar</button>
+      <span id="estadoCarga" class="nota"></span>
+    </div>
+    <!-- Próprio sítio, e não a linha de progresso: o aviso do leitor tem de
+         sobreviver ao texto que muda a cada canal carregado. -->
+    <p id="avisoPlayer" class="nota mau" hidden></p>
+  </section>
 
-<!-- A noite e o estado dos canais numa barra só. Eram duas secções com
-     títulos próprios para dois controlos — peso a mais para o que é, no
-     fundo, "qual noite e quem lá estava". -->
-<section id="noites" class="bloco" hidden>
-  <div class="linha barraSessao">
-    <label class="campo">
-      <span class="rotuloCampo" data-t="noite.label">Noite</span>
-      <select id="noite" data-t-aria="noite.label"></select>
-    </label>
-    <output id="confianca" class="confianca"></output>
-  </div>
-  <span class="nota" id="resumoNoite"></span>
-</section>
+  <!-- A noite e o estado dos canais numa barra só. Eram duas secções com
+       títulos próprios para dois controlos — peso a mais para o que é, no
+       fundo, "qual noite e quem lá estava". -->
+  <section id="noites" class="bloco" hidden>
+    <div class="linha barraSessao">
+      <label class="campo">
+        <span class="rotuloCampo" data-t="noite.label">Noite</span>
+        <select id="noite" data-t-aria="noite.label"></select>
+      </label>
+      <output id="confianca" class="confianca"></output>
+    </div>
+    <span class="nota" id="resumoNoite"></span>
+  </section>
 
-<!-- Fora do bloco da noite, e não dentro: os avisos de canal ("não existe",
-     "quiseste dizer") aparecem QUANDO NÃO HÁ noite nenhuma para mostrar, e
-     aninhados desapareciam com ela. -->
-<section id="canaisEstado" hidden>
-  <ul id="listaCanais" class="canais"></ul>
-</section>
+  <!-- Fora do bloco da noite, e não dentro: os avisos de canal ("não existe",
+       "quiseste dizer") aparecem QUANDO NÃO HÁ noite nenhuma para mostrar, e
+       aninhados desapareciam com ela. -->
+  <section id="canaisEstado" hidden>
+    <ul id="listaCanais" class="canais"></ul>
+  </section>
+</div><!-- .topoTrabalho -->
 
 <section id="palco" hidden>
   <!-- Duas colunas num ecrã grande: o vídeo e o relógio de um lado, a montagem
@@ -99,49 +106,61 @@
   <div id="palcoFoco" class="palcoFoco"></div>
   <div id="grade" class="grade"></div>
 
-  <div class="relogio">
-    <!-- A barra vive na MESMA grelha das faixas, com a mesma coluna vazia à
-         esquerda. Sem isso, a barra media a largura toda e as faixas mediam a
-         largura menos os nomes: o cursor e o puxador ficavam em sítios
-         diferentes para o mesmo instante. -->
-    <div class="barraLinha">
-      <span></span>
-      <input id="barra" type="range" min="0" max="1000" value="0" step="1" data-t-aria="tempo.linha" aria-label="linha do tempo">
-    </div>
-    <!-- Quem esteve no ar, e quando. Sem isto procura-se o momento a arrastar a
-         barra as cegas: os buracos e as sobreposicoes so se descobriam batendo
-         com o nariz neles. -->
-    <div id="faixas" class="faixas"><div id="cursor" class="cursor"></div></div>
-    <!-- A regua, como num editor: as horas por baixo das barras, e as kills
-         marcadas nela. Sem isto sabe-se que se esta "algures no meio". -->
-    <div class="reguaLinha"><span></span><div id="regua" class="regua"></div></div>
-    <div class="linha">
-      <output id="agora" class="tempo">—</output>
-      <output id="angulos" class="nota">—</output>
-    </div>
-    <!-- Os quatro na mesma linha, sempre: em grelha de quatro colunas iguais,
-         que não parte num ecrã estreito como uma linha flex parte. -->
-    <div class="saltos">
-      <button id="menos1m" data-t="tempo.menos1m" data-t-titulo="tempo.voltar1m" title="voltar 1 minuto">&laquo; 1 min</button>
-      <button id="menos10s" data-t="tempo.menos10s" data-t-titulo="tempo.voltar10s" title="voltar 10 segundos">&lsaquo; 10s</button>
-      <button id="mais10s" data-t="tempo.mais10s" data-t-titulo="tempo.avancar10s" title="avançar 10 segundos">10s &rsaquo;</button>
-      <button id="mais1m" data-t="tempo.mais1m" data-t-titulo="tempo.avancar1m" title="avançar 1 minuto">1 min &raquo;</button>
-    </div>
-    <div class="linha">
-      <button id="clipar"><span data-t="clipe.botao">Clipar</span> <kbd>C</kbd></button>
-      <button id="marcarIn"><span data-t="marca.inicio">Marcar entrada</span> <kbd>I</kbd></button>
-      <button id="marcarOut"><span data-t="marca.fim">Marcar saída</span> <kbd>O</kbd></button>
-      <output id="marca" class="nota"></output>
-    </div>
-  </div>
-
-  <div class="linha">
-    <button id="alinhar" data-t="alinhar.botao" data-t-titulo="alinhar.ajuda" title="Analisa o áudio de cada ângulo e corrige o desvio">Sincronizar por áudio</button>
-    <span id="estadoAlinhar" class="nota"></span>
-  </div>
   </div><!-- .palcoVideo -->
 
+  <!-- A DIREITA: a linha do tempo, inteira.
+       Trocada com a montagem a pedido dele: "quero isso completo com todas as
+       lives, coloca no lugar onde está a segunda print à direita, e o da direita
+       coloca em baixo". Faz sentido pela forma — trinta canais são trinta linhas
+       empilhadas, alto e estreito, que é exactamente a forma de uma coluna; a
+       montagem são filas de botões, que é a forma de uma faixa em baixo. -->
   <div class="palcoLado">
+    <div class="relogio">
+      <!-- A barra vive na MESMA grelha das faixas, com a mesma coluna vazia à
+           esquerda. Sem isso, a barra media a largura toda e as faixas mediam a
+           largura menos os nomes: o cursor e o puxador ficavam em sítios
+           diferentes para o mesmo instante. -->
+      <div class="barraLinha">
+        <span></span>
+        <input id="barra" type="range" min="0" max="1000" value="0" step="1" data-t-aria="tempo.linha" aria-label="linha do tempo">
+      </div>
+      <!-- Quem esteve no ar, e quando. Sem isto procura-se o momento a arrastar a
+           barra as cegas: os buracos e as sobreposicoes so se descobriam batendo
+           com o nariz neles. -->
+      <div id="faixas" class="faixas"><div id="cursor" class="cursor"></div></div>
+      <!-- A regua, como num editor: as horas por baixo das barras, e as kills
+           marcadas nela. Sem isto sabe-se que se esta "algures no meio". -->
+      <div class="reguaLinha"><span></span><div id="regua" class="regua"></div></div>
+      <div class="linha">
+        <output id="agora" class="tempo">—</output>
+        <output id="angulos" class="nota">—</output>
+      </div>
+      <!-- Os quatro na mesma linha, sempre: em grelha de quatro colunas iguais,
+           que não parte num ecrã estreito como uma linha flex parte. -->
+      <div class="saltos">
+        <button id="menos1m" data-t="tempo.menos1m" data-t-titulo="tempo.voltar1m" title="voltar 1 minuto">&laquo; 1 min</button>
+        <button id="menos10s" data-t="tempo.menos10s" data-t-titulo="tempo.voltar10s" title="voltar 10 segundos">&lsaquo; 10s</button>
+        <button id="mais10s" data-t="tempo.mais10s" data-t-titulo="tempo.avancar10s" title="avançar 10 segundos">10s &rsaquo;</button>
+        <button id="mais1m" data-t="tempo.mais1m" data-t-titulo="tempo.avancar1m" title="avançar 1 minuto">1 min &raquo;</button>
+      </div>
+      <div class="linha">
+        <button id="clipar"><span data-t="clipe.botao">Clipar</span> <kbd>C</kbd></button>
+        <button id="marcarIn"><span data-t="marca.inicio">Marcar entrada</span> <kbd>I</kbd></button>
+        <button id="marcarOut"><span data-t="marca.fim">Marcar saída</span> <kbd>O</kbd></button>
+        <output id="marca" class="nota"></output>
+      </div>
+    </div>
+
+    <div class="linha">
+      <button id="alinhar" data-t="alinhar.botao" data-t-titulo="alinhar.ajuda" title="Analisa o áudio de cada ângulo e corrige o desvio">Sincronizar por áudio</button>
+      <span id="estadoAlinhar" class="nota"></span>
+    </div>
+  </div><!-- .palcoLado -->
+
+  <!-- EM BAIXO, a toda a largura: montagem, deteção e cortes, lado a lado.
+       "Não precisa um widget tão grande" — em três colunas cada um fica com o
+       tamanho do que tem dentro, em vez de uma coluna estreita a empilhar tudo. -->
+  <div class="palcoFundo">
 
   <!-- A montagem. O fluxo do dono: marca-se a kill, e a pagina entrega a POV
        dele longa e as POVs de quem morreu curtinhas, ja numeradas. -->
@@ -223,7 +242,7 @@
        um clipe pronto — com um clipe so, o ZIP e um passo a mais. -->
   <div id="zip" class="linha"></div>
   <ul id="fila" class="fila"></ul>
-  </div><!-- .palcoLado -->
+  </div><!-- .palcoFundo -->
 </section>
 
 <!-- Os atalhos que já existem, num sítio onde se possam descobrir.

@@ -86,6 +86,21 @@ body {
 }
 @media (max-width: 620px) { .bloco { padding: var(--e4); } }
 
+/* ── o início, tudo numa fila ───────────────────────────────────────────────
+   Estava empilhado: dois cartões de 900 px um por cima do outro, e mil e
+   seiscentos pixels de preto ao lado. Numa fila que quebra, cada um leva o que
+   precisa e os nomes dos canais ficam ao lado em vez de espremidos em baixo.
+   `flex` e não `grid` de propósito: `#noites` e `#canaisEstado` nascem
+   escondidos, e num grid de colunas fixas deixavam a coluna vazia lá. */
+.topoTrabalho {
+  display: flex; flex-wrap: wrap; gap: var(--e5); align-items: flex-start;
+  margin-bottom: var(--e5);
+}
+.topoTrabalho > #entrada, .topoTrabalho > #noites { flex: 1 1 420px; max-width: 640px; }
+/* O 999 é para os nomes comerem o que sobrar depois de os dois cartões terem
+   o que precisam — e não um terço, que é o que um `flex: 1` daria. */
+.topoTrabalho > #canaisEstado { flex: 999 1 340px; min-width: 0; }
+
 header { border-bottom: 1px solid var(--borda); margin-bottom: var(--e5); }
 /* Uma marca, e não só uma palavra. Custa doze pixels e é a diferença entre
    um sítio e uma folha com texto. Pseudo-elemento sem conteúdo de propósito:
@@ -172,10 +187,10 @@ kbd {
    e quem tem três continua a vê-los todos sem rolar nada. */
 .canais {
   list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 8px;
-  /* Duas filas certas: 2 x 48 de chip + 8 de intervalo = 104. Andei a
-     adivinhar a altura do chip (35? 42?) e cortava sempre a segunda fila a
-     meio, o que se lê como avaria e não como limite. Fui medi-la: 48. */
-  max-height: 104px; overflow-y: auto; overscroll-behavior: contain;
+  /* Sem tecto: "os nomes adicionados têm que mostrar todos". O tecto de duas
+     filas existia porque isto atravessava a página inteira em baixo do vídeo,
+     onde cinco filas empurravam tudo para fora do ecrã. Ao lado dos cartões, a
+     lista cresce em quantas filas precisar e não empurra nada. */
 }
 .canais li {
   background: var(--caixa); border: 1px solid var(--borda); border-radius: 999px;
@@ -329,9 +344,10 @@ kbd {
    com tecto e rola por dentro; o cursor continua absoluto sobre elas. */
 .faixas {
   position: relative; margin-top: 10px; display: grid; gap: 3px;
-  /* Dez faixas certas: 10 x 19,5 + 9 x 3 de intervalo = 222. Medido, como os
-     chips — 210 cortava a décima a um terço. */
-  max-height: 222px; overflow-y: auto; overscroll-behavior: contain;
+  /* Sem tecto: ele quer as trinta de uma vez. O tecto de 222 px fazia sentido
+     enquanto isto vivia por baixo do vídeo, onde 675 px de barras empurravam
+     tudo o resto para fora do ecrã; numa coluna própria, alta e estreita, a
+     forma da lista e a forma do sítio são a mesma. */
 }
 .faixa { display: grid; grid-template-columns: 92px 1fr; gap: 8px; align-items: center; }
 .faixas { --coluna: 100px; }
@@ -596,21 +612,35 @@ footer { margin-top: 32px; border-top: 1px solid var(--borda); padding-top: 12px
    segunda vez que caio no mesmo sitio, por isso fica escrito. */
 #palco:not([hidden]) { display: grid; gap: 24px; }
 @media (min-width: 1080px) {
+  /* Três zonas: o vídeo à esquerda, a linha do tempo à direita, e a montagem
+     a toda a largura por baixo das duas. Em áreas nomeadas e não em ordem de
+     documento, porque a zona de baixo tem de atravessar as duas colunas. */
   #palco:not([hidden]) {
     grid-template-columns: minmax(0, 1.55fr) minmax(400px, 1fr);
-    /* Num monitor largo a montagem cabe muito melhor com espaço: os botões
-       de cada kill deixam de partir em quatro linhas. */
+    grid-template-areas: "video lado" "fundo fundo";
     align-items: start;
   }
-  /* A coluna do trabalho acompanha a página: rever uma kill e ver o vídeo ao
-     mesmo tempo é o gesto todo, e antes obrigava a andar para cima e para
-     baixo. */
+  .palcoVideo { grid-area: video; min-width: 0; }
+  .palcoLado { grid-area: lado; }
+  .palcoFundo { grid-area: fundo; min-width: 0; }
+  /* A linha do tempo acompanha a página: ver o vídeo e saber onde se está no
+     mesmo instante é o gesto todo. */
   .palcoLado {
     position: sticky; top: 16px;
     max-height: calc(100vh - 32px); overflow-y: auto;
     padding-right: 4px;
   }
   .palcoLado h2:first-child { margin-top: 0; }
+
+  /* Em baixo, lado a lado. "Não precisa um widget tão grande": em três
+     colunas cada um fica do tamanho do que tem dentro, em vez de uma coluna
+     estreita a empilhar tudo por cima de tudo. A montagem leva o dobro
+     porque é a única com uma lista lá dentro. */
+  .palcoFundo {
+    display: grid; gap: 16px; align-items: start;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  }
+  .palcoFundo > #montagem { grid-row: span 3; }
 }
 
 /* Um `select` no meio de uma linha de botões não tem de ocupar a linha toda.
@@ -620,13 +650,13 @@ footer { margin-top: 32px; border-top: 1px solid var(--borda); padding-top: 12px
 
 /* O fim da página estava desarrumado: quatro blocos seguidos, todos com o
    mesmo peso e sem nada entre eles. Cada um passa a ser uma caixa. */
-.palcoLado > section, .palcoLado > .linha, .palcoLado > #zip {
+.palcoFundo > section, .palcoFundo > .linha, .palcoFundo > #zip {
   background: var(--caixa); border: 1px solid var(--borda); border-radius: 10px;
   padding: 12px 14px; margin-bottom: 12px;
 }
-.palcoLado > section > h2 { margin-top: 0; }
-.palcoLado > .linha:empty, .palcoLado > #zip:empty { display: none; }
-.palcoLado .momentos li { background: var(--fundo); }
+.palcoFundo > section > h2 { margin-top: 0; }
+.palcoFundo > .linha:empty, .palcoFundo > #zip:empty { display: none; }
+.palcoFundo .momentos li { background: var(--fundo); }
 
 /* A deteção automática, à parte e no fim. Um botão que acerta em cinco de seis
    não pode ter o mesmo peso de um que acerta sempre — e ele viu-o antes de mim.
@@ -774,7 +804,12 @@ h2 { color: var(--texto-3); font-weight: 600; margin: var(--e5) 0 var(--e2); }
 /* A entrada: a procura ao serviço da lista, e não um segundo caminho. */
 .entradaGrelha { display: grid; gap: var(--e3); }
 .entradaGrelha .procura { position: relative; display: block; margin: 0; }
-@media (min-width: 720px) {
+/* Container query e não media query: o que decide se as duas caixas cabem lado
+   a lado é a largura do CARTÃO, não a do monitor. Com a media query, o cartão
+   passou a 421 px numa fila de três e as caixas continuaram lado a lado —
+   a de colar canais ficou com 120 px e mostrava três nomes de trinta. */
+#entrada { container-type: inline-size; }
+@container (min-width: 560px) {
   .entradaGrelha { grid-template-columns: minmax(200px, 1fr) minmax(0, 1.4fr); gap: var(--e4); }
   .entradaGrelha .procuraCampo { align-self: start; }
 }
