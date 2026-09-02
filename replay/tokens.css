@@ -1,0 +1,143 @@
+/* Os tokens. Depois deste ficheiro, nenhum valor solto no meio das regras.
+ *
+ * Fundo neutro e dessaturado de propósito: num sítio onde se decide o que
+ * cortar, a coisa mais clara do ecrã tem de ser o vídeo. Tudo o resto recua.
+ *
+ * UM acento, e só para duas coisas: a acção principal e a marcação de corte.
+ * Estava a ser usado no botão, na borda do foco, na faixa do tempo, no nome do
+ * canal, na ficha da vítima e no Clipar — seis sítios, o que é o mesmo que
+ * nenhum. As cores de estado (aviso, erro, ok) não são acentos: pertencem à
+ * informação e nunca à decoração.
+ */
+:root {
+  color-scheme: dark;
+
+  /* ── superfícies ─────────────────────────────────────────────────────── */
+  /* Verdes, e não cinzentas. Estavam puxadas para azul (#0d0e10: o azul é o
+     canal mais alto) e o site inteiro lia-se cinzento por mais verde que eu
+     pusesse nos botões — porque não é nos botões que mora a cor de um sítio,
+     é no chão. Isto é a mesma escuridão de antes, rodada para verde: o
+     contraste do texto sobe em vez de descer (16.5 em vez de 15.9). */
+  --fundo: #0b100d;          /* a página */
+  --caixa: #121815;          /* uma superfície levantada */
+  --caixa-2: #18201b;        /* levantada sobre a levantada (dentro de cartões) */
+  --borda: #233029;
+  --borda-forte: #31423a;
+  --realce: #ffffff10;       /* hover sobre superfície */
+  --video-fundo: #000;       /* atrás do vídeo, e só aí */
+  --sobre-video: #000000b3;  /* fundo dos controlos por cima do vídeo */
+  --vidro: #000000c7;        /* o fundo por trás de uma janela modal */
+
+  /* ── texto ───────────────────────────────────────────────────────────── */
+  --texto: #e9efea;
+  --texto-2: #a4b0a7;        /* secundário — passa AA sobre --fundo (8.5) */
+  --texto-3: #7d8a81;        /* terciário: só para o que é mesmo acessório */
+
+  /* ── acento (um só) ──────────────────────────────────────────────────── */
+  --acento: #53fc18;         /* o verde da Kick */
+  --acento-fraco: #53fc1826;
+  --sobre-acento: #071008;   /* texto por cima do acento */
+  /* O botão principal emite. É a única coisa da página que o faz, e é essa a
+     razão de existir: quando há uma coisa a fazer a seguir, é aquela. */
+  --brilho: 0 0 0 1px #53fc1847, 0 14px 44px -18px #53fc1899;
+  /* A grelha de fundo, no verde e quase invisível. Dá chão à página sem
+     pedir nada a ninguém — sem ela um fundo liso a esta escuridão é um
+     buraco, e tudo o que lá se põe parece a flutuar. */
+  --grelha: #53fc180f;
+  /* O verde apagado do material: onde há imagem, onde houve sinal. Não é uma
+     acção e não pode gritar como o botão — mas cinzento também não é, porque
+     cinzento não quer dizer nada. */
+  --acento-suave: #53fc1859;
+
+  /* ── estado ──────────────────────────────────────────────────────────── */
+  /* Ciano e não verde: um verde de "confirmado" ao lado do verde do acento
+     lê-se como a mesma cor, e o acento deixa de querer dizer "carrega aqui". */
+  --ok: #4dd4e8;
+  --aviso: #ffb02e;
+  --aviso-fundo: #ffb02e1a;
+  --erro: #ff7a7a;
+  --erro-fundo: #ff7a7a1a;
+  --marca-twitch: #a970ff;   /* a marca de outra gente, não um acento nosso */
+
+  /* Ouro, e só para uma coisa: "aqui aconteceu alguma coisa". Nem sempre foi
+     assim — as kills na régua e o cursor do instante eram verdes, a mesma cor
+     dos botões, e o ecrã pedia para carregar em tudo ao mesmo tempo. Verde
+     quer dizer "carrega"; ouro quer dizer "olha". São duas frases diferentes
+     e precisam de duas cores. Isto não é um segundo acento: é informação, da
+     mesma família do aviso e do erro. */
+  --marcador: #ffb407;
+  --marcador-fraco: #ffb40733;
+
+  /* ── largura ─────────────────────────────────────────────────────────── */
+  /* O palco quer o monitor todo: é lá que se compara um ângulo com outro.
+     O formulário não — com 1400px de largura os olhos atravessam o monitor
+     entre o rótulo e a caixa. Por isso só há uma medida aqui, e é a curta. */
+  --largura-forma: 900px;
+
+  /* ── espaço ──────────────────────────────────────────────────────────── */
+  --e1: 4px;
+  --e2: 8px;
+  --e3: 12px;
+  --e4: 16px;
+  --e5: 24px;
+  --e6: 32px;
+
+  /* ── raio ────────────────────────────────────────────────────────────── */
+  --r1: 6px;
+  --r2: 10px;
+  --r3: 999px;
+
+  /* ── tipografia: cinco tamanhos, e não oito ──────────────────────────── */
+  --t-micro: 11px;   /* etiquetas, kbd */
+  --t-menor: 13px;   /* secundário, notas */
+  --t-base: 15px;    /* corpo e controlos */
+  --t-maior: 18px;   /* título de secção */
+  --t-titulo: 24px;  /* nome da página */
+  /* Duas famílias, e cada uma no que faz melhor.
+   *
+   * Mono em TUDO — como nas ferramentas de torneio que ele mostrou — dá o
+   * registo técnico certo, e cobra caro no texto corrido: é mais largo, e num
+   * ecrã de 390 px uma frase de erro passa a ocupar três linhas. Por isso a
+   * mono fica onde ganha: relógio, durações, desvios, contagens, réguas e
+   * teclas. O texto que se lê fica em sans.
+   *
+   * Nenhuma das duas se descarrega: são as do sistema. Esta página corre ao
+   * lado de vários descodificadores de vídeo, e um webfont é mais um pedido
+   * na rede e um salto de letra a meio do arranque. */
+  --letra: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* Duas faces descarregadas, e só duas.
+   *
+   * Rajdhani nos títulos e nas etiquetas: é a face condensada e técnica da
+   * referência que ele mandou, e é dela que vem o carácter. 15,7 KB.
+   *
+   * IBM Plex Mono nos números: a mono do sistema muda de máquina para máquina
+   * — SF Mono no telemóvel dele, Consolas no PC — e o relógio e os desvios
+   * ficavam com desenhos diferentes em cada sítio. 14,7 KB.
+   *
+   * O Inter do site de referência fica de fora: são mais 30 KB para um sans
+   * de interface que ninguém distingue do do sistema. Peso que não se paga.
+   *
+   * As duas com `display=swap` e com a pilha do sistema por trás: um
+   * bloqueador ou uma rede má devolvem exactamente o que havia antes disto. */
+  --letra-titulo: Rajdhani, "Segoe UI Semibold", ui-sans-serif, system-ui, sans-serif;
+  --letra-dados: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* ── elevação ────────────────────────────────────────────────────────── */
+  --sombra-1: 0 1px 2px #00000059;
+  --sombra-2: 0 12px 32px #00000080;
+
+  /* ── movimento ───────────────────────────────────────────────────────── */
+  --rapido: 120ms;
+  --lento: 200ms;
+
+  /* Alvo de toque mínimo. Um botão de 28 px num telemóvel é uma aposta. */
+  --toque: 44px;
+}
+
+/* Quem pediu menos movimento não leva nenhum. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
+  }
+}

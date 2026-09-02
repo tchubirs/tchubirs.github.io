@@ -5,33 +5,39 @@
 // bottom rung of Kick's ladder and is what makes thirty tiles a home-connection
 // problem rather than a server problem.
 
-import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=4e5a1993ac';
+import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=fc0ba2be70';
 import {
   linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo,
-} from './relogio.js?v=4e5a1993ac';
-import { cortarTodosOsAngulos } from './baixar.js?v=4e5a1993ac';
-import { alinharPeloSom, custoEstimadoMB } from './alinhar.js?v=4e5a1993ac';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=4e5a1993ac';
+} from './relogio.js?v=fc0ba2be70';
+import { cortarTodosOsAngulos } from './baixar.js?v=fc0ba2be70';
+import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=fc0ba2be70';
+import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=fc0ba2be70';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=fc0ba2be70';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
   alternarVitima, filtrar, temMorte, clipesDoMomento,
-} from './momentos.js?v=4e5a1993ac';
-import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=4e5a1993ac';
-import { criarZip, crc32 } from './zip.js?v=4e5a1993ac';
-import { queFazerComOLeitor } from './leitor.js?v=4e5a1993ac';
-import { criarApanhador } from './frames.js?v=4e5a1993ac';
-import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=4e5a1993ac';
-import { TAXA_TIROS } from './tiros.js?v=4e5a1993ac';
-import { parecidos, juntarPerto } from './aprender.js?v=4e5a1993ac';
-import { somDoCanal } from './alinhar.js?v=4e5a1993ac';
-import { MAXIMO_S, mover, janelaInicial, nomeDoClipe } from './clipe.js?v=4e5a1993ac';
-import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=4e5a1993ac';
-import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=4e5a1993ac';
+} from './momentos.js?v=fc0ba2be70';
+import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=fc0ba2be70';
+import { criarZip, crc32 } from './zip.js?v=fc0ba2be70';
+import { queFazerComOLeitor } from './leitor.js?v=fc0ba2be70';
+import { criarApanhador } from './frames.js?v=fc0ba2be70';
+import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=fc0ba2be70';
+import { TAXA_TIROS } from './tiros.js?v=fc0ba2be70';
+import { parecidos, juntarPerto } from './aprender.js?v=fc0ba2be70';
+import { somDoCanal } from './alinhar.js?v=fc0ba2be70';
+import { MAXIMO_S, mover, janelaInicial, nomeDoClipe } from './clipe.js?v=fc0ba2be70';
+import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=fc0ba2be70';
+import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=fc0ba2be70';
 
 const $ = (id) => document.getElementById(id);
 const estado = {
   linhas: [],
   janela: null,
+  // A forma do som de cada canal em cada instante medido. Vive aqui e não
+  // dentro do alinhamento para sobreviver entre sincronizações: acrescentar
+  // um canal a uma noite já medida passa a ouvir só o canal novo. Com trinta
+  // ângulos, isso é 14 MB em vez de 434.
+  memoriaAlinhar: new Map(),
   agoraMs: 0,
   marca: { de: null, ate: null },
   nudges: {},
@@ -47,6 +53,10 @@ const estado = {
   // partir dai. E a previa: a kill que ele esta a ver em ciclo.
   ancora: null,
   previa: null,
+  // A janela à parte que está aberta, se houver. Uma de cada vez: duas janelas
+  // com dois ângulos seria bonito e não é o que ele pediu — ele quer UM ângulo
+  // no segundo monitor e a grelha no primeiro.
+  aparte: null,
   // A forma de cada estouro da ultima varredura, e o exemplo que ele
   // confirmou. Com um exemplo, a busca deixa de ser um palpite meu sobre o que
   // e um tiro e passa a procurar O MESMO SOM.
@@ -202,6 +212,50 @@ $('procurar').onkeydown = (e) => {
 document.addEventListener('click', (e) => {
   if (!e.target.closest('.procura')) fecharSugestoes();
 });
+
+/**
+ * Em que passo do caminho ele está.
+ *
+ * Não muda nada do que a página faz: lê o estado que já existe e acende o
+ * passo certo. Quem chega vê duas caixas vazias e um botão, e isto é a única
+ * explicação de que precisa.
+ */
+function pintarPassos() {
+  const passo = estado.momentos.length || estado.marca.de != null ? 3
+    : estado.linhas.length ? 2 : 1;
+  for (const li of document.querySelectorAll('#passos li')) {
+    const n = Number(li.dataset.passo);
+    li.classList.toggle('aqui', n === passo);
+    li.classList.toggle('feito', n < passo);
+  }
+  // Um botão cheio de cor de cada vez. Com a noite já carregada, "Carregar"
+  // deixa de ser a acção principal — e três botões verdes ao mesmo tempo são
+  // o mesmo que nenhum.
+  $('carregar').classList.toggle('principal', passo === 1);
+}
+
+/**
+ * Quanto se pode confiar no alinhamento, dito em voz alta.
+ *
+ * Este é o pior caso do produto e não tinha sítio nenhum na interface: um
+ * ângulo desalinhado exporta um clipe errado com ar de certo, e ninguém dá por
+ * nada até estar montado. O dado já existia — `linha.relogio` diz `exato`,
+ * `parcial` ou `nenhum` — e estava numa letra pequena no canto de um quadrado.
+ */
+function pintarConfianca() {
+  const caixa = $('confianca');
+  if (!caixa) return;
+  const linhas = estado.linhas;
+  if (!linhas.length) { caixa.textContent = ''; caixa.className = 'confianca'; return; }
+  const semRelogio = linhas.filter((l) => l.relogio !== 'exato');
+  const ajustados = Object.values(estado.nudges).filter((v) => v).length;
+  const estadoConf = !semRelogio.length ? 'exacto'
+    : semRelogio.length === linhas.length ? 'nenhum' : 'parcial';
+  caixa.className = `confianca ${estadoConf}`;
+  caixa.textContent = t(`confianca.${estadoConf}`, {
+    n: estadoConf === 'exacto' ? linhas.length : semRelogio.length,
+  }) + (ajustados ? t('confianca.ajustado', { n: ajustados }) : '');
+}
 
 // ── carregar ────────────────────────────────────────────────────────────────
 
@@ -455,8 +509,10 @@ async function abrirNoite(noite) {
   $('alinhar').hidden = soUmCanal();
   // Os segundos de quem morreu so fazem sentido se houver quem morrer.
   $('margensVitima').hidden = soUmCanal();
+  pintarResumoMargens();
   montarGrade();
   seguirVideo();
+  pintarConfianca();
   pintarFaixas();
   irPara(estado.agoraMs);
   pintarMarca();
@@ -476,6 +532,10 @@ function limparPalco() {
   $('listaMomentos').innerHTML = '';
   estado.linhas = [];
   estado.janela = null;
+  // A memória do som é de UMA noite. As chaves levam o instante absoluto, por
+  // isso outra noite falharia sozinha — mas ficava lá a ocupar memória para
+  // sempre, e ao fim de uma sessão longa são dezenas de MB de Float32.
+  estado.memoriaAlinhar.clear();
   $('angulos').textContent = '';
 }
 
@@ -814,7 +874,22 @@ function montarGrade() {
       + `<button data-passo="1" title="${t('tile.adiantar')}">+</button>`
       + '</span>'
       + '</span>'
-      + `<button class="par" title="${t('tile.par')}">⧉</button>`;
+      // Ecrã cheio e janela à parte, no canto de cima à direita — o mesmo sítio
+      // do YouTube, da Twitch e da Kick. Desenhados e não emoji: um ⛶ sai
+      // diferente em cada sistema, e no iPhone sai a cores.
+      + '<span class="fora">'
+      + `<button class="par" title="${t('tile.par')}">⧉</button>`
+      + `<button class="ecraCheio" title="${t('tile.ecraCheio')}" aria-label="${t('tile.ecraCheio')}">`
+      + '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"'
+      + ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+      + '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/>'
+      + '<path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>'
+      + `<button class="aparte" title="${t('tile.aparte')}" aria-label="${t('tile.aparte')}" hidden>`
+      + '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"'
+      + ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+      + '<rect x="3" y="4" width="18" height="14" rx="2"/>'
+      + '<rect x="11" y="10" width="8" height="6" rx="1" fill="currentColor"/></svg></button>'
+      + '</span>';
 
     tile.onclick = () => {
       // Num quadrado que já está em foco, o clique promove-o a principal em vez
@@ -831,6 +906,29 @@ function montarGrade() {
       };
     }
     tile.querySelector('.par').onclick = (e) => { e.stopPropagation(); alternarPar(linha.slug); };
+    tile.querySelector('.ecraCheio').onclick = async (e) => {
+      e.stopPropagation();
+      // Sair, se já lá está. Um botão que só sabe entrar deixa a pessoa presa
+      // ao Esc, e no telemóvel não há Esc.
+      if (document.fullscreenElement) { await document.exitFullscreen(); return; }
+      await irAEcraCheio(tile).catch(() => {});
+    };
+    const aparte = tile.querySelector('.aparte');
+    // Só aparece onde funciona. Um botão que não faz nada é pior do que não ter
+    // botão nenhum, porque a pessoa carrega, não acontece nada, e fica sem
+    // saber se se enganou ou se a página está avariada.
+    const podeAparte = capacidades();
+    aparte.hidden = !(podeAparte.documentoPiP || podeAparte.videoPiP);
+    aparte.onclick = async (e) => {
+      e.stopPropagation();
+      if (estado.aparte) { estado.aparte.fechar(); return; }
+      // O foco vai com ele: tirar um ângulo para o segundo monitor e deixá-lo
+      // mudo e pequeno seria tirar o ângulo errado.
+      if (!ehFoco(linha.slug)) { estado.focos = [linha.slug]; aplicarFoco(); irPara(estado.agoraMs); }
+      estado.aparte = await abrirJanela(tile, {
+        aoFechar: () => { estado.aparte = null; aplicarFoco(); },
+      }).catch(() => null);
+    };
     tile.querySelector('.pausa').onclick = (e) => { e.stopPropagation(); alternarPausa(); };
     tile.querySelector('.somBtn').onclick = (e) => { e.stopPropagation(); alternarSom(linha.slug); };
     const vol = tile.querySelector('.vol');
@@ -854,6 +952,7 @@ function empurrar(slug, ms) {
   const { nudges } = comNudge({ nudges: estado.nudges }, slug, (estado.nudges[slug] || 0) + ms);
   estado.nudges = nudges;
   irPara(estado.agoraMs);
+  pintarConfianca();
   guardar();
   // O tamanho do corte é por canal, e mexer no relógio de um canal muda quem
   // aparece na janela marcada. Não repintar deixava a lista a mentir.
@@ -1048,6 +1147,21 @@ function tocar(linha, r, video, { alta = false, correr = false, comSom = false }
   }
 }
 
+/**
+ * O resumo das margens, para se saber o que lá está sem abrir.
+ *
+ * As quatro caixas de número estavam permanentemente ao lado do "Marcar kill"
+ * e ocupavam duas filas inteiras num telemóvel. Acertam-se uma vez e nunca
+ * mais se tocam — mas quem as fecha tem de continuar a saber o que lá deixou.
+ */
+function pintarResumoMargens() {
+  const n = (id) => Number($(id).value) || 0;
+  const meu = `${n('protAntes')}/${n('protDepois')}s`;
+  $('resumoMargens').textContent = soUmCanal()
+    ? meu
+    : `${meu} · ${n('vitAntes')}/${n('vitDepois')}s`;
+}
+
 // ── alinhar pelo som ────────────────────────────────────────────────────────
 
 /**
@@ -1068,14 +1182,22 @@ async function alinhar() {
 
   // Com trinta ângulos isto passa a ser umas centenas de MB. Perguntar é mais
   // barato do que gastar os dados de alguém e explicar depois.
-  const mb = custoEstimadoMB(estado.linhas.length);
-  if (mb > 80 && !confirm(t('alinhar.custo', { n: estado.linhas.length, mb }))) return;
+  // O que falta OUVIR, e não quantos canais há: perguntar "vais gastar 434 MB?"
+  // para acrescentar um canal a uma noite já medida seria mentira, e ele dizia
+  // que não a uma coisa que custava catorze.
+  const instantes = instantesParaOuvir(estado.linhas, estado.janela);
+  const faltam = estado.linhas.filter(
+    (l) => instantes.some((i) => !estado.memoriaAlinhar.has(`${i}|${l.slug}`)),
+  ).length;
+  const mb = custoEstimadoMB(faltam);
+  if (mb > 80 && !confirm(t('alinhar.custo', { n: faltam, mb }))) return;
   botao.disabled = true;
 
   try {
     const r = await alinharPeloSom({
       linhas: estado.linhas,
       janela: estado.janela,
+      memoria: estado.memoriaAlinhar,
       sinal: controlo.signal,
       aoProgresso: (p) => {
         nota.textContent = p.fase === 'ouvir'
@@ -1103,6 +1225,7 @@ async function alinhar() {
         ? t('alinhar.naoOuvi', { lista: [...new Set(r.problemas.map((x) => x.canal))].join(', ') })
         : '');
     nota.classList.toggle('mau', !Object.keys(r.ajustesMs).length);
+    pintarConfianca();
     montarGrade();
     irPara(estado.agoraMs);
   } catch (e) {
@@ -1502,6 +1625,7 @@ function pintarMomentos() {
   }
   pintarRegua();
   pintarSelecao();
+  pintarPassos();
   const total = planoDaMontagem(lista, canais, { filmava }).length;
   $('baixarMontagem').disabled = !total;
   const semVitima = sozinho ? 0 : lista.filter((m) => !temMorte(m)).length;
@@ -2083,6 +2207,11 @@ $('marcarIn').onclick = () => { estado.marca = { de: estado.agoraMs, ate: null }
 $('marcarOut').onclick = () => { estado.marca.ate = estado.agoraMs; pintarMarca(); guardar(); };
 $('alinhar').onclick = alinhar;
 $('marcarKill').onclick = marcarKill;
+// O resumo tem de acompanhar as caixas, senão fechá-las mente sobre o que lá está.
+for (const id of ['protAntes', 'protDepois', 'vitAntes', 'vitDepois']) {
+  $(id).addEventListener('input', pintarResumoMargens);
+}
+pintarResumoMargens();
 $('apagarSelecionados').onclick = apagarSelecionados;
 $('anularApagar').onclick = anularApagar;
 $('selecionarNada').onclick = () => { estado.selecao.clear(); pintarMomentos(); };
@@ -2129,8 +2258,20 @@ for (const [id, delta] of [['menosClipe', -1000], ['maisClipe', 1000]]) {
 $('modalClipe').onclick = (e) => { if (e.target === $('modalClipe')) fecharClipe(); };
 $('recomecar').onclick = recomecar;
 
+const alternarAjuda = (abrir) => { $('modalAjuda').hidden = !abrir; };
+$('ajuda').onclick = () => alternarAjuda(true);
+$('fecharAjuda').onclick = () => alternarAjuda(false);
+$('modalAjuda').onclick = (e) => { if (e.target.id === 'modalAjuda') alternarAjuda(false); };
+
 document.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+  // O ponto de interrogação abre a lista dos atalhos, e o Esc fecha-a. Não
+  // acrescenta comportamento nenhum: torna descobrível o que já existia.
+  if (!$('modalAjuda').hidden) {
+    if (e.key === 'Escape' || e.key === '?') alternarAjuda(false);
+    return;
+  }
+  if (e.key === '?') { alternarAjuda(true); return; }
   const passo = e.shiftKey ? 10_000 : 1000;
   // Com a janela do clipe aberta, o teclado é dela: Esc fecha, e o resto não
   // pode andar com o tempo por baixo do que se está a cortar.

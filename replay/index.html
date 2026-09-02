@@ -4,6 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title data-t="app.titulo">Replay — vários ângulos, um relógio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Sem bloquear a primeira pintura. Um `<link rel=stylesheet>` normal para
+     um CDN de fontes atrasa TUDO enquanto a rede não responde, e ele está
+     quase sempre em dados móveis. Com `media=print` o browser descarrega sem
+     esperar, e o `onload` liga-o quando chegar; se nunca chegar, fica a letra
+     do sistema, que é o que havia antes. -->
+<link rel="stylesheet" media="print" onload="this.media='all';this.onload=null"
+  href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600&family=IBM+Plex+Mono:wght@400&display=swap">
+<noscript><link rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600&family=IBM+Plex+Mono:wght@400&display=swap"></noscript>
+<link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="estilo.css">
 </head>
 <body>
@@ -12,19 +24,40 @@
   <div class="topo">
     <h1 data-t="app.nome">Replay</h1>
     <a class="paraTwitch" href="twitch.html" data-t="app.twitch">Twitch</a>
+    <button id="ajuda" class="discreto" data-t-aria="ajuda.abrir" aria-haspopup="dialog">?</button>
     <select id="idioma" aria-label="idioma"></select>
   </div>
+  <!-- O caminho todo, em três passos e sem scroll.
+       Quem chega não sabe o que isto faz nem por onde começa; via duas caixas
+       vazias e um botão. O passo em que está fica aceso, e os outros dois
+       dizem o que vem a seguir — que é a única explicação de que precisa. -->
+  <ol id="passos" class="passos">
+    <li data-passo="1" class="aqui"><b>1</b><span data-t="passo.colar">Cola os canais</span></li>
+    <li data-passo="2"><b>2</b><span data-t="passo.rever">Revê alinhado</span></li>
+    <li data-passo="3"><b>3</b><span data-t="passo.exportar">Marca e exporta</span></li>
+  </ol>
 </header>
 
-<section id="entrada">
-  <div class="procura">
-    <input id="procurar" type="search" autocomplete="off" spellcheck="false"
-      data-t-aria="procurar.label" data-t-ph="procurar.ph" placeholder="buscar streamer">
-    <ul id="sugestoes" class="sugestoes" hidden></ul>
+<section id="entrada" class="bloco">
+  <!-- Duas caixas iguais e sem rótulo era o que um estranho via nos primeiros
+       dez segundos: nenhuma dizia o que fazia nem qual vinha primeiro. Cada
+       uma passa a ter o seu rótulo, e a procura fica visivelmente ao serviço
+       da lista — é um atalho para a encher, não um segundo caminho. -->
+  <div class="entradaGrelha">
+    <label class="campo procuraCampo">
+      <span class="rotuloCampo" data-t="procurar.label">Procurar um canal</span>
+      <span class="procura">
+        <input id="procurar" type="search" autocomplete="off" spellcheck="false"
+          data-t-aria="procurar.label" data-t-ph="procurar.ph" placeholder="nome do streamer">
+        <ul id="sugestoes" class="sugestoes" hidden></ul>
+      </span>
+    </label>
+    <label class="campo">
+      <span class="rotuloCampo" data-t="canais.label">Canais desta noite</span>
+      <textarea id="canais" rows="4" spellcheck="false" data-t-aria="canais.label"
+        data-t-ph="canais.ph" placeholder="um por linha"></textarea>
+    </label>
   </div>
-
-  <textarea id="canais" rows="4" spellcheck="false" data-t-aria="canais.label"
-    data-t-ph="canais.ph" placeholder="canais da Kick, um por linha"></textarea>
   <div class="linha">
     <button id="carregar" class="principal" data-t="canais.carregar">Carregar</button>
     <span id="estadoCarga" class="nota"></span>
@@ -34,13 +67,24 @@
   <p id="avisoPlayer" class="nota mau" hidden></p>
 </section>
 
-<section id="noites" hidden>
-  <select id="noite" data-t-aria="noite.label"></select>
+<!-- A noite e o estado dos canais numa barra só. Eram duas secções com
+     títulos próprios para dois controlos — peso a mais para o que é, no
+     fundo, "qual noite e quem lá estava". -->
+<section id="noites" class="bloco" hidden>
+  <div class="linha barraSessao">
+    <label class="campo">
+      <span class="rotuloCampo" data-t="noite.label">Noite</span>
+      <select id="noite" data-t-aria="noite.label"></select>
+    </label>
+    <output id="confianca" class="confianca"></output>
+  </div>
   <span class="nota" id="resumoNoite"></span>
 </section>
 
+<!-- Fora do bloco da noite, e não dentro: os avisos de canal ("não existe",
+     "quiseste dizer") aparecem QUANDO NÃO HÁ noite nenhuma para mostrar, e
+     aninhados desapareciam com ela. -->
 <section id="canaisEstado" hidden>
-  <h2 data-t="canais.titulo">Canais</h2>
   <ul id="listaCanais" class="canais"></ul>
 </section>
 
@@ -84,7 +128,7 @@
       <button id="mais1m" data-t="tempo.mais1m" data-t-titulo="tempo.avancar1m" title="avançar 1 minuto">1 min &raquo;</button>
     </div>
     <div class="linha">
-      <button id="clipar" class="principal"><span data-t="clipe.botao">Clipar</span> <kbd>C</kbd></button>
+      <button id="clipar"><span data-t="clipe.botao">Clipar</span> <kbd>C</kbd></button>
       <button id="marcarIn"><span data-t="marca.inicio">Marcar entrada</span> <kbd>I</kbd></button>
       <button id="marcarOut"><span data-t="marca.fim">Marcar saída</span> <kbd>O</kbd></button>
       <output id="marca" class="nota"></output>
@@ -103,14 +147,23 @@
        dele longa e as POVs de quem morreu curtinhas, ja numeradas. -->
   <section id="montagem">
     <h2 data-t="montagem.titulo">Montagem</h2>
+    <!-- As margens vivem fechadas. São quatro caixas de número que se acertam
+         uma vez e nunca mais se tocam, e estavam permanentemente ao lado do
+         botão a ocupar duas filas inteiras num telemóvel. O resumo em cima diz
+         os valores sem ser preciso abrir. -->
     <div class="linha">
       <button id="marcarKill" class="principal"><span data-t="montagem.marcar">Marcar kill</span> <kbd>M</kbd></button>
-      <label class="pequeno"><span data-t="montagem.minhaPov">minha POV</span> <input id="protAntes" type="number" value="5" min="0" max="120" step="1">s antes</label>
-      <label class="pequeno"><input id="protDepois" type="number" value="2" min="0" max="120" step="1">s depois</label>
-      <span id="margensVitima" class="linha" hidden>
-        <label class="pequeno"><span data-t="montagem.quemMorreu">quem morreu</span> <input id="vitAntes" type="number" value="1" min="0" max="60" step="1">s antes</label>
-        <label class="pequeno"><input id="vitDepois" type="number" value="2" min="0" max="60" step="1">s depois</label>
-      </span>
+      <details id="margens" class="margens">
+        <summary><span data-t="montagem.margens">Margens</span> <output id="resumoMargens" class="nota"></output></summary>
+        <div class="linha">
+          <label class="pequeno"><span data-t="montagem.minhaPov">minha POV</span> <input id="protAntes" type="number" value="5" min="0" max="120" step="1">s antes</label>
+          <label class="pequeno"><input id="protDepois" type="number" value="2" min="0" max="120" step="1">s depois</label>
+          <span id="margensVitima" class="linha" hidden>
+            <label class="pequeno"><span data-t="montagem.quemMorreu">quem morreu</span> <input id="vitAntes" type="number" value="1" min="0" max="60" step="1">s antes</label>
+            <label class="pequeno"><input id="vitDepois" type="number" value="2" min="0" max="60" step="1">s depois</label>
+          </span>
+        </div>
+      </details>
     </div>
     <!-- A barra de selecao. Uma noite varrida da dezenas de candidatos e a
          maioria nao e kill; apagar um a um era o trabalho manual que a busca
@@ -173,6 +226,27 @@
   </div><!-- .palcoLado -->
 </section>
 
+<!-- Os atalhos que já existem, num sítio onde se possam descobrir.
+     Não acrescenta tecla nenhuma: lista as que o teclado já responde. Um
+     atalho que ninguém sabe que existe é código morto. -->
+<div id="modalAjuda" class="modal" hidden>
+  <div class="modalCaixa estreita" role="dialog" aria-modal="true" data-t-aria="ajuda.titulo" aria-label="Atalhos">
+    <div class="modalTopo">
+      <b data-t="ajuda.titulo">Atalhos</b>
+      <button id="fecharAjuda" class="discreto" data-t-aria="ajuda.fechar" aria-label="fechar">✕</button>
+    </div>
+    <dl class="atalhos">
+      <dt><kbd>Espaço</kbd></dt><dd data-t="ajuda.pausa">Pausa e continua</dd>
+      <dt><kbd>J</kbd> <kbd>L</kbd></dt><dd data-t="ajuda.andar">Recua e avança 1 s (com Shift, 10 s)</dd>
+      <dt><kbd>I</kbd> <kbd>O</kbd></dt><dd data-t="ajuda.marca">Marca entrada e saída</dd>
+      <dt><kbd>M</kbd></dt><dd data-t="ajuda.kill">Marca kill</dd>
+      <dt><kbd>C</kbd></dt><dd data-t="ajuda.clipe">Abre o clipe</dd>
+      <dt><kbd>,</kbd> <kbd>.</kbd></dt><dd data-t="ajuda.ajuste">Ajusta o ângulo em foco</dd>
+      <dt><kbd>Esc</kbd></dt><dd data-t="ajuda.fecha">Fecha esta janela</dd>
+    </dl>
+  </div>
+</div>
+
 <!-- Criar clipe: uma janela por cima, com a barra de corte e um limite de
      180 s. E o caminho para "quero um so, agora" — a montagem e para depois. -->
 <div id="modalClipe" class="modal" hidden>
@@ -210,10 +284,10 @@
   <!-- A versao, a serio e visivel. O GitHub Pages serve com max-age=600 e um
        telemovel guarda o app.js antigo; sem isto, "ja corrigi" e "continua
        igual" sao as duas verdadeiras ao mesmo tempo e ninguem sai dali. -->
-  <p class="nota"><span data-t="app.rodape">A sessão fica guardada neste dispositivo.</span> · <span id="versao">4e5a1993ac</span></p>
+  <p class="nota"><span data-t="app.rodape">A sessão fica guardada neste dispositivo.</span> · <span id="versao">fc0ba2be70</span></p>
 </footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.17/hls.min.js"></script>
-<script type="module" src="app.js?v=4e5a1993ac"></script>
+<script type="module" src="app.js?v=fc0ba2be70"></script>
 </body>
 </html>
