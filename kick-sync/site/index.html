@@ -115,6 +115,16 @@
        em vez de um truque de CSS: com dois em foco lado a lado, "esticar a
        célula até ao fim da linha" deixa de existir como conceito. -->
   <div id="palcoFoco" class="palcoFoco"></div>
+  <!-- A ordem dos quadrados. "Nunca acho a live de quem tô procurando": com
+       trinta ângulos, saber que estão pela ordem em que os escrevi não me diz
+       onde está o fulano — para PROCURAR alguém a chave é o nome. -->
+  <div id="barraGrelha" class="barraGrelha" hidden>
+    <span class="rotuloCampo" data-t="grelha.ordem">Ordem</span>
+    <button id="ordemAdicionado" class="ordemGrelha" data-ordem="adicionado"
+      aria-pressed="true" data-t="grelha.adicionado">Como adicionei</button>
+    <button id="ordemAz" class="ordemGrelha" data-ordem="az"
+      aria-pressed="false" data-t="grelha.az">A–Z</button>
+  </div>
   <div id="grade" class="grade"></div>
 
   </div><!-- .palcoVideo -->

@@ -1693,6 +1693,54 @@ test('mudar de noite diz o que está a fazer, e a última escolha é a que fica'
     assert.deepEqual(erros, []);
   });
 
+// "Esses vídeos em baixo têm que ficar em alguma ordem, ou de adicionado ou
+//  alfabética, porque nunca acho a live de quem tô procurando."
+//
+// A ordem de adição já lá estava — foi ele que a pediu. Mas resolver "não há
+// ordem" não é o mesmo que resolver "não encontro o fulano": ninguém se lembra
+// em que posição escreveu um nome há uma hora, e para PROCURAR alguém a chave é
+// o nome.
+test('a grelha ordena-se como ele escreveu, ou de A a Z, à escolha',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    // Nomes cuja ordem de escrita é DIFERENTE da alfabética, senão o teste
+    // passa nos dois casos sem distinguir nada.
+    const canais = ['zebra', 'alfa', 'moka', 'beta'];
+    await kickFalsa(p, { canais });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', canais.join('\n'));
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 20000 });
+    await p.waitForSelector('#barraGrelha:not([hidden])', { timeout: 10000 });
+
+    // A ordem é dada pelo CSS e não pelo DOM: mover um `<video>` a tocar
+    // interrompe-o. Por isso lê-se `style.order`, e não a ordem dos nós.
+    const daGrelha = () => p.evaluate(() => [...document.querySelectorAll('#grade .tile')]
+      .map((t) => ({ slug: t.dataset.slug, ordem: Number(t.style.order) }))
+      .sort((a, b) => a.ordem - b.ordem)
+      .map((x) => x.slug));
+
+    assert.deepEqual(await daGrelha(), ['alfa', 'moka', 'beta'],
+      'devia estar pela ordem em que ele os escreveu, sem o que está em foco');
+
+    await p.click('#ordemAz');
+    assert.deepEqual(await daGrelha(), ['alfa', 'beta', 'moka'], 'devia estar de A a Z');
+
+    // E o quadrado que sobe ao foco não pode levar a ordem consigo: o foco
+    // TAMBÉM é uma grelha, e com dois lá em cima isso trocava-os.
+    await p.click('#grade .tile');
+    await p.waitForTimeout(400);
+    const focados = await p.evaluate(() => [...document.querySelectorAll('#palcoFoco .tile')]
+      .map((t) => t.style.order));
+    assert.deepEqual(focados, [''], `o quadrado em foco levou a ordem: ${JSON.stringify(focados)}`);
+    assert.deepEqual(await daGrelha(), ['beta', 'moka', 'zebra'], 'e a grelha continua de A a Z');
+
+    // A escolha fica guardada no dispositivo.
+    const guardado = await p.evaluate(() => localStorage.getItem('replay.ordem'));
+    assert.equal(guardado, 'az');
+    assert.deepEqual(erros, []);
+  });
+
 // `hidden` tem de esconder mesmo. Cai-se nisto sem dar por nada: basta uma
 // regra qualquer com `display` a apanhar o elemento, porque um `display`
 // escrito ganha ao `display: none` que o atributo traz. Aconteceu-me três

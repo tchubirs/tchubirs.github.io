@@ -12,6 +12,7 @@ import {
 import { cortarTodosOsAngulos } from './baixar.js';
 import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js';
 import { abrirJanela, irAEcraCheio, capacidades } from './janela.js';
+import { ordemDosAngulos, aplicarOrdem } from './grelha.js';
 import {
   RETRATO, enquadramentoInicial, limitar, desenhar, gravar, formatoQueFunciona, extensaoDe,
   reformar, limparDivisao, DIVISAO_OMISSAO,
@@ -37,6 +38,9 @@ const $ = (id) => document.getElementById(id);
 const estado = {
   linhas: [],
   janela: null,
+  // Como estão dispostos os quadrados: 'adicionado' ou 'az'. É uma preferência
+  // dele e não parte da noite, por isso vive no dispositivo e não no link.
+  ordemGrelha: 'adicionado',
   // A forma do som de cada canal em cada instante medido. Vive aqui e não
   // dentro do alinhamento para sobreviver entre sincronizações: acrescentar
   // um canal a uma noite já medida passa a ouvir só o canal novo. Com trinta
@@ -903,6 +907,33 @@ function aplicarFoco() {
   }
   $('palcoFoco').classList.toggle('dois', estado.focos.length > 1);
   marcarFaixas();
+  // A ordem é reposta aqui e não no `montarGrade`: um quadrado que desce do
+  // foco para a grelha é ACRESCENTADO ao fim, e sem isto ficava lá.
+  pintarOrdemDaGrelha();
+}
+
+/**
+ * Pôr os quadrados pela ordem escolhida.
+ *
+ * Pelo CSS e não pelo DOM: mover um `<video>` a tocar interrompe-o — está
+ * escrito no `aplicarFoco` porque já aconteceu.
+ */
+function pintarOrdemDaGrelha() {
+  const barra = $('barraGrelha');
+  const tiles = [...$('grade').querySelectorAll('.tile')];
+  barra.hidden = tiles.length < 2;
+  // O foco TAMBÉM é uma grelha. Um quadrado que sobe da grelha para o foco
+  // levava consigo o `order` que tinha lá em baixo, e com dois em foco isso
+  // trocava-os um pelo outro — o principal deixava de ser o da esquerda.
+  for (const tile of $('palcoFoco').querySelectorAll('.tile')) tile.style.order = '';
+  aplicarOrdem(tiles, ordemDosAngulos(estado.linhas, estado.ordemGrelha, listaDeCanais()));
+  for (const b of document.querySelectorAll('.ordemGrelha')) {
+    b.setAttribute('aria-pressed', String(b.dataset.ordem === estado.ordemGrelha));
+  }
+  // Sem contador aqui. Pus um a dizer "3 de 4 ângulos" e isso já quer dizer
+  // OUTRA coisa na linha do tempo — quantos estavam no ar naquele instante.
+  // Dois contadores com o mesmo texto e sentidos diferentes é pior do que
+  // nenhum; o da linha do tempo chega.
 }
 
 function montarGrade() {
@@ -2604,6 +2635,15 @@ $('guardarRetrato').onclick = guardarRetrato;
 for (const b of document.querySelectorAll('.modoRetrato')) {
   b.onclick = () => trocarModo(b.dataset.modo);
 }
+// A ordem, e a preferência guardada no dispositivo.
+for (const b of document.querySelectorAll('.ordemGrelha')) {
+  b.onclick = () => {
+    estado.ordemGrelha = b.dataset.ordem;
+    try { localStorage.setItem('replay.ordem', estado.ordemGrelha); } catch { /* janela privada */ }
+    pintarOrdemDaGrelha();
+  };
+}
+
 ligarDivisor();
 // O divisor é medido em pixels do ecrã: se a janela muda de tamanho, a conta
 // deixa de bater certo e o pill fica ao lado da linha por onde o vídeo parte.
@@ -2698,6 +2738,10 @@ try { guardadoIdioma = localStorage.getItem('replay.idioma'); } catch { /* janel
 // O filtro fica fora do link da sessao de proposito. O link e para partilhar, e
 // mandar a alguem uma montagem com metade escondida seria mandar-lhe um engano.
 try { estado.filtro = localStorage.getItem('replay.filtro') || 'todos'; } catch { /* janela privada */ }
+try {
+  const g = localStorage.getItem('replay.ordem');
+  if (g === 'az' || g === 'adicionado') estado.ordemGrelha = g;
+} catch { /* janela privada */ }
 $('filtroMomentos').value = estado.filtro;
 definirIdioma(guardadoIdioma || idiomaDoBrowser());
 $('idioma').value = idiomaActual();
