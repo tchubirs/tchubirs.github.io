@@ -127,6 +127,8 @@ export async function abrirJanela(tile, {
     if (!video) return null;
     await video.requestPictureInPicture();
     video.addEventListener('leavepictureinpicture', () => aoFechar(), { once: true });
+    // No PiP do vídeo o quadrado NÃO sai do documento — só a imagem é que
+    // flutua — por isso aqui não há `tile` para registar.
     return { modo: 'video', fechar: () => janela.document.exitPictureInPicture?.() };
   }
 
@@ -146,7 +148,10 @@ export async function abrirJanela(tile, {
     aoFechar();
   };
   nova.addEventListener('pagehide', voltar, { once: true });
-  return { modo: 'documento', janela: nova, fechar: () => nova.close() };
+  // `tile` vai no resultado porque quem manda na página tem de continuar a
+  // saber onde ele está: assim que sai daqui, nenhum `document.querySelector`
+  // o encontra, e o pause, o relógio e o volume passavam-lhe ao lado.
+  return { modo: 'documento', janela: nova, tile, fechar: () => nova.close() };
 }
 
 /** Ecrã cheio, com o caminho do iPhone por baixo. */

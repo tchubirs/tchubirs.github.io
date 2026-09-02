@@ -621,10 +621,18 @@ footer { margin-top: 32px; border-top: 1px solid var(--borda); padding-top: 12px
     align-items: start;
   }
   .palcoVideo { grid-area: video; min-width: 0; }
-  .palcoLado { grid-area: lado; }
+  .palcoLadoCaixa { grid-area: lado; min-width: 0; }
   .palcoFundo { grid-area: fundo; min-width: 0; }
+
   /* A linha do tempo acompanha a página: ver o vídeo e saber onde se está no
-     mesmo instante é o gesto todo. */
+     mesmo instante é o gesto todo.
+     A caixa à volta não é decoração — é o travão. Um `sticky` pára no fim do
+     seu bloco pai, e quando o pai era a CÉLULA da grelha ele não parava:
+     medi-o em 1115, 1440 e 2560, e nos três passava por cima da montagem
+     durante dez posições de scroll. Com um bloco normal esticado à altura da
+     linha, o limite passa a estar definido e a coluna pára onde a montagem
+     começa. */
+  .palcoLadoCaixa { align-self: stretch; }
   .palcoLado {
     position: sticky; top: 16px;
     max-height: calc(100vh - 32px); overflow-y: auto;

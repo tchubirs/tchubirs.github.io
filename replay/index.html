@@ -83,6 +83,11 @@
         <select id="noite" data-t-aria="noite.label"></select>
       </label>
       <output id="confianca" class="confianca"></output>
+      <!-- Passar a noite pronta a outra pessoa. O que vai no link não é a lista
+           de nomes — é o TRABALHO: os ajustes que ele acertou um a um. -->
+      <button id="partilhar" data-t="partilha.botao" data-t-titulo="partilha.ajuda"
+        title="Copia um link com estes canais e estes ajustes">Copiar link</button>
+      <output id="estadoPartilha" class="nota"></output>
     </div>
     <span class="nota" id="resumoNoite"></span>
   </section>
@@ -114,6 +119,7 @@
        coloca em baixo". Faz sentido pela forma — trinta canais são trinta linhas
        empilhadas, alto e estreito, que é exactamente a forma de uma coluna; a
        montagem são filas de botões, que é a forma de uma faixa em baixo. -->
+  <div class="palcoLadoCaixa">
   <div class="palcoLado">
     <div class="relogio">
       <!-- A barra vive na MESMA grelha das faixas, com a mesma coluna vazia à
@@ -155,7 +161,8 @@
       <button id="alinhar" data-t="alinhar.botao" data-t-titulo="alinhar.ajuda" title="Analisa o áudio de cada ângulo e corrige o desvio">Sincronizar por áudio</button>
       <span id="estadoAlinhar" class="nota"></span>
     </div>
-  </div><!-- .palcoLado -->
+  </div>
+  </div><!-- .palcoLadoCaixa -->
 
   <!-- EM BAIXO, a toda a largura: montagem, deteção e cortes, lado a lado.
        "Não precisa um widget tão grande" — em três colunas cada um fica com o
@@ -303,10 +310,10 @@
   <!-- A versao, a serio e visivel. O GitHub Pages serve com max-age=600 e um
        telemovel guarda o app.js antigo; sem isto, "ja corrigi" e "continua
        igual" sao as duas verdadeiras ao mesmo tempo e ninguem sai dali. -->
-  <p class="nota"><span data-t="app.rodape">A sessão fica guardada neste dispositivo.</span> · <span id="versao">030d0bc638</span></p>
+  <p class="nota"><span data-t="app.rodape">A sessão fica guardada neste dispositivo.</span> · <span id="versao">5a503c3ee2</span></p>
 </footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.17/hls.min.js"></script>
-<script type="module" src="app.js?v=030d0bc638"></script>
+<script type="module" src="app.js?v=5a503c3ee2"></script>
 </body>
 </html>
