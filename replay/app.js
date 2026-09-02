@@ -5,29 +5,29 @@
 // bottom rung of Kick's ladder and is what makes thirty tiles a home-connection
 // problem rather than a server problem.
 
-import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=fc0ba2be70';
+import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=030d0bc638';
 import {
   linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo,
-} from './relogio.js?v=fc0ba2be70';
-import { cortarTodosOsAngulos } from './baixar.js?v=fc0ba2be70';
-import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=fc0ba2be70';
-import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=fc0ba2be70';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=fc0ba2be70';
+} from './relogio.js?v=030d0bc638';
+import { cortarTodosOsAngulos } from './baixar.js?v=030d0bc638';
+import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=030d0bc638';
+import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=030d0bc638';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=030d0bc638';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
   alternarVitima, filtrar, temMorte, clipesDoMomento,
-} from './momentos.js?v=fc0ba2be70';
-import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=fc0ba2be70';
-import { criarZip, crc32 } from './zip.js?v=fc0ba2be70';
-import { queFazerComOLeitor } from './leitor.js?v=fc0ba2be70';
-import { criarApanhador } from './frames.js?v=fc0ba2be70';
-import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=fc0ba2be70';
-import { TAXA_TIROS } from './tiros.js?v=fc0ba2be70';
-import { parecidos, juntarPerto } from './aprender.js?v=fc0ba2be70';
-import { somDoCanal } from './alinhar.js?v=fc0ba2be70';
-import { MAXIMO_S, mover, janelaInicial, nomeDoClipe } from './clipe.js?v=fc0ba2be70';
-import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=fc0ba2be70';
-import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=fc0ba2be70';
+} from './momentos.js?v=030d0bc638';
+import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=030d0bc638';
+import { criarZip, crc32 } from './zip.js?v=030d0bc638';
+import { queFazerComOLeitor } from './leitor.js?v=030d0bc638';
+import { criarApanhador } from './frames.js?v=030d0bc638';
+import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=030d0bc638';
+import { TAXA_TIROS } from './tiros.js?v=030d0bc638';
+import { parecidos, juntarPerto } from './aprender.js?v=030d0bc638';
+import { somDoCanal } from './alinhar.js?v=030d0bc638';
+import { MAXIMO_S, mover, janelaInicial, nomeDoClipe } from './clipe.js?v=030d0bc638';
+import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=030d0bc638';
+import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=030d0bc638';
 
 const $ = (id) => document.getElementById(id);
 const estado = {
