@@ -165,11 +165,19 @@
         <button id="mais10s" data-t="tempo.mais10s" data-t-titulo="tempo.avancar10s" title="avançar 10 segundos">10s &rsaquo;</button>
         <button id="mais1m" data-t="tempo.mais1m" data-t-titulo="tempo.avancar1m" title="avançar 1 minuto">1 min &raquo;</button>
       </div>
+      <!-- "Destaca o botão Clipar. E bota na mesma linha os botões de marcar
+           início e marcar final — fica estranho, uma linha em cima, outra em
+           baixo." Os três tinham o mesmo peso e a mesma linha flex, que num
+           ecrã estreito parte onde lhe apetece. Agora o Clipar é o principal e
+           tem a linha dele; os dois de marcar são uma grelha de duas colunas
+           iguais, que não parte nunca. -->
       <div class="linha">
-        <button id="clipar"><span data-t="clipe.botao">Clipar</span> <kbd>C</kbd></button>
+        <button id="clipar" class="principal"><span data-t="clipe.botao">Clipar</span> <kbd>C</kbd></button>
+        <output id="marca" class="nota"></output>
+      </div>
+      <div class="marcas">
         <button id="marcarIn"><span data-t="marca.inicio">Marcar entrada</span> <kbd>I</kbd></button>
         <button id="marcarOut"><span data-t="marca.fim">Marcar saída</span> <kbd>O</kbd></button>
-        <output id="marca" class="nota"></output>
       </div>
     </div>
 
@@ -352,12 +360,12 @@
     <output id="tempoClipe" class="nota"></output>
     <div class="aparar">
       <span class="rotuloCampo" data-t="clipe.inicioLabel">Início</span>
-      <button id="inicioMenos" class="passo" data-t-titulo="clipe.recuar" title="1 s para trás">⏪</button>
-      <button id="inicioMais" class="passo" data-t-titulo="clipe.avancar" title="1 s para a frente">⏩</button>
+      <button id="inicioMenos" class="passo" data-t-titulo="clipe.recuar" title="meio segundo para trás">⏪</button>
+      <button id="inicioMais" class="passo" data-t-titulo="clipe.avancar" title="meio segundo para a frente">⏩</button>
       <button id="verClipe" class="ver" aria-pressed="false" data-t-titulo="clipe.ver" title="ver o clipe">▶</button>
       <span class="rotuloCampo" data-t="clipe.fimLabel">Fim</span>
-      <button id="fimMenos" class="passo" data-t-titulo="clipe.recuar" title="1 s para trás">⏪</button>
-      <button id="fimMais" class="passo" data-t-titulo="clipe.avancar" title="1 s para a frente">⏩</button>
+      <button id="fimMenos" class="passo" data-t-titulo="clipe.recuar" title="meio segundo para trás">⏪</button>
+      <button id="fimMais" class="passo" data-t-titulo="clipe.avancar" title="meio segundo para a frente">⏩</button>
     </div>
     <label for="tituloClipe" data-t="clipe.tituloLabel">Título do clipe</label>
     <input id="tituloClipe" type="text" maxlength="80" data-t-ph="clipe.tituloPh" placeholder="opcional — entra no nome do ficheiro">
@@ -375,10 +383,10 @@
   <!-- A versao, a serio e visivel. O GitHub Pages serve com max-age=600 e um
        telemovel guarda o app.js antigo; sem isto, "ja corrigi" e "continua
        igual" sao as duas verdadeiras ao mesmo tempo e ninguem sai dali. -->
-  <p class="nota"><span data-t="app.rodape">A sessão fica guardada neste dispositivo.</span> · <span id="versao">b8f3603e4d</span></p>
+  <p class="nota"><span data-t="app.rodape">A sessão fica guardada neste dispositivo.</span> · <span id="versao">a8dc186119</span></p>
 </footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.17/hls.min.js"></script>
-<script type="module" src="app.js?v=b8f3603e4d"></script>
+<script type="module" src="app.js?v=a8dc186119"></script>
 </body>
 </html>

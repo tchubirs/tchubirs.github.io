@@ -5,34 +5,34 @@
 // bottom rung of Kick's ladder and is what makes thirty tiles a home-connection
 // problem rather than a server problem.
 
-import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=b8f3603e4d';
+import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=a8dc186119';
 import {
   linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo,
-} from './relogio.js?v=b8f3603e4d';
-import { cortarTodosOsAngulos } from './baixar.js?v=b8f3603e4d';
-import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=b8f3603e4d';
-import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=b8f3603e4d';
-import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=b8f3603e4d';
+} from './relogio.js?v=a8dc186119';
+import { cortarTodosOsAngulos } from './baixar.js?v=a8dc186119';
+import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=a8dc186119';
+import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=a8dc186119';
+import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=a8dc186119';
 import {
   RETRATO, enquadramentoInicial, limitar, desenhar, gravar, formatoQueFunciona, extensaoDe,
   reformar, limparDivisao, DIVISAO_OMISSAO,
-} from './retrato.js?v=b8f3603e4d';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=b8f3603e4d';
+} from './retrato.js?v=a8dc186119';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=a8dc186119';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
   alternarVitima, filtrar, temMorte, clipesDoMomento,
-} from './momentos.js?v=b8f3603e4d';
-import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=b8f3603e4d';
-import { criarZip, crc32 } from './zip.js?v=b8f3603e4d';
-import { queFazerComOLeitor } from './leitor.js?v=b8f3603e4d';
-import { criarApanhador } from './frames.js?v=b8f3603e4d';
-import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=b8f3603e4d';
-import { TAXA_TIROS } from './tiros.js?v=b8f3603e4d';
-import { parecidos, juntarPerto } from './aprender.js?v=b8f3603e4d';
-import { somDoCanal } from './alinhar.js?v=b8f3603e4d';
-import { MAXIMO_S, mover, janelaInicial, nomeDoClipe } from './clipe.js?v=b8f3603e4d';
-import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=b8f3603e4d';
-import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=b8f3603e4d';
+} from './momentos.js?v=a8dc186119';
+import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=a8dc186119';
+import { criarZip, crc32 } from './zip.js?v=a8dc186119';
+import { queFazerComOLeitor } from './leitor.js?v=a8dc186119';
+import { criarApanhador } from './frames.js?v=a8dc186119';
+import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=a8dc186119';
+import { TAXA_TIROS } from './tiros.js?v=a8dc186119';
+import { parecidos, juntarPerto } from './aprender.js?v=a8dc186119';
+import { somDoCanal } from './alinhar.js?v=a8dc186119';
+import { MAXIMO_S, mover, janelaInicial, nomeDoClipe } from './clipe.js?v=a8dc186119';
+import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=a8dc186119';
+import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=a8dc186119';
 
 const $ = (id) => document.getElementById(id);
 const estado = {
@@ -2848,8 +2848,11 @@ for (const [id, qual, delta] of [
 ]) {
   $(id).onclick = (e) => {
     if (!estado.clipe) return;
-    // Shift afina: 0,2 s. Um segundo acha o sítio, dois décimos apuram-no.
-    const passo = delta * (e.shiftKey ? 200 : 1000);
+    // Meio segundo, e não um. "Fiz o teste, às vezes um segundo passa do ponto
+    // que eu quero" — e passa mesmo: entre o disparo e a morte cabem menos de
+    // dois segundos, e um passo de um segundo salta metade disso de uma vez.
+    // Com Shift são 0,1 s, que é onde ele acaba de apurar.
+    const passo = delta * (e.shiftKey ? 100 : 500);
     const agora = qual === 'de' ? estado.clipe.deMs : estado.clipe.ateMs;
     Object.assign(estado.clipe, mover(estado.clipe, qual, agora + passo,
       { limites: estado.clipe.limites }));
