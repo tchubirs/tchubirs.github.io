@@ -694,6 +694,34 @@ footer { margin-top: 32px; border-top: 1px solid var(--borda); padding-top: 12px
    ficavam encostados ao canto. */
 .modal .segundos { gap: 8px; }
 .modal .segundos button { flex: 1; padding: 10px; font-size: var(--t-base); }
+
+/* Aparar: cada ponta na sua linha, e o ▶ ao lado das duas.
+   Uma grelha e não duas linhas soltas — assim o "Início" e o "Fim" ficam
+   alinhados um por cima do outro, e o ▶ ocupa a altura dos dois porque toca
+   o pedaço INTEIRO, e não uma das pontas. */
+.aparar {
+  display: grid;
+  grid-template-columns: auto minmax(44px, 1fr) minmax(44px, 1fr) minmax(52px, 0.8fr);
+  gap: 8px;
+  align-items: stretch;
+  margin-top: 8px;
+}
+.aparar .rotuloCampo { align-self: center; margin: 0; }
+.aparar .passo {
+  padding: 10px 4px;
+  font-size: var(--t-base);
+  min-height: 44px;
+}
+.aparar .ver {
+  grid-row: 1 / span 2;
+  grid-column: 4;
+  font-size: 20px;
+  background: var(--acento);
+  color: var(--sobre-acento);
+  border-color: transparent;
+  font-variant-emoji: text;
+}
+.aparar .ver[aria-pressed="true"] { background: var(--marcador); }
 @media (max-width: 620px) {
   /* Uma folha que sobe do fundo, que é o que um telemóvel faz com isto. */
   .modal:not([hidden]) { place-items: end center; padding: 0; }

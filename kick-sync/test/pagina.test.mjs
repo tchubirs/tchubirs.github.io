@@ -1946,12 +1946,22 @@ test('o modal de clipe cabe num telemóvel em pé',
     await p.click('#clipar');
     await p.waitForSelector('#modalClipe:not([hidden])', { timeout: 10000 });
 
-    // Os dois botões de segundos lado a lado, e não um a cair para a linha de
-    // baixo sozinho — foi assim que ele o viu no telemóvel.
-    const [menos, mais] = await Promise.all([
-      p.locator('#menosClipe').boundingBox(), p.locator('#maisClipe').boundingBox(),
-    ]);
-    assert.ok(Math.abs(menos.y - mais.y) < 6, `−1s em y=${menos.y} e +1s em y=${mais.y}`);
+    // Cada par de setas na sua linha, e as duas setas da mesma ponta lado a
+    // lado — não uma a cair para a linha de baixo sozinha, que foi assim que
+    // ele viu os dois botões antigos no telemóvel.
+    const cx = async (id) => p.locator(id).boundingBox();
+    const [im, iM, fm, fM, ver] = await Promise.all(
+      ['#inicioMenos', '#inicioMais', '#fimMenos', '#fimMais', '#verClipe'].map(cx),
+    );
+    assert.ok(Math.abs(im.y - iM.y) < 6, `as setas do início em y=${im.y} e y=${iM.y}`);
+    assert.ok(Math.abs(fm.y - fM.y) < 6, `as setas do fim em y=${fm.y} e y=${fM.y}`);
+    assert.ok(fm.y > im.y + 10, 'o fim tem de ficar POR BAIXO do início, e não ao lado');
+    // O ▶ ao lado das duas linhas: toca o pedaço inteiro, não uma das pontas.
+    assert.ok(ver.y <= im.y + 6 && ver.y + ver.height >= fm.y + fm.height - 6,
+      'o ▶ devia acompanhar a altura das duas linhas');
+    for (const [id, b] of [['#inicioMenos', im], ['#fimMais', fM], ['#verClipe', ver]]) {
+      assert.ok(b.width >= 40 && b.height >= 40, `${id} tem ${b.width}x${b.height}, pequeno para um dedo`);
+    }
 
     const caixa = await p.locator('#modalClipe .modalCaixa').boundingBox();
     assert.ok(caixa.width <= 390, `a caixa tem ${caixa.width} px num ecrã de 390`);
@@ -1966,6 +1976,107 @@ test('o modal de clipe cabe num telemóvel em pé',
     }
     assert.equal(await p.evaluate(() => document.documentElement.scrollWidth
       <= document.documentElement.clientWidth), true, 'a página abana para o lado');
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+// "Os botões que estão lá dentro −1 segundo e +1 segundo só mexem no final do
+// vídeo. Preciso mexer com precisão no final E no começo."
+//
+// Mexiam mesmo: os dois estavam presos ao `ate`. E o segundo metade da queixa
+// é a que se mede pior e importa mais — "daí não aparece na tela onde acaba, e
+// é bom de ver". A prova disso aqui é a CABEÇA da barra: é ela que diz em que
+// instante a imagem está, e tem de saltar para a ponta que acabou de mexer.
+test('cada ponta tem as suas setas, e a imagem vai para onde a ponta foi',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 20000 });
+    // Sair do princípio da noite antes de abrir o clipe: colado ao início, o
+    // `de` está no limite do VOD e recuar não teria para onde ir — o teste
+    // falharia por causa do limite e não por causa do botão.
+    await p.click('#mais1m');
+    await p.click('#mais1m');
+    await p.click('#clipar');
+    await p.waitForSelector('#modalClipe:not([hidden])', { timeout: 10000 });
+
+    const ler = () => p.evaluate(() => {
+      const pos = (sel) => parseFloat(document.querySelector(sel).style.left) || 0;
+      return {
+        texto: document.getElementById('tempoClipe').textContent,
+        de: pos('#barraClipe .pega.de'),
+        ate: pos('#barraClipe .pega.ate'),
+        cabeca: pos('#barraClipe .cabeca'),
+      };
+    });
+
+    const antes = await ler();
+    await p.click('#fimMais');
+    const depoisFim = await ler();
+    assert.ok(depoisFim.ate > antes.ate, 'o fim tinha de andar para a frente');
+    assert.ok(Math.abs(depoisFim.de - antes.de) < 0.01, 'o início não se mexeu do sítio');
+    assert.ok(Math.abs(depoisFim.cabeca - depoisFim.ate) < 0.5,
+      `a imagem ficou em ${depoisFim.cabeca}% e o fim está em ${depoisFim.ate}%`);
+
+    await p.click('#inicioMenos');
+    const depoisInicio = await ler();
+    assert.ok(depoisInicio.de < depoisFim.de, 'o início tinha de recuar');
+    assert.ok(Math.abs(depoisInicio.ate - depoisFim.ate) < 0.01, 'o fim não se mexeu do sítio');
+    assert.ok(Math.abs(depoisInicio.cabeca - depoisInicio.de) < 0.5,
+      `a imagem ficou em ${depoisInicio.cabeca}% e o início está em ${depoisInicio.de}%`);
+
+    // Com Shift o passo é mais curto: é o que dá para apurar o instante certo
+    // depois de o segundo inteiro já ter chegado perto.
+    const largo = depoisInicio.ate - depoisInicio.de;
+    await p.click('#fimMais', { modifiers: ['Shift'] });
+    const fino = await ler();
+    assert.ok(fino.ate > depoisInicio.ate, 'com Shift também tem de andar');
+    assert.ok((fino.ate - depoisInicio.ate) < (depoisFim.ate - antes.ate) / 2,
+      'com Shift o passo tinha de ser bem menor do que um segundo');
+    assert.ok(fino.ate - fino.de > largo, 'e o clipe fica mais comprido, não mais curto');
+
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+// "Não tem um botão de play lá dentro para estar a ver o clipe pronto como
+//  está." O ▶ toca só o pedaço escolhido: liga o som, pára a grelha por trás
+// para não haver dois sons ao mesmo tempo, e volta atrás quando acaba.
+test('o ▶ do clipe toca só o pedaço, e pára a grelha enquanto toca',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 20000 });
+    await p.click('#clipar');
+    await p.waitForSelector('#modalClipe:not([hidden])', { timeout: 10000 });
+
+    const estadoDoBotao = () => p.evaluate(() => ({
+      carregado: document.getElementById('verClipe').getAttribute('aria-pressed'),
+      mudo: document.getElementById('previaClipe').muted,
+      grelhaParada: document.getElementById('agora').classList.contains('parado'),
+    }));
+
+    assert.deepEqual(await estadoDoBotao(),
+      { carregado: 'false', mudo: true, grelhaParada: false });
+
+    await p.click('#verClipe');
+    const aVer = await estadoDoBotao();
+    assert.equal(aVer.carregado, 'true', 'o botão tinha de ficar carregado');
+    assert.equal(aVer.mudo, false, 'ver um clipe sem som não serve para nada');
+    assert.equal(aVer.grelhaParada, true, 'a grelha tinha de parar para não haver dois sons');
+
+    // Carregar outra vez pára, e deixa tudo como estava.
+    await p.click('#verClipe');
+    assert.deepEqual(await estadoDoBotao(),
+      { carregado: 'false', mudo: true, grelhaParada: false },
+      'parar tinha de repor o som, o botão e a grelha');
+
     assert.deepEqual(erros, []);
     await p.close();
   });
