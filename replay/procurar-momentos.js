@@ -1,5 +1,5 @@
-import { energia, chao, impulsos, lutas, FPS, TAXA_TIROS } from './tiros.js?v=d9b44fa5e1';
-import { recortar } from './aprender.js?v=d9b44fa5e1';
+import { medir, chao, impulsos, lutas, FPS, TAXA_TIROS } from './tiros.js?v=ca64868580';
+import { recortar } from './aprender.js?v=ca64868580';
 
 // Achar as kills sozinho — pela forca do som.
 //
@@ -57,8 +57,10 @@ export async function varrerNoite({
     // forma — e e o contrario do que aqui e preciso: "quando acontece um som
     // de disparo, e o pico praticamente mais alto do grafico". A forca ERA o
     // sinal, e eu dividia-a fora antes de olhar.
-    const env = som ? energia(som, taxaSom) : new Float32Array(Math.round(duracaoS * FPS));
-    partes.push({ t, env, som });
+    const vazio = Math.round(duracaoS * FPS);
+    const m = som ? medir(som, taxaSom)
+      : { energia: new Float32Array(vazio), brilho: new Float32Array(vazio) };
+    partes.push({ t, env: m.energia, brilho: m.brilho, som });
     ouvidoMs += duracaoS * 1000;
   }
 
@@ -66,9 +68,16 @@ export async function varrerNoite({
   const fps = FPS;
   const comprimento = Math.round(((ateMs - deMs) / 1000) * fps);
   const tudo = new Float32Array(Math.max(0, comprimento));
-  for (const { t, env } of partes) {
+  // O brilho anda ao lado da energia e nao dentro dela: e uma razao entre duas
+  // bandas do mesmo instante, e por isso nao se soma nem se cola — copia-se
+  // para o mesmo sitio do relogio, bloco a bloco.
+  const brilhos = new Float32Array(Math.max(0, comprimento));
+  for (const { t, env, brilho } of partes) {
     const o = Math.round(((t - deMs) / 1000) * fps);
-    for (let i = 0; i < env.length && o + i < tudo.length; i++) tudo[o + i] = env[i];
+    for (let i = 0; i < env.length && o + i < tudo.length; i++) {
+      tudo[o + i] = env[i];
+      brilhos[o + i] = brilho[i];
+    }
   }
 
   // O chao e da NOITE INTEIRA e nao de cada bocado: senao um bocado calado
@@ -79,10 +88,11 @@ export async function varrerNoite({
   // kill que ele confirme. Sao 60 ms cada um: uma noite inteira cabe em
   // dezenas de megas, e sem isto aprender obrigava a baixar a noite outra vez.
   const estouros = [];
-  for (const { t, env, som } of partes) {
+  for (const parte of partes) {
+    const { t, env, som } = parte;
     if (!som) continue;
     const piso2 = piso;
-    for (const im of impulsos(env, piso2, opcoes)) {
+    for (const im of impulsos(env, piso2, { brilhos: parte.brilho, ...opcoes })) {
       const recorte = recortar(som, taxaSom, im.bloco / FPS);
       if (recorte) estouros.push({ ms: Math.round(t + (im.bloco / FPS) * 1000), altura: im.altura, recorte });
     }
@@ -96,7 +106,7 @@ export async function varrerNoite({
   // o som mais alto do jogo. Quinze por hora e o que ele consegue rever.
   const { porHora = 15 } = opcoes;
   const limite = Math.max(1, Math.round((porHora * (ateMs - deMs)) / 3_600_000));
-  const achadas = lutas(impulsos(tudo, piso, opcoes), opcoes).slice(0, limite);
+  const achadas = lutas(impulsos(tudo, piso, { brilhos, ...opcoes }), opcoes).slice(0, limite);
   return {
     candidatos: achadas.map((g) => ({
       ms: Math.round(deMs + g.inicioS * 1000),

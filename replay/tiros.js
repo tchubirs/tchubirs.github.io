@@ -47,21 +47,78 @@ export const FPS = 1000 / BLOCO_MS;
  * por tiro.
  */
 export function energia(amostras, taxa = TAXA_TIROS) {
+  return medir(amostras, taxa).energia;
+}
+
+// O brilho: quantos POLOS de cada lado. Um so nao chega — medido no som
+// verdadeiro dele, um polo separa a voz do estouro por 2,5x, dois por 4,1x e
+// tres por 6,1x. Tres e onde a folga passa a ser larga dos dois lados.
+// Onde fica a fronteira. Medido no clipe verdadeiro dele: as onze silabas que
+// o detector achou que eram tiros deram no maximo 0,038 de brilho, e a mediana
+// de todo o clipe deu 0,016. Um estouro de banda larga da 0,23 no minimo. O
+// limite fica a 0,10 — dois vezes e meia acima do pior caso da voz dele, e
+// duas vezes e pouco abaixo do melhor caso de um estouro.
+export const BRILHO_MIN = 0.10;
+
+const POLOS = 3;
+const CORTE_AGUDO = 4000;
+const CORTE_GRAVE = 1500;
+
+/**
+ * A energia aguda por bloco, e o BRILHO de cada bloco ao lado dela.
+ *
+ * O brilho e agudo a dividir por grave, e existe por causa de um clipe que ele
+ * mandou. Nele, o detector via onze "tiros" em dez segundos e ele nao tinha
+ * disparado nenhum: eram SILABAS. Medido, um a um, esses onze tinham entre
+ * 0,000 e 0,35 da energia acima de 4 kHz que tinham abaixo de 1,5 kHz — quase
+ * tudo grave, que e onde uma voz vive. Um estouro de banda larga da 5 a 6.
+ *
+ * O passa-alto de um polo a 2 kHz que ja ca estava atenua os 500 Hz em apenas
+ * 12 dB. Um "p" ou um "t" dito ao microfone, depois de uma pausa, sobe mais do
+ * que isso — e passava nas duas condicoes de uma vez, porque as duas sao
+ * RAZOES e uma razao nao muda quando se atenua os dois lados por igual. Era
+ * por isso que subir o corte sozinho nao resolvia nada.
+ *
+ * O brilho nao e uma razao contra o passado nem contra o chao: e uma razao
+ * entre duas bandas do MESMO instante. Nao ha maneira de a voz a enganar.
+ */
+export function medir(amostras, taxa = TAXA_TIROS) {
   const bl = Math.max(1, Math.round((taxa * BLOCO_MS) / 1000));
   const n = Math.floor(amostras.length / bl);
   const saida = new Float32Array(n);
+  const brilhos = new Float32Array(n);
   const a = Math.exp((-2 * Math.PI * 2000) / taxa);
+  const aA = Math.exp((-2 * Math.PI * CORTE_AGUDO) / taxa);
+  const aG = Math.exp((-2 * Math.PI * CORTE_GRAVE) / taxa);
   let media = 0;
+  const mA = new Float64Array(POLOS);
+  const mG = new Float64Array(POLOS);
   for (let b = 0; b < n; b++) {
     let soma = 0;
+    let somaA = 0;
+    let somaG = 0;
     for (let i = b * bl; i < (b + 1) * bl; i++) {
-      media = a * media + (1 - a) * amostras[i];
-      const alto = amostras[i] - media;
+      const x = amostras[i];
+      media = a * media + (1 - a) * x;
+      const alto = x - media;
       soma += alto * alto;
+
+      // Tres passa-altos em cadeia de um lado, tres passa-baixos do outro.
+      let vA = x;
+      let vG = x;
+      for (let p = 0; p < POLOS; p++) {
+        mA[p] = aA * mA[p] + (1 - aA) * vA;
+        vA -= mA[p];
+        mG[p] = aG * mG[p] + (1 - aG) * vG;
+        vG = mG[p];
+      }
+      somaA += vA * vA;
+      somaG += vG * vG;
     }
     saida[b] = Math.sqrt(soma / bl);
+    brilhos[b] = Math.sqrt(somaA / bl) / (Math.sqrt(somaG / bl) + 1e-12);
   }
-  return saida;
+  return { energia: saida, brilho: brilhos };
 }
 
 /**
@@ -95,14 +152,19 @@ export function chao(blocos) {
  *   Medido em som feito de proposito: a fala nunca passa dos 4,3x e um tiro
  *   passa dos 180x. Seis deixa uma folga larga dos dois lados.
  */
-export function impulsos(blocos, piso, { alturaMin = 8, saltoMin = 6 } = {}) {
+export function impulsos(blocos, piso, {
+  alturaMin = 8, saltoMin = 6, brilhos = null, brilhoMin = BRILHO_MIN,
+} = {}) {
   const saida = [];
   if (!piso) return saida;
   for (let b = 1; b < blocos.length; b++) {
     const altura = blocos[b] / piso;
     if (altura < alturaMin) continue;
     if (blocos[b] / (blocos[b - 1] + 1e-9) < saltoMin) continue;
-    saida.push({ bloco: b, altura });
+    // O terceiro: ser de banda larga. Sem isto, onze silabas do clipe que ele
+    // mandou passavam as duas primeiras e viravam um tiroteio.
+    if (brilhos && brilhos[b] < brilhoMin) continue;
+    saida.push({ bloco: b, altura, brilho: brilhos ? brilhos[b] : null });
   }
   return saida;
 }
@@ -154,7 +216,7 @@ export function lutas(imps, { minTiros = 4, juntarS = 14, maxLutaS = 90 } = {}) 
 
 /** Tudo junto: de amostras a lutas, ordenadas. */
 export function procurarTiros(amostras, { taxa = TAXA_TIROS, ...opcoes } = {}) {
-  const blocos = energia(amostras, taxa);
+  const { energia: blocos, brilho: brilhos } = medir(amostras, taxa);
   const piso = chao(blocos);
-  return lutas(impulsos(blocos, piso, opcoes), opcoes);
+  return lutas(impulsos(blocos, piso, { brilhos, ...opcoes }), opcoes);
 }

@@ -5,34 +5,34 @@
 // bottom rung of Kick's ladder and is what makes thirty tiles a home-connection
 // problem rather than a server problem.
 
-import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=d9b44fa5e1';
+import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=ca64868580';
 import {
   linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo,
-} from './relogio.js?v=d9b44fa5e1';
-import { cortarTodosOsAngulos } from './baixar.js?v=d9b44fa5e1';
-import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=d9b44fa5e1';
-import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=d9b44fa5e1';
-import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=d9b44fa5e1';
+} from './relogio.js?v=ca64868580';
+import { cortarTodosOsAngulos } from './baixar.js?v=ca64868580';
+import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=ca64868580';
+import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=ca64868580';
+import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=ca64868580';
 import {
   RETRATO, enquadramentoInicial, limitar, desenhar, gravar, formatoQueFunciona, extensaoDe,
   reformar, limparDivisao, DIVISAO_OMISSAO,
-} from './retrato.js?v=d9b44fa5e1';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=d9b44fa5e1';
+} from './retrato.js?v=ca64868580';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=ca64868580';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
   alternarVitima, filtrar, temMorte, clipesDoMomento,
-} from './momentos.js?v=d9b44fa5e1';
-import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=d9b44fa5e1';
-import { criarZip, crc32 } from './zip.js?v=d9b44fa5e1';
-import { queFazerComOLeitor } from './leitor.js?v=d9b44fa5e1';
-import { criarApanhador } from './frames.js?v=d9b44fa5e1';
-import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=d9b44fa5e1';
-import { TAXA_TIROS } from './tiros.js?v=d9b44fa5e1';
-import { parecidos, juntarPerto } from './aprender.js?v=d9b44fa5e1';
-import { somDoCanal } from './alinhar.js?v=d9b44fa5e1';
-import { MAXIMO_S, mover, janelaInicial, nomeDoClipe } from './clipe.js?v=d9b44fa5e1';
-import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=d9b44fa5e1';
-import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=d9b44fa5e1';
+} from './momentos.js?v=ca64868580';
+import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=ca64868580';
+import { criarZip, crc32 } from './zip.js?v=ca64868580';
+import { queFazerComOLeitor } from './leitor.js?v=ca64868580';
+import { criarApanhador } from './frames.js?v=ca64868580';
+import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=ca64868580';
+import { TAXA_TIROS } from './tiros.js?v=ca64868580';
+import { parecidos, juntarPerto } from './aprender.js?v=ca64868580';
+import { somDoCanal } from './alinhar.js?v=ca64868580';
+import { MAXIMO_S, mover, janelaInicial, nomeDoClipe } from './clipe.js?v=ca64868580';
+import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=ca64868580';
+import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=ca64868580';
 
 const $ = (id) => document.getElementById(id);
 const estado = {
@@ -1366,7 +1366,7 @@ async function procurarKills() {
   if (!(ateMs > deMs)) return;
 
   const mb = custoVarrerMB(ateMs - deMs);
-  if (!confirm(t('auto.custo', { min: Math.round((ateMs - deMs) / 60000), mb }))) return;
+  if (!confirm(t('auto.custo', { min: Math.round((ateMs - deMs) / 60000), mb, canal }))) return;
 
   const controlo = new AbortController();
   estado.cancelar = () => controlo.abort();
@@ -1383,13 +1383,13 @@ async function procurarKills() {
       lerSom: (l, quandoMs, duracaoS, opcoes) => somDoCanal(l, quandoMs, duracaoS, { ...opcoes, taxa: TAXA_TIROS }),
       aoProgresso: (p) => {
         nota.textContent = t('auto.aOuvir', {
-          feito: p.feito, total: p.total, mb: (p.bytes / 1048576).toFixed(0),
+          feito: p.feito, total: p.total, mb: (p.bytes / 1048576).toFixed(0), canal,
         });
       },
     });
 
     estado.estouros = r.estouros || [];
-    if (!r.candidatos.length) { nota.textContent = t('auto.nenhum'); return; }
+    if (!r.candidatos.length) { nota.textContent = t('auto.nenhum', { canal }); return; }
 
     for (const c of r.candidatos) {
       estado.momentos = acrescentar(
@@ -1415,7 +1415,7 @@ async function procurarKills() {
       if (houve) comMorte++;
     }
 
-    nota.textContent = t('auto.achei', { n: r.candidatos.length })
+    nota.textContent = t('auto.achei', { n: r.candidatos.length, canal })
       + (comMorte ? t('auto.comMorte', { n: comMorte }) : '');
     pintarMomentos();
     guardar();
