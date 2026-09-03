@@ -954,3 +954,19 @@ button, select, input[type="text"], input[type="search"], input[type="number"] {
 .ordemGrelha[aria-pressed="true"] {
   border-color: var(--acento); color: var(--acento); background: var(--acento-fraco);
 }
+
+/* O aviso que se pode carregar. Nasce com ar de aviso e não de botão
+   principal — só aparece quando alguma coisa não veio, e a acção que oferece
+   é "tentar outra vez", não "avançar". */
+.semPrevia {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-size: var(--t-nota);
+  color: var(--marcador);
+  background: var(--marcador-fraco);
+  border: 1px solid var(--marcador);
+  border-radius: 8px;
+  padding: 10px 12px;
+  min-height: 44px;
+}

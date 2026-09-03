@@ -2103,35 +2103,85 @@ function abrirClipe() {
  * calculado a partir de zero é uma caixa de zero pixels que não se vê nem se
  * arrasta — o utilizador via um editor vazio e concluía que estava avariado.
  */
+/**
+ * O tamanho da imagem de origem.
+ *
+ * O `<video>` é a verdade — mas só depois de ter metadados, e num iPhone isso
+ * pode demorar ou não acontecer de todo. Foi o que ele viu: a janela abria, o
+ * lado do 9:16 nunca aparecia, e o botão de exportar ficava apagado com um
+ * aviso a dizer para esperar. "Onde está a opção onde eu seleciono onde está
+ * a minha webcam, onde está a minha tela? Porque esse botão não dá para
+ * clicar."
+ *
+ * Não precisava de esperar por byte nenhum. O manifesto HLS já traz
+ * `RESOLUTION=` de cada qualidade, e é exactamente o mesmo número que o vídeo
+ * vai dar. Por isso o editor abre com o do manifesto e troca para o do vídeo
+ * assim que ele chegar: um editor que aparece já vale mais do que um certo que
+ * ninguém vê.
+ *
+ * @returns {{largura: number, altura: number}|null}
+ */
+function fonteDoClipe() {
+  const v = $('previaClipe');
+  if (v.videoWidth > 0) return { largura: v.videoWidth, altura: v.videoHeight };
+  const c = estado.clipe;
+  if (c?.fonteW > 0 && c?.fonteH > 0) return { largura: c.fonteW, altura: c.fonteH };
+  return null;
+}
+
 function prepararRetrato() {
   const v = $('previaClipe');
   const ligar = () => {
     const c = estado.clipe;
-    if (!c || !(v.videoWidth > 0)) return;
-    c.rects = enquadramentoInicial(v.videoWidth, v.videoHeight, c.modo, c.divisao);
+    const fonte = fonteDoClipe();
+    if (!c || !fonte) return;
+    // Só a primeira vez: um `loadedmetadata` a chegar depois do manifesto não
+    // pode atirar fora os enquadramentos que ele já arrastou.
+    if (!c.rects.length) {
+      c.rects = enquadramentoInicial(fonte.largura, fonte.altura, c.modo, c.divisao);
+    }
     $('ladoRetrato').hidden = false;
     $('recortes').hidden = false;
-    $('semRetrato').hidden = true;
-    $('guardarRetrato').disabled = false;
-    clearTimeout(estado.esperaRetrato);
     pintarRecortes();
     pintarDivisor();
     seguirRetrato();
   };
+  // O EXPORTAR é outra coisa: reconverte a partir da imagem, e para isso o
+  // vídeo tem mesmo de ter frames. O editor abre com o manifesto; o botão só
+  // acende quando há imagem.
+  const acenderExportar = () => {
+    const temImagem = v.readyState >= 2;
+    $('guardarRetrato').disabled = !(temImagem && estado.clipe?.rects.length);
+    // O aviso é sobre a IMAGEM, e não sobre o editor. Se o editor abrisse a
+    // calar o aviso, voltávamos ao botão apagado sem explicação — que foi a
+    // queixa dele da vez passada.
+    if (temImagem) { $('semRetrato').hidden = true; clearTimeout(estado.esperaRetrato); }
+  };
+  v.removeEventListener('loadeddata', estado.ouvinteFrames || (() => {}));
+  estado.ouvinteFrames = () => { ligar(); acenderExportar(); };
+  v.addEventListener('loadeddata', estado.ouvinteFrames);
   // Substituir e não acumular: o modal abre muitas vezes por sessão, e cada
   // abertura deixava mais um ouvinte pendurado no mesmo `<video>`.
   v.removeEventListener('loadedmetadata', estado.ouvinteRetrato || (() => {}));
   estado.ouvinteRetrato = ligar;
-  v.addEventListener('loadedmetadata', ligar);
-  if (v.videoWidth > 0) ligar();
+  v.addEventListener('loadedmetadata', () => { ligar(); acenderExportar(); });
+  ligar();
+  acenderExportar();
 
   // E se não carregar, dizer. Um botão apagado sem explicação é a mesma coisa
   // que um botão que não faz nada: a pessoa fica sem saber se se enganou.
   clearTimeout(estado.esperaRetrato);
   estado.esperaRetrato = setTimeout(() => {
-    if (!estado.clipe || estado.clipe.rects.length) return;
+    // A guarda é sobre a IMAGEM. Era sobre os enquadramentos, e desde que eles
+    // passaram a nascer do manifesto isso queria dizer "cala-te sempre".
+    if (!estado.clipe || v.readyState >= 2) return;
     $('semRetrato').textContent = t('retrato.semPrevia');
     $('semRetrato').hidden = false;
+    $('semRetrato').onclick = () => {
+      const video = $('previaClipe');
+      video.load?.();
+      preverClipe(estado.clipe?.deMs ?? 0);
+    };
   }, 6000);
 }
 
@@ -2140,10 +2190,11 @@ function pintarRecortes() {
   const c = estado.clipe;
   const v = $('previaClipe');
   const alvo = $('recortes');
-  if (!c || !(v.videoWidth > 0)) return;
+  const fonte = fonteDoClipe();
+  if (!c || !fonte) return;
   alvo.innerHTML = c.rects.map((r, i) => `<div class="recorte" data-i="${i}" style="`
-    + `left:${(r.x / v.videoWidth) * 100}%;top:${(r.y / v.videoHeight) * 100}%;`
-    + `width:${(r.largura / v.videoWidth) * 100}%;height:${(r.altura / v.videoHeight) * 100}%">`
+    + `left:${(r.x / fonte.largura) * 100}%;top:${(r.y / fonte.altura) * 100}%;`
+    + `width:${(r.largura / fonte.largura) * 100}%;height:${(r.altura / fonte.altura) * 100}%">`
     + (c.rects.length > 1 ? `<b class="ordem">${i === 0 ? '1' : '2'}</b>` : '')
     + '<span class="puxar"></span></div>').join('');
   for (const caixa of alvo.querySelectorAll('.recorte')) ligarArrasto(caixa);
@@ -2161,14 +2212,15 @@ function ligarArrasto(caixa) {
   const i = Number(caixa.dataset.i);
   const emPixels = (e) => {
     const cx = $('fonteClipe').getBoundingClientRect();
-    return { escala: v.videoWidth / cx.width, x: e.clientX, y: e.clientY };
+    return { escala: (fonteDoClipe()?.largura || cx.width) / cx.width, x: e.clientX, y: e.clientY };
   };
   const comecar = (e, redimensionar) => {
     e.preventDefault();
     e.stopPropagation();
     const p0 = emPixels(e);
     const r0 = { ...estado.clipe.rects[i] };
-    const fonte = { largura: v.videoWidth, altura: v.videoHeight };
+    const fonte = fonteDoClipe();
+      if (!fonte) return;
     const mover = (m) => {
       const dx = (m.clientX - p0.x) * p0.escala;
       const dy = (m.clientY - p0.y) * p0.escala;
@@ -2229,12 +2281,12 @@ function ligarDivisor() {
   const aplicar = (d) => {
     const c = estado.clipe;
     const v = $('previaClipe');
-    if (!c || !(v.videoWidth > 0)) return;
+    if (!c || !fonteDoClipe()) return;
     c.divisao = limparDivisao(d);
     c.rects = reformar(c.rects, {
       modo: c.modo,
       divisao: c.divisao,
-      fonte: { largura: v.videoWidth, altura: v.videoHeight },
+      fonte: fonteDoClipe(),
     });
     pintarRecortes();
     pintarDivisor();
@@ -2277,10 +2329,11 @@ function seguirRetrato() {
 function trocarModo(modo) {
   const c = estado.clipe;
   const v = $('previaClipe');
-  if (!c || !(v.videoWidth > 0)) return;
+  const fonte = fonteDoClipe();
+  if (!c || !fonte) return;
   c.modo = modo;
   c.divisao = DIVISAO_OMISSAO;
-  c.rects = enquadramentoInicial(v.videoWidth, v.videoHeight, modo, c.divisao);
+  c.rects = enquadramentoInicial(fonte.largura, fonte.altura, modo, c.divisao);
   for (const b of document.querySelectorAll('.modoRetrato')) {
     b.setAttribute('aria-pressed', String(b.dataset.modo === modo));
   }
@@ -2392,6 +2445,9 @@ function preverClipe(quandoMs) {
   if (r.estado !== 'toca') { v.pause?.(); return; }
   const peca = linha.pecasCompletas?.find((p) => p.vod.id === r.peca.vod.id) || r.peca;
   const alvo = peca.escada[0] || peca.barato;
+  // O tamanho vem do manifesto e não do vídeo: é o mesmo número, e chega
+  // meia noite mais cedo. Sem isto o editor do 9:16 esperava por bytes.
+  if (alvo.largura > 0 && alvo.altura > 0) { c.fonteW = alvo.largura; c.fonteH = alvo.altura; }
   if (c.url !== alvo.url) {
     c.hls?.destroy();
     c.url = alvo.url;
@@ -2403,6 +2459,26 @@ function preverClipe(quandoMs) {
     } else { v.src = alvo.url; }
   }
   if (Math.abs(v.currentTime - r.tempoS) > 0.3) v.currentTime = r.tempoS;
+  acordarPrevia();
+}
+
+/**
+ * Um empurrão para o iPhone.
+ *
+ * Um `<video>` que nunca toca pode ficar sem carregar nada — no iOS o
+ * `preload` é uma sugestão, e em poupança de energia é ignorado de vez. A
+ * prévia aqui nunca toca (serve para mostrar um frame de cada vez), e por isso
+ * ficava vazia: nem metadados, nem imagem, nem botão de exportar aceso.
+ *
+ * Um `play()` calado é permitido em qualquer lado, e um `pause()` logo a
+ * seguir deixa tudo como estava — mas o browser já carregou. Não se faz se ele
+ * estiver mesmo a ver o clipe: aí a pausa tirava-lhe o vídeo da frente.
+ */
+function acordarPrevia() {
+  const v = $('previaClipe');
+  if (estado.clipe?.aVer || v.readyState >= 2) return;
+  const p = v.play?.();
+  p?.then?.(() => { if (!estado.clipe?.aVer) v.pause?.(); })?.catch?.(() => {});
 }
 
 /**

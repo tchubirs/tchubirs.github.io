@@ -2042,6 +2042,61 @@ test('cada ponta tem as suas setas, e a imagem vai para onde a ponta foi',
     await p.close();
   });
 
+// "Onde está a opção onde eu seleciono onde está a minha webcam, onde está a
+//  minha tela? Os tamanhos, os quadrados. Porque esse botão não dá para
+//  clicar."
+//
+// No iPhone dele o lado do 9:16 nunca aparecia: o editor esperava por
+// `videoWidth`, e um `<video>` que nunca toca pode não carregar nada — no iOS
+// o `preload` é uma sugestão e em poupança de energia é ignorado. Ficava um
+// aviso a dizer para esperar e um botão apagado.
+//
+// Não era preciso esperar por byte nenhum: o manifesto HLS traz `RESOLUTION=`.
+// Este teste finge exactamente o que ele viu — um vídeo sem metadados — e o
+// editor tem de aparecer na mesma.
+test('o editor do 9:16 aparece mesmo sem o vídeo ter carregado',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 20000 });
+
+    // O iPhone dele, reproduzido: a prévia nunca ganha tamanho.
+    await p.evaluate(() => {
+      const v = document.getElementById('previaClipe');
+      Object.defineProperty(v, 'videoWidth', { get: () => 0, configurable: true });
+      Object.defineProperty(v, 'videoHeight', { get: () => 0, configurable: true });
+    });
+
+    await p.click('#clipar');
+    await p.waitForSelector('#modalClipe:not([hidden])', { timeout: 10000 });
+
+    const r = await p.evaluate(() => ({
+      editor: !document.getElementById('ladoRetrato').hidden,
+      caixas: document.querySelectorAll('.recorte').length,
+      modos: document.querySelectorAll('.modoRetrato').length,
+      largura: document.querySelector('.recorte')?.style.width || '',
+    }));
+    assert.equal(r.editor, true, 'o lado do 9:16 tinha de estar visível');
+    assert.ok(r.caixas >= 1, `nenhum quadrado de enquadramento (${r.caixas})`);
+    assert.equal(r.modos, 2, 'faltam os botões de um ou dois enquadramentos');
+    // 1920x1080 do manifesto falso: um 9:16 dentro disso tem 1080*9/16 = 608
+    // px de largura, ou seja 31,6% dos 1920. Se viesse de outro sítio o número
+    // era outro — é isto que prova que o tamanho veio do manifesto.
+    assert.match(r.largura, /^31\.[0-9]+%$/, `o quadrado ficou com ${r.largura}`);
+
+    // Escolher dois enquadramentos — webcam em cima, jogo em baixo — também
+    // não pode depender do vídeo.
+    await p.click('#modoDois');
+    assert.equal(await p.evaluate(() => document.querySelectorAll('.recorte').length), 2,
+      'no modo de dois têm de aparecer dois quadrados');
+
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
 // "Não tem um botão de play lá dentro para estar a ver o clipe pronto como
 //  está." O ▶ toca só o pedaço escolhido: liga o som, pára a grelha por trás
 // para não haver dois sons ao mesmo tempo, e volta atrás quando acaba.
@@ -2173,7 +2228,7 @@ test('todas as mensagens de erro dizem o próximo passo', async () => {
     if (!/erro|falh|não deu|nenhum|sem |não consegui|inválido|passa dos/i.test(frase)) continue;
     if (fragmentos.has(chave)) continue;
     // Um próximo passo é um verbo no imperativo: "tenta", "escolhe", "abre"…
-    if (!/\b(tenta|escolhe|abre|usa|move|encurta|guarda|confere|escreve|verifica|alinha|marca|corre|espera|sincroniza|desliga|recarrega|carrega|vai)\b/i.test(frase)) {
+    if (!/\b(tenta|escolhe|abre|usa|move|encurta|guarda|confere|escreve|verifica|alinha|marca|corre|espera|sincroniza|desliga|recarrega|carrega|toca|vai)\b/i.test(frase)) {
       curtas.push(chave);
     }
   }
