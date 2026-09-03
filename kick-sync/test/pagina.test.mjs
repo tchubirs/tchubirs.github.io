@@ -2046,6 +2046,37 @@ test('cada ponta tem as suas setas, e a imagem vai para onde a ponta foi',
     await p.close();
   });
 
+// O orçamento: a página não pode abanar depois de aparecer.
+//
+// Medido antes de existir esta regra: 0,049 num telemóvel, aos 12,5 s — o
+// momento em que a Rajdhani chega da rede. A fonte nova é mais larga do que a
+// de reserva, o `<h1>` cresce, o selector de idioma deixava de caber e caía
+// para a linha de baixo, e tudo o que vinha a seguir descia 44 px de uma vez —
+// com a página já a ser lida.
+//
+// `npm run velocidade` dá o quadro todo (LCP, TBT, bytes, quem salta). Isto
+// aqui é só o portão: um número que não pode voltar a subir sem alguém dar por
+// isso.
+test('a página não salta depois de aparecer',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir({ ecra: { width: 390, height: 844 } });
+    await kickFalsa(p, { canais: ['tchubi'] });
+    await p.addInitScript(`
+      window.__cls = 0;
+      new PerformanceObserver((l) => {
+        for (const e of l.getEntries()) if (!e.hadRecentInput) window.__cls += e.value;
+      }).observe({ type: 'layout-shift', buffered: true });
+    `);
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'load' });
+    // As fontes chegam tarde, e é tarde que o salto acontecia. Sem esta espera
+    // o teste media a página antes do momento que ele viu.
+    await p.waitForTimeout(2500);
+    const cls = await p.evaluate(() => window.__cls);
+    assert.ok(cls < 0.02, `a página saltou ${cls.toFixed(3)} (o limite é 0,020)`);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
 // "Destaca o botão Clipar. E bota na mesma linha os botões de marcar início e
 //  marcar final. Fica estranho, uma linha de cima, uma linha de baixo."
 //
