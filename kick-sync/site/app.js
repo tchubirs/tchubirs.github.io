@@ -2848,8 +2848,11 @@ for (const [id, qual, delta] of [
 ]) {
   $(id).onclick = (e) => {
     if (!estado.clipe) return;
-    // Shift afina: 0,2 s. Um segundo acha o sítio, dois décimos apuram-no.
-    const passo = delta * (e.shiftKey ? 200 : 1000);
+    // Meio segundo, e não um. "Fiz o teste, às vezes um segundo passa do ponto
+    // que eu quero" — e passa mesmo: entre o disparo e a morte cabem menos de
+    // dois segundos, e um passo de um segundo salta metade disso de uma vez.
+    // Com Shift são 0,1 s, que é onde ele acaba de apurar.
+    const passo = delta * (e.shiftKey ? 100 : 500);
     const agora = qual === 'de' ? estado.clipe.deMs : estado.clipe.ateMs;
     Object.assign(estado.clipe, mover(estado.clipe, qual, agora + passo,
       { limites: estado.clipe.limites }));

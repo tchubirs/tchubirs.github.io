@@ -2005,8 +2005,9 @@ test('cada ponta tem as suas setas, e a imagem vai para onde a ponta foi',
 
     const ler = () => p.evaluate(() => {
       const pos = (sel) => parseFloat(document.querySelector(sel).style.left) || 0;
+      const m = document.getElementById('tempoClipe').textContent.match(/([\d.]+)s de/);
       return {
-        texto: document.getElementById('tempoClipe').textContent,
+        dur: Number(m?.[1]),
         de: pos('#barraClipe .pega.de'),
         ate: pos('#barraClipe .pega.ate'),
         cabeca: pos('#barraClipe .cabeca'),
@@ -2017,6 +2018,9 @@ test('cada ponta tem as suas setas, e a imagem vai para onde a ponta foi',
     await p.click('#fimMais');
     const depoisFim = await ler();
     assert.ok(depoisFim.ate > antes.ate, 'o fim tinha de andar para a frente');
+    // "Fiz o teste, às vezes um segundo passa do ponto que eu quero."
+    assert.equal(Number((depoisFim.dur - antes.dur).toFixed(1)), 0.5,
+      `o passo devia ser meio segundo e andou ${(depoisFim.dur - antes.dur).toFixed(2)}s`);
     assert.ok(Math.abs(depoisFim.de - antes.de) < 0.01, 'o início não se mexeu do sítio');
     assert.ok(Math.abs(depoisFim.cabeca - depoisFim.ate) < 0.5,
       `a imagem ficou em ${depoisFim.cabeca}% e o fim está em ${depoisFim.ate}%`);
@@ -2034,9 +2038,43 @@ test('cada ponta tem as suas setas, e a imagem vai para onde a ponta foi',
     await p.click('#fimMais', { modifiers: ['Shift'] });
     const fino = await ler();
     assert.ok(fino.ate > depoisInicio.ate, 'com Shift também tem de andar');
-    assert.ok((fino.ate - depoisInicio.ate) < (depoisFim.ate - antes.ate) / 2,
-      'com Shift o passo tinha de ser bem menor do que um segundo');
+    assert.equal(Number((fino.dur - depoisInicio.dur).toFixed(1)), 0.1,
+      `com Shift o passo devia ser 0,1 s e andou ${(fino.dur - depoisInicio.dur).toFixed(2)}s`);
     assert.ok(fino.ate - fino.de > largo, 'e o clipe fica mais comprido, não mais curto');
+
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+// "Destaca o botão Clipar. E bota na mesma linha os botões de marcar início e
+//  marcar final. Fica estranho, uma linha de cima, uma linha de baixo."
+//
+// Os três estavam na mesma linha flex, com o mesmo peso, e num telemóvel isso
+// parte onde couber: o Clipar ficava numa fila e os dois de marcar noutra, sem
+// nada a dizer qual era o botão que termina a tarefa.
+test('o Clipar destaca-se e os dois de marcar ficam lado a lado',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir({ ecra: { width: 390, height: 844 } });
+    await kickFalsa(p, { canais: ['tchubi'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 20000 });
+
+    const [inicio, fim] = await Promise.all([
+      p.locator('#marcarIn').boundingBox(), p.locator('#marcarOut').boundingBox(),
+    ]);
+    assert.ok(Math.abs(inicio.y - fim.y) < 6,
+      `marcar entrada em y=${inicio.y} e marcar saída em y=${fim.y}`);
+    assert.ok(fim.x > inicio.x, 'o de saída fica à direita do de entrada');
+
+    // Destacado quer dizer com a cor do acento, e não igual aos outros.
+    const cores = await p.evaluate(() => {
+      const cor = (id) => getComputedStyle(document.getElementById(id)).backgroundColor;
+      return { clipar: cor('clipar'), marcar: cor('marcarIn') };
+    });
+    assert.notEqual(cores.clipar, cores.marcar,
+      'o Clipar tem de se distinguir dos outros dois');
 
     assert.deepEqual(erros, []);
     await p.close();

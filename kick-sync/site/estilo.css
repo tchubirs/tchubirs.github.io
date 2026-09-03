@@ -699,23 +699,28 @@ footer { margin-top: 32px; border-top: 1px solid var(--borda); padding-top: 12px
    Uma grelha e não duas linhas soltas — assim o "Início" e o "Fim" ficam
    alinhados um por cima do outro, e o ▶ ocupa a altura dos dois porque toca
    o pedaço INTEIRO, e não uma das pontas. */
+/* "Eles estão exageradamente grandes, pelo menos no celular." Estavam: as
+   colunas eram `1fr` e num telemóvel isso dá dois botões de 270 px para uma
+   seta de meio segundo. Agora têm largura de botão e não de painel, e a linha
+   encosta à esquerda em vez de se esticar. */
 .aparar {
   display: grid;
-  grid-template-columns: auto minmax(44px, 1fr) minmax(44px, 1fr) minmax(52px, 0.8fr);
+  grid-template-columns: auto 56px 56px 56px;
+  justify-content: start;
   gap: 8px;
   align-items: stretch;
   margin-top: 8px;
 }
 .aparar .rotuloCampo { align-self: center; margin: 0; }
 .aparar .passo {
-  padding: 10px 4px;
-  font-size: var(--t-base);
+  padding: 8px 0;
+  font-size: var(--t-nota);
   min-height: 44px;
 }
 .aparar .ver {
   grid-row: 1 / span 2;
   grid-column: 4;
-  font-size: 20px;
+  font-size: 18px;
   background: var(--acento);
   color: var(--sobre-acento);
   border-color: transparent;
@@ -970,3 +975,13 @@ button, select, input[type="text"], input[type="search"], input[type="number"] {
   padding: 10px 12px;
   min-height: 44px;
 }
+
+/* Marcar entrada e marcar saída: duas colunas iguais, sempre na mesma linha.
+   Numa linha flex partiam-se uma por cima da outra num ecrã estreito. */
+.marcas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+.marcas button { padding: 10px 6px; white-space: nowrap; }
