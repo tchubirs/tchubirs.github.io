@@ -21,7 +21,7 @@
 import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import {
-  TAXA_TIROS, BLOCO_MS, FPS, energia, chao, impulsos, lutas,
+  TAXA_TIROS, BLOCO_MS, FPS, medir, chao, impulsos, lutas, BRILHO_MIN,
 } from '../site/tiros.js';
 
 /** ffmpeg a despir o ficheiro: mono, 24 kHz, float cru. */
@@ -69,11 +69,12 @@ if (!amostras.length) {
   process.exit(0);
 }
 
-const blocos = energia(amostras, TAXA_TIROS);
+const { energia: blocos, brilho: brilhos } = medir(amostras, TAXA_TIROS);
 const doClipe = chao(blocos);
 const piso = arg('chao', doClipe);
 const alturaMin = arg('altura', 8);
 const saltoMin = arg('salto', 6);
+const brilhoMin = arg('brilho', BRILHO_MIN);
 
 const orden = Float32Array.from(blocos).sort();
 const pct = (p) => orden[Math.min(orden.length - 1, Math.floor(orden.length * p))];
@@ -83,12 +84,27 @@ console.log(`percentis  p10 ${pct(0.1).toExponential(2)}  p50 ${pct(0.5).toExpon
   + `  p90 ${pct(0.9).toExponential(2)}  máx ${orden[orden.length - 1].toExponential(2)}`);
 console.log(`o mais alto do clipe está a ${(orden[orden.length - 1] / piso).toFixed(1)}x do chão`);
 
-const imps = impulsos(blocos, piso, { alturaMin, saltoMin });
-console.log(`\nimpulsos   ${imps.length}  (alto ≥${alturaMin}x o chão E salto ≥${saltoMin}x em 2 ms)`);
+// Sem o brilho — para se ver o que a terceira condição está a apanhar.
+const semBrilho = impulsos(blocos, piso, { alturaMin, saltoMin });
+const imps = impulsos(blocos, piso, {
+  alturaMin, saltoMin, brilhos, brilhoMin,
+});
+console.log(`\nimpulsos   ${imps.length}  (alto ≥${alturaMin}x o chão, salto ≥${saltoMin}x em 2 ms,`
+  + ` brilho ≥${brilhoMin})`);
 for (const i of imps.slice(0, 60)) {
-  console.log(`  ${relogio(i.bloco / FPS)}   ${i.altura.toFixed(1)}x`);
+  console.log(`  ${relogio(i.bloco / FPS)}   ${i.altura.toFixed(1)}x   brilho ${i.brilho.toFixed(3)}`);
 }
 if (imps.length > 60) console.log(`  … e mais ${imps.length - 60}`);
+
+const chumbados = semBrilho.filter((i) => brilhos[i.bloco] < brilhoMin);
+if (chumbados.length) {
+  console.log(`\nchumbados pelo brilho   ${chumbados.length}`
+    + `  (passavam a altura e o salto, mas são graves demais — voz, passos, um baque)`);
+  for (const i of chumbados.slice(0, 20)) {
+    console.log(`  ${relogio(i.bloco / FPS)}   ${i.altura.toFixed(1)}x   brilho ${brilhos[i.bloco].toFixed(3)}`);
+  }
+  if (chumbados.length > 20) console.log(`  … e mais ${chumbados.length - 20}`);
+}
 
 const gs = lutas(imps, { minTiros: 4, juntarS: 14, maxLutaS: 90 });
 console.log(`\nlutas      ${gs.length}  (≥4 impulsos a ≤14 s uns dos outros)`);

@@ -1366,7 +1366,7 @@ async function procurarKills() {
   if (!(ateMs > deMs)) return;
 
   const mb = custoVarrerMB(ateMs - deMs);
-  if (!confirm(t('auto.custo', { min: Math.round((ateMs - deMs) / 60000), mb }))) return;
+  if (!confirm(t('auto.custo', { min: Math.round((ateMs - deMs) / 60000), mb, canal }))) return;
 
   const controlo = new AbortController();
   estado.cancelar = () => controlo.abort();
@@ -1383,13 +1383,13 @@ async function procurarKills() {
       lerSom: (l, quandoMs, duracaoS, opcoes) => somDoCanal(l, quandoMs, duracaoS, { ...opcoes, taxa: TAXA_TIROS }),
       aoProgresso: (p) => {
         nota.textContent = t('auto.aOuvir', {
-          feito: p.feito, total: p.total, mb: (p.bytes / 1048576).toFixed(0),
+          feito: p.feito, total: p.total, mb: (p.bytes / 1048576).toFixed(0), canal,
         });
       },
     });
 
     estado.estouros = r.estouros || [];
-    if (!r.candidatos.length) { nota.textContent = t('auto.nenhum'); return; }
+    if (!r.candidatos.length) { nota.textContent = t('auto.nenhum', { canal }); return; }
 
     for (const c of r.candidatos) {
       estado.momentos = acrescentar(
@@ -1415,7 +1415,7 @@ async function procurarKills() {
       if (houve) comMorte++;
     }
 
-    nota.textContent = t('auto.achei', { n: r.candidatos.length })
+    nota.textContent = t('auto.achei', { n: r.candidatos.length, canal })
       + (comMorte ? t('auto.comMorte', { n: comMorte }) : '');
     pintarMomentos();
     guardar();
