@@ -28,3 +28,6 @@ dados/nomes-*.json
 # o segundo porque são 50 MB que se voltam a descarregar num segundo.
 .servir-segredo
 cloudflared.exe
+
+# Fotografias da lista de um servidor: são nomes de PESSOAS REAIS.
+dados/servidor-*.json
