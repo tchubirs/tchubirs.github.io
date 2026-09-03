@@ -5,34 +5,34 @@
 // bottom rung of Kick's ladder and is what makes thirty tiles a home-connection
 // problem rather than a server problem.
 
-import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=ca64868580';
+import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=a24917a879';
 import {
   linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo,
-} from './relogio.js?v=ca64868580';
-import { cortarTodosOsAngulos } from './baixar.js?v=ca64868580';
-import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=ca64868580';
-import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=ca64868580';
-import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=ca64868580';
+} from './relogio.js?v=a24917a879';
+import { cortarTodosOsAngulos } from './baixar.js?v=a24917a879';
+import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=a24917a879';
+import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=a24917a879';
+import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=a24917a879';
 import {
   RETRATO, enquadramentoInicial, limitar, desenhar, gravar, formatoQueFunciona, extensaoDe,
   reformar, limparDivisao, DIVISAO_OMISSAO,
-} from './retrato.js?v=ca64868580';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=ca64868580';
+} from './retrato.js?v=a24917a879';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=a24917a879';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
   alternarVitima, filtrar, temMorte, clipesDoMomento,
-} from './momentos.js?v=ca64868580';
-import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=ca64868580';
-import { criarZip, crc32 } from './zip.js?v=ca64868580';
-import { queFazerComOLeitor } from './leitor.js?v=ca64868580';
-import { criarApanhador } from './frames.js?v=ca64868580';
-import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=ca64868580';
-import { TAXA_TIROS } from './tiros.js?v=ca64868580';
-import { parecidos, juntarPerto } from './aprender.js?v=ca64868580';
-import { somDoCanal } from './alinhar.js?v=ca64868580';
-import { MAXIMO_S, mover, janelaInicial, nomeDoClipe } from './clipe.js?v=ca64868580';
-import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=ca64868580';
-import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=ca64868580';
+} from './momentos.js?v=a24917a879';
+import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=a24917a879';
+import { criarZip, crc32 } from './zip.js?v=a24917a879';
+import { queFazerComOLeitor } from './leitor.js?v=a24917a879';
+import { criarApanhador } from './frames.js?v=a24917a879';
+import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=a24917a879';
+import { TAXA_TIROS } from './tiros.js?v=a24917a879';
+import { parecidos, juntarPerto } from './aprender.js?v=a24917a879';
+import { somDoCanal } from './alinhar.js?v=a24917a879';
+import { MAXIMO_S, mover, janelaInicial, nomeDoClipe } from './clipe.js?v=a24917a879';
+import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=a24917a879';
+import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=a24917a879';
 
 const $ = (id) => document.getElementById(id);
 const estado = {
@@ -2353,6 +2353,7 @@ async function guardarRetrato() {
 
 function fecharClipe() {
   clearTimeout(estado.esperaRetrato);
+  pararVer();
   estado.clipe?.hls?.destroy();
   const v = $('previaClipe');
   v.pause?.();
@@ -2402,6 +2403,77 @@ function preverClipe(quandoMs) {
     } else { v.src = alvo.url; }
   }
   if (Math.abs(v.currentTime - r.tempoS) > 0.3) v.currentTime = r.tempoS;
+}
+
+/**
+ * Ver só o pedaço escolhido, com som, sem exportar nada.
+ *
+ * "Não tem um botão de play lá dentro para estar a ver o clipe pronto como
+ *  está." Não tinha: a prévia servia só para mostrar UM frame de cada vez,
+ * calada, enquanto se arrastavam as pegas.
+ *
+ * Duas coisas que não são óbvias e que custaram a acertar:
+ *
+ *  - A grelha continua a tocar por trás da janela. Sem a parar, ouviam-se dois
+ *    sons ao mesmo tempo. Pára-se aqui, e só se retoma se tiver sido este
+ *    botão a pará-la — quem já a tinha em pausa não quer que ela arranque.
+ *  - O `currentTime` não vale nada no instante a seguir ao `preverClipe`:
+ *    se a fonte mudou, o HLS ainda está a carregar e o relógio está a zero.
+ *    Por isso o início só é lido quando o vídeo tem mesmo imagem.
+ */
+function verClipe() {
+  const c = estado.clipe;
+  if (!c) return;
+  const v = $('previaClipe');
+  c.retomar = !estado.parado;
+  if (c.retomar) alternarPausa();
+  c.aVer = true;
+  v.muted = false;
+  const botao = $('verClipe');
+  botao.textContent = '⏹';
+  botao.setAttribute('aria-pressed', 'true');
+  botao.title = t('clipe.parar');
+
+  preverClipe(c.deMs);
+  const duracaoS = (c.ateMs - c.deMs) / 1000;
+  let inicioS = null;
+  let esperas = 0;
+  const vigiar = () => {
+    if (!estado.clipe?.aVer) return;
+    if (inicioS === null) {
+      // Dez segundos à espera de imagem e desiste — melhor parar do que ficar
+      // um botão de stop aceso para sempre por cima de um vídeo que não veio.
+      if (v.readyState < 2 && esperas++ < 600) { c.vigia = requestAnimationFrame(vigiar); return; }
+      if (v.readyState < 2) { pararVer(); return; }
+      inicioS = v.currentTime;
+    }
+    if (v.currentTime - inicioS >= duracaoS) { pararVer(); return; }
+    $('barraClipe').querySelector('.cabeca').style.left =
+      `${posClipe(c.deMs + (v.currentTime - inicioS) * 1000)}%`;
+    c.vigia = requestAnimationFrame(vigiar);
+  };
+  v.play?.()?.catch?.(() => {});
+  c.vigia = requestAnimationFrame(vigiar);
+}
+
+/** Parar de ver, e deixar tudo como estava antes. */
+function pararVer() {
+  const c = estado.clipe;
+  const v = $('previaClipe');
+  if (c?.vigia) cancelAnimationFrame(c.vigia);
+  const botao = $('verClipe');
+  botao.textContent = '\u25B6';
+  botao.setAttribute('aria-pressed', 'false');
+  botao.title = t('clipe.ver');
+  v.pause?.();
+  v.muted = true;
+  if (!c) return;
+  c.vigia = null;
+  const retomar = c.aVer && c.retomar;
+  c.aVer = false;
+  c.retomar = false;
+  if (retomar) alternarPausa();
+  preverClipe(c.deMs);
 }
 
 function arrastar(qual) {
@@ -2686,14 +2758,30 @@ $('canalClipe').onchange = () => {
 };
 $('barraClipe').querySelector('.pega.de').onpointerdown = arrastar('de');
 $('barraClipe').querySelector('.pega.ate').onpointerdown = arrastar('ate');
-for (const [id, delta] of [['menosClipe', -1000], ['maisClipe', 1000]]) {
-  $(id).onclick = () => {
+// "Os botões que estão lá dentro −1 segundo e +1 segundo só mexem no final do
+// vídeo." Mexiam: estavam presos ao `ate`. E depois de mexerem, a imagem
+// ficava onde estava — "não aparece na tela onde acaba, e é bom de ver".
+//
+// Agora são quatro, com o nome da ponta à frente, e CADA UM LEVA A IMAGEM ao
+// sítio que acabou de mexer. É o que a Twitch e o YouTube fazem quando se
+// arrasta uma pega: o vídeo mostra o frame de onde a pega está. Sem isso,
+// apurar o fim é adivinhar.
+for (const [id, qual, delta] of [
+  ['inicioMenos', 'de', -1], ['inicioMais', 'de', 1],
+  ['fimMenos', 'ate', -1], ['fimMais', 'ate', 1],
+]) {
+  $(id).onclick = (e) => {
     if (!estado.clipe) return;
-    Object.assign(estado.clipe, mover(estado.clipe, 'ate', estado.clipe.ateMs + delta,
+    // Shift afina: 0,2 s. Um segundo acha o sítio, dois décimos apuram-no.
+    const passo = delta * (e.shiftKey ? 200 : 1000);
+    const agora = qual === 'de' ? estado.clipe.deMs : estado.clipe.ateMs;
+    Object.assign(estado.clipe, mover(estado.clipe, qual, agora + passo,
       { limites: estado.clipe.limites }));
     pintarClipe();
+    preverClipe(qual === 'de' ? estado.clipe.deMs : estado.clipe.ateMs);
   };
 }
+$('verClipe').onclick = () => (estado.clipe?.aVer ? pararVer() : verClipe());
 $('modalClipe').onclick = (e) => { if (e.target === $('modalClipe')) fecharClipe(); };
 $('recomecar').onclick = recomecar;
 

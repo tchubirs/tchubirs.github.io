@@ -303,7 +303,7 @@
          cima; à direita o 9:16 a sério, pintado em tempo real. -->
     <div class="clipeEditor">
       <div class="clipeFonte">
-        <span class="rotuloCampo" data-t="retrato.horizontal">Versão horizontal</span>
+        <span class="rotuloCampo" data-t="retrato.horizontal">Versão horizontal · 16:9</span>
         <div id="fonteClipe" class="fonteClipe">
           <video id="previaClipe" playsinline muted></video>
           <div id="recortes" class="recortes" hidden></div>
@@ -311,7 +311,7 @@
       </div>
       <output id="semRetrato" class="nota" hidden></output>
       <div class="clipeRetrato" hidden id="ladoRetrato">
-        <span class="rotuloCampo" data-t="retrato.retrato">Versão em retrato</span>
+        <span class="rotuloCampo" data-t="retrato.retrato">Versão em retrato · 9:16</span>
         <div id="molduraRetrato" class="molduraRetrato">
           <canvas id="telaRetrato" class="telaRetrato" width="1080" height="1920"></canvas>
           <!-- O divisor. Arrasta-se para dar mais altura ao quadro de cima ou
@@ -340,12 +340,22 @@
       <button class="pega ate" data-t-aria="clipe.fim" aria-label="fim do clipe"></button>
       <div class="cabeca"></div>
     </div>
-    <!-- O tempo numa linha e os dois botões noutra. Juntos, num telemóvel em
-         pé, o `+1s` partia-se para a linha de baixo sozinho. -->
+    <!-- O tempo numa linha e os botões noutra. Juntos, num telemóvel em pé, o
+         `+1s` partia-se para a linha de baixo sozinho.
+
+         Duas linhas e não uma: "os botões que estão lá dentro −1 segundo e
+         +1 segundo só mexem no final do vídeo". Mexiam mesmo — estavam presos
+         ao `ate`. Agora cada ponta tem o seu par, com o nome à frente, e não
+         há modo nenhum para decorar. O ▶ toca só o pedaço escolhido. -->
     <output id="tempoClipe" class="nota"></output>
-    <div class="linha segundos">
-      <button id="menosClipe">−1s</button>
-      <button id="maisClipe">+1s</button>
+    <div class="aparar">
+      <span class="rotuloCampo" data-t="clipe.inicioLabel">Início</span>
+      <button id="inicioMenos" class="passo" data-t-titulo="clipe.recuar" title="1 s para trás">⏪</button>
+      <button id="inicioMais" class="passo" data-t-titulo="clipe.avancar" title="1 s para a frente">⏩</button>
+      <button id="verClipe" class="ver" aria-pressed="false" data-t-titulo="clipe.ver" title="ver o clipe">▶</button>
+      <span class="rotuloCampo" data-t="clipe.fimLabel">Fim</span>
+      <button id="fimMenos" class="passo" data-t-titulo="clipe.recuar" title="1 s para trás">⏪</button>
+      <button id="fimMais" class="passo" data-t-titulo="clipe.avancar" title="1 s para a frente">⏩</button>
     </div>
     <label for="tituloClipe" data-t="clipe.tituloLabel">Título do clipe</label>
     <input id="tituloClipe" type="text" maxlength="80" data-t-ph="clipe.tituloPh" placeholder="opcional — entra no nome do ficheiro">
@@ -353,8 +363,8 @@
       <span id="estadoClipe" class="nota"></span>
       <button id="cancelarClipe" data-t="clipe.cancelar">Cancelar</button>
       <button id="guardarRetrato" data-t="retrato.exportar"
-        data-t-titulo="retrato.custo" title="Reconverte em tempo real">Exportar retrato</button>
-      <button id="guardarClipe" class="principal" data-t="clipe.guardar">Exportar clipe</button>
+        data-t-titulo="retrato.custo" title="Reconverte em tempo real">Exportar 9:16</button>
+      <button id="guardarClipe" class="principal" data-t="clipe.guardar">Exportar 16:9</button>
     </div>
   </div>
 </div>
@@ -363,10 +373,10 @@
   <!-- A versao, a serio e visivel. O GitHub Pages serve com max-age=600 e um
        telemovel guarda o app.js antigo; sem isto, "ja corrigi" e "continua
        igual" sao as duas verdadeiras ao mesmo tempo e ninguem sai dali. -->
-  <p class="nota"><span data-t="app.rodape">A sessão fica guardada neste dispositivo.</span> · <span id="versao">ca64868580</span></p>
+  <p class="nota"><span data-t="app.rodape">A sessão fica guardada neste dispositivo.</span> · <span id="versao">a24917a879</span></p>
 </footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.17/hls.min.js"></script>
-<script type="module" src="app.js?v=ca64868580"></script>
+<script type="module" src="app.js?v=a24917a879"></script>
 </body>
 </html>
