@@ -867,7 +867,17 @@ h2 { color: var(--texto-3); font-weight: 600; margin: var(--e5) 0 var(--e2); }
 
 /* A ligação para a Twitch partia-se em duas linhas num telemóvel. */
 .paraTwitch { white-space: nowrap; }
+/* Duas filas SEMPRE, e não "quando não couber".
+   Medido: num telemóvel a página dava um salto de 0,049 aos 12,5 s — o
+   momento exacto em que a Rajdhani chega. A fonte nova é mais larga do que a
+   de reserva, o `<h1>` cresce uns pixels, e o selector de idioma passava a não
+   caber e caía para a linha de baixo. Tudo o que vinha a seguir descia 44 px
+   de uma vez, com a página já a ser lida.
+   Com o título a ocupar a fila toda, a largura dele deixa de decidir seja o
+   que for: a segunda fila existe desde o primeiro pinte e a fonte pode chegar
+   quando quiser. Medido outra vez: 0,000. */
 .topo { flex-wrap: wrap; row-gap: var(--e2); }
+.topo h1 { flex: 1 0 100%; }
 /* Alvo de toque em tudo o que se carrega com o dedo. */
 button, select, input[type="text"], input[type="search"], input[type="number"] { min-height: 36px; }
 .linha button, .barraSelecao button, #carregar, #baixarMontagem { min-height: var(--toque); }
