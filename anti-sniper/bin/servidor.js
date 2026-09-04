@@ -23,13 +23,15 @@
  *     isto corre na máquina dele e não numa nuvem.
  *
  * O IP e a porta saem da página do servidor no BattleMetrics, ou do F1 do
- * jogo (`client.connect` mostra onde estás ligado).
+ * jogo (`client.connect` mostra onde estás ligado). Com `--bm <id>` nem isso:
+ * a página abre-se aqui como um browser normal e o endereço sai de lá.
  */
 
 const fs = require('node:fs');
 const path = require('node:path');
 const { consultarEsperto } = require('../src/jogo/rust-a2s');
 const { seguidores } = require('../src/seguidores');
+const { enderecoDaPagina } = require('../src/endereco');
 
 const PASTA = path.join(__dirname, '..', 'dados');
 
@@ -132,14 +134,54 @@ async function gravar(ip) {
   mostrar(fotos);
 }
 
+/**
+ * O endereço, a partir do id do BattleMetrics.
+ *
+ * Um browser a sério e não um `fetch`: a página está atrás da Cloudflare, e a
+ * Cloudflare distingue as duas coisas. Medido numa máquina de nuvem: o `fetch`
+ * leva 403 com a página de desafio. Num computador de casa, com o browser, ela
+ * abre — que é exactamente o "acessar de forma normal igual player".
+ */
+async function enderecoPeloBattleMetrics(id) {
+  let playwright;
+  try { playwright = require('playwright'); } catch {
+    console.error('O --bm precisa do Playwright:  npx playwright install chromium');
+    process.exit(2);
+  }
+  const url = `https://www.battlemetrics.com/servers/rust/${id}`;
+  console.log(`a abrir ${url}`);
+  const b = await playwright.chromium.launch({ headless: !tem('visivel') });
+  try {
+    const p = await b.newPage({ locale: 'en-US' });
+    await p.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    // A Cloudflare pode meter um ecrã de espera pelo meio. Cinco segundos
+    // chegam para ele se resolver sozinho num computador normal.
+    await p.waitForTimeout(5000);
+    const texto = await p.evaluate(() => document.body.innerText);
+    const e = enderecoDaPagina(texto);
+    if (!e) {
+      console.error('Não achei o endereço na página.');
+      console.error('Se apareceu um ecrã da Cloudflare, corre outra vez com --visivel e resolve-o à mão.');
+      process.exit(1);
+    }
+    console.log(`servidor em ${e.ip}:${e.porta}`);
+    return `${e.ip}:${e.porta}`;
+  } finally { await b.close(); }
+}
+
+const bm = arg('bm');
 const ip = arg('ip');
-if (tem('ver') || !ip) {
+if (!tem('ver') && !ip && bm) {
+  enderecoPeloBattleMetrics(bm).then(gravar);
+} else if (tem('ver') || !ip) {
   const f = ip
     ? ficheiro(ip.split(':')[0], Number(ip.split(':')[1] || 28015))
     : fs.readdirSync(PASTA).filter((n) => n.startsWith('servidor-')).map((n) => path.join(PASTA, n))[0];
   if (!f || !fs.existsSync(f)) {
     console.error('Nada gravado ainda. Começa com:');
-    console.error('  npm run servidor -- --ip 1.2.3.4:28015 --alvo Lauta');
+    console.error('  npm run servidor -- --bm 29566604 --alvo <o teu nome no jogo>');
+    console.error('ou, se já souberes o endereço:');
+    console.error('  npm run servidor -- --ip 1.2.3.4:28015 --alvo <o teu nome no jogo>');
     process.exit(1);
   }
   mostrar(ler(f));
