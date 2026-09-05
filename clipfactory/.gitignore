@@ -1,0 +1,11 @@
+config.yaml
+.env
+work/
+state/
+out/
+*.mp4
+*.vtt
+*.srt
+__pycache__/
+*.egg-info/
+.venv/

@@ -1,0 +1,91 @@
+[
+  {
+    "canal": "xqc",
+    "videosEndpoint": {
+      "status": 200,
+      "allowOrigin": "https://not-kick.example",
+      "allowMethods": null,
+      "type": "application/json",
+      "acceptsRange": false
+    },
+    "vodCount": 23,
+    "vod": {
+      "id": 124876014,
+      "createdAt": "2026-08-30 20:47:09",
+      "startTime": "2026-08-30 20:47:07",
+      "durationMs": 37779000,
+      "isPrivate": false,
+      "isPruned": false
+    },
+    "source": "https://stream.kick.com/3c81249a5ce0/ivs/v1/196233775518/DsuAwCgUc9Bh/2026/8/30/20/47/UAyEpT7jTp98/media/hls/master.m3u8",
+    "pathClock": "2026-08-30T20:47:00.000Z",
+    "apiClock": "2026-08-30T20:47:07Z",
+    "masterPlaylist": {
+      "status": 200,
+      "allowOrigin": "*",
+      "allowMethods": "GET",
+      "type": "application/x-mpegURL",
+      "acceptsRange": false
+    },
+    "ladder": [
+      {
+        "resolution": "1920x1080",
+        "fps": 60,
+        "bandwidth": 9091454
+      },
+      {
+        "resolution": "1280x720",
+        "fps": 60,
+        "bandwidth": 3491879
+      },
+      {
+        "resolution": "852x480",
+        "fps": 30,
+        "bandwidth": 1496879
+      },
+      {
+        "resolution": "640x360",
+        "fps": 30,
+        "bandwidth": 630000
+      },
+      {
+        "resolution": "284x160",
+        "fps": 30,
+        "bandwidth": 230000
+      }
+    ],
+    "lowestRung": {
+      "resolution": "284x160",
+      "fps": 30,
+      "bandwidth": 230000
+    },
+    "mediaPlaylist": {
+      "status": 200,
+      "allowOrigin": "*",
+      "allowMethods": "GET",
+      "type": "application/x-mpegURL",
+      "acceptsRange": false,
+      "rendition": "160p30/playlist.m3u8"
+    },
+    "programDateTime": {
+      "present": true,
+      "count": 3766,
+      "first": "2026-08-30T20:47:04.390Z",
+      "targetDuration": 12,
+      "playlistType": "EVENT"
+    },
+    "segment": {
+      "status": 206,
+      "allowOrigin": null,
+      "allowMethods": null,
+      "type": "video/MP2T",
+      "acceptsRange": true,
+      "name": "0.ts"
+    },
+    "disagreementSeconds": {
+      "pathVsApi": 7,
+      "pathVsPdt": 4.39,
+      "apiVsPdt": -2.61
+    }
+  }
+]

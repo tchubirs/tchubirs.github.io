@@ -1,0 +1,33 @@
+# Segredos
+.kick-secret
+.kick-token.json
+*.secret
+
+# Dependências: `npm install` recria. Commitar o Playwright seriam centenas
+# de MB no repositório e um navegador desatualizado para quem clonar.
+node_modules/
+
+# Estado local da máquina de quem roda
+detetive.db
+detetive.db-wal
+detetive.db-shm
+detetive.config.json
+demo.html
+
+# As leituras são de quem roda — cada máquina grava a sua live.
+dados/leituras.jsonl
+dados/presenca.jsonl
+
+# Histórico de nomes lido das páginas: são dados de PESSOAS REAIS, com nome,
+# ano e SteamID. Isso não entra num repositório público — o produto ajuda a
+# investigar uma live, não a publicar um dossiê de quem passou por ela.
+dados/nomes-*.json
+
+# O segredo que tranca o endereço público do `npm run servir`, e o binário do
+# túnel. Nenhum dos dois entra no repositório: o primeiro porque é uma chave,
+# o segundo porque são 50 MB que se voltam a descarregar num segundo.
+.servir-segredo
+cloudflared.exe
+
+# Fotografias da lista de um servidor: são nomes de PESSOAS REAIS.
+dados/servidor-*.json

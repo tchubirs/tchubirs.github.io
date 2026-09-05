@@ -1,0 +1,63 @@
+# ═══════════════════════════════════════════════════════════════
+# clipfactory — configuração da operação
+# Copie para config.yaml e ajuste. config.yaml NÃO vai para o git.
+# ═══════════════════════════════════════════════════════════════
+
+# Idioma dos artefatos publicados (título, descrição, legendas).
+# Use o idioma do MERCADO da campanha, não o seu.
+market_language: en          # en | pt-BR | es
+
+# ── Campanha ativa ────────────────────────────────────────────
+# Preencha com os dados do brief que você aceitou na Vyro/Whop/Ssemble.
+# `source` é o conteúdo QUE A CAMPANHA LICENCIOU para você cortar.
+campaign:
+  id: exemplo-001
+  platform: vyro             # vyro | whop | ssemble | outro
+  name: "Nome da campanha conforme o brief"
+  cpm_usd: 1.50              # US$ por 1.000 views verificadas (do brief)
+  min_views_to_pay: 1000     # views mínimas por post para gerar receita
+  max_payout_per_post_usd: 1000
+  source:
+    # URL do conteúdo-fonte fornecido pelo brief, OU caminho de arquivo local.
+    url: "https://exemplo.com/video-fonte-da-campanha"
+    # Cole aqui a frase do brief que autoriza o corte. Isto é o seu
+    # comprovante de licença. Sem isto, NÃO rode a campanha.
+    license_note: "Brief autoriza clipes derivados do VOD oficial."
+  rules:
+    # Regras do brief que a IA precisa respeitar ao escrever o texto
+    must_include: []         # ex: ["link na bio", "@handle"]
+    must_avoid: []           # ex: ["preço", "promessa de retorno"]
+
+# ── Produção ──────────────────────────────────────────────────
+production:
+  clips_per_run: 4           # quantos clipes gerar por execução
+  clip_seconds_min: 18
+  clip_seconds_max: 58       # <60s mantém elegível a Shorts/Reels
+  style: blur                # blur (fundo desfocado) | crop (corte central)
+  captions: true
+  burn_hook: true            # frase-gancho nos primeiros segundos
+  model: claude-opus-5       # ver custo/clipe no README antes de trocar
+
+# ── Publicação ────────────────────────────────────────────────
+publish:
+  youtube:
+    enabled: true
+    privacy: public          # public | unlisted | private
+    # OBRIGATÓRIO por política do YouTube quando houver conteúdo sintético
+    # realista. Clipe de vídeo real não editado sinteticamente => false.
+    synthetic_content_disclosure: false
+    category_id: "24"        # 24 = Entertainment
+  instagram:
+    enabled: false           # ligue só depois de ter conta Business + Página
+    share_to_feed: true
+
+# ── Regras de morte (kill rules) — números, não opinião ───────
+# Avaliadas por `clipfactory track`. Quando batem, a campanha para sozinha.
+kill_rules:
+  # Se após N posts a mediana de views ficar abaixo do mínimo pago, pare.
+  min_posts_before_judging: 12
+  median_views_floor: 400
+  # Se o custo acumulado de API passar da receita estimada por este fator, pare.
+  max_cost_to_revenue_ratio: 0.60
+  # Qualquer strike/remoção derruba a campanha imediatamente.
+  halt_on_any_strike: true

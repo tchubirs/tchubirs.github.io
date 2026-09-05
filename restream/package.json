@@ -1,0 +1,9 @@
+{
+  "name": "restream",
+  "version": "0.1.0",
+  "description": "Run many 24/7 rerun channels from one machine. Copy-mode restreaming: 172x cheaper than re-encoding.",
+  "license": "AGPL-3.0-or-later",
+  "engines": { "node": ">=20" },
+  "scripts": { "test": "node --test test/*.test.js" },
+  "dependencies": {}
+}

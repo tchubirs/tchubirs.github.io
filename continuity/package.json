@@ -1,0 +1,9 @@
+{
+  "name": "fedi-continuity",
+  "version": "0.1.0",
+  "description": "Identity continuity for ActivityPub accounts when the origin server is seized, blocked or shut down",
+  "license": "AGPL-3.0-or-later",
+  "engines": { "node": ">=20" },
+  "scripts": { "test": "node --test test/*.test.js" },
+  "dependencies": {}
+}

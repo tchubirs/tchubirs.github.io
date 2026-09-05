@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Detetive</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='13' cy='13' r='8' fill='none' stroke='%2353fc18' stroke-width='3'/%3E%3Cpath d='M19 19 L28 28' stroke='%2353fc18' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+  :root{color-scheme:dark;--fundo:#0f1113;--caixa:#16191c;--linha:#262b30;
+        --texto:#e8e8e8;--fraco:#8b949e;--alerta:#ff5f56;--ok:#53fc18}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--fundo);color:var(--texto);
+       font:15px/1.6 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  .topo{border-bottom:1px solid var(--linha);padding:16px 22px;display:flex;
+        align-items:baseline;gap:12px}
+  .topo h1{margin:0;font-size:17px;letter-spacing:.3px}
+  .topo .estado{margin-left:auto;font-size:13px;color:var(--fraco)}
+  .ponto{display:inline-block;width:8px;height:8px;border-radius:50%;
+         background:#444;margin-right:6px;vertical-align:middle}
+  .ponto.vivo{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+  main{max-width:860px;margin:0 auto;padding:22px}
+  .cartoes{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+           gap:10px;margin-bottom:20px}
+  .cartao{background:var(--caixa);border:1px solid var(--linha);border-radius:11px;padding:13px 15px}
+  .cartao b{display:block;font-size:26px;font-weight:600;font-variant-numeric:tabular-nums}
+  .cartao span{color:var(--fraco);font-size:12px}
+  .cartao.velho b{color:#f0a35e}
+  h2{font-size:14px;color:var(--fraco);font-weight:600;text-transform:uppercase;
+     letter-spacing:.7px;margin:26px 0 10px}
+  .alerta{background:#1a1214;border:1px solid #4a2226;border-left:3px solid var(--alerta);
+          border-radius:10px;padding:12px 14px;margin-bottom:8px}
+  .alerta .par{font-weight:600;font-size:15px}
+  .alerta .det{color:var(--fraco);font-size:13px;margin-top:4px}
+  .pc{color:#ff8a7a;font-variant-numeric:tabular-nums;font-weight:600}
+  .vazio{background:var(--caixa);border:1px solid var(--linha);border-radius:11px;
+         padding:20px;color:var(--fraco);font-size:14px}
+  .busca{display:flex;gap:8px;margin-bottom:8px}
+  .busca input{flex:1;background:var(--caixa);border:1px solid var(--linha);
+               border-radius:9px;padding:11px 13px;color:var(--texto);font-size:14px}
+  .busca button{background:var(--ok);color:#07160a;border:0;border-radius:9px;
+                padding:11px 20px;font-weight:600;font-size:14px;cursor:pointer}
+  .cabeca{background:var(--caixa);border:1px solid var(--linha);border-radius:11px;
+          padding:13px 15px;margin-bottom:8px}
+  .cabeca .quem{font-weight:600;font-size:16px}
+  .cabeca .sub{color:var(--fraco);font-size:12.5px;margin-top:3px}
+  .nomes{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}
+  .nomes i{font-style:normal;background:#20252a;border:1px solid var(--linha);
+           border-radius:6px;padding:2px 8px;font-size:12.5px;color:#c3ccd4}
+  .nomes i.bateu{background:#3a1a1c;border-color:#6b2b30;color:#ffb3a8;font-weight:600}
+  .busca .hora{flex:0 0 150px}
+  .atalhos{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+  .atalhos button{background:#1b2025;color:#9fb0bd;border:1px solid var(--linha);
+                  border-radius:7px;padding:5px 11px;font-size:12.5px;cursor:pointer}
+  .atalhos button:hover{border-color:#3a444d;color:var(--texto)}
+  .veredito{border-radius:11px;padding:14px 16px;margin-bottom:10px;font-size:15px;
+            border:1px solid var(--linha);background:var(--caixa)}
+  .veredito.sim{background:#1a1214;border-color:#4a2226;border-left:3px solid var(--alerta)}
+  .veredito.provavel{background:#1d1810;border-color:#4d3a1c;border-left:3px solid #f0a35e}
+  .veredito b{font-size:16px}
+  .veredito .obs{color:var(--fraco);font-size:13px;margin-top:6px}
+  .fita{margin-top:12px}
+  .fita .rot{color:var(--fraco);font-size:11.5px;text-transform:uppercase;
+             letter-spacing:.6px;margin:9px 0 4px}
+  .trilho{position:relative;height:16px;background:#1b2025;border:1px solid var(--linha);
+          border-radius:5px;overflow:hidden}
+  .trilho i{position:absolute;top:0;bottom:0;background:#2f7d3a;border-radius:3px}
+  .trilho.srv i{background:#2b5f8f}
+  .marca{position:absolute;top:-5px;bottom:-5px;width:2px;background:#fff;
+         box-shadow:0 0 6px rgba(255,255,255,.8);z-index:2}
+  .reguas{display:flex;justify-content:space-between;color:#6f7a84;
+          font-size:11px;margin-top:3px;font-variant-numeric:tabular-nums}
+  .qtd{color:var(--fraco);font-weight:400;letter-spacing:0}
+  .nota{color:var(--fraco);font-size:13px;margin:0 0 10px}
+  .nota code{background:#1b2025;border:1px solid var(--linha);border-radius:4px;padding:1px 5px}
+  .pessoas{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
+  .pessoa{background:var(--caixa);border:1px solid var(--linha);border-radius:10px;
+          padding:11px 13px;cursor:pointer;text-align:left;color:var(--texto);font:inherit}
+  .pessoa:hover{border-color:#3a444d;background:#1b2025}
+  .pessoa b{display:block;font-size:15px;margin-bottom:2px}
+  .pessoa > span{color:var(--fraco);font-size:12.5px}
+  .pessoa .viva{color:var(--ok)}
+  .log{background:var(--caixa);border:1px solid var(--linha);border-radius:11px;
+       padding:14px 16px;margin-bottom:10px}
+  .log h3{margin:0 0 3px;font-size:17px}
+  .log .resumo{color:var(--fraco);font-size:13px;margin-bottom:12px}
+  .log table{width:100%;border-collapse:collapse;font-size:13.5px}
+  .log td{padding:6px 8px;border-bottom:1px solid #1e2328;font-variant-numeric:tabular-nums}
+  .log tr:last-child td{border-bottom:0}
+  .log .onde{width:1%;white-space:nowrap;font-weight:600}
+  .log .onde.live{color:#5fd06e}
+  .log .onde.servidor{color:#6aa6e0}
+  .log .dur{color:var(--fraco);text-align:right}
+  .log .seta{color:#54606a;padding:0 2px}
+  .fechar{float:right;background:none;border:0;color:var(--fraco);font-size:20px;
+          cursor:pointer;line-height:1;padding:0 2px}
+  .fechar:hover{color:var(--texto)}
+  .dois{background:#1a1214;border:1px solid #4a2226;border-left:3px solid var(--alerta);
+        border-radius:10px;padding:12px 14px;margin-bottom:8px;cursor:pointer}
+  .dois:hover{border-color:#6b2b30}
+  /* Palpite não tem a cor de certeza: 70% e 100% pintados igual é o que
+     transforma a tela em barulho. */
+  .dois.talvez{background:#191510;border-color:#4a3a1c;border-left-color:#c98b2e}
+  .dois.talvez:hover{border-color:#6b532b}
+  .dois.talvez .pc{color:#e0a94a}
+  .alerta.talvez{background:#191510;border-color:#4a3a1c;border-left-color:#c98b2e}
+  .alerta.talvez .pc{color:#e0a94a}
+  .privado{margin-top:8px;font-size:12.5px;line-height:1.5;color:#c9a97a}
+  .privado b{color:#f0d3a4}
+  .duvida{margin-top:7px;font-size:12.5px;color:#c9a97a;line-height:1.5}
+  .duvida b{color:#f0d3a4}
+  /* Fechou a live e está no servidor: o padrão que o produto procura. */
+  .fechou{color:#ff8a5c;font-weight:600}
+  .duvida.vaievem{color:#e8b0a0}
+  .duvida.vaievem b{color:#ffb9a4}
+  .dois .par{font-weight:600;font-size:15.5px}
+  .dois .det{color:var(--fraco);font-size:13px;margin-top:4px}
+  .dois .agora{color:var(--ok)}
+  .cobertura{border-radius:10px;padding:11px 13px;margin-bottom:11px;font-size:13px;
+             line-height:1.55;border:1px solid var(--linha);background:var(--caixa);color:var(--fraco)}
+  .cobertura.cego{background:#1d1810;border-color:#4d3a1c;color:#e4c9a4}
+  .cobertura b{color:var(--texto)}
+  .cobertura.cego b{color:#ffd9a8}
+  .selo{display:inline-block;font-size:10.5px;letter-spacing:.4px;text-transform:uppercase;
+        border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:middle;
+        background:#20252a;border:1px solid var(--linha);color:#93a1ad}
+  .selo.tempo{background:#122a1a;border-color:#255c36;color:#7ee295}
+  .selo.ao-segundo{background:#101f2e;border-color:#255880;color:#8ec8f5}
+  .regua{font-size:11.5px;color:#7b8892}
+  .seta{color:#6f7a84}
+  .mesmo{font-size:11.5px;font-weight:400;color:#8b949e;letter-spacing:.2px}
+  .cobertura.boa{background:#101f2e;border-color:#255880;color:#b9d6ee}
+  .cobertura.boa b{color:#e7f2fb}
+  .cobertura code{background:#00000040;border-radius:4px;padding:1px 5px;font-size:12px}
+  .quem{margin-top:8px;padding-top:8px;border-top:1px solid #33222533;
+        font-size:12.5px;color:var(--fraco)}
+  .quem b{color:var(--texto)}
+  .quem.sem{color:#7a6b5e}
+  .quem a,.log a{color:#7fb3e8;text-decoration:none}
+  .quem a:hover,.log a:hover{text-decoration:underline}
+  .rodape{color:#6f7a84;font-size:12px;margin-top:26px;line-height:1.6;
+          border-top:1px solid var(--linha);padding-top:16px}
+</style>
+</head>
+<body>
+  <div class="topo">
+    <h1>Detetive</h1>
+    <span style="color:var(--fraco);font-size:13px" id="canal"></span>
+    <span class="estado"><span class="ponto" id="ponto"></span><span id="estado">ligando…</span></span>
+  </div>
+  <main>
+    <div class="cartoes">
+      <div class="cartao" id="c-servidor"><b>—</b><span>no servidor</span></div>
+      <div class="cartao" id="c-audiencia"><b>—</b><span>já assistiram</span></div>
+      <div class="cartao" id="c-alertas"><b>—</b><span>coincidências</span></div>
+    </div>
+
+    <h2>Procurar um jogador</h2>
+    <p style="color:var(--fraco);font-size:13px;margin:0 0 9px">Cole o <b>nome</b> que apareceu na tela, a <b>SteamID</b>, ou o <b>link do perfil</b>. Com o perfil eu confiro <b>todos os nomes</b> que a conta já usou.</p>
+    <div class="busca">
+      <input id="nome" placeholder="nome de quem te matou, a SteamID, ou o link do perfil" autocomplete="off">
+      <input id="quando" class="hora" placeholder="que horas? 22:47" autocomplete="off">
+      <button id="ir">Procurar</button>
+    </div>
+    <div class="atalhos">
+      <button data-min="0">agora</button>
+      <button data-min="5">5 min atrás</button>
+      <button data-min="15">15 min atrás</button>
+      <button data-min="60">1 h atrás</button>
+    </div>
+    <div id="resultado"></div>
+
+    <!-- "ou há pouco" não é folga: fechar a live antes de atacar é o
+         comportamento que se procura, e exigir "agora" filtraria fora
+         exatamente quem se comporta como sniper. -->
+    <h2 id="t-dois">No servidor <b style="color:var(--alerta)">E</b> na sua live —
+      agora ou há pouco <span id="qtd-dois" class="qtd"></span></h2>
+    <p class="nota">Inclui quem <b>fechou a live</b> nos últimos 15 min — e a linha diz
+      há quanto tempo fechou.</p>
+    <div id="nosdois"><div class="vazio">carregando…</div></div>
+
+    <h2>Na sua live agora <span id="qtd-agora" class="qtd"></span></h2>
+    <p class="nota">Clique em alguém para ver o <b>log completo</b>: entrou, saiu,
+      entrou de novo.</p>
+    <div id="cobertura" class="cobertura">…</div>
+    <div id="agora"><div class="vazio">carregando…</div></div>
+
+    <h2>Quem está no servidor agora e já assistiu</h2>
+    <div id="alertas"><div class="vazio">carregando…</div></div>
+
+    <div class="rodape">
+      Assistir não é crime. Isto mostra presença, não culpa — quem julga o
+      contexto é você, que jogou a partida.<br>
+      Ninguém aparecer aqui <b>não inocenta</b>: a pessoa pode usar nome
+      diferente nos dois lados.
+    </div>
+  </main>
+<script src="painel.js"></script>
+</body>
+</html>

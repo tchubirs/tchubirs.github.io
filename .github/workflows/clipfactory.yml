@@ -1,0 +1,136 @@
+name: clipfactory
+
+# Roda sozinho. O dono não precisa abrir o computador.
+on:
+  schedule:
+    # 12:10 UTC = 09:10 em Brasília. Publica de manhã, quando o feed enche.
+    - cron: "10 12 * * *"
+    # 23:40 UTC = 20:40 em Brasília. Só mede views e regras de morte.
+    - cron: "40 23 * * *"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "run (produz+publica) ou track (só mede)"
+        type: choice
+        options: [run, track, doctor]
+        default: run
+      dry_run:
+        description: "renderiza mas não publica"
+        type: boolean
+        default: false
+
+concurrency:
+  group: clipfactory
+  cancel-in-progress: false
+
+permissions:
+  contents: write   # necessário para gravar o ledger no branch de estado
+
+jobs:
+  clipfactory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: clipfactory
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: clipfactory/requirements.txt
+
+      - name: Instalar dependências
+        run: |
+          python -m pip install -q --upgrade pip
+          pip install -q -r requirements.txt
+          pip install -q -e .
+
+      # ── Estado: o ledger vive num branch órfão para não poluir o main ──
+      - name: Restaurar ledger
+        run: |
+          mkdir -p state
+          if git ls-remote --exit-code --heads origin clipfactory-state >/dev/null 2>&1; then
+            git fetch origin clipfactory-state --depth 1
+            git show origin/clipfactory-state:ledger.db > state/ledger.db 2>/dev/null \
+              || echo "branch existe mas sem ledger ainda"
+          else
+            echo "primeira execução — ledger novo"
+          fi
+          ls -la state/ || true
+
+      - name: Montar config
+        env:
+          CLIPFACTORY_CONFIG: ${{ secrets.CLIPFACTORY_CONFIG }}
+        run: |
+          if [ -n "$CLIPFACTORY_CONFIG" ]; then
+            printf '%s' "$CLIPFACTORY_CONFIG" > config.yaml
+            echo "config vindo do secret CLIPFACTORY_CONFIG"
+          elif [ -f config.yaml ]; then
+            echo "config vindo do arquivo versionado"
+          else
+            echo "::error::Sem config.yaml. Cadastre o secret CLIPFACTORY_CONFIG"
+            echo "::error::(cole o conteúdo do seu config.yaml inteiro) ou commite o arquivo."
+            exit 1
+          fi
+
+      - name: Pré-voo
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: clipfactory doctor
+
+      - name: Produzir e publicar
+        if: github.event.inputs.mode != 'track' && github.event.inputs.mode != 'doctor' && github.event.schedule != '40 23 * * *'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPO: ${{ github.repository }}
+        run: |
+          EXTRA=""
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then EXTRA="--dry-run"; fi
+          clipfactory run $EXTRA
+
+      - name: Medir views e regras de morte
+        id: track
+        if: always() && github.event.inputs.mode != 'doctor'
+        continue-on-error: true
+        env:
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: clipfactory track | tee $GITHUB_STEP_SUMMARY
+
+      - name: Gravar ledger de volta
+        if: always()
+        run: |
+          if [ ! -f state/ledger.db ]; then exit 0; fi
+          git config user.name  "clipfactory"
+          git config user.email "clipfactory@users.noreply.github.com"
+          cd "$GITHUB_WORKSPACE"
+          TMP=$(mktemp -d); cp clipfactory/state/ledger.db "$TMP/ledger.db"
+          git checkout --orphan clipfactory-state-tmp
+          git rm -rf --cached . >/dev/null 2>&1 || true
+          find . -maxdepth 1 -not -name .git -not -name . -exec rm -rf {} + 2>/dev/null || true
+          cp "$TMP/ledger.db" ledger.db
+          git add ledger.db
+          git commit -q -m "ledger $(date -u +%FT%TZ)" || exit 0
+          git push -f origin clipfactory-state-tmp:clipfactory-state
+
+      # A regra de morte sai com código 3. O job fica vermelho de propósito:
+      # é assim que o dono recebe o e-mail do GitHub avisando que algo travou.
+      - name: Falhar se regra de morte acionou
+        if: steps.track.outcome == 'failure'
+        run: |
+          echo "::error::Regra de morte acionada — leia o resumo do job."
+          exit 1
