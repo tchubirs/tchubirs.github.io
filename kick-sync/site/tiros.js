@@ -53,11 +53,31 @@ export function energia(amostras, taxa = TAXA_TIROS) {
 // O brilho: quantos POLOS de cada lado. Um so nao chega — medido no som
 // verdadeiro dele, um polo separa a voz do estouro por 2,5x, dois por 4,1x e
 // tres por 6,1x. Tres e onde a folga passa a ser larga dos dois lados.
-// Onde fica a fronteira. Medido no clipe verdadeiro dele: as onze silabas que
-// o detector achou que eram tiros deram no maximo 0,038 de brilho, e a mediana
-// de todo o clipe deu 0,016. Um estouro de banda larga da 0,23 no minimo. O
-// limite fica a 0,10 — dois vezes e meia acima do pior caso da voz dele, e
-// duas vezes e pouco abaixo do melhor caso de um estouro.
+// Onde fica a fronteira, e o que ela e mesmo.
+//
+// Primeira medicao, no clipe que ele mandou: as onze silabas que o detector
+// achou que eram tiros deram entre 0,003 e 0,090 de brilho. Um estouro de
+// banda larga da 0,23 a 1,03. Dai o 0,10.
+//
+// Segunda medicao, quinze minutos da noite dele — tres bocados de cinco, tirados
+// do VOD verdadeiro a duas, quatro e seis horas de stream. Seiscentos e quarenta
+// e nove impulsos passam a altura e o salto, e o brilho deles NAO tem um vale:
+//
+//   p50 0,017   p90 0,060   p95 0,088   p98 0,165   p99 0,255   max 1,085
+//
+// E uma cauda contínua. O 0,10 corta no percentil 96 e deixa passar 4% — nao e
+// uma linha que a natureza tenha desenhado, e por isso vale dizer o que ela faz
+// e o que nao faz.
+//
+// O que NAO faz: separar perfeitamente. A voz dele chegou a 0,111 num sitio, e
+// um tiro verdadeiro dele desceu a 0,104. Sobrepoem-se.
+//
+// O que FAZ, e chega: nos cinco minutos em que ele so falava, quatro impulsos
+// sobreviveram e nao formaram luta NENHUMA — porque uma luta precisa de quatro
+// juntos em catorze segundos. Nos cinco minutos com combate, treze sobreviveram
+// e formaram duas lutas, e o ecra desse instante mostra-o a apontar uma SMG com
+// trinta balas e um marcador de morte na bussola. O brilho nao tem de acertar
+// em cada impulso: tem de tirar os 96% que sao voz, e o agrupamento faz o resto.
 export const BRILHO_MIN = 0.10;
 
 const POLOS = 3;
