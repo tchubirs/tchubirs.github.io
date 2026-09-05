@@ -1,5 +1,5 @@
-import { medir, chao, impulsos, lutas, FPS, TAXA_TIROS } from './tiros.js?v=4d44bd7644';
-import { recortar } from './aprender.js?v=4d44bd7644';
+import { medir, chao, impulsos, lutas, FPS, TAXA_TIROS } from './tiros.js?v=19750b9efc';
+import { recortar } from './aprender.js?v=19750b9efc';
 
 // Achar as kills sozinho — pela forca do som.
 //
@@ -109,11 +109,24 @@ export async function varrerNoite({
   const achadas = lutas(impulsos(tudo, piso, { brilhos, ...opcoes }), opcoes).slice(0, limite);
   return {
     candidatos: achadas.map((g) => ({
-      ms: Math.round(deMs + g.inicioS * 1000),
-      // O primeiro e o ultimo disparo do tiroteio. E daqui que sai o clipe:
-      // as margens dele sao POR FORA do combate, e nao a volta de um instante.
-      combateDeMs: Math.round(deMs + g.inicioS * 1000),
-      combateAteMs: Math.round(deMs + g.fimS * 1000),
+      // O instante e o do TIRO MAIS ALTO, e nao o do primeiro do tiroteio.
+      // E ai que a coisa acontece — "quando ocorre um acerto na cabeca, o som
+      // e muito alto" — e e esse frame que interessa ver.
+      ms: Math.round(deMs + g.picoS * 1000),
+      // O clipe e a RAJADA ate a morte, e nao o combate inteiro.
+      //
+      // "Os clipes sao de setenta segundos. Se eu configurei zero antes e zero
+      //  depois, era pra ser exatamente: eu disparo, a pessoa morre, e acaba."
+      //
+      // Era: o clipe levava do primeiro ao ultimo disparo da luta — ate noventa
+      // segundos — e as margens dele somavam-se por fora disso. Agora comeca na
+      // rajada que leva ao tiro mais alto e acaba NESSE tiro, que e a morte.
+      // Com as margens a zero da exactamente o que ele descreveu.
+      combateDeMs: Math.round(deMs + g.rajadaDeS * 1000),
+      // Um segundo de chao: se o tiro mais alto for o primeiro da rajada — um
+      // headshot a primeira bala — as duas pontas seriam o mesmo instante, e um
+      // clipe de duracao zero sai vazio do cortador sem dizer porque.
+      combateAteMs: Math.round(deMs + Math.max(g.picoS, g.rajadaDeS + 1) * 1000),
       tiros: g.tiros,
       pico: g.pico,
       duracaoS: g.duracaoS,
