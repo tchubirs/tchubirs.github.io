@@ -206,7 +206,9 @@ export function impulsos(blocos, piso, {
  * headshot e o som mais alto do jogo, por isso a luta com o pico maior e a que
  * ele quer ver primeiro numa lista de trinta.
  */
-export function lutas(imps, { minTiros = 4, juntarS = 14, maxLutaS = 90 } = {}) {
+export function lutas(imps, {
+  minTiros = 4, juntarS = 14, maxLutaS = 90, juntarRajadaS = 3,
+} = {}) {
   const juntar = juntarS * FPS;
   const grupos = [];
   let atual = null;
@@ -215,23 +217,62 @@ export function lutas(imps, { minTiros = 4, juntarS = 14, maxLutaS = 90 } = {}) 
       atual.fim = i.bloco;
       atual.tiros++;
       atual.pico = Math.max(atual.pico, i.altura);
+      atual.blocos.push(i);
     } else {
       if (atual && atual.tiros >= minTiros) grupos.push(atual);
-      atual = { inicio: i.bloco, fim: i.bloco, tiros: 1, pico: i.altura };
+      atual = { inicio: i.bloco, fim: i.bloco, tiros: 1, pico: i.altura, blocos: [i] };
     }
   }
   if (atual && atual.tiros >= minTiros) grupos.push(atual);
 
   return grupos
-    .map((g) => ({
-      ...g,
+    .map((g) => {
       // O instante que interessa e o do tiro mais alto, e nao o do primeiro:
-      // e ai que a coisa acontece.
-      inicioS: g.inicio / FPS,
-      fimS: g.fim / FPS,
-      duracaoS: (g.fim - g.inicio) / FPS,
-    }))
+      // e ai que a coisa acontece. Ele disse-o em duas frases — "quando ocorre
+      // um acerto na cabeca, o som e muito alto" — e ate hoje o codigo dizia-o
+      // no comentario e nao fazia nada com isso.
+      const alto = g.blocos.reduce((a, b) => (b.altura > a.altura ? b : a));
+      const { de, ate } = rajadaAoRedor(g.blocos, alto.bloco, juntarRajadaS);
+      return {
+        ...g,
+        blocos: undefined,
+        inicioS: g.inicio / FPS,
+        fimS: g.fim / FPS,
+        duracaoS: (g.fim - g.inicio) / FPS,
+        picoS: alto.bloco / FPS,
+        rajadaDeS: de / FPS,
+        rajadaAteS: ate / FPS,
+      };
+    })
     .sort((a, b) => b.pico - a.pico);
+}
+
+/**
+ * A RAJADA a volta do tiro mais alto, dentro de uma luta.
+ *
+ * "Os clipes sao de setenta segundos. Se eu configurei zero antes e zero
+ *  depois, era pra ser exatamente: eu disparo, a pessoa morre, e acaba."
+ *
+ * Uma luta e uma coisa; uma rajada e outra. Os catorze segundos que juntam
+ * impulsos numa luta existem para nao partir um combate em pedacos — foi ele
+ * que me fez subi-los de seis para catorze. Mas usar essa mesma medida para
+ * CORTAR o clipe traz o combate inteiro, e o combate inteiro nao e o que ele
+ * pediu.
+ *
+ * Medido numa luta verdadeira dele: cinco impulsos em 13,6 s, com um intervalo
+ * de 10,5 s no meio e depois tres em 3,1 s. O tiro mais alto esta no segundo
+ * grupo. Com tres segundos, a rajada e esse grupo — 3,1 s em vez de 13,6 — e o
+ * silencio de dez segundos fica de fora. Noutra luta do mesmo VOD os cinco
+ * impulsos vinham em 0,3 s, e ai a rajada e a luta inteira, como deve ser.
+ */
+function rajadaAoRedor(blocos, centro, juntarRajadaS) {
+  const salto = juntarRajadaS * FPS;
+  const i = blocos.findIndex((b) => b.bloco === centro);
+  let de = i;
+  let ate = i;
+  while (de > 0 && blocos[de].bloco - blocos[de - 1].bloco <= salto) de--;
+  while (ate < blocos.length - 1 && blocos[ate + 1].bloco - blocos[ate].bloco <= salto) ate++;
+  return { de: blocos[de].bloco, ate: blocos[ate].bloco };
 }
 
 /** Tudo junto: de amostras a lutas, ordenadas. */

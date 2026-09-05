@@ -248,3 +248,49 @@ test('falar por cima de um tiroteio não apaga o tiroteio', () => {
   for (let i = 0; i < 6; i++) tiro(x, 10 + i * 0.16, { forca: 3 });
   assert.equal(procurarTiros(x).length, 1, 'a voz por cima não pode esconder os tiros');
 });
+
+// ── a rajada, e o clipe que sai dela ────────────────────────────────────────
+//
+// "Os clipes são de setenta segundos. Se eu configurei zero segundos antes e
+//  zero depois, era pra ser exatamente: eu disparo, a pessoa morre, e acaba."
+//
+// A forma destes números foi medida numa luta verdadeira dele, no VOD da Kick:
+// cinco impulsos em 13,6 s, com um silêncio de 10,5 s no meio e o tiro mais
+// alto no grupo do fim. O clipe levava os 13,6 s inteiros — dez deles de nada.
+
+/** Impulsos aos segundos que se quiser, com a altura que se quiser. */
+const nosSegundos = (pares) => pares.map(([s, altura]) => ({ bloco: Math.round(s * FPS), altura }));
+
+test('o instante de uma luta é o do tiro mais alto, e não o do primeiro', () => {
+  const [g] = lutas(nosSegundos([[10, 12], [10.5, 40], [11, 15], [11.5, 13]]));
+  assert.equal(g.picoS, 10.5, `o pico ficou em ${g.picoS}`);
+  assert.equal(g.inicioS, 10, 'a luta continua a começar no primeiro');
+});
+
+test('a rajada corta o silêncio que vem antes dela', () => {
+  // A luta verdadeira dele, à escala: um tiro solto, dez segundos de nada, e
+  // depois a rajada com o tiro mais alto lá dentro.
+  const [g] = lutas(nosSegundos([[0, 10], [10.5, 14], [10.6, 17], [11.5, 30], [13.6, 24]]));
+  assert.equal(g.duracaoS, 13.6, 'a luta inteira continua a ser a luta inteira');
+  assert.equal(g.picoS, 11.5);
+  assert.equal(g.rajadaDeS, 10.5, `a rajada começou em ${g.rajadaDeS} e devia ser 10,5`);
+  assert.equal(g.rajadaAteS, 13.6, `a rajada acabou em ${g.rajadaAteS}`);
+  // A prova ao contrário: sem a rajada, o clipe seria os 13,6 s todos.
+  assert.ok(g.rajadaAteS - g.rajadaDeS < g.duracaoS / 4,
+    'a rajada tinha de ser bem mais curta do que a luta');
+});
+
+test('uma rajada só, sem silêncios, é a luta inteira', () => {
+  // A outra luta do mesmo VOD: cinco impulsos em três décimos de segundo.
+  const [g] = lutas(nosSegundos([[5, 20], [5.08, 43], [5.14, 24], [5.2, 18], [5.3, 16]]));
+  assert.equal(g.rajadaDeS, 5, 'aqui a rajada é tudo');
+  assert.equal(g.rajadaAteS, 5.3);
+});
+
+test('o intervalo da rajada é mais curto do que o da luta', () => {
+  // Dois grupos a quatro segundos um do outro: a luta junta-os (catorze), a
+  // rajada não (três). Se os dois números fossem o mesmo, isto não separava.
+  const [g] = lutas(nosSegundos([[0, 10], [0.2, 11], [4.2, 12], [4.4, 30], [4.6, 13]]));
+  assert.equal(g.tiros, 5, 'a luta tem os cinco');
+  assert.equal(g.rajadaDeS, 4.2, `a rajada começou em ${g.rajadaDeS}`);
+});

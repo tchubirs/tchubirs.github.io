@@ -65,6 +65,57 @@ test('varre a noite aos bocados e acha as lutas onde elas estao', async () => {
   assert.deepEqual(picos, [...picos].sort((a, b) => b - a), 'a mais alta tem de vir a frente');
 });
 
+// "Os clipes sao de setenta segundos. Se eu configurei zero segundos antes e
+//  zero depois, era pra ser exatamente: eu disparo, a pessoa morre, e acaba."
+//
+// O clipe levava do primeiro ao ultimo disparo da luta — ate noventa segundos —
+// e as margens dele somavam-se por fora. Aqui a luta tem um tiro solto, dez
+// segundos de nada, e depois a rajada: e a forma medida numa luta verdadeira do
+// VOD dele. O clipe tem de ser a rajada, e nao os treze segundos.
+test('o clipe automatico e a rajada ate a morte, e nao o combate inteiro', async () => {
+  const T = Date.parse('2026-08-30T22:00:00Z');
+  const NOITE = 120;
+  const x = new Float32Array(Math.round((NOITE + 30) * TAXA));
+  let s = 7;
+  const rnd = () => ((s = (Math.imul(s, 1103515245) + 12345) >>> 0) / 0x100000000);
+  for (let i = 0; i < x.length; i++) x[i] = (rnd() * 2 - 1) * 0.01;
+  // Um tiro aos 50 s, silencio, e a rajada dos 60,5 aos 63,5 com o mais alto
+  // aos 61,5 — mesma forma, mesmos intervalos.
+  const estouro = (t, forca) => {
+    const i = Math.round(t * TAXA);
+    for (let j = 0; j < 1200 && i + j < x.length; j++) {
+      x[i + j] += forca * (rnd() * 2 - 1) * Math.exp(-j / 200);
+    }
+  };
+  for (const [t, f] of [[50, 1], [60.5, 1], [60.6, 1.2], [61.5, 2.5], [63.5, 1.4]]) estouro(t, f);
+
+  const r = await varrerNoite({
+    linha: { slug: 'tchubi' },
+    deMs: T,
+    ateMs: T + NOITE * 1000,
+    bocadoS: 300,
+    lerSom: async (linha, quandoMs, duracaoS) => {
+      const de = Math.round(((quandoMs - T) / 1000) * TAXA);
+      return x.subarray(de, de + Math.round(duracaoS * TAXA));
+    },
+  });
+
+  assert.equal(r.candidatos.length, 1, `deu ${r.candidatos.length} candidatos`);
+  const c = r.candidatos[0];
+  const seg = (ms) => (ms - T) / 1000;
+  // O instante e o tiro mais alto.
+  assert.ok(Math.abs(seg(c.ms) - 61.5) < 1, `o instante deu ${seg(c.ms)} e devia ser ~61,5`);
+  // E o clipe comeca na rajada, e nao no tiro solto dos 50 s.
+  assert.ok(seg(c.combateDeMs) > 58,
+    `o clipe comecou aos ${seg(c.combateDeMs)}s — voltou a levar o combate inteiro`);
+  assert.ok(Math.abs(seg(c.combateAteMs) - 61.5) < 1,
+    `o clipe acabou aos ${seg(c.combateAteMs)}s e devia acabar na morte`);
+  const dur = seg(c.combateAteMs) - seg(c.combateDeMs);
+  assert.ok(dur > 0.5 && dur < 5, `o clipe ficou com ${dur.toFixed(1)}s`);
+  // A luta inteira continua a saber-se, para a linha do tempo.
+  assert.ok(c.duracaoS > 10, `a luta devia continuar a ter ${c.duracaoS}s medidos por inteiro`);
+});
+
 // Um bocado que nao se consegue ouvir nao pode deslocar o resto no tempo.
 test('um bocado que falha nao desalinha os candidatos seguintes', async () => {
   const T = Date.parse('2026-08-30T22:00:00Z');
