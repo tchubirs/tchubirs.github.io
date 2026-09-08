@@ -1050,7 +1050,7 @@ body {
 @media (min-width: 720px) { body { padding: 28px; } }
 
 header {
-  max-width: 1320px;
+  max-width: var(--largura);
   margin: 0 auto var(--e5);
   padding: 28px 32px 24px;
   background: linear-gradient(135deg, #14221a 0%, var(--caixa) 60%);
@@ -1083,7 +1083,7 @@ h1::before { width: 24px; height: 24px; margin-right: 10px; }
 .passos li.feito { border-color: var(--ok); }
 
 .topoTrabalho {
-  max-width: 1320px;
+  max-width: var(--largura);
   margin: 0 auto var(--e6);
   gap: 16px;
 }
@@ -1115,7 +1115,7 @@ textarea:focus, select:focus, .procura input:focus {
 }
 
 #palco:not([hidden]) {
-  max-width: 1520px;
+  max-width: var(--largura);
   margin: 0 auto;
   gap: 18px;
 }
@@ -1169,3 +1169,34 @@ textarea, select, .procura input { min-height: 44px; }
   .canais li { max-width: 100%; }
   .confianca { width: 100%; justify-content: flex-start; }
 }
+
+/* O Clipar, colado aos ângulos em foco.
+   "Deixa o botão clipar maior e destacado perto dos players principais, pois
+   tá muito escondido." Ocupa a largura toda por baixo do vídeo, com o dobro
+   da altura de um botão normal — é o gesto que ele repete a noite inteira, e
+   um gesto repetido não pode custar uma procura. */
+.barraClipar {
+  display: flex; align-items: center; gap: var(--e2);
+  margin: var(--e2) 0 var(--e1);
+}
+.barraClipar #clipar {
+  flex: 1 1 auto; min-height: 52px;
+  font-size: 17px; font-weight: 700; letter-spacing: .02em;
+  border-radius: 10px;
+  box-shadow: 0 0 0 1px #53fc1826, 0 6px 18px #53fc1820;
+}
+.barraClipar #clipar kbd { margin-left: 8px; }
+.barraClipar #marca { flex: 0 1 auto; text-align: right; }
+@media (max-width: 620px) {
+  .barraClipar #clipar { min-height: 48px; font-size: 16px; }
+}
+
+/* A largura toda outra vez.
+   "O modelo atual voltou só pro meio da tela." Voltou: o alinhamento que veio
+   de fora trazia tectos de 1320 e 1520 px, e num monitor largo — que é onde
+   ele revê dezassete ângulos ao mesmo tempo — isso deixa duas barras pretas
+   enormes dos lados. Os tectos ficam, mas num só sítio e altos: o que eles
+   servem é impedir que uma linha de texto atravesse um metro de ecrã, e isso
+   já o `max-width` do texto resolve. */
+:root { --largura: 100%; }
+@media (min-width: 2100px) { :root { --largura: 2000px; } }

@@ -2107,6 +2107,15 @@ function abrirClipe() {
   // mensagem. Ele carregou e veio dizer-mo, e tinha toda a razão.
   $('guardarRetrato').disabled = true;
   $('semRetrato').hidden = true;
+  // A grelha pára ao abrir o clipe.
+  //
+  // "Quando aperto em clip, pausa os players principais, ou o player se for
+  //  1 só." Não parava: ficavam a andar por trás da janela, e quando ele
+  // voltava o instante já não era o que ele tinha escolhido — além de se
+  // ouvirem dois sons ao mesmo tempo. Só se retoma se tiver sido isto a
+  // parar: quem já a tinha em pausa não quer que ela arranque ao fechar.
+  estado.clipe.retomarGrelha = !estado.parado;
+  if (estado.clipe.retomarGrelha) alternarPausa();
   pintarClipe();
   preverClipe(estado.clipe.deMs);
   prepararRetrato();
@@ -2462,6 +2471,7 @@ async function guardarRetrato() {
 
 function fecharClipe() {
   clearTimeout(estado.esperaRetrato);
+  const retomarGrelha = estado.clipe?.retomarGrelha;
   pararVer();
   estado.clipe?.hls?.destroy();
   const v = $('previaClipe');
@@ -2469,6 +2479,7 @@ function fecharClipe() {
   v.removeAttribute('src');
   estado.clipe = null;
   $('modalClipe').hidden = true;
+  if (retomarGrelha && estado.parado) alternarPausa();
 }
 
 const posClipe = (ms) => {

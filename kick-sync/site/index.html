@@ -119,6 +119,16 @@
   <!-- A ordem dos quadrados. "Nunca acho a live de quem tô procurando": com
        trinta ângulos, saber que estão pela ordem em que os escrevi não me diz
        onde está o fulano — para PROCURAR alguém a chave é o nome. -->
+  <!-- O Clipar vive AQUI, colado aos ângulos em foco.
+       "Deixa o botão clipar maior e destacado perto dos players principais,
+        pois tá muito escondido." Estava: vivia no fundo da coluna do relógio,
+       a seguir a quatro botões de saltar e a dois de marcar, e num ecrã de
+       portátil ficava abaixo da dobra. É o botão que ele carrega mais vezes;
+       tem de estar onde os olhos já estão, que é no vídeo. -->
+  <div class="barraClipar">
+    <button id="clipar" class="principal"><span data-t="clipe.botao">Clipar</span> <kbd>C</kbd></button>
+    <output id="marca" class="nota"></output>
+  </div>
   <div id="barraGrelha" class="barraGrelha" hidden>
     <span class="rotuloCampo" data-t="grelha.ordem">Ordem</span>
     <button id="ordemAdicionado" class="ordemGrelha" data-ordem="adicionado"
@@ -165,16 +175,6 @@
         <button id="menos10s" data-t="tempo.menos10s" data-t-titulo="tempo.voltar10s" title="voltar 10 segundos">&lsaquo; 10s</button>
         <button id="mais10s" data-t="tempo.mais10s" data-t-titulo="tempo.avancar10s" title="avançar 10 segundos">10s &rsaquo;</button>
         <button id="mais1m" data-t="tempo.mais1m" data-t-titulo="tempo.avancar1m" title="avançar 1 minuto">1 min &raquo;</button>
-      </div>
-      <!-- "Destaca o botão Clipar. E bota na mesma linha os botões de marcar
-           início e marcar final — fica estranho, uma linha em cima, outra em
-           baixo." Os três tinham o mesmo peso e a mesma linha flex, que num
-           ecrã estreito parte onde lhe apetece. Agora o Clipar é o principal e
-           tem a linha dele; os dois de marcar são uma grelha de duas colunas
-           iguais, que não parte nunca. -->
-      <div class="linha">
-        <button id="clipar" class="principal"><span data-t="clipe.botao">Clipar</span> <kbd>C</kbd></button>
-        <output id="marca" class="nota"></output>
       </div>
       <div class="marcas">
         <button id="marcarIn"><span data-t="marca.inicio">Marcar entrada</span> <kbd>I</kbd></button>

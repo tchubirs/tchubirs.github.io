@@ -2207,8 +2207,10 @@ test('o ▶ do clipe toca só o pedaço, e pára a grelha enquanto toca',
       grelhaParada: document.getElementById('agora').classList.contains('parado'),
     }));
 
+    // A grelha JA vem parada: abrir o clipe pára-a, a pedido dele — "quando
+    // aperto em clip, pausa os players principais". O ▶ apanha-a assim.
     assert.deepEqual(await estadoDoBotao(),
-      { carregado: 'false', mudo: true, grelhaParada: false });
+      { carregado: 'false', mudo: true, grelhaParada: true });
 
     await p.click('#verClipe');
     const aVer = await estadoDoBotao();
@@ -2216,11 +2218,12 @@ test('o ▶ do clipe toca só o pedaço, e pára a grelha enquanto toca',
     assert.equal(aVer.mudo, false, 'ver um clipe sem som não serve para nada');
     assert.equal(aVer.grelhaParada, true, 'a grelha tinha de parar para não haver dois sons');
 
-    // Carregar outra vez pára, e deixa tudo como estava.
+    // Carregar outra vez pára, e deixa tudo como estava — que agora e a
+    // grelha PARADA, porque foi assim que o clipe a encontrou.
     await p.click('#verClipe');
     assert.deepEqual(await estadoDoBotao(),
-      { carregado: 'false', mudo: true, grelhaParada: false },
-      'parar tinha de repor o som, o botão e a grelha');
+      { carregado: 'false', mudo: true, grelhaParada: true },
+      'parar tinha de repor o som e o botão, e deixar a grelha como estava');
 
     assert.deepEqual(erros, []);
     await p.close();
@@ -2385,6 +2388,71 @@ test('nada é pedido a outro domínio: o hls.js é nosso',
     // que não carrega é pior do que o CDN.
     assert.equal(await p.evaluate(() => window.Hls?.version), '1.5.17');
     assert.equal(await p.evaluate(() => window.Hls?.isSupported?.()), true);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+// "Quando aperto em clip, pausa os players principais, ou o player se for 1 só."
+//
+// Não parava: os vídeos ficavam a andar por trás da janela, e quando ele
+// voltava o instante já não era o que tinha escolhido — além de se ouvirem
+// dois sons ao mesmo tempo. E fechar tem de devolver as coisas como estavam.
+test('abrir o clipe pára os vídeos, e fechar devolve-os como estavam',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 20000 });
+
+    const parados = () => p.evaluate(() => [...document.querySelectorAll('.tile video')]
+      .filter((v) => v.paused).length);
+    const quantos = await p.locator('.tile video').count();
+    assert.ok(quantos > 0, 'tem de haver vídeo');
+
+    await p.click('#clipar');
+    await p.waitForSelector('#modalClipe:not([hidden])', { timeout: 10000 });
+    await p.waitForFunction((n) => [...document.querySelectorAll('.tile video')]
+      .filter((v) => v.paused).length === n, quantos, { timeout: 5000 });
+
+    await p.click('#fecharClipe');
+    await p.waitForFunction(() => document.getElementById('modalClipe').hidden,
+      null, { timeout: 10000 });
+    await p.waitForFunction(() => [...document.querySelectorAll('.tile video')]
+      .some((v) => !v.paused), null, { timeout: 5000 });
+
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+// O botão que ele carrega mais vezes não pode estar abaixo da dobra.
+test('o Clipar fica junto aos ângulos em foco, e é o maior botão do palco',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir({ ecra: { width: 1280, height: 800 } });
+    await kickFalsa(p, { canais: ['tchubi'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 20000 });
+
+    const c = await p.locator('#clipar').boundingBox();
+    const foco = await p.locator('#palcoFoco').boundingBox();
+    assert.ok(c && c.height >= 44, `o Clipar tem ${c?.height}px de alto`);
+    // Colado ao vídeo: no máximo uma altura de botão abaixo dele.
+    assert.ok(c.y > foco.y && c.y - (foco.y + foco.height) < 80,
+      `o Clipar está a ${Math.round(c.y - (foco.y + foco.height))}px do vídeo`);
+    // E é mesmo o maior: nenhum outro botão do palco tem mais área.
+    const maior = await p.evaluate(() => {
+      let m = 0;
+      for (const b of document.querySelectorAll('#palco button')) {
+        const r = b.getBoundingClientRect();
+        if (b.id !== 'clipar' && r.width * r.height > m) m = r.width * r.height;
+      }
+      return m;
+    });
+    assert.ok(c.width * c.height > maior,
+      `o Clipar tem ${Math.round(c.width * c.height)}px² e há outro com ${Math.round(maior)}px²`);
     assert.deepEqual(erros, []);
     await p.close();
   });
