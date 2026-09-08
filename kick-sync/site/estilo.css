@@ -299,7 +299,13 @@ kbd {
    lá a não fazer nada — "não consigo deixar ela em tela cheia". Quem quer o
    vídeo grande no segundo monitor arrasta a janela e puxa-lhe o canto, que é
    para isso que ela existe. */
-.janelaAparte .tile .ecraCheio { display: none; }
+/* O ecrã cheio VOLTA à janela à parte.
+   Eu tinha-o escondido porque o browser nega o ecrã cheio a uma janela de
+   `documentPictureInPicture` — e escondê-lo foi a decisão errada: ele foi lá
+   procurá-lo. "Quando boto em aba separada o vídeo, o botão de tela cheia
+   sumiu." Um botão que existe e explica porque não pode é melhor do que um
+   buraco onde ele estava; e quando o browser deixar, passa a funcionar sem eu
+   mexer em nada. */
 .tile.vazio video { opacity: 0; }
 .tile .rotulo {
   position: absolute; left: 6px; top: 6px; background: var(--sobre-video); padding: 2px 7px;
@@ -639,7 +645,9 @@ footer { margin-top: 32px; border-top: 1px solid var(--borda); padding-top: 12px
      a toda a largura por baixo das duas. Em áreas nomeadas e não em ordem de
      documento, porque a zona de baixo tem de atravessar as duas colunas. */
   #palco:not([hidden]) {
-    grid-template-columns: minmax(0, 1.55fr) minmax(400px, 1fr);
+    /* A linha do tempo tem uma largura BOA e para de crescer; o que sobra do
+       ecrã vai todo para o vídeo, que é o que ganha em ser grande. */
+    grid-template-columns: minmax(0, 1fr) clamp(400px, 30vw, 640px);
     grid-template-areas: "video lado" "fundo fundo";
     align-items: start;
   }
@@ -667,11 +675,18 @@ footer { margin-top: 32px; border-top: 1px solid var(--borda); padding-top: 12px
      colunas cada um fica do tamanho do que tem dentro, em vez de uma coluna
      estreita a empilhar tudo por cima de tudo. A montagem leva o dobro
      porque é a única com uma lista lá dentro. */
+  /* Tantas colunas quantas couberem, com um mínimo por bloco: num ecrã de
+     1400 px dá duas, num de 2560 dá quatro. Assim o fundo ATRAVESSA o ecrã em
+     vez de deixar metade vazia — e nenhum bloco fica esticado, porque a
+     largura de cada um é a da sua coluna e não a da página. */
   .palcoFundo {
     display: grid; gap: 16px; align-items: start;
-    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
   }
-  .palcoFundo > #montagem { grid-row: span 3; }
+  /* A montagem é a única com uma lista lá dentro: leva duas colunas quando
+     houver duas para dar, e uma quando não houver. */
+  .palcoFundo > #montagem { grid-column: span 2; }
+  @media (max-width: 1400px) { .palcoFundo > #montagem { grid-column: span 1; } }
 }
 
 /* Um `select` no meio de uma linha de botões não tem de ocupar a linha toda.
@@ -1090,10 +1105,12 @@ button, select, input[type="text"], input[type="search"], input[type="number"] {
    de dois mil pixels. A página tem um tecto e centra-se; num ecrã normal o
    tecto nunca chega a tocar, e num largo sobram margens em vez de metros de
    caixa vazia. */
-body > header, body > .topoTrabalho, body > #palco, body > footer,
-body > #canaisEstado, body > .avisos {
-  max-width: 1700px; margin-left: auto; margin-right: auto;
-}
+/* O ecrã todo, sim — mas espalhado, não esticado.
+   "Agora espalha bem pra ocupar a tela toda, não estica as coisa porém espalha
+    elas pela tela de forma organizada."
+   O tecto sai: quem tem dois mil pixels quer usá-los. O que impede a bagunça
+   não é apertar a página, é cada bloco ter um tamanho próprio e a grelha
+   distribuí-los — que é o que as regras a seguir fazem. */
 
 /* Um botão tem o tamanho do que diz.
    Estas duas filas eram grelhas de colunas iguais a ocupar a largura toda: num
@@ -1109,3 +1126,10 @@ body > #canaisEstado, body > .avisos {
   grid-template-columns: none;
 }
 .marcas button { flex: 0 1 auto; }
+/* Um recado que substitui o nome do canal por uns segundos. Fica dentro do
+   quadrado de propósito: numa janela à parte, uma mensagem na página principal
+   está atrás dela e ninguém a vê. */
+.tile .rotulo.recado {
+  background: var(--aviso-fundo); color: var(--aviso); max-width: 92%;
+  white-space: normal; line-height: 1.3;
+}
