@@ -1026,3 +1026,146 @@ button, select, input[type="text"], input[type="search"], input[type="number"] {
   outline: 1px dashed var(--marcador);
   z-index: 3;
 }
+
+/* ─────────────────────────────────────────────────────────────────────
+   O alinhamento visual veio de fora: um amigo dele, que faz sites, pegou
+   na versao de 2/9 e devolveu isto. Fica como ele o escreveu, no fim do
+   ficheiro e so a acrescentar — nao renomeia nem apaga uma regra que
+   seja, e todas as variaveis que usa ja existiam nos tokens. Foi por
+   isso que deu para aplicar sem tocar em logica nenhuma.
+   ───────────────────────────────────────────────────────────────────── */
+
+/* Visual hierarchy for the working surface. */
+body {
+  min-height: 100vh;
+  padding: 18px;
+  background-color: #07100a;
+  background-image:
+    radial-gradient(circle at 8% 0%, #53fc1814, transparent 34%),
+    linear-gradient(180deg, #0e1912 0%, #07100a 42%, #050906 100%),
+    repeating-linear-gradient(to right, var(--grelha) 0 1px, transparent 1px 72px),
+    repeating-linear-gradient(to bottom, var(--grelha) 0 1px, transparent 1px 72px);
+}
+
+@media (min-width: 720px) { body { padding: 28px; } }
+
+header {
+  max-width: 1320px;
+  margin: 0 auto var(--e5);
+  padding: 28px 32px 24px;
+  background: linear-gradient(135deg, #14221a 0%, var(--caixa) 60%);
+  border: 1px solid var(--borda-forte);
+  border-radius: 14px;
+  box-shadow: var(--sombra-2);
+}
+
+.topo { gap: 16px; }
+.topo h1 { font-size: 36px; line-height: 1; letter-spacing: 0; }
+h1::before { width: 24px; height: 24px; margin-right: 10px; }
+.sub {
+  max-width: 620px;
+  margin: 12px 0 0;
+  color: var(--texto-2);
+  font-size: 16px;
+}
+
+.passos {
+  gap: 10px;
+  margin: 24px 0 0;
+}
+.passos li {
+  flex: 1 1 180px;
+  min-height: 44px;
+  border: 1px solid var(--borda);
+  background: #0d1711;
+}
+.passos li.aqui { border-color: var(--acento); box-shadow: 0 0 0 1px #53fc1826; }
+.passos li.feito { border-color: var(--ok); }
+
+.topoTrabalho {
+  max-width: 1320px;
+  margin: 0 auto var(--e6);
+  gap: 16px;
+}
+.bloco {
+  padding: 22px;
+  background: linear-gradient(145deg, #16231a 0%, var(--caixa) 72%);
+  border-color: var(--borda-forte);
+  box-shadow: var(--sombra-1);
+}
+.rotuloCampo { color: var(--texto-2); }
+.entradaGrelha { gap: 18px; }
+textarea, select, .procura input {
+  background: #0a120d;
+  border-color: var(--borda-forte);
+}
+textarea:focus, select:focus, .procura input:focus {
+  border-color: var(--acento);
+  box-shadow: 0 0 0 3px #53fc1826;
+  outline: none;
+}
+#carregar { min-width: 132px; }
+
+#canaisEstado:not([hidden]) {
+  align-self: stretch;
+  padding: 22px;
+  background: #0d1711;
+  border: 1px solid var(--borda);
+  border-radius: var(--r2);
+}
+
+#palco:not([hidden]) {
+  max-width: 1520px;
+  margin: 0 auto;
+  gap: 18px;
+}
+.palcoVideo, .palcoLado, .palcoFundo { min-width: 0; }
+.relogio {
+  background: linear-gradient(145deg, #142119 0%, var(--caixa) 75%);
+  border-color: var(--borda-forte);
+  box-shadow: var(--sombra-1);
+}
+.palcoFundo > section, .palcoFundo > .linha, .palcoFundo > #zip {
+  background: linear-gradient(145deg, #142119 0%, var(--caixa) 75%);
+  border-color: var(--borda-forte);
+}
+.palcoFundo .momentos li { background: #0a120d; }
+button { border-radius: 6px; }
+button:not(.principal):hover:not(:disabled) { background: var(--realce); }
+
+@media (max-width: 620px) {
+  body { padding: 10px; }
+  header { padding: 22px 18px 18px; border-radius: 10px; }
+  .topo h1 { font-size: 30px; }
+  .sub { font-size: 15px; }
+  .passos { display: grid; grid-template-columns: 1fr; }
+  .passos li { min-height: 40px; }
+  .bloco { padding: 18px; }
+}
+
+/* Calm the interface: one active accent, fewer competing outlines. */
+body { font-size: 16px; }
+header { border-color: #26382c; box-shadow: 0 16px 40px #00000030; }
+.passos li { border-radius: 7px; border-color: #26382c; }
+.passos li.feito { border-color: #26382c; color: var(--texto-2); }
+.passos li.aqui { border-color: var(--acento); }
+.bloco, #canaisEstado:not([hidden]), .palcoFundo > section, .palcoFundo > .linha,
+.palcoFundo > #zip, .relogio {
+  border-color: #26382c;
+  box-shadow: none;
+}
+.rotuloCampo, h2, .etiqueta { letter-spacing: .08em; }
+.rotuloCampo { font-size: 12px; }
+textarea, select, .procura input { min-height: 44px; }
+.confianca { line-height: 1.35; }
+
+@media (max-width: 620px) {
+  header { margin-bottom: 14px; }
+  .topoTrabalho { gap: 12px; margin-bottom: 18px; }
+  .bloco { padding: 16px; }
+  .entradaGrelha { gap: 14px; }
+  .topoTrabalho #carregar { width: 100%; }
+  #canaisEstado:not([hidden]) { padding: 16px; }
+  .canais li { max-width: 100%; }
+  .confianca { width: 100%; justify-content: flex-start; }
+}

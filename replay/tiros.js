@@ -334,8 +334,15 @@ export function procurarTiros(amostras, { taxa = TAXA_TIROS, ...opcoes } = {}) {
  *
  * Verificado em dois tiroteios que ele confirmou, um de cada canal:
  *
- *   · kodd, LA ISLA, 11915 s — ele morre. A regiao 219,4→226,0 s sai em
- *     PRIMEIRO de treze.
+ *   · kodd, LA ISLA, 11915 s — o ecra da morte do proprio jogo diz-no por
+ *     extenso: morto por uma espingarda de assalto, a 8,8 m. Seis segundos
+ *     antes ele esta vivo, de arma na mao, a apontar por um corredor. A
+ *     regiao 219,4→226,0 s sai em PRIMEIRO de treze.
+ *
+ *     Nota do que ele avisou: o instante que ELE tinha marcado nesse canal
+ *     (01:01:19) nao tinha PvP nenhum — estava no inventario. A troca e
+ *     dois minutos e meio DEPOIS. E precisamente para isso que a lista
+ *     ordenada serve: ele marca por volta, e a ordem leva-o ao sitio.
  *   · tchubi, LA ISLA, 13664 s — "eu mato 2 e morro no final". Sai em
  *     PRIMEIRO (a morte) e em TERCEIRO (a troca, com a arma na mao) de
  *     dezassete.
