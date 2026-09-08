@@ -5,34 +5,34 @@
 // bottom rung of Kick's ladder and is what makes thirty tiles a home-connection
 // problem rather than a server problem.
 
-import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=c507cb10a1';
+import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=9134a59bd5';
 import {
   linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo,
-} from './relogio.js?v=c507cb10a1';
-import { cortarTodosOsAngulos } from './baixar.js?v=c507cb10a1';
-import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=c507cb10a1';
-import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=c507cb10a1';
-import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=c507cb10a1';
+} from './relogio.js?v=9134a59bd5';
+import { cortarTodosOsAngulos } from './baixar.js?v=9134a59bd5';
+import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=9134a59bd5';
+import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=9134a59bd5';
+import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=9134a59bd5';
 import {
   RETRATO, enquadramentoInicial, limitar, desenhar, gravar, formatoQueFunciona, extensaoDe,
   reformar, limparDivisao, DIVISAO_OMISSAO, divisaoDoQuadro, proporcaoDoQuadro, encaixar,
-} from './retrato.js?v=c507cb10a1';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=c507cb10a1';
+} from './retrato.js?v=9134a59bd5';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=9134a59bd5';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
   alternarVitima, filtrar, temMorte, clipesDoMomento,
-} from './momentos.js?v=c507cb10a1';
-import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=c507cb10a1';
-import { criarZip, crc32 } from './zip.js?v=c507cb10a1';
-import { queFazerComOLeitor } from './leitor.js?v=c507cb10a1';
-import { criarApanhador } from './frames.js?v=c507cb10a1';
-import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=c507cb10a1';
-import { TAXA_TIROS } from './tiros.js?v=c507cb10a1';
-import { parecidos, juntarPerto } from './aprender.js?v=c507cb10a1';
-import { somDoCanal } from './alinhar.js?v=c507cb10a1';
-import { MAXIMO_S, mover, janelaInicial, nomeDoClipe, posicaoDaCabeca } from './clipe.js?v=c507cb10a1';
-import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=c507cb10a1';
-import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=c507cb10a1';
+} from './momentos.js?v=9134a59bd5';
+import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=9134a59bd5';
+import { criarZip, crc32 } from './zip.js?v=9134a59bd5';
+import { queFazerComOLeitor } from './leitor.js?v=9134a59bd5';
+import { criarApanhador } from './frames.js?v=9134a59bd5';
+import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=9134a59bd5';
+import { TAXA_TIROS } from './tiros.js?v=9134a59bd5';
+import { parecidos, juntarPerto } from './aprender.js?v=9134a59bd5';
+import { somDoCanal } from './alinhar.js?v=9134a59bd5';
+import { MAXIMO_S, mover, janelaInicial, nomeDoClipe, posicaoDaCabeca } from './clipe.js?v=9134a59bd5';
+import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=9134a59bd5';
+import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=9134a59bd5';
 
 const $ = (id) => document.getElementById(id);
 const estado = {
@@ -1389,7 +1389,18 @@ async function procurarKills() {
     });
 
     estado.estouros = r.estouros || [];
-    if (!r.candidatos.length) { nota.textContent = t('auto.nenhum', { canal }); return; }
+    if (!r.candidatos.length) {
+      // Dizer o que se ouviu, e nao so que nao se achou. "Da isso, porem eu sei
+      // que ta tendo tiroteio" — e sem estes tres numeros nao ha como saber se
+      // o detector ouviu o pedaco errado, se apertou demais, ou se faltou um
+      // tiro para fazer grupo.
+      const o = r.ouvido;
+      nota.textContent = t('auto.nenhum', { canal })
+        + (!o ? ''
+          : !o.altos ? t('auto.ouviNada')
+            : t('auto.ouvi', { ...o, minTiros: 4 }));
+      return;
+    }
 
     for (const c of r.candidatos) {
       estado.momentos = acrescentar(
