@@ -112,9 +112,11 @@ export async function kickFalsa(pagina, {
       : Buffer.alloc(4096, 7);
     return rota.fulfill({ status: 200, contentType: 'video/mp2t', body: corpo });
   });
-  // hls.js comes from a CDN this container cannot reach. Stub it: playback is
-  // not what this test is about, and a missing global would hide real errors.
-  await pagina.route('**/hls.min.js', (rota) => rota.fulfill({
+  // O hls.js e nosso desde que saiu do cdnjs — mas continua a ser trocado por
+  // um duplo aqui: tocar de verdade nao e o que estes testes medem, e o duplo
+  // e o unico sitio de onde se ve QUAL degrau da escada cada quadrado pediu.
+  // Quem quer o ficheiro a serio faz `p.unroute('**/hls-*.js')` a seguir.
+  await pagina.route('**/hls-*.js', (rota) => rota.fulfill({
     status: 200,
     contentType: 'text/javascript',
     // O stub regista o que lhe mandam carregar. Sem isto não há como ver

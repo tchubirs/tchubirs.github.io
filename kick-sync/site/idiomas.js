@@ -172,6 +172,7 @@ const TEXTOS = {
     'montagem.apagar': 'Remover',
     'montagem.verMortes': 'Identificar vítimas',
     'montagem.matou': 'Vítimas',
+    'montagem.quemMorreu': 'Quem morreu?',
     'montagem.naoFilmava': 'não estava a filmar',
     'montagem.clipes': '{n} clipes',
     'montagem.umClipe': '1 clipe',
@@ -253,7 +254,7 @@ const TEXTOS = {
     'auto.aprendi': 'Referência guardada · {n} momentos com o mesmo som',
     'auto.semSom': 'Sem áudio guardado deste momento. Corre a deteção automática primeiro.',
     'auto.semCodec': 'Este navegador não descodifica o áudio da Kick, por isso a deteção não corre. Abre no Chrome ou no Edge, ou marca as kills à mão.',
-    'leitor.aviso': 'O leitor de vídeo (hls.js) não carregou e sem ele os quadrados ficam pretos. Um bloqueador ou a rede terão travado o CDN — desliga o bloqueador nesta página e recarrega.',
+    'leitor.aviso': 'O leitor de vídeo (hls.js) não carregou e sem ele os quadrados ficam pretos. Recarrega a página; se continuar, desliga o bloqueador aqui e recarrega outra vez.',
   },
 
   en: {
@@ -417,6 +418,7 @@ const TEXTOS = {
     'montagem.apagar': 'Remove',
     'montagem.verMortes': 'Identify victims',
     'montagem.matou': 'Victims',
+    'montagem.quemMorreu': 'Who died?',
     'montagem.naoFilmava': 'was not recording',
     'montagem.clipes': '{n} clips',
     'montagem.umClipe': '1 clip',
@@ -498,7 +500,7 @@ const TEXTOS = {
     'auto.aprendi': 'Reference saved · {n} moments with the same sound',
     'auto.semSom': 'No audio kept for this moment. Run automatic detection first.',
     'auto.semCodec': 'This browser cannot decode Kick audio, so detection will not run. Open it in Chrome or Edge, or mark kills by hand.',
-    'leitor.aviso': 'The video player (hls.js) did not load — a blocker or the network stopped the CDN. Without it the tiles stay black.',
+    'leitor.aviso': 'The video player (hls.js) did not load, and without it the tiles stay black. Reload the page; if it persists, turn off your blocker here and reload again.',
   },
 
   es: {
@@ -662,6 +664,7 @@ const TEXTOS = {
     'montagem.apagar': 'Eliminar',
     'montagem.verMortes': 'Identificar víctimas',
     'montagem.matou': 'Víctimas',
+    'montagem.quemMorreu': '¿Quién murió?',
     'montagem.naoFilmava': 'no estaba grabando',
     'montagem.clipes': '{n} clips',
     'montagem.umClipe': '1 clip',
@@ -743,7 +746,7 @@ const TEXTOS = {
     'auto.aprendi': 'Referencia guardada · {n} momentos con el mismo sonido',
     'auto.semSom': 'Sin audio guardado de este momento. Corre la detección automática primero.',
     'auto.semCodec': 'Este navegador no descodifica el audio de Kick, así que la detección no corre. Ábrelo en Chrome o Edge, o marca las kills a mano.',
-    'leitor.aviso': 'El reproductor de vídeo (hls.js) no cargó — un bloqueador o la red frenaron el CDN. Sin él los cuadros quedan negros.',
+    'leitor.aviso': 'El reproductor de vídeo (hls.js) no cargó y sin él los cuadros quedan negros. Recarga la página; si sigue, desactiva el bloqueador aquí y recarga otra vez.',
   },
 };
 

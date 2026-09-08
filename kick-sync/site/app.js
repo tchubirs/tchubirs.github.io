@@ -268,10 +268,10 @@ function pintarConfianca() {
 // ── carregar ────────────────────────────────────────────────────────────────
 
 /**
- * hls.js comes from a CDN, and a CDN is a thing that can be down, blocked by a
- * network, or eaten by an ad blocker. Without it the tiles stay black and the
- * page looks broken for a reason nobody can guess — so it says so, once, and
- * names the cause.
+ * O hls.js é nosso desde que saiu do cdnjs — mas um ficheiro nosso também se
+ * perde: uma publicação a meio, uma cache envenenada, um bloqueador demasiado
+ * zeloso. Sem ele os quadrados ficam pretos e a página parece partida por uma
+ * razão que ninguém adivinha — por isso diz-se, uma vez, e diz-se o que fazer.
  */
 function temPlayer() {
   const aviso = $('avisoPlayer');
@@ -1692,7 +1692,14 @@ function pintarMomentos() {
       + (sozinho ? '' : `<button class="verMortes">${t('montagem.verMortes')}</button>`)
       + `<span class="quantos">${dur ? `${dur}s · ` : ''}`
       + `${tn(n, 'montagem.umClipe', 'montagem.clipes')}</span>`
-      + (sozinho ? '' : `<span class="vitimas"><span class="nota">${t('montagem.matou')}</span>${fichas}</span>`)
+      // "Vítimas" só quando há alguma. Antes a etiqueta estava lá sempre, em
+      // cima de uma fila de nomes que ninguém tinha medido — e dizer "Vítimas"
+      // por cima de seis nomes que não morreram é afirmar uma coisa que a
+      // página não sabe. Sem ninguém marcado é uma PERGUNTA, e os botões são a
+      // resposta.
+      + (sozinho ? '' : `<span class="vitimas${temMorte(m) ? ' ha' : ''}">`
+        + `<span class="nota">${t(temMorte(m) ? 'montagem.matou' : 'montagem.quemMorreu')}</span>`
+        + `${fichas}</span>`)
       + '<div class="olhar" hidden></div></li>';
   }).join('') || `<li class="nota">${t('montagem.vazia')}</li>`;
 

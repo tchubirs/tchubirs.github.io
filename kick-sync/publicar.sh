@@ -32,6 +32,14 @@ done
 perl -pi -e "s{(<span id=\"versao\">)[^<]*(</span>)}{\${1}$V\${2}}" "$DESTINO"/*.html
 
 echo "publicado em $DESTINO  ·  versao $V"
+# O hls.js leva a versao NO NOME e nao pode levar carimbo: sao 414 KB, e um
+# endereco novo a cada publicacao obriga a descarrega-los outra vez. Sem
+# carimbo o browser revalida e recebe um 304 sem corpo. Se algum dia a
+# expressao la de cima passar a apanha-lo, isto para a publicacao e diz porque.
+if grep -q 'hls-[0-9.]*\.js?v=' "$DESTINO"/index.html; then
+  echo "::error::o hls levou carimbo — sao 414 KB a mais por publicacao" >&2
+  exit 1
+fi
 # Provar que o carimbo entrou mesmo, em vez de confiar. Cada pagina e cada
 # ficheiro de codigo tem de o ter — foi assim que uma vez publiquei para a
 # pasta errada e o script disse "publicado".

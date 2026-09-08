@@ -1012,8 +1012,11 @@ test('o aviso do leitor aparece quando o hls.js não carrega',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
     const { p } = await abrir();
     await kickFalsa(p);
-    // Desta vez o CDN do hls.js está em baixo.
-    await p.route('**/hls.min.js', (rota) => rota.abort());
+    // Desta vez o hls.js não chega — agora é nosso, mas um ficheiro nosso
+    // também se perde: cache envenenada, publicação a meio, um bloqueador
+    // demasiado zeloso. O aviso tem de continuar a existir.
+    await p.unroute('**/hls-*.js');
+    await p.route('**/hls-*.js', (rota) => rota.abort());
     await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'domcontentloaded' });
     await p.fill('#canais', 'tchubi');
     await p.click('#carregar');
@@ -2321,3 +2324,67 @@ test('todas as mensagens de erro dizem o próximo passo', async () => {
   }
   assert.deepEqual(curtas, [], 'estas mensagens dizem o problema e não o próximo clique');
 });
+
+// A etiqueta não pode afirmar o que ninguém mediu.
+//
+// Estava lá "Vítimas" em cima de uma fila com o nome de toda a gente — e
+// dizer "Vítimas" por cima de seis nomes que não morreram é a página a
+// afirmar uma coisa que não sabe. Sem ninguém marcado é uma PERGUNTA.
+test('a lista pergunta quem morreu, e só diz "vítimas" quando há alguma',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'vitima1'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi\nvitima1');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 15000 });
+
+    await p.click('#mais1m');
+    await p.click('#marcarKill');
+    await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
+
+    const etiqueta = () => p.locator('#listaMomentos .vitimas .nota').first().innerText();
+    assert.match(await etiqueta(), /Quem morreu\?/i,
+      'sem ninguém marcado, a etiqueta tem de ser uma pergunta');
+
+    await p.locator('#listaMomentos .vit[data-canal="vitima1"]').click();
+    assert.match(await etiqueta(), /^Vítimas$/i,
+      'com alguém marcado, aí sim é uma afirmação');
+    assert.equal(await p.locator('#listaMomentos .vitimas.ha').count(), 1);
+
+    // E desmarcar volta atrás: a afirmação não pode ficar lá sem quem a
+    // sustente.
+    await p.locator('#listaMomentos .vit[data-canal="vitima1"]').click();
+    assert.match(await etiqueta(), /Quem morreu\?/i);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+// O site só pode depender de si próprio.
+//
+// O `hls.js` vinha do cdnjs. Um <script> de outro domínio é uma dependência
+// que ninguém aqui controla: com o cdnjs em baixo, ou bloqueado na rede de
+// quem abre isto, a página carregava INTEIRA e nenhum vídeo tocava — sem uma
+// mensagem que explicasse porquê. Agora é nosso, e este teste é o que impede
+// que outro volte a entrar sem se dar por isso.
+test('nada é pedido a outro domínio: o hls.js é nosso',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p);
+    // O duplo sai da frente: este e o unico teste que quer o ficheiro a serio.
+    await p.unroute('**/hls-*.js');
+    const foraDeCasa = [];
+    p.on('request', (r) => {
+      const u = new URL(r.url());
+      if (u.hostname !== '127.0.0.1' && r.resourceType() === 'script') foraDeCasa.push(r.url());
+    });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+
+    assert.deepEqual(foraDeCasa, [], 'nenhum script pode vir de fora');
+    // E o que ele substituiu tem mesmo de funcionar — um ficheiro guardado
+    // que não carrega é pior do que o CDN.
+    assert.equal(await p.evaluate(() => window.Hls?.version), '1.5.17');
+    assert.equal(await p.evaluate(() => window.Hls?.isSupported?.()), true);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });

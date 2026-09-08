@@ -386,7 +386,18 @@
   <p class="nota"><span data-t="app.rodape">A sessão fica guardada neste dispositivo.</span> · <span id="versao">dev</span></p>
 </footer>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.17/hls.min.js"></script>
+<!-- O hls.js é nosso, e não do cdnjs.
+     Um <script> de outro domínio é uma dependência que ninguém aqui controla:
+     se o cdnjs estiver em baixo, ou bloqueado na rede de quem abre isto, a
+     página carrega inteira e nenhum vídeo toca — e não há mensagem nenhuma
+     que explique porquê. Guardado connosco, o site só depende de si próprio.
+
+     A versão vai NO NOME e não num `?v=`. O carimbo do publicar.sh muda a
+     cada publicação, e um endereço novo obriga a descarregar os 414 KB outra
+     vez — em dados móveis, a cada correcção de uma vírgula. Com a versão no
+     nome, o endereço só muda quando o ficheiro muda mesmo, e no meio fica um
+     304 sem corpo. É por isso que o publicar.sh não pode carimbar este. -->
+<script src="hls-1.5.17.js"></script>
 <script type="module" src="app.js"></script>
 </body>
 </html>
