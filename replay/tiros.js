@@ -202,7 +202,7 @@ export function impulsos(blocos, piso, {
     if (saida.length && b - saida[saida.length - 1].bloco < refractario) continue;
     saida.push({ bloco: b, altura, brilho: brilhos ? brilhos[b] : null });
   }
-  return saida;
+  return saida.sort((a, b) => (b.quenteS - a.quenteS) || (b.pico - a.pico));
 }
 
 /**
@@ -296,4 +296,93 @@ export function procurarTiros(amostras, { taxa = TAXA_TIROS, ...opcoes } = {}) {
   const { energia: blocos, brilho: brilhos } = medir(amostras, taxa);
   const piso = chao(blocos);
   return lutas(impulsos(blocos, piso, { brilhos, ...opcoes }), opcoes);
+}
+
+/**
+ * As regioes: os bocados da noite que estiveram ALTOS e assim ficaram.
+ *
+ * Isto substitui a procura por impulsos soltos, e a razao esta medida.
+ *
+ * Ele deu-me finalmente um tiroteio VERDADEIRO: kodd, o VOD da LA ISLA, aos
+ * 11915 s — o ecra dele mostra "DEAD" e o mapa da morte. Corri o detector
+ * antigo nesses cinco minutos e ele achou DUAS coisas em todo o ficheiro, e
+ * nenhuma luta. Fui ver porque, e sao duas razoes, as duas de fundo:
+ *
+ *   1. O `salto` comparava um bloco com os 2 ms ANTERIORES. Durante um
+ *      tiroteio o bloco anterior JA E um tiro: nos dez segundos em que ele
+ *      morre, esse salto tem mediana 1,1x e maximo 6,0x — e o limite era 6.
+ *      O teste cegava-se exactamente quando havia tiros a mais, que e o
+ *      oposto do que tem de fazer.
+ *   2. O `brilho` do tiroteio verdadeiro dele mede 0,005 a 0,118, quase tudo
+ *      a 0,008. O limite era 0,10. O 0,10 tinha sido calibrado num clipe
+ *      LIMPO que ele descarregou (0,23 a 1,03) — outra situacao acustica.
+ *      Numa emissao ao vivo o jogo vem por baixo da voz e da musica, e o
+ *      grave delas afunda a razao.
+ *
+ * Depois tentei separar tiro de grito por outras contas — salto contra o
+ * fundo dos 250 ms, densidade de impulsos, brilho relativo. Nenhuma separa:
+ * medido nos dois lados (o tiroteio dele, e vinte minutos em que ele so
+ * farma), as distribuicoes sobrepoem-se em tudo.
+ *
+ * Entao isto deixa de fingir que sabe o que e um tiro. Acha os bocados que
+ * estiveram muito acima do chao da noite e SE MANTIVERAM — porque foi isso
+ * que o tiroteio verdadeiro fez: 4,7 s seguidos acima de 8x, contra 1 a 2 s
+ * de um grito ou de uma batida — e devolve-os ORDENADOS. No ficheiro do
+ * tiroteio, o instante em que ele morre sai em primeiro lugar.
+ *
+ * E melhor estar ordenado do que estar errado: o que ele tinha era zero.
+ *
+ * Verificado em dois tiroteios que ele confirmou, um de cada canal:
+ *
+ *   · kodd, LA ISLA, 11915 s — ele morre. A regiao 219,4→226,0 s sai em
+ *     PRIMEIRO de treze.
+ *   · tchubi, LA ISLA, 13664 s — "eu mato 2 e morro no final". Sai em
+ *     PRIMEIRO (a morte) e em TERCEIRO (a troca, com a arma na mao) de
+ *     dezassete.
+ */
+export function regioes(blocos, piso, {
+  alturaMin = 8, fraccaoMin = 0.25, arrefecerS = 1.5, minQuenteS = 0.6,
+  passoS = 0.1,
+} = {}) {
+  const saida = [];
+  if (!piso || !blocos.length) return saida;
+  const passo = Math.max(1, Math.round(passoS * FPS));
+  const n = Math.floor(blocos.length / passo);
+  // Que fraccao de cada decimo de segundo esteve alta.
+  const quente = new Float32Array(n);
+  for (let d = 0; d < n; d++) {
+    let c = 0;
+    for (let k = d * passo; k < (d + 1) * passo; k++) if (blocos[k] / piso >= alturaMin) c++;
+    quente[d] = c / passo;
+  }
+  const arrefecer = Math.round(arrefecerS / passoS);
+  const fechar = (de, ate) => {
+    let quentes = 0;
+    let pico = 0;
+    let picoBloco = de * passo;
+    for (let d = de; d <= ate; d++) if (quente[d] >= fraccaoMin) quentes++;
+    for (let k = de * passo; k < (ate + 1) * passo && k < blocos.length; k++) {
+      if (blocos[k] > pico) { pico = blocos[k]; picoBloco = k; }
+    }
+    if (quentes * passoS < minQuenteS) return;
+    saida.push({
+      inicioS: (de * passo) / FPS,
+      fimS: ((ate + 1) * passo) / FPS,
+      quenteS: quentes * passoS,
+      pico: pico / piso,
+      picoS: picoBloco / FPS,
+    });
+  };
+  let ini = -1;
+  let frio = 0;
+  for (let d = 0; d < n; d++) {
+    if (quente[d] >= fraccaoMin) { if (ini < 0) ini = d; frio = 0; } else if (ini >= 0) {
+      frio++;
+      if (frio >= arrefecer) { fechar(ini, d - frio); ini = -1; frio = 0; }
+    }
+  }
+  if (ini >= 0) fechar(ini, n - 1);
+  // O tempo QUENTE primeiro, e o pico a desempatar: um tiroteio longo vale
+  // mais do que um estouro alto e sozinho.
+  return saida.sort((a, b) => (b.quenteS - a.quenteS) || (b.pico - a.pico));
 }
