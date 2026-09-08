@@ -317,3 +317,57 @@ test('sem fonte não inventa encaixe nenhum', () => {
   assert.deepEqual(encaixar(caixa(10, 10), null).linhas, []);
   assert.equal(encaixar(null, FONTE).rect, null);
 });
+
+// "Esses ponto verde maior para alterar escala tem que estar nos quatro cantos
+//  dos 2." Com um canto só, encolher pela esquerda obrigava a encolher pela
+// direita e depois arrastar a caixa de volta — dois gestos para um.
+//
+// A regra de um rectângulo: o canto que se puxa manda, e o OPOSTO fica onde
+// está. Isto é a conta que o `ligarArrasto` faz, escrita aqui para não se
+// perder num ficheiro de mil linhas de interface.
+const puxar = (r0, canto, dx, prop) => {
+  const oeste = canto === 'no' || canto === 'so';
+  const norte = canto === 'no' || canto === 'ne';
+  const largura = r0.largura + (oeste ? -dx : dx);
+  const altura = largura / prop;
+  return {
+    largura,
+    altura,
+    x: oeste ? r0.x + (r0.largura - largura) : r0.x,
+    y: norte ? r0.y + (r0.altura - altura) : r0.y,
+  };
+};
+
+test('puxar um canto deixa o canto oposto onde estava', () => {
+  const r0 = { x: 100, y: 200, largura: 400, altura: 400 };
+  const dir = (r) => ({ x: r.x + r.largura, y: r.y + r.altura });
+
+  // Sudeste: o noroeste não se mexe.
+  const se = puxar(r0, 'se', 80, 1);
+  assert.equal(se.x, 100); assert.equal(se.y, 200);
+  assert.equal(se.largura, 480);
+
+  // Noroeste: o sudeste não se mexe.
+  const no = puxar(r0, 'no', 80, 1);
+  assert.deepEqual(dir(no), dir(r0), 'o canto oposto tinha de ficar quieto');
+  assert.equal(no.largura, 320, 'puxar o noroeste para dentro encolhe');
+
+  // Nordeste: o sudoeste não se mexe.
+  const ne = puxar(r0, 'ne', 60, 1);
+  assert.equal(ne.x, 100, 'a esquerda fica');
+  assert.equal(ne.y + ne.altura, r0.y + r0.altura, 'o fundo fica');
+
+  // Sudoeste: o nordeste não se mexe.
+  const so = puxar(r0, 'so', -60, 1);
+  assert.equal(so.x + so.largura, r0.x + r0.largura, 'a direita fica');
+  assert.equal(so.y, 200, 'o topo fica');
+});
+
+test('a forma continua presa a proporcao da faixa, venha o canto que vier', () => {
+  const r0 = { x: 0, y: 0, largura: 300, altura: 100 };
+  for (const canto of ['no', 'ne', 'so', 'se']) {
+    const r = puxar(r0, canto, 60, 3);
+    assert.equal(Number((r.largura / r.altura).toFixed(6)), 3,
+      `o canto ${canto} deformou a caixa`);
+  }
+});

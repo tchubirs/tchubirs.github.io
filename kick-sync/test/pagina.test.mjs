@@ -2456,3 +2456,45 @@ test('o Clipar fica junto aos ângulos em foco, e é o maior botão do palco',
     assert.deepEqual(erros, []);
     await p.close();
   });
+
+// "Quando marco a kill não consigo ajeitar os tamanhos depois de marcado —
+//  tipo o botão clip, para escolher o formato que eu quero e como quero."
+//
+// A lista de kills só sabia exportar com as margens fixas. Quem quisesse
+// apurar as pontas ou escolher 9:16 tinha de ir à linha do tempo procurar o
+// instante outra vez à mão.
+test('cada kill marcada abre o mesmo editor de clipe, no instante dela',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'vitima1'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi\nvitima1');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 20000 });
+
+    // Marcar uma kill num sítio, e depois AFASTAR o relógio dela.
+    await p.click('#mais1m');
+    await p.click('#marcarKill');
+    await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
+    const daKill = await p.evaluate(() =>
+      Number(document.querySelector('#listaMomentos li[data-ms]').dataset.ms));
+    await p.click('#mais1m');
+    await p.click('#mais1m');
+
+    await p.locator('#listaMomentos .cliparUma').first().click();
+    await p.waitForSelector('#modalClipe:not([hidden])', { timeout: 10000 });
+
+    // O clipe tem de abrir NA KILL, e não onde o relógio ficou.
+    const { de, ate } = await p.evaluate(() => ({
+      de: window.__estado?.clipe?.deMs, ate: window.__estado?.clipe?.ateMs,
+    }));
+    if (de != null) {
+      assert.ok(de <= daKill && ate >= daKill,
+        `a kill está em ${daKill} e o clipe vai de ${de} a ${ate}`);
+    }
+    // E é o editor inteiro: o 9:16 está lá para ele escolher.
+    assert.equal(await p.locator('#exportarRetrato, #guardarRetrato').first().isVisible(), true,
+      'o editor tem de trazer o 9:16, que é o formato que ele quer escolher');
+    assert.deepEqual(erros, []);
+    await p.close();
+  });

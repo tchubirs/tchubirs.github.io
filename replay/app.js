@@ -5,34 +5,34 @@
 // bottom rung of Kick's ladder and is what makes thirty tiles a home-connection
 // problem rather than a server problem.
 
-import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=13a59d0ce9';
+import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=e250278590';
 import {
   linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo,
-} from './relogio.js?v=13a59d0ce9';
-import { cortarTodosOsAngulos } from './baixar.js?v=13a59d0ce9';
-import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=13a59d0ce9';
-import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=13a59d0ce9';
-import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=13a59d0ce9';
+} from './relogio.js?v=e250278590';
+import { cortarTodosOsAngulos } from './baixar.js?v=e250278590';
+import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=e250278590';
+import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=e250278590';
+import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=e250278590';
 import {
   RETRATO, enquadramentoInicial, limitar, desenhar, gravar, formatoQueFunciona, extensaoDe,
   reformar, limparDivisao, DIVISAO_OMISSAO, divisaoDoQuadro, proporcaoDoQuadro, encaixar,
-} from './retrato.js?v=13a59d0ce9';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=13a59d0ce9';
+} from './retrato.js?v=e250278590';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=e250278590';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
   alternarVitima, filtrar, temMorte, clipesDoMomento,
-} from './momentos.js?v=13a59d0ce9';
-import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=13a59d0ce9';
-import { criarZip, crc32 } from './zip.js?v=13a59d0ce9';
-import { queFazerComOLeitor } from './leitor.js?v=13a59d0ce9';
-import { criarApanhador } from './frames.js?v=13a59d0ce9';
-import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=13a59d0ce9';
-import { TAXA_TIROS } from './tiros.js?v=13a59d0ce9';
-import { parecidos, juntarPerto } from './aprender.js?v=13a59d0ce9';
-import { somDoCanal } from './alinhar.js?v=13a59d0ce9';
-import { MAXIMO_S, mover, janelaInicial, nomeDoClipe, posicaoDaCabeca } from './clipe.js?v=13a59d0ce9';
-import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=13a59d0ce9';
-import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=13a59d0ce9';
+} from './momentos.js?v=e250278590';
+import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=e250278590';
+import { criarZip, crc32 } from './zip.js?v=e250278590';
+import { queFazerComOLeitor } from './leitor.js?v=e250278590';
+import { criarApanhador } from './frames.js?v=e250278590';
+import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=e250278590';
+import { TAXA_TIROS } from './tiros.js?v=e250278590';
+import { parecidos, juntarPerto } from './aprender.js?v=e250278590';
+import { somDoCanal } from './alinhar.js?v=e250278590';
+import { MAXIMO_S, mover, janelaInicial, nomeDoClipe, posicaoDaCabeca } from './clipe.js?v=e250278590';
+import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=e250278590';
+import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=e250278590';
 
 const $ = (id) => document.getElementById(id);
 const estado = {
@@ -1697,6 +1697,7 @@ function pintarMomentos() {
       + `<span class="quem">${m.protagonista || '—'}</span>`
       + `<button class="ver ${estado.previa?.ms === m.ms ? 'aVer' : ''}">`
       + `${t(estado.previa?.ms === m.ms ? 'montagem.parar' : 'montagem.ver')}</button>`
+      + `<button class="cliparUma">${t('montagem.clipar')}</button>`
       + `<button class="baixarUma" ${n ? '' : 'disabled'}>${t('montagem.baixarUma')}</button>`
       + (estado.estouros.length ? `<button class="foiKill">${t('auto.foiKill')}</button>` : '')
       + `<button class="fora">${t('montagem.apagar')}</button>`
@@ -1719,6 +1720,10 @@ function pintarMomentos() {
     li.querySelector('.ver').onclick = () => verMomento(ms);
     const fk = li.querySelector('.foiKill');
     if (fk) fk.onclick = () => aprenderCom(ms);
+    li.querySelector('.cliparUma').onclick = () => {
+      const m = estado.momentos.find((x) => x.ms === ms);
+      if (m) abrirClipe(m);
+    };
     li.querySelector('.baixarUma').onclick = () => {
       const m = estado.momentos.find((x) => x.ms === ms);
       if (m) baixarMontagem([m]);
@@ -2067,14 +2072,36 @@ async function baixarUm(slug) {
 
 const CONTEXTO_S = 150;   // o que a barra mostra de cada lado do instante
 
-function abrirClipe() {
+/**
+ * Abrir o editor de clipe. Sem argumentos e no instante em que se está; com
+ * um momento, NESSE momento e já com o pedaço dele escolhido.
+ *
+ * "Quando marco a kill não consigo ajeitar os tamanhos depois de marcado —
+ *  tipo o botão clip, depois de já ter exportado ou antes, para escolher o
+ *  formato que eu quero e como quero."
+ *
+ * A lista de kills só sabia exportar com as margens fixas lá de cima. Quem
+ * quisesse apurar as pontas ou escolher 9:16 tinha de ir à linha do tempo,
+ * procurar o instante outra vez à mão e carregar em Clipar. Agora cada kill
+ * tem o mesmo editor, aberto no sítio certo — e o pedaço que ele começa a
+ * mostrar é o combate que a busca mediu, não uma janela fixa à volta do ponto.
+ */
+function abrirClipe(momento = null) {
   if (!estado.linhas.length) return;
-  const canal = estado.focos[0] || estado.linhas[0].slug;
+  const canal = momento?.protagonista || estado.focos[0] || estado.linhas[0].slug;
   const linha = estado.linhas.find((l) => l.slug === canal) || estado.linhas[0];
   // Não deixar escolher um pedaço que este ângulo não filmou: os limites são
   // os do vídeo dele, e não os da noite.
   const limites = { inicio: linha.inicio, fim: linha.fim };
-  const centro = Math.min(Math.max(estado.agoraMs, limites.inicio), limites.fim);
+  const centro = Math.min(Math.max(momento?.ms ?? estado.agoraMs, limites.inicio), limites.fim);
+  // O combate medido, quando existe: é o que a busca automática achou, e é
+  // melhor ponto de partida do que quinze segundos para cada lado.
+  const janela = momento?.combateDeMs && momento?.combateAteMs
+    ? mover(
+      { deMs: momento.combateDeMs, ateMs: momento.combateAteMs },
+      'ate', momento.combateAteMs, { limites },
+    )
+    : null;
 
   estado.clipe = {
     canal: linha.slug,
@@ -2083,7 +2110,7 @@ function abrirClipe() {
       inicio: Math.max(limites.inicio, centro - CONTEXTO_S * 1000),
       fim: Math.min(limites.fim, centro + CONTEXTO_S * 1000),
     },
-    ...janelaInicial(centro, { limites }),
+    ...(janela || janelaInicial(centro, { limites })),
     hls: null,
     // O retrato: o modo e os enquadramentos, em pixels do vídeo de origem.
     // Nascem vazios porque só se sabe o tamanho da fonte depois de ela ter
@@ -2234,12 +2261,21 @@ function pintarRecortes(linhas = []) {
     cima: 'left:0;top:0;width:100%;height:0',
     baixo: 'left:0;top:100%;width:100%;height:0',
   };
+  pintarFaixasRetrato();
   alvo.innerHTML = linhas.map((n) => `<div class="guia" style="${GUIAS[n] || ''}"></div>`).join('')
     + c.rects.map((r, i) => `<div class="recorte" data-i="${i}" style="`
     + `left:${(r.x / fonte.largura) * 100}%;top:${(r.y / fonte.altura) * 100}%;`
     + `width:${(r.largura / fonte.largura) * 100}%;height:${(r.altura / fonte.altura) * 100}%">`
     + (c.rects.length > 1 ? `<b class="ordem">${i === 0 ? '1' : '2'}</b>` : '')
-    + '<span class="puxar"></span></div>').join('');
+    // Os quatro cantos, e nao so o de baixo a direita.
+    //
+    // "Esses ponto verde maior para alterar escala tem que estar nos quatro
+    //  cantos dos 2." Com um canto so, encolher pela esquerda obrigava a
+    // encolher pela direita e depois arrastar a caixa de volta — dois gestos
+    // para um. Puxar um canto ancora o canto OPOSTO, que e o que toda a gente
+    // espera de um rectangulo.
+    + ['no', 'ne', 'so', 'se'].map((k) => `<span class="puxar ${k}" data-canto="${k}"></span>`).join('')
+    + '</div>').join('');
   for (const caixa of alvo.querySelectorAll('.recorte')) ligarArrasto(caixa);
 }
 
@@ -2259,6 +2295,7 @@ function ligarArrasto(caixa) {
   const comecar = (e, redimensionar) => {
     e.preventDefault();
     e.stopPropagation();
+    const canto = e.target.dataset?.canto || 'se';
     const p0 = emPixels(e);
     const r0 = { ...estado.clipe.rects[i] };
     const fonte = fonteDoClipe();
@@ -2291,10 +2328,20 @@ function ligarArrasto(caixa) {
       // Uma dimensao manda e a outra vem da proporcao da faixa: com as duas a
       // mandar, arrastar na diagonal dava saltos, e uma faixa com proporcao
       // diferente da sua so pode entrar esticada.
-      const w = r0.largura + dx;
+      // O canto puxado manda; o oposto fica onde esta. Um `no` que anda 10 px
+      // para a direita ENCOLHE a caixa e move-lhe o x — nao a estica.
+      const oeste = canto === 'no' || canto === 'so';
+      const norte = canto === 'no' || canto === 'ne';
+      const w = r0.largura + (oeste ? -dx : dx);
       if (w < 40) return;
       const prop = proporcaoDoQuadro(c.modo, i, c.divisao);
-      c.rects[i] = limitar({ ...r0, largura: w, altura: w / prop }, fonte);
+      const h = w / prop;
+      c.rects[i] = limitar({
+        largura: w,
+        altura: h,
+        x: oeste ? r0.x + (r0.largura - w) : r0.x,
+        y: norte ? r0.y + (r0.altura - h) : r0.y,
+      }, fonte);
       pintarRecortes();
     };
     const largar = () => {
@@ -2306,7 +2353,9 @@ function ligarArrasto(caixa) {
     window.addEventListener('pointerup', largar);
   };
   caixa.addEventListener('pointerdown', (e) => comecar(e, false));
-  caixa.querySelector('.puxar').addEventListener('pointerdown', (e) => comecar(e, true));
+  for (const p of caixa.querySelectorAll('.puxar')) {
+    p.addEventListener('pointerdown', (e) => comecar(e, true));
+  }
 }
 
 /** O 9:16 a sério, pintado enquanto o modal estiver aberto. */
@@ -2317,6 +2366,33 @@ function ligarArrasto(caixa) {
  * ser mais larga, e a diferença punha o pill fora da linha por onde o vídeo
  * parte mesmo.
  */
+/**
+ * As faixas do lado direito, pintadas da cor do recorte que lhes corresponde.
+ *
+ * "Cada quadrado com sua cor e a mesma cor na direita, igual Twitch." Sem
+ * isso, com dois enquadramentos, nada dizia QUAL dos dois rectangulos da
+ * esquerda ia dar em qual faixa — descobria-se por tentativa.
+ *
+ * Sao `<div>` por cima do canvas e nao um traco DENTRO dele de proposito: o
+ * canvas e o que a gravacao le, e uma moldura desenhada la ficava dentro do
+ * video exportado.
+ */
+function pintarFaixasRetrato() {
+  const c = estado.clipe;
+  const moldura = $('molduraRetrato');
+  for (const v of moldura.querySelectorAll('.faixaRetrato')) v.remove();
+  if (!c || !c.rects.length) return;
+  const partes = c.modo === 'dois'
+    ? [[0, 0, c.divisao], [1, c.divisao, 1 - c.divisao]]
+    : [[0, 0, 1]];
+  for (const [i, topo, alto] of partes) {
+    const d = document.createElement('div');
+    d.className = `faixaRetrato q${i}`;
+    d.style.cssText = `top:${topo * 100}%;height:${alto * 100}%`;
+    moldura.appendChild(d);
+  }
+}
+
 function pintarDivisor() {
   const c = estado.clipe;
   const botao = $('divisor');
@@ -2886,7 +2962,10 @@ $('procurarKills').onclick = procurarKills;
 // argumento, e ele ia parar ao `soEsta` como se fosse uma lista de kills.
 $('baixarMontagem').onclick = () => baixarMontagem();
 $('limparFila').onclick = limparFila;
-$('clipar').onclick = abrirClipe;
+// Sem argumento nenhum, e não `= abrirClipe`: assim o objecto do clique ia
+// como momento, e um dia em que ele passe a ter um `.ms` isto abre o clipe no
+// sítio errado sem avisar ninguém.
+$('clipar').onclick = () => abrirClipe();
 $('fecharClipe').onclick = fecharClipe;
 $('cancelarClipe').onclick = fecharClipe;
 $('guardarClipe').onclick = guardarClipe;
