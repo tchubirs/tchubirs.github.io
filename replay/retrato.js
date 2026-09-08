@@ -52,7 +52,10 @@ const preso = (x, min, max) => Math.max(min, Math.min(max, x));
  */
 export const DIVISAO_MIN = 0.15;
 export const DIVISAO_MAX = 0.85;
-export const DIVISAO_OMISSAO = 0.5;
+// A webcam ocupa menos do que metade. Medido no 9:16 que ele mostrou: a caixa
+// da webcam ficava com cerca de um terço da altura, e o jogo com o resto.
+// Meio a meio dava uma webcam gigante que ele desfazia sempre à mão.
+export const DIVISAO_OMISSAO = 0.35;
 export const limparDivisao = (d) => preso(Number.isFinite(d) ? d : DIVISAO_OMISSAO, DIVISAO_MIN, DIVISAO_MAX);
 
 /** A proporção que o recorte `i` tem de ter, para encher o seu destino. */
@@ -85,7 +88,15 @@ export function enquadramentoInicial(largura, altura, modo = 'um', divisao = DIV
       let h = altura / 2;
       let w = h * proporcao;
       if (w > largura) { w = largura; h = w / proporcao; }
-      return { x: (largura - w) / 2, y: i === 0 ? 0 : altura - h, largura: w, altura: h };
+      // "Quando clico em dois enquadramentos devia ficar praticamente pronto."
+      //
+      // Ficava a meio, os dois, e ele tinha de arrastar os dois antes de ver
+      // seja o que for. O de cima passa a nascer no CANTO INFERIOR ESQUERDO da
+      // fonte, que é onde a webcam está — medido nos frames dos três canais que
+      // vi (o dele, o do kodd e o do Lauta): nos três, no canto de baixo à
+      // esquerda. O de baixo nasce ao meio, que é onde a acção está.
+      if (i === 0) return { x: 0, y: altura - h, largura: w, altura: h };
+      return { x: (largura - w) / 2, y: (altura - h) / 2, largura: w, altura: h };
     });
   }
   const proporcao = RETRATO.largura / RETRATO.altura;            // 9:16
@@ -353,4 +364,66 @@ export async function gravar(video, {
   // pasta de transferências e nenhuma explicação.
   if (!blob.size) throw Object.assign(new Error('não saiu nada'), { name: 'GRAVACAO-VAZIA' });
   return { blob, tipo, extensao: extensaoDe(tipo) };
+}
+
+/**
+ * A divisão que um enquadramento IMPLICA, pela forma que ele tem.
+ *
+ * "Quando mexo no tamanho da webcam devia mexer no outro automaticamente para
+ *  encaixar. Tenho que mexer em dois lugares para arrumar um."
+ *
+ * Tinha razão e a culpa era da proporção presa. Cada faixa do 9:16 tem uma
+ * proporção que só depende da divisão — `1080 / (1920 · d)` para a de cima — e
+ * eu prendia essa proporção ao redimensionar. Resultado: mexer no quadro nunca
+ * podia mudar a divisão, e ele tinha de ir ao divisor à mão fazer a outra
+ * metade do trabalho.
+ *
+ * Invertida, a conta é esta: dada a forma a que ele acabou de arrastar o
+ * quadro, qual é a divisão que a torna exacta. Depois o outro quadro reforma-se
+ * sozinho e o divisor anda para o sítio.
+ */
+export function divisaoDoQuadro(rect, i = 0) {
+  if (!(rect?.largura > 0) || !(rect?.altura > 0)) return null;
+  const parte = (RETRATO.largura * rect.altura) / (RETRATO.altura * rect.largura);
+  return limparDivisao(i === 0 ? parte : 1 - parte);
+}
+
+/** A que distância um encaixe agarra: 1,5% da largura da fonte. */
+export const ENCAIXE = 0.015;
+
+/**
+ * Encaixar um enquadramento nas linhas que importam.
+ *
+ * "Podia colocar as ajudas para deixar centralizado, de baixo para cima, do
+ *  lado para o outro."
+ *
+ * São seis linhas e nem uma a mais: o meio na horizontal, o meio na vertical, e
+ * as quatro bordas da fonte. Um enquadramento quase-centrado é a coisa que mais
+ * se nota num vídeo vertical, e acertá-lo ao pixel com o rato é impossível.
+ *
+ * Devolve o rectângulo já encaixado E o nome das linhas que agarraram, porque
+ * um encaixe que não se vê é um salto inexplicável.
+ */
+export function encaixar(rect, fonte, { forca = ENCAIXE } = {}) {
+  if (!rect || !(fonte?.largura > 0)) return { rect, linhas: [] };
+  const d = fonte.largura * forca;
+  const linhas = [];
+  let { x, y } = rect;
+  const perto = (a, b) => Math.abs(a - b) <= d;
+
+  // O meio ganha às bordas: é o que ele nomeou primeiro, e quando os dois
+  // estão ao alcance é o meio que ele quer.
+  if (perto(x + rect.largura / 2, fonte.largura / 2)) {
+    x = (fonte.largura - rect.largura) / 2; linhas.push('centroX');
+  } else if (perto(x, 0)) { x = 0; linhas.push('esquerda'); } else if (perto(x + rect.largura, fonte.largura)) {
+    x = fonte.largura - rect.largura; linhas.push('direita');
+  }
+
+  if (perto(y + rect.altura / 2, fonte.altura / 2)) {
+    y = (fonte.altura - rect.altura) / 2; linhas.push('centroY');
+  } else if (perto(y, 0)) { y = 0; linhas.push('cima'); } else if (perto(y + rect.altura, fonte.altura)) {
+    y = fonte.altura - rect.altura; linhas.push('baixo');
+  }
+
+  return { rect: { ...rect, x, y }, linhas };
 }

@@ -52,3 +52,22 @@ export function nomeDoClipe({ titulo, canal, quandoMs, sufixo = 'ts' }) {
   const d = new Date(quandoMs).toISOString().replace(/[-:]/g, '').replace('T', '-').slice(0, 15);
   return `${limpo ? `${limpo}__` : ''}${canal}__${d}Z.${sufixo}`;
 }
+
+/**
+ * Onde desenhar a cabeça — a barra branca que diz onde está o vídeo.
+ *
+ * Presa ao pedaço escolhido de propósito, e não por gosto de limites: o
+ * relógio de um `<video>` não vale nada no instante a seguir a um salto. O
+ * `readyState` já diz que há imagem com o frame ANTIGO ainda no ecrã, e quem
+ * lê o `currentTime` aí conta a partir do sítio errado. Se o salto era para
+ * trás — e é o que acontece a carregar em ▶ logo depois de apurar o FIM — a
+ * conta dá negativo e a cabeça ia parar à esquerda do início.
+ *
+ * "Essa barra branca aí de onde está o vídeo fica fora das barras verdes."
+ * Ficava. O vídeo está sempre dentro do pedaço; desenhá-la fora dele é mentir
+ * sobre a única coisa que ela tem para dizer.
+ */
+export function posicaoDaCabeca({ deMs, ateMs, vista }, ms) {
+  const preso = Math.min(Math.max(ms, deMs), ateMs);
+  return ((preso - vista.inicio) / Math.max(1, vista.fim - vista.inicio)) * 100;
+}

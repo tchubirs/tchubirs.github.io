@@ -5,34 +5,34 @@
 // bottom rung of Kick's ladder and is what makes thirty tiles a home-connection
 // problem rather than a server problem.
 
-import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=19750b9efc';
+import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=43e4e0bf1b';
 import {
   linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo,
-} from './relogio.js?v=19750b9efc';
-import { cortarTodosOsAngulos } from './baixar.js?v=19750b9efc';
-import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=19750b9efc';
-import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=19750b9efc';
-import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=19750b9efc';
+} from './relogio.js?v=43e4e0bf1b';
+import { cortarTodosOsAngulos } from './baixar.js?v=43e4e0bf1b';
+import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=43e4e0bf1b';
+import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=43e4e0bf1b';
+import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=43e4e0bf1b';
 import {
   RETRATO, enquadramentoInicial, limitar, desenhar, gravar, formatoQueFunciona, extensaoDe,
-  reformar, limparDivisao, DIVISAO_OMISSAO,
-} from './retrato.js?v=19750b9efc';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=19750b9efc';
+  reformar, limparDivisao, DIVISAO_OMISSAO, divisaoDoQuadro, proporcaoDoQuadro, encaixar,
+} from './retrato.js?v=43e4e0bf1b';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=43e4e0bf1b';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
   alternarVitima, filtrar, temMorte, clipesDoMomento,
-} from './momentos.js?v=19750b9efc';
-import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=19750b9efc';
-import { criarZip, crc32 } from './zip.js?v=19750b9efc';
-import { queFazerComOLeitor } from './leitor.js?v=19750b9efc';
-import { criarApanhador } from './frames.js?v=19750b9efc';
-import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=19750b9efc';
-import { TAXA_TIROS } from './tiros.js?v=19750b9efc';
-import { parecidos, juntarPerto } from './aprender.js?v=19750b9efc';
-import { somDoCanal } from './alinhar.js?v=19750b9efc';
-import { MAXIMO_S, mover, janelaInicial, nomeDoClipe } from './clipe.js?v=19750b9efc';
-import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=19750b9efc';
-import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=19750b9efc';
+} from './momentos.js?v=43e4e0bf1b';
+import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=43e4e0bf1b';
+import { criarZip, crc32 } from './zip.js?v=43e4e0bf1b';
+import { queFazerComOLeitor } from './leitor.js?v=43e4e0bf1b';
+import { criarApanhador } from './frames.js?v=43e4e0bf1b';
+import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=43e4e0bf1b';
+import { TAXA_TIROS } from './tiros.js?v=43e4e0bf1b';
+import { parecidos, juntarPerto } from './aprender.js?v=43e4e0bf1b';
+import { somDoCanal } from './alinhar.js?v=43e4e0bf1b';
+import { MAXIMO_S, mover, janelaInicial, nomeDoClipe, posicaoDaCabeca } from './clipe.js?v=43e4e0bf1b';
+import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=43e4e0bf1b';
+import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=43e4e0bf1b';
 
 const $ = (id) => document.getElementById(id);
 const estado = {
@@ -2186,13 +2186,29 @@ function prepararRetrato() {
 }
 
 /** As caixas por cima do vídeo, em percentagem — para seguirem a fonte. */
-function pintarRecortes() {
+/**
+ * As caixas por cima do vídeo, e as linhas de encaixe quando alguma agarra.
+ *
+ * "Podia colocar as ajudas para deixar centralizado, de baixo para cima, do
+ *  lado para o outro." As linhas só existem enquanto o dedo está em baixo: uma
+ * ajuda que fica no ecrã depois de servir passa a ser sujidade.
+ */
+function pintarRecortes(linhas = []) {
   const c = estado.clipe;
   const v = $('previaClipe');
   const alvo = $('recortes');
   const fonte = fonteDoClipe();
   if (!c || !fonte) return;
-  alvo.innerHTML = c.rects.map((r, i) => `<div class="recorte" data-i="${i}" style="`
+  const GUIAS = {
+    centroX: 'left:50%;top:0;width:0;height:100%',
+    centroY: 'left:0;top:50%;width:100%;height:0',
+    esquerda: 'left:0;top:0;width:0;height:100%',
+    direita: 'left:100%;top:0;width:0;height:100%',
+    cima: 'left:0;top:0;width:100%;height:0',
+    baixo: 'left:0;top:100%;width:100%;height:0',
+  };
+  alvo.innerHTML = linhas.map((n) => `<div class="guia" style="${GUIAS[n] || ''}"></div>`).join('')
+    + c.rects.map((r, i) => `<div class="recorte" data-i="${i}" style="`
     + `left:${(r.x / fonte.largura) * 100}%;top:${(r.y / fonte.altura) * 100}%;`
     + `width:${(r.largura / fonte.largura) * 100}%;height:${(r.altura / fonte.altura) * 100}%">`
     + (c.rects.length > 1 ? `<b class="ordem">${i === 0 ? '1' : '2'}</b>` : '')
@@ -2208,7 +2224,6 @@ function pintarRecortes() {
  * codificação. Quem quer outro enquadramento move e faz zoom, não deforma.
  */
 function ligarArrasto(caixa) {
-  const v = $('previaClipe');
   const i = Number(caixa.dataset.i);
   const emPixels = (e) => {
     const cx = $('fonteClipe').getBoundingClientRect();
@@ -2220,22 +2235,59 @@ function ligarArrasto(caixa) {
     const p0 = emPixels(e);
     const r0 = { ...estado.clipe.rects[i] };
     const fonte = fonteDoClipe();
-      if (!fonte) return;
+    if (!fonte) return;
     const mover = (m) => {
+      const c = estado.clipe;
       const dx = (m.clientX - p0.x) * p0.escala;
       const dy = (m.clientY - p0.y) * p0.escala;
-      const bruto = redimensionar
-        // Só uma dimensão manda; a outra vem da proporção. Com as duas a mandar,
-        // arrastar na diagonal dava saltos.
-        ? { ...r0, largura: r0.largura + dx, altura: (r0.largura + dx) * (r0.altura / r0.largura) }
-        : { ...r0, x: r0.x + dx, y: r0.y + dy };
-      if (bruto.largura < 40) return;
-      estado.clipe.rects[i] = limitar(bruto, fonte);
+
+      if (!redimensionar) {
+        // Arrastar: encaixa no meio e nas bordas, e a linha aparece.
+        const { rect, linhas } = encaixar({ ...r0, x: r0.x + dx, y: r0.y + dy }, fonte);
+        c.rects[i] = limitar(rect, fonte);
+        pintarRecortes(linhas);
+        return;
+      }
+
+      if (c.modo !== 'dois') {
+        // No modo de um a proporção é o 9:16 e não há nada a negociar: só uma
+        // dimensão manda, senão arrastar na diagonal dá saltos.
+        const w = r0.largura + dx;
+        if (w < 40) return;
+        c.rects[i] = limitar({ ...r0, largura: w, altura: w * (r0.altura / r0.largura) }, fonte);
+        pintarRecortes();
+        return;
+      }
+
+      // No modo de dois a forma É a divisão.
+      //
+      // "Quando mexo no tamanho da webcam devia mexer no outro automaticamente
+      //  para encaixar. Tenho que mexer em dois lugares para arrumar um."
+      //
+      // Mexia mesmo: a proporção estava presa, e uma proporção presa não pode
+      // mudar a divisão. Agora as duas dimensões mandam, a divisão sai da forma
+      // a que ele arrastou, e o OUTRO quadro reforma-se sozinho — que é a
+      // segunda metade do trabalho que ele estava a fazer à mão.
+      const w = r0.largura + dx;
+      const h = r0.altura + dy;
+      if (w < 40 || h < 40) return;
+      const d = divisaoDoQuadro({ largura: w, altura: h }, i);
+      if (d == null) return;
+      c.divisao = d;
+      // Este fica com a forma exacta da faixa nova; o outro reforma-se à volta
+      // do seu próprio centro, sem saltar para lado nenhum.
+      const outro = i === 0 ? 1 : 0;
+      c.rects[i] = limitar({ ...r0, largura: w, altura: w / proporcaoDoQuadro('dois', i, d) }, fonte);
+      if (c.rects[outro]) {
+        [c.rects[outro]] = reformar([c.rects[outro]], { modo: 'dois', divisao: d, fonte });
+      }
       pintarRecortes();
+      pintarDivisor();
     };
     const largar = () => {
       window.removeEventListener('pointermove', mover);
       window.removeEventListener('pointerup', largar);
+      pintarRecortes();
     };
     window.addEventListener('pointermove', mover);
     window.addEventListener('pointerup', largar);
@@ -2420,6 +2472,13 @@ const posClipe = (ms) => {
   return ((ms - inicio) / Math.max(1, fim - inicio)) * 100;
 };
 
+/** A cabeça vai sempre pelo mesmo sítio, e sai de lá presa ao pedaço. */
+const porCabeca = (ms) => {
+  if (!estado.clipe) return;
+  $('barraClipe').querySelector('.cabeca').style.left =
+    `${posicaoDaCabeca(estado.clipe, ms)}%`;
+};
+
 function pintarClipe() {
   const c = estado.clipe;
   if (!c) return;
@@ -2441,7 +2500,7 @@ function preverClipe(quandoMs) {
   const linha = estado.linhas.find((l) => l.slug === c.canal);
   const r = onde(linha, quandoMs, { nudgeMs: estado.nudges[c.canal] || 0 });
   const v = $('previaClipe');
-  $('barraClipe').querySelector('.cabeca').style.left = `${posClipe(quandoMs)}%`;
+  porCabeca(quandoMs);
   if (r.estado !== 'toca') { v.pause?.(); return; }
   const peca = linha.pecasCompletas?.find((p) => p.vod.id === r.peca.vod.id) || r.peca;
   const alvo = peca.escada[0] || peca.barato;
@@ -2458,6 +2517,9 @@ function preverClipe(quandoMs) {
       hls.attachMedia(v);
     } else { v.src = alvo.url; }
   }
+  // O instante pedido, guardado: é por ele que o ▶ sabe se o salto já
+  // assentou antes de começar a contar (ver `verClipe`).
+  c.alvoS = r.tempoS;
   if (Math.abs(v.currentTime - r.tempoS) > 0.3) v.currentTime = r.tempoS;
   acordarPrevia();
 }
@@ -2517,15 +2579,22 @@ function verClipe() {
   const vigiar = () => {
     if (!estado.clipe?.aVer) return;
     if (inicioS === null) {
-      // Dez segundos à espera de imagem e desiste — melhor parar do que ficar
-      // um botão de stop aceso para sempre por cima de um vídeo que não veio.
-      if (v.readyState < 2 && esperas++ < 600) { c.vigia = requestAnimationFrame(vigiar); return; }
+      // Ter imagem não chega: a seguir a um salto o `readyState` já é 2 com o
+      // frame ANTIGO ainda no ecrã, e o `currentTime` ainda é o de antes.
+      // Começar a contar aí punha a cabeça a andar a partir do sítio errado —
+      // e quando o salto era para trás ela ia parar À ESQUERDA do início,
+      // fora do verde. Espera-se que o relógio chegue ao instante pedido.
+      const assentou = v.readyState >= 2 && !v.seeking
+        && (c.alvoS == null || Math.abs(v.currentTime - c.alvoS) < 1);
+      // Dez segundos à espera e desiste — melhor parar do que ficar um botão
+      // de stop aceso para sempre por cima de um vídeo que não veio. Se houver
+      // imagem mas o relógio nunca bater certo, conta-se com o que há.
+      if (!assentou && esperas++ < 600) { c.vigia = requestAnimationFrame(vigiar); return; }
       if (v.readyState < 2) { pararVer(); return; }
       inicioS = v.currentTime;
     }
     if (v.currentTime - inicioS >= duracaoS) { pararVer(); return; }
-    $('barraClipe').querySelector('.cabeca').style.left =
-      `${posClipe(c.deMs + (v.currentTime - inicioS) * 1000)}%`;
+    porCabeca(c.deMs + (v.currentTime - inicioS) * 1000);
     c.vigia = requestAnimationFrame(vigiar);
   };
   v.play?.()?.catch?.(() => {});
