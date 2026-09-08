@@ -1,5 +1,5 @@
-import { medir, chao, impulsos, lutas, FPS, TAXA_TIROS } from './tiros.js?v=c507cb10a1';
-import { recortar } from './aprender.js?v=c507cb10a1';
+import { medir, chao, impulsos, lutas, FPS, TAXA_TIROS } from './tiros.js?v=9134a59bd5';
+import { recortar } from './aprender.js?v=9134a59bd5';
 
 // Achar as kills sozinho — pela forca do som.
 //
@@ -106,8 +106,37 @@ export async function varrerNoite({
   // o som mais alto do jogo. Quinze por hora e o que ele consegue rever.
   const { porHora = 15 } = opcoes;
   const limite = Math.max(1, Math.round((porHora * (ateMs - deMs)) / 3_600_000));
-  const achadas = lutas(impulsos(tudo, piso, { brilhos, ...opcoes }), opcoes).slice(0, limite);
+  const dos = impulsos(tudo, piso, { brilhos, ...opcoes });
+  const achadas = lutas(dos, opcoes).slice(0, limite);
+
+  // O que se ouviu, para quando NAO se achou nada.
+  //
+  // "Da isso, porem eu sei que ta tendo tiroteio." E a mensagem so sabia dizer
+  // "nenhum tiroteio nesse intervalo" — que e a mesma coisa que nao dizer nada.
+  // Sem saber O QUE o detector ouviu, nem ele nem eu podemos corrigir seja o
+  // que for: fica a discussao entre alguem que viu o tiroteio e um programa
+  // que se cala.
+  //
+  // Sao tres numeros e cada um aponta para um sitio diferente: nada alto =
+  // ouviu o canal errado ou o pedaco errado; muitos chumbados = o teste do
+  // brilho esta a apertar demais; um grupo maior de tres = falta pouco para
+  // fazer luta.
+  const semBrilho = impulsos(tudo, piso, { ...opcoes, brilhos: null });
+  let maior = 0;
+  let corrente = 0;
+  for (let k = 0; k < dos.length; k++) {
+    corrente = k && (dos[k].bloco - dos[k - 1].bloco) / FPS <= (opcoes.juntarS ?? 14)
+      ? corrente + 1 : 1;
+    maior = Math.max(maior, corrente);
+  }
+  const ouvido = {
+    altos: semBrilho.length,
+    chumbados: semBrilho.length - dos.length,
+    passaram: dos.length,
+    maiorGrupo: maior,
+  };
   return {
+    ouvido,
     candidatos: achadas.map((g) => ({
       // O instante e o do TIRO MAIS ALTO, e nao o do primeiro do tiroteio.
       // E ai que a coisa acontece — "quando ocorre um acerto na cabeca, o som

@@ -80,6 +80,7 @@ export function energia(amostras, taxa = TAXA_TIROS) {
 // em cada impulso: tem de tirar os 96% que sao voz, e o agrupamento faz o resto.
 export const BRILHO_MIN = 0.10;
 
+export const REFRACTARIO_MS = 70;
 const POLOS = 3;
 const CORTE_AGUDO = 4000;
 const CORTE_GRAVE = 1500;
@@ -174,9 +175,11 @@ export function chao(blocos) {
  */
 export function impulsos(blocos, piso, {
   alturaMin = 8, saltoMin = 6, brilhos = null, brilhoMin = BRILHO_MIN,
+  refractarioMs = REFRACTARIO_MS,
 } = {}) {
   const saida = [];
   if (!piso) return saida;
+  const refractario = Math.round((refractarioMs / BLOCO_MS));
   for (let b = 1; b < blocos.length; b++) {
     const altura = blocos[b] / piso;
     if (altura < alturaMin) continue;
@@ -184,6 +187,19 @@ export function impulsos(blocos, piso, {
     // O terceiro: ser de banda larga. Sem isto, onze silabas do clipe que ele
     // mandou passavam as duas primeiras e viravam um tiroteio.
     if (brilhos && brilhos[b] < brilhoMin) continue;
+    // O quarto, e o que faltava: UM ESTALO CONTA UMA VEZ.
+    //
+    // Um som alto nao dura dois milissegundos — dura duzentos, e cada bloco
+    // desses passa a altura e o salto por si so. Medido nos 20 minutos de VOD
+    // dele que corri para isto: a UNICA "luta" que o detector encontrou em
+    // vinte minutos foram quatro "tiros" em 0,23 s — 03:34.14, .15, .21 e .37.
+    // Nao eram quatro tiros. Era UM som, contado quatro vezes, e como a regra
+    // pede quatro impulsos, um baque sozinho fazia um tiroteio inteiro.
+    //
+    // Setenta milissegundos porque a arma mais rapida do Rust dispara umas dez
+    // vezes por segundo — cem milissegundos entre balas. Abaixo disso nao ha
+    // tiro nenhum para perder, e acima disso perdiam-se rajadas verdadeiras.
+    if (saida.length && b - saida[saida.length - 1].bloco < refractario) continue;
     saida.push({ bloco: b, altura, brilho: brilhos ? brilhos[b] : null });
   }
   return saida;

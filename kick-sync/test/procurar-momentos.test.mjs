@@ -225,3 +225,37 @@ test('uma rajada curta não sai com um segundo de clipe', async () => {
   const dur = (r.candidatos[0].combateAteMs - r.candidatos[0].combateDeMs) / 1000;
   assert.ok(dur >= 2, `o clipe saiu com ${dur.toFixed(1)}s — um segundo de vídeo não é um clipe`);
 });
+
+// "Da isso, porem eu sei que ta tendo tiroteio."
+//
+// A mensagem sabia dizer "nenhum tiroteio nesse intervalo" — que é a mesma
+// coisa que não dizer nada. Sem saber O QUE o detector ouviu, nem ele nem eu
+// podemos corrigir seja o que for: fica a discussão entre alguém que viu o
+// tiroteio e um programa que se cala.
+test('quando nao acha nada, diz o que ouviu', async () => {
+  // Uma noite de voz: alto e brusco, mas grave — é o que o brilho chumba.
+  const taxa = TAXA;
+  const som = new Float32Array(taxa * 60);
+  for (let i = 0; i < som.length; i++) som[i] = Math.sin((2 * Math.PI * 200 * i) / taxa) * 0.02;
+  for (let k = 0; k < 30; k++) {
+    const o = Math.round((2 + k * 1.9) * taxa);
+    for (let i = o; i < o + 60 && i < som.length; i++) {
+      som[i] = Math.sin((2 * Math.PI * 200 * (i - o)) / taxa) * 0.9;
+    }
+  }
+  const r = await varrerNoite({
+    linha: { slug: 'tchubi', inicio: 0, fim: 60000 },
+    deMs: 0,
+    ateMs: 60000,
+    bocadoS: 60,
+    lerSom: async () => som,
+  });
+
+  assert.equal(r.candidatos.length, 0, 'voz grave nao pode dar tiroteio');
+  assert.ok(r.ouvido, 'tem de dizer o que ouviu');
+  assert.ok(r.ouvido.altos > 0, 'ouviu sons altos — e tem de o dizer');
+  assert.equal(r.ouvido.altos, r.ouvido.chumbados + r.ouvido.passaram,
+    'as contas tem de fechar: altos = chumbados + passaram');
+  assert.ok(r.ouvido.maiorGrupo >= 0 && r.ouvido.maiorGrupo <= r.ouvido.passaram,
+    `maiorGrupo ${r.ouvido.maiorGrupo} nao pode passar os ${r.ouvido.passaram} que sobreviveram`);
+});

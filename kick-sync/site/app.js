@@ -1389,7 +1389,18 @@ async function procurarKills() {
     });
 
     estado.estouros = r.estouros || [];
-    if (!r.candidatos.length) { nota.textContent = t('auto.nenhum', { canal }); return; }
+    if (!r.candidatos.length) {
+      // Dizer o que se ouviu, e nao so que nao se achou. "Da isso, porem eu sei
+      // que ta tendo tiroteio" — e sem estes tres numeros nao ha como saber se
+      // o detector ouviu o pedaco errado, se apertou demais, ou se faltou um
+      // tiro para fazer grupo.
+      const o = r.ouvido;
+      nota.textContent = t('auto.nenhum', { canal })
+        + (!o ? ''
+          : !o.altos ? t('auto.ouviNada')
+            : t('auto.ouvi', { ...o, minTiros: 4 }));
+      return;
+    }
 
     for (const c of r.candidatos) {
       estado.momentos = acrescentar(

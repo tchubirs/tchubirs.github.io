@@ -294,3 +294,38 @@ test('o intervalo da rajada é mais curto do que o da luta', () => {
   assert.equal(g.tiros, 5, 'a luta tem os cinco');
   assert.equal(g.rajadaDeS, 4.2, `a rajada começou em ${g.rajadaDeS}`);
 });
+
+// UM ESTALO CONTA UMA VEZ.
+//
+// Medido em 20 minutos do VOD verdadeiro dele: a ÚNICA "luta" que o detector
+// achou nesse tempo todo foram quatro "tiros" em 0,23 s — 03:34.14, .15, .21
+// e .37. Não eram quatro tiros. Era UM som, contado quatro vezes, e como a
+// regra pede quatro impulsos, um baque sozinho fazia um tiroteio inteiro.
+test('um som alto so conta uma vez, por mais blocos que ele dure', () => {
+  // Um estalo verdadeiro nao decai a direito: ressoa, e cada re-pico volta a
+  // passar o teste do salto. Os quatro blocos dele estavam a 10, 60 e 160 ms
+  // do primeiro — e e essa a forma reproduzida aqui.
+  const b = new Float32Array(500).fill(1);
+  for (const d of [0, 5, 30, 115]) {           // 0, 10, 60 e 230 ms
+    b[200 + d] = 60 - d / 4;
+    b[201 + d] = 2;                            // o vale entre os re-picos
+  }
+  const sem = impulsos(b, 1, { refractarioMs: 0 });
+  const com = impulsos(b, 1, {});
+  assert.equal(sem.length, 4, 'sem refractario, um estalo dava quatro "tiros"');
+  // Dois e nao um: o ultimo re-pico esta a 230 ms, que ja e um intervalo de
+  // tiro a serio, e perde-lo custaria rajadas verdadeiras. O que interessa e
+  // que quatro deixam de ser quatro — e quatro era o que fazia uma luta.
+  assert.equal(com.length, 2, `com refractario tinham de sobrar dois, sobraram ${com.length}`);
+  assert.equal(lutas(com, {}).length, 0, 'e um estalo sozinho ja nao faz luta nenhuma');
+});
+
+test('dois tiros a cadencia de arma continuam a ser dois', () => {
+  // A arma mais rapida do Rust dispara umas dez vezes por segundo: 100 ms.
+  const b = new Float32Array(1000).fill(1);
+  for (const inicio of [200, 250, 300]) {        // 100 ms de intervalo (50 blocos)
+    for (let i = inicio; i < inicio + 6; i++) b[i] = 60 - (i - inicio) * 8;
+  }
+  assert.equal(impulsos(b, 1, {}).length, 3, 'a cadencia de uma arma nao se pode perder');
+});
+
