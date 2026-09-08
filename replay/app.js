@@ -5,34 +5,34 @@
 // bottom rung of Kick's ladder and is what makes thirty tiles a home-connection
 // problem rather than a server problem.
 
-import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=a4c6862ce2';
+import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=05ecf06133';
 import {
   linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo,
-} from './relogio.js?v=a4c6862ce2';
-import { cortarTodosOsAngulos } from './baixar.js?v=a4c6862ce2';
-import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=a4c6862ce2';
-import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=a4c6862ce2';
-import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=a4c6862ce2';
+} from './relogio.js?v=05ecf06133';
+import { cortarTodosOsAngulos } from './baixar.js?v=05ecf06133';
+import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=05ecf06133';
+import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=05ecf06133';
+import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=05ecf06133';
 import {
   RETRATO, enquadramentoInicial, limitar, desenhar, gravar, formatoQueFunciona, extensaoDe,
   reformar, limparDivisao, DIVISAO_OMISSAO, divisaoDoQuadro, proporcaoDoQuadro, encaixar,
-} from './retrato.js?v=a4c6862ce2';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=a4c6862ce2';
+} from './retrato.js?v=05ecf06133';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=05ecf06133';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
   alternarVitima, filtrar, temMorte, clipesDoMomento,
-} from './momentos.js?v=a4c6862ce2';
-import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=a4c6862ce2';
-import { criarZip, crc32 } from './zip.js?v=a4c6862ce2';
-import { queFazerComOLeitor } from './leitor.js?v=a4c6862ce2';
-import { criarApanhador } from './frames.js?v=a4c6862ce2';
-import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=a4c6862ce2';
-import { TAXA_TIROS } from './tiros.js?v=a4c6862ce2';
-import { parecidos, juntarPerto } from './aprender.js?v=a4c6862ce2';
-import { somDoCanal } from './alinhar.js?v=a4c6862ce2';
-import { MAXIMO_S, mover, janelaInicial, nomeDoClipe, posicaoDaCabeca } from './clipe.js?v=a4c6862ce2';
-import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=a4c6862ce2';
-import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=a4c6862ce2';
+} from './momentos.js?v=05ecf06133';
+import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=05ecf06133';
+import { criarZip, crc32 } from './zip.js?v=05ecf06133';
+import { queFazerComOLeitor } from './leitor.js?v=05ecf06133';
+import { criarApanhador } from './frames.js?v=05ecf06133';
+import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=05ecf06133';
+import { TAXA_TIROS } from './tiros.js?v=05ecf06133';
+import { parecidos, juntarPerto } from './aprender.js?v=05ecf06133';
+import { somDoCanal } from './alinhar.js?v=05ecf06133';
+import { MAXIMO_S, mover, janelaInicial, nomeDoClipe, posicaoDaCabeca } from './clipe.js?v=05ecf06133';
+import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=05ecf06133';
+import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=05ecf06133';
 
 const $ = (id) => document.getElementById(id);
 const estado = {
@@ -1011,8 +1011,24 @@ function montarGrade() {
       e.stopPropagation();
       // Sair, se já lá está. Um botão que só sabe entrar deixa a pessoa presa
       // ao Esc, e no telemóvel não há Esc.
-      if (document.fullscreenElement) { await document.exitFullscreen(); return; }
-      await irAEcraCheio(tile).catch(() => {});
+      const doc = tile.ownerDocument;
+      if (doc.fullscreenElement) { await doc.exitFullscreen(); return; }
+      // Numa janela à parte isto costuma ser NEGADO — o browser não dá ecrã
+      // cheio a uma janela que já está sempre à frente de tudo. Tentar e dizer
+      // porque falhou é melhor do que esconder o botão: escondido, ele foi lá
+      // procurá-lo e não o encontrou.
+      try {
+        await irAEcraCheio(tile, { janela: doc.defaultView || globalThis });
+      } catch {
+        // A explicação tem de aparecer DENTRO da janela onde ele carregou —
+        // uma mensagem na página principal, atrás desta, não se vê.
+        const r = tile.querySelector('.rotulo');
+        if (!r) return;
+        const antes = r.innerHTML;
+        r.textContent = t('tile.semEcraCheioAparte');
+        r.classList.add('recado');
+        setTimeout(() => { r.innerHTML = antes; r.classList.remove('recado'); }, 6000);
+      }
     };
     const aparte = tile.querySelector('.aparte');
     // Só aparece onde funciona. Um botão que não faz nada é pior do que não ter

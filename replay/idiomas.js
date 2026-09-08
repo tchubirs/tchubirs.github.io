@@ -96,6 +96,7 @@ const TEXTOS = {
     'tile.antes': 'ainda não tinha começado',
     'tile.depois': 'já tinha acabado',
     'tile.semVideo': 'sem vídeo',
+    'tile.semEcraCheioAparte': 'O navegador não dá ecrã cheio a uma janela à parte. Puxa o canto da janela, ou usa o botão de maximizar dela.',
 
     'tempo.linha': 'linha do tempo',
     'tempo.menos1m': '« 1 min',
@@ -345,6 +346,7 @@ const TEXTOS = {
     'tile.antes': 'had not started yet',
     'tile.depois': 'had already finished',
     'tile.semVideo': 'no video',
+    'tile.semEcraCheioAparte': 'The browser will not give fullscreen to a separate window. Drag its corner, or use its own maximise button.',
 
     'tempo.linha': 'timeline',
     'tempo.menos1m': '« 1 min',
@@ -594,6 +596,7 @@ const TEXTOS = {
     'tile.antes': 'todavía no había empezado',
     'tile.depois': 'ya había terminado',
     'tile.semVideo': 'sin vídeo',
+    'tile.semEcraCheioAparte': 'El navegador no da pantalla completa a una ventana aparte. Arrastra su esquina, o usa su botón de maximizar.',
 
     'tempo.linha': 'línea de tiempo',
     'tempo.menos1m': '« 1 min',
