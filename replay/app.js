@@ -5,34 +5,34 @@
 // bottom rung of Kick's ladder and is what makes thirty tiles a home-connection
 // problem rather than a server problem.
 
-import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=e250278590';
+import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=a4c6862ce2';
 import {
   linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo,
-} from './relogio.js?v=e250278590';
-import { cortarTodosOsAngulos } from './baixar.js?v=e250278590';
-import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=e250278590';
-import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=e250278590';
-import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=e250278590';
+} from './relogio.js?v=a4c6862ce2';
+import { cortarTodosOsAngulos } from './baixar.js?v=a4c6862ce2';
+import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=a4c6862ce2';
+import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=a4c6862ce2';
+import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=a4c6862ce2';
 import {
   RETRATO, enquadramentoInicial, limitar, desenhar, gravar, formatoQueFunciona, extensaoDe,
   reformar, limparDivisao, DIVISAO_OMISSAO, divisaoDoQuadro, proporcaoDoQuadro, encaixar,
-} from './retrato.js?v=e250278590';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=e250278590';
+} from './retrato.js?v=a4c6862ce2';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=a4c6862ce2';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
   alternarVitima, filtrar, temMorte, clipesDoMomento,
-} from './momentos.js?v=e250278590';
-import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=e250278590';
-import { criarZip, crc32 } from './zip.js?v=e250278590';
-import { queFazerComOLeitor } from './leitor.js?v=e250278590';
-import { criarApanhador } from './frames.js?v=e250278590';
-import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=e250278590';
-import { TAXA_TIROS } from './tiros.js?v=e250278590';
-import { parecidos, juntarPerto } from './aprender.js?v=e250278590';
-import { somDoCanal } from './alinhar.js?v=e250278590';
-import { MAXIMO_S, mover, janelaInicial, nomeDoClipe, posicaoDaCabeca } from './clipe.js?v=e250278590';
-import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=e250278590';
-import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=e250278590';
+} from './momentos.js?v=a4c6862ce2';
+import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=a4c6862ce2';
+import { criarZip, crc32 } from './zip.js?v=a4c6862ce2';
+import { queFazerComOLeitor } from './leitor.js?v=a4c6862ce2';
+import { criarApanhador } from './frames.js?v=a4c6862ce2';
+import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=a4c6862ce2';
+import { TAXA_TIROS } from './tiros.js?v=a4c6862ce2';
+import { parecidos, juntarPerto } from './aprender.js?v=a4c6862ce2';
+import { somDoCanal } from './alinhar.js?v=a4c6862ce2';
+import { MAXIMO_S, mover, janelaInicial, nomeDoClipe, posicaoDaCabeca } from './clipe.js?v=a4c6862ce2';
+import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=a4c6862ce2';
+import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=a4c6862ce2';
 
 const $ = (id) => document.getElementById(id);
 const estado = {

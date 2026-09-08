@@ -217,3 +217,58 @@ export async function procurarCanais(texto, { buscar = fetch, sinal, quantos = 8
     .sort((a, b) => b.seguidores - a.seguidores)
     .slice(0, quantos);
 }
+
+/**
+ * O que é este link.
+ *
+ * "A pessoa cola o link do clip ou VOD, você carrega e abre." Colar é o gesto
+ * mais barato que existe — não obriga a saber o slug do canal, nem a procurar
+ * a noite certa numa lista. Só que a Kick escreve o mesmo sítio de várias
+ * maneiras, e por isso isto lê a FORMA e não o endereço inteiro.
+ *
+ * Devolve `null` para o que não reconhece, e nunca adivinha: mandar alguém
+ * para o canal errado é pior do que dizer que não percebi o link.
+ */
+export function lerLinkKick(texto) {
+  const cru = String(texto || '').trim();
+  if (!cru) return null;
+  // Um id de clipe colado sozinho, sem endereço nenhum à volta.
+  if (/^clip_[A-Za-z0-9]+$/.test(cru)) return { tipo: 'clipe', id: cru };
+  let u;
+  try { u = new URL(/^https?:\/\//i.test(cru) ? cru : `https://${cru}`); } catch { return null; }
+  if (!/(^|\.)kick\.com$/i.test(u.hostname)) return null;
+  // O clipe pode vir no caminho ou como `?clip=`.
+  const doPar = u.searchParams.get('clip');
+  if (doPar && /^clip_/.test(doPar)) return { tipo: 'clipe', id: doPar };
+  const partes = u.pathname.split('/').filter(Boolean);
+  const iClip = partes.findIndex((p) => p === 'clips' || p === 'clip');
+  if (iClip >= 0 && partes[iClip + 1]) return { tipo: 'clipe', id: partes[iClip + 1] };
+  const iVod = partes.findIndex((p) => p === 'video' || p === 'videos');
+  if (iVod >= 0 && partes[iVod + 1]) return { tipo: 'vod', id: partes[iVod + 1] };
+  // O que sobra com uma parte só é um canal: kick.com/tchubi.
+  if (partes.length === 1 && /^[A-Za-z0-9_-]+$/.test(partes[0])) {
+    return { tipo: 'canal', slug: partes[0] };
+  }
+  return null;
+}
+
+/** Um clipe da Kick: o que é preciso para o pôr no relógio e para o cortar. */
+export async function clipeDaKick(id, { buscar = fetch, sinal } = {}) {
+  const r = await buscar(`https://kick.com/api/v2/clips/${encodeURIComponent(id)}`, { signal: sinal });
+  if (!r.ok) throw Object.assign(new Error(`clipe ${r.status}`), { name: 'SEM-CLIPE' });
+  const { clip } = await r.json();
+  if (!clip?.video_url && !clip?.clip_url) {
+    throw Object.assign(new Error('clipe sem vídeo'), { name: 'SEM-CLIPE' });
+  }
+  return {
+    id: clip.id,
+    titulo: clip.title || '',
+    canal: clip.channel?.slug || clip.creator?.slug || 'clipe',
+    duracaoS: Number(clip.duration) || 0,
+    // O endereço vem SEMPRE da API. O caminho tem um par de letras no meio
+    // (…/clips/e1/… , …/clips/22/…) que não se deduz do id — construí-lo à
+    // mão dá 403 e parece um clipe apagado.
+    m3u8: clip.video_url || clip.clip_url,
+    vodId: clip.livestream_id ? String(clip.livestream_id) : null,
+  };
+}

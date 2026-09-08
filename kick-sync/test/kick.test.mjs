@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
-  vodsDoCanal, lerMaster, lerPlaylist, segmentosNaJanela, tempoDeMidia,
+  vodsDoCanal, lerMaster, lerPlaylist, segmentosNaJanela, tempoDeMidia, lerLinkKick,
 } from '../site/kick.js';
 
 // The fixtures are real responses recorded from Kick on 31/08/2026. That is the
@@ -119,4 +119,27 @@ test('a VOD list that is all unusable is not "ok" with nothing in it', async () 
     }),
   });
   assert.equal(r.estado, 'vods-indisponiveis');
+});
+
+// "A pessoa cola o link do clip ou VOD, você carrega e abre."
+//
+// Colar é o gesto mais barato que existe: não obriga a saber o slug do canal
+// nem a procurar a noite certa numa lista. Só que a Kick escreve o mesmo
+// sítio de várias maneiras — e nunca se pode adivinhar, porque mandar alguém
+// para o canal errado é pior do que dizer que não percebi o link.
+test('le um link da Kick e diz o que ele e', () => {
+  assert.deepEqual(lerLinkKick('https://kick.com/tchubi/clips/clip_01ABC'),
+    { tipo: 'clipe', id: 'clip_01ABC' });
+  assert.deepEqual(lerLinkKick('kick.com/tchubi?clip=clip_01ABC'),
+    { tipo: 'clipe', id: 'clip_01ABC' });
+  assert.deepEqual(lerLinkKick('  clip_01ABC  '), { tipo: 'clipe', id: 'clip_01ABC' });
+  assert.deepEqual(lerLinkKick('https://kick.com/video/abc-123'), { tipo: 'vod', id: 'abc-123' });
+  assert.deepEqual(lerLinkKick('https://kick.com/tchubi'), { tipo: 'canal', slug: 'tchubi' });
+});
+
+test('e diz que nao sabe, em vez de adivinhar', () => {
+  for (const mau of ['', '   ', 'https://youtube.com/watch?v=1', 'https://kick.com.mau.pt/tchubi',
+    'não é um link', 'https://twitch.tv/tchubi']) {
+    assert.equal(lerLinkKick(mau), null, `devia recusar: ${mau}`);
+  }
 });

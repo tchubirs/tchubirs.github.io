@@ -1038,7 +1038,12 @@ button, select, input[type="text"], input[type="search"], input[type="number"] {
   margin: var(--e2) 0 var(--e1);
 }
 .barraClipar #clipar {
-  flex: 1 1 auto; min-height: 52px;
+  /* Do tamanho do que diz, e não da largura do ecrã.
+     "Esse verde tá muito forte." Estava: mil e duzentos pixels de verde de
+     néon a atravessar a página é um berro, e o berro não fica mais visível
+     por ser maior — fica só mais difícil de olhar. Continua a ser o botão
+     principal e o maior do palco, com duzentos e quarenta pixels. */
+  flex: 0 0 auto; min-width: 240px; min-height: 52px;
   font-size: 17px; font-weight: 700; letter-spacing: .02em;
   border-radius: 10px;
   box-shadow: 0 0 0 1px #53fc1826, 0 6px 18px #53fc1820;
@@ -1077,3 +1082,30 @@ button, select, input[type="text"], input[type="search"], input[type="number"] {
 .recorte .puxar.ne { right: -9px; top: -9px; cursor: nesw-resize; }
 .recorte .puxar.so { left: -9px; bottom: -9px; cursor: nesw-resize; }
 .recorte .puxar.se { right: -9px; bottom: -9px; cursor: nwse-resize; }
+
+/* ── a largura ──────────────────────────────────────────────────────────────
+   "Não precisa esticar isso pra deixar tela toda, deixa do tamanho necessário
+    somente, e bem organizado — não quero bagunça."
+   Nem espremido ao meio (que foi a queixa antes), nem esticado por um monitor
+   de dois mil pixels. A página tem um tecto e centra-se; num ecrã normal o
+   tecto nunca chega a tocar, e num largo sobram margens em vez de metros de
+   caixa vazia. */
+body > header, body > .topoTrabalho, body > #palco, body > footer,
+body > #canaisEstado, body > .avisos {
+  max-width: 1700px; margin-left: auto; margin-right: auto;
+}
+
+/* Um botão tem o tamanho do que diz.
+   Estas duas filas eram grelhas de colunas iguais a ocupar a largura toda: num
+   ecrã largo davam quatro botões enormes com três palavras lá dentro. Ficam na
+   MESMA linha, que é o que ele pediu, mas com o tamanho de que precisam. */
+.saltos {
+  display: flex; flex-wrap: nowrap; gap: 6px; margin-top: 10px;
+  justify-content: flex-start;
+}
+.saltos button { flex: 0 1 auto; padding: 10px 12px; }
+.marcas {
+  display: flex; flex-wrap: nowrap; gap: 8px;
+  grid-template-columns: none;
+}
+.marcas button { flex: 0 1 auto; }
