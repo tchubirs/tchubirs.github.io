@@ -8,7 +8,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   RETRATO, enquadramentoInicial, limitar, destinos, desenhar, melhorFormato, extensaoDe,
-  reformar, proporcaoDoQuadro, limparDivisao, DIVISAO_MIN, DIVISAO_MAX,
+  reformar, proporcaoDoQuadro, limparDivisao, DIVISAO_MIN, DIVISAO_MAX, DIVISAO_OMISSAO,
+  divisaoDoQuadro, encaixar,
 } from '../site/retrato.js';
 
 const perto = (a, b, tol = 0.01) => Math.abs(a - b) < tol;
@@ -22,26 +23,30 @@ test('um enquadramento abre com a fita 9:16 mais alta que cabe, ao meio', () => 
   assert.ok(perto(r.largura / r.altura, RETRATO.largura / RETRATO.altura), '9:16');
 });
 
-test('dois enquadramentos abrem em cima e em baixo, cada um 9:8', () => {
+test('dois enquadramentos nascem prontos: a webcam no canto, o jogo ao meio', () => {
   const [cima, baixo] = enquadramentoInicial(1920, 1080, 'dois');
-  const proporcao = RETRATO.largura / (RETRATO.altura / 2);
-  for (const r of [cima, baixo]) {
-    assert.ok(perto(r.largura / r.altura, proporcao), `proporção ${r.largura / r.altura}`);
+  // Cada um com a proporção da SUA faixa, que já não é meia a meia.
+  for (const [i, r] of [cima, baixo].entries()) {
+    assert.ok(perto(r.largura / r.altura, proporcaoDoQuadro('dois', i)),
+      `o ${i} ficou com ${r.largura / r.altura} e devia ter ${proporcaoDoQuadro('dois', i)}`);
     assert.ok(r.largura <= 1920 && r.altura <= 1080, 'cabe na fonte');
   }
-  assert.equal(cima.y, 0, 'a cara em cima');
-  assert.ok(perto(baixo.y + baixo.altura, 1080), 'o jogo em baixo');
-  // Separados, e não um por cima do outro. Numa fonte 16:9 a primeira versão
-  // dava a cada um a altura INTEIRA, e os dois nasciam no mesmo sítio — dois
-  // rectângulos sobrepostos ao pixel são indistinguíveis de um.
-  assert.ok(baixo.y >= cima.y + cima.altura - 0.01,
-    `o de baixo começa em ${baixo.y} e o de cima acaba em ${cima.y + cima.altura}`);
+  // "Quando clico em dois enquadramentos devia ficar praticamente pronto."
+  // A webcam está no canto de baixo à esquerda nos três canais que medi.
+  assert.equal(cima.x, 0, 'a webcam encostada à esquerda');
+  assert.ok(perto(cima.y + cima.altura, 1080), `a webcam em baixo, e ficou em ${cima.y}`);
+  // E o jogo ao meio, que é onde a acção está.
+  assert.ok(perto(baixo.x + baixo.largura / 2, 960), 'o jogo centrado na horizontal');
+  assert.ok(perto(baixo.y + baixo.altura / 2, 540), 'o jogo centrado na vertical');
 });
 
 test('numa fonte 16:9 os dois enquadramentos não nascem no mesmo sítio', () => {
+  // Dois rectângulos sobrepostos ao pixel são indistinguíveis de um, e a
+  // primeira versão dava-lhes o mesmo sítio.
   for (const [w, h] of [[1280, 720], [1920, 1080], [2560, 1440], [854, 480]]) {
     const [cima, baixo] = enquadramentoInicial(w, h, 'dois');
-    assert.ok(baixo.y > cima.y, `${w}x${h}: os dois em y=${cima.y}`);
+    assert.ok(cima.x !== baixo.x || cima.y !== baixo.y,
+      `${w}x${h}: os dois no mesmo x=${cima.x} y=${cima.y}`);
     assert.ok(cima.altura <= h / 2 + 0.01, `${w}x${h}: cada um devia caber em metade`);
   }
 });
@@ -135,7 +140,9 @@ test('dois enquadramentos dão dois desenhos, nos dois destinos', () => {
   const imagens = ctx.feito.filter((f) => f[0] === 'img');
   assert.equal(imagens.length, 2);
   assert.equal(imagens[0][6], 0, 'o primeiro aterra no topo');
-  assert.equal(imagens[1][6], 960, 'o segundo a meio');
+  // A divisão de omissão já não é meia a meia: a webcam leva menos.
+  assert.equal(imagens[1][6], Math.round(RETRATO.altura * DIVISAO_OMISSAO),
+    'o segundo aterra onde a primeira faixa acaba');
 });
 
 test('um enquadramento em falta é saltado, e não desenhado a zero', () => {
@@ -183,8 +190,8 @@ test('o divisor não passa dos limites', () => {
   assert.equal(limparDivisao(0), DIVISAO_MIN);
   assert.equal(limparDivisao(1), DIVISAO_MAX);
   assert.equal(limparDivisao(-5), DIVISAO_MIN);
-  assert.equal(limparDivisao(NaN), 0.5);
-  assert.equal(limparDivisao(undefined), 0.5);
+  assert.equal(limparDivisao(NaN), DIVISAO_OMISSAO);
+  assert.equal(limparDivisao(undefined), DIVISAO_OMISSAO);
   assert.equal(limparDivisao(0.3), 0.3);
 });
 
@@ -240,4 +247,73 @@ test('desenhar reparte a tela pelo divisor', () => {
   assert.equal(imagens[0][8], 1344, 'o de cima leva 70% de 1920');
   assert.equal(imagens[1][6], 1344, 'o de baixo começa onde o outro acaba');
   assert.equal(imagens[1][8], 576);
+});
+
+// ── mexer num quadro mexe no outro ──────────────────────────────────────────
+//
+// "Quando mexo no tamanho da webcam devia mexer no outro automaticamente para
+//  encaixar. Tenho que mexer em dois lugares para arrumar um."
+
+test('a forma de um quadro diz qual é a divisão', () => {
+  // Ida e volta: o quadro que nasce com uma divisão devolve essa divisão.
+  for (const d of [0.2, 0.35, 0.5, 0.7, 0.8]) {
+    const [cima, baixo] = enquadramentoInicial(1920, 1080, 'dois', d);
+    assert.ok(perto(divisaoDoQuadro(cima, 0), d, 0.001), `de cima deu ${divisaoDoQuadro(cima, 0)} e era ${d}`);
+    assert.ok(perto(divisaoDoQuadro(baixo, 1), d, 0.001), `de baixo deu ${divisaoDoQuadro(baixo, 1)} e era ${d}`);
+  }
+});
+
+test('esticar a webcam para baixo dá-lhe mais faixa', () => {
+  const [cima] = enquadramentoInicial(1920, 1080, 'dois', 0.35);
+  // Mais alto pela mesma largura = mais altura no 9:16.
+  const maisAlto = { ...cima, altura: cima.altura * 1.5 };
+  assert.ok(divisaoDoQuadro(maisAlto, 0) > 0.35,
+    `deu ${divisaoDoQuadro(maisAlto, 0)} e devia crescer`);
+});
+
+test('a divisão que sai de um quadro nunca passa dos limites', () => {
+  assert.equal(divisaoDoQuadro({ largura: 1, altura: 1000 }, 0), DIVISAO_MAX);
+  assert.equal(divisaoDoQuadro({ largura: 1000, altura: 1 }, 0), DIVISAO_MIN);
+  assert.equal(divisaoDoQuadro(null), null);
+  assert.equal(divisaoDoQuadro({ largura: 0, altura: 0 }), null);
+});
+
+// ── os encaixes ─────────────────────────────────────────────────────────────
+//
+// "Podia colocar as ajudas para deixar centralizado, de baixo para cima, do
+//  lado para o outro."
+
+const FONTE = { largura: 1920, altura: 1080 };
+const caixa = (x, y) => ({ x, y, largura: 400, altura: 300 });
+
+test('quase ao meio agarra ao meio, e diz que agarrou', () => {
+  const r = encaixar(caixa(760, 388), FONTE);
+  assert.equal(r.rect.x, (1920 - 400) / 2);
+  assert.equal(r.rect.y, (1080 - 300) / 2);
+  assert.deepEqual(r.linhas, ['centroX', 'centroY']);
+});
+
+test('longe do meio não agarra nada', () => {
+  const r = encaixar(caixa(200, 100), FONTE);
+  assert.equal(r.rect.x, 200);
+  assert.equal(r.rect.y, 100);
+  assert.deepEqual(r.linhas, []);
+});
+
+test('as quatro bordas agarram', () => {
+  assert.deepEqual(encaixar(caixa(10, 500), FONTE).linhas, ['esquerda']);
+  assert.deepEqual(encaixar(caixa(1510, 500), FONTE).linhas, ['direita']);
+  assert.deepEqual(encaixar(caixa(200, 12), FONTE).linhas, ['cima']);
+  assert.deepEqual(encaixar(caixa(200, 770), FONTE).linhas, ['baixo']);
+});
+
+test('o meio ganha à borda quando os dois estão ao alcance', () => {
+  // Uma caixa quase tão larga como a fonte tem o meio e a borda no mesmo sítio.
+  const larga = { x: 5, y: 500, largura: 1900, altura: 300 };
+  assert.deepEqual(encaixar(larga, FONTE).linhas, ['centroX']);
+});
+
+test('sem fonte não inventa encaixe nenhum', () => {
+  assert.deepEqual(encaixar(caixa(10, 10), null).linhas, []);
+  assert.equal(encaixar(null, FONTE).rect, null);
 });

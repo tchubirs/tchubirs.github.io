@@ -1563,12 +1563,30 @@ test('o editor do retrato mede-se pelo vídeo e não pela caixa à volta',
       `a zona de corte ${JSON.stringify(medidas.zona)} não é a imagem ${JSON.stringify(medidas.video)}`);
     assert.equal(medidas.caixas, 1, 'um modo, um enquadramento');
 
-    // Dois enquadramentos: dois rectângulos, e o de baixo por baixo do de cima.
+    // Dois enquadramentos, e a nascer PRONTOS: "quando clico em dois
+    // enquadramentos devia ficar praticamente pronto". O primeiro é a webcam e
+    // vai para o canto de baixo à esquerda — que é onde ela está nos três
+    // canais que medi; o segundo é o jogo e fica ao meio.
     await p.click('#modoDois');
-    const dois = await p.evaluate(() => [...document.querySelectorAll('.recorte')]
-      .map((e) => Math.round(e.getBoundingClientRect().y)));
+    const dois = await p.evaluate(() => {
+      const z = document.querySelector('#recortes').getBoundingClientRect();
+      return [...document.querySelectorAll('.recorte')].map((e) => {
+        const b = e.getBoundingClientRect();
+        return {
+          esq: (b.x - z.x) / z.width,
+          topo: (b.y - z.y) / z.height,
+          meioX: (b.x + b.width / 2 - z.x) / z.width,
+          meioY: (b.y + b.height / 2 - z.y) / z.height,
+          baixo: (b.y + b.height - z.y) / z.height,
+        };
+      });
+    });
     assert.equal(dois.length, 2);
-    assert.ok(dois[1] > dois[0], `o segundo (${dois[1]}) devia ficar abaixo do primeiro (${dois[0]})`);
+    assert.ok(dois[0].esq < 0.02, `a webcam devia encostar à esquerda e ficou em ${dois[0].esq}`);
+    assert.ok(dois[0].baixo > 0.98, `a webcam devia encostar em baixo e acabou em ${dois[0].baixo}`);
+    assert.ok(Math.abs(dois[1].meioX - 0.5) < 0.02, `o jogo devia ficar ao meio e ficou em ${dois[1].meioX}`);
+    assert.ok(Math.abs(dois[1].meioY - 0.5) < 0.02, `o jogo devia ficar ao meio e ficou em ${dois[1].meioY}`);
+    assert.ok(dois[0].topo !== dois[1].topo, 'os dois no mesmo sítio são indistinguíveis de um');
 
     // "Mexer na direita afeta directamente os tamanhos na esquerda."
     //

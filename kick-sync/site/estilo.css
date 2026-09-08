@@ -278,15 +278,28 @@ kbd {
   opacity: .35; transition: opacity .15s;
 }
 .tile:hover .fora, .tile.foco .fora { opacity: 1; }
+/* "Aumenta um pouco desses botão, pois está muito pequeno."
+   Estavam com 26px de alto e o desenho com 15 — abaixo dos 24px que uma mão
+   com rato acerta sem mirar, e muito abaixo dos 44 de um dedo. Passam a 36
+   quadrados, que é o meio termo que ainda não tapa o vídeo num quadrado
+   pequeno; abaixo dos 260px de largura eles já desaparecem por outra regra. */
 .tile .fora button {
-  padding: 1px 7px; font-size: var(--t-menor); background: var(--sobre-video);
-  border-radius: 5px; display: grid; place-items: center; min-height: 26px;
+  padding: 1px 6px; font-size: var(--t-menor); background: var(--sobre-video);
+  border-radius: 6px; display: grid; place-items: center;
+  min-height: 36px; min-width: 36px;
 }
+.tile .fora button svg { width: 18px; height: 18px; }
 .tile.foco .fora button { color: var(--texto); border-color: var(--borda-forte); }
 /* Dentro da janela à parte não há grelha para onde voltar nem par que faça
    sentido: fica só o botão que a fecha. */
 .janelaAparte .tile { position: absolute; inset: 0; aspect-ratio: auto; border: 0; border-radius: 0; }
 .janelaAparte .tile .par { display: none; }
+/* E o ecrã cheio também não: uma janela de `documentPictureInPicture` está
+   sempre à frente de tudo e o browser NEGA-lhe o ecrã cheio. O botão ficava
+   lá a não fazer nada — "não consigo deixar ela em tela cheia". Quem quer o
+   vídeo grande no segundo monitor arrasta a janela e puxa-lhe o canto, que é
+   para isso que ela existe. */
+.janelaAparte .tile .ecraCheio { display: none; }
 .tile.vazio video { opacity: 0; }
 .tile .rotulo {
   position: absolute; left: 6px; top: 6px; background: var(--sobre-video); padding: 2px 7px;
@@ -528,8 +541,8 @@ footer { margin-top: 32px; border-top: 1px solid var(--borda); padding-top: 12px
   background: var(--acento); border: 0; border-radius: 4px; cursor: ew-resize;
 }
 .barraClipe .cabeca {
-  position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--texto);
-  pointer-events: none;
+  position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px;
+  background: var(--texto); pointer-events: none;
 }
 /* Os botões de acção ficam sempre à mão, mesmo com o editor aberto e a caixa a
    rolar por dentro. Antes ficavam por baixo da dobra: quem abria o clipe via o
@@ -995,3 +1008,14 @@ button, select, input[type="text"], input[type="search"], input[type="number"] {
   margin-top: 8px;
 }
 .marcas button { padding: 10px 6px; white-space: nowrap; }
+
+/* As linhas de encaixe: só existem enquanto o dedo está em baixo.
+   "Podia colocar as ajudas para deixar centralizado, de baixo para cima, do
+   lado para o outro." Amarelas e não verdes: o verde é a cor dos recortes, e
+   uma ajuda tem de se distinguir daquilo que ajuda a alinhar. */
+.guia {
+  position: absolute;
+  pointer-events: none;
+  outline: 1px dashed var(--marcador);
+  z-index: 3;
+}

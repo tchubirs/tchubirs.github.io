@@ -108,10 +108,14 @@ test('o clipe automatico e a rajada ate a morte, e nao o combate inteiro', async
   // E o clipe comeca na rajada, e nao no tiro solto dos 50 s.
   assert.ok(seg(c.combateDeMs) > 58,
     `o clipe comecou aos ${seg(c.combateDeMs)}s — voltou a levar o combate inteiro`);
-  assert.ok(Math.abs(seg(c.combateAteMs) - 61.5) < 1,
-    `o clipe acabou aos ${seg(c.combateAteMs)}s e devia acabar na morte`);
+  // Acaba no FIM da rajada — o último tiro da troca — e não no tiro mais alto.
+  // Acabar no mais alto dava um clipe de um segundo sempre que o mais alto era
+  // o primeiro da rajada, que é exactamente o caso de um headshot à primeira
+  // bala. "Não funciona mais, não cria mais nenhum clipe."
+  assert.ok(Math.abs(seg(c.combateAteMs) - 63.5) < 1,
+    `o clipe acabou aos ${seg(c.combateAteMs)}s e devia acabar no último tiro`);
   const dur = seg(c.combateAteMs) - seg(c.combateDeMs);
-  assert.ok(dur > 0.5 && dur < 5, `o clipe ficou com ${dur.toFixed(1)}s`);
+  assert.ok(dur >= 2 && dur < 6, `o clipe ficou com ${dur.toFixed(1)}s`);
   // A luta inteira continua a saber-se, para a linha do tempo.
   assert.ok(c.duracaoS > 10, `a luta devia continuar a ter ${c.duracaoS}s medidos por inteiro`);
 });
@@ -182,4 +186,42 @@ test('a varredura guarda a forma de cada estouro, para depois se aprender', asyn
   const segundos = r.estouros.map((e) => (e.ms - T) / 1000);
   assert.ok(segundos.some((s) => Math.abs(s - 100) < 6), 'nenhum recorte na primeira luta');
   assert.ok(segundos.some((s) => Math.abs(s - 250) < 6), 'nenhum recorte na segunda luta');
+});
+
+// "Não funciona mais, não cria mais nenhum clipe."
+//
+// Medido na luta verdadeira dele: cinco impulsos em três décimos de segundo, o
+// mais alto o segundo deles. A acabar no tiro mais alto o clipe saía com UM
+// SEGUNDO — o chão que eu tinha posto para as pontas não coincidirem. Um
+// segundo de vídeo não é um clipe, e é isso que ele viu.
+test('uma rajada curta não sai com um segundo de clipe', async () => {
+  const T = Date.parse('2026-08-30T22:00:00Z');
+  const NOITE = 120;
+  const x = new Float32Array(Math.round((NOITE + 30) * TAXA));
+  let s = 11;
+  const rnd = () => ((s = (Math.imul(s, 1103515245) + 12345) >>> 0) / 0x100000000);
+  for (let i = 0; i < x.length; i++) x[i] = (rnd() * 2 - 1) * 0.01;
+  const estouro = (t, forca) => {
+    const i = Math.round(t * TAXA);
+    for (let j = 0; j < 1200 && i + j < x.length; j++) {
+      x[i + j] += forca * (rnd() * 2 - 1) * Math.exp(-j / 200);
+    }
+  };
+  // O mais alto é o PRIMEIRO: um headshot à primeira bala.
+  for (const [t, f] of [[60, 3], [60.08, 1], [60.14, 1], [60.2, 1], [60.3, 1]]) estouro(t, f);
+
+  const r = await varrerNoite({
+    linha: { slug: 'tchubi' },
+    deMs: T,
+    ateMs: T + NOITE * 1000,
+    bocadoS: 300,
+    lerSom: async (linha, quandoMs, duracaoS) => {
+      const de = Math.round(((quandoMs - T) / 1000) * TAXA);
+      return x.subarray(de, de + Math.round(duracaoS * TAXA));
+    },
+  });
+
+  assert.equal(r.candidatos.length, 1, `deu ${r.candidatos.length} candidatos`);
+  const dur = (r.candidatos[0].combateAteMs - r.candidatos[0].combateDeMs) / 1000;
+  assert.ok(dur >= 2, `o clipe saiu com ${dur.toFixed(1)}s — um segundo de vídeo não é um clipe`);
 });

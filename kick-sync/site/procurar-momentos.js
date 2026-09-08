@@ -123,10 +123,23 @@ export async function varrerNoite({
       // rajada que leva ao tiro mais alto e acaba NESSE tiro, que e a morte.
       // Com as margens a zero da exactamente o que ele descreveu.
       combateDeMs: Math.round(deMs + g.rajadaDeS * 1000),
-      // Um segundo de chao: se o tiro mais alto for o primeiro da rajada — um
-      // headshot a primeira bala — as duas pontas seriam o mesmo instante, e um
-      // clipe de duracao zero sai vazio do cortador sem dizer porque.
-      combateAteMs: Math.round(deMs + Math.max(g.picoS, g.rajadaDeS + 1) * 1000),
+      // ATE AO FIM DA RAJADA, e nao ate ao tiro mais alto.
+      //
+      // "Isso nao funciona mais, nao cria mais nenhum clipe." Nao criava: media
+      // um segundo. O tiro mais alto e muitas vezes o PRIMEIRO da rajada — um
+      // headshot a primeira bala, que e precisamente o clipe que ele quer — e
+      // acabar ali punha as duas pontas no mesmo instante. Medido na luta
+      // verdadeira dele: cinco impulsos em 0,3 s, o mais alto o segundo, e o
+      // clipe saia com 1,0 s de chao. Um segundo de video nao e um clipe.
+      //
+      // O tiro mais alto e onde a coisa ACONTECE, e por isso continua a ser o
+      // instante do momento. Mas o clipe acaba quando a troca acaba, que e o
+      // ultimo tiro da rajada — "eu disparo, a pessoa morre, e acaba".
+      //
+      // Os dois segundos de chao sao um julgamento e nao uma medida: uma rajada
+      // de tres decimos de segundo E a accao toda, mas tres decimos de video
+      // nao se ve. Dois segundos e o mais curto que ainda se le como um clipe.
+      combateAteMs: Math.round(deMs + Math.max(g.rajadaAteS, g.rajadaDeS + 2) * 1000),
       tiros: g.tiros,
       pico: g.pico,
       duracaoS: g.duracaoS,
