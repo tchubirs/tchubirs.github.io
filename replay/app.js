@@ -5,34 +5,34 @@
 // bottom rung of Kick's ladder and is what makes thirty tiles a home-connection
 // problem rather than a server problem.
 
-import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=43e4e0bf1b';
+import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=c507cb10a1';
 import {
   linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo,
-} from './relogio.js?v=43e4e0bf1b';
-import { cortarTodosOsAngulos } from './baixar.js?v=43e4e0bf1b';
-import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=43e4e0bf1b';
-import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=43e4e0bf1b';
-import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=43e4e0bf1b';
+} from './relogio.js?v=c507cb10a1';
+import { cortarTodosOsAngulos } from './baixar.js?v=c507cb10a1';
+import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=c507cb10a1';
+import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=c507cb10a1';
+import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=c507cb10a1';
 import {
   RETRATO, enquadramentoInicial, limitar, desenhar, gravar, formatoQueFunciona, extensaoDe,
   reformar, limparDivisao, DIVISAO_OMISSAO, divisaoDoQuadro, proporcaoDoQuadro, encaixar,
-} from './retrato.js?v=43e4e0bf1b';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=43e4e0bf1b';
+} from './retrato.js?v=c507cb10a1';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=c507cb10a1';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
   alternarVitima, filtrar, temMorte, clipesDoMomento,
-} from './momentos.js?v=43e4e0bf1b';
-import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=43e4e0bf1b';
-import { criarZip, crc32 } from './zip.js?v=43e4e0bf1b';
-import { queFazerComOLeitor } from './leitor.js?v=43e4e0bf1b';
-import { criarApanhador } from './frames.js?v=43e4e0bf1b';
-import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=43e4e0bf1b';
-import { TAXA_TIROS } from './tiros.js?v=43e4e0bf1b';
-import { parecidos, juntarPerto } from './aprender.js?v=43e4e0bf1b';
-import { somDoCanal } from './alinhar.js?v=43e4e0bf1b';
-import { MAXIMO_S, mover, janelaInicial, nomeDoClipe, posicaoDaCabeca } from './clipe.js?v=43e4e0bf1b';
-import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=43e4e0bf1b';
-import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=43e4e0bf1b';
+} from './momentos.js?v=c507cb10a1';
+import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=c507cb10a1';
+import { criarZip, crc32 } from './zip.js?v=c507cb10a1';
+import { queFazerComOLeitor } from './leitor.js?v=c507cb10a1';
+import { criarApanhador } from './frames.js?v=c507cb10a1';
+import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=c507cb10a1';
+import { TAXA_TIROS } from './tiros.js?v=c507cb10a1';
+import { parecidos, juntarPerto } from './aprender.js?v=c507cb10a1';
+import { somDoCanal } from './alinhar.js?v=c507cb10a1';
+import { MAXIMO_S, mover, janelaInicial, nomeDoClipe, posicaoDaCabeca } from './clipe.js?v=c507cb10a1';
+import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=c507cb10a1';
+import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=c507cb10a1';
 
 const $ = (id) => document.getElementById(id);
 const estado = {
@@ -268,10 +268,10 @@ function pintarConfianca() {
 // ── carregar ────────────────────────────────────────────────────────────────
 
 /**
- * hls.js comes from a CDN, and a CDN is a thing that can be down, blocked by a
- * network, or eaten by an ad blocker. Without it the tiles stay black and the
- * page looks broken for a reason nobody can guess — so it says so, once, and
- * names the cause.
+ * O hls.js é nosso desde que saiu do cdnjs — mas um ficheiro nosso também se
+ * perde: uma publicação a meio, uma cache envenenada, um bloqueador demasiado
+ * zeloso. Sem ele os quadrados ficam pretos e a página parece partida por uma
+ * razão que ninguém adivinha — por isso diz-se, uma vez, e diz-se o que fazer.
  */
 function temPlayer() {
   const aviso = $('avisoPlayer');
@@ -1692,7 +1692,14 @@ function pintarMomentos() {
       + (sozinho ? '' : `<button class="verMortes">${t('montagem.verMortes')}</button>`)
       + `<span class="quantos">${dur ? `${dur}s · ` : ''}`
       + `${tn(n, 'montagem.umClipe', 'montagem.clipes')}</span>`
-      + (sozinho ? '' : `<span class="vitimas"><span class="nota">${t('montagem.matou')}</span>${fichas}</span>`)
+      // "Vítimas" só quando há alguma. Antes a etiqueta estava lá sempre, em
+      // cima de uma fila de nomes que ninguém tinha medido — e dizer "Vítimas"
+      // por cima de seis nomes que não morreram é afirmar uma coisa que a
+      // página não sabe. Sem ninguém marcado é uma PERGUNTA, e os botões são a
+      // resposta.
+      + (sozinho ? '' : `<span class="vitimas${temMorte(m) ? ' ha' : ''}">`
+        + `<span class="nota">${t(temMorte(m) ? 'montagem.matou' : 'montagem.quemMorreu')}</span>`
+        + `${fichas}</span>`)
       + '<div class="olhar" hidden></div></li>';
   }).join('') || `<li class="nota">${t('montagem.vazia')}</li>`;
 
