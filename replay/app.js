@@ -5,34 +5,34 @@
 // bottom rung of Kick's ladder and is what makes thirty tiles a home-connection
 // problem rather than a server problem.
 
-import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=e42f9aef50';
+import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=13a59d0ce9';
 import {
   linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo,
-} from './relogio.js?v=e42f9aef50';
-import { cortarTodosOsAngulos } from './baixar.js?v=e42f9aef50';
-import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=e42f9aef50';
-import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=e42f9aef50';
-import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=e42f9aef50';
+} from './relogio.js?v=13a59d0ce9';
+import { cortarTodosOsAngulos } from './baixar.js?v=13a59d0ce9';
+import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=13a59d0ce9';
+import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=13a59d0ce9';
+import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=13a59d0ce9';
 import {
   RETRATO, enquadramentoInicial, limitar, desenhar, gravar, formatoQueFunciona, extensaoDe,
   reformar, limparDivisao, DIVISAO_OMISSAO, divisaoDoQuadro, proporcaoDoQuadro, encaixar,
-} from './retrato.js?v=e42f9aef50';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=e42f9aef50';
+} from './retrato.js?v=13a59d0ce9';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=13a59d0ce9';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
   alternarVitima, filtrar, temMorte, clipesDoMomento,
-} from './momentos.js?v=e42f9aef50';
-import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=e42f9aef50';
-import { criarZip, crc32 } from './zip.js?v=e42f9aef50';
-import { queFazerComOLeitor } from './leitor.js?v=e42f9aef50';
-import { criarApanhador } from './frames.js?v=e42f9aef50';
-import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=e42f9aef50';
-import { TAXA_TIROS } from './tiros.js?v=e42f9aef50';
-import { parecidos, juntarPerto } from './aprender.js?v=e42f9aef50';
-import { somDoCanal } from './alinhar.js?v=e42f9aef50';
-import { MAXIMO_S, mover, janelaInicial, nomeDoClipe, posicaoDaCabeca } from './clipe.js?v=e42f9aef50';
-import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=e42f9aef50';
-import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=e42f9aef50';
+} from './momentos.js?v=13a59d0ce9';
+import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=13a59d0ce9';
+import { criarZip, crc32 } from './zip.js?v=13a59d0ce9';
+import { queFazerComOLeitor } from './leitor.js?v=13a59d0ce9';
+import { criarApanhador } from './frames.js?v=13a59d0ce9';
+import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=13a59d0ce9';
+import { TAXA_TIROS } from './tiros.js?v=13a59d0ce9';
+import { parecidos, juntarPerto } from './aprender.js?v=13a59d0ce9';
+import { somDoCanal } from './alinhar.js?v=13a59d0ce9';
+import { MAXIMO_S, mover, janelaInicial, nomeDoClipe, posicaoDaCabeca } from './clipe.js?v=13a59d0ce9';
+import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=13a59d0ce9';
+import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=13a59d0ce9';
 
 const $ = (id) => document.getElementById(id);
 const estado = {
@@ -2107,6 +2107,15 @@ function abrirClipe() {
   // mensagem. Ele carregou e veio dizer-mo, e tinha toda a razão.
   $('guardarRetrato').disabled = true;
   $('semRetrato').hidden = true;
+  // A grelha pára ao abrir o clipe.
+  //
+  // "Quando aperto em clip, pausa os players principais, ou o player se for
+  //  1 só." Não parava: ficavam a andar por trás da janela, e quando ele
+  // voltava o instante já não era o que ele tinha escolhido — além de se
+  // ouvirem dois sons ao mesmo tempo. Só se retoma se tiver sido isto a
+  // parar: quem já a tinha em pausa não quer que ela arranque ao fechar.
+  estado.clipe.retomarGrelha = !estado.parado;
+  if (estado.clipe.retomarGrelha) alternarPausa();
   pintarClipe();
   preverClipe(estado.clipe.deMs);
   prepararRetrato();
@@ -2462,6 +2471,7 @@ async function guardarRetrato() {
 
 function fecharClipe() {
   clearTimeout(estado.esperaRetrato);
+  const retomarGrelha = estado.clipe?.retomarGrelha;
   pararVer();
   estado.clipe?.hls?.destroy();
   const v = $('previaClipe');
@@ -2469,6 +2479,7 @@ function fecharClipe() {
   v.removeAttribute('src');
   estado.clipe = null;
   $('modalClipe').hidden = true;
+  if (retomarGrelha && estado.parado) alternarPausa();
 }
 
 const posClipe = (ms) => {
