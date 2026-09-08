@@ -5,34 +5,34 @@
 // bottom rung of Kick's ladder and is what makes thirty tiles a home-connection
 // problem rather than a server problem.
 
-import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=05ecf06133';
+import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=0813fd8878';
 import {
   linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo,
-} from './relogio.js?v=05ecf06133';
-import { cortarTodosOsAngulos } from './baixar.js?v=05ecf06133';
-import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=05ecf06133';
-import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=05ecf06133';
-import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=05ecf06133';
+} from './relogio.js?v=0813fd8878';
+import { cortarTodosOsAngulos } from './baixar.js?v=0813fd8878';
+import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=0813fd8878';
+import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=0813fd8878';
+import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=0813fd8878';
 import {
   RETRATO, enquadramentoInicial, limitar, desenhar, gravar, formatoQueFunciona, extensaoDe,
   reformar, limparDivisao, DIVISAO_OMISSAO, divisaoDoQuadro, proporcaoDoQuadro, encaixar,
-} from './retrato.js?v=05ecf06133';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=05ecf06133';
+} from './retrato.js?v=0813fd8878';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=0813fd8878';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
   alternarVitima, filtrar, temMorte, clipesDoMomento,
-} from './momentos.js?v=05ecf06133';
-import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=05ecf06133';
-import { criarZip, crc32 } from './zip.js?v=05ecf06133';
-import { queFazerComOLeitor } from './leitor.js?v=05ecf06133';
-import { criarApanhador } from './frames.js?v=05ecf06133';
-import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=05ecf06133';
-import { TAXA_TIROS } from './tiros.js?v=05ecf06133';
-import { parecidos, juntarPerto } from './aprender.js?v=05ecf06133';
-import { somDoCanal } from './alinhar.js?v=05ecf06133';
-import { MAXIMO_S, mover, janelaInicial, nomeDoClipe, posicaoDaCabeca } from './clipe.js?v=05ecf06133';
-import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=05ecf06133';
-import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=05ecf06133';
+} from './momentos.js?v=0813fd8878';
+import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=0813fd8878';
+import { criarZip, crc32 } from './zip.js?v=0813fd8878';
+import { queFazerComOLeitor } from './leitor.js?v=0813fd8878';
+import { criarApanhador } from './frames.js?v=0813fd8878';
+import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=0813fd8878';
+import { TAXA_TIROS } from './tiros.js?v=0813fd8878';
+import { parecidos, juntarPerto } from './aprender.js?v=0813fd8878';
+import { somDoCanal } from './alinhar.js?v=0813fd8878';
+import { MAXIMO_S, mover, janelaInicial, nomeDoClipe, posicaoDaCabeca } from './clipe.js?v=0813fd8878';
+import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=0813fd8878';
+import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=0813fd8878';
 
 const $ = (id) => document.getElementById(id);
 const estado = {
@@ -2508,6 +2508,9 @@ function trocarModo(modo) {
 async function guardarRetrato() {
   const c = estado.clipe;
   const v = $('previaClipe');
+  const mudoAntes = v.muted;
+  const volumeAntes = v.volume;
+  const devolverSom = () => { v.muted = mudoAntes; v.volume = volumeAntes; };
   const botao = $('guardarRetrato');
   if (!c || !c.rects.length) {
     // Nunca em silêncio. Era assim que estava, e "o botão nem fez nada quando
@@ -2527,6 +2530,14 @@ async function guardarRetrato() {
     }
     // Do princípio do clipe, e não de onde a pré-visualização parou.
     await preverClipe(c.deMs);
+    // A partir daqui ninguém pode pausar isto por baixo — nem o `acordarPrevia`
+    // com um pause adiado, nem um `preverClipe` que chegue tarde.
+    c.aGravar = true;
+    // E sem som não vale nada: um `captureStream` de um vídeo em mudo dá uma
+    // faixa de áudio SILENCIOSA. O volume fica a zero para não se ouvir a
+    // gravação na sala, mas a faixa passa a ter sinal.
+    v.muted = false;
+    v.volume = 0;
     const { blob, tipo } = await gravar(v, {
       rects: c.rects,
       modo: c.modo,
@@ -2554,9 +2565,14 @@ async function guardarRetrato() {
     a.click();
     $('estadoClipe').textContent = t('retrato.pronto');
   } catch (e) {
-    $('estadoClipe').textContent = e.name === 'SEM-GRAVADOR'
-      ? t('retrato.semGravador')
-      : t('clipe.naoDeu', { erro: e.message });
+    $('estadoClipe').textContent = e.name === 'SEM-GRAVADOR' ? t('retrato.semGravador')
+      : e.name === 'GRAVACAO-PARADA' ? t('retrato.parou')
+        : t('clipe.naoDeu', { erro: e.message });
+  } finally {
+    // A marca sai mesmo que a gravação rebente: senão o `acordarPrevia` fica
+    // calado para sempre e a prévia nunca mais carrega uma imagem.
+    if (estado.clipe) estado.clipe.aGravar = false;
+    devolverSom();
   }
   botao.disabled = false;
 }
@@ -2645,9 +2661,15 @@ function preverClipe(quandoMs) {
  */
 function acordarPrevia() {
   const v = $('previaClipe');
-  if (estado.clipe?.aVer || v.readyState >= 2) return;
+  if (estado.clipe?.aVer || estado.clipe?.aGravar || v.readyState >= 2) return;
   const p = v.play?.();
-  p?.then?.(() => { if (!estado.clipe?.aVer) v.pause?.(); })?.catch?.(() => {});
+  // O `pause` é ADIADO — chega quando a promessa do `play` resolve, e isso
+  // pode ser meio segundo depois. Se entretanto a gravação começou, este
+  // pause cai a meio dela e congela o vídeo: o 9:16 saía com uma FOTO e sem
+  // som, que foi exactamente o que ele apanhou no primeiro export a sério.
+  p?.then?.(() => {
+    if (!estado.clipe?.aVer && !estado.clipe?.aGravar) v.pause?.();
+  })?.catch?.(() => {});
 }
 
 /**

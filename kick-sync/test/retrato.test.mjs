@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import {
   RETRATO, enquadramentoInicial, limitar, destinos, desenhar, melhorFormato, extensaoDe,
   reformar, proporcaoDoQuadro, limparDivisao, DIVISAO_MIN, DIVISAO_MAX, DIVISAO_OMISSAO,
-  divisaoDoQuadro, encaixar,
+  divisaoDoQuadro, encaixar, gravar,
 } from '../site/retrato.js';
 
 const perto = (a, b, tol = 0.01) => Math.abs(a - b) < tol;
@@ -370,4 +370,43 @@ test('a forma continua presa a proporcao da faixa, venha o canto que vier', () =
     assert.equal(Number((r.largura / r.altura).toFixed(6)), 3,
       `o canto ${canto} deformou a caixa`);
   }
+});
+
+// "Fiz meu primeiro download 9x16 e veio só a foto, não tem vídeo nem som."
+//
+// Vinha: um `pause()` adiado caía a meio da gravação, o relógio do vídeo não
+// andava, e cada frame pintado era o mesmo. O ficheiro saía com uma imagem
+// parada e com a faixa muda que um vídeo em pausa produz.
+//
+// A causa está corrigida na app; isto é o travão para a PRÓXIMA, seja ela
+// qual for. Entregar uma fotografia a quem pediu um clipe é mentir.
+test('um video que nao anda rebenta, em vez de dar uma foto', async () => {
+  // Um vídeo que diz que toca e cujo relógio nunca anda — que é exactamente
+  // o que um `pause()` a cair a meio produz.
+  const v = {
+    videoWidth: 1920, videoHeight: 1080, currentTime: 10,
+    play: async () => {}, pause: () => {},
+    captureStream: () => ({ getAudioTracks: () => [] }),
+  };
+  const tela = {
+    width: 0, height: 0,
+    getContext: () => ({ drawImage() {}, fillRect() {}, clearRect() {}, save() {}, restore() {} }),
+    captureStream: () => ({ addTrack() {} }),
+  };
+  class MRFalso {
+    constructor() { this.state = 'inactive'; }
+    start() { this.state = 'recording'; }
+    stop() { this.state = 'inactive'; this.onstop?.(); }
+  }
+  await assert.rejects(
+    () => gravar(v, {
+      rects: [{ x: 0, y: 0, largura: 1080, altura: 1080 }],
+      duracaoS: 5,
+      formato: 'video/webm',
+      criarTela: () => tela,
+      MR: MRFalso,
+    }),
+    (e) => e.name === 'GRAVACAO-PARADA',
+    'tinha de recusar em vez de devolver uma imagem parada',
+  );
 });

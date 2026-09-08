@@ -2508,6 +2508,9 @@ function trocarModo(modo) {
 async function guardarRetrato() {
   const c = estado.clipe;
   const v = $('previaClipe');
+  const mudoAntes = v.muted;
+  const volumeAntes = v.volume;
+  const devolverSom = () => { v.muted = mudoAntes; v.volume = volumeAntes; };
   const botao = $('guardarRetrato');
   if (!c || !c.rects.length) {
     // Nunca em silêncio. Era assim que estava, e "o botão nem fez nada quando
@@ -2527,6 +2530,14 @@ async function guardarRetrato() {
     }
     // Do princípio do clipe, e não de onde a pré-visualização parou.
     await preverClipe(c.deMs);
+    // A partir daqui ninguém pode pausar isto por baixo — nem o `acordarPrevia`
+    // com um pause adiado, nem um `preverClipe` que chegue tarde.
+    c.aGravar = true;
+    // E sem som não vale nada: um `captureStream` de um vídeo em mudo dá uma
+    // faixa de áudio SILENCIOSA. O volume fica a zero para não se ouvir a
+    // gravação na sala, mas a faixa passa a ter sinal.
+    v.muted = false;
+    v.volume = 0;
     const { blob, tipo } = await gravar(v, {
       rects: c.rects,
       modo: c.modo,
@@ -2554,9 +2565,14 @@ async function guardarRetrato() {
     a.click();
     $('estadoClipe').textContent = t('retrato.pronto');
   } catch (e) {
-    $('estadoClipe').textContent = e.name === 'SEM-GRAVADOR'
-      ? t('retrato.semGravador')
-      : t('clipe.naoDeu', { erro: e.message });
+    $('estadoClipe').textContent = e.name === 'SEM-GRAVADOR' ? t('retrato.semGravador')
+      : e.name === 'GRAVACAO-PARADA' ? t('retrato.parou')
+        : t('clipe.naoDeu', { erro: e.message });
+  } finally {
+    // A marca sai mesmo que a gravação rebente: senão o `acordarPrevia` fica
+    // calado para sempre e a prévia nunca mais carrega uma imagem.
+    if (estado.clipe) estado.clipe.aGravar = false;
+    devolverSom();
   }
   botao.disabled = false;
 }
@@ -2645,9 +2661,15 @@ function preverClipe(quandoMs) {
  */
 function acordarPrevia() {
   const v = $('previaClipe');
-  if (estado.clipe?.aVer || v.readyState >= 2) return;
+  if (estado.clipe?.aVer || estado.clipe?.aGravar || v.readyState >= 2) return;
   const p = v.play?.();
-  p?.then?.(() => { if (!estado.clipe?.aVer) v.pause?.(); })?.catch?.(() => {});
+  // O `pause` é ADIADO — chega quando a promessa do `play` resolve, e isso
+  // pode ser meio segundo depois. Se entretanto a gravação começou, este
+  // pause cai a meio dela e congela o vídeo: o 9:16 saía com uma FOTO e sem
+  // som, que foi exactamente o que ele apanhou no primeiro export a sério.
+  p?.then?.(() => {
+    if (!estado.clipe?.aVer && !estado.clipe?.aGravar) v.pause?.();
+  })?.catch?.(() => {});
 }
 
 /**

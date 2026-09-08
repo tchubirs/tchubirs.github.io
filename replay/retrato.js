@@ -320,6 +320,19 @@ export async function gravar(video, {
   const inicio = video.currentTime;
   let parar = false;
   let pincel = null;
+  // Um vídeo PARADO dá uma foto, e uma foto não é um clipe.
+  //
+  // "Fiz meu primeiro download 9x16 e veio só a foto, não tem vídeo nem som."
+  // Vinha: o relógio do vídeo não andava, cada frame pintado era o mesmo, e o
+  // `feito` nunca chegava à duração — o ficheiro saía com uma imagem parada e
+  // com a faixa de áudio muda que um vídeo em pausa produz.
+  //
+  // A causa era um `pause()` adiado a cair a meio (ver `acordarPrevia` na
+  // app). Isto é o travão para a PRÓXIMA causa, seja ela qual for: se ao fim
+  // de três segundos o relógio do vídeo não andou nada, isto rebenta com um
+  // nome próprio em vez de entregar uma fotografia.
+  let voltas = 0;
+  const PARADO_MAX = 90;                    // 3 s a 30 pinceladas por segundo
   // Um relógio próprio, e não o ritmo a que o vídeo entrega frames.
   //
   // A primeira versão pintava dentro do `requestVideoFrameCallback`, que é a
@@ -334,6 +347,14 @@ export async function gravar(video, {
     if (parar) return;
     desenhar(ctx, video, rects, modo, divisao);
     const feito = Math.max(0, video.currentTime - inicio);
+    voltas = feito > 0.05 ? 0 : voltas + 1;
+    if (voltas > PARADO_MAX) {
+      parar = true;
+      clearInterval(pincel);
+      if (gravador.state !== 'inactive') gravador.stop();
+      paradoDemais = true;
+      return;
+    }
     aoProgresso({ feito, total: duracaoS });
     if (feito >= duracaoS) {
       parar = true;
@@ -342,6 +363,7 @@ export async function gravar(video, {
     }
   };
 
+  let paradoDemais = false;
   const acabou = new Promise((ok, falha) => {
     gravador.onstop = () => ok(new Blob(pedacos, { type: tipo }));
     gravador.onerror = (e) => falha(e.error || new Error('gravação falhou'));
@@ -360,6 +382,9 @@ export async function gravar(video, {
   clearInterval(pincel);
   video.pause();
   if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
+  if (paradoDemais) {
+    throw Object.assign(new Error('o vídeo não andou'), { name: 'GRAVACAO-PARADA' });
+  }
   // Zero bytes é falha, não é ficheiro. Deixar passar dava um .mp4 vazio na
   // pasta de transferências e nenhuma explicação.
   if (!blob.size) throw Object.assign(new Error('não saiu nada'), { name: 'GRAVACAO-VAZIA' });
