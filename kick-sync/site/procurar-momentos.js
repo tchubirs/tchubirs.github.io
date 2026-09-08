@@ -1,4 +1,4 @@
-import { medir, chao, impulsos, lutas, FPS, TAXA_TIROS } from './tiros.js';
+import { medir, chao, impulsos, regioes, FPS, TAXA_TIROS } from './tiros.js';
 import { recortar } from './aprender.js';
 
 // Achar as kills sozinho — pela forca do som.
@@ -106,72 +106,39 @@ export async function varrerNoite({
   // o som mais alto do jogo. Quinze por hora e o que ele consegue rever.
   const { porHora = 15 } = opcoes;
   const limite = Math.max(1, Math.round((porHora * (ateMs - deMs)) / 3_600_000));
-  const dos = impulsos(tudo, piso, { brilhos, ...opcoes });
-  const achadas = lutas(dos, opcoes).slice(0, limite);
+  // Os bocados que estiveram altos e ASSIM FICARAM, ordenados pelo tempo
+  // quente. Ver `regioes` em `tiros.js` para a medicao que matou a procura
+  // por impulsos soltos: o tiroteio verdadeiro dele dava ZERO com ela.
+  const achadas = regioes(tudo, piso, opcoes).slice(0, limite);
 
-  // O que se ouviu, para quando NAO se achou nada.
+  // O que se ouviu, para quando nao se achou nada.
   //
-  // "Da isso, porem eu sei que ta tendo tiroteio." E a mensagem so sabia dizer
-  // "nenhum tiroteio nesse intervalo" — que e a mesma coisa que nao dizer nada.
-  // Sem saber O QUE o detector ouviu, nem ele nem eu podemos corrigir seja o
-  // que for: fica a discussao entre alguem que viu o tiroteio e um programa
-  // que se cala.
-  //
-  // Sao tres numeros e cada um aponta para um sitio diferente: nada alto =
-  // ouviu o canal errado ou o pedaco errado; muitos chumbados = o teste do
-  // brilho esta a apertar demais; um grupo maior de tres = falta pouco para
-  // fazer luta.
+  // "Da isso, porem eu sei que ta tendo tiroteio." A mensagem so sabia dizer
+  // "nenhum tiroteio nesse intervalo", que e a mesma coisa que nao dizer nada.
+  const dos = impulsos(tudo, piso, { brilhos, ...opcoes });
   const semBrilho = impulsos(tudo, piso, { ...opcoes, brilhos: null });
-  let maior = 0;
-  let corrente = 0;
-  for (let k = 0; k < dos.length; k++) {
-    corrente = k && (dos[k].bloco - dos[k - 1].bloco) / FPS <= (opcoes.juntarS ?? 14)
-      ? corrente + 1 : 1;
-    maior = Math.max(maior, corrente);
-  }
   const ouvido = {
     altos: semBrilho.length,
     chumbados: semBrilho.length - dos.length,
     passaram: dos.length,
-    maiorGrupo: maior,
+    maiorGrupo: achadas.length,
   };
   return {
     ouvido,
     candidatos: achadas.map((g) => ({
-      // O instante e o do TIRO MAIS ALTO, e nao o do primeiro do tiroteio.
-      // E ai que a coisa acontece — "quando ocorre um acerto na cabeca, o som
-      // e muito alto" — e e esse frame que interessa ver.
+      // O instante e o do som MAIS ALTO da regiao. E ai que a coisa acontece —
+      // "quando ocorre um acerto na cabeca, o som e muito alto" — e e esse o
+      // frame que o "quem morreu" tem de ver.
       ms: Math.round(deMs + g.picoS * 1000),
-      // O clipe e a RAJADA ate a morte, e nao o combate inteiro.
-      //
-      // "Os clipes sao de setenta segundos. Se eu configurei zero antes e zero
-      //  depois, era pra ser exatamente: eu disparo, a pessoa morre, e acaba."
-      //
-      // Era: o clipe levava do primeiro ao ultimo disparo da luta — ate noventa
-      // segundos — e as margens dele somavam-se por fora disso. Agora comeca na
-      // rajada que leva ao tiro mais alto e acaba NESSE tiro, que e a morte.
-      // Com as margens a zero da exactamente o que ele descreveu.
-      combateDeMs: Math.round(deMs + g.rajadaDeS * 1000),
-      // ATE AO FIM DA RAJADA, e nao ate ao tiro mais alto.
-      //
-      // "Isso nao funciona mais, nao cria mais nenhum clipe." Nao criava: media
-      // um segundo. O tiro mais alto e muitas vezes o PRIMEIRO da rajada — um
-      // headshot a primeira bala, que e precisamente o clipe que ele quer — e
-      // acabar ali punha as duas pontas no mesmo instante. Medido na luta
-      // verdadeira dele: cinco impulsos em 0,3 s, o mais alto o segundo, e o
-      // clipe saia com 1,0 s de chao. Um segundo de video nao e um clipe.
-      //
-      // O tiro mais alto e onde a coisa ACONTECE, e por isso continua a ser o
-      // instante do momento. Mas o clipe acaba quando a troca acaba, que e o
-      // ultimo tiro da rajada — "eu disparo, a pessoa morre, e acaba".
-      //
-      // Os dois segundos de chao sao um julgamento e nao uma medida: uma rajada
-      // de tres decimos de segundo E a accao toda, mas tres decimos de video
-      // nao se ve. Dois segundos e o mais curto que ainda se le como um clipe.
-      combateAteMs: Math.round(deMs + Math.max(g.rajadaAteS, g.rajadaDeS + 2) * 1000),
-      tiros: g.tiros,
+      // E o clipe e a regiao inteira: do momento em que aquilo comecou a ser
+      // alto ate ao momento em que arrefeceu. No tiroteio verdadeiro dele isso
+      // da 219,4 s a 226,0 s — comeca antes do primeiro tiro que se ouve e
+      // acaba depois de ele morrer, aos 222.
+      combateDeMs: Math.round(deMs + g.inicioS * 1000),
+      combateAteMs: Math.round(deMs + Math.max(g.fimS, g.inicioS + 2) * 1000),
+      tiros: Math.round(g.quenteS * 10) / 10,
       pico: g.pico,
-      duracaoS: g.duracaoS,
+      duracaoS: g.fimS - g.inicioS,
     })),
     estouros,
     bytes,

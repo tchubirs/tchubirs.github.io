@@ -9,7 +9,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  energia, medir, chao, impulsos, lutas, procurarTiros, TAXA_TIROS, FPS, BRILHO_MIN,
+  energia, medir, chao, impulsos, lutas, regioes, procurarTiros, TAXA_TIROS, FPS, BRILHO_MIN,
 } from '../site/tiros.js';
 
 const TAXA = TAXA_TIROS;
@@ -329,3 +329,47 @@ test('dois tiros a cadencia de arma continuam a ser dois', () => {
   assert.equal(impulsos(b, 1, {}).length, 3, 'a cadencia de uma arma nao se pode perder');
 });
 
+
+// A forma de um tiroteio VERDADEIRO, medida.
+//
+// kodd, o VOD da LA ISLA, aos 11915 s: o ecrã dele diz "DEAD" e mostra o mapa
+// da morte. Nos dez segundos à volta disso o detector antigo achou DUAS coisas
+// e nenhuma luta, e a razão está nos números:
+//
+//   · o `salto` contra os 2 ms anteriores teve mediana 1,1x e MÁXIMO 6,0x —
+//     e o limite era 6. Durante um tiroteio o bloco anterior já é um tiro.
+//   · o `brilho` mediu 0,005 a 0,118, quase tudo 0,008. O limite era 0,10.
+//
+// O que o tiroteio TEM é 4,7 s seguidos acima de 8x o chão. Um grito ou uma
+// batida de música dão 1 a 2 s. É isso que o `regioes` mede.
+test('um tiroteio sustentado e achado, e um estouro sozinho nao', () => {
+  const piso = 1;
+  const b = new Float32Array(60 * FPS).fill(1);
+  // Um estouro sozinho aos 5 s: alto, mas dura 200 ms.
+  for (let i = 5 * FPS; i < 5 * FPS + 100; i++) b[i] = 40;
+  // Um tiroteio dos 20 aos 24,5 s: alto do princípio ao fim.
+  for (let i = 20 * FPS; i < 24.5 * FPS; i++) b[i] = 10 + (i % 55 === 0 ? 30 : 0);
+
+  const rs = regioes(b, piso, {});
+  assert.equal(rs.length, 1, `devia achar so o tiroteio, achou ${rs.length}`);
+  const [r] = rs;
+  assert.ok(r.inicioS >= 19.5 && r.inicioS <= 20.5, `comecou aos ${r.inicioS}s`);
+  assert.ok(r.fimS >= 24 && r.fimS <= 27, `acabou aos ${r.fimS}s`);
+  assert.ok(r.quenteS > 4, `so ${r.quenteS}s quentes`);
+});
+
+test('as regioes saem ordenadas pelo tempo quente, e nao pelo relogio', () => {
+  const b = new Float32Array(120 * FPS).fill(1);
+  for (let i = 10 * FPS; i < 11.5 * FPS; i++) b[i] = 50;      // curta e altissima
+  for (let i = 60 * FPS; i < 66 * FPS; i++) b[i] = 12;        // longa e mais baixa
+  const rs = regioes(b, 1, {});
+  assert.equal(rs.length, 2);
+  assert.ok(rs[0].inicioS > 50, 'a longa tem de vir a frente da curta e alta');
+  assert.ok(rs[0].quenteS > rs[1].quenteS);
+});
+
+test('um pico de meio segundo nao e um tiroteio', () => {
+  const b = new Float32Array(30 * FPS).fill(1);
+  for (let i = 10 * FPS; i < 10.3 * FPS; i++) b[i] = 60;
+  assert.equal(regioes(b, 1, {}).length, 0, 'trezentos milissegundos nao sao uma troca');
+});

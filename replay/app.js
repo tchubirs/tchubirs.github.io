@@ -5,34 +5,34 @@
 // bottom rung of Kick's ladder and is what makes thirty tiles a home-connection
 // problem rather than a server problem.
 
-import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=9134a59bd5';
+import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js?v=ae3b1b7aa8';
 import {
   linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo,
-} from './relogio.js?v=9134a59bd5';
-import { cortarTodosOsAngulos } from './baixar.js?v=9134a59bd5';
-import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=9134a59bd5';
-import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=9134a59bd5';
-import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=9134a59bd5';
+} from './relogio.js?v=ae3b1b7aa8';
+import { cortarTodosOsAngulos } from './baixar.js?v=ae3b1b7aa8';
+import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=ae3b1b7aa8';
+import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=ae3b1b7aa8';
+import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=ae3b1b7aa8';
 import {
   RETRATO, enquadramentoInicial, limitar, desenhar, gravar, formatoQueFunciona, extensaoDe,
   reformar, limparDivisao, DIVISAO_OMISSAO, divisaoDoQuadro, proporcaoDoQuadro, encaixar,
-} from './retrato.js?v=9134a59bd5';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=9134a59bd5';
+} from './retrato.js?v=ae3b1b7aa8';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=ae3b1b7aa8';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
   alternarVitima, filtrar, temMorte, clipesDoMomento,
-} from './momentos.js?v=9134a59bd5';
-import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=9134a59bd5';
-import { criarZip, crc32 } from './zip.js?v=9134a59bd5';
-import { queFazerComOLeitor } from './leitor.js?v=9134a59bd5';
-import { criarApanhador } from './frames.js?v=9134a59bd5';
-import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=9134a59bd5';
-import { TAXA_TIROS } from './tiros.js?v=9134a59bd5';
-import { parecidos, juntarPerto } from './aprender.js?v=9134a59bd5';
-import { somDoCanal } from './alinhar.js?v=9134a59bd5';
-import { MAXIMO_S, mover, janelaInicial, nomeDoClipe, posicaoDaCabeca } from './clipe.js?v=9134a59bd5';
-import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=9134a59bd5';
-import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=9134a59bd5';
+} from './momentos.js?v=ae3b1b7aa8';
+import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=ae3b1b7aa8';
+import { criarZip, crc32 } from './zip.js?v=ae3b1b7aa8';
+import { queFazerComOLeitor } from './leitor.js?v=ae3b1b7aa8';
+import { criarApanhador } from './frames.js?v=ae3b1b7aa8';
+import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=ae3b1b7aa8';
+import { TAXA_TIROS } from './tiros.js?v=ae3b1b7aa8';
+import { parecidos, juntarPerto } from './aprender.js?v=ae3b1b7aa8';
+import { somDoCanal } from './alinhar.js?v=ae3b1b7aa8';
+import { MAXIMO_S, mover, janelaInicial, nomeDoClipe, posicaoDaCabeca } from './clipe.js?v=ae3b1b7aa8';
+import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=ae3b1b7aa8';
+import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=ae3b1b7aa8';
 
 const $ = (id) => document.getElementById(id);
 const estado = {
@@ -1398,7 +1398,7 @@ async function procurarKills() {
       nota.textContent = t('auto.nenhum', { canal })
         + (!o ? ''
           : !o.altos ? t('auto.ouviNada')
-            : t('auto.ouvi', { ...o, minTiros: 4 }));
+            : t('auto.ouvi', o));
       return;
     }
 
@@ -2267,40 +2267,26 @@ function ligarArrasto(caixa) {
         return;
       }
 
-      if (c.modo !== 'dois') {
-        // No modo de um a proporção é o 9:16 e não há nada a negociar: só uma
-        // dimensão manda, senão arrastar na diagonal dá saltos.
-        const w = r0.largura + dx;
-        if (w < 40) return;
-        c.rects[i] = limitar({ ...r0, largura: w, altura: w * (r0.altura / r0.largura) }, fonte);
-        pintarRecortes();
-        return;
-      }
-
-      // No modo de dois a forma É a divisão.
+      // Redimensionar e ZOOM, e mais nada.
       //
-      // "Quando mexo no tamanho da webcam devia mexer no outro automaticamente
-      //  para encaixar. Tenho que mexer em dois lugares para arrumar um."
+      // "Os da esquerda so dao zoom na direita." E o modelo da Twitch, e o
+      // certo: o rectangulo da esquerda escolhe QUE PEDACO da fonte entra na
+      // faixa; quanto da altura do 9:16 essa faixa ocupa decide-se no divisor
+      // da direita — e quando ele se mexe, os dois rectangulos reformam-se
+      // sozinhos.
       //
-      // Mexia mesmo: a proporção estava presa, e uma proporção presa não pode
-      // mudar a divisão. Agora as duas dimensões mandam, a divisão sai da forma
-      // a que ele arrastou, e o OUTRO quadro reforma-se sozinho — que é a
-      // segunda metade do trabalho que ele estava a fazer à mão.
+      // Da volta passada eu tinha ligado isto ao contrario: arrastar o canto
+      // da webcam mudava a divisao. Duas coisas ao mesmo tempo num gesto so,
+      // e nenhuma delas previsivel.
+      //
+      // Uma dimensao manda e a outra vem da proporcao da faixa: com as duas a
+      // mandar, arrastar na diagonal dava saltos, e uma faixa com proporcao
+      // diferente da sua so pode entrar esticada.
       const w = r0.largura + dx;
-      const h = r0.altura + dy;
-      if (w < 40 || h < 40) return;
-      const d = divisaoDoQuadro({ largura: w, altura: h }, i);
-      if (d == null) return;
-      c.divisao = d;
-      // Este fica com a forma exacta da faixa nova; o outro reforma-se à volta
-      // do seu próprio centro, sem saltar para lado nenhum.
-      const outro = i === 0 ? 1 : 0;
-      c.rects[i] = limitar({ ...r0, largura: w, altura: w / proporcaoDoQuadro('dois', i, d) }, fonte);
-      if (c.rects[outro]) {
-        [c.rects[outro]] = reformar([c.rects[outro]], { modo: 'dois', divisao: d, fonte });
-      }
+      if (w < 40) return;
+      const prop = proporcaoDoQuadro(c.modo, i, c.divisao);
+      c.rects[i] = limitar({ ...r0, largura: w, altura: w / prop }, fonte);
       pintarRecortes();
-      pintarDivisor();
     };
     const largar = () => {
       window.removeEventListener('pointermove', mover);

@@ -13,18 +13,27 @@ import { TAXA_TIROS as TAXA } from '../site/tiros.js';
 
 // ── varrer a noite ──────────────────────────────────────────────────────────
 
-/** Som verdadeiro (amostras), com rajadas onde se mandar. */
-function somComRajadas(segundos, emS = [], { semente = 3 } = {}) {
+/**
+ * Som verdadeiro (amostras), com tiroteios onde se mandar.
+ *
+ * A forma veio de um tiroteio MEDIDO — kodd, o VOD da LA ISLA, o instante em
+ * que ele morre. Nao sao dez estalos soltos espalhados por quatro segundos:
+ * sao quatro segundos e meio ALTOS DO PRINCIPIO AO FIM, com um disparo a cada
+ * decimo de segundo e a cauda de cada um a segurar o nivel entre eles. A
+ * fixture antiga tinha a forma que eu tinha IMAGINADO, e passava por isso.
+ */
+function somComRajadas(segundos, emS = [], { semente = 3, duracaoS = 4.5 } = {}) {
   let s = semente >>> 0;
   const rnd = () => ((s = (Math.imul(s, 1103515245) + 12345) >>> 0) / 0x100000000);
   const x = new Float32Array(Math.round(segundos * TAXA));
   for (let i = 0; i < x.length; i++) x[i] = (rnd() * 2 - 1) * 0.01;
   for (const t of emS) {
-    for (const [k, atraso] of [0, 0.31, 0.55, 1.02, 1.19, 1.9, 2.4, 2.44, 3.1, 3.7].entries()) {
-      void k;
-      const i = Math.round((t + atraso) * TAXA);
-      for (let j = 0; j < 1200 && i + j < x.length; j++) {
-        x[i + j] += (rnd() * 2 - 1) * Math.exp(-j / 200);
+    // Um disparo a cada 110 ms — a cadencia de uma arma automatica do Rust.
+    for (let d = 0; d < duracaoS * 1000; d += 110) {
+      const i = Math.round((t + d / 1000) * TAXA);
+      for (let j = 0; j < 3000 && i + j < x.length; j++) {
+        if (i + j < 0) continue;
+        x[i + j] += (rnd() * 2 - 1) * Math.exp(-j / 900);
       }
     }
   }
@@ -79,15 +88,18 @@ test('o clipe automatico e a rajada ate a morte, e nao o combate inteiro', async
   let s = 7;
   const rnd = () => ((s = (Math.imul(s, 1103515245) + 12345) >>> 0) / 0x100000000);
   for (let i = 0; i < x.length; i++) x[i] = (rnd() * 2 - 1) * 0.01;
-  // Um tiro aos 50 s, silencio, e a rajada dos 60,5 aos 63,5 com o mais alto
-  // aos 61,5 — mesma forma, mesmos intervalos.
+  // Um tiro solto aos 50 s, dez segundos de nada, e a troca dos 60,5 aos 65 —
+  // alta do principio ao fim, com o mais alto aos 61,5. E a forma medida no
+  // tiroteio verdadeiro dele, e o clipe tem de ser A TROCA, e nao os catorze
+  // segundos que vao do tiro solto ao fim dela.
   const estouro = (t, forca) => {
     const i = Math.round(t * TAXA);
-    for (let j = 0; j < 1200 && i + j < x.length; j++) {
-      x[i + j] += forca * (rnd() * 2 - 1) * Math.exp(-j / 200);
+    for (let j = 0; j < 3000 && i + j < x.length; j++) {
+      x[i + j] += forca * (rnd() * 2 - 1) * Math.exp(-j / 900);
     }
   };
-  for (const [t, f] of [[50, 1], [60.5, 1], [60.6, 1.2], [61.5, 2.5], [63.5, 1.4]]) estouro(t, f);
+  estouro(50, 1);
+  for (let d = 0; d <= 4500; d += 110) estouro(60.5 + d / 1000, Math.abs(d - 1000) < 60 ? 2.5 : 1.2);
 
   const r = await varrerNoite({
     linha: { slug: 'tchubi' },
@@ -108,16 +120,14 @@ test('o clipe automatico e a rajada ate a morte, e nao o combate inteiro', async
   // E o clipe comeca na rajada, e nao no tiro solto dos 50 s.
   assert.ok(seg(c.combateDeMs) > 58,
     `o clipe comecou aos ${seg(c.combateDeMs)}s — voltou a levar o combate inteiro`);
-  // Acaba no FIM da rajada — o último tiro da troca — e não no tiro mais alto.
-  // Acabar no mais alto dava um clipe de um segundo sempre que o mais alto era
-  // o primeiro da rajada, que é exactamente o caso de um headshot à primeira
-  // bala. "Não funciona mais, não cria mais nenhum clipe."
-  assert.ok(Math.abs(seg(c.combateAteMs) - 63.5) < 1,
-    `o clipe acabou aos ${seg(c.combateAteMs)}s e devia acabar no último tiro`);
+  // Acaba quando a troca arrefece, e nao no tiro mais alto. Acabar no mais
+  // alto dava um clipe de um segundo sempre que o mais alto era o PRIMEIRO —
+  // que e exactamente o caso de um headshot a primeira bala.
+  assert.ok(seg(c.combateAteMs) > 64,
+    `o clipe acabou aos ${seg(c.combateAteMs)}s e devia levar a troca toda`);
   const dur = seg(c.combateAteMs) - seg(c.combateDeMs);
-  assert.ok(dur >= 2 && dur < 6, `o clipe ficou com ${dur.toFixed(1)}s`);
-  // A luta inteira continua a saber-se, para a linha do tempo.
-  assert.ok(c.duracaoS > 10, `a luta devia continuar a ter ${c.duracaoS}s medidos por inteiro`);
+  assert.ok(dur >= 2 && dur < 12, `o clipe ficou com ${dur.toFixed(1)}s`);
+  assert.ok(c.duracaoS >= 2, `a duracao medida deu ${c.duracaoS}s`);
 });
 
 // Um bocado que nao se consegue ouvir nao pode deslocar o resto no tempo.
@@ -203,12 +213,13 @@ test('uma rajada curta não sai com um segundo de clipe', async () => {
   for (let i = 0; i < x.length; i++) x[i] = (rnd() * 2 - 1) * 0.01;
   const estouro = (t, forca) => {
     const i = Math.round(t * TAXA);
-    for (let j = 0; j < 1200 && i + j < x.length; j++) {
-      x[i + j] += forca * (rnd() * 2 - 1) * Math.exp(-j / 200);
+    for (let j = 0; j < 3000 && i + j < x.length; j++) {
+      x[i + j] += forca * (rnd() * 2 - 1) * Math.exp(-j / 900);
     }
   };
-  // O mais alto é o PRIMEIRO: um headshot à primeira bala.
-  for (const [t, f] of [[60, 3], [60.08, 1], [60.14, 1], [60.2, 1], [60.3, 1]]) estouro(t, f);
+  // Uma troca curta — pouco mais de um segundo — com o mais alto a abrir: um
+  // headshot a primeira bala, que e precisamente o clipe que ele quer.
+  for (let d = 0; d <= 1100; d += 110) estouro(60 + d / 1000, d === 0 ? 3 : 1);
 
   const r = await varrerNoite({
     linha: { slug: 'tchubi' },

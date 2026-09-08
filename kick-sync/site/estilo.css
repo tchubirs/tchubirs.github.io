@@ -926,9 +926,16 @@ button, select, input[type="text"], input[type="search"], input[type="number"] {
   box-shadow: 0 0 0 9999px #00000059;   /* escurece tudo o que fica de fora */
   cursor: move; touch-action: none;
 }
+/* O puxador fica ACIMA de qualquer caixa, e nao so da sua.
+   "Quando o alterador de tamanho na esquerda esta sobreposto por outro nao
+   consigo mexer nele." Nao conseguia: o puxador vive fora da caixa, no canto
+   de baixo a direita, e a caixa do jogo — que vem depois no HTML — tapava-o.
+   Sem `z-index` na `.recorte` nao ha contexto de empilhamento a prender o
+   filho, e por isso este sobe acima das duas. */
 .recorte .puxar {
-  position: absolute; right: -7px; bottom: -7px; width: 14px; height: 14px;
+  position: absolute; right: -9px; bottom: -9px; width: 18px; height: 18px;
   background: var(--acento); border-radius: 3px; cursor: nwse-resize; touch-action: none;
+  z-index: 5; box-shadow: 0 0 0 2px var(--fundo);
 }
 .recorte .ordem {
   position: absolute; left: 4px; top: 4px; background: var(--acento); color: var(--sobre-acento);
