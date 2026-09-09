@@ -1185,7 +1185,14 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
   body.mesa:has(#palco:not([hidden])) .relogio .saltos { gap: 3px; }
   body.mesa:has(#palco:not([hidden])) .relogio .saltos button { min-height: 32px; padding: 0 var(--e2); }
   body.mesa:has(#palco:not([hidden])) .relogio .marcas button { min-height: 32px; padding: 0 var(--e3); }
-  body.mesa:has(#palco:not([hidden])) .relogio .linha { margin-top: var(--e3); }
+  body.mesa:has(#palco:not([hidden])) .relogio .linha { margin-top: var(--e2); }
+  /* Catorze pixels devolvidos ao painel do tempo, num portátil de 720.
+     Medido: a fila do Marcar entrada / Marcar saída ficava 2 px por baixo da
+     borda — cortada — e as faixas cabiam em três canais. Com a régua mais
+     baixa e as folgas apertadas, a fila fica dentro com folga e as faixas
+     passam a quatro. */
+  body.mesa:has(#palco:not([hidden])) .regua { height: 24px; }
+  body.mesa:has(#palco:not([hidden])) .relogio > .reguaLinha { margin-top: var(--e2); }
   body.mesa:has(#palco:not([hidden])) #agora { font-size: var(--t-medio); }
 
   /* DIREITA, em baixo: a montagem. */

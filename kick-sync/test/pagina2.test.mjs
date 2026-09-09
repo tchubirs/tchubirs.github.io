@@ -1618,12 +1618,47 @@ for (const ecra of [{ width: 1920, height: 1080 }, { width: 1366, height: 720 }]
       await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
 
       const medida = await p.evaluate(() => {
+        // "À vista" quer dizer QUE SE PODE CARREGAR, e não só que o rectângulo
+        // cai dentro do ecrã.
+        //
+        // A primeira versão media só o rectângulo, e por isso deixou passar um
+        // corte a sério: com a régua por cima das faixas, num portátil de 720
+        // a fila do Marcar entrada / Marcar saída ficava 2 px por baixo da
+        // borda do painel — invisível, porque o painel tem `overflow: hidden`
+        // — e continuava a ter um rectângulo dentro da janela. O teste ficava
+        // verde por cima de um botão que ninguém via.
+        //
+        // `elementFromPoint` no meio do botão responde à pergunta certa: quem
+        // é que apanha o clique ali? Se não for ele nem um filho dele, ou está
+        // cortado, ou está por baixo de outra coisa — e as duas contam.
         const dentro = (el) => {
           const r = el.getBoundingClientRect();
-          return r.width > 0 && r.height > 0 && r.top >= 0 && r.bottom <= window.innerHeight
-            && r.left >= 0 && r.right <= window.innerWidth;
+          if (!(r.width > 0 && r.height > 0)) return false;
+          if (!(r.top >= 0 && r.bottom <= window.innerHeight
+            && r.left >= 0 && r.right <= window.innerWidth)) return false;
+          const x = r.left + r.width / 2;
+          const y = r.top + r.height / 2;
+          const emCima = document.elementFromPoint(x, y);
+          if (!emCima || !(el === emCima || el.contains(emCima) || emCima.contains(el))) return false;
+          // E INTEIRO dentro de quem o corta. O `elementFromPoint` no meio
+          // continua a responder com o botão quando só lhe faltam dois pixels
+          // — foi assim que o Marcar entrada esteve cortado com o teste verde.
+          // Um botão a que falta um bocado está mal, mesmo que se possa
+          // carregar no meio dele.
+          for (let a = el.parentElement; a; a = a.parentElement) {
+            const cs = getComputedStyle(a);
+            if (cs.overflowX === 'visible' && cs.overflowY === 'visible') continue;
+            const b = a.getBoundingClientRect();
+            if (r.top < b.top - 0.5 || r.bottom > b.bottom + 0.5
+              || r.left < b.left - 0.5 || r.right > b.right + 0.5) return false;
+          }
+          return true;
         };
-        const ids = ['clipar', 'barra', 'marcarKill', 'baixarMontagem', 'procurarKills', 'mais3s', 'menos5m'];
+        // O marcar entrada/saída entra na lista: com a régua por cima das
+        // faixas, num portátil de 720 essa fila ficava 2 px por baixo da
+        // borda do painel — cortada, e sem nada a dizê-lo.
+        const ids = ['clipar', 'barra', 'marcarKill', 'baixarMontagem', 'procurarKills',
+          'mais3s', 'menos5m', 'marcarIn', 'marcarOut', 'zoomTempo'];
         const fora = ids.filter((id) => !dentro(document.getElementById(id)));
         if (!dentro(document.querySelector('.tile.foco'))) fora.push('.tile.foco');
         // Da primeira kill chega ver a CABEÇA — a hora e os botões dela; os

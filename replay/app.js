@@ -7,35 +7,35 @@
 
 import {
   vodsDoCanal, lerMaster, lerPlaylist, procurarCanais, lerLinkKick, clipeDaKick, DESCONHECIDO,
-} from './kick.js?v=0c4439dc30';
+} from './kick.js?v=f41715f9b7';
 import {
   linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo,
   passoDoArrasto, ARRASTO_INTERVALO_MS, ARRASTO_ESPERA_MS, vistaDaLinha, saiuDaVista,
-} from './relogio.js?v=0c4439dc30';
-import { cortarTodosOsAngulos } from './baixar.js?v=0c4439dc30';
-import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=0c4439dc30';
-import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=0c4439dc30';
-import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=0c4439dc30';
+} from './relogio.js?v=f41715f9b7';
+import { cortarTodosOsAngulos } from './baixar.js?v=f41715f9b7';
+import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=f41715f9b7';
+import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=f41715f9b7';
+import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=f41715f9b7';
 import {
   RETRATO, enquadramentoInicial, limitar, desenhar, gravar, formatoQueFunciona, extensaoDe,
   reformar, limparDivisao, DIVISAO_OMISSAO, divisaoDoQuadro, proporcaoDoQuadro, encaixar,
-} from './retrato.js?v=0c4439dc30';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=0c4439dc30';
+} from './retrato.js?v=f41715f9b7';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=f41715f9b7';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
   alternarVitima, filtrar, temMorte, clipesDoMomento, comAjuste,
-} from './momentos.js?v=0c4439dc30';
-import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=0c4439dc30';
-import { criarZip, crc32 } from './zip.js?v=0c4439dc30';
-import { queFazerComOLeitor } from './leitor.js?v=0c4439dc30';
-import { criarApanhador } from './frames.js?v=0c4439dc30';
-import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=0c4439dc30';
-import { TAXA_TIROS } from './tiros.js?v=0c4439dc30';
-import { parecidos, juntarPerto } from './aprender.js?v=0c4439dc30';
-import { somDoCanal } from './alinhar.js?v=0c4439dc30';
-import { MAXIMO_S, mover, janelaInicial, nomeDoClipe, posicaoDaCabeca } from './clipe.js?v=0c4439dc30';
-import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=0c4439dc30';
-import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=0c4439dc30';
+} from './momentos.js?v=f41715f9b7';
+import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=f41715f9b7';
+import { criarZip, crc32 } from './zip.js?v=f41715f9b7';
+import { queFazerComOLeitor } from './leitor.js?v=f41715f9b7';
+import { criarApanhador } from './frames.js?v=f41715f9b7';
+import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=f41715f9b7';
+import { TAXA_TIROS } from './tiros.js?v=f41715f9b7';
+import { parecidos, juntarPerto } from './aprender.js?v=f41715f9b7';
+import { somDoCanal } from './alinhar.js?v=f41715f9b7';
+import { MAXIMO_S, mover, janelaInicial, nomeDoClipe, posicaoDaCabeca } from './clipe.js?v=f41715f9b7';
+import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=f41715f9b7';
+import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=f41715f9b7';
 
 /* Os glifos dos controlos do vídeo são DESENHO e não emoji.
    Um ⏸ ou um 🔇 sai diferente em cada sistema — no iPhone sai a cores, no
