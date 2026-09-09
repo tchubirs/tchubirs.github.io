@@ -7,35 +7,35 @@
 
 import {
   vodsDoCanal, lerMaster, lerPlaylist, procurarCanais, lerLinkKick, clipeDaKick, DESCONHECIDO,
-} from './kick.js?v=874d029ee3';
+} from './kick.js?v=0c4439dc30';
 import {
   linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo,
-  passoDoArrasto, ARRASTO_INTERVALO_MS, ARRASTO_ESPERA_MS,
-} from './relogio.js?v=874d029ee3';
-import { cortarTodosOsAngulos } from './baixar.js?v=874d029ee3';
-import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=874d029ee3';
-import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=874d029ee3';
-import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=874d029ee3';
+  passoDoArrasto, ARRASTO_INTERVALO_MS, ARRASTO_ESPERA_MS, vistaDaLinha, saiuDaVista,
+} from './relogio.js?v=0c4439dc30';
+import { cortarTodosOsAngulos } from './baixar.js?v=0c4439dc30';
+import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=0c4439dc30';
+import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=0c4439dc30';
+import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=0c4439dc30';
 import {
   RETRATO, enquadramentoInicial, limitar, desenhar, gravar, formatoQueFunciona, extensaoDe,
   reformar, limparDivisao, DIVISAO_OMISSAO, divisaoDoQuadro, proporcaoDoQuadro, encaixar,
-} from './retrato.js?v=874d029ee3';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=874d029ee3';
+} from './retrato.js?v=0c4439dc30';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=0c4439dc30';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
   alternarVitima, filtrar, temMorte, clipesDoMomento, comAjuste,
-} from './momentos.js?v=874d029ee3';
-import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=874d029ee3';
-import { criarZip, crc32 } from './zip.js?v=874d029ee3';
-import { queFazerComOLeitor } from './leitor.js?v=874d029ee3';
-import { criarApanhador } from './frames.js?v=874d029ee3';
-import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=874d029ee3';
-import { TAXA_TIROS } from './tiros.js?v=874d029ee3';
-import { parecidos, juntarPerto } from './aprender.js?v=874d029ee3';
-import { somDoCanal } from './alinhar.js?v=874d029ee3';
-import { MAXIMO_S, mover, janelaInicial, nomeDoClipe, posicaoDaCabeca } from './clipe.js?v=874d029ee3';
-import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=874d029ee3';
-import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=874d029ee3';
+} from './momentos.js?v=0c4439dc30';
+import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=0c4439dc30';
+import { criarZip, crc32 } from './zip.js?v=0c4439dc30';
+import { queFazerComOLeitor } from './leitor.js?v=0c4439dc30';
+import { criarApanhador } from './frames.js?v=0c4439dc30';
+import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=0c4439dc30';
+import { TAXA_TIROS } from './tiros.js?v=0c4439dc30';
+import { parecidos, juntarPerto } from './aprender.js?v=0c4439dc30';
+import { somDoCanal } from './alinhar.js?v=0c4439dc30';
+import { MAXIMO_S, mover, janelaInicial, nomeDoClipe, posicaoDaCabeca } from './clipe.js?v=0c4439dc30';
+import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=0c4439dc30';
+import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=0c4439dc30';
 
 /* Os glifos dos controlos do vídeo são DESENHO e não emoji.
    Um ⏸ ou um 🔇 sai diferente em cada sistema — no iPhone sai a cores, no
@@ -53,6 +53,10 @@ const estado = {
   // Como estão dispostos os quadrados: 'adicionado' ou 'az'. É uma preferência
   // dele e não parte da noite, por isso vive no dispositivo e não no link.
   ordemGrelha: 'adicionado',
+  // Quantos segundos de noite é que a linha do tempo mostra. Zero = a noite
+  // toda, que é como sempre esteve.
+  zoomS: 0,
+  vista: null,
   // A forma do som de cada canal em cada instante medido. Vive aqui e não
   // dentro do alinhamento para sobreviver entre sincronizações: acrescentar
   // um canal a uma noite já medida passa a ouvir só o canal novo. Com trinta
@@ -646,7 +650,10 @@ async function lerNoite(noite) {
   montarGrade();
   seguirVideo();
   pintarConfianca();
-  pintarFaixas();
+  // Noite nova, vista nova: a de antes apontava para instantes que já não
+  // existem nesta.
+  estado.vista = null;
+  acertarVista({ forcar: true });
   irPara(estado.agoraMs);
   pintarMarca();
   pintarMomentos();
@@ -714,8 +721,31 @@ function limparPalco() {
  * sobreposições só se descobriam batendo com o nariz neles. Aqui vê-se de
  * relance onde há dois ângulos e onde há um só, e clica-se lá directamente.
  */
+/** O pedaço da noite que está desenhado agora. */
+const vistaAgora = () => estado.vista || estado.janela;
+
+/**
+ * Acertar a vista e repintar o que ela desenha — mas só quando muda mesmo.
+ *
+ * As faixas são dezoito linhas de DOM: repintá-las a cada instante enquanto o
+ * vídeo anda seria sessenta reconstruções por segundo. Com o `saiuDaVista`, a
+ * vista está quieta quase sempre e salta uma vez quando o cursor lhe chega à
+ * ponta — e é aí, e só aí, que se paga o repinte.
+ */
+function acertarVista({ forcar = false } = {}) {
+  if (!estado.janela) return false;
+  if (!forcar && estado.vista && !saiuDaVista(estado.vista, estado.agoraMs)) return false;
+  const nova = vistaDaLinha(estado.janela, estado.agoraMs, estado.zoomS);
+  if (!forcar && estado.vista
+    && nova.inicio === estado.vista.inicio && nova.fim === estado.vista.fim) return false;
+  estado.vista = nova;
+  pintarFaixas();
+  pintarRegua();
+  return true;
+}
+
 function pintarFaixas() {
-  const { inicio, fim } = estado.janela || {};
+  const { inicio, fim } = vistaAgora() || {};
   const alvo = $('faixas');
   [...alvo.querySelectorAll('.faixa')].forEach((f) => f.remove());
   if (inicio == null || !(fim > inicio)) return;
@@ -750,7 +780,7 @@ function pintarFaixas() {
  * uma vez e sabe-se que horas são naquele ponto — e onde já se marcou.
  */
 function pintarRegua() {
-  const { inicio, fim } = estado.janela || {};
+  const { inicio, fim } = vistaAgora() || {};
   const alvo = $('regua');
   if (!alvo) return;
   if (inicio == null || !(fim > inicio)) { alvo.innerHTML = ''; return; }
@@ -767,15 +797,40 @@ function pintarRegua() {
 
   const partes = [];
   const primeiro = Math.ceil(inicio / passo) * passo;
+  // A marca que MUDA DE DIA diz o dia, e não outra hora igual às outras.
+  //
+  // "Mudou alguma coisa? Onde é que está o dia 30?" Não tinha mudado nada —
+  // é que nunca lá esteve. Uma noite de Rust começa às onze da manhã e acaba
+  // às quatro da manhã seguinte, e a régua escrevia só HH:MM: passava-se a
+  // meia-noite e nada dizia que o dia era outro. Duas horas com o mesmo
+  // número, uma em cada dia, ficavam indistinguíveis.
+  let diaAnterior = new Date(inicio).toISOString().slice(0, 10);
   for (let t = primeiro; t <= fim; t += passo) {
     const x = pct(t);
-    partes.push(`<i class="risco" style="left:${x}%"></i>`);
-    partes.push(`<b class="hora" style="left:${x}%">${relogioCurto(t).slice(0, 5)}</b>`);
+    const dia = new Date(t).toISOString().slice(0, 10);
+    const virou = dia !== diaAnterior;
+    diaAnterior = dia;
+    partes.push(`<i class="risco${virou ? ' vira' : ''}" style="left:${x}%"></i>`);
+    partes.push(`<b class="hora${virou ? ' vira' : ''}" style="left:${x}%">`
+      + `${virou ? `${dia.slice(8, 10)}/${dia.slice(5, 7)}` : relogioCurto(t).slice(0, 5)}</b>`);
   }
+  // O NÚMERO só quando há sítio para ele.
+  //
+  // "Coloca a linha do tempo, o timer, do lado de cima — aí tá tudo
+  //  amontoado." Estava: numa noite com quinze kills, metade delas em dois
+  //  tiroteios seguidos, os números caíam uns por cima dos outros e o que se
+  //  lia era uma mancha. O risco fica sempre — é ele que diz ONDE — e o
+  //  número só entra se o anterior estiver a mais de catorze pixels.
+  const larguraPx = alvo.clientWidth || 600;
+  const folgaPct = (14 / larguraPx) * 100;
+  let ultimoNumero = -Infinity;
   for (const [i, m] of ordenar(estado.momentos).entries()) {
     if (m.ms < inicio || m.ms > fim) continue;
-    partes.push(`<button class="kill" data-ms="${m.ms}" style="left:${pct(m.ms)}%" `
-      + `title="kill ${i + 1} — ${relogioCurto(m.ms)}Z"><span>${i + 1}</span></button>`);
+    const x = pct(m.ms);
+    const cabe = x - ultimoNumero >= folgaPct;
+    if (cabe) ultimoNumero = x;
+    partes.push(`<button class="kill" data-ms="${m.ms}" style="left:${x}%" `
+      + `title="kill ${i + 1} — ${relogioCurto(m.ms)}Z">${cabe ? `<span>${i + 1}</span>` : ''}</button>`);
   }
   alvo.innerHTML = partes.join('');
   for (const b of alvo.querySelectorAll('.kill')) {
@@ -1059,10 +1114,40 @@ function pintarOrdemDaGrelha() {
   for (const b of document.querySelectorAll('.ordemGrelha')) {
     b.setAttribute('aria-pressed', String(b.dataset.ordem === estado.ordemGrelha));
   }
-  // Sem contador aqui. Pus um a dizer "3 de 4 ângulos" e isso já quer dizer
-  // OUTRA coisa na linha do tempo — quantos estavam no ar naquele instante.
-  // Dois contadores com o mesmo texto e sentidos diferentes é pior do que
-  // nenhum; o da linha do tempo chega.
+  pintarFiltroDaGrelha();
+}
+
+/**
+ * Esconder da grelha os ângulos que não interessam agora.
+ *
+ * "Adiciona um lugar de pesquisa pra pesquisar as miniaturas de vídeo em
+ *  baixo." Com dezassete quadrados de 150 px, achar um pelo nome é passar os
+ * olhos por todos; com trinta é desistir.
+ *
+ * ESCONDE, e não tira: um `<video>` arrancado do DOM pára e volta a carregar,
+ * e limpar a caixa devolvia trinta quadrados a descarregar tudo outra vez.
+ * Com `display: none` o leitor continua vivo e sincronizado por trás — o que
+ * ele quer é ver menos, não desligar nada.
+ *
+ * O contador só aparece quando há filtro: sem ele diria "17 de 17", e ali ao
+ * lado já há um "17 de 17 ângulos" na linha do tempo que quer dizer OUTRA
+ * coisa — quantos estavam no ar naquele instante. Dois contadores iguais com
+ * sentidos diferentes é pior do que nenhum.
+ */
+function pintarFiltroDaGrelha() {
+  const procura = ($('filtrarGrelha').value || '').trim().toLowerCase();
+  const tiles = [...$('grade').querySelectorAll('.tile')];
+  let vistos = 0;
+  for (const tile of tiles) {
+    const cabe = !procura || tile.dataset.slug.toLowerCase().includes(procura);
+    tile.classList.toggle('foraDoFiltro', !cabe);
+    if (cabe) vistos++;
+  }
+  const nota = $('quantosNaGrelha');
+  nota.classList.toggle('mau', procura !== '' && vistos === 0);
+  nota.textContent = !procura ? ''
+    : vistos === 0 ? t('grelha.nenhum')
+      : t('grelha.deQuantos', { n: vistos, total: tiles.length });
 }
 
 function montarGrade() {
@@ -1228,7 +1313,7 @@ function pintarRelogio(quandoMs) {
   // alguem. Nao falta: e o que ele pediu.
   $('angulos').textContent = soUmCanal() ? '' : t('tempo.angulos', { n: vivos, total: estado.linhas.length });
   $('angulos').classList.toggle('mau', !soUmCanal() && vivos < 2);
-  const { inicio, fim } = estado.janela;
+  const { inicio, fim } = vistaAgora();
   const fraccao = Math.min(1, Math.max(0, (quandoMs - inicio) / (fim - inicio)));
   $('barra').value = String(Math.round(fraccao * 1000));
   // O cursor vive por cima das faixas e não dentro de uma delas: é um instante
@@ -1244,6 +1329,7 @@ let ultimoSegundo = -1;
 function irPara(quandoMs) {
   estado.agoraMs = quandoMs;
   guardar();
+  acertarVista();
   pintarRelogio(quandoMs);
 
   const principal = [];
@@ -2206,10 +2292,20 @@ function pintarMarca() {
 function pintarCorte() {
   const { de, ate } = estado.marca;
   const valida = de != null && ate != null && ate > de;
-  // A secção fica sempre à vista, e diz o que fazer quando ainda não há marca:
-  // escondê-la fazia com que ninguém descobrisse que se podia baixar.
+  // Sem marca, a secção INTEIRA desaparece.
+  //
+  // "Exclui isso, pois não faz nada — isso é somente pra dizer os atalhos."
+  // Tinha razão sobre o que ele estava a ver: uma caixa com um título e uma
+  // frase a repetir duas teclas que já estão escritas nos Atalhos e nos dois
+  // botões de marcar. A secção continua a existir e a fazer o que faz —
+  // um botão de baixar por canal, com as margens de cada um — mas só aparece
+  // quando há mesmo um pedaço marcado para cortar.
+  //
+  // (A versão anterior deixava-a sempre à vista para se descobrir que dava
+  //  para baixar. A descoberta ficou nos dois botões e na lista de atalhos.)
+  $('corte').hidden = !valida;
   $('comoCortar').innerHTML = t('corte.como', { i: '<kbd>I</kbd>', o: '<kbd>O</kbd>' });
-  $('comoCortar').hidden = valida;
+  $('comoCortar').hidden = true;
   $('listaCorte').hidden = !valida;
   if (!valida) { $('listaCorte').innerHTML = ''; return; }
 
@@ -3228,7 +3324,9 @@ $('partilhar').onclick = async () => {
 // nao pode ficar a ser puxado de volta para o clipe em ciclo.
 const largarPrevia = () => { if (estado.previa) { estado.previa = null; pintarMomentos(); } };
 $('barra').oninput = () => {
-  const { inicio, fim } = estado.janela || {};
+  // Na VISTA e não na noite: com a linha do tempo em dez minutos, a barra
+  // inteira passa a valer dez minutos — que é o que a torna precisa.
+  const { inicio, fim } = vistaAgora() || {};
   if (inicio == null) return;
   largarPrevia();
   irPara(Math.round(inicio + ((fim - inicio) * Number($('barra').value)) / 1000));
@@ -3236,6 +3334,15 @@ $('barra').oninput = () => {
 // Os saltos que faltavam. A barra serve para procurar a noite; isto serve para
 // caçar o momento, que é uma coisa diferente e a barra faz mal.
 const saltar = (ms) => () => { largarPrevia(); irPara(estado.agoraMs + ms); };
+$('filtrarGrelha').oninput = pintarFiltroDaGrelha;
+$('zoomTempo').onchange = () => {
+  estado.zoomS = Number($('zoomTempo').value) || 0;
+  try { localStorage.setItem('replay.zoom', String(estado.zoomS)); } catch { /* janela privada */ }
+  acertarVista({ forcar: true });
+  pintarRelogio(estado.agoraMs);
+};
+try { estado.zoomS = Number(localStorage.getItem('replay.zoom')) || 0; } catch { /* nada */ }
+$('zoomTempo').value = String(estado.zoomS);
 $('menos1m').onclick = saltar(-60_000);
 $('menos10s').onclick = saltar(-10_000);
 $('mais10s').onclick = saltar(10_000);
@@ -3347,8 +3454,9 @@ async function abrirLinkKick() {
     montarGrade();
     seguirVideo();
     pintarConfianca();
-    pintarFaixas();
-    pintarRegua();
+    estado.vista = null;
+    estado.agoraMs = playlist.inicio;
+    acertarVista({ forcar: true });
     irPara(playlist.inicio);
     pintarMomentos();
     guardar();

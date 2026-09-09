@@ -364,6 +364,17 @@
       aria-pressed="true" data-t="grelha.adicionado">Por ordem de adição</button>
     <button id="ordemAz" class="ordemGrelha" data-ordem="az"
       aria-pressed="false" data-t="grelha.az">A–Z</button>
+    <!-- Procurar um ângulo pelo nome, entre os que já estão carregados.
+         "Adiciona um lugar de pesquisa pra pesquisar as miniaturas de vídeo em
+          baixo." Com dezassete quadrados de 150 px, achar um pelo nome é
+         passar os olhos por todos; com trinta é desistir. A caixa de cima
+         procura na Kick e ACRESCENTA — esta só esconde o que não interessa. -->
+    <span class="procura procuraGrelha">
+      <input id="filtrarGrelha" type="search" autocomplete="off" spellcheck="false"
+        data-t-aria="grelha.filtrar" data-t-ph="grelha.filtrar" placeholder="filtrar ângulos">
+      <svg class="ic lupa" aria-hidden="true"><use href="#i-procurar"/></svg>
+    </span>
+    <output id="quantosNaGrelha" class="nota"></output>
   </div>
   <div id="grade" class="grade"></div>
 
@@ -446,6 +457,17 @@
       <div class="reguaLinha"><span></span><div id="regua" class="regua"></div></div>
       <div class="linha">
         <output id="agora" class="tempo">—</output>
+        <!-- Quanto tempo é que a linha do tempo mostra.
+             "Com tanto tempo aparecendo, as barras ficaram muito pequenas" —
+             a noite dele são 34 horas em 450 px, ou seja 4,5 minutos por
+             pixel: um tiroteio de noventa segundos ocupa um terço de pixel. -->
+        <select id="zoomTempo" data-t-aria="tempo.zoom">
+          <option value="0" data-t="tempo.zoomTudo">a noite toda</option>
+          <option value="21600" data-t="tempo.zoom6h">6 horas</option>
+          <option value="3600" data-t="tempo.zoom1h">1 hora</option>
+          <option value="600" data-t="tempo.zoom10m">10 minutos</option>
+          <option value="120" data-t="tempo.zoom2m">2 minutos</option>
+        </select>
         <output id="angulos" class="nota">—</output>
       </div>
       <!-- Os quatro na mesma linha, sempre: em grelha de quatro colunas iguais,
@@ -457,8 +479,8 @@
         <button id="menos5m" data-t-titulo="tempo.voltar5m" title="voltar 5 minutos"><svg class="ic" aria-hidden="true"><use href="#i-seta2"/></svg><span data-t="tempo.menos5m">5 min</span></button>
         <button id="menos1m" data-t-titulo="tempo.voltar1m" title="voltar 1 minuto"><svg class="ic" aria-hidden="true"><use href="#i-seta2"/></svg><span data-t="tempo.menos1m">1 min</span></button>
         <button id="menos10s" data-t-titulo="tempo.voltar10s" title="voltar 10 segundos"><svg class="ic" aria-hidden="true"><use href="#i-seta"/></svg><span data-t="tempo.menos10s">10s</span></button>
-        <button id="menos3s" data-t-titulo="tempo.voltar3s" title="voltar 3 segundos"><svg class="ic" aria-hidden="true"><use href="#i-seta"/></svg><span data-t="tempo.menos3s">3s</span></button>
-        <button id="mais3s" data-t-titulo="tempo.avancar3s" title="avançar 3 segundos"><span data-t="tempo.mais3s">3s</span><svg class="ic" aria-hidden="true"><use href="#i-seta"/></svg></button>
+        <button id="menos3s" data-t-titulo="tempo.voltar3s" title="voltar 3 segundos"><svg class="ic" aria-hidden="true"><use href="#i-seta"/></svg><span data-t="tempo.menos3s">3s</span> <kbd>A</kbd></button>
+        <button id="mais3s" data-t-titulo="tempo.avancar3s" title="avançar 3 segundos"><kbd>D</kbd> <span data-t="tempo.mais3s">3s</span><svg class="ic" aria-hidden="true"><use href="#i-seta"/></svg></button>
         <button id="mais10s" data-t-titulo="tempo.avancar10s" title="avançar 10 segundos"><span data-t="tempo.mais10s">10s</span><svg class="ic" aria-hidden="true"><use href="#i-seta"/></svg></button>
         <button id="mais1m" data-t-titulo="tempo.avancar1m" title="avançar 1 minuto"><span data-t="tempo.mais1m">1 min</span><svg class="ic" aria-hidden="true"><use href="#i-seta2"/></svg></button>
         <button id="mais5m" data-t-titulo="tempo.avancar5m" title="avançar 5 minutos"><span data-t="tempo.mais5m">5 min</span><svg class="ic" aria-hidden="true"><use href="#i-seta2"/></svg></button>
@@ -633,7 +655,7 @@
   <!-- A versao, a serio e visivel. O GitHub Pages serve com max-age=600 e um
        telemovel guarda o app.js antigo; sem isto, "ja corrigi" e "continua
        igual" sao as duas verdadeiras ao mesmo tempo e ninguem sai dali. -->
-  <p class="nota"><span data-t="app.rodape">A sessão fica guardada neste dispositivo.</span> · <span id="versao">874d029ee3</span></p>
+  <p class="nota"><span data-t="app.rodape">A sessão fica guardada neste dispositivo.</span> · <span id="versao">0c4439dc30</span></p>
 </footer>
 
 <!-- O hls.js é nosso, e não do cdnjs.
@@ -648,6 +670,6 @@
      nome, o endereço só muda quando o ficheiro muda mesmo, e no meio fica um
      304 sem corpo. É por isso que o publicar.sh não pode carimbar este. -->
 <script src="hls-1.5.17.js"></script>
-<script type="module" src="app.js?v=874d029ee3"></script>
+<script type="module" src="app.js?v=0c4439dc30"></script>
 </body>
 </html>
