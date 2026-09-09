@@ -7,34 +7,43 @@
 
 import {
   vodsDoCanal, lerMaster, lerPlaylist, procurarCanais, lerLinkKick, clipeDaKick, DESCONHECIDO,
-} from './kick.js?v=d23df16643';
+} from './kick.js?v=1df47ec342';
 import {
   linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo,
-} from './relogio.js?v=d23df16643';
-import { cortarTodosOsAngulos } from './baixar.js?v=d23df16643';
-import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=d23df16643';
-import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=d23df16643';
-import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=d23df16643';
+} from './relogio.js?v=1df47ec342';
+import { cortarTodosOsAngulos } from './baixar.js?v=1df47ec342';
+import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=1df47ec342';
+import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=1df47ec342';
+import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=1df47ec342';
 import {
   RETRATO, enquadramentoInicial, limitar, desenhar, gravar, formatoQueFunciona, extensaoDe,
   reformar, limparDivisao, DIVISAO_OMISSAO, divisaoDoQuadro, proporcaoDoQuadro, encaixar,
-} from './retrato.js?v=d23df16643';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=d23df16643';
+} from './retrato.js?v=1df47ec342';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=1df47ec342';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
   alternarVitima, filtrar, temMorte, clipesDoMomento, comAjuste,
-} from './momentos.js?v=d23df16643';
-import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=d23df16643';
-import { criarZip, crc32 } from './zip.js?v=d23df16643';
-import { queFazerComOLeitor } from './leitor.js?v=d23df16643';
-import { criarApanhador } from './frames.js?v=d23df16643';
-import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=d23df16643';
-import { TAXA_TIROS } from './tiros.js?v=d23df16643';
-import { parecidos, juntarPerto } from './aprender.js?v=d23df16643';
-import { somDoCanal } from './alinhar.js?v=d23df16643';
-import { MAXIMO_S, mover, janelaInicial, nomeDoClipe, posicaoDaCabeca } from './clipe.js?v=d23df16643';
-import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=d23df16643';
-import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=d23df16643';
+} from './momentos.js?v=1df47ec342';
+import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=1df47ec342';
+import { criarZip, crc32 } from './zip.js?v=1df47ec342';
+import { queFazerComOLeitor } from './leitor.js?v=1df47ec342';
+import { criarApanhador } from './frames.js?v=1df47ec342';
+import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=1df47ec342';
+import { TAXA_TIROS } from './tiros.js?v=1df47ec342';
+import { parecidos, juntarPerto } from './aprender.js?v=1df47ec342';
+import { somDoCanal } from './alinhar.js?v=1df47ec342';
+import { MAXIMO_S, mover, janelaInicial, nomeDoClipe, posicaoDaCabeca } from './clipe.js?v=1df47ec342';
+import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=1df47ec342';
+import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=1df47ec342';
+
+/* Os glifos dos controlos do vídeo são DESENHO e não emoji.
+   Um ⏸ ou um 🔇 sai diferente em cada sistema — no iPhone sai a cores, no
+   Android sai de outra família, e no Windows sai de uma terceira. Uma barra
+   de leitor com três desenhos de três sítios diferentes não é uma barra:
+   é o que estava aqui. Os símbolos vivem no sprite da página (ver o topo do
+   index.html) e herdam a cor do texto como tudo o resto. */
+const ICONE = (nome, classe = 'ic ic-p') =>
+  `<svg class="${classe}" aria-hidden="true"><use href="#i-${nome}"/></svg>`;
 
 const $ = (id) => document.getElementById(id);
 const estado = {
@@ -848,7 +857,7 @@ function alternarPausa() {
   }
   for (const tile of tiles()) {
     const b = tile.querySelector('.pausa');
-    if (b) b.textContent = estado.parado ? '▶' : '⏸';
+    if (b) b.innerHTML = ICONE(estado.parado ? 'tocar' : 'pausa');
   }
   $('agora').classList.toggle('parado', estado.parado);
 }
@@ -990,7 +999,7 @@ function aplicarFoco() {
     }
     tile.classList.toggle('foco', foco);
     tile.classList.toggle('principal', ehPrincipal(slug));
-    tile.querySelector('.par').textContent = foco ? '✓' : '⧉';
+    tile.querySelector('.par').innerHTML = ICONE(foco ? 'certo' : 'mais');
     // O som é de cada quadrado, e não do papel de principal. Assim dá para ter
     // os dois a falar, os dois calados, ou um só — que é o que se quer quando
     // se compara um tiro visto de dois sítios.
@@ -1007,10 +1016,10 @@ function aplicarFoco() {
     const som = tile.querySelector('.som');
     som.hidden = !foco;
     const botao = som.querySelector('.somBtn');
-    botao.textContent = cala || nivel === 0 ? '🔇' : nivel < 0.5 ? '🔉' : '🔊';
+    botao.innerHTML = ICONE(cala || nivel === 0 ? 'mudo' : 'som');
     botao.title = cala ? t('tile.ligarSom') : t('tile.calar');
     som.querySelector('.vol').value = String(Math.round(nivel * 100));
-    som.querySelector('.pausa').textContent = estado.parado ? '▶' : '⏸';
+    som.querySelector('.pausa').innerHTML = ICONE(estado.parado ? 'tocar' : 'pausa');
   }
   $('palcoFoco').classList.toggle('dois', estado.focos.length > 1);
   marcarFaixas();
@@ -1069,8 +1078,8 @@ function montarGrade() {
       // Twitch, da Kick e do YouTube. Um controlo que toda a gente já sabe
       // usar não se põe noutro sítio só porque dá jeito.
       + '<span class="som" hidden>'
-      + `<button class="pausa" title="${t('tile.pausa')}">⏸</button>`
-      + '<button class="somBtn">🔇</button>'
+      + `<button class="pausa" title="${t('tile.pausa')}">${ICONE('pausa')}</button>`
+      + `<button class="somBtn" aria-label="${t('tile.pausa')}">${ICONE('mudo')}</button>`
       + '<input class="vol" type="range" min="0" max="100" value="100" aria-label="volume">'
       + '</span>'
       // O relógio da Kick põe cada ângulo dentro de um segmento da verdade, o
@@ -1086,17 +1095,11 @@ function montarGrade() {
       // do YouTube, da Twitch e da Kick. Desenhados e não emoji: um ⛶ sai
       // diferente em cada sistema, e no iPhone sai a cores.
       + '<span class="fora">'
-      + `<button class="par" title="${t('tile.par')}">⧉</button>`
+      + `<button class="par" title="${t('tile.par')}" aria-label="${t('tile.par')}">${ICONE('mais')}</button>`
       + `<button class="ecraCheio" title="${t('tile.ecraCheio')}" aria-label="${t('tile.ecraCheio')}">`
-      + '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"'
-      + ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
-      + '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/>'
-      + '<path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>'
+      + `${ICONE('ecra-cheio')}</button>`
       + `<button class="aparte" title="${t('tile.aparte')}" aria-label="${t('tile.aparte')}" hidden>`
-      + '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"'
-      + ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
-      + '<rect x="3" y="4" width="18" height="14" rx="2"/>'
-      + '<rect x="11" y="10" width="8" height="6" rx="1" fill="currentColor"/></svg></button>'
+      + `${ICONE('janela')}</button>`
       + '</span>';
 
     tile.onclick = () => {

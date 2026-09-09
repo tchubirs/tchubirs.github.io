@@ -1,1185 +1,1128 @@
-/* Dark by default: this is used at night, next to a game, on a second monitor. */
-/* Os tokens estão em tokens.css. Aqui não entra nenhum valor solto. */
+/* ═══ A folha de estilo ═════════════════════════════════════════════════════
+ *
+ * Escrita de raiz por cima do sistema em tokens.css. Nenhum valor solto: se
+ * aparecer aqui um `#` ou um `px` que não seja geometria, é um esquecimento.
+ *
+ * A ordem do ficheiro é a ordem do ecrã, de fora para dentro:
+ *   1 base          6 relógio e linha do tempo
+ *   2 tipografia    7 montagem
+ *   3 controlos     8 o fundo do palco
+ *   4 cabeçalho     9 janelas
+ *   5 palco e vídeo 10 ecrã de PC · 11 telemóvel
+ */
 
-* { box-sizing: border-box; }
+/* ═══ 1 · base ══════════════════════════════════════════════════════════════ */
 
-/* Dois toques seguidos num botao davam zoom na pagina inteira.
-   `touch-action: manipulation` diz ao browser para nao esperar por um segundo
-   toque — o botao responde ao primeiro e o duplo toque deixa de existir. O
-   zoom por dois dedos continua a funcionar, que e o que alguem quer mesmo. */
-button, .tile, input, select, textarea, label, kbd {
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-}
-button { user-select: none; }
+*, *::before, *::after { box-sizing: border-box; }
 
-/* `hidden` esconde. Ponto.
-   Sem isto, qualquer regra com `display` — `.linha` é flex, `.corte` é grid —
-   ganha ao `display: none` que o atributo traz, e o elemento aparece na
-   mesma. Andei a apagar isto um a um (`#modalClipe`, `#palco`, `#entrada`) e
-   ainda havia dois por apagar: `#margensVitima` e `#listaCorte`, que
-   apareciam com a página acabada de carregar. Uma linha resolve todos, os
-   deste ano e os do ano que vem. O `!important` é para isto mesmo: o
-   atributo é uma afirmação, não uma sugestão. */
+/* Um `display` qualquer numa regra ganha ao `display:none` do atributo, e o
+   elemento escondido volta a aparecer. Já aconteceu três vezes neste
+   ficheiro — com o palco, com o modal e com a entrada — por isso deixa de
+   ser uma regra que se lembra e passa a ser uma que se aplica sempre. */
 [hidden] { display: none !important; }
 
-/* As três listas que passaram a rolar por dentro (canais, faixas, vítimas)
-   traziam a barra branca do sistema, que num fundo escuro grita mais do que
-   o conteúdo. */
-* { scrollbar-width: thin; scrollbar-color: var(--borda-forte) transparent; }
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-thumb { background: var(--borda-forte); border-radius: 999px; }
-::-webkit-scrollbar-track { background: transparent; }
+/* E pela mesma razão, um <details> fechado. O browser esconde o conteúdo com
+   uma regra dele, e uma regra NOSSA ganha-lhe sempre — bastou a caixa das
+   margens ter a classe `.linha`, que traz `display: flex`, para os quatro
+   campos de segundos ficarem desenhados por cima da lista de kills com o
+   painel fechado. Medido: 175 px de caixa invisível a apanhar cliques. */
+details:not([open]) > *:not(summary) { display: none; }
+
+html { -webkit-text-size-adjust: 100%; }
 
 body {
   margin: 0;
-  padding: 20px;
-  background: var(--fundo);
-  /* A grelha. `background-attachment: fixed` para que não ande com o scroll:
-     é o chão da página, e o chão não se mexe. */
-  background-attachment: fixed;
-  color: var(--texto);
-  font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  /* 1400 era estreito de mais num ecrã grande: a página ficava uma tira ao
-     meio com metade do monitor vazio de cada lado. 1760 era o outro extremo:
-     a 1440 não sobrava margem nenhuma. Agora não há tecto nenhum: com 31
-     ângulos abertos num monitor de 2560 o tecto de 1760 deixava OITOCENTOS
-     pixels vazios de lado enquanto a grelha só conseguia seis colunas para
-     trinta e um vídeos. Isto é uma ferramenta: usa o monitor. A margem faz-se
-     com padding, e a medida curta é só do formulário. */
-  max-width: none;
+  padding: var(--e5);
+  background: var(--sup-0);
+  color: var(--tinta);
+  font: 400 var(--t-base)/var(--lh) var(--letra);
+  font-feature-settings: 'ss02', 'cv05';
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
-@media (min-width: 720px) { body { padding: var(--e6); } }
-/* O quadriculado é da página inteira, do início ao fim.
-   Tinha-o prendido ao ecrã de entrada por ter lido mal: "na hora de ver os
-   VODs, tira" não é "tira da página", é "não o quero por trás do vídeo". E
-   por trás do vídeo ele nunca esteve — os quadrados e os cartões são opacos.
-   Onde ele aparece é exactamente onde não há nada, que é o sítio onde faz
-   falta: com um formulário de 900px num monitor de 2560 sobram 1600px de
-   preto liso de lado, e preto liso não é desenho nenhum, é ausência. */
-body {
-  background-image:
-    repeating-linear-gradient(to right, var(--grelha) 0 1px, transparent 1px 72px),
-    repeating-linear-gradient(to bottom, var(--grelha) 0 1px, transparent 1px 72px);
+@media (min-width: 760px) { body { padding: var(--e6); } }
+
+/* A letra vive aqui e não numa rede de terceiros.
+   `block` e não `swap`, e é uma medida e não um gosto: com `swap` o texto é
+   pintado primeiro na letra do sistema e repintado quando a Plex chega, e as
+   duas não têm a mesma largura — a página inteira dava um salto de 0,156 no
+   momento da troca (o orçamento é 0,020, e há um teste que o mede). Com
+   `block` o texto espera pela letra certa; como os ficheiros são nossos, são
+   pré-carregados e não passam de 25 KB cada, essa espera são milissegundos.
+   Se algum dia faltarem, ao fim de três segundos entra a do sistema. */
+@font-face {
+  font-family: 'IBM Plex Sans'; font-style: normal; font-weight: 400;
+  font-display: block; src: url('letra/ibm-plex-sans-400.woff2') format('woff2');
 }
-/* Menos um pouco por trás do palco, que é onde vive a imagem. */
-#palco { background: var(--fundo); }
-
-/* ── uma caixa ──────────────────────────────────────────────────────────────
-   O que é um bloco de trabalho tem de parecer um bloco. Os campos do início
-   flutuavam directamente sobre o fundo da página, sem nada a dizer onde
-   começavam nem onde acabavam. */
-/* `.bloco` e nao `.cartao`: `.cartao` ja existia, e e a ficha da vitima —
-   118px de largura e `display: grid`. Chamei-lhe o mesmo nome, e a seccao do
-   inicio encolheu para 118px enquanto a da noite, que devia estar escondida,
-   apareceu: `display` ganha outra vez ao `hidden`. E a terceira. Duas das
-   tres foram nome repetido ou display por cima de hidden — por isso fica
-   escrito aqui tambem. */
-.bloco {
-  /* Opaco de propósito: a grelha do fundo a atravessar um cartão faz o
-     cartão deixar de ser um cartão. */
-  background: var(--caixa); border: 1px solid var(--borda);
-  border-radius: var(--r2); padding: var(--e5);
-  /* Um formulário com a largura de um monitor obriga os olhos a atravessá-lo
-     entre o rótulo e a caixa. O palco quer largura; isto não. */
-  max-width: var(--largura-forma);
+@font-face {
+  font-family: 'IBM Plex Sans'; font-style: normal; font-weight: 500;
+  font-display: block; src: url('letra/ibm-plex-sans-500.woff2') format('woff2');
 }
-@media (max-width: 620px) { .bloco { padding: var(--e4); } }
-
-/* ── o início, tudo numa fila ───────────────────────────────────────────────
-   Estava empilhado: dois cartões de 900 px um por cima do outro, e mil e
-   seiscentos pixels de preto ao lado. Numa fila que quebra, cada um leva o que
-   precisa e os nomes dos canais ficam ao lado em vez de espremidos em baixo.
-   `flex` e não `grid` de propósito: `#noites` e `#canaisEstado` nascem
-   escondidos, e num grid de colunas fixas deixavam a coluna vazia lá. */
-.topoTrabalho {
-  display: flex; flex-wrap: wrap; gap: var(--e5); align-items: flex-start;
-  margin-bottom: var(--e5);
+@font-face {
+  font-family: 'IBM Plex Sans'; font-style: normal; font-weight: 600;
+  font-display: block; src: url('letra/ibm-plex-sans-600.woff2') format('woff2');
 }
-.topoTrabalho > #entrada, .topoTrabalho > #noites { flex: 1 1 420px; max-width: 640px; }
-/* O 999 é para os nomes comerem o que sobrar depois de os dois cartões terem
-   o que precisam — e não um terço, que é o que um `flex: 1` daria. */
-.topoTrabalho > #canaisEstado { flex: 999 1 340px; min-width: 0; }
-
-header { border-bottom: 1px solid var(--borda); margin-bottom: var(--e5); }
-/* Uma marca, e não só uma palavra. Custa doze pixels e é a diferença entre
-   um sítio e uma folha com texto. Pseudo-elemento sem conteúdo de propósito:
-   é decoração, e um leitor de ecrã não tem nada que a ler. */
-h1::before {
-  content: ''; display: inline-block; vertical-align: -3px;
-  width: 20px; height: 20px; margin-right: var(--e2);
-  border-radius: var(--r1); background: var(--acento);
-  box-shadow: inset 0 0 0 4px var(--fundo), 0 0 18px -4px var(--acento);
+@font-face {
+  font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 400;
+  font-display: block; src: url('letra/ibm-plex-mono-400.woff2') format('woff2');
 }
-h1 { font-size: var(--t-titulo); margin: 0; letter-spacing: -.01em; }
-.topo { display: flex; align-items: center; gap: 12px; }
-.topo #idioma { width: auto; padding: 5px 8px; font-size: var(--t-menor); margin-left: auto; }
-h2 { font-size: var(--t-menor); text-transform: uppercase; letter-spacing: .08em; color: var(--texto-2); margin: 20px 0 8px; }
-.sub { color: var(--texto-2); margin: 4px 0 20px; }
-.nota { color: var(--texto-2); font-size: var(--t-menor); }
-.mau { color: var(--mau); }
-
-label { display: block; font-size: var(--t-menor); color: var(--texto-2); margin-bottom: 6px; }
-
-textarea, select {
-  width: 100%;
-  background: var(--caixa);
-  color: var(--texto);
-  border: 1px solid var(--borda);
-  border-radius: 8px;
-  padding: 10px 12px;
-  font: inherit;
-  resize: vertical;
+@font-face {
+  font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 500;
+  font-display: block; src: url('letra/ibm-plex-mono-500.woff2') format('woff2');
 }
 
-/* A busca. O slug da Kick nem sempre e o nome que se ve, e obrigar alguem a
-   descobri-lo antes de usar isto era um passo a mais por cada canal. */
-.procura input {
-  width: 100%; background: var(--caixa); color: var(--texto);
-  border: 1px solid var(--borda); border-radius: 8px; padding: 10px 12px; font: inherit;
-}
-.sugestoes {
-  position: absolute; z-index: 5; left: 0; right: 0; top: calc(100% + 4px);
-  list-style: none; margin: 0; padding: 4px; max-height: 300px; overflow-y: auto;
-  background: var(--caixa); border: 1px solid var(--borda); border-radius: 8px;
-  box-shadow: var(--sombra-2);
-}
-.sugestoes li {
-  padding: 7px 10px; border-radius: 6px; cursor: pointer;
-  display: flex; justify-content: space-between; gap: 12px; align-items: baseline;
-}
-.sugestoes li:hover, .sugestoes li[aria-selected="true"] { background: var(--realce); }
-.sugestoes li.ja { opacity: .45; cursor: default; }
-.sugestoes .quantos { color: var(--texto-2); font-size: var(--t-menor); font-variant-numeric: tabular-nums; }
-.sugestoes .vivo { color: var(--ok); font-size: var(--t-micro); }
+::selection { background: var(--acento-eco); color: var(--tinta); }
 
-.linha { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
 
-button {
-  background: var(--caixa);
-  color: var(--texto);
-  border: 1px solid var(--borda);
-  border-radius: 8px;
-  padding: 9px 14px;
-  font: inherit;
-  cursor: pointer;
+/* As calhas de rolagem fazem parte do móvel: uma barra branca de sistema no
+   meio de um painel escuro é a única coisa da página que não foi desenhada. */
+* { scrollbar-width: thin; scrollbar-color: var(--linha-2) transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: var(--linha-2); border-radius: var(--r-redondo);
+  border: 3px solid transparent; background-clip: content-box;
 }
-button:hover:not(:disabled) { border-color: var(--texto-2); }
-button:disabled { opacity: .45; cursor: default; }
-button.principal {
-  background: var(--acento); border-color: var(--acento); color: var(--sobre-acento);
-  font-weight: 600; box-shadow: var(--brilho);
+*::-webkit-scrollbar-thumb:hover { background: var(--linha-3); background-clip: content-box; }
+
+/* ═══ 2 · tipografia ════════════════════════════════════════════════════════ */
+
+h1, h2, h3 { margin: 0; font-weight: 600; line-height: var(--lh-apertado); letter-spacing: -.015em; }
+h1 { font-size: var(--t-titulo); }
+h2 { font-size: var(--t-medio); }
+p { margin: 0; }
+
+/* O rótulo pequeno em maiúsculas. É o único sítio onde há entrelinha larga,
+   e é isso que o faz ler-se como rótulo e não como texto. */
+.rotuloCampo, .barraGrelha .rotuloCampo, #montagem > h2, .palcoFundo > section > h2 {
+  font-size: var(--t-micro); font-weight: 600; letter-spacing: var(--letra-larga);
+  text-transform: uppercase; color: var(--tinta-3);
 }
-.principal:hover { background: color-mix(in srgb, var(--acento) 88%, #fff); }
-.principal:disabled { box-shadow: none; }
-button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible {
-  outline: 2px solid var(--acento);
-  outline-offset: 2px;
+
+.nota { color: var(--tinta-2); font-size: var(--t-menor); }
+.nota:empty { display: none; }
+.nota.mau, .mau { color: var(--perigo); }
+.nota.aviso { color: var(--aviso); }
+.pequeno { font-size: var(--t-menor); color: var(--tinta-2); }
+
+/* Números com largura fixa em TODO o lado onde se comparam: horas, durações,
+   contagens. Sem isto o relógio dança a cada segundo que passa. */
+.tempo, .hora, .nudge, .posicao, .dur, .n, .quantos, kbd,
+.faixa .nome, .quem, #versao, .mms {
+  font-family: var(--letra-mono); font-variant-numeric: tabular-nums;
 }
 
 kbd {
-  background: var(--sobre-acento); border: 1px solid var(--borda); border-radius: 4px;
-  padding: 0 5px; font-size: var(--t-micro); color: var(--texto-2);
+  font-size: var(--t-micro); font-weight: 500; line-height: 1;
+  padding: 3px 5px; border-radius: var(--r-fio);
+  background: var(--sup-1); border: 1px solid var(--linha-2);
+  color: var(--tinta-2); box-shadow: inset 0 -1px 0 var(--linha);
 }
 
-/* Trinta e um canais davam CINCO filas de chips antes de se ver um vídeo.
-   Duas filas de altura e rola: quem tem trinta ângulos não os lê um a um,
-   e quem tem três continua a vê-los todos sem rolar nada. */
-.canais {
-  list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 8px;
-  /* Sem tecto: "os nomes adicionados têm que mostrar todos". O tecto de duas
-     filas existia porque isto atravessava a página inteira em baixo do vídeo,
-     onde cinco filas empurravam tudo para fora do ecrã. Ao lado dos cartões, a
-     lista cresce em quantas filas precisar e não empurra nada. */
+a { color: var(--acento); text-decoration-color: var(--acento-fio); text-underline-offset: 3px; }
+a:hover { color: var(--acento-alto); }
+
+/* ═══ 3 · controlos ═════════════════════════════════════════════════════════ */
+
+/* Um só desenho de botão, em três pesos:
+     .principal  — o que se carrega para avançar. Cheio, e há um por zona.
+     (normal)    — tudo o resto. Superfície levantada com um fio à volta.
+     .discreto   — transparente até se lhe tocar. Para o que é acessório.
+   Um quarto peso seria o mesmo que nenhum. */
+button, .botaoZip {
+  font: 500 var(--t-base)/1 var(--letra);
+  color: var(--tinta);
+  background: var(--sup-3);
+  border: 1px solid var(--linha-2);
+  border-radius: var(--r-2);
+  padding: 0 var(--e4);
+  min-height: 36px;
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--e3);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background var(--mov-rapido), border-color var(--mov-rapido), color var(--mov-rapido);
 }
+button:hover:not(:disabled), .botaoZip:hover { background: var(--sup-4); border-color: var(--linha-3); }
+button:active:not(:disabled) { background: var(--sup-5); }
+button:disabled { opacity: .38; cursor: not-allowed; }
+
+button.principal {
+  background: var(--acento); color: var(--sobre-acento); border-color: transparent;
+  font-weight: 600;
+}
+button.principal:hover:not(:disabled) { background: var(--acento-alto); border-color: transparent; }
+button.principal:active:not(:disabled) { background: var(--acento); }
+
+button.discreto {
+  background: transparent; border-color: transparent; color: var(--tinta-2);
+  padding: 0 var(--e3);
+}
+button.discreto:hover:not(:disabled) { background: var(--sup-3); color: var(--tinta); border-color: transparent; }
+
+/* Um botão que só tem ícone é quadrado, e não um rectângulo com um ícone
+   perdido ao meio. */
+button.so-icone { padding: 0; width: 36px; min-width: 36px; }
+
+/* O estado ligado. Um botão que está A FAZER alguma coisa não pode ter a
+   mesma cara de um que espera — era assim que "Ver" ficava indistinguível
+   de "Parar". */
+button[aria-pressed="true"], button.ativo, .ordemGrelha[aria-pressed="true"] {
+  background: var(--acento-eco); border-color: var(--acento-fio); color: var(--acento);
+}
+button[aria-pressed="true"]:hover, button.ativo:hover { background: var(--acento-eco); border-color: var(--acento); }
+
+input, select, textarea {
+  font: 400 var(--t-base)/1.4 var(--letra);
+  color: var(--tinta);
+  background: var(--sup-1);
+  border: 1px solid var(--linha-2);
+  border-radius: var(--r-2);
+  padding: 9px var(--e4);
+  width: 100%;
+  transition: border-color var(--mov-rapido), background var(--mov-rapido);
+}
+input:hover, select:hover, textarea:hover { border-color: var(--linha-3); }
+textarea { resize: vertical; min-height: 96px; line-height: var(--lh); font-family: var(--letra-mono); font-size: var(--t-menor); }
+input::placeholder, textarea::placeholder { color: var(--tinta-3); }
+
+/* A seta do `select`, desenhada. A do sistema é a única peça do ecrã que não
+   obedece a este ficheiro. */
+select {
+  appearance: none;
+  padding-right: var(--e7);
+  background-image: linear-gradient(45deg, transparent 50%, var(--tinta-3) 50%),
+                    linear-gradient(135deg, var(--tinta-3) 50%, transparent 50%);
+  background-position: calc(100% - 17px) 50%, calc(100% - 12px) 50%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+
+input[type="checkbox"] {
+  appearance: none; width: 17px; height: 17px; min-width: 17px; padding: 0;
+  border-radius: var(--r-fio); border: 1.5px solid var(--linha-3);
+  background: var(--sup-1); cursor: pointer; position: relative;
+}
+input[type="checkbox"]:checked { background: var(--acento); border-color: var(--acento); }
+input[type="checkbox"]:checked::after {
+  content: ''; position: absolute; inset: 0;
+  background: var(--sobre-acento);
+  clip-path: polygon(19% 47%, 8% 60%, 39% 87%, 92% 26%, 80% 15%, 38% 63%);
+}
+
+/* Um só anel de foco em toda a página, e só para quem anda pelo teclado. */
+:focus { outline: none; }
+:focus-visible { box-shadow: var(--foco); border-radius: var(--r-2); }
+
+/* ── ícones ────────────────────────────────────────────────────────────────
+   Herdam a cor do texto e alinham-se pela linha de base óptica. `flex:none`
+   porque um ícone dentro de um botão flexível encolhia quando o texto era
+   comprido — e um ícone amassado é pior do que nenhum. */
+.ic { width: 16px; height: 16px; flex: none; display: block; }
+.ic-p { width: 14px; height: 14px; }
+.ic-g { width: 20px; height: 20px; }
+
+.linha { display: flex; align-items: center; gap: var(--e3); flex-wrap: wrap; }
+/* Uma caixa de texto tem `width: 100%`, e dentro de uma linha isso enche a
+   linha inteira e manda o botão ao lado para baixo. Numa linha, quem manda é
+   a linha: a caixa cresce com o que sobra e o botão fica onde está. */
+.linha > input, .linha > textarea { flex: 1 1 auto; width: auto; min-width: 0; }
+.linha > select { flex: 0 1 auto; }
+.linha.fim { justify-content: flex-end; }
+.linha:empty { display: none; }
+
+.campo { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+
+/* Uma etiqueta de estado: pequena, em maiúsculas, com a cor do que diz. */
+.etiqueta {
+  font-size: var(--t-micro); font-weight: 600; letter-spacing: var(--letra-larga);
+  text-transform: uppercase; padding: 2px 7px; border-radius: var(--r-fio);
+  background: var(--aviso-eco); color: var(--aviso); border: 1px solid transparent;
+}
+
+/* ═══ 4 · cabeçalho e caminho ═══════════════════════════════════════════════ */
+
+header { margin-bottom: var(--e6); }
+
+.topo {
+  display: flex; align-items: center; gap: var(--e4);
+  padding-bottom: var(--e4); border-bottom: 1px solid var(--linha);
+}
+.topo h1 {
+  display: flex; align-items: center; gap: var(--e3);
+  margin-right: auto; font-size: var(--t-grande);
+}
+/* A marca desta casa: três gravações de comprimentos diferentes e a agulha a
+   atravessá-las no mesmo instante. É o que o sítio faz, desenhado. */
+.topo h1 .ic { width: 22px; height: 22px; color: var(--acento); }
+
+/* O atalho para a Twitch leva a marca da Twitch. Um símbolo inventado para
+   uma plataforma que tem o seu seria pior do que texto. */
+.paraTwitch {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: var(--t-menor); font-weight: 500; text-decoration: none;
+  color: var(--tinta-2); padding: 6px var(--e4); min-height: 32px;
+  border: 1px solid var(--linha); border-radius: var(--r-2);
+}
+.paraTwitch:hover { color: var(--tinta); border-color: var(--linha-3); background: var(--sup-3); }
+.paraTwitch .ic { width: 14px; height: 14px; }
+
+/* Largura fixa, e é uma medida: o selector nasce VAZIO e só ganha as três
+   línguas quando o guião corre. Com largura automática, aos 93 ms ele
+   crescia, deixava de caber na linha e caía para baixo — e o cabeçalho, os
+   três passos e a página inteira desciam 44 px de uma vez. Salto de 0,149
+   medido num ecrã de 390; o orçamento é 0,020. */
+.topo #idioma { width: 132px; flex: 0 0 auto; }
+.topo #ajuda { width: 34px; min-width: 34px; padding: 0; }
+
+/* ── os três passos ────────────────────────────────────────────────────────
+   Numerados porque são MESMO uma sequência: não se marca uma kill antes de
+   carregar a noite. Um número que não conta nada é enfeite; este conta.
+   A linha entre eles é o caminho, e ela acende-se até onde ele já foi. */
+.passos {
+  list-style: none; margin: var(--e5) 0 0; padding: 0;
+  display: flex; align-items: center; gap: 0; flex-wrap: wrap;
+}
+.passos li {
+  display: flex; align-items: center; gap: var(--e3);
+  font-size: var(--t-menor); color: var(--tinta-3); padding-right: var(--e4);
+}
+.passos li + li { padding-left: var(--e4); }
+.passos li + li::before {
+  content: ''; width: 20px; height: 1px; background: var(--linha);
+  margin-right: var(--e4); margin-left: calc(var(--e4) * -1);
+}
+.passos li b {
+  display: grid; place-items: center; width: 22px; height: 22px;
+  border-radius: var(--r-redondo); font-size: var(--t-micro); font-weight: 600;
+  font-family: var(--letra-mono);
+  background: var(--sup-2); border: 1px solid var(--linha); color: var(--tinta-3);
+}
+.passos li.aqui { color: var(--tinta); font-weight: 500; }
+.passos li.aqui b { background: var(--acento); border-color: var(--acento); color: var(--sobre-acento); }
+.passos li.feito b { background: var(--acento-eco); border-color: var(--acento-fio); color: var(--acento); }
+
+footer { margin-top: var(--e7); padding-top: var(--e4); border-top: 1px solid var(--linha); }
+footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
+
+/* ═══ 5 · a preparação ══════════════════════════════════════════════════════ */
+
+/* Duas colunas SÓ quando há mesmo duas coisas. Com a noite ainda por abrir,
+   o painel da direita está escondido e uma grelha de 1,6fr + 1fr deixava
+   metade do ecrã vazia com a caixa dos canais espremida na outra metade —
+   que é exactamente a "tira ao meio" de que ele se queixou. */
+.topoTrabalho { display: grid; gap: var(--e4); }
+#entrada { max-width: 1100px; }
+@media (min-width: 1000px) {
+  .topoTrabalho:has(#noites:not([hidden])) { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); align-items: start; }
+  .topoTrabalho:has(#noites:not([hidden])) #entrada { max-width: none; }
+}
+
+/* Um painel. Fio fino e superfície, sem sombra: num sítio escuro a sombra
+   não se vê e o que separa é o fio. */
+.bloco {
+  background: var(--sup-2); border: 1px solid var(--linha); border-radius: var(--r-3);
+  padding: var(--e5); display: grid; gap: var(--e4);
+}
+@media (min-width: 1000px) { .topoTrabalho:has(#noites:not([hidden])) #entrada { grid-row: span 2; } }
+
+.entradaGrelha { display: grid; gap: var(--e4); }
+@media (min-width: 620px) { .entradaGrelha { grid-template-columns: 1fr 1fr; } }
+
+.colarLinha { flex-wrap: nowrap; gap: var(--e3); }
+.colarLinha input { min-width: 0; }
+.colarLinha button { flex: none; }
+
+/* A procura, com a lupa dentro da caixa. */
+.procura { position: relative; display: block; }
+.procura input { padding-left: var(--e7); }
+.procura .lupa {
+  position: absolute; left: var(--e4); top: 50%; transform: translateY(-50%);
+  width: 15px; height: 15px; pointer-events: none; color: var(--tinta-3);
+}
+.sugestoes {
+  position: absolute; z-index: 30; top: calc(100% + 5px); left: 0; right: 0;
+  list-style: none; margin: 0; padding: var(--e2);
+  max-height: 260px; overflow-y: auto;
+  background: var(--sup-2); border: 1px solid var(--linha-2); border-radius: var(--r-2);
+  box-shadow: var(--sombra-flutua);
+}
+.sugestoes li { display: block; }
+.sugestoes button {
+  width: 100%; justify-content: flex-start; background: transparent; border-color: transparent;
+  font-weight: 400; padding: 0 var(--e3);
+}
+.sugestoes button:hover, .sugestoes li.eSugerido button { background: var(--sup-3); border-color: transparent; }
+.sugestoes .ja { color: var(--tinta-3); }
+
+/* A barra da noite: o selector, a confiança e o partilhar numa linha. */
+.barraSessao { align-items: flex-end; gap: var(--e4); }
+.barraSessao .campo { flex: 1 1 220px; }
+.barraSessao #noite { min-width: 0; }
+
+/* A confiança do alinhamento. Uma ficha com a cor do que diz, e não texto
+   solto: é um veredicto, e um veredicto tem forma. */
+.confianca {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: var(--t-menor); font-weight: 500; padding: 5px var(--e3);
+  border-radius: var(--r-1); border: 1px solid var(--linha);
+  background: var(--sup-1); color: var(--tinta-2);
+}
+.confianca:empty { display: none; }
+.confianca.ha { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent); background: var(--ok-eco); }
+.confianca.mau { color: var(--perigo); border-color: color-mix(in srgb, var(--perigo) 40%, transparent); background: var(--perigo-eco); }
+
+/* ── o estado de cada canal ─────────────────────────────────────────────── */
+#canaisEstado { margin-top: var(--e4); }
+.canais { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--e2); }
 .canais li {
-  background: var(--caixa); border: 1px solid var(--borda); border-radius: 999px;
-  padding: 5px 12px; display: flex; gap: 8px; align-items: baseline;
+  display: flex; align-items: center; gap: var(--e3); flex-wrap: wrap;
+  padding: 7px var(--e4); border-radius: var(--r-1);
+  background: var(--sup-2); border: 1px solid var(--linha);
+  font-size: var(--t-menor);
 }
-.canais .parecidos { display: inline-flex; gap: 5px; align-items: center; }
-.canais .parecidos button { padding: 2px 8px; font-size: var(--t-menor); border-radius: 999px; }
-.canais .tirar { padding: 0 6px; font-size: var(--t-micro); line-height: 1.4; border-radius: 999px; opacity: .5; }
-.canais li:hover .tirar { opacity: 1; }
-.canais li.mau { border-color: color-mix(in srgb, var(--mau) 45%, var(--borda)); }
+.canais li b { font-family: var(--letra-mono); font-weight: 500; }
+.canais li.vivo { border-left: 2px solid var(--ok); }
+.canais li.mau { border-left: 2px solid var(--perigo); }
+.parecidos { display: flex; gap: 6px; flex-wrap: wrap; }
+.parecidos button { min-height: 26px; padding: 0 var(--e3); font-size: var(--t-menor); }
 
-/* The grid. Focus takes the top row on its own; the rest are thumbnails,
-   because only the focus tile decodes at a real rendition. */
-.grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin: 16px 0; }
-@media (min-width: 1800px) { .grade { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); } }
-.tile {
-  position: relative; aspect-ratio: 16/9; background: var(--video-fundo);
-  border: 1px solid var(--borda); border-radius: 8px; overflow: hidden; cursor: pointer;
-}
-/* `contain` e nao `cover`: o quadrado tem de mostrar o FRAME INTEIRO.
-   Com `cover` o video de 16:9 era esticado ate encher e o topo e o fundo
-   ficavam de fora — e e no topo que esta o kill feed e em baixo a vida. Num
-   sitio onde se decide o que cortar, esconder metade do ecra e inaceitavel. */
-.tile video { width: 100%; height: 100%; object-fit: contain; display: block; background: var(--video-fundo); }
-/* Os ângulos em foco, fora da grelha. Um ocupa a largura toda; dois ficam
-   lado a lado, que é o que serve para decidir se vale a pena baixar.
+/* ═══ 6 · o palco: o vídeo ══════════════════════════════════════════════════ */
 
-   Grelha e não flex, e com `min-height`: um `aspect-ratio` dentro de um item
-   flex com base 0 colapsa para altura zero em vários browsers de telemóvel. O
-   quadrado continua lá, continua a tocar e continua a ter som — só não se vê.
-   Foi exactamente esse o sintoma: ouvia-se o canal e ele não aparecia em lado
-   nenhum, e do lado de quem usa parece um canal a faltar, não um bug de CSS. */
+/* `:not([hidden])` e não `#palco` seco — ver a nota da regra do `[hidden]`. */
+#palco:not([hidden]) { display: grid; gap: var(--e6); }
+
+/* Os ângulos em foco. Grelha de colunas iguais: com dois lado a lado nenhum
+   fica com "o resto da linha", que é o que fazia um deles esticar. */
 .palcoFoco {
   display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr);
-  gap: 8px; margin: 16px 0 8px;
+  gap: var(--e3); margin: 0 0 var(--e4);
 }
-.palcoFoco .tile { aspect-ratio: 16/9; min-height: 180px; }
-.palcoFoco.dois .tile { aspect-ratio: 16/9; min-height: 140px; }
 .palcoFoco:empty { display: none; }
-.tile.foco { border-color: var(--borda-forte); }
-/* O som no canto de baixo a esquerda, e o cursor de volume a abrir ao lado —
-   o mesmo sitio e o mesmo gesto da Twitch, da Kick e do YouTube. */
-/* Uma barra só no fundo do quadrado, e não um grupo colado a cada canto.
-   Colados aos cantos batiam um no outro assim que o quadrado ficava pequeno —
-   e com dezoito canais na grelha todos ficam pequenos. */
-.tile .controlos {
-  position: absolute; left: 6px; right: 6px; bottom: 6px;
-  display: flex; align-items: center; justify-content: space-between; gap: 6px;
-  /* O fundo da barra não pode roubar o clique que promove o quadrado a foco. */
+.palcoFoco .tile { aspect-ratio: 16/9; min-height: 180px; }
+.palcoFoco.dois .tile { min-height: 140px; }
+
+/* A grelha dos ângulos. Quadrados pequenos, muitos, e o nome legível em
+   todos: com dezassete canais, "onde está o fulano" resolve-se pelo NOME. */
+.grade {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--e3); margin: var(--e4) 0;
+}
+@media (min-width: 1800px) { .grade { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); } }
+
+.tile {
+  position: relative; aspect-ratio: 16/9; overflow: hidden;
+  background: var(--video-fundo);
+  border: 1px solid var(--linha); border-radius: var(--r-3);
+  cursor: pointer; touch-action: manipulation;
+  transition: border-color var(--mov-rapido);
+}
+.tile:hover { border-color: var(--linha-3); }
+/* O ângulo em foco marca-se com o acento, e com um fio DUPLO: sobre preto um
+   fio só de 1 px desaparece à distância a que se olha para um monitor. */
+.tile.foco { border-color: var(--acento); box-shadow: inset 0 0 0 1px var(--acento-fio); }
+
+/* O frame INTEIRO, sempre. Com `cover` o vídeo de 16:9 é esticado até encher
+   e o topo e o fundo ficam de fora — e é no topo que está o kill feed e em
+   baixo a vida. Isto não é gosto: é a informação de que ele precisa. */
+.tile video { width: 100%; height: 100%; object-fit: contain; display: block; background: var(--video-fundo); }
+
+/* O nome, sempre legível: um degradê por baixo em vez de uma caixa opaca,
+   que taparia parte da imagem. */
+.tile .rotulo {
+  position: absolute; inset: 0 0 auto 0; z-index: 2;
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px var(--e3) var(--e6);
+  font: 500 var(--t-menor)/1 var(--letra-mono);
+  color: #fff; text-shadow: 0 1px 3px #000;
+  background: linear-gradient(to bottom, #000000b0, transparent);
   pointer-events: none;
 }
-.tile .controlos > * { pointer-events: auto; }
-/* O quadrado mede-se a si próprio: num polegar da grelha só cabe o som, e o
-   ajuste fino não faz falta nenhuma ali. */
-.tile { container-type: inline-size; }
-@container (max-width: 230px) { .tile .ajuste { display: none; } }
-/* Num polegar de 150px, três botões no canto tapam o vídeo. Ficam os do
-   quadrado grande, que é onde se usa isto. */
-@container (max-width: 260px) { .tile .fora .ecraCheio, .tile .fora .aparte { display: none; } }
-
-.tile .som {
-  display: flex; align-items: center; gap: 0;
-  background: var(--sobre-video); border-radius: 6px; padding: 2px;
+.tile .rotulo .posicao { font-weight: 400; color: #ffffffb0; }
+.tile .rotulo .aviso { color: var(--aviso); font-style: normal; }
+.tile .estadoTile {
+  position: absolute; inset: auto var(--e3) var(--e3) var(--e3); z-index: 2;
+  font-size: var(--t-menor); color: var(--tinta-2); text-align: center;
+  pointer-events: none;
 }
-.tile .somBtn, .tile .pausa {
-  padding: 1px 7px; font-size: var(--t-menor); background: transparent; border: 0; line-height: 1.4;
+.tile.semImagem { border-style: dashed; }
+
+/* Os controlos por cima do vídeo. UMA barra no fundo com dois grupos, e não
+   um botão colado a cada canto: colados, batiam uns nos outros assim que o
+   quadrado ficava pequeno — e com dezassete na grelha, todos ficam pequenos. */
+.tile .controlos {
+  position: absolute; inset: auto var(--e2) var(--e2) var(--e2); z-index: 3;
+  display: flex; align-items: center; justify-content: space-between; gap: var(--e2);
+  opacity: 0; transition: opacity var(--mov);
+}
+.tile:hover .controlos, .tile.foco .controlos, .tile .controlos:focus-within { opacity: 1; }
+.tile .fora {
+  position: absolute; inset: var(--e2) var(--e2) auto auto; z-index: 3;
+  display: flex; gap: var(--e2); opacity: 0; transition: opacity var(--mov);
+}
+.tile:hover .fora, .tile.foco .fora, .tile .fora:focus-within { opacity: 1; }
+
+/* Um botão sobre a imagem: vidro escuro, sem fio, do tamanho de um polegar. */
+.tile .controlos button, .tile .fora button {
+  min-height: 30px; width: 30px; min-width: 30px; padding: 0;
+  background: var(--sobre-video); border: none; border-radius: var(--r-1);
+  color: #fff;
+}
+.tile .controlos button:hover, .tile .fora button:hover { background: #000; }
+.tile .som, .tile .ajuste { display: flex; align-items: center; gap: var(--e2); }
+.tile .ajuste button { width: 26px; min-width: 26px; min-height: 26px; font-size: var(--t-medio); }
+.tile .nudge {
+  font-size: var(--t-micro); color: #fff; background: var(--sobre-video);
+  padding: 5px 6px; border-radius: var(--r-fio); min-width: 40px; text-align: center;
 }
 .tile .vol {
-  width: 0; min-width: 0; opacity: 0; margin: 0; accent-color: var(--texto);
-  /* Fechado nao pode apanhar cliques. Com largura zero o browser ainda lhe da
-     area de toque, e ela cai por cima do proprio botao do som — o botao ficava
-     impossivel de carregar sem que nada no ecra o explicasse. */
-  pointer-events: none;
-  transition: width .18s ease, opacity .18s ease, margin .18s ease;
+  width: 0; padding: 0; opacity: 0; border: 0; background: transparent;
+  transition: width var(--mov), opacity var(--mov);
 }
-.tile .som:hover .vol, .tile .som:focus-within .vol {
-  width: 72px; opacity: 1; margin: 0 6px 0 2px; pointer-events: auto;
-}
-.tile.principal { border-color: var(--texto); box-shadow: 0 0 0 1px var(--texto); }
-/* Os três do canto de cima à direita: par, ecrã cheio, janela à parte.
-   Numa fila com `gap` e não cada um com o seu `right:` — foi assim que os
-   controlos de baixo deixaram de bater uns nos outros, e a razão é a mesma. */
-.tile .fora {
-  /* Colados ao canto de cima à direita, e maiores. "Aumenta um pouco mais
-     esses botões e deixa-os mais pro canto superior direito dos vídeos." */
-  position: absolute; right: 3px; top: 3px; display: flex; gap: 5px; align-items: center;
-  opacity: .35; transition: opacity .15s;
-}
-.tile:hover .fora, .tile.foco .fora { opacity: 1; }
-/* "Aumenta um pouco desses botão, pois está muito pequeno."
-   Estavam com 26px de alto e o desenho com 15 — abaixo dos 24px que uma mão
-   com rato acerta sem mirar, e muito abaixo dos 44 de um dedo. Passam a 36
-   quadrados, que é o meio termo que ainda não tapa o vídeo num quadrado
-   pequeno; abaixo dos 260px de largura eles já desaparecem por outra regra. */
-.tile .fora button {
-  padding: 1px 6px; font-size: var(--t-menor); background: var(--sobre-video);
-  border-radius: 6px; display: grid; place-items: center;
-  min-height: 44px; min-width: 44px;
-}
-.tile .fora button svg { width: 22px; height: 22px; }
-.tile.foco .fora button { color: var(--texto); border-color: var(--borda-forte); }
-/* Dentro da janela à parte não há grelha para onde voltar nem par que faça
-   sentido: fica só o botão que a fecha. */
-.janelaAparte .tile { position: absolute; inset: 0; aspect-ratio: auto; border: 0; border-radius: 0; }
-.janelaAparte .tile .par { display: none; }
-/* E o ecrã cheio também não: uma janela de `documentPictureInPicture` está
-   sempre à frente de tudo e o browser NEGA-lhe o ecrã cheio. O botão ficava
-   lá a não fazer nada — "não consigo deixar ela em tela cheia". Quem quer o
-   vídeo grande no segundo monitor arrasta a janela e puxa-lhe o canto, que é
-   para isso que ela existe. */
-/* O ecrã cheio VOLTA à janela à parte.
-   Eu tinha-o escondido porque o browser nega o ecrã cheio a uma janela de
-   `documentPictureInPicture` — e escondê-lo foi a decisão errada: ele foi lá
-   procurá-lo. "Quando boto em aba separada o vídeo, o botão de tela cheia
-   sumiu." Um botão que existe e explica porque não pode é melhor do que um
-   buraco onde ele estava; e quando o browser deixar, passa a funcionar sem eu
-   mexer em nada. */
-.tile.vazio video { opacity: 0; }
-.tile .rotulo {
-  position: absolute; left: 6px; top: 6px; background: var(--sobre-video); padding: 2px 7px;
-  border-radius: 5px; font-size: var(--t-menor);
-}
-.tile .aviso { color: var(--aviso); }
-.tile .estadoTile {
-  position: absolute; inset: 0; display: grid; place-items: center;
-  font-size: var(--t-menor); color: var(--texto-2); text-align: center; padding: 8px;
+.tile .som:hover .vol, .tile .som:focus-within .vol { width: 64px; opacity: 1; }
+
+/* O recado que o quadrado dá quando o ecrã cheio falha. */
+.tile .recado {
+  position: absolute; inset: auto var(--e3) 44px var(--e3); z-index: 4;
+  padding: var(--e3); border-radius: var(--r-1); text-align: center;
+  background: var(--perigo-eco); color: var(--perigo);
+  border: 1px solid color-mix(in srgb, var(--perigo) 40%, transparent);
+  font-size: var(--t-menor); line-height: var(--lh-apertado);
 }
 
-/* O ajuste por ângulo. Fica por cima do vídeo, no canto, e só ganha cor
-   quando alguém lhe mexeu — um valor a zero não precisa de chamar a atenção. */
-.tile .ajuste {
-  display: flex; gap: 2px; align-items: center;
-  background: var(--sobre-video); border-radius: 6px; padding: 2px; opacity: .35; transition: opacity .15s;
-}
-.tile:hover .ajuste, .tile .ajuste.ativo, .tile .ajuste:focus-within { opacity: 1; }
-.tile .ajuste button {
-  padding: 0 7px; font-size: var(--t-menor); line-height: 20px; border-radius: 4px; background: transparent;
-}
-.tile .ajuste .nudge {
-  font-size: var(--t-micro); font-variant-numeric: tabular-nums; min-width: 40px; text-align: center;
-  color: var(--texto-2); font-weight: 400;
-}
-.tile .ajuste.ativo .nudge { color: var(--aviso); }
+/* ── a ordem da grelha ─────────────────────────────────────────────────── */
+.barraGrelha { display: flex; align-items: center; gap: var(--e3); flex-wrap: wrap; margin: var(--e5) 0 0; }
+.ordemGrelha { min-height: 30px; padding: 0 var(--e4); font-size: var(--t-menor); }
 
-/* Onde cada ângulo está dentro do vídeo dele. Aparece antes da imagem, e é o
-   que mostra o avanço e o atraso quando o quadrado ainda está preto. */
-/* A posicao vive dentro do rotulo: o canto de baixo a esquerda passou a ser do
-   som, que e o sitio onde toda a gente ja o procura. */
-.tile .posicao { color: var(--texto-2); font-weight: 400; font-variant-numeric: tabular-nums; }
-.tile.vazio .posicao { display: none; }
+/* ── o Clipar ──────────────────────────────────────────────────────────────
+   Vive colado aos ângulos em foco e não no fundo da coluna: é o botão que
+   ele carrega mais vezes, e tem de estar onde os olhos já estão.
+   Do tamanho do que diz, e não da largura do ecrã: uma barra de mil e
+   duzentos pixels de cor a atravessar a página é um berro, e o berro não
+   fica mais visível por ser maior — fica mais difícil de olhar. */
+.barraClipar { display: flex; align-items: center; gap: var(--e4); margin: 0 0 var(--e4); }
+.barraClipar #clipar { flex: none; min-width: 190px; min-height: 46px; font-size: var(--t-medio); }
+.barraClipar #marca { flex: 1 1 auto; text-align: right; }
 
-.relogio { background: var(--caixa); border: 1px solid var(--borda); border-radius: 10px; padding: 12px; }
-/* Os saltos. Grelha de quatro colunas iguais em vez de uma linha flex: numa
-   linha flex o quarto botão cai para baixo assim que o ecrã aperta. */
-.saltos {
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 10px;
-}
-.saltos button {
-  padding: 10px 4px; white-space: nowrap;
-  /* Sete botões do mesmo peso em duas filas: nada dizia qual era o trabalho.
-     Andar no tempo é navegação, e a navegação cala-se. */
-  background: transparent; color: var(--texto-2);
-}
-.saltos button:hover { background: var(--realce); color: var(--texto); }
+/* ═══ 7 · o relógio e a linha do tempo ══════════════════════════════════════ */
 
-/* Uma coluna de nomes igual à das faixas, para que o mesmo instante caia no
-   mesmo x na barra e no cursor. */
-.barraLinha { display: grid; grid-template-columns: 92px 1fr; gap: 8px; align-items: center; }
-#barra { width: 100%; margin: 0; accent-color: var(--texto); }
-/* As faixas: uma linha por canal, com o tempo em que esteve no ar. */
-/* Com trinta e um canais isto eram quinhentos pixels de barras iguais. Fica
-   com tecto e rola por dentro; o cursor continua absoluto sobre elas. */
-.faixas {
-  position: relative; margin-top: 10px; display: grid; gap: 3px;
-  /* Sem tecto: ele quer as trinta de uma vez. O tecto de 222 px fazia sentido
-     enquanto isto vivia por baixo do vídeo, onde 675 px de barras empurravam
-     tudo o resto para fora do ecrã; numa coluna própria, alta e estreita, a
-     forma da lista e a forma do sítio são a mesma. */
+/* A coluna dos nomes é UMA, e as três linhas — a barra, as faixas e a régua —
+   usam-na todas. Estavam em 92 px, 100 px e 92 px: o mesmo instante caía em
+   três sítios diferentes de x, e o cursor apontava para o lado da hora. */
+.relogio {
+  --coluna: 96px;
+  background: var(--sup-2); border: 1px solid var(--linha); border-radius: var(--r-3);
+  padding: var(--e4);
 }
-.faixa { display: grid; grid-template-columns: 92px 1fr; gap: 8px; align-items: center; }
-.faixas { --coluna: 100px; }
+.barraLinha, .reguaLinha, .faixa { display: grid; grid-template-columns: var(--coluna) 1fr; gap: var(--e3); }
+.barraLinha { align-items: center; }
+
+/* A barra de tempo, desenhada. A nativa do sistema é a única peça do ecrã
+   que ignora este ficheiro, e num painel escuro sai azul-Windows. */
+#barra {
+  appearance: none; width: 100%; height: 18px; padding: 0; margin: 0;
+  background: transparent; border: 0; cursor: pointer; touch-action: manipulation;
+}
+#barra::-webkit-slider-runnable-track { height: 4px; border-radius: var(--r-fio); background: var(--sup-4); }
+#barra::-moz-range-track { height: 4px; border-radius: var(--r-fio); background: var(--sup-4); }
+#barra::-webkit-slider-thumb {
+  appearance: none; width: 14px; height: 14px; margin-top: -5px;
+  border-radius: var(--r-redondo); background: var(--tinta); border: 2px solid var(--sup-0);
+}
+#barra::-moz-range-thumb {
+  width: 14px; height: 14px; border-radius: var(--r-redondo);
+  background: var(--tinta); border: 2px solid var(--sup-0);
+}
+#barra:hover::-webkit-slider-thumb { background: var(--acento); }
+#barra:hover::-moz-range-thumb { background: var(--acento); }
+
+/* ── as faixas: uma linha por canal ────────────────────────────────────────
+   Sem tecto: ele quer os trinta de uma vez, e numa coluna alta e estreita a
+   forma da lista é a forma do sítio. Quem lhe põe tecto é o ecrã de PC. */
+.faixas { position: relative; margin-top: var(--e4); display: grid; gap: 3px; }
+.faixa { align-items: center; }
 .faixa .nome {
-  font-size: var(--t-menor); font-weight: 600; color: var(--texto-2); white-space: nowrap;
-  overflow: hidden; text-overflow: ellipsis;
+  font-size: var(--t-menor); color: var(--tinta-3);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.faixa.principal .nome { color: var(--texto); }
+.faixa.principal .nome { color: var(--tinta); font-weight: 500; }
+/* A calha é o vazio, e o traço é a gravação. Raio de fio e não de painel:
+   uma faixa de tempo não tem a forma de um cartão. */
 .trilho {
-  position: relative; height: 12px; background: #ffffff0a;
-  border-radius: 3px; overflow: hidden; cursor: pointer;
+  position: relative; height: 13px; border-radius: var(--r-fio);
+  background: var(--sup-1); cursor: pointer; overflow: hidden;
 }
-/* Cinzento não quer dizer nada, e a barra é o material: é onde há imagem
-   para cortar. E a minha POV era a MAIS APAGADA das três — ao contrário. */
+/* Dezassete faixas cheias de cor a atravessar o painel é uma parede: a
+   informação aqui é ONDE HÁ e onde NÃO HÁ gravação, e para isso chega um
+   tom. A do canal dele leva a cor inteira — é a única que ele procura. */
 .trilho i {
-  position: absolute; top: 0; bottom: 0; border-radius: 2px;
-  background: var(--acento-suave);
+  position: absolute; top: 0; bottom: 0; display: block;
+  background: color-mix(in srgb, var(--acento) 30%, var(--sup-1));
+  border-radius: 1px;
 }
-/* .55 e não .8: a barra tem setecentos pixels e o botão tem cem. Ao mesmo
-   brilho, a barra ganha, e o que se quer que se veja primeiro é o botão. */
-.faixa.principal .trilho i { background: var(--acento); opacity: .55; }
-/* A regua: as horas por baixo das barras, e as kills marcadas nela. */
-.reguaLinha { display: grid; grid-template-columns: 92px 1fr; gap: 8px; margin-top: 2px; }
-.regua { position: relative; height: 26px; border-top: 1px solid var(--borda); }
-.regua .risco {
-  position: absolute; top: 0; width: 1px; height: 5px; background: var(--borda);
+.faixa.principal .trilho i { background: color-mix(in srgb, var(--acento) 78%, var(--sup-1)); }
+.trilho:hover i { background: color-mix(in srgb, var(--acento) 52%, var(--sup-1)); }
+
+/* A agulha do instante actual, por cima de todas as faixas. Branca de
+   propósito: é a única coisa que tem de se ver sobre qualquer cor. */
+.cursor {
+  position: absolute; top: 0; bottom: 0; width: 2px; z-index: 2;
+  background: var(--tinta); box-shadow: 0 0 0 1px #0009; pointer-events: none;
 }
+
+/* ── a régua: as horas e as kills marcadas ──────────────────────────────── */
+.regua { position: relative; height: 30px; border-top: 1px solid var(--linha); }
+.regua .risco { position: absolute; top: 0; width: 1px; height: 5px; background: var(--linha-2); }
 .regua .hora {
-  position: absolute; top: 7px; font-size: var(--t-micro); color: var(--texto-2);
-  transform: translateX(-50%); white-space: nowrap; font-variant-numeric: tabular-nums;
+  position: absolute; top: 8px; font-size: var(--t-micro); font-weight: 400;
+  color: var(--tinta-3); transform: translateX(-50%); white-space: nowrap;
 }
+/* A kill na régua é ÂMBAR, como o marcador de qualquer mesa de montagem. É a
+   única coisa desta cor na linha do tempo, e é isso que a faz saltar. */
 .regua .kill {
-  position: absolute; top: 0; height: 100%; width: 14px; transform: translateX(-50%);
-  background: none; border: 0; padding: 0; cursor: pointer; color: var(--marcador);
-  font-size: var(--t-micro); line-height: 1; text-align: center;
+  position: absolute; top: 0; height: 100%; width: 16px; transform: translateX(-50%);
+  background: none; border: 0; padding: 0; min-height: 0; cursor: pointer;
+  color: var(--marca); font-size: var(--t-micro); font-family: var(--letra-mono);
 }
 .regua .kill::before {
-  content: ''; position: absolute; left: 50%; top: 0; width: 2px; height: 9px;
-  background: var(--marcador);
+  content: ''; position: absolute; left: 50%; top: 0; width: 2px; height: 10px;
+  margin-left: -1px; background: var(--marca); border-radius: 0 0 1px 1px;
 }
-.regua .kill span { position: absolute; top: 9px; left: 50%; transform: translateX(-50%); }
+.regua .kill span { position: absolute; top: 11px; left: 50%; transform: translateX(-50%); }
+.regua .kill:hover { background: none; }
+.regua .kill:hover::before { background: var(--marca-alto); }
 
-/* A linha do instante actual, por cima de todas as faixas. */
-.cursor {
-  position: absolute; top: 0; bottom: 0; width: 2px; background: var(--texto);
-  pointer-events: none; box-shadow: 0 0 0 1px var(--sombra-2);
+/* ── o instante, em números ──────────────────────────────────────────────── */
+.relogio .linha { justify-content: space-between; margin-top: var(--e4); }
+#agora {
+  font: 500 var(--t-grande)/1 var(--letra-mono); font-variant-numeric: tabular-nums;
+  color: var(--tinta); letter-spacing: -.01em;
 }
+#agora.parado { color: var(--tinta-3); }
 
-.tempo { font-variant-numeric: tabular-nums; font-size: var(--t-maior); min-width: 100px; }
-.tempo.parado { color: var(--texto-2); }
+/* ── os saltos ─────────────────────────────────────────────────────────────
+   Oito, simétricos: 5 min e 1 min para achar o sítio, 10 s e 3 s para apurar.
+   Grelha de quatro colunas iguais e não uma linha flex: numa linha flex o
+   quarto botão cai para baixo assim que o ecrã aperta, e aí deixam de se ler
+   como um conjunto. Aqui são sempre duas filas certas, coluna a coluna. */
+.saltos { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--e2); margin-top: var(--e4); }
+.saltos button {
+  padding: 0 var(--e2); min-height: 38px; gap: 5px; white-space: nowrap;
+  background: transparent; border-color: transparent; color: var(--tinta-2);
+  font-family: var(--letra-mono); font-size: var(--t-menor);
+}
+.saltos button:hover { background: var(--sup-3); border-color: var(--linha-2); color: var(--tinta); }
+.saltos .ic { width: 13px; height: 13px; opacity: .75; }
 
-/* A lista de momentos da montagem. */
-.momentos { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 5px; }
-/* Duas fileiras de kills num ecra largo. "Pode ser em 2 fileiras, pois no PC
-   tem bastante espaco na tela ainda." Uma so coluna fazia uma lista de trinta
-   kills ter um metro de altura, com metade da largura vazia ao lado. */
-@media (min-width: 1500px) {
-  .momentos { grid-template-columns: 1fr 1fr; gap: 8px; align-items: start; }
-  .momentos li.nota { grid-column: 1 / -1; }
+/* ── marcar entrada e saída ─────────────────────────────────────────────── */
+.marcas { display: grid; grid-template-columns: 1fr 1fr; gap: var(--e3); margin-top: var(--e3); }
+.marcas button { min-height: 38px; padding: 0 var(--e3); white-space: nowrap; font-size: var(--t-menor); }
+.marcas kbd { margin-left: 2px; }
+
+/* ── sincronizar por áudio ──────────────────────────────────────────────── */
+.sincronizar { gap: var(--e4); }
+
+/* ═══ 8 · a montagem ════════════════════════════════════════════════════════ */
+
+.palcoFundo > section, .palcoFundo > .linha, .palcoFundo > #zip, #montagem {
+  background: var(--sup-2); border: 1px solid var(--linha); border-radius: var(--r-3);
+  padding: var(--e5); margin-bottom: var(--e4);
 }
-/* A kill que ja tem ajustes guardados diz-o. */
-.momentos .ajustado {
-  font-family: var(--letra-dados); font-size: var(--t-micro); letter-spacing: .06em;
-  color: var(--ok); border: 1px solid color-mix(in srgb, var(--ok) 45%, transparent);
-  border-radius: 999px; padding: 1px 7px;
+.palcoFundo > section > h2, #montagem > h2 { margin-bottom: var(--e4); }
+.palcoFundo > .linha:empty, .palcoFundo > #zip:empty { display: none; }
+
+#montagem { display: flex; flex-direction: column; gap: var(--e4); min-width: 0; }
+#montagem > * { margin: 0; }
+#marcarKill { min-height: 42px; padding: 0 var(--e5); }
+
+.margens summary {
+  display: flex; align-items: center; gap: var(--e3); cursor: pointer;
+  list-style: none; padding: 8px var(--e4); border-radius: var(--r-2);
+  border: 1px solid var(--linha-2); background: var(--sup-3);
+  font-size: var(--t-menor); color: var(--tinta-2);
 }
-.fila .editarUm { margin-left: 6px; }
+.margens summary::-webkit-details-marker { display: none; }
+.margens summary:hover { background: var(--sup-4); }
+.margens[open] summary { border-radius: var(--r-2) var(--r-2) 0 0; }
+.margens > .linha {
+  padding: var(--e4); border: 1px solid var(--linha-2); border-top: 0;
+  border-radius: 0 0 var(--r-2) var(--r-2); background: var(--sup-1);
+}
+.margens label { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.margens input[type="number"] { width: 58px; padding: 5px var(--e3); text-align: center; font-family: var(--letra-mono); }
+
+.barraSelecao { gap: var(--e3); }
+.barraSelecao select { width: auto; min-width: 130px; }
+.barraSelecao button { min-height: 30px; padding: 0 var(--e4); font-size: var(--t-menor); }
+.barraSelecao label { display: inline-flex; align-items: center; gap: 6px; }
+
+/* ── a lista de kills ──────────────────────────────────────────────────────
+   Cada kill é uma ficha, e a ficha diz o que ela É antes de dizer o que se
+   pode fazer com ela: número, hora, quem. Os botões vêm depois, e as vítimas
+   embrulham por baixo. */
+/* `align-content: start` no grelha e nas linhas: a lista ocupa a altura toda
+   do painel, e sem isto a única kill lá dentro esticava-se para a encher —
+   as três filas dentro do cartão ficavam a cem pixels umas das outras, com
+   bandas vazias no meio que não eram nada. */
+.momentos { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--e3); align-content: start; }
 .momentos li {
-  background: var(--caixa); border: 1px solid var(--borda); border-radius: 8px;
-  padding: 7px 12px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
-  font-variant-numeric: tabular-nums;
+  display: flex; align-items: center; align-content: center; gap: var(--e3); flex-wrap: wrap;
+  padding: var(--e4); border-radius: var(--r-2);
+  background: var(--sup-1); border: 1px solid var(--linha);
+  border-left: 3px solid var(--linha-2);
 }
-.momentos li.aqui { border-color: var(--borda-forte); background: var(--caixa-2); }
-/* Numa noite varrida a lista tem dezenas de linhas e a maioria nao e kill.
-   O risco verde a esquerda diz quais ja estao prontas sem ele ler nada. */
-.momentos li.confirmada { box-shadow: inset 3px 0 0 var(--ok); }
-.momentos .pega { width: 16px; height: 16px; accent-color: var(--texto-2); cursor: pointer; }
+.momentos li.nota { display: block; border-left-color: var(--linha); color: var(--tinta-3); }
+/* Onde ele está agora, na lista. Sem isto, com trinta kills, o cursor da
+   régua e a lista eram dois sítios sem relação nenhuma. */
+.momentos li.aqui {
+  border-color: color-mix(in srgb, var(--acento) 26%, var(--linha));
+  border-left-color: var(--acento);
+  background: color-mix(in srgb, var(--acento) 7%, var(--sup-1));
+}
+/* Com vítima identificada — a kill está pronta a exportar. */
+.momentos li.confirmada { border-left-color: var(--ok); }
+.momentos li .n {
+  font-size: var(--t-menor); font-weight: 500; color: var(--tinta-3);
+  min-width: 20px;
+}
+.momentos li > span:nth-of-type(1) { font-family: var(--letra-mono); font-size: var(--t-menor); }
+.momentos li .quem { font-weight: 500; font-size: var(--t-menor); color: var(--tinta); }
+.momentos li button { min-height: 30px; padding: 0 var(--e3); font-size: var(--t-menor); }
+.momentos li .fora { color: var(--tinta-3); background: transparent; border-color: transparent; }
+.momentos li .fora:hover { color: var(--perigo); background: var(--perigo-eco); border-color: transparent; }
+.momentos li .quantos { margin-left: auto; color: var(--tinta-3); font-size: var(--t-menor); }
+.momentos .ajustado {
+  font-size: var(--t-micro); font-weight: 600; letter-spacing: var(--letra-larga);
+  text-transform: uppercase; padding: 2px 7px; border-radius: var(--r-fio);
+  background: var(--marca-eco); color: var(--marca);
+}
+.momentos .pega { margin: 0; }
 
-/* A barra que trata da lista toda: filtrar, seleccionar, apagar, desfazer. */
-.barraSelecao { gap: 8px; margin-top: 10px; flex-wrap: wrap; }
-.barraSelecao button { padding: 4px 10px; font-size: var(--t-menor); }
-#anularApagar { border-color: var(--borda-forte); }
-.momentos .n { color: var(--texto-2); min-width: 26px; }
-.momentos .quem { color: var(--texto-2); }
-.momentos .quantos { color: var(--texto-2); font-size: var(--t-menor); margin-left: auto; }
-.momentos button { padding: 3px 9px; font-size: var(--t-menor); }
-/* Quem morreu nesta kill. Sem marcar ninguem, sai so a POV do dono. */
-/* Com trinta e um ângulos isto eram QUATRO filas de chips dentro de uma só
-   kill — e uma noite tem dezenas de kills. Duas filas e rola: quem morreu
-   está quase sempre entre os primeiros, e os outros continuam a um dedo. */
-.momentos .vitimas {
-  display: flex; gap: 5px; align-items: center; flex-wrap: wrap; flex-basis: 100%;
-  max-height: 66px; overflow-y: auto; overscroll-behavior: contain;
+/* As fichas de quem morreu. Uma linha inteira, por baixo — são até trinta
+   nomes, e trinta fichas no meio dos botões afogavam-nos. */
+.vitimas { flex: 1 1 100%; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; padding-top: var(--e3); border-top: 1px dashed var(--linha); }
+.vitimas .nota { margin-right: var(--e2); }
+.vit {
+  min-height: 26px; padding: 0 var(--e3); font-size: var(--t-menor);
+  font-family: var(--letra-mono); background: var(--sup-2); color: var(--tinta-2);
 }
-.momentos .vit { border-radius: 999px; opacity: .5; }
-.momentos .vit.sim { opacity: 1; border-color: var(--ok); color: var(--ok); }
-.momentos .vit:disabled { opacity: .2; }
+.vit.sim { background: var(--perigo-eco); border-color: color-mix(in srgb, var(--perigo) 45%, transparent); color: var(--perigo); }
+.olhar { flex: 1 1 100%; }
+.olhar:empty { display: none; }
 
-/* Os seis ecrãs, lado a lado, no instante do tiro. */
-.olhar { flex-basis: 100%; display: flex; gap: 6px; flex-wrap: wrap; align-items: flex-start; margin-top: 4px; }
-.olhar .nota { flex-basis: 100%; }
-.cartao {
-  display: grid; gap: 2px; padding: 4px; width: 118px; text-align: center;
-  background: var(--fundo); border: 1px solid var(--borda); border-radius: 8px;
-}
-.cartao img { width: 108px; height: 61px; object-fit: cover; border-radius: 4px; display: block; }
-.cartao .semImagem {
-  width: 108px; height: 61px; display: grid; place-items: center;
-  background: var(--video-fundo); border-radius: 4px; font-size: var(--t-micro); color: var(--texto-2);
-}
-.cartao b { font-size: var(--t-menor); overflow: hidden; text-overflow: ellipsis; }
-.cartao.morreu { border-color: var(--ok); }
-.cartao.morreu b { color: var(--ok); }
-label.pequeno { display: inline-flex; gap: 5px; align-items: center; margin: 0; font-size: var(--t-menor); }
-label.pequeno input {
-  width: 54px; background: var(--fundo); color: var(--texto); border: 1px solid var(--borda);
-  border-radius: 6px; padding: 4px 6px; font: inherit; font-variant-numeric: tabular-nums;
-}
+/* ═══ 9 · o fundo do palco: deteção, corte, ficheiros ═══════════════════════ */
 
-/* A lista de corte: um canal por linha, com o seu próprio tamanho. */
-.corte { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 6px; }
+/* A deteção automática, à parte e com o aviso à vista. Um botão que acerta em
+   cinco de seis não pode ter o mesmo peso de um que acerta sempre. */
+#automatico {
+  border-color: color-mix(in srgb, var(--aviso) 30%, var(--linha)) !important;
+  background: color-mix(in srgb, var(--aviso) 5%, var(--sup-2)) !important;
+}
+#automatico h2 { display: flex; align-items: center; gap: var(--e3); }
+#automatico select { width: auto; min-width: 130px; }
+
+.corte { list-style: none; margin: 0 0 var(--e3); padding: 0; display: grid; gap: 6px; }
 .corte li {
-  background: var(--caixa); border: 1px solid var(--borda); border-radius: 8px;
-  padding: 8px 12px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+  display: flex; align-items: center; gap: var(--e3); flex-wrap: wrap;
+  padding: 8px var(--e4); border-radius: var(--r-1);
+  background: var(--sup-1); border: 1px solid var(--linha); font-size: var(--t-menor);
 }
-.corte b { min-width: 120px; }
-.corte label { display: inline-flex; gap: 5px; align-items: center; margin: 0; font-size: var(--t-menor); }
-.corte input {
-  width: 58px; background: var(--fundo); color: var(--texto); border: 1px solid var(--borda);
-  border-radius: 6px; padding: 4px 6px; font: inherit; font-variant-numeric: tabular-nums;
-}
-.corte .dur { font-variant-numeric: tabular-nums; color: var(--texto-2); min-width: 48px; }
-.corte .estadoCorte { min-width: 120px; }
+.corte li b { font-family: var(--letra-mono); font-weight: 500; }
+.corte .dur { margin-left: auto; color: var(--tinta-3); }
 
-.fila { list-style: none; padding: 0; margin: 12px 0 0; display: grid; gap: 6px; }
+/* A fila de ficheiros prontos. */
+.fila { list-style: none; margin: var(--e4) 0 0; padding: 0; display: grid; gap: 6px; }
 .fila li {
-  background: var(--caixa); border: 1px solid var(--borda); border-radius: 8px; padding: 8px 12px;
-  font-variant-numeric: tabular-nums;
+  display: flex; align-items: center; gap: var(--e3); flex-wrap: wrap;
+  padding: 9px var(--e4); border-radius: var(--r-1);
+  background: var(--sup-2); border: 1px solid var(--linha); font-size: var(--t-menor);
 }
-.fila a { color: var(--texto); text-decoration-color: var(--texto-3); }
-.fila li { display: flex; gap: 8px; align-items: baseline; }
-.fila .apagarUm { margin-left: auto; padding: 2px 9px; font-size: var(--t-menor); line-height: 1.2; }
+.fila li b { font-family: var(--letra-mono); font-weight: 500; }
+.fila a { font-family: var(--letra-mono); }
+.fila button { min-height: 28px; padding: 0 var(--e3); font-size: var(--t-menor); }
+.botaoZip { text-decoration: none; }
+#zip { justify-content: flex-start; }
 
-footer { margin-top: 32px; border-top: 1px solid var(--borda); padding-top: 12px; }
+/* ═══ 10 · janelas ══════════════════════════════════════════════════════════ */
 
-@media (max-width: 620px) {
-  .grade { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
-  .palcoFoco { grid-auto-flow: row; }
-  .palcoFoco .tile, .palcoFoco.dois .tile { aspect-ratio: 16/9; min-height: 150px; }
-  .corte b { min-width: 0; }
-}
-
-
-/* ── criar clipe ──────────────────────────────────────────────────────────── */
-
-/* `display: grid` ganha ao `display: none` que o browser da a [hidden], e o
-   modal ficava invisivel mas por cima da pagina toda a apanhar os cliques.
-   Por isso o display so existe quando ele esta mesmo aberto. */
-.modal { display: none; }
-.modal:not([hidden]) {
-  position: fixed; inset: 0; z-index: 50; display: grid; place-items: center;
-  background: var(--vidro); padding: var(--e4);
+.modal {
+  position: fixed; inset: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: center;
+  padding: var(--e5); background: var(--vidro);
+  backdrop-filter: blur(3px);
 }
 .modalCaixa {
-  background: var(--caixa); border: 1px solid var(--borda); border-radius: 12px;
-  /* Mais largo desde que o editor do retrato vive aqui: 820 punha a fonte e o
-     9:16 lado a lado com pouca largura para os dois. */
-  padding: 14px; width: min(1040px, 100%); max-height: 92vh; overflow-y: auto;
-  display: grid; gap: 10px;
+  width: min(980px, 100%); max-height: calc(100vh - var(--e7));
+  overflow-y: auto; display: flex; flex-direction: column; gap: var(--e4);
+  padding: var(--e5); border-radius: var(--r-3);
+  background: var(--sup-2); border: 1px solid var(--linha-2);
+  box-shadow: var(--sombra-janela);
 }
-.modalTopo { display: flex; gap: 10px; align-items: center; }
-.modalTopo b { font-size: var(--t-base); }
-.modalTopo select { width: auto; flex: 1; }
-.modalTopo button { padding: 3px 10px; }
-#previaClipe {
-  width: 100%; aspect-ratio: 16/9; background: var(--video-fundo); border-radius: 8px;
-  object-fit: contain; display: block;
+/* Numa coluna flex os filhos encolhem quando o conteúdo passa do tecto: a
+   barra de corte, que tem 44 px, foi medida com 2. O que passa do tecto rola,
+   e nada se esmaga. */
+.modalCaixa > * { flex: 0 0 auto; }
+.modalCaixa.estreita { width: min(460px, 100%); }
+.modalTopo {
+  display: flex; align-items: center; gap: var(--e4);
+  padding-bottom: var(--e4); border-bottom: 1px solid var(--linha);
+}
+.modalTopo b { font-size: var(--t-medio); font-weight: 600; margin-right: auto; }
+.modalTopo select { width: auto; min-width: 150px; }
+.modalTopo button { width: 34px; min-width: 34px; padding: 0; background: transparent; border-color: transparent; color: var(--tinta-2); }
+.modalTopo button:hover { background: var(--sup-3); color: var(--tinta); border-color: transparent; }
+
+/* A linha que TERMINA a tarefa fica presa ao fundo da janela. Numa janela
+   que rola — e num telemóvel em pé rola sempre — o Exportar ficava noventa
+   pixels abaixo do ecrã, e nada na página dizia que ele existia. */
+.modalCaixa > .linha.fim {
+  position: sticky; bottom: calc(var(--e5) * -1); z-index: 5;
+  margin: 0 calc(var(--e5) * -1) calc(var(--e5) * -1);
+  padding: var(--e4) var(--e5); background: var(--sup-2);
+  border-top: 1px solid var(--linha);
 }
 
-/* A barra de corte. As pegas sao botoes a serio, para funcionarem com o
-   teclado e com um dedo — nao so com o rato. */
+.atalhos { display: grid; grid-template-columns: auto 1fr; gap: var(--e3) var(--e5); margin: 0; align-items: center; }
+.atalhos dt { display: flex; gap: 5px; }
+.atalhos dd { margin: 0; font-size: var(--t-menor); color: var(--tinta-2); }
+
+/* ── o editor do clipe ─────────────────────────────────────────────────────
+   À esquerda o vídeo deitado com os enquadramentos por cima; à direita o
+   9:16 pintado em tempo real. Os dois lado a lado e não um por baixo do
+   outro: mexer num e ver o outro é o gesto todo. */
+.clipeEditor { display: flex; gap: var(--e4); align-items: flex-start; }
+.clipeFonte { flex: 1 1 auto; min-width: 0; display: grid; gap: var(--e2); }
+.clipeRetrato { flex: 0 0 auto; display: grid; gap: var(--e2); justify-items: center; }
+
+/* A caixa encolhe até ao vídeo, e não ao contrário.
+   Com uma proporção fixa na caixa e `contain` no vídeo, um 16:9 limitado
+   pela altura fica com barras pretas nos lados — e as caixas de
+   enquadramento, que se posicionam em percentagem do CONTENTOR, ficam
+   desalinhadas da imagem e arrastam à velocidade errada. Ninguém vê isso no
+   editor: vê-se no ficheiro exportado, com o enquadramento noutro sítio. */
+.fonteClipe { position: relative; line-height: 0; width: fit-content; margin-inline: auto; max-width: 100%; }
+.fonteClipe video { width: auto; max-width: 100%; max-height: 34vh; display: block; background: var(--video-fundo); }
+.recortes { position: absolute; inset: 0; }
+
+/* As guias do terço, por baixo dos enquadramentos. */
+.guia { position: absolute; border-left: 1px dashed #ffffff2e; border-top: 1px dashed #ffffff2e; }
+
+/* Cada enquadramento com a SUA cor, e a mesma cor do outro lado. Sem isto,
+   com dois enquadramentos, nada dizia qual dos dois rectângulos da esquerda
+   ia dar em qual faixa da direita — descobria-se por tentativa.
+   A sombra de 9999 px escurece tudo o que fica DE FORA do enquadramento: é
+   o que se vê num visor a sério, e diz o que entra no ficheiro. */
+.recorte {
+  position: absolute; cursor: move; touch-action: none;
+  border: 2px solid var(--acento); box-shadow: 0 0 0 9999px #00000059;
+}
+.recorte[data-i="1"] { border-color: var(--marca); }
+.recorte .ordem {
+  position: absolute; top: 3px; left: 3px; padding: 0 5px; border-radius: var(--r-fio);
+  font: 600 var(--t-micro)/1.6 var(--letra-mono);
+  background: var(--acento); color: var(--sobre-acento);
+}
+.recorte[data-i="1"] .ordem { background: var(--marca); color: var(--sobre-marca); }
+
+/* Os quatro cantos de cada enquadramento. Com um canto só, encolher pela
+   esquerda obrigava a encolher pela direita e a arrastar a caixa de volta:
+   dois gestos para um. O puxador fica ACIMA de qualquer caixa e não só da
+   sua — a caixa que vem depois no HTML tapava-o. */
+.puxar {
+  position: absolute; width: 17px; height: 17px; z-index: 5; touch-action: none;
+  background: var(--acento); border-radius: var(--r-redondo); box-shadow: 0 0 0 2px var(--sup-0);
+}
+.recorte[data-i="1"] .puxar { background: var(--marca); }
+.puxar.no { top: -9px; left: -9px; cursor: nwse-resize; }
+.puxar.ne { top: -9px; right: -9px; cursor: nesw-resize; }
+.puxar.so { bottom: -9px; left: -9px; cursor: nesw-resize; }
+.puxar.se { bottom: -9px; right: -9px; cursor: nwse-resize; }
+
+.molduraRetrato { position: relative; line-height: 0; }
+.telaRetrato {
+  width: auto; height: 34vh; max-height: 34vh; display: block;
+  background: var(--video-fundo); border: 1px solid var(--linha); border-radius: var(--r-2);
+}
+/* A faixa que diz de onde vem cada pedaço do 9:16 — a mesma cor do
+   rectângulo do lado esquerdo que a alimenta. */
+.faixaRetrato { position: absolute; left: 0; right: 0; pointer-events: none; border: 2px solid var(--acento); }
+.faixaRetrato.q1 { border-color: var(--marca); }
+/* O divisor: arrasta-se para dar mais altura ao quadro de cima ou ao de baixo. */
+#divisor {
+  position: absolute; left: 0; right: 0; height: 26px; transform: translateY(-50%);
+  background: none; border: 0; padding: 0; min-height: 0; cursor: ns-resize; touch-action: none; z-index: 4;
+}
+#divisor span { display: block; height: 3px; background: var(--tinta); box-shadow: 0 0 0 1px #0009; }
+#divisor:hover span { background: var(--acento); }
+.modosRetrato { justify-content: center; }
+.modoRetrato { width: 40px; min-width: 40px; padding: 0; }
+.modoRetrato .ic { width: 19px; height: 19px; }
+.semPrevia {
+  width: 100%; min-height: 44px; background: var(--aviso-eco); color: var(--aviso);
+  border-color: color-mix(in srgb, var(--aviso) 40%, transparent);
+}
+
+/* ── a barra de corte ──────────────────────────────────────────────────────
+   O poço é a gravação, o âmbar é o pedaço escolhido, e a agulha branca é
+   onde a imagem está. As mesmas três cores da linha do tempo grande. */
 .barraClipe {
-  position: relative; height: 40px; background: var(--realce); border-radius: 8px;
-  touch-action: none; user-select: none;
+  position: relative; height: 44px; border-radius: var(--r-2);
+  background: var(--sup-1); border: 1px solid var(--linha); overflow: hidden; touch-action: none;
 }
-.barraClipe .seleccao {
-  position: absolute; top: 0; bottom: 0; background: color-mix(in srgb, var(--acento) 22%, transparent);
-  border-left: 2px solid var(--acento); border-right: 2px solid var(--acento);
-}
+.barraClipe .seleccao { position: absolute; top: 0; bottom: 0; background: var(--marca-eco); border-inline: 1px solid var(--marca-fio); }
 .barraClipe .pega {
-  position: absolute; top: 0; bottom: 0; width: 16px; margin-left: -8px; padding: 0;
-  background: var(--acento); border: 0; border-radius: 4px; cursor: ew-resize;
+  position: absolute; top: 0; bottom: 0; width: 14px; margin: 0; padding: 0; min-height: 0;
+  background: var(--marca); border: 0; border-radius: 0; cursor: ew-resize; z-index: 3;
 }
-.barraClipe .cabeca {
-  position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px;
-  background: var(--texto); pointer-events: none;
+.barraClipe .pega:hover { background: var(--marca-alto); }
+.barraClipe .pega::after {
+  content: ''; position: absolute; inset: 50% auto auto 50%; transform: translate(-50%, -50%);
+  width: 2px; height: 14px; background: var(--sobre-marca); border-radius: 1px;
+  box-shadow: 3px 0 0 var(--sobre-marca), -3px 0 0 var(--sobre-marca);
 }
-/* Os botões de acção ficam sempre à mão, mesmo com o editor aberto e a caixa a
-   rolar por dentro. Antes ficavam por baixo da dobra: quem abria o clipe via o
-   editor e tinha de rolar para encontrar o botão que exporta. */
-.linha.fim {
-  justify-content: flex-end;
-  position: sticky; bottom: calc(var(--e3) * -1);
-  background: var(--caixa); padding: var(--e2) 0;
-  border-top: 1px solid var(--borda); margin-top: var(--e1);
-}
-#tituloClipe {
-  width: 100%; background: var(--fundo); color: var(--texto);
-  border: 1px solid var(--borda); border-radius: 8px; padding: 9px 11px; font: inherit;
-}
+.barraClipe .pega.de { border-radius: var(--r-fio) 0 0 var(--r-fio); }
+.barraClipe .pega.ate { border-radius: 0 var(--r-fio) var(--r-fio) 0; }
+.barraClipe .cabeca { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--tinta); z-index: 4; pointer-events: none; }
 
-/* O ZIP da montagem toda. E o unico botao desta zona que faz o trabalho todo
-   de uma vez, e tem de se ver que e esse. */
-#zip:empty { display: none; }
-.botaoZip {
-  display: inline-block; padding: 8px 16px; border-radius: 8px; font-weight: 600;
-  background: var(--acento); color: var(--sobre-acento); text-decoration: none;
+/* Uma linha por ponta, e o ▶ ao lado das duas: toca o pedaço inteiro e não
+   uma das pontas. Numa linha só, num telemóvel em pé, o último botão caía
+   sozinho para baixo — e um par de setas partido ao meio deixa de se ler
+   como um par. Em grelha de quatro colunas isso não pode acontecer. */
+.aparar {
+  display: grid; grid-template-columns: auto minmax(48px, 1fr) minmax(48px, 1fr) 56px;
+  gap: var(--e3); align-items: stretch; justify-content: start; max-width: 420px;
 }
-.botaoZip:hover { filter: brightness(1.1); }
+.aparar .rotuloCampo { align-self: center; }
+.aparar .passo { min-height: 44px; width: auto; min-width: 0; padding: 0; }
+.aparar .ver { grid-row: 1 / span 2; grid-column: 4; width: auto; min-width: 0; padding: 0; }
+/* A seta dupla aponta para onde o botão anda. */
+.aparar .recua .ic, .saltos button[id^="menos"] .ic { transform: rotate(180deg); }
 
-/* ── a pagina da Twitch ─────────────────────────────────────────────────────
-   Reaproveita a grelha e os tiles da Kick. O que muda e que dentro de cada
-   tile ha um iframe da Twitch em vez de um <video> nosso: nao lhe podemos
-   tocar por dentro, so dizer-lhe onde saltar. */
-.marca { color: var(--marca-twitch); }                 /* o roxo da Twitch, so no titulo */
-.voltar { color: inherit; text-decoration: none; }
-.voltar:hover { text-decoration: underline; }
+/* ═══ 11 · o ecrã de PC ═════════════════════════════════════════════════════ */
 
-.aviso {
-  background: var(--caixa); border: 1px solid var(--borda); border-left: 3px solid var(--marca-twitch);
-  border-radius: 8px; padding: 10px 14px; margin: 0 0 14px; line-height: 1.5; font-size: var(--t-menor);
-}
-.aviso a { color: var(--acento); }
-
-/* O tile da Kick e um quadrado 16:9 com o video a preencher tudo. O da Twitch
-   tem tres andares — nome, quadro, nota — e enfiados naquele 16:9 os de baixo
-   transbordavam e caiam POR CIMA do de cima: a caixa do som ficava impossivel
-   de carregar e nada no ecra o explicava. A proporcao passa para o quadro. */
-.tile.tw {
-  aspect-ratio: auto; cursor: default;
-  display: grid; grid-template-rows: auto auto auto;
-}
-/* `position: static` a serio: a `.nota` dentro de um `.tile` e absoluta na
-   pagina da Kick — e um rotulo por cima do video — e aqui cobria o tile
-   inteiro, incluindo a caixa do som. Herdar uma regra de outra pagina e assim:
-   nada parece errado no ecra e o botao simplesmente nao responde. */
-.tile.tw .estadoTile { position: static; padding: 0 8px 6px; min-height: 1.2em; }
-
-/* O iframe nao aceita `object-fit`, por isso a proporcao tem de ser do quadro. */
-.quadro { aspect-ratio: 16 / 9; background: var(--video-fundo); }
-.quadro iframe { width: 100%; height: 100%; border: 0; display: block; }
-/* A caixa do som desta pagina chama-se `ligarSom` e nao `som`: `.tile .som` ja
-   existe na pagina da Kick, e e `position: absolute` por cima do video. Duas
-   coisas diferentes com o mesmo nome davam um botao que nao se conseguia
-   carregar e nada no ecra a explicar porque. */
-.tile .cabeca { display: flex; gap: 10px; align-items: center; padding: 5px 8px; }
-.tile .cabeca .pequeno { display: flex; gap: 5px; align-items: center; }
-.tile .cabeca b { flex: 1; }
-/* Quem nao estava a transmitir naquele instante. Escurecer diz isso de
-   relance, sem ele ter de ler a nota por baixo. */
-.tile.fora { opacity: .45; }
-
-.sugestoes .sug {
-  display: inline-flex; gap: 7px; align-items: center; margin: 0 6px 6px 0; padding: 4px 10px;
-}
-.sugestoes .sug img { border-radius: 50%; }
-.barraTempo { flex-wrap: wrap; gap: 7px; }
-/* O caminho para a outra pagina, no roxo dela. */
-.paraTwitch {
-  color: var(--marca-twitch); text-decoration: none; font-size: var(--t-menor); border: 1px solid color-mix(in srgb, var(--marca-twitch) 40%, transparent);
-  border-radius: 999px; padding: 3px 11px;
-}
-.paraTwitch:hover { background: color-mix(in srgb, var(--marca-twitch) 18%, transparent); }
-/* A kill que está a ser vista em ciclo. */
-.momentos .ver.aVer { border-color: var(--acento); color: var(--acento); }
-.momentos li:has(.ver.aVer) { border-color: var(--acento); }
-
-
-/* ── o ecrã grande ──────────────────────────────────────────────────────────
-   Num telemóvel isto empilha e sempre empilhou. Num PC havia largura a mais e
-   altura a menos: o vídeo enorme, a montagem a quilómetros dele, e metade do
-   monitor vazio dos dois lados. Duas colunas resolvem os três de uma vez. */
-/* `:not([hidden])` e nao `#palco` seco. Um `display` qualquer ganha ao
-   `display: none` do atributo `hidden`, e o palco passava a aparecer com a
-   pagina ainda vazia. Ja me aconteceu uma vez com o modal do clipe; e a
-   segunda vez que caio no mesmo sitio, por isso fica escrito. */
-#palco:not([hidden]) { display: grid; gap: 24px; }
+/* Duas colunas assim que houver largura: o vídeo com tudo o que se carrega
+   por baixo dele, e a linha do tempo ao lado. Num monitor havia largura a
+   mais e altura a menos — o vídeo enorme, a montagem a quilómetros dele e
+   metade do ecrã vazia dos dois lados. */
 @media (min-width: 1080px) {
-  /* Três zonas: o vídeo à esquerda, a linha do tempo à direita, e a montagem
-     a toda a largura por baixo das duas. Em áreas nomeadas e não em ordem de
-     documento, porque a zona de baixo tem de atravessar as duas colunas. */
-  #palco:not([hidden]) {
-    /* Duas colunas so: o video com tudo o que se carrega por baixo dele, e a
-       linha do tempo ao lado. O fundo deixou de ser uma faixa a atravessar a
-       pagina — vive dentro da coluna do video, por baixo dos quadrados. */
+  .mesa #palco:not([hidden]) {
     grid-template-columns: minmax(0, 1fr) clamp(400px, 30vw, 640px);
-    grid-template-areas: "video lado";
+    grid-template-areas: "video lado" "monta monta";
     align-items: start;
   }
   .palcoVideo { grid-area: video; min-width: 0; }
-  .palcoLadoCaixa { grid-area: lado; min-width: 0; }
-  .palcoFundo { min-width: 0; margin-top: var(--e3); }
+  .palcoLadoCaixa { grid-area: lado; min-width: 0; align-self: stretch; }
+  #montagem { grid-area: monta; min-width: 0; }
+  .palcoFundo { min-width: 0; margin-top: var(--e6); }
 
   /* A linha do tempo acompanha a página: ver o vídeo e saber onde se está no
-     mesmo instante é o gesto todo.
-     A caixa à volta não é decoração — é o travão. Um `sticky` pára no fim do
-     seu bloco pai, e quando o pai era a CÉLULA da grelha ele não parava:
-     medi-o em 1115, 1440 e 2560, e nos três passava por cima da montagem
-     durante dez posições de scroll. Com um bloco normal esticado à altura da
-     linha, o limite passa a estar definido e a coluna pára onde a montagem
-     começa. */
-  .palcoLadoCaixa { align-self: stretch; }
-  .palcoLado {
-    position: sticky; top: 16px;
-    max-height: calc(100vh - 32px); overflow-y: auto;
-    padding-right: 4px;
-  }
-  .palcoLado h2:first-child { margin-top: 0; }
+     mesmo instante é o gesto todo. A caixa à volta não é decoração — é o
+     travão: um `sticky` pára no fim do seu bloco pai, e quando o pai era a
+     CÉLULA da grelha ele não parava. Medido em 1115, 1440 e 2560. */
+  .palcoLado { position: sticky; top: var(--e5); max-height: calc(100vh - var(--e7)); overflow-y: auto; padding-right: var(--e2); }
 
-  /* Em baixo, lado a lado. "Não precisa um widget tão grande": em três
-     colunas cada um fica do tamanho do que tem dentro, em vez de uma coluna
-     estreita a empilhar tudo por cima de tudo. A montagem leva o dobro
-     porque é a única com uma lista lá dentro. */
   /* Tantas colunas quantas couberem, com um mínimo por bloco: num ecrã de
-     1400 px dá duas, num de 2560 dá quatro. Assim o fundo ATRAVESSA o ecrã em
-     vez de deixar metade vazia — e nenhum bloco fica esticado, porque a
-     largura de cada um é a da sua coluna e não a da página. */
-  .palcoFundo {
-    display: grid; gap: 16px; align-items: start;
-    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+     1400 dá duas, num de 2560 dá quatro. Assim o fundo ATRAVESSA o ecrã em
+     vez de deixar metade vazia, e nenhum bloco fica esticado. */
+  .palcoFundo { display: grid; gap: var(--e5); align-items: start; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
+}
+
+/* ── o ecrã inteiro como área de trabalho ──────────────────────────────────
+   "Quero que minha tela cheia vire minha área de trabalho: tudo o que a
+    pessoa precise clicar e opções tem que aparecer na tela sem ela precisar
+    rolar pra baixo ou pra cima pra procurar coisas ou botões."
+
+   Só num ecrã de PC, e só depois de haver uma noite aberta: a página de
+   entrada continua a fluir e o telemóvel fica como está.
+
+   A regra é uma: a PÁGINA não rola; rolam os painéis, e cada painel rola só
+   a parte que cresce com a noite. À esquerda o vídeo em foco tem altura
+   fixa e é a grelha dos ângulos que rola. À direita a linha do tempo tem o
+   cursor e os saltos sempre fixos e são as faixas que rolam; por baixo dela
+   a montagem, com o Marcar kill, os filtros e o Exportar fixos e a lista de
+   kills a rolar. Medido com dezassete ângulos e uma kill, em 1920×1080 e em
+   1366×720: tudo o que se carrega está dentro do ecrã. */
+@media (min-width: 1080px) and (min-height: 640px) {
+  body.mesa:has(#palco:not([hidden])) {
+    height: 100vh; box-sizing: border-box; overflow: hidden;
+    display: flex; flex-direction: column;
   }
-  /* A montagem é a única com uma lista lá dentro: leva duas colunas quando
-     houver duas para dar, e uma quando não houver. */
-  .palcoFundo > #montagem { grid-column: span 2; }
-  @media (max-width: 1400px) { .palcoFundo > #montagem { grid-column: span 1; } }
-}
-
-/* Um `select` no meio de uma linha de botões não tem de ocupar a linha toda.
-   O "uma hora" da deteção automática estava com 1200 px de largura. */
-.linha select { width: auto; min-width: 120px; }
-.linha input[type="number"] { width: 68px; }
-
-/* O fim da página estava desarrumado: quatro blocos seguidos, todos com o
-   mesmo peso e sem nada entre eles. Cada um passa a ser uma caixa. */
-.palcoFundo > section, .palcoFundo > .linha, .palcoFundo > #zip, #montagem {
-  background: var(--caixa); border: 1px solid var(--borda); border-radius: 10px;
-  padding: 12px 14px; margin-bottom: 12px;
-}
-.palcoFundo > section > h2 { margin-top: 0; }
-.palcoFundo > .linha:empty, .palcoFundo > #zip:empty { display: none; }
-.palcoFundo .momentos li { background: var(--fundo); }
-
-/* A deteção automática, à parte e no fim. Um botão que acerta em cinco de seis
-   não pode ter o mesmo peso de um que acerta sempre — e ele viu-o antes de mim.
-   A etiqueta "teste" não é enfeite: é o aviso. */
-#automatico { border-color: color-mix(in srgb, var(--aviso) 26%, var(--borda)) !important; background: color-mix(in srgb, var(--aviso) 7%, var(--caixa)) !important; }
-#automatico h2 { display: flex; align-items: center; gap: 8px; }
-.etiqueta {
-  font-size: var(--t-micro); letter-spacing: .1em; text-transform: uppercase;
-  background: var(--aviso-fundo); color: var(--aviso); border: 1px solid color-mix(in srgb, var(--aviso) 45%, transparent);
-  border-radius: 999px; padding: 2px 8px; font-weight: 700;
-}
-#automatico .nota { margin: 0 0 10px; line-height: 1.45; }
-
-/* ── o modal de clipe num telemóvel ─────────────────────────────────────────
-   Desenhado num ecrã grande, num telemóvel em pé partia-se: o `+1s` caía
-   sozinho para a linha seguinte e os dois botões que terminam a tarefa
-   ficavam encostados ao canto. */
-.modal .segundos { gap: 8px; }
-.modal .segundos button { flex: 1; padding: 10px; font-size: var(--t-base); }
-
-/* Aparar: cada ponta na sua linha, e o ▶ ao lado das duas.
-   Uma grelha e não duas linhas soltas — assim o "Início" e o "Fim" ficam
-   alinhados um por cima do outro, e o ▶ ocupa a altura dos dois porque toca
-   o pedaço INTEIRO, e não uma das pontas. */
-/* "Eles estão exageradamente grandes, pelo menos no celular." Estavam: as
-   colunas eram `1fr` e num telemóvel isso dá dois botões de 270 px para uma
-   seta de meio segundo. Agora têm largura de botão e não de painel, e a linha
-   encosta à esquerda em vez de se esticar. */
-.aparar {
-  display: grid;
-  grid-template-columns: auto 56px 56px 56px;
-  justify-content: start;
-  gap: 8px;
-  align-items: stretch;
-  margin-top: 8px;
-}
-.aparar .rotuloCampo { align-self: center; margin: 0; }
-.aparar .passo {
-  padding: 8px 0;
-  font-size: var(--t-nota);
-  min-height: 44px;
-}
-.aparar .ver {
-  grid-row: 1 / span 2;
-  grid-column: 4;
-  font-size: 18px;
-  background: var(--acento);
-  color: var(--sobre-acento);
-  border-color: transparent;
-  font-variant-emoji: text;
-}
-.aparar .ver[aria-pressed="true"] { background: var(--marcador); }
-@media (max-width: 620px) {
-  /* Uma folha que sobe do fundo, que é o que um telemóvel faz com isto. */
-  .modal:not([hidden]) { place-items: end center; padding: 0; }
-  .modalCaixa {
-    width: 100%; max-height: 94vh; border-radius: 14px 14px 0 0;
-    padding: 14px 14px calc(14px + env(safe-area-inset-bottom));
+  body.mesa:has(#palco:not([hidden])) > header { flex: 0 0 auto; margin-bottom: var(--e2); }
+  body.mesa:has(#palco:not([hidden])) > header .topo { padding-bottom: var(--e3); }
+  body.mesa:has(#palco:not([hidden])) > header .passos { display: none; }
+  body.mesa:has(#palco:not([hidden])) > header .topo h1 { font-size: var(--t-medio); }
+  /* A preparação vira uma BARRA e não um par de painéis com tecto.
+     Com `max-height: 10vh` e rolagem por dentro, o que se via era um painel
+     cortado a meio de uma palavra — a página parecia partida. Aqui os dois
+     painéis deitam-se numa faixa: os rótulos calam-se (o `placeholder` de
+     cada caixa já diz o que ela é), a caixa dos canais fica com uma linha de
+     altura e cresce por dentro, e tudo cabe em 46 px. */
+  body.mesa:has(#palco:not([hidden])) > .topoTrabalho {
+    flex: 0 0 auto; display: flex; align-items: center; gap: var(--e3);
+    max-height: none; overflow: visible; margin-bottom: var(--e3);
   }
-  /* Os dois botões do fim ocupam a linha e são fáceis de acertar com o dedo. */
-  .modal .linha.fim { flex-wrap: wrap; }
-  .modal .linha.fim #estadoClipe { flex-basis: 100%; }
-  .modal .linha.fim button { flex: 1; padding: 12px; font-size: var(--t-base); }
+  body.mesa:has(#palco:not([hidden])) > .topoTrabalho > * { min-width: 0; }
+  body.mesa:has(#palco:not([hidden])) #entrada,
+  body.mesa:has(#palco:not([hidden])) #noites {
+    display: flex; align-items: center; gap: var(--e3); flex: 1 1 0;
+    padding: var(--e3); margin: 0; max-width: none; border-radius: var(--r-2);
+  }
+  body.mesa:has(#palco:not([hidden])) .topoTrabalho .rotuloCampo,
+  body.mesa:has(#palco:not([hidden])) .topoTrabalho label[for],
+  body.mesa:has(#palco:not([hidden])) #resumoNoite,
+  body.mesa:has(#palco:not([hidden])) #entrada > .campo:first-child { display: none; }
+  body.mesa:has(#palco:not([hidden])) #entrada .entradaGrelha { display: flex; gap: var(--e3); flex: 1 1 auto; min-width: 0; }
+  body.mesa:has(#palco:not([hidden])) #entrada .campo,
+  body.mesa:has(#palco:not([hidden])) #noites .campo { flex: 1 1 0; min-width: 0; }
+  body.mesa:has(#palco:not([hidden])) #entrada textarea {
+    min-height: 34px; height: 34px; padding: 7px var(--e3); white-space: pre; overflow-x: hidden;
+  }
+  body.mesa:has(#palco:not([hidden])) .topoTrabalho input,
+  body.mesa:has(#palco:not([hidden])) .topoTrabalho select { min-height: 34px; padding: 6px var(--e3); }
+  /* A lupa vive dentro da caixa: com a caixa apertada, a folga da esquerda
+     tem de encolher com ela ou o desenho fica por cima da primeira letra. */
+  body.mesa:has(#palco:not([hidden])) .procura input { padding-left: var(--e6); }
+  body.mesa:has(#palco:not([hidden])) .procura .lupa { left: var(--e3); width: 14px; height: 14px; }
+  body.mesa:has(#palco:not([hidden])) #canaisEstado:has(li) { max-width: 220px; }
+  body.mesa:has(#palco:not([hidden])) .topoTrabalho select { padding-right: var(--e6); }
+  body.mesa:has(#palco:not([hidden])) .topoTrabalho button { min-height: 34px; padding: 0 var(--e4); }
+  body.mesa:has(#palco:not([hidden])) .barraSessao { flex: 1 1 auto; align-items: center; flex-wrap: nowrap; }
+  body.mesa:has(#palco:not([hidden])) #canaisEstado { display: none; }
+  body.mesa:has(#palco:not([hidden])) #canaisEstado:has(li) { display: block; flex: 0 1 auto; max-height: 46px; overflow-y: auto; }
+  body.mesa:has(#palco:not([hidden])) > footer { display: none; }
+  body.mesa:has(#palco:not([hidden])) #palco:not([hidden]) {
+    flex: 1 1 auto; min-height: 0; gap: var(--e4);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas: "video tempo" "video monta";
+    align-items: stretch;
+  }
+
+  /* ESQUERDA. `overflow: hidden` de propósito: o que não couber fica cortado
+     e o teste apanha-o, em vez de escorrer e pôr a página a rolar. */
+  body.mesa:has(#palco:not([hidden])) .palcoVideo {
+    grid-area: video; display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+  }
+  /* O foco cresce até onde a coluna deixa, e a grelha fica com o resto.
+     Estava preso em 32vh: num monitor de 1920 isso dava 615 px de vídeo numa
+     coluna de 1250, com 600 px de preto vazio dos dois lados — o vídeo é a
+     única coisa desta página que quer espaço, e era a única que não o
+     usava. Vai a 42vh com tecto na largura, e a grelha continua a rolar. */
+  body.mesa:has(#palco:not([hidden])) .palcoFoco {
+    display: flex; justify-content: center; align-items: stretch;
+    height: 48vh; min-height: 140px; max-height: calc(100% - 300px); flex: 0 1 auto; margin: 0 0 var(--e2);
+  }
+  body.mesa:has(#palco:not([hidden])) .palcoFoco:empty { display: none; }
+  body.mesa:has(#palco:not([hidden])) .palcoFoco .tile {
+    height: 100%; width: auto; aspect-ratio: 16/9; min-height: 0; max-width: 100%; flex: 0 1 auto;
+  }
+  body.mesa:has(#palco:not([hidden])) .palcoFoco.dois .tile { max-width: calc(50% - 4px); }
+  body.mesa:has(#palco:not([hidden])) .barraClipar { flex: 0 0 auto; margin: var(--e2) 0; }
+  body.mesa:has(#palco:not([hidden])) .barraGrelha { flex: 0 0 auto; margin: 0; }
+  /* A grelha é a única coisa da esquerda que cede: tudo o resto tem tamanho.
+     Uma grelha com altura definida esmaga as linhas para caber e o
+     `aspect-ratio` perde — ficavam tiras de 25 px umas por cima das outras.
+     As linhas ficam com o tamanho do conteúdo e o resto rola. */
+  body.mesa:has(#palco:not([hidden])) #grade {
+    flex: 1 1 0; min-height: 60px; overflow-y: auto; margin: var(--e2) 0; padding-right: var(--e2);
+    align-content: start; grid-auto-rows: max-content;
+    /* Sombra de rolagem: uma fita escura no topo e no fundo que só aparece
+       quando há mesmo mais quadrados para lá da borda. Sem ela, uma fila
+       cortada ao meio lê-se como um erro de desenho e não como "continua".
+       O truque é o `local` das duas primeiras camadas — elas rolam com o
+       conteúdo e tapam as `scroll` que estão presas à caixa. */
+    background:
+      linear-gradient(var(--sup-0) 30%, transparent) top / 100% 18px local no-repeat,
+      linear-gradient(transparent, var(--sup-0) 70%) bottom / 100% 18px local no-repeat,
+      radial-gradient(farthest-side at 50% 0, #000000a6, transparent) top / 100% 10px scroll no-repeat,
+      radial-gradient(farthest-side at 50% 100%, #000000a6, transparent) bottom / 100% 10px scroll no-repeat;
+  }
+  body.mesa:has(#palco:not([hidden])) #grade .tile { align-self: start; }
+  body.mesa:has(#palco:not([hidden])) .palcoFundo {
+    flex: 0 0 auto; max-height: 22vh; overflow-y: auto; margin-top: 0; padding-right: var(--e2);
+    grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--e4);
+  }
+  body.mesa:has(#palco:not([hidden])) .palcoFundo > section,
+  body.mesa:has(#palco:not([hidden])) .palcoFundo > .linha { padding: var(--e3) var(--e4); margin-bottom: 0; }
+  body.mesa:has(#palco:not([hidden])) #automatico > p { display: none; }
+
+  /* DIREITA, em cima: a linha do tempo. */
+  body.mesa:has(#palco:not([hidden])) .palcoLadoCaixa { grid-area: tempo; min-height: 0; display: flex; overflow: hidden; }
+  body.mesa:has(#palco:not([hidden])) .palcoLado {
+    position: static; max-height: 40vh; flex: 1 1 auto; min-height: 0; min-width: 0; width: 100%;
+    display: flex; flex-direction: column; overflow: hidden; padding-right: 0;
+  }
+  body.mesa:has(#palco:not([hidden])) .palcoLado > * { flex: 0 0 auto; }
+  body.mesa:has(#palco:not([hidden])) .palcoLado .relogio,
+  body.mesa:has(#palco:not([hidden])) .palcoLado .marcas,
+  body.mesa:has(#palco:not([hidden])) .palcoLado .linha { min-width: 0; }
+  /* O relógio encolhe (min-height 0) mas não ESCORRE (overflow hidden): as
+     faixas cedem primeiro, até três canais; se ainda assim não couber, é o
+     fim dele que fica cortado — e o teste apanha-o — em vez de os saltos
+     irem parar por cima do que vem a seguir. Medido: com `min-height: auto`
+     o mínimo passava a ser as faixas INTEIRAS (380 px) e o painel rolava. */
+  body.mesa:has(#palco:not([hidden])) .palcoLado > .relogio {
+    flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden;
+  }
+  body.mesa:has(#palco:not([hidden])) .relogio > * { flex: 0 0 auto; }
+  body.mesa:has(#palco:not([hidden])) .relogio > .faixas { flex: 1 1 auto; min-height: 56px; overflow-y: auto; overflow-x: hidden; }
+  body.mesa:has(#palco:not([hidden])) .relogio .saltos { gap: 3px; }
+  body.mesa:has(#palco:not([hidden])) .relogio .saltos button { min-height: 32px; padding: 0 var(--e2); }
+  body.mesa:has(#palco:not([hidden])) .relogio .marcas button { min-height: 32px; padding: 0 var(--e3); }
+  body.mesa:has(#palco:not([hidden])) .relogio .linha { margin-top: var(--e3); }
+  body.mesa:has(#palco:not([hidden])) #agora { font-size: var(--t-medio); }
+
+  /* DIREITA, em baixo: a montagem. */
+  body.mesa:has(#palco:not([hidden])) #montagem {
+    grid-area: monta; min-height: 0; display: flex; flex-direction: column;
+    margin-bottom: 0; overflow: hidden; padding: var(--e3) var(--e4); gap: var(--e2);
+  }
+  body.mesa:has(#palco:not([hidden])) #montagem > * { flex: 0 0 auto; }
+  body.mesa:has(#palco:not([hidden])) #montagem > h2 { display: none; }
+  body.mesa:has(#palco:not([hidden])) #montagem > .linha,
+  body.mesa:has(#palco:not([hidden])) #montagem > .barraSelecao { gap: var(--e2) 6px; margin: 0; }
+  body.mesa:has(#palco:not([hidden])) #montagem > .linha button,
+  body.mesa:has(#palco:not([hidden])) #montagem > .barraSelecao button,
+  body.mesa:has(#palco:not([hidden])) #montagem > .barraSelecao select {
+    min-height: 30px; padding: 0 var(--e3); font-size: var(--t-menor);
+  }
+  body.mesa:has(#palco:not([hidden])) #marcarKill { min-height: 32px; }
+  body.mesa:has(#palco:not([hidden])) #montagem > .barraSelecao select { min-width: 88px; max-width: 112px; }
+  /* Um botão apagado não precisa de sítio: numa faixa de 380 px é a
+     diferença entre os filtros numa linha ou em duas. */
+  body.mesa:has(#palco:not([hidden])) #montagem > .barraSelecao button:disabled { display: none; }
+  /* A ordem: Marcar kill, Exportar, a LISTA, e os filtros presos ao fundo.
+     Com os filtros por cima da lista, num portátil de 720 a primeira kill
+     ficava por baixo do ecrã. No fim continuam sempre à vista: a lista é que
+     encolhe, nunca eles. */
+  body.mesa:has(#palco:not([hidden])) #montagem > .linha:has(#marcarKill) { order: 0; }
+  body.mesa:has(#palco:not([hidden])) #montagem > .linha:has(#baixarMontagem) { order: 1; }
+  body.mesa:has(#palco:not([hidden])) #montagem > .barraSelecao { order: 5; }
+  body.mesa:has(#palco:not([hidden])) #montagem > .momentos {
+    order: 4; flex: 1 1 auto; min-height: 60px; overflow-y: auto; padding-right: var(--e2);
+    /* Uma coluna: numa faixa de 500 px, duas colunas de kills com dezassete
+       nomes cada não se leem. */
+    grid-template-columns: 1fr; gap: var(--e2);
+  }
+  body.mesa:has(#palco:not([hidden])) .momentos li { padding: 6px var(--e3); gap: 6px; }
+  body.mesa:has(#palco:not([hidden])) .momentos .vit { min-height: 22px; padding: 0 6px; font-size: var(--t-micro); }
+  body.mesa:has(#palco:not([hidden])) .vitimas { padding-top: var(--e2); }
 }
 
-/* ── o caminho de três passos ───────────────────────────────────────────────
-   Quem chega vê duas caixas vazias e um botão, e não sabe o que isto faz. Os
-   três passos dizem-lhe o caminho inteiro sem uma linha de explicação, e o
-   passo em que está fica aceso. */
-.passos {
-  list-style: none; display: flex; flex-wrap: wrap; gap: var(--e2);
-  padding: 0; margin: var(--e3) 0 var(--e5); counter-reset: p;
-}
-.passos li {
-  display: flex; align-items: center; gap: var(--e2);
-  font-size: var(--t-menor); color: var(--texto-3);
-  padding: var(--e1) var(--e3) var(--e1) var(--e1);
-  border-radius: var(--r3);
-}
-.passos li b {
-  display: grid; place-items: center; width: 22px; height: 22px; border-radius: var(--r3);
-  background: var(--caixa-2); color: var(--texto-3);
-  font-size: var(--t-micro); font-weight: 700; font-variant-numeric: tabular-nums;
-}
-.passos li.aqui { color: var(--texto); background: var(--caixa); }
-.passos li.aqui b { background: var(--acento); color: var(--sobre-acento); }
-.passos li.feito { color: var(--texto-2); }
-.passos li.feito b { background: var(--acento-fraco); color: var(--acento); }
+/* ═══ 12 · o telemóvel ══════════════════════════════════════════════════════ */
 
-/* ── as margens, fechadas ───────────────────────────────────────────────────
-   Quatro caixas de número que se acertam uma vez e depois nunca mais. Ficam
-   atrás de um resumo em vez de ocuparem duas filas para sempre. */
-.margens > summary {
-  list-style: none; cursor: pointer; display: inline-flex; align-items: center;
-  gap: var(--e2); padding: 0 var(--e3); min-height: var(--toque);
-  border: 1px solid var(--borda); border-radius: var(--r1);
-  color: var(--texto-2); font-size: var(--t-menor);
-}
-.margens > summary::-webkit-details-marker { display: none; }
-.margens > summary::after { content: '▾'; color: var(--texto-3); }
-.margens[open] > summary::after { content: '▴'; }
-.margens > summary:hover { background: var(--realce); color: var(--texto); }
-.margens[open] > summary { border-color: var(--borda-forte); }
-.margens > .linha { margin-top: var(--e2); }
-/* Um `<details>` fechado esconde os filhos — excepto os que trazem `display`
-   escrito, e `.linha` traz `display: flex`. Os quatro campos ficavam visíveis
-   dentro de uma gaveta fechada, por cima do que estava por baixo. É a mesma
-   história do `hidden`, agora com `[open]`; o teste de sobreposição apanhou-a
-   antes de ir para o ar. */
-.margens:not([open]) > *:not(summary) { display: none; }
-
-/* ── a barra da sessão ──────────────────────────────────────────────────── */
-.barraSessao { margin-top: 0; align-items: end; }
-.campo { display: grid; gap: var(--e1); margin: 0; }
-.rotuloCampo {
-  font-size: var(--t-micro); letter-spacing: .06em; text-transform: uppercase;
-  color: var(--texto-3);
-}
-.barraSessao select { min-width: 280px; }
-
-/* ── a confiança do alinhamento ─────────────────────────────────────────────
-   O pior caso deste produto não é falhar: é acertar por engano. Um ângulo
-   desalinhado exporta um clipe errado com ar de certo, e ninguém dá por nada
-   até estar montado. Por isso o estado do relógio deixa de ser uma letra
-   pequena no canto de um quadrado e passa a viver ao lado da noite. */
-.confianca {
-  display: inline-flex; align-items: center; gap: var(--e2);
-  font-size: var(--t-menor); padding: var(--e2) var(--e3);
-  border-radius: var(--r1); border: 1px solid var(--borda);
-  background: var(--caixa);
-}
-.confianca::before {
-  content: ''; width: 8px; height: 8px; border-radius: var(--r3);
-  background: var(--texto-3); flex: none;
-}
-.confianca.exacto::before { background: var(--ok); }
-.confianca.parcial::before { background: var(--aviso); }
-.confianca.parcial { border-color: color-mix(in srgb, var(--aviso) 40%, var(--borda)); }
-.confianca.nenhum::before { background: var(--erro); }
-.confianca.nenhum { border-color: color-mix(in srgb, var(--erro) 40%, var(--borda)); }
-.confianca:empty { display: none; }
-
-/* Os atalhos que já existem, num sítio onde se descubram. */
-.modalCaixa.estreita { width: min(420px, 100%); }
-.atalhos { display: grid; grid-template-columns: auto 1fr; gap: var(--e2) var(--e4); margin: 0; }
-.atalhos dt { display: flex; gap: var(--e1); }
-.atalhos dd { margin: 0; color: var(--texto-2); font-size: var(--t-menor); }
-button.discreto {
-  background: transparent; border-color: transparent; color: var(--texto-2);
-  min-width: var(--toque); min-height: 32px;
-}
-button.discreto:hover:not(:disabled) { background: var(--realce); color: var(--texto); }
-
-/* ── mono nos dados ─────────────────────────────────────────────────────────
-   O registo técnico da referência que ele mandou, mas só onde ganha: números
-   que se comparam de linha para linha, e teclas. O texto que se lê fica em
-   sans — mono numa frase de erro a 390 px passa a três linhas. */
-.tempo, .posicao, .nudge, .regua, .quantos, .dur, #tempoClipe, #memoria,
-#confianca, .momentos li > span, .momentos .n, .canais .vods, .fila li,
-.passos li b, kbd, .sugestoes .quantos, .corte .estadoCorte {
-  font-family: var(--letra-dados);
-  font-variant-numeric: tabular-nums;
-}
-/* Etiquetas em maiúsculas com espaçamento: é isto que dá o ar de painel de
-   instrumentos, e não a família da letra. */
-/* Os títulos e as etiquetas na face condensada; o resto do texto fica no sans
-   do sistema, que é onde a legibilidade importa mais do que o carácter. */
-h2, .rotuloCampo, .etiqueta {
-  font-size: var(--t-micro); letter-spacing: .12em; text-transform: uppercase;
-  font-family: var(--letra-titulo); font-weight: 600;
-}
-h1 { font-family: var(--letra-titulo); font-weight: 600; letter-spacing: .01em; }
-.passos li span, .modalTopo b { font-family: var(--letra-titulo); font-weight: 600; letter-spacing: .03em; }
-.passos li span { text-transform: uppercase; font-size: var(--t-menor); }
-h2 { color: var(--texto-3); font-weight: 600; margin: var(--e5) 0 var(--e2); }
-.momentos .n { color: var(--texto-3); }
-
-/* A entrada: a procura ao serviço da lista, e não um segundo caminho. */
-.entradaGrelha { display: grid; gap: var(--e3); }
-.entradaGrelha .procura { position: relative; display: block; margin: 0; }
-/* Container query e não media query: o que decide se as duas caixas cabem lado
-   a lado é a largura do CARTÃO, não a do monitor. Com a media query, o cartão
-   passou a 421 px numa fila de três e as caixas continuaram lado a lado —
-   a de colar canais ficou com 120 px e mostrava três nomes de trinta. */
-#entrada { container-type: inline-size; }
-@container (min-width: 560px) {
-  .entradaGrelha { grid-template-columns: minmax(200px, 1fr) minmax(0, 1.4fr); gap: var(--e4); }
-  .entradaGrelha .procuraCampo { align-self: start; }
-}
-
-/* A ligação para a Twitch partia-se em duas linhas num telemóvel. */
-.paraTwitch { white-space: nowrap; }
-/* Duas filas SEMPRE, e não "quando não couber".
-   Medido: num telemóvel a página dava um salto de 0,049 aos 12,5 s — o
-   momento exacto em que a Rajdhani chega. A fonte nova é mais larga do que a
-   de reserva, o `<h1>` cresce uns pixels, e o selector de idioma passava a não
-   caber e caía para a linha de baixo. Tudo o que vinha a seguir descia 44 px
-   de uma vez, com a página já a ser lida.
-   Com o título a ocupar a fila toda, a largura dele deixa de decidir seja o
-   que for: a segunda fila existe desde o primeiro pinte e a fonte pode chegar
-   quando quiser. Medido outra vez: 0,000. */
-.topo { flex-wrap: wrap; row-gap: var(--e2); }
-.topo h1 { flex: 1 0 100%; }
-/* Alvo de toque em tudo o que se carrega com o dedo. */
-button, select, input[type="text"], input[type="search"], input[type="number"] { min-height: 36px; }
-.linha button, .barraSelecao button, #carregar, #baixarMontagem { min-height: var(--toque); }
-/* O foco tem de se ver mesmo por cima do vídeo. */
-:focus-visible { outline-offset: 2px; }
-
-/* ── o editor do retrato ────────────────────────────────────────────────────
-   Como o da Twitch que ele mandou: a fonte deitada de um lado com as caixas de
-   enquadramento por cima, e o 9:16 a sério do outro, pintado em tempo real.
-   Ver o resultado enquanto se arrasta é o ponto todo — sem isso é adivinhar. */
-.clipeEditor { display: flex; gap: var(--e4); align-items: flex-start; }
-.clipeFonte { flex: 1 1 auto; min-width: 0; display: grid; gap: var(--e1); }
-.clipeRetrato { flex: 0 0 auto; display: grid; gap: var(--e1); justify-items: center; }
-
-/* O vídeo e as caixas na MESMA caixa: as caixas são posicionadas em
-   percentagem da fonte, e por isso seguem-na quando a janela muda de tamanho
-   sem ser preciso recalcular nada. */
-/* A caixa encolhe até ao vídeo, e não ao contrário.
-   Com `width: 100%` no vídeo, um 16:9 limitado pela altura ficava com barras
-   pretas nos lados — e as caixas de enquadramento, que se posicionam em
-   percentagem do CONTENTOR, ficavam desalinhadas da imagem e arrastavam à
-   velocidade errada. Ninguém vê isso no editor: vê-se no ficheiro exportado,
-   com o enquadramento noutro sítio. */
-.fonteClipe {
-  position: relative; line-height: 0; width: fit-content; margin-inline: auto; max-width: 100%;
-}
-.fonteClipe video {
-  width: auto; max-width: 100%; max-height: 34vh; display: block; background: var(--video-fundo);
-}
-.recortes { position: absolute; inset: 0; }
-.recorte {
-  position: absolute; border: 2px solid var(--acento);
-  box-shadow: 0 0 0 9999px #00000059;   /* escurece tudo o que fica de fora */
-  cursor: move; touch-action: none;
-}
-/* O puxador fica ACIMA de qualquer caixa, e nao so da sua.
-   "Quando o alterador de tamanho na esquerda esta sobreposto por outro nao
-   consigo mexer nele." Nao conseguia: o puxador vive fora da caixa, no canto
-   de baixo a direita, e a caixa do jogo — que vem depois no HTML — tapava-o.
-   Sem `z-index` na `.recorte` nao ha contexto de empilhamento a prender o
-   filho, e por isso este sobe acima das duas. */
-.recorte .puxar {
-  position: absolute; right: -9px; bottom: -9px; width: 18px; height: 18px;
-  background: var(--acento); border-radius: 3px; cursor: nwse-resize; touch-action: none;
-  z-index: 5; box-shadow: 0 0 0 2px var(--fundo);
-}
-.recorte .ordem {
-  position: absolute; left: 4px; top: 4px; background: var(--acento); color: var(--sobre-acento);
-  font-family: var(--letra-dados); font-size: var(--t-micro); border-radius: 3px; padding: 0 5px;
-}
-
-.telaRetrato {
-  width: auto; height: 34vh; max-height: 34vh; display: block;
-  background: var(--video-fundo); border: 1px solid var(--borda); border-radius: var(--r1);
-}
-.modosRetrato { justify-content: center; margin-top: var(--e1); }
-.modoRetrato { padding: 6px 10px; display: grid; place-items: center; }
-.modoRetrato[aria-pressed="true"] {
-  border-color: var(--acento); color: var(--acento); background: var(--acento-fraco);
-}
-
-/* Num telemóvel os dois lado a lado não cabem: o retrato passa para baixo. */
-@media (max-width: 720px) {
-  .clipeEditor { flex-direction: column; }
-  .clipeRetrato { justify-items: start; width: 100%; }
-  .telaRetrato { height: 34vh; }
-}
-
-/* O divisor do retrato: o pill branco que se arrasta para dar mais altura ao
-   quadro de cima ou ao de baixo. Vive por cima da tela, e é a única coisa do
-   lado direito que se mexe — por isso é a única com contraste a sério. */
-.molduraRetrato { position: relative; line-height: 0; }
-.divisor {
-  position: absolute; left: 0; right: 0; height: 26px; transform: translateY(-50%);
-  background: none; border: 0; padding: 0; cursor: ns-resize; touch-action: none;
-  display: grid; place-items: center;
-}
-.divisor::before {
-  content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 2px;
-  background: var(--acento); opacity: .9;
-}
-.divisor span {
-  position: relative; width: 46px; height: 18px; border-radius: 999px;
-  background: var(--texto); box-shadow: var(--sombra-1);
-  background-image: radial-gradient(circle, #0006 1.2px, transparent 1.3px);
-  background-size: 6px 6px; background-position: center;
-}
-.divisor:focus-visible span { outline: 2px solid var(--acento); outline-offset: 2px; }
-
-/* A ordem da grelha: duas escolhas, e a que está activa vê-se. */
-.barraGrelha {
-  display: flex; align-items: center; gap: var(--e2); flex-wrap: wrap;
-  margin: var(--e4) 0 calc(var(--e4) * -1 + var(--e2));
-}
-.ordemGrelha { padding: 4px 12px; font-size: var(--t-menor); min-height: 32px; }
-.ordemGrelha[aria-pressed="true"] {
-  border-color: var(--acento); color: var(--acento); background: var(--acento-fraco);
-}
-
-/* O aviso que se pode carregar. Nasce com ar de aviso e não de botão
-   principal — só aparece quando alguma coisa não veio, e a acção que oferece
-   é "tentar outra vez", não "avançar". */
-.semPrevia {
-  display: block;
-  width: 100%;
-  text-align: left;
-  font-size: var(--t-nota);
-  color: var(--marcador);
-  background: var(--marcador-fraco);
-  border: 1px solid var(--marcador);
-  border-radius: 8px;
-  padding: 10px 12px;
-  min-height: 44px;
-}
-
-/* Marcar entrada e marcar saída: duas colunas iguais, sempre na mesma linha.
-   Numa linha flex partiam-se uma por cima da outra num ecrã estreito. */
-.marcas {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-top: 8px;
-}
-.marcas button { padding: 10px 6px; white-space: nowrap; }
-
-/* As linhas de encaixe: só existem enquanto o dedo está em baixo.
-   "Podia colocar as ajudas para deixar centralizado, de baixo para cima, do
-   lado para o outro." Amarelas e não verdes: o verde é a cor dos recortes, e
-   uma ajuda tem de se distinguir daquilo que ajuda a alinhar. */
-.guia {
-  position: absolute;
-  pointer-events: none;
-  outline: 1px dashed var(--marcador);
-  z-index: 3;
-}
-
-
-/* O Clipar, colado aos ângulos em foco.
-   "Deixa o botão clipar maior e destacado perto dos players principais, pois
-   tá muito escondido." Ocupa a largura toda por baixo do vídeo, com o dobro
-   da altura de um botão normal — é o gesto que ele repete a noite inteira, e
-   um gesto repetido não pode custar uma procura. */
-.barraClipar {
-  display: flex; align-items: center; gap: var(--e2);
-  margin: var(--e2) 0 var(--e1);
-}
-.barraClipar #clipar {
-  /* Do tamanho do que diz, e não da largura do ecrã.
-     "Esse verde tá muito forte." Estava: mil e duzentos pixels de verde de
-     néon a atravessar a página é um berro, e o berro não fica mais visível
-     por ser maior — fica só mais difícil de olhar. Continua a ser o botão
-     principal e o maior do palco, com duzentos e quarenta pixels. */
-  flex: 0 0 auto; min-width: 240px; min-height: 52px;
-  font-size: 17px; font-weight: 700; letter-spacing: .02em;
-  border-radius: 10px;
-  box-shadow: 0 0 0 1px #53fc1826, 0 6px 18px #53fc1820;
-}
-.barraClipar #clipar kbd { margin-left: 8px; }
-.barraClipar #marca { flex: 0 1 auto; text-align: right; }
-@media (max-width: 620px) {
-  .barraClipar #clipar { min-height: 48px; font-size: 16px; }
-}
-
-/* Cada enquadramento com a sua cor, e a mesma cor do outro lado.
-   "Cada quadrado com sua cor e a mesma cor na direita, igual Twitch." Sem
-   isso, com dois enquadramentos, nada dizia qual dos dois rectângulos da
-   esquerda ia dar em qual faixa — descobria-se por tentativa. */
-.recorte[data-i="0"] { border-color: var(--acento); }
-.recorte[data-i="1"] { border-color: var(--ok); }
-.recorte[data-i="0"] .puxar { background: var(--acento); }
-.recorte[data-i="1"] .puxar { background: var(--ok); }
-.recorte[data-i="0"] .ordem { background: var(--acento); }
-.recorte[data-i="1"] .ordem { background: var(--ok); color: #04120f; }
-.faixaRetrato {
-  position: absolute; left: 0; right: 0; pointer-events: none;
-  border: 2px solid var(--acento); border-radius: 2px;
-}
-.faixaRetrato.q1 { border-color: var(--ok); }
-
-/* Os quatro cantos. O de baixo à direita já lá estava; os outros três são
-   novos, e todos eles têm de ficar ACIMA da outra caixa para se poderem
-   agarrar quando as duas se sobrepõem. */
-.recorte .puxar {
-  position: absolute; width: 18px; height: 18px;
-  border-radius: 3px; touch-action: none;
-  z-index: 5; box-shadow: 0 0 0 2px var(--fundo);
-}
-.recorte .puxar.no { left: -9px; top: -9px; cursor: nwse-resize; }
-.recorte .puxar.ne { right: -9px; top: -9px; cursor: nesw-resize; }
-.recorte .puxar.so { left: -9px; bottom: -9px; cursor: nesw-resize; }
-.recorte .puxar.se { right: -9px; bottom: -9px; cursor: nwse-resize; }
-
-/* ── a largura ──────────────────────────────────────────────────────────────
-   "Não precisa esticar isso pra deixar tela toda, deixa do tamanho necessário
-    somente, e bem organizado — não quero bagunça."
-   Nem espremido ao meio (que foi a queixa antes), nem esticado por um monitor
-   de dois mil pixels. A página tem um tecto e centra-se; num ecrã normal o
-   tecto nunca chega a tocar, e num largo sobram margens em vez de metros de
-   caixa vazia. */
-/* O ecrã todo, sim — mas espalhado, não esticado.
-   "Agora espalha bem pra ocupar a tela toda, não estica as coisa porém espalha
-    elas pela tela de forma organizada."
-   O tecto sai: quem tem dois mil pixels quer usá-los. O que impede a bagunça
-   não é apertar a página, é cada bloco ter um tamanho próprio e a grelha
-   distribuí-los — que é o que as regras a seguir fazem. */
-
-/* Um botão tem o tamanho do que diz.
-   Estas duas filas eram grelhas de colunas iguais a ocupar a largura toda: num
-   ecrã largo davam quatro botões enormes com três palavras lá dentro. Ficam na
-   MESMA linha, que é o que ele pediu, mas com o tamanho de que precisam. */
-.saltos {
-  display: flex; flex-wrap: nowrap; gap: 6px; margin-top: 10px;
-  justify-content: flex-start;
-}
-.saltos button { flex: 0 1 auto; padding: 10px 12px; }
-.marcas {
-  display: flex; flex-wrap: nowrap; gap: 8px;
-  grid-template-columns: none;
-}
-.marcas button { flex: 0 1 auto; }
-/* Um recado que substitui o nome do canal por uns segundos. Fica dentro do
-   quadrado de propósito: numa janela à parte, uma mensagem na página principal
-   está atrás dela e ninguém a vê. */
-.tile .rotulo.recado {
-  background: var(--aviso-fundo); color: var(--aviso); max-width: 92%;
-  white-space: normal; line-height: 1.3;
-}
-
-/* Oito saltos num telemóvel não cabem numa linha: 390 px de ecrã, 560 de
-   botões, e a página inteira passava a rolar de lado. Em ecrã estreito ficam
-   duas filas de quatro — que era como os quatro antigos já estavam. */
-@media (max-width: 620px) {
-  .saltos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
-  .saltos button { padding: 10px 2px; min-width: 0; }
-  .marcas { flex-wrap: wrap; }
-  .marcas button { flex: 1 1 45%; }
-}
-
-/* A montagem saiu do fundo e é filha do palco (ver o HTML): fora do ecrã de
-   PC ocupa uma fila inteira por baixo das duas colunas, como antes. */
-@media (min-width: 1080px) {
-  #palco:not([hidden]) { grid-template-areas: "video lado" "monta monta"; }
-  #montagem { grid-area: monta; min-width: 0; }
-}
-
-/* ── o telemóvel: os controlos colados ao vídeo ─────────────────────────────
-   "Pra versão de celular isso tem que ficar perto do player principal, porque
+/* "Pra versão de celular isso tem que ficar perto do player principal, porque
     se eu quero passar pra frente e pra trás eu tenho que rolar pra baixo
     muito até chegar nessa parte. Ou pelo menos os botões de passar pra frente
     ou pra trás, lá junto com o vídeo principal."
 
-   Tinha razão, e a medida diz quanto: entre o vídeo e o « 5 min estavam a
-   grelha dos dezassete ângulos, o Sincronizar, a Deteção, o Cortar, as
-   exportações e a lista de ficheiros. Rolo até ao botão que anda três
-   segundos: 2 359 px num ecrã de 390×844.
+   Medido antes, num ecrã de 390×844 com dezassete canais: entre o vídeo e o
+   « 5 min estavam a grelha dos ângulos, o Sincronizar, a Deteção, o Cortar,
+   as exportações e a lista de ficheiros — 2 359 px de rolo para carregar num
+   botão que anda três segundos.
 
-   Duas mudanças, as duas só de CSS e só aqui — o PC não é tocado:
+   Duas mudanças, as duas só aqui e nenhuma toca no PC:
 
    1. Os invólucros da coluna da direita deixam de existir no telemóvel
       (`display: contents`). Não têm um único estilo próprio fora do PC, por
@@ -1189,18 +1132,18 @@ button, select, input[type="text"], input[type="search"], input[type="number"] {
 
    2. Dentro do relógio, o que se CARREGA sobe e o que se OLHA desce: o
       instante, os oito saltos e o marcar entrada/saída ficam colados ao
-      vídeo; as faixas dos canais — dezassete linhas, meio ecrã — descem para
-      baixo deles. A ordem de leitura no HTML fica a mesma para quem ouve a
-      página, porque `order` só muda a pintura.
+      vídeo; as dezassete faixas dos canais descem para baixo deles. A ordem
+      de leitura no HTML fica a mesma para quem ouve a página, porque `order`
+      só muda a pintura.
 
-   Medido depois, no mesmo 390×844: o « 5 min a 356 px do topo, dentro do
-   primeiro ecrã e com o vídeo à vista por cima. */
+   Medido depois, no mesmo 390×844: vídeo, Clipar, relógio, oito saltos e as
+   duas marcas, tudo dentro do primeiro ecrã. */
 @media (max-width: 1079.98px) {
   .palcoVideo, .palcoLadoCaixa, .palcoLado { display: contents; }
 
   /* Com os invólucros fora, o palco passa a ter sete filhos em vez de três:
      as margens de cada um deixam de somar com a folga da grelha. */
-  #palco:not([hidden]) { gap: var(--e3); }
+  #palco:not([hidden]) { gap: var(--e4); }
   #palcoFoco { order: 1; margin: 0; }
   .barraClipar { order: 2; margin: 0; }
   .relogio { order: 3; }
@@ -1209,166 +1152,103 @@ button, select, input[type="text"], input[type="search"], input[type="number"] {
   #grade { order: 6; margin: 0; }
   .palcoFundo { order: 7; }
 
-  /* O relógio por dentro. `flex` e não `grid` de propósito: os filhos têm
-     larguras diferentes e nenhum deles quer uma coluna. */
+  /* O relógio por dentro. `flex` e não `grid`: os filhos têm larguras
+     diferentes e nenhum deles quer uma coluna. */
   .relogio { display: flex; flex-direction: column; }
-  .relogio > .linha { order: 1; }       /* 01:00:43Z · 17 de 17 ângulos */
-  .relogio > .saltos { order: 2; margin-top: var(--e2); }
+  .relogio > .linha { order: 1; margin-top: 0; }   /* 21:05:00Z · 17 de 17 ângulos */
+  .relogio > .saltos { order: 2; margin-top: var(--e4); }
   .relogio > .marcas { order: 3; }
-  .relogio > .barraLinha { order: 4; margin-top: var(--e4); }
+  .relogio > .barraLinha { order: 4; margin-top: var(--e5); }
   .relogio > .faixas { order: 5; }
   .relogio > .reguaLinha { order: 6; }
 }
 
-/* ── o ecrã inteiro como área de trabalho ───────────────────────────────────
-   "Quero que minha tela cheia vire minha área de trabalho: tudo o que a
-    pessoa precise clicar e opções tem que aparecer na tela sem ela precisar
-    rolar pra baixo ou pra cima pra procurar coisas ou botões."
-
-   Só num ecrã de PC, e só depois de haver uma noite aberta: a página de
-   entrada continua a fluir, e o telemóvel fica exactamente como estava — lá
-   as coisas empilham-se, e é isso que os testes do telemóvel medem.
-
-   A regra é uma só: a PÁGINA não rola; rolam os painéis, e cada painel rola
-   só a parte que cresce com a noite. À esquerda o vídeo em foco tem altura
-   fixa, e é a grelha dos ângulos que rola. À direita, a linha do tempo tem o
-   cursor e os saltos sempre fixos e são as faixas dos canais que rolam (com
-   trinta canais são seiscentos pixels); por baixo dela a montagem, com o
-   Marcar kill, os filtros e o Exportar fixos e a lista de kills a rolar.
-
-   Medido com dezassete ângulos e uma kill, em 1920×1080 e em 1366×720: tudo
-   o que se carrega está dentro do ecrã. As medidas de partida vieram de um
-   dump de geometria e não de olho: o foco tinha encolhido para 210 px porque
-   era ele a ceder e não a grelha, e a montagem gastava 232 px de cabeçalho
-   antes da primeira kill. */
-@media (min-width: 1080px) and (min-height: 640px) {
-  body:has(#palco:not([hidden])) {
-    height: 100vh; box-sizing: border-box; overflow: hidden;
-    display: flex; flex-direction: column;
+/* Num ecrã estreito a coluna dos nomes aperta, e oito botões de salto não
+   cabem em 390 px de largura numa linha só — ficam nas duas filas certas de
+   quatro que a grelha já garante. */
+@media (max-width: 620px) {
+  body { padding: var(--e4); }
+  /* Dois ângulos em foco lado a lado num ecrã de 390 px não são dois vídeos:
+     são dois selos. Empilham, e cada um fica com a largura toda. Sem isto o
+     `aspect-ratio` empurrava cada quadrado para 320 px de largura dentro de
+     uma coluna de 175 e a página passava a andar de lado — 448 px medidos. */
+  .palcoFoco { grid-auto-flow: row; }
+  .palcoFoco .tile, .palcoFoco.dois .tile { min-height: 150px; }
+  .aparar { grid-template-columns: auto minmax(44px, 1fr) minmax(44px, 1fr) 52px; gap: var(--e3) 6px; }
+  .relogio { --coluna: 76px; padding: var(--e4) var(--e3); }
+  .bloco { padding: var(--e4); }
+  .palcoFundo > section, .palcoFundo > .linha, .palcoFundo > #zip, #montagem { padding: var(--e4); }
+  .saltos { gap: 5px; }
+  .saltos button { padding: 0; font-size: var(--t-micro); }
+  .saltos .ic { width: 11px; height: 11px; }
+  .barraClipar #clipar { min-width: 0; flex: 1 1 auto; }
+  /* Uma linha só, e nunca duas. O cabeçalho embrulhava assim que o texto
+     mudava de tamanho — e ele MUDA: a página nasce em português com "Twitch"
+     escrito no HTML e o guião troca-o por "Versão Twitch" aos 89 ms. O
+     selector caía para a linha de baixo e a página inteira descia 44 px, com
+     ela já a ser lida. Salto medido: 0,160 num ecrã de 390 px.
+     Num telemóvel o atalho fica só com a marca da Twitch, que chega — e
+     assim a linha cabe em qualquer língua. */
+  .topo { flex-wrap: nowrap; gap: var(--e3); }
+  .topo h1 { font-size: var(--t-medio); min-width: 0; }
+  .topo h1 span { overflow: hidden; text-overflow: ellipsis; }
+  .topo .paraTwitch { padding: 0; width: 34px; justify-content: center; }
+  .topo .paraTwitch span { display: none; }
+  .topo #idioma { width: 112px; }
+  .passos li span { display: none; }
+  .passos li.aqui span { display: inline; }
+  /* Uma folha que sobe do fundo, que é o que um telemóvel faz com isto. */
+  .modal { padding: 0; align-items: flex-end; }
+  .modalCaixa {
+    width: 100%; max-height: 94vh; border-radius: var(--r-3) var(--r-3) 0 0;
+    padding: var(--e4) var(--e4) calc(var(--e4) + env(safe-area-inset-bottom));
   }
-  body:has(#palco:not([hidden])) > header { flex: 0 0 auto; margin-bottom: var(--e1); padding-bottom: 4px; }
-  body:has(#palco:not([hidden])) > header .passos { display: none; }
-  body:has(#palco:not([hidden])) > header .topo h1 { font-size: 24px; }
-  body:has(#palco:not([hidden])) > .topoTrabalho {
-    flex: 0 0 auto; max-height: 10vh; overflow-y: auto; margin-bottom: var(--e1);
+  .clipeEditor { flex-direction: column; }
+  .clipeRetrato { justify-items: start; width: 100%; }
+  /* Com os dois visores empilhados não sobra altura para 34vh cada. */
+  .fonteClipe video { max-height: 24vh; }
+  .telaRetrato { height: 26vh; max-height: 26vh; }
+  /* Os dois botões do fim ocupam a linha e são fáceis de acertar com o dedo. */
+  .modalCaixa > .linha.fim {
+    bottom: calc((var(--e4) + env(safe-area-inset-bottom)) * -1);
+    margin: 0 calc(var(--e4) * -1) calc((var(--e4) + env(safe-area-inset-bottom)) * -1);
+    padding: var(--e3) var(--e4) calc(var(--e3) + env(safe-area-inset-bottom));
   }
-  body:has(#palco:not([hidden])) > footer { display: none; }
-  body:has(#palco:not([hidden])) #palco:not([hidden]) {
-    flex: 1 1 auto; min-height: 0; gap: 16px;
-    grid-template-rows: auto minmax(0, 1fr);
-    grid-template-areas: "video tempo" "video monta";
-    align-items: stretch;
-  }
-
-  /* ESQUERDA. `overflow: hidden` de propósito: o que não couber fica cortado
-     e o teste apanha-o, em vez de escorrer e pôr a página a rolar. */
-  body:has(#palco:not([hidden])) .palcoVideo {
-    grid-area: video; display: flex; flex-direction: column; min-height: 0; overflow: hidden;
-  }
-  body:has(#palco:not([hidden])) .palcoFoco {
-    display: flex; justify-content: center; align-items: stretch;
-    height: 32vh; min-height: 140px; flex: 0 1 auto; margin: 0 0 var(--e1);
-  }
-  body:has(#palco:not([hidden])) .palcoFoco:empty { display: none; }
-  body:has(#palco:not([hidden])) .palcoFoco .tile {
-    height: 100%; width: auto; aspect-ratio: 16/9; min-height: 0; max-width: 100%; flex: 0 1 auto;
-  }
-  body:has(#palco:not([hidden])) .palcoFoco.dois .tile { max-width: calc(50% - 4px); }
-  body:has(#palco:not([hidden])) .barraClipar { flex: 0 0 auto; margin: var(--e1) 0; }
-  body:has(#palco:not([hidden])) .barraGrelha { flex: 0 0 auto; margin: 0; }
-  /* A grelha é a única coisa da esquerda que cede: tudo o resto tem tamanho. */
-  body:has(#palco:not([hidden])) #grade {
-    flex: 1 1 0; min-height: 60px; overflow-y: auto; margin: var(--e1) 0; padding-right: 4px;
-    /* Uma grelha com altura definida esmaga as linhas para caber, e o
-       `aspect-ratio` dos quadrados perde: ficavam tiras de 25 px umas por
-       cima das outras. As linhas têm o tamanho do conteúdo e o resto rola. */
-    align-content: start; grid-auto-rows: max-content;
-  }
-  body:has(#palco:not([hidden])) #grade .tile { align-self: start; }
-  body:has(#palco:not([hidden])) .palcoFundo {
-    flex: 0 0 auto; max-height: 22vh; overflow-y: auto; margin-top: 0; padding-right: 4px;
-    /* Três colunas sempre: com duas, num portátil, os três blocos faziam duas
-       filas e roubavam a altura toda ao vídeo. */
-    grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;
-  }
-  body:has(#palco:not([hidden])) .palcoFundo > section,
-  body:has(#palco:not([hidden])) .palcoFundo > .linha { padding: 8px 10px; margin-bottom: 0; }
-  /* A explicação da deteção é para quem chega; aqui o que interessa é o botão. */
-  body:has(#palco:not([hidden])) #automatico > p { display: none; }
-
-  /* DIREITA, em cima: a linha do tempo. Cursor, régua e saltos fixos; as
-     faixas dos canais rolam por dentro. */
-  body:has(#palco:not([hidden])) .palcoLadoCaixa {
-    grid-area: tempo; min-height: 0; display: flex; overflow: hidden;
-  }
-  body:has(#palco:not([hidden])) .palcoLado {
-    position: static; max-height: 40vh; flex: 1 1 auto; min-height: 0; min-width: 0; width: 100%;
-    display: flex; flex-direction: column; overflow: hidden;
-  }
-  /* Oito saltos numa faixa de 576 px não cabem em linha: em vez de a fila
-     empurrar o painel e cortar os rótulos à esquerda, embrulha. */
-  body:has(#palco:not([hidden])) .palcoLado .saltos { flex-wrap: wrap; gap: 3px; }
-  body:has(#palco:not([hidden])) .palcoLado .relogio,
-  body:has(#palco:not([hidden])) .palcoLado .marcas,
-  body:has(#palco:not([hidden])) .palcoLado .linha { min-width: 0; }
-  body:has(#palco:not([hidden])) .palcoLado > * { flex: 0 0 auto; }
-  /* O relogio encolhe (min-height 0) mas nao ESCORRE (overflow hidden): as
-     faixas cedem primeiro, ate tres canais; se ainda assim nao couber, e o
-     fim dele que fica cortado — e o teste apanha-o — em vez de os saltos
-     irem parar por cima do que vem a seguir, que foi o que aconteceu.
-     Medido: com `min-height: auto` o minimo dele passava a ser as faixas
-     INTEIRAS (380 px) e o painel todo voltava a rolar. */
-  body:has(#palco:not([hidden])) .palcoLado > .relogio {
-    flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden;
-  }
-  body:has(#palco:not([hidden])) .relogio > * { flex: 0 0 auto; }
-  body:has(#palco:not([hidden])) .relogio > .faixas {
-    flex: 1 1 auto; min-height: 56px; overflow-y: auto; overflow-x: hidden;
-  }
-  /* Oito saltos numa linha, ate numa faixa de 380 px: 8 × 42 + 7 × 3 = 357. */
-  body:has(#palco:not([hidden])) .relogio .saltos button { padding: 6px 5px; font-size: var(--t-menor); }
-  body:has(#palco:not([hidden])) .relogio .marcas button { min-height: 34px; padding: 4px 10px; }
-
-  /* DIREITA, em baixo: a montagem. Cabeçalho compacto, Exportar logo por
-     baixo dos filtros, e a lista de kills a rolar. */
-  body:has(#palco:not([hidden])) #montagem {
-    grid-area: monta; min-height: 0; display: flex; flex-direction: column;
-    margin-bottom: 0; overflow: hidden; padding: 6px 8px;
-  }
-  body:has(#palco:not([hidden])) #montagem > * { flex: 0 0 auto; }
-  body:has(#palco:not([hidden])) #montagem > h2 { display: none; }
-  /* O essencial em cima e compacto: Marcar kill, e logo por baixo o Exportar;
-     os filtros a seguir; a lista rola. Os botões encolhem um pouco porque
-     numa faixa de 400 px a fila dos filtros embrulha em três linhas. */
-  body:has(#palco:not([hidden])) #montagem > .linha,
-  body:has(#palco:not([hidden])) #montagem > .barraSelecao { gap: 4px; margin: 2px 0; }
-  body:has(#palco:not([hidden])) #montagem > .linha button,
-  body:has(#palco:not([hidden])) #montagem > .barraSelecao button,
-  body:has(#palco:not([hidden])) #montagem > .barraSelecao select {
-    min-height: 30px; padding: 3px 7px; font-size: var(--t-menor);
-  }
-  /* Os filtros numa linha so, ate numa faixa de 380 px: o selector nao
-     precisa de mais do que o nome do filtro. */
-  body:has(#palco:not([hidden])) #montagem > .barraSelecao select { min-width: 88px; max-width: 112px; }
-  body:has(#palco:not([hidden])) #montagem > .barraSelecao { gap: 4px 6px; }
-  /* Um botao apagado nao precisa de sitio: o "Remover selecionados" so
-     aparece quando ha seleccao — e numa faixa de 380 px isso e a diferenca
-     entre os filtros numa linha ou em duas. */
-  body:has(#palco:not([hidden])) #montagem > .barraSelecao button:disabled { display: none; }
-  /* A ordem: Marcar kill, Exportar, a LISTA, e os filtros no fim, presos ao
-     fundo do painel. Com os filtros por cima da lista, num portatil de 720
-     a primeira kill ficava por baixo do ecra — os filtros embrulham em duas
-     linhas numa faixa de 380 px e comiam o que sobrava. No fim continuam
-     sempre a vista: a lista e que encolhe, nunca eles. */
-  body:has(#palco:not([hidden])) #montagem > .linha:has(#marcarKill) { order: 0; }
-  body:has(#palco:not([hidden])) #montagem > .linha:has(#baixarMontagem) { order: 1; }
-  body:has(#palco:not([hidden])) #montagem > .barraSelecao { order: 5; margin-top: 4px; }
-  body:has(#palco:not([hidden])) #montagem > .momentos {
-    order: 4; flex: 1 1 auto; min-height: 60px; overflow-y: auto; padding-right: 4px; margin-top: 4px;
-    /* Uma coluna: numa faixa de 500 px, duas colunas de kills com dezassete
-       nomes cada não se leem. As duas fileiras ficam para o ecrã sem tecto. */
-    grid-template-columns: 1fr;
-  }
-  body:has(#palco:not([hidden])) .momentos li { padding: 5px 8px; gap: 6px; }
-  body:has(#palco:not([hidden])) .momentos .vit { padding: 1px 6px; font-size: var(--t-micro); }
+  .modal .linha.fim { flex-wrap: wrap; }
+  .modal .linha.fim #estadoClipe { flex-basis: 100%; }
+  .modal .linha.fim button { flex: 1 1 auto; min-height: 44px; }
+  .momentos li { padding: var(--e3); }
+  .aparar { justify-content: space-between; }
 }
+
+/* ═══ 13 · a página da Twitch ═══════════════════════════════════════════════
+   Partilha esta folha inteira e só precisa do que é dela: o cabeçalho com as
+   duas marcas, o aviso do que a versão não faz, e a barra de tempo. */
+
+.voltar { color: var(--tinta); text-decoration: none; }
+.voltar:hover { color: var(--acento); }
+.marca {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: var(--t-menor); font-weight: 500; color: var(--tinta-2);
+  padding: 4px var(--e3); border-radius: var(--r-1);
+  background: var(--sup-2); border: 1px solid var(--linha);
+}
+/* O aviso de entrada. Dizer o que a coisa NÃO faz à porta vale mais do que
+   deixar descobri-lo ao fim de meia hora. */
+p.aviso {
+  padding: var(--e4); border-radius: var(--r-2); margin-bottom: var(--e5);
+  background: var(--aviso-eco); color: var(--aviso);
+  border: 1px solid color-mix(in srgb, var(--aviso) 30%, transparent);
+  font-size: var(--t-menor); line-height: var(--lh);
+}
+p.aviso:empty { display: none; }
+body:not(.mesa) > section {
+  background: var(--sup-2); border: 1px solid var(--linha); border-radius: var(--r-3);
+  padding: var(--e5); margin-bottom: var(--e4); display: grid; gap: var(--e4);
+}
+body:not(.mesa) > section > h2 { margin: 0; }
+.barraTempo { gap: var(--e3); }
+.barraTempo #relogio { margin-left: auto; font-size: var(--t-medio); }
+body:not(.mesa) #sugestoes { position: static; display: flex; flex-wrap: wrap; gap: 6px; padding: 0; background: none; border: 0; box-shadow: none; }
+body:not(.mesa) #sugestoes:empty { display: none; }
+body:not(.mesa) #sugestoes button { width: auto; min-height: 30px; font-size: var(--t-menor); background: var(--sup-3); border-color: var(--linha-2); }

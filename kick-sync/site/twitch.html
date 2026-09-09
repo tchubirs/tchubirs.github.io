@@ -1,22 +1,42 @@
+<meta charset="utf-8">
 <title data-t="tw.titulo">Replay Twitch — os POVs lado a lado</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<!-- Sem bloquear a primeira pintura. Um `<link rel=stylesheet>` normal para
-     um CDN de fontes atrasa TUDO enquanto a rede não responde, e ele está
-     quase sempre em dados móveis. Com `media=print` o browser descarrega sem
-     esperar, e o `onload` liga-o quando chegar; se nunca chegar, fica a letra
-     do sistema, que é o que havia antes. -->
-<link rel="stylesheet" media="print" onload="this.media='all';this.onload=null"
-  href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600&family=IBM+Plex+Mono:wght@400&display=swap">
-<noscript><link rel="stylesheet"
-  href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600&family=IBM+Plex+Mono:wght@400&display=swap"></noscript>
+<meta name="theme-color" content="#131211">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%23131211'/%3E%3Cg fill='%232FB3C4'%3E%3Crect x='3.4' y='5.6' width='11' height='3' rx='1.5' opacity='.7'/%3E%3Crect x='6.4' y='10.5' width='13.2' height='3' rx='1.5'/%3E%3Crect x='5' y='15.4' width='9' height='3' rx='1.5' opacity='.7'/%3E%3Crect x='11.6' y='3' width='1.8' height='18' rx='.9'/%3E%3C/g%3E%3C/svg%3E">
+<!-- A letra vive no repositório, em letra/ — ver a nota em estilo.css. -->
+<link rel="preload" as="font" type="font/woff2" href="letra/ibm-plex-sans-400.woff2" crossorigin>
+<link rel="preload" as="font" type="font/woff2" href="letra/ibm-plex-sans-600.woff2" crossorigin>
+<link rel="preload" as="font" type="font/woff2" href="letra/ibm-plex-mono-400.woff2" crossorigin>
 <link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="estilo.css">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
+<!-- Os três símbolos que esta página usa. O conjunto inteiro vive no
+     index.html; aqui só entra o que se vê, para a página não carregar
+     trinta desenhos por causa de dois. -->
+<svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
+  <symbol id="i-replay" viewBox="0 0 24 24">
+    <g fill="currentColor">
+      <rect x="2.4" y="4.4" width="13.4" height="4.2" rx="2.1" opacity=".7"/>
+      <rect x="6.2" y="9.9" width="15.4" height="4.2" rx="2.1"/>
+      <rect x="4" y="15.4" width="11" height="4.2" rx="2.1" opacity=".7"/>
+      <rect x="11.2" y="2.4" width="1.6" height="19.2" rx=".8"/>
+    </g>
+  </symbol>
+  <symbol id="i-twitch" viewBox="0 0 24 24">
+    <path fill="currentColor" d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/>
+  </symbol>
+  <symbol id="i-tocar" viewBox="0 0 24 24">
+    <path d="M8.8 6.1 19 12 8.8 17.9Z" fill="currentColor" stroke="currentColor"
+      stroke-width="2.4" stroke-linejoin="round"/>
+  </symbol>
+</svg>
+
 <header>
-  <h1><a href="./" class="voltar">Replay</a> <span class="marca">Twitch</span></h1>
-  <select id="idioma" aria-label="idioma"></select>
+  <div class="topo">
+    <h1><svg class="ic" aria-hidden="true"><use href="#i-replay"/></svg><a href="./" class="voltar">Replay</a>
+      <span class="marca"><svg class="ic ic-p" aria-hidden="true"><use href="#i-twitch"/></svg>Twitch</span></h1>
+    <select id="idioma" aria-label="idioma"></select>
+  </div>
 </header>
 
 <!-- O que esta versao nao faz, dito a entrada e nao descoberto ao fim de meia
@@ -48,7 +68,7 @@
 
 <section id="palco" hidden>
   <div class="linha barraTempo">
-    <button id="tocar" class="principal" data-t="tw.tocar">Reproduzir</button>
+    <button id="tocar" class="principal"><svg class="ic ic-p" aria-hidden="true"><use href="#i-tocar"/></svg><span data-t="tw.tocar">Reproduzir</span></button>
     <button id="menos1m" data-t="tempo.menos1m">-1 min</button>
     <button id="menos10s" data-t="tempo.menos10s">-10 s</button>
     <button id="mais10s" data-t="tempo.mais10s">+10 s</button>

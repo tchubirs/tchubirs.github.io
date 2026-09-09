@@ -4,27 +4,233 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title data-t="app.titulo">Replay — vários ângulos, um relógio</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<!-- Sem bloquear a primeira pintura. Um `<link rel=stylesheet>` normal para
-     um CDN de fontes atrasa TUDO enquanto a rede não responde, e ele está
-     quase sempre em dados móveis. Com `media=print` o browser descarrega sem
-     esperar, e o `onload` liga-o quando chegar; se nunca chegar, fica a letra
-     do sistema, que é o que havia antes. -->
-<link rel="stylesheet" media="print" onload="this.media='all';this.onload=null"
-  href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600&family=IBM+Plex+Mono:wght@400&display=swap">
-<noscript><link rel="stylesheet"
-  href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600&family=IBM+Plex+Mono:wght@400&display=swap"></noscript>
+<meta name="theme-color" content="#131211">
+<!-- O icone do separador e a marca desta casa: tres gravacoes de comprimentos
+     diferentes e a agulha a atravessa-las no mesmo instante. Em SVG dentro do
+     endereco, sem um pedido a rede so para isto. -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%23131211'/%3E%3Cg fill='%232FB3C4'%3E%3Crect x='3.4' y='5.6' width='11' height='3' rx='1.5' opacity='.55'/%3E%3Crect x='6.4' y='10.5' width='13.2' height='3' rx='1.5'/%3E%3Crect x='5' y='15.4' width='9' height='3' rx='1.5' opacity='.55'/%3E%3Crect x='11.6' y='3' width='1.8' height='18' rx='.9'/%3E%3C/g%3E%3C/svg%3E">
+<!-- A letra vive no repositorio, em letra/. Uma letra que depende de um CDN e
+     uma letra que as vezes nao ha — e em dados moveis isso e metade das
+     vezes. As medidas do ecra deixam de mudar com a rede. As caras vao
+     declaradas em estilo.css, ao pe de tudo o resto que e desenho. -->
+<link rel="preload" as="font" type="font/woff2" href="letra/ibm-plex-sans-400.woff2" crossorigin>
+<link rel="preload" as="font" type="font/woff2" href="letra/ibm-plex-sans-500.woff2" crossorigin>
+<link rel="preload" as="font" type="font/woff2" href="letra/ibm-plex-sans-600.woff2" crossorigin>
+<link rel="preload" as="font" type="font/woff2" href="letra/ibm-plex-mono-400.woff2" crossorigin>
+<link rel="preload" as="font" type="font/woff2" href="letra/ibm-plex-mono-500.woff2" crossorigin>
 <link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="estilo.css">
 </head>
-<body>
+<!-- `mesa` é a mesa de montagem. A folha de estilo é partilhada com a
+     página da Twitch, e as regras do ecrã inteiro (a página não rola, rolam
+     os painéis) só fazem sentido aqui: lá `#palco` é outra coisa e a página
+     ficava presa a 100vh sem nada que a fizesse caber. -->
+<body class="mesa">
+
+<!-- ═══ Os ícones ═══════════════════════════════════════════════════════════
+     Desenhados aqui e não importados de uma biblioteca. Uma biblioteca de
+     ícones é a assinatura de outra pessoa no meio da nossa, e as três que
+     toda a gente usa dão a todos os sítios a mesma cara.
+
+     Três famílias, e cada uma tem uma razão para existir:
+
+     1. TRAÇO — quase tudo. Grelha de 24, área viva de 2 a 22, traço de 1,75,
+        pontas e junções redondas, cantos de raio 2. Um ícone que não caiba
+        nestas medidas não entra.
+     2. CHEIO — só o transporte (tocar, pausa, parar). Um triângulo de tocar
+        em traço fino desaparece a 14 px, e é o glifo mais carregado da
+        página; em todos os leitores do mundo é cheio, e não é aqui que isso
+        se vai reinventar.
+     3. MARCA — Twitch, Kick, YouTube. São marcas registadas: vão com o
+        desenho oficial, sem redesenho e sem "interpretação". Nomear a
+        plataforma com o símbolo dela é o uso normal; inventar-lhe um símbolo
+        parecido é que seria errado.
+
+     Sprite inteiro dentro da página, e não um ficheiro à parte: `<use>` para
+     fora do documento não é de confiança no Safari nem no Chrome, e a página
+     tem de funcionar sem rede. -->
+<svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
+  <!-- ── a marca desta casa ────────────────────────────────────────────────
+       Três gravações de comprimentos diferentes e uma agulha a atravessá-las
+       no mesmo instante. É literalmente o que o sítio faz. -->
+  <symbol id="i-replay" viewBox="0 0 24 24">
+    <g fill="currentColor">
+      <rect x="2.4" y="4.4" width="13.4" height="4.2" rx="2.1" opacity=".7"/>
+      <rect x="6.2" y="9.9" width="15.4" height="4.2" rx="2.1"/>
+      <rect x="4" y="15.4" width="11" height="4.2" rx="2.1" opacity=".7"/>
+      <rect x="11.2" y="2.4" width="1.6" height="19.2" rx=".8"/>
+    </g>
+  </symbol>
+
+  <!-- ── transporte, cheio ─────────────────────────────────────────────────
+       O traço da mesma cor arredonda os cantos sem uma curva escrita à mão. -->
+  <symbol id="i-tocar" viewBox="0 0 24 24">
+    <path d="M8.8 6.1 19 12 8.8 17.9Z" fill="currentColor" stroke="currentColor"
+      stroke-width="2.4" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="i-pausa" viewBox="0 0 24 24">
+    <rect x="7.4" y="5.6" width="3.7" height="12.8" rx="1.4" fill="currentColor"/>
+    <rect x="12.9" y="5.6" width="3.7" height="12.8" rx="1.4" fill="currentColor"/>
+  </symbol>
+  <symbol id="i-parar" viewBox="0 0 24 24">
+    <rect x="6.4" y="6.4" width="11.2" height="11.2" rx="2.2" fill="currentColor"/>
+  </symbol>
+
+  <!-- ── traço ─────────────────────────────────────────────────────────── -->
+  <symbol id="i-som" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M11.4 4.9 6.6 9.2H3.9a1 1 0 0 0-1 1v3.6a1 1 0 0 0 1 1h2.7l4.8 4.3Z"/>
+    <path d="M15.1 9.4a3.7 3.7 0 0 1 0 5.2"/>
+    <path d="M17.9 6.6a7.6 7.6 0 0 1 0 10.8"/>
+  </symbol>
+  <symbol id="i-mudo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M11.4 4.9 6.6 9.2H3.9a1 1 0 0 0-1 1v3.6a1 1 0 0 0 1 1h2.7l4.8 4.3Z"/>
+    <path d="m15.6 9.6 5.2 4.8M20.8 9.6l-5.2 4.8"/>
+  </symbol>
+  <symbol id="i-ecra-cheio" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8.4 3.2H4.6a1.4 1.4 0 0 0-1.4 1.4v3.8"/>
+    <path d="M15.6 3.2h3.8a1.4 1.4 0 0 1 1.4 1.4v3.8"/>
+    <path d="M20.8 15.6v3.8a1.4 1.4 0 0 1-1.4 1.4h-3.8"/>
+    <path d="M8.4 20.8H4.6a1.4 1.4 0 0 1-1.4-1.4v-3.8"/>
+  </symbol>
+  <symbol id="i-janela" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M20.8 12.2V6a1.8 1.8 0 0 0-1.8-1.8H5A1.8 1.8 0 0 0 3.2 6v9a1.8 1.8 0 0 0 1.8 1.8h5.6"/>
+    <rect x="12.6" y="12.8" width="8.2" height="7" rx="1.6"/>
+  </symbol>
+  <symbol id="i-tesoura" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="6.4" cy="6.2" r="2.7"/><circle cx="6.4" cy="17.8" r="2.7"/>
+    <path d="M8.8 7.6 20.8 18.4M20.8 5.6 8.8 16.4"/>
+  </symbol>
+  <symbol id="i-marcador" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M5.8 21.2V3.4"/>
+    <path d="M5.8 4.4h12.4l-2.9 4.4 2.9 4.4H5.8"/>
+  </symbol>
+  <symbol id="i-descarregar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 3.4v10.9"/><path d="m7.4 10 4.6 4.6 4.6-4.6"/>
+    <path d="M3.6 17.4v1.6a1.6 1.6 0 0 0 1.6 1.6h13.6a1.6 1.6 0 0 0 1.6-1.6v-1.6"/>
+  </symbol>
+  <symbol id="i-arquivo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="3.8" width="18" height="4.6" rx="1.5"/>
+    <path d="M4.9 8.4v10a1.6 1.6 0 0 0 1.6 1.6h11a1.6 1.6 0 0 0 1.6-1.6v-10"/>
+    <path d="M10 12.4h4"/>
+  </symbol>
+  <symbol id="i-lixo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4.2 6.6h15.6"/>
+    <path d="M9.4 6.6V4.9a1.4 1.4 0 0 1 1.4-1.4h2.4a1.4 1.4 0 0 1 1.4 1.4v1.7"/>
+    <path d="m6.6 6.6.9 12.2a1.6 1.6 0 0 0 1.6 1.5h5.8a1.6 1.6 0 0 0 1.6-1.5l.9-12.2"/>
+    <path d="M10.4 10.4v6.2M13.6 10.4v6.2"/>
+  </symbol>
+  <symbol id="i-mais" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round">
+    <path d="M12 4.4v15.2M4.4 12h15.2"/>
+  </symbol>
+  <symbol id="i-fechar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round">
+    <path d="m5.8 5.8 12.4 12.4M18.2 5.8 5.8 18.2"/>
+  </symbol>
+  <symbol id="i-certo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m4.4 12.6 5.1 5.1L19.6 6.6"/>
+  </symbol>
+  <symbol id="i-procurar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="10.6" cy="10.6" r="6.4"/><path d="m15.4 15.4 5.4 5.4"/>
+  </symbol>
+  <symbol id="i-ligacao" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10.2 13.6a3.8 3.8 0 0 0 5.7.4l2.8-2.8a3.8 3.8 0 0 0-5.4-5.4l-1.6 1.6"/>
+    <path d="M13.8 10.4a3.8 3.8 0 0 0-5.7-.4l-2.8 2.8a3.8 3.8 0 0 0 5.4 5.4l1.6-1.6"/>
+  </symbol>
+  <symbol id="i-externo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14.2 3.4h6.4v6.4M20.6 3.4 11.6 12.4"/>
+    <path d="M17.6 14v5.2a1.6 1.6 0 0 1-1.6 1.6H4.8a1.6 1.6 0 0 1-1.6-1.6V8a1.6 1.6 0 0 1 1.6-1.6H10"/>
+  </symbol>
+  <symbol id="i-aviso" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 3.6 21.4 19a1.4 1.4 0 0 1-1.2 2.1H3.8A1.4 1.4 0 0 1 2.6 19Z"/>
+    <path d="M12 9.6v4.6M12 17.6h.01"/>
+  </symbol>
+  <symbol id="i-ajuda" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="8.6"/>
+    <path d="M9.5 9.6a2.6 2.6 0 0 1 5.05.85c0 1.75-2.55 2.65-2.55 2.65"/>
+    <path d="M12 17.2h.01"/>
+  </symbol>
+  <symbol id="i-anular" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3.6 8.6h9.2a5.8 5.8 0 0 1 0 11.6H6.8"/>
+    <path d="M7.4 4.8 3.6 8.6l3.8 3.8"/>
+  </symbol>
+  <symbol id="i-relogio" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="8.6"/><path d="M12 6.8V12l3.6 2.2"/>
+  </symbol>
+  <symbol id="i-onda" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round">
+    <path d="M4.4 10v4M8.2 6.6v10.8M12 3.4v17.2M15.8 7.4v9.2M19.6 10.4v3.2"/>
+  </symbol>
+  <symbol id="i-mira" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="7.4"/><circle cx="12" cy="12" r="2.2"/>
+    <path d="M12 2.6v2.6M12 18.8v2.6M2.6 12h2.6M18.8 12h2.6"/>
+  </symbol>
+  <symbol id="i-grelha" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round">
+    <rect x="3.4" y="3.4" width="7.2" height="7.2" rx="1.6"/>
+    <rect x="13.4" y="3.4" width="7.2" height="7.2" rx="1.6"/>
+    <rect x="3.4" y="13.4" width="7.2" height="7.2" rx="1.6"/>
+    <rect x="13.4" y="13.4" width="7.2" height="7.2" rx="1.6"/>
+  </symbol>
+  <symbol id="i-deslizadores" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3.4 7.6h8.2M17.2 7.6h3.4"/><circle cx="14.4" cy="7.6" r="2.4"/>
+    <path d="M3.4 16.4h3.4M12.4 16.4h8.2"/><circle cx="9.6" cy="16.4" r="2.4"/>
+  </symbol>
+  <symbol id="i-olho" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2.4 12S6 5.4 12 5.4 21.6 12 21.6 12 18 18.6 12 18.6 2.4 12 2.4 12Z"/>
+    <circle cx="12" cy="12" r="3.1"/>
+  </symbol>
+  <symbol id="i-copiar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="8.6" y="8.6" width="12" height="12" rx="2"/>
+    <path d="M15.4 8.6V5.4a2 2 0 0 0-2-2H5.4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3.2"/>
+  </symbol>
+  <symbol id="i-filme" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round">
+    <rect x="2.8" y="4.4" width="18.4" height="15.2" rx="2.2"/>
+    <path d="M7.6 4.4v15.2M16.4 4.4v15.2M2.8 12h18.4" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="i-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m9.6 5.4 6.6 6.6-6.6 6.6"/>
+  </symbol>
+  <symbol id="i-seta2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m5.4 5.4 6.6 6.6-6.6 6.6M13.2 5.4l6.6 6.6-6.6 6.6"/>
+  </symbol>
+
+
+  <!-- Entrada e saída. O colchete com o bloco cheio do lado que FICA: é o
+       glifo de qualquer mesa de montagem, e diz sozinho para que lado corta.
+       Antes estavam as duas com a mesma seta a apontar para a direita. -->
+  <symbol id="i-entrada" viewBox="0 0 24 24">
+    <path d="M8.2 3.6H5.2a1.6 1.6 0 0 0-1.6 1.6v13.6a1.6 1.6 0 0 0 1.6 1.6h3"
+      fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="12" y="3.6" width="8.4" height="16.8" rx="1.6" fill="currentColor"/>
+  </symbol>
+  <symbol id="i-saida" viewBox="0 0 24 24">
+    <path d="M15.8 3.6h3a1.6 1.6 0 0 1 1.6 1.6v13.6a1.6 1.6 0 0 1-1.6 1.6h-3"
+      fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="3.6" y="3.6" width="8.4" height="16.8" rx="1.6" fill="currentColor"/>
+  </symbol>
+
+  <symbol id="i-quadro-um" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round">
+    <rect x="6.6" y="2.8" width="10.8" height="18.4" rx="2.2"/>
+  </symbol>
+  <symbol id="i-quadro-dois" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round">
+    <rect x="6.6" y="2.8" width="10.8" height="8.2" rx="1.8"/>
+    <rect x="6.6" y="13" width="10.8" height="8.2" rx="1.8"/>
+  </symbol>
+
+  <!-- ── marcas registadas, no desenho oficial ─────────────────────────── -->
+  <symbol id="i-twitch" viewBox="0 0 24 24">
+    <path fill="currentColor" d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/>
+  </symbol>
+  <symbol id="i-kick" viewBox="0 0 24 24">
+    <path fill="currentColor" d="M1.333 0h8v5.333H12V2.667h2.667V0h8v8H20v2.667h-2.667v2.666H20V16h2.667v8h-8v-2.667H12v-2.666H9.333V24h-8Z"/>
+  </symbol>
+  <symbol id="i-youtube" viewBox="0 0 24 24">
+    <path fill="currentColor" d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+  </symbol>
+</svg>
 
 <header>
   <div class="topo">
-    <h1 data-t="app.nome">Replay</h1>
-    <a class="paraTwitch" href="twitch.html" data-t="app.twitch">Twitch</a>
-    <button id="ajuda" class="discreto" data-t-aria="ajuda.abrir" aria-haspopup="dialog">?</button>
+    <h1><svg class="ic" aria-hidden="true"><use href="#i-replay"/></svg><span data-t="app.nome">Replay</span></h1>
+    <a class="paraTwitch" href="twitch.html"><svg class="ic" aria-hidden="true"><use href="#i-twitch"/></svg><span data-t="app.twitch">Twitch</span></a>
+    <button id="ajuda" class="discreto" data-t-aria="ajuda.abrir" aria-haspopup="dialog"><svg class="ic" aria-hidden="true"><use href="#i-ajuda"/></svg></button>
     <select id="idioma" aria-label="idioma"></select>
   </div>
   <!-- O caminho todo, em três passos e sem scroll.
@@ -58,7 +264,7 @@
         <input id="linkKick" type="url" autocomplete="off" spellcheck="false"
           data-t-aria="link.label" data-t-ph="link.ph"
           placeholder="link de um clipe, de um VOD ou de um canal">
-        <button id="abrirLink" data-t="link.abrir">Abrir</button>
+        <button id="abrirLink"><svg class="ic ic-p" aria-hidden="true"><use href="#i-externo"/></svg><span data-t="link.abrir">Abrir</span></button>
       </span>
       <output id="estadoLink" class="nota"></output>
     </label>
@@ -68,6 +274,7 @@
         <span class="procura">
           <input id="procurar" type="search" autocomplete="off" spellcheck="false"
             data-t-aria="procurar.label" data-t-ph="procurar.ph" placeholder="nome do streamer">
+          <svg class="ic lupa" aria-hidden="true"><use href="#i-procurar"/></svg>
           <ul id="sugestoes" class="sugestoes" hidden></ul>
         </span>
       </label>
@@ -78,7 +285,7 @@
       </label>
     </div>
     <div class="linha">
-      <button id="carregar" class="principal" data-t="canais.carregar">Carregar</button>
+      <button id="carregar" class="principal"><svg class="ic ic-p" aria-hidden="true"><use href="#i-seta"/></svg><span data-t="canais.carregar">Carregar</span></button>
       <span id="estadoCarga" class="nota"></span>
     </div>
     <!-- Próprio sítio, e não a linha de progresso: o aviso do leitor tem de
@@ -99,7 +306,7 @@
       <!-- Passar a noite pronta a outra pessoa. O que vai no link não é a lista
            de nomes — é o TRABALHO: os ajustes que ele acertou um a um. -->
       <button id="partilhar" data-t="partilha.botao" data-t-titulo="partilha.ajuda"
-        title="Copia um link com estes canais e estes ajustes">Copiar link</button>
+        title="Copia um link com estes canais e estes ajustes"><svg class="ic ic-p" aria-hidden="true"><use href="#i-copiar"/></svg><span data-t="partilha.botao">Copiar link</span></button>
       <output id="estadoPartilha" class="nota"></output>
     </div>
     <!-- O que está a acontecer, AO PÉ do controlo que o desencadeia.
@@ -138,7 +345,7 @@
        portátil ficava abaixo da dobra. É o botão que ele carrega mais vezes;
        tem de estar onde os olhos já estão, que é no vídeo. -->
   <div class="barraClipar">
-    <button id="clipar" class="principal"><span data-t="clipe.botao">Clipar</span> <kbd>C</kbd></button>
+    <button id="clipar" class="principal"><svg class="ic" aria-hidden="true"><use href="#i-tesoura"/></svg><span data-t="clipe.botao">Clipar</span> <kbd>C</kbd></button>
     <output id="marca" class="nota"></output>
   </div>
   <div id="barraGrelha" class="barraGrelha" hidden>
@@ -169,14 +376,14 @@
        aqui e não na coluna do relógio, que num portátil não tinha altura para
        ele — os saltos escorriam por cima do botão. -->
   <div class="linha sincronizar">
-      <button id="alinhar" data-t="alinhar.botao" data-t-titulo="alinhar.ajuda" title="Analisa o áudio de cada ângulo e corrige o desvio">Sincronizar por áudio</button>
+      <button id="alinhar" data-t="alinhar.botao" data-t-titulo="alinhar.ajuda" title="Analisa o áudio de cada ângulo e corrige o desvio"><svg class="ic ic-p" aria-hidden="true"><use href="#i-onda"/></svg><span data-t="alinhar.botao">Sincronizar por áudio</span></button>
       <span id="estadoAlinhar" class="nota"></span>
     </div>
   <section id="automatico">
     <h2><span data-t="auto.titulo">Deteção automática</span> <b class="etiqueta" data-t="auto.teste">teste</b></h2>
     <p class="nota" data-t="auto.explica">Ouve a tua POV à procura de tiroteios.</p>
     <div class="linha">
-      <button id="procurarKills" data-t="auto.botao">Deteção automática</button>
+      <button id="procurarKills"><svg class="ic ic-p" aria-hidden="true"><use href="#i-mira"/></svg><span data-t="auto.botao">Deteção automática</span></button>
       <select id="janelaAuto" data-t-aria="auto.quanto">
         <option value="1800" data-t="auto.meiaHora">meia hora</option>
         <option value="3600" selected data-t="auto.umaHora">uma hora</option>
@@ -192,8 +399,8 @@
   </section>
 
   <div class="linha">
-    <button id="limparFila" data-t="fila.limpar">Limpar exportações</button>
-    <button id="recomecar" data-t="fila.recomecar">Repor sessão</button>
+    <button id="limparFila"><svg class="ic ic-p" aria-hidden="true"><use href="#i-lixo"/></svg><span data-t="fila.limpar">Limpar exportações</span></button>
+    <button id="recomecar"><svg class="ic ic-p" aria-hidden="true"><use href="#i-anular"/></svg><span data-t="fila.recomecar">Repor sessão</span></button>
     <span id="memoria" class="nota"></span>
   </div>
   <!-- Trinta e seis ficheiros num so. Aparece sozinho quando ha mais do que
@@ -237,18 +444,18 @@
            3 s para apurar. "Adiciona botão de 3 segundos pra trás e 3 pra
            frente, e 5 minutos pra trás e 5 minutos pra frente." -->
       <div class="saltos">
-        <button id="menos5m" data-t="tempo.menos5m" data-t-titulo="tempo.voltar5m" title="voltar 5 minutos">&laquo; 5 min</button>
-        <button id="menos1m" data-t="tempo.menos1m" data-t-titulo="tempo.voltar1m" title="voltar 1 minuto">&laquo; 1 min</button>
-        <button id="menos10s" data-t="tempo.menos10s" data-t-titulo="tempo.voltar10s" title="voltar 10 segundos">&lsaquo; 10s</button>
-        <button id="menos3s" data-t="tempo.menos3s" data-t-titulo="tempo.voltar3s" title="voltar 3 segundos">&lsaquo; 3s</button>
-        <button id="mais3s" data-t="tempo.mais3s" data-t-titulo="tempo.avancar3s" title="avançar 3 segundos">3s &rsaquo;</button>
-        <button id="mais10s" data-t="tempo.mais10s" data-t-titulo="tempo.avancar10s" title="avançar 10 segundos">10s &rsaquo;</button>
-        <button id="mais1m" data-t="tempo.mais1m" data-t-titulo="tempo.avancar1m" title="avançar 1 minuto">1 min &raquo;</button>
-        <button id="mais5m" data-t="tempo.mais5m" data-t-titulo="tempo.avancar5m" title="avançar 5 minutos">5 min &raquo;</button>
+        <button id="menos5m" data-t-titulo="tempo.voltar5m" title="voltar 5 minutos"><svg class="ic" aria-hidden="true"><use href="#i-seta2"/></svg><span data-t="tempo.menos5m">5 min</span></button>
+        <button id="menos1m" data-t-titulo="tempo.voltar1m" title="voltar 1 minuto"><svg class="ic" aria-hidden="true"><use href="#i-seta2"/></svg><span data-t="tempo.menos1m">1 min</span></button>
+        <button id="menos10s" data-t-titulo="tempo.voltar10s" title="voltar 10 segundos"><svg class="ic" aria-hidden="true"><use href="#i-seta"/></svg><span data-t="tempo.menos10s">10s</span></button>
+        <button id="menos3s" data-t-titulo="tempo.voltar3s" title="voltar 3 segundos"><svg class="ic" aria-hidden="true"><use href="#i-seta"/></svg><span data-t="tempo.menos3s">3s</span></button>
+        <button id="mais3s" data-t-titulo="tempo.avancar3s" title="avançar 3 segundos"><span data-t="tempo.mais3s">3s</span><svg class="ic" aria-hidden="true"><use href="#i-seta"/></svg></button>
+        <button id="mais10s" data-t-titulo="tempo.avancar10s" title="avançar 10 segundos"><span data-t="tempo.mais10s">10s</span><svg class="ic" aria-hidden="true"><use href="#i-seta"/></svg></button>
+        <button id="mais1m" data-t-titulo="tempo.avancar1m" title="avançar 1 minuto"><span data-t="tempo.mais1m">1 min</span><svg class="ic" aria-hidden="true"><use href="#i-seta2"/></svg></button>
+        <button id="mais5m" data-t-titulo="tempo.avancar5m" title="avançar 5 minutos"><span data-t="tempo.mais5m">5 min</span><svg class="ic" aria-hidden="true"><use href="#i-seta2"/></svg></button>
       </div>
       <div class="marcas">
-        <button id="marcarIn"><span data-t="marca.inicio">Marcar entrada</span> <kbd>I</kbd></button>
-        <button id="marcarOut"><span data-t="marca.fim">Marcar saída</span> <kbd>O</kbd></button>
+        <button id="marcarIn"><svg class="ic ic-p" aria-hidden="true"><use href="#i-entrada"/></svg><span data-t="marca.inicio">Marcar entrada</span> <kbd>I</kbd></button>
+        <button id="marcarOut"><svg class="ic ic-p" aria-hidden="true"><use href="#i-saida"/></svg><span data-t="marca.fim">Marcar saída</span> <kbd>O</kbd></button>
       </div>
     </div>
 
@@ -272,9 +479,9 @@
          botão a ocupar duas filas inteiras num telemóvel. O resumo em cima diz
          os valores sem ser preciso abrir. -->
     <div class="linha">
-      <button id="marcarKill" class="principal"><span data-t="montagem.marcar">Marcar kill</span> <kbd>M</kbd></button>
+      <button id="marcarKill" class="principal"><svg class="ic" aria-hidden="true"><use href="#i-marcador"/></svg><span data-t="montagem.marcar">Marcar kill</span> <kbd>M</kbd></button>
       <details id="margens" class="margens">
-        <summary><span data-t="montagem.margens">Margens</span> <output id="resumoMargens" class="nota"></output></summary>
+        <summary><svg class="ic ic-p" aria-hidden="true"><use href="#i-deslizadores"/></svg><span data-t="montagem.margens">Margens</span> <output id="resumoMargens" class="nota"></output></summary>
         <div class="linha">
           <label class="pequeno"><span data-t="montagem.minhaPov">minha POV</span> <input id="protAntes" type="number" value="5" min="0" max="120" step="1">s antes</label>
           <label class="pequeno"><input id="protDepois" type="number" value="2" min="0" max="120" step="1">s depois</label>
@@ -298,13 +505,13 @@
       </label>
       <button id="selecionarTudo" data-t="sel.tudo">Selecionar tudo</button>
       <button id="selecionarNada" data-t="sel.nada">Limpar seleção</button>
-      <button id="apagarSelecionados" data-t="sel.apagar" disabled>Remover selecionados</button>
-      <button id="anularApagar" data-t="sel.anular" hidden>Anular</button>
+      <button id="apagarSelecionados" disabled><svg class="ic ic-p" aria-hidden="true"><use href="#i-lixo"/></svg><span data-t="sel.apagar">Remover selecionados</span></button>
+      <button id="anularApagar" hidden><svg class="ic ic-p" aria-hidden="true"><use href="#i-anular"/></svg><span data-t="sel.anular">Anular</span></button>
       <span id="estadoSelecao" class="nota"></span>
     </div>
     <ul id="listaMomentos" class="momentos"></ul>
     <div class="linha">
-      <button id="baixarMontagem" data-t="montagem.baixar" disabled>Exportar montagem</button>
+      <button id="baixarMontagem" disabled><svg class="ic" aria-hidden="true"><use href="#i-descarregar"/></svg><span data-t="montagem.baixar">Exportar montagem</span></button>
       <span id="estadoMontagem" class="nota"></span>
     </div>
   </section>
@@ -317,7 +524,7 @@
   <div class="modalCaixa estreita" role="dialog" aria-modal="true" data-t-aria="ajuda.titulo" aria-label="Atalhos">
     <div class="modalTopo">
       <b data-t="ajuda.titulo">Atalhos</b>
-      <button id="fecharAjuda" class="discreto" data-t-aria="ajuda.fechar" aria-label="fechar">✕</button>
+      <button id="fecharAjuda" class="discreto" data-t-aria="ajuda.fechar" aria-label="fechar"><svg class="ic" aria-hidden="true"><use href="#i-fechar"/></svg></button>
     </div>
     <dl class="atalhos">
       <dt><kbd>Espaço</kbd></dt><dd data-t="ajuda.pausa">Pausa e continua</dd>
@@ -338,7 +545,7 @@
     <div class="modalTopo">
       <b data-t="clipe.titulo">Criar clipe</b>
       <select id="canalClipe" data-t-aria="clipe.angulo" aria-label="ângulo"></select>
-      <button id="fecharClipe" data-t-titulo="clipe.fechar" title="fechar">✕</button>
+      <button id="fecharClipe" data-t-titulo="clipe.fechar" title="fechar"><svg class="ic" aria-hidden="true"><use href="#i-fechar"/></svg></button>
     </div>
     <!-- O editor do retrato, ao lado da fonte — como no da Twitch que ele
          mandou. À esquerda o vídeo deitado com as caixas de enquadramento por
@@ -366,15 +573,9 @@
         </div>
         <div class="linha modosRetrato">
           <button id="modoUm" class="modoRetrato" data-modo="um" data-t-titulo="retrato.um"
-            title="Um enquadramento" aria-pressed="true">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
-              stroke-width="2" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="2"/></svg>
-          </button>
+            title="Um enquadramento" aria-pressed="true"><svg class="ic" aria-hidden="true"><use href="#i-quadro-um"/></svg></button>
           <button id="modoDois" class="modoRetrato" data-modo="dois" data-t-titulo="retrato.dois"
-            title="Dois enquadramentos" aria-pressed="false">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
-              stroke-width="2" aria-hidden="true"><rect x="7" y="3" width="10" height="8" rx="1.5"/><rect x="7" y="13" width="10" height="8" rx="1.5"/></svg>
-          </button>
+            title="Dois enquadramentos" aria-pressed="false"><svg class="ic" aria-hidden="true"><use href="#i-quadro-dois"/></svg></button>
         </div>
       </div>
     </div>
@@ -394,12 +595,12 @@
     <output id="tempoClipe" class="nota"></output>
     <div class="aparar">
       <span class="rotuloCampo" data-t="clipe.inicioLabel">Início</span>
-      <button id="inicioMenos" class="passo" data-t-titulo="clipe.recuar" title="meio segundo para trás">⏪</button>
-      <button id="inicioMais" class="passo" data-t-titulo="clipe.avancar" title="meio segundo para a frente">⏩</button>
-      <button id="verClipe" class="ver" aria-pressed="false" data-t-titulo="clipe.ver" title="ver o clipe">▶</button>
+      <button id="inicioMenos" class="passo recua" data-t-titulo="clipe.recuar" title="meio segundo para trás" aria-label="início: meio segundo para trás"><svg class="ic ic-p" aria-hidden="true"><use href="#i-seta2"/></svg></button>
+      <button id="inicioMais" class="passo" data-t-titulo="clipe.avancar" title="meio segundo para a frente" aria-label="início: meio segundo para a frente"><svg class="ic ic-p" aria-hidden="true"><use href="#i-seta2"/></svg></button>
+      <button id="verClipe" class="ver" aria-pressed="false" data-t-titulo="clipe.ver" title="ver o clipe" aria-label="ver o clipe"><svg class="ic" aria-hidden="true"><use href="#i-tocar"/></svg></button>
       <span class="rotuloCampo" data-t="clipe.fimLabel">Fim</span>
-      <button id="fimMenos" class="passo" data-t-titulo="clipe.recuar" title="meio segundo para trás">⏪</button>
-      <button id="fimMais" class="passo" data-t-titulo="clipe.avancar" title="meio segundo para a frente">⏩</button>
+      <button id="fimMenos" class="passo recua" data-t-titulo="clipe.recuar" title="meio segundo para trás" aria-label="fim: meio segundo para trás"><svg class="ic ic-p" aria-hidden="true"><use href="#i-seta2"/></svg></button>
+      <button id="fimMais" class="passo" data-t-titulo="clipe.avancar" title="meio segundo para a frente" aria-label="fim: meio segundo para a frente"><svg class="ic ic-p" aria-hidden="true"><use href="#i-seta2"/></svg></button>
     </div>
     <label for="tituloClipe" data-t="clipe.tituloLabel">Título do clipe</label>
     <input id="tituloClipe" type="text" maxlength="80" data-t-ph="clipe.tituloPh" placeholder="opcional — entra no nome do ficheiro">
@@ -409,10 +610,10 @@
       <!-- So aparece quando o editor veio de uma kill da lista. Guarda as
            pontas e o enquadramento NA KILL, sem exportar nada: "ai vou fazendo
            em tudo e depois baixo tudo junto". -->
-      <button id="guardarAjustes" class="principal" hidden data-t="clipe.guardarAjustes">Guardar ajustes</button>
-      <button id="guardarRetrato" data-t="retrato.exportar"
-        data-t-titulo="retrato.custo" title="Reconverte em tempo real">Exportar 9:16</button>
-      <button id="guardarClipe" class="principal" data-t="clipe.guardar">Exportar 16:9</button>
+      <button id="guardarAjustes" class="principal" hidden><svg class="ic" aria-hidden="true"><use href="#i-certo"/></svg><span data-t="clipe.guardarAjustes">Guardar ajustes</span></button>
+      <button id="guardarRetrato"
+        data-t-titulo="retrato.custo" title="Reconverte em tempo real"><svg class="ic ic-p" aria-hidden="true"><use href="#i-descarregar"/></svg><span data-t="retrato.exportar">Exportar 9:16</span></button>
+      <button id="guardarClipe" class="principal"><svg class="ic" aria-hidden="true"><use href="#i-descarregar"/></svg><span data-t="clipe.guardar">Exportar 16:9</span></button>
     </div>
   </div>
 </div>
@@ -421,7 +622,7 @@
   <!-- A versao, a serio e visivel. O GitHub Pages serve com max-age=600 e um
        telemovel guarda o app.js antigo; sem isto, "ja corrigi" e "continua
        igual" sao as duas verdadeiras ao mesmo tempo e ninguem sai dali. -->
-  <p class="nota"><span data-t="app.rodape">A sessão fica guardada neste dispositivo.</span> · <span id="versao">d23df16643</span></p>
+  <p class="nota"><span data-t="app.rodape">A sessão fica guardada neste dispositivo.</span> · <span id="versao">1df47ec342</span></p>
 </footer>
 
 <!-- O hls.js é nosso, e não do cdnjs.
@@ -436,6 +637,6 @@
      nome, o endereço só muda quando o ficheiro muda mesmo, e no meio fica um
      304 sem corpo. É por isso que o publicar.sh não pode carimbar este. -->
 <script src="hls-1.5.17.js"></script>
-<script type="module" src="app.js?v=d23df16643"></script>
+<script type="module" src="app.js?v=1df47ec342"></script>
 </body>
 </html>

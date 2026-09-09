@@ -1,143 +1,146 @@
-/* Os tokens. Depois deste ficheiro, nenhum valor solto no meio das regras.
+/* ═══ O sistema visual ══════════════════════════════════════════════════════
  *
- * Fundo neutro e dessaturado de propósito: num sítio onde se decide o que
- * cortar, a coisa mais clara do ecrã tem de ser o vídeo. Tudo o resto recua.
+ * Um ficheiro, e depois dele nenhum valor solto no meio das regras. Quem
+ * quiser mudar a cor, a letra ou o espaço deste sítio mexe aqui e mais lado
+ * nenhum.
  *
- * UM acento, e só para duas coisas: a acção principal e a marcação de corte.
- * Estava a ser usado no botão, na borda do foco, na faixa do tempo, no nome do
- * canal, na ficha da vítima e no Clipar — seis sítios, o que é o mesmo que
- * nenhum. As cores de estado (aviso, erro, ok) não são acentos: pertencem à
- * informação e nunca à decoração.
+ * ── A ideia ────────────────────────────────────────────────────────────────
+ * Isto não é um site: é um INSTRUMENTO. Dezassete gravações, um relógio só,
+ * e alguém a decidir o que corta. A referência não são páginas — é o material
+ * de estúdio: caixa preta anodizada, mostrador frio, lâmpada de tally âmbar.
+ *
+ * Três decisões, e tudo o resto sai delas:
+ *
+ * 1. O CHÃO É QUENTE. Cinzento com o matiz rodado para 60º e croma quase
+ *    nulo (0,004 a 0,010). Toda a ferramenta escura do mundo usa cinzento
+ *    azulado; puxar o preto para o lado quente é o que faz isto parecer
+ *    equipamento em vez de painel de programador — e é o que dá tensão à
+ *    cor fria por cima, que é como o material real se comporta.
+ *
+ * 2. O AZUL-VERDE É O QUE SE CARREGA. Um acento só, frio, para acção e
+ *    selecção. Frio sobre quente é o par complementar; ao lado do chão salta
+ *    sem precisar de brilhar.
+ *
+ * 3. O ÂMBAR É O TEMPO MARCADO, e mais nada. Entrada e saída, marcas de
+ *    kill na régua, o instante em que se está. É a cor que qualquer mesa de
+ *    montagem usa para marcadores, e aqui não empresta o nome a botões.
+ *
+ * O verde de néon que estava aqui foi-se. "Esse verde tá muito forte" — e
+ * estava: preto quase puro com um verde ácido é o cliché de que este sítio
+ * mais precisava de sair.
+ *
+ * ── A escala das superfícies ───────────────────────────────────────────────
+ * Doze passos era demais e três era pouco. São seis, cada um com UM papel,
+ * pela mesma lógica das escalas de doze do Radix: fundo da aplicação, fundo
+ * afundado, painel, controlo, controlo sob o rato, controlo carregado.
+ * Nenhuma regra deste projecto tem o direito de inventar um sétimo.
  */
 :root {
   color-scheme: dark;
 
   /* ── superfícies ─────────────────────────────────────────────────────── */
-  /* Verdes, e não cinzentas. Estavam puxadas para azul (#0d0e10: o azul é o
-     canal mais alto) e o site inteiro lia-se cinzento por mais verde que eu
-     pusesse nos botões — porque não é nos botões que mora a cor de um sítio,
-     é no chão. Isto é a mesma escuridão de antes, rodada para verde: o
-     contraste do texto sobe em vez de descer (16.5 em vez de 15.9). */
-  --fundo: #0b100d;          /* a página */
-  --caixa: #121815;          /* uma superfície levantada */
-  --caixa-2: #18201b;        /* levantada sobre a levantada (dentro de cartões) */
-  --borda: #233029;
-  --borda-forte: #31423a;
-  --realce: #ffffff10;       /* hover sobre superfície */
+  --sup-0: #131211;          /* a página */
+  --sup-1: #191817;          /* afundado: caixas de texto, calhas, poços */
+  --sup-2: #1F1E1C;          /* um painel */
+  --sup-3: #262421;          /* um controlo em repouso */
+  --sup-4: #2F2C28;          /* o mesmo controlo sob o rato */
+  --sup-5: #383430;          /* carregado */
   --video-fundo: #000;       /* atrás do vídeo, e só aí */
-  --sobre-video: #000000b3;  /* fundo dos controlos por cima do vídeo */
-  --vidro: #000000c7;        /* o fundo por trás de uma janela modal */
+  --sobre-video: #0a0908d9;  /* controlos por cima da imagem */
+  --vidro: #0b0a09e0;        /* por trás de uma janela */
 
-  /* ── texto ───────────────────────────────────────────────────────────── */
-  --texto: #e9efea;
-  --texto-2: #a4b0a7;        /* secundário — passa AA sobre --fundo (8.5) */
-  --texto-3: #7d8a81;        /* terciário: só para o que é mesmo acessório */
+  /* ── linhas ──────────────────────────────────────────────────────────── */
+  /* Três, e a diferença entre elas é se a coisa responde ao toque. Um fio
+     à volta de um painel não pode ter o mesmo peso do fio à volta de um
+     botão: o segundo é uma promessa de que ali se carrega. */
+  --linha: #302D2A;          /* separadores e painéis: não se carrega ali */
+  --linha-2: #413D38;        /* a borda de um controlo */
+  --linha-3: #565046;        /* a borda dele sob o rato */
 
-  /* ── acento (um só) ──────────────────────────────────────────────────── */
-  --acento: #53fc18;         /* o verde da Kick */
-  --acento-fraco: #53fc1826;
-  --sobre-acento: #071008;   /* texto por cima do acento */
-  /* O botão principal emite. É a única coisa da página que o faz, e é essa a
-     razão de existir: quando há uma coisa a fazer a seguir, é aquela. */
-  --brilho: 0 0 0 1px #53fc1847, 0 14px 44px -18px #53fc1899;
-  /* A grelha de fundo, no verde e quase invisível. Dá chão à página sem
-     pedir nada a ninguém — sem ela um fundo liso a esta escuridão é um
-     buraco, e tudo o que lá se põe parece a flutuar. */
-  --grelha: #53fc180f;
-  /* O verde apagado do material: onde há imagem, onde houve sinal. Não é uma
-     acção e não pode gritar como o botão — mas cinzento também não é, porque
-     cinzento não quer dizer nada. */
-  --acento-suave: #53fc1859;
+  /* ── tinta ───────────────────────────────────────────────────────────── */
+  /* Medido sobre --sup-0: 15,6 · 8,0 · 4,9. O terceiro passa AA e é o menor
+     que passa — abaixo disto não há terceiro nível, há texto ilegível. */
+  --tinta: #F3F0EA;
+  --tinta-2: #B4AEA4;
+  --tinta-3: #8F8980;
+
+  /* ── acento: o que se carrega ────────────────────────────────────────── */
+  --acento: #2FB3C4;
+  --acento-alto: #46C6D6;    /* sob o rato */
+  --acento-eco: #2fb3c424;   /* fundo esbatido, para estados escolhidos */
+  --acento-fio: #2fb3c46b;
+  --sobre-acento: #04191C;   /* 8,9:1 sobre o acento cheio */
+
+  /* ── âmbar: o tempo marcado ──────────────────────────────────────────── */
+  --marca: #E4A13A;
+  --marca-alto: #F2B254;
+  --marca-eco: #e4a13a24;
+  --marca-fio: #e4a13a70;
+  --sobre-marca: #1E1305;
 
   /* ── estado ──────────────────────────────────────────────────────────── */
-  /* Ciano e não verde: um verde de "confirmado" ao lado do verde do acento
-     lê-se como a mesma cor, e o acento deixa de querer dizer "carrega aqui". */
-  --ok: #4dd4e8;
-  --aviso: #ffb02e;
-  --aviso-fundo: #ffb02e1a;
-  --erro: #ff7a7a;
-  --erro-fundo: #ff7a7a1a;
-  --marca-twitch: #a970ff;   /* a marca de outra gente, não um acento nosso */
+  /* Não são acentos: pertencem à informação, e não à decoração. */
+  --perigo: #E0574F;
+  --perigo-eco: #e0574f1f;
+  --ok: #5FAE72;             /* esteve no ar, ficou pronto */
+  --ok-eco: #5fae7226;
+  --aviso: #D9A441;
+  --aviso-eco: #d9a4411f;
 
-  /* Ouro, e só para uma coisa: "aqui aconteceu alguma coisa". Nem sempre foi
-     assim — as kills na régua e o cursor do instante eram verdes, a mesma cor
-     dos botões, e o ecrã pedia para carregar em tudo ao mesmo tempo. Verde
-     quer dizer "carrega"; ouro quer dizer "olha". São duas frases diferentes
-     e precisam de duas cores. Isto não é um segundo acento: é informação, da
-     mesma família do aviso e do erro. */
-  --marcador: #ffb407;
-  --marcador-fraco: #ffb40733;
+  /* ── a letra ─────────────────────────────────────────────────────────── */
+  /* IBM Plex, as duas. Desenhada para produtos técnicos, não para páginas de
+     campanha: terminais rectos, 'g' de um andar, números de largura fixa.
+     Vive no repositório e não num CDN — em dados móveis, uma letra que
+     depende da rede é uma letra que às vezes não há, e as medidas do ecrã
+     mudavam com ela. O mono não é enfeite: é onde moram as horas, os
+     segundos e os nomes dos canais, e ali as colunas têm de bater certo. */
+  --letra: 'IBM Plex Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --letra-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', 'Cascadia Mono', monospace;
 
-  /* ── largura ─────────────────────────────────────────────────────────── */
-  /* O palco quer o monitor todo: é lá que se compara um ângulo com outro.
-     O formulário não — com 1400px de largura os olhos atravessam o monitor
-     entre o rótulo e a caixa. Por isso só há uma medida aqui, e é a curta. */
-  --largura-forma: 900px;
+  /* Terça menor a partir de 14. Seis tamanhos e nem mais um. */
+  --t-micro: 11px;           /* etiquetas em maiúsculas, teclas */
+  --t-menor: 12.5px;         /* notas, o que é acessório */
+  --t-base: 14px;
+  --t-medio: 16px;           /* botões principais */
+  --t-grande: 20px;          /* o relógio */
+  --t-titulo: 26px;
+
+  --lh-apertado: 1.25;
+  --lh: 1.5;
+  --letra-larga: .09em;      /* só para maiúsculas pequenas */
 
   /* ── espaço ──────────────────────────────────────────────────────────── */
-  --e1: 4px;
-  --e2: 8px;
-  --e3: 12px;
-  --e4: 16px;
-  --e5: 24px;
-  --e6: 32px;
+  --e1: 2px;
+  --e2: 4px;
+  --e3: 8px;
+  --e4: 12px;
+  --e5: 16px;
+  --e6: 24px;
+  --e7: 32px;
+  --e8: 48px;
 
   /* ── raio ────────────────────────────────────────────────────────────── */
-  --r1: 6px;
-  --r2: 10px;
-  --r3: 999px;
+  /* Quatro, e cada um diz o que a coisa é. Tudo com o mesmo raio é a marca
+     de quem não escolheu: uma faixa de tempo não tem a forma de um painel. */
+  --r-fio: 2px;              /* faixas, riscos, barras de tempo */
+  --r-1: 5px;                /* fichas, teclas, caixas pequenas */
+  --r-2: 7px;                /* controlos */
+  --r-3: 10px;               /* painéis e quadrados de vídeo */
+  --r-redondo: 999px;
 
-  /* ── tipografia: cinco tamanhos, e não oito ──────────────────────────── */
-  --t-micro: 11px;   /* etiquetas, kbd */
-  --t-menor: 13px;   /* secundário, notas */
-  --t-base: 15px;    /* corpo e controlos */
-  --t-maior: 18px;   /* título de secção */
-  --t-titulo: 24px;  /* nome da página */
-  /* Duas famílias, e cada uma no que faz melhor.
-   *
-   * Mono em TUDO — como nas ferramentas de torneio que ele mostrou — dá o
-   * registo técnico certo, e cobra caro no texto corrido: é mais largo, e num
-   * ecrã de 390 px uma frase de erro passa a ocupar três linhas. Por isso a
-   * mono fica onde ganha: relógio, durações, desvios, contagens, réguas e
-   * teclas. O texto que se lê fica em sans.
-   *
-   * Nenhuma das duas se descarrega: são as do sistema. Esta página corre ao
-   * lado de vários descodificadores de vídeo, e um webfont é mais um pedido
-   * na rede e um salto de letra a meio do arranque. */
-  --letra: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  /* Duas faces descarregadas, e só duas.
-   *
-   * Rajdhani nos títulos e nas etiquetas: é a face condensada e técnica da
-   * referência que ele mandou, e é dela que vem o carácter. 15,7 KB.
-   *
-   * IBM Plex Mono nos números: a mono do sistema muda de máquina para máquina
-   * — SF Mono no telemóvel dele, Consolas no PC — e o relógio e os desvios
-   * ficavam com desenhos diferentes em cada sítio. 14,7 KB.
-   *
-   * O Inter do site de referência fica de fora: são mais 30 KB para um sans
-   * de interface que ninguém distingue do do sistema. Peso que não se paga.
-   *
-   * As duas com `display=swap` e com a pilha do sistema por trás: um
-   * bloqueador ou uma rede má devolvem exactamente o que havia antes disto. */
-  --letra-titulo: Rajdhani, "Segoe UI Semibold", ui-sans-serif, system-ui, sans-serif;
-  --letra-dados: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-
-  /* ── elevação ────────────────────────────────────────────────────────── */
-  --sombra-1: 0 1px 2px #00000059;
-  --sombra-2: 0 12px 32px #00000080;
+  /* ── sombra ──────────────────────────────────────────────────────────── */
+  /* Num sítio escuro a profundidade faz-se com a escala das superfícies e um
+     fio de luz, não com borrões pretos: sombra sobre preto não se vê. Só o
+     que flutua mesmo por cima da página é que a leva. */
+  --sombra-flutua: 0 8px 24px -10px #000000a8;
+  --sombra-janela: 0 32px 64px -16px #000000cc;
 
   /* ── movimento ───────────────────────────────────────────────────────── */
-  --rapido: 120ms;
-  --lento: 200ms;
+  --mov-rapido: 90ms cubic-bezier(.2, 0, .38, .9);
+  --mov: 160ms cubic-bezier(.2, 0, .38, .9);
 
-  /* Alvo de toque mínimo. Um botão de 28 px num telemóvel é uma aposta. */
-  --toque: 44px;
-}
-
-/* Quem pediu menos movimento não leva nenhum. */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: .01ms !important;
-    transition-duration: .01ms !important;
-  }
+  /* ── o anel de foco ──────────────────────────────────────────────────── */
+  /* Dois anéis: um da cor do chão a separar, outro do acento a marcar. Assim
+     lê-se por cima de qualquer superfície, incluindo por cima do vídeo. */
+  --foco: 0 0 0 2px var(--sup-0), 0 0 0 4px var(--acento);
 }

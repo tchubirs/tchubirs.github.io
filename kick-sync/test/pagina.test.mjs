@@ -325,7 +325,9 @@ test('num telemovel a pagina abre no video e os saltos ficam no primeiro ecra',
     // video — que era a queixa.
     const fora = await p.evaluate(() => ['#palcoFoco', '#clipar', '#menos5m', '#mais5m', '#marcarIn']
       .map((s) => [s, document.querySelector(s).getBoundingClientRect()])
-      .filter(([, r]) => r.bottom > innerHeight || r.top < 0)
+      // Um pixel de folga: o `scrollIntoView` pousa em fracções de pixel, e
+      // um topo de -0,4 não é "fora do ecrã" — é a mesma linha.
+      .filter(([, r]) => r.bottom > innerHeight + 1 || r.top < -1)
       .map(([s, r]) => `${s} em ${Math.round(r.top)}..${Math.round(r.bottom)}`));
     assert.deepEqual(fora, [], `fora do primeiro ecra de ${844}: ${fora.join(', ')}`);
 
@@ -927,9 +929,13 @@ test('o pause para tudo, e a barra de espaco faz o mesmo',
     await p.click('#carregar');
     await p.waitForSelector('.tile.foco .pausa', { timeout: 15000 });
 
-    assert.equal(await p.locator('.tile.foco .pausa').innerText(), '⏸');
+    // O botão já não diz '⏸' em texto: é um símbolo desenhado, e o que o
+    // identifica é QUAL símbolo do sprite ele está a usar.
+    const glifo = () => p.locator('.tile.foco .pausa use').getAttribute('href');
+    assert.equal(await glifo(), '#i-pausa');
     await p.click('.tile.foco .pausa');
-    await p.waitForFunction(() => document.querySelector('.tile.foco .pausa').textContent === '▶',
+    await p.waitForFunction(() => document.querySelector('.tile.foco .pausa use')
+      ?.getAttribute('href') === '#i-tocar',
       null, { timeout: 5000 });
     const parados = await p.evaluate(() => [...document.querySelectorAll('.tile video')].every((v) => v.paused));
     assert.equal(parados, true, 'parar e parar tudo');
@@ -937,10 +943,11 @@ test('o pause para tudo, e a barra de espaco faz o mesmo',
     // E andar no tempo durante a pausa nao pode fazer o video voltar a andar:
     // o botao dizia parado e o quadrado andava.
     await p.click('#mais10s');
-    assert.equal(await p.locator('.tile.foco .pausa').innerText(), '▶');
+    assert.equal(await glifo(), '#i-tocar');
 
     await p.keyboard.press(' ');
-    await p.waitForFunction(() => document.querySelector('.tile.foco .pausa').textContent === '⏸',
+    await p.waitForFunction(() => document.querySelector('.tile.foco .pausa use')
+      ?.getAttribute('href') === '#i-pausa',
       null, { timeout: 5000 });
     assert.deepEqual(erros, []);
     await p.close();
@@ -2138,6 +2145,85 @@ test('cada ponta tem as suas setas, e a imagem vai para onde a ponta foi',
       `com Shift o passo devia ser 0,1 s e andou ${(fino.dur - depoisInicio.dur).toFixed(2)}s`);
     assert.ok(fino.ate - fino.de > largo, 'e o clipe fica mais comprido, não mais curto');
 
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+// ── o sistema visual ───────────────────────────────────────────────────────
+//
+// Três coisas que se partem sem dar erro nenhum, e por isso têm de ser
+// medidas: um símbolo que aponta para um nome que não existe desenha o vazio;
+// uma letra que volta a vir de um CDN desaparece quando não há rede; e as
+// regras do ecrã inteiro, que são só da mesa de montagem, prendiam a página
+// da Twitch a 100vh sem nada que a fizesse caber.
+
+test('todos os símbolos usados existem no sprite, e nenhum é emoji',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'outro'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi\noutro');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 20000 });
+    await p.click('#mais1m');
+    await p.click('#marcarKill');
+    await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
+
+    const partidos = await p.evaluate(() => [...document.querySelectorAll('use')]
+      .map((u) => u.getAttribute('href'))
+      .filter((h, i, a) => a.indexOf(h) === i)
+      .filter((h) => !h || !document.querySelector(`symbol${h}`)));
+    assert.deepEqual(partidos, [], `símbolos sem desenho: ${partidos.join(', ')}`);
+
+    // E nenhum botão diz o que quer dizer com um emoji: um ⏸ sai de uma
+    // família diferente em cada sistema, e no iPhone sai a cores.
+    const comEmoji = await p.evaluate(() => [...document.querySelectorAll('#palco button, header button')]
+      .filter((b) => /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}]/u.test(b.textContent))
+      .map((b) => `${b.id || b.className}: ${b.textContent.trim().slice(0, 12)}`));
+    assert.deepEqual(comEmoji, [], `botões com emoji: ${comEmoji.join(', ')}`);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+test('a página não pede nada a mais ninguém — nem a letra',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    const forasteiros = [];
+    p.on('request', (r) => {
+      const u = new URL(r.url());
+      if (u.hostname !== '127.0.0.1' && u.protocol !== 'data:' && u.protocol !== 'blob:') forasteiros.push(r.url());
+    });
+    await kickFalsa(p, { canais: ['tchubi'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.waitForTimeout(600);
+    assert.deepEqual(forasteiros, [], `pedidos a outros domínios: ${forasteiros.join(', ')}`);
+
+    // E a letra que a página está mesmo a usar é a nossa, e não a de reserva.
+    const carregadas = await p.evaluate(() => [...document.fonts].map((f) => f.family));
+    assert.ok(carregadas.includes('IBM Plex Sans'), `caras declaradas: ${carregadas.join(', ')}`);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+test('a página da Twitch não fica presa às regras da mesa de montagem',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir({ ecra: { width: 1920, height: 1080 } });
+    await p.goto(`http://127.0.0.1:${PORTA}/twitch.html`, { waitUntil: 'networkidle' });
+    // Com uma noite aberta, que é quando as regras da mesa disparam. Aqui
+    // basta destapar o palco: carregar uma noite a sério pedia a API da
+    // Twitch, e o que se mede é o CSS e não o carregamento.
+    await p.evaluate(() => document.getElementById('palco').removeAttribute('hidden'));
+    await p.waitForTimeout(120);
+    const medida = await p.evaluate(() => ({
+      mesa: document.body.classList.contains('mesa'),
+      corpoPreso: getComputedStyle(document.body).overflowY === 'hidden',
+      alturaPresa: getComputedStyle(document.body).height === `${window.innerHeight}px`,
+      // E o texto tem acentos a sério: sem <meta charset> saía "Â·".
+      rodape: document.querySelector('footer')?.textContent || '',
+    }));
+    assert.equal(medida.mesa, false, 'a página da Twitch não é a mesa de montagem');
+    assert.equal(medida.corpoPreso, false, 'a página da Twitch ficou sem poder rolar');
+    assert.ok(!/Â|Ã/.test(medida.rodape), `o rodapé saiu mal codificado: ${medida.rodape}`);
     assert.deepEqual(erros, []);
     await p.close();
   });

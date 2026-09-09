@@ -18,6 +18,12 @@ cd "$(dirname "$0")"
 
 V=$(cat site/*.js site/*.css site/index.html | sha1sum | cut -c1-10)
 cp site/*.html site/*.js site/*.css "$DESTINO/"
+# A letra vive connosco e nao num CDN (ver a nota em estilo.css). Sem esta
+# linha o site sai publicado a apontar para cinco ficheiros que nao estao la,
+# e a pagina inteira cai para a letra do sistema — que e exactamente o que
+# esta montagem existe para evitar.
+mkdir -p "$DESTINO/letra"
+cp site/letra/* "$DESTINO/letra/"
 
 for f in "$DESTINO"/*.js "$DESTINO"/*.html; do
   # `from './x.js'` e `src="app.js"` -> mesmos ficheiros, endereço novo.
@@ -46,4 +52,9 @@ fi
 for f in "$DESTINO"/index.html "$DESTINO"/twitch.html "$DESTINO"/app.js "$DESTINO"/twitch-app.js; do
   grep -q "v=$V" "$f" || { echo "SEM CARIMBO: $f" >&2; exit 1; }
 done
-echo "carimbo v=$V em todas as paginas" 
+# E que a letra foi mesmo junto: cinco caras, e todas com corpo.
+for f in site/letra/*.woff2; do
+  n=$(basename "$f")
+  [ -s "$DESTINO/letra/$n" ] || { echo "FALTA A LETRA: $n" >&2; exit 1; }
+done
+echo "carimbo v=$V em todas as paginas  ·  $(ls "$DESTINO"/letra/*.woff2 | wc -l) caras de letra" 
