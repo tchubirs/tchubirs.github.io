@@ -159,56 +159,19 @@
 
   <!-- A montagem. O fluxo do dono: marca-se a kill, e a pagina entrega a POV
        dele longa e as POVs de quem morreu curtinhas, ja numeradas. -->
-  <section id="montagem">
-    <h2 data-t="montagem.titulo">Montagem</h2>
-    <!-- As margens vivem fechadas. São quatro caixas de número que se acertam
-         uma vez e nunca mais se tocam, e estavam permanentemente ao lado do
-         botão a ocupar duas filas inteiras num telemóvel. O resumo em cima diz
-         os valores sem ser preciso abrir. -->
-    <div class="linha">
-      <button id="marcarKill" class="principal"><span data-t="montagem.marcar">Marcar kill</span> <kbd>M</kbd></button>
-      <details id="margens" class="margens">
-        <summary><span data-t="montagem.margens">Margens</span> <output id="resumoMargens" class="nota"></output></summary>
-        <div class="linha">
-          <label class="pequeno"><span data-t="montagem.minhaPov">minha POV</span> <input id="protAntes" type="number" value="5" min="0" max="120" step="1">s antes</label>
-          <label class="pequeno"><input id="protDepois" type="number" value="2" min="0" max="120" step="1">s depois</label>
-          <span id="margensVitima" class="linha" hidden>
-            <label class="pequeno"><span data-t="montagem.quemMorreu">quem morreu</span> <input id="vitAntes" type="number" value="1" min="0" max="60" step="1">s antes</label>
-            <label class="pequeno"><input id="vitDepois" type="number" value="2" min="0" max="60" step="1">s depois</label>
-          </span>
-        </div>
-      </details>
-    </div>
-    <!-- A barra de selecao. Uma noite varrida da dezenas de candidatos e a
-         maioria nao e kill; apagar um a um era o trabalho manual que a busca
-         automatica existe para tirar. -->
-    <div class="linha barraSelecao">
-      <label class="pequeno"><span data-t="sel.mostrar">Filtrar</span>
-        <select id="filtroMomentos" data-t-aria="sel.mostrar">
-          <option value="todos" data-t="sel.todos">todos</option>
-          <option value="comMorte" data-t="sel.comMorte">Com vítima identificada</option>
-          <option value="semMorte" data-t="sel.semMorte">Por rever</option>
-        </select>
-      </label>
-      <button id="selecionarTudo" data-t="sel.tudo">Selecionar tudo</button>
-      <button id="selecionarNada" data-t="sel.nada">Limpar seleção</button>
-      <button id="apagarSelecionados" data-t="sel.apagar" disabled>Remover selecionados</button>
-      <button id="anularApagar" data-t="sel.anular" hidden>Anular</button>
-      <span id="estadoSelecao" class="nota"></span>
-    </div>
-    <ul id="listaMomentos" class="momentos"></ul>
-    <div class="linha">
-      <button id="baixarMontagem" data-t="montagem.baixar" disabled>Exportar montagem</button>
-      <span id="estadoMontagem" class="nota"></span>
-    </div>
-  </section>
-
   <!-- A deteção automática à parte, e no fim.
        "A parte dos clipes automáticos está muito ruim — temos que pôr escrito
        teste, e puxar um pouco mais para baixo, separada das funções normais."
        Tem razão: estava no meio dos botões que funcionam, e um botão que
        acerta em cinco de seis não pode ter o mesmo peso de um que acerta
        sempre. -->
+  <!-- O Sincronizar por áudio é uma ferramenta da NOITE, como a deteção: vive
+       aqui e não na coluna do relógio, que num portátil não tinha altura para
+       ele — os saltos escorriam por cima do botão. -->
+  <div class="linha sincronizar">
+      <button id="alinhar" data-t="alinhar.botao" data-t-titulo="alinhar.ajuda" title="Analisa o áudio de cada ângulo e corrige o desvio">Sincronizar por áudio</button>
+      <span id="estadoAlinhar" class="nota"></span>
+    </div>
   <section id="automatico">
     <h2><span data-t="auto.titulo">Deteção automática</span> <b class="etiqueta" data-t="auto.teste">teste</b></h2>
     <p class="nota" data-t="auto.explica">Ouve a tua POV à procura de tiroteios.</p>
@@ -289,10 +252,7 @@
       </div>
     </div>
 
-    <div class="linha">
-      <button id="alinhar" data-t="alinhar.botao" data-t-titulo="alinhar.ajuda" title="Analisa o áudio de cada ângulo e corrige o desvio">Sincronizar por áudio</button>
-      <span id="estadoAlinhar" class="nota"></span>
-    </div>
+    
   </div>
   </div><!-- .palcoLadoCaixa -->
 
@@ -300,6 +260,54 @@
        "Não precisa um widget tão grande" — em três colunas cada um fica com o
        tamanho do que tem dentro, em vez de uma coluna estreita a empilhar tudo. -->
 
+
+  <!-- A montagem e filha directa do palco, e nao do fundo, por causa do ecra
+       de PC: la ela vive na coluna da direita, por baixo dos botoes de salto,
+       com a lista a rolar por dentro e o Exportar sempre a vista. No telemovel
+       e num ecra baixo fica por baixo de tudo, como sempre esteve. -->
+  <section id="montagem">
+    <h2 data-t="montagem.titulo">Montagem</h2>
+    <!-- As margens vivem fechadas. São quatro caixas de número que se acertam
+         uma vez e nunca mais se tocam, e estavam permanentemente ao lado do
+         botão a ocupar duas filas inteiras num telemóvel. O resumo em cima diz
+         os valores sem ser preciso abrir. -->
+    <div class="linha">
+      <button id="marcarKill" class="principal"><span data-t="montagem.marcar">Marcar kill</span> <kbd>M</kbd></button>
+      <details id="margens" class="margens">
+        <summary><span data-t="montagem.margens">Margens</span> <output id="resumoMargens" class="nota"></output></summary>
+        <div class="linha">
+          <label class="pequeno"><span data-t="montagem.minhaPov">minha POV</span> <input id="protAntes" type="number" value="5" min="0" max="120" step="1">s antes</label>
+          <label class="pequeno"><input id="protDepois" type="number" value="2" min="0" max="120" step="1">s depois</label>
+          <span id="margensVitima" class="linha" hidden>
+            <label class="pequeno"><span data-t="montagem.quemMorreu">quem morreu</span> <input id="vitAntes" type="number" value="1" min="0" max="60" step="1">s antes</label>
+            <label class="pequeno"><input id="vitDepois" type="number" value="2" min="0" max="60" step="1">s depois</label>
+          </span>
+        </div>
+      </details>
+    </div>
+    <!-- A barra de selecao. Uma noite varrida da dezenas de candidatos e a
+         maioria nao e kill; apagar um a um era o trabalho manual que a busca
+         automatica existe para tirar. -->
+    <div class="linha barraSelecao">
+      <label class="pequeno"><span data-t="sel.mostrar">Filtrar</span>
+        <select id="filtroMomentos" data-t-aria="sel.mostrar">
+          <option value="todos" data-t="sel.todos">todos</option>
+          <option value="comMorte" data-t="sel.comMorte">Com vítima identificada</option>
+          <option value="semMorte" data-t="sel.semMorte">Por rever</option>
+        </select>
+      </label>
+      <button id="selecionarTudo" data-t="sel.tudo">Selecionar tudo</button>
+      <button id="selecionarNada" data-t="sel.nada">Limpar seleção</button>
+      <button id="apagarSelecionados" data-t="sel.apagar" disabled>Remover selecionados</button>
+      <button id="anularApagar" data-t="sel.anular" hidden>Anular</button>
+      <span id="estadoSelecao" class="nota"></span>
+    </div>
+    <ul id="listaMomentos" class="momentos"></ul>
+    <div class="linha">
+      <button id="baixarMontagem" data-t="montagem.baixar" disabled>Exportar montagem</button>
+      <span id="estadoMontagem" class="nota"></span>
+    </div>
+  </section>
 </section>
 
 <!-- Os atalhos que já existem, num sítio onde se possam descobrir.
@@ -413,7 +421,7 @@
   <!-- A versao, a serio e visivel. O GitHub Pages serve com max-age=600 e um
        telemovel guarda o app.js antigo; sem isto, "ja corrigi" e "continua
        igual" sao as duas verdadeiras ao mesmo tempo e ninguem sai dali. -->
-  <p class="nota"><span data-t="app.rodape">A sessão fica guardada neste dispositivo.</span> · <span id="versao">4177dd6a2d</span></p>
+  <p class="nota"><span data-t="app.rodape">A sessão fica guardada neste dispositivo.</span> · <span id="versao">35e0821e85</span></p>
 </footer>
 
 <!-- O hls.js é nosso, e não do cdnjs.
@@ -428,6 +436,6 @@
      nome, o endereço só muda quando o ficheiro muda mesmo, e no meio fica um
      304 sem corpo. É por isso que o publicar.sh não pode carimbar este. -->
 <script src="hls-1.5.17.js"></script>
-<script type="module" src="app.js?v=4177dd6a2d"></script>
+<script type="module" src="app.js?v=35e0821e85"></script>
 </body>
 </html>

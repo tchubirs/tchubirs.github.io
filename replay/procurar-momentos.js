@@ -1,5 +1,5 @@
-import { medir, chao, impulsos, regioes, FPS, TAXA_TIROS } from './tiros.js?v=4177dd6a2d';
-import { recortar } from './aprender.js?v=4177dd6a2d';
+import { medir, chao, impulsos, regioes, FPS, TAXA_TIROS } from './tiros.js?v=35e0821e85';
+import { recortar } from './aprender.js?v=35e0821e85';
 
 // Achar as kills sozinho — pela forca do som.
 //

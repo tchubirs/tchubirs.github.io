@@ -7,34 +7,34 @@
 
 import {
   vodsDoCanal, lerMaster, lerPlaylist, procurarCanais, lerLinkKick, clipeDaKick, DESCONHECIDO,
-} from './kick.js?v=4177dd6a2d';
+} from './kick.js?v=35e0821e85';
 import {
   linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo,
-} from './relogio.js?v=4177dd6a2d';
-import { cortarTodosOsAngulos } from './baixar.js?v=4177dd6a2d';
-import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=4177dd6a2d';
-import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=4177dd6a2d';
-import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=4177dd6a2d';
+} from './relogio.js?v=35e0821e85';
+import { cortarTodosOsAngulos } from './baixar.js?v=35e0821e85';
+import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=35e0821e85';
+import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=35e0821e85';
+import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=35e0821e85';
 import {
   RETRATO, enquadramentoInicial, limitar, desenhar, gravar, formatoQueFunciona, extensaoDe,
   reformar, limparDivisao, DIVISAO_OMISSAO, divisaoDoQuadro, proporcaoDoQuadro, encaixar,
-} from './retrato.js?v=4177dd6a2d';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=4177dd6a2d';
+} from './retrato.js?v=35e0821e85';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=35e0821e85';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
   alternarVitima, filtrar, temMorte, clipesDoMomento, comAjuste,
-} from './momentos.js?v=4177dd6a2d';
-import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=4177dd6a2d';
-import { criarZip, crc32 } from './zip.js?v=4177dd6a2d';
-import { queFazerComOLeitor } from './leitor.js?v=4177dd6a2d';
-import { criarApanhador } from './frames.js?v=4177dd6a2d';
-import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=4177dd6a2d';
-import { TAXA_TIROS } from './tiros.js?v=4177dd6a2d';
-import { parecidos, juntarPerto } from './aprender.js?v=4177dd6a2d';
-import { somDoCanal } from './alinhar.js?v=4177dd6a2d';
-import { MAXIMO_S, mover, janelaInicial, nomeDoClipe, posicaoDaCabeca } from './clipe.js?v=4177dd6a2d';
-import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=4177dd6a2d';
-import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=4177dd6a2d';
+} from './momentos.js?v=35e0821e85';
+import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=35e0821e85';
+import { criarZip, crc32 } from './zip.js?v=35e0821e85';
+import { queFazerComOLeitor } from './leitor.js?v=35e0821e85';
+import { criarApanhador } from './frames.js?v=35e0821e85';
+import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=35e0821e85';
+import { TAXA_TIROS } from './tiros.js?v=35e0821e85';
+import { parecidos, juntarPerto } from './aprender.js?v=35e0821e85';
+import { somDoCanal } from './alinhar.js?v=35e0821e85';
+import { MAXIMO_S, mover, janelaInicial, nomeDoClipe, posicaoDaCabeca } from './clipe.js?v=35e0821e85';
+import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=35e0821e85';
+import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=35e0821e85';
 
 const $ = (id) => document.getElementById(id);
 const estado = {
