@@ -214,6 +214,14 @@
     <rect x="6.6" y="13" width="10.8" height="8.2" rx="1.8"/>
   </symbol>
 
+  <!-- Dois painéis lado a lado. É o que o botão FAZ: põe este ângulo ao lado
+       do que já está aberto. Estava um "+", que num quadrado com um "+" e um
+       "−" de acerto de relógio mesmo por baixo não dizia nada. -->
+  <symbol id="i-lado-a-lado" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round">
+    <rect x="2.4" y="4.6" width="8.8" height="14.8" rx="1.9"/>
+    <rect x="12.8" y="4.6" width="8.8" height="14.8" rx="1.9"/>
+  </symbol>
+
   <!-- ── marcas registadas, no desenho oficial ─────────────────────────── -->
   <symbol id="i-twitch" viewBox="0 0 24 24">
     <path fill="currentColor" d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/>
@@ -306,7 +314,7 @@
       <!-- Passar a noite pronta a outra pessoa. O que vai no link não é a lista
            de nomes — é o TRABALHO: os ajustes que ele acertou um a um. -->
       <button id="partilhar" data-t="partilha.botao" data-t-titulo="partilha.ajuda"
-        title="Copia um link com estes canais e estes ajustes"><svg class="ic ic-p" aria-hidden="true"><use href="#i-copiar"/></svg><span data-t="partilha.botao">Copiar link</span></button>
+        title="Copia um link com o projeto de agora"><svg class="ic ic-p" aria-hidden="true"><use href="#i-copiar"/></svg><span data-t="partilha.botao">Partilhar projeto</span></button>
       <output id="estadoPartilha" class="nota"></output>
     </div>
     <!-- O que está a acontecer, AO PÉ do controlo que o desencadeia.
@@ -349,9 +357,11 @@
     <output id="marca" class="nota"></output>
   </div>
   <div id="barraGrelha" class="barraGrelha" hidden>
-    <span class="rotuloCampo" data-t="grelha.ordem">Ordem</span>
+    <!-- Sem o rótulo "ORDEM" à frente: os dois botões passaram a dizer o que
+         ordenam ("Por ordem de adição", "A–Z"), e "ORDEM  Por ordem de
+         adição" era a mesma palavra duas vezes na mesma linha. -->
     <button id="ordemAdicionado" class="ordemGrelha" data-ordem="adicionado"
-      aria-pressed="true" data-t="grelha.adicionado">Como adicionei</button>
+      aria-pressed="true" data-t="grelha.adicionado">Por ordem de adição</button>
     <button id="ordemAz" class="ordemGrelha" data-ordem="az"
       aria-pressed="false" data-t="grelha.az">A–Z</button>
   </div>
@@ -527,13 +537,13 @@
       <button id="fecharAjuda" class="discreto" data-t-aria="ajuda.fechar" aria-label="fechar"><svg class="ic" aria-hidden="true"><use href="#i-fechar"/></svg></button>
     </div>
     <dl class="atalhos">
-      <dt><kbd>Espaço</kbd></dt><dd data-t="ajuda.pausa">Pausa e continua</dd>
+      <dt><kbd data-t="ajuda.teclaEspaco">Espaço</kbd></dt><dd data-t="ajuda.pausa">Pausa e continua</dd>
       <dt><kbd>J</kbd> <kbd>L</kbd></dt><dd data-t="ajuda.andar">Recua e avança 1 s (com Shift, 10 s)</dd>
       <dt><kbd>I</kbd> <kbd>O</kbd></dt><dd data-t="ajuda.marca">Marca entrada e saída</dd>
       <dt><kbd>M</kbd></dt><dd data-t="ajuda.kill">Marca kill</dd>
       <dt><kbd>C</kbd></dt><dd data-t="ajuda.clipe">Abre o clipe</dd>
       <dt><kbd>,</kbd> <kbd>.</kbd></dt><dd data-t="ajuda.ajuste">Ajusta o ângulo em foco</dd>
-      <dt><kbd>Esc</kbd></dt><dd data-t="ajuda.fecha">Fecha esta janela</dd>
+      <dt><kbd data-t="ajuda.teclaEsc">Esc</kbd></dt><dd data-t="ajuda.fecha">Fecha esta janela</dd>
     </dl>
   </div>
 </div>
@@ -622,7 +632,7 @@
   <!-- A versao, a serio e visivel. O GitHub Pages serve com max-age=600 e um
        telemovel guarda o app.js antigo; sem isto, "ja corrigi" e "continua
        igual" sao as duas verdadeiras ao mesmo tempo e ninguem sai dali. -->
-  <p class="nota"><span data-t="app.rodape">A sessão fica guardada neste dispositivo.</span> · <span id="versao">5681c83e44</span></p>
+  <p class="nota"><span data-t="app.rodape">A sessão fica guardada neste dispositivo.</span> · <span id="versao">ce2e4e8997</span></p>
 </footer>
 
 <!-- O hls.js é nosso, e não do cdnjs.
@@ -637,6 +647,6 @@
      nome, o endereço só muda quando o ficheiro muda mesmo, e no meio fica um
      304 sem corpo. É por isso que o publicar.sh não pode carimbar este. -->
 <script src="hls-1.5.17.js"></script>
-<script type="module" src="app.js?v=5681c83e44"></script>
+<script type="module" src="app.js?v=ce2e4e8997"></script>
 </body>
 </html>
