@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo,
-  passoDoArrasto, ARRASTO_INTERVALO_MS,
+  passoDoArrasto, ARRASTO_INTERVALO_MS, vistaDaLinha, saiuDaVista,
 } from '../site/relogio.js';
 
 // Helper: a VOD covering [inicio, inicio+segundos) built from 10-second
@@ -262,4 +262,48 @@ test('segurar atravessa uma noite inteira em menos de dois minutos', () => {
     `${Math.round(segundosReais)} s para atravessar dez horas — devagar demais`);
   assert.ok(segundosReais > 20,
     `${Math.round(segundosReais)} s — tão depressa que passa por cima de tudo`);
+});
+
+// "Com tanto tempo aparecendo, as barras ficaram muito pequenas, não? Talvez
+//  um botão pra escolher mostrar mais tempo ou menos nessa linha do tempo."
+//
+// A conta que lhe dá razão: a noite dele são 34 horas de janela comum
+// espalhadas por uns 450 px de faixa. São 4,5 minutos por pixel — um tiroteio
+// de noventa segundos ocupa um TERÇO de pixel e não existe no ecrã.
+const NOITE = { inicio: Date.parse('2026-08-30T11:20:00Z'), fim: Date.parse('2026-08-31T21:00:00Z') };
+const meio = NOITE.inicio + (NOITE.fim - NOITE.inicio) / 2;
+
+test('a vista da linha do tempo é uma janela centrada, presa dentro da noite', () => {
+  // Sem zoom, é a noite inteira — que é como sempre esteve.
+  assert.deepEqual(vistaDaLinha(NOITE, meio, 0), NOITE);
+  assert.deepEqual(vistaDaLinha(NOITE, meio, 999_999), NOITE, 'um zoom maior que a noite é a noite');
+
+  // Com zoom, tem a largura pedida e o instante ao meio.
+  const dez = vistaDaLinha(NOITE, meio, 600);
+  assert.equal(dez.fim - dez.inicio, 600_000, 'dez minutos são dez minutos');
+  assert.equal((dez.inicio + dez.fim) / 2, meio, 'o instante devia ficar ao meio');
+
+  // Nas pontas, encosta em vez de sair da noite: uma vista fora da noite
+  // desenhava faixas onde não há gravação nenhuma.
+  const naEntrada = vistaDaLinha(NOITE, NOITE.inicio, 600);
+  assert.equal(naEntrada.inicio, NOITE.inicio, 'saiu pela esquerda');
+  assert.equal(naEntrada.fim - naEntrada.inicio, 600_000, 'e encolheu ao encostar');
+  const naSaida = vistaDaLinha(NOITE, NOITE.fim, 600);
+  assert.equal(naSaida.fim, NOITE.fim, 'saiu pela direita');
+
+  // E o que é ilegível não rebenta: devolve a noite.
+  for (const mau of [null, undefined, { inicio: 5, fim: 5 }]) {
+    assert.equal(vistaDaLinha(mau, meio, 600), mau);
+  }
+});
+
+// Recentrar a cada instante obrigava a repintar dezoito faixas sessenta vezes
+// por segundo, e pregava o cursor ao meio — o que se quer ver é ele a ANDAR.
+test('a vista fica quieta até o cursor lhe chegar à beira', () => {
+  const v = { inicio: 0, fim: 1000 };
+  assert.equal(saiuDaVista(v, 500), false, 'ao meio, não se mexe');
+  assert.equal(saiuDaVista(v, 300), false, 'a trinta por cento, ainda não');
+  assert.equal(saiuDaVista(v, 150), true, 'a quinze por cento, já saiu');
+  assert.equal(saiuDaVista(v, 900), true, 'e do outro lado também');
+  assert.equal(saiuDaVista(null, 500), false, 'sem vista não há beira nenhuma');
 });

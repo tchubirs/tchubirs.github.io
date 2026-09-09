@@ -509,6 +509,14 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 /* ── a ordem da grelha ─────────────────────────────────────────────────── */
 .barraGrelha { display: flex; align-items: center; gap: var(--e3); flex-wrap: wrap; margin: var(--e5) 0 0; }
 .ordemGrelha { min-height: 30px; padding: 0 var(--e4); font-size: var(--t-menor); }
+/* A procura na grelha: pequena, ao lado da ordem, e do tamanho do que se
+   escreve lá dentro — um nome de canal. */
+.procuraGrelha { flex: 0 1 220px; min-width: 120px; }
+.procuraGrelha input { min-height: 30px; padding: 0 var(--e3) 0 var(--e6); font-size: var(--t-menor); }
+.procuraGrelha .lupa { left: var(--e3); width: 14px; height: 14px; }
+/* Escondido pelo filtro, e não tirado: o leitor continua vivo por trás. */
+#grade .tile.foraDoFiltro { display: none; }
+.barraGrelha #quantosNaGrelha { margin-left: auto; }
 
 /* ── o Clipar ──────────────────────────────────────────────────────────────
    Vive colado aos ângulos em foco e não no fundo da coluna: é o botão que
@@ -516,16 +524,34 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
    Do tamanho do que diz, e não da largura do ecrã: uma barra de mil e
    duzentos pixels de cor a atravessar a página é um berro, e o berro não
    fica mais visível por ser maior — fica mais difícil de olhar. */
-.barraClipar { display: flex; align-items: center; gap: var(--e4); margin: 0 0 var(--e4); }
-.barraClipar #clipar { flex: none; min-width: 190px; min-height: 46px; font-size: var(--t-medio); }
-.barraClipar #marca { flex: 1 1 auto; text-align: right; }
+/* O Clipar EXACTAMENTE por baixo do vídeo, e ao meio dos dois quando são dois.
+   "O botão de clipar coloca exatamente em baixo do player principal, e quando
+    tem dois players rodando ele fica no meio dos 2, em baixo."
+   Três colunas e não uma linha flex: com `justify-content: center` numa linha,
+   o botão escorregava para o lado sempre que a nota ao lado dele mudava de
+   tamanho — e ela muda a cada marca. Assim o botão está no meio da coluna do
+   meio, e a nota cresce na terceira sem lhe tocar. */
+.barraClipar {
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+  gap: var(--e4); margin: 0 0 var(--e4);
+}
+.barraClipar #clipar { grid-column: 2; min-width: 190px; min-height: 46px; font-size: var(--t-medio); }
+.barraClipar #marca { grid-column: 3; justify-self: start; }
 
 /* ═══ 7 · o relógio e a linha do tempo ══════════════════════════════════════ */
 
 /* A coluna dos nomes é UMA, e as três linhas — a barra, as faixas e a régua —
    usam-na todas. Estavam em 92 px, 100 px e 92 px: o mesmo instante caía em
    três sítios diferentes de x, e o cursor apontava para o lado da hora. */
+/* A régua VAI PARA CIMA das faixas, e não por baixo delas.
+   "Coloca a linha do tempo, o timer, do lado de cima — aí tá tudo amontoado."
+   Em baixo, as horas e as marcas de kill dividiam trinta pixels com a borda
+   do painel, e numa noite com quinze kills os números ficavam uma mancha por
+   cima dos algarismos das horas. Em cima, a régua fica entre o cursor e as
+   faixas — que é onde qualquer mesa de montagem a põe — e as duas coisas
+   deixam de disputar o mesmo espaço. */
 .relogio {
+  display: flex; flex-direction: column;
   --coluna: 96px;
   background: var(--sup-2); border: 1px solid var(--linha); border-radius: var(--r-3);
   padding: var(--e4);
@@ -561,7 +587,7 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 /* ── as faixas: uma linha por canal ────────────────────────────────────────
    Sem tecto: ele quer os trinta de uma vez, e numa coluna alta e estreita a
    forma da lista é a forma do sítio. Quem lhe põe tecto é o ecrã de PC. */
-.faixas { position: relative; margin-top: var(--e4); display: grid; gap: 3px; }
+.faixas { position: relative; margin-top: var(--e3); display: grid; gap: 3px; }
 .faixa { align-items: center; }
 .faixa .nome {
   font-size: var(--t-menor); color: var(--tinta-3);
@@ -593,8 +619,21 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 }
 
 /* ── a régua: as horas e as kills marcadas ──────────────────────────────── */
-.regua { position: relative; height: 30px; border-top: 1px solid var(--linha); }
+.relogio > .barraLinha { order: 1; }
+.relogio > .reguaLinha { order: 2; margin-top: var(--e3); }
+.relogio > .faixas { order: 3; }
+.relogio > .linha { order: 4; }
+.relogio > .saltos { order: 5; }
+.relogio > .marcas { order: 6; }
+/* Os riscos e as marcas apontam para BAIXO, para as faixas que estão logo a
+   seguir, e o fio fecha a régua por baixo em vez de por cima. */
+.regua { position: relative; height: 30px; border-bottom: 1px solid var(--linha); }
 .regua .risco { position: absolute; top: 0; width: 1px; height: 5px; background: var(--linha-2); }
+/* A passagem de um dia para o outro: o risco atravessa a régua inteira e a
+   etiqueta escreve a data. Numa noite que começa às onze da manhã e acaba às
+   quatro da manhã seguinte, é a única coisa que diz em que dia se está. */
+.regua .risco.vira { height: 100%; background: var(--linha-3); }
+.regua .hora.vira { color: var(--tinta-2); font-weight: 500; }
 .regua .hora {
   position: absolute; top: 8px; font-size: var(--t-micro); font-weight: 400;
   color: var(--tinta-3); transform: translateX(-50%); white-space: nowrap;
@@ -616,6 +655,14 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 
 /* ── o instante, em números ──────────────────────────────────────────────── */
 .relogio .linha { justify-content: space-between; margin-top: var(--e4); }
+/* O selector do zoom é do tamanho do que diz, e não da largura do painel:
+   com `width: 100%` ocupava uma fila inteira e empurrava a contagem de
+   ângulos para uma terceira. */
+.relogio .linha select {
+  width: auto; min-width: 118px; flex: 0 0 auto;
+  min-height: 30px; padding: 0 var(--e6) 0 var(--e3); font-size: var(--t-menor);
+  background-position: calc(100% - 15px) 50%, calc(100% - 10px) 50%;
+}
 #agora {
   font: 500 var(--t-grande)/1 var(--letra-mono); font-variant-numeric: tabular-nums;
   color: var(--tinta); letter-spacing: -.01em;
@@ -1011,10 +1058,12 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
      precisar de mais rola com a roda — a caixa continua a rolar, o que
      desaparece é o risco cinzento. */
   body.mesa:has(#palco:not([hidden])) #entrada textarea {
-    /* 48 = 2 de fio + 10 de folga + 2 linhas de 18. A conta é exacta de
-       propósito: com uma altura qualquer sobrava uma tira da terceira linha
-       encostada ao fundo, e uma letra cortada ao meio lê-se como avaria. */
-    min-height: 48px; height: 48px; padding: 5px var(--e3);
+    /* 66 = 2 de fio + 10 de folga + 3 linhas de 18. A conta é exacta de
+       propósito: com uma altura qualquer sobra uma tira da linha seguinte
+       encostada ao fundo, e uma letra cortada ao meio lê-se como avaria.
+       Três linhas e não duas — "podia utilizar uma linha a mais, pouca coisa
+       de tamanho, com os nomes". */
+    min-height: 66px; height: 66px; padding: 5px var(--e3);
     font-size: var(--t-micro); line-height: 18px; white-space: pre;
     overflow: auto; scrollbar-width: none;
   }
@@ -1028,7 +1077,29 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
   body.mesa:has(#palco:not([hidden])) #canaisEstado:has(li) { max-width: 220px; }
   body.mesa:has(#palco:not([hidden])) .topoTrabalho select { padding-right: var(--e6); }
   body.mesa:has(#palco:not([hidden])) .topoTrabalho button { min-height: 34px; padding: 0 var(--e4); }
-  body.mesa:has(#palco:not([hidden])) .barraSessao { flex: 1 1 auto; align-items: center; flex-wrap: nowrap; }
+  /* Cada peça da barra com o seu lugar, por ordem de quem não pode faltar.
+     Sem isto o selector da noite — que é a coisa que mais se carrega desta
+     metade — era espremido até desaparecer pela frase do link, e as duas
+     notas embrulhavam em duas linhas cada uma. */
+  body.mesa:has(#palco:not([hidden])) .barraSessao {
+    flex: 1 1 auto; align-items: center; flex-wrap: nowrap; gap: var(--e3); min-width: 0;
+  }
+  /* Com `#noites` no selector, e não sem ele: a regra genérica desta barra
+     traz um `#` e ganha a qualquer contagem de classes, por mais específica
+     que pareça. Foi assim que o selector da noite ficou com sete pixels. */
+  body.mesa:has(#palco:not([hidden])) #noites .barraSessao > .campo { flex: 1 1 210px; min-width: 150px; }
+  body.mesa:has(#palco:not([hidden])) .barraSessao > #partilhar { flex: 0 0 auto; }
+  /* As notas cedem primeiro, e cortam com reticências em vez de embrulhar:
+     duas linhas aqui empurram a barra e roubam altura ao vídeo. */
+  body.mesa:has(#palco:not([hidden])) .barraSessao > .nota,
+  body.mesa:has(#palco:not([hidden])) .barraSessao > .confianca {
+    flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  /* Entre as duas notas, quem cede primeiro é a confiança: ela diz uma coisa
+     que não muda, e a do link diz o instante — que é o que muda a cada
+     segundo e a única razão para a frase estar ali. */
+  body.mesa:has(#palco:not([hidden])) .barraSessao > .confianca { flex: 0 4 auto; }
+  body.mesa:has(#palco:not([hidden])) .barraSessao > #estadoPartilha { flex: 0 1 auto; }
   body.mesa:has(#palco:not([hidden])) #canaisEstado { display: none; }
   body.mesa:has(#palco:not([hidden])) #canaisEstado:has(li) { display: block; flex: 0 1 auto; max-height: 46px; overflow-y: auto; }
   body.mesa:has(#palco:not([hidden])) > footer { display: none; }
@@ -1196,15 +1267,15 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
   #grade { order: 6; margin: 0; }
   .palcoFundo { order: 7; }
 
-  /* O relógio por dentro. `flex` e não `grid`: os filhos têm larguras
-     diferentes e nenhum deles quer uma coluna. */
-  .relogio { display: flex; flex-direction: column; }
+  /* O relógio por dentro. A coluna flex já vem de cima; aqui só muda a ordem. */
   .relogio > .linha { order: 1; margin-top: 0; }   /* 21:05:00Z · 17 de 17 ângulos */
   .relogio > .saltos { order: 2; margin-top: var(--e4); }
   .relogio > .marcas { order: 3; }
   .relogio > .barraLinha { order: 4; margin-top: var(--e5); }
-  .relogio > .faixas { order: 5; }
-  .relogio > .reguaLinha { order: 6; }
+  /* A régua por cima das faixas também aqui: num ecrã estreito as horas e as
+     marcas de kill ainda se pisam mais do que num monitor. */
+  .relogio > .reguaLinha { order: 5; margin-top: var(--e3); }
+  .relogio > .faixas { order: 6; }
 }
 
 /* Num ecrã estreito a coluna dos nomes aperta, e oito botões de salto não
@@ -1225,7 +1296,12 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
   .saltos { gap: 5px; }
   .saltos button { padding: 0; font-size: var(--t-micro); }
   .saltos .ic { width: 11px; height: 11px; }
-  .barraClipar #clipar { min-width: 0; flex: 1 1 auto; }
+  /* Num ecrã estreito não há sítio para a tecla escrita: lá o teclado não
+     existe, e o que fica é o número. */
+  .saltos kbd { display: none; }
+  .barraClipar { grid-template-columns: 1fr; }
+  .barraClipar #clipar { grid-column: 1; min-width: 0; }
+  .barraClipar #marca { grid-column: 1; justify-self: center; }
   /* Uma linha só, e nunca duas. O cabeçalho embrulhava assim que o texto
      mudava de tamanho — e ele MUDA: a página nasce em português com "Twitch"
      escrito no HTML e o guião troca-o por "Versão Twitch" aos 89 ms. O

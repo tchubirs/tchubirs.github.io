@@ -107,6 +107,9 @@ const IGUAIS_DE_PROPOSITO = {
     'montagem.umaKill', 'montagem.kills', 'montagem.marcar',
     // "Exportar retrato" e "A–Z" escrevem-se exactamente assim nas duas.
     'retrato.exportar', 'grelha.az', 'ajuda.teclaEsc',
+    // "6 horas", "1 hora", "10 minutos", "2 minutos" e "{n} de {total}"
+    // escrevem-se exactamente assim nas duas linguas.
+    'tempo.zoom6h', 'tempo.zoom1h', 'tempo.zoom10m', 'tempo.zoom2m', 'grelha.deQuantos',
     'procurar.seguidores', 'noite.todosJuntos', 'noite.umCanal',
     'tile.atrasar', 'alinhar.cancelado', 'montagem.antes', 'montagem.ir',
     'corte.titulo', 'corte.antes', 'clipe.cancelar',

@@ -1646,3 +1646,120 @@ for (const ecra of [{ width: 1920, height: 1080 }, { width: 1366, height: 720 }]
       await p.close();
     });
 }
+
+// "Adiciona um lugar de pesquisa pra pesquisar as miniaturas de vídeo em
+//  baixo."
+//
+// Com dezassete quadrados de 150 px, achar um pelo nome é passar os olhos por
+// todos; com trinta é desistir. A caixa ESCONDE e não tira: um <video>
+// arrancado do DOM pára e volta a carregar, e limpar a caixa devolvia trinta
+// quadrados a descarregar tudo outra vez.
+test('a procura da grelha esconde os outros ângulos sem os desligar',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const canais = ['tchubi', 'kodd', 'krakenpez', 'lautaarg00'];
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', canais.join('\n'));
+    await p.click('#carregar');
+    await p.waitForFunction((n) => document.querySelectorAll('.tile').length === n,
+      canais.length, { timeout: 20000 });
+
+    const vistos = () => p.evaluate(() => [...document.querySelectorAll('#grade .tile')]
+      .filter((t) => t.offsetParent !== null).map((t) => t.dataset.slug));
+    assert.equal((await vistos()).length, 3, 'a grelha devia ter os três que não estão em foco');
+
+    await p.fill('#filtrarGrelha', 'kra');
+    assert.deepEqual(await vistos(), ['krakenpez'], 'só o que combina fica à vista');
+    // Os outros continuam no DOM, com o leitor vivo: não foram removidos.
+    assert.equal(await p.locator('#grade .tile').count(), 3, 'os quadrados foram TIRADOS em vez de escondidos');
+    assert.equal(await p.locator('#grade .tile video').count(), 3, 'algum leitor foi ao chão');
+
+    // Um nome que não existe diz-o, em vez de deixar a grelha vazia e muda.
+    await p.fill('#filtrarGrelha', 'zzzz');
+    assert.deepEqual(await vistos(), []);
+    assert.match(await p.locator('#quantosNaGrelha').innerText(), /\S/, 'a grelha ficou vazia sem dizer porquê');
+
+    // E limpar devolve tudo.
+    await p.fill('#filtrarGrelha', '');
+    assert.equal((await vistos()).length, 3);
+    assert.equal(await p.locator('#quantosNaGrelha').innerText(), '',
+      'sem filtro não há contador: ao lado já há um "de quantos" que quer dizer outra coisa');
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+// "O botão de clipar coloca exatamente em baixo do player principal, e quando
+//  tem dois players rodando ele fica no meio dos 2, em baixo."
+test('o Clipar fica no meio do que está em foco, com um ou com dois',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir({ ecra: { width: 1440, height: 900 } });
+    await kickFalsa(p, { canais: ['tchubi', 'kodd'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi\nkodd');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile.foco', { timeout: 20000 });
+
+    const meio = async (sel) => {
+      const b = await p.locator(sel).boundingBox();
+      return b.x + b.width / 2;
+    };
+    const desvio = async () => Math.abs(await meio('#clipar') - await meio('#palcoFoco'));
+    assert.ok(await desvio() < 4, `com um player, o Clipar está ${await desvio()} px fora do meio`);
+
+    // E com dois lado a lado, o meio dos dois — que é o meio do palco.
+    await p.locator('#grade .tile').first().locator('.par').click();
+    await p.waitForFunction(() => document.querySelectorAll('#palcoFoco .tile').length === 2,
+      null, { timeout: 10000 });
+    assert.ok(await desvio() < 4, `com dois players, o Clipar está ${await desvio()} px fora do meio`);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+// O zoom no browser: escolher dez minutos tem de encolher MESMO o que a linha
+// do tempo mostra — a régua, as faixas e a barra — e não só mudar um número.
+test('escolher quanto tempo a linha mostra encolhe a régua e as faixas',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'kodd'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi\nkodd');
+    await p.click('#carregar');
+    await p.waitForSelector('#regua .hora', { timeout: 20000 });
+
+    // O intervalo que a régua cobre, lido das próprias etiquetas.
+    const minutosNaRegua = async () => {
+      const horas = await p.locator('#regua .hora').allInnerTexts();
+      const emMin = horas.filter((h) => h.includes(':'))
+        .map((h) => { const [a, b] = h.split(':').map(Number); return a * 60 + b; });
+      return Math.max(...emMin) - Math.min(...emMin);
+    };
+    const noiteToda = await minutosNaRegua();
+
+    // Ao meio da noite, para o zoom não bater nas pontas.
+    await p.click('#mais5m');
+    // Dois minutos: a noite de teste tem dez, e um zoom maior do que a noite
+    // é a noite — não testava nada.
+    await p.selectOption('#zoomTempo', '120');
+    await p.waitForTimeout(250);
+    const doisMinutos = await minutosNaRegua();
+    assert.ok(doisMinutos < noiteToda,
+      `a régua não encolheu: ${noiteToda} min antes, ${doisMinutos} depois`);
+    assert.ok(doisMinutos <= 3, `dois minutos de zoom mostram ${doisMinutos} min de régua`);
+
+    // As faixas seguem a mesma vista: uma gravação que ocupava um pedaço da
+    // noite passa a ocupar a faixa toda quando a vista cabe dentro dela.
+    const largura = () => p.evaluate(() => {
+      const i = document.querySelector('#faixas .faixa .trilho i');
+      const t = i.parentElement.getBoundingClientRect();
+      return i.getBoundingClientRect().width / t.width;
+    });
+    assert.ok(await largura() > 0.9, `a faixa devia encher a vista: ${await largura()}`);
+
+    // E voltar a "a noite toda" devolve o que era.
+    await p.selectOption('#zoomTempo', '0');
+    await p.waitForTimeout(250);
+    assert.equal(await minutosNaRegua(), noiteToda, 'voltar atrás não devolveu a noite inteira');
+    assert.deepEqual(erros, []);
+    await p.close();
+  });

@@ -5,7 +5,7 @@
 // an ordered set of VODs plus the gaps, and scrubbing across a gap must either
 // switch VODs by itself or show the hole — never quietly play the wrong moment.
 
-import { tempoDeMidia } from './kick.js?v=874d029ee3';
+import { tempoDeMidia } from './kick.js?v=0c4439dc30';
 
 /**
  * One channel's night: its VODs in order, and the holes between them.
@@ -232,4 +232,42 @@ export const ARRASTO_ESCADA = [
 export function passoDoArrasto(seguradoMs) {
   const ms = Number.isFinite(seguradoMs) ? Math.max(0, seguradoMs) : 0;
   return ARRASTO_ESCADA.find((d) => ms >= d.apos).passo;
+}
+
+/**
+ * Que pedaço da noite é que a linha do tempo mostra.
+ *
+ * "Com tanto tempo aparecendo, as barras ficaram muito pequenas, não? Talvez
+ *  um botão pra escolher mostrar mais tempo ou menos nessa linha do tempo."
+ *
+ * Tinha razão, e a conta diz quanto: a noite dele são 34 horas de janela comum
+ * espalhadas por uns 450 px de faixa. Dá 4,5 minutos por pixel — um tiroteio
+ * de noventa segundos ocupa um TERÇO de pixel e não existe no ecrã.
+ *
+ * A vista é uma janela de `zoomS` segundos centrada no instante em que ele
+ * está, presa dentro da noite. Com `zoomS` a zero, ou maior do que a noite, é
+ * a noite inteira — que é como sempre esteve.
+ */
+export function vistaDaLinha(janela, agoraMs, zoomS = 0) {
+  if (!janela || !(janela.fim > janela.inicio)) return janela;
+  const total = janela.fim - janela.inicio;
+  const largura = Number.isFinite(zoomS) && zoomS > 0 ? zoomS * 1000 : total;
+  if (largura >= total) return { inicio: janela.inicio, fim: janela.fim };
+  const centro = Number.isFinite(agoraMs) ? agoraMs : janela.inicio + largura / 2;
+  const de = Math.max(janela.inicio, Math.min(centro - largura / 2, janela.fim - largura));
+  return { inicio: de, fim: de + largura };
+}
+
+/**
+ * A vista só se mexe quando o cursor lhe chega perto da beira.
+ *
+ * Recentrar a cada instante obrigava a repintar dezoito faixas sessenta vezes
+ * por segundo, e o cursor ficava pregado ao meio — o que se quer ver é ele a
+ * ANDAR. Com uma margem de um quinto, a vista está quieta quase sempre e
+ * salta uma vez quando ele sai pela ponta.
+ */
+export function saiuDaVista(vista, agoraMs, margem = 0.2) {
+  if (!vista || !(vista.fim > vista.inicio)) return false;
+  const l = vista.fim - vista.inicio;
+  return agoraMs < vista.inicio + l * margem || agoraMs > vista.fim - l * margem;
 }

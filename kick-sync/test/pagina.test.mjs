@@ -385,7 +385,7 @@ test('cada canal tem uma barra a dizer quando esteve no ar, e clicar nela salta'
 
 // "Ate agora nao sei como e que se baixa, tem algum botao?" Havia, mas so
 // aparecia depois de marcar — ou seja, so o encontrava quem ja sabia.
-test('a seccao de cortar diz o que fazer antes de haver marca',
+test('a secção de cortar só existe quando há um pedaço marcado',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
     const { p, erros } = await abrir();
     await kickFalsa(p);
@@ -394,15 +394,20 @@ test('a seccao de cortar diz o que fazer antes de haver marca',
     await p.click('#carregar');
     await p.waitForSelector('.tile', { timeout: 15000 });
 
-    assert.equal(await p.locator('#comoCortar').isVisible(), true, 'sem marca, diz como se marca');
-    assert.match(await p.locator('#comoCortar').innerText(), /I.*O/s);
+    // "Exclui isso, pois não faz nada — isso é somente pra dizer os atalhos."
+    // Sem marca não há nada para cortar, e uma caixa com um título e uma frase
+    // a repetir duas teclas que já estão nos Atalhos e nos dois botões de
+    // marcar é ruído. A secção só aparece quando há mesmo um pedaço marcado.
+    assert.equal(await p.locator('#corte').isVisible(), false,
+      'sem marca, a secção de cortar não devia estar lá');
 
     await p.click('#marcarIn');
     await p.click('#mais10s');
     await p.click('#marcarOut');
     await p.waitForSelector('#listaCorte li[data-slug]', { timeout: 10000 });
-    assert.equal(await p.locator('#comoCortar').isVisible(), false, 'com marca, sai da frente');
-    assert.equal(await p.locator('#listaCorte .baixarUm').count(), 1);
+    assert.equal(await p.locator('#corte').isVisible(), true, 'com marca, a secção aparece');
+    assert.equal(await p.locator('#listaCorte .baixarUm').count(), 1,
+      'e traz o botão de baixar desse canal');
     assert.deepEqual(erros, []);
     await p.close();
   });
@@ -730,7 +735,7 @@ test('marcar kills gera a montagem, em ordem e com os ficheiros numerados',
 
 // "Podia aparecer a linha do tempo em baixo dessas barras, igual ao Premiere."
 // Sem regua sabe-se que se esta "algures no meio" e mais nada.
-test('a regua mostra as horas por baixo das barras, e as kills marcadas nela',
+test('a régua mostra as horas por cima das barras, e as kills marcadas nela',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
     const { p, erros } = await abrir();
     await kickFalsa(p, { canais: ['tchubi', 'outro'] });
@@ -741,7 +746,16 @@ test('a regua mostra as horas por baixo das barras, e as kills marcadas nela',
 
     const horas = await p.locator('#regua .hora').allInnerTexts();
     assert.ok(horas.length >= 2 && horas.length <= 9, `${horas.length} marcas e demais ou de menos`);
-    for (const h of horas) assert.match(h, /^\d{2}:\d{2}$/, `marca ilegivel: ${h}`);
+    // Ou uma hora, ou uma data — e a data só na marca em que o dia vira.
+    // "Mudou alguma coisa? Onde é que está o dia 30?" Não tinha mudado nada:
+    // é que nunca lá esteve. Uma noite que começa às onze da manhã e acaba às
+    // quatro da manhã seguinte escrevia só HH:MM, e passava-se a meia-noite
+    // sem nada dizer que o dia era outro.
+    for (const h of horas) {
+      assert.match(h, /^(\d{2}:\d{2}|\d{2}\/\d{2})$/, `marca ilegivel: ${h}`);
+    }
+    const datas = await p.locator('#regua .hora.vira').allInnerTexts();
+    for (const d of datas) assert.match(d, /^\d{2}\/\d{2}$/, `a marca do dia devia ser uma data: ${d}`);
     // Em ordem, e dentro da noite.
     assert.deepEqual(horas, [...horas].sort());
 
@@ -756,6 +770,16 @@ test('a regua mostra as horas por baixo das barras, e as kills marcadas nela',
     const fora = await p.locator('#agora').innerText();
     await p.locator('#regua .kill').click();
     assert.notEqual(await p.locator('#agora').innerText(), fora, 'clicar na kill salta para ela');
+
+    // A régua fica POR CIMA das faixas, entre o cursor e elas.
+    // "Coloca a linha do tempo, o timer, do lado de cima — aí tá tudo
+    //  amontoado." Em baixo, as horas e as marcas de kill dividiam trinta
+    //  pixels e numa noite com quinze kills os números eram uma mancha.
+    const [regua, faixas] = await Promise.all([
+      p.locator('#regua').boundingBox(), p.locator('#faixas').boundingBox(),
+    ]);
+    assert.ok(regua.y + regua.height <= faixas.y + 2,
+      `a régua está por baixo das faixas: ${regua.y} vs ${faixas.y}`);
 
     // E a regua alinha com as faixas: a mesma coluna de nomes a esquerda.
     const [rx, fx] = await Promise.all([
