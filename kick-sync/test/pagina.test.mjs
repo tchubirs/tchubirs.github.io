@@ -2590,3 +2590,69 @@ test('os saltos de 3 s e de 5 min andam o que dizem',
     assert.deepEqual(erros, []);
     await p.close();
   });
+
+// "Quando adiciono streamer novo à tabela quero só incluir ele em tudo, não
+//  ter que recarregar tudo."
+//
+// Cada Carregar refazia TODOS os pedidos à Kick e punha o relógio e o foco
+// onde lhe apetecia. Juntar um canal tem de ser juntar: só o novo vai à rede,
+// e o instante, o foco e as kills ficam onde estavam.
+test('juntar um streamer so vai buscar esse, e nao mexe onde ele estava',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    const pedidos = await kickFalsa(p, { canais: ['tchubi', 'vitima1'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 20000 });
+    await p.click('#mais5m');
+    await p.click('#mais1m');
+    await p.click('#marcarKill');
+    await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
+    const antes = {
+      agora: await p.locator('#agora').innerText(),
+      api: pedidos.api,
+      playlist: pedidos.playlist,
+      kills: await p.locator('#listaMomentos li[data-ms]').count(),
+    };
+    assert.equal(antes.api, 1, 'um canal, um pedido');
+
+    await p.fill('#canais', 'tchubi\nvitima1');
+    await p.click('#carregar');
+    await p.waitForFunction(() => document.querySelectorAll('.tile').length === 2, null, { timeout: 20000 });
+
+    assert.equal(pedidos.api, antes.api + 1, 'so o canal novo foi a Kick');
+    assert.equal(pedidos.playlist, antes.playlist + 1, 'so a playlist do novo foi lida');
+    assert.equal(await p.locator('#agora').innerText(), antes.agora, 'o relogio ficou onde estava');
+    assert.equal(await p.locator('#listaMomentos li[data-ms]').count(), antes.kills, 'a kill ficou');
+    assert.equal(await p.locator('.tile.foco').first().getAttribute('data-slug'), 'tchubi',
+      'e o foco continua no canal em que ele estava');
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+// "Quando volto quero voltar de onde eu parei, não ter que procurar de novo
+//  onde eu tava."
+test('fechar e voltar traz o mesmo instante, sem ir a Kick outra vez, e no mesmo sitio da pagina',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir({ ecra: { width: 1280, height: 700 } });
+    const pedidos = await kickFalsa(p, { canais: ['tchubi'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 20000 });
+    await p.click('#mais5m');
+    await p.click('#mais10s');
+    const agora = await p.locator('#agora').innerText();
+    await p.evaluate(() => window.scrollTo({ top: 350 }));
+    await p.waitForTimeout(600);                  // o guardar tem 400 ms de calma
+    const apiAntes = pedidos.api;
+
+    await p.reload({ waitUntil: 'networkidle' });
+    await p.waitForSelector('.tile', { timeout: 20000 });
+    await p.waitForFunction((a) => document.getElementById('agora').textContent === a, agora, { timeout: 10000 });
+    assert.equal(pedidos.api, apiAntes, 'a lista de VOD veio da memoria, nao da Kick');
+    await p.waitForFunction(() => Math.abs(window.scrollY - 350) < 40, null, { timeout: 5000 });
+    assert.deepEqual(erros, []);
+    await p.close();
+  });

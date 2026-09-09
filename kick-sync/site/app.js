@@ -80,6 +80,16 @@ const estado = {
   // e uma caixa que ele carrega em OK sem ler.
   apagados: null,
   restaurar: null,
+  // O que já se foi buscar à Kick, para não ir buscar outra vez.
+  //
+  // "Quando adiciono streamer novo à tabela quero só incluir ele em tudo, não
+  //  ter que recarregar tudo." E "quando volto quero voltar de onde eu parei".
+  // As duas queixas são a mesma coisa: cada Carregar refazia trinta pedidos de
+  // listas de VOD e sessenta de playlists, para chegar ao sítio onde já
+  // estava. A lista de VOD de um canal não muda depois de a live acabar, e a
+  // playlist de um VOD nunca muda — por isso ficam aqui, por canal e por VOD.
+  vodsPorCanal: new Map(),
+  pecasLidas: new Map(),
   volume: {},
   parado: false,
   clipe: null,
@@ -117,6 +127,7 @@ let timerGuardar = null;
 function guardar() {
   clearTimeout(timerGuardar);
   timerGuardar = setTimeout(() => {
+    guardarRolar();
     try {
       localStorage.setItem('replay', paraLink({
         canais: estado.linhas.length ? estado.linhas.map((l) => l.slug) : listaDeCanais(),
@@ -132,6 +143,39 @@ function guardar() {
       }));
     } catch { /* janela privada, quota, o que for — nunca partir a pagina por isto */ }
   }, 400);
+}
+
+/**
+ * As listas de VOD sobrevivem a fechar o separador — por vinte minutos.
+ *
+ * É o que faz "voltar" ser voltar: sem isto, cada regresso repetia trinta
+ * pedidos à Kick antes de mostrar o sítio onde ele estava. Vinte minutos
+ * porque um canal AO VIVO ainda muda a lista; quem quer forçar tem o Repor
+ * sessão, que apaga isto também.
+ */
+const VODS_VALEM_MS = 20 * 60 * 1000;
+function guardarVods() {
+  try {
+    localStorage.setItem('replay.vods', JSON.stringify({
+      quando: Date.now(),
+      porCanal: Object.fromEntries(estado.vodsPorCanal),
+    }));
+  } catch { /* quota, janela privada — nunca partir a página por isto */ }
+}
+function reporVods() {
+  try {
+    const g = JSON.parse(localStorage.getItem('replay.vods') || 'null');
+    if (!g || !(Date.now() - g.quando < VODS_VALEM_MS)) return;
+    for (const [slug, r] of Object.entries(g.porCanal || {})) {
+      if (r?.estado === 'ok' && Array.isArray(r.vods)) estado.vodsPorCanal.set(slug, r);
+    }
+  } catch { /* um JSON estragado é o mesmo que não haver */ }
+}
+// E o sítio da página. "Quando volto, quero voltar de onde eu parei, não ter
+// que procurar de novo onde eu tava." O instante e o foco já voltavam; a
+// página é que abria em cima, com a lista de kills a um ecrã de distância.
+function guardarRolar() {
+  try { localStorage.setItem('replay.rolar', String(Math.round(window.scrollY))); } catch { /* idem */ }
 }
 
 // ── procurar canais ─────────────────────────────────────────────────────────
@@ -302,9 +346,17 @@ async function carregar() {
   // Sequential, and that is deliberate: thirty parallel calls from five hundred
   // people is what gets a free tool rate-limited for everyone on day one.
   for (const [i, nome] of nomes.entries()) {
+    const chave = String(nome).trim().replace(/^@/, '').toLowerCase();
+    const memo = estado.vodsPorCanal.get(chave);
+    // Um canal que já deu certo não se pede outra vez; um que deu erro
+    // (rate-limit, rede) pede-se, porque da próxima pode dar.
+    if (memo && memo.estado === 'ok') { canais.push(memo); continue; }
     $('estadoCarga').textContent = `${i + 1}/${nomes.length} — ${nome}`;
-    canais.push(await vodsDoCanal(nome));
+    const r = await vodsDoCanal(nome);
+    if (r.estado === 'ok') estado.vodsPorCanal.set(r.slug, r);
+    canais.push(r);
   }
+  guardarVods();
   $('estadoCarga').textContent = '';
   $('carregar').disabled = false;
 
@@ -445,16 +497,34 @@ async function lerNoite(noite) {
   // deixá-lo aberto convida a mudar outra vez a meio.
   $('noite').disabled = true;
   dizer(t('canais.aLerRelogios'));
+  // Se já havia uma noite aberta, o sítio onde ele estava vale como se fosse
+  // uma sessão guardada: o mesmo instante, o mesmo foco, a mesma marca e as
+  // mesmas kills. É o que faz "juntar um streamer" ser juntar, e não
+  // recomeçar — o bloco de restauro lá em baixo já sabe validar isto tudo.
+  if (!estado.restaurar && estado.linhas.length && estado.janela) {
+    estado.restaurar = {
+      agora: estado.agoraMs, focos: estado.focos, marca: estado.marca, momentos: estado.momentos,
+    };
+  }
   const porCanal = new Map();
   for (const { slug, v } of noite.itens) {
     if (!v.master) continue;
+    const chave = `${slug}|${v.id}`;
+    const lida = estado.pecasLidas.get(chave);
+    if (lida) {
+      if (!porCanal.has(slug)) porCanal.set(slug, []);
+      porCanal.get(slug).push(lida);
+      continue;
+    }
     try {
       const master = lerMaster(await (await fetch(v.master)).text(), v.master);
       if (!master.length) continue;
       const barato = master.at(-1);
       const playlist = lerPlaylist(await (await fetch(barato.url)).text(), barato.url);
+      const peca = { vod: v, playlist, escada: master, barato };
+      estado.pecasLidas.set(chave, peca);
       if (!porCanal.has(slug)) porCanal.set(slug, []);
-      porCanal.get(slug).push({ vod: v, playlist, escada: master, barato });
+      porCanal.get(slug).push(peca);
     } catch { /* a channel that cannot be read is shown as such below */ }
   }
   $('noite').disabled = false;
@@ -570,7 +640,14 @@ async function lerNoite(noite) {
   pintarMarca();
   pintarMomentos();
   guardar();
+  // Só na primeira noite depois de abrir a página: a seguir, quem rola é ele.
+  if (rolarPendente != null) {
+    const y = rolarPendente;
+    rolarPendente = null;
+    requestAnimationFrame(() => window.scrollTo({ top: y }));
+  }
 }
+let rolarPendente = null;
 
 /** Deitar fora tudo o que estava no ecrã, sem deixar leitores a tocar sozinhos. */
 function limparPalco() {
@@ -3006,6 +3083,10 @@ function limparFila() {
  * juntar e o que ninguém quer perder por engano.
  */
 function recomecar() {
+  // O memo vai junto: Repor é a maneira de forçar a Kick outra vez.
+  estado.vodsPorCanal.clear();
+  estado.pecasLidas.clear();
+  try { localStorage.removeItem('replay.vods'); localStorage.removeItem('replay.rolar'); } catch { /* nada */ }
   const quantas = estado.momentos.length;
   const aviso = quantas ? t('recomecar.comKills', { n: quantas }) : t('recomecar.semKills');
   if (!confirm(aviso)) return;
@@ -3385,6 +3466,8 @@ aplicarIdioma();
 const guardado = doLink(new URLSearchParams(location.search).get('s') || '')
   || doLink(localStorage.getItem('replay') || '');
 
+reporVods();
+try { rolarPendente = Number(localStorage.getItem('replay.rolar')) || null; } catch { /* nada */ }
 if (guardado) {
   $('canais').value = guardado.canais.join('\n');
   estado.nudges = guardado.nudges;
@@ -3400,6 +3483,7 @@ if (guardado) {
 window.addEventListener('beforeunload', () => {
   clearTimeout(timerGuardar);
   timerGuardar = null;
+  guardarRolar();
   try {
     localStorage.setItem('replay', paraLink({
       canais: estado.linhas.length ? estado.linhas.map((l) => l.slug) : listaDeCanais(),
