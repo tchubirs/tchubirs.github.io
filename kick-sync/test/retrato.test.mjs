@@ -7,7 +7,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  RETRATO, enquadramentoInicial, limitar, destinos, desenhar, melhorFormato, extensaoDe,
+  RETRATO, enquadramentoInicial, limitar, destinos, desenhar, melhorFormato, extensaoDe, FORMATOS,
   reformar, proporcaoDoQuadro, limparDivisao, DIVISAO_MIN, DIVISAO_MAX, DIVISAO_OMISSAO,
   divisaoDoQuadro, encaixar, gravar,
 } from '../site/retrato.js';
@@ -409,4 +409,63 @@ test('um video que nao anda rebenta, em vez de dar uma foto', async () => {
     (e) => e.name === 'GRAVACAO-PARADA',
     'tinha de recusar em vez de devolver uma imagem parada',
   );
+});
+
+// "Acabei de fazer uma mas não gostei muito da qualidade, parece que ficou bem
+//  ruim." · "Deu várias falhas de falta de bitrate."
+//
+// Não era impressão dele, e a medida é curta: o `MediaRecorder` do Chrome, sem
+// ninguém lhe dizer nada, grava a 2 500 000 bits por segundo — e os dois
+// ficheiros que ele mandou têm 2,54 e 2,71 Mbit/s. A 1080x1920 e a 30 imagens
+// por segundo isso é 0,04 bits por pixel, que para um jogo é onde o H.264
+// começa a partir a imagem em quadrados.
+//
+// Este teste apanha as duas metades do arranjo: o gravador tem de receber um
+// número, e o número tem de dar pelo menos 0,15 bits por pixel a 1080x1920.
+test('o retrato é gravado com bitrate declarado, e não com o de omissão', async () => {
+  const v = {
+    videoWidth: 1920, videoHeight: 1080, currentTime: 10,
+    play: async () => {}, pause: () => {},
+    captureStream: () => ({ getAudioTracks: () => [] }),
+  };
+  const tela = {
+    width: 0, height: 0,
+    getContext: () => ({ drawImage() {}, fillRect() {} }),
+    captureStream: () => ({ addTrack() {} }),
+  };
+  let opcoes = null;
+  class MRFalso {
+    constructor(_fluxo, o) { opcoes = o; this.state = 'inactive'; }
+    start() { this.state = 'recording'; }
+    stop() { this.state = 'inactive'; this.onstop?.(); }
+  }
+  // O vídeo não anda de propósito: interessa o que foi PEDIDO ao gravador, e
+  // isso é decidido antes da primeira pincelada.
+  await gravar(v, {
+    rects: [{ x: 0, y: 0, largura: 1080, altura: 1080 }],
+    duracaoS: 1, formato: 'video/webm', criarTela: () => tela, MR: MRFalso,
+  }).catch(() => {});
+
+  assert.ok(opcoes && opcoes.videoBitsPerSecond > 0,
+    `o gravador ficou com o bitrate de omissão: ${JSON.stringify(opcoes)}`);
+  const porPixel = opcoes.videoBitsPerSecond / (RETRATO.largura * RETRATO.altura * 30);
+  assert.ok(porPixel >= 0.15,
+    `${(porPixel).toFixed(3)} bits por pixel — é a zona em que a imagem parte`);
+  assert.ok(opcoes.audioBitsPerSecond > 0, 'e o som também leva um número');
+});
+
+// O nível pedido no nome do codec tem de chegar para a imagem que vamos
+// gravar. O nível 3.0 está definido até 1 620 macroblocos por frame; um
+// retrato de 1080x1920 tem 8 160 — cinco vezes mais.
+test('o formato preferido aguenta 1080x1920, e não é Baseline nível 3.0', () => {
+  const macroblocos = Math.ceil(RETRATO.largura / 16) * Math.ceil(RETRATO.altura / 16);
+  assert.equal(macroblocos, 8160);
+  const mp4 = FORMATOS.filter((f) => f.includes('avc1.'));
+  assert.ok(mp4.length >= 2, 'um só perfil de H.264 não deixa alternativa nenhuma');
+  // O primeiro é o melhor: High (0x64) no nível 4.0 (0x28 = 40).
+  const [perfil, , nivel] = mp4[0].match(/avc1\.(\w{2})(\w{2})(\w{2})/).slice(1);
+  assert.equal(perfil, '64', `o primeiro MP4 pede o perfil ${perfil} e não High`);
+  assert.ok(parseInt(nivel, 16) >= 40, `nível ${parseInt(nivel, 16) / 10}, e 1080x1920 precisa de 4.0`);
+  // E o Baseline continua na lista, atrás: é a rede de quem não sabe os outros.
+  assert.ok(FORMATOS.some((f) => f.includes('avc1.42E01E')), 'o Baseline saiu da lista');
 });

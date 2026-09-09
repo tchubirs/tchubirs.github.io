@@ -2154,7 +2154,7 @@ test('cada ponta tem as suas setas, e a imagem vai para onde a ponta foi',
 //
 // Pôr um quadrado de 150 px em ecrã cheio dá uma imagem de 150 px esticada. O
 // que ele quer nessa altura é ABRIR o ângulo — e isso é o outro botão.
-test('o ecrã cheio só existe no ângulo aberto, e não nas miniaturas',
+test('a miniatura tem um botão só, e o desenho dele diz o que faz',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
     const { p, erros } = await abrir();
     await kickFalsa(p, { canais: ['tchubi', 'outro'] });
@@ -2167,10 +2167,22 @@ test('o ecrã cheio só existe no ângulo aberto, e não nas miniaturas',
       const e = document.querySelector(s);
       return !!e && e.offsetParent !== null;
     }, sel);
-    assert.equal(await seVe('#grade .tile .ecraCheio'), false,
-      'a miniatura ainda tem o botão de ecrã cheio');
-    assert.equal(await seVe('#palcoFoco .tile .ecraCheio'), true,
-      'o ângulo aberto ficou sem o botão de ecrã cheio');
+    for (const botao of ['.ecraCheio', '.aparte']) {
+      assert.equal(await seVe(`#grade .tile ${botao}`), false,
+        `a miniatura ainda tem o ${botao}`);
+      assert.equal(await seVe(`#palcoFoco .tile ${botao}`), true,
+        `o ângulo aberto ficou sem o ${botao}`);
+    }
+    // Numa miniatura fica UM botão, e o desenho dele diz o que faz: dois
+    // painéis lado a lado. No ângulo aberto é um olho — o que ele já está a
+    // fazer. "Tá difícil de entender o que significam os ícones."
+    const glifo = (sel) => p.getAttribute(`${sel} .par use`, 'href');
+    assert.equal(await glifo('#grade .tile'), '#i-lado-a-lado');
+    assert.equal(await glifo('#palcoFoco .tile'), '#i-olho');
+    // E cada um com a sua frase: a mesma para os dois não explicava nenhum.
+    const dica = (sel) => p.getAttribute(`${sel} .par`, 'title');
+    assert.notEqual(await dica('#grade .tile'), await dica('#palcoFoco .tile'),
+      'os dois estados do botão diziam a mesma coisa');
 
     // E o botão segue o quadrado: promover uma miniatura a foco faz o botão
     // aparecer nela, sem repintar nada — é o mesmo nó a mudar de pai.
@@ -2180,6 +2192,8 @@ test('o ecrã cheio só existe no ângulo aberto, e não nas miniaturas',
       antes, { timeout: 10000 });
     assert.equal(await seVe(`#palcoFoco .tile[data-slug="${antes}"] .ecraCheio`), true,
       'promovida a foco, a miniatura devia ganhar o ecrã cheio');
+    assert.equal(await glifo(`#palcoFoco .tile[data-slug="${antes}"]`), '#i-olho',
+      'promovida a foco, o botão devia passar a olho');
     assert.deepEqual(erros, []);
     await p.close();
   });

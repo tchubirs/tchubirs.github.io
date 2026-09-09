@@ -7,34 +7,34 @@
 
 import {
   vodsDoCanal, lerMaster, lerPlaylist, procurarCanais, lerLinkKick, clipeDaKick, DESCONHECIDO,
-} from './kick.js?v=5681c83e44';
+} from './kick.js?v=ce2e4e8997';
 import {
   linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo,
-} from './relogio.js?v=5681c83e44';
-import { cortarTodosOsAngulos } from './baixar.js?v=5681c83e44';
-import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=5681c83e44';
-import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=5681c83e44';
-import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=5681c83e44';
+} from './relogio.js?v=ce2e4e8997';
+import { cortarTodosOsAngulos } from './baixar.js?v=ce2e4e8997';
+import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=ce2e4e8997';
+import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=ce2e4e8997';
+import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=ce2e4e8997';
 import {
   RETRATO, enquadramentoInicial, limitar, desenhar, gravar, formatoQueFunciona, extensaoDe,
   reformar, limparDivisao, DIVISAO_OMISSAO, divisaoDoQuadro, proporcaoDoQuadro, encaixar,
-} from './retrato.js?v=5681c83e44';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=5681c83e44';
+} from './retrato.js?v=ce2e4e8997';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=ce2e4e8997';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
   alternarVitima, filtrar, temMorte, clipesDoMomento, comAjuste,
-} from './momentos.js?v=5681c83e44';
-import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=5681c83e44';
-import { criarZip, crc32 } from './zip.js?v=5681c83e44';
-import { queFazerComOLeitor } from './leitor.js?v=5681c83e44';
-import { criarApanhador } from './frames.js?v=5681c83e44';
-import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=5681c83e44';
-import { TAXA_TIROS } from './tiros.js?v=5681c83e44';
-import { parecidos, juntarPerto } from './aprender.js?v=5681c83e44';
-import { somDoCanal } from './alinhar.js?v=5681c83e44';
-import { MAXIMO_S, mover, janelaInicial, nomeDoClipe, posicaoDaCabeca } from './clipe.js?v=5681c83e44';
-import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=5681c83e44';
-import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=5681c83e44';
+} from './momentos.js?v=ce2e4e8997';
+import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=ce2e4e8997';
+import { criarZip, crc32 } from './zip.js?v=ce2e4e8997';
+import { queFazerComOLeitor } from './leitor.js?v=ce2e4e8997';
+import { criarApanhador } from './frames.js?v=ce2e4e8997';
+import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=ce2e4e8997';
+import { TAXA_TIROS } from './tiros.js?v=ce2e4e8997';
+import { parecidos, juntarPerto } from './aprender.js?v=ce2e4e8997';
+import { somDoCanal } from './alinhar.js?v=ce2e4e8997';
+import { MAXIMO_S, mover, janelaInicial, nomeDoClipe, posicaoDaCabeca } from './clipe.js?v=ce2e4e8997';
+import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=ce2e4e8997';
+import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=ce2e4e8997';
 
 /* Os glifos dos controlos do vídeo são DESENHO e não emoji.
    Um ⏸ ou um 🔇 sai diferente em cada sistema — no iPhone sai a cores, no
@@ -638,6 +638,7 @@ async function lerNoite(noite) {
   // Sem noite aberta não há nada para partilhar, e um botão que copia um link
   // vazio é pior do que um botão que não está lá.
   $('partilhar').disabled = !estado.linhas.length || !estado.janela;
+  pintarPartilha();
   // Os segundos de quem morreu so fazem sentido se houver quem morrer.
   $('margensVitima').hidden = soUmCanal();
   pintarResumoMargens();
@@ -999,7 +1000,18 @@ function aplicarFoco() {
     }
     tile.classList.toggle('foco', foco);
     tile.classList.toggle('principal', ehPrincipal(slug));
-    tile.querySelector('.par').innerHTML = ICONE(foco ? 'certo' : 'mais');
+    // O botão do canto muda de DESENHO e de NOME com o papel do quadrado.
+    // "Tá difícil de entender o que significam os ícones." Estava: era um "+"
+    // na miniatura — com um "+" e um "−" de acerto de relógio logo por baixo,
+    // no mesmo quadrado — e um "✓" no ângulo aberto, que não diz o que
+    // acontece se se carregar nele. Agora a miniatura mostra dois painéis
+    // lado a lado, que é o que o botão faz, e o ângulo aberto mostra um olho,
+    // que é o que ele já está a fazer. E os dois têm a sua própria frase.
+    const par = tile.querySelector('.par');
+    par.innerHTML = ICONE(foco ? 'olho' : 'lado-a-lado');
+    const dizPar = t(foco ? 'tile.aVer' : 'tile.par');
+    par.title = dizPar;
+    par.setAttribute('aria-label', dizPar);
     // O som é de cada quadrado, e não do papel de principal. Assim dá para ter
     // os dois a falar, os dois calados, ou um só — que é o que se quer quando
     // se compara um tiro visto de dois sítios.
@@ -1095,7 +1107,7 @@ function montarGrade() {
       // do YouTube, da Twitch e da Kick. Desenhados e não emoji: um ⛶ sai
       // diferente em cada sistema, e no iPhone sai a cores.
       + '<span class="fora">'
-      + `<button class="par" title="${t('tile.par')}" aria-label="${t('tile.par')}">${ICONE('mais')}</button>`
+      + `<button class="par" title="${t('tile.par')}" aria-label="${t('tile.par')}">${ICONE('lado-a-lado')}</button>`
       + `<button class="ecraCheio" title="${t('tile.ecraCheio')}" aria-label="${t('tile.ecraCheio')}">`
       + `${ICONE('ecra-cheio')}</button>`
       + `<button class="aparte" title="${t('tile.aparte')}" aria-label="${t('tile.aparte')}" hidden>`
@@ -1221,7 +1233,12 @@ function pintarRelogio(quandoMs) {
   // O cursor vive por cima das faixas e não dentro de uma delas: é um instante
   // só, partilhado por todos os canais — que é a ideia toda desta página.
   $('cursor').style.left = `calc(var(--coluna) + (100% - var(--coluna)) * ${fraccao})`;
+  // A frase do link diz o instante, e o instante anda. Reescrevê-la a cada
+  // frame era trabalho para nada: só quando o segundo muda.
+  const segundo = Math.floor(quandoMs / 1000);
+  if (segundo !== ultimoSegundo) { ultimoSegundo = segundo; pintarPartilha(); }
 }
+let ultimoSegundo = -1;
 
 function irPara(quandoMs) {
   estado.agoraMs = quandoMs;
@@ -3153,6 +3170,28 @@ $('carregar').onclick = carregar;
  * ângulo em foco. Isso é a sessão dele, não a configuração — e trezentas kills
  * num endereço fariam um link que não cabe numa mensagem.
  */
+/* O que o link leva, escrito ao lado do botão.
+   "Na parte do link deveria estar escrito: partilhar projeto atual com (x)
+    transmissões, data (x), tempo atual de reprodução (x)."
+   Tinha razão — o botão dizia "Copiar link" e mais nada, e ninguém copia um
+   link sem saber o que vai dentro. As três coisas que ele nomeou são as três
+   que o `paraLink` mesmo guarda, por isso a frase não promete nada a mais.
+   Vive na mesma caixa onde aparece o "copiado": é a única folga que a barra
+   de cima tem, e a mensagem de copiado volta a dar lugar à frase ao fim de
+   quatro segundos. */
+let voltarAPartilha = 0;
+function pintarPartilha() {
+  const nota = $('estadoPartilha');
+  if (voltarAPartilha) return;
+  if (!estado.linhas.length || !estado.janela) { nota.textContent = ''; return; }
+  nota.classList.remove('mau');
+  nota.textContent = t('partilha.leva', {
+    n: estado.linhas.length,
+    data: new Date(estado.janela.inicio).toISOString().slice(0, 10),
+    hora: `${relogioCurto(estado.agoraMs)}Z`,
+  });
+}
+
 function linkDaNoite() {
   if (!estado.linhas.length || !estado.janela) return '';
   const magro = paraLink({
@@ -3173,6 +3212,8 @@ $('partilhar').onclick = async () => {
     await navigator.clipboard.writeText(u);
     nota.textContent = t('partilha.copiado');
     nota.classList.remove('mau');
+    clearTimeout(voltarAPartilha);
+    voltarAPartilha = setTimeout(() => { voltarAPartilha = 0; pintarPartilha(); }, 4000);
   } catch {
     // Sem permissão para a área de transferência — acontece em http e em
     // alguns telemóveis. Pôr o link na barra de endereço é o plano B honesto:

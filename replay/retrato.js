@@ -193,14 +193,54 @@ export function desenhar(ctx, fonte, rects, modo = 'um', divisao = DIVISAO_OMISS
  * Os formatos por ordem de preferência. MP4 primeiro porque é o que toda a
  * gente sabe abrir; WebM porque é o que o Chrome grava sempre. Com os codecs
  * escritos: pedir sem eles dava ficheiros que o Windows abria como som.
+ *
+ * A ORDEM dos três MP4 não é gosto, são números:
+ *
+ *   avc1.640028  High, nível 4.0
+ *   avc1.4D4028  Main, nível 4.0
+ *   avc1.42E01E  Baseline, nível 3.0   ← era este o único que estava aqui
+ *
+ * O nível 3.0 está definido até 1 620 macroblocos por frame. Um retrato de
+ * 1080x1920 tem 8 160. Estávamos a pedir ao codificador um nível que nem
+ * chega para um quarto da imagem, e em Baseline — que é o perfil SEM CABAC e
+ * SEM frames B, os dois mecanismos que fazem o H.264 render. Com o mesmo
+ * número de bits, High entrega bastante mais imagem; o nível 4.0 chega a
+ * 8 192 macroblocos e a 20 Mbit/s, que é o que isto precisa.
+ *
+ * Continua a haver a rede de segurança: o `formatoQueFunciona` grava mesmo
+ * meio segundo em cada candidato e fica no primeiro que produzir bytes, por
+ * isso um browser que não saiba estes dois cai no que já havia.
  */
 export const FORMATOS = [
+  'video/mp4;codecs=avc1.640028,mp4a.40.2',
+  'video/mp4;codecs=avc1.4D4028,mp4a.40.2',
   'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
   'video/mp4',
   'video/webm;codecs=vp9,opus',
   'video/webm;codecs=vp8,opus',
   'video/webm',
 ];
+
+/**
+ * Os bits por segundo do retrato.
+ *
+ * "Acabei de fazer uma mas não gostei muito da qualidade, parece que ficou bem
+ *  ruim." · "Deu várias falhas de falta de bitrate."
+ *
+ * Não era impressão dele. O `MediaRecorder` do Chrome, quando ninguém lhe diz
+ * nada, grava a 2 500 000 bits por segundo — medido aqui num Chromium, e é
+ * exactamente o que os dois ficheiros dele têm (2,54 e 2,71 Mbit/s). A 1080 por
+ * 1920 e a 30 imagens por segundo isso dá 0,04 bits por pixel: para um jogo,
+ * com folhagem e a câmara sempre a andar, é onde o H.264 começa a partir a
+ * imagem em quadrados.
+ *
+ * 12 Mbit/s dão 0,19 bits por pixel, que é a zona em que a gravação deixa de
+ * ser o elo fraco — e cabem à vontade no nível 4.0 que passámos a pedir. Custa
+ * 1,5 MB por segundo de clipe: um clipe de trinta segundos passa de 10 MB para
+ * 45. É o preço, e é o certo para uma coisa que ele vai publicar.
+ */
+export const BITS_VIDEO = 12_000_000;
+export const BITS_SOM = 128_000;
 
 /** O que o browser DIZ que sabe gravar. */
 export function melhorFormato(MR = globalThis.MediaRecorder) {
@@ -304,6 +344,12 @@ export async function gravar(video, {
   tela.width = RETRATO.largura;
   tela.height = RETRATO.altura;
   const ctx = tela.getContext('2d');
+  // O recorte quase nunca tem o tamanho do destino: uma webcam de 320 px de
+  // largura vai para uma faixa de 1080. Com a reamostragem de omissão isso
+  // sai aos degraus; `high` é bilinear com mipmaps e custa quase nada quando
+  // a placa faz o trabalho.
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
 
   const fluxo = tela.captureStream(30);
   // O som vem do vídeo, quando o browser o deixa sair. Sem isto o retrato sai
@@ -313,7 +359,9 @@ export async function gravar(video, {
     for (const faixa of somDoVideo?.getAudioTracks?.() || []) fluxo.addTrack(faixa);
   } catch { /* sem som: o vídeo continua a valer, o silêncio não o impede */ }
 
-  const gravador = new MR(fluxo, { mimeType: tipo });
+  const gravador = new MR(fluxo, {
+    mimeType: tipo, videoBitsPerSecond: BITS_VIDEO, audioBitsPerSecond: BITS_SOM,
+  });
   const pedacos = [];
   gravador.ondataavailable = (e) => { if (e.data?.size) pedacos.push(e.data); };
 

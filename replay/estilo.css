@@ -462,15 +462,16 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
   position: absolute; inset: var(--e2) var(--e2) auto auto; z-index: 3;
   display: flex; gap: var(--e2); opacity: 0; transition: opacity var(--mov);
 }
-/* Numa MINIATURA não há ecrã cheio.
-   "Esse botão tela cheia na miniatura do vídeo é inútil, pode remover: a
-    miniatura não roda, só quando abro ele."
-   Tem razão — pôr um quadrado de 150 px em ecrã cheio dá uma imagem de 150 px
-   esticada, e o que ele quer nessa altura é abrir o ângulo, que é o que o
-   outro botão faz. A regra é pelo SÍTIO e não pelo quadrado: quando um
-   ângulo passa da grelha para o foco é o mesmo nó que muda de pai, e assim o
-   botão aparece e desaparece com ele sem uma linha de JavaScript. */
-#grade .tile .ecraCheio { display: none; }
+/* Numa MINIATURA há UM botão, e não três.
+   "Esse botão tela cheia na miniatura é inútil: a miniatura não roda, só
+    quando abro ele." · "Tira esse modo janela da miniatura."
+   Tem razão nos dois: pôr um quadrado de 150 px em ecrã cheio dá uma imagem
+   de 150 px esticada, e mandá-lo para uma janela à parte é a mesma coisa. O
+   que se quer numa miniatura é ABRI-LA — e é o único botão que lá fica.
+   A regra é pelo SÍTIO e não pelo quadrado: quando um ângulo passa da grelha
+   para o foco é o mesmo nó a mudar de pai, e assim os botões aparecem e
+   desaparecem com ele sem uma linha de JavaScript. */
+#grade .tile .ecraCheio, #grade .tile .aparte { display: none; }
 .tile:hover .fora, .tile.foco .fora, .tile .fora:focus-within { opacity: 1; }
 
 /* Um botão sobre a imagem: vidro escuro, sem fio, do tamanho de um polegar. */
@@ -480,6 +481,10 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
   color: #fff;
 }
 .tile .controlos button:hover, .tile .fora button:hover { background: #000; }
+/* Os símbolos do quadrado um ponto maiores: são os únicos que se veem por
+   cima de imagem em movimento, e a 14 px dois painéis lado a lado liam-se
+   como dois pontos. */
+.tile .controlos button .ic, .tile .fora button .ic { width: 16px; height: 16px; }
 .tile .som, .tile .ajuste { display: flex; align-items: center; gap: var(--e2); }
 .tile .ajuste button { width: 26px; min-width: 26px; min-height: 26px; font-size: var(--t-medio); }
 .tile .nudge {
@@ -536,12 +541,18 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 }
 #barra::-webkit-slider-runnable-track { height: 4px; border-radius: var(--r-fio); background: var(--sup-4); }
 #barra::-moz-range-track { height: 4px; border-radius: var(--r-fio); background: var(--sup-4); }
+/* O pino ao CENTRO da calha, e não meio pixel acima.
+   "O pino branco não está centralizado com a barra." Não estava: o `*` do
+   `box-sizing` não chega aos pseudo-elementos do browser, por isso o pino
+   media 14 px mais 2 de fio de cada lado — 18 no total — e a margem estava
+   calculada para 14. Com `box-sizing` declarado aqui, a conta volta a bater:
+   metade da calha menos metade do pino, (4 − 16) ÷ 2. */
 #barra::-webkit-slider-thumb {
-  appearance: none; width: 14px; height: 14px; margin-top: -5px;
+  appearance: none; box-sizing: border-box; width: 16px; height: 16px; margin-top: -6px;
   border-radius: var(--r-redondo); background: var(--tinta); border: 2px solid var(--sup-0);
 }
 #barra::-moz-range-thumb {
-  width: 14px; height: 14px; border-radius: var(--r-redondo);
+  box-sizing: border-box; width: 16px; height: 16px; border-radius: var(--r-redondo);
   background: var(--tinta); border: 2px solid var(--sup-0);
 }
 #barra:hover::-webkit-slider-thumb { background: var(--acento); }
@@ -990,9 +1001,24 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
   body.mesa:has(#palco:not([hidden])) #entrada .entradaGrelha { display: flex; gap: var(--e3); flex: 1 1 auto; min-width: 0; }
   body.mesa:has(#palco:not([hidden])) #entrada .campo,
   body.mesa:has(#palco:not([hidden])) #noites .campo { flex: 1 1 0; min-width: 0; }
+  /* Duas linhas e sem calha de rolagem.
+     "Isso eu não quero, uma barra lateral pra rolar nessa parte de cima acho
+      muito feio: podia utilizar uma linha a mais, pouca coisa de tamanho, com
+      os nomes — não precisa ser muito grande os nomes."
+     Com uma linha só, dezassete canais deixavam sempre a calha à vista, e uma
+     calha de sistema no meio de uma barra é a única peça do ecrã que não foi
+     desenhada. Duas linhas de letra pequena mostram quatro nomes, e quem
+     precisar de mais rola com a roda — a caixa continua a rolar, o que
+     desaparece é o risco cinzento. */
   body.mesa:has(#palco:not([hidden])) #entrada textarea {
-    min-height: 34px; height: 34px; padding: 7px var(--e3); white-space: pre; overflow-x: hidden;
+    /* 48 = 2 de fio + 10 de folga + 2 linhas de 18. A conta é exacta de
+       propósito: com uma altura qualquer sobrava uma tira da terceira linha
+       encostada ao fundo, e uma letra cortada ao meio lê-se como avaria. */
+    min-height: 48px; height: 48px; padding: 5px var(--e3);
+    font-size: var(--t-micro); line-height: 18px; white-space: pre;
+    overflow: auto; scrollbar-width: none;
   }
+  body.mesa:has(#palco:not([hidden])) #entrada textarea::-webkit-scrollbar { width: 0; height: 0; }
   body.mesa:has(#palco:not([hidden])) .topoTrabalho input,
   body.mesa:has(#palco:not([hidden])) .topoTrabalho select { min-height: 34px; padding: 6px var(--e3); }
   /* A lupa vive dentro da caixa: com a caixa apertada, a folga da esquerda
@@ -1032,14 +1058,18 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
     height: 100%; width: auto; aspect-ratio: 16/9; min-height: 0; max-width: 100%; flex: 0 1 auto;
   }
   body.mesa:has(#palco:not([hidden])) .palcoFoco.dois .tile { max-width: calc(50% - 4px); }
-  body.mesa:has(#palco:not([hidden])) .barraClipar { flex: 0 0 auto; margin: var(--e2) 0; }
-  body.mesa:has(#palco:not([hidden])) .barraGrelha { flex: 0 0 auto; margin: 0; }
+  /* Uma folga entre as quatro coisas empilhadas à esquerda. "Afasta um pouco,
+     parece que tá muito junto: dá uma pequena folga pros botões." Estava tudo
+     a 4 px: os controlos do vídeo, o Clipar, a ordem e a grelha liam-se como
+     um bloco só. */
+  body.mesa:has(#palco:not([hidden])) .barraClipar { flex: 0 0 auto; margin: var(--e4) 0 var(--e3); }
+  body.mesa:has(#palco:not([hidden])) .barraGrelha { flex: 0 0 auto; margin: 0 0 var(--e3); }
   /* A grelha é a única coisa da esquerda que cede: tudo o resto tem tamanho.
      Uma grelha com altura definida esmaga as linhas para caber e o
      `aspect-ratio` perde — ficavam tiras de 25 px umas por cima das outras.
      As linhas ficam com o tamanho do conteúdo e o resto rola. */
   body.mesa:has(#palco:not([hidden])) #grade {
-    flex: 1 1 0; min-height: 60px; overflow-y: auto; margin: var(--e2) 0; padding-right: var(--e2);
+    flex: 1 1 0; min-height: 60px; overflow-y: auto; margin: 0; padding-right: var(--e2);
     align-content: start; grid-auto-rows: max-content;
     /* Sombra de rolagem: uma fita escura no topo e no fundo que só aparece
        quando há mesmo mais quadrados para lá da borda. Sem ela, uma fila
