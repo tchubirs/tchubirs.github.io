@@ -462,6 +462,15 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
   position: absolute; inset: var(--e2) var(--e2) auto auto; z-index: 3;
   display: flex; gap: var(--e2); opacity: 0; transition: opacity var(--mov);
 }
+/* Numa MINIATURA não há ecrã cheio.
+   "Esse botão tela cheia na miniatura do vídeo é inútil, pode remover: a
+    miniatura não roda, só quando abro ele."
+   Tem razão — pôr um quadrado de 150 px em ecrã cheio dá uma imagem de 150 px
+   esticada, e o que ele quer nessa altura é abrir o ângulo, que é o que o
+   outro botão faz. A regra é pelo SÍTIO e não pelo quadrado: quando um
+   ângulo passa da grelha para o foco é o mesmo nó que muda de pai, e assim o
+   botão aparece e desaparece com ele sem uma linha de JavaScript. */
+#grade .tile .ecraCheio { display: none; }
 .tile:hover .fora, .tile.foco .fora, .tile .fora:focus-within { opacity: 1; }
 
 /* Um botão sobre a imagem: vidro escuro, sem fio, do tamanho de um polegar. */
@@ -608,12 +617,17 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
    quarto botão cai para baixo assim que o ecrã aperta, e aí deixam de se ler
    como um conjunto. Aqui são sempre duas filas certas, coluna a coluna. */
 .saltos { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--e2); margin-top: var(--e4); }
+/* Com cara de botão, e não de texto.
+   "Aqui nos botões queria que parecesse botões." Estavam transparentes e sem
+   fio, com a ideia de que andar no tempo é navegação e a navegação se cala —
+   mas oito coisas soltas no meio de um painel não se leem como oito coisas
+   em que se carrega. Ficam com a mesma superfície e o mesmo fio de todos os
+   outros; o que os mantém calados é a cor do texto e não a falta de caixa. */
 .saltos button {
   padding: 0 var(--e2); min-height: 38px; gap: 5px; white-space: nowrap;
-  background: transparent; border-color: transparent; color: var(--tinta-2);
-  font-family: var(--letra-mono); font-size: var(--t-menor);
+  color: var(--tinta-2); font-family: var(--letra-mono); font-size: var(--t-menor);
 }
-.saltos button:hover { background: var(--sup-3); border-color: var(--linha-2); color: var(--tinta); }
+.saltos button:hover { color: var(--tinta); }
 .saltos .ic { width: 13px; height: 13px; opacity: .75; }
 
 /* ── marcar entrada e saída ─────────────────────────────────────────────── */
