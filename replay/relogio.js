@@ -5,7 +5,7 @@
 // an ordered set of VODs plus the gaps, and scrubbing across a gap must either
 // switch VODs by itself or show the hole — never quietly play the wrong moment.
 
-import { tempoDeMidia } from './kick.js?v=ce2e4e8997';
+import { tempoDeMidia } from './kick.js?v=874d029ee3';
 
 /**
  * One channel's night: its VODs in order, and the holes between them.
@@ -196,4 +196,40 @@ export function instanteSeguindo(ancora, video, { limiteMs = 3_600_000 } = {}) {
   // ainda a caminho; longe demais é um pedaço novo com o tempo recomeçado.
   if (!Number.isFinite(ms) || ms < ancora.ms || ms - ancora.ms > limiteMs) return null;
   return ms;
+}
+
+/**
+ * Andar no tempo com a tecla carregada.
+ *
+ * "Podia pôr a letra A e a letra D para voltar e avançar 3 segundos a cada
+ *  clique, e se segurasse pressionado fica voltando ou avançando mais — não
+ *  sei como fazer isso em escala de tempo."
+ *
+ * A escala é esta, e a conta que a justifica está ao lado. Um toque vale três
+ * segundos, como os botões ‹3s / 3s›. Segurar dispara nove passos por segundo,
+ * e o tamanho do passo cresce com o tempo que a tecla leva carregada:
+ *
+ *   até 1 s carregada     3 s por passo   ≈ 27 s de vídeo por segundo real
+ *   até 2 s               10 s            ≈ 90 s/s
+ *   até 3,5 s             30 s            ≈ 270 s/s
+ *   a partir daí          60 s            ≈ 540 s/s
+ *
+ * O último degrau é o que decide se isto serve: uma noite de dez horas são
+ * 36 000 segundos, e a 540 por segundo atravessa-se em pouco mais de um
+ * minuto sem largar a tecla. Mais depressa do que isso passava por cima de
+ * tudo; mais devagar não chegava ao outro lado da noite.
+ */
+export const ARRASTO_INTERVALO_MS = 110;
+export const ARRASTO_ESPERA_MS = 350;
+export const ARRASTO_ESCADA = [
+  { apos: 3500, passo: 60_000 },
+  { apos: 2000, passo: 30_000 },
+  { apos: 1000, passo: 10_000 },
+  { apos: 0, passo: 3_000 },
+];
+
+/** O passo de agora, pelo tempo que a tecla já leva carregada. */
+export function passoDoArrasto(seguradoMs) {
+  const ms = Number.isFinite(seguradoMs) ? Math.max(0, seguradoMs) : 0;
+  return ARRASTO_ESCADA.find((d) => ms >= d.apos).passo;
 }
