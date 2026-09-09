@@ -8,8 +8,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   RETRATO, enquadramentoInicial, limitar, destinos, desenhar, melhorFormato, extensaoDe, FORMATOS,
+  formatoQueFunciona,
   reformar, proporcaoDoQuadro, limparDivisao, DIVISAO_MIN, DIVISAO_MAX, DIVISAO_OMISSAO,
-  divisaoDoQuadro, encaixar, gravar,
+  divisaoDoQuadro, encaixar, gravar, noSitio,
 } from '../site/retrato.js';
 
 const perto = (a, b, tol = 0.01) => Math.abs(a - b) < tol;
@@ -411,6 +412,112 @@ test('um video que nao anda rebenta, em vez de dar uma foto', async () => {
   );
 });
 
+// "Acabei de fazer outro, deu várias falhas."
+//
+// Medido no 9:16 de 31/08 que ele mandou (1080x1920, 22,79 s): os primeiros
+// 0,267 s do ficheiro são PRETOS, e os 0,167 s seguintes mostram o ecrã de
+// morte do Rust — que no clipe só acontece aos 22,2 s. Meio segundo de lixo
+// à cabeça, e a imagem errada.
+//
+// São duas causas diferentes e cada uma tem o seu teste aqui em baixo.
+
+test('a gravação começa com a imagem pintada, e não com a tela preta', async () => {
+  const ordem = [];
+  const v = {
+    videoWidth: 1920, videoHeight: 1080, currentTime: 10, seeking: false, readyState: 4,
+    play: async () => { ordem.push('play'); }, pause: () => {},
+    captureStream: () => ({ getAudioTracks: () => [] }),
+  };
+  const ctx = {
+    drawImage() { ordem.push('pintar'); v.currentTime += 0.05; },
+    fillRect() {}, clearRect() {}, save() {}, restore() {},
+  };
+  const tela = { width: 0, height: 0, getContext: () => ctx, captureStream: () => ({ addTrack() {} }) };
+  class MRFalso {
+    constructor() { this.state = 'inactive'; }
+    start() { this.state = 'recording'; ordem.push('gravar'); }
+    stop() {
+      this.state = 'inactive';
+      this.ondataavailable?.({ data: new Blob(['x']) });
+      this.onstop?.();
+    }
+  }
+  const { blob } = await gravar(v, {
+    rects: [{ x: 0, y: 0, largura: 1080, altura: 1080 }],
+    duracaoS: 0.2, formato: 'video/webm', criarTela: () => tela, MR: MRFalso,
+  });
+  assert.ok(blob.size > 0, 'tinha de sair ficheiro');
+  assert.equal(ordem[0], 'pintar', `a primeira coisa tinha de ser uma pincelada, foi ${ordem[0]}`);
+  assert.ok(
+    ordem.indexOf('pintar') < ordem.indexOf('gravar'),
+    'o gravador arrancou antes de a tela ter imagem: isso são frames pretos no ficheiro',
+  );
+});
+
+test('gravar espera que a procura no vídeo aterre, em vez de gravar o frame velho', async () => {
+  const ouvintes = new Map();
+  const disparar = (nome) => { for (const f of ouvintes.get(nome) || []) f(); };
+  let arrancou = false;
+  // Onde ele estava a espreitar antes de carregar em gravar: o fim do clipe.
+  const v = {
+    videoWidth: 1920, videoHeight: 1080, currentTime: 55, seeking: true, readyState: 1,
+    addEventListener: (n, f) => { ouvintes.set(n, [...(ouvintes.get(n) || []), f]); },
+    removeEventListener: (n, f) => { ouvintes.set(n, (ouvintes.get(n) || []).filter((x) => x !== f)); },
+    play: async () => {}, pause: () => {},
+    captureStream: () => ({ getAudioTracks: () => [] }),
+  };
+  const ctx = {
+    drawImage() { v.currentTime += 0.05; },
+    fillRect() {}, clearRect() {}, save() {}, restore() {},
+  };
+  const tela = { width: 0, height: 0, getContext: () => ctx, captureStream: () => ({ addTrack() {} }) };
+  class MRFalso {
+    constructor() { this.state = 'inactive'; }
+    start() { this.state = 'recording'; arrancou = true; }
+    stop() {
+      this.state = 'inactive';
+      this.ondataavailable?.({ data: new Blob(['x']) });
+      this.onstop?.();
+    }
+  }
+  const feito = gravar(v, {
+    rects: [{ x: 0, y: 0, largura: 1080, altura: 1080 }],
+    duracaoS: 0.2, formato: 'video/webm', criarTela: () => tela, MR: MRFalso,
+  });
+  await new Promise((k) => setTimeout(k, 40));
+  assert.equal(arrancou, false, 'gravou por cima de uma procura a meio: o primeiro frame é o do sítio errado');
+
+  // A procura aterra no início do clipe.
+  v.currentTime = 10;
+  v.seeking = false;
+  v.readyState = 4;
+  disparar('seeked');
+  const { blob } = await feito;
+  assert.ok(blob.size > 0);
+  assert.ok(arrancou, 'depois de aterrar tinha de gravar');
+  // Se o `inicio` tivesse sido lido antes da procura seria 55, e a conta da
+  // duração dava negativa para sempre: o clipe nunca acabava.
+  assert.ok(v.currentTime > 10 && v.currentTime < 11, `parou em ${v.currentTime}`);
+});
+
+test('um vídeo que nunca aterra não prende a gravação para sempre', async () => {
+  const ouvintes = new Map();
+  const v = {
+    seeking: true, readyState: 0,
+    addEventListener: (n, f) => { ouvintes.set(n, [...(ouvintes.get(n) || []), f]); },
+    removeEventListener: (n, f) => { ouvintes.set(n, (ouvintes.get(n) || []).filter((x) => x !== f)); },
+  };
+  assert.equal(await noSitio(v, { esperaMs: 30 }), false, 'tinha de desistir e deixar seguir');
+  for (const [nome, lista] of ouvintes) {
+    assert.equal(lista.length, 0, `ficou um ouvinte de ${nome} pendurado`);
+  }
+});
+
+test('um vídeo sem readyState conta como pronto, e não fica à espera', async () => {
+  assert.equal(await noSitio({ play: async () => {} }), true);
+  assert.equal(await noSitio(undefined), true);
+});
+
 // "Acabei de fazer uma mas não gostei muito da qualidade, parece que ficou bem
 //  ruim." · "Deu várias falhas de falta de bitrate."
 //
@@ -454,18 +561,98 @@ test('o retrato é gravado com bitrate declarado, e não com o de omissão', asy
   assert.ok(opcoes.audioBitsPerSecond > 0, 'e o som também leva um número');
 });
 
-// O nível pedido no nome do codec tem de chegar para a imagem que vamos
-// gravar. O nível 3.0 está definido até 1 620 macroblocos por frame; um
-// retrato de 1080x1920 tem 8 160 — cinco vezes mais.
-test('o formato preferido aguenta 1080x1920, e não é Baseline nível 3.0', () => {
-  const macroblocos = Math.ceil(RETRATO.largura / 16) * Math.ceil(RETRATO.altura / 16);
-  assert.equal(macroblocos, 8160);
-  const mp4 = FORMATOS.filter((f) => f.includes('avc1.'));
-  assert.ok(mp4.length >= 2, 'um só perfil de H.264 não deixa alternativa nenhuma');
-  // O primeiro é o melhor: High (0x64) no nível 4.0 (0x28 = 40).
-  const [perfil, , nivel] = mp4[0].match(/avc1\.(\w{2})(\w{2})(\w{2})/).slice(1);
-  assert.equal(perfil, '64', `o primeiro MP4 pede o perfil ${perfil} e não High`);
-  assert.ok(parseInt(nivel, 16) >= 40, `nível ${parseInt(nivel, 16) / 10}, e 1080x1920 precisa de 4.0`);
-  // E o Baseline continua na lista, atrás: é a rede de quem não sabe os outros.
-  assert.ok(FORMATOS.some((f) => f.includes('avc1.42E01E')), 'o Baseline saiu da lista');
+// O formato preferido é o que já se PROVOU que grava som, e não o que parecia
+// melhor no papel.
+//
+// Tentei pôr High/Main à frente do Baseline, com o argumento de que o nível
+// 3.0 não chega para 1080x1920 (8 160 macroblocos contra 1 620) e de que
+// Baseline não tem CABAC nem frames B. Publiquei, ele exportou, e o ficheiro
+// dele disse o contrário do que eu tinha assumido:
+//
+//   profile=Constrained Baseline   level=40   bit_rate=9 413 851
+//   pistas: 1 — só vídeo. SEM SOM.
+//
+// O Chrome ignora o perfil e o nível pedidos (escolhe o nível pela resolução),
+// e com o codec novo a faixa de áudio desapareceu. Zero ganho, som perdido.
+// Este teste prende a lista no que está medido.
+test('o MP4 preferido é o que grava com som, e não o que parece melhor no papel', () => {
+  assert.equal(FORMATOS[0], 'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+    'o primeiro MP4 mudou — mede um ficheiro exportado e conta as pistas antes de o trocar');
+  // Todos os MP4 com codecs escritos têm de declarar áudio: um `video/mp4`
+  // com só o vídeo lá dentro é a receita do clipe mudo.
+  for (const f of FORMATOS.filter((x) => x.includes('codecs='))) {
+    assert.match(f, /mp4a|opus/, `${f} não declara codec de áudio nenhum`);
+  }
+  // E o WebM continua atrás, como rede.
+  assert.ok(FORMATOS.indexOf('video/webm;codecs=vp9,opus') > FORMATOS.indexOf('video/mp4'),
+    'o WebM passou à frente do MP4');
+});
+
+// A prova de formato tem de gravar COM SOM.
+//
+// Era só de vídeo, e por isso aprovava um formato que grava imagem e deita o
+// áudio fora — que foi exactamente o que aconteceu.
+test('a prova de formato leva uma faixa de som, como a gravação a sério', async () => {
+  const pistas = [];
+  const tela = {
+    width: 0, height: 0,
+    getContext: () => ({ fillRect() {}, drawImage() {} }),
+    captureStream: () => ({
+      addTrack: (f) => pistas.push(f),
+      getTracks: () => [{ stop() {} }],
+    }),
+  };
+  class MRFalso {
+    static isTypeSupported() { return true; }
+    constructor() { this.state = 'inactive'; }
+    start() { this.state = 'recording'; this.ondataavailable?.({ data: { size: 10 } }); }
+    stop() { this.state = 'inactive'; this.onstop?.(); }
+  }
+  // Um `AudioContext` de mentira, para se poder ver se a prova o usa.
+  let fechado = false;
+  const antes = globalThis.AudioContext;
+  globalThis.AudioContext = class {
+    createMediaStreamDestination() {
+      return { stream: { getAudioTracks: () => [{ nome: 'som-de-prova', stop() {} }] } };
+    }
+
+    createConstantSource() { return { connect() {} }; }
+
+    close() { fechado = true; return Promise.resolve(); }
+  };
+  try {
+    const tipo = await formatoQueFunciona({ MR: MRFalso, criarTela: () => tela, msPorTentativa: 5 });
+    assert.equal(tipo, FORMATOS[0], 'devia ficar no primeiro que produziu bytes');
+    assert.deepEqual(pistas.map((f) => f.nome), ['som-de-prova'],
+      'a prova gravou só imagem — é assim que passa um formato que deita o som fora');
+    assert.equal(fechado, true, 'o contexto de áudio ficou aberto depois da prova');
+  } finally {
+    if (antes) globalThis.AudioContext = antes; else delete globalThis.AudioContext;
+  }
+});
+
+// E sem `AudioContext` a prova continua a valer: um ambiente que não o tem
+// (um teste, um browser velho) não pode ficar sem formato nenhum.
+test('sem AudioContext a prova de formato continua a dar resposta', async () => {
+  const tela = {
+    width: 0, height: 0,
+    getContext: () => ({ fillRect() {}, drawImage() {} }),
+    captureStream: () => ({ addTrack() {}, getTracks: () => [{ stop() {} }] }),
+  };
+  class MRFalso {
+    static isTypeSupported() { return true; }
+    constructor() { this.state = 'inactive'; }
+    start() { this.state = 'recording'; this.ondataavailable?.({ data: { size: 10 } }); }
+    stop() { this.state = 'inactive'; this.onstop?.(); }
+  }
+  const antes = globalThis.AudioContext;
+  delete globalThis.AudioContext;
+  try {
+    assert.equal(
+      await formatoQueFunciona({ MR: MRFalso, criarTela: () => tela, msPorTentativa: 5 }),
+      FORMATOS[0],
+    );
+  } finally {
+    if (antes) globalThis.AudioContext = antes;
+  }
 });
