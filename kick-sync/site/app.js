@@ -10,6 +10,7 @@ import {
 } from './kick.js';
 import {
   linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo,
+  passoDoArrasto, ARRASTO_INTERVALO_MS, ARRASTO_ESPERA_MS,
 } from './relogio.js';
 import { cortarTodosOsAngulos } from './baixar.js';
 import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js';
@@ -3484,7 +3485,87 @@ document.addEventListener('keydown', (e) => {
   // O ângulo em foco anda sozinho: alinhar à vista, sem tirar a mão do teclado.
   if (e.key === ',' && estado.focos[0]) empurrar(estado.focos[0], -passo);
   if (e.key === '.' && estado.focos[0]) empurrar(estado.focos[0], passo);
+  // O A e o D são a mão esquerda: três segundos por toque, e uma corrida se
+  // ficarem carregados. É a mesma mão que fica no teclado enquanto a outra
+  // está no rato — e três segundos é o passo de apurar sem passar por cima
+  // da kill, que é o mesmo dos botões ‹3s / 3s›.
+  if (e.key === 'a' || e.key === 'A') { e.preventDefault(); comecarArrasto(-1); }
+  if (e.key === 'd' || e.key === 'D') { e.preventDefault(); comecarArrasto(1); }
 });
+
+// ── segurar o A ou o D ──────────────────────────────────────────────────────
+//
+// A repetição é NOSSA e não a do sistema. A do sistema começa quando o
+// sistema quiser, repete ao ritmo que estiver configurado nesse computador, e
+// o mesmo gesto andava distâncias diferentes em máquinas diferentes. Com um
+// relógio próprio, segurar dois segundos anda sempre o mesmo.
+let arrasto = null;
+function comecarArrasto(sentido) {
+  // O `keydown` repete-se sozinho enquanto a tecla está em baixo: o segundo
+  // não pode começar uma segunda corrida por cima da primeira.
+  if (arrasto) return;
+  largarPrevia();
+  irPara(estado.agoraMs + sentido * passoDoArrasto(0));
+  const desde = Date.now();
+  arrasto = { sentido, tempo: null };
+  arrasto.tempo = setTimeout(() => {
+    arrasto.tempo = setInterval(() => {
+      irPara(estado.agoraMs + sentido * passoDoArrasto(Date.now() - desde));
+    }, ARRASTO_INTERVALO_MS);
+  }, ARRASTO_ESPERA_MS);
+}
+function pararArrasto() {
+  if (!arrasto) return;
+  clearTimeout(arrasto.tempo);
+  clearInterval(arrasto.tempo);
+  arrasto = null;
+}
+document.addEventListener('keyup', (e) => {
+  if (e.key === 'a' || e.key === 'A' || e.key === 'd' || e.key === 'D') pararArrasto();
+});
+// A janela que perde o foco nunca entrega o `keyup`, e a corrida ficava a
+// andar sozinha por trás de outra janela até alguém voltar.
+window.addEventListener('blur', pararArrasto);
+
+/**
+ * A página velha na cache do browser, resolvida por ela própria.
+ *
+ * "Cadê as mudanças anteriores que eu pedi, de ícone, layout e espaçamento?"
+ * Estavam publicadas — ele é que estava a ver a página de antes. O GitHub
+ * Pages responde `cache-control: max-age=600` e não há como mudar isso: durante
+ * dez minutos o browser serve o `index.html` guardado sem sequer perguntar ao
+ * servidor. O carimbo `?v=` nos endereços do código não resolve este caso,
+ * porque é o HTML que traz os endereços — HTML velho, código velho.
+ *
+ * Então a página pergunta. O `versao.txt` é lido com `no-store`, por isso vem
+ * mesmo do servidor; se o que lá está não for o que esta página tem escrito no
+ * rodapé, esta página é velha e recarrega-se — e um `reload` revalida sempre o
+ * documento principal, ao contrário de o abrir outra vez.
+ *
+ * Uma vez por versão, e guardado na sessão: se por alguma razão o número
+ * continuar diferente depois de recarregar, ela não fica num ciclo — fica com
+ * a versão que tem e diz-lho no rodapé.
+ */
+async function verSeEstaVelha() {
+  const escrita = $('versao').textContent.trim();
+  // Em desenvolvimento não há ficheiro nenhum, e não há nada a comparar.
+  if (!escrita || escrita === 'dev') return;
+  try {
+    const r = await fetch(`versao.txt?t=${Date.now()}`, { cache: 'no-store' });
+    if (!r.ok) return;
+    const servidor = (await r.text()).trim();
+    if (!servidor || servidor === escrita) return;
+    const jaTentei = sessionStorage.getItem('replay.recarga');
+    if (jaTentei === servidor) {
+      $('versao').textContent = `${escrita} → ${servidor}`;
+      $('versao').classList.add('mau');
+      return;
+    }
+    sessionStorage.setItem('replay.recarga', servidor);
+    location.reload();
+  } catch { /* sem rede: fica com o que tem, que é melhor do que nada */ }
+}
+verSeEstaVelha();
 
 // ── idioma ──────────────────────────────────────────────────────────────────
 

@@ -2228,6 +2228,103 @@ test('os saltos no tempo têm a mesma cara dos outros botões',
     await p.close();
   });
 
+// "Cadê as mudanças anteriores que eu pedi, de ícone, layout e espaçamento?"
+//
+// Estavam publicadas — ele é que estava a ver a página de antes. O GitHub Pages
+// responde `cache-control: max-age=600` e durante dez minutos o browser serve o
+// `index.html` guardado sem perguntar nada. O carimbo `?v=` no código não
+// resolve este caso: é o HTML que traz os endereços, e HTML velho traz código
+// velho. A página passa a perguntar ao servidor qual é a versão e, se for
+// outra, recarrega-se sozinha — uma vez.
+test('uma página velha na cache recarrega-se sozinha, e só uma vez',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p);
+    // O servidor de teste não publica `versao.txt`: aqui é ele que o serve, e
+    // com um número diferente do que a página traz escrita.
+    let pedidos = 0;
+    await p.route('**/versao.txt*', (rota) => {
+      pedidos++;
+      rota.fulfill({ status: 200, contentType: 'text/plain', body: 'versao-nova' });
+    });
+    // E a página tem de CHEGAR com uma versão escrita, como chega depois de
+    // publicada: escrevê-la depois de o código correr não testava nada, porque
+    // é ao arrancar que ele se compara com o servidor.
+    await p.route(`http://127.0.0.1:${PORTA}/`, async (rota) => {
+      const r = await rota.fetch();
+      const corpo = (await r.text()).replace('id="versao">dev<', 'id="versao">versao-velha<');
+      rota.fulfill({ response: r, body: corpo });
+    });
+
+    let recargas = 0;
+    p.on('load', () => { recargas++; });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.waitForTimeout(1500);
+
+    assert.ok(pedidos >= 1, 'a página nunca perguntou ao servidor qual era a versão');
+    assert.ok(recargas >= 2, `a página não se recarregou (${recargas} carregamentos)`);
+    // E não fica num ciclo: com o número ainda diferente, pára e diz-lho.
+    assert.ok(recargas <= 3, `entrou num ciclo de recargas: ${recargas}`);
+    const rodape = await p.locator('#versao').innerText();
+    assert.match(rodape, /versao-nova/, `o rodapé devia dizer a versão nova: ${rodape}`);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+// "Podia pôr a letra A e a letra D para voltar e avançar 3 segundos a cada
+//  clique, e se segurasse pressionado fica voltando ou avançando mais."
+//
+// A escada em si é medida sem browser (ver relogio.test.mjs). Isto é o resto:
+// que as teclas existem, que um toque vale três segundos, que segurar corre
+// muito mais do que isso, e que largar PÁRA — uma corrida que não pára é pior
+// do que não haver corrida nenhuma.
+test('o A e o D andam três segundos, e segurar corre a noite',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 20000 });
+    // Parado, para o relógio só andar por causa das teclas.
+    await p.keyboard.press(' ');
+    await p.waitForTimeout(200);
+
+    const segundos = async () => {
+      const txt = await p.locator('#agora').innerText();
+      const [h, m, s] = txt.replace('Z', '').split(':').map(Number);
+      return h * 3600 + m * 60 + s;
+    };
+    // O foco não pode estar numa caixa de texto: o teclado é da página.
+    await p.locator('#palcoFoco .tile').click();
+    await p.waitForTimeout(150);
+
+    const antes = await segundos();
+    await p.keyboard.press('d');
+    await p.waitForTimeout(200);
+    assert.equal(await segundos() - antes, 3, 'um toque no D devia andar três segundos');
+
+    await p.keyboard.press('a');
+    await p.waitForTimeout(200);
+    assert.equal(await segundos() - antes, 0, 'e o A devia trazer de volta');
+
+    // Segurar: um segundo e meio, que já passa do primeiro degrau da escada.
+    const antesDeSegurar = await segundos();
+    await p.keyboard.down('d');
+    await p.waitForTimeout(1500);
+    await p.keyboard.up('d');
+    await p.waitForTimeout(250);
+    const correu = await segundos() - antesDeSegurar;
+    assert.ok(correu > 20, `segurar um segundo e meio andou só ${correu}s`);
+
+    // E largar pára mesmo.
+    const aoLargar = await segundos();
+    await p.waitForTimeout(700);
+    assert.equal(await segundos(), aoLargar, 'o relógio continuou a andar depois de largar');
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
 // ── o sistema visual ───────────────────────────────────────────────────────
 //
 // Três coisas que se partem sem dar erro nenhum, e por isso têm de ser

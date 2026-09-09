@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo,
+  passoDoArrasto, ARRASTO_INTERVALO_MS,
 } from '../site/relogio.js';
 
 // Helper: a VOD covering [inicio, inicio+segundos) built from 10-second
@@ -218,4 +219,47 @@ test('um salto absurdo não mexe no relógio', () => {
   assert.equal(instanteSeguindo(ancora, leitor({ currentTime: NaN })), null);
   assert.equal(instanteSeguindo(null, leitor()), null);
   assert.equal(instanteSeguindo(ancora, null), null);
+});
+
+// "Se segurasse pressionado fica voltando ou avançando mais — não sei como
+//  fazer isso em escala de tempo."
+//
+// A escala tem de ser a mesma em qualquer computador, e por isso a repetição é
+// NOSSA e não a do sistema: a do sistema começa quando quer e repete ao ritmo
+// que estiver configurado, e o mesmo gesto andava distâncias diferentes em
+// máquinas diferentes.
+test('o passo de segurar cresce por degraus, e o primeiro é o do toque', () => {
+  assert.equal(passoDoArrasto(0), 3_000, 'um toque vale três segundos');
+  assert.equal(passoDoArrasto(999), 3_000);
+  assert.equal(passoDoArrasto(1000), 10_000);
+  assert.equal(passoDoArrasto(1999), 10_000);
+  assert.equal(passoDoArrasto(2000), 30_000);
+  assert.equal(passoDoArrasto(3499), 30_000);
+  assert.equal(passoDoArrasto(3500), 60_000);
+  assert.equal(passoDoArrasto(60_000), 60_000, 'e pára de crescer');
+
+  // Nunca anda para trás com o tempo: uma escada que descesse era um gesto
+  // que abrandava a meio sem ninguém perceber porquê.
+  let antes = 0;
+  for (let ms = 0; ms <= 6000; ms += 100) {
+    const agora = passoDoArrasto(ms);
+    assert.ok(agora >= antes, `o passo encolheu aos ${ms} ms`);
+    antes = agora;
+  }
+  // Lixo não rebenta nem inventa: cai no primeiro degrau.
+  for (const mau of [undefined, null, NaN, -500, 'x']) {
+    assert.equal(passoDoArrasto(mau), 3_000, `${mau} devia cair no degrau de baixo`);
+  }
+});
+
+// O degrau de cima é o que decide se isto serve para alguma coisa: uma noite
+// de dez horas tem de se atravessar sem largar a tecla.
+test('segurar atravessa uma noite inteira em menos de dois minutos', () => {
+  const porSegundo = (passoDoArrasto(10_000) * 1000) / ARRASTO_INTERVALO_MS;
+  const noiteS = 10 * 60 * 60;
+  const segundosReais = noiteS / (porSegundo / 1000);
+  assert.ok(segundosReais < 120,
+    `${Math.round(segundosReais)} s para atravessar dez horas — devagar demais`);
+  assert.ok(segundosReais > 20,
+    `${Math.round(segundosReais)} s — tão depressa que passa por cima de tudo`);
 });

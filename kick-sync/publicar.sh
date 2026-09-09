@@ -36,6 +36,12 @@ for f in "$DESTINO"/*.js "$DESTINO"/*.html; do
   perl -pi -e "s{(src=\")([a-z0-9-]+\.js)(\")}{\${1}\${2}?v=$V\${3}}g" "$f"
 done
 perl -pi -e "s{(<span id=\"versao\">)[^<]*(</span>)}{\${1}$V\${2}}" "$DESTINO"/*.html
+# A versao tambem num ficheiro so dela, para a pagina se poder comparar com o
+# servidor. O index.html sai daqui com `cache-control: max-age=600` e nao ha
+# como mudar isso: durante dez minutos o browser serve o HTML antigo sem sequer
+# perguntar, e quem esta a olhar ve a versao de ontem e diz "cade as mudancas".
+# Este ficheiro e lido com `no-store`, por isso chega sempre do servidor.
+printf '%s' "$V" > "$DESTINO/versao.txt"
 
 echo "publicado em $DESTINO  ·  versao $V"
 # O hls.js leva a versao NO NOME e nao pode levar carimbo: sao 414 KB, e um
@@ -53,6 +59,7 @@ for f in "$DESTINO"/index.html "$DESTINO"/twitch.html "$DESTINO"/app.js "$DESTIN
   grep -q "v=$V" "$f" || { echo "SEM CARIMBO: $f" >&2; exit 1; }
 done
 # E que a letra foi mesmo junto: cinco caras, e todas com corpo.
+[ -s "$DESTINO/versao.txt" ] || { echo "SEM versao.txt" >&2; exit 1; }
 for f in site/letra/*.woff2; do
   n=$(basename "$f")
   [ -s "$DESTINO/letra/$n" ] || { echo "FALTA A LETRA: $n" >&2; exit 1; }
