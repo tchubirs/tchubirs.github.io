@@ -612,7 +612,7 @@ async function lerNoite(noite) {
       .filter((m) => m.ms >= estado.janela.inicio && m.ms <= estado.janela.fim);
     estado.restaurar = null;
   }
-  $('palco').hidden = false;
+  mostrarPalco();
   // Quem esta nesta noite, pelo nome. "Nunca estiveram todos no ar ao mesmo
   // tempo" era um aviso a fingir de problema: nao ter todos nao impede nada,
   // corta-se na mesma com os que la estavam. O que faz falta e saber QUEM.
@@ -648,6 +648,34 @@ async function lerNoite(noite) {
   }
 }
 let rolarPendente = null;
+
+/* Num telemovel o palco nasce a dois mil pixels do topo: por cima dele estao a
+   caixa dos canais, a lista de noites e o estado de cada canal — 1 680 px de
+   PREPARACAO, medidos num ecra de 390x844 com dezassete canais, que ja nao
+   interessam a ninguem no segundo em que a noite abre.
+
+   "Pra versao de celular isso tem que ficar perto do player principal, porque
+    se eu quero passar pra frente e pra tras eu tenho que rolar pra baixo
+    muito ate chegar nessa parte."
+
+   Da PRIMEIRA vez que o palco aparece, a pagina desce ate ele; a seguir quem
+   rola e ele. Tres travoes, e cada um tem um motivo:
+   - so quando o palco estava escondido: acrescentar um streamer a uma noite
+     ja aberta nao pode dar um salto no ecra ("quero so incluir ele em tudo");
+   - so quando nao ha scroll guardado para repor, senao roubava-lhe o sitio
+     onde ficou;
+   - so num ecra estreito: no PC a pagina inteira e a area de trabalho e nao
+     rola de todo, por isso nao havia nada para onde descer. */
+let palcoJaAberto = false;
+function mostrarPalco() {
+  const palco = $('palco');
+  const primeira = palco.hidden && !palcoJaAberto;
+  palco.hidden = false;
+  if (!primeira) return;
+  palcoJaAberto = true;
+  if (rolarPendente != null || window.innerWidth >= 1080) return;
+  requestAnimationFrame(() => palco.scrollIntoView({ block: 'start' }));
+}
 
 /** Deitar fora tudo o que estava no ecrã, sem deixar leitores a tocar sozinhos. */
 function limparPalco() {
@@ -3270,7 +3298,7 @@ async function abrirLinkKick() {
     estado.focos = [slug];
     estado.janela = janelaComum(estado.linhas);
     estado.agoraMs = playlist.inicio;
-    $('palco').hidden = false;
+    mostrarPalco();
     montarGrade();
     seguirVideo();
     pintarConfianca();

@@ -1168,6 +1168,58 @@ button, select, input[type="text"], input[type="search"], input[type="number"] {
   #montagem { grid-area: monta; min-width: 0; }
 }
 
+/* ── o telemóvel: os controlos colados ao vídeo ─────────────────────────────
+   "Pra versão de celular isso tem que ficar perto do player principal, porque
+    se eu quero passar pra frente e pra trás eu tenho que rolar pra baixo
+    muito até chegar nessa parte. Ou pelo menos os botões de passar pra frente
+    ou pra trás, lá junto com o vídeo principal."
+
+   Tinha razão, e a medida diz quanto: entre o vídeo e o « 5 min estavam a
+   grelha dos dezassete ângulos, o Sincronizar, a Deteção, o Cortar, as
+   exportações e a lista de ficheiros. Rolo até ao botão que anda três
+   segundos: 2 359 px num ecrã de 390×844.
+
+   Duas mudanças, as duas só de CSS e só aqui — o PC não é tocado:
+
+   1. Os invólucros da coluna da direita deixam de existir no telemóvel
+      (`display: contents`). Não têm um único estilo próprio fora do PC, por
+      isso apagar a caixa não apaga nada; o que ganho é ter o relógio como
+      IRMÃO do vídeo, e irmãos ordenam-se com `order`. Mover no HTML era a
+      outra saída, e essa desmanchava a grelha do PC.
+
+   2. Dentro do relógio, o que se CARREGA sobe e o que se OLHA desce: o
+      instante, os oito saltos e o marcar entrada/saída ficam colados ao
+      vídeo; as faixas dos canais — dezassete linhas, meio ecrã — descem para
+      baixo deles. A ordem de leitura no HTML fica a mesma para quem ouve a
+      página, porque `order` só muda a pintura.
+
+   Medido depois, no mesmo 390×844: o « 5 min a 356 px do topo, dentro do
+   primeiro ecrã e com o vídeo à vista por cima. */
+@media (max-width: 1079.98px) {
+  .palcoVideo, .palcoLadoCaixa, .palcoLado { display: contents; }
+
+  /* Com os invólucros fora, o palco passa a ter sete filhos em vez de três:
+     as margens de cada um deixam de somar com a folga da grelha. */
+  #palco:not([hidden]) { gap: var(--e3); }
+  #palcoFoco { order: 1; margin: 0; }
+  .barraClipar { order: 2; margin: 0; }
+  .relogio { order: 3; }
+  #montagem { order: 4; }
+  .barraGrelha { order: 5; margin: 0; }
+  #grade { order: 6; margin: 0; }
+  .palcoFundo { order: 7; }
+
+  /* O relógio por dentro. `flex` e não `grid` de propósito: os filhos têm
+     larguras diferentes e nenhum deles quer uma coluna. */
+  .relogio { display: flex; flex-direction: column; }
+  .relogio > .linha { order: 1; }       /* 01:00:43Z · 17 de 17 ângulos */
+  .relogio > .saltos { order: 2; margin-top: var(--e2); }
+  .relogio > .marcas { order: 3; }
+  .relogio > .barraLinha { order: 4; margin-top: var(--e4); }
+  .relogio > .faixas { order: 5; }
+  .relogio > .reguaLinha { order: 6; }
+}
+
 /* ── o ecrã inteiro como área de trabalho ───────────────────────────────────
    "Quero que minha tela cheia vire minha área de trabalho: tudo o que a
     pessoa precise clicar e opções tem que aparecer na tela sem ela precisar

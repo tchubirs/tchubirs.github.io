@@ -275,6 +275,66 @@ test('os oito botoes de salto formam duas filas certas no telemovel, e nao passa
     await p.close();
   });
 
+// "Pra versao de celular isso tem que ficar perto do player principal, porque
+//  se eu quero passar pra frente e pra tras eu tenho que rolar pra baixo muito
+//  ate chegar nessa parte. Entao tera que ser o video principal rodando em
+//  cima e depois isso embaixo."
+//
+// Media do estado anterior, num ecra de 390x844 com dezassete canais: o video
+// abria a 1 978 px do topo da pagina — por cima dele a caixa dos canais, as
+// noites e o estado de cada canal — e o « 5 min ficava 2 359 px abaixo DISSO,
+// depois da grelha dos angulos, do Sincronizar, da Detecao, do Cortar e da
+// lista de ficheiros. Rolo de quatro mil pixels para carregar num botao que
+// anda tres segundos.
+//
+// Este teste mede as duas metades do arranjo: a pagina abre no video, e a
+// partir do video tudo o que se carrega cabe no primeiro ecra.
+test('num telemovel a pagina abre no video e os saltos ficam no primeiro ecra',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const canais = ['tchubi', 'a', 'b', 'c', 'd', 'e'];
+    const { p, erros } = await abrir({ ecra: { width: 390, height: 844 } });
+    await kickFalsa(p, { canais });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', canais.join('\n'));
+    await p.click('#carregar');
+    await p.waitForFunction(
+      (n) => document.querySelectorAll('.tile').length === n, canais.length, { timeout: 20000 },
+    );
+    await p.waitForTimeout(300);
+
+    // Um: a pagina desceu sozinha ate ao palco. Sem isto o video nascia a dois
+    // mil pixels do topo e a primeira coisa a fazer era rolar.
+    const topoDoPalco = await p.evaluate(
+      () => Math.round(document.getElementById('palco').getBoundingClientRect().top),
+    );
+    assert.ok(Math.abs(topoDoPalco) < 8, `o palco abriu a ${topoDoPalco} px do topo do ecra`);
+
+    // Dois: a ordem na PINTURA. O video, o Clipar, os saltos, e so depois as
+    // faixas dos canais, a montagem e a grelha dos angulos.
+    const y = async (sel) => (await p.locator(sel).boundingBox()).y;
+    const [foco, clipar, salto, faixas, grade] = await Promise.all(
+      ['#palcoFoco', '#clipar', '#menos5m', '#faixas', '#grade'].map(y),
+    );
+    assert.ok(clipar > foco, 'o Clipar vem por baixo do video');
+    assert.ok(salto > clipar, 'os saltos vem por baixo do Clipar');
+    assert.ok(faixas > salto, 'as faixas dos canais vem por baixo dos saltos');
+    assert.ok(grade > faixas, 'a grelha dos angulos vem por ultimo');
+
+    // Tres: e tudo isso cabe num ecra de 844 px, sem rolar. Cada botao que ele
+    // carrega para andar no tempo tem de estar a vista ao mesmo tempo que o
+    // video — que era a queixa.
+    const fora = await p.evaluate(() => ['#palcoFoco', '#clipar', '#menos5m', '#mais5m', '#marcarIn']
+      .map((s) => [s, document.querySelector(s).getBoundingClientRect()])
+      .filter(([, r]) => r.bottom > innerHeight || r.top < 0)
+      .map(([s, r]) => `${s} em ${Math.round(r.top)}..${Math.round(r.bottom)}`));
+    assert.deepEqual(fora, [], `fora do primeiro ecra de ${844}: ${fora.join(', ')}`);
+
+    const larguraDaPagina = await p.evaluate(() => document.documentElement.scrollWidth);
+    assert.ok(larguraDaPagina <= 390, `a pagina passa do ecra: ${larguraDaPagina}`);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
 // "Sem VODs" sozinho nao chega: quem escreveu mal fica sem saber se errou ou
 // se o canal existe mesmo e nao tem gravacoes.
 test('um nome errado oferece o parecido, e um clique corrige e recarrega',

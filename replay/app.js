@@ -7,34 +7,34 @@
 
 import {
   vodsDoCanal, lerMaster, lerPlaylist, procurarCanais, lerLinkKick, clipeDaKick, DESCONHECIDO,
-} from './kick.js?v=35e0821e85';
+} from './kick.js?v=d23df16643';
 import {
   linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo,
-} from './relogio.js?v=35e0821e85';
-import { cortarTodosOsAngulos } from './baixar.js?v=35e0821e85';
-import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=35e0821e85';
-import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=35e0821e85';
-import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=35e0821e85';
+} from './relogio.js?v=d23df16643';
+import { cortarTodosOsAngulos } from './baixar.js?v=d23df16643';
+import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=d23df16643';
+import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=d23df16643';
+import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=d23df16643';
 import {
   RETRATO, enquadramentoInicial, limitar, desenhar, gravar, formatoQueFunciona, extensaoDe,
   reformar, limparDivisao, DIVISAO_OMISSAO, divisaoDoQuadro, proporcaoDoQuadro, encaixar,
-} from './retrato.js?v=35e0821e85';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=35e0821e85';
+} from './retrato.js?v=d23df16643';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=d23df16643';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
   alternarVitima, filtrar, temMorte, clipesDoMomento, comAjuste,
-} from './momentos.js?v=35e0821e85';
-import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=35e0821e85';
-import { criarZip, crc32 } from './zip.js?v=35e0821e85';
-import { queFazerComOLeitor } from './leitor.js?v=35e0821e85';
-import { criarApanhador } from './frames.js?v=35e0821e85';
-import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=35e0821e85';
-import { TAXA_TIROS } from './tiros.js?v=35e0821e85';
-import { parecidos, juntarPerto } from './aprender.js?v=35e0821e85';
-import { somDoCanal } from './alinhar.js?v=35e0821e85';
-import { MAXIMO_S, mover, janelaInicial, nomeDoClipe, posicaoDaCabeca } from './clipe.js?v=35e0821e85';
-import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=35e0821e85';
-import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=35e0821e85';
+} from './momentos.js?v=d23df16643';
+import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js?v=d23df16643';
+import { criarZip, crc32 } from './zip.js?v=d23df16643';
+import { queFazerComOLeitor } from './leitor.js?v=d23df16643';
+import { criarApanhador } from './frames.js?v=d23df16643';
+import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=d23df16643';
+import { TAXA_TIROS } from './tiros.js?v=d23df16643';
+import { parecidos, juntarPerto } from './aprender.js?v=d23df16643';
+import { somDoCanal } from './alinhar.js?v=d23df16643';
+import { MAXIMO_S, mover, janelaInicial, nomeDoClipe, posicaoDaCabeca } from './clipe.js?v=d23df16643';
+import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=d23df16643';
+import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=d23df16643';
 
 const $ = (id) => document.getElementById(id);
 const estado = {
@@ -612,7 +612,7 @@ async function lerNoite(noite) {
       .filter((m) => m.ms >= estado.janela.inicio && m.ms <= estado.janela.fim);
     estado.restaurar = null;
   }
-  $('palco').hidden = false;
+  mostrarPalco();
   // Quem esta nesta noite, pelo nome. "Nunca estiveram todos no ar ao mesmo
   // tempo" era um aviso a fingir de problema: nao ter todos nao impede nada,
   // corta-se na mesma com os que la estavam. O que faz falta e saber QUEM.
@@ -648,6 +648,34 @@ async function lerNoite(noite) {
   }
 }
 let rolarPendente = null;
+
+/* Num telemovel o palco nasce a dois mil pixels do topo: por cima dele estao a
+   caixa dos canais, a lista de noites e o estado de cada canal — 1 680 px de
+   PREPARACAO, medidos num ecra de 390x844 com dezassete canais, que ja nao
+   interessam a ninguem no segundo em que a noite abre.
+
+   "Pra versao de celular isso tem que ficar perto do player principal, porque
+    se eu quero passar pra frente e pra tras eu tenho que rolar pra baixo
+    muito ate chegar nessa parte."
+
+   Da PRIMEIRA vez que o palco aparece, a pagina desce ate ele; a seguir quem
+   rola e ele. Tres travoes, e cada um tem um motivo:
+   - so quando o palco estava escondido: acrescentar um streamer a uma noite
+     ja aberta nao pode dar um salto no ecra ("quero so incluir ele em tudo");
+   - so quando nao ha scroll guardado para repor, senao roubava-lhe o sitio
+     onde ficou;
+   - so num ecra estreito: no PC a pagina inteira e a area de trabalho e nao
+     rola de todo, por isso nao havia nada para onde descer. */
+let palcoJaAberto = false;
+function mostrarPalco() {
+  const palco = $('palco');
+  const primeira = palco.hidden && !palcoJaAberto;
+  palco.hidden = false;
+  if (!primeira) return;
+  palcoJaAberto = true;
+  if (rolarPendente != null || window.innerWidth >= 1080) return;
+  requestAnimationFrame(() => palco.scrollIntoView({ block: 'start' }));
+}
 
 /** Deitar fora tudo o que estava no ecrã, sem deixar leitores a tocar sozinhos. */
 function limparPalco() {
@@ -3270,7 +3298,7 @@ async function abrirLinkKick() {
     estado.focos = [slug];
     estado.janela = janelaComum(estado.linhas);
     estado.agoraMs = playlist.inicio;
-    $('palco').hidden = false;
+    mostrarPalco();
     montarGrade();
     seguirVideo();
     pintarConfianca();
