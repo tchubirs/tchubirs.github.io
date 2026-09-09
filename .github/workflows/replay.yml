@@ -59,7 +59,15 @@ jobs:
       - name: Correr os testes
         run: |
           set -o pipefail
-          node --test --test-timeout=120000 test/*.mjs 2>&1 | tee /tmp/saida.txt
+          # 180 s por ficheiro, e a razao esta medida.
+          #
+          # Os testes de pagina levavam 148 s num ficheiro so e a CI cortava aos
+          # 120: a suite ficava vermelha sem nada estar partido. Estao em dois
+          # (pagina e pagina2, com o palco partilhado em palco.mjs), medidos em
+          # 62 s e 89 s, e correm ao mesmo tempo. O limite continua a existir
+          # para apanhar um teste PENDURADO — que e para isso que serve — mas
+          # com folga suficiente para uma maquina mais lenta do que esta.
+          node --test --test-timeout=180000 test/*.mjs 2>&1 | tee /tmp/saida.txt
         shell: bash
 
       - name: Garantir que os testes de browser correram mesmo
