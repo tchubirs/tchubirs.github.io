@@ -2149,6 +2149,71 @@ test('cada ponta tem as suas setas, e a imagem vai para onde a ponta foi',
     await p.close();
   });
 
+// "Esse botão tela cheia na miniatura do vídeo é inútil, pode remover: a
+//  miniatura não roda, só quando abro ele."
+//
+// Pôr um quadrado de 150 px em ecrã cheio dá uma imagem de 150 px esticada. O
+// que ele quer nessa altura é ABRIR o ângulo — e isso é o outro botão.
+test('o ecrã cheio só existe no ângulo aberto, e não nas miniaturas',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'outro'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi\noutro');
+    await p.click('#carregar');
+    await p.waitForSelector('#grade .tile', { timeout: 20000 });
+
+    const seVe = (sel) => p.evaluate((s) => {
+      const e = document.querySelector(s);
+      return !!e && e.offsetParent !== null;
+    }, sel);
+    assert.equal(await seVe('#grade .tile .ecraCheio'), false,
+      'a miniatura ainda tem o botão de ecrã cheio');
+    assert.equal(await seVe('#palcoFoco .tile .ecraCheio'), true,
+      'o ângulo aberto ficou sem o botão de ecrã cheio');
+
+    // E o botão segue o quadrado: promover uma miniatura a foco faz o botão
+    // aparecer nela, sem repintar nada — é o mesmo nó a mudar de pai.
+    const antes = await p.locator('#grade .tile').first().getAttribute('data-slug');
+    await p.locator('#grade .tile').first().locator('.par').click();
+    await p.waitForFunction((s) => document.querySelector(`#palcoFoco .tile[data-slug="${s}"]`),
+      antes, { timeout: 10000 });
+    assert.equal(await seVe(`#palcoFoco .tile[data-slug="${antes}"] .ecraCheio`), true,
+      'promovida a foco, a miniatura devia ganhar o ecrã cheio');
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+// "Passar pra frente e pra trás não parece botões."
+//
+// Não parecia: estavam transparentes e sem fio, com a ideia de que andar no
+// tempo é navegação e a navegação se cala. Oito coisas soltas no meio de um
+// painel não se leem como oito coisas em que se carrega.
+test('os saltos no tempo têm a mesma cara dos outros botões',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 20000 });
+
+    const cara = (id) => p.evaluate((i) => {
+      const e = getComputedStyle(document.getElementById(i));
+      return { fundo: e.backgroundColor, fio: e.borderTopColor, largura: e.borderTopWidth };
+    }, id);
+    const [salto, referencia] = await Promise.all([cara('menos5m'), cara('marcarIn')]);
+    // A referência é um botão que ele já reconhece como botão.
+    assert.deepEqual(salto, referencia,
+      `o salto está ${JSON.stringify(salto)} e um botão normal está ${JSON.stringify(referencia)}`);
+    // E nem o fundo nem o fio podem ser invisíveis.
+    for (const [nome, cor] of [['fundo', salto.fundo], ['fio', salto.fio]]) {
+      assert.ok(!/rgba\(0, 0, 0, 0\)|transparent/.test(cor), `o ${nome} do salto é invisível: ${cor}`);
+    }
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
 // ── o sistema visual ───────────────────────────────────────────────────────
 //
 // Três coisas que se partem sem dar erro nenhum, e por isso têm de ser
