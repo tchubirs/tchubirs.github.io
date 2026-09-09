@@ -713,7 +713,7 @@ footer { margin-top: 32px; border-top: 1px solid var(--borda); padding-top: 12px
 
 /* O fim da página estava desarrumado: quatro blocos seguidos, todos com o
    mesmo peso e sem nada entre eles. Cada um passa a ser uma caixa. */
-.palcoFundo > section, .palcoFundo > .linha, .palcoFundo > #zip {
+.palcoFundo > section, .palcoFundo > .linha, .palcoFundo > #zip, #montagem {
   background: var(--caixa); border: 1px solid var(--borda); border-radius: 10px;
   padding: 12px 14px; margin-bottom: 12px;
 }
@@ -1159,4 +1159,164 @@ button, select, input[type="text"], input[type="search"], input[type="number"] {
   .saltos button { padding: 10px 2px; min-width: 0; }
   .marcas { flex-wrap: wrap; }
   .marcas button { flex: 1 1 45%; }
+}
+
+/* A montagem saiu do fundo e é filha do palco (ver o HTML): fora do ecrã de
+   PC ocupa uma fila inteira por baixo das duas colunas, como antes. */
+@media (min-width: 1080px) {
+  #palco:not([hidden]) { grid-template-areas: "video lado" "monta monta"; }
+  #montagem { grid-area: monta; min-width: 0; }
+}
+
+/* ── o ecrã inteiro como área de trabalho ───────────────────────────────────
+   "Quero que minha tela cheia vire minha área de trabalho: tudo o que a
+    pessoa precise clicar e opções tem que aparecer na tela sem ela precisar
+    rolar pra baixo ou pra cima pra procurar coisas ou botões."
+
+   Só num ecrã de PC, e só depois de haver uma noite aberta: a página de
+   entrada continua a fluir, e o telemóvel fica exactamente como estava — lá
+   as coisas empilham-se, e é isso que os testes do telemóvel medem.
+
+   A regra é uma só: a PÁGINA não rola; rolam os painéis, e cada painel rola
+   só a parte que cresce com a noite. À esquerda o vídeo em foco tem altura
+   fixa, e é a grelha dos ângulos que rola. À direita, a linha do tempo tem o
+   cursor e os saltos sempre fixos e são as faixas dos canais que rolam (com
+   trinta canais são seiscentos pixels); por baixo dela a montagem, com o
+   Marcar kill, os filtros e o Exportar fixos e a lista de kills a rolar.
+
+   Medido com dezassete ângulos e uma kill, em 1920×1080 e em 1366×720: tudo
+   o que se carrega está dentro do ecrã. As medidas de partida vieram de um
+   dump de geometria e não de olho: o foco tinha encolhido para 210 px porque
+   era ele a ceder e não a grelha, e a montagem gastava 232 px de cabeçalho
+   antes da primeira kill. */
+@media (min-width: 1080px) and (min-height: 640px) {
+  body:has(#palco:not([hidden])) {
+    height: 100vh; box-sizing: border-box; overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  body:has(#palco:not([hidden])) > header { flex: 0 0 auto; margin-bottom: var(--e1); padding-bottom: 4px; }
+  body:has(#palco:not([hidden])) > header .passos { display: none; }
+  body:has(#palco:not([hidden])) > header .topo h1 { font-size: 24px; }
+  body:has(#palco:not([hidden])) > .topoTrabalho {
+    flex: 0 0 auto; max-height: 10vh; overflow-y: auto; margin-bottom: var(--e1);
+  }
+  body:has(#palco:not([hidden])) > footer { display: none; }
+  body:has(#palco:not([hidden])) #palco:not([hidden]) {
+    flex: 1 1 auto; min-height: 0; gap: 16px;
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas: "video tempo" "video monta";
+    align-items: stretch;
+  }
+
+  /* ESQUERDA. `overflow: hidden` de propósito: o que não couber fica cortado
+     e o teste apanha-o, em vez de escorrer e pôr a página a rolar. */
+  body:has(#palco:not([hidden])) .palcoVideo {
+    grid-area: video; display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+  }
+  body:has(#palco:not([hidden])) .palcoFoco {
+    display: flex; justify-content: center; align-items: stretch;
+    height: 32vh; min-height: 140px; flex: 0 1 auto; margin: 0 0 var(--e1);
+  }
+  body:has(#palco:not([hidden])) .palcoFoco:empty { display: none; }
+  body:has(#palco:not([hidden])) .palcoFoco .tile {
+    height: 100%; width: auto; aspect-ratio: 16/9; min-height: 0; max-width: 100%; flex: 0 1 auto;
+  }
+  body:has(#palco:not([hidden])) .palcoFoco.dois .tile { max-width: calc(50% - 4px); }
+  body:has(#palco:not([hidden])) .barraClipar { flex: 0 0 auto; margin: var(--e1) 0; }
+  body:has(#palco:not([hidden])) .barraGrelha { flex: 0 0 auto; margin: 0; }
+  /* A grelha é a única coisa da esquerda que cede: tudo o resto tem tamanho. */
+  body:has(#palco:not([hidden])) #grade {
+    flex: 1 1 0; min-height: 60px; overflow-y: auto; margin: var(--e1) 0; padding-right: 4px;
+    /* Uma grelha com altura definida esmaga as linhas para caber, e o
+       `aspect-ratio` dos quadrados perde: ficavam tiras de 25 px umas por
+       cima das outras. As linhas têm o tamanho do conteúdo e o resto rola. */
+    align-content: start; grid-auto-rows: max-content;
+  }
+  body:has(#palco:not([hidden])) #grade .tile { align-self: start; }
+  body:has(#palco:not([hidden])) .palcoFundo {
+    flex: 0 0 auto; max-height: 22vh; overflow-y: auto; margin-top: 0; padding-right: 4px;
+    /* Três colunas sempre: com duas, num portátil, os três blocos faziam duas
+       filas e roubavam a altura toda ao vídeo. */
+    grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;
+  }
+  body:has(#palco:not([hidden])) .palcoFundo > section,
+  body:has(#palco:not([hidden])) .palcoFundo > .linha { padding: 8px 10px; margin-bottom: 0; }
+  /* A explicação da deteção é para quem chega; aqui o que interessa é o botão. */
+  body:has(#palco:not([hidden])) #automatico > p { display: none; }
+
+  /* DIREITA, em cima: a linha do tempo. Cursor, régua e saltos fixos; as
+     faixas dos canais rolam por dentro. */
+  body:has(#palco:not([hidden])) .palcoLadoCaixa {
+    grid-area: tempo; min-height: 0; display: flex; overflow: hidden;
+  }
+  body:has(#palco:not([hidden])) .palcoLado {
+    position: static; max-height: 40vh; flex: 1 1 auto; min-height: 0; min-width: 0; width: 100%;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  /* Oito saltos numa faixa de 576 px não cabem em linha: em vez de a fila
+     empurrar o painel e cortar os rótulos à esquerda, embrulha. */
+  body:has(#palco:not([hidden])) .palcoLado .saltos { flex-wrap: wrap; gap: 3px; }
+  body:has(#palco:not([hidden])) .palcoLado .relogio,
+  body:has(#palco:not([hidden])) .palcoLado .marcas,
+  body:has(#palco:not([hidden])) .palcoLado .linha { min-width: 0; }
+  body:has(#palco:not([hidden])) .palcoLado > * { flex: 0 0 auto; }
+  /* O relogio encolhe (min-height 0) mas nao ESCORRE (overflow hidden): as
+     faixas cedem primeiro, ate tres canais; se ainda assim nao couber, e o
+     fim dele que fica cortado — e o teste apanha-o — em vez de os saltos
+     irem parar por cima do que vem a seguir, que foi o que aconteceu.
+     Medido: com `min-height: auto` o minimo dele passava a ser as faixas
+     INTEIRAS (380 px) e o painel todo voltava a rolar. */
+  body:has(#palco:not([hidden])) .palcoLado > .relogio {
+    flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden;
+  }
+  body:has(#palco:not([hidden])) .relogio > * { flex: 0 0 auto; }
+  body:has(#palco:not([hidden])) .relogio > .faixas {
+    flex: 1 1 auto; min-height: 56px; overflow-y: auto; overflow-x: hidden;
+  }
+  /* Oito saltos numa linha, ate numa faixa de 380 px: 8 × 42 + 7 × 3 = 357. */
+  body:has(#palco:not([hidden])) .relogio .saltos button { padding: 6px 5px; font-size: var(--t-menor); }
+  body:has(#palco:not([hidden])) .relogio .marcas button { min-height: 34px; padding: 4px 10px; }
+
+  /* DIREITA, em baixo: a montagem. Cabeçalho compacto, Exportar logo por
+     baixo dos filtros, e a lista de kills a rolar. */
+  body:has(#palco:not([hidden])) #montagem {
+    grid-area: monta; min-height: 0; display: flex; flex-direction: column;
+    margin-bottom: 0; overflow: hidden; padding: 6px 8px;
+  }
+  body:has(#palco:not([hidden])) #montagem > * { flex: 0 0 auto; }
+  body:has(#palco:not([hidden])) #montagem > h2 { display: none; }
+  /* O essencial em cima e compacto: Marcar kill, e logo por baixo o Exportar;
+     os filtros a seguir; a lista rola. Os botões encolhem um pouco porque
+     numa faixa de 400 px a fila dos filtros embrulha em três linhas. */
+  body:has(#palco:not([hidden])) #montagem > .linha,
+  body:has(#palco:not([hidden])) #montagem > .barraSelecao { gap: 4px; margin: 2px 0; }
+  body:has(#palco:not([hidden])) #montagem > .linha button,
+  body:has(#palco:not([hidden])) #montagem > .barraSelecao button,
+  body:has(#palco:not([hidden])) #montagem > .barraSelecao select {
+    min-height: 30px; padding: 3px 7px; font-size: var(--t-menor);
+  }
+  /* Os filtros numa linha so, ate numa faixa de 380 px: o selector nao
+     precisa de mais do que o nome do filtro. */
+  body:has(#palco:not([hidden])) #montagem > .barraSelecao select { min-width: 88px; max-width: 112px; }
+  body:has(#palco:not([hidden])) #montagem > .barraSelecao { gap: 4px 6px; }
+  /* Um botao apagado nao precisa de sitio: o "Remover selecionados" so
+     aparece quando ha seleccao — e numa faixa de 380 px isso e a diferenca
+     entre os filtros numa linha ou em duas. */
+  body:has(#palco:not([hidden])) #montagem > .barraSelecao button:disabled { display: none; }
+  /* A ordem: Marcar kill, Exportar, a LISTA, e os filtros no fim, presos ao
+     fundo do painel. Com os filtros por cima da lista, num portatil de 720
+     a primeira kill ficava por baixo do ecra — os filtros embrulham em duas
+     linhas numa faixa de 380 px e comiam o que sobrava. No fim continuam
+     sempre a vista: a lista e que encolhe, nunca eles. */
+  body:has(#palco:not([hidden])) #montagem > .linha:has(#marcarKill) { order: 0; }
+  body:has(#palco:not([hidden])) #montagem > .linha:has(#baixarMontagem) { order: 1; }
+  body:has(#palco:not([hidden])) #montagem > .barraSelecao { order: 5; margin-top: 4px; }
+  body:has(#palco:not([hidden])) #montagem > .momentos {
+    order: 4; flex: 1 1 auto; min-height: 60px; overflow-y: auto; padding-right: 4px; margin-top: 4px;
+    /* Uma coluna: numa faixa de 500 px, duas colunas de kills com dezassete
+       nomes cada não se leem. As duas fileiras ficam para o ecrã sem tecto. */
+    grid-template-columns: 1fr;
+  }
+  body:has(#palco:not([hidden])) .momentos li { padding: 5px 8px; gap: 6px; }
+  body:has(#palco:not([hidden])) .momentos .vit { padding: 1px 6px; font-size: var(--t-micro); }
 }

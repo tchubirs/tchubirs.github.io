@@ -2635,7 +2635,10 @@ test('juntar um streamer so vai buscar esse, e nao mexe onde ele estava',
 //  onde eu tava."
 test('fechar e voltar traz o mesmo instante, sem ir a Kick outra vez, e no mesmo sitio da pagina',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
-    const { p, erros } = await abrir({ ecra: { width: 1280, height: 700 } });
+    // Um ecrã BAIXO de propósito: num PC com altura a página é a área de
+    // trabalho e não rola — o sítio a repor é o de quem rola, que é o
+    // telemóvel e uma janela pequena.
+    const { p, erros } = await abrir({ ecra: { width: 1280, height: 600 } });
     const pedidos = await kickFalsa(p, { canais: ['tchubi'] });
     await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
     await p.fill('#canais', 'tchubi');
@@ -2656,3 +2659,55 @@ test('fechar e voltar traz o mesmo instante, sem ir a Kick outra vez, e no mesmo
     assert.deepEqual(erros, []);
     await p.close();
   });
+
+// "Quero que minha tela cheia vire minha área de trabalho: tudo o que a pessoa
+//  precise clicar e opções tem que aparecer na tela sem ela precisar rolar."
+//
+// Medido, e não olhado: num PC, com dezassete ângulos e uma kill marcada, a
+// PÁGINA não rola — rolam os painéis — e cada botão que ele carrega durante a
+// noite está dentro do ecrã. Em dois tamanhos de ecrã, porque um portátil de
+// 720 px de alto é onde isto costuma partir.
+for (const ecra of [{ width: 1920, height: 1080 }, { width: 1366, height: 720 }]) {
+  test(`num PC de ${ecra.width}x${ecra.height} a pagina nao rola e tudo o que se carrega esta a vista`,
+    { skip: !podeCorrer && 'sem navegador' }, async () => {
+      const { p, erros } = await abrir({ ecra });
+      const canais = Array.from({ length: 17 }, (_, i) => `canal${String(i + 1).padStart(2, '0')}`);
+      await kickFalsa(p, { canais });
+      await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+      await p.fill('#canais', canais.join('\n'));
+      await p.click('#carregar');
+      await p.waitForFunction((n) => document.querySelectorAll('.tile').length === n, canais.length,
+        { timeout: 40000 });
+      await p.click('#mais5m');
+      await p.click('#marcarKill');
+      await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
+
+      const medida = await p.evaluate(() => {
+        const dentro = (el) => {
+          const r = el.getBoundingClientRect();
+          return r.width > 0 && r.height > 0 && r.top >= 0 && r.bottom <= window.innerHeight
+            && r.left >= 0 && r.right <= window.innerWidth;
+        };
+        const ids = ['clipar', 'barra', 'marcarKill', 'baixarMontagem', 'procurarKills', 'mais3s', 'menos5m'];
+        const fora = ids.filter((id) => !dentro(document.getElementById(id)));
+        if (!dentro(document.querySelector('.tile.foco'))) fora.push('.tile.foco');
+        // Da primeira kill chega ver a CABEÇA — a hora e os botões dela; os
+        // nomes das vítimas embrulham por baixo e rolam com a lista.
+        const kill = document.querySelector('#listaMomentos li[data-ms]').getBoundingClientRect();
+        if (!(kill.top >= 0 && kill.top + 40 <= window.innerHeight)) fora.push('primeira kill');
+        const grade = document.getElementById('grade');
+        return {
+          fora,
+          paginaRola: document.documentElement.scrollHeight > window.innerHeight + 1,
+          bodyRola: getComputedStyle(document.body).overflowY,
+          gradeRola: getComputedStyle(grade).overflowY === 'auto' && grade.scrollHeight > grade.clientHeight,
+          quadrados: document.querySelectorAll('#grade .tile').length,
+        };
+      });
+      assert.equal(medida.paginaRola, false, `a pagina rola (${ecra.width}x${ecra.height})`);
+      assert.deepEqual(medida.fora, [], `fora do ecra: ${medida.fora.join(', ')}`);
+      assert.ok(medida.gradeRola, 'com 16 angulos na grelha, e a GRELHA que rola, por dentro');
+      assert.deepEqual(erros, []);
+      await p.close();
+    });
+}
