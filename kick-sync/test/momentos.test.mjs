@@ -7,7 +7,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  PADRAO, novoMomento, ordenar, acrescentar, remover, clipesDoMomento, planoDaMontagem, alternarVitima, removerVarios, filtrar, temMorte,
+  PADRAO, novoMomento, ordenar, acrescentar, remover, clipesDoMomento, planoDaMontagem, alternarVitima, removerVarios, filtrar, temMorte, comAjuste, semAjuste,
 } from '../site/momentos.js';
 
 const T = Date.parse('2026-08-30T22:00:00.000Z');
@@ -258,4 +258,52 @@ test('um combate com as pontas trocadas não dá um clipe ao contrário', () => 
   const m = novoMomento(50_000, 'eu', { combateDeMs: 61_000, combateAteMs: 42_000 });
   const [c] = clipesDoMomento(m, ['eu'], 0);
   assert.ok(c.ateMs > c.deMs, `${c.deMs} → ${c.ateMs}`);
+});
+
+
+// "Quando eu clico em ajeitar e ajeito, quero um botão pra salvar alteração;
+//  aí vou fazendo em tudo e depois baixo tudo junto."
+//
+// O ajuste são as pontas que ele apurou no editor, e o enquadramento do 9:16
+// se o mexeu. Vale só para a POV dele — é a dele que ele corta à mão; as dos
+// outros continuam a sair pelas margens.
+const DOIS = ['tchubi', 'vitima1'];
+
+test('um ajuste guardado manda nas pontas da POV dele, e so nela', () => {
+  const m = alternarVitima(novoMomento(T, 'tchubi'), 'vitima1');
+  const aj = comAjuste(m, {
+    deMs: T - 4000, ateMs: T + 2500, formato: 'dois',
+    rects: [{ x: 10, y: 20, largura: 300, altura: 200 }], divisao: 0.35,
+  });
+  const c = clipesDoMomento(aj, DOIS, 0);
+  const meu = c.find((x) => x.papel === 'protagonista');
+  assert.equal(meu.deMs, T - 4000, 'o inicio e o que ele apurou');
+  assert.equal(meu.ateMs, T + 2500, 'o fim e o que ele apurou');
+  assert.equal(meu.retrato.modo, 'dois', 'e o 9:16 vai junto, com o modo dele');
+  assert.deepEqual(meu.retrato.rects, [{ x: 10, y: 20, largura: 300, altura: 200 }]);
+  assert.equal(meu.retrato.divisao, 0.35);
+  const dela = c.find((x) => x.papel !== 'protagonista');
+  assert.ok(dela, 'a vitima continua a sair');
+  assert.equal(dela.retrato, null, 'mas sem 9:16: o enquadramento e da POV dele');
+  assert.ok(dela.deMs < T && dela.ateMs > T, 'e pelas margens, como sempre');
+});
+
+test('sem ajuste nada muda, e um ajuste sem 9:16 e so as pontas', () => {
+  const m = novoMomento(T, 'tchubi');
+  assert.equal(clipesDoMomento(m, DOIS, 0)[0].retrato, null);
+  const so = comAjuste(m, { deMs: T - 1000, ateMs: T + 1000 });
+  const [c] = clipesDoMomento(so, DOIS, 0);
+  assert.equal(c.deMs, T - 1000);
+  assert.equal(c.retrato, null, 'formato nulo quer dizer so 16:9');
+});
+
+test('um ajuste invalido nao entra, e tirar o ajuste devolve o momento', () => {
+  const m = novoMomento(T, 'tchubi');
+  assert.equal(comAjuste(m, { deMs: T, ateMs: T }).ajuste, undefined, 'zero segundos nao e um clipe');
+  assert.equal(comAjuste(m, { deMs: T + 5, ateMs: T }).ajuste, undefined, 'pontas trocadas tambem nao');
+  const com = comAjuste(m, { deMs: T - 1000, ateMs: T + 1000, formato: 'um' });
+  assert.ok(com.ajuste);
+  assert.notEqual(com, m, 'e um momento novo, nunca o mesmo mudado no sitio');
+  assert.deepEqual(semAjuste(com), m);
+  assert.equal(semAjuste(m), m);
 });

@@ -244,7 +244,12 @@ test('no ecra de um telemovel o foco continua a ocupar espaco',
 
 // Os quatro na mesma linha, sempre. Numa linha flex o quarto cai para baixo
 // assim que o ecra aperta, e ai deixam de se ver como um conjunto.
-test('os quatro botoes de salto ficam na mesma linha, ate no telemovel',
+// Eram quatro numa linha; agora sao oito — "3 segundos pra tras e pra frente,
+// 5 minutos pra tras e pra frente". Oito nao cabem em 390 px, e a regra que
+// interessa nao e "uma linha": e que NAO PARTAM ONDE LHES APETECE. Num
+// telemovel sao duas filas certas — a de recuar e a de avancar — alinhadas
+// coluna a coluna, e nada passa do ecra.
+test('os oito botoes de salto formam duas filas certas no telemovel, e nao passam do ecra',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
     const { p, erros } = await abrir({ ecra: { width: 390, height: 844 } });
     await kickFalsa(p);
@@ -253,9 +258,19 @@ test('os quatro botoes de salto ficam na mesma linha, ate no telemovel',
     await p.click('#carregar');
     await p.waitForSelector('.tile', { timeout: 15000 });
 
-    const ys = await Promise.all(['#menos1m', '#menos10s', '#mais10s', '#mais1m']
-      .map(async (id) => (await p.locator(id).boundingBox()).y));
-    assert.ok(Math.max(...ys) - Math.min(...ys) < 2, `botoes em linhas diferentes: ${ys}`);
+    const caixa = async (id) => p.locator(id).boundingBox();
+    const recuar = await Promise.all(['#menos5m', '#menos1m', '#menos10s', '#menos3s'].map(caixa));
+    const avancar = await Promise.all(['#mais3s', '#mais10s', '#mais1m', '#mais5m'].map(caixa));
+    const linha = (bs) => Math.max(...bs.map((b) => b.y)) - Math.min(...bs.map((b) => b.y)) < 2;
+    assert.ok(linha(recuar), `os de recuar partiram: ${recuar.map((b) => b.y)}`);
+    assert.ok(linha(avancar), `os de avancar partiram: ${avancar.map((b) => b.y)}`);
+    assert.ok(avancar[0].y > recuar[0].y, 'a fila de avancar vem por baixo da de recuar');
+    // Alinhados coluna a coluna: e uma grelha, nao um embrulho.
+    for (let i = 0; i < 4; i++) {
+      assert.ok(Math.abs(recuar[i].x - avancar[i].x) < 2, `coluna ${i} desalinhada`);
+    }
+    const larguraDaPagina = await p.evaluate(() => document.documentElement.scrollWidth);
+    assert.ok(larguraDaPagina <= 390, `a pagina passa do ecra: ${larguraDaPagina}`);
     assert.deepEqual(erros, []);
     await p.close();
   });
@@ -2495,6 +2510,83 @@ test('cada kill marcada abre o mesmo editor de clipe, no instante dela',
     // E é o editor inteiro: o 9:16 está lá para ele escolher.
     assert.equal(await p.locator('#exportarRetrato, #guardarRetrato').first().isVisible(), true,
       'o editor tem de trazer o 9:16, que é o formato que ele quer escolher');
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+// "Quando eu clico em ajeitar e ajeito, quero um botão pra salvar alteração;
+//  aí vou fazendo em tudo e depois baixo tudo junto."
+test('ajeitar uma kill, guardar, e a kill lembra-se — sem exportar nada',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'vitima1'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi\nvitima1');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 20000 });
+    await p.click('#mais1m');
+    await p.click('#mais1m');
+    await p.click('#marcarKill');
+    await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
+
+    // O Clipar solto nao tem onde guardar: o botao nao aparece.
+    await p.click('#clipar');
+    await p.waitForSelector('#modalClipe:not([hidden])', { timeout: 10000 });
+    assert.equal(await p.locator('#guardarAjustes').isVisible(), false,
+      'sem kill de origem nao ha "Guardar ajustes"');
+    await p.click('#fecharClipe');
+    await p.waitForFunction(() => document.getElementById('modalClipe').hidden, null, { timeout: 5000 });
+
+    // Da lista, sim.
+    await p.locator('#listaMomentos .cliparUma').first().click();
+    await p.waitForSelector('#modalClipe:not([hidden])', { timeout: 10000 });
+    assert.equal(await p.locator('#guardarAjustes').isVisible(), true);
+    await p.click('#inicioMenos');
+    await p.click('#inicioMenos');
+    const apurado = await p.locator('#tempoClipe').innerText();
+    const ficheirosAntes = await p.locator('#fila li').count();
+    await p.click('#guardarAjustes');
+    await p.waitForFunction(() => document.getElementById('modalClipe').hidden, null, { timeout: 5000 });
+
+    assert.equal(await p.locator('#listaMomentos .ajustado').count(), 1, 'a kill diz que esta ajustada');
+    assert.match(await p.locator('#estadoMontagem').innerText(), /guardados/i);
+    assert.equal(await p.locator('#fila li').count(), ficheirosAntes, 'guardar nao exporta nada');
+
+    // Abrir outra vez traz o que ele apurou, e nao a janela de origem.
+    await p.locator('#listaMomentos .cliparUma').first().click();
+    await p.waitForSelector('#modalClipe:not([hidden])', { timeout: 10000 });
+    assert.equal(await p.locator('#tempoClipe').innerText(), apurado,
+      'o editor tinha de abrir exactamente onde ele guardou');
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+// "Adiciona botão de 3 segundos pra trás e 3 pra frente, e 5 minutos pra trás
+//  e 5 minutos pra frente."
+test('os saltos de 3 s e de 5 min andam o que dizem',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 20000 });
+    // Sair do principio, senao recuar nao tem para onde ir.
+    await p.click('#mais5m');
+    await p.click('#mais5m');
+    const seg = async () => {
+      const [h, m, s] = (await p.locator('#agora').innerText()).replace(/Z.*$/, '').split(':').map(Number);
+      return h * 3600 + m * 60 + s;
+    };
+    const t0 = await seg();
+    await p.click('#mais3s');
+    assert.equal(await seg() - t0, 3, '3 s para a frente');
+    await p.click('#menos3s');
+    assert.equal(await seg() - t0, 0, '3 s para tras');
+    await p.click('#menos5m');
+    assert.equal(await seg() - t0, -300, '5 min para tras');
+    await p.click('#mais5m');
+    assert.equal(await seg() - t0, 0, '5 min para a frente');
     assert.deepEqual(erros, []);
     await p.close();
   });

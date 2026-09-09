@@ -121,15 +121,29 @@ export function clipesDoMomento(momento, canais, indice, { filmava = () => true 
   // clipe de duracao negativa, que o cortador aceita e devolve vazio.
   const combateDe = Math.min(a, b);
   const combateAte = Math.max(a, b);
+  // O ajuste dele manda, quando existe.
+  //
+  // "Quando eu clico em ajeitar e ajeito, quero um botao pra salvar alteracao;
+  //  ai vou fazendo em tudo e depois baixo tudo junto." O ajuste sao as pontas
+  // que ele apurou no editor, e vale so para a POV dele — e a dele que ele
+  // corta a mao; as dos outros continuam a sair pelas margens.
+  const aj = momento.ajuste;
   const junta = (slug, antesS, depoisS, papel, letra) => {
-    const deMs = combateDe - antesS * 1000;
-    const ateMs = combateAte + depoisS * 1000;
+    const ajustado = papel === 'protagonista' && aj
+      && Number.isFinite(aj.deMs) && Number.isFinite(aj.ateMs) && aj.ateMs > aj.deMs;
+    const deMs = ajustado ? aj.deMs : combateDe - antesS * 1000;
+    const ateMs = ajustado ? aj.ateMs : combateAte + depoisS * 1000;
     if (!filmava(slug, deMs, ateMs)) return;
     saida.push({
       canal: slug,
       papel,
       deMs,
       ateMs,
+      // O retrato, quando ele o guardou: e com isto que a montagem sabe que
+      // tem de tirar tambem o 9:16 deste clipe, e com que enquadramento.
+      retrato: ajustado && aj.formato ? {
+        modo: aj.formato, rects: aj.rects || [], divisao: aj.divisao,
+      } : null,
       // A que kill este clipe pertence. Sem isto nao havia maneira de pedir os
       // clipes de UMA kill sem refazer o plano todo por fora.
       ms: momento.ms,
@@ -156,4 +170,35 @@ export function clipesDoMomento(momento, canais, indice, { filmava = () => true 
 /** A montagem inteira: todos os momentos, todos os clipes, já em ordem. */
 export function planoDaMontagem(momentos, canais, opcoes = {}) {
   return ordenar(momentos).flatMap((m, i) => clipesDoMomento(m, canais, i, opcoes));
+}
+
+
+/**
+ * Guardar num momento o que ele apurou no editor.
+ *
+ * Devolve um momento novo — os momentos nunca se mudam no sitio, e assim o
+ * `guardar()` da sessao e o desenho da lista ficam sempre certos. `formato`
+ * nulo quer dizer "so 16:9"; 'um' ou 'dois' quer dizer "e o 9:16 tambem, com
+ * estes enquadramentos".
+ */
+export function comAjuste(momento, { deMs, ateMs, formato = null, rects = [], divisao } = {}) {
+  if (!Number.isFinite(deMs) || !Number.isFinite(ateMs) || ateMs <= deMs) return momento;
+  return {
+    ...momento,
+    ajuste: {
+      deMs: Math.round(deMs),
+      ateMs: Math.round(ateMs),
+      formato: formato === 'um' || formato === 'dois' ? formato : null,
+      rects: rects.map((r) => ({ x: r.x, y: r.y, largura: r.largura, altura: r.altura })),
+      divisao: Number.isFinite(divisao) ? divisao : undefined,
+    },
+  };
+}
+
+/** Tirar o ajuste: volta ao combate medido e as margens. */
+export function semAjuste(momento) {
+  if (!momento.ajuste) return momento;
+  const { ajuste, ...resto } = momento;
+  void ajuste;
+  return resto;
 }

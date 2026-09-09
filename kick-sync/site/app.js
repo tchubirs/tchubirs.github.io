@@ -5,7 +5,9 @@
 // bottom rung of Kick's ladder and is what makes thirty tiles a home-connection
 // problem rather than a server problem.
 
-import { vodsDoCanal, lerMaster, lerPlaylist, procurarCanais } from './kick.js';
+import {
+  vodsDoCanal, lerMaster, lerPlaylist, procurarCanais, lerLinkKick, clipeDaKick, DESCONHECIDO,
+} from './kick.js';
 import {
   linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo,
 } from './relogio.js';
@@ -20,7 +22,7 @@ import {
 import { agruparPorNoite, rotuloDaNoite } from './noites.js';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
-  alternarVitima, filtrar, temMorte, clipesDoMomento,
+  alternarVitima, filtrar, temMorte, clipesDoMomento, comAjuste,
 } from './momentos.js';
 import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js';
 import { criarZip, crc32 } from './zip.js';
@@ -1720,6 +1722,10 @@ function pintarMomentos() {
       + (sozinho ? '' : `<button class="verMortes">${t('montagem.verMortes')}</button>`)
       + `<span class="quantos">${dur ? `${dur}s · ` : ''}`
       + `${tn(n, 'montagem.umClipe', 'montagem.clipes')}</span>`
+      // A kill que já tem ajustes guardados diz-o — é assim que ele sabe por
+      // onde vai, numa lista de trinta.
+      + (m.ajuste ? `<span class="ajustado">${t(m.ajuste.formato
+        ? 'montagem.ajustadoRetrato' : 'montagem.ajustado')}</span>` : '')
       // "Vítimas" só quando há alguma. Antes a etiqueta estava lá sempre, em
       // cima de uma fila de nomes que ninguém tinha medido — e dizer "Vítimas"
       // por cima de seis nomes que não morreram é afirmar uma coisa que a
@@ -1878,7 +1884,32 @@ async function baixarMontagem(soEsta = null) {
         url: guardarFicheiro(blob),
         nota: `${(r.bytes.length / 1048576).toFixed(1)} MB · `
           + `${clipe.papel === 'protagonista' ? t('fila.tuaPov') : t('fila.quemMorreu')}`,
+        momentoMs: clipe.ms,
       });
+      // E o 9:16, quando ele guardou o enquadramento nesta kill. "Faça tudo
+      // funcionar perfeitamente, o 9x16 no modo automático" — o vertical sai
+      // na mesma volta que o resto, e não um a um à mão.
+      if (clipe.retrato) {
+        const item2 = document.createElement('li');
+        $('fila').append(item2);
+        $('estadoMontagem').textContent = `${feitos}/${plano.length} — ${clipe.prefixo} ${clipe.canal} · 9:16`;
+        try {
+          const { blob: b2, tipo: t2 } = await renderizarRetrato(linha, clipe, { sinal: controlo.signal });
+          const nome2 = `${nome.replace(/\.[a-z0-9]+$/i, '')}-retrato.${extensaoDe(t2)}`;
+          const bytes2 = new Uint8Array(await b2.arrayBuffer());
+          paraZip.push({ nome: nome2, blob: b2, crc: crc32(bytes2), tamanho: bytes2.length });
+          linhaDeFicheiro(item2, {
+            nome: nome2,
+            url: guardarFicheiro(b2),
+            nota: `${(b2.size / 1048576).toFixed(1)} MB · ${t('fila.retratoDe')} ${clipe.prefixo}`,
+            momentoMs: clipe.ms,
+          });
+        } catch (e) {
+          if (e.name === 'AbortError') break;
+          item2.innerHTML = `<b>${clipe.prefixo} ${clipe.canal} · 9:16</b> `
+            + `<span class="nota mau">${t('fila.retratoFalhou', { erro: e.message })}</span>`;
+        }
+      }
     } catch (e) {
       if (e.name === 'AbortError') break;
       item.innerHTML = `<b>${clipe.prefixo} ${clipe.canal}</b> <span class="nota mau">${e.message}</span>`;
@@ -1891,6 +1922,69 @@ async function baixarMontagem(soEsta = null) {
   if (!soEsta) oferecerZip(paraZip);
   $('baixarMontagem').disabled = false;
   estado.cancelar = null;
+}
+
+/**
+ * Tirar o 9:16 de um clipe da montagem, num vídeo fora do ecrã.
+ *
+ * O `gravar` só sabe pintar a partir de um `<video>` a tocar. Na montagem não
+ * há prévia aberta, por isso cria-se um vídeo escondido, liga-se-lhe a mesma
+ * fonte que a prévia usaria (o degrau de cima da escada, no instante certo),
+ * espera-se pela primeira imagem e grava-se. No fim deita-se tudo fora — o
+ * leitor HLS, o elemento, os bytes.
+ *
+ * Os enquadramentos foram guardados em pixels do degrau de cima; é esse o
+ * degrau que se usa aqui, e é por isso que os números batem.
+ */
+async function renderizarRetrato(linha, clipe, { sinal } = {}) {
+  const nudge = estado.nudges[clipe.canal] || 0;
+  const r = onde(linha, clipe.deMs, { nudgeMs: nudge });
+  if (r.estado !== 'toca') throw new Error(r.estado);
+  const peca = linha.pecasCompletas?.find((p) => p.vod.id === r.peca.vod.id) || r.peca;
+  const alvo = peca.escada[0] || peca.barato;
+  const v = document.createElement('video');
+  v.muted = true;
+  v.playsInline = true;
+  v.preload = 'auto';
+  v.style.cssText = 'position:fixed;left:-9999px;top:0;width:320px;height:180px;';
+  document.body.appendChild(v);
+  let hls = null;
+  try {
+    if (window.Hls?.isSupported()) {
+      hls = new window.Hls({ startPosition: r.tempoS, maxBufferLength: 30 });
+      hls.loadSource(alvo.url);
+      hls.attachMedia(v);
+    } else {
+      v.src = alvo.url;
+      v.currentTime = r.tempoS;
+    }
+    await new Promise((ok, mal) => {
+      const fim = setTimeout(() => mal(new Error('sem imagem em 20 s')), 20000);
+      v.addEventListener('loadeddata', () => { clearTimeout(fim); ok(); }, { once: true });
+      v.addEventListener('error', () => { clearTimeout(fim); mal(new Error('o vídeo não carregou')); }, { once: true });
+      sinal?.addEventListener('abort', () => { clearTimeout(fim); mal(new DOMException('cancelado', 'AbortError')); }, { once: true });
+    });
+    if (Math.abs(v.currentTime - r.tempoS) > 0.5) v.currentTime = r.tempoS;
+    // Som: de mudo sai uma faixa silenciosa. Volume a zero para não se ouvir
+    // a gravação na sala — a mesma conta do `guardarRetrato`.
+    v.muted = false;
+    v.volume = 0;
+    const formato = await formatoQueFunciona();
+    if (!formato) throw Object.assign(new Error('sem gravador'), { name: 'SEM-GRAVADOR' });
+    return await gravar(v, {
+      rects: clipe.retrato.rects,
+      modo: clipe.retrato.modo,
+      divisao: Number.isFinite(clipe.retrato.divisao) ? clipe.retrato.divisao : DIVISAO_OMISSAO,
+      duracaoS: (clipe.ateMs - clipe.deMs) / 1000,
+      formato,
+      sinal,
+    });
+  } finally {
+    hls?.destroy();
+    v.pause();
+    v.removeAttribute('src');
+    v.remove();
+  }
 }
 
 /**
@@ -2110,14 +2204,17 @@ function abrirClipe(momento = null) {
   // os do vídeo dele, e não os da noite.
   const limites = { inicio: linha.inicio, fim: linha.fim };
   const centro = Math.min(Math.max(momento?.ms ?? estado.agoraMs, limites.inicio), limites.fim);
-  // O combate medido, quando existe: é o que a busca automática achou, e é
-  // melhor ponto de partida do que quinze segundos para cada lado.
-  const janela = momento?.combateDeMs && momento?.combateAteMs
-    ? mover(
-      { deMs: momento.combateDeMs, ateMs: momento.combateAteMs },
-      'ate', momento.combateAteMs, { limites },
-    )
-    : null;
+  // O ajuste que ele guardou manda; sem ajuste, o combate medido; sem
+  // nenhum dos dois, quinze segundos para cada lado.
+  const aj = momento?.ajuste;
+  const janela = aj
+    ? mover({ deMs: aj.deMs, ateMs: aj.ateMs }, 'ate', aj.ateMs, { limites })
+    : momento?.combateDeMs && momento?.combateAteMs
+      ? mover(
+        { deMs: momento.combateDeMs, ateMs: momento.combateAteMs },
+        'ate', momento.combateAteMs, { limites },
+      )
+      : null;
 
   estado.clipe = {
     canal: linha.slug,
@@ -2131,11 +2228,21 @@ function abrirClipe(momento = null) {
     // O retrato: o modo e os enquadramentos, em pixels do vídeo de origem.
     // Nascem vazios porque só se sabe o tamanho da fonte depois de ela ter
     // metadados — antes disso, qualquer enquadramento seria um palpite.
-    modo: 'um',
-    rects: [],
+    modo: aj?.formato || 'um',
+    // Os enquadramentos guardados voltam tal e qual; sem ajuste nascem vazios
+    // e o `prepararRetrato` enche-os quando souber o tamanho da fonte.
+    rects: (aj?.rects || []).map((r) => ({ ...r })),
     // Quanto do 9:16 fica para o quadro de cima. Só conta no modo de dois.
-    divisao: DIVISAO_OMISSAO,
+    divisao: Number.isFinite(aj?.divisao) ? aj.divisao : DIVISAO_OMISSAO,
+    // De que kill da lista isto veio, se veio de alguma. É o que liga o
+    // "Guardar ajustes" à kill certa.
+    momentoMs: momento?.ms ?? null,
   };
+  // O botão de guardar só existe quando há uma kill onde guardar.
+  $('guardarAjustes').hidden = momento == null;
+  for (const b of document.querySelectorAll('.modoRetrato')) {
+    b.setAttribute('aria-pressed', String(b.dataset.modo === estado.clipe.modo));
+  }
 
   $('canalClipe').innerHTML = estado.linhas
     .map((l) => `<option value="${l.slug}"${l.slug === linha.slug ? ' selected' : ''}>${l.slug}</option>`)
@@ -2850,10 +2957,18 @@ function guardarFicheiro(blob, { auxiliar = false } = {}) {
  * há sempre dois ou três que não prestam, e apagar os bons com eles é pior do
  * que não ter botão nenhum.
  */
-function linhaDeFicheiro(item, { nome, url, nota }) {
+function linhaDeFicheiro(item, { nome, url, nota, momentoMs = null }) {
   item.innerHTML = `<a href="${url}" download="${nome}">${nome}</a> `
     + `<span class="nota">${nota}</span>`
+    // "Depois que eu clico exportar montagem, também queria um botão de editar
+    // os clipes na exportação." Abre a mesma kill no editor; ao guardar e
+    // exportar outra vez, sai por cima.
+    + (momentoMs != null ? `<button class="editarUm">${t('fila.editar')}</button>` : '')
     + `<button class="apagarUm" title="${t('fila.apagarUm')}">✕</button>`;
+  item.querySelector('.editarUm')?.addEventListener('click', () => {
+    const m = estado.momentos.find((x) => x.ms === momentoMs);
+    if (m) abrirClipe(m);
+  });
   item.querySelector('.apagarUm').onclick = () => {
     // Soltar ESTE endereço: é o que devolve a memória deste ficheiro.
     URL.revokeObjectURL(url);
@@ -2971,6 +3086,13 @@ $('menos1m').onclick = saltar(-60_000);
 $('menos10s').onclick = saltar(-10_000);
 $('mais10s').onclick = saltar(10_000);
 $('mais1m').onclick = saltar(60_000);
+// "Adiciona botão de 3 segundos pra trás e 3 pra frente, e 5 minutos pra trás
+// e 5 minutos pra frente." Cinco minutos para achar o sítio; três segundos
+// para apurar sem saltar por cima da kill.
+$('menos5m').onclick = saltar(-300_000);
+$('mais5m').onclick = saltar(300_000);
+$('menos3s').onclick = saltar(-3_000);
+$('mais3s').onclick = saltar(3_000);
 $('marcarIn').onclick = () => { estado.marca = { de: estado.agoraMs, ate: null }; pintarMarca(); guardar(); };
 $('marcarOut').onclick = () => { estado.marca.ate = estado.agoraMs; pintarMarca(); guardar(); };
 $('alinhar').onclick = alinhar;
@@ -3003,8 +3125,121 @@ $('limparFila').onclick = limparFila;
 // Sem argumento nenhum, e não `= abrirClipe`: assim o objecto do clique ia
 // como momento, e um dia em que ele passe a ter um `.ms` isto abre o clipe no
 // sítio errado sem avisar ninguém.
+/**
+ * Colar um link da Kick e abri-lo pronto a cortar.
+ *
+ * "A pessoa cola o link do clip ou VOD, você carrega e abre o como se tivesse
+ *  clicado em clip pra pessoa baixar."
+ *
+ * Um clipe da Kick é uma playlist HLS com os mesmos `EXT-X-PROGRAM-DATE-TIME`
+ * dos VODs — medido, incluindo `access-control-allow-origin: *` na playlist e
+ * nos segmentos. Ou seja: entra no MESMO relógio e no mesmo editor, e não
+ * precisa de um caminho à parte nem de servidor nenhum. Aparece como mais um
+ * ângulo, com o nome do canal e um `·clipe` atrás para se distinguir do VOD
+ * inteiro do mesmo canal.
+ */
+async function abrirLinkKick() {
+  const nota = $('estadoLink');
+  const botao = $('abrirLink');
+  const lido = lerLinkKick($('linkKick').value);
+  nota.classList.remove('mau');
+  if (!lido) { nota.classList.add('mau'); nota.textContent = t('link.naoPercebi'); return; }
+
+  if (lido.tipo === 'canal') {
+    // Um canal não tem nada de especial: é o caminho normal, com a caixa cheia.
+    $('canais').value = [$('canais').value.trim(), lido.slug].filter(Boolean).join('\n');
+    nota.textContent = '';
+    $('carregar').click();
+    return;
+  }
+  if (lido.tipo === 'vod') {
+    // Um VOD identifica um canal e uma noite. A página já sabe carregar a noite
+    // inteira de um canal — e é isso que ele quer de um VOD, porque é assim que
+    // pode escolher qualquer pedaço dele.
+    try {
+      botao.disabled = true;
+      nota.textContent = t('link.aLer');
+      const r = await fetch(`https://kick.com/api/v2/video/${encodeURIComponent(lido.id)}`);
+      const v = await r.json();
+      const slug = v?.livestream?.channel?.slug;
+      if (!slug) throw new Error('sem canal');
+      $('canais').value = [$('canais').value.trim(), slug].filter(Boolean).join('\n');
+      nota.textContent = '';
+      $('carregar').click();
+    } catch {
+      nota.classList.add('mau');
+      nota.textContent = t('link.semClipe');
+    } finally { botao.disabled = false; }
+    return;
+  }
+
+  try {
+    botao.disabled = true;
+    nota.textContent = t('link.aLer');
+    const c = await clipeDaKick(lido.id);
+    const playlist = lerPlaylist(await (await fetch(c.m3u8)).text(), c.m3u8);
+    if (!Number.isFinite(playlist.inicio)) throw new Error('clipe sem relógio');
+    const degrau = { url: c.m3u8, largura: DESCONHECIDO, altura: DESCONHECIDO };
+    const peca = { vod: { id: c.id }, playlist, escada: [degrau], barato: degrau };
+    const slug = `${c.canal}·clipe`;
+    estado.linhas = [
+      ...estado.linhas.filter((l) => l.slug !== slug),
+      linhaDoCanal(slug, [peca]),
+    ];
+    estado.focos = [slug];
+    estado.janela = janelaComum(estado.linhas);
+    estado.agoraMs = playlist.inicio;
+    $('palco').hidden = false;
+    montarGrade();
+    seguirVideo();
+    pintarConfianca();
+    pintarFaixas();
+    pintarRegua();
+    irPara(playlist.inicio);
+    pintarMomentos();
+    guardar();
+    nota.textContent = t('link.clipeAberto', {
+      canal: c.canal, dur: Math.round(c.duracaoS || (playlist.fim - playlist.inicio) / 1000),
+    });
+    abrirClipe({ ms: playlist.inicio, protagonista: slug,
+      combateDeMs: playlist.inicio, combateAteMs: playlist.fim });
+  } catch (e) {
+    nota.classList.add('mau');
+    nota.textContent = e.name === 'SEM-CLIPE' ? t('link.semClipe')
+      : t('alinhar.erro', { erro: e.message });
+  } finally { botao.disabled = false; }
+}
+$('abrirLink').onclick = abrirLinkKick;
+$('linkKick').onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); abrirLinkKick(); } };
 $('clipar').onclick = () => abrirClipe();
 $('fecharClipe').onclick = fecharClipe;
+/**
+ * Guardar na kill o que ele apurou, sem exportar nada.
+ *
+ * "Quando eu clico em ajeitar e ajeito, quero um botão pra salvar alteração;
+ *  aí vou fazendo em tudo e depois baixo tudo junto." É o fluxo certo para
+ * trinta kills: apurar uma a uma custa atenção, exportar custa tempo de
+ * máquina — e as duas coisas não têm de andar juntas. O enquadramento do
+ * 9:16 vai junto: se ele o mexeu, é porque quer o vertical dessa kill.
+ */
+function guardarAjustes() {
+  const c = estado.clipe;
+  if (!c || c.momentoMs == null) return;
+  const querRetrato = !$('ladoRetrato').hidden && c.rects.length > 0;
+  estado.momentos = estado.momentos.map((m) => (m.ms === c.momentoMs
+    ? comAjuste(m, {
+      deMs: c.deMs, ateMs: c.ateMs,
+      formato: querRetrato ? c.modo : null, rects: c.rects, divisao: c.divisao,
+    })
+    : m));
+  const n = ordenar(estado.momentos).findIndex((m) => m.ms === c.momentoMs) + 1;
+  guardar();
+  pintarMomentos();
+  fecharClipe();
+  $('estadoMontagem').classList.remove('mau');
+  $('estadoMontagem').textContent = t('clipe.ajustesGuardados', { n });
+}
+$('guardarAjustes').onclick = guardarAjustes;
 $('cancelarClipe').onclick = fecharClipe;
 $('guardarClipe').onclick = guardarClipe;
 $('guardarRetrato').onclick = guardarRetrato;

@@ -39,6 +39,7 @@ const IGUAIS_DE_PROPOSITO = {
   en: new Set([
     'app.nome', 'canais.vods', 'marca.feita',
     'tempo.menos1m', 'tempo.menos10s', 'tempo.mais10s', 'tempo.mais1m',
+    'tempo.menos5m', 'tempo.menos3s', 'tempo.mais3s', 'tempo.mais5m',
     'montagem.umaKill', 'montagem.kills',
     // "A–Z" escreve-se assim em toda a parte.
     'grelha.az',
@@ -46,7 +47,12 @@ const IGUAIS_DE_PROPOSITO = {
   // O espanhol e o portugues escrevem estas exactamente da mesma maneira.
   es: new Set([
     'app.nome', 'canais.vods', 'marca.feita', 'clipe.tempo',
+    // "Abrir", "Editar", "Guardar ajustes" e "ajustado" escrevem-se igual.
+    'link.abrir', 'fila.editar', 'clipe.guardarAjustes', 'montagem.ajustado',
+    'montagem.ajustadoRetrato', 'fila.retratoDe',
+    'tempo.menos5m', 'tempo.menos3s', 'tempo.mais3s', 'tempo.mais5m',
     'tempo.menos1m', 'tempo.menos10s', 'tempo.mais10s', 'tempo.mais1m',
+    'tempo.menos5m', 'tempo.menos3s', 'tempo.mais3s', 'tempo.mais5m',
     'montagem.umaKill', 'montagem.kills', 'montagem.marcar',
     // "Exportar retrato" e "A–Z" escrevem-se exactamente assim nas duas.
     'retrato.exportar', 'grelha.az',
