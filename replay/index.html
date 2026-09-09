@@ -49,6 +49,19 @@
          dez segundos: nenhuma dizia o que fazia nem qual vinha primeiro. Cada
          uma passa a ter o seu rótulo, e a procura fica visivelmente ao serviço
          da lista — é um atalho para a encher, não um segundo caminho. -->
+    <!-- Colar. E o gesto mais barato que existe: nao obriga a saber o slug do
+         canal nem a procurar a noite certa numa lista de trinta.
+         "A pessoa cola o link do clip ou VOD, voce carrega e abre." -->
+    <label class="campo">
+      <span class="rotuloCampo" data-t="link.label">Colar um link da Kick</span>
+      <span class="linha colarLinha">
+        <input id="linkKick" type="url" autocomplete="off" spellcheck="false"
+          data-t-aria="link.label" data-t-ph="link.ph"
+          placeholder="link de um clipe, de um VOD ou de um canal">
+        <button id="abrirLink" data-t="link.abrir">Abrir</button>
+      </span>
+      <output id="estadoLink" class="nota"></output>
+    </label>
     <div class="entradaGrelha">
       <label class="campo procuraCampo">
         <span class="rotuloCampo" data-t="procurar.label">Procurar um canal</span>
@@ -137,60 +150,11 @@
   </div>
   <div id="grade" class="grade"></div>
 
-  </div><!-- .palcoVideo -->
-
-  <!-- A DIREITA: a linha do tempo, inteira.
-       Trocada com a montagem a pedido dele: "quero isso completo com todas as
-       lives, coloca no lugar onde está a segunda print à direita, e o da direita
-       coloca em baixo". Faz sentido pela forma — trinta canais são trinta linhas
-       empilhadas, alto e estreito, que é exactamente a forma de uma coluna; a
-       montagem são filas de botões, que é a forma de uma faixa em baixo. -->
-  <div class="palcoLadoCaixa">
-  <div class="palcoLado">
-    <div class="relogio">
-      <!-- A barra vive na MESMA grelha das faixas, com a mesma coluna vazia à
-           esquerda. Sem isso, a barra media a largura toda e as faixas mediam a
-           largura menos os nomes: o cursor e o puxador ficavam em sítios
-           diferentes para o mesmo instante. -->
-      <div class="barraLinha">
-        <span></span>
-        <input id="barra" type="range" min="0" max="1000" value="0" step="1" data-t-aria="tempo.linha" aria-label="linha do tempo">
-      </div>
-      <!-- Quem esteve no ar, e quando. Sem isto procura-se o momento a arrastar a
-           barra as cegas: os buracos e as sobreposicoes so se descobriam batendo
-           com o nariz neles. -->
-      <div id="faixas" class="faixas"><div id="cursor" class="cursor"></div></div>
-      <!-- A regua, como num editor: as horas por baixo das barras, e as kills
-           marcadas nela. Sem isto sabe-se que se esta "algures no meio". -->
-      <div class="reguaLinha"><span></span><div id="regua" class="regua"></div></div>
-      <div class="linha">
-        <output id="agora" class="tempo">—</output>
-        <output id="angulos" class="nota">—</output>
-      </div>
-      <!-- Os quatro na mesma linha, sempre: em grelha de quatro colunas iguais,
-           que não parte num ecrã estreito como uma linha flex parte. -->
-      <div class="saltos">
-        <button id="menos1m" data-t="tempo.menos1m" data-t-titulo="tempo.voltar1m" title="voltar 1 minuto">&laquo; 1 min</button>
-        <button id="menos10s" data-t="tempo.menos10s" data-t-titulo="tempo.voltar10s" title="voltar 10 segundos">&lsaquo; 10s</button>
-        <button id="mais10s" data-t="tempo.mais10s" data-t-titulo="tempo.avancar10s" title="avançar 10 segundos">10s &rsaquo;</button>
-        <button id="mais1m" data-t="tempo.mais1m" data-t-titulo="tempo.avancar1m" title="avançar 1 minuto">1 min &raquo;</button>
-      </div>
-      <div class="marcas">
-        <button id="marcarIn"><span data-t="marca.inicio">Marcar entrada</span> <kbd>I</kbd></button>
-        <button id="marcarOut"><span data-t="marca.fim">Marcar saída</span> <kbd>O</kbd></button>
-      </div>
-    </div>
-
-    <div class="linha">
-      <button id="alinhar" data-t="alinhar.botao" data-t-titulo="alinhar.ajuda" title="Analisa o áudio de cada ângulo e corrige o desvio">Sincronizar por áudio</button>
-      <span id="estadoAlinhar" class="nota"></span>
-    </div>
-  </div>
-  </div><!-- .palcoLadoCaixa -->
-
-  <!-- EM BAIXO, a toda a largura: montagem, deteção e cortes, lado a lado.
-       "Não precisa um widget tão grande" — em três colunas cada um fica com o
-       tamanho do que tem dentro, em vez de uma coluna estreita a empilhar tudo. -->
+  <!-- E por baixo dos quadrados, tudo o que se carrega: a montagem, a
+       deteccao, o cortar e as exportacoes. "Adiciona todos esses botoes e
+       filtros soltos em baixo dos clips, e debaixo dos botoes deixa as
+       montagens." Estavam numa faixa a atravessar a pagina, por baixo das
+       duas colunas — longe do video, que e para onde ele olha. -->
   <div class="palcoFundo">
 
   <!-- A montagem. O fluxo do dono: marca-se a kill, e a pagina entrega a POV
@@ -274,6 +238,68 @@
   <div id="zip" class="linha"></div>
   <ul id="fila" class="fila"></ul>
   </div><!-- .palcoFundo -->
+  </div><!-- .palcoVideo -->
+
+  <!-- A DIREITA: a linha do tempo, inteira.
+       Trocada com a montagem a pedido dele: "quero isso completo com todas as
+       lives, coloca no lugar onde está a segunda print à direita, e o da direita
+       coloca em baixo". Faz sentido pela forma — trinta canais são trinta linhas
+       empilhadas, alto e estreito, que é exactamente a forma de uma coluna; a
+       montagem são filas de botões, que é a forma de uma faixa em baixo. -->
+  <div class="palcoLadoCaixa">
+  <div class="palcoLado">
+    <div class="relogio">
+      <!-- A barra vive na MESMA grelha das faixas, com a mesma coluna vazia à
+           esquerda. Sem isso, a barra media a largura toda e as faixas mediam a
+           largura menos os nomes: o cursor e o puxador ficavam em sítios
+           diferentes para o mesmo instante. -->
+      <div class="barraLinha">
+        <span></span>
+        <input id="barra" type="range" min="0" max="1000" value="0" step="1" data-t-aria="tempo.linha" aria-label="linha do tempo">
+      </div>
+      <!-- Quem esteve no ar, e quando. Sem isto procura-se o momento a arrastar a
+           barra as cegas: os buracos e as sobreposicoes so se descobriam batendo
+           com o nariz neles. -->
+      <div id="faixas" class="faixas"><div id="cursor" class="cursor"></div></div>
+      <!-- A regua, como num editor: as horas por baixo das barras, e as kills
+           marcadas nela. Sem isto sabe-se que se esta "algures no meio". -->
+      <div class="reguaLinha"><span></span><div id="regua" class="regua"></div></div>
+      <div class="linha">
+        <output id="agora" class="tempo">—</output>
+        <output id="angulos" class="nota">—</output>
+      </div>
+      <!-- Os quatro na mesma linha, sempre: em grelha de quatro colunas iguais,
+           que não parte num ecrã estreito como uma linha flex parte. -->
+      <!-- Oito saltos, simétricos: 5 min e 1 min para achar o sítio, 10 s e
+           3 s para apurar. "Adiciona botão de 3 segundos pra trás e 3 pra
+           frente, e 5 minutos pra trás e 5 minutos pra frente." -->
+      <div class="saltos">
+        <button id="menos5m" data-t="tempo.menos5m" data-t-titulo="tempo.voltar5m" title="voltar 5 minutos">&laquo; 5 min</button>
+        <button id="menos1m" data-t="tempo.menos1m" data-t-titulo="tempo.voltar1m" title="voltar 1 minuto">&laquo; 1 min</button>
+        <button id="menos10s" data-t="tempo.menos10s" data-t-titulo="tempo.voltar10s" title="voltar 10 segundos">&lsaquo; 10s</button>
+        <button id="menos3s" data-t="tempo.menos3s" data-t-titulo="tempo.voltar3s" title="voltar 3 segundos">&lsaquo; 3s</button>
+        <button id="mais3s" data-t="tempo.mais3s" data-t-titulo="tempo.avancar3s" title="avançar 3 segundos">3s &rsaquo;</button>
+        <button id="mais10s" data-t="tempo.mais10s" data-t-titulo="tempo.avancar10s" title="avançar 10 segundos">10s &rsaquo;</button>
+        <button id="mais1m" data-t="tempo.mais1m" data-t-titulo="tempo.avancar1m" title="avançar 1 minuto">1 min &raquo;</button>
+        <button id="mais5m" data-t="tempo.mais5m" data-t-titulo="tempo.avancar5m" title="avançar 5 minutos">5 min &raquo;</button>
+      </div>
+      <div class="marcas">
+        <button id="marcarIn"><span data-t="marca.inicio">Marcar entrada</span> <kbd>I</kbd></button>
+        <button id="marcarOut"><span data-t="marca.fim">Marcar saída</span> <kbd>O</kbd></button>
+      </div>
+    </div>
+
+    <div class="linha">
+      <button id="alinhar" data-t="alinhar.botao" data-t-titulo="alinhar.ajuda" title="Analisa o áudio de cada ângulo e corrige o desvio">Sincronizar por áudio</button>
+      <span id="estadoAlinhar" class="nota"></span>
+    </div>
+  </div>
+  </div><!-- .palcoLadoCaixa -->
+
+  <!-- EM BAIXO, a toda a largura: montagem, deteção e cortes, lado a lado.
+       "Não precisa um widget tão grande" — em três colunas cada um fica com o
+       tamanho do que tem dentro, em vez de uma coluna estreita a empilhar tudo. -->
+
 </section>
 
 <!-- Os atalhos que já existem, num sítio onde se possam descobrir.
@@ -372,6 +398,10 @@
     <div class="linha fim">
       <span id="estadoClipe" class="nota"></span>
       <button id="cancelarClipe" data-t="clipe.cancelar">Cancelar</button>
+      <!-- So aparece quando o editor veio de uma kill da lista. Guarda as
+           pontas e o enquadramento NA KILL, sem exportar nada: "ai vou fazendo
+           em tudo e depois baixo tudo junto". -->
+      <button id="guardarAjustes" class="principal" hidden data-t="clipe.guardarAjustes">Guardar ajustes</button>
       <button id="guardarRetrato" data-t="retrato.exportar"
         data-t-titulo="retrato.custo" title="Reconverte em tempo real">Exportar 9:16</button>
       <button id="guardarClipe" class="principal" data-t="clipe.guardar">Exportar 16:9</button>
@@ -383,7 +413,7 @@
   <!-- A versao, a serio e visivel. O GitHub Pages serve com max-age=600 e um
        telemovel guarda o app.js antigo; sem isto, "ja corrigi" e "continua
        igual" sao as duas verdadeiras ao mesmo tempo e ninguem sai dali. -->
-  <p class="nota"><span data-t="app.rodape">A sessão fica guardada neste dispositivo.</span> · <span id="versao">0813fd8878</span></p>
+  <p class="nota"><span data-t="app.rodape">A sessão fica guardada neste dispositivo.</span> · <span id="versao">6681999139</span></p>
 </footer>
 
 <!-- O hls.js é nosso, e não do cdnjs.
@@ -398,6 +428,6 @@
      nome, o endereço só muda quando o ficheiro muda mesmo, e no meio fica um
      304 sem corpo. É por isso que o publicar.sh não pode carimbar este. -->
 <script src="hls-1.5.17.js"></script>
-<script type="module" src="app.js?v=0813fd8878"></script>
+<script type="module" src="app.js?v=6681999139"></script>
 </body>
 </html>
