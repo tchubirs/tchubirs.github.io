@@ -194,26 +194,33 @@ export function desenhar(ctx, fonte, rects, modo = 'um', divisao = DIVISAO_OMISS
  * gente sabe abrir; WebM porque é o que o Chrome grava sempre. Com os codecs
  * escritos: pedir sem eles dava ficheiros que o Windows abria como som.
  *
- * A ORDEM dos três MP4 não é gosto, são números:
+ * ── porque é que o Baseline 3.0 fica aqui, e à frente ──────────────────────
  *
- *   avc1.640028  High, nível 4.0
- *   avc1.4D4028  Main, nível 4.0
- *   avc1.42E01E  Baseline, nível 3.0   ← era este o único que estava aqui
+ * Tentei pôr `avc1.640028` (High, nível 4.0) e `avc1.4D4028` (Main) antes
+ * deste, com um argumento que parecia sólido: o nível 3.0 está definido até
+ * 1 620 macroblocos por frame e um retrato de 1080x1920 tem 8 160, e Baseline
+ * é o perfil sem CABAC e sem frames B. Publiquei, e ele exportou um clipe.
  *
- * O nível 3.0 está definido até 1 620 macroblocos por frame. Um retrato de
- * 1080x1920 tem 8 160. Estávamos a pedir ao codificador um nível que nem
- * chega para um quarto da imagem, e em Baseline — que é o perfil SEM CABAC e
- * SEM frames B, os dois mecanismos que fazem o H.264 render. Com o mesmo
- * número de bits, High entrega bastante mais imagem; o nível 4.0 chega a
- * 8 192 macroblocos e a 20 Mbit/s, que é o que isto precisa.
+ * O que a medição do ficheiro dele disse:
  *
- * Continua a haver a rede de segurança: o `formatoQueFunciona` grava mesmo
- * meio segundo em cada candidato e fica no primeiro que produzir bytes, por
- * isso um browser que não saiba estes dois cai no que já havia.
+ *   profile=Constrained Baseline   level=40   bit_rate=9 413 851
+ *   pistas: 1 — só vídeo. SEM SOM.
+ *
+ * Duas lições, as duas contra o que eu tinha assumido:
+ *
+ * 1. O Chrome IGNORA o perfil e o nível que se lhe pedem. Escolheu Baseline
+ *    na mesma, e escolheu o nível 4.0 sozinho a partir da resolução — ou
+ *    seja, o nível nunca foi problema nenhum e o pedido não valia nada.
+ * 2. Com um dos codecs novos escolhido, a faixa de áudio DESAPARECEU do
+ *    ficheiro. Os dois clipes anteriores, gravados com `avc1.42E01E`, tinham
+ *    AAC. Um clipe de Rust mudo não vale nada — o tiro É o clipe.
+ *
+ * Trocar zero ganho por perder o som é um mau negócio, por isso a lista volta
+ * ao que estava. Quem quiser mexer nisto outra vez: mede um ficheiro exportado
+ * a sério e conta as pistas, porque `isTypeSupported` diz que sim a formatos
+ * que depois gravam sem áudio.
  */
 export const FORMATOS = [
-  'video/mp4;codecs=avc1.640028,mp4a.40.2',
-  'video/mp4;codecs=avc1.4D4028,mp4a.40.2',
   'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
   'video/mp4',
   'video/webm;codecs=vp9,opus',
@@ -221,24 +228,6 @@ export const FORMATOS = [
   'video/webm',
 ];
 
-/**
- * Os bits por segundo do retrato.
- *
- * "Acabei de fazer uma mas não gostei muito da qualidade, parece que ficou bem
- *  ruim." · "Deu várias falhas de falta de bitrate."
- *
- * Não era impressão dele. O `MediaRecorder` do Chrome, quando ninguém lhe diz
- * nada, grava a 2 500 000 bits por segundo — medido aqui num Chromium, e é
- * exactamente o que os dois ficheiros dele têm (2,54 e 2,71 Mbit/s). A 1080 por
- * 1920 e a 30 imagens por segundo isso dá 0,04 bits por pixel: para um jogo,
- * com folhagem e a câmara sempre a andar, é onde o H.264 começa a partir a
- * imagem em quadrados.
- *
- * 12 Mbit/s dão 0,19 bits por pixel, que é a zona em que a gravação deixa de
- * ser o elo fraco — e cabem à vontade no nível 4.0 que passámos a pedir. Custa
- * 1,5 MB por segundo de clipe: um clipe de trinta segundos passa de 10 MB para
- * 45. É o preço, e é o certo para uma coisa que ele vai publicar.
- */
 export const BITS_VIDEO = 12_000_000;
 export const BITS_SOM = 128_000;
 
@@ -283,6 +272,22 @@ export async function formatoQueFunciona({
       tela.width = 320; tela.height = 180;
       const ctx = tela.getContext('2d');
       const fluxo = tela.captureStream(30);
+      // Com uma faixa de SOM, como a gravação a sério tem.
+      //
+      // A prova era só de vídeo, e por isso aprovava um formato que grava
+      // imagem e deita o áudio fora — foi assim que um clipe saiu mudo depois
+      // de eu mexer nesta lista. Uma pista de áudio silenciosa é o suficiente:
+      // o que se está a perguntar é se o gravador ACEITA áudio neste formato.
+      let audio = null;
+      try {
+        const Ctx = globalThis.AudioContext || globalThis.webkitAudioContext;
+        if (Ctx) {
+          audio = new Ctx();
+          const saida = audio.createMediaStreamDestination();
+          audio.createConstantSource().connect(saida);
+          for (const f of saida.stream.getAudioTracks()) fluxo.addTrack(f);
+        }
+      } catch { /* sem áudio de teste: fica a prova de vídeo, como era */ }
       const g = new MR(fluxo, { mimeType: tipo });
       let bytes = 0;
       g.ondataavailable = (e) => { bytes += e.data?.size || 0; };
@@ -303,6 +308,7 @@ export async function formatoQueFunciona({
       if (g.state !== 'inactive') g.stop();
       await parou;
       for (const f of fluxo.getTracks()) f.stop();
+      await audio?.close?.().catch?.(() => {});
       if (bytes > 0) return tipo;
     } catch {
       /* o próximo */
@@ -315,6 +321,43 @@ export async function formatoQueFunciona({
 
 /** A extensão que combina com o tipo. */
 export const extensaoDe = (tipo) => (String(tipo).startsWith('video/mp4') ? 'mp4' : 'webm');
+
+/**
+ * Esperar que o `<video>` tenha MESMO o frame onde diz estar.
+ *
+ * Medido no 9:16 que ele exportou a 31/08: os primeiros 0,27 s do ficheiro
+ * eram pretos e os 0,17 s seguintes mostravam o ecrã de morte — que só
+ * acontece no FIM do clipe. Meio segundo de lixo à cabeça de um clipe de 22 s.
+ *
+ * A causa são duas, e esta função trata da segunda. Quem chama faz
+ * `v.currentTime = r.tempoS` e grava a seguir, na mesma volta; o browser ainda
+ * não procurou nada, e o elemento continua a segurar o último frame que
+ * descodificou — o sítio onde ele estava a espreitar antes de carregar em
+ * gravar. Sem esperar, esse frame velho é o primeiro do ficheiro, e o `inicio`
+ * lido a seguir é a posição ERRADA: a duração do clipe conta a partir dela.
+ *
+ * `readyState` em falta conta como pronto de propósito: assim um `<video>` de
+ * mentira nos testes não fica dois segundos à espera de um evento que ninguém
+ * vai disparar. Só esperamos quando SABEMOS que ainda não está.
+ */
+export function noSitio(video, { esperaMs = 2000 } = {}) {
+  const pronto = () => !video?.seeking && !(video?.readyState < 2);
+  if (pronto() || typeof video?.addEventListener !== 'function') return Promise.resolve(pronto());
+  return new Promise((ok) => {
+    let fechado = false;
+    const limpar = () => {
+      clearTimeout(relogio);
+      for (const nome of ['seeked', 'loadeddata', 'canplay']) video.removeEventListener(nome, ver);
+    };
+    // O tempo esgotar-se não é falha: mais vale gravar um frame duvidoso do
+    // que ficar preso para sempre num vídeo que nunca dispara `seeked`.
+    const acabar = (r) => { if (fechado) return; fechado = true; limpar(); ok(r); };
+    function ver() { if (pronto()) acabar(true); }
+    const relogio = setTimeout(() => acabar(false), esperaMs);
+    for (const nome of ['seeked', 'loadeddata', 'canplay']) video.addEventListener(nome, ver);
+    ver();
+  });
+}
 
 /**
  * Gravar o retrato, do princípio ao fim do clipe.
@@ -365,6 +408,9 @@ export async function gravar(video, {
   const pedacos = [];
   gravador.ondataavailable = (e) => { if (e.data?.size) pedacos.push(e.data); };
 
+  // O frame certo ANTES de medir seja o que for: `inicio` lido em cima de uma
+  // procura a meio é a posição de onde ele veio, não a do início do clipe.
+  await noSitio(video);
   const inicio = video.currentTime;
   let parar = false;
   let pincel = null;
@@ -422,6 +468,14 @@ export async function gravar(video, {
     if (gravador.state !== 'inactive') gravador.stop();
   }, { once: true });
 
+  // Pintar ANTES de `start()`, e não depois.
+  //
+  // A tela acabada de criar é transparente, e `captureStream` publica-a na
+  // mesma: o gravador arranca, o `await` do `play()` devolve a volta ao
+  // browser, e o que fica gravado nesse intervalo são frames PRETOS. Foram
+  // 0,27 s medidos no ficheiro dele. Uma pincelada antes de gravar custa um
+  // frame e o clipe passa a começar na imagem certa.
+  desenhar(ctx, video, rects, modo, divisao);
   gravador.start();
   await video.play().catch(() => {});
   pintar();
