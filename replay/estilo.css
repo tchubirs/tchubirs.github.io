@@ -1074,7 +1074,6 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
      tem de encolher com ela ou o desenho fica por cima da primeira letra. */
   body.mesa:has(#palco:not([hidden])) .procura input { padding-left: var(--e6); }
   body.mesa:has(#palco:not([hidden])) .procura .lupa { left: var(--e3); width: 14px; height: 14px; }
-  body.mesa:has(#palco:not([hidden])) #canaisEstado:has(li) { max-width: 220px; }
   body.mesa:has(#palco:not([hidden])) .topoTrabalho select { padding-right: var(--e6); }
   body.mesa:has(#palco:not([hidden])) .topoTrabalho button { min-height: 34px; padding: 0 var(--e4); }
   /* Cada peça da barra com o seu lugar, por ordem de quem não pode faltar.
@@ -1100,8 +1099,49 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
      segundo e a única razão para a frase estar ali. */
   body.mesa:has(#palco:not([hidden])) .barraSessao > .confianca { flex: 0 4 auto; }
   body.mesa:has(#palco:not([hidden])) .barraSessao > #estadoPartilha { flex: 0 1 auto; }
+  /* TODOS os nomes, numa linha própria por baixo da barra.
+     "Você fez as mudanças na parte de cima do front end no PC que eu falei,
+      uma linha a mais com todos os nomes adicionados?"
+     Não tinha. Medido com nove canais a 1600x900: esta caixa ficava com
+     197 px de largura e 46 px de altura para 482 px de conteúdo — mostrava UM
+     nome de nove e punha uma calha cinzenta do sistema no meio da barra, que
+     é exactamente a peça que ele já tinha dito que achava feia.
+     Agora a barra embrulha e esta caixa toma a linha inteira: cada canal é
+     uma pastilha de 11 px com o nome e o botão de tirar, e nove nomes ocupam
+     menos de metade da largura. O tecto de duas linhas é só para o caso
+     patológico — a 11 px cabem umas trinta pastilhas em duas linhas, e ele
+     usa dezassete no máximo. Se alguma vez passar disso rola com a roda, e
+     sem risco cinzento à vista. */
+  body.mesa:has(#palco:not([hidden])) > .topoTrabalho { flex-wrap: wrap; }
   body.mesa:has(#palco:not([hidden])) #canaisEstado { display: none; }
-  body.mesa:has(#palco:not([hidden])) #canaisEstado:has(li) { display: block; flex: 0 1 auto; max-height: 46px; overflow-y: auto; }
+  body.mesa:has(#palco:not([hidden])) #canaisEstado:has(li) {
+    display: block; flex: 1 0 100%; max-width: none; margin: 0;
+    /* 54 = 2 pastilhas de 24 (18 de linha + 2+2 de folga + 2 de fio) e 6 de
+       intervalo. A conta é exacta de propósito: com 52 sobrava uma tira de
+       2 px da segunda linha, e uma letra cortada ao meio lê-se como avaria. */
+    max-height: 54px; overflow-y: auto; scrollbar-width: none;
+  }
+  body.mesa:has(#palco:not([hidden])) #canaisEstado::-webkit-scrollbar { width: 0; height: 0; }
+  body.mesa:has(#palco:not([hidden])) #canaisEstado .canais {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  }
+  body.mesa:has(#palco:not([hidden])) #canaisEstado .canais li {
+    flex: 0 0 auto; flex-wrap: nowrap; gap: 6px; white-space: nowrap;
+    padding: 2px 4px 2px var(--e3); font-size: var(--t-micro); line-height: 18px;
+  }
+  /* "1 VOD(s)" vezes dezassete é ruído, e ruído é o que faz uma linha precisar
+     de duas. O que ele quer ler aqui é QUEM está carregado. Quem falhou
+     continua a dizer porquê: essa nota é a única razão de a linha existir. */
+  body.mesa:has(#palco:not([hidden])) #canaisEstado .canais li:not(.mau) .nota { display: none; }
+  /* Sem isto o ✕ herda os 34 px de altura dos botões da barra e cada pastilha
+     fica com a altura de um campo de texto. */
+  body.mesa:has(#palco:not([hidden])) #canaisEstado .canais li .tirar {
+    min-height: 18px; height: 18px; width: 18px; padding: 0;
+    font-size: var(--t-micro); line-height: 1;
+  }
+  body.mesa:has(#palco:not([hidden])) #canaisEstado .canais li .parecidos button {
+    min-height: 20px; padding: 0 6px; font-size: var(--t-micro);
+  }
   body.mesa:has(#palco:not([hidden])) > footer { display: none; }
   body.mesa:has(#palco:not([hidden])) #palco:not([hidden]) {
     flex: 1 1 auto; min-height: 0; gap: var(--e4);
