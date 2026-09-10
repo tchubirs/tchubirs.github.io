@@ -1666,17 +1666,40 @@ for (const ecra of [{ width: 1920, height: 1080 }, { width: 1366, height: 720 }]
         const kill = document.querySelector('#listaMomentos li[data-ms]').getBoundingClientRect();
         if (!(kill.top >= 0 && kill.top + 40 <= window.innerHeight)) fora.push('primeira kill');
         const grade = document.getElementById('grade');
+        // A caixa dos nomes: TODOS lá, e sem calha.
+        const ce = document.getElementById('canaisEstado');
+        const caixa = ce.getBoundingClientRect();
+        const linhas = [...ce.querySelectorAll('#listaCanais li')];
         return {
           fora,
           paginaRola: document.documentElement.scrollHeight > window.innerHeight + 1,
           bodyRola: getComputedStyle(document.body).overflowY,
           gradeRola: getComputedStyle(grade).overflowY === 'auto' && grade.scrollHeight > grade.clientHeight,
           quadrados: document.querySelectorAll('#grade .tile').length,
+          nomes: linhas.map((li) => li.querySelector('b')?.textContent),
+          nomesRolam: ce.scrollHeight > ce.clientHeight + 1,
+          nomesCortados: linhas.filter((li) => {
+            const r = li.getBoundingClientRect();
+            return r.top < caixa.top - 0.5 || r.bottom > caixa.bottom + 0.5;
+          }).map((li) => li.dataset.slug),
+          alturaDosNomes: Math.round(caixa.height),
         };
       });
       assert.equal(medida.paginaRola, false, `a pagina rola (${ecra.width}x${ecra.height})`);
       assert.deepEqual(medida.fora, [], `fora do ecra: ${medida.fora.join(', ')}`);
       assert.ok(medida.gradeRola, 'com 16 angulos na grelha, e a GRELHA que rola, por dentro');
+      // "Uma linha a mais com TODOS os nomes adicionados."
+      //
+      // Medido antes disto, com nove canais a 1600x900: a caixa tinha 197 px
+      // de largura e 46 px de altura para 482 px de conteudo — um nome de
+      // nove, e uma calha cinzenta do sistema no meio da barra. Estas tres
+      // linhas sao a diferenca entre "esta escrito no CSS" e "veem-se".
+      assert.equal(medida.nomes.length, canais.length,
+        `so ha ${medida.nomes.length} nomes de ${canais.length}`);
+      assert.equal(medida.nomesRolam, false,
+        `a caixa dos nomes voltou a ter calha de rolar (${ecra.width}x${ecra.height})`);
+      assert.deepEqual(medida.nomesCortados, [],
+        `nomes cortados: ${medida.nomesCortados.join(', ')}`);
       assert.deepEqual(erros, []);
       await p.close();
     });
