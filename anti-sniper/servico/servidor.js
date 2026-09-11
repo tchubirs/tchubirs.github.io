@@ -722,6 +722,63 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
    *   nao      — não foi vista por perto. NÃO é prova de ausência: quem
    *              assiste calado não gera mensagem nenhuma
    */
+  /**
+   * Gravar uma morte lida no painel do jogo.
+   *
+   * Guarda mesmo sem nome. Uma morte de que não se leu o nome continua a ser
+   * uma morte, e a conta de quantas vezes ele morreu numa noite não pode
+   * depender de o OCR ter acertado — senão o produto conta menos mortes nas
+   * noites em que lê pior, que é exactamente ao contrário.
+   */
+  function receberMorte(canalId, { quandoMs, nome = null, arma = null, votos = 0, de = 0 }) {
+    if (!canalId || !(quandoMs > 0)) return { gravado: false };
+    db.prepare(`INSERT INTO morte (canal_id, quando_em, nome, nome_norm, arma, votos, de)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(canal_id, quando_em) DO UPDATE SET
+                  nome = excluded.nome, nome_norm = excluded.nome_norm,
+                  arma = excluded.arma, votos = excluded.votos, de = excluded.de`)
+      .run(canalId, Math.round(quandoMs), nome, nome ? normalizar(nome) : null, arma, votos, de);
+    return { gravado: true };
+  }
+
+  /** As mortes de um canal, da mais recente para a mais antiga. */
+  function mortes(canalId, { desdeMs = 0, ate = 200 } = {}) {
+    return db.prepare(`SELECT quando_em AS quando, nome, nome_norm, arma, votos, de
+                       FROM morte WHERE canal_id = ? AND quando_em >= ?
+                       ORDER BY quando_em DESC LIMIT ?`)
+      .all(canalId, Math.round(desdeMs), ate);
+  }
+
+  /**
+   * Quem matou mais de uma vez — e o que isso vale.
+   *
+   * Uma morte não diz nada: num servidor de Rust matam-no o dia todo. O que
+   * pede explicação é o mesmo nome a voltar noite após noite, e ainda mais
+   * se essa pessoa estiver na audiência quando acontece. Por isso a saída
+   * traz `noites` separado de `vezes`: cinco mortes numa noite é uma briga,
+   * cinco mortes em cinco noites é outra conversa.
+   *
+   * Continua a não acusar ninguém: devolve contagens e presença, e a palavra
+   * "sniper" não aparece.
+   */
+  function reincidentes(canalId, { desdeMs = 0, minVezes = 2 } = {}) {
+    const lista = mortes(canalId, { desdeMs, ate: 5000 })
+      .filter((m) => m.nome_norm && m.votos >= 2);
+    const por = new Map();
+    for (const m of lista) {
+      const v = por.get(m.nome_norm) || { nome: m.nome, nome_norm: m.nome_norm, vezes: 0, quando: [], noites: new Set(), armas: new Set() };
+      v.vezes++;
+      v.quando.push(m.quando);
+      v.noites.add(new Date(m.quando).toISOString().slice(0, 10));
+      if (m.arma) v.armas.add(m.arma);
+      por.set(m.nome_norm, v);
+    }
+    return [...por.values()]
+      .map((v) => ({ ...v, noites: v.noites.size, armas: [...v.armas] }))
+      .filter((v) => v.vezes >= minVezes)
+      .sort((a, b) => b.noites - a.noites || b.vezes - a.vezes);
+  }
+
   function momento(canalId, onde, nome, quandoMs) {
     const lista = estadas(canalId, onde, nome);
     if (!lista.length) return { estado: 'sem-registro', estadas: [] };
@@ -1197,7 +1254,7 @@ function criar({ caminhoBanco = 'detetive.db', chavePem = CHAVE_KICK, agora = Da
            guardarServidor, cruzarAgora, ver, estadas, momento, agoraNa, nosDois, log, fusoDoCanal,
            ligarColeta, ligarAlvos, ligarBotrixPublico, pararColeta, coletores, receberFidelidade,
            listarFontes, guardarFonte, verNome, nomesDe, quemUsou, importarNomes,
-           verIntervalo, receberPresenca };
+           verIntervalo, receberPresenca, receberMorte, mortes, reincidentes };
 }
 
 module.exports = { criar, verificar, CHAVE_KICK, BLOCO_MS };

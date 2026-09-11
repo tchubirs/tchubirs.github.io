@@ -146,6 +146,29 @@ function abrir(caminho = 'detetive.db') {
     );
     CREATE INDEX IF NOT EXISTS idx_nome_visto_norm ON nome_visto (nome_norm);
 
+    -- MORTE: quem o matou, lido no painel de morte do próprio jogo.
+    --
+    -- É a única tabela que sabe o INSTANTE em que a suspeita nasce. A tabela
+    -- estada diz quem esteve na live das 21h10 às 23h05; esta diz que ele
+    -- morreu às 22h47, e só as duas juntas respondem à pergunta.
+    --
+    -- As colunas votos e de ficam gravadas de propósito. O painel anima a entrar e
+    -- as primeiras leituras saem em lixo, por isso o nome é eleito por
+    -- repetição — e quem ler isto daqui a um mês tem de conseguir separar
+    -- "cinco leituras iguais" de "uma leitura e um palpite" sem ter de
+    -- acreditar em mim.
+    CREATE TABLE IF NOT EXISTS morte (
+      canal_id   TEXT NOT NULL,
+      quando_em  INTEGER NOT NULL,
+      nome       TEXT,
+      nome_norm  TEXT,
+      arma       TEXT,
+      votos      INTEGER NOT NULL DEFAULT 0,
+      de         INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (canal_id, quando_em)
+    );
+    CREATE INDEX IF NOT EXISTS idx_morte_norm ON morte (canal_id, nome_norm);
+
     -- Idempotência de webhook: a Kick reentrega evento quando não recebe
     -- 200 a tempo. Sem isto, uma reentrega contaria presença duas vezes.
     CREATE TABLE IF NOT EXISTS evento_visto (

@@ -17,8 +17,7 @@
  * aparece em fonte nenhuma, e um sniper tem todas as razões para o fazer.
  */
 
-const { execFile, spawn } = require('node:child_process');
-const { promisify } = require('node:util');
+const { spawn } = require('node:child_process');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -26,8 +25,8 @@ const path = require('node:path');
 const { temPainel, lerPainel, agrupar, votar, seguro } = require('../src/jogo/painel-morte');
 const { placarPublico } = require('../src/stream/botrix-api');
 const { Indice } = require('../src/indice');
+const { criar } = require('../servico/servidor');
 
-const correr = promisify(execFile);
 const arg = (nome, omissao) => {
   const i = process.argv.indexOf(`--${nome}`);
   return i > 0 && process.argv[i + 1] ? process.argv[i + 1] : omissao;
@@ -98,9 +97,17 @@ async function principal() {
   const idx = new Indice(gente);
   const relogio = (d) => d.toTimeString().slice(0, 8);
 
+  // Guardar ANTES de imprimir. Uma noite não responde nada: num servidor de
+  // Rust matam-no o dia todo. A resposta é o mesmo nome a voltar, e isso só
+  // existe se cada noite ficar escrita.
+  const servico = criar({ caminhoBanco: path.join(__dirname, '..', 'detetive.db'), chavePem: 'x' });
+
   for (const g of grupos) {
     const v = votar(g);
     const arma = votar(g.map((x) => ({ nome: x.arma })));
+    servico.receberMorte(canal, {
+      quandoMs: g[0].quando.getTime(), nome: v.nome, arma: arma.nome, votos: v.votos, de: v.de,
+    });
     const marca = seguro(v) ? '✓' : '?';
     const nome = v.nome || 'não deu para ler';
     console.log(`  ${marca} ${relogio(g[0].quando)}  ${String(g.length).padStart(2)}s   matou-o: ${nome.padEnd(18)} ${arma.nome || ''}`);
@@ -115,7 +122,24 @@ async function principal() {
 
   console.log(`\n  A audiência que consigo ver: ${gente.length} pessoa(s) com sessão iniciada,`);
   console.log(`  de ${live.viram} que a Kick contou. Quem assiste deslogado não aparece`);
-  console.log('  em fonte nenhuma — e é o que um sniper faria.\n');
+  console.log('  em fonte nenhuma — e é o que um sniper faria.');
+
+  // O que realmente responde à pergunta: quem VOLTA.
+  const repete = servico.reincidentes(canal);
+  if (repete.length) {
+    console.log('\n  Quem já o matou mais de uma vez, contando todas as noites gravadas:\n');
+    for (const r of repete.slice(0, 10)) {
+      const noites = r.noites === 1 ? '1 noite' : `${r.noites} noites`;
+      console.log(`    ${r.nome.padEnd(18)} ${String(r.vezes).padStart(2)}x em ${noites.padEnd(9)} ${r.armas.slice(0, 3).join(', ')}`);
+    }
+    console.log('\n  Isto é contagem, não acusação. Cinco mortes numa noite é uma briga;');
+    console.log('  o mesmo nome em cinco noites é outra conversa.');
+  } else {
+    console.log('\n  Ninguém o matou mais de uma vez ainda. Corra isto em mais noites:');
+    console.log('  a resposta não sai de uma, sai de ver quem volta.');
+  }
+  console.log('');
+  try { servico.db.close(); } catch { /* já fechado */ }
 }
 
 if (require.main === module) {
