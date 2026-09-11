@@ -5,6 +5,7 @@
  *
  *   npm run servidor -- --ip 1.2.3.4:28015 --alvo Lauta
  *   npm run servidor -- --ver --alvo Lauta --equipa "cTapp,Tia Paola"
+ *   npm run servidor -- --ver --equipa-de Dehxter      quem anda sempre com ele
  *
  * "Com a API do BattleMetrics não dá para ver servidor dos outros, tem que
  *  acessar de forma normal igual player."
@@ -30,7 +31,8 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { consultarEsperto } = require('../src/jogo/rust-a2s');
-const { seguidores } = require('../src/seguidores');
+const { seguidores, equipaDe } = require('../src/seguidores');
+const { normalizar } = require('../src/nomes');
 const { enderecoDaPagina } = require('../src/endereco');
 
 const PASTA = path.join(__dirname, '..', 'dados');
@@ -43,6 +45,7 @@ const arg = (nome, omissao = null) => {
 const tem = (nome) => process.argv.includes(`--${nome}`);
 
 const alvo = arg('alvo');
+const equipaDeQuem = arg('equipa-de');
 const equipa = (arg('equipa') || '').split(',').map((s) => s.trim()).filter(Boolean);
 const janelaMin = Number(arg('janela', '10'));
 
@@ -62,6 +65,31 @@ function mostrar(fotos) {
   const ate = new Date(fotos.at(-1).ms).toISOString().slice(0, 16).replace('T', ' ');
   const horas = ((fotos.at(-1).ms - fotos[0].ms) / 3600000).toFixed(1);
   console.log(`${fotos.length} fotografias, de ${de} a ${ate} (${horas} h)\n`);
+
+  // "Se tivesse uma opção ver o time de tal pessoa ajudava muito."
+  if (equipaDeQuem) {
+    const { fotosDoAlvo, equipa } = equipaDe(fotos, equipaDeQuem, { normalizar });
+    if (!fotosDoAlvo) {
+      console.log(`"${equipaDeQuem}" não aparece em fotografia nenhuma.`);
+      console.log('Confere o nome com --ver sem mais nada.');
+      return;
+    }
+    console.log(`"${equipaDeQuem}" apareceu em ${fotosDoAlvo} fotografias.\n`);
+    if (!equipa.length) {
+      console.log('Ninguém andou sempre com ele. Ou joga sozinho, ou ainda não há fotografias que cheguem.');
+      return;
+    }
+    console.log('  juntos   com ele   com ela   nome');
+    for (const e of equipa.slice(0, 25)) {
+      console.log(`  ${String(e.juntos).padStart(6)}   ${String(Math.round(e.dele * 100)).padStart(6)}%`
+        + `   ${String(Math.round(e.dela * 100)).padStart(6)}%   ${e.nome}`);
+    }
+    console.log('\n  "com ele"  — das vezes que ele lá esteve, quantas é que este também.');
+    console.log('  "com ela"  — das vezes que ESTE lá esteve, quantas é que ele também.');
+    console.log('  Uma equipa tem as duas altas. Quem vive no servidor tem a primeira');
+    console.log('  alta e a segunda baixa, e por isso não entra nesta lista.');
+    return;
+  }
 
   if (!alvo) {
     const todos = new Set();

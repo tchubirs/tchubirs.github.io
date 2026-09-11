@@ -1,34 +1,64 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * Uso:
- *   node bin/anti-sniper.js <steamid64> <arquivo-com-a-tabela-colada>
+ * A busca rápida: dá-me a Steam de quem te matou, e eu digo se ele te via.
  *
- * A tabela é a lista de fidelidade do BotRix, copiada do painel. Coloque
- * "Mostrar: 100" antes de copiar para pegar mais gente de uma vez.
+ *   npm run quem -- 76561198066116229
+ *   npm run quem -- https://steamcommunity.com/id/algum-apelido
+ *   npm run quem -- 76561198066116229 --canal outro
+ *   npm run quem -- 76561198066116229 tabela.txt     (tabela colada à mão)
+ *
+ * "Primeiro uma busca mais rápida: eu dou o SteamID do inimigo, você pesquisa
+ *  os nomes e faz a comparação."
+ *
+ * A audiência vem sozinha da BotRix — antes era preciso copiar a tabela do
+ * painel para um ficheiro, e um passo à mão no meio de uma pergunta urgente é
+ * um passo que não se dá. O ficheiro continua a ser aceite para quando ele
+ * tiver uma lista maior colada à mão do que a que a API devolve.
+ *
+ * Aceita link de perfil e apelido, não só os 17 dígitos: ninguém tem a
+ * SteamID decorada, o que se tem é o link que se copiou do jogo.
  */
 
 const fs = require('node:fs');
 const { lerTabela } = require('../src/stream/botrix');
 const { consultar } = require('../src/consulta');
-const { ehSteamId64 } = require('../src/steam');
+const { resolverEntrada } = require('../src/steam');
+const { placarPublico } = require('../src/stream/botrix-api');
+
+/** A audiência de agora, sem ninguém ter de copiar nada. */
+async function audienciaViva(canal) {
+  const p = await placarPublico(canal, 'kick');
+  return (p.pessoas || p || [])
+    .map((x) => ({ nome: x.nome || x.name || x.username, minutosAssistidos: x.minutos ?? x.minutosAssistidos ?? null }))
+    .filter((x) => x.nome);
+}
 
 async function main() {
-  const [steamId, arquivo] = process.argv.slice(2);
-  if (!steamId || !arquivo) {
-    console.error('uso: anti-sniper <steamid64> <arquivo-da-tabela>');
-    process.exit(2);
-  }
-  if (!ehSteamId64(steamId)) {
-    console.error(`SteamID64 inválido: ${steamId}`);
-    console.error('deve ter 17 dígitos e começar com 7656119');
+  const argv = process.argv.slice(2);
+  const iCanal = argv.indexOf('--canal');
+  const canal = iCanal > 0 && argv[iCanal + 1] ? argv[iCanal + 1] : 'tchubi';
+  const livres = argv.filter((a, i) => !a.startsWith('--') && argv[i - 1] !== '--canal');
+  const [entrada, arquivo] = livres;
+  if (!entrada) {
+    console.error('uso: npm run quem -- <steamid64 | link do perfil> [ficheiro-da-tabela]');
     process.exit(2);
   }
 
-  const audiencia = lerTabela(fs.readFileSync(arquivo, 'utf8'));
+  const steamId = await resolverEntrada(entrada);
+  if (!steamId) {
+    console.error(`não consegui chegar a uma SteamID a partir de "${entrada}".`);
+    console.error('aceito os 17 dígitos, /profiles/<id> ou /id/<apelido>.');
+    process.exit(2);
+  }
+
+  const audiencia = arquivo
+    ? lerTabela(fs.readFileSync(arquivo, 'utf8'))
+    : await audienciaViva(canal);
   if (audiencia.length === 0) {
-    console.error('não consegui ler nenhum espectador do arquivo.');
-    console.error('confira se copiou a tabela inteira, com a coluna de tempo.');
+    console.error(arquivo
+      ? 'não consegui ler nenhum espectador do ficheiro.'
+      : `a BotRix não devolveu ninguém para "${canal}".`);
     process.exit(1);
   }
 

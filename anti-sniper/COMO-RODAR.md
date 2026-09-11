@@ -108,6 +108,41 @@ a tela em barulho.
 é alguém conferindo a tela, não assistindo — então a linha diz `3×` em vez
 de mostrar só a última visita.
 
+## A busca rápida — `npm run quem`
+
+```
+npm run quem -- 76561198066116229
+npm run quem -- https://steamcommunity.com/id/algum-apelido
+```
+
+Dás-lhe a Steam de quem te matou, ele vai buscar **todos os nomes que essa
+conta já usou** e compara-os com quem está a assistir. A audiência vem
+sozinha da BotRix — não é preciso copiar tabela nenhuma.
+
+Aceita link de perfil e apelido, e não só os 17 dígitos: ninguém tem a
+SteamID decorada, o que se tem é o link que se copiou do jogo.
+
+## A equipa de alguém — `npm run servidor -- --ver --equipa-de <nome>`
+
+```
+  juntos   com ele   com ela   nome
+       5      100%       83%   Kappa
+       3       60%       75%   Ranger
+```
+
+**"com ele"** é, das vezes que ele lá esteve, quantas é que este também.
+**"com ela"** é o contrário: das vezes que ESTE lá esteve, quantas é que ele
+também. Uma equipa tem as duas altas.
+
+A conta que parece certa e está errada é "quem aparece mais ao lado dele":
+num servidor de 300 pessoas, quem está online catorze horas por dia aparece
+ao lado de toda a gente, e a lista dava os jogadores mais viciados do
+servidor em vez da equipa de alguém. Por isso são as duas fracções, e quem
+vive no servidor cai sozinho.
+
+Isto trabalha sobre as fotografias que o `npm run servidor -- --ip ...`
+grava. Sem fotografias não há equipa nenhuma para calcular.
+
 ## Quem o matou — `npm run mortes`
 
 ```

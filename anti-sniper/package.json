@@ -20,7 +20,8 @@
     "nomes": "node bin/nomes.js",
     "servir": "node bin/servir.js",
     "servidor": "node bin/servidor.js",
-    "mortes": "node bin/mortes.js"
+    "mortes": "node bin/mortes.js",
+    "quem": "node bin/anti-sniper.js"
   },
   "dependencies": {
     "playwright": "^1.47.0"

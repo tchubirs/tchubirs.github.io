@@ -93,4 +93,62 @@ function seguidores(fotos, alvo, { janelaMin = 10, ignorar = [] } = {}) {
     .sort((a, b) => (b.vezes - a.vezes) || (b.fatia - a.fatia));
 }
 
-module.exports = { entradas, seguidores };
+/**
+ * A equipa de alguém: quem joga SEMPRE com essa pessoa.
+ *
+ * "Se tivesse uma opção ver o time de tal pessoa ajudava muito."
+ *
+ * Ajuda, sim: quem te mata sozinho é uma coisa, quem te mata com quatro
+ * amigos é outra, e saber quem são esses quatro poupa a noite seguinte.
+ *
+ * A conta que parece certa e está errada é "quem aparece mais ao lado dele".
+ * Num servidor de 300 pessoas, quem está online 14 horas por dia aparece ao
+ * lado de toda a gente e ficava sempre no topo — a lista dava os jogadores
+ * mais viciados do servidor, não a equipa de ninguém.
+ *
+ * Por isso isto pede as DUAS fracções:
+ *
+ *   · `dele` — das vezes que o ALVO lá esteve, quantas é que este também
+ *   · `dela` — das vezes que ESTE lá esteve, quantas é que o alvo também
+ *
+ * Um companheiro de equipa tem as duas altas. Quem vive no servidor tem a
+ * primeira alta e a segunda baixa, e cai sozinho.
+ *
+ * @param {Array<{ms:number, nomes:string[]}>} fotos
+ * @param {string} alvo
+ */
+function equipaDe(fotos, alvo, { minFraccao = 0.6, minJuntos = 3, normalizar = (s) => String(s).toLowerCase() } = {}) {
+  const chave = normalizar(alvo);
+  const ordenadas = [...(fotos || [])].sort((a, b) => a.ms - b.ms);
+  const total = new Map();          // nome -> em quantas fotos apareceu
+  let fotosDoAlvo = 0;
+  const juntos = new Map();         // nome -> em quantas fotos esteve COM o alvo
+
+  for (const f of ordenadas) {
+    const presentes = new Map();
+    for (const n of f.nomes || []) presentes.set(normalizar(n), n);
+    for (const [k] of presentes) total.set(k, (total.get(k) || 0) + 1);
+    if (!presentes.has(chave)) continue;
+    fotosDoAlvo++;
+    for (const [k, nome] of presentes) {
+      if (k === chave) continue;
+      const v = juntos.get(k) || { nome, vezes: 0 };
+      v.vezes++;
+      juntos.set(k, v);
+    }
+  }
+
+  const equipa = [...juntos.entries()]
+    .map(([k, v]) => ({
+      nome: v.nome,
+      juntos: v.vezes,
+      dele: fotosDoAlvo ? v.vezes / fotosDoAlvo : 0,
+      dela: total.get(k) ? v.vezes / total.get(k) : 0,
+    }))
+    .filter((x) => x.juntos >= minJuntos && x.dele >= minFraccao && x.dela >= minFraccao)
+    .sort((a, b) => (b.dele + b.dela) - (a.dele + a.dela) || b.juntos - a.juntos);
+
+  return { alvo, fotosDoAlvo, equipa };
+}
+
+module.exports = { entradas, seguidores, equipaDe };
