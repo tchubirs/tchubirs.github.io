@@ -108,6 +108,37 @@ a tela em barulho.
 é alguém conferindo a tela, não assistindo — então a linha diz `3×` em vez
 de mostrar só a última visita.
 
+## Quem o matou — `npm run mortes`
+
+```
+npm run mortes                 vigia a live agora, 60 min
+npm run mortes -- --min 30
+npm run mortes -- --canal outro
+```
+
+```
+  ✓ 03:14:56   6s   matou-o: Dehxter            Thompson
+      não está entre quem eu consigo ver na audiência
+```
+
+**Não pede chave nem login a ninguém.** O nome de quem mata está escrito no
+painel de morte do próprio Rust, e o vídeo da live é público. Isto substituiu
+o caminho do BattleMetrics, que a 11/09/2026 passou a responder
+`403 — A subscription is required to use the API`.
+
+Precisa de `ffmpeg` e de `tesseract` (`apt-get install tesseract-ocr`).
+
+**O `✓` e o `?` querem dizer coisas diferentes.** O painel anima a entrar, e
+os primeiros quadros dão lixo — por isso o nome só conta quando se repetiu em
+pelo menos duas leituras. Uma leitura única sai com `?` e sem nome, em vez de
+sair com um palpite a fingir de resposta.
+
+**E vê metade.** A audiência vem da BotRix, que só conta quem está com sessão
+iniciada: medido na live dele, 20 pessoas visíveis de 38 a 82 espectadores.
+Quem assiste deslogado não aparece em fonte nenhuma — e é o que um sniper
+faria. Por isso uma noite sem casamento não é inocência; é uma noite. O valor
+está em correr isto todas as noites e ver que nome volta.
+
 ## Sem login — `npm run gravar`
 
 ```
