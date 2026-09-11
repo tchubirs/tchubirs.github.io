@@ -191,11 +191,25 @@ async function resolverEntrada(texto, buscar = globalThis.fetch) {
   const m = t.match(/steamcommunity\.com\/id\/([A-Za-z0-9_.\-]+)/);
   const apelido = m ? m[1] : (/^[A-Za-z0-9_.\-]{2,32}$/.test(t) && !/^\d+$/.test(t) ? null : null);
   if (!apelido) return null;
-  const r = await buscar(`https://steamcommunity.com/id/${encodeURIComponent(apelido)}?xml=1`,
-    { headers: { 'User-Agent': UA } });
-  if (!r.ok) return null;
-  const id = (await r.text()).match(/<steamID64>(7656119\d{10})<\/steamID64>/);
-  return id ? id[1] : null;
+  // Duas tentativas, e nao uma.
+  //
+  // O `conferir` dava "nao consegui resolver um link de perfil da Steam" de
+  // vez em quando, e o caminho estava bom: chamada a chamada respondia 200.
+  // Com um espia por cima do `fetch` apanhei o que se passava — a Steam
+  // atira um erro passageiro quando lhe chegam pedidos seguidos, e uma
+  // falha num pedido virava "isto esta partido" no ecra. Uma segunda
+  // tentativa passado meio segundo apaga o falso alarme, e um erro a serio
+  // continua a dar `null` como antes.
+  const url = `https://steamcommunity.com/id/${encodeURIComponent(apelido)}?xml=1`;
+  for (let tentativa = 0; tentativa < 2; tentativa++) {
+    if (tentativa) await new Promise((k) => setTimeout(k, 500));
+    let r;
+    try { r = await buscar(url, { headers: { 'User-Agent': UA } }); } catch { continue; }
+    if (!r?.ok) continue;
+    const id = (await r.text()).match(/<steamID64>(7656119\d{10})<\/steamID64>/);
+    if (id) return id[1];
+  }
+  return null;
 }
 
 module.exports = { ehSteamId64, resolverEntrada, historicoDeNomes, perfilPublico, chavesDeIdentidade, pelaVanity };
