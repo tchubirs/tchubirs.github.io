@@ -17,7 +17,7 @@ existe espera de monetização: o pagador é a campanha, não o algoritmo.
 
 | Etapa | Automático? | Observação |
 |---|---|---|
-| Baixar a fonte licenciada | ✅ | `yt-dlp`, ou arquivo local do brief |
+| Baixar a fonte licenciada | ✅ | `yt-dlp`, arquivo local, ou **pasta inteira do Drive** |
 | Transcrever | ✅ | usa a legenda da fonte; whisper local só se faltar |
 | Escolher os trechos | ✅ | Claude, com validador mecânico por cima |
 | Cortar 9:16 + legenda + gancho | ✅ | ffmpeg, custo zero de API |
@@ -159,3 +159,14 @@ vermelho e o GitHub te manda e-mail. É o alarme de celular sem app nenhum.
   vira vários cues em sequência — nunca é espremido em duas linhas largas
   (era o bug que jogava texto para fora do quadro).
 - `-14 LUFS` é o alvo de loudness que YouTube/TikTok/Instagram normalizam.
+- Campanha de **clipagem** dá um VOD; campanha de **UGC** dá uma pasta de
+  materiais. Por isso `campaign.source` aceita `url:` (uma) ou `urls:` (muitas),
+  e um link de pasta do Google Drive é expandido ficheiro a ficheiro. O que não
+  for vídeo — PDF, imagem, Google Doc — fica anotado como ignorado e a execução
+  segue; derrubar a pasta toda por causa de um PDF seria perder o trabalho todo
+  por um ficheiro que nunca ia servir.
+- Com muitas fontes, o id do clipe **inclui a fonte**. Dois vídeos da mesma
+  pasta com um bom trecho aos 0→30s é o caso normal, e sem isso o segundo
+  clipe reescrevia o primeiro no ledger.
+- `clips_per_run` é o orçamento da **execução**, não de cada fonte: numa pasta
+  com 20 materiais, pedir 4 clipes a cada um daria 80 clipes e 80 chamadas.

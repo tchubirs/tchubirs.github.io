@@ -18,8 +18,14 @@ campaign:
   min_views_to_pay: 1000     # views mínimas por post para gerar receita
   max_payout_per_post_usd: 1000
   source:
-    # URL do conteúdo-fonte fornecido pelo brief, OU caminho de arquivo local.
+    # Brief de CLIPAGEM (dá um VOD): uma URL ou um caminho local.
     url: "https://exemplo.com/video-fonte-da-campanha"
+    # Brief de UGC (dá uma PASTA de materiais): use `urls` no lugar de `url`.
+    # Um link de pasta do Google Drive é expandido sozinho, ficheiro a ficheiro.
+    # O que não for vídeo (PDF, imagem, Doc) é anotado e ignorado, não derruba.
+    # urls:
+    #   - "https://drive.google.com/drive/folders/XXXXXXXXXXXX"
+    #   - "https://youtube.com/watch?v=YYYYYYYY"
     # Cole aqui a frase do brief que autoriza o corte. Isto é o seu
     # comprovante de licença. Sem isto, NÃO rode a campanha.
     license_note: "Brief autoriza clipes derivados do VOD oficial."

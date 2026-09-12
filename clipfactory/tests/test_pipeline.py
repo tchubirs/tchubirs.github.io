@@ -128,3 +128,111 @@ def test_estimativa_respeita_piso_e_teto():
     assert c.estimated_usd(999) == 0.0          # abaixo do piso não paga nada
     assert c.estimated_usd(1000) == 2.0
     assert c.estimated_usd(10_000_000) == 5.0   # teto do brief
+
+
+# ── Pasta de materiais: uma campanha de UGC não dá um vídeo, dá uma pasta ──
+
+def test_pasta_do_drive_e_reconhecida_e_um_ficheiro_solto_nao_e():
+    from clipfactory.ingest import PASTA_DRIVE
+    assert PASTA_DRIVE.search("https://drive.google.com/drive/folders/1a2B3c")
+    assert PASTA_DRIVE.search("https://drive.google.com/drive/u/0/folders/1a2B3c")
+    assert not PASTA_DRIVE.search("https://drive.google.com/file/d/1a2B3c/view")
+    assert not PASTA_DRIVE.search("https://youtube.com/watch?v=x")
+
+
+def test_o_que_nao_e_pasta_passa_intacto_e_nao_chama_a_rede(monkeypatch):
+    from clipfactory import ingest
+    monkeypatch.setattr(ingest, "_ytdlp_json",
+                        lambda *a, **k: pytest.fail("não devia consultar a rede"))
+    assert ingest.expandir("https://youtube.com/watch?v=x") == \
+        ["https://youtube.com/watch?v=x"]
+
+
+def test_a_pasta_vira_um_link_por_ficheiro(monkeypatch):
+    from clipfactory import ingest
+    monkeypatch.setattr(ingest, "_ytdlp_json", lambda *a, **k: {"entries": [
+        {"url": "https://drive.google.com/file/d/AAA/view"},
+        {"id": "BBB"},                       # às vezes vem só o id
+        {"title": "sem nada"},               # e às vezes não vem nada
+    ]})
+    assert ingest.expandir("https://drive.google.com/drive/folders/X") == [
+        "https://drive.google.com/file/d/AAA/view",
+        "https://drive.google.com/file/d/BBB/view",
+    ]
+
+
+def test_pasta_vazia_diz_que_o_problema_e_a_partilha(monkeypatch):
+    from clipfactory import ingest
+    monkeypatch.setattr(ingest, "_ytdlp_json", lambda *a, **k: {"entries": []})
+    with pytest.raises(RuntimeError, match="partilha"):
+        ingest.expandir("https://drive.google.com/drive/folders/X")
+
+
+# Uma pasta de materiais tem PDF, imagem e Google Doc ao lado do vídeo. Se um
+# PDF derrubasse a execução, a pasta certa nunca chegaria a produzir um clipe.
+def test_um_pdf_no_meio_da_pasta_nao_derruba_o_resto(monkeypatch, tmp_path):
+    from clipfactory import ingest
+
+    def falso(u, wd, *a, **k):
+        if u.endswith(".pdf"):
+            raise RuntimeError("Unsupported URL")
+        return ingest.SourceMedia(tmp_path / "v.mp4", [], "legenda-da-fonte", u)
+
+    monkeypatch.setattr(ingest, "fetch_source", falso)
+    m = ingest.fetch_sources(["a.mp4", "b.pdf", "c.mp4"], tmp_path)
+    assert [f.url for f in m.fontes] == ["a.mp4", "c.mp4"]
+    assert [u for u, _ in m.ignorados] == ["b.pdf"]
+
+
+def test_pasta_so_de_pdfs_falha_e_diz_quais(monkeypatch, tmp_path):
+    from clipfactory import ingest
+    monkeypatch.setattr(ingest, "fetch_source",
+                        lambda *a, **k: (_ for _ in ()).throw(RuntimeError("nope")))
+    with pytest.raises(RuntimeError, match="b.pdf"):
+        ingest.fetch_sources(["a.pdf", "b.pdf"], tmp_path)
+
+
+def test_a_mesma_fonte_repetida_e_baixada_uma_vez(monkeypatch, tmp_path):
+    from clipfactory import ingest
+    vistas = []
+
+    def falso(u, wd, *a, **k):
+        vistas.append(u)
+        return ingest.SourceMedia(tmp_path / "v.mp4", [], "legenda-da-fonte", u)
+
+    monkeypatch.setattr(ingest, "fetch_source", falso)
+    ingest.fetch_sources(["a.mp4", "a.mp4", "b.mp4"], tmp_path)
+    assert vistas == ["a.mp4", "b.mp4"], "baixar duas vezes é pagar duas vezes"
+
+
+# ── O id do clipe ──
+
+# Este é o defeito que a mudança para muitas fontes criou. Dois vídeos da mesma
+# pasta com um bom trecho aos 0→30s são o caso normal, não o raro.
+def test_mesmo_minuto_em_videos_diferentes_da_ids_diferentes():
+    from clipfactory.cli import _clip_id
+    a = _clip_id("camp", 0.0, 30.0, "https://drive/AAA")
+    b = _clip_id("camp", 0.0, 30.0, "https://drive/BBB")
+    assert a != b, "um clipe reescreveria o outro no ledger"
+    assert _clip_id("camp", 0.0, 30.0, "https://drive/AAA") == a
+
+
+# ── A configuração ──
+
+def test_config_aceita_uma_url_ou_uma_lista():
+    from clipfactory.config import Source, _fontes
+    assert _fontes({"url": "u"}) == ("u",)
+    assert _fontes({"urls": ["a", "b"]}) == ("a", "b")
+    assert _fontes({"urls": "a"}) == ("a",)
+    assert _fontes({"urls": [" a ", "", "b"]}) == ("a", "b")
+    # quem já usava .url continua a poder
+    assert Source(url="u", license_note="n").urls == ("u",)
+    assert Source(url="", urls=("a", "b"), license_note="n").url == "a"
+
+
+def test_config_sem_fonte_nenhuma_explica_o_que_falta():
+    from clipfactory.config import ConfigError, _fontes
+    with pytest.raises(ConfigError, match="urls"):
+        _fontes({"license_note": "x"})
+    with pytest.raises(ConfigError):
+        _fontes({"urls": []})

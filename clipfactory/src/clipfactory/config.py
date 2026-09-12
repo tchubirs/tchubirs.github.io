@@ -18,8 +18,22 @@ class ConfigError(RuntimeError):
 
 @dataclass(frozen=True)
 class Source:
+    """A fonte licenciada pelo brief.
+
+    Um brief de clipagem dá um VOD: uma URL. Um brief de UGC dá uma pasta de
+    materiais: muitas. `urls` é a verdade; `url` fica a apontar para a primeira,
+    porque é o que o ledger grava e o que vai na descrição do vídeo.
+    """
+
     url: str
     license_note: str
+    urls: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        if not self.urls:
+            object.__setattr__(self, "urls", (self.url,) if self.url else ())
+        elif not self.url:
+            object.__setattr__(self, "url", self.urls[0])
 
 
 @dataclass(frozen=True)
@@ -86,6 +100,22 @@ class Config:
         return {n: os.environ[n] for n in names}
 
 
+def _fontes(s: dict) -> tuple[str, ...]:
+    """Aceita `url:` (uma) ou `urls:` (muitas). Pelo menos uma tem de existir."""
+    brutas = s.get("urls")
+    if brutas is None:
+        brutas = [s["url"]] if s.get("url") else []
+    elif isinstance(brutas, str):
+        brutas = [brutas]
+    fontes = tuple(str(u).strip() for u in brutas if str(u).strip())
+    if not fontes:
+        raise ConfigError(
+            "campaign.source precisa de `url:` (uma fonte) ou `urls:` (uma lista). "
+            "Numa campanha de UGC, `urls` costuma ser a pasta do Drive do brief."
+        )
+    return fontes
+
+
 def _req(d: dict, key: str, where: str):
     if key not in d:
         raise ConfigError(f"config.yaml: falta '{key}' em {where}")
@@ -130,7 +160,7 @@ def load(path: str | Path = "config.yaml") -> Config:
             cpm_usd=float(_req(c, "cpm_usd", "campaign")),
             min_views_to_pay=int(c.get("min_views_to_pay", 1000)),
             max_payout_per_post_usd=float(c.get("max_payout_per_post_usd", 1e9)),
-            source=Source(url=str(_req(s, "url", "campaign.source")),
+            source=Source(url="", urls=_fontes(s),
                           license_note=str(s["license_note"]).strip()),
             must_include=list((c.get("rules") or {}).get("must_include") or []),
             must_avoid=list((c.get("rules") or {}).get("must_avoid") or []),
