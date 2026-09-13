@@ -1,0 +1,13 @@
+{
+  "name": "quanto-sobra",
+  "version": "1.0.0",
+  "description": "Diz quais campanhas de content rewards ainda têm dinheiro, e quanto tempo falta até não terem.",
+  "license": "MIT",
+  "private": true,
+  "bin": { "quanto-sobra": "bin/quanto-sobra.js" },
+  "scripts": {
+    "start": "node bin/quanto-sobra.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": { "node": ">=20" }
+}

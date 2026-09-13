@@ -1,0 +1,25 @@
+# Os testes do quanto-sobra, a cada push.
+name: quanto-sobra
+
+on:
+  push:
+    paths: ['quanto-sobra/**', '.github/workflows/quanto-sobra.yml']
+  pull_request:
+    paths: ['quanto-sobra/**', '.github/workflows/quanto-sobra.yml']
+  workflow_dispatch:
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: quanto-sobra
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      # Não há dependências nenhumas de propósito: `npm ci` sem lockfile falha,
+      # e um lockfile vazio só serviria para envelhecer.
+      - name: Correr os testes
+        run: npm test
