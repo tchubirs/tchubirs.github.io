@@ -1,0 +1,63 @@
+# Refaz a página da Peneira e publica-a no site.
+#
+# O GitHub só corre horários a partir do ramo principal — por isso este
+# ficheiro tem de estar no `main` para o `schedule` disparar. Enquanto estiver
+# só no ramo de trabalho, corre à mão pelo botão "Run workflow".
+name: peneira
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"     # de meia em meia hora
+  workflow_dispatch:
+  push:
+    paths: ['peneira/**', '.github/workflows/peneira.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: peneira
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - run: npm test
+
+  publicar:
+    needs: testes
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - name: Gerar a página
+        run: node peneira/bin/peneira.js --novos 24 --html /tmp/index.html
+
+      # Só se publica uma página com tokens lá dentro. Uma página vazia porque
+      # a API respondeu 429 substituiria a boa por uma que não diz nada.
+      - name: Recusar página vazia
+        run: |
+          n=$(grep -c '<article' /tmp/index.html || true)
+          echo "cartões: $n"
+          test "$n" -ge 3 || { echo "::error::só $n tokens, não publico"; exit 1; }
+
+      - name: Publicar no site
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git checkout -B publicar origin/main
+          mkdir -p peneira
+          cp /tmp/index.html peneira/index.html
+          git add peneira/index.html
+          git diff --cached --quiet && { echo "nada mudou"; exit 0; }
+          git commit -m "peneira: página de $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push origin publicar:main

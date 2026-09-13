@@ -1,0 +1,14 @@
+{
+  "name": "peneira",
+  "version": "1.0.0",
+  "description": "Passa tokens novos da Solana pelas armadilhas que dá para medir, antes de comprar.",
+  "license": "MIT",
+  "private": true,
+  "bin": { "peneira": "bin/peneira.js" },
+  "scripts": {
+    "start": "node bin/peneira.js --novos",
+    "pagina": "node bin/peneira.js --novos 24 --html site/index.html",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": { "node": ">=20" }
+}
