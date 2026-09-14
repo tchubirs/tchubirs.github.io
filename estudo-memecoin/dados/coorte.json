@@ -1,0 +1,1128 @@
+{
+ "fixadoEm": "2026-09-13T23:00:32.714900+00:00",
+ "rede": "solana",
+ "fonte": "geckoterminal new_pools, paginas 1-10",
+ "quantos": 140,
+ "tokens": [
+  {
+   "endereco": "Boi3A9eim74K9y1z2R6QaLqATw5QrChijksig1YEZYGt",
+   "nome": "Kabosu / SOL",
+   "criada_em": "2026-09-13T22:58:46Z",
+   "precoEntrada": 4.180655139836812e-05,
+   "liquidezEntrada": 39635.78682248,
+   "vol24hEntrada": 1.6910158383
+  },
+  {
+   "endereco": "8g6xgxc4TrFPeTa4Y8xbWt2xenoUmDPnkNanhACkW6X5",
+   "nome": "AppleCat / AAPLx",
+   "criada_em": "2026-09-13T22:58:40Z",
+   "precoEntrada": 4.734872069548436e-06,
+   "liquidezEntrada": 3770.72145242023,
+   "vol24hEntrada": 407.2112583944
+  },
+  {
+   "endereco": "GqrtKsxziuyWNf38tNHVUMMiyEacn9wjFKgEG4WNwiqy",
+   "nome": "DATA / SOL",
+   "criada_em": "2026-09-13T22:58:39Z",
+   "precoEntrada": 2.789093866454596e-06,
+   "liquidezEntrada": 2212.03035015455,
+   "vol24hEntrada": 0.4497855759
+  },
+  {
+   "endereco": "CLA7GkGCoDhtMsBLrGsVuhC6BmZz8MvuC6RcFdUV5e7B",
+   "nome": "GVP / SOL",
+   "criada_em": "2026-09-13T22:58:35Z",
+   "precoEntrada": 3.5444952480382226e-06,
+   "liquidezEntrada": 2863.76949314345,
+   "vol24hEntrada": 4204.5982461196
+  },
+  {
+   "endereco": "CbAcKQQU2DggkYnnNN7H9UgmHUPNtbQvg6jVUdRurSwY",
+   "nome": "RIP / SOL",
+   "criada_em": "2026-09-13T22:58:32Z",
+   "precoEntrada": 2.9049186699123284e-06,
+   "liquidezEntrada": 2290.83734084568,
+   "vol24hEntrada": 51.5654335113
+  },
+  {
+   "endereco": "AeWv1sn29mv4bAGiXyiNQKQaWZR42oUnaY84vX1QJsTU",
+   "nome": "TXDOT / SOL",
+   "criada_em": "2026-09-13T22:58:30Z",
+   "precoEntrada": 3.1464056744897253e-06,
+   "liquidezEntrada": 2337.6657,
+   "vol24hEntrada": 105.1245061026
+  },
+  {
+   "endereco": "4etteVjLtWHQrA4QQhZmu1w9U8rpDnK1ec3sidDHb2xC",
+   "nome": "CHINAPAD / SOL",
+   "criada_em": "2026-09-13T22:58:29Z",
+   "precoEntrada": 3.56055811457054e-10,
+   "liquidezEntrada": 1.59732386038308,
+   "vol24hEntrada": 526.0390485077
+  },
+  {
+   "endereco": "66CmjwRQtH6JJdk1sJDewspJTgxZ6YxAnhdpnrmWpznK",
+   "nome": "Kabosu / SOL",
+   "criada_em": "2026-09-13T22:58:29Z",
+   "precoEntrada": 2.791286209106338e-06,
+   "liquidezEntrada": 2211.6435,
+   "vol24hEntrada": 1.9510961879
+  },
+  {
+   "endereco": "FY5xrpPKDYbbVVQrJdBrniUScs9QWQUaSvvjecDzbmVT",
+   "nome": "Kabosu / SOL",
+   "criada_em": "2026-09-13T22:58:28Z",
+   "precoEntrada": 2.80632700298764e-06,
+   "liquidezEntrada": 2225.69794656821,
+   "vol24hEntrada": 203.9191480599
+  },
+  {
+   "endereco": "6h9m9dhvH4BkBzbCjuTxghasopFRoKqrHkyThV8N31qb",
+   "nome": "$CAT / SOL",
+   "criada_em": "2026-09-13T22:58:27Z",
+   "precoEntrada": 2.0698629524547984e-06,
+   "liquidezEntrada": 2090.92852297145,
+   "vol24hEntrada": 2.2319880642
+  },
+  {
+   "endereco": "BcYBiaq4DzzEmQYd7qpvWihwepnDiqLvoqbY6vQJoUzR",
+   "nome": "Solut / SOL",
+   "criada_em": "2026-09-13T22:58:23Z",
+   "precoEntrada": 3.7105259230255677e-06,
+   "liquidezEntrada": 2861.5914,
+   "vol24hEntrada": 2935.1987324845
+  },
+  {
+   "endereco": "8A8Nhiib9LdL6f4haRe5K8tWG6u8pUXY4nhV7P44475V",
+   "nome": "Pufcat / SOL",
+   "criada_em": "2026-09-13T22:58:21Z",
+   "precoEntrada": 2.91460244061166e-06,
+   "liquidezEntrada": 1951.8877,
+   "vol24hEntrada": 132.9383379848
+  },
+  {
+   "endereco": "F9SqgRm2W9TB1fJQkDVWsx6ShF2bXvnzDaFibFHUnLet",
+   "nome": "BBC / SOL",
+   "criada_em": "2026-09-13T22:58:20Z",
+   "precoEntrada": 2.7908333610614825e-06,
+   "liquidezEntrada": 2213.40993865786,
+   "vol24hEntrada": 0.791475769
+  },
+  {
+   "endereco": "HZ3b2zP1dU2C7hf73Fh5YMaQaQyCrAr2Aw9VsmhXxxcA",
+   "nome": "ASSDAQ / QQQx",
+   "criada_em": "2026-09-13T22:58:19Z",
+   "precoEntrada": 6.72487893307272e-05,
+   "liquidezEntrada": 21144.8137,
+   "vol24hEntrada": 2946.4952932828
+  },
+  {
+   "endereco": "7sYBTffKWUB7EHna5XAg7dnJSmzDAsKYEuwVnjg7hi2u",
+   "nome": "\u867e\u7f51 / SOL",
+   "criada_em": "2026-09-13T22:58:18Z",
+   "precoEntrada": 1.2814696143727563e-05,
+   "liquidezEntrada": 22915.1156,
+   "vol24hEntrada": 3387.8889550692
+  },
+  {
+   "endereco": "4ixY4Hz1UvkwynCc1Pp2UFceLtiUEuGeARQj84mfB8NV",
+   "nome": "Absolute / SOL",
+   "criada_em": "2026-09-13T22:58:18Z",
+   "precoEntrada": 3.174447874545543e-06,
+   "liquidezEntrada": 2473.98664980363,
+   "vol24hEntrada": 199.829152302
+  },
+  {
+   "endereco": "4XU5v6wYcot6xLQnymBuT3n2eJpKpPdsu8CSUZVzTYZr",
+   "nome": "TESTICLES / SOL",
+   "criada_em": "2026-09-13T22:58:11Z",
+   "precoEntrada": 1.2193452871429014e-05,
+   "liquidezEntrada": 16964.548,
+   "vol24hEntrada": 8774.954787661
+  },
+  {
+   "endereco": "3L66XKtrbYNywRCsXmctrrDMBATqnf2TzH65u3wWFHDA",
+   "nome": "RISE / SOL",
+   "criada_em": "2026-09-13T22:58:10Z",
+   "precoEntrada": 7.937926407766384e-06,
+   "liquidezEntrada": 4885.587,
+   "vol24hEntrada": 2073.5157914479
+  },
+  {
+   "endereco": "FswVf8MtDsqdyuW3togQCHQSFPELfbYAry9VW94ghn1N",
+   "nome": "WOLF / SOL",
+   "criada_em": "2026-09-13T22:58:06Z",
+   "precoEntrada": 2.80284806328139e-06,
+   "liquidezEntrada": 2222.9106,
+   "vol24hEntrada": 3407.9119513329
+  },
+  {
+   "endereco": "H1kgbwv1epWbX7fd9cbda9jYnq4HXmbQXJbzeeXGYWLd",
+   "nome": "DOGE / SOL",
+   "criada_em": "2026-09-13T22:58:06Z",
+   "precoEntrada": 2.9401795347092075e-06,
+   "liquidezEntrada": 2328.4072,
+   "vol24hEntrada": 624.7014265355
+  },
+  {
+   "endereco": "8YnozPEUvNkwaHZgiHxyUENzpMhc5M6KJPnCwzKU9dPS",
+   "nome": "FRUITCOIN / SOL",
+   "criada_em": "2026-09-13T22:58:37Z",
+   "precoEntrada": 2.7903812186597563e-06,
+   "liquidezEntrada": 2213.05134451905,
+   "vol24hEntrada": 0.0009855506952
+  },
+  {
+   "endereco": "HHuZMg6p4mgS3smMzemvUzHhfm7ZECE2HjzNWSC6zphZ",
+   "nome": "LEGCOIN / SOL",
+   "criada_em": "2026-09-13T22:58:05Z",
+   "precoEntrada": 2.8705351771140804e-06,
+   "liquidezEntrada": 2341.5185,
+   "vol24hEntrada": 177.7430630706
+  },
+  {
+   "endereco": "DH8fGumTxN5UxPaCYb3toZ4S9Bg8Rf6ixFRx3D1tX5sM",
+   "nome": "NEONFLY / SOL",
+   "criada_em": "2026-09-13T22:58:02Z",
+   "precoEntrada": 2.93674227956716e-06,
+   "liquidezEntrada": 2326.5764,
+   "vol24hEntrada": 201.109936766
+  },
+  {
+   "endereco": "5Z42AyKuz3uBEK1Q1bzmaUFHUx4LEqt1cAYz21623bzq",
+   "nome": "fruit / SOL",
+   "criada_em": "2026-09-13T22:58:01Z",
+   "precoEntrada": 1.19113881080498e-05,
+   "liquidezEntrada": 3.1207,
+   "vol24hEntrada": 0.3909088523
+  },
+  {
+   "endereco": "3ij3vYzR1MZ8HUazLnuWybqpt6Q6dF944fRe4EFibHXY",
+   "nome": "\u9f99\u867e / SOL",
+   "criada_em": "2026-09-13T22:58:01Z",
+   "precoEntrada": 4.880819079643983e-05,
+   "liquidezEntrada": 0.0,
+   "vol24hEntrada": 4227.0315188938
+  },
+  {
+   "endereco": "22GNkNFmxMqTPiCi2UdkSnBKMSRZbMfd26h3o679bUfy",
+   "nome": "FTB / SOL",
+   "criada_em": "2026-09-13T22:57:55Z",
+   "precoEntrada": 2.79356501601453e-06,
+   "liquidezEntrada": 2222.837,
+   "vol24hEntrada": 14.3695376314
+  },
+  {
+   "endereco": "RnXVJKiDwhfuWutiruHmyodacZYgKL1aJQCJUFBUERg",
+   "nome": "WCAT / SOL",
+   "criada_em": "2026-09-13T22:57:54Z",
+   "precoEntrada": 4.441305040938435e-05,
+   "liquidezEntrada": 17313.1825,
+   "vol24hEntrada": 199.0183359052
+  },
+  {
+   "endereco": "JCLNpcNfwugamKHe2xjxa9JCof4KHWtNK3YGEwakAxzD",
+   "nome": "BMWX / SOL",
+   "criada_em": "2026-09-13T22:57:51Z",
+   "precoEntrada": 2.7623853457092576e-06,
+   "liquidezEntrada": 2434.6521,
+   "vol24hEntrada": 151.6624767566
+  },
+  {
+   "endereco": "Cw1G1tUiiPgA5xttwoa4TYGQpkZEY8uVbgMMgdfQy6TB",
+   "nome": "POTATO / SOL",
+   "criada_em": "2026-09-13T22:57:48Z",
+   "precoEntrada": 2.9365931190791367e-06,
+   "liquidezEntrada": 2337.6113,
+   "vol24hEntrada": 2493.5299146255
+  },
+  {
+   "endereco": "BBofw5ASs42zsmMyi6ufEfZjN1MgEX3efxRgykFmDwBu",
+   "nome": "WCAT / SOL",
+   "criada_em": "2026-09-13T22:57:47Z",
+   "precoEntrada": 4.408240544380117e-05,
+   "liquidezEntrada": 0.6186,
+   "vol24hEntrada": 0.393784856
+  },
+  {
+   "endereco": "3rjQHu9WiR9XxKt9ozABDQ5MNH4UJBCRUaz9awgjoHF2",
+   "nome": "WCAT / SOL",
+   "criada_em": "2026-09-13T22:57:47Z",
+   "precoEntrada": 4.486703421212886e-11,
+   "liquidezEntrada": 0.0,
+   "vol24hEntrada": 0.008971161933
+  },
+  {
+   "endereco": "D5nChfCkriTu1suX8y5BFtZ4LyX7PiMjQ2BieFrLJjmX",
+   "nome": "TESLA AI / SOL",
+   "criada_em": "2026-09-13T22:57:43Z",
+   "precoEntrada": 4.878292678854297e-05,
+   "liquidezEntrada": 0.0,
+   "vol24hEntrada": 7668.7618929645
+  },
+  {
+   "endereco": "7BemmJLdxYkDa3FELuEf3Lm2br9TSmRF7NHZ3jsDzqgu",
+   "nome": "kabosu / SOL",
+   "criada_em": "2026-09-13T22:57:42Z",
+   "precoEntrada": 1.294040972267455e-05,
+   "liquidezEntrada": 20906.7319,
+   "vol24hEntrada": 44443.2632679621
+  },
+  {
+   "endereco": "8sJj72xsgpv58TuXQiYQVYMUL7ZcF5uJMLFP9F9rNAAh",
+   "nome": "mmrich / SOL",
+   "criada_em": "2026-09-13T22:57:39Z",
+   "precoEntrada": 1.944095572601567e-06,
+   "liquidezEntrada": 1546.1555,
+   "vol24hEntrada": 60.5389682618
+  },
+  {
+   "endereco": "A5NaMnqCruyUnatwG58MV8uuxr5yLx6L69Pnuv5nXBt6",
+   "nome": "mustang / SOL",
+   "criada_em": "2026-09-13T22:57:37Z",
+   "precoEntrada": 2.2140399050281754e-06,
+   "liquidezEntrada": 1648.7143,
+   "vol24hEntrada": 50.9190313871
+  },
+  {
+   "endereco": "GThVkkjW96KrVP6BK7TwwpzStb7F5axGahpATd5U4Epi",
+   "nome": "DUDE / SOL",
+   "criada_em": "2026-09-13T22:57:36Z",
+   "precoEntrada": 1.7267252544839397e-05,
+   "liquidezEntrada": 3109.6856,
+   "vol24hEntrada": 146.2072108767
+  },
+  {
+   "endereco": "DvJpfzWLgS3UGpZiXzCquXd2te3o4u6oezia2CiNNdBn",
+   "nome": "Kabosu / SOL",
+   "criada_em": "2026-09-13T22:57:32Z",
+   "precoEntrada": 5.313294105698171e-05,
+   "liquidezEntrada": 20542.7018,
+   "vol24hEntrada": 333.0883693689
+  },
+  {
+   "endereco": "kJSKNt7qmdHsFKcjrNH3L5obr7gjhMzoumYREaSQk9w",
+   "nome": "TESTICLES / SOL",
+   "criada_em": "2026-09-13T22:57:32Z",
+   "precoEntrada": 1.702953891446448e-05,
+   "liquidezEntrada": 25778.2092,
+   "vol24hEntrada": 191243.324143976
+  },
+  {
+   "endereco": "7TRFN4r3uxYpK4dGZJMb6KA1yYxVng189pTZ2fnBFFv",
+   "nome": "CHINAPAD / SOL",
+   "criada_em": "2026-09-13T22:57:28Z",
+   "precoEntrada": 4.910349970540721e-05,
+   "liquidezEntrada": 0.0,
+   "vol24hEntrada": 2672.9754822231
+  },
+  {
+   "endereco": "5bk8Y9heynTUunRKoDWqPcL4CcQ4s9WNdaVqE3HjbADN",
+   "nome": "BITCOIN / WBTC",
+   "criada_em": "2026-09-13T22:57:24Z",
+   "precoEntrada": 3.0378792653204286e-06,
+   "liquidezEntrada": 3137.1783,
+   "vol24hEntrada": 529.6066512831
+  },
+  {
+   "endereco": "Fdbz3FQmSBZeskbVxLHHsNHRiuqZq8cjGtsmToHFUu4C",
+   "nome": "Kabosu / SOL",
+   "criada_em": "2026-09-13T22:57:24Z",
+   "precoEntrada": 5.395592659916068e-05,
+   "liquidezEntrada": 0.319,
+   "vol24hEntrada": 0.426858554
+  },
+  {
+   "endereco": "Evy1YkHPjJCUpBA3BoRaVfjSzHjw7PvvR6kJ6eTfbsF3",
+   "nome": "Kabosu / SOL",
+   "criada_em": "2026-09-13T22:57:24Z",
+   "precoEntrada": 4.49023730337986e-11,
+   "liquidezEntrada": 0.0,
+   "vol24hEntrada": 0.008978227929
+  },
+  {
+   "endereco": "9Hr78DKB7X47rwgyYAAKPDML4hSwqhnqA1aRFtRSiZaN",
+   "nome": "\u9f99\u867e / SOL",
+   "criada_em": "2026-09-13T22:57:23Z",
+   "precoEntrada": 4.961105456098616e-10,
+   "liquidezEntrada": 1826.0343,
+   "vol24hEntrada": 3157.9473684511
+  },
+  {
+   "endereco": "2CpZ1Y3PdBY8SbFEzZfRCqQZKyBxnY7Ck2ZnK4JKd9VS",
+   "nome": "BTC / SOL",
+   "criada_em": "2026-09-13T22:57:22Z",
+   "precoEntrada": 4.1950101476033493e-07,
+   "liquidezEntrada": 318.5151,
+   "vol24hEntrada": 2805.7218969352
+  },
+  {
+   "endereco": "EsiqpNdniDcaaiqW8Wh4GEQpj2peuykrR1cgTH93APmM",
+   "nome": "TITTIES / SOL",
+   "criada_em": "2026-09-13T22:57:12Z",
+   "precoEntrada": 2.8064314274458927e-06,
+   "liquidezEntrada": 3231.4942,
+   "vol24hEntrada": 1958.2141501604
+  },
+  {
+   "endereco": "95EfijJdhrhJX9F9Y7y9a6KV4NxSAJVrcvYQogzKU3rE",
+   "nome": "CHINAPAD / SOL",
+   "criada_em": "2026-09-13T22:57:12Z",
+   "precoEntrada": 4.22157785022411e-10,
+   "liquidezEntrada": 1.4169,
+   "vol24hEntrada": 120.6744877417
+  },
+  {
+   "endereco": "9yw4FFNDRthydM7sSdXo7e5588Ya3o7bPXpedfXXBuVd",
+   "nome": "Fruit / SOL",
+   "criada_em": "2026-09-13T22:57:11Z",
+   "precoEntrada": 1.0651086802623312e-05,
+   "liquidezEntrada": 19956.2421,
+   "vol24hEntrada": 64765.7786389062
+  },
+  {
+   "endereco": "DARvZcEfsYRrKMoeG7JptkP6p3EnwAkw1msnwqAAY8X3",
+   "nome": "C4 / SOL",
+   "criada_em": "2026-09-13T22:57:10Z",
+   "precoEntrada": 2.8077440512678005e-06,
+   "liquidezEntrada": 2230.1963,
+   "vol24hEntrada": 983.7875323534
+  },
+  {
+   "endereco": "4kGs6Nd2FCa7xT5fB2bZPjEeyEQm5FELYeFAQXNy4wWG",
+   "nome": "$UNITY / SOL",
+   "criada_em": "2026-09-13T22:57:06Z",
+   "precoEntrada": 2.8281208969553567e-06,
+   "liquidezEntrada": 2242.9606,
+   "vol24hEntrada": 730.6796802633
+  },
+  {
+   "endereco": "hNVfrTj4P3DVnbV1JcpChjZotdRbvzsCo9BndnqS9pY",
+   "nome": "Kabosu / SOL",
+   "criada_em": "2026-09-13T22:56:59Z",
+   "precoEntrada": 2.790982086421043e-06,
+   "liquidezEntrada": 2399.9094,
+   "vol24hEntrada": 1888.648395373
+  },
+  {
+   "endereco": "8HWKAP3m6aNtpCcHYAuSSRh597QC1eWtTL9927vErDAm",
+   "nome": "RR / SOL",
+   "criada_em": "2026-09-13T22:56:59Z",
+   "precoEntrada": 1.0684547187961488e-05,
+   "liquidezEntrada": 0.0,
+   "vol24hEntrada": 8473.9143747723
+  },
+  {
+   "endereco": "3s98FQTVCAKFFL91biM6Rg9hZ9VSrmyZp6stCXx58ZeL",
+   "nome": "RR / SOL",
+   "criada_em": "2026-09-13T22:56:59Z",
+   "precoEntrada": 0.002827860377198129,
+   "liquidezEntrada": 139039.82,
+   "vol24hEntrada": 62064.268359674
+  },
+  {
+   "endereco": "9VDwzvm11TmyDcoXuSdkG3wheXQDYkWAGem6YJWSu75Y",
+   "nome": "pnut / SOL",
+   "criada_em": "2026-09-13T22:56:51Z",
+   "precoEntrada": 1.270791924589331e-07,
+   "liquidezEntrada": 97.1556,
+   "vol24hEntrada": 375.1196251611
+  },
+  {
+   "endereco": "FZTWNdf9DtWmg7hxf6446x5pK4174cEPrEH5R6TqUXB6",
+   "nome": "BS / NVDAx",
+   "criada_em": "2026-09-13T22:56:51Z",
+   "precoEntrada": 2.917855107798775e-06,
+   "liquidezEntrada": 2920.1059,
+   "vol24hEntrada": 1122.0822373678
+  },
+  {
+   "endereco": "7jJ1FyA51Jvf9Jxtvs18BCiWj5jHcQmwMycD4vcwhhBX",
+   "nome": "PVE / SOL",
+   "criada_em": "2026-09-13T22:56:45Z",
+   "precoEntrada": 0.00023037573749230383,
+   "liquidezEntrada": 219057.5574,
+   "vol24hEntrada": 813.6833815004
+  },
+  {
+   "endereco": "DmdzYEbct8gDbTWJHofRpGiuUmea51tUX6bzktezsexU",
+   "nome": "xBTC / SOL",
+   "criada_em": "2026-09-13T22:56:28Z",
+   "precoEntrada": 2.0134728675219194e-05,
+   "liquidezEntrada": 25330.0153,
+   "vol24hEntrada": 148701.117261948
+  },
+  {
+   "endereco": "57agUY1S1tAvSQvddoCzAHTLz1cxXPh9J1p9DgHcEeAD",
+   "nome": "GVP / SOL",
+   "criada_em": "2026-09-13T22:56:27Z",
+   "precoEntrada": 2.7918114148797896e-06,
+   "liquidezEntrada": 2214.0698,
+   "vol24hEntrada": 2342.1323807104
+  },
+  {
+   "endereco": "EHKTKNNRb1KdBHrMsy9sXqvhngA6FNSpwjHGEu4xh3pM",
+   "nome": "JineX / SOL",
+   "criada_em": "2026-09-13T22:56:27Z",
+   "precoEntrada": 2.8582853476153463e-06,
+   "liquidezEntrada": 2264.6249,
+   "vol24hEntrada": 37.3609417094
+  },
+  {
+   "endereco": "9R6jq3DgwWNtPTyPm1XrjMYJ9pGgA3KGzHaR6dokyJqk",
+   "nome": "PENIS / SOL",
+   "criada_em": "2026-09-13T22:55:42Z",
+   "precoEntrada": 2.871764323601467e-06,
+   "liquidezEntrada": 2275.7412,
+   "vol24hEntrada": 183.8204082189
+  },
+  {
+   "endereco": "8WFEXbhtsFw67ToJRYumwg2KqBWtmmw9CKktR33vCbTW",
+   "nome": "Tulip / SOL",
+   "criada_em": "2026-09-13T22:55:39Z",
+   "precoEntrada": 1.8751517501272595e-05,
+   "liquidezEntrada": 25727.5392,
+   "vol24hEntrada": 102939.862218831
+  },
+  {
+   "endereco": "7Ts7NHcTN5YwvDpLSJFq2v2gQmrVXTTwHfp9eNM6gYFW",
+   "nome": "PONSBER / SOL",
+   "criada_em": "2026-09-13T22:55:39Z",
+   "precoEntrada": 0.00010639232154302339,
+   "liquidezEntrada": 26007.3051,
+   "vol24hEntrada": 179745.854759285
+  },
+  {
+   "endereco": "vJzhKrpjLUeEruMMA2Kr7DBzQFuABSzXkGxC1t92oEa",
+   "nome": "PONSBER / SOL",
+   "criada_em": "2026-09-13T22:55:39Z",
+   "precoEntrada": 4.076004620025594e-05,
+   "liquidezEntrada": 0.0,
+   "vol24hEntrada": 6463.9324990057
+  },
+  {
+   "endereco": "3nnmd7yjgaeZskaeiUUyRm8Qyg5fyUxhs9rVRE8KnDtm",
+   "nome": "mustang / SOL",
+   "criada_em": "2026-09-13T22:55:31Z",
+   "precoEntrada": 3.7150313413523553e-07,
+   "liquidezEntrada": 295.6734,
+   "vol24hEntrada": 35.2960061043
+  },
+  {
+   "endereco": "JC3asA1q3yxdGNCJ9PSVh2pK9AUaYNjt2Z2aXTkZr2bf",
+   "nome": "WOLF / SOL",
+   "criada_em": "2026-09-13T22:55:26Z",
+   "precoEntrada": 4.149278387388543e-06,
+   "liquidezEntrada": 3404.2357,
+   "vol24hEntrada": 6344.8360384617
+  },
+  {
+   "endereco": "GLY8YAc6sa4c2JJjNKHxivJY1dXALVLuXmeodrpDXZV8",
+   "nome": "TRUMPDOGE / SOL",
+   "criada_em": "2026-09-13T22:55:21Z",
+   "precoEntrada": 2.8254152518119785e-06,
+   "liquidezEntrada": 2272.0157,
+   "vol24hEntrada": 84.88773207
+  },
+  {
+   "endereco": "EvoFtXktg1AJKSz16Qn7DgB45fckgbd5fxLAppo47UD5",
+   "nome": "CHINAPAD / SOL",
+   "criada_em": "2026-09-13T22:55:21Z",
+   "precoEntrada": 4.5822587471355367e-10,
+   "liquidezEntrada": 0.7278,
+   "vol24hEntrada": 32263.9680182966
+  },
+  {
+   "endereco": "2Txe7RSwtVQ2hkVLuZJevK5ZBALGJHyRqSoiDaygN53s",
+   "nome": "FROGE / SOL",
+   "criada_em": "2026-09-13T22:55:14Z",
+   "precoEntrada": 5.371159066001331e-05,
+   "liquidezEntrada": 5.310828693e-07,
+   "vol24hEntrada": 397.3445485883
+  },
+  {
+   "endereco": "2EonaH3LB8sfBKSqzDH5LDPwU75nwa8TR2hp4nS7p1VV",
+   "nome": "bank / SOL",
+   "criada_em": "2026-09-13T22:55:12Z",
+   "precoEntrada": 1.1874340499883604e-05,
+   "liquidezEntrada": 5.762146147e-05,
+   "vol24hEntrada": 80569.5529789953
+  },
+  {
+   "endereco": "3ANdcPsaMNUYLyNaD5LiGN2VEojgnkvNQh1auAzmqD5g",
+   "nome": "HERO / SOL",
+   "criada_em": "2026-09-13T22:55:08Z",
+   "precoEntrada": 8.465089012391895e-08,
+   "liquidezEntrada": 3.2696,
+   "vol24hEntrada": 50.6916673868
+  },
+  {
+   "endereco": "EnkcXPAsThTxVSTpbLTYts3qP9wgn4vgHBXzhgzUKxYZ",
+   "nome": "COPYCAT / SOL",
+   "criada_em": "2026-09-13T22:55:08Z",
+   "precoEntrada": 2.789486866018869e-06,
+   "liquidezEntrada": 2212.2357,
+   "vol24hEntrada": 19120.2832029578
+  },
+  {
+   "endereco": "BKQ18V2oEozzQMwwLrTbNh28GppSZbHPapAbEwu4pqCd",
+   "nome": "TITTIES / SOL",
+   "criada_em": "2026-09-13T22:55:06Z",
+   "precoEntrada": 2.8067348544713033e-06,
+   "liquidezEntrada": 2223.8089,
+   "vol24hEntrada": 12462.0528060685
+  },
+  {
+   "endereco": "EEfM8yBYcQJz9VAK1Hhh93hPNCnTHDkC1XSps2zTRcZ4",
+   "nome": "BoBo / SOL",
+   "criada_em": "2026-09-13T22:55:06Z",
+   "precoEntrada": 2.7974602190172885e-06,
+   "liquidezEntrada": 2218.6516,
+   "vol24hEntrada": 5.7270308648
+  },
+  {
+   "endereco": "FM8Gb1rHJTYwv5MXBn4d6cNvCAopK5TFnfMEMzXui4cm",
+   "nome": "FROGE / SOL",
+   "criada_em": "2026-09-13T22:55:06Z",
+   "precoEntrada": 1.2378618950816868e-06,
+   "liquidezEntrada": 0.309,
+   "vol24hEntrada": 0.6987861236
+  },
+  {
+   "endereco": "cx5rfx9QsQxmtgmH8GfDvfzWrCxFWH9RhAk2UpockR8",
+   "nome": "FROGE / SOL",
+   "criada_em": "2026-09-13T22:55:06Z",
+   "precoEntrada": 4.496811777700625e-11,
+   "liquidezEntrada": 0.0,
+   "vol24hEntrada": 0.008991373589
+  },
+  {
+   "endereco": "5U5xQFFgCCuVggkBAKsyVWGvSmnBFYipFNjFCG1CccWV",
+   "nome": "PEAR / SOL",
+   "criada_em": "2026-09-13T22:55:03Z",
+   "precoEntrada": 1.5972101690591368e-05,
+   "liquidezEntrada": 22735.4993,
+   "vol24hEntrada": 100687.406507768
+  },
+  {
+   "endereco": "enPVz5QtEEZaPWux3GzhetXZUT62RPGxBxTt21c6NLm",
+   "nome": "STUNK / SOL",
+   "criada_em": "2026-09-13T22:54:58Z",
+   "precoEntrada": 2.2212721679444225e-08,
+   "liquidezEntrada": 19.9914396422632,
+   "vol24hEntrada": 0.009965747648
+  },
+  {
+   "endereco": "7wN6oSGCmz8ed5pdoMQNYwR5PjtAAoJVuuJ6d72vvyBQ",
+   "nome": "PURR / USDC",
+   "criada_em": "2026-09-13T22:54:58Z",
+   "precoEntrada": 0.00029960355151938063,
+   "liquidezEntrada": 1048627.5898,
+   "vol24hEntrada": 2100.4867035992
+  },
+  {
+   "endereco": "Ddvb6cmveNnLGBZuEJsbvYuYAENrQVZgYdKrommJmPiv",
+   "nome": "NSTONK / SOL",
+   "criada_em": "2026-09-13T22:54:54Z",
+   "precoEntrada": 2.8158373594651853e-06,
+   "liquidezEntrada": 2222.4838,
+   "vol24hEntrada": 14.5089765028
+  },
+  {
+   "endereco": "6FXFt2wGL6aZjHYb6h29yGDafszmNWqZqKSaMu9MwUyv",
+   "nome": "TESTICLES / SOL",
+   "criada_em": "2026-09-13T22:54:49Z",
+   "precoEntrada": 1.3398743555971864e-05,
+   "liquidezEntrada": 21411.5547,
+   "vol24hEntrada": 34928.0563466218
+  },
+  {
+   "endereco": "5rfqn1WmUvjC5FuUqLLDWUv4usxy3Jo1sZsQ3W3V1j9P",
+   "nome": "BMW / SOL",
+   "criada_em": "2026-09-13T22:54:48Z",
+   "precoEntrada": 1.3950418364488528e-07,
+   "liquidezEntrada": 113.9578,
+   "vol24hEntrada": 251.1933226809
+  },
+  {
+   "endereco": "9Qky52ANXKLRmzfAb3kUmqfAQHwk5V1hyhRgy5BWnxeX",
+   "nome": "vrl / SOL",
+   "criada_em": "2026-09-13T22:54:45Z",
+   "precoEntrada": 8.768529723980048e-07,
+   "liquidezEntrada": 696.8803,
+   "vol24hEntrada": 49.9254683276
+  },
+  {
+   "endereco": "4MVVhLqAZnJcj7u5RP9DK5JXC44cuidfjyvCFt9PY2yP",
+   "nome": "flylaunch / GOOGLx",
+   "criada_em": "2026-09-13T22:54:45Z",
+   "precoEntrada": 2.8951597334967257e-06,
+   "liquidezEntrada": 2893.1336,
+   "vol24hEntrada": 667.6586292924
+  },
+  {
+   "endereco": "7YKmmpDWWpGVAWG5GEhsS5FiWUZdzNCnupbXgR6hJfC",
+   "nome": "$SAME / SOL",
+   "criada_em": "2026-09-13T22:54:44Z",
+   "precoEntrada": 2.7912276738077767e-06,
+   "liquidezEntrada": 2217.1594,
+   "vol24hEntrada": 2186.1976688209
+  },
+  {
+   "endereco": "CkQwHy5uo49ZSSw72vikv8Z1YtkFcGZPBUdHyYdb7QHS",
+   "nome": "PUMP / SOL",
+   "criada_em": "2026-09-13T22:54:42Z",
+   "precoEntrada": 0.0014390493125151808,
+   "liquidezEntrada": 98582.5489,
+   "vol24hEntrada": 40531.2389146779
+  },
+  {
+   "endereco": "EzG4Kp9sgwqbzePsSywbVsoKi19aV7oCHiq4pDbTRu6",
+   "nome": "TESLA AI / SOL",
+   "criada_em": "2026-09-13T22:54:41Z",
+   "precoEntrada": 4.6713197990625e-05,
+   "liquidezEntrada": 0.0,
+   "vol24hEntrada": 10047.5046061512
+  },
+  {
+   "endereco": "G8SCus4jwGgpyswx9t8U79euwidrsPJqwVXtY7DXeTZg",
+   "nome": "DOOYET / SOL",
+   "criada_em": "2026-09-13T22:54:41Z",
+   "precoEntrada": 3.135525417324201e-06,
+   "liquidezEntrada": 2120.2078,
+   "vol24hEntrada": 133.984172957
+  },
+  {
+   "endereco": "33cSBZeT3es7GcxA1oneEU2wUonGdU4j7yeUFpSzai1o",
+   "nome": "fruit / SOL",
+   "criada_em": "2026-09-13T22:54:28Z",
+   "precoEntrada": 0.00010808001149081455,
+   "liquidezEntrada": 27057.3501,
+   "vol24hEntrada": 5855.3750021375
+  },
+  {
+   "endereco": "BduWDAYyVVQMLeeVG3ndUUckkRFe6iocJ7MqTEa4kD6P",
+   "nome": "WOLF / SOL",
+   "criada_em": "2026-09-13T22:54:28Z",
+   "precoEntrada": 2.8697280411147977e-06,
+   "liquidezEntrada": 2276.9845,
+   "vol24hEntrada": 4130.5956335267
+  },
+  {
+   "endereco": "GNvG2modfhXhmkJG53xpbajtKQngnvspxj7XiAMbh9ag",
+   "nome": "SOL / SOL",
+   "criada_em": "2026-09-13T22:54:28Z",
+   "precoEntrada": 4.5810812388464485e-06,
+   "liquidezEntrada": 3199.5608,
+   "vol24hEntrada": 1474.5685398507
+  },
+  {
+   "endereco": "D8nVe2bUq8esSnToicFeLb9rZxNJ47eQjyGpkijDmrEo",
+   "nome": "Ben / SOL",
+   "criada_em": "2026-09-13T22:54:27Z",
+   "precoEntrada": 5.17737134335701e-05,
+   "liquidezEntrada": 33103.933,
+   "vol24hEntrada": 24835.8450266755
+  },
+  {
+   "endereco": "Ai97WnZp632pQcvVc6tk199bwVqAzQ17TVCwmGt6zgTd",
+   "nome": "useless / SOL",
+   "criada_em": "2026-09-13T22:54:26Z",
+   "precoEntrada": 3.479492864397024e-06,
+   "liquidezEntrada": 2714.129,
+   "vol24hEntrada": 505.8011607204
+  },
+  {
+   "endereco": "Avi4ugbP3t7xQgrQJJJZ2VzSaY4xwy4DN8ZxfFYgHht",
+   "nome": "TESLA AI / SOL",
+   "criada_em": "2026-09-13T22:54:23Z",
+   "precoEntrada": 4.1142782791565447e-10,
+   "liquidezEntrada": 1.0584,
+   "vol24hEntrada": 121.2435914704
+  },
+  {
+   "endereco": "769fnR3cM4FZ5fLsK3FiPgfZzXSKKWeX4gDNf5iNRXq4",
+   "nome": "fruit / SOL",
+   "criada_em": "2026-09-13T22:54:20Z",
+   "precoEntrada": 4.499318933050536e-11,
+   "liquidezEntrada": 0.0,
+   "vol24hEntrada": 0.008996386645
+  },
+  {
+   "endereco": "CneENRFutu3q1piAUB1yJ6A9aJhvt9imkZKpwXnXsSyh",
+   "nome": "fruit / SOL",
+   "criada_em": "2026-09-13T22:54:20Z",
+   "precoEntrada": 9.180358663519215e-05,
+   "liquidezEntrada": 0.4189,
+   "vol24hEntrada": 0.5817912348
+  },
+  {
+   "endereco": "HiMZC1vRzZswrdZyVaevrf7dmiw7uCnk5mdAUo18eCfN",
+   "nome": "BROKE / SOL",
+   "criada_em": "2026-09-13T22:54:20Z",
+   "precoEntrada": 3.0599169759036774e-06,
+   "liquidezEntrada": 2419.7944,
+   "vol24hEntrada": 147.7445176228
+  },
+  {
+   "endereco": "149P9Sn4he4WSNcoRDgkTwExmUV68CLeVgXXZWeUY91t",
+   "nome": "STINK / METAx",
+   "criada_em": "2026-09-13T22:54:16Z",
+   "precoEntrada": 4.24117107219951e-06,
+   "liquidezEntrada": 3356.324,
+   "vol24hEntrada": 48.4278055567
+  },
+  {
+   "endereco": "Bm1DGWbDvMFRrtU8uRJUifje8QnHzKjWG36RRpL2Ac3z",
+   "nome": "RobinhoodCoin / SOL",
+   "criada_em": "2026-09-13T22:54:15Z",
+   "precoEntrada": 2.7991098386237186e-06,
+   "liquidezEntrada": 2252.7087,
+   "vol24hEntrada": 104.602144178
+  },
+  {
+   "endereco": "7b2wqHsDuuZ5kCoCkHTzkHUC9vcZK1tE4AQcnEsHuebh",
+   "nome": "Ben / SOL",
+   "criada_em": "2026-09-13T22:54:12Z",
+   "precoEntrada": 1.969580894786998e-06,
+   "liquidezEntrada": 0.5985,
+   "vol24hEntrada": 2.0613718508
+  },
+  {
+   "endereco": "Hxo9UD5WHSGfaiSTSSpq73yqravUMft4B9mY9tX1fHNk",
+   "nome": "CHINAPAD / SOL",
+   "criada_em": "2026-09-13T22:54:12Z",
+   "precoEntrada": 4.915941154034803e-05,
+   "liquidezEntrada": 0.0,
+   "vol24hEntrada": 3385.0104638734
+  },
+  {
+   "endereco": "BhSDLFcom15EhJ7w5Tax1YpnBWaCGh52WXzY8zg3QpAA",
+   "nome": "Ben / SOL",
+   "criada_em": "2026-09-13T22:54:12Z",
+   "precoEntrada": 9.956085349136826e-08,
+   "liquidezEntrada": 0.0,
+   "vol24hEntrada": 0.04975526451
+  },
+  {
+   "endereco": "5aD78m1WQ7rMT7XeG7wwzyJZhHRx4smKMdYSAYH7phZp",
+   "nome": "TESTICLES / SOL",
+   "criada_em": "2026-09-13T22:54:07Z",
+   "precoEntrada": 5.017807339319527e-10,
+   "liquidezEntrada": 39184.8641,
+   "vol24hEntrada": 24836.345187641
+  },
+  {
+   "endereco": "5GWQdhh865thCRtek66oPXmbUP1pdua2Exa2VfJsC8M1",
+   "nome": "$UNSUP / SOL",
+   "criada_em": "2026-09-13T22:54:07Z",
+   "precoEntrada": 2.2032842338659865e-09,
+   "liquidezEntrada": 5.4262,
+   "vol24hEntrada": 222.3010764894
+  },
+  {
+   "endereco": "FQX93tXRGrE292bn2neMXNmwinqmLdX34RgqpZVEvCw4",
+   "nome": "DIESEL / SOL",
+   "criada_em": "2026-09-13T22:54:05Z",
+   "precoEntrada": 2.067813202333832e-07,
+   "liquidezEntrada": 595.818,
+   "vol24hEntrada": 25.9347423368
+  },
+  {
+   "endereco": "pEdmKmTa4MYrv9apc553JPKCfkCNYVptKopsEHeweHu",
+   "nome": "LLM / SOL",
+   "criada_em": "2026-09-13T22:53:59Z",
+   "precoEntrada": 2.7868965798692302e-06,
+   "liquidezEntrada": 2211.7284,
+   "vol24hEntrada": 2078.5752863877
+  },
+  {
+   "endereco": "8GFRnicwpnCjrsdTFXzgyFKfLxycNF13PSvMAdLYQGYt",
+   "nome": "TITTIES / SOL",
+   "criada_em": "2026-09-13T22:53:52Z",
+   "precoEntrada": 3.692044633583803e-06,
+   "liquidezEntrada": 2859.9767,
+   "vol24hEntrada": 25894.207726667
+  },
+  {
+   "endereco": "4YqksQ8rqRrnyumsjZbTXQD286FNf9nmgbbidhQwTY9G",
+   "nome": "SPEED / SOL",
+   "criada_em": "2026-09-13T22:53:51Z",
+   "precoEntrada": 2.793782635436591e-06,
+   "liquidezEntrada": 2220.7771,
+   "vol24hEntrada": 106.1006854664
+  },
+  {
+   "endereco": "7ERHE7MZ4S6npAQpd1iuheTpReL2otJhMz7VHgrVGXM9",
+   "nome": "EMBER / SOL",
+   "criada_em": "2026-09-13T22:53:49Z",
+   "precoEntrada": 1.1110001751551807e-05,
+   "liquidezEntrada": 3.089681688e-07,
+   "vol24hEntrada": 114582.497364417
+  },
+  {
+   "endereco": "5iBDTmmZwuEdLtZ8rittcRiPR1AphHWvjSmiUtf9fXMB",
+   "nome": "SCRVAN / SOL",
+   "criada_em": "2026-09-13T22:53:48Z",
+   "precoEntrada": 9.038722274190156e-07,
+   "liquidezEntrada": 1632.6,
+   "vol24hEntrada": 179.2803329463
+  },
+  {
+   "endereco": "9C1dBHhb5q1tjBSZEuUN4Uk2URuTMZQn2hmuNwaR8BLk",
+   "nome": "TESLA AI / SOL",
+   "criada_em": "2026-09-13T22:53:42Z",
+   "precoEntrada": 4.70302620606365e-05,
+   "liquidezEntrada": 0.0,
+   "vol24hEntrada": 3386.8979349928
+  },
+  {
+   "endereco": "8rNhvY3N4zhfT1U7HXwnp5LEzUESsrjpuVHDNt3iG2Ru",
+   "nome": "READ / SOL",
+   "criada_em": "2026-09-13T22:53:39Z",
+   "precoEntrada": 2.7966134005666264e-06,
+   "liquidezEntrada": 2211.7694,
+   "vol24hEntrada": 0.09878727171
+  },
+  {
+   "endereco": "GVStu5WtithF3QF93UH8HZcNTbWwEijMmpXkkivvzbWH",
+   "nome": "InuChain / SOL",
+   "criada_em": "2026-09-13T22:53:38Z",
+   "precoEntrada": 2.7961675670299072e-06,
+   "liquidezEntrada": 2219.1286,
+   "vol24hEntrada": 10.010224946
+  },
+  {
+   "endereco": "HdAGxPkxsSUe6XLHjgQCNEuwscuVMXwiQzTua4zngm2c",
+   "nome": "melons / SOL",
+   "criada_em": "2026-09-13T22:53:36Z",
+   "precoEntrada": 2.79909053363044e-06,
+   "liquidezEntrada": 2215.3103,
+   "vol24hEntrada": 184.6813712817
+  },
+  {
+   "endereco": "Ehb12PLZiTnWRC6Yw5KxsRyXx2GtD3KW1uqXS5sVejgh",
+   "nome": "READ / SOL",
+   "criada_em": "2026-09-13T22:53:36Z",
+   "precoEntrada": 2.7977919546862995e-06,
+   "liquidezEntrada": 2214.0535,
+   "vol24hEntrada": 6.098289039
+  },
+  {
+   "endereco": "6kCr31Q4yo5nGae25iaJTDxLjim2QxUzHj5zX9vVdQFJ",
+   "nome": "C.R.E.A.M. / SOL",
+   "criada_em": "2026-09-13T22:53:29Z",
+   "precoEntrada": 199355.29151752437,
+   "liquidezEntrada": 42.8268,
+   "vol24hEntrada": 37.6521123733
+  },
+  {
+   "endereco": "7aDGu6u5Su3ctBM1YgZcpjfEB5rvrtMFwxLHFxtC5Rm3",
+   "nome": "TESTICLES / SOL",
+   "criada_em": "2026-09-13T22:53:26Z",
+   "precoEntrada": 0.00014717559030630583,
+   "liquidezEntrada": 0.2195,
+   "vol24hEntrada": 487.0096949046
+  },
+  {
+   "endereco": "3VQWojTziku5Hkv62KVJuwndUWtFcnDUmhcao1RqYYjr",
+   "nome": "OpenAI / USDC",
+   "criada_em": "2026-09-13T22:53:21Z",
+   "precoEntrada": 0.0016394361124681494,
+   "liquidezEntrada": 125433.0693,
+   "vol24hEntrada": 1078.3720226405
+  },
+  {
+   "endereco": "96vosF1LFTcAU8Ej2bJZDVZ76B1BH9h8J8sevRYQZMkv",
+   "nome": "FERSPE / SOL",
+   "criada_em": "2026-09-13T22:53:20Z",
+   "precoEntrada": 7.397915761316561e-07,
+   "liquidezEntrada": 454.5852,
+   "vol24hEntrada": 1614.9318158174
+  },
+  {
+   "endereco": "vBZ6VEKHi4rCj2wTVuQQ6tJ1REz4Dc8Hi62SwAcUkoJ",
+   "nome": "iFOLD / SOL",
+   "criada_em": "2026-09-13T22:53:13Z",
+   "precoEntrada": 4.8638811859972025e-06,
+   "liquidezEntrada": 3522.6578,
+   "vol24hEntrada": 19260.1753337976
+  },
+  {
+   "endereco": "AKyB7iFhS9Ev7YwX2EZPwrBUgB6hR1v1mrGaSBvbof3N",
+   "nome": "LMEOW / SOL",
+   "criada_em": "2026-09-13T22:53:07Z",
+   "precoEntrada": 2.8039873260294307e-06,
+   "liquidezEntrada": 2219.1802,
+   "vol24hEntrada": 12.583858067
+  },
+  {
+   "endereco": "B7mSRLusYK12AexvKjPL93ffobnaL9gGTF2rHi4Gtx77",
+   "nome": "SAVPIR / SOL",
+   "criada_em": "2026-09-13T22:53:07Z",
+   "precoEntrada": 7.133398982198534e-08,
+   "liquidezEntrada": 57.3194,
+   "vol24hEntrada": 226.5963246958
+  },
+  {
+   "endereco": "DnbxT5zndaM9W9FJDWHT7B6y8Ytnn7eVuDhwzZgNvJqP",
+   "nome": "TESTICLES / SOL",
+   "criada_em": "2026-09-13T22:53:06Z",
+   "precoEntrada": 9.507256455179714e-05,
+   "liquidezEntrada": 35682.5474,
+   "vol24hEntrada": 1081.1502399882
+  },
+  {
+   "endereco": "ESKXPTt1K8EwdGRTj4gzEbBibFpF69tipNHevdj6zu9M",
+   "nome": "USMS / SOL",
+   "criada_em": "2026-09-13T22:53:06Z",
+   "precoEntrada": 3.322920225430308e-07,
+   "liquidezEntrada": 264.2862,
+   "vol24hEntrada": 137.8263291899
+  },
+  {
+   "endereco": "7CmRHykz4maHQKZHG7mhZocBgzUGbNYHKxYjqDKiBXhF",
+   "nome": "TESTICLES / SOL",
+   "criada_em": "2026-09-13T22:53:03Z",
+   "precoEntrada": 9.370811886240538e-05,
+   "liquidezEntrada": 0.4488,
+   "vol24hEntrada": 0.3111285974
+  },
+  {
+   "endereco": "A7k6sPUWVYz2umkktvbAXE7yfquFK1N4fuMbUgsQYUSi",
+   "nome": "TESTICLES / SOL",
+   "criada_em": "2026-09-13T22:53:03Z",
+   "precoEntrada": 4.5029261711744765e-11,
+   "liquidezEntrada": 0.0,
+   "vol24hEntrada": 0.009003599316
+  },
+  {
+   "endereco": "6vuN8DYrVWVPuNgXxyJFnddjMYr8TnoMZxgrKfwvg4SD",
+   "nome": "BMW / SOL",
+   "criada_em": "2026-09-13T22:53:00Z",
+   "precoEntrada": 1.6871516080375387e-06,
+   "liquidezEntrada": 3152.3612,
+   "vol24hEntrada": 210.527426878
+  },
+  {
+   "endereco": "MUy5xsdBcPsL2PbtJ6kwXUkTrdYQXemnca8RKTcPMss",
+   "nome": "APEDIF / SOL",
+   "criada_em": "2026-09-13T22:52:59Z",
+   "precoEntrada": 3.8131075257238587e-06,
+   "liquidezEntrada": 3012.8339,
+   "vol24hEntrada": 19.3459736458
+  },
+  {
+   "endereco": "GQGAAVLEdMMEYx9pvztHLqEvEGQehwzo4vPS9RTUnrBk",
+   "nome": "TITTIES / SOL",
+   "criada_em": "2026-09-13T22:52:58Z",
+   "precoEntrada": 2.7898924849173685e-06,
+   "liquidezEntrada": 2224.4668,
+   "vol24hEntrada": 3910.6437866961
+  },
+  {
+   "endereco": "6aoF5fKW7LVhCSNC2MMjvdPgc7z23EiZhkDvMFBU7QLr",
+   "nome": "ch / SOL",
+   "criada_em": "2026-09-13T22:52:58Z",
+   "precoEntrada": 3.2514706882221687e-07,
+   "liquidezEntrada": 259.5575,
+   "vol24hEntrada": 146.7430413804
+  },
+  {
+   "endereco": "6iLoWCsaG2ke8iZyehu8sndRyqiwuZqSrdP771sJ4Yzx",
+   "nome": "SOL / SOL",
+   "criada_em": "2026-09-13T22:52:55Z",
+   "precoEntrada": 2.803661379564775e-06,
+   "liquidezEntrada": 2216.9959,
+   "vol24hEntrada": 1333.8277385054
+  },
+  {
+   "endereco": "8DV8nQ4DmsqxWSHxYYAebLQk5MgqXuWvfYmGQEHhbSV2",
+   "nome": "\u202eREBME / USDC",
+   "criada_em": "2026-09-13T22:52:55Z",
+   "precoEntrada": 0.00030022037274627923,
+   "liquidezEntrada": 1043451.3926,
+   "vol24hEntrada": 1007.4883827506
+  },
+  {
+   "endereco": "5RbsHKhu9ZkSKEaAD4HwAwVWkdUZBp3CbpoTFRak2dRB",
+   "nome": "SM / SOL",
+   "criada_em": "2026-09-13T22:52:54Z",
+   "precoEntrada": 1.052370158568534e-05,
+   "liquidezEntrada": 252702.0411,
+   "vol24hEntrada": 750724.20966305
+  },
+  {
+   "endereco": "GJTViZWiUEwSR5Nkue5v16uM6FaMy4T4biktXcYyd9fW",
+   "nome": "OnlyFans / SOL",
+   "criada_em": "2026-09-13T22:52:49Z",
+   "precoEntrada": 2.7925947061614904e-06,
+   "liquidezEntrada": 2214.2407,
+   "vol24hEntrada": 3.9539819911
+  },
+  {
+   "endereco": "7iYmHFRPMjZX1NmThDez12favV1h5XizQUNktRXXB5Xz",
+   "nome": "MONEY / SOL",
+   "criada_em": "2026-09-13T22:52:49Z",
+   "precoEntrada": 2.810224623244291e-06,
+   "liquidezEntrada": 2224.9652,
+   "vol24hEntrada": 10.4824901764
+  },
+  {
+   "endereco": "8b4gb2Dzkmk95XbTCCNS4L23ukSd6qCuQoKobwb1dvnc",
+   "nome": "$CAT / SOL",
+   "criada_em": "2026-09-13T22:52:44Z",
+   "precoEntrada": 4.525188549955554e-06,
+   "liquidezEntrada": 3565.4987,
+   "vol24hEntrada": 188.3465769417
+  },
+  {
+   "endereco": "5dQEG1BXHgWXDPmdXdhSajJkbv6mXdAJr7pLvK1covhD",
+   "nome": "TWINE / SOL",
+   "criada_em": "2026-09-13T22:52:39Z",
+   "precoEntrada": 1.4646003125866479e-05,
+   "liquidezEntrada": 21743.5413,
+   "vol24hEntrada": 90082.1493660359
+  },
+  {
+   "endereco": "FKdhspys4YHJfRuHiiG5NNbn4WNd8XaXpc5ZAKhdYdpP",
+   "nome": "Veggie / SOL",
+   "criada_em": "2026-09-13T22:53:26Z",
+   "precoEntrada": 2.790090804953486e-06,
+   "liquidezEntrada": 2284.3446,
+   "vol24hEntrada": 198.980045875
+  },
+  {
+   "endereco": "62ikWuheu4dhnLpi34RxMRJXhFq8WySkwPgE9XhFUhpQ",
+   "nome": "AUDIX / SOL",
+   "criada_em": "2026-09-13T22:53:25Z",
+   "precoEntrada": 5.5777003620126055e-09,
+   "liquidezEntrada": 3.9202,
+   "vol24hEntrada": 1104.1546890697
+  },
+  {
+   "endereco": "13DcDvxGpuPeFgGDN2PyqGuT1SUSY9SE3mAxNAUQKe5K",
+   "nome": "DICKOWEEN / SOL",
+   "criada_em": "2026-09-13T22:53:23Z",
+   "precoEntrada": 6.8926554977675735e-06,
+   "liquidezEntrada": 4920.6733,
+   "vol24hEntrada": 59.8505492586
+  },
+  {
+   "endereco": "2SEjrf7CJooDELmAUfi5f6P5P6JgjURysVp1QG7Y7PX9",
+   "nome": "TESTICLES / SOL",
+   "criada_em": "2026-09-13T22:53:23Z",
+   "precoEntrada": 4.8705536082576674e-05,
+   "liquidezEntrada": 0.0,
+   "vol24hEntrada": 1284.762869956
+  },
+  {
+   "endereco": "AZvVgsuF4dPGwsqHKhMFgTmFGMZ4ap6uRa4Cj4Wvbqu6",
+   "nome": "OpenAI / USDC",
+   "criada_em": "2026-09-13T22:53:21Z",
+   "precoEntrada": 1.5350843606339126e-05,
+   "liquidezEntrada": 0.0,
+   "vol24hEntrada": 12174.7540641876
+  }
+ ]
+}

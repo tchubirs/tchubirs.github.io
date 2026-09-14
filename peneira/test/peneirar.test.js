@@ -129,3 +129,68 @@ test('os numeros sao legiveis, e o que falta aparece como travessao', () => {
   assert.equal(dinheiro(0), '$0.00');
   assert.equal(dinheiro(null), '—');
 });
+
+// ── A base do mercado ──
+
+// Sem esta linha, um `PASSA` lê-se como "então compra". O estudo é o contexto
+// que diz o que acontece ao token típico, e é isso que impede a peneira de
+// mentir por omissão do outro lado.
+test('a base do mercado sai no rodape quando ha estudo', () => {
+  const { baseDoMercado } = require('../src/pagina.js');
+  // Os números são escolhidos para NÃO colidirem entre si: 112/140 = 80% e
+  // 70/140 = 50%. Com 126/140 a fracção dava 90% e a expressão `/90%/` casava
+  // com a frase errada — o teste passava com a linha dos 90% apagada. Foi o
+  // que a mutação apanhou.
+  const frase = baseDoMercado({
+    medidos: 140, abaixoDaEntrada: 112, perdeu90ouMais: 70, dobrou: 7,
+    retornoMedio: 0.62,
+  });
+  assert.match(frase, /140 tokens/);
+  assert.match(frase, /80% ficaram abaixo/);
+  assert.match(frase, /50% perderam 90% ou mais/);
+  assert.match(frase, /0\.62x/);
+  assert.match(frase, /-38%/, 'uma média abaixo de 1 tem de aparecer como perda');
+  assert.match(pagina([], { base: frase }), /base do mercado/);
+});
+
+test('media acima de 1 aparece como ganho, com sinal', () => {
+  const { baseDoMercado } = require('../src/pagina.js');
+  assert.match(baseDoMercado({ medidos: 10, abaixoDaEntrada: 2, perdeu90ouMais: 1,
+    dobrou: 4, retornoMedio: 1.5 }), /\+50%/);
+});
+
+test('sem estudo a pagina sai na mesma, so sem a linha', () => {
+  const { baseDoMercado } = require('../src/pagina.js');
+  assert.equal(baseDoMercado(null), null);
+  assert.equal(baseDoMercado({ medidos: 0 }), null);
+  assert.equal(baseDoMercado({}), null);
+  const h = pagina([], { base: null });
+  assert.ok(!h.includes('base do mercado'));
+  assert.ok(h.includes('Peneira'), 'a página tem de sair à mesma');
+});
+
+// O defeito que quase foi publicado: a média no papel do grupo de 13/09 deu
+// 2,31x, e quatro dos cinco maiores ganhos (77x, 40x, 20x, 19x) estavam em
+// piscinas com $0 de liquidez. Publicar os 2,31x era repetir exactamente a
+// mentira que este estudo existe para desmontar.
+test('a base usa a media REALIZAVEL, nunca a do papel', () => {
+  const { baseDoMercado } = require('../src/pagina.js');
+  const frase = baseDoMercado({
+    medidos: 138, abaixoDaEntrada: 45, perdeu90ouMais: 4, dobrou: 8,
+    retornoMedio: 2.3105,        // o papel
+    mediaRealizavel: 0.7084,     // o que se consegue vender
+  });
+  assert.match(frase, /0\.71x/, `usou o numero errado: ${frase}`);
+  assert.ok(!frase.includes('2.31x'), 'o numero do papel nao pode sair na pagina');
+  assert.match(frase, /-29%/);
+  assert.match(frase, /liquidez/, 'tem de dizer porque e que o numero e mais baixo');
+});
+
+test('sem media realizavel medida, usa a que ha e nao inventa a explicacao', () => {
+  const { baseDoMercado } = require('../src/pagina.js');
+  const frase = baseDoMercado({ medidos: 10, abaixoDaEntrada: 5, perdeu90ouMais: 2,
+    dobrou: 1, retornoMedio: 1.2 });
+  assert.match(frase, /1\.20x/);
+  assert.ok(!frase.includes('já não têm liquidez'),
+    'nao pode prometer um ajuste que nao foi feito');
+});
