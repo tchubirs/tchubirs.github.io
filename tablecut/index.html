@@ -50,7 +50,7 @@ button,input,select{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 
-.wrap{max-width:1220px;margin:0 auto;padding-inline:20px;padding-block:22px 60px}
+.wrap{max-width:min(1600px, 96vw);margin:0 auto;padding-inline:20px;padding-block:22px 60px}
 header.top{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;justify-content:space-between;margin-bottom:8px}
 h1{font-family:var(--serif);font-size:27px;font-weight:600;margin:0;letter-spacing:-.01em}
 h1 span{color:var(--ink)}
@@ -111,8 +111,14 @@ input[type=range]{width:100%;margin:6px 0 0;accent-color:var(--ink)}
 table{border-collapse:collapse;width:100%}
 th,td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);
   padding:7px 11px;text-align:left;font-family:var(--mono);font-size:13px;
-  font-variant-numeric:tabular-nums;white-space:pre-wrap;overflow-wrap:anywhere;
-  vertical-align:top;max-width:360px}
+  font-variant-numeric:tabular-nums;vertical-align:top;
+  /* Partir palavras a meio tornava a tabela ilegivel num extracto real:
+     "CHEQUES" virava "CHEQ/UES" e "24.03" virava "24.0/3". As celulas
+     passam a ter largura minima e a so partir onde ha espaco; se a tabela
+     ficar mais larga que o ecra, rola para o lado, que e o mal menor. */
+  white-space:pre-wrap;overflow-wrap:break-word;word-break:normal;
+  min-width:96px;max-width:420px}
+td.num{white-space:nowrap}
 th{background:var(--sunk);position:sticky;top:0;font-weight:500;color:var(--muted);
   font-size:11px;letter-spacing:.08em;text-transform:uppercase;z-index:1}
 td.num{text-align:right}
