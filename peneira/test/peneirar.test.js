@@ -114,6 +114,22 @@ test('o nome do token nao pode injectar HTML na pagina', () => {
   assert.ok(h.includes('&lt;img'), 'devia estar escapado');
 });
 
+// O mesmo nome vai agora TAMBÉM para dentro de um <script>, nos factos
+// cozidos. `JSON.stringify` escapa aspas mas não escapa `<` — e um token
+// chamado `</script>…` fugia da etiqueta e corria o que quisesse no telemóvel
+// de quem abrisse a página.
+test('o nome do token nao pode fugir do bloco de script', () => {
+  const mau = '</script><img src=x onerror=alert(1)><script>';
+  const h = pagina([{ f: { ...bom, nome: mau, simbolo: 'X' }, j: peneirar(bom) }]);
+  assert.ok(!h.includes('</script><img'), 'o nome fechou a etiqueta e escapou');
+  assert.ok(h.includes('\\u003c/script'), 'o `<` tinha de sair escapado em \\u003c');
+  // e o JSON continua a ser JSON legível pelo browser
+  const m = h.match(/var COZIDOS = (\{.*?\});/s);
+  assert.ok(m, 'os factos cozidos desapareceram');
+  assert.doesNotThrow(() => JSON.parse(m[1].replace(/\\u003c/g, '<')
+    .replace(/\\u003e/g, '>').replace(/\\u0026/g, '&')));
+});
+
 test('a pagina diz sempre o que mede e o que nao mede', () => {
   const h = pagina([]);
   assert.match(h, /getTokenLargestAccounts/, 'tem de dizer o que NAO mede');

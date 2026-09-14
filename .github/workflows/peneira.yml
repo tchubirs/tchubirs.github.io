@@ -34,6 +34,15 @@ jobs:
           node-version: '22'
       - run: npm test
 
+      # Os testes de unidade provam que a página CONTÉM o guião. Só um browser
+      # a sério prova que ele CORRE — e já se partiu uma vez por um backtick
+      # num comentário, coisa que nenhum teste de texto apanhava.
+      - name: Correr o guião num Chromium a sério
+        run: |
+          npm install --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+          npm run browser
+
   publicar:
     needs: testes
     if: github.event_name != 'push'

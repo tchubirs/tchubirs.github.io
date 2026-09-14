@@ -9,7 +9,8 @@ e diz `FOGE`, `CUIDADO` ou `PASSA` — sempre com o motivo escrito.
 node bin/peneira.js <endereço-do-token>
 node bin/peneira.js --novos 24
 node bin/peneira.js --novos 24 --html site/index.html
-npm test                              # 28 testes, zero dependências
+npm test                              # 31 testes, zero dependências
+npm run browser                       # o guião embutido, num Chromium a sério
 ```
 
 ## O que mede, e de onde vem
@@ -64,13 +65,33 @@ veredicto diz isso, e o rodapé da página traz a base do mercado medida em
 em partes iguais dá 0,71x** depois de contar como perda os que já não têm
 liquidez para se venderem.
 
-## Porque é uma página gerada e não uma que consulta sozinha
+## Gerada E viva — e porquê as duas
 
-Um site no GitHub Pages a chamar o DexScreener a partir do browser bate em CORS
-e em limites por visitante. Gerar de fora e servir o resultado é mais rápido
-para quem abre e não parte quando duas pessoas abrem ao mesmo tempo.
+Escrevi aqui, antes, que uma página no GitHub Pages a chamar o DexScreener do
+browser "bate em CORS". **Estava errado, e nunca o tinha medido.** O DexScreener
+responde `access-control-allow-origin: *`, e 12 tokens numa chamada voltam em
+**122 ms**.
 
-O horário do GitHub é "melhor esforço": medido, com `*/30` disparou **uma vez em
-quatro** — 90 minutos sem correr. Está agora aos 7 e aos 37, longe dos minutos
-redondos que toda a gente usa. E como o atraso vai acontecer na mesma, a página
-diz a idade dela e avisa acima de uma hora.
+Por isso a página faz as duas coisas:
+
+| | |
+|---|---|
+| **Gerada** pelo Actions | serve de base, e traz o que só a blockchain dá: mint e freeze authority |
+| **Viva** no browser | ao abrir, vai buscar liquidez, volume, idade e a fracção na piscina, e **recalcula o veredicto no teu telemóvel** |
+
+O que o browser não refaz são as autoridades — e não precisa: uma autoridade
+queimada não volta a acender.
+
+**O guião corre os MESMOS ficheiros que a linha de comandos.** `peneirar.js` e
+`cartao.js` são embutidos na página tal como estão. Uma segunda cópia das regras
+dentro do `<script>` era a maneira mais rápida de a página e o terminal
+passarem a discordar sem ninguém dar por isso.
+
+### Porque isto era preciso
+
+O horário do GitHub é "melhor esforço", e falhou duas vezes medidas: **90
+minutos** à primeira, **245** à segunda. Não vale a pena continuar a afinar o
+cron — está aos 7 e aos 37 (longe dos minutos redondos que toda a gente usa) e
+passa a ser só a rede de segurança para quem nunca abre a página.
+
+A página diz na mesma a idade dela, e avisa acima de uma hora.
