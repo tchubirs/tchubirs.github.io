@@ -194,3 +194,15 @@ test('sem media realizavel medida, usa a que ha e nao inventa a explicacao', () 
   assert.ok(!frase.includes('já não têm liquidez'),
     'nao pode prometer um ajuste que nao foi feito');
 });
+
+// Uma peneira velha é pior que nenhuma: um token pode ter perdido a liquidez
+// toda entretanto. O horário do GitHub falhou 90 minutos numa medição real, por
+// isso a página tem de dizer a idade dela, não só a hora em UTC.
+test('a pagina traz consigo a hora exacta, para poder dizer que idade tem', () => {
+  const q = new Date('2026-09-14T02:18:00Z');
+  const h = pagina([], { quando: q });
+  assert.ok(h.includes('datetime="2026-09-14T02:18:00.000Z"'), 'falta a hora legivel por maquina');
+  assert.ok(h.includes('id="quando"'), 'o guiao precisa de encontrar a hora');
+  assert.ok(h.includes('id="idade"'), 'falta o sitio onde a idade aparece');
+  assert.ok(/perdido a liquidez toda/.test(h), 'falta o aviso de leitura velha');
+});

@@ -7,7 +7,13 @@ name: peneira
 
 on:
   schedule:
-    - cron: "*/30 * * * *"     # de meia em meia hora
+    # Aos 7 e aos 37, não aos 0 e aos 30.
+    #
+    # Medido: com `*/30` disparou UMA vez em quatro (02:18, e depois nada
+    # durante 90 minutos). Os horários do GitHub são "melhor esforço" e os
+    # minutos redondos são os mais disputados do mundo inteiro — toda a gente
+    # escreve `0 * * * *`. Fugir do minuto cheio é de graça.
+    - cron: "7,37 * * * *"
   workflow_dispatch:
   push:
     paths: ['peneira/**', '.github/workflows/peneira.yml']
