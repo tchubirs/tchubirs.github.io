@@ -36,10 +36,21 @@ function baseDoMercado(r) {
     `${pct(r.perdeu90ouMais)} perderam 90% ou mais`,
   ];
   if (Number.isFinite(r.dobrou)) partes.push(`${pct(r.dobrou)} dobraram`);
-  if (Number.isFinite(r.retornoMedio)) {
-    const m = r.retornoMedio;
+
+  // Escolhe-se a média REALIZÁVEL quando existe, nunca a do papel.
+  //
+  // No grupo de 13/09 a média no papel deu 2,31x — e quatro dos cinco maiores
+  // ganhos (77x, 40x, 20x, 19x) estavam em piscinas com $0 de liquidez. Esse
+  // preço é o da última troca antes de a liquidez ser retirada; não se vende
+  // ali. Exigir $500 no fundo para poder sair leva a média a 0,71x. Publicar
+  // os 2,31x seria repetir a mentira que este estudo existe para desmontar.
+  const m = Number.isFinite(r.mediaRealizavel) ? r.mediaRealizavel : r.retornoMedio;
+  if (Number.isFinite(m)) {
+    const sufixo = Number.isFinite(r.mediaRealizavel)
+      ? `, contando como perda os que já não têm liquidez para se venderem`
+      : '';
     partes.push(`quem comprasse todos em partes iguais ficaria com ${m.toFixed(2)}x `
-      + `(${m >= 1 ? '+' : ''}${((m - 1) * 100).toFixed(0)}%)`);
+      + `(${m >= 1 ? '+' : ''}${((m - 1) * 100).toFixed(0)}%)${sufixo}`);
   }
   return partes.join(', ') + '.';
 }

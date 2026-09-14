@@ -59,6 +59,25 @@ def main():
         if (i + 1) % 20 == 0:
             print(f"  … {i+1}/{len(c['tokens'])}", file=sys.stderr)
 
+    # ── O número que interessa não é o do papel ──
+    #
+    # 63 dos 138 tokens deste grupo tinham o preço de agora EXACTAMENTE igual
+    # ao da entrada: nunca mais foram negociados, e a API repete o último
+    # preço. Pior: quatro dos cinco maiores ganhos — 77x, 40x, 20x, 19x —
+    # estavam em piscinas com $0 de liquidez. Esse preço é o da última troca
+    # antes de a liquidez ser retirada. Não se vende ali.
+    #
+    # Um ganho que não se consegue realizar não é um ganho. Por isso o resumo
+    # traz as duas contas, e o limite fica à vista para se poder discordar.
+    def realizavel(t, minimo):
+        return 0.0 if (t.get("liquidezAgora") or 0) < minimo else (t.get("retorno") or 0.0)
+
+    LIMITE = 500
+    reais = sorted(realizavel(x, LIMITE) for x in linhas)
+    iliquidos = sum(1 for x in linhas if (x.get("liquidezAgora") or 0) < LIMITE)
+    escada = {f"${lim}": round(st.fmean([realizavel(x, lim) for x in linhas]), 4)
+              for lim in (0, 100, 250, 500, 1000, 2500)}
+
     rets = sorted(x["retorno"] for x in linhas)
     n = len(rets)
     if not n:
@@ -82,6 +101,15 @@ def main():
         "fez10x": sum(1 for r in rets if r >= 10),
         # Comprar todos em partes iguais: é a média, não a mediana.
         "carteiraIgualitaria": round(st.fmean(rets), 4),
+
+        # O mesmo, mas só contando o que se consegue mesmo vender.
+        "limiteLiquidez": LIMITE,
+        "iliquidos": iliquidos,
+        "mediaRealizavel": round(st.fmean(reais), 4),
+        "medianaRealizavel": round(st.median(reais), 4),
+        "escadaDeLiquidez": escada,
+        "fraccaoQueEraPapel": round(1 - st.fmean(reais) / st.fmean(rets), 4)
+                              if st.fmean(rets) else None,
     }
     json.dump({"resumo": resumo, "tokens": linhas},
               open(AQUI / "dados" / "resultado.json", "w"), indent=1)

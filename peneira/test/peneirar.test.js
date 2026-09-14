@@ -168,3 +168,29 @@ test('sem estudo a pagina sai na mesma, so sem a linha', () => {
   assert.ok(!h.includes('base do mercado'));
   assert.ok(h.includes('Peneira'), 'a página tem de sair à mesma');
 });
+
+// O defeito que quase foi publicado: a média no papel do grupo de 13/09 deu
+// 2,31x, e quatro dos cinco maiores ganhos (77x, 40x, 20x, 19x) estavam em
+// piscinas com $0 de liquidez. Publicar os 2,31x era repetir exactamente a
+// mentira que este estudo existe para desmontar.
+test('a base usa a media REALIZAVEL, nunca a do papel', () => {
+  const { baseDoMercado } = require('../src/pagina.js');
+  const frase = baseDoMercado({
+    medidos: 138, abaixoDaEntrada: 45, perdeu90ouMais: 4, dobrou: 8,
+    retornoMedio: 2.3105,        // o papel
+    mediaRealizavel: 0.7084,     // o que se consegue vender
+  });
+  assert.match(frase, /0\.71x/, `usou o numero errado: ${frase}`);
+  assert.ok(!frase.includes('2.31x'), 'o numero do papel nao pode sair na pagina');
+  assert.match(frase, /-29%/);
+  assert.match(frase, /liquidez/, 'tem de dizer porque e que o numero e mais baixo');
+});
+
+test('sem media realizavel medida, usa a que ha e nao inventa a explicacao', () => {
+  const { baseDoMercado } = require('../src/pagina.js');
+  const frase = baseDoMercado({ medidos: 10, abaixoDaEntrada: 5, perdeu90ouMais: 2,
+    dobrou: 1, retornoMedio: 1.2 });
+  assert.match(frase, /1\.20x/);
+  assert.ok(!frase.includes('já não têm liquidez'),
+    'nao pode prometer um ajuste que nao foi feito');
+});
