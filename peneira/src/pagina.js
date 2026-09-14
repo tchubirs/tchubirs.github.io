@@ -9,13 +9,22 @@
 // não parte quando duas pessoas abrem ao mesmo tempo.
 //
 
-const esc = (s) => String(s ?? '').replace(/[&<>"']/g,
-  (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fs = require('node:fs');
+const path = require('node:path');
+const { esc, dinheiro, cartao, ordenar, jsonSeguro } = require('./cartao.js');
 
-const dinheiro = (n) => (n == null ? '—'
-  : n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M`
-  : n >= 1e3 ? `$${(n / 1e3).toFixed(1)}K`
-  : `$${n.toFixed(n < 10 ? 2 : 0)}`);
+/**
+ * O código de um módulo nosso, pronto a embutir na página.
+ *
+ * A página corre o MESMO ficheiro que a linha de comandos. Escrever uma
+ * segunda cópia das regras dentro do `<script>` era a maneira mais rápida de a
+ * página e o terminal passarem a discordar um do outro — e de ninguém dar por
+ * isso, porque os dois continuariam a parecer certos.
+ */
+function embutir(nome) {
+  return fs.readFileSync(path.join(__dirname, nome), 'utf8')
+    .replace(/^if \(typeof module[^\n]*\n?/m, '');
+}
 
 /**
  * A frase da base do mercado, a partir do resultado do estudo.
@@ -55,31 +64,8 @@ function baseDoMercado(r) {
   return partes.join(', ') + '.';
 }
 
-function cartao({ f, j }) {
-  return `
-  <article class="t ${j.veredicto.toLowerCase()}">
-    <header>
-      <span class="v">${esc(j.veredicto)}</span>
-      <h2>${esc(f.simbolo || '?')}<small>${esc(f.nome || '')}</small></h2>
-    </header>
-    <dl>
-      <div><dt>Liquidez</dt><dd>${dinheiro(f.liquidezUsd)}</dd></div>
-      <div><dt>Volume 1h</dt><dd>${dinheiro(f.vol1h)}</dd></div>
-      <div><dt>Idade</dt><dd>${f.idadeMin == null ? '—' : Math.round(f.idadeMin) + ' min'}</dd></div>
-      <div><dt>Na piscina</dt><dd>${f.fraccaoNaPiscina == null ? '—'
-        : (f.fraccaoNaPiscina * 100).toFixed(f.fraccaoNaPiscina < 0.01 ? 3 : 1) + '%'}</dd></div>
-      <div><dt>Mint auth.</dt><dd>${f.mintAuthority ? 'ACTIVA' : 'queimada'}</dd></div>
-      <div><dt>Freeze auth.</dt><dd>${f.freezeAuthority ? 'ACTIVA' : 'queimada'}</dd></div>
-    </dl>
-    ${j.porque.length ? `<ul>${j.porque.map((p) => `<li>${esc(p)}</li>`).join('')}</ul>` : ''}
-    ${j.aviso ? `<p class="nota">${esc(j.aviso)}</p>` : ''}
-    ${f.url ? `<a href="${esc(f.url)}" rel="noopener">ver no DexScreener →</a>` : ''}
-  </article>`;
-}
-
 function pagina(linhas, { quando = new Date(), base = null } = {}) {
-  const ordem = { FOGE: 0, CUIDADO: 1, PASSA: 2 };
-  const ord = [...linhas].sort((a, b) => ordem[a.j.veredicto] - ordem[b.j.veredicto]);
+  const ord = ordenar(linhas);
   const conta = (v) => ord.filter((x) => x.j.veredicto === v).length;
 
   return `<!doctype html>
@@ -119,6 +105,9 @@ ul{margin:12px 0 0;padding-left:18px;font-size:.9rem} li{margin:3px 0}
 .idade{margin:-14px 0 20px;font-size:.85rem;padding:8px 12px;border-radius:8px;
  border:1px solid var(--fio);background:var(--caixa)}
 .idade.velha{border-color:var(--meio);color:var(--meio);font-weight:600}
+#recarregar{margin:0 0 20px;padding:9px 16px;border-radius:8px;border:1px solid var(--fio);
+ background:var(--caixa);color:inherit;font:inherit;font-weight:600;cursor:pointer}
+#recarregar:hover{border-color:var(--tinta)}
 footer{margin-top:28px;padding-top:16px;border-top:1px solid var(--fio);color:var(--fraco);font-size:.82rem}
 footer p{margin:0 0 8px}
 </style></head><body><main>
@@ -126,13 +115,15 @@ footer p{margin:0 0 8px}
 <p class="sub">Tokens acabados de nascer na Solana, passados pelas armadilhas que dá para medir.
 Actualizado <time id="quando" datetime="${quando.toISOString()}">${quando.toISOString().replace('T', ' ').slice(0, 16)} UTC</time>.</p>
 <p class="idade" id="idade" hidden></p>
-<div class="resumo">
+<p class="idade" id="estadoLive" hidden></p>
+<button id="recarregar" hidden>Actualizar agora</button>
+<div class="resumo" id="resumo">
   <b>${ord.length} vistos</b>
   <b style="color:var(--mau)">${conta('FOGE')} foge</b>
   <b style="color:var(--meio)">${conta('CUIDADO')} cuidado</b>
   <b style="color:var(--bom)">${conta('PASSA')} passa</b>
 </div>
-${ord.map(cartao).join('')}
+<div id="cartoes">${ord.map(cartao).join('')}</div>
 ${base ? `<footer><p><strong>A base do mercado, medida:</strong> ${esc(base)}</p></footer>` : ''}
 <footer>
 <p><strong>PASSA não quer dizer bom.</strong> Quer dizer que não encontrei nenhuma das
@@ -145,6 +136,22 @@ Solana recusam <code>getTokenLargestAccounts</code> sem chave paga (403, 400 e 4
 piscina tanto pode estar em dez mil pessoas como numa só — e a diferença entre as duas é tudo.</p>
 </footer>
 </main>
+<script>
+// ── As regras e o desenho, os MESMOS ficheiros que a linha de comandos corre ──
+${embutir('peneirar.js')}
+${embutir('cartao.js')}
+
+// Os factos que só se conseguem na blockchain e que o browser não vai buscar:
+// mint authority, freeze authority e a oferta total. Ficam cozidos aqui, do
+// momento em que a página foi gerada, porque não mudam depois de queimadas.
+var COZIDOS = ${jsonSeguro(Object.fromEntries(ord.map(({ f }) => [f.mint, {
+    mintAuthority: f.mintAuthority ?? null,
+    freezeAuthority: f.freezeAuthority ?? null,
+    oferta: f.oferta ?? null,
+    nome: f.nome ?? null,
+    simbolo: f.simbolo ?? null,
+  }])))};
+</script>
 <script>
 // Quanto tempo tem esta página.
 //
@@ -167,8 +174,98 @@ piscina tanto pode estar em dez mil pessoas como numa só — e a diferença ent
   if (min > 60) alvo.className = 'idade velha';
   alvo.hidden = false;
 })();
+
+// ── Actualizar sozinha, sem esperar pelo GitHub ──
+//
+// O horário do GitHub falhou duas vezes medidas: 90 minutos à primeira, 245 à
+// segunda. Não vale a pena continuar a afinar o cron.
+//
+// Medi que o DexScreener responde access-control-allow-origin: * — o browser
+// pode chamá-lo directamente, 12 tokens numa chamada em 122 ms. Por isso a
+// página vai buscar os números frescos quando alguém a abre, e o horário passa
+// a ser só a rede de segurança para quem nunca a abre.
+//
+// O que NÃO se actualiza aqui: mint e freeze authority, que vêm da blockchain.
+// Ficam os valores cozidos — e não mudam, porque uma autoridade queimada não
+// volta a acender.
+(function () {
+  var mints = Object.keys(COZIDOS);
+  var estado = document.getElementById('estadoLive');
+  if (!mints.length || !estado || typeof peneirar !== 'function') return;
+
+  function marcar(texto, classe) {
+    estado.textContent = texto;
+    estado.className = 'idade' + (classe ? ' ' + classe : '');
+    estado.hidden = false;
+  }
+
+  function actualizar() {
+    marcar('A buscar números frescos…');
+    fetch('https://api.dexscreener.com/latest/dex/tokens/' + mints.join(','))
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (d) {
+        var porMint = {};
+        (d.pairs || []).forEach(function (p) {
+          if (p.chainId !== 'solana') return;
+          var m = p.baseToken && p.baseToken.address;
+          if (!m) return;
+          var liq = (p.liquidity && p.liquidity.usd) || 0;
+          var actual = porMint[m];
+          if (!actual || liq > ((actual.liquidity && actual.liquidity.usd) || 0)) porMint[m] = p;
+        });
+
+        var linhas = [];
+        mints.forEach(function (m) {
+          var p = porMint[m], c = COZIDOS[m];
+          if (!p) return;                       // sem par agora: fica o cartão velho
+          var naPiscina = p.liquidity && p.liquidity.base != null ? Number(p.liquidity.base) : null;
+          var f = {
+            mint: m,
+            nome: (p.baseToken && p.baseToken.name) || c.nome,
+            simbolo: (p.baseToken && p.baseToken.symbol) || c.simbolo,
+            precoUsd: Number(p.priceUsd) || null,
+            fdv: Number(p.fdv) || null,
+            liquidezUsd: p.liquidity && p.liquidity.usd != null ? Number(p.liquidity.usd) : null,
+            vol1h: Number(p.volume && p.volume.h1) || 0,
+            vol24h: Number(p.volume && p.volume.h24) || 0,
+            compras5m: p.txns && p.txns.m5 ? p.txns.m5.buys : null,
+            vendas5m: p.txns && p.txns.m5 ? p.txns.m5.sells : null,
+            idadeMin: p.pairCreatedAt ? (Date.now() - p.pairCreatedAt) / 60000 : null,
+            fraccaoNaPiscina: (naPiscina != null && c.oferta > 0) ? naPiscina / c.oferta : null,
+            mintAuthority: c.mintAuthority,
+            freezeAuthority: c.freezeAuthority,
+            concentracao: null,
+            url: p.url || null,
+          };
+          linhas.push({ f: f, j: peneirar(f) });
+        });
+
+        if (!linhas.length) { marcar('Ninguém respondeu. Fica a leitura de antes.', 'velha'); return; }
+
+        var ord = ordenar(linhas);
+        document.getElementById('cartoes').innerHTML = ord.map(cartao).join('');
+        var conta = function (v) { return ord.filter(function (x) { return x.j.veredicto === v; }).length; };
+        document.getElementById('resumo').innerHTML =
+          '<b>' + ord.length + ' vistos</b>'
+          + '<b style="color:var(--mau)">' + conta('FOGE') + ' foge</b>'
+          + '<b style="color:var(--meio)">' + conta('CUIDADO') + ' cuidado</b>'
+          + '<b style="color:var(--bom)">' + conta('PASSA') + ' passa</b>';
+        var alvo = document.getElementById('idade');
+        if (alvo) alvo.hidden = true;
+        marcar('Números frescos, buscados agora no teu telemóvel.');
+      })
+      .catch(function (e) {
+        marcar('Não consegui buscar números frescos (' + e.message + '). '
+          + 'O que está em baixo é a leitura de antes.', 'velha');
+      });
+  }
+
+  actualizar();
+  var b = document.getElementById('recarregar');
+  if (b) { b.hidden = false; b.addEventListener('click', actualizar); }
+})();
 </script>
 </body></html>`;
 }
 
-module.exports = { pagina, cartao, dinheiro, esc, baseDoMercado };
+module.exports = { pagina, cartao, dinheiro, esc, baseDoMercado, embutir };

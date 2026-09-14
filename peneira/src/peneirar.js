@@ -130,4 +130,4 @@ function peneirar(f, { limites = LIMITES } = {}) {
   };
 }
 
-module.exports = { peneirar, LIMITES };
+if (typeof module !== 'undefined') module.exports = { peneirar, LIMITES };

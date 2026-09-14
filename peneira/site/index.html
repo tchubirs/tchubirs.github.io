@@ -35,292 +35,263 @@ ul{margin:12px 0 0;padding-left:18px;font-size:.9rem} li{margin:3px 0}
 .idade{margin:-14px 0 20px;font-size:.85rem;padding:8px 12px;border-radius:8px;
  border:1px solid var(--fio);background:var(--caixa)}
 .idade.velha{border-color:var(--meio);color:var(--meio);font-weight:600}
+#recarregar{margin:0 0 20px;padding:9px 16px;border-radius:8px;border:1px solid var(--fio);
+ background:var(--caixa);color:inherit;font:inherit;font-weight:600;cursor:pointer}
+#recarregar:hover{border-color:var(--tinta)}
 footer{margin-top:28px;padding-top:16px;border-top:1px solid var(--fio);color:var(--fraco);font-size:.82rem}
 footer p{margin:0 0 8px}
 </style></head><body><main>
 <h1>Peneira</h1>
 <p class="sub">Tokens acabados de nascer na Solana, passados pelas armadilhas que dá para medir.
-Actualizado <time id="quando" datetime="2026-09-14T05:54:52.894Z">2026-09-14 05:54 UTC</time>.</p>
+Actualizado <time id="quando" datetime="2026-09-14T20:28:23.239Z">2026-09-14 20:28 UTC</time>.</p>
 <p class="idade" id="idade" hidden></p>
-<div class="resumo">
-  <b>17 vistos</b>
-  <b style="color:var(--mau)">6 foge</b>
-  <b style="color:var(--meio)">1 cuidado</b>
-  <b style="color:var(--bom)">10 passa</b>
+<p class="idade" id="estadoLive" hidden></p>
+<button id="recarregar" hidden>Actualizar agora</button>
+<div class="resumo" id="resumo">
+  <b>14 vistos</b>
+  <b style="color:var(--mau)">10 foge</b>
+  <b style="color:var(--meio)">0 cuidado</b>
+  <b style="color:var(--bom)">4 passa</b>
 </div>
-
+<div id="cartoes">
   <article class="t foge">
     <header>
       <span class="v">FOGE</span>
-      <h2>SPEPE<small>SemiPepe</small></h2>
-    </header>
-    <dl>
-      <div><dt>Liquidez</dt><dd>$4.8K</dd></div>
-      <div><dt>Volume 1h</dt><dd>$1.90</dd></div>
-      <div><dt>Idade</dt><dd>33867 min</dd></div>
-      <div><dt>Mint auth.</dt><dd>queimada</dd></div>
-      <div><dt>Freeze auth.</dt><dd>queimada</dd></div>
-    </dl>
-    <ul><li>o preço avalia tudo em $108831939 com $4806 no fundo (22643x): não há lá dinheiro para pagar essa avaliação</li><li>só 0.002% da oferta está dentro da piscina: quase tudo está em carteiras, e basta uma para esmagar o preço</li></ul>
-    
-    <a href="https://dexscreener.com/solana/enpme1po2juncnbus7jodmoj2nxtbcvypkbsnqheyl2t" rel="noopener">ver no DexScreener →</a>
-  </article>
-  <article class="t foge">
-    <header>
-      <span class="v">FOGE</span>
-      <h2>DEV<small>DeployExtractVamp</small></h2>
+      <h2>ZION<small>Zion The Monkey</small></h2>
     </header>
     <dl>
       <div><dt>Liquidez</dt><dd>—</dd></div>
-      <div><dt>Volume 1h</dt><dd>$15.4K</dd></div>
-      <div><dt>Idade</dt><dd>47 min</dd></div>
+      <div><dt>Volume 1h</dt><dd>$0.00</dd></div>
+      <div><dt>Idade</dt><dd>6 min</dd></div>
+      <div><dt>Na piscina</dt><dd>—</dd></div>
       <div><dt>Mint auth.</dt><dd>queimada</dd></div>
       <div><dt>Freeze auth.</dt><dd>queimada</dd></div>
     </dl>
     <ul><li>não há dados de liquidez nenhuns — não dá para saber se se sai</li></ul>
     
-    <a href="https://dexscreener.com/solana/gr2zhtfkczs1d87uhfvfhadrkgeda3aeirwdpbowzovf" rel="noopener">ver no DexScreener →</a>
+    <a href="https://dexscreener.com/solana/8hwwkcozzmycrkqx32vtse9sph25teynkpisbvetndir" rel="noopener" target="_blank">ver no DexScreener →</a>
   </article>
   <article class="t foge">
     <header>
       <span class="v">FOGE</span>
-      <h2>Sloth<small>The Anti Ai Sloth</small></h2>
+      <h2>BANKS<small>The White Bank</small></h2>
     </header>
     <dl>
       <div><dt>Liquidez</dt><dd>—</dd></div>
-      <div><dt>Volume 1h</dt><dd>$55.5K</dd></div>
-      <div><dt>Idade</dt><dd>49 min</dd></div>
+      <div><dt>Volume 1h</dt><dd>$0.00</dd></div>
+      <div><dt>Idade</dt><dd>6 min</dd></div>
+      <div><dt>Na piscina</dt><dd>—</dd></div>
       <div><dt>Mint auth.</dt><dd>queimada</dd></div>
       <div><dt>Freeze auth.</dt><dd>queimada</dd></div>
     </dl>
     <ul><li>não há dados de liquidez nenhuns — não dá para saber se se sai</li></ul>
     
-    <a href="https://dexscreener.com/solana/c1v5jtx58izcs7apizxtyuryfgzmsbzrrkaeupwb4ty8" rel="noopener">ver no DexScreener →</a>
+    <a href="https://dexscreener.com/solana/32rtvbe4b4ohyu9ufycu35x4brhgpealbvk9pjsyfztb" rel="noopener" target="_blank">ver no DexScreener →</a>
   </article>
   <article class="t foge">
     <header>
       <span class="v">FOGE</span>
-      <h2>Basilisk<small>Roko&#39;s Basilisk</small></h2>
+      <h2>SlopCycle<small>SlopCycle</small></h2>
     </header>
     <dl>
       <div><dt>Liquidez</dt><dd>—</dd></div>
-      <div><dt>Volume 1h</dt><dd>$28.8K</dd></div>
-      <div><dt>Idade</dt><dd>58 min</dd></div>
+      <div><dt>Volume 1h</dt><dd>$0.00</dd></div>
+      <div><dt>Idade</dt><dd>22 min</dd></div>
+      <div><dt>Na piscina</dt><dd>—</dd></div>
       <div><dt>Mint auth.</dt><dd>queimada</dd></div>
       <div><dt>Freeze auth.</dt><dd>queimada</dd></div>
     </dl>
     <ul><li>não há dados de liquidez nenhuns — não dá para saber se se sai</li></ul>
     
-    <a href="https://dexscreener.com/solana/5y776awupyumdfyvt3swefz5aupbgtdwpxaumtgiywe8" rel="noopener">ver no DexScreener →</a>
+    <a href="https://dexscreener.com/solana/gqvwzm5zsox5ijwninmqg9jsdfrw2bkj5zsdbgz468zq" rel="noopener" target="_blank">ver no DexScreener →</a>
   </article>
   <article class="t foge">
     <header>
       <span class="v">FOGE</span>
-      <h2>Alon<small>Alon</small></h2>
+      <h2>Stuart<small>Stuart</small></h2>
+    </header>
+    <dl>
+      <div><dt>Liquidez</dt><dd>$4.40</dd></div>
+      <div><dt>Volume 1h</dt><dd>$0.41</dd></div>
+      <div><dt>Idade</dt><dd>37 min</dd></div>
+      <div><dt>Na piscina</dt><dd>0.014%</dd></div>
+      <div><dt>Mint auth.</dt><dd>queimada</dd></div>
+      <div><dt>Freeze auth.</dt><dd>queimada</dd></div>
+    </dl>
+    <ul><li>só há $4 de liquidez: não consegues vender sem esmagar o preço</li><li>o preço avalia tudo em $16512 com $4 no fundo (3753x): não há lá dinheiro para pagar essa avaliação</li><li>só 0.014% da oferta está dentro da piscina: quase tudo está em carteiras, e basta uma para esmagar o preço</li></ul>
+    
+    <a href="https://dexscreener.com/solana/3fjts7gm4yhyu5ghtoqhw8vvjf8lyuxmredba3wzncef" rel="noopener" target="_blank">ver no DexScreener →</a>
+  </article>
+  <article class="t foge">
+    <header>
+      <span class="v">FOGE</span>
+      <h2>WORTHLESS<small>Worthless Coin</small></h2>
+    </header>
+    <dl>
+      <div><dt>Liquidez</dt><dd>$23</dd></div>
+      <div><dt>Volume 1h</dt><dd>$0.00</dd></div>
+      <div><dt>Idade</dt><dd>12 min</dd></div>
+      <div><dt>Na piscina</dt><dd>0.096%</dd></div>
+      <div><dt>Mint auth.</dt><dd>queimada</dd></div>
+      <div><dt>Freeze auth.</dt><dd>queimada</dd></div>
+    </dl>
+    <ul><li>só há $23 de liquidez: não consegues vender sem esmagar o preço</li><li>o preço avalia tudo em $11988 com $23 no fundo (522x): não há lá dinheiro para pagar essa avaliação</li><li>só 0.096% da oferta está dentro da piscina: quase tudo está em carteiras, e basta uma para esmagar o preço</li></ul>
+    
+    <a href="https://dexscreener.com/solana/gswpxr2w5ivrxth5xwcfg36mgdpnsyyz2h3ofvzh364e" rel="noopener" target="_blank">ver no DexScreener →</a>
+  </article>
+  <article class="t foge">
+    <header>
+      <span class="v">FOGE</span>
+      <h2>PEPETIDE<small>pepetide</small></h2>
+    </header>
+    <dl>
+      <div><dt>Liquidez</dt><dd>$735</dd></div>
+      <div><dt>Volume 1h</dt><dd>$692</dd></div>
+      <div><dt>Idade</dt><dd>16 min</dd></div>
+      <div><dt>Na piscina</dt><dd>0.128%</dd></div>
+      <div><dt>Mint auth.</dt><dd>queimada</dd></div>
+      <div><dt>Freeze auth.</dt><dd>queimada</dd></div>
+    </dl>
+    <ul><li>só há $735 de liquidez: não consegues vender sem esmagar o preço</li><li>o preço avalia tudo em $287688 com $735 no fundo (391x): não há lá dinheiro para pagar essa avaliação</li><li>só 0.128% da oferta está dentro da piscina: quase tudo está em carteiras, e basta uma para esmagar o preço</li><li>13 vendas contra 0 compras nos últimos 5 minutos: estão a sair</li></ul>
+    
+    <a href="https://dexscreener.com/solana/5rhqewlykeebu2fqbdi59yfgmjbgxjwjwhst5czideyr" rel="noopener" target="_blank">ver no DexScreener →</a>
+  </article>
+  <article class="t foge">
+    <header>
+      <span class="v">FOGE</span>
+      <h2>MOG<small>MOG </small></h2>
+    </header>
+    <dl>
+      <div><dt>Liquidez</dt><dd>$18</dd></div>
+      <div><dt>Volume 1h</dt><dd>$0.00</dd></div>
+      <div><dt>Idade</dt><dd>15 min</dd></div>
+      <div><dt>Na piscina</dt><dd>0.036%</dd></div>
+      <div><dt>Mint auth.</dt><dd>queimada</dd></div>
+      <div><dt>Freeze auth.</dt><dd>queimada</dd></div>
+    </dl>
+    <ul><li>só há $18 de liquidez: não consegues vender sem esmagar o preço</li><li>o preço avalia tudo em $25094 com $18 no fundo (1385x): não há lá dinheiro para pagar essa avaliação</li><li>só 0.036% da oferta está dentro da piscina: quase tudo está em carteiras, e basta uma para esmagar o preço</li></ul>
+    
+    <a href="https://dexscreener.com/solana/3qeto5dxfqqdztmlmpcyssjc8wjlxfhsenmobxlc9yms" rel="noopener" target="_blank">ver no DexScreener →</a>
+  </article>
+  <article class="t foge">
+    <header>
+      <span class="v">FOGE</span>
+      <h2>HYBRID<small>Hybrid Memes</small></h2>
     </header>
     <dl>
       <div><dt>Liquidez</dt><dd>—</dd></div>
-      <div><dt>Volume 1h</dt><dd>$175</dd></div>
-      <div><dt>Idade</dt><dd>71 min</dd></div>
+      <div><dt>Volume 1h</dt><dd>$210.3K</dd></div>
+      <div><dt>Idade</dt><dd>31 min</dd></div>
+      <div><dt>Na piscina</dt><dd>—</dd></div>
       <div><dt>Mint auth.</dt><dd>queimada</dd></div>
       <div><dt>Freeze auth.</dt><dd>queimada</dd></div>
     </dl>
     <ul><li>não há dados de liquidez nenhuns — não dá para saber se se sai</li></ul>
     
-    <a href="https://dexscreener.com/solana/9ehs8lzqmbfldyhtujfrjgd2gckbnyaefhtclbeu6ajx" rel="noopener">ver no DexScreener →</a>
+    <a href="https://dexscreener.com/solana/afsfb5kkfzmbusm3k5e8gnhdap69glv2mlqf6dmldxsl" rel="noopener" target="_blank">ver no DexScreener →</a>
   </article>
   <article class="t foge">
     <header>
       <span class="v">FOGE</span>
-      <h2>ACTII<small>ACTII: The AI Threat</small></h2>
+      <h2>VIBREW<small>Vibrew Norby</small></h2>
     </header>
     <dl>
-      <div><dt>Liquidez</dt><dd>$730</dd></div>
-      <div><dt>Volume 1h</dt><dd>$272</dd></div>
-      <div><dt>Idade</dt><dd>60 min</dd></div>
-      <div><dt>Mint auth.</dt><dd>queimada</dd></div>
-      <div><dt>Freeze auth.</dt><dd>queimada</dd></div>
-    </dl>
-    <ul><li>só há $730 de liquidez: não consegues vender sem esmagar o preço</li></ul>
-    
-    <a href="https://dexscreener.com/solana/aic544fbrb416p8gx6jynruycvpp5e5s6pugow5qs7mn" rel="noopener">ver no DexScreener →</a>
-  </article>
-  <article class="t cuidado">
-    <header>
-      <span class="v">CUIDADO</span>
-      <h2>NFA<small>Never Fade Again</small></h2>
-    </header>
-    <dl>
-      <div><dt>Liquidez</dt><dd>$2.5K</dd></div>
-      <div><dt>Volume 1h</dt><dd>$74.6K</dd></div>
-      <div><dt>Idade</dt><dd>33 min</dd></div>
-      <div><dt>Mint auth.</dt><dd>queimada</dd></div>
-      <div><dt>Freeze auth.</dt><dd>queimada</dd></div>
-    </dl>
-    <ul><li>11 vendas contra 1 compras nos últimos 5 minutos: estão a sair</li></ul>
-    
-    <a href="https://dexscreener.com/solana/ecgcyt7uzpbfvpnjrbgcg4dwavbhhjmyzzd79qrabavs" rel="noopener">ver no DexScreener →</a>
-  </article>
-  <article class="t passa">
-    <header>
-      <span class="v">PASSA</span>
-      <h2>KNOB<small>Knob</small></h2>
-    </header>
-    <dl>
-      <div><dt>Liquidez</dt><dd>$78.0K</dd></div>
-      <div><dt>Volume 1h</dt><dd>$952.7K</dd></div>
+      <div><dt>Liquidez</dt><dd>—</dd></div>
+      <div><dt>Volume 1h</dt><dd>$76.1K</dd></div>
       <div><dt>Idade</dt><dd>38 min</dd></div>
+      <div><dt>Na piscina</dt><dd>—</dd></div>
       <div><dt>Mint auth.</dt><dd>queimada</dd></div>
       <div><dt>Freeze auth.</dt><dd>queimada</dd></div>
     </dl>
+    <ul><li>não há dados de liquidez nenhuns — não dá para saber se se sai</li></ul>
     
-    <p class="nota">PASSA quer dizer &quot;não encontrei as armadilhas que sei procurar&quot; — não quer dizer que preste</p>
-    <a href="https://dexscreener.com/solana/afnmjdjp5nahyldvq2cyiafljefvfxq2yyrvvsq9ykqr" rel="noopener">ver no DexScreener →</a>
+    <a href="https://dexscreener.com/solana/yogcrf4y7hsyyjhxagvpdijfvgqdq7yp3c84zw9pzhf" rel="noopener" target="_blank">ver no DexScreener →</a>
+  </article>
+  <article class="t foge">
+    <header>
+      <span class="v">FOGE</span>
+      <h2>MUSKSAN<small>musksan</small></h2>
+    </header>
+    <dl>
+      <div><dt>Liquidez</dt><dd>$11</dd></div>
+      <div><dt>Volume 1h</dt><dd>$0.00</dd></div>
+      <div><dt>Idade</dt><dd>36 min</dd></div>
+      <div><dt>Na piscina</dt><dd>0.031%</dd></div>
+      <div><dt>Mint auth.</dt><dd>queimada</dd></div>
+      <div><dt>Freeze auth.</dt><dd>queimada</dd></div>
+    </dl>
+    <ul><li>só há $11 de liquidez: não consegues vender sem esmagar o preço</li><li>o preço avalia tudo em $16996 com $11 no fundo (1611x): não há lá dinheiro para pagar essa avaliação</li><li>só 0.031% da oferta está dentro da piscina: quase tudo está em carteiras, e basta uma para esmagar o preço</li></ul>
+    
+    <a href="https://dexscreener.com/solana/fcvmxnnabzttjapymq2d38x2ssnwrxgjm4gmtgwdhkqf" rel="noopener" target="_blank">ver no DexScreener →</a>
   </article>
   <article class="t passa">
     <header>
       <span class="v">PASSA</span>
-      <h2>VIDA<small>Vida Global CTO</small></h2>
+      <h2>Callr<small>Callr</small></h2>
     </header>
     <dl>
-      <div><dt>Liquidez</dt><dd>$40.9K</dd></div>
-      <div><dt>Volume 1h</dt><dd>$138.0K</dd></div>
-      <div><dt>Idade</dt><dd>18555 min</dd></div>
+      <div><dt>Liquidez</dt><dd>$16.1K</dd></div>
+      <div><dt>Volume 1h</dt><dd>$80.3K</dd></div>
+      <div><dt>Idade</dt><dd>16 min</dd></div>
+      <div><dt>Na piscina</dt><dd>22.0%</dd></div>
       <div><dt>Mint auth.</dt><dd>queimada</dd></div>
       <div><dt>Freeze auth.</dt><dd>queimada</dd></div>
     </dl>
     
     <p class="nota">PASSA quer dizer &quot;não encontrei as armadilhas que sei procurar&quot; — não quer dizer que preste</p>
-    <a href="https://dexscreener.com/solana/fxzwm5spff9uns9ae7dq9efrjwuoc8ksltbdpadtzfhw" rel="noopener">ver no DexScreener →</a>
+    <a href="https://dexscreener.com/solana/2suhhc9mxi4qzj2ubpjtjycgmf9owgb9qntsxjr9zktu" rel="noopener" target="_blank">ver no DexScreener →</a>
   </article>
   <article class="t passa">
     <header>
       <span class="v">PASSA</span>
-      <h2>MadisonBeer<small>Madison Beer</small></h2>
+      <h2>CatDamon<small>CatDamon</small></h2>
     </header>
     <dl>
-      <div><dt>Liquidez</dt><dd>$12.8K</dd></div>
-      <div><dt>Volume 1h</dt><dd>$118.8K</dd></div>
-      <div><dt>Idade</dt><dd>21 min</dd></div>
+      <div><dt>Liquidez</dt><dd>$20.8K</dd></div>
+      <div><dt>Volume 1h</dt><dd>$20.3K</dd></div>
+      <div><dt>Idade</dt><dd>22 min</dd></div>
+      <div><dt>Na piscina</dt><dd>16.7%</dd></div>
       <div><dt>Mint auth.</dt><dd>queimada</dd></div>
       <div><dt>Freeze auth.</dt><dd>queimada</dd></div>
     </dl>
     
     <p class="nota">PASSA quer dizer &quot;não encontrei as armadilhas que sei procurar&quot; — não quer dizer que preste</p>
-    <a href="https://dexscreener.com/solana/32einrepn8wdtmrmw1yvzpgbz6hnpomlkk1wwvbmbpfv" rel="noopener">ver no DexScreener →</a>
+    <a href="https://dexscreener.com/solana/e2187xkg5pgt7zdhu4221b9a9ittmwucmm2c2ztmr8pd" rel="noopener" target="_blank">ver no DexScreener →</a>
   </article>
   <article class="t passa">
     <header>
       <span class="v">PASSA</span>
-      <h2>CATESZN<small>Cate Season</small></h2>
+      <h2>PS500<small>PumpStocks500</small></h2>
     </header>
     <dl>
-      <div><dt>Liquidez</dt><dd>$34.9K</dd></div>
-      <div><dt>Volume 1h</dt><dd>$492.5K</dd></div>
-      <div><dt>Idade</dt><dd>29 min</dd></div>
+      <div><dt>Liquidez</dt><dd>$26.3K</dd></div>
+      <div><dt>Volume 1h</dt><dd>$129.6K</dd></div>
+      <div><dt>Idade</dt><dd>30 min</dd></div>
+      <div><dt>Na piscina</dt><dd>15.8%</dd></div>
       <div><dt>Mint auth.</dt><dd>queimada</dd></div>
       <div><dt>Freeze auth.</dt><dd>queimada</dd></div>
     </dl>
     
     <p class="nota">PASSA quer dizer &quot;não encontrei as armadilhas que sei procurar&quot; — não quer dizer que preste</p>
-    <a href="https://dexscreener.com/solana/awhmtfpicgzdy8pcydhxaj34wbb6qcj89m42lykrv21b" rel="noopener">ver no DexScreener →</a>
+    <a href="https://dexscreener.com/solana/fttbl57hvwm9dvrwrurtbm1wws8hmutf8jxkj5g5rxb2" rel="noopener" target="_blank">ver no DexScreener →</a>
   </article>
   <article class="t passa">
     <header>
       <span class="v">PASSA</span>
-      <h2>TWICE<small>Twice</small></h2>
+      <h2>FINE<small>This is Fine</small></h2>
     </header>
     <dl>
-      <div><dt>Liquidez</dt><dd>$3.4K</dd></div>
-      <div><dt>Volume 1h</dt><dd>$53.8K</dd></div>
-      <div><dt>Idade</dt><dd>46 min</dd></div>
+      <div><dt>Liquidez</dt><dd>$11.5K</dd></div>
+      <div><dt>Volume 1h</dt><dd>$130.9K</dd></div>
+      <div><dt>Idade</dt><dd>37 min</dd></div>
+      <div><dt>Na piscina</dt><dd>32.5%</dd></div>
       <div><dt>Mint auth.</dt><dd>queimada</dd></div>
       <div><dt>Freeze auth.</dt><dd>queimada</dd></div>
     </dl>
     
     <p class="nota">PASSA quer dizer &quot;não encontrei as armadilhas que sei procurar&quot; — não quer dizer que preste</p>
-    <a href="https://dexscreener.com/solana/cwyfpdajnzyvjprxyygkhsyse4ezvzvjistahshudxxg" rel="noopener">ver no DexScreener →</a>
-  </article>
-  <article class="t passa">
-    <header>
-      <span class="v">PASSA</span>
-      <h2>mictyson<small>Mic Tyson</small></h2>
-    </header>
-    <dl>
-      <div><dt>Liquidez</dt><dd>$57.0K</dd></div>
-      <div><dt>Volume 1h</dt><dd>$381.4K</dd></div>
-      <div><dt>Idade</dt><dd>64 min</dd></div>
-      <div><dt>Mint auth.</dt><dd>queimada</dd></div>
-      <div><dt>Freeze auth.</dt><dd>queimada</dd></div>
-    </dl>
-    
-    <p class="nota">PASSA quer dizer &quot;não encontrei as armadilhas que sei procurar&quot; — não quer dizer que preste</p>
-    <a href="https://dexscreener.com/solana/9p55zudkdv4c718vv7x8qtnctj7tpjoqrtpeykt27naa" rel="noopener">ver no DexScreener →</a>
-  </article>
-  <article class="t passa">
-    <header>
-      <span class="v">PASSA</span>
-      <h2>bikecate<small>BIKE CATE</small></h2>
-    </header>
-    <dl>
-      <div><dt>Liquidez</dt><dd>$66.5K</dd></div>
-      <div><dt>Volume 1h</dt><dd>$382.7K</dd></div>
-      <div><dt>Idade</dt><dd>91 min</dd></div>
-      <div><dt>Mint auth.</dt><dd>queimada</dd></div>
-      <div><dt>Freeze auth.</dt><dd>queimada</dd></div>
-    </dl>
-    
-    <p class="nota">PASSA quer dizer &quot;não encontrei as armadilhas que sei procurar&quot; — não quer dizer que preste</p>
-    <a href="https://dexscreener.com/solana/3wbmnexoxsgwpgxbawwpganvxgzsn5bqr1lnu76afzsz" rel="noopener">ver no DexScreener →</a>
-  </article>
-  <article class="t passa">
-    <header>
-      <span class="v">PASSA</span>
-      <h2>Humanity<small>Team Humanity</small></h2>
-    </header>
-    <dl>
-      <div><dt>Liquidez</dt><dd>$14.0K</dd></div>
-      <div><dt>Volume 1h</dt><dd>$393.7K</dd></div>
-      <div><dt>Idade</dt><dd>95 min</dd></div>
-      <div><dt>Mint auth.</dt><dd>queimada</dd></div>
-      <div><dt>Freeze auth.</dt><dd>queimada</dd></div>
-    </dl>
-    
-    <p class="nota">PASSA quer dizer &quot;não encontrei as armadilhas que sei procurar&quot; — não quer dizer que preste</p>
-    <a href="https://dexscreener.com/solana/89piezz9ct5hjqnwrmbgke2mscbushovqu57fc4xlvk8" rel="noopener">ver no DexScreener →</a>
-  </article>
-  <article class="t passa">
-    <header>
-      <span class="v">PASSA</span>
-      <h2>Humanity<small>Team Humanity</small></h2>
-    </header>
-    <dl>
-      <div><dt>Liquidez</dt><dd>$8.0K</dd></div>
-      <div><dt>Volume 1h</dt><dd>$16.5K</dd></div>
-      <div><dt>Idade</dt><dd>96 min</dd></div>
-      <div><dt>Mint auth.</dt><dd>queimada</dd></div>
-      <div><dt>Freeze auth.</dt><dd>queimada</dd></div>
-    </dl>
-    
-    <p class="nota">PASSA quer dizer &quot;não encontrei as armadilhas que sei procurar&quot; — não quer dizer que preste</p>
-    <a href="https://dexscreener.com/solana/dqku833pfdbudtwy4avfbmv7xvztpe7u8lnep3c7g7rs" rel="noopener">ver no DexScreener →</a>
-  </article>
-  <article class="t passa">
-    <header>
-      <span class="v">PASSA</span>
-      <h2>BATMAN<small>Batman</small></h2>
-    </header>
-    <dl>
-      <div><dt>Liquidez</dt><dd>$33.6K</dd></div>
-      <div><dt>Volume 1h</dt><dd>$47.8K</dd></div>
-      <div><dt>Idade</dt><dd>77 min</dd></div>
-      <div><dt>Mint auth.</dt><dd>queimada</dd></div>
-      <div><dt>Freeze auth.</dt><dd>queimada</dd></div>
-    </dl>
-    
-    <p class="nota">PASSA quer dizer &quot;não encontrei as armadilhas que sei procurar&quot; — não quer dizer que preste</p>
-    <a href="https://dexscreener.com/solana/ce2ovjbns5sexjtubtsxj2w1dtbgtxhu6zb2s8z2i9ny" rel="noopener">ver no DexScreener →</a>
-  </article>
+    <a href="https://dexscreener.com/solana/dbstyngqkjshqainnbnepqdyp5gyyhzfaaw6s5uwqun9" rel="noopener" target="_blank">ver no DexScreener →</a>
+  </article></div>
 <footer><p><strong>A base do mercado, medida:</strong> 138 tokens seguidos desde o primeiro minuto, 33% ficaram abaixo do preço de entrada, 3% perderam 90% ou mais, 6% dobraram, quem comprasse todos em partes iguais ficaria com 0.71x (-29%), contando como perda os que já não têm liquidez para se venderem.</p></footer>
 <footer>
 <p><strong>PASSA não quer dizer bom.</strong> Quer dizer que não encontrei nenhuma das
@@ -333,6 +304,212 @@ Solana recusam <code>getTokenLargestAccounts</code> sem chave paga (403, 400 e 4
 piscina tanto pode estar em dez mil pessoas como numa só — e a diferença entre as duas é tudo.</p>
 </footer>
 </main>
+<script>
+// ── As regras e o desenho, os MESMOS ficheiros que a linha de comandos corre ──
+'use strict';
+//
+// O juízo sobre um token, a partir de factos medidos.
+//
+// Função pura de propósito: recebe números, devolve veredicto. Toda a rede
+// está do lado de fora, para isto poder ser testado sem inventar um servidor.
+//
+// O que NÃO está aqui, e porquê: a concentração de carteiras (quanto da oferta
+// está nas 10 maiores). Medi os três RPC públicos da Solana e os três recusam
+// `getTokenLargestAccounts` sem chave paga — 403, 400 e 429. Fica por medir e
+// é dito na cara, em vez de se fingir que o token passou num exame que ninguém
+// fez.
+//
+
+/** Os limites, à vista, para se poder discordar deles. */
+const LIMITES = {
+  liquidezMinima: 1000,      // abaixo disto não se sai da posição
+  fdvSobreLiquidez: 50,      // preço sustentado por quase nada no fundo
+  vendasSobreCompras: 3,     // toda a gente a sair ao mesmo tempo
+  idadeMinimaMin: 5,         // novo demais para ter história nenhuma
+  quedaLiquidez: 0.5,        // metade da liquidez saiu desde que foi visto
+  // Quanto da oferta tem de estar DENTRO da piscina.
+  //
+  // Medido em 13 tokens novos, em 14/09/2026: mediana 11,4% dentro, p10 4,4%,
+  // p75 31,7%. Um único ficou abaixo de 1% — o SPEPE, com 0,002%, três ordens
+  // de grandeza abaixo de tudo o resto. Daí os dois degraus: abaixo de 1% é
+  // fora de escala, entre 1% e 4% é a cauda de baixo.
+  //
+  // A amostra é de 13 tokens de uma noite. É pouco, e está escrito aqui para
+  // quem mudar isto saber em cima de que é que está a mudar.
+  fraccaoNaPiscinaGrave: 0.01,
+  fraccaoNaPiscinaBaixa: 0.04,
+};
+
+const num = (x) => (Number.isFinite(x) ? x : null);
+
+/**
+ * FOGE, CUIDADO ou PASSA.
+ *
+ * `PASSA` nunca quer dizer "bom investimento" — quer dizer "não encontrei
+ * nenhuma das armadilhas que sei procurar". É uma peneira, não um conselho, e
+ * o texto do veredicto diz isso.
+ */
+function peneirar(f, { limites = LIMITES } = {}) {
+  if (!f || !f.mint) return null;
+
+  const fugir = [], avisar = [], notas = [];
+  const liq = num(f.liquidezUsd);
+  const fdv = num(f.fdv);
+
+  // ── Armadilhas de contrato: estas são absolutas, não são questão de grau ──
+  if (f.freezeAuthority) {
+    fugir.push('a freeze authority está activa: podem congelar a tua carteira e ficas sem vender');
+  }
+  if (f.mintAuthority) {
+    fugir.push('a mint authority está activa: podem imprimir mais e diluir-te a zero');
+  }
+
+  // ── Liquidez: é o que decide se consegues SAIR, não se consegues entrar ──
+  if (liq == null) {
+    fugir.push('não há dados de liquidez nenhuns — não dá para saber se se sai');
+  } else if (liq < limites.liquidezMinima) {
+    fugir.push(`só há $${liq.toFixed(0)} de liquidez: não consegues vender sem esmagar o preço`);
+  }
+
+  // A assinatura que vi no ATM/SOL: $26.901 de volume com $0 de liquidez. Isso
+  // não é um token a negociar — é a liquidez já retirada, e o volume foi a saída.
+  if (num(f.vol24h) > 0 && liq != null && liq < 1) {
+    fugir.push(`teve $${f.vol24h.toFixed(0)} de volume e a liquidez está a zero: já foi retirada`);
+  }
+
+  if (fdv != null && liq != null && liq > 0) {
+    const razao = fdv / liq;
+    if (razao > limites.fdvSobreLiquidez) {
+      fugir.push(`o preço avalia tudo em $${fdv.toFixed(0)} com $${liq.toFixed(0)} no fundo `
+        + `(${razao.toFixed(0)}x): não há lá dinheiro para pagar essa avaliação`);
+    }
+    notas.push(`avaliação ${razao.toFixed(1)}x a liquidez`);
+  }
+
+  // ── Pressão de venda ──
+  const c = num(f.compras5m), v = num(f.vendas5m);
+  if (c != null && v != null && (c + v) >= 5 && v > Math.max(1, c) * limites.vendasSobreCompras) {
+    avisar.push(`${v} vendas contra ${c} compras nos últimos 5 minutos: estão a sair`);
+  }
+
+  if (num(f.idadeMin) != null && f.idadeMin < limites.idadeMinimaMin) {
+    avisar.push(`tem ${f.idadeMin.toFixed(0)} minutos de vida: não há história nenhuma para ler`);
+  }
+
+  if (num(f.quedaLiquidez) != null && f.quedaLiquidez >= limites.quedaLiquidez) {
+    fugir.push(`perdeu ${(f.quedaLiquidez * 100).toFixed(0)}% da liquidez desde que foi visto`);
+  }
+
+  // ── Quanto da oferta está fora da piscina ──
+  //
+  // Isto NÃO é a concentração por carteira: 95% fora pode estar espalhado por
+  // dez mil pessoas. Mas é o tamanho do martelo que existe do lado de fora —
+  // quanto menos moeda houver dentro, menos é preciso vender para esmagar o
+  // preço. É a melhor medida que se consegue sem RPC pago, e diz-se o que é.
+  const fp = num(f.fraccaoNaPiscina);
+  if (fp != null) {
+    const dentro = (fp * 100).toFixed(fp < 0.01 ? 3 : 1);
+    if (fp < limites.fraccaoNaPiscinaGrave) {
+      fugir.push(`só ${dentro}% da oferta está dentro da piscina: quase tudo está `
+        + 'em carteiras, e basta uma para esmagar o preço');
+    } else if (fp < limites.fraccaoNaPiscinaBaixa) {
+      avisar.push(`só ${dentro}% da oferta está dentro da piscina `
+        + '(a mediana medida foi 11%)');
+    }
+    notas.push(`${dentro}% da oferta dentro da piscina`);
+  }
+
+  if (f.concentracao == null) {
+    notas.push('por carteira, a concentração continua NÃO medida '
+      + '(os RPC públicos recusam sem chave paga)');
+  } else if (f.concentracao > 0.5) {
+    fugir.push(`${(f.concentracao * 100).toFixed(0)}% da oferta está em 10 carteiras`);
+  }
+
+  const veredicto = fugir.length ? 'FOGE' : (avisar.length ? 'CUIDADO' : 'PASSA');
+  return {
+    veredicto,
+    porque: [...fugir, ...avisar],
+    notas,
+    // Dito sempre, para ninguém confundir isto com um conselho de compra.
+    aviso: veredicto === 'PASSA'
+      ? 'PASSA quer dizer "não encontrei as armadilhas que sei procurar" — não quer dizer que preste'
+      : null,
+  };
+}
+
+
+'use strict';
+//
+// O desenho de um cartão. Puro de propósito, sem nada do Node: este mesmo
+// ficheiro é embutido na página e corre no browser para redesenhar os cartões
+// com dados frescos.
+//
+// Uma segunda cópia deste código no `<script>` da página seria a maneira mais
+// rápida de a página e a linha de comandos passarem a discordar uma da outra.
+//
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g,
+  (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+const dinheiro = (n) => (n == null ? '—'
+  : n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M`
+  : n >= 1e3 ? `$${(n / 1e3).toFixed(1)}K`
+  : `$${n.toFixed(n < 10 ? 2 : 0)}`);
+
+const fraccao = (f) => (f == null ? '—'
+  : `${(f * 100).toFixed(f < 0.01 ? 3 : 1)}%`);
+
+function cartao({ f, j }) {
+  return `
+  <article class="t ${j.veredicto.toLowerCase()}">
+    <header>
+      <span class="v">${esc(j.veredicto)}</span>
+      <h2>${esc(f.simbolo || '?')}<small>${esc(f.nome || '')}</small></h2>
+    </header>
+    <dl>
+      <div><dt>Liquidez</dt><dd>${dinheiro(f.liquidezUsd)}</dd></div>
+      <div><dt>Volume 1h</dt><dd>${dinheiro(f.vol1h)}</dd></div>
+      <div><dt>Idade</dt><dd>${f.idadeMin == null ? '—' : Math.round(f.idadeMin) + ' min'}</dd></div>
+      <div><dt>Na piscina</dt><dd>${fraccao(f.fraccaoNaPiscina)}</dd></div>
+      <div><dt>Mint auth.</dt><dd>${f.mintAuthority ? 'ACTIVA' : 'queimada'}</dd></div>
+      <div><dt>Freeze auth.</dt><dd>${f.freezeAuthority ? 'ACTIVA' : 'queimada'}</dd></div>
+    </dl>
+    ${j.porque.length ? `<ul>${j.porque.map((p) => `<li>${esc(p)}</li>`).join('')}</ul>` : ''}
+    ${j.aviso ? `<p class="nota">${esc(j.aviso)}</p>` : ''}
+    ${f.url ? `<a href="${esc(f.url)}" rel="noopener" target="_blank">ver no DexScreener →</a>` : ''}
+  </article>`;
+}
+
+/**
+ * JSON seguro para pôr dentro de um <script>.
+ *
+ * JSON.stringify escapa aspas mas NAO escapa o sinal de menor. O nome de um
+ * token e texto escolhido por quem lancou a moeda: basta chamar-lhe algo que
+ * feche esta etiqueta de script e abra uma imagem com onerror, e corre o que
+ * quiser na pagina de quem a abre. Os separadores U+2028/2029 tambem entram,
+ * porque sao quebras de linha para o JavaScript e nao para o JSON.
+ *
+ * Este comentario esta sem acentos e sem o exemplo literal de proposito: a
+ * primeira versao dele TRAZIA o ataque escrito por extenso, e como este
+ * ficheiro e embutido na pagina, o comentario que explicava a fuga fazia-a.
+ */
+const jsonSeguro = (v) => JSON.stringify(v)
+  .replace(/</g, '\\u003c').replace(/>/g, '\\u003e')
+  .replace(/&/g, '\\u0026')
+  .replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
+
+/** Os cartões pela ordem em que devem ser lidos: o perigoso primeiro. */
+const ORDEM = { FOGE: 0, CUIDADO: 1, PASSA: 2 };
+const ordenar = (linhas) => [...linhas].sort((a, b) =>
+  (ORDEM[a.j.veredicto] ?? 9) - (ORDEM[b.j.veredicto] ?? 9));
+
+
+
+// Os factos que só se conseguem na blockchain e que o browser não vai buscar:
+// mint authority, freeze authority e a oferta total. Ficam cozidos aqui, do
+// momento em que a página foi gerada, porque não mudam depois de queimadas.
+var COZIDOS = {"3u9j8SEzeQ3rmhPBPdNMjunL4zAQrSZcFXrkjGvrpump":{"mintAuthority":null,"freezeAuthority":null,"oferta":1000000000,"nome":"Zion The Monkey","simbolo":"ZION"},"MSCXLS6wM2Dz2ormjyuPpKk8AVzaa1CvGTXbMFi8sWV":{"mintAuthority":null,"freezeAuthority":null,"oferta":998968385.765627,"nome":"The White Bank","simbolo":"BANKS"},"3vsesKyQKXp3ykze7Trth35VfwA2jPVtrfCjAMrJpump":{"mintAuthority":null,"freezeAuthority":null,"oferta":1000000000,"nome":"SlopCycle","simbolo":"SlopCycle"},"8fJjPjFc9PpvXMHf5YKxNMvAsxnP7yZ4FWPALCeFpump":{"mintAuthority":null,"freezeAuthority":null,"oferta":1000000000,"nome":"Stuart","simbolo":"Stuart"},"DRWuunuTMziMTZQcyxc4DcYtETZ9vAEBmnqZzQdwpump":{"mintAuthority":null,"freezeAuthority":null,"oferta":1000000000,"nome":"Worthless Coin","simbolo":"WORTHLESS"},"ArgY4k7p9NZKp2udJ5NR5QgGSqkevHriC4TrYfguNvJt":{"mintAuthority":null,"freezeAuthority":null,"oferta":977515326.772265,"nome":"pepetide","simbolo":"PEPETIDE"},"FHGUexxFtJdHQ3ejvFoMyXAdrNPVJpQVxi8z8haZpump":{"mintAuthority":null,"freezeAuthority":null,"oferta":1000000000,"nome":"MOG ","simbolo":"MOG"},"boDoUbtgp4DuUuJBTf3J6cPXabf9k8rC1Wi1PuGpump":{"mintAuthority":null,"freezeAuthority":null,"oferta":1000000000,"nome":"Hybrid Memes","simbolo":"HYBRID"},"EEo7cdV61n6DGQTXQgaRo4osMmytkTz6o1Z4oqYPop3x":{"mintAuthority":null,"freezeAuthority":null,"oferta":1000000000,"nome":"Vibrew Norby","simbolo":"VIBREW"},"EqkxqZcFZXd1ZdGnNojq1Sno9CHbnRPCKANqQ4N6vRyy":{"mintAuthority":null,"freezeAuthority":null,"oferta":999681780.60263,"nome":"musksan","simbolo":"MUSKSAN"},"CALLrLF4fS7FN4QA85j7xmC3Az2XKkrV9CBwg6qWHr6Y":{"mintAuthority":null,"freezeAuthority":null,"oferta":937756786.549034,"nome":"Callr","simbolo":"Callr"},"DjrtmQM3tQj51YDCrMYETG8PF4crqy9nLUyE5CEGpump":{"mintAuthority":null,"freezeAuthority":null,"oferta":970887020.881114,"nome":"CatDamon","simbolo":"CatDamon"},"7Vv1veMsBcBWAiSP1JTkRKvNeWmwf5Z7KbQuuKH1pump":{"mintAuthority":null,"freezeAuthority":null,"oferta":968419100.245409,"nome":"PumpStocks500","simbolo":"PS500"},"B3STjzr94bn61TF9qXhAiK98HwypNoyMc8tr78f3QuCQ":{"mintAuthority":null,"freezeAuthority":null,"oferta":999705573.586922,"nome":"This is Fine","simbolo":"FINE"}};
+</script>
 <script>
 // Quanto tempo tem esta página.
 //
@@ -354,6 +531,96 @@ piscina tanto pode estar em dez mil pessoas como numa só — e a diferença ent
     : 'Leitura de ' + texto + '.';
   if (min > 60) alvo.className = 'idade velha';
   alvo.hidden = false;
+})();
+
+// ── Actualizar sozinha, sem esperar pelo GitHub ──
+//
+// O horário do GitHub falhou duas vezes medidas: 90 minutos à primeira, 245 à
+// segunda. Não vale a pena continuar a afinar o cron.
+//
+// Medi que o DexScreener responde access-control-allow-origin: * — o browser
+// pode chamá-lo directamente, 12 tokens numa chamada em 122 ms. Por isso a
+// página vai buscar os números frescos quando alguém a abre, e o horário passa
+// a ser só a rede de segurança para quem nunca a abre.
+//
+// O que NÃO se actualiza aqui: mint e freeze authority, que vêm da blockchain.
+// Ficam os valores cozidos — e não mudam, porque uma autoridade queimada não
+// volta a acender.
+(function () {
+  var mints = Object.keys(COZIDOS);
+  var estado = document.getElementById('estadoLive');
+  if (!mints.length || !estado || typeof peneirar !== 'function') return;
+
+  function marcar(texto, classe) {
+    estado.textContent = texto;
+    estado.className = 'idade' + (classe ? ' ' + classe : '');
+    estado.hidden = false;
+  }
+
+  function actualizar() {
+    marcar('A buscar números frescos…');
+    fetch('https://api.dexscreener.com/latest/dex/tokens/' + mints.join(','))
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (d) {
+        var porMint = {};
+        (d.pairs || []).forEach(function (p) {
+          if (p.chainId !== 'solana') return;
+          var m = p.baseToken && p.baseToken.address;
+          if (!m) return;
+          var liq = (p.liquidity && p.liquidity.usd) || 0;
+          var actual = porMint[m];
+          if (!actual || liq > ((actual.liquidity && actual.liquidity.usd) || 0)) porMint[m] = p;
+        });
+
+        var linhas = [];
+        mints.forEach(function (m) {
+          var p = porMint[m], c = COZIDOS[m];
+          if (!p) return;                       // sem par agora: fica o cartão velho
+          var naPiscina = p.liquidity && p.liquidity.base != null ? Number(p.liquidity.base) : null;
+          var f = {
+            mint: m,
+            nome: (p.baseToken && p.baseToken.name) || c.nome,
+            simbolo: (p.baseToken && p.baseToken.symbol) || c.simbolo,
+            precoUsd: Number(p.priceUsd) || null,
+            fdv: Number(p.fdv) || null,
+            liquidezUsd: p.liquidity && p.liquidity.usd != null ? Number(p.liquidity.usd) : null,
+            vol1h: Number(p.volume && p.volume.h1) || 0,
+            vol24h: Number(p.volume && p.volume.h24) || 0,
+            compras5m: p.txns && p.txns.m5 ? p.txns.m5.buys : null,
+            vendas5m: p.txns && p.txns.m5 ? p.txns.m5.sells : null,
+            idadeMin: p.pairCreatedAt ? (Date.now() - p.pairCreatedAt) / 60000 : null,
+            fraccaoNaPiscina: (naPiscina != null && c.oferta > 0) ? naPiscina / c.oferta : null,
+            mintAuthority: c.mintAuthority,
+            freezeAuthority: c.freezeAuthority,
+            concentracao: null,
+            url: p.url || null,
+          };
+          linhas.push({ f: f, j: peneirar(f) });
+        });
+
+        if (!linhas.length) { marcar('Ninguém respondeu. Fica a leitura de antes.', 'velha'); return; }
+
+        var ord = ordenar(linhas);
+        document.getElementById('cartoes').innerHTML = ord.map(cartao).join('');
+        var conta = function (v) { return ord.filter(function (x) { return x.j.veredicto === v; }).length; };
+        document.getElementById('resumo').innerHTML =
+          '<b>' + ord.length + ' vistos</b>'
+          + '<b style="color:var(--mau)">' + conta('FOGE') + ' foge</b>'
+          + '<b style="color:var(--meio)">' + conta('CUIDADO') + ' cuidado</b>'
+          + '<b style="color:var(--bom)">' + conta('PASSA') + ' passa</b>';
+        var alvo = document.getElementById('idade');
+        if (alvo) alvo.hidden = true;
+        marcar('Números frescos, buscados agora no teu telemóvel.');
+      })
+      .catch(function (e) {
+        marcar('Não consegui buscar números frescos (' + e.message + '). '
+          + 'O que está em baixo é a leitura de antes.', 'velha');
+      });
+  }
+
+  actualizar();
+  var b = document.getElementById('recarregar');
+  if (b) { b.hidden = false; b.addEventListener('click', actualizar); }
 })();
 </script>
 </body></html>
