@@ -20,7 +20,10 @@ function mostrar(f, j) {
     + `  ·  vol 1h $${(f.vol1h || 0).toFixed(0)}`
     + `  ·  ${f.idadeMin == null ? '?' : Math.round(f.idadeMin)} min de vida`);
   console.log(`  mint auth ${f.mintAuthority ? 'ACTIVA' : 'queimada'}`
-    + `  ·  freeze auth ${f.freezeAuthority ? 'ACTIVA' : 'queimada'}`);
+    + `  ·  freeze auth ${f.freezeAuthority ? 'ACTIVA' : 'queimada'}`
+    + `  ·  ${f.fraccaoNaPiscina == null ? 'oferta na piscina desconhecida'
+      : (f.fraccaoNaPiscina * 100).toFixed(f.fraccaoNaPiscina < 0.01 ? 3 : 1)
+        + '% da oferta na piscina'}`);
   for (const p of j.porque) console.log(`  · ${p}`);
   if (j.aviso) console.log(`  ${j.aviso}`);
 }

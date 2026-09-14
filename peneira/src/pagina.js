@@ -66,6 +66,8 @@ function cartao({ f, j }) {
       <div><dt>Liquidez</dt><dd>${dinheiro(f.liquidezUsd)}</dd></div>
       <div><dt>Volume 1h</dt><dd>${dinheiro(f.vol1h)}</dd></div>
       <div><dt>Idade</dt><dd>${f.idadeMin == null ? '—' : Math.round(f.idadeMin) + ' min'}</dd></div>
+      <div><dt>Na piscina</dt><dd>${f.fraccaoNaPiscina == null ? '—'
+        : (f.fraccaoNaPiscina * 100).toFixed(f.fraccaoNaPiscina < 0.01 ? 3 : 1) + '%'}</dd></div>
       <div><dt>Mint auth.</dt><dd>${f.mintAuthority ? 'ACTIVA' : 'queimada'}</dd></div>
       <div><dt>Freeze auth.</dt><dd>${f.freezeAuthority ? 'ACTIVA' : 'queimada'}</dd></div>
     </dl>

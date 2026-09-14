@@ -254,3 +254,17 @@ test('sem dados da piscina nao se inventa fraccao nenhuma', () => {
   assert.equal(j.veredicto, 'PASSA');
   assert.ok(!j.notas.some((n) => /dentro da piscina/.test(n)));
 });
+
+// Medir e esconder não serve de nada. A fracção gatilhava veredictos mas não
+// aparecia em cartão nenhum — as `notas` nunca chegavam a ser desenhadas.
+test('a fraccao na piscina aparece no cartao, nao so no veredicto', () => {
+  const h = pagina([{ f: { ...bom, fraccaoNaPiscina: 0.114 }, j: peneirar(bom) }]);
+  assert.match(h, /Na piscina/, 'falta a etiqueta no cartão');
+  assert.match(h, /11\.4%/, 'o número tem de estar à vista');
+});
+
+test('token sem essa medida mostra travessao, e nao um zero enganador', () => {
+  const h = pagina([{ f: { ...bom, fraccaoNaPiscina: null }, j: peneirar(bom) }]);
+  assert.match(h, /Na piscina<\/dt><dd>—/);
+  assert.ok(!/Na piscina<\/dt><dd>0/.test(h), '"0%" faria parecer medido e vazio');
+});
