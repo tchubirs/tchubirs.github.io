@@ -114,12 +114,16 @@ dd{margin:2px 0 0;font-variant-numeric:tabular-nums;font-weight:600;font-size:.9
 ul{margin:12px 0 0;padding-left:18px;font-size:.9rem} li{margin:3px 0}
 .nota{font-size:.82rem;color:var(--fraco);margin:10px 0 0;font-style:italic}
 .t a{display:inline-block;margin-top:10px;font-size:.85rem;color:inherit}
+.idade{margin:-14px 0 20px;font-size:.85rem;padding:8px 12px;border-radius:8px;
+ border:1px solid var(--fio);background:var(--caixa)}
+.idade.velha{border-color:var(--meio);color:var(--meio);font-weight:600}
 footer{margin-top:28px;padding-top:16px;border-top:1px solid var(--fio);color:var(--fraco);font-size:.82rem}
 footer p{margin:0 0 8px}
 </style></head><body><main>
 <h1>Peneira</h1>
 <p class="sub">Tokens acabados de nascer na Solana, passados pelas armadilhas que dá para medir.
-Actualizado <time datetime="${quando.toISOString()}">${quando.toISOString().replace('T', ' ').slice(0, 16)} UTC</time>.</p>
+Actualizado <time id="quando" datetime="${quando.toISOString()}">${quando.toISOString().replace('T', ' ').slice(0, 16)} UTC</time>.</p>
+<p class="idade" id="idade" hidden></p>
 <div class="resumo">
   <b>${ord.length} vistos</b>
   <b style="color:var(--mau)">${conta('FOGE')} foge</b>
@@ -135,7 +139,31 @@ armadilhas que sei procurar. Não é conselho de compra, e eu não recebo nada s
 recusam <code>getTokenLargestAccounts</code> sem chave paga (403, 400 e 429). Um token pode
 passar aqui e ter 90% da oferta numa carteira só.</p>
 </footer>
-</main></body></html>`;
+</main>
+<script>
+// Quanto tempo tem esta página.
+//
+// O horário do GitHub é "melhor esforço": medi um salto de 90 minutos sem
+// disparar. Uma data em UTC no topo não diz a ninguém se o que está em baixo
+// ainda vale — e uma peneira velha é pior que nenhuma, porque um token pode ter
+// perdido a liquidez toda entretanto.
+(function () {
+  var t = document.getElementById('quando'), alvo = document.getElementById('idade');
+  if (!t || !alvo) return;
+  var ms = Date.now() - Date.parse(t.getAttribute('datetime'));
+  if (!isFinite(ms)) return;
+  var min = Math.max(0, Math.round(ms / 60000));
+  var texto = min < 1 ? 'agora mesmo'
+    : min < 60 ? 'há ' + min + ' min'
+    : 'há ' + Math.floor(min / 60) + 'h' + String(min % 60).padStart(2, '0');
+  alvo.textContent = min > 60
+    ? 'Esta leitura é de ' + texto + '. Nesse tempo um token pode ter perdido a liquidez toda — confirma antes de agir.'
+    : 'Leitura de ' + texto + '.';
+  if (min > 60) alvo.className = 'idade velha';
+  alvo.hidden = false;
+})();
+</script>
+</body></html>`;
 }
 
 module.exports = { pagina, cartao, dinheiro, esc, baseDoMercado };
