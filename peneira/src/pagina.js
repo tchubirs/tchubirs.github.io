@@ -135,9 +135,12 @@ ${base ? `<footer><p><strong>A base do mercado, medida:</strong> ${esc(base)}</p
 <footer>
 <p><strong>PASSA não quer dizer bom.</strong> Quer dizer que não encontrei nenhuma das
 armadilhas que sei procurar. Não é conselho de compra, e eu não recebo nada se comprares.</p>
-<p>A concentração de carteiras <strong>não</strong> é medida: os três RPC públicos da Solana
-recusam <code>getTokenLargestAccounts</code> sem chave paga (403, 400 e 429). Um token pode
-passar aqui e ter 90% da oferta numa carteira só.</p>
+<p>Mede-se <strong>quanto da oferta está dentro da piscina</strong> — o resto está em
+carteiras, e é o martelo que existe do lado de fora. Na amostra medida a mediana foi
+<strong>11%</strong> dentro; abaixo de 1% é FOGE.</p>
+<p>Mas a concentração <strong>por carteira</strong> continua por medir: os três RPC públicos da
+Solana recusam <code>getTokenLargestAccounts</code> sem chave paga (403, 400 e 429). 95% fora da
+piscina tanto pode estar em dez mil pessoas como numa só — e a diferença entre as duas é tudo.</p>
 </footer>
 </main>
 <script>

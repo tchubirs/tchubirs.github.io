@@ -114,8 +114,11 @@ test('o nome do token nao pode injectar HTML na pagina', () => {
   assert.ok(h.includes('&lt;img'), 'devia estar escapado');
 });
 
-test('a pagina diz sempre que a concentracao nao e medida', () => {
-  assert.match(pagina([]), /getTokenLargestAccounts/);
+test('a pagina diz sempre o que mede e o que nao mede', () => {
+  const h = pagina([]);
+  assert.match(h, /getTokenLargestAccounts/, 'tem de dizer o que NAO mede');
+  assert.match(h, /dentro da piscina/, 'e tem de dizer o que mede');
+  assert.match(h, /numa só/, 'e porque e que uma coisa nao substitui a outra');
 });
 
 // Abaixo de $10 mostram-se cêntimos de propósito: a diferença entre $0,75 de
@@ -205,4 +208,49 @@ test('a pagina traz consigo a hora exacta, para poder dizer que idade tem', () =
   assert.ok(h.includes('id="quando"'), 'o guiao precisa de encontrar a hora');
   assert.ok(h.includes('id="idade"'), 'falta o sitio onde a idade aparece');
   assert.ok(/perdido a liquidez toda/.test(h), 'falta o aviso de leitura velha');
+});
+
+// ── Quanto da oferta está dentro da piscina ──
+//
+// Substitui, de graça, a concentração por carteira que os RPC públicos
+// recusam. Não é a mesma coisa e o código diz que não é — mas mede o tamanho
+// do martelo que existe do lado de fora da piscina.
+
+test('quase nada da oferta dentro da piscina e FOGE', () => {
+  const j = peneirar({ ...bom, fraccaoNaPiscina: 0.00002 });   // o SPEPE real
+  assert.equal(j.veredicto, 'FOGE');
+  assert.ok(j.porque.some((p) => /0\.002% da oferta/.test(p)), j.porque.join(' / '));
+});
+
+// O limite não é inventado: na amostra de 14/09 a mediana foi 11,4% e o p10
+// 4,43%. 4% apanha o que está abaixo do décimo percentil, e não mais.
+test('a cauda de baixo e CUIDADO, e o resto da amostra passa', () => {
+  assert.equal(peneirar({ ...bom, fraccaoNaPiscina: 0.03 }).veredicto, 'CUIDADO');
+  assert.equal(peneirar({ ...bom, fraccaoNaPiscina: 0.0443 }).veredicto, 'PASSA'); // o p10
+  assert.equal(peneirar({ ...bom, fraccaoNaPiscina: 0.114 }).veredicto, 'PASSA');  // a mediana
+});
+
+// Uma fracção pequena mas normal não pode virar alarme: 11% é a MEDIANA.
+// Se isto disparasse a 11%, metade dos tokens levava aviso e o aviso deixava
+// de querer dizer nada.
+test('a mediana medida nao pode disparar aviso nenhum', () => {
+  const j = peneirar({ ...bom, fraccaoNaPiscina: 0.114 });
+  assert.equal(j.porque.length, 0, `a mediana levou aviso: ${j.porque.join(' / ')}`);
+});
+
+test('a fraccao aparece sempre nas notas, mesmo quando esta bem', () => {
+  const j = peneirar({ ...bom, fraccaoNaPiscina: 0.32 });
+  assert.ok(j.notas.some((n) => /32\.0% da oferta dentro/.test(n)), j.notas.join(' / '));
+});
+
+// Isto é o que impede a peneira de se armar em mais do que é.
+test('continua a dizer que a concentracao POR CARTEIRA nao e medida', () => {
+  const j = peneirar({ ...bom, fraccaoNaPiscina: 0.5 });
+  assert.ok(j.notas.some((n) => /por carteira.*NÃO medida/.test(n)), j.notas.join(' / '));
+});
+
+test('sem dados da piscina nao se inventa fraccao nenhuma', () => {
+  const j = peneirar({ ...bom, fraccaoNaPiscina: null });
+  assert.equal(j.veredicto, 'PASSA');
+  assert.ok(!j.notas.some((n) => /dentro da piscina/.test(n)));
 });
