@@ -1,0 +1,663 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tablecut - PDF table to spreadsheet, without uploading the file</title>
+<meta name="description" content="Pull tables out of a PDF and paste them into a spreadsheet. The file never leaves your computer - no upload, no account. For bank statements, invoices and reports that only ever arrive as PDF.">
+<meta property="og:title" content="Tablecut - PDF table to spreadsheet, without uploading the file">
+<meta property="og:description" content="Pull tables out of a PDF and paste them into a spreadsheet. The file never leaves your computer - no upload, no account. For bank statements, invoices and reports that only ever arrive as PDF.">
+<meta property="og:type" content="website">
+<style>img{max-width:100%}[hidden]{display:none!important}body{margin:0}</style>
+</head>
+<body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js"></script>
+<style>
+/* Tablecut — tabela de PDF para folha de calculo, dentro do browser.
+   Mundo visual: livro-razao. Papel frio, tinta azul, verde de coluna
+   extraida. Tema claro e escuro pelos mesmos tokens. */
+:root{
+  --ground:#f4f6f8; --panel:#ffffff; --sunk:#eef1f5; --line:#dde3ea;
+  --text:#16202b; --muted:#5a6b7b; --faint:#8595a4;
+  --ink:#2c5f9e; --ink-soft:#e7eefa; --green:#136f52; --green-soft:#e2f3ec;
+  --warn:#9a5b12; --bad:#a32f2f;
+  --shadow:0 1px 2px rgba(22,32,43,.06), 0 6px 18px rgba(22,32,43,.05);
+  --serif:"Source Serif 4",Georgia,serif;
+  --sans:"Public Sans",ui-sans-serif,system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ground:#0f151b; --panel:#161e26; --sunk:#131a21; --line:#26323d;
+  --text:#e6edf4; --muted:#9aabba; --faint:#6b7c8b;
+  --ink:#79aae8; --ink-soft:#18283c; --green:#57c69b; --green-soft:#13302a;
+  --warn:#e0a558; --bad:#e2807f;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.3);
+}}
+:root[data-theme="dark"]{
+  --ground:#0f151b; --panel:#161e26; --sunk:#131a21; --line:#26323d;
+  --text:#e6edf4; --muted:#9aabba; --faint:#6b7c8b;
+  --ink:#79aae8; --ink-soft:#18283c; --green:#57c69b; --green-soft:#13302a;
+  --warn:#e0a558; --bad:#e2807f;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.55}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+.wrap{max-width:1220px;margin:0 auto;padding-inline:20px;padding-block:22px 60px}
+header.top{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;justify-content:space-between;margin-bottom:8px}
+h1{font-family:var(--serif);font-size:27px;font-weight:600;margin:0;letter-spacing:-.01em}
+h1 span{color:var(--ink)}
+.tagline{color:var(--muted);font-size:14px;margin:3px 0 0;max-width:62ch}
+.privacy{display:inline-flex;align-items:center;gap:7px;background:var(--green-soft);color:var(--green);
+  border-radius:999px;padding:5px 12px;font-size:12.5px;font-weight:500;white-space:nowrap}
+.privacy b{font-weight:600}
+
+.grid{display:grid;grid-template-columns:320px minmax(0,1fr);gap:22px;align-items:start;margin-top:22px}
+.grid > *{min-width:0}
+@media (max-width:920px){.grid{grid-template-columns:minmax(0,1fr)}}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
+.card + .card{margin-top:16px}
+.card > .head{padding:13px 16px;border-bottom:1px solid var(--line);display:flex;
+  align-items:baseline;justify-content:space-between;gap:10px}
+.card > .head h2{font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--faint);margin:0}
+.card .body{padding:16px}
+
+.drop{border:1.5px dashed var(--line);border-radius:10px;background:var(--sunk);padding:22px 16px;
+  text-align:center;cursor:pointer;transition:border-color .15s,background .15s}
+.drop:hover,.drop.over{border-color:var(--ink);background:var(--ink-soft)}
+.drop strong{display:block;font-size:15px;margin-bottom:3px}
+.drop span{color:var(--muted);font-size:13px}
+.file{display:flex;align-items:center;gap:9px;margin-top:12px;font-size:13px;color:var(--muted);
+  font-family:var(--mono);overflow-wrap:anywhere}
+.file b{color:var(--text);font-weight:500}
+
+.ctl{margin-top:16px}
+.ctl label{display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+  font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);font-family:var(--mono)}
+.ctl label em{font-style:normal;color:var(--ink);font-weight:500}
+input[type=range]{width:100%;margin:6px 0 0;accent-color:var(--ink)}
+.hint{font-size:12.5px;color:var(--muted);margin:6px 0 0}
+.check{display:flex;align-items:center;gap:8px;margin-top:11px;font-size:13.5px;color:var(--text);cursor:pointer}
+.check input{accent-color:var(--ink);width:15px;height:15px}
+
+.btn{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:9px 13px;
+  cursor:pointer;font-size:13.5px;font-weight:500;transition:border-color .12s,background .12s}
+.btn:hover{border-color:var(--ink);color:var(--ink)}
+.btn.primary{background:var(--ink);border-color:var(--ink);color:#fff}
+.btn.primary:hover{filter:brightness(1.08);color:#fff}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+
+.pages[hidden]{display:none}
+.pages{display:flex;gap:6px;flex-wrap:wrap;padding:11px 16px;border-bottom:1px solid var(--line);background:var(--sunk)}
+.pg{border:1px solid var(--line);background:var(--panel);border-radius:7px;padding:5px 11px;
+  font-family:var(--mono);font-size:12px;cursor:pointer}
+.pg[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
+.pg.tem{border-color:var(--green);color:var(--green)}
+.pg.tem[aria-pressed="true"]{background:var(--green);border-color:var(--green);color:#fff}
+.pg:not(.tem){opacity:.62}
+.pg small{opacity:.7}
+
+.tablewrap{overflow:auto;max-width:100%;max-height:560px}
+table{border-collapse:collapse;width:100%}
+th,td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);
+  padding:7px 11px;text-align:left;font-family:var(--mono);font-size:13px;
+  font-variant-numeric:tabular-nums;white-space:pre-wrap;overflow-wrap:anywhere;
+  vertical-align:top;max-width:360px}
+th{background:var(--sunk);position:sticky;top:0;font-weight:500;color:var(--muted);
+  font-size:11px;letter-spacing:.08em;text-transform:uppercase;z-index:1}
+td.num{text-align:right}
+tbody tr:hover td{background:var(--ink-soft)}
+tr.head td{background:var(--green-soft);color:var(--green);font-weight:500}
+tr.above td{opacity:.4}
+th.col{cursor:pointer;user-select:none}
+th.col:hover{color:var(--ink)}
+th.off{text-decoration:line-through;color:var(--faint)}
+td.off{opacity:.25}
+tbody tr{cursor:pointer}
+th:last-child,td:last-child{border-right:0}
+
+.state{padding:44px 20px;text-align:center;color:var(--muted)}
+.state h3{font-family:var(--serif);font-size:19px;font-weight:600;color:var(--text);margin:0 0 6px}
+.state.err h3{color:var(--bad)}
+.spin{display:inline-block;width:15px;height:15px;border:2px solid var(--line);
+  border-top-color:var(--ink);border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+.foot{margin-top:14px;font-size:12.5px;color:var(--faint);display:flex;gap:14px;flex-wrap:wrap}
+.foot b{color:var(--muted);font-weight:500}
+/* ── seccoes de venda, por baixo da ferramenta ── */
+.sell{border-top:1px solid var(--line);margin-top:40px;background:var(--panel)}
+.sell-in{max-width:1220px;margin:0 auto;padding-inline:20px;padding-block:36px 44px}
+.sell h2{font-family:var(--serif);font-size:23px;font-weight:600;margin:34px 0 14px}
+.sell h2:first-child{margin-top:0}
+.sell h3{font-size:15.5px;font-weight:600;margin:0 0 7px}
+.sell p{margin:0 0 11px;max-width:62ch;color:var(--muted)}
+.sell b{color:var(--text);font-weight:600}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:28px}
+.who{margin:0;padding-left:20px;color:var(--muted);max-width:66ch}
+.who li{margin-bottom:9px}
+.aside{font-size:13.5px;color:var(--faint);border-left:2px solid var(--line);padding-left:13px;max-width:62ch}
+.price{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;max-width:720px}
+.plan{border:1px solid var(--line);border-radius:12px;padding:18px}
+.plan.buy{border-color:var(--ink)}
+.plan .big{font-family:var(--serif);font-size:26px;color:var(--text);margin:2px 0 10px}
+.plan .big small{font-size:14px;font-family:var(--sans);color:var(--faint)}
+.cta{display:inline-block;background:var(--ink);color:#fff;text-decoration:none;
+     padding:11px 20px;border-radius:9px;font-weight:600;margin-top:4px}
+.foot-site{max-width:1220px;margin:0 auto;padding:22px 20px 48px;color:var(--faint);font-size:13px}
+
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Table<span>cut</span></h1>
+      <p class="tagline">Pull the tables out of a PDF and paste them straight into a spreadsheet. Invoices, bank statements, reports.</p>
+    </div>
+    <p class="privacy"><b>Nothing is uploaded.</b> The file is read inside this tab.</p>
+  </header>
+
+  <div class="grid">
+    <div>
+      <div class="card">
+        <div class="head"><h2>File</h2><button class="btn" id="btn-example" style="padding:3px 9px;font-size:12px">Example</button></div>
+        <div class="body">
+          <div class="drop" id="drop" tabindex="0" role="button" aria-label="Choose a PDF">
+            <strong>Drop a PDF here</strong>
+            <span>or click to choose one</span>
+          </div>
+          <input type="file" id="file" accept="application/pdf,.pdf" hidden>
+          <p class="file" id="fileinfo"></p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="head"><h2>Reading</h2></div>
+        <div class="body">
+          <div class="ctl">
+            <label for="rowtol">Row grouping <em id="rowtol-v">0.6</em></label>
+            <input type="range" id="rowtol" min="0.2" max="1.6" step="0.1" value="0.6">
+            <p class="hint">Raise it when one row is being split in two. Lower it when two rows are merging into one.</p>
+          </div>
+          <div class="ctl">
+            <label for="colgap">Column gap <em id="colgap-v">12</em></label>
+            <input type="range" id="colgap" min="3" max="40" step="1" value="12">
+            <p class="hint">The blank space, in points, that starts a new column.</p>
+          </div>
+          <label class="check"><input type="checkbox" id="trim" checked> Drop empty columns</label>
+          <p class="hint" id="headhint" style="margin-top:12px">Click a column letter to leave that column out, and a row to say where the table starts — the lines above it (titles, addresses) are left out when you copy.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="head"><h2>Take it away</h2></div>
+        <div class="body">
+          <div class="btns">
+            <button class="btn primary" id="btn-tsv" disabled>Copy for spreadsheet</button>
+            <button class="btn" id="btn-csv" disabled>Copy as CSV</button>
+          </div>
+          <p class="hint" id="copy-hint">Copy, then paste into Excel, Numbers or Google Sheets — the columns land in place.</p>
+          <div class="btns" style="margin-top:10px">
+            <button class="btn" id="btn-all" disabled>Copy every page</button>
+            <button class="btn" id="btn-theme" title="Switch light and dark">Theme</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin:0">
+      <div class="head">
+        <h2>Table</h2>
+        <span class="hint" id="summary" style="margin:0"></span>
+      </div>
+      <div class="pages" id="pages" hidden></div>
+      <div id="out">
+        <div class="state"><h3><span class="spin"></span> Reading the example</h3>
+        <p>One moment — the PDF engine is loading.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <p class="foot">
+    <span><b>Why in the browser:</b> a bank statement or a client invoice should not be uploaded to a stranger's server to become a spreadsheet.</span>
+    <span><b>Reads:</b> text-based PDFs. A scan with no text layer needs OCR, which this does not do.</span>
+  </p>
+</div>
+
+<section class="sell">
+  <div class="sell-in">
+
+    <h2>Why this one is different</h2>
+    <div class="two">
+      <div>
+        <h3>The file stays on your computer</h3>
+        <p>Every other converter asks you to upload the PDF to their server. Tablecut
+        does the reading here, in this tab, with your browser's own PDF engine. Nothing
+        is sent anywhere — you can turn off your internet after the page loads and it
+        still works.</p>
+        <p>That is the whole point. A bank statement, a client invoice, a payroll sheet:
+        those are exactly the documents you are not allowed to hand to a company you
+        have never heard of — and exactly the ones people end up retyping by hand.</p>
+      </div>
+      <div>
+        <h3>It shows you what it read</h3>
+        <p>The table on screen is what you are about to paste. Check it before you paste
+        it, fix a row, drop the lines above the header.</p>
+        <p>A converter that quietly drops a digit is worse than no converter at all,
+        because you find out three weeks later when a total does not match. Tablecut
+        would rather show you a messy table than a wrong clean one.</p>
+      </div>
+    </div>
+
+    <h2>Who ends up using it</h2>
+    <ul class="who">
+      <li><b>Bookkeepers and small accounting offices</b> — statements and invoices that
+      arrive as PDFs from a dozen different banks and suppliers, every month.</li>
+      <li><b>People who handle someone else's documents</b> — where uploading is not a
+      preference but a rule you would be breaking.</li>
+      <li><b>Anyone told "just retype it"</b> — reports, price lists, listings that only
+      ever come as PDF.</li>
+    </ul>
+    <p class="aside">If your own system produced the data, you do not need this. Export
+    a CSV and go. This exists for documents that arrive from outside.</p>
+
+    <h2>Honest limits</h2>
+    <ul class="who">
+      <li><b>Scanned pages do not work.</b> If the PDF is a photograph of a document
+      there is no text to read, and Tablecut tells you so instead of inventing rows.</li>
+      <li><b>Hard layouts need a nudge.</b> Two sliders — row grouping and column gap —
+      and a click to say where the table starts. That is the whole adjustment.</li>
+      <li><b>It reads tables, it does not understand them.</b> It will not know which
+      column is VAT.</li>
+    </ul>
+
+    
+    <h2 id="price">Price</h2>
+    <p class="aside">Free while it is being tested on real documents. When it earns a
+    price it will be shown here, and it will be one payment — not a subscription you
+    have to remember to cancel.</p>
+  </div>
+</section>
+
+<footer class="foot-site">
+  <p>Tablecut — a table out of a PDF, without the file leaving your computer.</p>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var EXAMPLE_B64 = "JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA1OTUgODQyXSAvUmVzb3VyY2VzIDw8IC9Gb250IDw8IC9GMSA1IDAgUiAvRjIgNiAwIFIgPj4gPj4gL0NvbnRlbnRzIDQgMCBSID4+CmVuZG9iago0IDAgb2JqCjw8IC9MZW5ndGggNTQ2IC9GaWx0ZXIgL0ZsYXRlRGVjb2RlID4+CnN0cmVhbQp4nI2VS4/bIBCA7/kVc2yl2OVhbOfYNGm1lz42XqlXauMN3QQsTNJdqT++OIG1mlbGys35ZpgPhmFdLd59JIAZVO0CA3I/DCyHIkdQHRdvPmtj97+kauBeHPgLJCCe+bE7CJDqrGUt3kL1c7GtFushEYbVbZ6MXPLcXWnYfk8Qohh+g+z7k2iAIJInaJUgDO7ja/aGW74EpS1wMIIfoNbHjquXv5ZzdaPb9dC17nvRppMsxiO8EX1tZGelVpMxlKLXmG92uhZajvkflLSTcFaMid8f9UnZm239xzMvsiudYJThSXowDfhGNLLm1u17L8xZmCVQAp/Wk/GDdYgn02Q5rlRmKUKT9CAdaJyXMXyQZmSUni7lIu3x7bM1HO6+njPgTWNE38d9fWgW9/UkTdkMXQ/j6OYMtvTaEOuEEDxNX2w9/qVtk15aAT94/XTqlsBcY805Yh8/3UwXZU+SIl3NcJ5ND86oHJ1ntLXHd4p3/d4NCyOsUMM9BoqauLIPn6EcSDKrq2fTTpm59AP8IaE0skGDcsA3G72DVh6sMFI9LqG3XDXcxKVDAhqVDiRezZEONCvmSOfZKB0/54BXhretrEG70cUfhfu3ijd2CI7PrkCWKWFx3zyMrtjNH3z9M7hJMoTikyvgu1PXuQcY9vpk+iVod7U7wZ/iyj4+jyt7MmOzztjTpEC3+P/eP4avV7/Slh+iD2CgWc7SLCT/A0Fl3g4KZW5kc3RyZWFtCmVuZG9iago1IDAgb2JqCjw8IC9UeXBlIC9Gb250IC9TdWJ0eXBlIC9UeXBlMSAvQmFzZUZvbnQgL0hlbHZldGljYSA+PgplbmRvYmoKNiAwIG9iago8PCAvVHlwZSAvRm9udCAvU3VidHlwZSAvVHlwZTEgL0Jhc2VGb250IC9IZWx2ZXRpY2EtQm9sZCA+PgplbmRvYmoKeHJlZgowIDcKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDA5IDAwMDAwIG4gCjAwMDAwMDAwNTggMDAwMDAgbiAKMDAwMDAwMDExNSAwMDAwMCBuIAowMDAwMDAwMjUxIDAwMDAwIG4gCjAwMDAwMDA4NjkgMDAwMDAgbiAKMDAwMDAwMDkzOSAwMDAwMCBuIAp0cmFpbGVyCjw8IC9TaXplIDcgL1Jvb3QgMSAwIFIgPj4Kc3RhcnR4cmVmCjEwMTQKJSVFT0YK";
+  var $ = function(id){ return document.getElementById(id); };
+  var pages = [], current = 0, fileName = "", headRow = {}, resumoCache = {}, fora = {};
+
+  // resumo de cada pagina para as etiquetas e para escolher onde abrir.
+  // Guardado por combinacao de opcoes: mexer num cursor nao volta a moer
+  // 71 paginas sem necessidade.
+  function resumos(){
+    var o = opts(), chave = o.tol + "|" + o.gap + "|" + o.trim;
+    if (resumoCache.chave === chave) return resumoCache.lista;
+    var lista = pages.map(function(p){
+      var t = matrix(p, o.tol, o.gap, o.trim), cel = t.cells;
+      var multi = cel.length ? cel.filter(function(l){
+        return l.filter(function(c){ return c !== ""; }).length >= 2; }).length / cel.length : 0;
+      return {linhas: cel.length, colunas: t.cols,
+              tabela: cel.length >= 3 && t.cols >= 2 && multi >= 0.4,
+              nota: (cel.length >= 3 && t.cols >= 2) ? multi * Math.min(t.cols, 8) : 0};
+    });
+    resumoCache = {chave: chave, lista: lista};
+    return lista;
+  }
+
+  if (window.pdfjsLib){
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
+  }
+
+  /* ── ler o PDF ─────────────────────────────────────────────────────
+     Cada item de texto traz a sua posicao. As linhas saem de agrupar por
+     altura; as colunas, de agrupar os inicios em x e cortar onde ha um
+     vao maior que o limite. E geometria, nao adivinhacao. */
+  function toBytes(b64){
+    var bin = atob(b64), a = new Uint8Array(bin.length);
+    for (var i=0;i<bin.length;i++) a[i] = bin.charCodeAt(i);
+    return a;
+  }
+
+  function readItems(page){
+    return page.getTextContent().then(function(tc){
+      var out = [];
+      tc.items.forEach(function(it){
+        var s = (it.str||"").replace(/\s+/g," ").trim();
+        if (!s) return;
+        out.push({x:it.transform[4], y:it.transform[5],
+                  h:Math.abs(it.transform[3]) || 10, w:it.width||0, s:s});
+      });
+      return out;
+    });
+  }
+
+  function medianHeight(items){
+    if (!items.length) return 10;
+    var h = items.map(function(i){ return i.h; }).sort(function(a,b){ return a-b; });
+    return h[Math.floor(h.length/2)] || 10;
+  }
+
+  function buildRows(items, tolFactor){
+    var mh = medianHeight(items), tol = mh * tolFactor;
+    var sorted = items.slice().sort(function(a,b){ return b.y - a.y || a.x - b.x; });
+    var rows = [], cur = null;
+    sorted.forEach(function(it){
+      if (!cur || Math.abs(cur.y - it.y) > tol){
+        cur = {y:it.y, items:[it]}; rows.push(cur);
+      } else {
+        cur.items.push(it);
+        cur.y = (cur.y * (cur.items.length-1) + it.y) / cur.items.length;
+      }
+    });
+    rows.forEach(function(r){ r.items.sort(function(a,b){ return a.x - b.x; }); });
+    return rows;
+  }
+
+  function buildColumns(rows, gap){
+    var xs = [];
+    rows.forEach(function(r){ r.items.forEach(function(i){ xs.push(i.x); }); });
+    xs.sort(function(a,b){ return a-b; });
+    var cuts = [], start = null, prev = null;
+    xs.forEach(function(x){
+      if (start === null){ start = x; prev = x; return; }
+      if (x - prev > gap){ cuts.push(start); start = x; }
+      prev = x;
+    });
+    if (start !== null) cuts.push(start);
+    return cuts;
+  }
+
+  // Uma coluna que, na maioria das linhas, tem dois pedacos separados por um
+  // vao, eram duas colunas. Acontece com numeros alinhados a direita, que e
+  // como vem o dinheiro em qualquer factura ou extracto.
+  function splitColumns(rows, cols, gap){
+    if (cols.length < 1) return cols;
+    var finas = Math.max(2, gap / 3), saida = [];
+    for (var c = 0; c < cols.length; c++){
+      var ini = cols[c], fim = (c + 1 < cols.length) ? cols[c+1] : Infinity;
+      var comItens = 0, concorda = 0, cortes = [];
+      rows.forEach(function(r){
+        var dentro = r.items.filter(function(i){ return i.x >= ini - 1 && i.x < fim - 1; });
+        if (!dentro.length) return;
+        comItens++;
+        var partes = 1;
+        for (var k = 1; k < dentro.length; k++){
+          var antes = dentro[k-1], vao = dentro[k].x - (antes.x + Math.max(antes.w || 0, 1));
+          if (vao >= finas){ partes++; cortes.push(dentro[k].x); }
+        }
+        if (partes > 1) concorda++;
+      });
+      saida.push(ini);
+      // so corta se mais de metade das linhas com conteudo concordarem
+      if (comItens >= 4 && concorda > comItens * 0.5 && cortes.length){
+        cortes.sort(function(a, b){ return a - b; });
+        var grupo = [cortes[0]], usados = [];
+        for (var k = 1; k <= cortes.length; k++){
+          if (k < cortes.length && cortes[k] - grupo[grupo.length-1] <= finas){ grupo.push(cortes[k]); continue; }
+          if (grupo.length > comItens * 0.4){                  // este corte repete-se
+            var media = grupo.reduce(function(a, b){ return a + b; }, 0) / grupo.length;
+            if (media > ini + 1 && media < fim - 1) usados.push(media);
+          }
+          if (k < cortes.length) grupo = [cortes[k]];
+        }
+        usados.slice(0, 4).forEach(function(x){ saida.push(x); });
+      }
+    }
+    return saida.sort(function(a, b){ return a - b; });
+  }
+
+  function matrix(items, tolFactor, gap, trim){
+    var rows = buildRows(items, tolFactor);
+    var cols = splitColumns(rows, buildColumns(rows, gap), gap);
+    if (!cols.length) return {cells:[], cols:0};
+    var cells = rows.map(function(r){
+      var line = new Array(cols.length).fill(""), fim = new Array(cols.length);
+      r.items.forEach(function(it){
+        var idx = 0;
+        for (var c=0;c<cols.length;c++) if (it.x >= cols[c] - 1) idx = c;
+        if (line[idx] === ""){ line[idx] = it.s; }
+        else {
+          // Vao entre este pedaco e o anterior. Se e muito menor que a altura
+          // da letra, nao havia espaco nenhum ali: era a mesma palavra partida
+          // em pedacos pelo PDF — "M a r r i e d" era "Married".
+          var vao = (fim[idx] == null) ? 99 : it.x - fim[idx];
+          line[idx] += (vao < (it.h || 10) * 0.22 ? "" : " ") + it.s;
+        }
+        fim[idx] = it.x + Math.max(it.w || 0, 1);
+      });
+      return line;
+    });
+    if (trim){
+      var keep = [];
+      for (var c=0;c<cols.length;c++){
+        var any = cells.some(function(l){ return l[c] !== ""; });
+        if (any) keep.push(c);
+      }
+      cells = cells.map(function(l){ return keep.map(function(c){ return l[c]; }); });
+    }
+    cells = cells.filter(function(l){ return l.some(function(v){ return v !== ""; }); });
+    return {cells:cells, cols:cells.length ? cells[0].length : 0};
+  }
+
+  /* ── carregar ── */
+  function loadBytes(bytes, name){
+    fileName = name;
+    show('<div class="state"><h3><span class="spin"></span> Reading ' + esc(name) + '</h3></div>');
+    if (!window.pdfjsLib){
+      return show('<div class="state err"><h3>The PDF engine did not load</h3>' +
+        '<p>It comes from a CDN and the network blocked it. Reload the page; if it keeps failing, the network is the problem, not the file.</p></div>');
+    }
+    pdfjsLib.getDocument({data:bytes}).promise.then(function(doc){
+      var jobs = [];
+      for (var i=1;i<=doc.numPages;i++) jobs.push(doc.getPage(i).then(readItems));
+      return Promise.all(jobs);
+    }).then(function(all){
+      pages = all; current = 0; headRow = {}; resumoCache = {}; fora = {};
+      $("fileinfo").innerHTML = '<b>' + esc(name) + '</b> · ' + all.length + (all.length===1?' page':' pages');
+      var withText = all.filter(function(p){ return p.length; }).length;
+      if (!withText){
+        return show('<div class="state err"><h3>No text in this PDF</h3>' +
+          '<p>Every page came back empty, which means this is a scan — a picture of a document. Reading it needs OCR, and Tablecut does not do OCR.</p></div>');
+      }
+      // abrir onde esta a tabela, nao na capa
+      var res = resumos(), melhor = 0;
+      res.forEach(function(r, i){ if (r.nota > res[melhor].nota) melhor = i; });
+      current = melhor;
+      render();
+      if (melhor > 0){
+        $("summary").textContent += " · opened on page " + (melhor + 1);
+      }
+    }).catch(function(e){
+      show('<div class="state err"><h3>That file did not open</h3><p>' + esc(String(e && e.message || e)) + '</p></div>');
+    });
+  }
+
+  function show(html){ $("out").innerHTML = html; $("pages").hidden = true; setButtons(false); }
+  function setButtons(on){
+    ["btn-tsv","btn-csv","btn-all"].forEach(function(id){ $(id).disabled = !on; });
+  }
+
+  /* ── desenhar ── */
+  function opts(){
+    return {tol:parseFloat($("rowtol").value), gap:parseFloat($("colgap").value), trim:$("trim").checked};
+  }
+  function tableOf(i){
+    var o = opts();
+    return matrix(pages[i] || [], o.tol, o.gap, o.trim);
+  }
+  // o que sai para a folha de calculo comeca na linha que ele escolheu
+  function cut(i){
+    var cells = tableOf(i).cells, hr = headRow[i];
+    if (hr != null) cells = cells.slice(hr);
+    var apagadas = fora[i] || {};
+    if (!Object.keys(apagadas).length) return cells;
+    return cells.map(function(l){
+      return l.filter(function(v, ci){ return !apagadas[ci]; });
+    });
+  }
+  function render(){
+    if (!pages.length) return;
+    var o = opts(), t = tableOf(current);
+    $("pages").hidden = pages.length < 2;
+    if (pages.length > 1){
+      var res = resumos();
+      $("pages").innerHTML = pages.map(function(p, i){
+        return '<button class="pg' + (res[i].tabela ? ' tem' : '') + '" data-page="' + i +
+               '" aria-pressed="' + (i===current) + '" title="' +
+               (res[i].tabela ? 'looks like a table' : 'no table found here') + '">Page ' +
+               (i+1) + ' <small>' + res[i].linhas + ' rows</small></button>';
+      }).join("");
+    }
+    var nFora = Object.keys(fora[current] || {}).length;
+    $("summary").textContent = (headRow[current] == null ? t.cells.length
+        : (t.cells.length - headRow[current]) + " of " + t.cells.length) + " rows · " +
+        (nFora ? (t.cols - nFora) + " of " + t.cols : t.cols) + " columns";
+    if (!t.cells.length){
+      return $("out").innerHTML = '<div class="state"><h3>Nothing on this page</h3>' +
+        '<p>No text was found here. Try another page.</p></div>';
+    }
+    var hr = headRow[current];
+    var apagadas = fora[current] || {};
+    var html = '<div class="tablewrap"><table><thead><tr>';
+    for (var c=0;c<t.cols;c++){
+      html += '<th class="col' + (apagadas[c] ? ' off' : '') + '" data-col="' + c +
+              '" title="' + (apagadas[c] ? 'Click to bring this column back' : 'Click to leave this column out') +
+              '">' + String.fromCharCode(65 + (c % 26)) + '</th>';
+    }
+    html += '</tr></thead><tbody>';
+    t.cells.forEach(function(line, ri){
+      var cls = hr == null ? "" : (ri === hr ? " head" : (ri < hr ? " above" : ""));
+      html += '<tr class="' + cls.trim() + '" data-row="' + ri + '" title="Click to start the table here">';
+      line.forEach(function(v, ci){
+        html += '<td class="' + (isNum(v) ? 'num' : '') + (apagadas[ci] ? ' off' : '') + '">' + esc(v) + '</td>';
+      });
+      html += '</tr>';
+    });
+    $("out").innerHTML = html + '</tbody></table></div>';
+    setButtons(true);
+  }
+  function isNum(v){ return /^[-(]?[\d.,]+[)%]?$/.test(v.trim()) && /\d/.test(v); }
+  function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+
+  /* ── sair para a folha de calculo ── */
+  function tsv(cells){ return cells.map(function(l){ return l.join("\t"); }).join("\n"); }
+  function csv(cells){
+    return cells.map(function(l){
+      return l.map(function(v){
+        return /[",\n]/.test(v) ? '"' + v.replace(/"/g,'""') + '"' : v;
+      }).join(",");
+    }).join("\n");
+  }
+  function copy(text, btn){
+    var back = btn.textContent;
+    var ok = function(){ btn.textContent = "Copied"; setTimeout(function(){ btn.textContent = back; }, 1500); };
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(ok, fallback);
+    } else fallback();
+    function fallback(){
+      var ta = document.createElement("textarea");
+      ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      try{ document.execCommand("copy"); ok(); }
+      catch(e){ $("copy-hint").textContent = "This browser blocked the clipboard. Select the table and copy by hand."; }
+      document.body.removeChild(ta);
+    }
+  }
+
+  /* ── ligacoes ── */
+  $("drop").addEventListener("click", function(){ $("file").click(); });
+  $("drop").addEventListener("keydown", function(e){
+    if (e.key === "Enter" || e.key === " "){ e.preventDefault(); $("file").click(); } });
+  ["dragenter","dragover"].forEach(function(ev){
+    $("drop").addEventListener(ev, function(e){ e.preventDefault(); this.classList.add("over"); }); });
+  ["dragleave","drop"].forEach(function(ev){
+    $("drop").addEventListener(ev, function(e){ e.preventDefault(); this.classList.remove("over"); }); });
+  $("drop").addEventListener("drop", function(e){
+    var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) readFile(f);
+  });
+  $("file").addEventListener("change", function(){ if (this.files[0]) readFile(this.files[0]); });
+
+  function readFile(f){
+    var r = new FileReader();
+    r.onload = function(){ loadBytes(new Uint8Array(r.result), f.name); };
+    r.onerror = function(){ show('<div class="state err"><h3>Could not read that file</h3></div>'); };
+    r.readAsArrayBuffer(f);
+  }
+
+  $("btn-example").addEventListener("click", function(){
+    loadBytes(toBytes(EXAMPLE_B64), "example-invoice.pdf");
+  });
+
+  ["rowtol","colgap"].forEach(function(id){
+    $(id).addEventListener("input", function(){
+      $(id + "-v").textContent = this.value;
+      if (pages.length) render();
+    });
+  });
+  $("trim").addEventListener("change", function(){ if (pages.length) render(); });
+
+  // clicar numa linha diz onde comeca a tabela; clicar outra vez desfaz
+  $("out").addEventListener("click", function(e){
+    var th = e.target.closest("th.col");
+    if (th){
+      var c = +th.getAttribute("data-col");
+      fora[current] = fora[current] || {};
+      if (fora[current][c]) delete fora[current][c]; else fora[current][c] = 1;
+      render();
+      return;
+    }
+    var tr = e.target.closest("tbody tr");
+    if (!tr) return;
+    var i = +tr.getAttribute("data-row");
+    headRow[current] = (headRow[current] === i) ? null : i;
+    render();
+  });
+
+  $("pages").addEventListener("click", function(e){
+    var b = e.target.closest("[data-page]");
+    if (!b) return;
+    current = +b.getAttribute("data-page");
+    render();
+  });
+
+  $("btn-tsv").addEventListener("click", function(){ copy(tsv(cut(current)), this); });
+  $("btn-csv").addEventListener("click", function(){ copy(csv(cut(current)), this); });
+  $("btn-all").addEventListener("click", function(){
+    var all = [];
+    pages.forEach(function(p, i){
+      var c = cut(i);
+      if (c.length) all = all.concat(c);
+    });
+    copy(tsv(all), this);
+  });
+
+  $("btn-theme").addEventListener("click", function(){
+    var cur = document.documentElement.getAttribute("data-theme");
+    var dark = cur ? cur === "dark"
+      : window.matchMedia("(prefers-color-scheme: dark)").matches;
+    document.documentElement.setAttribute("data-theme", dark ? "light" : "dark");
+  });
+
+  loadBytes(toBytes(EXAMPLE_B64), "example-invoice.pdf");
+})();
+</script>
+
+</body>
+</html>
