@@ -201,7 +201,7 @@ th:last-child,td:last-child{border-right:0}
             <p class="hint">The blank space, in points, that starts a new column.</p>
           </div>
           <label class="check"><input type="checkbox" id="trim" checked> Drop empty columns</label>
-          <p class="hint" id="headhint" style="margin-top:12px">Click a column letter to leave that column out, and a row to say where the table starts — the lines above it (titles, addresses) are left out when you copy.</p>
+          <p class="hint" id="headhint" style="margin-top:12px">Click the row where the table starts — the columns are counted from there and the lines above are left out. Click a column letter to drop a column — the lines above it (titles, addresses) are left out when you copy.</p>
         </div>
       </div>
 
@@ -321,7 +321,7 @@ th:last-child,td:last-child{border-right:0}
   "use strict";
   var EXAMPLE_B64 = "JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA1OTUgODQyXSAvUmVzb3VyY2VzIDw8IC9Gb250IDw8IC9GMSA1IDAgUiAvRjIgNiAwIFIgPj4gPj4gL0NvbnRlbnRzIDQgMCBSID4+CmVuZG9iago0IDAgb2JqCjw8IC9MZW5ndGggNTQ2IC9GaWx0ZXIgL0ZsYXRlRGVjb2RlID4+CnN0cmVhbQp4nI2VS4/bIBCA7/kVc2yl2OVhbOfYNGm1lz42XqlXauMN3QQsTNJdqT++OIG1mlbGys35ZpgPhmFdLd59JIAZVO0CA3I/DCyHIkdQHRdvPmtj97+kauBeHPgLJCCe+bE7CJDqrGUt3kL1c7GtFushEYbVbZ6MXPLcXWnYfk8Qohh+g+z7k2iAIJInaJUgDO7ja/aGW74EpS1wMIIfoNbHjquXv5ZzdaPb9dC17nvRppMsxiO8EX1tZGelVpMxlKLXmG92uhZajvkflLSTcFaMid8f9UnZm239xzMvsiudYJThSXowDfhGNLLm1u17L8xZmCVQAp/Wk/GDdYgn02Q5rlRmKUKT9CAdaJyXMXyQZmSUni7lIu3x7bM1HO6+njPgTWNE38d9fWgW9/UkTdkMXQ/j6OYMtvTaEOuEEDxNX2w9/qVtk15aAT94/XTqlsBcY805Yh8/3UwXZU+SIl3NcJ5ND86oHJ1ntLXHd4p3/d4NCyOsUMM9BoqauLIPn6EcSDKrq2fTTpm59AP8IaE0skGDcsA3G72DVh6sMFI9LqG3XDXcxKVDAhqVDiRezZEONCvmSOfZKB0/54BXhretrEG70cUfhfu3ijd2CI7PrkCWKWFx3zyMrtjNH3z9M7hJMoTikyvgu1PXuQcY9vpk+iVod7U7wZ/iyj4+jyt7MmOzztjTpEC3+P/eP4avV7/Slh+iD2CgWc7SLCT/A0Fl3g4KZW5kc3RyZWFtCmVuZG9iago1IDAgb2JqCjw8IC9UeXBlIC9Gb250IC9TdWJ0eXBlIC9UeXBlMSAvQmFzZUZvbnQgL0hlbHZldGljYSA+PgplbmRvYmoKNiAwIG9iago8PCAvVHlwZSAvRm9udCAvU3VidHlwZSAvVHlwZTEgL0Jhc2VGb250IC9IZWx2ZXRpY2EtQm9sZCA+PgplbmRvYmoKeHJlZgowIDcKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDA5IDAwMDAwIG4gCjAwMDAwMDAwNTggMDAwMDAgbiAKMDAwMDAwMDExNSAwMDAwMCBuIAowMDAwMDAwMjUxIDAwMDAwIG4gCjAwMDAwMDA4NjkgMDAwMDAgbiAKMDAwMDAwMDkzOSAwMDAwMCBuIAp0cmFpbGVyCjw8IC9TaXplIDcgL1Jvb3QgMSAwIFIgPj4Kc3RhcnR4cmVmCjEwMTQKJSVFT0YK";
   var $ = function(id){ return document.getElementById(id); };
-  var pages = [], current = 0, fileName = "", headRow = {}, resumoCache = {}, fora = {};
+  var pages = [], current = 0, fileName = "", headRow = {}, headY = {}, resumoCache = {}, fora = {};
 
   // resumo de cada pagina para as etiquetas e para escolher onde abrir.
   // Guardado por combinacao de opcoes: mexer num cursor nao volta a moer
@@ -444,11 +444,19 @@ th:last-child,td:last-child{border-right:0}
     return saida.sort(function(a, b){ return a - b; });
   }
 
-  function matrix(items, tolFactor, gap, trim){
+  function matrix(items, tolFactor, gap, trim, desdeY){
     var rows = buildRows(items, tolFactor);
-    var cols = splitColumns(rows, buildColumns(rows, gap), gap);
-    if (!cols.length) return {cells:[], cols:0};
-    var cells = rows.map(function(r){
+    // Quando a pessoa clica na linha onde a tabela comeca, as colunas passam a
+    // ser contadas SO a partir dali. E o que resolve o caso real: num extracto
+    // bancario o cabecalho da pagina — morada, RIB, titulos — tem texto em
+    // sitios onde a tabela nao tem nada, e cada um desses sitios virava uma
+    // coluna a mais. Aqui nao ha adivinhacao: foi ela que disse onde comeca.
+    // (o y desce ao longo da pagina, por isso "dali para baixo" e y menor)
+    var base = (desdeY == null) ? rows : rows.filter(function(r){ return r.y <= desdeY + 0.5; });
+    if (base.length < 2) base = rows;
+    var cols = splitColumns(base, buildColumns(base, gap), gap);
+    if (!cols.length) return {cells:[], cols:0, ys:[]};
+    var linhas = rows.map(function(r){
       var line = new Array(cols.length).fill(""), fim = new Array(cols.length);
       r.items.forEach(function(it){
         var idx = 0;
@@ -463,18 +471,20 @@ th:last-child,td:last-child{border-right:0}
         }
         fim[idx] = it.x + Math.max(it.w || 0, 1);
       });
-      return line;
+      return {y:r.y, line:line};
     });
     if (trim){
       var keep = [];
       for (var c=0;c<cols.length;c++){
-        var any = cells.some(function(l){ return l[c] !== ""; });
+        var any = linhas.some(function(l){ return l.line[c] !== ""; });
         if (any) keep.push(c);
       }
-      cells = cells.map(function(l){ return keep.map(function(c){ return l[c]; }); });
+      linhas.forEach(function(l){ l.line = keep.map(function(c){ return l.line[c]; }); });
     }
-    cells = cells.filter(function(l){ return l.some(function(v){ return v !== ""; }); });
-    return {cells:cells, cols:cells.length ? cells[0].length : 0};
+    linhas = linhas.filter(function(l){ return l.line.some(function(v){ return v !== ""; }); });
+    return {cells: linhas.map(function(l){ return l.line; }),
+            ys:    linhas.map(function(l){ return l.y; }),
+            cols:  linhas.length ? linhas[0].line.length : 0};
   }
 
   /* ── carregar ── */
@@ -490,7 +500,7 @@ th:last-child,td:last-child{border-right:0}
       for (var i=1;i<=doc.numPages;i++) jobs.push(doc.getPage(i).then(readItems));
       return Promise.all(jobs);
     }).then(function(all){
-      pages = all; current = 0; headRow = {}; resumoCache = {}; fora = {};
+      pages = all; current = 0; headRow = {}; headY = {}; resumoCache = {}; fora = {};
       $("fileinfo").innerHTML = '<b>' + esc(name) + '</b> · ' + all.length + (all.length===1?' page':' pages');
       var withText = all.filter(function(p){ return p.length; }).length;
       if (!withText){
@@ -521,7 +531,7 @@ th:last-child,td:last-child{border-right:0}
   }
   function tableOf(i){
     var o = opts();
-    return matrix(pages[i] || [], o.tol, o.gap, o.trim);
+    return matrix(pages[i] || [], o.tol, o.gap, o.trim, headY[i]);
   }
   // o que sai para a folha de calculo comeca na linha que ele escolheu
   function cut(i){
@@ -649,7 +659,9 @@ th:last-child,td:last-child{border-right:0}
     var tr = e.target.closest("tbody tr");
     if (!tr) return;
     var i = +tr.getAttribute("data-row");
-    headRow[current] = (headRow[current] === i) ? null : i;
+    if (headRow[current] === i){ headRow[current] = null; headY[current] = null; }
+    else { headRow[current] = i; headY[current] = tableOf(current).ys[i]; }
+    fora[current] = {};                 // as colunas mudam de sitio; recomeca
     render();
   });
 

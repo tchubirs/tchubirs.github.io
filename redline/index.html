@@ -215,6 +215,8 @@ body.so-mudancas .par.igual{display:none}
             });
             return linhas.map(function(l){ return l.t.replace(/\s+/g," ").trim(); })
                          .filter(function(t){ return t; });
+            // (os itens ja vem ordenados por x dentro de cada linha porque a
+            //  lista foi ordenada por y e depois por x antes de agrupar)
           });
         }));
       }
@@ -252,7 +254,13 @@ body.so-mudancas .par.igual{display:none}
     return ops.reverse();
   }
 
-  function normal(s){ return s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim(); }
+  // Duas linhas sao "a mesma" se so diferem em espacos. NADA MAIS.
+  //
+  // Antes, isto deitava fora tudo o que nao fosse letra ou numero — e com
+  // isso "$500" e "EUR 500" passavam a ser a mesma linha, e "5% ao ano" era
+  // igual a "5 ao ano". Num comparador de contratos isso nao e um defeito
+  // pequeno: e dizer "nao mudou nada" precisamente onde mudou o que importa.
+  function normal(s){ return s.replace(/\s+/g, " ").trim().toLowerCase(); }
 
   function emparelhar(A, B){
     var ops = lcs(A, B, function(x, y){ return normal(x) === normal(y); });
@@ -304,6 +312,7 @@ body.so-mudancas .par.igual{display:none}
 
   function render(){
     if (!pares){
+      ["b-prev","b-next","b-copy"].forEach(function(id){ $(id).disabled = true; });
       return mostrar('<div class="estado err"><h3>These two are too long to compare here</h3>' +
         '<p>The comparison runs in your browser, and this pair is beyond what it can hold. ' +
         'Comparing chapter by chapter works.</p></div>');
@@ -325,7 +334,7 @@ body.so-mudancas .par.igual{display:none}
       return '<div class="par so-dir" data-i="' + i + '"><div class="lado esq"><span class="vazio">added</span>' +
              '</div><div class="lado dir"><ins>' + esc(p.b) + '</ins></div></div>';
     }).join("");
-    mostrar(html);
+    $("saida").innerHTML = html;      // aqui nao se usa mostrar(): ela limpa os pares
 
     var mud = pares.filter(function(p){ return p.tipo === "mudou"; }).length;
     var sai = pares.filter(function(p){ return p.tipo === "saiu"; }).length;
@@ -338,7 +347,14 @@ body.so-mudancas .par.igual{display:none}
     ["b-prev","b-next","b-copy"].forEach(function(id){ $(id).disabled = (mud + sai + ent === 0); });
     foco = -1;
   }
-  function mostrar(html){ $("saida").innerHTML = html; }
+  // Qualquer ecra que nao seja a comparacao desliga os botoes: copiar o
+  // resultado anterior debaixo de nomes de ficheiro novos seria pior do que
+  // nao copiar nada.
+  function mostrar(html){
+    $("saida").innerHTML = html;
+    pares = [];
+    ["b-prev","b-next","b-copy"].forEach(function(id){ $(id).disabled = true; });
+  }
 
   function mudancas(){
     return pares.map(function(p, i){ return {p:p, i:i}; })
