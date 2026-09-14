@@ -12,38 +12,59 @@
       <h1>Site do Tchubi</h1>
       <p>Acompanhe os vídeos, lives e redes sociais</p>
       <div class="social-links">
-        <a href="https://twitch.tv/tchubi" target="_blank">Twitch</a>
-        <a href="https://www.youtube.com/c/Tchubi" target="_blank">YouTube</a>
-        <a href="https://www.tiktok.com/@tchubi.rs" target="_blank">TikTok</a>
-        <a href="https://x.com/TchubiRS" target="_blank">Twitter</a>
+        <a href="https://twitch.tv/tchubi" target="_blank" rel="noopener">Twitch</a>
+        <a href="https://www.youtube.com/@Tchubi" target="_blank" rel="noopener">YouTube</a>
+        <a href="https://www.tiktok.com/@tchubi.rs" target="_blank" rel="noopener">TikTok</a>
+        <a href="https://x.com/TchubiRS" target="_blank" rel="noopener">Twitter</a>
       </div>
     </header>
 
     <main>
       <section>
         <h2>Últimos vídeos do YouTube</h2>
-        <iframe width="560" height="315" src="https://www.youtube.com/embed?listType=user_uploads&list=UCVWeo7G9daOvWgwAqEcf5uw" allowfullscreen></iframe>
+        <!-- O canal estava com o ID errado (UCVWeo7G9daOvWgwAqEcf5uw dá 404).
+             O canal a sério é UCC7SvNOLL84jTdP-xpcs_Hg; a lista de uploads é
+             o mesmo ID com UU no início, e vai buscando os novos sozinha. -->
+        <iframe class="player"
+                src="https://www.youtube.com/embed/videoseries?list=UUC7SvNOLL84jTdP-xpcs_Hg"
+                title="Últimos vídeos do Tchubi no YouTube"
+                allow="accelerometer; clipboard-write; encrypted-media; picture-in-picture"
+                allowfullscreen></iframe>
       </section>
 
       <section>
         <h2>Live na Twitch</h2>
-        <iframe src="https://player.twitch.tv/?channel=tchubi&parent=tchubi.org" width="700" height="400" allowfullscreen></iframe>
+        <!-- `parent` tem de nomear o domínio que MOSTRA o player. Estava
+             tchubi.org, mas o site é servido em tchubirs.github.io — e a
+             Twitch recusa-se a aparecer quando não bate certo. -->
+        <iframe class="player"
+                src="https://player.twitch.tv/?channel=tchubi&parent=tchubirs.github.io&parent=tchubi.org"
+                title="Live do Tchubi na Twitch"
+                allowfullscreen></iframe>
       </section>
 
       <section>
         <h2>Clipes Populares</h2>
-        <iframe src="https://clips.twitch.tv/embed?clip=AgilePunchyDadCopyThis&parent=tchubi.org" width="480" height="270" allowfullscreen></iframe>
+        <iframe class="player"
+                src="https://clips.twitch.tv/embed?clip=AgilePunchyDadCopyThis&parent=tchubirs.github.io&parent=tchubi.org"
+                title="Clipe do Tchubi"
+                allowfullscreen></iframe>
       </section>
 
       <section>
         <h2>Vídeos do TikTok</h2>
-        <iframe src="https://www.tiktok.com/embed/v2/7181314098859199749" width="300" height="550" allowfullscreen></iframe>
-        <iframe src="https://www.tiktok.com/embed/v2/7194563223469690117" width="300" height="550" allowfullscreen></iframe>
+        <div class="tiktoks">
+          <iframe src="https://www.tiktok.com/embed/v2/7181314098859199749"
+                  title="1v7 na large oil" allowfullscreen></iframe>
+          <iframe src="https://www.tiktok.com/embed/v2/7194563223469690117"
+                  title="O MELHOR susto que você verá hoje" allowfullscreen></iframe>
+        </div>
       </section>
     </main>
 
     <footer>
-      <p>© 2025 Tchubi - Todos os direitos reservados</p>
+      <p>© 2026 Tchubi - Todos os direitos reservados</p>
+      <p><a href="termos/">Termos de Serviço</a> &middot; <a href="privacidade/">Política de Privacidade</a></p>
     </footer>
   </div>
 </body>

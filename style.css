@@ -1,17 +1,19 @@
-
+/* Fundo: o ficheiro chama-se logo_background.jpg. O `wall.png` que estava
+   aqui nunca existiu no repositório — daí o site aparecer cinzento. */
 body {
   margin: 0;
   padding: 0;
-  background: url('wall.png') no-repeat center center fixed;
+  background: #14121a url('logo_background.jpg') no-repeat center center fixed;
   background-size: cover;
-  font-family: sans-serif;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   color: white;
 }
 
 .overlay {
-  background-color: rgba(0, 0, 0, 0.7);
+  background-color: rgba(0, 0, 0, 0.72);
   min-height: 100vh;
-  padding: 20px;
+  padding-block: 24px;
+  padding-inline: 16px;   /* nunca encostado à margem, mesmo em telemóvel */
 }
 
 header, main, footer {
@@ -19,15 +21,53 @@ header, main, footer {
   margin-bottom: 30px;
 }
 
+h1 { margin: 0 0 6px; }
+
+.social-links {
+  display: flex;
+  flex-wrap: wrap;            /* em telemóvel passa para a linha de baixo */
+  justify-content: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+
 .social-links a {
   color: white;
-  margin: 0 10px;
   text-decoration: none;
   background: #9146FF;
-  padding: 10px 15px;
-  border-radius: 5px;
+  padding: 10px 16px;
+  border-radius: 6px;
 }
 
 section {
-  margin: 20px 0;
+  margin: 34px auto;
+  max-width: 760px;
 }
+
+/* Os iframes tinham largura fixa (560, 700, 480 px) e por isso rebentavam
+   para fora do ecrã do telemóvel. Agora acompanham a largura disponível e
+   guardam a proporção certa. */
+.player {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 0;
+  border-radius: 8px;
+  background: #000;
+}
+
+.tiktoks {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px;
+}
+
+.tiktoks iframe {
+  width: 325px;
+  max-width: 100%;
+  height: 580px;
+  border: 0;
+  border-radius: 8px;
+}
+
+footer a { color: #b98bff; }
