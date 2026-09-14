@@ -129,3 +129,42 @@ test('os numeros sao legiveis, e o que falta aparece como travessao', () => {
   assert.equal(dinheiro(0), '$0.00');
   assert.equal(dinheiro(null), '—');
 });
+
+// ── A base do mercado ──
+
+// Sem esta linha, um `PASSA` lê-se como "então compra". O estudo é o contexto
+// que diz o que acontece ao token típico, e é isso que impede a peneira de
+// mentir por omissão do outro lado.
+test('a base do mercado sai no rodape quando ha estudo', () => {
+  const { baseDoMercado } = require('../src/pagina.js');
+  // Os números são escolhidos para NÃO colidirem entre si: 112/140 = 80% e
+  // 70/140 = 50%. Com 126/140 a fracção dava 90% e a expressão `/90%/` casava
+  // com a frase errada — o teste passava com a linha dos 90% apagada. Foi o
+  // que a mutação apanhou.
+  const frase = baseDoMercado({
+    medidos: 140, abaixoDaEntrada: 112, perdeu90ouMais: 70, dobrou: 7,
+    retornoMedio: 0.62,
+  });
+  assert.match(frase, /140 tokens/);
+  assert.match(frase, /80% ficaram abaixo/);
+  assert.match(frase, /50% perderam 90% ou mais/);
+  assert.match(frase, /0\.62x/);
+  assert.match(frase, /-38%/, 'uma média abaixo de 1 tem de aparecer como perda');
+  assert.match(pagina([], { base: frase }), /base do mercado/);
+});
+
+test('media acima de 1 aparece como ganho, com sinal', () => {
+  const { baseDoMercado } = require('../src/pagina.js');
+  assert.match(baseDoMercado({ medidos: 10, abaixoDaEntrada: 2, perdeu90ouMais: 1,
+    dobrou: 4, retornoMedio: 1.5 }), /\+50%/);
+});
+
+test('sem estudo a pagina sai na mesma, so sem a linha', () => {
+  const { baseDoMercado } = require('../src/pagina.js');
+  assert.equal(baseDoMercado(null), null);
+  assert.equal(baseDoMercado({ medidos: 0 }), null);
+  assert.equal(baseDoMercado({}), null);
+  const h = pagina([], { base: null });
+  assert.ok(!h.includes('base do mercado'));
+  assert.ok(h.includes('Peneira'), 'a página tem de sair à mesma');
+});

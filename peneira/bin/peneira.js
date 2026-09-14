@@ -8,7 +8,7 @@
 const fs = require('node:fs');
 const { factos, novos, dorme } = require('../src/fontes.js');
 const { peneirar } = require('../src/peneirar.js');
-const { pagina } = require('../src/pagina.js');
+const { pagina, baseDoMercado } = require('../src/pagina.js');
 
 const CORES = { FOGE: '\x1b[31m', CUIDADO: '\x1b[33m', PASSA: '\x1b[32m' };
 
@@ -54,7 +54,17 @@ async function main() {
   }
 
   if (html) {
-    fs.writeFileSync(html, pagina(linhas, { quando: new Date() }));
+    // O estudo pode ainda não ter corrido. Nesse caso a página sai na mesma,
+    // só sem a linha do contexto — não se parte uma página por um ficheiro
+    // que ainda não existe.
+    let base = null;
+    try {
+      const r = JSON.parse(fs.readFileSync(
+        require('node:path').join(__dirname, '..', '..',
+          'estudo-memecoin', 'dados', 'resultado.json'), 'utf8'));
+      base = baseDoMercado(r.resumo);
+    } catch { /* ainda não há estudo */ }
+    fs.writeFileSync(html, pagina(linhas, { quando: new Date(), base }));
     console.error(`escrito ${html} com ${linhas.length} tokens`);
   } else {
     const fogem = linhas.filter((x) => x.j.veredicto === 'FOGE').length;

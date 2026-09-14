@@ -17,7 +17,32 @@ const dinheiro = (n) => (n == null ? '—'
   : n >= 1e3 ? `$${(n / 1e3).toFixed(1)}K`
   : `$${n.toFixed(n < 10 ? 2 : 0)}`);
 
-const CORES = { FOGE: '--mau', CUIDADO: '--meio', PASSA: '--bom' };
+/**
+ * A frase da base do mercado, a partir do resultado do estudo.
+ *
+ * O estudo é o contexto que falta a qualquer peneira: saber que ESTE token tem
+ * armadilhas não diz nada sobre o que acontece ao token típico. Sem isto, um
+ * `PASSA` lê-se como "então compra" — que é exactamente o que não é.
+ *
+ * Devolve `null` se ainda não houver estudo. A página nunca pode partir por
+ * causa de um ficheiro que ainda não existe.
+ */
+function baseDoMercado(r) {
+  if (!r || !Number.isFinite(r.medidos) || r.medidos < 1) return null;
+  const pct = (n) => `${Math.round((n / r.medidos) * 100)}%`;
+  const partes = [
+    `${r.medidos} tokens seguidos desde o primeiro minuto`,
+    `${pct(r.abaixoDaEntrada)} ficaram abaixo do preço de entrada`,
+    `${pct(r.perdeu90ouMais)} perderam 90% ou mais`,
+  ];
+  if (Number.isFinite(r.dobrou)) partes.push(`${pct(r.dobrou)} dobraram`);
+  if (Number.isFinite(r.retornoMedio)) {
+    const m = r.retornoMedio;
+    partes.push(`quem comprasse todos em partes iguais ficaria com ${m.toFixed(2)}x `
+      + `(${m >= 1 ? '+' : ''}${((m - 1) * 100).toFixed(0)}%)`);
+  }
+  return partes.join(', ') + '.';
+}
 
 function cartao({ f, j }) {
   return `
@@ -102,4 +127,4 @@ passar aqui e ter 90% da oferta numa carteira só.</p>
 </main></body></html>`;
 }
 
-module.exports = { pagina, cartao, dinheiro, esc };
+module.exports = { pagina, cartao, dinheiro, esc, baseDoMercado };
