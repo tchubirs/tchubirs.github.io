@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Autorização TikTok - Tchubi</title>
+  <link rel="stylesheet" href="../style.css" />
+  <style>
+    .caixa {
+      max-width: 720px; margin: 0 auto; text-align: left;
+      background: rgba(255,255,255,.06); border: 1px solid #444;
+      border-radius: 8px; padding: 20px;
+    }
+    #codigo {
+      display: block; width: 100%; box-sizing: border-box;
+      font-family: monospace; font-size: 15px; word-break: break-all;
+      background: #111; color: #0f0; border: 1px solid #333;
+      border-radius: 6px; padding: 12px; min-height: 90px;
+    }
+    button {
+      background: #9146FF; color: #fff; border: 0; border-radius: 6px;
+      padding: 14px 20px; font-size: 16px; margin-top: 12px; cursor: pointer;
+    }
+    .erro { color: #ff6b6b; }
+    .ok { color: #6bff8f; }
+  </style>
+</head>
+<body>
+  <div class="overlay">
+    <header>
+      <h1>Autorização TikTok</h1>
+    </header>
+
+    <main>
+      <div class="caixa">
+        <p id="estado">A ler o endereço...</p>
+        <textarea id="codigo" readonly></textarea>
+        <button id="copiar">Copiar</button>
+        <p style="font-size:14px;color:#bbb">
+          Copie o texto acima e cole-o de volta na conversa. Este código só
+          serve uma vez e dura poucos minutos.
+        </p>
+      </div>
+    </main>
+
+    <footer>
+      <p><a style="color:#9146FF" href="../">Voltar ao site</a></p>
+    </footer>
+  </div>
+
+<script>
+(function () {
+  var p = new URLSearchParams(window.location.search);
+  var estado = document.getElementById('estado');
+  var caixa = document.getElementById('codigo');
+
+  if (p.get('error')) {
+    estado.className = 'erro';
+    estado.textContent = 'O TikTok recusou: ' + p.get('error') +
+      (p.get('error_description') ? ' — ' + p.get('error_description') : '');
+    caixa.value = window.location.href;
+    return;
+  }
+
+  var code = p.get('code');
+  if (!code) {
+    estado.textContent = 'Nada para autorizar. Esta página só é usada depois de ' +
+      'autorizar a aplicação no TikTok.';
+    caixa.value = '';
+    return;
+  }
+
+  estado.className = 'ok';
+  estado.textContent = 'Autorizado. Copie o endereço completo abaixo:';
+  caixa.value = window.location.href;
+})();
+
+document.getElementById('copiar').onclick = function () {
+  var caixa = document.getElementById('codigo');
+  caixa.select();
+  caixa.setSelectionRange(0, 99999);
+  var feito = false;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(caixa.value).then(function () {}, function () {});
+    feito = true;
+  }
+  try { document.execCommand('copy'); feito = true; } catch (e) {}
+  this.textContent = feito ? 'Copiado' : 'Selecione e copie à mão';
+};
+</script>
+</body>
+</html>
