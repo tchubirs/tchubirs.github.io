@@ -284,3 +284,12 @@ test('token sem essa medida mostra travessao, e nao um zero enganador', () => {
   assert.match(h, /Na piscina<\/dt><dd>—/);
   assert.ok(!/Na piscina<\/dt><dd>0/.test(h), '"0%" faria parecer medido e vazio');
 });
+
+// Sem ícone o browser pede /favicon.ico, leva 404 em toda a visita, e a página
+// fica sem cara quando alguém a guarda no telemóvel. Embutido para não haver
+// um segundo pedido nem um segundo sítio que possa faltar.
+test('a pagina traz o proprio icone, sem pedir ficheiro nenhum', () => {
+  const h = pagina([]);
+  assert.match(h, /<link rel="icon" href="data:image\/svg\+xml/);
+  assert.ok(!/href="[^"]*favicon\.ico"/.test(h), 'não pode depender de um ficheiro à parte');
+});

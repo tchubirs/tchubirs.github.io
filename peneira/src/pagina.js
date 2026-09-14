@@ -71,6 +71,8 @@ function pagina(linhas, { quando = new Date(), base = null } = {}) {
   return `<!doctype html>
 <html lang="pt"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%227%22%20fill%3D%22%2314161a%22%2F%3E%3Cpath%20d%3D%22M6%208h20L19%2017v7l-6%203v-10z%22%20fill%3D%22none%22%20stroke%3D%22%234ade80%22%20stroke-width%3D%222.4%22%20stroke-linejoin%3D%22round%22%2F%3E%3Ccircle%20cx%3D%2224%22%20cy%3D%2224%22%20r%3D%224.5%22%20fill%3D%22%23f87171%22%2F%3E%3C%2Fsvg%3E">
+<meta name="theme-color" content="#14161a">
 <title>Peneira — tokens novos da Solana</title>
 <style>
 :root{

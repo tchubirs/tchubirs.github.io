@@ -1,6 +1,8 @@
 <!doctype html>
 <html lang="pt"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%227%22%20fill%3D%22%2314161a%22%2F%3E%3Cpath%20d%3D%22M6%208h20L19%2017v7l-6%203v-10z%22%20fill%3D%22none%22%20stroke%3D%22%234ade80%22%20stroke-width%3D%222.4%22%20stroke-linejoin%3D%22round%22%2F%3E%3Ccircle%20cx%3D%2224%22%20cy%3D%2224%22%20r%3D%224.5%22%20fill%3D%22%23f87171%22%2F%3E%3C%2Fsvg%3E">
+<meta name="theme-color" content="#14161a">
 <title>Peneira — tokens novos da Solana</title>
 <style>
 :root{
@@ -43,17 +45,51 @@ footer p{margin:0 0 8px}
 </style></head><body><main>
 <h1>Peneira</h1>
 <p class="sub">Tokens acabados de nascer na Solana, passados pelas armadilhas que dá para medir.
-Actualizado <time id="quando" datetime="2026-09-14T20:28:23.239Z">2026-09-14 20:28 UTC</time>.</p>
+Actualizado <time id="quando" datetime="2026-09-14T20:32:37.503Z">2026-09-14 20:32 UTC</time>.</p>
 <p class="idade" id="idade" hidden></p>
 <p class="idade" id="estadoLive" hidden></p>
 <button id="recarregar" hidden>Actualizar agora</button>
 <div class="resumo" id="resumo">
-  <b>14 vistos</b>
-  <b style="color:var(--mau)">10 foge</b>
+  <b>16 vistos</b>
+  <b style="color:var(--mau)">12 foge</b>
   <b style="color:var(--meio)">0 cuidado</b>
   <b style="color:var(--bom)">4 passa</b>
 </div>
 <div id="cartoes">
+  <article class="t foge">
+    <header>
+      <span class="v">FOGE</span>
+      <h2>HORNY<small>Buy if ur horny</small></h2>
+    </header>
+    <dl>
+      <div><dt>Liquidez</dt><dd>$4.94</dd></div>
+      <div><dt>Volume 1h</dt><dd>$0.00</dd></div>
+      <div><dt>Idade</dt><dd>9 min</dd></div>
+      <div><dt>Na piscina</dt><dd>0.013%</dd></div>
+      <div><dt>Mint auth.</dt><dd>queimada</dd></div>
+      <div><dt>Freeze auth.</dt><dd>queimada</dd></div>
+    </dl>
+    <ul><li>só há $5 de liquidez: não consegues vender sem esmagar o preço</li><li>o preço avalia tudo em $18731 com $5 no fundo (3792x): não há lá dinheiro para pagar essa avaliação</li><li>só 0.013% da oferta está dentro da piscina: quase tudo está em carteiras, e basta uma para esmagar o preço</li></ul>
+    
+    <a href="https://dexscreener.com/solana/9ir2xbg8zdhjaxpr4drwx1zhjeqwxwvsr9fqfpl3bcba" rel="noopener" target="_blank">ver no DexScreener →</a>
+  </article>
+  <article class="t foge">
+    <header>
+      <span class="v">FOGE</span>
+      <h2>Pill<small>Take The Pill</small></h2>
+    </header>
+    <dl>
+      <div><dt>Liquidez</dt><dd>—</dd></div>
+      <div><dt>Volume 1h</dt><dd>$0.00</dd></div>
+      <div><dt>Idade</dt><dd>7 min</dd></div>
+      <div><dt>Na piscina</dt><dd>—</dd></div>
+      <div><dt>Mint auth.</dt><dd>queimada</dd></div>
+      <div><dt>Freeze auth.</dt><dd>queimada</dd></div>
+    </dl>
+    <ul><li>não há dados de liquidez nenhuns — não dá para saber se se sai</li></ul>
+    
+    <a href="https://dexscreener.com/solana/byvbrjgacujgkyliptuxybnexgfkh8rx5hrpmz7hzufx" rel="noopener" target="_blank">ver no DexScreener →</a>
+  </article>
   <article class="t foge">
     <header>
       <span class="v">FOGE</span>
@@ -62,7 +98,7 @@ Actualizado <time id="quando" datetime="2026-09-14T20:28:23.239Z">2026-09-14 20:
     <dl>
       <div><dt>Liquidez</dt><dd>—</dd></div>
       <div><dt>Volume 1h</dt><dd>$0.00</dd></div>
-      <div><dt>Idade</dt><dd>6 min</dd></div>
+      <div><dt>Idade</dt><dd>11 min</dd></div>
       <div><dt>Na piscina</dt><dd>—</dd></div>
       <div><dt>Mint auth.</dt><dd>queimada</dd></div>
       <div><dt>Freeze auth.</dt><dd>queimada</dd></div>
@@ -79,7 +115,7 @@ Actualizado <time id="quando" datetime="2026-09-14T20:28:23.239Z">2026-09-14 20:
     <dl>
       <div><dt>Liquidez</dt><dd>—</dd></div>
       <div><dt>Volume 1h</dt><dd>$0.00</dd></div>
-      <div><dt>Idade</dt><dd>6 min</dd></div>
+      <div><dt>Idade</dt><dd>11 min</dd></div>
       <div><dt>Na piscina</dt><dd>—</dd></div>
       <div><dt>Mint auth.</dt><dd>queimada</dd></div>
       <div><dt>Freeze auth.</dt><dd>queimada</dd></div>
@@ -96,12 +132,12 @@ Actualizado <time id="quando" datetime="2026-09-14T20:28:23.239Z">2026-09-14 20:
     <dl>
       <div><dt>Liquidez</dt><dd>—</dd></div>
       <div><dt>Volume 1h</dt><dd>$0.00</dd></div>
-      <div><dt>Idade</dt><dd>22 min</dd></div>
+      <div><dt>Idade</dt><dd>26 min</dd></div>
       <div><dt>Na piscina</dt><dd>—</dd></div>
       <div><dt>Mint auth.</dt><dd>queimada</dd></div>
       <div><dt>Freeze auth.</dt><dd>queimada</dd></div>
     </dl>
-    <ul><li>não há dados de liquidez nenhuns — não dá para saber se se sai</li></ul>
+    <ul><li>não há dados de liquidez nenhuns — não dá para saber se se sai</li><li>23 vendas contra 2 compras nos últimos 5 minutos: estão a sair</li></ul>
     
     <a href="https://dexscreener.com/solana/gqvwzm5zsox5ijwninmqg9jsdfrw2bkj5zsdbgz468zq" rel="noopener" target="_blank">ver no DexScreener →</a>
   </article>
@@ -113,7 +149,7 @@ Actualizado <time id="quando" datetime="2026-09-14T20:28:23.239Z">2026-09-14 20:
     <dl>
       <div><dt>Liquidez</dt><dd>$4.40</dd></div>
       <div><dt>Volume 1h</dt><dd>$0.41</dd></div>
-      <div><dt>Idade</dt><dd>37 min</dd></div>
+      <div><dt>Idade</dt><dd>41 min</dd></div>
       <div><dt>Na piscina</dt><dd>0.014%</dd></div>
       <div><dt>Mint auth.</dt><dd>queimada</dd></div>
       <div><dt>Freeze auth.</dt><dd>queimada</dd></div>
@@ -128,14 +164,14 @@ Actualizado <time id="quando" datetime="2026-09-14T20:28:23.239Z">2026-09-14 20:
       <h2>WORTHLESS<small>Worthless Coin</small></h2>
     </header>
     <dl>
-      <div><dt>Liquidez</dt><dd>$23</dd></div>
+      <div><dt>Liquidez</dt><dd>$20</dd></div>
       <div><dt>Volume 1h</dt><dd>$0.00</dd></div>
-      <div><dt>Idade</dt><dd>12 min</dd></div>
-      <div><dt>Na piscina</dt><dd>0.096%</dd></div>
+      <div><dt>Idade</dt><dd>17 min</dd></div>
+      <div><dt>Na piscina</dt><dd>0.084%</dd></div>
       <div><dt>Mint auth.</dt><dd>queimada</dd></div>
       <div><dt>Freeze auth.</dt><dd>queimada</dd></div>
     </dl>
-    <ul><li>só há $23 de liquidez: não consegues vender sem esmagar o preço</li><li>o preço avalia tudo em $11988 com $23 no fundo (522x): não há lá dinheiro para pagar essa avaliação</li><li>só 0.096% da oferta está dentro da piscina: quase tudo está em carteiras, e basta uma para esmagar o preço</li></ul>
+    <ul><li>só há $20 de liquidez: não consegues vender sem esmagar o preço</li><li>o preço avalia tudo em $11988 com $20 no fundo (596x): não há lá dinheiro para pagar essa avaliação</li><li>só 0.084% da oferta está dentro da piscina: quase tudo está em carteiras, e basta uma para esmagar o preço</li></ul>
     
     <a href="https://dexscreener.com/solana/gswpxr2w5ivrxth5xwcfg36mgdpnsyyz2h3ofvzh364e" rel="noopener" target="_blank">ver no DexScreener →</a>
   </article>
@@ -145,14 +181,14 @@ Actualizado <time id="quando" datetime="2026-09-14T20:28:23.239Z">2026-09-14 20:
       <h2>PEPETIDE<small>pepetide</small></h2>
     </header>
     <dl>
-      <div><dt>Liquidez</dt><dd>$735</dd></div>
-      <div><dt>Volume 1h</dt><dd>$692</dd></div>
-      <div><dt>Idade</dt><dd>16 min</dd></div>
-      <div><dt>Na piscina</dt><dd>0.128%</dd></div>
+      <div><dt>Liquidez</dt><dd>$522</dd></div>
+      <div><dt>Volume 1h</dt><dd>$784</dd></div>
+      <div><dt>Idade</dt><dd>21 min</dd></div>
+      <div><dt>Na piscina</dt><dd>0.164%</dd></div>
       <div><dt>Mint auth.</dt><dd>queimada</dd></div>
       <div><dt>Freeze auth.</dt><dd>queimada</dd></div>
     </dl>
-    <ul><li>só há $735 de liquidez: não consegues vender sem esmagar o preço</li><li>o preço avalia tudo em $287688 com $735 no fundo (391x): não há lá dinheiro para pagar essa avaliação</li><li>só 0.128% da oferta está dentro da piscina: quase tudo está em carteiras, e basta uma para esmagar o preço</li><li>13 vendas contra 0 compras nos últimos 5 minutos: estão a sair</li></ul>
+    <ul><li>só há $522 de liquidez: não consegues vender sem esmagar o preço</li><li>o preço avalia tudo em $161774 com $522 no fundo (310x): não há lá dinheiro para pagar essa avaliação</li><li>só 0.164% da oferta está dentro da piscina: quase tudo está em carteiras, e basta uma para esmagar o preço</li><li>13 vendas contra 0 compras nos últimos 5 minutos: estão a sair</li></ul>
     
     <a href="https://dexscreener.com/solana/5rhqewlykeebu2fqbdi59yfgmjbgxjwjwhst5czideyr" rel="noopener" target="_blank">ver no DexScreener →</a>
   </article>
@@ -164,7 +200,7 @@ Actualizado <time id="quando" datetime="2026-09-14T20:28:23.239Z">2026-09-14 20:
     <dl>
       <div><dt>Liquidez</dt><dd>$18</dd></div>
       <div><dt>Volume 1h</dt><dd>$0.00</dd></div>
-      <div><dt>Idade</dt><dd>15 min</dd></div>
+      <div><dt>Idade</dt><dd>19 min</dd></div>
       <div><dt>Na piscina</dt><dd>0.036%</dd></div>
       <div><dt>Mint auth.</dt><dd>queimada</dd></div>
       <div><dt>Freeze auth.</dt><dd>queimada</dd></div>
@@ -180,8 +216,8 @@ Actualizado <time id="quando" datetime="2026-09-14T20:28:23.239Z">2026-09-14 20:
     </header>
     <dl>
       <div><dt>Liquidez</dt><dd>—</dd></div>
-      <div><dt>Volume 1h</dt><dd>$210.3K</dd></div>
-      <div><dt>Idade</dt><dd>31 min</dd></div>
+      <div><dt>Volume 1h</dt><dd>$213.2K</dd></div>
+      <div><dt>Idade</dt><dd>35 min</dd></div>
       <div><dt>Na piscina</dt><dd>—</dd></div>
       <div><dt>Mint auth.</dt><dd>queimada</dd></div>
       <div><dt>Freeze auth.</dt><dd>queimada</dd></div>
@@ -197,8 +233,8 @@ Actualizado <time id="quando" datetime="2026-09-14T20:28:23.239Z">2026-09-14 20:
     </header>
     <dl>
       <div><dt>Liquidez</dt><dd>—</dd></div>
-      <div><dt>Volume 1h</dt><dd>$76.1K</dd></div>
-      <div><dt>Idade</dt><dd>38 min</dd></div>
+      <div><dt>Volume 1h</dt><dd>$76.2K</dd></div>
+      <div><dt>Idade</dt><dd>42 min</dd></div>
       <div><dt>Na piscina</dt><dd>—</dd></div>
       <div><dt>Mint auth.</dt><dd>queimada</dd></div>
       <div><dt>Freeze auth.</dt><dd>queimada</dd></div>
@@ -215,7 +251,7 @@ Actualizado <time id="quando" datetime="2026-09-14T20:28:23.239Z">2026-09-14 20:
     <dl>
       <div><dt>Liquidez</dt><dd>$11</dd></div>
       <div><dt>Volume 1h</dt><dd>$0.00</dd></div>
-      <div><dt>Idade</dt><dd>36 min</dd></div>
+      <div><dt>Idade</dt><dd>40 min</dd></div>
       <div><dt>Na piscina</dt><dd>0.031%</dd></div>
       <div><dt>Mint auth.</dt><dd>queimada</dd></div>
       <div><dt>Freeze auth.</dt><dd>queimada</dd></div>
@@ -230,10 +266,10 @@ Actualizado <time id="quando" datetime="2026-09-14T20:28:23.239Z">2026-09-14 20:
       <h2>Callr<small>Callr</small></h2>
     </header>
     <dl>
-      <div><dt>Liquidez</dt><dd>$16.1K</dd></div>
-      <div><dt>Volume 1h</dt><dd>$80.3K</dd></div>
-      <div><dt>Idade</dt><dd>16 min</dd></div>
-      <div><dt>Na piscina</dt><dd>22.0%</dd></div>
+      <div><dt>Liquidez</dt><dd>$17.0K</dd></div>
+      <div><dt>Volume 1h</dt><dd>$83.5K</dd></div>
+      <div><dt>Idade</dt><dd>20 min</dd></div>
+      <div><dt>Na piscina</dt><dd>20.9%</dd></div>
       <div><dt>Mint auth.</dt><dd>queimada</dd></div>
       <div><dt>Freeze auth.</dt><dd>queimada</dd></div>
     </dl>
@@ -247,10 +283,10 @@ Actualizado <time id="quando" datetime="2026-09-14T20:28:23.239Z">2026-09-14 20:
       <h2>CatDamon<small>CatDamon</small></h2>
     </header>
     <dl>
-      <div><dt>Liquidez</dt><dd>$20.8K</dd></div>
-      <div><dt>Volume 1h</dt><dd>$20.3K</dd></div>
-      <div><dt>Idade</dt><dd>22 min</dd></div>
-      <div><dt>Na piscina</dt><dd>16.7%</dd></div>
+      <div><dt>Liquidez</dt><dd>$20.1K</dd></div>
+      <div><dt>Volume 1h</dt><dd>$22.2K</dd></div>
+      <div><dt>Idade</dt><dd>26 min</dd></div>
+      <div><dt>Na piscina</dt><dd>17.3%</dd></div>
       <div><dt>Mint auth.</dt><dd>queimada</dd></div>
       <div><dt>Freeze auth.</dt><dd>queimada</dd></div>
     </dl>
@@ -264,10 +300,10 @@ Actualizado <time id="quando" datetime="2026-09-14T20:28:23.239Z">2026-09-14 20:
       <h2>PS500<small>PumpStocks500</small></h2>
     </header>
     <dl>
-      <div><dt>Liquidez</dt><dd>$26.3K</dd></div>
-      <div><dt>Volume 1h</dt><dd>$129.6K</dd></div>
-      <div><dt>Idade</dt><dd>30 min</dd></div>
-      <div><dt>Na piscina</dt><dd>15.8%</dd></div>
+      <div><dt>Liquidez</dt><dd>$27.0K</dd></div>
+      <div><dt>Volume 1h</dt><dd>$132.9K</dd></div>
+      <div><dt>Idade</dt><dd>34 min</dd></div>
+      <div><dt>Na piscina</dt><dd>15.5%</dd></div>
       <div><dt>Mint auth.</dt><dd>queimada</dd></div>
       <div><dt>Freeze auth.</dt><dd>queimada</dd></div>
     </dl>
@@ -281,10 +317,10 @@ Actualizado <time id="quando" datetime="2026-09-14T20:28:23.239Z">2026-09-14 20:
       <h2>FINE<small>This is Fine</small></h2>
     </header>
     <dl>
-      <div><dt>Liquidez</dt><dd>$11.5K</dd></div>
-      <div><dt>Volume 1h</dt><dd>$130.9K</dd></div>
-      <div><dt>Idade</dt><dd>37 min</dd></div>
-      <div><dt>Na piscina</dt><dd>32.5%</dd></div>
+      <div><dt>Liquidez</dt><dd>$11.1K</dd></div>
+      <div><dt>Volume 1h</dt><dd>$132.0K</dd></div>
+      <div><dt>Idade</dt><dd>41 min</dd></div>
+      <div><dt>Na piscina</dt><dd>34.0%</dd></div>
       <div><dt>Mint auth.</dt><dd>queimada</dd></div>
       <div><dt>Freeze auth.</dt><dd>queimada</dd></div>
     </dl>
@@ -508,7 +544,7 @@ const ordenar = (linhas) => [...linhas].sort((a, b) =>
 // Os factos que só se conseguem na blockchain e que o browser não vai buscar:
 // mint authority, freeze authority e a oferta total. Ficam cozidos aqui, do
 // momento em que a página foi gerada, porque não mudam depois de queimadas.
-var COZIDOS = {"3u9j8SEzeQ3rmhPBPdNMjunL4zAQrSZcFXrkjGvrpump":{"mintAuthority":null,"freezeAuthority":null,"oferta":1000000000,"nome":"Zion The Monkey","simbolo":"ZION"},"MSCXLS6wM2Dz2ormjyuPpKk8AVzaa1CvGTXbMFi8sWV":{"mintAuthority":null,"freezeAuthority":null,"oferta":998968385.765627,"nome":"The White Bank","simbolo":"BANKS"},"3vsesKyQKXp3ykze7Trth35VfwA2jPVtrfCjAMrJpump":{"mintAuthority":null,"freezeAuthority":null,"oferta":1000000000,"nome":"SlopCycle","simbolo":"SlopCycle"},"8fJjPjFc9PpvXMHf5YKxNMvAsxnP7yZ4FWPALCeFpump":{"mintAuthority":null,"freezeAuthority":null,"oferta":1000000000,"nome":"Stuart","simbolo":"Stuart"},"DRWuunuTMziMTZQcyxc4DcYtETZ9vAEBmnqZzQdwpump":{"mintAuthority":null,"freezeAuthority":null,"oferta":1000000000,"nome":"Worthless Coin","simbolo":"WORTHLESS"},"ArgY4k7p9NZKp2udJ5NR5QgGSqkevHriC4TrYfguNvJt":{"mintAuthority":null,"freezeAuthority":null,"oferta":977515326.772265,"nome":"pepetide","simbolo":"PEPETIDE"},"FHGUexxFtJdHQ3ejvFoMyXAdrNPVJpQVxi8z8haZpump":{"mintAuthority":null,"freezeAuthority":null,"oferta":1000000000,"nome":"MOG ","simbolo":"MOG"},"boDoUbtgp4DuUuJBTf3J6cPXabf9k8rC1Wi1PuGpump":{"mintAuthority":null,"freezeAuthority":null,"oferta":1000000000,"nome":"Hybrid Memes","simbolo":"HYBRID"},"EEo7cdV61n6DGQTXQgaRo4osMmytkTz6o1Z4oqYPop3x":{"mintAuthority":null,"freezeAuthority":null,"oferta":1000000000,"nome":"Vibrew Norby","simbolo":"VIBREW"},"EqkxqZcFZXd1ZdGnNojq1Sno9CHbnRPCKANqQ4N6vRyy":{"mintAuthority":null,"freezeAuthority":null,"oferta":999681780.60263,"nome":"musksan","simbolo":"MUSKSAN"},"CALLrLF4fS7FN4QA85j7xmC3Az2XKkrV9CBwg6qWHr6Y":{"mintAuthority":null,"freezeAuthority":null,"oferta":937756786.549034,"nome":"Callr","simbolo":"Callr"},"DjrtmQM3tQj51YDCrMYETG8PF4crqy9nLUyE5CEGpump":{"mintAuthority":null,"freezeAuthority":null,"oferta":970887020.881114,"nome":"CatDamon","simbolo":"CatDamon"},"7Vv1veMsBcBWAiSP1JTkRKvNeWmwf5Z7KbQuuKH1pump":{"mintAuthority":null,"freezeAuthority":null,"oferta":968419100.245409,"nome":"PumpStocks500","simbolo":"PS500"},"B3STjzr94bn61TF9qXhAiK98HwypNoyMc8tr78f3QuCQ":{"mintAuthority":null,"freezeAuthority":null,"oferta":999705573.586922,"nome":"This is Fine","simbolo":"FINE"}};
+var COZIDOS = {"R8nifMzFqm6NXinPt1JbxEjR61hVrXYzBHxqtvgs36x":{"mintAuthority":null,"freezeAuthority":null,"oferta":1000000000,"nome":"Buy if ur horny","simbolo":"HORNY"},"DeviBsuav5HuusgVqkKD5ZLvnLrfYN9fi85KUohHpump":{"mintAuthority":null,"freezeAuthority":null,"oferta":1000000000,"nome":"Take The Pill","simbolo":"Pill"},"3u9j8SEzeQ3rmhPBPdNMjunL4zAQrSZcFXrkjGvrpump":{"mintAuthority":null,"freezeAuthority":null,"oferta":999928743.828885,"nome":"Zion The Monkey","simbolo":"ZION"},"MSCXLS6wM2Dz2ormjyuPpKk8AVzaa1CvGTXbMFi8sWV":{"mintAuthority":null,"freezeAuthority":null,"oferta":998968385.765627,"nome":"The White Bank","simbolo":"BANKS"},"3vsesKyQKXp3ykze7Trth35VfwA2jPVtrfCjAMrJpump":{"mintAuthority":null,"freezeAuthority":null,"oferta":1000000000,"nome":"SlopCycle","simbolo":"SlopCycle"},"8fJjPjFc9PpvXMHf5YKxNMvAsxnP7yZ4FWPALCeFpump":{"mintAuthority":null,"freezeAuthority":null,"oferta":1000000000,"nome":"Stuart","simbolo":"Stuart"},"DRWuunuTMziMTZQcyxc4DcYtETZ9vAEBmnqZzQdwpump":{"mintAuthority":null,"freezeAuthority":null,"oferta":1000000000,"nome":"Worthless Coin","simbolo":"WORTHLESS"},"ArgY4k7p9NZKp2udJ5NR5QgGSqkevHriC4TrYfguNvJt":{"mintAuthority":null,"freezeAuthority":null,"oferta":977515326.772265,"nome":"pepetide","simbolo":"PEPETIDE"},"FHGUexxFtJdHQ3ejvFoMyXAdrNPVJpQVxi8z8haZpump":{"mintAuthority":null,"freezeAuthority":null,"oferta":1000000000,"nome":"MOG ","simbolo":"MOG"},"boDoUbtgp4DuUuJBTf3J6cPXabf9k8rC1Wi1PuGpump":{"mintAuthority":null,"freezeAuthority":null,"oferta":1000000000,"nome":"Hybrid Memes","simbolo":"HYBRID"},"EEo7cdV61n6DGQTXQgaRo4osMmytkTz6o1Z4oqYPop3x":{"mintAuthority":null,"freezeAuthority":null,"oferta":1000000000,"nome":"Vibrew Norby","simbolo":"VIBREW"},"EqkxqZcFZXd1ZdGnNojq1Sno9CHbnRPCKANqQ4N6vRyy":{"mintAuthority":null,"freezeAuthority":null,"oferta":999681780.60263,"nome":"musksan","simbolo":"MUSKSAN"},"CALLrLF4fS7FN4QA85j7xmC3Az2XKkrV9CBwg6qWHr6Y":{"mintAuthority":null,"freezeAuthority":null,"oferta":937756786.549034,"nome":"Callr","simbolo":"Callr"},"DjrtmQM3tQj51YDCrMYETG8PF4crqy9nLUyE5CEGpump":{"mintAuthority":null,"freezeAuthority":null,"oferta":970887020.881114,"nome":"CatDamon","simbolo":"CatDamon"},"7Vv1veMsBcBWAiSP1JTkRKvNeWmwf5Z7KbQuuKH1pump":{"mintAuthority":null,"freezeAuthority":null,"oferta":968419100.245409,"nome":"PumpStocks500","simbolo":"PS500"},"B3STjzr94bn61TF9qXhAiK98HwypNoyMc8tr78f3QuCQ":{"mintAuthority":null,"freezeAuthority":null,"oferta":999705573.586922,"nome":"This is Fine","simbolo":"FINE"}};
 </script>
 <script>
 // Quanto tempo tem esta página.
