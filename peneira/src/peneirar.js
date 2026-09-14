@@ -19,6 +19,17 @@ const LIMITES = {
   vendasSobreCompras: 3,     // toda a gente a sair ao mesmo tempo
   idadeMinimaMin: 5,         // novo demais para ter história nenhuma
   quedaLiquidez: 0.5,        // metade da liquidez saiu desde que foi visto
+  // Quanto da oferta tem de estar DENTRO da piscina.
+  //
+  // Medido em 13 tokens novos, em 14/09/2026: mediana 11,4% dentro, p10 4,4%,
+  // p75 31,7%. Um único ficou abaixo de 1% — o SPEPE, com 0,002%, três ordens
+  // de grandeza abaixo de tudo o resto. Daí os dois degraus: abaixo de 1% é
+  // fora de escala, entre 1% e 4% é a cauda de baixo.
+  //
+  // A amostra é de 13 tokens de uma noite. É pouco, e está escrito aqui para
+  // quem mudar isto saber em cima de que é que está a mudar.
+  fraccaoNaPiscinaGrave: 0.01,
+  fraccaoNaPiscinaBaixa: 0.04,
 };
 
 const num = (x) => (Number.isFinite(x) ? x : null);
@@ -81,8 +92,28 @@ function peneirar(f, { limites = LIMITES } = {}) {
     fugir.push(`perdeu ${(f.quedaLiquidez * 100).toFixed(0)}% da liquidez desde que foi visto`);
   }
 
+  // ── Quanto da oferta está fora da piscina ──
+  //
+  // Isto NÃO é a concentração por carteira: 95% fora pode estar espalhado por
+  // dez mil pessoas. Mas é o tamanho do martelo que existe do lado de fora —
+  // quanto menos moeda houver dentro, menos é preciso vender para esmagar o
+  // preço. É a melhor medida que se consegue sem RPC pago, e diz-se o que é.
+  const fp = num(f.fraccaoNaPiscina);
+  if (fp != null) {
+    const dentro = (fp * 100).toFixed(fp < 0.01 ? 3 : 1);
+    if (fp < limites.fraccaoNaPiscinaGrave) {
+      fugir.push(`só ${dentro}% da oferta está dentro da piscina: quase tudo está `
+        + 'em carteiras, e basta uma para esmagar o preço');
+    } else if (fp < limites.fraccaoNaPiscinaBaixa) {
+      avisar.push(`só ${dentro}% da oferta está dentro da piscina `
+        + '(a mediana medida foi 11%)');
+    }
+    notas.push(`${dentro}% da oferta dentro da piscina`);
+  }
+
   if (f.concentracao == null) {
-    notas.push('concentração de carteiras NÃO medida (os RPC públicos recusam sem chave paga)');
+    notas.push('por carteira, a concentração continua NÃO medida '
+      + '(os RPC públicos recusam sem chave paga)');
   } else if (f.concentracao > 0.5) {
     fugir.push(`${(f.concentracao * 100).toFixed(0)}% da oferta está em 10 carteiras`);
   }

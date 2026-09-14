@@ -78,6 +78,9 @@ async function mercado(mint) {
     compras5m: p.txns?.m5?.buys ?? null,
     vendas5m: p.txns?.m5?.sells ?? null,
     idadeMin: p.pairCreatedAt ? (Date.now() - p.pairCreatedAt) / 60000 : null,
+    // Quantas moedas estão DENTRO da piscina. Com a oferta total dá a fracção
+    // — e essa é a única medida de concentração que se consegue de graça.
+    naPiscina: p.liquidity && p.liquidity.base != null ? Number(p.liquidity.base) : null,
     url: p.url || null,
   };
 }
@@ -86,7 +89,9 @@ async function mercado(mint) {
 async function factos(mint) {
   const [m, a] = await Promise.all([mercado(mint), autoridades(mint)]);
   if (!m) return null;
-  return { mint, ...m, ...a, concentracao: null };
+  const fraccaoNaPiscina = (m.naPiscina != null && a.oferta > 0)
+    ? m.naPiscina / a.oferta : null;
+  return { mint, ...m, ...a, fraccaoNaPiscina, concentracao: null };
 }
 
 /** Os tokens acabados de nascer, pelo DexScreener. */
