@@ -321,7 +321,7 @@ th:last-child,td:last-child{border-right:0}
   "use strict";
   var EXAMPLE_B64 = "JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA1OTUgODQyXSAvUmVzb3VyY2VzIDw8IC9Gb250IDw8IC9GMSA1IDAgUiAvRjIgNiAwIFIgPj4gPj4gL0NvbnRlbnRzIDQgMCBSID4+CmVuZG9iago0IDAgb2JqCjw8IC9MZW5ndGggNTQ2IC9GaWx0ZXIgL0ZsYXRlRGVjb2RlID4+CnN0cmVhbQp4nI2VS4/bIBCA7/kVc2yl2OVhbOfYNGm1lz42XqlXauMN3QQsTNJdqT++OIG1mlbGys35ZpgPhmFdLd59JIAZVO0CA3I/DCyHIkdQHRdvPmtj97+kauBeHPgLJCCe+bE7CJDqrGUt3kL1c7GtFushEYbVbZ6MXPLcXWnYfk8Qohh+g+z7k2iAIJInaJUgDO7ja/aGW74EpS1wMIIfoNbHjquXv5ZzdaPb9dC17nvRppMsxiO8EX1tZGelVpMxlKLXmG92uhZajvkflLSTcFaMid8f9UnZm239xzMvsiudYJThSXowDfhGNLLm1u17L8xZmCVQAp/Wk/GDdYgn02Q5rlRmKUKT9CAdaJyXMXyQZmSUni7lIu3x7bM1HO6+njPgTWNE38d9fWgW9/UkTdkMXQ/j6OYMtvTaEOuEEDxNX2w9/qVtk15aAT94/XTqlsBcY805Yh8/3UwXZU+SIl3NcJ5ND86oHJ1ntLXHd4p3/d4NCyOsUMM9BoqauLIPn6EcSDKrq2fTTpm59AP8IaE0skGDcsA3G72DVh6sMFI9LqG3XDXcxKVDAhqVDiRezZEONCvmSOfZKB0/54BXhretrEG70cUfhfu3ijd2CI7PrkCWKWFx3zyMrtjNH3z9M7hJMoTikyvgu1PXuQcY9vpk+iVod7U7wZ/iyj4+jyt7MmOzztjTpEC3+P/eP4avV7/Slh+iD2CgWc7SLCT/A0Fl3g4KZW5kc3RyZWFtCmVuZG9iago1IDAgb2JqCjw8IC9UeXBlIC9Gb250IC9TdWJ0eXBlIC9UeXBlMSAvQmFzZUZvbnQgL0hlbHZldGljYSA+PgplbmRvYmoKNiAwIG9iago8PCAvVHlwZSAvRm9udCAvU3VidHlwZSAvVHlwZTEgL0Jhc2VGb250IC9IZWx2ZXRpY2EtQm9sZCA+PgplbmRvYmoKeHJlZgowIDcKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDA5IDAwMDAwIG4gCjAwMDAwMDAwNTggMDAwMDAgbiAKMDAwMDAwMDExNSAwMDAwMCBuIAowMDAwMDAwMjUxIDAwMDAwIG4gCjAwMDAwMDA4NjkgMDAwMDAgbiAKMDAwMDAwMDkzOSAwMDAwMCBuIAp0cmFpbGVyCjw8IC9TaXplIDcgL1Jvb3QgMSAwIFIgPj4Kc3RhcnR4cmVmCjEwMTQKJSVFT0YK";
   var $ = function(id){ return document.getElementById(id); };
-  var pages = [], current = 0, fileName = "", headRow = {}, headY = {}, resumoCache = {}, fora = {}, geracao = 0;
+  var pages = [], current = 0, fileName = "", headRow = {}, headY = {}, resumoCache = {}, fora = {}, autoFora = {}, geracao = 0;
 
   // resumo de cada pagina para as etiquetas e para escolher onde abrir.
   // Guardado por combinacao de opcoes: mexer num cursor nao volta a moer
@@ -542,7 +542,7 @@ th:last-child,td:last-child{border-right:0}
   function cut(i){
     var cells = tableOf(i).cells, hr = headRow[i];
     if (hr != null) cells = cells.slice(hr);
-    var apagadas = fora[i] || {};
+    var apagadas = autoFora[i] || fora[i] || {};
     if (!Object.keys(apagadas).length) return cells;
     return cells.map(function(l){
       return l.filter(function(v, ci){ return !apagadas[ci]; });
@@ -569,10 +569,6 @@ th:last-child,td:last-child{border-right:0}
                (i+1) + ' <small>' + res[i].linhas + ' rows</small></button>';
       }).join("");
     }
-    var nFora = Math.min(Object.keys(fora[current] || {}).length, t.cols);
-    $("summary").textContent = (headRow[current] == null ? t.cells.length
-        : (t.cells.length - headRow[current]) + " of " + t.cells.length) + " rows · " +
-        (nFora ? (t.cols - nFora) + " of " + t.cols : t.cols) + " columns";
     if (!t.cells.length){
       setButtons(false);        // sem tabela nao ha nada para copiar
       $("out").innerHTML = '<div class="state"><h3>Nothing on this page</h3>' +
@@ -580,7 +576,31 @@ th:last-child,td:last-child{border-right:0}
       return;
     }
     var hr = headRow[current];
-    var apagadas = fora[current] || {};
+    // Colunas quase vazias escondem-se sozinhas. Medido: num extracto, 78%
+    // das celulas estao vazias — sao colunas que o cabecalho da pagina criou
+    // e que nao trazem dado nenhum. Nao se apaga nada em silencio: ficam
+    // riscadas, o rodape diz quantas sao, e um clique traz qualquer uma de
+    // volta. Subir o corte das colunas resolvia isto tambem, mas estragava
+    // numeros (medido: fundidas 2,0% -> 3,2%), e numero errado e pior.
+    var escolha = fora[current] || {};
+    var apagadas = {}, auto = 0;
+    if (t.cols > 6){
+      for (var c = 0; c < t.cols; c++){
+        var cheias = t.cells.filter(function(l){ return l[c] && l[c].trim(); }).length;
+        if (cheias / t.cells.length < 0.08) { apagadas[c] = 1; auto++; }
+      }
+    }
+    Object.keys(escolha).forEach(function(c){        // a pessoa manda sempre
+      if (escolha[c]) apagadas[c] = 1; else { if (apagadas[c]) auto--; delete apagadas[c]; }
+    });
+    autoFora[current] = apagadas;
+
+    var nFora = Math.min(Object.keys(apagadas).length, t.cols);
+    $("summary").textContent = (headRow[current] == null ? t.cells.length
+        : (t.cells.length - headRow[current]) + " of " + t.cells.length) + " rows · " +
+        (nFora ? (t.cols - nFora) + " of " + t.cols : t.cols) + " columns" +
+        (auto > 0 ? " · " + auto + (auto === 1 ? " empty column hidden" : " empty columns hidden") : "");
+
     var html = '<div class="tablewrap"><table><thead><tr>';
     for (var c=0;c<t.cols;c++){
       html += '<th class="col' + (apagadas[c] ? ' off' : '') + '" data-col="' + c +
@@ -667,7 +687,8 @@ th:last-child,td:last-child{border-right:0}
     if (th){
       var c = +th.getAttribute("data-col");
       fora[current] = fora[current] || {};
-      if (fora[current][c]) delete fora[current][c]; else fora[current][c] = 1;
+      var escondida = (autoFora[current] || {})[c];
+      fora[current][c] = escondida ? 0 : 1;      // 0 = mostrar sempre, 1 = esconder
       render();
       return;
     }
