@@ -321,7 +321,7 @@ th:last-child,td:last-child{border-right:0}
   "use strict";
   var EXAMPLE_B64 = "JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA1OTUgODQyXSAvUmVzb3VyY2VzIDw8IC9Gb250IDw8IC9GMSA1IDAgUiAvRjIgNiAwIFIgPj4gPj4gL0NvbnRlbnRzIDQgMCBSID4+CmVuZG9iago0IDAgb2JqCjw8IC9MZW5ndGggNTQ2IC9GaWx0ZXIgL0ZsYXRlRGVjb2RlID4+CnN0cmVhbQp4nI2VS4/bIBCA7/kVc2yl2OVhbOfYNGm1lz42XqlXauMN3QQsTNJdqT++OIG1mlbGys35ZpgPhmFdLd59JIAZVO0CA3I/DCyHIkdQHRdvPmtj97+kauBeHPgLJCCe+bE7CJDqrGUt3kL1c7GtFushEYbVbZ6MXPLcXWnYfk8Qohh+g+z7k2iAIJInaJUgDO7ja/aGW74EpS1wMIIfoNbHjquXv5ZzdaPb9dC17nvRppMsxiO8EX1tZGelVpMxlKLXmG92uhZajvkflLSTcFaMid8f9UnZm239xzMvsiudYJThSXowDfhGNLLm1u17L8xZmCVQAp/Wk/GDdYgn02Q5rlRmKUKT9CAdaJyXMXyQZmSUni7lIu3x7bM1HO6+njPgTWNE38d9fWgW9/UkTdkMXQ/j6OYMtvTaEOuEEDxNX2w9/qVtk15aAT94/XTqlsBcY805Yh8/3UwXZU+SIl3NcJ5ND86oHJ1ntLXHd4p3/d4NCyOsUMM9BoqauLIPn6EcSDKrq2fTTpm59AP8IaE0skGDcsA3G72DVh6sMFI9LqG3XDXcxKVDAhqVDiRezZEONCvmSOfZKB0/54BXhretrEG70cUfhfu3ijd2CI7PrkCWKWFx3zyMrtjNH3z9M7hJMoTikyvgu1PXuQcY9vpk+iVod7U7wZ/iyj4+jyt7MmOzztjTpEC3+P/eP4avV7/Slh+iD2CgWc7SLCT/A0Fl3g4KZW5kc3RyZWFtCmVuZG9iago1IDAgb2JqCjw8IC9UeXBlIC9Gb250IC9TdWJ0eXBlIC9UeXBlMSAvQmFzZUZvbnQgL0hlbHZldGljYSA+PgplbmRvYmoKNiAwIG9iago8PCAvVHlwZSAvRm9udCAvU3VidHlwZSAvVHlwZTEgL0Jhc2VGb250IC9IZWx2ZXRpY2EtQm9sZCA+PgplbmRvYmoKeHJlZgowIDcKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDA5IDAwMDAwIG4gCjAwMDAwMDAwNTggMDAwMDAgbiAKMDAwMDAwMDExNSAwMDAwMCBuIAowMDAwMDAwMjUxIDAwMDAwIG4gCjAwMDAwMDA4NjkgMDAwMDAgbiAKMDAwMDAwMDkzOSAwMDAwMCBuIAp0cmFpbGVyCjw8IC9TaXplIDcgL1Jvb3QgMSAwIFIgPj4Kc3RhcnR4cmVmCjEwMTQKJSVFT0YK";
   var $ = function(id){ return document.getElementById(id); };
-  var pages = [], current = 0, fileName = "", headRow = {}, headY = {}, resumoCache = {}, fora = {};
+  var pages = [], current = 0, fileName = "", headRow = {}, headY = {}, resumoCache = {}, fora = {}, geracao = 0;
 
   // resumo de cada pagina para as etiquetas e para escolher onde abrir.
   // Guardado por combinacao de opcoes: mexer num cursor nao volta a moer
@@ -489,6 +489,7 @@ th:last-child,td:last-child{border-right:0}
 
   /* ── carregar ── */
   function loadBytes(bytes, name){
+    var meu = ++geracao;      // o ultimo ficheiro a entrar e o que manda
     fileName = name;
     show('<div class="state"><h3><span class="spin"></span> Reading ' + esc(name) + '</h3></div>');
     if (!window.pdfjsLib){
@@ -500,6 +501,9 @@ th:last-child,td:last-child{border-right:0}
       for (var i=1;i<=doc.numPages;i++) jobs.push(doc.getPage(i).then(readItems));
       return Promise.all(jobs);
     }).then(function(all){
+      // o exemplo demora a abrir; se a pessoa largou um ficheiro entretanto,
+      // este resultado chega atrasado e nao pode pisar o dela
+      if (meu !== geracao) return;
       pages = all; current = 0; headRow = {}; headY = {}; resumoCache = {}; fora = {};
       $("fileinfo").innerHTML = '<b>' + esc(name) + '</b> · ' + all.length + (all.length===1?' page':' pages');
       var withText = all.filter(function(p){ return p.length; }).length;
@@ -516,6 +520,7 @@ th:last-child,td:last-child{border-right:0}
         $("summary").textContent += " · opened on page " + (melhor + 1);
       }
     }).catch(function(e){
+      if (meu !== geracao) return;
       show('<div class="state err"><h3>That file did not open</h3><p>' + esc(String(e && e.message || e)) + '</p></div>');
     });
   }
@@ -546,6 +551,14 @@ th:last-child,td:last-child{border-right:0}
   function render(){
     if (!pages.length) return;
     var o = opts(), t = tableOf(current);
+    // Mexer nos cursores muda o numero de colunas. Uma coluna apagada pelo
+    // indice 7 passaria a apagar outra qualquer — ou nenhuma, e a conta no
+    // resumo dava negativo. Por isso o que ficou fora do intervalo cai.
+    if (fora[current]){
+      Object.keys(fora[current]).forEach(function(c){
+        if (+c >= t.cols) delete fora[current][c];
+      });
+    }
     $("pages").hidden = pages.length < 2;
     if (pages.length > 1){
       var res = resumos();
@@ -556,13 +569,15 @@ th:last-child,td:last-child{border-right:0}
                (i+1) + ' <small>' + res[i].linhas + ' rows</small></button>';
       }).join("");
     }
-    var nFora = Object.keys(fora[current] || {}).length;
+    var nFora = Math.min(Object.keys(fora[current] || {}).length, t.cols);
     $("summary").textContent = (headRow[current] == null ? t.cells.length
         : (t.cells.length - headRow[current]) + " of " + t.cells.length) + " rows · " +
         (nFora ? (t.cols - nFora) + " of " + t.cols : t.cols) + " columns";
     if (!t.cells.length){
-      return $("out").innerHTML = '<div class="state"><h3>Nothing on this page</h3>' +
+      setButtons(false);        // sem tabela nao ha nada para copiar
+      $("out").innerHTML = '<div class="state"><h3>Nothing on this page</h3>' +
         '<p>No text was found here. Try another page.</p></div>';
+      return;
     }
     var hr = headRow[current];
     var apagadas = fora[current] || {};

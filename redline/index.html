@@ -173,7 +173,7 @@ body.so-mudancas .par.igual{display:none}
   "use strict";
   var EX_A = "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", EX_B = "JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA1OTUgODQyXSAvUmVzb3VyY2VzIDw8IC9Gb250IDw8IC9GMSA1IDAgUiAvRjIgNiAwIFIgPj4gPj4gL0NvbnRlbnRzIDQgMCBSID4+CmVuZG9iago0IDAgb2JqCjw8IC9MZW5ndGggODc4IC9GaWx0ZXIgL0ZsYXRlRGVjb2RlID4+CnN0cmVhbQp4nI1V0Y7iRhB85yv65ZJdaUOwsWF5ZPe8G0scrMDZ6CReBruBSewZazyG+O9T9sBd7m5PXiEEtjxd1dVV7Ydk8PuTT55PyX7g0QgfjyYBTe9HlBSDm020fo0fow3Nn9dR9ClaJreU/D2IksFDe9Ijz/v+ZDDuTiZHWdH8YJgLVpZwUYiMacf2zKxoqY09nqXKaM25aGhhM9re2CPTpi7LXLLZ3pJQWS+cP+ng/hBmp2tDv9CjEYrpRRir2FSXoo+oqOz2dkgP2h5JiYIrEoaJ/xVFmXM1/AboDUUmM78D8oa0eVy9RH3EJlP/osPXlqg6ijyn0uiThBaFUOLAGR11ZaU63FGhlbTa4H/bOkmV4jFle6HCsIMyXJVaVUx7bajtumoqy0VFucRvW4826ZGzOmea9zfse11Vf0hJtP7US2LkvTX3HR+kqkgrPLVKrd5BBX+EobUNplqh8Rqj6BifOT8xBub529s+uPA+6OAgmT1WQ4otGVZ8xlRrqwthZQqpG6oVhlsRS+hhqIQrGjrIEyCVxjPcK0MYuiSMh/QUtUFYfqSX+ef3RCEcj75YwBnwagAYPvpzTcHdBNVLEOvauMOEThqkMncN+hiZMIaF+c6gb6F5Lnixq+HsDSSxw7jP6B+1ILNtftvLTuYgRMQy0WA6+84uF3Tcs9wLF8xc8BZ4uIXppp2CrAS0VJbhRkvCUvCBxE4DsYXYCdjT/FD/Dd2DictPgLy5JUSL6DVabHqJBT8NXiFADF+azYbhhy8ii5OQudjJXNpmiP3BmbSQD0ebXjDfRe8Md/E3hWgPxAr+z/UZrUOIvTzUhu8gUllixLijsag6Eu0E9vyOLTSeuZSF4LlaPsUfYcN4voiTz31Mx1N3MhLp8ZIDJ8o/zGU3G91G5NeqTeW+2ztS5JgkPNPGCQmuODVs37OVx6FLp0NA0iiTVZprDF9asho1GmBKk12otP7UtaWzkdbi9ZC2e0zZXheOx9OvWyfNRQ2EqjanLuHwYCGV494uGNFGTerM+R0bCiEYIwPNj/l6S/qRy9fE7cN4OU/i1bKPoH/vTkX/X0AF8n8lx+1uVFIx7m9vZqNrJq9KvHNN+cGsw5kO6Xn1Gq2X8fKZFvO/evn5s5+8rg/IrFEw6q7p7JGLc7cpYoMXtsqujP4DTn1SqgplbmRzdHJlYW0KZW5kb2JqCjUgMCBvYmoKPDwgL1R5cGUgL0ZvbnQgL1N1YnR5cGUgL1R5cGUxIC9CYXNlRm9udCAvVGltZXMtUm9tYW4gPj4KZW5kb2JqCjYgMCBvYmoKPDwgL1R5cGUgL0ZvbnQgL1N1YnR5cGUgL1R5cGUxIC9CYXNlRm9udCAvVGltZXMtQm9sZCA+PgplbmRvYmoKeHJlZgowIDcKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDA5IDAwMDAwIG4gCjAwMDAwMDAwNTggMDAwMDAgbiAKMDAwMDAwMDExNSAwMDAwMCBuIAowMDAwMDAwMjUxIDAwMDAwIG4gCjAwMDAwMDEyMDEgMDAwMDAgbiAKMDAwMDAwMTI3MyAwMDAwMCBuIAp0cmFpbGVyCjw8IC9TaXplIDcgL1Jvb3QgMSAwIFIgPj4Kc3RhcnR4cmVmCjEzNDQKJSVFT0YK";
   var $ = function(id){ return document.getElementById(id); };
-  var docs = {a:null, b:null}, nomes = {a:"", b:""}, pares = [], foco = -1;
+  var docs = {a:null, b:null}, nomes = {a:"", b:""}, pares = [], foco = -1, geracao = 0;
 
   if (window.pdfjsLib){
     pdfjsLib.GlobalWorkerOptions.workerSrc =
@@ -205,16 +205,27 @@ body.so-mudancas .par.igual{display:none}
             var linhas = [], cur = null;
             itens.forEach(function(it){
               if (!cur || Math.abs(cur.y - it.y) > (it.h * 0.6)){
-                cur = {y:it.y, fim:it.x + it.w, t:it.s.trim()};
+                cur = {y:it.y, p:[it]};
                 linhas.push(cur);
               } else {
-                var vao = it.x - cur.fim;
-                cur.t += (vao < it.h * 0.22 ? "" : " ") + it.s.trim();
-                cur.fim = it.x + it.w;
+                cur.p.push(it);
+                cur.y = (cur.y * (cur.p.length - 1) + it.y) / cur.p.length;
               }
             });
-            return linhas.map(function(l){ return l.t.replace(/\s+/g," ").trim(); })
-                         .filter(function(t){ return t; });
+            // Juntar SEMPRE por ordem horizontal. Um pedaco numa linha de base
+            // ligeiramente diferente chega fora de ordem, e sem isto ficava
+            // colado no fim da frase — texto baralhado, e depois uma linha
+            // "alterada" que afinal nao mudou nada.
+            return linhas.map(function(l){
+              l.p.sort(function(a, b){ return a.x - b.x; });
+              var t = "", fim = null;
+              l.p.forEach(function(it){
+                var vao = (fim == null) ? 99 : it.x - fim;
+                t += (t === "" ? "" : (vao < it.h * 0.22 ? "" : " ")) + it.s.trim();
+                fim = it.x + it.w;
+              });
+              return t.replace(/\s+/g, " ").trim();
+            }).filter(function(t){ return t; });
             // (os itens ja vem ordenados por x dentro de cada linha porque a
             //  lista foi ordenada por y e depois por x antes de agrupar)
           });
@@ -377,15 +388,20 @@ body.so-mudancas .par.igual{display:none}
 
   /* ── carregar ── */
   function carregar(lado, data, nome){
+    var meu = ++geracao;                 // quem chegou depois manda
     nomes[lado] = nome;
     $("n-" + lado).innerHTML = '<b>' + esc(nome) + '</b>';
     $("h-" + lado).textContent = (lado === "a" ? "Earlier · " : "Later · ") + nome;
     if (!window.pdfjsLib){
-      return mostrar('<div class="estado err"><h3>The PDF engine did not load</h3>' +
+      mostrar('<div class="estado err"><h3>The PDF engine did not load</h3>' +
         '<p>It comes from a CDN and the network blocked it. Reload the page.</p></div>');
+      return Promise.resolve();          // devolver sempre promessa: quem chama usa .then
     }
     mostrar('<div class="estado"><h3><span class="gira"></span> Reading ' + esc(nome) + '</h3></div>');
     return linhasDe(data).then(function(linhas){
+      // Se entretanto entrou outro ficheiro, este resultado ja nao interessa.
+      // (o exemplo carrega A e so depois B, por isso nunca se atropelam)
+      if (meu !== geracao) return;
       docs[lado] = linhas;
       if (!linhas.length){
         docs[lado] = null;
@@ -411,6 +427,10 @@ body.so-mudancas .par.igual{display:none}
   function lerFicheiro(lado, f){
     var r = new FileReader();
     r.onload = function(){ carregar(lado, new Uint8Array(r.result), f.name); };
+    r.onerror = function(){
+      mostrar('<div class="estado err"><h3>Could not read ' + esc(f.name) + '</h3>' +
+        '<p>The browser could not open that file. Try choosing it again.</p></div>');
+    };
     r.readAsArrayBuffer(f);
   }
 
@@ -442,11 +462,21 @@ body.so-mudancas .par.igual{display:none}
       else if (p.tipo === "entrou") txt.push("ADDED\n  " + p.b);
     });
     var s = txt.join("\n"), btn = this;
+    var feito = function(){ btn.textContent = "Copied";
+      setTimeout(function(){ btn.textContent = "Copy the changes"; }, 1500); };
+    var plano_b = function(){
+      // em file:// e em http a area de transferencia moderna nao existe;
+      // sem isto o botao nao fazia absolutamente nada, em silencio
+      var ta = document.createElement("textarea");
+      ta.value = s; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); feito(); }
+      catch(e){ btn.textContent = "The browser blocked the clipboard"; }
+      document.body.removeChild(ta);
+    };
     if (navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(s).then(function(){
-        btn.textContent = "Copied"; setTimeout(function(){ btn.textContent = "Copy the changes"; }, 1500);
-      }, function(){ btn.textContent = "The browser blocked the clipboard"; });
-    }
+      navigator.clipboard.writeText(s).then(feito, plano_b);
+    } else plano_b();
   });
   $("b-exemplo").addEventListener("click", exemplo);
 
