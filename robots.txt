@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://tchubirs.github.io/sitemap.xml
