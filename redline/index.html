@@ -357,6 +357,20 @@ body.so-mudancas .par.igual{display:none}
       '<div class="g"><b>' + ent + '</b>' + (ent === 1 ? "line added" : "lines added") + '</div>' +
       '<div class="r"><b>' + sai + '</b>' + (sai === 1 ? "line removed" : "lines removed") + '</div>' +
       (mud + sai + ent === 0 ? '<div>the text is identical</div>' : "");
+    // Aviso honesto: se quase nada bate certo, o mais provavel e que o
+    // documento tenha sido recomposto (outra largura, outro tipo de letra) e
+    // nao reescrito. Medido em duas versoes reais do mesmo artigo cientifico:
+    // 36 linhas iguais em mil e trezentas, com o texto praticamente igual.
+    // Mais vale dizer isto do que deixar alguem ler mil marcas que nao sao
+    // alteracoes nenhumas.
+    var total = mud + sai + ent + pares.filter(function(p){ return p.tipo === "igual"; }).length;
+    var iguais = pares.filter(function(p){ return p.tipo === "igual"; }).length;
+    if (total > 40 && iguais / total < 0.15){
+      $("conta").innerHTML += '<div style="flex-basis:100%;color:var(--saiu);font-size:13px;' +
+        'margin-top:6px">Almost every line differs. These two were probably re-typeset — ' +
+        'different margins or font — rather than edited. The marks below may be noise, ' +
+        'not changes.</div>';
+    }
     ["b-prev","b-next","b-copy"].forEach(function(id){ $(id).disabled = (mud + sai + ent === 0); });
     foco = -1;
   }
