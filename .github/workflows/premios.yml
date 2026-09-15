@@ -1,0 +1,60 @@
+# Refaz o radar de prémios e publica-o no site.
+name: premios
+
+on:
+  schedule:
+    # Aos 11 e aos 41 — longe dos minutos redondos, onde os horários do GitHub
+    # se atropelam. Medido noutro workflow: com */30 disparou 1 vez em 4.
+    - cron: "11,41 * * * *"
+  workflow_dispatch:
+  push:
+    paths: ['radar-premios/**', '.github/workflows/premios.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: radar-premios
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - run: npm test
+
+  publicar:
+    needs: testes
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - name: Gerar a página
+        run: node radar-premios/bin/radar.js --paginas 12 --html /tmp/index.html
+
+      # Uma página vazia porque a API não respondeu é pior que a página velha.
+      - name: Recusar página vazia
+        run: |
+          n=$(grep -c '<article' /tmp/index.html || true)
+          echo "cartões: $n"
+          test "$n" -ge 2 || { echo "::error::só $n concursos, não publico"; exit 1; }
+
+      - name: Publicar no site
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git checkout -B publicar origin/main
+          mkdir -p premios
+          cp /tmp/index.html premios/index.html
+          git add premios/index.html
+          git diff --cached --quiet && { echo "nada mudou"; exit 0; }
+          git commit -m "premios: página de $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push origin publicar:main

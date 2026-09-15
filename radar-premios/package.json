@@ -1,0 +1,14 @@
+{
+  "name": "radar-premios",
+  "version": "1.0.0",
+  "description": "Concursos abertos onde há dinheiro, ordenados pela hipótese de receber — não pelo tamanho do prémio.",
+  "license": "MIT",
+  "private": true,
+  "bin": { "radar-premios": "bin/radar.js" },
+  "scripts": {
+    "start": "node bin/radar.js",
+    "pagina": "node bin/radar.js --paginas 12 --html site/index.html",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": { "node": ">=20" }
+}
