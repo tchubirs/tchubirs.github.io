@@ -484,6 +484,33 @@ th:last-child,td:last-child{border-right:0}
       linhas.forEach(function(l){ l.line = keep.map(function(c){ return l.line[c]; }); });
     }
     linhas = linhas.filter(function(l){ return l.line.some(function(v){ return v !== ""; }); });
+
+    // Juntar as continuacoes de linha.
+    //
+    // Num extracto, a descricao de uma transacao passa muitas vezes para a
+    // linha de baixo: "DU 230325 SELECTA SAS" numa linha, "FRA 1,20EUR" na
+    // seguinte. O PDF nao diz que sao a mesma transacao — so o desenho diz.
+    // Uma linha com UMA celula so, logo a seguir a uma linha cheia, e quase
+    // sempre a continuacao dela. Junta-se ao texto da mesma coluna.
+    //
+    // As condicoes sao apertadas de proposito: so uma celula preenchida, essa
+    // celula nao pode ser um numero (um total sozinho nao e continuacao de
+    // nada), e a linha anterior tem de ser mesmo uma linha de tabela, com tres
+    // celulas ou mais. Um titulo de seccao nao entra por aqui.
+    var juntas = [];
+    linhas.forEach(function(l){
+      var cheias = [], idx = -1;
+      l.line.forEach(function(v, c){ if (v !== ""){ cheias.push(v); idx = c; } });
+      var ant = juntas[juntas.length - 1];
+      var soUma = cheias.length === 1 && !/^[-(]?[\d.,]+[)%]?$/.test(cheias[0].trim());
+      var antCheia = ant && ant.line.filter(function(v){ return v !== ""; }).length >= 3;
+      if (soUma && antCheia){
+        ant.line[idx] = ant.line[idx] ? ant.line[idx] + " " + cheias[0] : cheias[0];
+      } else {
+        juntas.push(l);
+      }
+    });
+    linhas = juntas;
     return {cells: linhas.map(function(l){ return l.line; }),
             ys:    linhas.map(function(l){ return l.y; }),
             cols:  linhas.length ? linhas[0].line.length : 0};
