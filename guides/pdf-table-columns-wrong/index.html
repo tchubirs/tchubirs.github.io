@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PDF table extraction: why the columns come out wrong, and how to fix it</title>
+<meta name="description" content="Merged columns, split dates, glued rows — why every PDF table extractor gets these wrong, and what to adjust to get a clean table.">
+<link rel="canonical" href="https://tchubirs.github.io/guides/pdf-table-columns-wrong/">
+<meta property="og:title" content="PDF table extraction: why the columns come out wrong, and how to fix it"><meta property="og:description" content="Merged columns, split dates, glued rows — why every PDF table extractor gets these wrong, and what to adjust to get a clean table.">
+<meta property="og:type" content="article">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ground:#f4f6f8; --panel:#ffffff; --sunk:#eef1f5; --line:#dde3ea;
+  --text:#16202b; --muted:#5a6b7b; --faint:#8595a4;
+  --ink:#2c5f9e; --ink-soft:#e7eefa; --green:#136f52; --green-soft:#e2f3ec;
+  --serif:"Source Serif 4",Georgia,serif; --sans:"Public Sans",ui-sans-serif,system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ground:#0f151b; --panel:#161e26; --sunk:#131a21; --line:#26323d;
+  --text:#e6edf4; --muted:#9aabba; --faint:#6b7c8b;
+  --ink:#79aae8; --ink-soft:#18283c; --green:#57c69b; --green-soft:#13302a;
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--text);font-family:var(--sans);
+     font-size:17px;line-height:1.65}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:30px 70px}
+.volta{font-size:13.5px;color:var(--muted);text-decoration:none;font-family:var(--mono);
+       letter-spacing:.08em;text-transform:uppercase}
+.volta:hover{color:var(--ink)}
+h1{font-family:var(--serif);font-size:34px;font-weight:600;line-height:1.16;margin:22px 0 10px;
+   letter-spacing:-.015em;text-wrap:balance}
+.chapeu{color:var(--muted);font-size:18px;margin:0 0 30px}
+h2{font-family:var(--serif);font-size:23px;font-weight:600;margin:38px 0 12px}
+h3{font-size:16.5px;font-weight:600;margin:26px 0 8px}
+p{margin:0 0 15px}
+b{font-weight:600}
+ul,ol{margin:0 0 16px;padding-left:22px}
+li{margin-bottom:9px}
+a{color:var(--ink)}
+.caixa{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--ink);
+       border-radius:0 10px 10px 0;padding:16px 18px;margin:24px 0}
+.caixa p:last-child{margin-bottom:0}
+.caixa.aviso{border-left-color:var(--green);background:var(--green-soft)}
+.cta{display:block;background:var(--panel);border:1px solid var(--ink);border-radius:12px;
+     padding:20px;margin:30px 0;text-decoration:none;color:inherit}
+.cta:hover{background:var(--ink-soft)}
+.cta b{display:block;font-family:var(--serif);font-size:20px;margin-bottom:5px;color:var(--ink)}
+.cta span{color:var(--muted);font-size:15px}
+table{border-collapse:collapse;width:100%;margin:20px 0;font-size:15px}
+th,td{border-bottom:1px solid var(--line);padding:9px 10px;text-align:left;vertical-align:top}
+th{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);font-weight:600}
+code{font-family:var(--mono);font-size:14px;background:var(--sunk);padding:1px 5px;border-radius:4px}
+.rodape{margin-top:46px;padding-top:20px;border-top:1px solid var(--line);
+        font-size:13.5px;color:var(--faint)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="volta" href="https://tchubirs.github.io/tablecut/">&larr; Tablecut</a>
+  <h1>Why the columns come out wrong</h1>
+  <p class="chapeu">Every PDF table extractor guesses. Here is what it is guessing, why it guesses wrong, and which knob fixes which failure.</p>
+  
+<h2>There is no table in the PDF</h2>
+<p>This is the one thing worth understanding, because every failure below follows from it.</p>
+<p>A PDF page is a list of drawing instructions: <i>put this piece of text at this position, in
+this font, at this size</i>. When a person looks at the page, the alignment of those pieces reads
+as a table. The file itself has no idea there is a table there. No rows, no columns, no cells —
+just text with coordinates.</p>
+<p>So every extractor works backwards: group the pieces into lines by their vertical position,
+then decide where the column boundaries are from the horizontal gaps. Both steps are guesses,
+and both are adjustable.</p>
+
+<h2>Failure 1: two columns merged into one cell</h2>
+<p>You see <code>303 303</code> in a cell that should have been two cells. Or an amount stuck to
+the end of a description.</p>
+<p><b>Why:</b> the gap between those two columns was narrower than the tool's threshold, so it
+never saw a boundary there. This is most common with right-aligned numbers, where the left edge
+of each value moves depending on how many digits it has.</p>
+<p><b>Fix:</b> lower the column-gap threshold, so a smaller blank space counts as a break. In
+Tablecut that is the <i>column gap</i> slider — try 8 or 6 instead of 12. Every serious tool has
+this control under some name.</p>
+
+<h2>Failure 2: one column split into two</h2>
+<p><code>Nov – 01</code> becomes <code>Nov</code> and <code>– 01</code>. Or a two-word
+description breaks across cells.</p>
+<p><b>Why:</b> the opposite of above — a space inside a single value was wide enough to look like
+a column boundary.</p>
+<p><b>Fix:</b> raise the column-gap threshold. Note the tension: the same slider fixes failure 1
+and causes failure 2. There is no universally right value, which is why the control exists.</p>
+
+<h2>Failure 3: one row split into two, or two rows merged</h2>
+<p>A description that wraps onto a second line becomes its own row. Or two adjacent transactions
+end up in the same row.</p>
+<p><b>Why:</b> rows are grouped by vertical position with a tolerance. Too tight, and a slightly
+offset baseline starts a new row. Too loose, and two close rows merge.</p>
+<p><b>Fix:</b> the row-grouping tolerance. Raise it when one row is being split; lower it when two
+rows are merging.</p>
+
+<h2>Failure 4: columns that do not exist</h2>
+<p>The table has five columns and the tool reports fifteen, most of them empty.</p>
+<p><b>Why:</b> the page header counts too. A letterhead, an address block, an account number line
+— all of them have text at horizontal positions where the table has nothing, and each of those
+positions looks like a column.</p>
+<p><b>Fix:</b> tell the tool where the table starts, so the header rows stop voting on the column
+layout, and drop the columns that are empty. In Tablecut, clicking the header row does the first
+and clicking a column letter does the second; near-empty columns hide themselves and come back
+with one click.</p>
+
+<h2>Failure 5: nothing comes out at all</h2>
+<p><b>Why:</b> the PDF is a scan. There is no text layer, only an image of one.</p>
+<p><b>Fix:</b> OCR, before extraction. And then check every number twice, because OCR errors look
+exactly like real digits.</p>
+
+<div class="caixa aviso">
+<p><b>How to know you are done:</b> not by looking at the table, but by summing a numeric column
+and comparing it to the total printed on the document. A table can look perfect and still have a
+merged cell three screens down. The total is the only check that sees everything at once.</p>
+</div>
+
+  <a class="cta" href="https://tchubirs.github.io/tablecut/">
+  <b>Tablecut &rarr;</b>
+  <span>Drop a PDF, check the table on screen, copy it into your spreadsheet.
+  The file is read inside your browser and never uploaded. Free to use.</span></a>
+  <p class="rodape">Written by the people who built Tablecut, a browser tool that does this
+  without uploading your file. &copy; 2026 Tchubi. All rights reserved.</p>
+</div>
+</body>
+</html>

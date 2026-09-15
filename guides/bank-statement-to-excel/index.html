@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bank statement PDF to Excel: how to get the transactions out</title>
+<meta name="description" content="Four ways to turn a bank statement PDF into spreadsheet rows, what each one costs you in privacy, and how to check the result before you trust it.">
+<link rel="canonical" href="https://tchubirs.github.io/guides/bank-statement-to-excel/">
+<meta property="og:title" content="Bank statement PDF to Excel: how to get the transactions out"><meta property="og:description" content="Four ways to turn a bank statement PDF into spreadsheet rows, what each one costs you in privacy, and how to check the result before you trust it.">
+<meta property="og:type" content="article">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ground:#f4f6f8; --panel:#ffffff; --sunk:#eef1f5; --line:#dde3ea;
+  --text:#16202b; --muted:#5a6b7b; --faint:#8595a4;
+  --ink:#2c5f9e; --ink-soft:#e7eefa; --green:#136f52; --green-soft:#e2f3ec;
+  --serif:"Source Serif 4",Georgia,serif; --sans:"Public Sans",ui-sans-serif,system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ground:#0f151b; --panel:#161e26; --sunk:#131a21; --line:#26323d;
+  --text:#e6edf4; --muted:#9aabba; --faint:#6b7c8b;
+  --ink:#79aae8; --ink-soft:#18283c; --green:#57c69b; --green-soft:#13302a;
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--text);font-family:var(--sans);
+     font-size:17px;line-height:1.65}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:30px 70px}
+.volta{font-size:13.5px;color:var(--muted);text-decoration:none;font-family:var(--mono);
+       letter-spacing:.08em;text-transform:uppercase}
+.volta:hover{color:var(--ink)}
+h1{font-family:var(--serif);font-size:34px;font-weight:600;line-height:1.16;margin:22px 0 10px;
+   letter-spacing:-.015em;text-wrap:balance}
+.chapeu{color:var(--muted);font-size:18px;margin:0 0 30px}
+h2{font-family:var(--serif);font-size:23px;font-weight:600;margin:38px 0 12px}
+h3{font-size:16.5px;font-weight:600;margin:26px 0 8px}
+p{margin:0 0 15px}
+b{font-weight:600}
+ul,ol{margin:0 0 16px;padding-left:22px}
+li{margin-bottom:9px}
+a{color:var(--ink)}
+.caixa{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--ink);
+       border-radius:0 10px 10px 0;padding:16px 18px;margin:24px 0}
+.caixa p:last-child{margin-bottom:0}
+.caixa.aviso{border-left-color:var(--green);background:var(--green-soft)}
+.cta{display:block;background:var(--panel);border:1px solid var(--ink);border-radius:12px;
+     padding:20px;margin:30px 0;text-decoration:none;color:inherit}
+.cta:hover{background:var(--ink-soft)}
+.cta b{display:block;font-family:var(--serif);font-size:20px;margin-bottom:5px;color:var(--ink)}
+.cta span{color:var(--muted);font-size:15px}
+table{border-collapse:collapse;width:100%;margin:20px 0;font-size:15px}
+th,td{border-bottom:1px solid var(--line);padding:9px 10px;text-align:left;vertical-align:top}
+th{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);font-weight:600}
+code{font-family:var(--mono);font-size:14px;background:var(--sunk);padding:1px 5px;border-radius:4px}
+.rodape{margin-top:46px;padding-top:20px;border-top:1px solid var(--line);
+        font-size:13.5px;color:var(--faint)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="volta" href="https://tchubirs.github.io/tablecut/">&larr; Tablecut</a>
+  <h1>Bank statement PDF to Excel</h1>
+  <p class="chapeu">Your bank sends a PDF. Your spreadsheet wants rows. Here is what actually works, what it costs you, and how to tell when the conversion quietly went wrong.</p>
+  
+<h2>First: does your bank offer CSV?</h2>
+<p>Before anything else, log into your bank and look for an export option — CSV, OFX, QIF or
+Excel. Most retail banks have one, usually hidden under <i>Statements</i>, <i>Download</i> or
+<i>Export</i>, and often limited to the last 12 or 24 months.</p>
+<p>If it is there, <b>use it and stop reading</b>. A CSV from the bank is the actual data.
+Everything below is reconstruction — reading numbers back off a printed page — and
+reconstruction can be wrong in ways an export never is.</p>
+<p>You are still here because one of these is true: the statement is older than the export
+window, it came from a closed account, it arrived by email from a third party, or your bank
+simply does not offer it. That is the normal case, and it is why this problem exists at all.</p>
+
+<h2>The four ways, and what each costs</h2>
+<table>
+<tr><th>Way</th><th>What it costs you</th></tr>
+<tr><td><b>Retyping by hand</b></td><td>Time, and transcription errors. A wrong digit in a
+statement does not announce itself — you find it weeks later when a total does not match.</td></tr>
+<tr><td><b>An online converter</b></td><td>You upload the statement to a company you know
+nothing about: account number, balance, every payee, your address. Free ones fund themselves
+somehow.</td></tr>
+<tr><td><b>A Python script</b> (pdfplumber, camelot)</td><td>Nothing, if you write code.
+Everything, if you do not.</td></tr>
+<tr><td><b>A tool that runs in your browser</b></td><td>Nothing leaves the machine, but you
+have to check the output yourself — which you should be doing anyway.</td></tr>
+</table>
+
+<div class="caixa">
+<p><b>Why the upload matters more than people admit.</b> If the statement is yours, uploading it
+is your risk to take. If it belongs to a client — an accountant, a bookkeeper, a lawyer handling
+someone's affairs — it is not your risk to take. Sending a third party's financial records to a
+processor you have not vetted is the kind of thing that sits badly in an audit, and in the EU it
+is a transfer of personal data you would have to be able to justify.</p>
+</div>
+
+<h2>Why the columns come out wrong</h2>
+<p>A PDF does not contain a table. It contains pieces of text, each with a position on the page.
+Any tool that "extracts a table" is guessing where the columns were, from the gaps. That guess
+fails in four predictable ways:</p>
+<ul>
+<li><b>Two columns merge into one.</b> Amounts are right-aligned, so the left edge of the number
+moves depending on whether it is 9.50 or 1,234.56. Tools that cut columns by where text
+<i>starts</i> lose that boundary.</li>
+<li><b>One column splits in two.</b> A date written <code>12 Mar</code> has a space in it, and a
+space wide enough looks like a column break.</li>
+<li><b>Rows merge.</b> A description that wraps onto a second line becomes a row of its own, or
+gets glued to the wrong transaction.</li>
+<li><b>Everything is empty.</b> The statement is a scan — a photograph of a page — and there is
+no text to read at all. That needs OCR, which is a different problem with different error modes.</li>
+</ul>
+
+<h2>Check the result before you trust it</h2>
+<p>Whatever tool you use, do this every single time. It takes twenty seconds.</p>
+<ol>
+<li><b>Count the rows.</b> The statement usually tells you how many transactions it has. If the
+spreadsheet has fewer, something was dropped.</li>
+<li><b>Sum the amounts and compare to the statement's own total.</b> This is the check that
+catches a dropped digit, a merged cell and a lost row all at once. If it matches, the conversion
+is almost certainly clean.</li>
+<li><b>Check the first and last row against the paper.</b> Extraction errors cluster at the
+edges, where headers and footers confuse the tool.</li>
+<li><b>Look for numbers in the description column.</b> That means two columns merged.</li>
+</ol>
+<div class="caixa aviso">
+<p><b>The rule that matters:</b> a converter that fails loudly is worth more than one that fails
+quietly. If a tool hands you a clean-looking table with one wrong number in it, you have a
+problem you will not find until it costs you something.</p>
+</div>
+
+<h2>If the statement is a scan</h2>
+<p>Open the PDF and try to select a line of text with your mouse. If you cannot, there is no text
+layer: it is an image. No extraction tool can help, because there is nothing to extract. You need
+OCR first — Adobe Acrobat, Tesseract, or your scanner's own software — and then you are reading
+numbers a machine guessed from pixels, so the total check above stops being optional.</p>
+
+  <a class="cta" href="https://tchubirs.github.io/tablecut/">
+  <b>Tablecut &rarr;</b>
+  <span>Drop a PDF, check the table on screen, copy it into your spreadsheet.
+  The file is read inside your browser and never uploaded. Free to use.</span></a>
+  <p class="rodape">Written by the people who built Tablecut, a browser tool that does this
+  without uploading your file. &copy; 2026 Tchubi. All rights reserved.</p>
+</div>
+</body>
+</html>

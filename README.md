@@ -30,6 +30,12 @@ o servidor de um desconhecido para saber o que mudou.
 
 **[English: compare two PDF contracts without uploading them →](https://tchubirs.github.io/redline/)**
 
+## [Guias](https://tchubirs.github.io/guides/)
+
+Como tirar dados de PDFs, sem fingir que é simples: extractos bancários para o
+Excel, porque é que as colunas saem tortas, e como comparar duas versões de um
+contrato.
+
 ---
 
 Sem licença aberta — ver [LICENCA.md](LICENCA.md). O repositório é público

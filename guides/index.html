@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Guides — getting data out of PDFs</title>
+<meta name="description" content="Practical guides on getting tables and text out of PDF files: bank statements into a spreadsheet, why columns come out wrong, comparing two contract versions.">
+<link rel="canonical" href="https://tchubirs.github.io/guides/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Public+Sans:wght@400;500;600&display=swap">
+<style>
+:root{--ground:#f4f6f8;--panel:#fff;--line:#dde3ea;--text:#16202b;--muted:#5a6b7b;--ink:#2c5f9e;
+      --serif:"Source Serif 4",Georgia,serif;--sans:"Public Sans",system-ui,sans-serif}
+@media (prefers-color-scheme:dark){:root{--ground:#0f151b;--panel:#161e26;--line:#26323d;
+      --text:#e6edf4;--muted:#9aabba;--ink:#79aae8}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--text);font-family:var(--sans);font-size:17px;line-height:1.6}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:34px 70px}
+h1{font-family:var(--serif);font-size:32px;font-weight:600;margin:0 0 8px}
+.sub{color:var(--muted);margin:0 0 30px}
+a.card{display:block;background:var(--panel);border:1px solid var(--line);border-radius:12px;
+       padding:18px 20px;margin-bottom:14px;text-decoration:none;color:inherit}
+a.card:hover{border-color:var(--ink)}
+a.card b{display:block;font-family:var(--serif);font-size:20px;color:var(--ink);margin-bottom:5px}
+a.card span{color:var(--muted);font-size:15px}
+.fer{margin-top:34px;padding-top:20px;border-top:1px solid var(--line);font-size:15px;color:var(--muted)}
+.fer a{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Guides</h1>
+  <p class="sub">Getting data out of PDF files, without pretending it is simple.</p>
+
+  <a class="card" href="bank-statement-to-excel/">
+    <b>Bank statement PDF to Excel</b>
+    <span>Four ways to get the transactions out, what each costs you in privacy, and the
+    twenty-second check that catches a wrong number before it costs you something.</span></a>
+
+  <a class="card" href="pdf-table-columns-wrong/">
+    <b>Why the columns come out wrong</b>
+    <span>Merged columns, split dates, rows glued together, columns that do not exist.
+    What every extractor is guessing, and which control fixes which failure.</span></a>
+
+  <a class="card" href="compare-two-pdf-contracts/">
+    <b>Comparing two versions of a contract</b>
+    <span>Word compares documents; PDF does not. The changes that matter are one word long,
+    and the silent failure to watch for.</span></a>
+
+  <p class="fer">The tools: <a href="../tablecut/">Tablecut</a> puts a PDF table into your
+  spreadsheet, <a href="../redline/">Redline</a> compares two contract versions. Both run
+  inside your browser — the file never leaves your computer.</p>
+</div>
+</body>
+</html>
