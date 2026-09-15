@@ -202,6 +202,16 @@ th:last-child,td:last-child{border-right:0}
             <p class="hint">The blank space, in points, that starts a new column.</p>
           </div>
           <label class="check"><input type="checkbox" id="trim" checked> Drop empty columns</label>
+          <div class="ctl">
+            <label for="numeros">Numbers</label>
+            <select id="numeros" style="margin-top:5px">
+              <option value="">Leave them exactly as they are</option>
+              <option value="virgula">Use comma as the decimal — 1.234,56</option>
+              <option value="ponto">Use point as the decimal — 1,234.56</option>
+            </select>
+            <p class="hint">Your spreadsheet only adds up numbers written the way it expects.
+            A statement from another country usually is not.</p>
+          </div>
           <p class="hint" id="headhint" style="margin-top:12px">Click the row where the table starts — the columns are counted from there and the lines above are left out. Click a column letter to drop a column — the lines above it (titles, addresses) are left out when you copy.</p>
         </div>
       </div>
@@ -572,10 +582,12 @@ th:last-child,td:last-child{border-right:0}
     var cells = tableOf(i).cells, hr = headRow[i];
     if (hr != null) cells = cells.slice(hr);
     var apagadas = autoFora[i] || fora[i] || {};
-    if (!Object.keys(apagadas).length) return cells;
-    return cells.map(function(l){
-      return l.filter(function(v, ci){ return !apagadas[ci]; });
-    });
+    if (Object.keys(apagadas).length){
+      cells = cells.map(function(l){
+        return l.filter(function(v, ci){ return !apagadas[ci]; });
+      });
+    }
+    return aplicarNumeros(cells);
   }
   function render(){
     if (!pages.length) return;
@@ -653,6 +665,44 @@ th:last-child,td:last-child{border-right:0}
     return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
 
   /* ── sair para a folha de calculo ── */
+  // Reescrever um numero de um formato para o outro, sem lhe tocar se nao
+  // for mesmo um numero. Na duvida, nao se mexe: estragar um numero e pior
+  // do que o deixar no formato errado.
+  function converter(v, modo){
+    if (!modo) return v;
+    var t = v.trim();
+    // So numeros puros, com sinal e separadores. E SO se ja tiverem um
+    // separador la dentro: "0054623598" e um numero de conta, nao um valor,
+    // e eu cheguei a transforma-lo em "0.054.623.598" antes de reparar. Um
+    // numero sem separador nenhum fica exactamente como esta — referencia,
+    // ano, quantidade, tudo isso passa incolume.
+    if (!/^[-+(]?\s*[\d][\d.,\s]*\)?\s*[%]?$/.test(t)) return v;
+    if (!/[.,]/.test(t)) return v;
+    var neg = /^[-(]/.test(t) || /\)$/.test(t);
+    var so = t.replace(/[^\d.,]/g, "");
+    if (!/\d/.test(so)) return v;
+    var ultimoP = so.lastIndexOf("."), ultimaV = so.lastIndexOf(",");
+    var dec = "", inteiro = so;
+    // o separador decimal e o ultimo que aparece, e so se deixar 1 ou 2 digitos
+    var pos = Math.max(ultimoP, ultimaV);
+    if (pos > -1 && so.length - pos - 1 <= 2 && so.length - pos - 1 > 0){
+      inteiro = so.slice(0, pos); dec = so.slice(pos + 1);
+    }
+    inteiro = inteiro.replace(/[.,]/g, "");
+    if (!inteiro && !dec) return v;
+    var sepMil = modo === "virgula" ? "." : ",";
+    var sepDec = modo === "virgula" ? "," : ".";
+    var comMil = inteiro.replace(/\B(?=(\d{3})+(?!\d))/g, sepMil);
+    var saida = comMil + (dec ? sepDec + dec : "");
+    return (neg ? "-" : "") + saida + (/%$/.test(t) ? "%" : "");
+  }
+
+  function aplicarNumeros(cells){
+    var modo = $("numeros").value;
+    if (!modo) return cells;
+    return cells.map(function(l){ return l.map(function(v){ return converter(v, modo); }); });
+  }
+
   function tsv(cells){ return cells.map(function(l){ return l.join("\t"); }).join("\n"); }
   function csv(cells){
     return cells.map(function(l){
@@ -709,6 +759,7 @@ th:last-child,td:last-child{border-right:0}
     });
   });
   $("trim").addEventListener("change", function(){ if (pages.length) render(); });
+  $("numeros").addEventListener("change", function(){ if (pages.length) render(); });
 
   // clicar numa linha diz onde comeca a tabela; clicar outra vez desfaz
   $("out").addEventListener("click", function(e){
