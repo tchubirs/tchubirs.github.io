@@ -72,7 +72,8 @@ threshold on.
 
 ## Open source
 
-MIT. Repository: <https://github.com/tchubirs/tchubirs.github.io/tree/main/vesuvius>
+MIT. Repository:
+<https://github.com/tchubirs/tchubirs.github.io/tree/claude/ai-revenue-automation-map-g00jks/vesuvius>
 (patch, tests, measurement tool, isolated reproduction, full reproduction instructions).
 
 ## Disclosure
