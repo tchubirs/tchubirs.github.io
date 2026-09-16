@@ -1,0 +1,680 @@
+diff --git a/volume-cartographer/apps/src/vc_calc_surface_metrics.cpp b/volume-cartographer/apps/src/vc_calc_surface_metrics.cpp
+index 92c3a9b..082cd25 100644
+--- a/volume-cartographer/apps/src/vc_calc_surface_metrics.cpp
++++ b/volume-cartographer/apps/src/vc_calc_surface_metrics.cpp
+@@ -5,6 +5,7 @@
+ #include <opencv2/imgcodecs.hpp>
+ #include <boost/program_options.hpp>
+ #include "utils/Json.hpp"
++#include <cstdint>
+ #include <iostream>
+ #include <fstream>
+ 
+@@ -20,7 +21,8 @@ int main(int argc, char** argv)
+         ("winding", po::value<std::string>(), "Input winding file (.tif)")
+         ("output", po::value<std::string>(), "Output metrics file (.json)")
+         ("z_min", po::value<int>()->default_value(-1), "Minimum slice index to consider (optional)")
+-        ("z_max", po::value<int>()->default_value(-1), "Maximum slice index to consider (optional)");
++        ("z_max", po::value<int>()->default_value(-1), "Maximum slice index to consider (optional)")
++        ("seed", po::value<uint32_t>()->default_value(0), "Draw index for the random-restart search behind the winding metrics. Same inputs and same seed give the same numbers; vary it to measure how much of a score is sampling noise.");
+ 
+     po::variables_map vm;
+     po::store(po::parse_command_line(argc, argv, desc), vm);
+@@ -41,6 +43,7 @@ int main(int argc, char** argv)
+     std::string output_path = vm["output"].as<std::string>();
+     int z_min = vm["z_min"].as<int>();
+     int z_max = vm["z_max"].as<int>();
++    uint32_t seed = vm["seed"].as<uint32_t>();
+ 
+     PointCollections collection;
+     if (!collection.loadFromJSON(collection_path)) {
+@@ -67,8 +70,11 @@ int main(int argc, char** argv)
+             std::cerr << "Error: Failed to load winding from " << winding_path << std::endl;
+             return 1;
+         }
+-        utils::Json winding_metrics = calc_point_winding_metrics(collection, surface.get(), winding, z_min, z_max);
++        utils::Json winding_metrics = calc_point_winding_metrics(collection, surface.get(), winding, z_min, z_max, seed);
+         metrics.update(winding_metrics);
++        // Recorded so a metrics file can be told apart from the same trace
++        // scored under a different draw.
++        metrics["winding_metrics_seed"] = static_cast<int64_t>(seed);
+     }
+ 
+     std::ofstream o(output_path);
+diff --git a/volume-cartographer/core/include/vc/core/util/RandomRestarts.hpp b/volume-cartographer/core/include/vc/core/util/RandomRestarts.hpp
+new file mode 100644
+index 0000000..0741127
+--- /dev/null
++++ b/volume-cartographer/core/include/vc/core/util/RandomRestarts.hpp
+@@ -0,0 +1,123 @@
++#pragma once
++
++// Deterministic start points for the random-restart searches in the metrics
++// code. Split out of surface_metrics.cpp so the part that has to be
++// reproducible is a pure function with no hidden state, and can be tested
++// without building a QuadSurface.
++//
++// Two properties are load-bearing here:
++//
++//   * The sequence depends only on the arguments. No wall clock, no global
++//     generator. Re-running an evaluation on the same inputs gives the same
++//     number, which is what makes a reported metric comparable between runs.
++//   * The sequence still differs between call sites, because restart_seed()
++//     mixes the geometry of the query into it. A fixed constant would make
++//     every segment of every surface probe the same 1000 cells, which is a
++//     different bug wearing the word "deterministic".
++
++#include <cstdint>
++#include <cstring>
++#include <random>
++#include <vector>
++
++#include <opencv2/core/matx.hpp>
++
++namespace vc::sampling
++{
++
++namespace detail
++{
++// FNV-1a. Chosen because it is short enough to read, has no tables, and is
++// fully specified - the same bytes give the same digest on every platform and
++// every standard library, which std::hash does not promise.
++inline constexpr std::uint32_t kFnvOffsetBasis = 0x811c9dc5u;
++inline constexpr std::uint32_t kFnvPrime = 0x01000193u;
++
++inline std::uint32_t fnv1a(std::uint32_t h, std::uint32_t word)
++{
++    for (int byte = 0; byte < 4; ++byte) {
++        h ^= static_cast<std::uint32_t>((word >> (byte * 8)) & 0xffu);
++        h *= kFnvPrime;
++    }
++    return h;
++}
++
++inline std::uint32_t float_bits(float f)
++{
++    std::uint32_t bits = 0;
++    std::memcpy(&bits, &f, sizeof(bits));
++    return bits;
++}
++
++inline std::uint32_t hash_vec3(std::uint32_t h, const cv::Vec3f& v)
++{
++    h = fnv1a(h, float_bits(v[0]));
++    h = fnv1a(h, float_bits(v[1]));
++    h = fnv1a(h, float_bits(v[2]));
++    return h;
++}
++
++// Draw uniformly from [0, n) with the bias removed. mt19937 covers
++// [0, 2^32), which is not a multiple of n, so plain `% n` would make the
++// first 2^32 % n values marginally more likely. For n = 129 that bias is
++// about 3e-8 and rejection almost never fires, but the whole point of this
++// header is that the numbers are defensible, so it is not worth leaving in.
++inline std::uint32_t bounded(std::mt19937& rng, std::uint32_t n)
++{
++    if (n == 0) {
++        return 0;
++    }
++    const std::uint64_t span = std::uint64_t{1} << 32;
++    const std::uint64_t limit = span - (span % n);
++    std::uint64_t value;
++    do {
++        value = rng();
++    } while (value >= limit);
++    return static_cast<std::uint32_t>(value % n);
++}
++} // namespace detail
++
++/**
++ * Seed for a restart sequence, derived from the query itself.
++ *
++ * @param a,b,c  the geometry the search is about - for
++ *               find_closest_intersection() these are the two segment
++ *               endpoints and the proximity point.
++ * @param user_seed  caller-supplied offset, so a whole evaluation can be
++ *               repeated under a different draw without changing anything
++ *               else. 0 is the default run.
++ */
++inline std::uint32_t restart_seed(const cv::Vec3f& a, const cv::Vec3f& b, const cv::Vec3f& c,
++                                  std::uint32_t user_seed)
++{
++    std::uint32_t h = detail::kFnvOffsetBasis;
++    h = detail::hash_vec3(h, a);
++    h = detail::hash_vec3(h, b);
++    h = detail::hash_vec3(h, c);
++    h = detail::fnv1a(h, user_seed);
++    return h;
++}
++
++/**
++ * @c count start cells drawn uniformly from the [0, width) x [0, height)
++ * grid. Returns an empty vector if the grid is degenerate, so a caller that
++ * loops over the result simply does nothing rather than sampling garbage.
++ */
++inline std::vector<cv::Vec2f> restart_points(int width, int height, int count, std::uint32_t seed)
++{
++    std::vector<cv::Vec2f> points;
++    if (width <= 0 || height <= 0 || count <= 0) {
++        return points;
++    }
++
++    std::mt19937 rng(seed);
++    points.reserve(static_cast<std::size_t>(count));
++    for (int i = 0; i < count; ++i) {
++        const float x = static_cast<float>(detail::bounded(rng, static_cast<std::uint32_t>(width)));
++        const float y = static_cast<float>(detail::bounded(rng, static_cast<std::uint32_t>(height)));
++        points.push_back({x, y});
++    }
++    return points;
++}
++
++} // namespace vc::sampling
+diff --git a/volume-cartographer/core/include/vc/ui/surface_metrics.hpp b/volume-cartographer/core/include/vc/ui/surface_metrics.hpp
+index 6013bb3..0dcc9c9 100644
+--- a/volume-cartographer/core/include/vc/ui/surface_metrics.hpp
++++ b/volume-cartographer/core/include/vc/ui/surface_metrics.hpp
+@@ -3,10 +3,16 @@
+ #include "vc/core/PointCollections.hpp"
+ 
+ #include "utils/Json.hpp"
++#include <cstdint>
+ #include <opencv2/core/mat.hpp>
+ 
+ // Forward declarations
+ class QuadSurface;
+ 
+-utils::Json calc_point_winding_metrics(const PointCollections& collection, QuadSurface* surface, const cv::Mat_<float>& winding, int z_min, int z_max);
++// seed selects which draw of the random-restart search the winding metrics are
++// measured under. The default, 0, is the run to report; other values exist so
++// the same trace can be scored repeatedly and the spread of the result looked
++// at, rather than a single sample being taken for the truth. Same inputs and
++// same seed always give the same numbers.
++utils::Json calc_point_winding_metrics(const PointCollections& collection, QuadSurface* surface, const cv::Mat_<float>& winding, int z_min, int z_max, uint32_t seed = 0);
+ utils::Json calc_point_metrics(const PointCollections& collection, QuadSurface* surface, int z_min, int z_max);
+diff --git a/volume-cartographer/core/src/surface_metrics.cpp b/volume-cartographer/core/src/surface_metrics.cpp
+index b5713d9..82f2344 100644
+--- a/volume-cartographer/core/src/surface_metrics.cpp
++++ b/volume-cartographer/core/src/surface_metrics.cpp
+@@ -1,9 +1,10 @@
+ #include "vc/ui/surface_metrics.hpp"
+ #include "vc/core/util/QuadSurface.hpp"
++#include "vc/core/util/RandomRestarts.hpp"
+ #include <vector>
+ #include <algorithm>
+ #include <cmath>
+-#include <cstdlib>
++#include <cstdint>
+ #include "utils/Json.hpp"
+ 
+ // Helper to get point-to-line-segment squared distance
+@@ -70,7 +71,7 @@ static float find_intersection_direct(QuadSurface* surface, cv::Vec2f& loc, cons
+     return sqrt(best_dist_sq);
+ }
+ 
+-static cv::Vec2f find_closest_intersection(QuadSurface* surface, const cv::Vec3f& p1, const cv::Vec3f& p2, const cv::Vec3f& proximity_point, float& line_dist, float& prox_dist)
++static cv::Vec2f find_closest_intersection(QuadSurface* surface, const cv::Vec3f& p1, const cv::Vec3f& p2, const cv::Vec3f& proximity_point, float& line_dist, float& prox_dist, uint32_t seed)
+ {
+     cv::Vec2f best_loc = {-1, -1};
+     line_dist = -1.0f;
+@@ -82,14 +83,17 @@ static cv::Vec2f find_closest_intersection(QuadSurface* surface, const cv::Vec3f
+     cv::Vec3f zero_ptr(0, 0, 0);
+     cv::Vec3f center_in_points = surface->loc_raw(zero_ptr);
+ 
+-    srand(time(NULL));
+-
+-    for (int i = 0; i < 1000; ++i) { // 1000 random trials
+-        cv::Vec2f nominal_loc = {
+-            (float)(rand() % s_size.width),
+-            (float)(rand() % s_size.height)
+-        };
+-
++    // 1000 random restarts, seeded from the query geometry rather than from
++    // the clock, so the same surface and the same segment always probe the
++    // same cells and a re-run of the evaluation reports the same number.
++    // vc_tifxyz_gengt.cpp already does its own restart search this way.
++    // seed repeats the evaluation under a different draw, which is what makes
++    // the spread of the resulting metric measurable.
++    const std::vector<cv::Vec2f> restarts = vc::sampling::restart_points(
++        s_size.width, s_size.height, 1000,
++        vc::sampling::restart_seed(p1, p2, proximity_point, seed));
++
++    for (const cv::Vec2f& nominal_loc : restarts) {
+         cv::Vec2f cand_loc_abs = { nominal_loc[0] * scale[0], nominal_loc[1] * scale[1] };
+ 
+         cv::Vec3f ptr_loc = cv::Vec3f(cand_loc_abs[0], cand_loc_abs[1], 0) - center_in_points;
+@@ -189,7 +193,7 @@ utils::Json calc_point_metrics(const PointCollections& collection, QuadSurface*
+     return results;
+ }
+ 
+-utils::Json calc_point_winding_metrics(const PointCollections& collection, QuadSurface* surface, const cv::Mat_<float>& winding, int z_min, int z_max)
++utils::Json calc_point_winding_metrics(const PointCollections& collection, QuadSurface* surface, const cv::Mat_<float>& winding, int z_min, int z_max, uint32_t seed)
+ {
+     utils::Json results;
+ 
+@@ -226,7 +230,7 @@ utils::Json calc_point_winding_metrics(const PointCollections& collection, QuadS
+             const auto& p2_info = points_with_winding[i+1];
+ 
+             float line_dist = -1.0f, prox_dist = -1.0f;
+-            cv::Vec2f loc = find_closest_intersection(surface, p1_info.p, p2_info.p, p1_info.p, line_dist, prox_dist);
++            cv::Vec2f loc = find_closest_intersection(surface, p1_info.p, p2_info.p, p1_info.p, line_dist, prox_dist, seed);
+ 
+             if (loc[0] < 0) {
+                 intersection_windings.push_back(NAN);
+diff --git a/volume-cartographer/core/test/CMakeLists.txt b/volume-cartographer/core/test/CMakeLists.txt
+index b765917..adc0c5f 100644
+--- a/volume-cartographer/core/test/CMakeLists.txt
++++ b/volume-cartographer/core/test/CMakeLists.txt
+@@ -70,6 +70,8 @@ vc_add_test(NAME test_omp_thread_point_collection)
+ 
+ vc_add_test(NAME test_surface_area_units)
+ 
++vc_add_test(NAME test_random_restarts)
++
+ vc_add_test(NAME test_voxel_size_metadata)
+ 
+ vc_add_test(NAME test_tifxyz_identity)
+diff --git a/volume-cartographer/core/test/test_random_restarts.cpp b/volume-cartographer/core/test/test_random_restarts.cpp
+new file mode 100644
+index 0000000..c0cb176
+--- /dev/null
++++ b/volume-cartographer/core/test/test_random_restarts.cpp
+@@ -0,0 +1,188 @@
++// Coverage for RandomRestarts.hpp, the start-point generator behind the
++// random-restart search in surface_metrics.cpp.
++//
++// That search used to call srand(time(NULL)) and then rand(), once per point
++// pair. Three things were wrong with it and each has a case below: the draw
++// depended on the wall clock, every pair inside the same second got the same
++// 1000 cells, and the process-global rand() stream was reseeded out from under
++// every other caller. The number it feeds, winding_valid_fraction, is declared
++// as "trace_ranking_metric" in scripts/evaluation/example_config.json, so a
++// score that moves between two identical runs is a score that cannot rank.
++
++#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
++#include <doctest/doctest.h>
++
++#include "vc/core/util/RandomRestarts.hpp"
++
++#include <cmath>
++#include <cstdlib>
++#include <set>
++#include <utility>
++
++using vc::sampling::restart_points;
++using vc::sampling::restart_seed;
++
++namespace
++{
++// core/test/data/segments/20241113070770 is 129 x 129, and the production
++// caller asks for 1000 restarts.
++constexpr int kW = 129;
++constexpr int kH = 129;
++constexpr int kTrials = 1000;
++
++const cv::Vec3f kP1{1712.5f, 2210.25f, 7008.0f};
++const cv::Vec3f kP2{1755.0f, 2183.75f, 7008.0f};
++const cv::Vec3f kProx{1712.5f, 2210.25f, 7008.0f};
++} // namespace
++
++TEST_CASE("restart_seed: same query, same seed")
++{
++    CHECK(restart_seed(kP1, kP2, kProx, 0) == restart_seed(kP1, kP2, kProx, 0));
++}
++
++TEST_CASE("restart_seed: a different query is a different seed")
++{
++    // The whole point of deriving the seed from the geometry is that two
++    // different segments do not end up probing the same 1000 cells. A fixed
++    // constant would pass the determinism case above and fail here.
++    const cv::Vec3f moved = kP2 + cv::Vec3f(1.0f, 0.0f, 0.0f);
++
++    CHECK(restart_seed(kP1, kP2, kProx, 0) != restart_seed(moved, kP2, kProx, 0));
++    CHECK(restart_seed(kP1, kP2, kProx, 0) != restart_seed(kP1, moved, kProx, 0));
++    CHECK(restart_seed(kP1, kP2, kProx, 0) != restart_seed(kP1, kP2, moved, 0));
++
++    // Order matters too: swapping the endpoints is a different query.
++    CHECK(restart_seed(kP1, kP2, kProx, 0) != restart_seed(kP2, kP1, kProx, 0));
++}
++
++TEST_CASE("restart_seed: the user seed changes the draw")
++{
++    // This is what makes the noise floor of a metric measurable at all - the
++    // same trace scored under seed 0 and seed 1 must be a genuinely different
++    // sample, not the same one relabelled.
++    std::set<std::uint32_t> seeds;
++    for (std::uint32_t s = 0; s < 16; ++s) {
++        seeds.insert(restart_seed(kP1, kP2, kProx, s));
++    }
++    CHECK(seeds.size() == 16);
++}
++
++TEST_CASE("restart_seed: a tiny change of geometry is not ignored")
++{
++    // Hashing the float bits rather than a rounded value: two points one ULP
++    // apart are different queries and get different draws.
++    cv::Vec3f nudged = kP1;
++    nudged[0] = std::nextafter(nudged[0], 2000.0f);
++    CHECK(restart_seed(kP1, kP2, kProx, 0) != restart_seed(nudged, kP2, kProx, 0));
++}
++
++TEST_CASE("restart_points: the same seed replays the same sequence")
++{
++    const auto a = restart_points(kW, kH, kTrials, 12345u);
++    const auto b = restart_points(kW, kH, kTrials, 12345u);
++
++    REQUIRE(a.size() == static_cast<std::size_t>(kTrials));
++    REQUIRE(b.size() == a.size());
++    for (std::size_t i = 0; i < a.size(); ++i) {
++        CHECK(a[i][0] == b[i][0]);
++        CHECK(a[i][1] == b[i][1]);
++    }
++}
++
++TEST_CASE("restart_points: a different seed is a different sequence")
++{
++    const auto a = restart_points(kW, kH, kTrials, 12345u);
++    const auto b = restart_points(kW, kH, kTrials, 12346u);
++
++    REQUIRE(a.size() == b.size());
++    std::size_t differing = 0;
++    for (std::size_t i = 0; i < a.size(); ++i) {
++        if (a[i][0] != b[i][0] || a[i][1] != b[i][1]) {
++            ++differing;
++        }
++    }
++    // Two independent draws over a 129 x 129 grid collide on about 1 in 16641
++    // cells, so out of 1000 points essentially all of them should differ.
++    CHECK(differing > 990);
++}
++
++TEST_CASE("restart_points: every point is inside the grid")
++{
++    // The caller indexes a surface with these, so an off-by-one at the top
++    // end is an out-of-bounds read rather than a slightly wrong metric.
++    const auto points = restart_points(kW, kH, kTrials, 7u);
++    REQUIRE(points.size() == static_cast<std::size_t>(kTrials));
++    for (const auto& p : points) {
++        CHECK(p[0] >= 0.0f);
++        CHECK(p[1] >= 0.0f);
++        CHECK(p[0] <= static_cast<float>(kW - 1));
++        CHECK(p[1] <= static_cast<float>(kH - 1));
++        CHECK(p[0] == std::floor(p[0]));
++        CHECK(p[1] == std::floor(p[1]));
++    }
++}
++
++TEST_CASE("restart_points: the draw covers the grid")
++{
++    // Guards against a generator that is deterministic and in bounds but
++    // degenerate - a stuck bit or a tiny period would still pass every case
++    // above while probing the same handful of cells 1000 times. 1000 draws
++    // from 16641 cells give about 971 distinct ones by the birthday bound.
++    const auto points = restart_points(kW, kH, kTrials, 99u);
++    std::set<std::pair<float, float>> distinct;
++    for (const auto& p : points) {
++        distinct.insert({p[0], p[1]});
++    }
++    CHECK(distinct.size() > 900);
++
++    // And both axes are actually used, not just the first.
++    std::set<float> xs, ys;
++    for (const auto& p : points) {
++        xs.insert(p[0]);
++        ys.insert(p[1]);
++    }
++    CHECK(xs.size() > 100);
++    CHECK(ys.size() > 100);
++}
++
++TEST_CASE("restart_points: a non-rectangular grid stays inside both bounds")
++{
++    // width and height are used separately; swapping them would be invisible
++    // on the square fixture above.
++    const auto points = restart_points(8, 512, 400, 3u);
++    REQUIRE(points.size() == 400u);
++    bool saw_high_y = false;
++    for (const auto& p : points) {
++        CHECK(p[0] <= 7.0f);
++        CHECK(p[1] <= 511.0f);
++        if (p[1] > 255.0f) {
++            saw_high_y = true;
++        }
++    }
++    CHECK(saw_high_y);
++}
++
++TEST_CASE("restart_points: a degenerate grid yields nothing")
++{
++    CHECK(restart_points(0, kH, kTrials, 1u).empty());
++    CHECK(restart_points(kW, 0, kTrials, 1u).empty());
++    CHECK(restart_points(-1, kH, kTrials, 1u).empty());
++    CHECK(restart_points(kW, kH, 0, 1u).empty());
++}
++
++TEST_CASE("restart_points: the global rand() stream is left alone")
++{
++    // The old code called srand() inside the metrics function, which reseeded
++    // the process-global generator that QuadSurface.cpp and PointCollections
++    // also draw from. Sampling must not have that side effect.
++    std::srand(4242u);
++    const int expected_first = std::rand();
++    const int expected_second = std::rand();
++
++    std::srand(4242u);
++    (void)restart_points(kW, kH, kTrials, 1u);
++    (void)restart_seed(kP1, kP2, kProx, 1u);
++
++    CHECK(std::rand() == expected_first);
++    CHECK(std::rand() == expected_second);
++}
+diff --git a/volume-cartographer/scripts/evaluation/metric_noise_floor.py b/volume-cartographer/scripts/evaluation/metric_noise_floor.py
+new file mode 100755
+index 0000000..10c9d33
+--- /dev/null
++++ b/volume-cartographer/scripts/evaluation/metric_noise_floor.py
+@@ -0,0 +1,204 @@
++#!/usr/bin/env python3
++"""Measure how much of a surface metric is sampling noise.
++
++eval_surface_tracer.py ranks traces by `trace_ranking_metric` (by default
++`winding_valid_fraction`) and averages the top `num_best_traces_to_average`.
++That number comes out of a random-restart search inside
++vc_calc_surface_metrics, so it is a sample, not a constant: two traces whose
++scores differ by less than the spread of that sample are not actually ranked.
++
++This script scores the same traces repeatedly and reports the spread, then
++says which of the rankings it produced survive it.
++
++Two modes:
++
++  --mode seed    (default) re-score with --seed 0..N-1. Needs a binary that
++                 has the --seed option. Each seed is an independent draw of
++                 the restart points, so the spread across seeds is the
++                 sampling noise of the metric.
++
++  --mode repeat  run the identical command N times, changing nothing. On a
++                 correct binary every run must return the same number and the
++                 spread is exactly zero. A non-zero spread here means the
++                 metric is not reproducible at all - the same inputs scored
++                 twice give two different answers.
++
++Example:
++
++  python metric_noise_floor.py \\
++      --bin-path ../../build/bin \\
++      --collection ../volpkgs/PHerc0172.volpkg/wrap_labels.json \\
++      --z-min 2000 --z-max 2400 \\
++      --seeds 16 \\
++      ../out/traces/trace_a ../out/traces/trace_b ../out/traces/trace_c
++"""
++
++from __future__ import annotations
++
++import argparse
++import json
++import statistics
++import subprocess
++import sys
++import tempfile
++from itertools import combinations
++from pathlib import Path
++
++
++def score_once(bin_path: Path, trace: Path, collection: Path, winding: Path,
++               z_min: int, z_max: int, seed: int | None) -> dict:
++    """Run vc_calc_surface_metrics once and return the parsed metrics."""
++    with tempfile.TemporaryDirectory() as tmp:
++        out = Path(tmp) / "metrics.json"
++        cmd = [
++            str(bin_path / "vc_calc_surface_metrics"),
++            "--collection", str(collection),
++            "--surface", str(trace),
++            "--winding", str(winding),
++            "--output", str(out),
++            "--z_min", str(z_min),
++            "--z_max", str(z_max),
++        ]
++        if seed is not None:
++            cmd += ["--seed", str(seed)]
++
++        result = subprocess.run(cmd, capture_output=True, text=True)
++        if result.returncode != 0 or not out.exists():
++            raise RuntimeError(
++                f"vc_calc_surface_metrics failed for {trace}:\n"
++                f"  command: {' '.join(cmd)}\n"
++                f"  stdout: {result.stdout.strip()}\n"
++                f"  stderr: {result.stderr.strip()}"
++            )
++        return json.loads(out.read_text())
++
++
++def supports_seed(bin_path: Path) -> bool:
++    result = subprocess.run([str(bin_path / "vc_calc_surface_metrics"), "--help"],
++                            capture_output=True, text=True)
++    return "--seed" in (result.stdout + result.stderr)
++
++
++def summarize(values: list[float]) -> dict:
++    spread = max(values) - min(values)
++    return {
++        "n": len(values),
++        "min": min(values),
++        "max": max(values),
++        "mean": statistics.fmean(values),
++        "stdev": statistics.stdev(values) if len(values) > 1 else 0.0,
++        "spread": spread,
++    }
++
++
++def main() -> int:
++    ap = argparse.ArgumentParser(description=__doc__,
++                                 formatter_class=argparse.RawDescriptionHelpFormatter)
++    ap.add_argument("traces", nargs="+", type=Path,
++                    help="Trace directories (tifxyz), as passed to --surface")
++    ap.add_argument("--bin-path", type=Path, required=True,
++                    help="Directory holding vc_calc_surface_metrics")
++    ap.add_argument("--collection", type=Path, required=True,
++                    help="Point collection with winding annotations (wrap_labels.json)")
++    ap.add_argument("--winding-name", default="winding.tif",
++                    help="Winding file inside each trace directory (default: winding.tif)")
++    ap.add_argument("--z-min", type=int, default=-1)
++    ap.add_argument("--z-max", type=int, default=-1)
++    ap.add_argument("--seeds", type=int, default=16,
++                    help="How many draws to take per trace (default: 16)")
++    ap.add_argument("--mode", choices=["seed", "repeat"], default="seed",
++                    help="seed: vary --seed. repeat: run the identical command N times.")
++    ap.add_argument("--metric", default="winding_valid_fraction",
++                    help="Metric to analyse (default: winding_valid_fraction)")
++    ap.add_argument("--json-out", type=Path,
++                    help="Also write the full result as JSON here")
++    args = ap.parse_args()
++
++    seedable = supports_seed(args.bin_path)
++    if args.mode == "seed" and not seedable:
++        print("This vc_calc_surface_metrics has no --seed option, so the draw cannot\n"
++              "be controlled. Use --mode repeat to measure run-to-run reproducibility\n"
++              "instead, or build a newer binary.", file=sys.stderr)
++        return 2
++
++    per_trace: dict[str, dict] = {}
++    draws: dict[str, list[float]] = {}
++
++    for trace in args.traces:
++        winding = trace / args.winding_name
++        if not winding.exists():
++            print(f"skipping {trace}: no {args.winding_name}", file=sys.stderr)
++            continue
++
++        values = []
++        for i in range(args.seeds):
++            # repeat mode changes nothing between runs; seed mode takes one
++            # independent draw per iteration.
++            seed = i if args.mode == "seed" else (0 if seedable else None)
++            metrics = score_once(args.bin_path, trace, args.collection, winding,
++                                 args.z_min, args.z_max, seed)
++            if args.metric not in metrics:
++                raise SystemExit(f"{trace}: metrics.json has no {args.metric!r}; "
++                                 f"got {sorted(metrics)}")
++            values.append(float(metrics[args.metric]))
++
++        draws[trace.name] = values
++        per_trace[trace.name] = summarize(values)
++
++    if not per_trace:
++        print("nothing to report: no trace had a winding file", file=sys.stderr)
++        return 1
++
++    label = "across seeds" if args.mode == "seed" else "across identical runs"
++    print(f"\n{args.metric} {label} ({args.seeds} draws per trace)\n")
++    width = max(5, max(len(name) for name in per_trace))
++    print(f"{'trace'.ljust(width)}  {'mean':>9}  {'stdev':>9}  {'min':>9}  {'max':>9}  {'spread':>9}")
++    for name, s in per_trace.items():
++        print(f"{name.ljust(width)}  {s['mean']:9.5f}  {s['stdev']:9.5f}  "
++              f"{s['min']:9.5f}  {s['max']:9.5f}  {s['spread']:9.5f}")
++
++    worst_spread = max(s["spread"] for s in per_trace.values())
++
++    if args.mode == "repeat":
++        print()
++        if worst_spread == 0.0:
++            print("Every run returned the same number. The metric is reproducible.")
++        else:
++            print(f"The same inputs scored {args.seeds} times gave answers up to "
++                  f"{worst_spread:.5f} apart.\nThis metric is not reproducible: "
++                  f"re-running the evaluation can change the ranking\nwithout anything "
++                  f"about the traces changing.")
++
++    if len(per_trace) > 1:
++        print(f"\nnoise floor (largest spread seen): {worst_spread:.5f}")
++        print("\ntrace pairs, gap vs noise floor:")
++        decidable = 0
++        pairs = list(combinations(per_trace.items(), 2))
++        for (a_name, a), (b_name, b) in pairs:
++            gap = abs(a["mean"] - b["mean"])
++            verdict = "separated" if gap > worst_spread else "INSIDE THE NOISE"
++            if gap > worst_spread:
++                decidable += 1
++            print(f"  {a_name} vs {b_name}: gap {gap:.5f}  {verdict}")
++        print(f"\n{decidable}/{len(pairs)} pairs are ranked by more than the metric's own spread.")
++
++        orderings = set()
++        for i in range(args.seeds):
++            order = tuple(sorted(draws, key=lambda n: -draws[n][i]))
++            orderings.add(order)
++        print(f"{len(orderings)} distinct ranking(s) of these traces over {args.seeds} draws.")
++        if len(orderings) > 1:
++            print("The ranking is not stable, so which trace the evaluation calls best\n"
++                  "depends on the draw and not only on the traces.")
++
++    if args.json_out:
++        args.json_out.write_text(json.dumps(
++            {"metric": args.metric, "mode": args.mode, "seeds": args.seeds,
++             "summary": per_trace, "draws": draws}, indent=2))
++        print(f"\nwrote {args.json_out}")
++
++    return 0
++
++
++if __name__ == "__main__":
++    sys.exit(main())
