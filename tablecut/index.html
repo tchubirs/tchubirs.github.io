@@ -332,9 +332,10 @@ th:last-child,td:last-child{border-right:0}
       var t = matrix(p, o.tol, o.gap, o.trim), cel = t.cells;
       var multi = cel.length ? cel.filter(function(l){
         return l.filter(function(c){ return c !== ""; }).length >= 2; }).length / cel.length : 0;
+      var nCols = t.colsBrutas || t.cols;
       return {linhas: cel.length, colunas: t.cols,
-              tabela: cel.length >= 3 && t.cols >= 2 && multi >= 0.4,
-              nota: (cel.length >= 3 && t.cols >= 2) ? multi * Math.min(t.cols, 8) : 0};
+              tabela: cel.length >= 3 && nCols >= 2 && multi >= 0.4,
+              nota: (cel.length >= 3 && nCols >= 2) ? multi * Math.min(nCols, 8) : 0};
     });
     resumoCache = {chave: chave, lista: lista};
     return lista;
@@ -508,8 +509,48 @@ th:last-child,td:last-child{border-right:0}
       }
     });
     linhas = juntas;
+
+    // Juntar colunas que nunca se cruzam.
+    //
+    // Numa factura ou num extracto ha colunas que so tem texto numas linhas e
+    // outras que so tem noutras, nunca nas mesmas. Duas colunas vizinhas em
+    // que nunca estao as duas preenchidas na mesma linha nao estao a separar
+    // nada: cabem na mesma coluna sem que uma celula pise a outra. E a unica
+    // juncao que nao pode perder dados — nenhuma celula desaparece, so a
+    // grelha encolhe. Numa folha larga era isto que fazia dezasseis colunas
+    // quase vazias em vez de oito com conteudo.
+    var nc = linhas.length ? linhas[0].line.length : 0;
+    if (nc > 6){
+      var vivas = [];
+      for (var c = 0; c < nc; c++) vivas.push([c]);
+      var i2 = 0;
+      while (i2 < vivas.length - 1){
+        var esq = vivas[i2], dir = vivas[i2+1];
+        var choca = linhas.some(function(l){
+          var a = esq.some(function(c){ return l.line[c] !== ""; });
+          var b = dir.some(function(c){ return l.line[c] !== ""; });
+          return a && b;
+        });
+        if (choca){ i2++; }
+        else { vivas.splice(i2, 2, esq.concat(dir)); if (i2 > 0) i2--; }
+      }
+      if (vivas.length < nc){
+        linhas.forEach(function(l){
+          l.line = vivas.map(function(grupo){
+            for (var k = 0; k < grupo.length; k++) if (l.line[grupo[k]] !== "") return l.line[grupo[k]];
+            return "";
+          });
+        });
+      }
+    }
     return {cells: linhas.map(function(l){ return l.line; }),
             ys:    linhas.map(function(l){ return l.y; }),
+            // colsBrutas: quantas colunas havia ANTES da juncao. E esta que
+            // serve para escolher a pagina que mais parece tabela — se a
+            // escolha usasse a contagem ja encolhida, juntar colunas mudava a
+            // pagina escolhida, e foi exactamente isso que o banco de ensaio
+            // apanhou: dois documentos passaram a abrir na pagina errada.
+            colsBrutas: nc,
             cols:  linhas.length ? linhas[0].line.length : 0};
   }
 
