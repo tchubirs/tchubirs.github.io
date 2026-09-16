@@ -326,6 +326,19 @@ th:last-child,td:last-child{border-right:0}
     <p class="aside">If your own system produced the data, you do not need this. Export
     a CSV and go. This exists for documents that arrive from outside.</p>
 
+    <h2>What it was measured against</h2>
+    <p class="aside">Twenty public documents, none of them ours: US tax forms, research
+    papers, and bank statements published by the banks themselves — including a
+    <a href="https://static.societegenerale.fr/pri/PRI/Repertoire_par_type_de_contenus/Fichier_a_telecharger/nouveau-releve-compte.pdf" style="color:var(--ink)">Soci&eacute;t&eacute; G&eacute;n&eacute;rale specimen</a>
+    in French, the <a href="https://clientebancario.bportugal.pt/sites/default/files/relacionados/noticia/ExemploExtrato.pdf" style="color:var(--ink)">Banco de Portugal official example</a>,
+    and real <a href="https://www.fazenda.pr.gov.br/sites/default/arquivos_restritos/files/documento/2021-09/2018_11_extrato_movimento.pdf" style="color:var(--ink)">Brazilian statements</a>
+    published by a state treasury. Across 916 extracted rows, <b>90% come out with the
+    columns separated</b>, and 1.8% of cells still hold two numbers that belong apart.
+    A scanned statement in the set is refused, which is the right answer.</p>
+    <p class="aside">Those are the real numbers, including the bad one. The test set and
+    the scripts are <a href="https://tchubirs.github.io/tablecut/banco/" style="color:var(--ink)">published here</a>,
+    so anyone can repeat the measurement instead of believing this paragraph.</p>
+
     <h2>Honest limits</h2>
     <ul class="who">
       <li><b>Scanned pages do not work.</b> If the PDF is a photograph of a document

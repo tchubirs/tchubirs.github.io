@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tablecut — the test set, so you can repeat the measurement</title>
+<meta name="description" content="The twenty public PDFs Tablecut is measured against, the scripts that measure it, and the last measurement in full. Repeat it yourself instead of believing a number on a page.">
+<style>
+ body{margin:0;background:#f4f6f8;color:#16202b;font:16px/1.65 ui-sans-serif,system-ui,sans-serif}
+ main{max-width:44rem;margin:0 auto;padding:2.5rem 1.25rem 4rem}
+ h1{font:600 1.7rem/1.25 Georgia,serif;margin:0 0 .4rem}
+ h2{font:600 1.1rem/1.3 ui-sans-serif,system-ui;margin:2rem 0 .5rem}
+ p,li{color:#33424f} a{color:#2c5f9e}
+ pre{background:#fff;border:1px solid #dde3ea;border-radius:8px;padding:.9rem 1rem;overflow:auto;font:13px/1.6 ui-monospace,Menlo,monospace}
+ table{border-collapse:collapse;width:100%;margin:.6rem 0;font-size:.95rem}
+ th,td{border-bottom:1px solid #dde3ea;padding:.4rem .5rem;text-align:left}
+ .aside{color:#5a6b7b;font-size:.95rem}
+</style>
+</head>
+<body>
+<main>
+<h1>The test set</h1>
+<p class="aside">A number on a product page is worth nothing if nobody can check it.
+This is everything needed to check the ones on the <a href="../">Tablecut page</a>.</p>
+
+<h2>What it is measured against</h2>
+<p>Twenty public documents, none of them ours: US tax forms and tax tables, four research
+papers, a commercial invoice template, and bank statements published by the banks and
+public bodies themselves — among them a Société Générale <i>relevé de compte</i> specimen
+in French, the Banco de Portugal official example, and real Brazilian statements published
+by the Paraná state treasury. One of them is a scan with no text in it, on purpose: the
+right answer there is to refuse it, not to invent rows.</p>
+
+<h2>The last measurement</h2>
+<table>
+<tr><th>measure</th><th>result</th></tr>
+<tr><td>rows with the columns separated</td><td><b>90.3%</b> of 916 rows</td></tr>
+<tr><td>cells still holding two numbers</td><td>1.8% of 4 542 cells</td></tr>
+<tr><td>cells with letters broken apart</td><td>0.7%</td></tr>
+<tr><td>scanned document</td><td>refused, which is correct</td></tr>
+</table>
+<p class="aside">Per document, in full: <a href="medicao.json">medicao.json</a>.
+The bad numbers are in there too.</p>
+
+<h2>Repeat it</h2>
+<pre>sh buscar.sh ./pdfs            # downloads the twenty documents
+npm install playwright
+node banco.js ./pdfs path/to/app.html run1</pre>
+<p>It opens the real tool in a real browser, drops each PDF in, and measures what
+comes out. <a href="celulas.js">celulas.js</a> does the other check: it runs two
+versions side by side and compares every cell of text, in reading order, so a change
+meant to alter the layout cannot quietly lose content.</p>
+
+<h2>The files</h2>
+<ul>
+<li><a href="buscar.sh">buscar.sh</a> — fetches the documents from their original sources</li>
+<li><a href="banco.js">banco.js</a> — the measurement</li>
+<li><a href="celulas.js">celulas.js</a> — the cell-by-cell comparison</li>
+<li><a href="LEIA.md">LEIA.md</a> — the notes, in Portuguese, including which changes were rejected and why</li>
+</ul>
+<p class="aside">Some of those addresses will die with time. One that fails does not
+invalidate the others; it invalidates comparing against older measurements, and that
+should be said out loud.</p>
+</main>
+</body>
+</html>
