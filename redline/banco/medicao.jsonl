@@ -1,0 +1,6 @@
+{"nome":"ele proprio (attention v1 vs v1)","mudou":0,"saiu":0,"entrou":0,"iguais":527,"total":0,"veredito":"CERTO (zero)","seg":3.7}
+{"nome":"ele proprio (f941 2026 vs 2026)","mudou":0,"saiu":0,"entrou":0,"iguais":144,"total":0,"veredito":"CERTO (zero)","seg":3.3}
+{"nome":"artigo revisto (attention v1->v5)","mudou":105,"saiu":54,"entrou":85,"iguais":368,"total":244,"veredito":"ok","seg":3.7}
+{"nome":"artigo revisto (bert v1->v2)","mudou":250,"saiu":448,"entrou":577,"iguais":36,"total":1275,"veredito":"ok","seg":4.5}
+{"nome":"formulario (f941 2025->2026)","mudou":47,"saiu":0,"entrou":11,"iguais":86,"total":58,"veredito":"ok","seg":3.5}
+{"nome":"formulario (1040SB 2024->2026)","mudou":4,"saiu":0,"entrou":0,"iguais":65,"total":4,"veredito":"ok","seg":3.5}
