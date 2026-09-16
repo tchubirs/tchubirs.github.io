@@ -384,7 +384,14 @@ th:last-child,td:last-child{border-right:0}
       var limpa = comTexto ? 1 - fundidas / comTexto : 1;
       return {linhas: cel.length, colunas: t.cols,
               tabela: cel.length >= 3 && nCols >= 2 && multi >= 0.4,
-              nota: (cel.length >= 3 && nCols >= 2) ? multi * Math.min(nCols, 8) * limpa : 0};
+              // O numero de linhas conta. Sem isto, num extracto frances de
+              // verdade a ferramenta abria numa pagina com QUATRO linhas de
+              // texto legal em vez da pagina com os 46 movimentos: a pagina
+              // pequena tinha as celulas todas cheias e ganhava. Acima de 25
+              // linhas ja nao conta mais — uma tabela de 500 linhas nao e
+              // vinte vezes mais tabela que uma de 25.
+              nota: (cel.length >= 3 && nCols >= 2)
+                    ? multi * Math.min(nCols, 8) * limpa * Math.min(cel.length, 25) : 0};
     });
     resumoCache = {chave: chave, lista: lista};
     return lista;
