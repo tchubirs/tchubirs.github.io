@@ -13,10 +13,18 @@ Quem trabalha com papelada de clientes não pode fazer isso — e é essa gente 
 acaba a copiar números à mão. O Tablecut lê o PDF dentro do próprio browser:
 depois de a página carregar, pode-se desligar a internet e continua a funcionar.
 
-Medido contra 18 documentos públicos reais (formulários fiscais dos EUA,
-tabelas de imposto, extractos bancários de amostra): 88% das linhas saem
-completas, e 2% das células trazem números que deviam estar separados. Um PDF
-digitalizado é recusado com aviso, em vez de devolver linhas inventadas.
+Medido contra 20 documentos públicos reais — formulários fiscais dos EUA,
+artigos científicos, e extractos publicados pelos próprios bancos, incluindo um
+*relevé de compte* da Société Générale, o exemplo oficial do Banco de Portugal e
+extractos verdadeiros da Fazenda do Paraná. Em 916 linhas extraídas, **90% saem
+com as colunas separadas** e 1,8% das células ainda trazem dois números que
+deviam estar à parte. Um PDF digitalizado é recusado com aviso, em vez de
+devolver linhas inventadas.
+
+Os números não são para acreditar:
+**[o banco de ensaio está publicado](https://tchubirs.github.io/tablecut/banco/)** —
+os guiões, os endereços de origem dos 20 documentos e a medição inteira,
+documento a documento, com os números maus lá dentro.
 
 **[English: PDF table to spreadsheet, without uploading the file →](https://tchubirs.github.io/tablecut/)**
 
@@ -27,6 +35,11 @@ compara-se; em PDF, não — e é em PDF que os contratos chegam.
 
 Os dois ficheiros ficam no computador. Um contrato de cliente não se envia para
 o servidor de um desconhecido para saber o que mudou.
+
+O teste que mais interessa é comparar um ficheiro **consigo próprio**: tem de dar
+exactamente zero alterações, e dá.
+**[O ensaio está publicado](https://tchubirs.github.io/redline/banco/)**, com os
+oito documentos e o resultado inteiro.
 
 **[English: compare two PDF contracts without uploading them →](https://tchubirs.github.io/redline/)**
 
