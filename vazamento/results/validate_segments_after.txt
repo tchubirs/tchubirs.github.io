@@ -1,0 +1,72 @@
+Checked 32 segment(s) under /tmp/claude-0/-home-user-tchubirs-github-io/18a9ebb2-8c09-5b5c-bf44-08a5fb1b239c/scratchpad/mirror
+Found 46 issue(s) across 8 segment(s):
+
+[0009b/auto_grown_20250919055754487_inp_hr_2um]
+  zarr shape: 16x16
+  auto_grown_20250919055754487_inp_hr_inklabels.tif: label prefix 'auto_grown_20250919055754487_inp_hr' does not match segment directory 'auto_grown_20250919055754487_inp_hr_2um'; discover_segment_labels() will ignore this file
+  auto_grown_20250919055754487_inp_hr_inklabels_v2.tif: label prefix 'auto_grown_20250919055754487_inp_hr' does not match segment directory 'auto_grown_20250919055754487_inp_hr_2um'; discover_segment_labels() will ignore this file
+  auto_grown_20250919055754487_inp_hr_supervision_mask.tif: label prefix 'auto_grown_20250919055754487_inp_hr' does not match segment directory 'auto_grown_20250919055754487_inp_hr_2um'; discover_segment_labels() will ignore this file
+  auto_grown_20250919055754487_inp_hr_supervision_mask_v2.tif: label prefix 'auto_grown_20250919055754487_inp_hr' does not match segment directory 'auto_grown_20250919055754487_inp_hr_2um'; discover_segment_labels() will ignore this file
+  auto_grown_20250919055754487_inp_hr_validation_mask_v2.tif: label prefix 'auto_grown_20250919055754487_inp_hr' does not match segment directory 'auto_grown_20250919055754487_inp_hr_2um'; discover_segment_labels() will ignore this file
+
+[1667/w013_20240304141531_2um]
+  zarr shape: 16x16
+  w013_20240304141531_inklabels.tif: label prefix 'w013_20240304141531' does not match segment directory 'w013_20240304141531_2um'; discover_segment_labels() will ignore this file
+  w013_20240304141531_supervision_mask.tif: label prefix 'w013_20240304141531' does not match segment directory 'w013_20240304141531_2um'; discover_segment_labels() will ignore this file
+  .: missing required label TIFF containing 'inklabels'
+  .: missing required label TIFF containing 'supervision_mask'
+
+[1667/w018_20240304144031_2um]
+  zarr shape: 16x16
+  w018_20240304144031_inklabels.tif: label prefix 'w018_20240304144031' does not match segment directory 'w018_20240304144031_2um'; discover_segment_labels() will ignore this file
+  w018_20240304144031_inklabels_v2.tif: label prefix 'w018_20240304144031' does not match segment directory 'w018_20240304144031_2um'; discover_segment_labels() will ignore this file
+  w018_20240304144031_supervision_mask.tif: label prefix 'w018_20240304144031' does not match segment directory 'w018_20240304144031_2um'; discover_segment_labels() will ignore this file
+  w018_20240304144031_supervision_mask_v2.tif: label prefix 'w018_20240304144031' does not match segment directory 'w018_20240304144031_2um'; discover_segment_labels() will ignore this file
+  w018_20240304144031_validation_mask_v2.tif: label prefix 'w018_20240304144031' does not match segment directory 'w018_20240304144031_2um'; discover_segment_labels() will ignore this file
+  .: missing required label TIFF containing 'inklabels'
+  .: missing required label TIFF containing 'supervision_mask'
+
+[1667/w023_20240304161941_2um]
+  zarr shape: 16x16
+  w023_20240304161941_inklabels.tif: label prefix 'w023_20240304161941' does not match segment directory 'w023_20240304161941_2um'; discover_segment_labels() will ignore this file
+  w023_20240304161941_inklabels_v2.tif: label prefix 'w023_20240304161941' does not match segment directory 'w023_20240304161941_2um'; discover_segment_labels() will ignore this file
+  w023_20240304161941_supervision_mask.tif: label prefix 'w023_20240304161941' does not match segment directory 'w023_20240304161941_2um'; discover_segment_labels() will ignore this file
+  w023_20240304161941_supervision_mask_v2.tif: label prefix 'w023_20240304161941' does not match segment directory 'w023_20240304161941_2um'; discover_segment_labels() will ignore this file
+  w023_20240304161941_validation_mask_v2.tif: label prefix 'w023_20240304161941' does not match segment directory 'w023_20240304161941_2um'; discover_segment_labels() will ignore this file
+  .: missing required label TIFF containing 'inklabels'
+  .: missing required label TIFF containing 'supervision_mask'
+
+[1667/w028_20251208130119156_2um]
+  zarr shape: 16x16
+  w028_20251208130119156_inklabels.tif: label prefix 'w028_20251208130119156' does not match segment directory 'w028_20251208130119156_2um'; discover_segment_labels() will ignore this file
+  w028_20251208130119156_inklabels_v2.tif: label prefix 'w028_20251208130119156' does not match segment directory 'w028_20251208130119156_2um'; discover_segment_labels() will ignore this file
+  w028_20251208130119156_supervision_mask.tif: label prefix 'w028_20251208130119156' does not match segment directory 'w028_20251208130119156_2um'; discover_segment_labels() will ignore this file
+  w028_20251208130119156_supervision_mask_v2.tif: label prefix 'w028_20251208130119156' does not match segment directory 'w028_20251208130119156_2um'; discover_segment_labels() will ignore this file
+  w028_20251208130119156_validation_mask_v2.tif: label prefix 'w028_20251208130119156' does not match segment directory 'w028_20251208130119156_2um'; discover_segment_labels() will ignore this file
+  .: missing required label TIFF containing 'inklabels'
+  .: missing required label TIFF containing 'supervision_mask'
+
+[1667/w029_20251212185248662_2um]
+  zarr shape: 16x16
+  w029_20251212185248662_inklabels.tif: label prefix 'w029_20251212185248662' does not match segment directory 'w029_20251212185248662_2um'; discover_segment_labels() will ignore this file
+  w029_20251212185248662_inklabels_v2.tif: label prefix 'w029_20251212185248662' does not match segment directory 'w029_20251212185248662_2um'; discover_segment_labels() will ignore this file
+  w029_20251212185248662_supervision_mask.tif: label prefix 'w029_20251212185248662' does not match segment directory 'w029_20251212185248662_2um'; discover_segment_labels() will ignore this file
+  w029_20251212185248662_supervision_mask_v2.tif: label prefix 'w029_20251212185248662' does not match segment directory 'w029_20251212185248662_2um'; discover_segment_labels() will ignore this file
+  w029_20251212185248662_validation_mask_v2.tif: label prefix 'w029_20251212185248662' does not match segment directory 'w029_20251212185248662_2um'; discover_segment_labels() will ignore this file
+  .: missing required label TIFF containing 'inklabels'
+  .: missing required label TIFF containing 'supervision_mask'
+
+[1667/w031_2025122323_2um]
+  zarr shape: 16x16
+  w031_2025122323_inklabels.tif: label prefix 'w031_2025122323' does not match segment directory 'w031_2025122323_2um'; discover_segment_labels() will ignore this file
+  w031_2025122323_inklabels_v2.tif: label prefix 'w031_2025122323' does not match segment directory 'w031_2025122323_2um'; discover_segment_labels() will ignore this file
+  w031_2025122323_supervision_mask.tif: label prefix 'w031_2025122323' does not match segment directory 'w031_2025122323_2um'; discover_segment_labels() will ignore this file
+  w031_2025122323_supervision_mask_v2.tif: label prefix 'w031_2025122323' does not match segment directory 'w031_2025122323_2um'; discover_segment_labels() will ignore this file
+  w031_2025122323_validation_mask_v2.tif: label prefix 'w031_2025122323' does not match segment directory 'w031_2025122323_2um'; discover_segment_labels() will ignore this file
+  .: missing required label TIFF containing 'inklabels'
+  .: missing required label TIFF containing 'supervision_mask'
+
+[phercparis4/w05_4424]
+  zarr shape: 16x16
+  4424_inklabels.tif: label prefix '4424' does not match segment directory 'w05_4424'; discover_segment_labels() will ignore this file
+  4424_supervision_mask.tif: label prefix '4424' does not match segment directory 'w05_4424'; discover_segment_labels() will ignore this file

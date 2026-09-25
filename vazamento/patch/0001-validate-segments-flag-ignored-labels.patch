@@ -1,0 +1,106 @@
+diff --git a/vesuvius/src/vesuvius/ink_detection/preprocessing/validate_segments.py b/vesuvius/src/vesuvius/ink_detection/preprocessing/validate_segments.py
+index 0e2069f..36159cd 100644
+--- a/vesuvius/src/vesuvius/ink_detection/preprocessing/validate_segments.py
++++ b/vesuvius/src/vesuvius/ink_detection/preprocessing/validate_segments.py
+@@ -128,6 +128,11 @@ def _parse_label_tiff(path: Path) -> tuple[str, int] | None:
+     return match.group("label_kind").lower(), version_num
+ 
+ 
++def _label_prefix(path: Path) -> str | None:
++    match = LABEL_TIFF_NAME_RE.match(path.name)
++    return None if match is None else match.group("prefix")
++
++
+ def discover_segment_dirs(root: Path) -> list[Path]:
+     segments: list[Path] = []
+     for scroll_dir in sorted(path for path in root.iterdir() if path.is_dir()):
+@@ -400,11 +405,25 @@ def validate_root(
+     version_suffix = f" for version {_format_version_id(label_version)}" if label_version is not None else ""
+     for state in states.values():
+         state.target_tiffs = tuple(iter_target_tiffs(state.segment_dir, label_version=label_version))
++        # discover_segment_labels() only accepts a label whose prefix equals the
++        # segment directory name; anything else is skipped without a warning at
++        # training time, so it must not count as present here either.
++        segment_name = state.segment_dir.name
++        for tiff_path in state.target_tiffs:
++            prefix = _label_prefix(tiff_path)
++            if prefix is not None and prefix != segment_name:
++                state.issues.append(
++                    ShapeIssue(
++                        tiff_path,
++                        f"label prefix '{prefix}' does not match segment directory "
++                        f"'{segment_name}'; discover_segment_labels() will ignore this file",
++                    )
++                )
+         present_label_kinds = {
+             parsed_label[0]
+             for tiff_path in state.target_tiffs
+             for parsed_label in [_parse_label_tiff(tiff_path)]
+-            if parsed_label is not None
++            if parsed_label is not None and _label_prefix(tiff_path) == segment_name
+         }
+         for label_kind in REQUIRED_LABEL_KINDS:
+             if label_kind not in present_label_kinds:
+diff --git a/vesuvius/tests/ink_detection/test_curation_preprocessing.py b/vesuvius/tests/ink_detection/test_curation_preprocessing.py
+index 8686f64..48e69ac 100644
+--- a/vesuvius/tests/ink_detection/test_curation_preprocessing.py
++++ b/vesuvius/tests/ink_detection/test_curation_preprocessing.py
+@@ -194,6 +194,58 @@ def test_validate_segments_reports_content_despite_unrelated_metadata_failure(
+     assert validate_segments.main([str(root), "--workers", "1", "--no-progress"]) == 1
+ 
+ 
++def test_validate_segments_flags_labels_the_training_loader_would_ignore(
++    tmp_path: Path,
++) -> None:
++    # Mirrors the published PHerc1667 layout: the segment directory and its zarr
++    # carry a "_2um" suffix, but the v2 label TIFFs (including the validation
++    # mask) were written without it. discover_segment_labels() only accepts a
++    # label whose prefix equals the directory name, so it silently falls back to
++    # the v1 labels and drops the validation mask; the validator must say so
++    # instead of reporting the labels as present.
++    from vesuvius.ink_detection.data.segment import parse_label_asset_path
++
++    root = tmp_path / "labels"
++    seg = root / "1667" / "w028_2um"
++    ok = root / "1667" / "w029"
++    seg.mkdir(parents=True)
++    ok.mkdir(parents=True)
++    blank = np.zeros((16, 16), dtype=np.uint8)
++    for directory in (seg, ok):
++        _write_group(
++            directory / f"{directory.name}.zarr",
++            {"0": np.zeros((1, 16, 16), dtype=np.uint8)},
++            chunks=(1, 16, 16),
++        )
++    for kind in ("inklabels_v2", "supervision_mask_v2", "validation_mask_v2"):
++        tifffile.imwrite(seg / f"w028_{kind}.tif", blank)
++        tifffile.imwrite(ok / f"w029_{kind}.tif", blank)
++
++    # The training loader's own rule, applied to these names.
++    assert parse_label_asset_path(seg / "w028_validation_mask_v2.tif")["prefix"] != seg.name
++
++    results = validate_segments.validate_root(root, workers=1, show_progress=False)
++    issues = {
++        result.segment_dir.name: [issue.message for issue in result.issues]
++        for result in results
++    }
++    by_name = {result.segment_dir.name: result for result in results}
++    mismatched = {
++        issue.file_path.name
++        for issue in by_name["w028_2um"].issues
++        if "does not match segment directory" in issue.message
++    }
++    assert mismatched == {
++        "w028_inklabels_v2.tif",
++        "w028_supervision_mask_v2.tif",
++        "w028_validation_mask_v2.tif",
++    }
++    # With the ignored files discounted, the required labels are genuinely missing.
++    assert any("missing required label TIFF containing 'inklabels'" in m for m in issues["w028_2um"])
++    assert issues["w029"] == []
++    assert validate_segments.main([str(root), "--workers", "1", "--no-progress"]) == 1
++
++
+ def test_merge_predictions_exports_expected_values_reruns_and_rejects_invalid_inputs(
+     tmp_path: Path,
+ ) -> None:
