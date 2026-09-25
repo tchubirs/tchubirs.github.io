@@ -70,14 +70,22 @@ def covered_fraction(a: np.ndarray, b: np.ndarray, cell: float) -> float:
     """
     if len(a) == 0 or len(b) == 0:
         return 0.0
-    kb = np.unique(cell_keys(b, cell))
+    kb = np.unique(cell_keys(b, cell))          # sorted
     qa = np.floor(a / cell).astype(np.int64)
     hit = np.zeros(len(a), dtype=bool)
     for off in OFFSETS:
         q = qa + off
         k = (q[:, 0] << 42) ^ (q[:, 1] << 21) ^ q[:, 2]
-        hit |= np.isin(k, kb, assume_unique=False)
+        pos = np.minimum(np.searchsorted(kb, k), len(kb) - 1)
+        hit |= kb[pos] == k
     return float(hit.mean())
+
+
+def bboxes_touch(a: np.ndarray, b: np.ndarray, margin: float) -> bool:
+    """Cheap prefilter: axis-aligned boxes of the two point sets, grown by margin."""
+    lo = np.maximum(a.min(0), b.min(0)) - margin
+    hi = np.minimum(a.max(0), b.max(0)) + margin
+    return bool(np.all(lo <= hi))
 
 
 def subsample(points: np.ndarray, n: int, seed: int = 0) -> np.ndarray:
@@ -89,10 +97,11 @@ def subsample(points: np.ndarray, n: int, seed: int = 0) -> np.ndarray:
 
 def pairwise(segments: list[Segment], cells: list[float], sample: int = 200_000) -> dict:
     out = {}
+    margin = max(cells) * 2
     for a in segments:
         sa = subsample(a.points, sample)
         for b in segments:
-            if a is b:
+            if a is b or not bboxes_touch(a.points, b.points, margin):
                 continue
             out[f"{a.name}|{b.name}"] = {str(c): covered_fraction(sa, b.points, c) for c in cells}
     return out
