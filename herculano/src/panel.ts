@@ -4,6 +4,7 @@ import {
   UIKitMLAsset,
   VisibilityState,
 } from '@iwsdk/core';
+import { scrollAudio } from './audio.js';
 import { Scroll } from './scroll-component.js';
 
 /** What the guide says at each step. Plain ASCII: the panel font is Latin-only. */
@@ -46,7 +47,10 @@ export class PanelSystem extends createSystem({
       return;
     }
 
-    const launchXR = () => this.world.launchXR();
+    const launchXR = () => {
+      scrollAudio.unlock(); // inside the click, so the browser allows sound
+      this.world.launchXR();
+    };
     const exitXR = () => this.world.exitXR();
     xrButton.addEventListener('click', launchXR);
     exitButton.addEventListener('click', exitXR);

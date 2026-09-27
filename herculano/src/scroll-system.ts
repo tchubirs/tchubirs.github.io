@@ -21,6 +21,8 @@ import {
   type SheetMaterial,
 } from './scroll-geometry.js';
 import { createInk } from './ink.js';
+import { scrollAudio } from './audio.js';
+import { createWordLabel } from './word-label.js';
 
 /** Where the outer end of the sheet rests, in world space (table height). */
 const SHEET_ORIGIN = new Vector3(-0.35, 0.74, -0.5);
@@ -46,6 +48,11 @@ export class ScrollSystem extends createSystem({
   private p = new Vector3();
   /** Last palm position on the sheet per hand, in (s, z); NaN when off it. */
   private last = [new Vector3(NaN, 0, 0), new Vector3(NaN, 0, 0)];
+  private light = [0, 0]; // smoothed scanner strength per hand
+  private label!: Mesh;
+  private head = new Vector3();
+  private foundFor = -1; // seconds since the word was found; -1 before
+  private prevUnroll = 0;
 
   init(): void {
     const ink = createInk();
@@ -53,6 +60,8 @@ export class ScrollSystem extends createSystem({
     const reveal = createRevealTexture(MASK_W, MASK_H);
     this.mask = reveal.image.data as Uint8Array;
     this.material = createSheetMaterial(ink.texture, reveal);
+    this.material.uniforms.uPalmR.value = PALM_RADIUS;
+    this.material.uniforms.uTarget.value.set(...ink.target);
 
     const sheetMesh = new Mesh(createSheetGeometry(), this.material);
     sheetMesh.name = 'Sheet';
@@ -68,6 +77,14 @@ export class ScrollSystem extends createSystem({
       // v runs up the canvas; the canvas top is the far edge (-z).
       targetZ: (0.5 - (tv0 + tv1) / 2) * SHEET.height,
     });
+
+    this.label = createWordLabel('ἡδονῶν', 'hēdonōn · “of pleasures”', 'Epicurus, Principal Doctrines III');
+    this.label.position.set(
+      this.sheet.getValue(Scroll, 'targetS') ?? 0,
+      0.075,
+      this.sheet.getValue(Scroll, 'targetZ') ?? 0,
+    );
+    sheetMesh.add(this.label);
 
     const rollR = turnRadius(0);
     const proxy = new Mesh(
@@ -93,7 +110,7 @@ export class ScrollSystem extends createSystem({
     this.handle.object3D!.position.copy(this.p);
   }
 
-  update(): void {
+  update(delta: number, time: number): void {
     const obj = this.sheet.object3D!;
     obj.updateWorldMatrix(true, false);
     this.toLocal.copy(obj.matrixWorld).invert();
@@ -109,6 +126,9 @@ export class ScrollSystem extends createSystem({
     }
     this.material.uniforms.uUnroll.value = unroll;
     this.material.uniforms.uRollR.value = turnRadius(unroll);
+    this.material.uniforms.uTime.value = time;
+    scrollAudio.unroll(delta > 0 ? (unroll - this.prevUnroll) / delta : 0);
+    this.prevUnroll = unroll;
 
     if (this.world.visibilityState.peek() === VisibilityState.NonImmersive) return;
     let changed = false;
@@ -119,6 +139,7 @@ export class ScrollSystem extends createSystem({
       // The hand pulling the roll open is not sweeping for ink.
       if (holder === (h === 0 ? 'left' : 'right')) {
         last.x = NaN;
+        this.fadeLight(h, 0, delta);
         continue;
       }
       grips[h].getWorldPosition(this.p);
@@ -129,8 +150,12 @@ export class ScrollSystem extends createSystem({
         Math.abs(this.p.z) <= SHEET.height / 2;
       if (!over) {
         last.x = NaN;
+        this.fadeLight(h, 0, delta);
         continue;
       }
+      // Closer to the papyrus, brighter the scan.
+      this.fadeLight(h, 1 - 0.6 * (this.p.y / PALM_REACH), delta);
+      this.material.uniforms.uPalms.value[h].setX(this.p.x).setY(this.p.z);
       // Stamp along the path since the last frame so a fast sweep leaves a
       // continuous trail rather than a row of separate spots.
       // A jump (tracking lost and regained) starts a new trail instead.
@@ -158,8 +183,32 @@ export class ScrollSystem extends createSystem({
       const found = this.targetSeen / this.targetTexels > 0.6;
       if (found && !this.sheet.getValue(Scroll, 'wordFound')) {
         this.sheet.setValue(Scroll, 'wordFound', true);
+        this.foundFor = 0;
+        this.label.visible = true;
+        scrollAudio.chime();
       }
     }
+    scrollAudio.scan(Math.max(this.light[0], this.light[1]), changed);
+    if (this.foundFor >= 0) this.showFound(delta);
+  }
+
+  private fadeLight(h: number, target: number, delta: number): void {
+    this.light[h] += (target - this.light[h]) * Math.min(1, delta * 12);
+    this.material.uniforms.uPalms.value[h].setZ(this.light[h]);
+  }
+
+  /** The word breathes and its gloss rises to face the reader. */
+  private showFound(delta: number): void {
+    this.foundFor += delta;
+    const k = Math.min(1, this.foundFor / 0.8);
+    const ease = 1 - (1 - k) ** 3;
+    this.material.uniforms.uFound.value = ease;
+    const m = this.label.material as MeshBasicMaterial;
+    m.opacity = ease;
+    this.label.scale.setScalar(0.6 + 0.4 * ease);
+    this.label.position.y = 0.045 + 0.03 * ease;
+    this.player.head.getWorldPosition(this.head);
+    this.label.lookAt(this.head);
   }
 
   /** Mark a disc of the reveal mask; returns whether any texel changed. */

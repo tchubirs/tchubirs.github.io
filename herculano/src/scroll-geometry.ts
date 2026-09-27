@@ -9,7 +9,9 @@ import {
   RedFormat,
   ShaderMaterial,
   SRGBColorSpace,
+  Vector2,
   Vector3,
+  Vector4,
 } from '@iwsdk/core';
 
 /** Physical dimensions of the simulated scroll, in metres. */
@@ -135,6 +137,13 @@ const fragmentShader = /* glsl */ `
   uniform sampler2D uReveal;   // where a palm has swept
   uniform vec3 uLightDir;
   uniform vec3 uGlow;
+  uniform vec4 uPalms[2];     // per hand: (s, z, strength, unused)
+  uniform float uPalmR;       // radius of the scanned disc, metres
+  uniform vec3 uScan;         // colour of the scanner light
+  uniform vec4 uTarget;       // box of the target word in uv
+  uniform float uFound;       // 0 until found, then rises to 1
+  uniform float uTime;
+  uniform vec2 uSize;         // sheet length, height
   varying vec2 vUv;
   varying vec3 vNormal;
   varying vec3 vWorld;
@@ -160,7 +169,27 @@ const fragmentShader = /* glsl */ `
     float ink = texture2D(uInk, vUv).r;
     float seen = texture2D(uReveal, vUv).r * vFlat * (gl_FrontFacing ? 1.0 : 0.0);
     colour = mix(colour, uGlow, ink * seen);
-    colour += uGlow * 0.08 * seen;   // faint trace of where the palm has passed
+    colour += uGlow * 0.05 * seen;   // faint trace of where the palm has passed
+
+    // Scanner light under each palm: a soft disc with a thin bright rim.
+    float face = vFlat * (gl_FrontFacing ? 1.0 : 0.0);
+    vec2 sz = vec2(vUv.x * uSize.x, (0.5 - vUv.y) * uSize.y);
+    float light = 0.0;
+    float rim = 0.0;
+    for (int i = 0; i < 2; i++) {
+      float d = distance(sz, uPalms[i].xy);
+      light = max(light, uPalms[i].z * (1.0 - smoothstep(uPalmR * 0.3, uPalmR * 1.4, d)));
+      rim = max(rim, uPalms[i].z * (1.0 - smoothstep(0.0, 0.0022, abs(d - uPalmR))));
+    }
+    light *= face;
+    rim *= face;
+    colour += uScan * (light * 0.16 + rim * 0.55);
+    colour = mix(colour, uGlow * 1.3, ink * light * 0.85);
+
+    // Once found, the target word breathes.
+    vec2 inBox = step(uTarget.xy, vUv) * step(vUv, uTarget.zw);
+    float word = inBox.x * inBox.y * uFound * (0.7 + 0.3 * sin(uTime * 4.0));
+    colour = mix(colour, vec3(1.0, 0.94, 0.78), ink * seen * word);
     gl_FragColor = vec4(colour, 1.0);
   }
 `;
@@ -174,6 +203,13 @@ export interface SheetMaterial extends ShaderMaterial {
     uReveal: { value: DataTexture };
     uLightDir: { value: Vector3 };
     uGlow: { value: Color };
+    uPalms: { value: [Vector4, Vector4] };
+    uPalmR: { value: number };
+    uScan: { value: Color };
+    uTarget: { value: Vector4 };
+    uFound: { value: number };
+    uTime: { value: number };
+    uSize: { value: Vector2 };
   };
 }
 
@@ -188,6 +224,13 @@ export function createSheetMaterial(ink: CanvasTexture, reveal: DataTexture): Sh
       uReveal: { value: reveal },
       uLightDir: { value: new Vector3(0.3, 1, 0.4) },
       uGlow: { value: new Color(1.0, 0.72, 0.32) },
+      uPalms: { value: [new Vector4(), new Vector4()] },
+      uPalmR: { value: 0.035 },
+      uScan: { value: new Color(0.55, 0.85, 1.0) },
+      uTarget: { value: new Vector4(-1, -1, -1, -1) },
+      uFound: { value: 0 },
+      uTime: { value: 0 },
+      uSize: { value: new Vector2(SHEET.length, SHEET.height) },
     },
     vertexShader,
     fragmentShader,
