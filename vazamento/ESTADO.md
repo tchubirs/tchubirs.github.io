@@ -25,6 +25,19 @@ Palavras dele: *"Não vou fazer essa merda já fiz tantas vezes e nunca tenho re
   anunciados a 06/08; os de Setembro saem no início de Outubro. Verificação agendada
   para 08/10.
 
+## Submetido — 27/09/2026
+
+Submetido pelo dono ao Progress Prize de Setembro, pelo link pré-preenchido.
+É a segunda submissão do mês (a primeira foi a de `vesuvius/`, a 17/09).
+
+⚠️ **Este ramo não pode ser reescrito nem apagado até haver resultado.** O link da
+submissão aponta para `vazamento/` neste ramo. Fundir para o `main` é seguro;
+force-push, rebase ou apagar não.
+
+Resultado esperado no início de Outubro (os de Julho saíram a 06/08). Verificação
+automática agendada para 08/10/2026 (`trig_01QgJcJZnVaJERLnA68q8UCu`), que agora
+cobre as duas submissões.
+
 ## O que se encontrou (medido nos dados públicos deles)
 
 1. **Bug no carregador oficial**: em 6 segmentos (5 do PHerc 1667 e 1 do 0009B), os
