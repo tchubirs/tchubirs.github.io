@@ -20,9 +20,9 @@ Setembro deve sair entre 03/10 e 16/10.
 | Mês | Total | Prémios | $20.000 | $2.500 | $1.000 | $500 | $250 |
 |---|---|---|---|---|---|---|---|
 | Julho 2026 | $33.500 | 13 | 1 | 1 | 11 | 0 | 0 |
-| Agosto 2026 | $31.000 | 15 | 1 | 1 | 7 | 2 | 4 |
+| Agosto 2026 | $31.000 | 15 | 1 | 1 | 6 | 3 | 4 |
 
-O prémio mais comum é **$1.000**.
+O prémio mais comum é **$1.000**. (Conferido: 20.000 + 2.500 + 11×1.000 = 33.500; 20.000 + 2.500 + 6×1.000 + 3×500 + 4×250 = 31.000.)
 
 ## O tipo de trabalho premiado que se parece com o nosso
 
