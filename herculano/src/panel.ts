@@ -1,17 +1,42 @@
-/**
- * Copyright (c) Meta Platforms, Inc. and affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- */
+import {
+  createSystem,
+  UIKit,
+  UIKitMLAsset,
+  VisibilityState,
+} from '@iwsdk/core';
+import { Scroll } from './scroll-component.js';
 
-import { createSystem, UIKitMLAsset, VisibilityState } from '@iwsdk/core';
+/** What the guide says at each step. Plain ASCII: the panel font is Latin-only. */
+export const HINTS = {
+  open: 'A scroll buried by Vesuvius, burnt to carbon. Pinch it and pull it to the right to open it.',
+  sweep: 'The ink is invisible to the eye. Sweep your palm slowly, just above the papyrus.',
+  search: 'Letters! Keep sweeping and find the word HEDONON.',
+  found:
+    'HEDONON: "of pleasures". Epicurus, Principal Doctrines III. ' +
+    'This scroll is simulated; in 2023 the first word read inside a real one was PORPHYRAS, "purple".',
+} as const;
 
-export class PanelSystem extends createSystem({}) {
+export type Step = keyof typeof HINTS;
+
+export function stepFor(unroll: number, revealed: number, wordFound: boolean): Step {
+  if (wordFound) return 'found';
+  if (unroll < 0.05) return 'open';
+  if (revealed < 0.01) return 'sweep';
+  return 'search';
+}
+
+export class PanelSystem extends createSystem({
+  scrolls: { required: [Scroll] },
+}) {
+  private hint: UIKit.Text | null = null;
+  private step: Step | null = null;
+
   init(): void {
     const panel = this.world.getSceneObject<UIKitMLAsset>('welcome-panel');
     const xrButton = panel?.getElementById('xr-button');
     const exitButton = panel?.getElementById('exit-button');
+    this.hint = (panel?.getElementById('hint') as UIKit.Text | undefined) ?? null;
+    if (this.hint) this.hint.name = 'hint';
     if (xrButton == null || exitButton == null) {
       return;
     }
@@ -34,5 +59,20 @@ export class PanelSystem extends createSystem({}) {
         exitButton.setProperties({ display: is2D ? 'none' : 'flex' });
       }),
     );
+  }
+
+  update(): void {
+    if (!this.hint) return;
+    for (const scroll of this.queries.scrolls.entities) {
+      const step = stepFor(
+        scroll.getValue(Scroll, 'unroll') ?? 0,
+        scroll.getValue(Scroll, 'revealed') ?? 0,
+        scroll.getValue(Scroll, 'wordFound') ?? false,
+      );
+      if (step !== this.step) {
+        this.step = step;
+        this.hint.setProperties({ text: HINTS[step] });
+      }
+    }
   }
 }

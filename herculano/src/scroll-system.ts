@@ -1,6 +1,7 @@
 import {
   createSystem,
   Grabbed,
+  GrabSystem,
   Matrix4,
   Mesh,
   MeshBasicMaterial,
@@ -27,6 +28,7 @@ const MASK_W = 512;
 const MASK_H = 96;
 const PALM_RADIUS = 0.035; // metres of sheet revealed around a palm
 const PALM_REACH = 0.1; // palm must be within this height above the sheet
+const MAX_STEP = 0.15; // a palm moving further than this in one frame jumped
 
 export class ScrollSystem extends createSystem({
   scrolls: { required: [Scroll] },
@@ -42,6 +44,8 @@ export class ScrollSystem extends createSystem({
   private targetSeen = 0;
   private toLocal = new Matrix4();
   private p = new Vector3();
+  /** Last palm position on the sheet per hand, in (s, z); NaN when off it. */
+  private last = [new Vector3(NaN, 0, 0), new Vector3(NaN, 0, 0)];
 
   init(): void {
     const ink = createInk();
@@ -55,7 +59,15 @@ export class ScrollSystem extends createSystem({
     sheetMesh.frustumCulled = false;
     this.sheet = this.world.createTransformEntity(sheetMesh);
     this.sheet.object3D!.position.copy(SHEET_ORIGIN);
-    this.sheet.addComponent(Scroll, { unroll: 0, revealed: 0, wordFound: false });
+    const [tu0, tv0, tu1, tv1] = ink.target;
+    this.sheet.addComponent(Scroll, {
+      unroll: 0,
+      revealed: 0,
+      wordFound: false,
+      targetS: ((tu0 + tu1) / 2) * SHEET.length,
+      // v runs up the canvas; the canvas top is the far edge (-z).
+      targetZ: (0.5 - (tv0 + tv1) / 2) * SHEET.height,
+    });
 
     const rollR = turnRadius(0);
     const proxy = new Mesh(
@@ -100,12 +112,46 @@ export class ScrollSystem extends createSystem({
 
     if (this.world.visibilityState.peek() === VisibilityState.NonImmersive) return;
     let changed = false;
-    for (const grip of [this.player.gripSpaces.left, this.player.gripSpaces.right]) {
-      grip.getWorldPosition(this.p);
+    const grips = [this.player.gripSpaces.left, this.player.gripSpaces.right];
+    const holder = this.world.getSystem(GrabSystem)?.getHolderHand(this.handle) ?? null;
+    for (let h = 0; h < 2; h++) {
+      const last = this.last[h];
+      // The hand pulling the roll open is not sweeping for ink.
+      if (holder === (h === 0 ? 'left' : 'right')) {
+        last.x = NaN;
+        continue;
+      }
+      grips[h].getWorldPosition(this.p);
       this.p.applyMatrix4(this.toLocal);
-      if (this.p.y < 0 || this.p.y > PALM_REACH) continue;
-      if (this.p.x < 0 || this.p.x > unroll || Math.abs(this.p.z) > SHEET.height / 2) continue;
-      changed = this.stamp(this.p.x / SHEET.length, 1 - (this.p.z / SHEET.height + 0.5)) || changed;
+      const over =
+        this.p.y >= 0 && this.p.y <= PALM_REACH &&
+        this.p.x >= 0 && this.p.x <= unroll &&
+        Math.abs(this.p.z) <= SHEET.height / 2;
+      if (!over) {
+        last.x = NaN;
+        continue;
+      }
+      // Stamp along the path since the last frame so a fast sweep leaves a
+      // continuous trail rather than a row of separate spots.
+      // A jump (tracking lost and regained) starts a new trail instead.
+      let fromX = Number.isNaN(last.x) ? this.p.x : last.x;
+      let fromZ = Number.isNaN(last.x) ? this.p.z : last.z;
+      let dist = Math.hypot(this.p.x - fromX, this.p.z - fromZ);
+      if (dist > MAX_STEP) {
+        fromX = this.p.x;
+        fromZ = this.p.z;
+        dist = 0;
+      }
+      const steps = Math.max(1, Math.ceil(dist / (PALM_RADIUS * 0.5)));
+      for (let i = 1; i <= steps; i++) {
+        const t = i / steps;
+        const x = fromX + (this.p.x - fromX) * t;
+        const z = fromZ + (this.p.z - fromZ) * t;
+        changed = this.stamp(x / SHEET.length, 1 - (z / SHEET.height + 0.5)) || changed;
+      }
+      last.set(this.p.x, 0, this.p.z);
+      this.sheet.setValue(Scroll, 'palmS', this.p.x);
+      this.sheet.setValue(Scroll, 'palmZ', this.p.z);
     }
     if (changed) {
       this.material.uniforms.uReveal.value.needsUpdate = true;

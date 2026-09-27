@@ -8,6 +8,12 @@ export const Scroll = createComponent('Scroll', {
   unroll: { type: Types.Float32, default: 0, min: 0, label: 'Unrolled (m)' },
   revealed: { type: Types.Float32, default: 0, min: 0, max: 1, label: 'Ink revealed' },
   wordFound: { type: Types.Boolean, default: false, label: 'Target word found' },
+  /** Centre of the target word on the flat sheet (metres along s, and z). */
+  targetS: { type: Types.Float32, default: 0, label: 'Target word s (m)' },
+  targetZ: { type: Types.Float32, default: 0, label: 'Target word z (m)' },
+  /** Where the last palm touched the sheet (s, z in metres); for tests and tuning. */
+  palmS: { type: Types.Float32, default: -1, label: 'Last palm s (m)' },
+  palmZ: { type: Types.Float32, default: 0, label: 'Last palm z (m)' },
 });
 
 /** Invisible proxy around the rolled part: pinch it and drag to unroll. */
