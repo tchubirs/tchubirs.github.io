@@ -12,9 +12,15 @@ Palavras dele: *"Não vou fazer essa merda já fiz tantas vezes e nunca tenho re
 - Oferta feita, sem insistir: se ele der **uma vez** o nome completo e disser
   "podes enviar em meu nome", passo a ser eu a submeter ao Progress Prize — esta e as
   seguintes, sempre com a divulgação de que foi feito por IA. Ele não abre nada.
-- Verificado a 27/09, só a ler a página, sem enviar nada: o formulário não mostra muro
-  de login Google ao abrir; tem seis campos (nome, equipa, Discord, URL, contribuição,
-  termos) e pede email.
+- **Correção (27/09, mais tarde):** a verificação acima estava errada. Li só o HTML;
+  o aviso de login é desenhado por JavaScript. Aberto num browser a sério, o
+  formulário mostra "To fill out this form, you must be signed in." — exige conta
+  Google. Não dá para eu enviar sem o login dele, e a password não se pede.
+- O dono deu o nome completo. Em vez de envio automático, foi-lhe dado no chat um
+  **link pré-preenchido** (nome, equipa, URL, texto completo, termos aceites),
+  verificado num browser: 200, todos os campos preenchidos. Ele só tem de marcar
+  "Record my email address" e carregar em Submit. O link não fica neste repositório
+  porque leva o nome dele e o repositório é público.
 - A submissão de 17/09 ainda não podia ter tido resposta: os prémios de Julho foram
   anunciados a 06/08; os de Setembro saem no início de Outubro. Verificação agendada
   para 08/10.
