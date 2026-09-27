@@ -1,0 +1,106 @@
+{
+  "scroll": "ink_0139",
+  "cell": 16.0,
+  "skipped": {},
+  "segments": {
+    "w016_2025010815": {
+      "labels_prefix": "w016_2025010815",
+      "labels_version": 2,
+      "training_cells": 20259,
+      "validation_cells": 7377,
+      "dropped_cells": 0,
+      "dropped_fraction": 0.0,
+      "written": []
+    },
+    "w017_2025010815": {
+      "labels_prefix": "w017_2025010815",
+      "labels_version": 1,
+      "training_cells": 10836,
+      "validation_cells": 0,
+      "dropped_cells": 0,
+      "dropped_fraction": 0.0,
+      "written": []
+    },
+    "w028_20260115221": {
+      "labels_prefix": "w028_20260115221",
+      "labels_version": 2,
+      "training_cells": 59187,
+      "validation_cells": 9263,
+      "dropped_cells": 0,
+      "dropped_fraction": 0.0,
+      "written": []
+    },
+    "w029_202601261946": {
+      "labels_prefix": "w029_202601261946",
+      "labels_version": 2,
+      "training_cells": 19616,
+      "validation_cells": 2995,
+      "dropped_cells": 0,
+      "dropped_fraction": 0.0,
+      "written": []
+    },
+    "w030_202601301912": {
+      "labels_prefix": "w030_202601301912",
+      "labels_version": 2,
+      "training_cells": 69360,
+      "validation_cells": 4355,
+      "dropped_cells": 0,
+      "dropped_fraction": 0.0,
+      "written": []
+    },
+    "w035_2026031718": {
+      "labels_prefix": "w035_2026031718",
+      "labels_version": 1,
+      "training_cells": 41766,
+      "validation_cells": 0,
+      "dropped_cells": 0,
+      "dropped_fraction": 0.0,
+      "written": []
+    },
+    "w039_2026030210": {
+      "labels_prefix": "w039_2026030210",
+      "labels_version": 1,
+      "training_cells": 22342,
+      "validation_cells": 0,
+      "dropped_cells": 0,
+      "dropped_fraction": 0.0,
+      "written": []
+    },
+    "w040_2025083102": {
+      "labels_prefix": "w040_2025083102",
+      "labels_version": 1,
+      "training_cells": 63765,
+      "validation_cells": 0,
+      "dropped_cells": 0,
+      "dropped_fraction": 0.0,
+      "written": []
+    },
+    "w041_2026010816": {
+      "labels_prefix": "w041_2026010816",
+      "labels_version": 1,
+      "training_cells": 21543,
+      "validation_cells": 0,
+      "dropped_cells": 0,
+      "dropped_fraction": 0.0,
+      "written": []
+    },
+    "w043_2026011217": {
+      "labels_prefix": "w043_2026011217",
+      "labels_version": 1,
+      "training_cells": 17787,
+      "validation_cells": 0,
+      "dropped_cells": 0,
+      "dropped_fraction": 0.0,
+      "written": []
+    },
+    "w044_2026011522": {
+      "labels_prefix": "w044_2026011522",
+      "labels_version": 1,
+      "training_cells": 45904,
+      "validation_cells": 0,
+      "dropped_cells": 0,
+      "dropped_fraction": 0.0,
+      "written": []
+    }
+  }
+}

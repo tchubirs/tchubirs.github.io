@@ -123,6 +123,14 @@ vx apart. After an 8 vx fix, 368 shared cells remain at 32 vx with 88.6% agreeme
 16 or 32 vx (exact-cell matching, `tools/residual_ink.py`); the 3.7% in the last
 column counts neighbouring cells up to ~110 vx away.
 
+**Every published validation mask checked.** PHerc 139: four segments publish one
+(w016, w028, w029, w030); at 16 vx none lies on another segment's training area.
+PHerc 841: every labelled pixel of all three segments is inside its validation mask —
+the scroll is held out entirely, nothing to leak. 814, 0009B, 0500P2 and MAN5 have one
+labelled segment each; Paris4 publishes no validation masks. Among everything
+published, the PHerc 1667 w029/w028 pair is the only cross-segment validation leak
+(`results/leakfree_*_cell16.json`).
+
 The 317 cells w023 loses are collateral: w023's training and w028's validation agree
 65.6% (chance 49.7%, IoU 0.42) where they meet at 32 vx, against 92% (IoU 0.77–0.82)
 for the confirmed duplicate — not the same text.

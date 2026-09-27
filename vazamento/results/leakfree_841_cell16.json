@@ -1,0 +1,34 @@
+{
+  "scroll": "ink_841",
+  "cell": 16.0,
+  "skipped": {},
+  "segments": {
+    "auto_grown_20260220144552896": {
+      "labels_prefix": "auto_grown_20260220144552896",
+      "labels_version": 2,
+      "training_cells": 0,
+      "validation_cells": 543816,
+      "dropped_cells": 0,
+      "dropped_fraction": 0.0,
+      "written": []
+    },
+    "auto_grown_20260220174252405": {
+      "labels_prefix": "auto_grown_20260220174252405",
+      "labels_version": 2,
+      "training_cells": 0,
+      "validation_cells": 521668,
+      "dropped_cells": 0,
+      "dropped_fraction": 0.0,
+      "written": []
+    },
+    "w00": {
+      "labels_prefix": "w00",
+      "labels_version": 2,
+      "training_cells": 0,
+      "validation_cells": 543862,
+      "dropped_cells": 0,
+      "dropped_fraction": 0.0,
+      "written": []
+    }
+  }
+}
