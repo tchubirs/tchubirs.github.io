@@ -62,23 +62,32 @@ def cell_keys(points: np.ndarray, cell: float) -> np.ndarray:
     return (q[:, 0] << 42) ^ (q[:, 1] << 21) ^ q[:, 2]
 
 
-def covered_fraction(a: np.ndarray, b: np.ndarray, cell: float) -> float:
-    """Fraction of points of `a` within roughly `cell` of some point of `b`.
+def covered_mask(a: np.ndarray, b: np.ndarray, cell: float) -> np.ndarray:
+    """For each point of `a`, whether some point of `b` is near it.
 
     A point counts as covered when its cell or any of the 26 neighbouring cells
-    holds a point of `b`, so the tolerance is between `cell` and 2*`cell`.
+    holds a point of `b`. Every point of `b` within `cell` of it is therefore
+    found; points up to 2*`cell` away along an axis, and up to 2*sqrt(3)*`cell`
+    away diagonally, can also count.
     """
+    hit = np.zeros(len(a), dtype=bool)
     if len(a) == 0 or len(b) == 0:
-        return 0.0
+        return hit
     kb = np.unique(cell_keys(b, cell))          # sorted
     qa = np.floor(a / cell).astype(np.int64)
-    hit = np.zeros(len(a), dtype=bool)
     for off in OFFSETS:
         q = qa + off
         k = (q[:, 0] << 42) ^ (q[:, 1] << 21) ^ q[:, 2]
         pos = np.minimum(np.searchsorted(kb, k), len(kb) - 1)
         hit |= kb[pos] == k
-    return float(hit.mean())
+    return hit
+
+
+def covered_fraction(a: np.ndarray, b: np.ndarray, cell: float) -> float:
+    """Fraction of points of `a` near some point of `b` (see covered_mask)."""
+    if len(a) == 0 or len(b) == 0:
+        return 0.0
+    return float(covered_mask(a, b, cell).mean())
 
 
 def bboxes_touch(a: np.ndarray, b: np.ndarray, margin: float) -> bool:
