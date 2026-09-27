@@ -1,8 +1,23 @@
 # Estado
 
-**Projeto começado a 25/09/2026.** Pronto a submeter ao Progress Prize da Vesuvius no
-mesmo formulário da vez passada. Prazo: **30/09/2026, 23:59 Pacífico**. As regras
-deixam submeter várias vezes no mesmo mês.
+**Projeto começado a 25/09/2026.** Pronto a submeter ao Progress Prize da Vesuvius.
+
+## 27/09/2026 — decisão do dono: não submete
+
+Palavras dele: *"Não vou fazer essa merda já fiz tantas vezes e nunca tenho resposta"*.
+**Não se lhe volta a pedir que preencha formulários.**
+
+- O trabalho fica guardado aqui, completo. Se for submetido, entra em Setembro (até
+  30/09) ou em Outubro (até 31/10) — os prémios são mensais.
+- Oferta feita, sem insistir: se ele der **uma vez** o nome completo e disser
+  "podes enviar em meu nome", passo a ser eu a submeter ao Progress Prize — esta e as
+  seguintes, sempre com a divulgação de que foi feito por IA. Ele não abre nada.
+- Verificado a 27/09, só a ler a página, sem enviar nada: o formulário não mostra muro
+  de login Google ao abrir; tem seis campos (nome, equipa, Discord, URL, contribuição,
+  termos) e pede email.
+- A submissão de 17/09 ainda não podia ter tido resposta: os prémios de Julho foram
+  anunciados a 06/08; os de Setembro saem no início de Outubro. Verificação agendada
+  para 08/10.
 
 ## O que se encontrou (medido nos dados públicos deles)
 
