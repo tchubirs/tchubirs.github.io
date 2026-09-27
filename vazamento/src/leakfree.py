@@ -124,7 +124,9 @@ def foreign_validation(segments: list[Segment], cell: float) -> dict[str, np.nda
         others = [b.xyz[b.validation] for b in segments if b is not a and b.validation.any()]
         hit = np.zeros(a.valid.shape, dtype=bool)
         if others:
-            cand = a.valid & a.supervised
+            # Only training cells: a segment's own validation is already kept out of
+            # its training by exclude_validation_voxels(), so it is not a leak.
+            cand = a.valid & a.supervised & ~a.validation
             pts = a.xyz[cand]
             hit[cand] = overlap.covered_mask(pts, np.concatenate(others), cell)
         out[a.path.name] = hit
@@ -157,13 +159,15 @@ def run(scroll_dir: Path, cell: float, write: bool) -> dict:
     report = {"scroll": scroll_dir.name, "cell": cell, "skipped": skipped, "segments": {}}
     for s in segments:
         drop = drops[s.path.name]
-        n_sup, n_drop = int(s.supervised.sum()), int(drop.sum())
+        n_train = int((s.supervised & ~s.validation).sum())
+        n_drop = int(drop.sum())
         entry = {
             "labels_prefix": s.labels.prefix,
             "labels_version": s.labels.version,
-            "supervised_cells": n_sup,
+            "training_cells": n_train,
+            "validation_cells": int(s.validation.sum()),
             "dropped_cells": n_drop,
-            "dropped_fraction": (n_drop / n_sup) if n_sup else 0.0,
+            "dropped_fraction": (n_drop / n_train) if n_train else 0.0,
             "written": [],
         }
         if write and n_drop:
@@ -188,15 +192,18 @@ if __name__ == "__main__":
     import argparse
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("scroll_dir", type=Path, help="One scroll directory: segment subdirectories with x/y/z.tif and label TIFFs")
-    ap.add_argument("--cell", type=float, default=8.0,
-                    help="Cell size in voxels. Every cell within this distance of another segment's validation is dropped (default 8).")
+    ap.add_argument("--cell", type=float, default=16.0,
+                    help="Cell size in voxels. Every training cell within this distance of another segment's "
+                         "validation is dropped (default 16: on PHerc 1667, 8 left part of the w028/w029 "
+                         "duplicate in place, 16 removed all of it).")
     ap.add_argument("--write", action="store_true", help="Write the next label version instead of only reporting")
     ap.add_argument("--json-out", type=Path)
     args = ap.parse_args()
     rep = run(args.scroll_dir, args.cell, args.write)
     for name, e in rep["segments"].items():
         print(f"{name:34s} v{e['labels_version']} prefix={e['labels_prefix']:30s} "
-              f"supervised {e['supervised_cells']:>9,}  dropped {e['dropped_cells']:>7,} ({100*e['dropped_fraction']:.2f}%)"
+              f"training {e['training_cells']:>9,}  validation {e['validation_cells']:>7,}  "
+              f"dropped {e['dropped_cells']:>7,} ({100*e['dropped_fraction']:.2f}% of training)"
               + (f"  -> {', '.join(e['written'])}" if e["written"] else ""))
     for name, why in rep["skipped"].items():
         print(f"{name:34s} skipped: {why}")

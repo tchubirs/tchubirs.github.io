@@ -38,6 +38,14 @@ Resultado esperado no início de Outubro (os de Julho saíram a 06/08). Verifica
 automática agendada para 08/10/2026 (`trig_01QgJcJZnVaJERLnA68q8UCu`), que agora
 cobre as duas submissões.
 
+## 27/09 — correção pronta para Outubro
+
+`src/leakfree.py` gera máscaras de treino sem vazamento, no formato que o carregador
+deles já lê. No PHerc 1667: vazamento de 31–35% para **0**, confirmado com a função
+deles. Custo: o w028 perde 15,9% do seu treino. Texto para Outubro em
+`FORM-OUTUBRO.md` — **não enviado**. Espera-se pelo resultado de Setembro
+(saída prevista entre 03/10 e 16/10) antes de pedir ao dono.
+
 ## O que se encontrou (medido nos dados públicos deles)
 
 1. **Bug no carregador oficial**: em 6 segmentos (5 do PHerc 1667 e 1 do 0009B), os

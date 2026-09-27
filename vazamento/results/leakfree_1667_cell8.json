@@ -1,0 +1,65 @@
+{
+  "scroll": "lf8",
+  "cell": 8.0,
+  "skipped": {},
+  "segments": {
+    "w013_20240304141531_2um": {
+      "labels_prefix": "w013_20240304141531",
+      "labels_version": 1,
+      "training_cells": 135998,
+      "validation_cells": 0,
+      "dropped_cells": 0,
+      "dropped_fraction": 0.0,
+      "written": []
+    },
+    "w018_20240304144031_2um": {
+      "labels_prefix": "w018_20240304144031",
+      "labels_version": 2,
+      "training_cells": 562390,
+      "validation_cells": 78214,
+      "dropped_cells": 0,
+      "dropped_fraction": 0.0,
+      "written": []
+    },
+    "w023_20240304161941_2um": {
+      "labels_prefix": "w023_20240304161941",
+      "labels_version": 2,
+      "training_cells": 219020,
+      "validation_cells": 23843,
+      "dropped_cells": 0,
+      "dropped_fraction": 0.0,
+      "written": []
+    },
+    "w028_20251208130119156_2um": {
+      "labels_prefix": "w028_20251208130119156",
+      "labels_version": 2,
+      "training_cells": 34335,
+      "validation_cells": 16303,
+      "dropped_cells": 4833,
+      "dropped_fraction": 0.14076015727391875,
+      "written": [
+        "w028_20251208130119156_2um_inklabels_v3.tif",
+        "w028_20251208130119156_2um_supervision_mask_v3.tif",
+        "w028_20251208130119156_2um_validation_mask_v3.tif"
+      ]
+    },
+    "w029_20251212185248662_2um": {
+      "labels_prefix": "w029_20251212185248662",
+      "labels_version": 2,
+      "training_cells": 48997,
+      "validation_cells": 15500,
+      "dropped_cells": 0,
+      "dropped_fraction": 0.0,
+      "written": []
+    },
+    "w031_2025122323_2um": {
+      "labels_prefix": "w031_2025122323",
+      "labels_version": 2,
+      "training_cells": 105523,
+      "validation_cells": 23534,
+      "dropped_cells": 0,
+      "dropped_fraction": 0.0,
+      "written": []
+    }
+  }
+}

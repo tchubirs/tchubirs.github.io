@@ -99,6 +99,46 @@ On the w029/w028 cells the ink labels agree 90.8% (458 cells; chance 50.1%), ink
 w028. Both segments are in the shipped corpus. The second row is a neighbouring sheet
 (nothing below 16 vx), not a leak.
 
+## 4. The fix: leak-free supervision masks
+
+`src/leakfree.py` takes one scroll directory. For every segment it removes from the
+supervision mask the training cells that lie near any *other* segment's validation
+region, and writes the result as the next label version under the directory-name
+prefix — the only prefix `discover_segment_labels()` accepts. `create_label_zarrs`
+converts it as usual and the loader selects it. No training code changes. Dry run by
+default; `--write` creates files and never overwrites.
+
+On PHerc 1667 with the published v2 masks:
+
+| Tolerance | Training removed | w029 validation on w028 training (4 / 8 / 16 / 32 vx) |
+|---|---|---|
+| none (published) | — | 10.2% / 31.0% / 34.9% / 36.9% |
+| 8 vx | w028: 4,833 of 34,335 cells (14.1%) | 0 / 0 / 6.9% / 13.3% |
+| **16 vx (default)** | w028: 5,465 cells (15.9%); w023: 317 of 219,020 (0.14%) | **0 / 0 / 0** / 3.7% |
+
+Why 16 and not 8: before the fix, cells shared at 32 vx still carry the same text
+(ink agreement 92.3%, chance 57.5%) — the two traces of this papyrus drift up to ~30
+vx apart. After an 8 vx fix, 368 shared cells remain at 32 vx with 88.6% agreement
+(chance 64.8%): part of the leak survives. After a 16 vx fix no cell is shared at 8,
+16 or 32 vx (exact-cell matching, `tools/residual_ink.py`); the 3.7% in the last
+column counts neighbouring cells up to ~110 vx away.
+
+The 317 cells w023 loses are collateral: w023's training and w028's validation agree
+65.6% (chance 49.7%, IoU 0.42) where they meet at 32 vx, against 92% (IoU 0.77–0.82)
+for the confirmed duplicate — not the same text.
+
+Checked on the written files (`tools/verify_leakfree.py`):
+
+- the new w028 supervision mask has the same shape and only pixels switched off
+  (2,159,328 at 16 vx), none switched on;
+- villa's own `discover_segment_labels(extension=".tif")`, unmodified, now selects
+  `w028_20251208130119156_2um_{inklabels,supervision_mask,validation_mask}_v3.tif` —
+  including the validation mask it could not see before (finding 1).
+
+`tests/test_leakfree.py`: 13 tests. Thirteen deliberate breakages of `leakfree.py`
+were each caught; one of them — counting unlabelled cells as removed — escaped at
+first and got its own test.
+
 ## What this does not show
 
 - **No retrained model.** I have not measured how much the leak inflates a reported
@@ -121,7 +161,8 @@ w028. Both segments are in the shipped corpus. The second row is a neighbouring 
 
 ```
 pip install numpy tifffile imagecodecs
-python -m unittest discover -s tests          # 14 tests for overlap.py
+python -m unittest discover -s tests          # 27 tests
+python src/leakfree.py <scroll dir>           # report; add --write to write the next label version
 python src/overlap.py <segment dirs...>       # pairwise labelled-area overlap
 python tools/ink_agreement.py A B 8 <root>    # ink-label agreement on shared cells
 python tools/run_villa_label_discovery.py 1667   # villa's own loader on the published names

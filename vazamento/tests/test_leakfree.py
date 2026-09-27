@@ -71,9 +71,20 @@ class Leakfree(unittest.TestCase):
         make_segment(self.root, "a", "a", z=100.0, sup_cols=slice(10, 16))
         make_segment(self.root, "b", "b", z=100.0, val_cols=slice(0, 16))
         rep = leakfree.run(self.root, cell=2.0, write=False)
-        self.assertEqual(rep["segments"]["a"]["supervised_cells"], H * 6)
+        self.assertEqual(rep["segments"]["a"]["training_cells"], H * 6)
         self.assertEqual(rep["segments"]["a"]["dropped_cells"], H * 6)
         self.assertEqual(rep["segments"]["a"]["dropped_fraction"], 1.0)
+
+    def test_validation_on_both_sides_is_not_a_leak(self):
+        # Both segments hold the same papyrus out for validation: nothing is trained
+        # on it, so nothing is dropped and nothing is written.
+        make_segment(self.root, "a", "a", z=100.0, val_cols=slice(0, 4))
+        make_segment(self.root, "b", "b", z=100.0, val_cols=slice(0, 4))
+        rep = leakfree.run(self.root, cell=2.0, write=True)
+        for name in ("a", "b"):
+            self.assertEqual(rep["segments"][name]["dropped_cells"], 0)
+            self.assertEqual(rep["segments"][name]["written"], [])
+            self.assertEqual(rep["segments"][name]["training_cells"], H * (W - 4))
 
     def test_a_neighbouring_sheet_is_left_alone(self):
         make_segment(self.root, "a", "a", z=100.0)
