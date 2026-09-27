@@ -8,6 +8,8 @@ export const Scroll = createComponent('Scroll', {
   unroll: { type: Types.Float32, default: 0, min: 0, label: 'Unrolled (m)' },
   revealed: { type: Types.Float32, default: 0, min: 0, max: 1, label: 'Ink revealed' },
   wordFound: { type: Types.Boolean, default: false, label: 'Target word found' },
+  /** Which reading (see readings.ts) the scroll holds; change it to roll up and swap. */
+  reading: { type: Types.Int8, default: 0, min: 0, label: 'Reading' },
   /** Centre of the target word on the flat sheet (metres along s, and z). */
   targetS: { type: Types.Float32, default: 0, label: 'Target word s (m)' },
   targetZ: { type: Types.Float32, default: 0, label: 'Target word z (m)' },

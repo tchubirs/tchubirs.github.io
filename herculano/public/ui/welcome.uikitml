@@ -1,7 +1,7 @@
 <!--
   Guide panel: one line of instruction that follows what the player does.
   Panel, Divider, Button, ButtonIcon and ButtonLabel come from the bundled
-  Horizon kit; RectangleGoggles and LogIn are bundled Lucide icons.
+  Horizon kit; RectangleGoggles, ScrollText and LogIn are bundled Lucide icons.
 -->
 <style>
   .panel-root {
@@ -65,6 +65,12 @@
       <RectangleGoggles></RectangleGoggles>
     </ButtonIcon>
     <ButtonLabel class="button-label">Enter XR</ButtonLabel>
+  </Button>
+  <Button id="next-button" class="button" style="display: none">
+    <ButtonIcon>
+      <ScrollText></ScrollText>
+    </ButtonIcon>
+    <ButtonLabel class="button-label">Open another scroll</ButtonLabel>
   </Button>
   <Button id="exit-button" class="button" style="display: none">
     <ButtonIcon>

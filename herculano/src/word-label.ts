@@ -5,9 +5,18 @@ import {
   PlaneGeometry,
   SRGBColorSpace,
 } from '@iwsdk/core';
+import { sourceOf, type Reading } from './readings.js';
 
-/** The floating gloss that appears above the target word once it is found. */
-export function createWordLabel(greek: string, gloss: string, source: string): Mesh {
+const SERIF = 'Georgia, "Noto Serif", "DejaVu Serif", serif';
+
+interface Line {
+  text: string;
+  font: string;
+  colour: string;
+  y: number;
+}
+
+function card(widthM: number, lines: Line[], name: string): Mesh {
   const c = document.createElement('canvas');
   c.width = 1024;
   c.height = 320;
@@ -20,24 +29,52 @@ export function createWordLabel(greek: string, gloss: string, source: string): M
   g.lineWidth = 4;
   g.stroke();
   g.textAlign = 'center';
-  g.fillStyle = '#ffd98a';
-  g.font = '600 140px Georgia, "Noto Serif", "DejaVu Serif", serif';
-  g.fillText(greek, c.width / 2, 160);
-  g.fillStyle = '#f4e8d2';
-  g.font = '52px Georgia, "Noto Serif", "DejaVu Serif", serif';
-  g.fillText(gloss, c.width / 2, 238);
-  g.fillStyle = '#c6b393';
-  g.font = 'italic 36px Georgia, "Noto Serif", "DejaVu Serif", serif';
-  g.fillText(source, c.width / 2, 290);
-
+  for (const l of lines) {
+    g.font = l.font;
+    g.fillStyle = l.colour;
+    // Shrink a line that would run past the card's edges.
+    const k = Math.min(1, (c.width - 96) / g.measureText(l.text).width);
+    g.save();
+    g.translate(c.width / 2, l.y);
+    g.scale(k, k);
+    g.fillText(l.text, 0, 0);
+    g.restore();
+  }
   const texture = new CanvasTexture(c);
   texture.colorSpace = SRGBColorSpace;
-  const label = new Mesh(
-    new PlaneGeometry(0.3, 0.3 * (c.height / c.width)),
-    new MeshBasicMaterial({ map: texture, transparent: true, opacity: 0, depthWrite: false }),
+  const mesh = new Mesh(
+    new PlaneGeometry(widthM, widthM * (c.height / c.width)),
+    new MeshBasicMaterial({ map: texture, transparent: true, depthWrite: false }),
   );
-  label.name = 'WordLabel';
+  mesh.name = name;
+  mesh.renderOrder = 10;
+  return mesh;
+}
+
+/** The gloss that rises above the word once it is found. Starts hidden. */
+export function createWordLabel(r: Reading): Mesh {
+  const label = card(0.3, [
+    { text: r.greek, font: `600 140px ${SERIF}`, colour: '#ffd98a', y: 160 },
+    { text: `${r.latin.toLowerCase()} · “${r.gloss}”`, font: `52px ${SERIF}`, colour: '#f4e8d2', y: 238 },
+    { text: sourceOf(r), font: `italic 36px ${SERIF}`, colour: '#c6b393', y: 290 },
+  ], 'WordLabel');
+  (label.material as MeshBasicMaterial).opacity = 0;
   label.visible = false;
-  label.renderOrder = 10;
   return label;
+}
+
+/** A museum card beside the scroll: the word to look for, as the scribe wrote it. */
+export function createWantedCard(r: Reading): Mesh {
+  return card(0.16, [
+    { text: 'FIND THIS WORD', font: `600 54px ${SERIF}`, colour: '#c6b393', y: 92 },
+    { text: r.word, font: `600 150px "Noto Serif", "DejaVu Serif", serif`, colour: '#ffd98a', y: 250 },
+  ], 'WantedCard');
+}
+
+export function disposeCard(m: Mesh): void {
+  m.removeFromParent();
+  m.geometry.dispose();
+  const mat = m.material as MeshBasicMaterial;
+  mat.map?.dispose();
+  mat.dispose();
 }

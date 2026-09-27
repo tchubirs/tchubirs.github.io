@@ -16,7 +16,18 @@ def scroll_state():
 
 def hint_text():
     res = cli("ui", "inspect", payload={"entityIndex": entity("ScreenSpace"), "selector": "#hint"})
-    return json.dumps(res, ensure_ascii=False)
+    found = []
+    def walk(o):
+        if isinstance(o, dict):
+            if isinstance(o.get("text"), str):
+                found.append(o["text"])
+            for v in o.values():
+                walk(v)
+        elif isinstance(o, list):
+            for v in o:
+                walk(v)
+    walk(res)
+    return found[0] if found else json.dumps(res)[:200]
 
 def check(name, ok, detail=""):
     global fails
@@ -82,11 +93,28 @@ print(f"     palm last at s={s['palmS']:.3f} z={s['palmZ']:.3f}; target at s={s[
 check("sweeping reveals ink", s["revealed"] > 0.005, f"revealed={s['revealed']:.4f}")
 check("sweeping over the word finds it", s["wordFound"] is True)
 
-# 3. Guide text reached the final step, and the gloss is showing.
+# 3. Guide text reached the final step.
+LATIN = ["HEDONON", "THANATOS", "ZEN", "APHTHARTON", "SARKI"]   # src/readings.ts order
 try:
     t = hint_text()
-    check("guide shows the found message", "HEDONON" in t and "PORPHYRAS" in t, t[:120])
+    check("guide shows the found message", LATIN[s["reading"]] in t and "PORPHYRAS" in t and "of 5 read" in t, t[:120])
 except Exception as e:
     check("guide shows the found message", False, str(e)[:200])
+
+# 4. Another scroll: the old one rolls up and a different word is hidden.
+before = s
+cli("ecs", "set-component", payload={"entityIndex": entity("Scroll"), "componentId": "Scroll",
+                                     "field": "reading", "value": (s["reading"] + 1) % len(LATIN)})
+time.sleep(1.5)
+s = scroll_state()
+check("another scroll rolls up fresh", s["unroll"] == 0 and s["revealed"] == 0 and not s["wordFound"]
+      and s["reading"] == (before["reading"] + 1) % len(LATIN), str({k: s[k] for k in ("reading", "unroll", "revealed")}))
+check("its word is somewhere else", abs(s["targetS"] - before["targetS"]) > 0.01 or abs(s["targetZ"] - before["targetZ"]) > 0.01,
+      f"targetS {before['targetS']:.3f} -> {s['targetS']:.3f}")
+try:
+    t = hint_text()
+    check("guide starts over", "Pinch it" in t, t[:120])
+except Exception as e:
+    check("guide starts over", False, str(e)[:200])
 
 sys.exit(1 if fails else 0)

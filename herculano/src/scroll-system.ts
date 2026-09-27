@@ -22,7 +22,8 @@ import {
 } from './scroll-geometry.js';
 import { createInk } from './ink.js';
 import { scrollAudio } from './audio.js';
-import { createWordLabel } from './word-label.js';
+import { createWantedCard, createWordLabel, disposeCard } from './word-label.js';
+import { markRead, READINGS, todaysReading } from './readings.js';
 
 /** Where the outer end of the sheet rests, in world space (table height). */
 const SHEET_ORIGIN = new Vector3(-0.35, 0.74, -0.5);
@@ -53,38 +54,24 @@ export class ScrollSystem extends createSystem({
   private head = new Vector3();
   private foundFor = -1; // seconds since the word was found; -1 before
   private prevUnroll = 0;
+  private sheetMesh!: Mesh;
+  private card!: Mesh;
+  private loaded = -1; // reading whose ink is on the sheet
 
   init(): void {
-    const ink = createInk();
-    this.target = ink.target;
+    const first = todaysReading();
+    const ink = createInk(READINGS[first]);
     const reveal = createRevealTexture(MASK_W, MASK_H);
     this.mask = reveal.image.data as Uint8Array;
     this.material = createSheetMaterial(ink.texture, reveal);
     this.material.uniforms.uPalmR.value = PALM_RADIUS;
-    this.material.uniforms.uTarget.value.set(...ink.target);
 
-    const sheetMesh = new Mesh(createSheetGeometry(), this.material);
-    sheetMesh.name = 'Sheet';
-    sheetMesh.frustumCulled = false;
-    this.sheet = this.world.createTransformEntity(sheetMesh);
+    this.sheetMesh = new Mesh(createSheetGeometry(), this.material);
+    this.sheetMesh.name = 'Sheet';
+    this.sheetMesh.frustumCulled = false;
+    this.sheet = this.world.createTransformEntity(this.sheetMesh);
     this.sheet.object3D!.position.copy(SHEET_ORIGIN);
-    const [tu0, tv0, tu1, tv1] = ink.target;
-    this.sheet.addComponent(Scroll, {
-      unroll: 0,
-      revealed: 0,
-      wordFound: false,
-      targetS: ((tu0 + tu1) / 2) * SHEET.length,
-      // v runs up the canvas; the canvas top is the far edge (-z).
-      targetZ: (0.5 - (tv0 + tv1) / 2) * SHEET.height,
-    });
-
-    this.label = createWordLabel('ἡδονῶν', 'hēdonōn · “of pleasures”', 'Epicurus, Principal Doctrines III');
-    this.label.position.set(
-      this.sheet.getValue(Scroll, 'targetS') ?? 0,
-      0.075,
-      this.sheet.getValue(Scroll, 'targetZ') ?? 0,
-    );
-    sheetMesh.add(this.label);
+    this.sheet.addComponent(Scroll, { reading: first });
 
     const rollR = turnRadius(0);
     const proxy = new Mesh(
@@ -97,9 +84,42 @@ export class ScrollSystem extends createSystem({
     this.handle.addComponent(OneHandGrabbable, { translate: true, rotate: false });
     this.handle.addComponent(RollHandle);
     this.placeHandle(0);
+    this.applyReading(first, ink);
+  }
 
-    const [u0, v0, u1, v1] = this.target;
+  /** Ink a reading onto the (rolled) sheet and forget everything about the last one. */
+  private applyReading(i: number, ink = createInk(READINGS[i])): void {
+    const u = this.material.uniforms;
+    if (u.uInk.value !== ink.texture) u.uInk.value.dispose();
+    u.uInk.value = ink.texture;
+    this.target = ink.target;
+    u.uTarget.value.set(...ink.target);
+    u.uFound.value = 0;
+    this.mask.fill(0);
+    u.uReveal.value.needsUpdate = true;
+    const [u0, v0, u1, v1] = ink.target;
     this.targetTexels = Math.max(1, Math.round((u1 - u0) * MASK_W) * Math.round((v1 - v0) * MASK_H));
+    this.targetSeen = 0;
+    this.foundFor = -1;
+    const targetS = ((u0 + u1) / 2) * SHEET.length;
+    // v runs up the canvas; the canvas top is the far edge (-z).
+    const targetZ = (0.5 - (v0 + v1) / 2) * SHEET.height;
+    this.sheet.setValue(Scroll, 'targetS', targetS);
+    this.sheet.setValue(Scroll, 'targetZ', targetZ);
+    this.sheet.setValue(Scroll, 'revealed', 0);
+    this.sheet.setValue(Scroll, 'wordFound', false);
+
+    if (this.label) disposeCard(this.label);
+    this.label = createWordLabel(READINGS[i]);
+    this.label.position.set(targetS, 0.075, targetZ);
+    this.sheetMesh.add(this.label);
+    if (this.card) disposeCard(this.card);
+    this.card = createWantedCard(READINGS[i]);
+    // Left of the scroll's outer end, tilted up toward the reader.
+    this.card.position.set(-0.12, 0.02, 0);
+    this.card.rotation.set(-Math.PI / 3, 0, 0);
+    this.sheetMesh.add(this.card);
+    this.loaded = i;
   }
 
   /** Put the grab proxy on the axis of whatever is still rolled. */
@@ -116,7 +136,15 @@ export class ScrollSystem extends createSystem({
     this.toLocal.copy(obj.matrixWorld).invert();
 
     let unroll = this.sheet.getValue(Scroll, 'unroll') ?? 0;
-    if (this.queries.heldHandles.entities.size > 0) {
+    const wanted = this.sheet.getValue(Scroll, 'reading') ?? 0;
+    if (wanted !== this.loaded && READINGS[wanted]) {
+      // Roll the finished scroll back up, then swap in the next one.
+      this.label.visible = false;
+      unroll = Math.max(0, unroll - delta * 1.2);
+      this.sheet.setValue(Scroll, 'unroll', unroll);
+      this.placeHandle(unroll);
+      if (unroll === 0) this.applyReading(wanted);
+    } else if (this.queries.heldHandles.entities.size > 0) {
       this.handle.object3D!.getWorldPosition(this.p);
       this.p.applyMatrix4(this.toLocal);
       unroll = Math.min(SHEET.length, Math.max(unroll, this.p.x));
@@ -185,6 +213,7 @@ export class ScrollSystem extends createSystem({
         this.sheet.setValue(Scroll, 'wordFound', true);
         this.foundFor = 0;
         this.label.visible = true;
+        markRead(this.loaded);
         scrollAudio.chime();
       }
     }
