@@ -1,7 +1,11 @@
 import {
+  BoxGeometry,
   createSystem,
+  type Entity,
   Grabbed,
   Matrix4,
+  Mesh,
+  MeshStandardMaterial,
   Quaternion,
   ScreenSpace,
   Vector3,
@@ -47,6 +51,22 @@ export class DeskSystem extends createSystem({
   private spot = new Vector3();
   private q = new Quaternion();
   private inv = new Matrix4();
+  private desk!: Entity;
+
+  init(): void {
+    // A plain wooden desk for when the room has no table (or no passthrough).
+    const wood = new MeshStandardMaterial({ color: 0x3a2819, roughness: 0.85 });
+    const top = new Mesh(new BoxGeometry(1.5, 0.035, 0.62), wood);
+    top.name = 'VirtualDesk';
+    for (const [x, z] of [[-0.7, -0.26], [0.7, -0.26], [-0.7, 0.26], [0.7, 0.26]]) {
+      const leg = new Mesh(new BoxGeometry(0.05, 1, 0.05), wood);
+      leg.name = 'Leg';
+      leg.position.set(x, -0.5, z); // scaled to reach the floor when placed
+      top.add(leg);
+    }
+    this.desk = this.world.createTransformEntity(top);
+    top.visible = false;
+  }
 
   update(delta: number): void {
     if (this.locked) return;
@@ -84,6 +104,9 @@ export class DeskSystem extends createSystem({
     }
     this.onTable = table;
     this.placedFrom.copy(this.head);
+    // In VR the real table is invisible, so draw one where it is.
+    const opaque = this.world.session?.environmentBlendMode === 'opaque';
+    this.showDesk(!table || opaque, Math.atan2(-this.fwd.x, -this.fwd.z));
 
     const yaw = Math.atan2(-this.fwd.x, -this.fwd.z);
     const obj = sheet.object3D!;
@@ -101,6 +124,21 @@ export class DeskSystem extends createSystem({
       `[desk] scroll laid ${table ? 'on a table' : 'in front of the reader (no table found)'} at`,
       this.spot.x.toFixed(2), this.spot.y.toFixed(2), this.spot.z.toFixed(2),
     );
+  }
+
+  /** Show the virtual desk under the scroll, legs down to the floor (y = 0). */
+  private showDesk(show: boolean, yaw: number): void {
+    const top = this.desk.object3D!;
+    top.visible = show;
+    if (!show) return;
+    top.position.copy(this.spot);
+    top.position.y -= 0.0175;
+    top.rotation.set(0, yaw, 0);
+    const h = Math.max(0.05, top.position.y);
+    for (const leg of top.children) {
+      leg.scale.y = h;
+      leg.position.y = -h / 2;
+    }
   }
 
   /**
