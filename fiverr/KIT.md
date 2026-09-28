@@ -325,6 +325,13 @@ Do you use Google Sheets or Excel (Windows or Mac)?
 
 ---
 
+## Passo extra (opcional): anúncio 4, skill do Claude
+
+Os textos estão em [DISPATCH.md](DISPATCH.md), na seção "Gig 4". Crie este
+anúncio depois dos outros três, se quiser.
+
+---
+
 ## Passo 5: quando chegar cliente
 
 Quando chegar uma mensagem ou um pedido no Fiverr, copie o texto do cliente

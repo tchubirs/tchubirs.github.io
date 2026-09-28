@@ -208,10 +208,61 @@ I work AI-assisted for speed; everything is tested in the actual file.
   - Do you use Google Sheets or Excel (Windows or Mac)?
 - **Gallery:** gig3-sheets-excel.png
 
+### Gig 4 (optional): custom Claude skill
+
+- **Title:** I will build a custom claude skill that automates your workflow
+- **Category:** Programming & Tech → AI Development (or the AI agents/automation subcategory Fiverr offers).
+- **Search tags:** claude, claude skill, ai agent, ai automation, prompt engineering
+- **Packages:**
+
+  | | Basic | Standard | Premium |
+  |---|---|---|---|
+  | Name | One skill | Skill + tools | Skill pack |
+  | Description | One Claude skill for one task, with instructions and an example. | One skill with scripts or templates, tested on your real examples. | Up to 3 skills for your workflow, tested, with a short setup guide. |
+  | Delivery | 2 days | 4 days | 6 days |
+  | Revisions | 1 | 2 | 3 |
+  | Price | $30 | $75 | $150 |
+
+- **Description:**
+
+```
+Stop re-explaining the same task to Claude. A skill is a small package (instructions, examples and optional scripts) that Claude loads automatically whenever the task comes up, so it follows YOUR process every time.
+
+Examples:
+- Write proposals, emails or reports in your company's format
+- Turn meeting notes into tasks, summaries or follow-ups
+- Review documents or code against your checklist
+- Fill spreadsheets or create files from your templates
+
+What you get:
+- A ready-to-install skill folder (SKILL.md plus any templates or scripts)
+- Tests on examples you provide, so it behaves the way you expect
+- A short guide to install it in Claude (desktop, web or Claude Code)
+
+How it works:
+1. Tell me the task and send 2-3 real examples of good output.
+2. I confirm scope and price before you order.
+3. You receive the skill, the test results and the guide.
+
+I build skills AI-assisted and test each one before delivery.
+```
+
+- **FAQ:**
+  - Q: Which Claude plans support skills?
+    A: Skills work in Claude apps and Claude Code on plans with skills enabled. I'll check your setup with you before you order.
+  - Q: Can you update an existing skill?
+    A: Yes. Send the skill folder and describe what should change.
+  - Q: Do you need my account or password?
+    A: No, never. You install the skill yourself with the guide.
+- **Requirements** (all mandatory):
+  - Describe the task the skill should handle.
+  - Attach 2-3 examples of the output you want (files or text).
+  - Which Claude app do you use (web, desktop, Claude Code)?
+
 ## When you are done
 
 Publish all three gigs, then report back to the user:
 
 - the username;
-- the link to each of the three gigs, and whether each is live or in review;
+- the link to each gig, and whether each is live or in review;
 - anything you skipped, changed or could not do.
