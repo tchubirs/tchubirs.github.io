@@ -1,4 +1,4 @@
-# Task: open an Etsy shop and publish twenty-five digital-download listings
+# Task: open an Etsy shop and publish twenty-six digital-download listings
 
 You are acting in the user's own browser, on the user's behalf. Everything to
 publish is already made: spreadsheet files, guides, photos and listing texts.
@@ -102,6 +102,9 @@ computer:
 - Plants: `plants/Plant-Care-Tracker.xlsx`, `plants/Start-Here-Guide.pdf`,
   and the photos `plants/images/01-today.jpg`, `02-this-week.jpg`, `03-plants.jpg`,
   `04-care-log.jpg`, `05-whats-inside.jpg`.
+- Moving: `moving/Moving-Planner.xlsx`, `moving/Start-Here-Guide.pdf`,
+  and the photos `moving/images/01-dashboard.jpg`, `02-boxes.jpg`, `03-checklist.jpg`,
+  `04-new-address.jpg`, `05-costs.jpg`, `06-whats-inside.jpg`.
 
 Files from different products share names (every product has a
 `Start-Here-Guide.pdf`), so prefix each file with its folder name when you
@@ -119,7 +122,7 @@ save it.
    lets you finish opening the shop after one listing exists.
 5. Payment, billing and security steps: **stop and hand over to the user**.
 
-## 3. The twenty-five listings
+## 3. The twenty-six listings
 
 Each listing's texts are in its `LISTING.md`: title, description, 13 tags,
 price, and which files and photos to upload. Read it at the base URL above,
@@ -152,6 +155,7 @@ followed by the path.
 | 23 | Roommate bill splitter | `house-bills/LISTING.md` | 6.50 |
 | 24 | Party planner | `party/LISTING.md` | 6.50 |
 | 25 | Plant care tracker | `plants/LISTING.md` | 4.50 |
+| 26 | Moving planner | `moving/LISTING.md` | 6.50 |
 
 The price column replaces the dollar prices in the LISTING.md files, because
 the shop is in euros.

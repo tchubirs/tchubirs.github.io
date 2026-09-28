@@ -359,8 +359,9 @@ style(db.cell(r, 3, f'=SUM({FO("K")})'), False, "#,##0.00;;")
 style(db.cell(r, 4, f'=SUMIFS({FO("K")},{FO("L")},"<>")'), False, "#,##0.00;;")
 style(db.cell(r, 5, f"=C{r}-D{r}"), False, "#,##0.00;;")
 style(db.cell(r + 1, 2, "Total"), False, bold=True)
-for c in (3, 4, 5):
-    style(db.cell(r + 1, c, f"=SUM({L(c)}22:{L(c)}{r})"), False, MONEY, True)
+still = f'SUM({BU("H")})+SUM({FO("K")})-SUMIFS({FO("K")},{FO("L")},"<>")'
+for c, formula in ((3, planned), (4, paid), (5, still)):   # every cost, also one without a category
+    style(db.cell(r + 1, c, f"={formula}"), False, MONEY, True)
 db[f"B{r + 2}"] = f'=IF(N($C$6)=0,"",{bar(f"MIN(1,C{r + 1}/$C$6)", 24)})'
 db[f"B{r + 2}"].font = Font(name=F, size=12, color=TEAL)
 db.merge_cells(f"B{r + 2}:D{r + 2}")
