@@ -195,7 +195,7 @@ focus_pay = f'INDEX(Debts!$H${D0}:$H${D1},MATCH(1,IF({METHOD}="Snowball",Debts!$
 db["B9"] = "This month"
 db["B9"].font = font(12, True, "FFFFFF")
 db["B9"].fill = fill(TEAL)
-db["B10"] = (f'=IFERROR("Pay the minimum on every debt, and "&TEXT({focus_pay},"#,##0.00")&" on "&{focus}'
+db["B10"] = (f'=IFERROR("Pay the minimum on every debt, and "&FIXED({focus_pay},2)&" on "&{focus}'
              f'&". That is your focus debt.","Add your debts on the Debts tab.")')
 db["B10"].font = font(13, True)
 db["B10"].fill = fill("FFFFFF")
@@ -210,7 +210,7 @@ for i, m in enumerate(("Avalanche", "Snowball")):
     style(db.cell(r, 3, f"={free[m]}"), False, "0", align="center")
     style(db.cell(r, 4, f'=IF(C{r}="","15+ years",EDATE({START},C{r}-1))'), False, "MMM YYYY", align="center")
     style(db.cell(r, 5, f"={interest[m]}"), False, MONEY)
-style(db.cell(13, 6, '=IF(E14-E13>0.5,"saves "&TEXT(E14-E13,"#,##0")&" in interest","same interest")'), False)
+style(db.cell(13, 6, '=IF(E14-E13>0.5,"saves "&FIXED(E14-E13,0)&" in interest","same interest")'), False)
 style(db.cell(14, 6, f'="1st debt gone in "&MIN(Debts!$M${D0}:$M${D1})&" mo (vs "&MIN(Debts!$N${D0}:$N${D1})&")"'), False)
 # Google Sheets only accepts other-sheet references in conditional formatting through INDIRECT.
 db.conditional_formatting.add("B13:F14", FormulaRule(formula=['$B13=INDIRECT("Debts!J10")'], fill=fill(OK)))

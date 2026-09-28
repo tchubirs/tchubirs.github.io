@@ -29,8 +29,9 @@ templates/planners que a Etsy sugerir.
 
 ## Type
 
-**Digital files.** Envie 2 arquivos: `ADHD-Friendly-Budget.xlsx` e
-`Start-Here-Guide.pdf`.
+**Digital files.** Envie 4 arquivos: `ADHD-Friendly-Budget.xlsx`,
+`Start-Here-Guide.pdf`, `Budget-TDAH.xlsx` (versão em francês) e
+`Guide-Demarrage.pdf`.
 
 ## Price
 
@@ -73,6 +74,7 @@ WORKS WITH
 YOU RECEIVE
 • ADHD-Friendly-Budget.xlsx
 • Start-Here-Guide.pdf (how to open it in Google Sheets or Excel)
+• A French version: Budget-TDAH.xlsx + Guide-Demarrage.pdf
 
 This is a digital download; nothing will be shipped. Because it is a digital file, returns are not accepted, but message me if anything does not work and I will help.
 
@@ -103,4 +105,58 @@ budget planner
 
 ```
 Google Sheets, Excel, Digital download
+```
+
+## Tradução francesa (opcional, para aparecer em buscas na França)
+
+Na Etsy: Settings → Shop settings → Languages → adicione **Français**. Depois,
+neste anúncio, abra a aba **Français** e cole os textos abaixo.
+
+**Titre**
+```
+Budget TDAH, Tableur Google Sheets & Excel, Planificateur de Budget Mensuel, Suivi des Factures, Achats Impulsifs, Épargne
+```
+
+**Description**
+```
+Un budget qui fonctionne AVEC un cerveau TDAH, pas contre lui.
+
+La plupart des tableurs de budget demandent de remplir 40 cases par semaine. Celui-ci ne demande qu'une ligne quand l'argent bouge : date, montant, catégorie. Tout le reste se met à jour tout seul.
+
+CE QUE VOUS VOYEZ CHAQUE JOUR
+• Un grand chiffre : ce que vous pouvez dépenser par jour jusqu'à la fin du mois
+• Des barres de couleur par catégorie
+• Un encadré « À surveiller » : factures à payer dans 3 jours, factures en retard, envies en attente
+
+DANS LE FICHIER (7 onglets)
+• Tableau de bord, Budget, Journal, Factures, Envies (la règle des 48 heures), Objectifs d'épargne, Commencer ici
+
+FONCTIONNE AVEC
+• Google Sheets (gratuit) et Microsoft Excel
+• Toutes les devises
+
+VOUS RECEVEZ
+• Budget-TDAH.xlsx + Guide-Demarrage.pdf (en français)
+• La version anglaise : ADHD-Friendly-Budget.xlsx + Start-Here-Guide.pdf
+
+Fichier numérique : rien n'est expédié. Outil de budget personnel, pas un conseil financier.
+
+Conçu par moi avec l'aide d'outils d'IA ; les formules ont été vérifiées avec les données d'exemple.
+```
+
+**Tags**
+```
+budget tdah
+tableur budget
+budget excel
+google sheets
+planificateur
+suivi factures
+budget mensuel
+tdah adulte
+epargne
+gestion budget
+achats impulsifs
+modele budget
+finances perso
 ```

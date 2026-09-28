@@ -62,7 +62,7 @@ for i in range(FIRST, LAST + 1):
     nxt = (f'IF(F{i}>=TODAY(),F{i},IF(E{i}="Weekly",F{i}+7*ROUNDUP((TODAY()-F{i})/7,0),'
            f'EDATE(F{i},{months}*ROUNDUP((DATEDIF(F{i},TODAY(),"m")+1)/{months},0))))')
     days = f'({nxt}-TODAY())'
-    status = (f'=IF(OR(B{i}="",F{i}=""),"",IF(I{i}="Cancel","✗ Cancel before "&TEXT({nxt},"dd mmm"),'
+    status = (f'=IF(OR(B{i}="",F{i}=""),"",IF(I{i}="Cancel","✗ Cancel within "&{days}&" day(s)",'
               f'IF(G{i}=TRUE,"⚠ Trial ends in "&{days}&" day(s)",'
               f'IF(AND(H{i}<>"",TODAY()-H{i}>30),"💤 Unused "&(TODAY()-H{i})&" days: still worth it?",'
               f'"Renews in "&{days}&" day(s)"))))')
