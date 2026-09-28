@@ -12,7 +12,8 @@ T = Path(tempfile.mkdtemp())
 P.SECRET, P.DONE = T / ".etsy-secret", T / "published.json"
 time.sleep = lambda s: None
 
-shop = {"listings": {}, "next": 900, "calls": [], "fail_image_call": None, "image_calls": 0, "tokens": 0}
+shop = {"listings": {}, "next": 900, "calls": [], "fail_image_call": None, "image_calls": 0, "tokens": 0,
+        "active": False}
 shop["listings"][555] = {"title": P.listings()[0]["title"], "state": "active", "images": [], "files": [], "data": {}}
 
 
@@ -40,6 +41,9 @@ def fake_post(url, data=None, timeout=None):
 
 def fake_request(method, url, timeout=None, params=None, data=None, files=None, headers=None):
     assert headers["x-api-key"] == "KEY:SECRET", headers
+    if url == P.API + "/openapi-ping":
+        assert method == "GET" and "Authorization" not in headers
+        return R(200, {"application_id": 1}) if shop["active"] else R(403, {"error": "API key not active"})
     assert headers["Authorization"].startswith("Bearer 77.tok")
     path = url[len(P.API):]
     shop["calls"].append((method, path))
@@ -87,6 +91,9 @@ requests.request, requests.post = fake_request, fake_post
 
 # keys, auth link, token
 P.main(["key", "KEY", "SECRET"])
+assert P.main(["ping"]) == 1, "keys not switched on yet"
+shop["active"] = True
+assert P.main(["ping"]) == 0, "keys switched on"
 import io, contextlib
 out = io.StringIO()
 with contextlib.redirect_stdout(out):

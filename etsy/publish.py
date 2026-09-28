@@ -2,6 +2,7 @@
 
     python3 etsy/publish.py check                 no network: read every listing and check it against Etsy's rules
     python3 etsy/publish.py key KEYSTRING SECRET  keep the app's keys (or set ETSY_KEYSTRING and ETSY_SHARED_SECRET)
+    python3 etsy/publish.py ping                  whether Etsy has switched the app's keys on yet
     python3 etsy/publish.py auth                  print the link the shop owner opens to let the app in
     python3 etsy/publish.py token ADDRESS         the address the browser landed on after that
     python3 etsy/publish.py taxonomy WORD         categories whose name has that word, with their numbers
@@ -174,6 +175,19 @@ def save(s):
     SECRET.chmod(0o600)
 
 
+def ping():
+    """Whether Etsy has switched the app's keys on. Needs no shop login."""
+    import requests
+    s = load()
+    r = requests.request("GET", API + "/openapi-ping", timeout=60,
+                         headers={"x-api-key": f"{s['keystring']}:{s['shared_secret']}"})
+    if r.ok:
+        print("active: the keys work")
+        return 0
+    print(f"not active yet: {r.status_code} {r.text[:200]}")
+    return 1
+
+
 def b64(raw):
     return base64.urlsafe_b64encode(raw).rstrip(b"=").decode()
 
@@ -341,6 +355,8 @@ def main(args):
         s["keystring"], s["shared_secret"] = args[1], args[2]
         save(s)
         print("keys kept in", SECRET.name)
+    elif args[0] == "ping":
+        return ping()
     elif args[0] == "auth":
         auth()
     elif args[0] == "token" and len(args) == 2:
