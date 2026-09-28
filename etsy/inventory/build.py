@@ -36,8 +36,8 @@ header(pr, 5, 2, ["SKU", "Product", "Category", "Unit cost", "Price", "Start sto
 products = [("CAN-01", "Soy candle, lavender", "Candles", 4.2, 18, 20, 8),
             ("CAN-02", "Soy candle, cedar", "Candles", 4.2, 18, 15, 8),
             ("MUG-01", "Hand-painted mug", "Ceramics", 7.5, 28, 12, 5),
-            ("EAR-01", "Brass earrings", "Jewelry", 3.1, 22, 30, 10),
-            ("CRD-01", "Greeting card set", "Paper", 1.4, 9, 40, 15),
+            ("EAR-01", "Brass earrings", "Jewelry", 3.1, 22, 30, 6),
+            ("CRD-01", "Greeting card set", "Paper", 1.4, 9, 40, 10),
             ("BAG-01", "Linen tote bag", "Textile", 6.8, 24, 10, 4)]
 MV = lambda col: f"'Stock Moves'!${col}${M0}:${col}${M1}"
 for r in range(P0, P1 + 1):
@@ -51,13 +51,13 @@ for r in range(P0, P1 + 1):
     style(pr.cell(r, 10, f'=IF(B{r}="","",SUMIFS({MV("E")},{MV("C")},B{r},{MV("D")},"Sale"))'), False, "0", align="center")
     style(pr.cell(r, 11, f'=IF(B{r}="","",G{r}+I{r}-J{r})'), False, "0", align="center", bold=True)
     style(pr.cell(r, 12, f'=IF(OR(B{r}="",N(F{r})=0),"",(F{r}-E{r})/F{r})'), False, "0%", align="center")
-    st = f'=IF(B{r}="","",IF(K{r}<=0,"✗ Out of stock",IF(K{r}<=H{r},"⚠ Reorder now","✓ OK")))'
+    st = f'=IF(B{r}="","",IF(K{r}<=0,"Out of stock",IF(K{r}<=H{r},"Reorder now","OK")))'
     style(pr.cell(r, 13, st), False)
 pr.freeze_panes = "D6"
 rng = f"M{P0}:M{P1}"
-pr.conditional_formatting.add(rng, FormulaRule(formula=[f'LEFT($M{P0},1)="✓"'], fill=fill(OK)))
-pr.conditional_formatting.add(rng, FormulaRule(formula=[f'LEFT($M{P0},1)="⚠"'], fill=fill(WARN), font=Font(name=F, bold=True)))
-pr.conditional_formatting.add(rng, FormulaRule(formula=[f'LEFT($M{P0},1)="✗"'], fill=fill(BAD),
+pr.conditional_formatting.add(rng, FormulaRule(formula=[f'$M{P0}="OK"'], fill=fill(OK)))
+pr.conditional_formatting.add(rng, FormulaRule(formula=[f'$M{P0}="Reorder now"'], fill=fill(WARN), font=Font(name=F, bold=True)))
+pr.conditional_formatting.add(rng, FormulaRule(formula=[f'$M{P0}="Out of stock"'], fill=fill(BAD),
                                                font=Font(name=F, bold=True, color="9B1C1C")))
 SKUS = f"Products!$B${P0}:$B${P1}"
 
@@ -96,7 +96,7 @@ mv.freeze_panes = "B6"
 
 # ---------------------------------------------------------------- Dashboard
 db = wb.create_sheet("Dashboard", 0)
-sheet_base(db, "Your shop at a glance", "Pick the month and year. Stock is always 'now'.",
+sheet_base(db, "Shop dashboard", "Pick a month and a year. Stock figures are always as of today.",
            [3, 24, 16, 16, 16, 16, 3, 40])
 db["B4"] = "Month"
 db["B4"].font = font(11, True)
@@ -133,7 +133,7 @@ for col, label, formula, colour, fmt in tiles:
         db[f"{col}{r}"].fill = fill("FFFFFF")
         db[f"{col}{r}"].border = box
 db["H6"] = "To reorder now"
-db["H7"] = f'=COUNTIFS({PR("M")},"⚠*")+COUNTIFS({PR("M")},"✗*")'
+db["H7"] = f'=COUNTIFS({PR("M")},"Reorder now")+COUNTIFS({PR("M")},"Out of stock")'
 for a, size in (("H6", 11), ("H7", 28)):
     db[a].font = font(size, True, "FFFFFF")
     db[a].fill = fill(TEAL_D)
@@ -145,17 +145,21 @@ db["H9"] = "Heads-up"
 db["H9"].font = font(11, True, "FFFFFF")
 db["H9"].fill = fill(TEAL)
 best = f'INDEX({PR("C")},MATCH(MAX({PR("J")}),{PR("J")},0))'
+out_n, low_n = f'COUNTIFS({PR("M")},"Out of stock")', f'COUNTIFS({PR("M")},"Reorder now")'
 notes = [
-    (f'=COUNTIFS({PR("M")},"✗*")&" product(s) out of stock"', BAD),
-    (f'=COUNTIFS({PR("M")},"⚠*")&" product(s) at or below the reorder level"', WARN),
-    (f'="Best seller (all time): "&IFERROR({best},"—")', OK),
-    (f'="Average margin: "&IFERROR(FIXED(AVERAGE({PR("L")})*100,0)&"%","—")', INFO),
+    (f'=IF({out_n}=0,"Nothing is out of stock",IF({out_n}=1,"1 product is out of stock",{out_n}&" products are out of stock"))', BAD),
+    (f'=IF({low_n}=0,"No product is at its reorder level",IF({low_n}=1,"1 product is at its reorder level",'
+     f'{low_n}&" products are at their reorder level"))', WARN),
+    (f'="Best seller so far: "&IFERROR({best},"none yet")', OK),
+    (f'="Average margin: "&IFERROR(FIXED(AVERAGE({PR("L")})*100,0)&"%","n/a")', INFO),
 ]
 for k, (formula, colour) in enumerate(notes):
     c = db.cell(10 + k, 8, formula)
     c.fill = fill(colour)
     c.font = font(11)
     c.border = box
+db.conditional_formatting.add("H10:H11", FormulaRule(formula=['LEFT(H10,2)="No"'], fill=fill(OK)))
+db["H9"].alignment = Alignment(vertical="center")
 
 header(db, 9, 2, ["Month", "Sales", "Units", "Gross profit"])
 for i, m in enumerate(MONTHS):
@@ -180,21 +184,21 @@ db.add_chart(chart, "H15")
 
 # ---------------------------------------------------------------- Start Here
 st = wb.create_sheet("Start Here")
-sheet_base(st, "Start here: 10 minutes", "Only type in YELLOW cells.", [3, 6, 100])
+sheet_base(st, "Start here", "Type only in the yellow cells. Everything else is calculated.", [3, 6, 100])
 steps = [
-    ("1", "Products: one line per product: SKU (a short code), name, cost, price, stock today, reorder level."),
-    ("2", "Stock Moves: one line each time stock changes: a Purchase, a Sale, a Return or an Adjustment."),
-    ("3", "Adjustment: use a negative quantity for broken, lost or gifted items."),
-    ("★", "Products shows the stock now and turns orange at the reorder level, red when out of stock."),
-    ("★", "Dashboard: sales, profit and units per month, stock value, best seller, what to reorder."),
+    ("1", "Products: add each product once, with its code, cost, price, stock today and reorder level."),
+    ("2", "Stock Moves: add a line each time stock changes (Purchase, Sale, Return or Adjustment)."),
+    ("3", "Broken, lost or gifted items: add an Adjustment with a negative quantity."),
+    ("4", "Products then shows the stock you have. Orange means reorder, red means sold out."),
+    ("5", "Dashboard: sales, profit and units for the month you pick, and the value of your stock."),
 ]
 for k, (n, text) in enumerate(steps):
     r = 5 + k * 2
     st.cell(r, 2, n).font = font(18, True, TEAL)
     st.cell(r, 3, text).font = font(13)
-st["C17"] = "Example products and moves show how it works: delete them and add yours."
+st["C17"] = "The example products and moves show how it works. Delete them and add your own."
 st["C17"].font = font(11, color=MUTED, italic=True)
-st["C19"] = "Works in Google Sheets and Microsoft Excel. Any currency."
+st["C19"] = "Works in Google Sheets and Microsoft Excel, in any currency."
 st["C19"].font = font(11, color=MUTED, italic=True)
 
 wb.active = 0

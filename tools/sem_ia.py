@@ -58,8 +58,9 @@ def issues_in(text, markdown):
     for ch, name in SYMBOLS.items():
         if ch in text:
             found.append(f"{name} {ch}")
-    if EMOJI.search(text):
-        found.append("emoji or dingbat " + EMOJI.search(text).group())
+    extra = [c for c in EMOJI.findall(text) if c not in SYMBOLS]
+    if extra:
+        found.append("emoji or dingbat " + extra[0])
     low = text.lower()
     found += [f"phrase '{p}'" for p in PHRASES if p in low]
     found += [name for rx, name in PATTERNS if rx.search(text)]

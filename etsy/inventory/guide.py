@@ -4,19 +4,19 @@ import pymupdf
 S = "font-family:sans-serif"
 HTML = f"""
 <h1 style="color:#15525A;{S}">Inventory &amp; Sales Tracker</h1>
-<p style="{S};color:#5E6E72">Thank you! Ten minutes to set it up, then one line each time stock changes.</p>
-<h2 style="color:#1F6F78;{S}">Open it</h2>
-<p style="{S}"><b>Google Sheets:</b> drive.google.com → <i>New › File upload</i> → <b>Inventory-Sales-Tracker.xlsx</b> →
-open it → <i>File › Save as Google Sheets</i>. <b>Excel:</b> double-click the file.</p>
-<h2 style="color:#1F6F78;{S}">Set it up</h2>
+<p style="{S};color:#5E6E72">Thanks for your order. Setting it up takes about ten minutes. After that you add one line each time your stock changes.</p>
+<h2 style="color:#1F6F78;{S}">Opening the file</h2>
+<p style="{S}"><b>Google Sheets:</b> go to drive.google.com, click <i>New &gt; File upload</i> and pick <b>Inventory-Sales-Tracker.xlsx</b>.
+Open it, then choose <i>File &gt; Save as Google Sheets</i>.<br/><b>Excel:</b> double-click the file.</p>
+<h2 style="color:#1F6F78;{S}">Setting it up</h2>
 <ol style="{S}">
-<li><b>Products:</b> one line per product: a short SKU code, name, category, unit cost, price, stock today, and the level at which you want to reorder.</li>
-<li><b>Stock Moves:</b> from now on, one line each time stock changes: <i>Purchase</i> (you bought or made stock), <i>Sale</i>, <i>Return</i>, or <i>Adjustment</i> (negative number for broken, lost or gifted items).</li>
+<li><b>Products:</b> one line per product. Give it a short code (SKU), then the name, a category, what one unit costs you, your price, how many you have today, and the stock level at which you want to reorder.</li>
+<li><b>Stock Moves:</b> from now on, one line each time stock changes. <i>Purchase</i> is stock you bought or made, <i>Sale</i> is an order, <i>Return</i> is an item sent back, and <i>Adjustment</i> is for broken, lost or gifted items (type a negative number).</li>
 </ol>
-<h2 style="color:#1F6F78;{S}">Every week</h2>
-<p style="{S}">Open the Dashboard: <b>To reorder now</b> counts products at or below their reorder level; the Products tab shows which ones in orange (red when sold out).
+<h2 style="color:#1F6F78;{S}">Once a week</h2>
+<p style="{S}">Open the Dashboard. <b>To reorder now</b> counts the products at or below their reorder level. On the Products tab they show in orange, or in red when sold out.
 Pick a month to see its sales, units and gross profit.</p>
-<p style="{S};color:#5E6E72;font-size:9px">Designed with the help of AI tools. Any currency.</p>
+<p style="{S};color:#5E6E72;font-size:9px">Made with the help of AI tools. Works with any currency.</p>
 """
 story = pymupdf.Story(html=HTML)
 writer = pymupdf.DocumentWriter("Start-Here-Guide.pdf")

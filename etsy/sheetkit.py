@@ -1,10 +1,10 @@
-"""Shared look for the Etsy spreadsheets: calm paper, teal headers, yellow inputs."""
+"""Shared look for the Etsy spreadsheets: white page, teal headers, yellow input cells."""
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
 F = "Arial"
 TEAL, TEAL_D, INK, MUTED = "1F6F78", "15525A", "1E2A2F", "6B7B80"
-PAPER, INPUT, LINE = "F6F4EF", "FFF4C2", "D9D4C7"
+PAPER, INPUT, LINE = "FFFFFF", "FFF4C2", "D5DBDB"
 OK, WARN, BAD, INFO = "D8F0DC", "FFE2B8", "F9C9C4", "E3E8FF"
 MONEY = '#,##0.00'
 DATE = "DD MMM YYYY"

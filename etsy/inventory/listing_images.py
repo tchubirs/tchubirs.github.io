@@ -1,33 +1,32 @@
-"""Etsy listing images for the Inventory & Sales Tracker (run build.py first)."""
+"""Etsy listing photos for the Inventory & Sales Tracker (run build.py first)."""
 import os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
-from listingkit import H, W, Renders, badges, canvas, card, chips, content, headline, inside, save  # noqa: E402
+from listingkit import M, Renders, canvas, content, detail, grid, laptop, note, save, title  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-r = Renders(os.path.join(HERE, "Inventory-Sales-Tracker.xlsx"), os.path.join(HERE, "out"))
+xlsx = os.path.join(HERE, "Inventory-Sales-Tracker.xlsx")
+r = Renders(xlsx, os.path.join(HERE, "out"))
+close = Renders(xlsx, os.path.join(HERE, "out"), hide={"Products": ["D", "E", "F", "G", "I", "J"]})
 img_dir = os.path.join(HERE, "images")
 
-img = canvas()
-headline(img, "Inventory & Sales Tracker", "Stock, sales and profit for your small shop, updated from one log")
-card(img, content(r.page("Your shop at a glance")), (100, 390, W - 100, H - 180))
-badges(img, ["Google Sheets", "Excel", "Instant download"], H - 150)
+img = canvas(dark=True)
+title(img, "Inventory and sales tracker\nfor small shops",
+      "Stock, sales and profit, worked out from one list of stock moves", dark=True, width=2300)
+laptop(img, content(r.page("Shop dashboard")), 600, 700, 1950)
+note(img, ["Google Sheets", "and Excel"], M, 1720, dark=True)
 save(img, os.path.join(img_dir, "01-dashboard.jpg"))
 
-img = canvas()
-headline(img, "Know what to reorder, before you run out", "Every product shows its stock now, margin and status")
-card(img, content(r.page("Products"), keep=0.30), (80, 380, W - 80, 1500))
-chips(img, [("#D8F0DC", "OK", "enough stock"), ("#FFE2B8", "Reorder now", "at your reorder level"),
-            ("#F9C9C4", "Out of stock", "sold out")], 1600)
-save(img, os.path.join(img_dir, "02-products.jpg"))
+detail(os.path.join(img_dir, "02-products.jpg"), "See what to reorder before you run out",
+       "Each product shows its stock now, its margin and a status",
+       close.shot("Products", until="Linen tote bag"),
+       [("#D8F0DC", "OK"), ("#FFE2B8", "Reorder now"), ("#F9C9C4", "Out of stock")])
 
 img = canvas()
-headline(img, "What's inside", "4 tabs: you only type in the yellow cells")
-inside(img, [
-    ("Dashboard", "sales, profit, units per month, stock value"),
-    ("Products", "cost, price, stock now, margin, status"),
-    ("Stock Moves", "purchases, sales, returns, adjustments"),
-    ("Start Here", "5 steps, 10 minutes"),
-    ("For makers", "candles, jewelry, prints, crafts, resale"),
-])
-badges(img, ["Google Sheets + Excel", "No subscription", "Instant download"], H - 180)
+y = title(img, "Inside the file", "Four tabs. You type in the yellow cells and the rest is calculated.")
+grid(img, [
+    (content(r.page("Shop dashboard")), "Dashboard", "Sales, profit and units by month, stock value"),
+    (content(r.page("Products")), "Products", "Cost, price, stock now, margin and status"),
+    (content(r.page("Stock moves")), "Stock Moves", "Purchases, sales, returns and adjustments"),
+    (content(r.page("Start here")), "Start Here", "Five short steps to set it up"),
+], y + 80)
 save(img, os.path.join(img_dir, "03-whats-inside.jpg"))
