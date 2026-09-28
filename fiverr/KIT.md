@@ -16,7 +16,7 @@ Se aparecer alguma pergunta que não está aqui, me manda um print.
 4. **Description:**
 
 ```
-I build small tools that save time: Python scripts, web scrapers that turn websites into clean Excel/CSV files, and Google Sheets/Excel automations with formulas, Apps Script or VBA. I work AI-assisted, which makes delivery fast, and I test every file and script on real data before sending it. Clear scope and price before you order, and revisions until it works as agreed. Communication in English (written).
+I build small tools for data and office work: Python scripts, web scrapers, and Google Sheets or Excel automations with formulas, Apps Script or VBA. Scraped data is delivered as an Excel, CSV or JSON file. I use AI tools to work faster, and I test every script and file on real data before I send it. We agree on the scope and the price before you order. If the delivery does not work as agreed, I fix it. All communication is in written English.
 ```
 
 5. **Languages:** Portuguese (Native) e English. No inglês, coloque o seu nível real.
@@ -43,9 +43,9 @@ Automation
 
 **Gig title:**
 ```
-I will scrape any public website and deliver clean data in excel or csv
+I will scrape public websites and deliver clean data in excel or csv
 ```
-**Category:** Data → Data Scraping. Em "service type", escolha a opção de web scraping.
+**Category:** Data > Data Scraping. Em "service type", escolha a opção de web scraping.
 
 **Search tags** (5):
 ```
@@ -78,25 +78,28 @@ Up to 20,000 rows, plus the Python script and a guide to re-run it.
 
 **Description:**
 ```
-Need data from a website in a clean spreadsheet? I extract it for you.
+I extract data from public websites into Excel, CSV or JSON files.
 
-What you get:
-- The fields you ask for, one row per item, no duplicates
-- Excel, CSV or JSON, ready to use
-- A quality check before delivery (missing values, duplicates, encoding)
+You send:
+- The link to the website and the pages you need
+- The columns you want, for example name, price and link
+- Roughly how many rows or pages
 
-Typical jobs: product lists and prices, business directories, real-estate or job listings, reviews, tables spread over many pages.
+You get:
+- A file with the columns you asked for, one row per item
+- No duplicate rows
+- A check for missing values and encoding errors before delivery
+- With Premium, the Python script and a guide to run it again
 
-How it works:
-1. Send me the website link and the columns you need.
-2. I confirm what is possible and the price before you order.
-3. On larger jobs you get a sample first, then the full file.
+Delivery takes 2, 3 or 5 days, depending on the package. On bigger jobs you get a sample first, then the full file.
 
-I work AI-assisted, so turnaround is fast, and every file is checked against the real site.
+Typical jobs: product lists and prices, business directories, real estate or job listings, reviews, tables spread over many pages.
 
-I only scrape publicly available pages: no logins you don't own, no paywall bypassing, and no collecting personal data in breach of privacy law.
+Message me the link before you order. I check the site and tell you what I can extract and what it costs.
 
-Message me before ordering.
+I use AI tools to write the scrapers faster, and I check every file against the live site.
+
+I only scrape public pages. I do not use logins that are not yours, bypass paywalls or collect personal data in breach of privacy law.
 ```
 
 **FAQ** (pergunta e depois resposta):
@@ -104,24 +107,24 @@ Message me before ordering.
 Can you scrape any website?
 ```
 ```
-Most public websites, yes. Some sites block automated access or need a login; I tell you before you order if a site can't be done reliably.
+Most public websites, yes. Some sites block automated access or need a login. Send me the link and I will tell you before you order if a site cannot be scraped reliably.
 ```
 ```
 Do I get the code?
 ```
 ```
-Yes, with the Premium package: the Python script plus a short guide to run it yourself.
+Yes, with the Premium package. You get the Python script and a short guide to run it yourself.
 ```
 ```
 Can you update the data regularly?
 ```
 ```
-Yes. Tell me how often you need it (daily, weekly) and I will send you a custom offer.
+Yes. Tell me how often you need fresh data, for example daily or weekly, and I will send you a custom offer.
 ```
 
 **Requirements** (perguntas para o cliente, marque todas como obrigatórias):
 ```
-Link(s) to the website and the pages to scrape.
+Links to the website and the pages to scrape.
 ```
 ```
 Which columns or fields do you need? An example row helps.
@@ -176,23 +179,28 @@ A complete tool with a command line or simple interface, tests and a guide.
 
 **Description:**
 ```
-Stop doing it by hand. I write Python scripts that handle repetitive work: renaming and sorting files, merging Excel/CSV files, calling APIs, downloading reports, sending emails, cleaning data.
+I write Python scripts that do repetitive computer work for you. I also fix Python code: errors, crashes, wrong results, slow scripts.
 
-I also fix Python code: errors, crashes, wrong results, slow scripts.
+Typical scripts:
+- Rename and sort files
+- Merge Excel or CSV files
+- Call an API or download reports
+- Send emails
+- Clean up data
 
-What you get:
-- Clean, commented Python code for Windows, macOS or Linux
-- A short guide on how to install and run it
-- A test on sample data before delivery
+You send a description of the task, or your code and the error message.
 
-How it works:
-1. Describe the task, or send the code and the error message.
-2. I confirm scope and price before you order.
-3. You receive the script, the guide and a short explanation.
+You get:
+- Commented Python code for Windows, macOS or Linux
+- A guide to install and run it
+- A short explanation of what the code does
+- A test run on sample data before delivery
 
-I work AI-assisted, which keeps delivery fast; every script is run and tested before you get it.
+Delivery takes 2, 3 or 5 days, depending on the package. I confirm the scope and the price before you order.
 
-Message me first with your task. I'll tell you honestly if a script is the right solution.
+I use AI tools to write code faster. I run and test every script before you get it.
+
+Message me first with your task. If a script is not the right solution, I will tell you.
 ```
 
 **FAQ:**
@@ -200,13 +208,13 @@ Message me first with your task. I'll tell you honestly if a script is the right
 Do I need to know Python?
 ```
 ```
-No. You get step-by-step instructions to install and run the script.
+No. You get step-by-step instructions to install Python and run the script.
 ```
 ```
 Can you work with my existing code?
 ```
 ```
-Yes. Send the files (or a zip) with the error message or what should change.
+Yes. Send the files or a zip, with the error message or a note on what should change.
 ```
 ```
 Which Python version do you use?
@@ -236,7 +244,7 @@ Which operating system do you use (Windows, macOS, Linux)?
 ```
 I will automate your google sheets or excel with formulas, apps script or vba
 ```
-**Category:** Data → Data Processing, ou a opção mais parecida com Excel/Google Sheets.
+**Category:** Data > Data Processing, ou a opção mais parecida com Excel/Google Sheets.
 
 **Search tags:**
 ```
@@ -269,25 +277,24 @@ Several sheets automated, plus a summary dashboard with charts.
 
 **Description:**
 ```
-Spreadsheets that do the work for you.
+I write formulas and scripts for Google Sheets and Excel.
 
-I can:
+What I do:
 - Write or fix formulas: XLOOKUP/VLOOKUP, SUMIFS, QUERY, ARRAYFORMULA, dates, text cleanup
-- Automate Google Sheets with Apps Script: buttons, scheduled updates, emails, importing data
+- Automate Google Sheets with Apps Script: buttons, scheduled updates, emails, data imports
 - Automate Excel with VBA macros
-- Build a clean dashboard from your data
+- Build a dashboard with charts from your data
 
-What you get:
-- A working copy of your file with everything set up
-- Notes explaining each formula or script, so you can maintain it
+You send a copy of your file, with sensitive data removed, and a description of what it should do.
+
+You get:
+- Your file back with everything set up
+- Notes on each formula or script, so you can maintain it yourself
 - A test on your real data before delivery
 
-How it works:
-1. Share a copy of your file (remove sensitive data) and describe what you need.
-2. I confirm scope and price before you order.
-3. You receive the updated file and instructions.
+Delivery takes 2, 3 or 5 days, depending on the package. I confirm the scope and the price before you order.
 
-I work AI-assisted for speed; everything is tested in the actual file.
+I use AI tools to work faster, and I test everything in your actual file.
 ```
 
 **FAQ:**
@@ -325,7 +332,7 @@ Do you use Google Sheets or Excel (Windows or Mac)?
 
 ---
 
-## Passo extra (opcional): anúncio 4, skill do Claude
+## Passo extra (opcional): anúncios 4 e 5
 
 Os textos estão em [DISPATCH.md](DISPATCH.md), nas seções "Gig 4" (skill do
 Claude) e "Gig 5" (extrato bancário em PDF para Excel). Crie esses anúncios

@@ -10,7 +10,7 @@ Fiverr seller profile and three published gigs, using exactly the texts below.
 - A **phone or e-mail verification code**, or an **ID check**.
 - Anything that **costs money**: Seller Plus, Promoted Gigs, paid badges or
   subscriptions. Answer no or skip; never enter card details.
-- Anything not covered here. Ask rather than invent: never add experience,
+- Anything not covered here. Ask the user. Never add experience,
   education, certificates, reviews or portfolio items that the user did not
   give you.
 
@@ -32,7 +32,7 @@ Fiverr seller profile and three published gigs, using exactly the texts below.
 - **Profile photo:** ask the user (see above).
 - **Description:**
 
-  > I build small tools that save time: Python scripts, web scrapers that turn websites into clean Excel/CSV files, and Google Sheets/Excel automations with formulas, Apps Script or VBA. I work AI-assisted, which makes delivery fast, and I test every file and script on real data before sending it. Clear scope and price before you order, and revisions until it works as agreed. Communication in English (written).
+  > I build small tools for data and office work: Python scripts, web scrapers, and Google Sheets or Excel automations with formulas, Apps Script or VBA. Scraped data is delivered as an Excel, CSV or JSON file. I use AI tools to work faster, and I test every script and file on real data before I send it. We agree on the scope and the price before you order. If the delivery does not work as agreed, I fix it. All communication is in written English.
 
 - **Languages:** Portuguese, Native/Bilingual. English, at the level the user
   tells you.
@@ -52,8 +52,8 @@ Premium). Leave extras, videos and PDFs out.
 
 ### Gig 1: web scraping
 
-- **Title:** I will scrape any public website and deliver clean data in excel or csv
-- **Category:** Data → Data Scraping. For service type, pick the web
+- **Title:** I will scrape public websites and deliver clean data in excel or csv
+- **Category:** Data > Data Scraping. For service type, pick the web
   scraping option.
 - **Search tags:** web scraping, data scraping, data extraction, python, excel
 - **Packages:**
@@ -69,36 +69,39 @@ Premium). Leave extras, videos and PDFs out.
 - **Description:**
 
 ```
-Need data from a website in a clean spreadsheet? I extract it for you.
+I extract data from public websites into Excel, CSV or JSON files.
 
-What you get:
-- The fields you ask for, one row per item, no duplicates
-- Excel, CSV or JSON, ready to use
-- A quality check before delivery (missing values, duplicates, encoding)
+You send:
+- The link to the website and the pages you need
+- The columns you want, for example name, price and link
+- Roughly how many rows or pages
 
-Typical jobs: product lists and prices, business directories, real-estate or job listings, reviews, tables spread over many pages.
+You get:
+- A file with the columns you asked for, one row per item
+- No duplicate rows
+- A check for missing values and encoding errors before delivery
+- With Premium, the Python script and a guide to run it again
 
-How it works:
-1. Send me the website link and the columns you need.
-2. I confirm what is possible and the price before you order.
-3. On larger jobs you get a sample first, then the full file.
+Delivery takes 2, 3 or 5 days, depending on the package. On bigger jobs you get a sample first, then the full file.
 
-I work AI-assisted, so turnaround is fast, and every file is checked against the real site.
+Typical jobs: product lists and prices, business directories, real estate or job listings, reviews, tables spread over many pages.
 
-I only scrape publicly available pages: no logins you don't own, no paywall bypassing, and no collecting personal data in breach of privacy law.
+Message me the link before you order. I check the site and tell you what I can extract and what it costs.
 
-Message me before ordering.
+I use AI tools to write the scrapers faster, and I check every file against the live site.
+
+I only scrape public pages. I do not use logins that are not yours, bypass paywalls or collect personal data in breach of privacy law.
 ```
 
 - **FAQ:**
   - Q: Can you scrape any website?
-    A: Most public websites, yes. Some sites block automated access or need a login; I tell you before you order if a site can't be done reliably.
+    A: Most public websites, yes. Some sites block automated access or need a login. Send me the link and I will tell you before you order if a site cannot be scraped reliably.
   - Q: Do I get the code?
-    A: Yes, with the Premium package: the Python script plus a short guide to run it yourself.
+    A: Yes, with the Premium package. You get the Python script and a short guide to run it yourself.
   - Q: Can you update the data regularly?
-    A: Yes. Tell me how often you need it (daily, weekly) and I will send you a custom offer.
+    A: Yes. Tell me how often you need fresh data, for example daily or weekly, and I will send you a custom offer.
 - **Requirements** (free-text answers, all mandatory):
-  - Link(s) to the website and the pages to scrape.
+  - Links to the website and the pages to scrape.
   - Which columns or fields do you need? An example row helps.
   - Roughly how many rows or pages?
   - Preferred format: Excel, CSV or JSON?
@@ -123,30 +126,35 @@ Message me before ordering.
 - **Description:**
 
 ```
-Stop doing it by hand. I write Python scripts that handle repetitive work: renaming and sorting files, merging Excel/CSV files, calling APIs, downloading reports, sending emails, cleaning data.
+I write Python scripts that do repetitive computer work for you. I also fix Python code: errors, crashes, wrong results, slow scripts.
 
-I also fix Python code: errors, crashes, wrong results, slow scripts.
+Typical scripts:
+- Rename and sort files
+- Merge Excel or CSV files
+- Call an API or download reports
+- Send emails
+- Clean up data
 
-What you get:
-- Clean, commented Python code for Windows, macOS or Linux
-- A short guide on how to install and run it
-- A test on sample data before delivery
+You send a description of the task, or your code and the error message.
 
-How it works:
-1. Describe the task, or send the code and the error message.
-2. I confirm scope and price before you order.
-3. You receive the script, the guide and a short explanation.
+You get:
+- Commented Python code for Windows, macOS or Linux
+- A guide to install and run it
+- A short explanation of what the code does
+- A test run on sample data before delivery
 
-I work AI-assisted, which keeps delivery fast; every script is run and tested before you get it.
+Delivery takes 2, 3 or 5 days, depending on the package. I confirm the scope and the price before you order.
 
-Message me first with your task. I'll tell you honestly if a script is the right solution.
+I use AI tools to write code faster. I run and test every script before you get it.
+
+Message me first with your task. If a script is not the right solution, I will tell you.
 ```
 
 - **FAQ:**
   - Q: Do I need to know Python?
-    A: No. You get step-by-step instructions to install and run the script.
+    A: No. You get step-by-step instructions to install Python and run the script.
   - Q: Can you work with my existing code?
-    A: Yes. Send the files (or a zip) with the error message or what should change.
+    A: Yes. Send the files or a zip, with the error message or a note on what should change.
   - Q: Which Python version do you use?
     A: Python 3.10 or newer by default. Tell me if you need a specific version.
 - **Requirements** (all mandatory):
@@ -158,7 +166,7 @@ Message me first with your task. I'll tell you honestly if a script is the right
 ### Gig 3: Google Sheets and Excel
 
 - **Title:** I will automate your google sheets or excel with formulas, apps script or vba
-- **Category:** Data → Data Processing, or the closest one to Excel/Google
+- **Category:** Data > Data Processing, or the closest one to Excel/Google
   Sheets.
 - **Search tags:** google sheets, excel, apps script, vba, spreadsheet
 - **Packages:**
@@ -174,25 +182,24 @@ Message me first with your task. I'll tell you honestly if a script is the right
 - **Description:**
 
 ```
-Spreadsheets that do the work for you.
+I write formulas and scripts for Google Sheets and Excel.
 
-I can:
+What I do:
 - Write or fix formulas: XLOOKUP/VLOOKUP, SUMIFS, QUERY, ARRAYFORMULA, dates, text cleanup
-- Automate Google Sheets with Apps Script: buttons, scheduled updates, emails, importing data
+- Automate Google Sheets with Apps Script: buttons, scheduled updates, emails, data imports
 - Automate Excel with VBA macros
-- Build a clean dashboard from your data
+- Build a dashboard with charts from your data
 
-What you get:
-- A working copy of your file with everything set up
-- Notes explaining each formula or script, so you can maintain it
+You send a copy of your file, with sensitive data removed, and a description of what it should do.
+
+You get:
+- Your file back with everything set up
+- Notes on each formula or script, so you can maintain it yourself
 - A test on your real data before delivery
 
-How it works:
-1. Share a copy of your file (remove sensitive data) and describe what you need.
-2. I confirm scope and price before you order.
-3. You receive the updated file and instructions.
+Delivery takes 2, 3 or 5 days, depending on the package. I confirm the scope and the price before you order.
 
-I work AI-assisted for speed; everything is tested in the actual file.
+I use AI tools to work faster, and I test everything in your actual file.
 ```
 
 - **FAQ:**
@@ -210,8 +217,8 @@ I work AI-assisted for speed; everything is tested in the actual file.
 
 ### Gig 4 (optional): custom Claude skill
 
-- **Title:** I will build a custom claude skill that automates your workflow
-- **Category:** Programming & Tech → AI Development (or the AI agents/automation subcategory Fiverr offers).
+- **Title:** I will build a custom claude skill to automate a task you repeat
+- **Category:** Programming & Tech > AI Development (or the AI agents/automation subcategory Fiverr offers).
 - **Search tags:** claude, claude skill, ai agent, ai automation, prompt engineering
 - **Packages:**
 
@@ -226,43 +233,42 @@ I work AI-assisted for speed; everything is tested in the actual file.
 - **Description:**
 
 ```
-Stop re-explaining the same task to Claude. A skill is a small package (instructions, examples and optional scripts) that Claude loads automatically whenever the task comes up, so it follows YOUR process every time.
+A Claude skill is a folder with instructions, examples and, if needed, scripts or templates. Claude reads it when the task comes up and follows your steps and format. You do not have to explain the task again in each new chat.
 
 Examples:
-- Write proposals, emails or reports in your company's format
-- Turn meeting notes into tasks, summaries or follow-ups
-- Review documents or code against your checklist
-- Fill spreadsheets or create files from your templates
+- Proposals, emails or reports in your company's format
+- Meeting notes turned into tasks, summaries or follow-ups
+- Documents or code reviewed against your checklist
+- Spreadsheets or files filled in from your templates
 
-What you get:
-- A ready-to-install skill folder (SKILL.md plus any templates or scripts)
-- Tests on examples you provide, so it behaves the way you expect
+You send the task and 2 or 3 real examples of good output.
+
+You get:
+- A skill folder ready to install: the instruction file plus any templates or scripts
+- Test results on the examples you sent
 - A short guide to install it in Claude (desktop, web or Claude Code)
 
-How it works:
-1. Tell me the task and send 2-3 real examples of good output.
-2. I confirm scope and price before you order.
-3. You receive the skill, the test results and the guide.
+Delivery takes 2, 4 or 6 days, depending on the package. I confirm the scope and the price before you order.
 
-I build skills AI-assisted and test each one before delivery.
+I use AI tools to build skills, and I test each one before delivery.
 ```
 
 - **FAQ:**
   - Q: Which Claude plans support skills?
-    A: Skills work in Claude apps and Claude Code on plans with skills enabled. I'll check your setup with you before you order.
+    A: Skills work in the Claude apps and in Claude Code, on plans that have skills turned on. Before you order, I check your setup with you.
   - Q: Can you update an existing skill?
     A: Yes. Send the skill folder and describe what should change.
   - Q: Do you need my account or password?
-    A: No, never. You install the skill yourself with the guide.
+    A: No. I never need your account or password. You install the skill yourself with the guide.
 - **Requirements** (all mandatory):
   - Describe the task the skill should handle.
-  - Attach 2-3 examples of the output you want (files or text).
+  - Attach 2 or 3 examples of the output you want, as files or text.
   - Which Claude app do you use (web, desktop, Claude Code)?
 
 ### Gig 5 (optional): bank statement PDF to Excel
 
-- **Title:** I will convert your bank statement PDF to excel or csv, clean and checked
-- **Category:** Data → Data Entry (or Data Processing), service type: PDF to Excel.
+- **Title:** I will convert your bank statement PDF to excel or csv and check every row
+- **Category:** Data > Data Entry (or Data Processing), service type: PDF to Excel.
 - **Search tags:** pdf to excel, bank statement, data entry, excel, bookkeeping
 - **Packages:**
 
@@ -277,35 +283,34 @@ I build skills AI-assisted and test each one before delivery.
 - **Description:**
 
 ```
-Need your bank or card statements in a spreadsheet? Send the PDFs, get back a clean Excel file.
+I convert bank and card statement PDFs into a spreadsheet.
 
-What you get:
+You send the statements as PDF files. PDFs downloaded from online banking are fine. For scanned paper statements, message me first.
+
+You get an Excel or CSV file with:
 - One row per transaction: date, description, money in, money out, balance
 - Several months or accounts merged into one sheet, sorted by date
-- A monthly summary (money in, money out, net)
-- A check of every row against the statement's running balance, so nothing is missing or doubled
+- A monthly summary: money in, money out and net
+- Every row checked against the running balance, so nothing is missing or counted twice
 
-Great for bookkeeping, tax returns, budgeting, loan or visa applications.
+Delivery takes 1 day for up to 5 pages, 2 days for up to 25 and 3 days for up to 100. I confirm the page count and the price before you order.
 
-How it works:
-1. Send the PDF statements (text PDFs; for scanned paper statements, message me first).
-2. I confirm the page count and price before you order.
-3. You receive the Excel (or CSV) file, usually within a day.
+Typical uses: bookkeeping, tax returns, budgeting, loan or visa applications.
 
-Your files are used only for your order and deleted after delivery. I work AI-assisted and check every file against the statement totals.
+I use AI tools for the conversion, and I check every file against the statement totals. Your files are used only for your order and deleted after delivery.
 ```
 
 - **FAQ:**
   - Q: Which banks do you support?
-    A: Any bank whose statements are text PDFs, in English, French, Portuguese or Spanish. Send one page first if you are unsure.
+    A: Any bank, if the statements are text PDFs in English, French, Portuguese or Spanish. If you are not sure, send me one page first.
   - Q: Can you do scanned statements?
-    A: Scanned or photographed statements need extra work; message me first with a sample page.
+    A: Scanned or photographed statements take extra work. Message me first with one sample page.
   - Q: Is my data safe?
-    A: Files are used only for your order and deleted after delivery. You can hide account numbers before sending.
+    A: I use your files only for your order and delete them after delivery. You can hide account numbers before you send them.
 - **Requirements** (all mandatory):
   - Attach the PDF statements.
   - Excel or CSV? Any specific columns or date format you need?
-  - Should categories be added (food, rent, transport...)? If yes, list the ones you want.
+  - Do you want categories added, for example food, rent and transport? If yes, list the ones you want.
 - **Gallery:** gig5-statement-excel.png
 
 ## When you are done
