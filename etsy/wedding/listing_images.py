@@ -1,33 +1,32 @@
-"""Etsy listing images for the Wedding Budget Planner (run build.py first)."""
+"""Etsy listing photos for the Wedding Budget Planner (run build.py first)."""
 import os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
-from listingkit import H, W, Renders, badges, canvas, card, chips, content, headline, inside, save  # noqa: E402
+from listingkit import M, Renders, canvas, content, detail, grid, laptop, note, save, title  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-r = Renders(os.path.join(HERE, "Wedding-Budget-Planner.xlsx"), os.path.join(HERE, "out"))
+xlsx = os.path.join(HERE, "Wedding-Budget-Planner.xlsx")
+r = Renders(xlsx, os.path.join(HERE, "out"))
 img_dir = os.path.join(HERE, "images")
 
-img = canvas()
-headline(img, "Wedding Budget Planner", "Budget, vendors, payments and guests, in one calm dashboard")
-card(img, content(r.page("Our wedding at a glance")), (100, 390, W - 100, H - 180))
-badges(img, ["Google Sheets", "Excel", "Instant download"], H - 150)
+img = canvas(dark=True)
+title(img, "Wedding budget planner\nwith vendor payments", "Budget, vendors, payments and guests in one spreadsheet",
+      dark=True, width=2300)
+laptop(img, content(r.page("Wedding dashboard")), 600, 700, 1950)
+note(img, ["Google Sheets", "and Excel"], M, 1720, dark=True)
 save(img, os.path.join(img_dir, "01-dashboard.jpg"))
 
-img = canvas()
-headline(img, "Never miss a vendor payment", "Each vendor shows what is paid, what is left and when it is due")
-card(img, content(r.page("Vendors & payments"), keep=0.30), (100, 380, W - 100, 1500))
-chips(img, [("#D8F0DC", "Paid in full", "nothing left to do"), ("#FFE2B8", "Due soon", "within 14 days"),
-            ("#F9C9C4", "Overdue", "call the vendor")], 1600)
-save(img, os.path.join(img_dir, "02-vendors.jpg"))
+close = Renders(xlsx, os.path.join(HERE, "out"), hide={"Vendors": ["C"]})
+detail(os.path.join(img_dir, "02-vendors.jpg"), "Know which vendor to pay next",
+       "Each vendor shows what is paid, what is left and when it is due",
+       close.shot("Vendors & payments", until="Paper & Ink"),
+       [("#D8F0DC", "Paid in full"), ("#FFE2B8", "Due in the next 14 days"), ("#F9C9C4", "Overdue")])
 
 img = canvas()
-headline(img, "What's inside", "5 tabs: you only type in the yellow cells")
-inside(img, [
-    ("Dashboard", "countdown, committed, paid, still to pay"),
-    ("Budget", "your total, split into 11 categories"),
-    ("Vendors", "quotes, deposits, due dates, status"),
-    ("Guests", "RSVP, plus ones, meals, tables"),
-    ("Start Here", "5 steps, 10 minutes"),
-])
-badges(img, ["Google Sheets + Excel", "No subscription", "Instant download"], H - 180)
+y = title(img, "Inside the file", "Five tabs. You type in the yellow cells and the rest is calculated.")
+grid(img, [
+    (content(r.page("Wedding dashboard")), "Dashboard", "Countdown, booked, paid and still to pay"),
+    (content(r.page("Budget")), "Budget", "Your total split into 11 categories"),
+    (content(r.page("Vendors & payments")), "Vendors", "Quotes, deposits, due dates and status"),
+    (content(r.page("Guest list")), "Guests", "RSVP, plus ones, meals and tables"),
+], y + 80)
 save(img, os.path.join(img_dir, "03-whats-inside.jpg"))

@@ -78,19 +78,21 @@ for r in range(V0, V1 + 1):
     style(ve.cell(r, 5, s[3]), True, MONEY)
     style(ve.cell(r, 6, s[4]), True, DATE)
     style(ve.cell(r, 7, f'=IF(B{r}="","",D{r}-E{r})'), False, MONEY)
-    st = (f'=IF(B{r}="","",IF(G{r}<=0,"✓ Paid in full",IF(F{r}="","Balance, no date yet",'
-          f'IF(F{r}<TODAY(),"⚠ OVERDUE "&(TODAY()-F{r})&" day(s)",'
-          f'IF(F{r}-TODAY()<=14,"Due in "&(F{r}-TODAY())&" day(s)","Due "&(F{r}-TODAY())&" days from now")))))')
+    late, left = f"TODAY()-F{r}", f"F{r}-TODAY()"
+    st = (f'=IF(B{r}="","",IF(G{r}<=0,"Paid in full",IF(F{r}="","Balance due, no date set",'
+          f'IF(F{r}<TODAY(),"Overdue by "&{late}&IF({late}=1," day"," days"),IF(F{r}=TODAY(),"Due today",'
+          f'IF({left}<=14,"Due in "&{left}&IF({left}=1," day"," days"),"Next payment in "&{left}&" days"))))))')
     style(ve.cell(r, 8, st), False)
 dv = DataValidation(type="list", formula1=f"={CAT_RANGE}", allow_blank=True)
 ve.add_data_validation(dv)
 dv.add(f"C{V0}:C{V1}")
 ve.freeze_panes = "B6"
 rng = f"H{V0}:H{V1}"
-ve.conditional_formatting.add(rng, FormulaRule(formula=[f'LEFT($H{V0},1)="✓"'], fill=fill(OK)))
-ve.conditional_formatting.add(rng, FormulaRule(formula=[f'LEFT($H{V0},1)="⚠"'], fill=fill(BAD),
+ve.conditional_formatting.add(rng, FormulaRule(formula=[f'$H{V0}="Paid in full"'], fill=fill(OK)))
+ve.conditional_formatting.add(rng, FormulaRule(formula=[f'LEFT($H{V0},7)="Overdue"'], fill=fill(BAD),
                                                font=Font(name=F, bold=True, color="9B1C1C")))
-ve.conditional_formatting.add(rng, FormulaRule(formula=[f'LEFT($H{V0},6)="Due in"'], fill=fill(WARN)))
+ve.conditional_formatting.add(rng, FormulaRule(formula=[f'OR(LEFT($H{V0},6)="Due in",$H{V0}="Due today")'],
+                                               fill=fill(WARN)))
 
 # ---------------------------------------------------------------- Guests
 gu = wb.create_sheet("Guests")
@@ -107,23 +109,23 @@ for r in range(G0, G1 + 1):
     style(gu.cell(r, 2, names[k] if have else None), True)
     style(gu.cell(r, 3, ["Both", "Partner A", "Partner B"][k % 3] if have else None), True, align="center")
     style(gu.cell(r, 4, rsvp[k] if have else None), True, align="center")
-    style(gu.cell(r, 5, (k % 4 == 0) if have else None), True, align="center")
+    style(gu.cell(r, 5, ("Yes" if k % 4 == 0 else "No") if have else None), True, align="center")
     style(gu.cell(r, 6, meals[k] if have else None), True, align="center")
     style(gu.cell(r, 7, (k // 4) + 1 if have and rsvp[k] == "Yes" else None), True, "0", align="center")
     style(gu.cell(r, 8), True)
 for col, options in (("C", ["Both", "Partner A", "Partner B"]), ("D", ["Yes", "No", "Pending"]),
-                     ("E", ["TRUE", "FALSE"]), ("F", ["Meat", "Fish", "Veggie", "Kids"])):
+                     ("E", ["Yes", "No"]), ("F", ["Meat", "Fish", "Veggie", "Kids"])):
     v = DataValidation(type="list", formula1='"' + ",".join(options) + '"', allow_blank=True)
     gu.add_data_validation(v)
     v.add(f"{col}{G0}:{col}{G1}")
 gu.conditional_formatting.add(f"D{G0}:D{G1}", FormulaRule(formula=[f'$D{G0}="Yes"'], fill=fill(OK)))
 gu.conditional_formatting.add(f"D{G0}:D{G1}", FormulaRule(formula=[f'$D{G0}="Pending"'], fill=fill(WARN)))
-gu.conditional_formatting.add(f"D{G0}:D{G1}", FormulaRule(formula=[f'$D{G0}="No"'], fill=fill("E6E2DA")))
+gu.conditional_formatting.add(f"D{G0}:D{G1}", FormulaRule(formula=[f'$D{G0}="No"'], fill=fill("E4E8E8")))
 gu.freeze_panes = "B6"
 
 # ---------------------------------------------------------------- Dashboard
 db = wb.create_sheet("Dashboard", 0)
-sheet_base(db, "Our wedding at a glance", "Set the date below. Everything else fills itself in.",
+sheet_base(db, "Wedding dashboard", "Set the date below. Everything else fills itself in.",
            [3, 24, 16, 16, 16, 16, 3, 40])
 db["B4"] = "Wedding date"
 db["B4"].font = font(12, True, TEAL_D)
@@ -158,10 +160,10 @@ db.row_dimensions[7].height = 44
 header(db, 9, 2, ["Guests", "Invited", "Yes", "Pending", "No"])
 style(db["B10"], False, bold=True)
 db["B10"] = "People (incl. plus ones)"
-db["C10"] = f'=COUNTIFS({G("B")},"<>")+COUNTIFS({G("B")},"<>",{G("E")},TRUE)'
-db["D10"] = f'=COUNTIFS({G("D")},"Yes")+COUNTIFS({G("D")},"Yes",{G("E")},TRUE)'
-db["E10"] = f'=COUNTIFS({G("D")},"Pending")+COUNTIFS({G("D")},"Pending",{G("E")},TRUE)'
-db["F10"] = f'=COUNTIFS({G("D")},"No")+COUNTIFS({G("D")},"No",{G("E")},TRUE)'
+db["C10"] = f'=COUNTIFS({G("B")},"<>")+COUNTIFS({G("B")},"<>",{G("E")},"Yes")'
+db["D10"] = f'=COUNTIFS({G("D")},"Yes")+COUNTIFS({G("D")},"Yes",{G("E")},"Yes")'
+db["E10"] = f'=COUNTIFS({G("D")},"Pending")+COUNTIFS({G("D")},"Pending",{G("E")},"Yes")'
+db["F10"] = f'=COUNTIFS({G("D")},"No")+COUNTIFS({G("D")},"No",{G("E")},"Yes")'
 for col in "CDEF":
     style(db[f"{col}10"], False, "0", align="center")
 style(db["B11"], False, bold=True)
@@ -173,10 +175,16 @@ for i, meal in enumerate(["Meat", "Fish", "Veggie", "Kids"]):
 db["H9"] = "Heads-up"
 db["H9"].font = font(11, True, "FFFFFF")
 db["H9"].fill = fill(TEAL)
+late_n = f'COUNTIFS({V("H")},"Overdue*")'
+soon_n = f'(COUNTIFS({V("H")},"Due in*")+COUNTIFS({V("H")},"Due today"))'
+soon_sum = f'(SUMIFS({V("G")},{V("H")},"Due in*")+SUMIFS({V("G")},{V("H")},"Due today"))'
+wait_n = f'COUNTIFS({G("D")},"Pending")'
 notes = [
-    (f'=COUNTIFS({V("H")},"⚠*")&" payment(s) overdue"', BAD),
-    (f'=COUNTIFS({V("H")},"Due in*")&" payment(s) due in the next 14 days: "&FIXED(SUMIFS({V("G")},{V("H")},"Due in*"),2)', WARN),
-    (f'=COUNTIFS({G("D")},"Pending")&" guest(s) still to answer"', INFO),
+    (f'=IF({late_n}=0,"No overdue payments",IF({late_n}=1,"1 payment is overdue",{late_n}&" payments are overdue"))', BAD),
+    (f'=IF({soon_n}=0,"Nothing due in the next 14 days",IF({soon_n}=1,"1 payment",{soon_n}&" payments")'
+     f'&" due in the next 14 days: "&FIXED({soon_sum},2))', WARN),
+    (f'=IF({wait_n}=0,"Every guest has answered",IF({wait_n}=1,"1 guest has not answered yet",'
+     f'{wait_n}&" guests have not answered yet"))', INFO),
     ('=IF(C7>B7,"Over budget by "&FIXED(C7-B7,2),"Within budget")', OK),
 ]
 for k, (formula, colour) in enumerate(notes):
@@ -184,6 +192,10 @@ for k, (formula, colour) in enumerate(notes):
     c.fill = fill(colour)
     c.font = font(11)
     c.border = box
+for cell, start in (("H10", "No"), ("H11", "Nothing"), ("H12", "Every")):
+    db.conditional_formatting.add(cell, FormulaRule(formula=[f'LEFT({cell},{len(start)})="{start}"'], fill=fill(OK)))
+db.conditional_formatting.add("H13", FormulaRule(formula=['LEFT(H13,4)="Over"'], fill=fill(BAD)))
+db["H9"].alignment = Alignment(vertical="center")
 
 header(db, 14, 2, ["Category", "Planned", "Committed", "Used"])
 for k in range(len(CATS)):
@@ -198,21 +210,21 @@ db.column_dimensions["E"].width = 26
 
 # ---------------------------------------------------------------- Start Here
 st = wb.create_sheet("Start Here")
-sheet_base(st, "Start here: 10 minutes", "Only type in YELLOW cells.", [3, 6, 100])
+sheet_base(st, "Start here", "Type only in the yellow cells. Everything else is calculated.", [3, 6, 100])
 steps = [
-    ("1", "Dashboard: your wedding date (the countdown starts)."),
-    ("2", "Budget: your total budget. Adjust the shares if your priorities differ (they must add up to 100)."),
-    ("3", "Vendors: each vendor once you have a quote: amount, what you paid, next payment date."),
-    ("4", "Guests: one line per guest; update RSVP and meal as answers come in."),
-    ("★", "Dashboard: what is committed, paid and still to pay, payments due soon, and guest numbers."),
+    ("1", "Dashboard: type your wedding date and the countdown starts."),
+    ("2", "Budget: type your total. Change the percentages if your priorities differ (they add up to 100)."),
+    ("3", "Vendors: add each vendor once you have a quote, with the amount, what you paid and the next due date."),
+    ("4", "Guests: one line per guest. Update the RSVP and meal as answers come in."),
+    ("5", "The Dashboard then shows what is booked, paid and still to pay, and your guest numbers."),
 ]
 for k, (n, text) in enumerate(steps):
     r = 5 + k * 2
     st.cell(r, 2, n).font = font(18, True, TEAL)
     st.cell(r, 3, text).font = font(13)
-st["C17"] = "Example vendors and guests show how it works: delete them and add yours."
+st["C17"] = "The example vendors and guests show how it works. Delete them and add your own."
 st["C17"].font = font(11, color=MUTED, italic=True)
-st["C19"] = "Works in Google Sheets and Microsoft Excel. Any currency."
+st["C19"] = "Works in Google Sheets and Microsoft Excel, in any currency."
 st["C19"].font = font(11, color=MUTED, italic=True)
 
 wb.active = 0
