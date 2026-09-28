@@ -10,7 +10,7 @@ Pasta `images/`, nesta ordem: 01, 02, 03.
 ## Title
 
 ```
-Wedding Budget Planner Spreadsheet, Google Sheets & Excel, Wedding Vendor Payment Tracker, Guest List Rsvp, Wedding Checklist
+Wedding Budget Planner Spreadsheet, Google Sheets & Excel, Wedding Vendor Payment Tracker, Guest List RSVP, Wedding Checklist
 ```
 
 ## Type
@@ -31,18 +31,18 @@ Wedding budget spreadsheet for Google Sheets and Excel, for couples who want the
 
 The Dashboard shows:
 - A countdown to the wedding day
-- Total budget, committed, paid so far, still to pay and not allocated yet
+- Total budget, committed, paid so far, still to pay and not yet allocated
 - Overdue payments, payments due in the next 14 days and guests who have not answered
-- Each budget category, planned against committed, with a bar. The committed amount turns red when a category goes over plan.
+- Each category, planned against committed, with bars (red when a category goes over plan)
 - Guest numbers (invited, yes, pending, no) and meal counts for the caterer
 
 In the file (5 tabs):
-- Budget: your total split into 11 categories. It starts with a common split and you can change every share.
-- Vendors: the quote, what you have paid so far and the next payment date. The status turns orange when a payment is due within 14 days, red when it is overdue and green when it is paid in full.
-- Guests: replies (yes, no or pending), plus ones, meal choice and table
+- Budget: your total split into 11 categories, with a common split you can change
+- Vendors: quote, paid so far, next payment date and a status that updates by itself
+- Guests: RSVP (yes, no, pending), plus ones, meal choice and table
 - Dashboard and Start Here
 
-If you share it in Google Sheets, you both see the same numbers. It also works in Microsoft Excel, in any currency.
+Share it in Google Sheets and you both see the same numbers. It also works in Microsoft Excel, in any currency.
 
 You get:
 - Wedding-Budget-Planner.xlsx

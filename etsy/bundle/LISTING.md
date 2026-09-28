@@ -28,33 +28,31 @@ dela (renomeie para `Subscriptions-Guide.pdf`).
 ## Description
 
 ```
-Two spreadsheets that do the remembering for you, 15% cheaper together.
+Two spreadsheets for Google Sheets and Excel: an ADHD-friendly monthly budget and a subscription tracker.
+Together they cost less than buying them separately.
 
-1 · ADHD-FRIENDLY BUDGET
-• One big number: what you can safely spend per day for the rest of the month
-• One line per purchase: date, amount, category
-• Bills turn orange 3 days before they are due, red when overdue
-• Impulse List with the 48-hour rule, and a counter of the money you kept
-• Savings goals with progress bars
+The budget:
+- What you can safely spend per day for the rest of the month
+- One line per purchase: date, amount and category
+- Bills turn orange 3 days before they are due and red when overdue
+- An Impulse List with the 48-hour rule, and a total of the money you kept by not buying
+- Savings goals with progress bars
 
-2 · SUBSCRIPTION TRACKER
-• Every subscription with its cost per month and per year
-• Red warning before a free trial starts charging
-• Orange flag on subscriptions you have not used in 30+ days
-• See how much cancelling saves you per year
+The subscription tracker:
+- Each subscription's cost per month and per year
+- A red warning before a free trial starts charging
+- An orange flag on subscriptions you have not used in over 30 days
+- How much cancelling saves you per year
 
-BOTH
-• Work in Google Sheets (free) and Microsoft Excel
-• You only type in the yellow cells
-• Example data included, plus a one-page guide for each
+In both you only type in the yellow cells, and each file comes with example data and a one-page guide.
 
-YOU RECEIVE
-• ADHD-Friendly-Budget.xlsx + guide (PDF)
-• Subscription-Tracker.xlsx + guide (PDF)
+You get:
+- ADHD-Friendly-Budget.xlsx and Budget-Guide.pdf
+- Subscription-Tracker.xlsx and Subscriptions-Guide.pdf
 
-Digital download; nothing will be shipped. Personal budgeting tools, not financial advice.
+This is a digital download and nothing will be shipped. These are budgeting tools and do not give financial advice.
 
-Designed by me with the help of AI tools; formulas were checked with the example data before release.
+I designed these with the help of AI tools and checked the formulas with the example data before listing them.
 ```
 
 ## Tags (13)

@@ -27,38 +27,37 @@ Debt Payoff Planner Spreadsheet, Snowball & Avalanche Calculator, Google Sheets 
 ## Description
 
 ```
-Get ONE date to aim for (your debt-free month) and ONE thing to do each month.
+Debt payoff planner for Google Sheets and Excel, for anyone paying off credit cards or loans.
+Enter your debts once and it works out, month by month, when each one will be paid off.
 
-Enter your debts once. The planner works out, month by month, when each debt disappears, with the two classic methods side by side:
-• Avalanche: highest interest first, so you pay the least interest
-• Snowball: smallest balance first, for quick wins and motivation
-It shows which one saves you more and which one clears your first debt sooner.
+It compares the two usual methods:
+- Avalanche: highest interest first, so you pay the least interest
+- Snowball: smallest balance first, so one debt is gone early
 
-THE DASHBOARD SHOWS
-• Your debt-free month and how many months to go
-• Total interest you will pay with your plan
-• "This month": pay the minimum on everything and put X on your focus debt
-• When each debt will be paid off, in order
-• A chart of each debt shrinking to zero
+The Dashboard shows:
+- Which method saves more interest and which clears your first debt sooner
+- Your debt-free month and how many months to go
+- The total interest you will pay with your plan
+- This month's step: pay the minimum on every debt and the amount shown on your focus debt
+- When each debt will be paid off, in order
+- A chart of your debts over the first 4 years
 
-HOW IT WORKS
-• Up to 10 debts: credit cards, loans, store cards, medical bills
-• Add an extra monthly amount and watch the date move closer
-• Rollover built in: when a debt is paid, its minimum moves to the next one
-• Month-by-month plans for up to 15 years
+How it works:
+- Up to 10 debts: credit cards, loans, store cards, medical bills
+- Add an extra amount per month and see the date move closer
+- When a debt is paid off, its minimum moves to the next one
+- Month-by-month plans for up to 15 years
 
-WORKS WITH
-• Google Sheets (free) and Microsoft Excel
-• Any currency
+Works with Google Sheets (free) and Microsoft Excel, in any currency.
 
-YOU RECEIVE
-• Debt-Payoff-Planner.xlsx
-• Start-Here-Guide.pdf
-• A French version: Plan-Remboursement-Dettes.xlsx + Guide-Demarrage.pdf
+You get:
+- Debt-Payoff-Planner.xlsx
+- Start-Here-Guide.pdf
+- A French version: Plan-Remboursement-Dettes.xlsx and Guide-Demarrage.pdf
 
-Digital download; nothing will be shipped. A planning tool, not financial advice: each lender may calculate interest slightly differently.
+This is a digital download and nothing will be shipped. It is a planning tool and does not give financial advice. Each lender may calculate interest a little differently.
 
-Designed by me with the help of AI tools; formulas were checked with the example data before release.
+I designed this with the help of AI tools and checked the formulas with the example data before listing it.
 ```
 
 ## Tags (13)
@@ -85,40 +84,41 @@ Mesmo esquema: aba **Français** do anúncio.
 
 **Titre**
 ```
-Plan de Remboursement de Dettes, Méthode Boule de Neige et Avalanche, Tableur Google Sheets & Excel, Date de Fin des Dettes
+Plan de remboursement de dettes, méthode boule de neige et avalanche, tableur Google Sheets & Excel, date de fin des dettes
 ```
 
 **Description**
 ```
-UNE date à viser (le mois où vous serez libre de dettes) et UNE chose à faire chaque mois.
+Tableur de remboursement de dettes pour Google Sheets et Excel, pour savoir quand vous aurez fini de rembourser vos crédits.
+Vous saisissez vos dettes une fois et il calcule, mois par mois, quand chacune sera soldée.
 
-Saisissez vos dettes une fois. Le tableur calcule, mois par mois, quand chaque dette disparaît, avec les deux méthodes classiques côte à côte :
-• Avalanche : le taux le plus élevé d'abord, pour payer le moins d'intérêts
-• Boule de neige : le plus petit solde d'abord, pour des victoires rapides
-Il montre laquelle vous fait économiser le plus, et laquelle solde votre première dette le plus vite.
+Il compare les deux méthodes classiques :
+- Avalanche : le taux le plus élevé d'abord, pour payer le moins d'intérêts
+- Boule de neige : le plus petit solde d'abord, pour solder vite une première dette
 
-LE TABLEAU DE BORD MONTRE
-• Votre mois de liberté et le nombre de mois restants
-• Le total des intérêts avec votre plan
-• « Ce mois-ci » : payez le minimum partout et mettez X sur votre dette prioritaire
-• La date où chaque dette sera soldée, dans l'ordre
-• Un graphique de chaque dette qui fond jusqu'à zéro
+Le tableau de bord montre :
+- quelle méthode coûte le moins d'intérêts et laquelle solde votre première dette le plus tôt
+- le mois où vous n'aurez plus de dettes et le nombre de mois restants
+- le total des intérêts avec votre plan
+- ce qu'il faut payer ce mois-ci : le minimum partout, plus le montant indiqué sur votre dette prioritaire
+- le mois où chaque dette sera soldée, dans l'ordre
+- un graphique de vos dettes sur les 4 premières années
 
-COMMENT ÇA MARCHE
-• Jusqu'à 10 dettes : cartes de crédit, prêts, cartes de magasin, frais médicaux
-• Ajoutez un montant en plus chaque mois et regardez la date se rapprocher
-• Effet boule de neige intégré : quand une dette est soldée, son minimum passe à la suivante
-• Plans mois par mois jusqu'à 15 ans
+Comment ça marche :
+- jusqu'à 10 dettes : cartes de crédit, prêts, cartes de magasin, frais médicaux
+- ajoutez un montant en plus chaque mois et voyez combien de mois vous gagnez
+- quand une dette est soldée, son minimum passe à la suivante
+- plans mois par mois jusqu'à 15 ans
 
-FONCTIONNE AVEC Google Sheets (gratuit) et Microsoft Excel, toutes devises.
+Fonctionne avec Google Sheets (gratuit) et Microsoft Excel, toutes devises.
 
-VOUS RECEVEZ
-• Plan-Remboursement-Dettes.xlsx + Guide-Demarrage.pdf (en français)
-• La version anglaise : Debt-Payoff-Planner.xlsx + Start-Here-Guide.pdf
+Vous recevez :
+- Plan-Remboursement-Dettes.xlsx et Guide-Demarrage.pdf (en français)
+- la version anglaise : Debt-Payoff-Planner.xlsx et Start-Here-Guide.pdf
 
-Fichier numérique : rien n'est expédié. Outil de planification, pas un conseil financier.
+Fichier numérique : rien n'est expédié. C'est un outil de planification et il ne donne pas de conseil financier. Chaque organisme de crédit peut calculer les intérêts un peu différemment.
 
-Conçu par moi avec l'aide d'outils d'IA ; les formules ont été vérifiées avec les données d'exemple.
+Je l'ai conçu avec l'aide d'outils d'IA et j'ai vérifié les formules avec les données d'exemple.
 ```
 
 **Tags**

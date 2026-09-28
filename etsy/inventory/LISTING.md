@@ -27,33 +27,29 @@ Inventory Tracker Spreadsheet, Small Business Stock and Sales Tracker, Google Sh
 ## Description
 
 ```
-Know what is in stock, what sells, and what to reorder, without a costly inventory app.
+Inventory and sales tracker for small shops and Etsy sellers, for Google Sheets and Excel.
+List your products once, then add one line each time stock changes (purchase, sale, return or adjustment). The sheet keeps your stock count and tells you when to reorder.
 
-List your products once. Then add one line each time stock changes (purchase, sale, return or adjustment) and everything else updates.
+The Dashboard shows:
+- Sales, units sold and gross profit for the month you pick
+- A 12-month table and a chart of sales
+- Stock value at cost and at selling price
+- How many products to reorder and how many are out of stock, your best seller and average margin
 
-THE DASHBOARD SHOWS
-• Sales, units sold and gross profit for the month you pick
-• A 12-month table and chart of sales
-• Stock value at cost and at selling price
-• How many products to reorder now, which are out of stock, your best seller and average margin
+The Products tab shows:
+- Current stock for every product, calculated from your stock moves
+- Margin per product
+- A status that updates by itself: OK (green), Reorder now (orange) or Out of stock (red)
 
-THE PRODUCTS TAB SHOWS
-• Stock now for every product, calculated from your moves
-• Margin per product
-• A status that changes by itself: OK, Reorder now (orange), Out of stock (red)
+For shops selling candles, jewelry, ceramics, prints, stickers, clothing or resale items. Up to 200 products and 2,000 stock moves. Works with Google Sheets (free) and Microsoft Excel, in any currency.
 
-MADE FOR SMALL SHOPS
-• Candles, jewelry, ceramics, prints, stickers, clothing, resale
-• Up to 200 products and 2,000 stock moves
-• Works in Google Sheets (free) and Microsoft Excel, any currency
+You get:
+- Inventory-Sales-Tracker.xlsx
+- Start-Here-Guide.pdf
 
-YOU RECEIVE
-• Inventory-Sales-Tracker.xlsx
-• Start-Here-Guide.pdf
+This is a digital download and nothing will be shipped.
 
-Digital download; nothing will be shipped.
-
-Designed by me with the help of AI tools; formulas were checked with the example data before release.
+I designed this with the help of AI tools and checked the formulas with the example data before listing it.
 ```
 
 ## Tags (13)

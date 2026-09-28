@@ -27,36 +27,30 @@ Subscription Tracker Spreadsheet, Google Sheets & Excel, Free Trial Reminder, Ca
 ## Description
 
 ```
-How much do your subscriptions really cost per year? Most people guess half of the real number.
+Subscription tracker spreadsheet for Google Sheets and Excel. It lists your subscriptions and free trials and warns you before a trial starts charging.
+I made it for people with ADHD who sign up for free trials and forget them, and for anyone checking their subscriptions before a new budget.
 
-This tracker puts every subscription in one place and tells you, automatically:
-• What you pay per month AND per year
-• Which free trials are about to start charging (red warning, with the days left)
-• Which subscriptions you have not used in 30+ days (orange: still worth it?)
-• How much you save per year by cancelling the ones you mark "Cancel"
-• When each one renews next, even for weekly, quarterly and yearly billing
+For each subscription it shows:
+- The cost per month and per year
+- The next renewal date, for weekly, monthly, quarterly or yearly billing
+- The days left before a free trial starts charging, in red
+- An orange flag if you have not used it for more than 30 days
 
-WHAT'S INSIDE
-• Dashboard: per month, per year, unused money, savings from cancelling, spending by category with bars
-• Subscriptions: one line each, with dropdowns for category, billing and keep/cancel
-• Start Here: 5 steps, 2 minutes
+In the file:
+- Dashboard: totals per month and per year, the yearly cost of unused subscriptions, the yearly saving from the ones marked Cancel, and spending by category with bars
+- Subscriptions: one line each, with dropdown lists for category, billing and Keep, Cancel or Decide
+- Start Here: 5 steps, 2 minutes
 
-GREAT FOR
-• ADHD brains that sign up for free trials and forget them
-• Anyone doing a "subscription audit" before a new budget
+Works with Google Sheets (free) and Microsoft Excel, in any currency.
 
-WORKS WITH
-• Google Sheets (free) and Microsoft Excel
-• Any currency
+You get:
+- Subscription-Tracker.xlsx
+- Start-Here-Guide.pdf (how to open it, and where to find all your subscriptions)
+- A French version: Abonnements-Suivi.xlsx and Guide-Demarrage.pdf
 
-YOU RECEIVE
-• Subscription-Tracker.xlsx
-• Start-Here-Guide.pdf (how to open it, and where to find all your subscriptions)
-• A French version: Abonnements-Suivi.xlsx + Guide-Demarrage.pdf
+This is a digital download and nothing will be shipped. The tracker does not cancel anything for you. It shows you what you could cancel.
 
-This is a digital download; nothing will be shipped. The tracker does not cancel anything for you: it shows you what to cancel.
-
-Designed by me with the help of AI tools; formulas were checked with the example data before release.
+I designed this with the help of AI tools and checked the formulas with the example data before listing it.
 ```
 
 ## Tags (13)
@@ -83,34 +77,34 @@ Mesmo esquema do orçamento: aba **Français** do anúncio.
 
 **Titre**
 ```
-Suivi des Abonnements, Tableur Google Sheets & Excel, Rappel Fin d'Essai Gratuit, Résilier les Abonnements Inutilisés, Budget
+Suivi des abonnements, tableur Google Sheets & Excel, rappel de fin d'essai gratuit, résilier les abonnements inutilisés, budget
 ```
 
 **Description**
 ```
-Combien vous coûtent vraiment vos abonnements par an ? La plupart des gens sous-estiment de moitié.
+Tableur de suivi des abonnements pour Google Sheets et Excel. Il liste vos abonnements et vos essais gratuits, et vous prévient avant qu'un essai devienne payant.
+Utile si vous oubliez vos essais gratuits ou avant de refaire votre budget.
 
-Ce tableur réunit tous vos abonnements et vous dit, automatiquement :
-• Combien vous payez par mois ET par an
-• Quels essais gratuits vont bientôt devenir payants (alerte rouge, avec les jours restants)
-• Quels abonnements vous n'utilisez plus depuis 30 jours (orange : ça vaut encore le coup ?)
-• Combien vous économisez par an en résiliant ceux marqués « Annuler »
-• La date du prochain prélèvement, même en facturation hebdo, trimestrielle ou annuelle
+Pour chaque abonnement, il affiche :
+- le prix par mois et par an
+- la date du prochain prélèvement, même en facturation hebdo, trimestrielle ou annuelle
+- en rouge, les jours restants avant la fin d'un essai gratuit
+- en orange, s'il n'a pas servi depuis plus de 30 jours
 
-DANS LE FICHIER
-• Tableau de bord : par mois, par an, argent dormant, économies, dépenses par catégorie
-• Abonnements : une ligne chacun, avec des listes déroulantes
-• Commencer ici : 5 étapes, 2 minutes
+Le fichier a 3 onglets :
+- Tableau de bord : total par mois et par an, coût annuel des abonnements inutilisés, économies si vous résiliez ceux marqués Annuler, dépenses par catégorie
+- Abonnements : une ligne par abonnement, avec des listes déroulantes
+- Commencer ici : 5 étapes, 2 minutes
 
-FONCTIONNE AVEC Google Sheets (gratuit) et Microsoft Excel, toutes devises.
+Fonctionne avec Google Sheets (gratuit) et Microsoft Excel, toutes devises.
 
-VOUS RECEVEZ
-• Abonnements-Suivi.xlsx + Guide-Demarrage.pdf (en français)
-• La version anglaise : Subscription-Tracker.xlsx + Start-Here-Guide.pdf
+Vous recevez :
+- Abonnements-Suivi.xlsx et Guide-Demarrage.pdf (en français)
+- la version anglaise : Subscription-Tracker.xlsx et Start-Here-Guide.pdf
 
-Fichier numérique : rien n'est expédié. Le tableur ne résilie rien à votre place : il vous montre quoi résilier.
+Fichier numérique : rien n'est expédié. Le tableur ne résilie rien à votre place. Il vous montre ce que vous pourriez résilier.
 
-Conçu par moi avec l'aide d'outils d'IA ; les formules ont été vérifiées avec les données d'exemple.
+Je l'ai conçu avec l'aide d'outils d'IA et j'ai vérifié les formules avec les données d'exemple.
 ```
 
 **Tags**

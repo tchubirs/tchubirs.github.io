@@ -27,33 +27,31 @@ Freelancer Income and Expense Tracker, Tax Set Aside Spreadsheet, Google Sheets 
 ## Description
 
 ```
-Freelancing is great until tax time. This tracker tells you, every week, how much of your income is really yours and how much to put aside for tax.
+Income and expense tracker for freelancers and self-employed people, for Google Sheets and Excel.
+It works out your profit and how much of it to put aside for tax, at the rate you choose.
 
-THE DASHBOARD SHOWS
-• Paid income, expenses and profit for the year
-• How much to put aside for tax, using YOUR rate
-• What you already put aside, and what is still missing
-• Quarter by quarter: income, expenses, profit and tax share (handy for estimated taxes)
-• Heads-up: overdue invoices, invoices waiting, expenses without a receipt
+The Dashboard shows:
+- Paid income, expenses and profit for the year
+- What you already put aside for tax and what is still missing
+- Income, expenses, profit and tax share per quarter, useful for estimated taxes
+- Overdue invoices, invoices waiting and expenses without a receipt
 
-WHAT'S INSIDE (6 tabs)
-• Income: one line per invoice, with paid / waiting / overdue status
-• Expenses: categories you can rename, plus a receipt reminder
-• Tax Savings: log what you move aside
-• Settings: the year, your tax share, when an invoice counts as overdue
-• Dashboard and Start Here
+In the file (6 tabs):
+- Income: one line per invoice, marked Paid (green), Waiting (orange) or Overdue (red)
+- Expenses: categories you can rename, and a reminder when a receipt is missing
+- Tax Savings: log what you move aside
+- Settings: the year, your tax share and when an invoice counts as overdue
+- Dashboard and Start Here
 
-WORKS WITH
-• Google Sheets (free) and Microsoft Excel
-• Any country and any currency: you choose the tax share
+Works with Google Sheets (free) and Microsoft Excel, in any country and currency: you set the tax share.
 
-YOU RECEIVE
-• Freelancer-Tax-Tracker.xlsx
-• Start-Here-Guide.pdf
+You get:
+- Freelancer-Tax-Tracker.xlsx
+- Start-Here-Guide.pdf
 
-Digital download; nothing will be shipped. A tracking tool, not tax advice: check your rate with an accountant.
+This is a digital download and nothing will be shipped. It is a tracking tool and does not give tax advice, so check your rate with an accountant.
 
-Designed by me with the help of AI tools; formulas were checked with the example data before release.
+I designed this with the help of AI tools and checked the formulas with the example data before listing it.
 ```
 
 ## Tags (13)

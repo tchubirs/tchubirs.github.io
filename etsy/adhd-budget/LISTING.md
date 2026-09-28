@@ -1,7 +1,7 @@
 # Anúncio na Etsy: planilha de orçamento para TDAH
 
-Copie cada bloco para o campo de mesmo nome na Etsy (Shop Manager → Listings
-→ Add a listing).
+Copie cada bloco para o campo de mesmo nome na Etsy (Shop Manager > Listings >
+Add a listing).
 
 ## Fotos
 
@@ -11,7 +11,7 @@ Envie, nesta ordem, as imagens da pasta `images/`: 01, 02, 03, 04, 05.
 
 - **Who made it?** I did
 - **What is it?** A finished product
-- **When was it made?** 2020 – 2026
+- **When was it made?** 2020 - 2026
 - **Uso de IA (obrigatório na Etsy desde 2026):** quando a Etsy perguntar
   como o item foi feito, marque **Designed by** a sua loja. A frase sobre IA
   já está no fim da descrição.
@@ -44,43 +44,38 @@ conseguir as primeiras vendas e avaliações.)
 ## Description
 
 ```
-A budget that works WITH an ADHD brain, not against it.
+Monthly budget spreadsheet for Google Sheets and Excel, made for people with ADHD.
+You add one line each time you spend or get paid (date, amount, category) and the sheet works out the rest.
 
-Most budget spreadsheets want you to fill in 40 cells every week. This one asks for one line when money moves: date, amount, category. Everything else updates itself.
+The Dashboard shows:
+- What you can safely spend per day for the rest of the month
+- Money in, spent, bills not paid yet and what is left for the month
+- A colour-coded bar for each category
+- Bills due in the next 3 days, overdue bills and items waiting on your Impulse List
 
-WHAT YOU SEE EVERY DAY
-• One big number: what you can safely spend per day for the rest of the month
-• Colour-coded bars per category, so you see at a glance where the money went
-• Heads-up box: bills due in the next 3 days, overdue bills, items cooling off
+In the file (7 tabs):
+- Dashboard: pick a month and everything updates
+- Budget: your monthly amount per category. You can rename the categories.
+- Log: one line per purchase or payday, with dropdown lists
+- Bills: list each bill once. It turns green when paid, orange in the 3 days before it is due and red when overdue.
+- Impulse List: the 48-hour rule. Note what you want and decide two days later. It adds up the money you kept by not buying.
+- Goals: savings targets with progress bars
+- Start Here: 3 steps, 5 minutes
 
-WHAT'S INSIDE (7 tabs)
-• Dashboard: money in, spent, bills not paid yet, left for the month
-• Budget: your monthly amount per category (rename them freely)
-• Log: one line per purchase or payday, with dropdowns
-• Bills: list each bill once; green = paid, orange = due soon, red = overdue
-• Impulse List: the 48-hour rule. Park it, wait, decide. Shows the money you kept by skipping.
-• Goals: savings targets with progress bars
-• Start Here: 3 steps, 5 minutes
+You only type in the yellow cells. Example data shows how it works before you add your own.
 
-MADE FOR FOCUS
-• You only type in the yellow cells
-• Big numbers, calm colours, no clutter
-• Example data included, so you see how it works before you start
+Works with Google Sheets (free) and Microsoft Excel, in any currency, because amounts are plain numbers.
 
-WORKS WITH
-• Google Sheets (free) and Microsoft Excel
-• Any currency: amounts are plain numbers
+You get:
+- ADHD-Friendly-Budget.xlsx
+- Start-Here-Guide.pdf (how to open it in Google Sheets or Excel)
+- A French version: Budget-TDAH.xlsx and Guide-Demarrage.pdf
 
-YOU RECEIVE
-• ADHD-Friendly-Budget.xlsx
-• Start-Here-Guide.pdf (how to open it in Google Sheets or Excel)
-• A French version: Budget-TDAH.xlsx + Guide-Demarrage.pdf
+This is a digital download and nothing will be shipped. Because it is a digital file I can't accept returns, but message me if anything does not work and I will help.
 
-This is a digital download; nothing will be shipped. Because it is a digital file, returns are not accepted, but message me if anything does not work and I will help.
+It is a budgeting tool and does not give financial advice.
 
-This spreadsheet is a personal budgeting tool, not financial advice.
-
-Designed by me with the help of AI tools; formulas were checked with the example data before release.
+I designed this with the help of AI tools and checked the formulas with the example data before listing it.
 ```
 
 ## Tags (13)
@@ -109,39 +104,32 @@ Google Sheets, Excel, Digital download
 
 ## Tradução francesa (opcional, para aparecer em buscas na França)
 
-Na Etsy: Settings → Shop settings → Languages → adicione **Français**. Depois,
+Na Etsy: Settings > Shop settings > Languages > adicione **Français**. Depois,
 neste anúncio, abra a aba **Français** e cole os textos abaixo.
 
 **Titre**
 ```
-Budget TDAH, Tableur Google Sheets & Excel, Planificateur de Budget Mensuel, Suivi des Factures, Achats Impulsifs, Épargne
+Budget TDAH, tableur Google Sheets & Excel, planificateur de budget mensuel, suivi des factures, achats impulsifs, épargne
 ```
 
 **Description**
 ```
-Un budget qui fonctionne AVEC un cerveau TDAH, pas contre lui.
+Tableur de budget mensuel pour Google Sheets et Excel, pensé pour les personnes avec un TDAH.
+Vous ajoutez une ligne quand vous dépensez ou recevez de l'argent (date, montant, catégorie) et le tableur calcule le reste.
 
-La plupart des tableurs de budget demandent de remplir 40 cases par semaine. Celui-ci ne demande qu'une ligne quand l'argent bouge : date, montant, catégorie. Tout le reste se met à jour tout seul.
+Le tableau de bord montre ce que vous pouvez dépenser par jour jusqu'à la fin du mois, une barre de couleur par catégorie, les factures à payer dans les 3 jours, les factures en retard et les envies en attente.
 
-CE QUE VOUS VOYEZ CHAQUE JOUR
-• Un grand chiffre : ce que vous pouvez dépenser par jour jusqu'à la fin du mois
-• Des barres de couleur par catégorie
-• Un encadré « À surveiller » : factures à payer dans 3 jours, factures en retard, envies en attente
+Le fichier a 7 onglets : Tableau de bord, Budget, Journal, Factures, Envies (la règle des 48 heures), Objectifs (épargne) et Commencer ici.
 
-DANS LE FICHIER (7 onglets)
-• Tableau de bord, Budget, Journal, Factures, Envies (la règle des 48 heures), Objectifs d'épargne, Commencer ici
+Fonctionne avec Google Sheets (gratuit) et Microsoft Excel, toutes devises.
 
-FONCTIONNE AVEC
-• Google Sheets (gratuit) et Microsoft Excel
-• Toutes les devises
+Vous recevez :
+- Budget-TDAH.xlsx et Guide-Demarrage.pdf (en français)
+- la version anglaise : ADHD-Friendly-Budget.xlsx et Start-Here-Guide.pdf
 
-VOUS RECEVEZ
-• Budget-TDAH.xlsx + Guide-Demarrage.pdf (en français)
-• La version anglaise : ADHD-Friendly-Budget.xlsx + Start-Here-Guide.pdf
+Fichier numérique : rien n'est expédié et les retours ne sont pas possibles, mais écrivez-moi en cas de problème. C'est un outil de budget et il ne donne pas de conseil financier.
 
-Fichier numérique : rien n'est expédié. Outil de budget personnel, pas un conseil financier.
-
-Conçu par moi avec l'aide d'outils d'IA ; les formules ont été vérifiées avec les données d'exemple.
+Je l'ai conçu avec l'aide d'outils d'IA et j'ai vérifié les formules avec les données d'exemple.
 ```
 
 **Tags**
