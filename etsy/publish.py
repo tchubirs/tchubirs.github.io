@@ -6,7 +6,7 @@
     python3 etsy/publish.py auth                  print the link the shop owner opens to let the app in
     python3 etsy/publish.py token ADDRESS         the address the browser landed on after that
     python3 etsy/publish.py taxonomy WORD         categories whose name has that word, with their numbers
-    python3 etsy/publish.py publish [N ...] --taxonomy ID [--draft]
+    python3 etsy/publish.py publish [N ...] [--taxonomy ID] [--draft]
                                                   create, fill and publish the listings (all, or only numbers N)
     python3 etsy/publish.py sales                 orders of the last 30 days
 
@@ -32,6 +32,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 SECRET = HERE.parent / ".etsy-secret"
 DONE = HERE / "published.json"
+CATS = HERE / "taxonomy.json"       # the Etsy category of each folder
 API = "https://api.etsy.com/v3/application"
 TOKEN_URL = "https://api.etsy.com/v3/public/oauth/token"
 CONNECT = "https://www.etsy.com/oauth/connect"
@@ -286,10 +287,16 @@ def shop_titles(s):
 
 
 def publish(numbers, taxonomy_id, draft):
+    """With no taxonomy_id, each listing takes the category etsy/taxonomy.json gives its folder."""
     s = load()
     if not s.get("shop_id"):
         sys.exit("no shop yet: run auth and token first")
     chosen = [li for li in listings() if not numbers or li["n"] in numbers]
+    cats = json.loads(CATS.read_text()) if CATS.exists() else {}
+    if taxonomy_id is None:
+        missing = [li["folder"] for li in chosen if li["folder"] not in cats]
+        if missing:
+            sys.exit(f"no category in {CATS.name} for: {missing} (or say --taxonomy ID)")
     broken = [(li["n"], problems(li)) for li in chosen if problems(li)]
     if broken:
         sys.exit(f"fix these first (python3 etsy/publish.py check): {broken}")
@@ -313,7 +320,8 @@ def publish(numbers, taxonomy_id, draft):
         if not rec.get("listing_id"):
             made = call(s, "POST", f"/shops/{shop}/listings", data={
                 "quantity": 999, "title": li["title"], "description": li["description"], "price": f"{li['price']:.2f}",
-                "who_made": "i_did", "when_made": "2020_2026", "taxonomy_id": taxonomy_id, "type": "download",
+                "who_made": "i_did", "when_made": "2020_2026",
+                "taxonomy_id": taxonomy_id if taxonomy_id is not None else cats[li["folder"]], "type": "download",
                 "is_supply": "false", "should_auto_renew": "true", "tags": ",".join(li["tags"]),
                 "materials": ",".join(li["materials"])})
             rec = {"listing_id": made["listing_id"], "photos": 0, "files": 0, "state": "draft"}
@@ -365,10 +373,12 @@ def main(args):
         taxonomy(args[1])
     elif args[0] == "publish":
         rest = args[1:]
-        if "--taxonomy" not in rest or rest.index("--taxonomy") + 1 >= len(rest):
-            sys.exit("say which category: --taxonomy ID (python3 etsy/publish.py taxonomy planner)")
-        at = rest.index("--taxonomy")
-        tax = int(rest.pop(at + 1))
+        tax = None
+        if "--taxonomy" in rest:
+            at = rest.index("--taxonomy")
+            if at + 1 >= len(rest) or not rest[at + 1].isdigit():
+                sys.exit("say which category: --taxonomy ID (python3 etsy/publish.py taxonomy planner)")
+            tax = int(rest.pop(at + 1))
         numbers = {int(a) for a in rest if a.isdigit()}
         publish(numbers, tax, "--draft" in rest)
     elif args[0] == "sales":

@@ -138,5 +138,12 @@ assert shop["tokens"] == 2, "the token was not refreshed once"
 before = len(shop["calls"])
 P.main(["publish", "--taxonomy", "1281", "2", "22"])
 assert all(c[0] == "GET" for c in shop["calls"][before:]), shop["calls"][before:]
+# no --taxonomy: the category comes from etsy/taxonomy.json, per folder
+P.main(["publish", "3"])
+done = json.loads(P.DONE.read_text())
+cats = json.loads(P.CATS.read_text())
+li = shop["listings"][done["3"]["listing_id"]]
+assert li["data"]["taxonomy_id"] == cats[P.listings()[2]["folder"]], li["data"]["taxonomy_id"]
+assert all(li["folder"] in cats for li in P.listings()), "a listing has no category"
 P.main(["sales"])
 print("all good")
