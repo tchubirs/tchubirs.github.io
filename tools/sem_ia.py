@@ -99,7 +99,9 @@ def main(args):
     if args:
         files = [pathlib.Path(a).resolve() for a in args]
     else:
-        listed = subprocess.run(["git", "ls-files", *SCOPE], cwd=ROOT, capture_output=True, text=True).stdout
+        # New files count too, so the check runs before `git add`.
+        listed = subprocess.run(["git", "ls-files", "--cached", "--others", "--exclude-standard", *SCOPE], cwd=ROOT,
+                                capture_output=True, text=True).stdout
         files = [ROOT / p for p in listed.split() if p.endswith((".md", ".py"))]
     problems = []
     for f in files:

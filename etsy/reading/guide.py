@@ -26,7 +26,7 @@ a day are worked out.</li>
 <li><b>Books you want to read</b> go in the same list as Want to read. A book you stop reading can be set to Did not
 finish, and it stays out of your count.</li>
 </ul>
-<p style="{S}">The Dashboard shows your books and pages for the year, your average rating, whether you are ahead or
+<p style="{S}">The Dashboard shows your books and pages for the year, your average rating, if you are ahead or
 behind your goal for today's date, your books by month and by genre, what you are reading now and your five-star
 books. The Bookshelf puts every book you finish on a shelf, in the order you finished them and in the colour of its
 genre. It holds 100 books.</p>

@@ -30,7 +30,7 @@ Reading Tracker Spreadsheet, Book Journal with Yearly Reading Goal, Reading Log,
 Reading tracker for Google Sheets and Excel, for book lovers, reading challenges and book clubs.
 
 Dashboard:
-- Your goal for the year, with a bar and whether you are ahead or behind for today's date
+- Your goal for the year, with a bar that shows if you are ahead or behind for today's date
 - Books and pages this year, your average rating, what you are reading now and how many you want to read
 - Books and pages by month, with a chart
 - Books, pages and average rating by genre
