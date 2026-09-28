@@ -1,4 +1,4 @@
-# Task: open an Etsy shop and publish thirty-two digital-download listings
+# Task: open an Etsy shop and publish thirty-three digital-download listings
 
 You are acting in the user's own browser, on the user's behalf. Everything to
 publish is already made: spreadsheet files, guides, photos and listing texts.
@@ -131,7 +131,7 @@ save it.
    lets you finish opening the shop after one listing exists.
 5. Payment, billing and security steps: **stop and hand over to the user**.
 
-## 3. The thirty-two listings
+## 3. The thirty-three listings
 
 Each listing's texts are in its `LISTING.md`: title, description, 13 tags,
 price, and which files and photos to upload. Read it at the base URL above,
@@ -171,6 +171,7 @@ followed by the path.
 | 30 | Timesheet and invoice maker | `timesheet/LISTING.md` | 6.50 |
 | 31 | Christmas planner | `christmas/LISTING.md` | 6.50 |
 | 32 | Software and tools tracker | `software/LISTING.md` | 7.50 |
+| 33 | Blood sugar and medicine log | `glucose/LISTING.md` | 5.50 |
 
 The price column replaces the dollar prices in the LISTING.md files, because
 the shop is in euros.
