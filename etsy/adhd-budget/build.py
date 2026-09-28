@@ -13,7 +13,7 @@ from openpyxl.worksheet.datavalidation import DataValidation
 
 F = "Arial"
 TEAL, TEAL_D, INK, MUTED = "1F6F78", "15525A", "1E2A2F", "6B7B80"
-PAPER, INPUT, LINE = "F6F4EF", "FFF4C2", "D9D4C7"
+PAPER, INPUT, LINE = "FFFFFF", "FFF4C2", "D5DBDB"
 OK, WARN, BAD = "D8F0DC", "FFE2B8", "F9C9C4"
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
           "August", "September", "October", "November", "December"]
@@ -68,24 +68,24 @@ wb = Workbook()
 # ---------------------------------------------------------------- Start Here
 ws = wb.active
 ws.title = "Start Here"
-sheet_base(ws, "Start here: 3 steps, 5 minutes", "Only type in YELLOW cells. Everything else fills itself in.", [3, 6, 90])
+sheet_base(ws, "Start here", "Type only in the yellow cells. Everything else is calculated.", [3, 6, 90])
 steps = [
     ("1", "Budget tab: type how much you want to spend per category each month."),
-    ("2", "Bills tab: list your bills once (amount + day of the month they are due)."),
-    ("3", "Log tab: every time you spend or get paid, add ONE line: date, amount, category."),
+    ("2", "Bills tab: list your bills once, with the amount and the day of the month they are due."),
+    ("3", "Log tab: each time you spend or get paid, add one line with the date, amount and category."),
     ("", ""),
-    ("★", "Dashboard: pick the month. The big number is what you can safely spend per day."),
-    ("⏳", "Impulse List: want to buy something? Park it here for 48 hours first."),
-    ("🎯", "Goals: watch your savings bars fill up."),
+    ("4", "Dashboard: pick the month. The big number is what you can spend per day for the rest of it."),
+    ("5", "Impulse List: when you want to buy something, write it here and wait 48 hours."),
+    ("6", "Goals: update what you have saved and the bars fill up."),
 ]
 for i, (n, text) in enumerate(steps):
     r = 5 + i * 2
     ws.cell(r, 2, n).font = font(18, True, TEAL)
     ws.cell(r, 3, text).font = font(14)
     ws.row_dimensions[r].height = 26
-ws["C21"] = "Tip: the example lines in Log, Bills and Goals are there to show how it works. Delete them and add yours."
+ws["C21"] = "The example lines in Log, Bills and Goals show how it works. Delete them and add your own."
 ws["C21"].font = font(11, color=MUTED, italic=True)
-ws["C23"] = "Works in Google Sheets (File → Import, or open the file in Drive) and in Microsoft Excel."
+ws["C23"] = "Works in Google Sheets (File > Import, or open the file from Drive) and in Microsoft Excel."
 ws["C23"].font = font(11, color=MUTED, italic=True)
 
 # ---------------------------------------------------------------- Budget
@@ -107,7 +107,7 @@ cellstyle(bud["E8"], True, MONEY); bud["E8"] = 150
 
 # ---------------------------------------------------------------- Log
 log = wb.create_sheet("Log")
-sheet_base(log, "Log: one line per money moment", "Date · Amount · Type · Category · Note. That's it.", [3, 14, 13, 11, 22, 34])
+sheet_base(log, "Log: one line per purchase or payday", "Date, amount, type, category, and a note if you want.", [3, 14, 13, 11, 22, 34])
 header(log, 5, 2, ["Date", "Amount", "Type", "Category", "Note"])
 today = dt.date.today()
 m0 = today.replace(day=1)
@@ -116,7 +116,7 @@ sample = [
     (2, 64.3, "Expense", "Groceries", "Supermarket"), (3, 12.5, "Expense", "Eating out", "Lunch"),
     (4, 9.99, "Expense", "Subscriptions", "Music"), (5, 38, "Expense", "Transport", "Monthly pass"),
     (6, 23.9, "Expense", "Fun", "Cinema + snacks"), (8, 71.2, "Expense", "Groceries", "Weekly shop"),
-    (9, 18, "Expense", "Eating out", "Pizza"), (10, 45, "Expense", "Shopping", "Shoes (was on the Impulse List!)"),
+    (9, 18, "Expense", "Eating out", "Pizza"), (10, 45, "Expense", "Shopping", "Shoes, from the Impulse List"),
     (12, 15.49, "Expense", "Subscriptions", "Streaming"), (13, 30, "Expense", "Health", "Pharmacy"),
 ]
 for i, (d, amt, typ, cat, note) in enumerate(sample):
@@ -140,14 +140,14 @@ R = lambda col: f"Log!${col}$6:${col}${LOG_END}"
 
 # ---------------------------------------------------------------- Bills
 bil = wb.create_sheet("Bills")
-sheet_base(bil, "Bills: list them once", "Tick 'Paid' each month. Colours warn you before the due date.", [3, 24, 13, 11, 10, 26])
+sheet_base(bil, "Bills: list them once", "Choose Yes under 'Paid?' each month. The colours warn you before the due date.", [3, 24, 13, 11, 10, 26])
 header(bil, 5, 2, ["Bill", "Amount", "Due day", "Paid?", "Status"])
 # Example bills around the build date, so the demo shows every status.
 d0 = today.day
 month_len = (today.replace(day=28) + dt.timedelta(days=4)).replace(day=1) - dt.timedelta(days=1)
 soon = lambda k: d0 + k if d0 + k <= month_len.day else max(1, d0 - 1)
-bills = [("Rent", 900, 1, True), ("Phone", 19.99, soon(1), False), ("Internet", 29.99, 15, True),
-         ("Electricity", 54, soon(2), False), ("Gym", 24.9, max(1, d0 - 4), False), ("Insurance", 32.5, 5, True)]
+bills = [("Rent", 900, 1, "Yes"), ("Phone", 19.99, soon(1), "No"), ("Internet", 29.99, 15, "Yes"),
+         ("Electricity", 54, soon(2), "No"), ("Gym", 24.9, max(1, d0 - 4), "No"), ("Insurance", 32.5, 5, "Yes")]
 BILL_END = 30
 for i in range(BILL_END - 5):
     r = 6 + i
@@ -156,19 +156,21 @@ for i in range(BILL_END - 5):
     cellstyle(bil.cell(r, 3, amt), True, MONEY)
     cellstyle(bil.cell(r, 4, due), True, "0", align="center")
     cellstyle(bil.cell(r, 5, paid), True, align="center")
-    s = bil.cell(r, 6, f'=IF(B{r}="","",IF(E{r}=TRUE,"✓ Paid",IF(D{r}<DAY(TODAY()),"⚠ OVERDUE",'
-                        f'IF(D{r}-DAY(TODAY())<=3,"Due in "&(D{r}-DAY(TODAY()))&" day(s)","Due on the "&D{r}))))')
+    n = f"(D{r}-DAY(TODAY()))"
+    th = f'IF(AND(D{r}>=11,D{r}<=13),"th",IF(MOD(D{r},10)=1,"st",IF(MOD(D{r},10)=2,"nd",IF(MOD(D{r},10)=3,"rd","th"))))'
+    s = bil.cell(r, 6, f'=IF(B{r}="","",IF(E{r}="Yes","Paid",IF(D{r}<DAY(TODAY()),"Overdue",IF({n}=0,"Due today",'
+                        f'IF({n}<=3,"Due in "&{n}&IF({n}=1," day"," days"),"Due on the "&D{r}&{th})))))')
     cellstyle(s, False, align="center")
-dv_paid = DataValidation(type="list", formula1='"TRUE,FALSE"', allow_blank=False)
+dv_paid = DataValidation(type="list", formula1='"Yes,No"', allow_blank=False)
 bil.add_data_validation(dv_paid); dv_paid.add(f"E6:E{BILL_END}")
 rng = f"F6:F{BILL_END}"
-bil.conditional_formatting.add(rng, FormulaRule(formula=['LEFT($F6,1)="✓"'], fill=fill(OK)))
-bil.conditional_formatting.add(rng, FormulaRule(formula=['LEFT($F6,1)="⚠"'], fill=fill(BAD), font=Font(name=F, bold=True, color="9B1C1C")))
-bil.conditional_formatting.add(rng, FormulaRule(formula=['AND(LEFT($F6,6)="Due in",($D6-DAY(TODAY()))<=3)'], fill=fill(WARN)))
+bil.conditional_formatting.add(rng, FormulaRule(formula=['$F6="Paid"'], fill=fill(OK)))
+bil.conditional_formatting.add(rng, FormulaRule(formula=['$F6="Overdue"'], fill=fill(BAD), font=Font(name=F, bold=True, color="9B1C1C")))
+bil.conditional_formatting.add(rng, FormulaRule(formula=['OR(LEFT($F6,6)="Due in",$F6="Due today")'], fill=fill(WARN)))
 
 # ---------------------------------------------------------------- Impulse List
 imp = wb.create_sheet("Impulse List")
-sheet_base(imp, "Impulse List: the 48-hour rule", "Want it? Park it here. If you still want it in 48 hours, go ahead.", [3, 26, 12, 14, 34, 14])
+sheet_base(imp, "Impulse List: the 48-hour rule", "Write down what you want to buy. If you still want it 48 hours later, go ahead.", [3, 26, 12, 14, 34, 14])
 header(imp, 5, 2, ["Item", "Price", "Added on", "Verdict", "I decided"])
 items = [("Wireless earbuds", 79, -3, ""), ("Standing desk", 249, -1, ""), ("Shoes", 45, -6, "Bought"),
          ("Smart watch", 199, -9, "Skipped"), ("Board game", 39, 0, "")]
@@ -178,14 +180,15 @@ for i in range(25):
     cellstyle(imp.cell(r, 2, item[0] if item else None), True)
     cellstyle(imp.cell(r, 3, item[1] if item else None), True, MONEY)
     cellstyle(imp.cell(r, 4, today + dt.timedelta(days=item[2]) if item else None), True, "DD MMM YYYY")
-    v = imp.cell(r, 5, f'=IF(B{r}="","",IF(F{r}<>"",F{r},IF(TODAY()-D{r}>=2,"✓ 48h passed: buy only if you still want it",'
-                        f'"⏳ Wait "&(2-(TODAY()-D{r}))&" more day(s)")))')
+    w = f"(2-(TODAY()-D{r}))"
+    v = imp.cell(r, 5, f'=IF(B{r}="","",IF(F{r}<>"",F{r},IF(TODAY()-D{r}>=2,"48 hours passed: buy it if you still want it",'
+                        f'"Wait "&{w}&IF({w}=1," more day"," more days"))))')
     cellstyle(v, False)
     cellstyle(imp.cell(r, 6, item[3] if item else None), True, align="center")
 dv_dec = DataValidation(type="list", formula1='"Bought,Skipped"', allow_blank=True)
 imp.add_data_validation(dv_dec); dv_dec.add("F6:F30")
-imp.conditional_formatting.add("E6:E30", FormulaRule(formula=['LEFT($E6,1)="⏳"'], fill=fill(WARN)))
-imp.conditional_formatting.add("E6:E30", FormulaRule(formula=['LEFT($E6,1)="✓"'], fill=fill(OK)))
+imp.conditional_formatting.add("E6:E30", FormulaRule(formula=['LEFT($E6,4)="Wait"'], fill=fill(WARN)))
+imp.conditional_formatting.add("E6:E30", FormulaRule(formula=['LEFT($E6,8)="48 hours"'], fill=fill(OK)))
 imp.conditional_formatting.add("E6:E30", FormulaRule(formula=['$E6="Skipped"'], fill=fill("E3E8FF")))
 imp["H5"] = "Money kept by skipping:"; imp["H5"].font = font(12, True, TEAL_D)
 imp["H6"] = '=SUMIFS(C6:C30,F6:F30,"Skipped")'; imp["H6"].number_format = MONEY; imp["H6"].font = font(20, True, TEAL)
@@ -208,7 +211,7 @@ for i in range(10):
 
 # ---------------------------------------------------------------- Dashboard (first tab)
 db = wb.create_sheet("Dashboard", 0)
-sheet_base(db, "Money at a glance", "Pick a month. Everything below updates.", [3, 24, 15, 15, 15, 30, 3, 44])
+sheet_base(db, "Money overview", "Pick a month. Everything below updates.", [3, 24, 15, 15, 15, 30, 3, 44])
 db["B5"] = "Month"; db["B5"].font = font(11, True)
 db["C5"] = MONTHS[today.month - 1]; cellstyle(db["C5"], True, bold=True)
 db["D5"] = "Year"; db["D5"].font = font(11, True); db["D5"].alignment = Alignment(horizontal="right")
@@ -223,7 +226,7 @@ OUT = f'SUMIFS({R("C")},{R("D")},"Expense",{R("B")},">="&$J$2,{R("B")},"<="&$J$3
 tiles = [
     ("B", "Money in", f"={IN}", TEAL),
     ("C", "Spent", f"={OUT}", "B4541F"),
-    ("D", "Bills not paid yet", '=SUM(Bills!$C$6:$C$30)-SUMIFS(Bills!$C$6:$C$30,Bills!$E$6:$E$30,TRUE)', "B4541F"),
+    ("D", "Bills not paid yet", '=SUM(Bills!$C$6:$C$30)-SUMIFS(Bills!$C$6:$C$30,Bills!$E$6:$E$30,"Yes")', "B4541F"),
     ("E", "Left for the month", "=B8-C8-D8-Budget!$E$8", TEAL),
 ]
 for col, label, formula, colour in tiles:
@@ -257,15 +260,22 @@ db.conditional_formatting.add(f"F13:F{end}", FormulaRule(formula=["AND($C13>0,$D
 db.conditional_formatting.add(f"F13:F{end}", FormulaRule(formula=["AND($C13>0,$D13/$C13>0.8,$D13/$C13<=1)"], font=Font(name=F, color="C98A0B")))
 
 db["H12"] = "Heads-up"; db["H12"].font = font(11, True, "FFFFFF"); db["H12"].fill = fill(TEAL)
+soon = '(COUNTIFS(Bills!$F$6:$F$30,"Due in*")+COUNTIFS(Bills!$F$6:$F$30,"Due today"))'
+late = 'COUNTIFS(Bills!$F$6:$F$30,"Overdue")'
+wait = 'COUNTIFS(\'Impulse List\'!$E$6:$E$30,"Wait*")'
 notes = [
-    ('=COUNTIFS(Bills!$F$6:$F$30,"Due in*")&" bill(s) due in the next 3 days"', WARN),
-    ('=COUNTIFS(Bills!$F$6:$F$30,"⚠*")&" bill(s) overdue"', BAD),
-    ('=COUNTIFS(\'Impulse List\'!$E$6:$E$30,"⏳*")&" item(s) cooling off on your Impulse List"', "E3E8FF"),
+    (f'=IF({soon}=0,"No bills due in the next 3 days",IF({soon}=1,"1 bill",{soon}&" bills")&" due in the next 3 days")', WARN),
+    (f'=IF({late}=0,"No overdue bills",IF({late}=1,"1 bill is overdue",{late}&" bills are overdue"))', BAD),
+    (f'=IF({wait}=0,"Nothing waiting on your Impulse List",IF({wait}=1,"1 item",{wait}&" items")&" waiting on your Impulse List")',
+     "E3E8FF"),
     ('="Kept by skipping impulse buys: "&FIXED(\'Impulse List\'!$H$6,2)', OK),
 ]
 for i, (f, colour) in enumerate(notes):
     c = db.cell(13 + i * 2, 8, f); c.fill = fill(colour); c.font = font(11); c.border = box
     c.alignment = Alignment(vertical="center")
+for cell, prefix in (("H13", "No"), ("H15", "No"), ("H17", "Nothing")):
+    db.conditional_formatting.add(cell, FormulaRule(formula=[f'LEFT({cell},{len(prefix)})="{prefix}"'], fill=fill(OK)))
+db["H12"].alignment = Alignment(vertical="center")
 for r in range(13, 13 + len(CATS)):
     db.row_dimensions[r].height = 24
 

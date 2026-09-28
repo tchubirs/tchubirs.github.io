@@ -13,7 +13,7 @@ from openpyxl.worksheet.datavalidation import DataValidation
 
 F = "Arial"
 TEAL, TEAL_D, INK, MUTED = "1F6F78", "15525A", "1E2A2F", "6B7B80"
-PAPER, INPUT, LINE = "F6F4EF", "FFF4C2", "D9D4C7"
+PAPER, INPUT, LINE = "FFFFFF", "FFF4C2", "D5DBDB"
 OK, WARN, BAD = "D8F0DC", "FFE2B8", "F9C9C4"
 MONTHS = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet",
           "Août", "Septembre", "Octobre", "Novembre", "Décembre"]
@@ -68,24 +68,24 @@ wb = Workbook()
 # ---------------------------------------------------------------- Start Here
 ws = wb.active
 ws.title = "Commencer ici"
-sheet_base(ws, "Commencer ici : 3 étapes, 5 minutes", "Tapez uniquement dans les cases JAUNES. Tout le reste se remplit tout seul.", [3, 6, 90])
+sheet_base(ws, "Commencer ici", "Tapez uniquement dans les cases jaunes. Tout le reste est calculé.", [3, 6, 90])
 steps = [
     ("1", "Onglet Budget : combien vous voulez dépenser par catégorie chaque mois."),
-    ("2", "Onglet Factures : listez vos factures une seule fois (montant + jour d’échéance)."),
-    ("3", "Onglet Journal : à chaque dépense ou rentrée d’argent, ajoutez UNE ligne : date, montant, catégorie."),
+    ("2", "Onglet Factures : listez vos factures une seule fois, avec le montant et le jour d'échéance."),
+    ("3", "Onglet Journal : à chaque dépense ou rentrée d'argent, ajoutez une ligne avec la date, le montant et la catégorie."),
     ("", ""),
-    ("★", "Tableau de bord : choisissez le mois. Le grand chiffre, c’est ce que vous pouvez dépenser par jour sans risque."),
-    ("⏳", "Envies : envie d’acheter quelque chose ? Mettez-le ici 48 heures d’abord."),
-    ("🎯", "Objectifs : regardez vos barres d’épargne se remplir."),
+    ("4", "Tableau de bord : choisissez le mois. Le grand chiffre indique ce que vous pouvez dépenser par jour jusqu'à la fin du mois."),
+    ("5", "Envies : quand vous voulez acheter quelque chose, notez-le ici et attendez 48 heures."),
+    ("6", "Objectifs : mettez à jour ce que vous avez épargné et les barres se remplissent."),
 ]
 for i, (n, text) in enumerate(steps):
     r = 5 + i * 2
     ws.cell(r, 2, n).font = font(18, True, TEAL)
     ws.cell(r, 3, text).font = font(14)
     ws.row_dimensions[r].height = 26
-ws["C21"] = "Astuce : les lignes d’exemple (Journal, Factures, Objectifs) montrent comment ça marche. Supprimez-les et ajoutez les vôtres."
+ws["C21"] = "Les lignes d'exemple du Journal, des Factures et des Objectifs montrent comment ça marche. Supprimez-les et ajoutez les vôtres."
 ws["C21"].font = font(11, color=MUTED, italic=True)
-ws["C23"] = "Fonctionne dans Google Sheets (Fichier → Importer, ou ouvrez le fichier dans Drive) et dans Microsoft Excel."
+ws["C23"] = "Fonctionne dans Google Sheets (Fichier > Importer, ou ouvrez le fichier depuis Drive) et dans Microsoft Excel."
 ws["C23"].font = font(11, color=MUTED, italic=True)
 
 # ---------------------------------------------------------------- Budget
@@ -107,7 +107,7 @@ cellstyle(bud["E8"], True, MONEY); bud["E8"] = 150
 
 # ---------------------------------------------------------------- Log
 log = wb.create_sheet("Journal")
-sheet_base(log, "Journal : une ligne par mouvement d’argent", "Date · Montant · Type · Catégorie · Note. C’est tout.", [3, 14, 13, 11, 22, 34])
+sheet_base(log, "Journal : une ligne par achat ou rentrée d'argent", "Date, montant, type, catégorie, et une note si vous voulez.", [3, 14, 13, 11, 22, 34])
 header(log, 5, 2, ["Date", "Montant", "Type", "Catégorie", "Note"])
 today = dt.date.today()
 m0 = today.replace(day=1)
@@ -116,7 +116,7 @@ sample = [
     (2, 64.3, "Dépense", "Courses", "Supermarché"), (3, 12.5, "Dépense", "Restaurants", "Déjeuner"),
     (4, 9.99, "Dépense", "Abonnements", "Musique"), (5, 38, "Dépense", "Transports", "Pass mensuel"),
     (6, 23.9, "Dépense", "Loisirs", "Cinéma + snacks"), (8, 71.2, "Dépense", "Courses", "Courses de la semaine"),
-    (9, 18, "Dépense", "Restaurants", "Pizza"), (10, 45, "Dépense", "Shopping", "Chaussures (passées par la liste Envies !)"),
+    (9, 18, "Dépense", "Restaurants", "Pizza"), (10, 45, "Dépense", "Shopping", "Chaussures, passées par la liste Envies"),
     (12, 15.49, "Dépense", "Abonnements", "Streaming"), (13, 30, "Dépense", "Santé", "Pharmacie"),
 ]
 for i, (d, amt, typ, cat, note) in enumerate(sample):
@@ -140,14 +140,14 @@ R = lambda col: f"Journal!${col}$6:${col}${LOG_END}"
 
 # ---------------------------------------------------------------- Bills
 bil = wb.create_sheet("Factures")
-sheet_base(bil, "Factures : à lister une seule fois", "Mettez « Payée » à TRUE chaque mois. Les couleurs préviennent avant l’échéance.", [3, 24, 13, 11, 10, 26])
-header(bil, 5, 2, ["Facture", "Montant", "Jour d’échéance", "Payée ?", "Statut"])
+sheet_base(bil, "Factures : à lister une seule fois", "Chaque mois, choisissez Oui quand une facture est payée. Les couleurs préviennent avant l'échéance.", [3, 24, 13, 11, 10, 26])
+header(bil, 5, 2, ["Facture", "Montant", "Jour d'échéance", "Payée ?", "Statut"])
 # Example bills around the build date, so the demo shows every status.
 d0 = today.day
 month_len = (today.replace(day=28) + dt.timedelta(days=4)).replace(day=1) - dt.timedelta(days=1)
 soon = lambda k: d0 + k if d0 + k <= month_len.day else max(1, d0 - 1)
-bills = [("Loyer", 900, 1, True), ("Téléphone", 19.99, soon(1), False), ("Internet", 29.99, 15, True),
-         ("Électricité", 54, soon(2), False), ("Salle de sport", 24.9, max(1, d0 - 4), False), ("Assurance", 32.5, 5, True)]
+bills = [("Loyer", 900, 1, "Oui"), ("Téléphone", 19.99, soon(1), "Non"), ("Internet", 29.99, 15, "Oui"),
+         ("Électricité", 54, soon(2), "Non"), ("Salle de sport", 24.9, max(1, d0 - 4), "Non"), ("Assurance", 32.5, 5, "Oui")]
 BILL_END = 30
 for i in range(BILL_END - 5):
     r = 6 + i
@@ -156,19 +156,20 @@ for i in range(BILL_END - 5):
     cellstyle(bil.cell(r, 3, amt), True, MONEY)
     cellstyle(bil.cell(r, 4, due), True, "0", align="center")
     cellstyle(bil.cell(r, 5, paid), True, align="center")
-    s = bil.cell(r, 6, f'=IF(B{r}="","",IF(E{r}=TRUE,"✓ Payée",IF(D{r}<DAY(TODAY()),"⚠ EN RETARD",'
-                        f'IF(D{r}-DAY(TODAY())<=3,"Dans "&(D{r}-DAY(TODAY()))&" jour(s)","Le "&D{r}))))')
+    n = f"(D{r}-DAY(TODAY()))"
+    s = bil.cell(r, 6, f'=IF(B{r}="","",IF(E{r}="Oui","Payée",IF(D{r}<DAY(TODAY()),"En retard",IF({n}=0,"Aujourd\'hui",'
+                        f'IF({n}<=3,"Dans "&{n}&IF({n}<=1," jour"," jours"),"Le "&D{r})))))')
     cellstyle(s, False, align="center")
-dv_paid = DataValidation(type="list", formula1='"TRUE,FALSE"', allow_blank=False)
+dv_paid = DataValidation(type="list", formula1='"Oui,Non"', allow_blank=False)
 bil.add_data_validation(dv_paid); dv_paid.add(f"E6:E{BILL_END}")
 rng = f"F6:F{BILL_END}"
-bil.conditional_formatting.add(rng, FormulaRule(formula=['LEFT($F6,1)="✓"'], fill=fill(OK)))
-bil.conditional_formatting.add(rng, FormulaRule(formula=['LEFT($F6,1)="⚠"'], fill=fill(BAD), font=Font(name=F, bold=True, color="9B1C1C")))
-bil.conditional_formatting.add(rng, FormulaRule(formula=['AND(LEFT($F6,4)="Dans",($D6-DAY(TODAY()))<=3)'], fill=fill(WARN)))
+bil.conditional_formatting.add(rng, FormulaRule(formula=['$F6="Payée"'], fill=fill(OK)))
+bil.conditional_formatting.add(rng, FormulaRule(formula=['$F6="En retard"'], fill=fill(BAD), font=Font(name=F, bold=True, color="9B1C1C")))
+bil.conditional_formatting.add(rng, FormulaRule(formula=['OR(LEFT($F6,4)="Dans",$F6="Aujourd\'hui")'], fill=fill(WARN)))
 
 # ---------------------------------------------------------------- Impulse List
 imp = wb.create_sheet("Envies")
-sheet_base(imp, "Envies : la règle des 48 heures", "Envie de l’acheter ? Mettez-le ici. Si l’envie est toujours là dans 48 heures, allez-y.", [3, 26, 12, 14, 34, 14])
+sheet_base(imp, "Envies : la règle des 48 heures", "Notez ce que vous voulez acheter. Si l'envie est toujours là 48 heures plus tard, allez-y.", [3, 26, 12, 14, 34, 14])
 header(imp, 5, 2, ["Article", "Prix", "Ajouté le", "Verdict", "Ma décision"])
 items = [("Écouteurs sans fil", 79, -3, ""), ("Bureau debout", 249, -1, ""), ("Chaussures", 45, -6, "Acheté"),
          ("Montre connectée", 199, -9, "Renoncé"), ("Jeu de société", 39, 0, "")]
@@ -178,14 +179,15 @@ for i in range(25):
     cellstyle(imp.cell(r, 2, item[0] if item else None), True)
     cellstyle(imp.cell(r, 3, item[1] if item else None), True, MONEY)
     cellstyle(imp.cell(r, 4, today + dt.timedelta(days=item[2]) if item else None), True, "DD MMM YYYY")
-    v = imp.cell(r, 5, f'=IF(B{r}="","",IF(F{r}<>"",F{r},IF(TODAY()-D{r}>=2,"✓ 48 h passées : achetez seulement si l’envie est toujours là",'
-                        f'"⏳ Encore "&(2-(TODAY()-D{r}))&" jour(s) à attendre")))')
+    w = f"(2-(TODAY()-D{r}))"
+    v = imp.cell(r, 5, f'=IF(B{r}="","",IF(F{r}<>"",F{r},IF(TODAY()-D{r}>=2,"48 heures passées : achetez si l\'envie est toujours là",'
+                        f'"Encore "&{w}&IF({w}<=1," jour"," jours")&" à attendre")))')
     cellstyle(v, False)
     cellstyle(imp.cell(r, 6, item[3] if item else None), True, align="center")
 dv_dec = DataValidation(type="list", formula1='"Acheté,Renoncé"', allow_blank=True)
 imp.add_data_validation(dv_dec); dv_dec.add("F6:F30")
-imp.conditional_formatting.add("E6:E30", FormulaRule(formula=['LEFT($E6,1)="⏳"'], fill=fill(WARN)))
-imp.conditional_formatting.add("E6:E30", FormulaRule(formula=['LEFT($E6,1)="✓"'], fill=fill(OK)))
+imp.conditional_formatting.add("E6:E30", FormulaRule(formula=['LEFT($E6,6)="Encore"'], fill=fill(WARN)))
+imp.conditional_formatting.add("E6:E30", FormulaRule(formula=['LEFT($E6,9)="48 heures"'], fill=fill(OK)))
 imp.conditional_formatting.add("E6:E30", FormulaRule(formula=['$E6="Renoncé"'], fill=fill("E3E8FF")))
 imp["H5"] = "Argent gardé en renonçant :"; imp["H5"].font = font(12, True, TEAL_D)
 imp["H6"] = '=SUMIFS(C6:C30,F6:F30,"Renoncé")'; imp["H6"].number_format = MONEY; imp["H6"].font = font(20, True, TEAL)
@@ -193,9 +195,9 @@ imp.column_dimensions["G"].width = 3; imp.column_dimensions["H"].width = 26
 
 # ---------------------------------------------------------------- Goals
 gol = wb.create_sheet("Objectifs")
-sheet_base(gol, "Objectifs d’épargne", "Mettez à jour « Déjà épargné » dès que vous mettez de l’argent de côté.", [3, 24, 14, 14, 10, 34])
+sheet_base(gol, "Objectifs d'épargne", "Mettez à jour la colonne Déjà épargné dès que vous mettez de l'argent de côté.", [3, 24, 14, 14, 10, 34])
 header(gol, 5, 2, ["Objectif", "Cible", "Déjà épargné", "Fait", "Progression"])
-goals = [("Fonds d’urgence", 3000, 1250), ("Voyage", 1200, 400), ("Nouvel ordinateur", 900, 810)]
+goals = [("Fonds d'urgence", 3000, 1250), ("Voyage", 1200, 400), ("Nouvel ordinateur", 900, 810)]
 for i in range(10):
     r = 6 + i
     g = goals[i] if i < len(goals) else None
@@ -208,7 +210,7 @@ for i in range(10):
 
 # ---------------------------------------------------------------- Dashboard (first tab)
 db = wb.create_sheet("Tableau de bord", 0)
-sheet_base(db, "L’argent en un coup d’œil", "Choisissez un mois. Tout se met à jour.", [3, 24, 15, 15, 15, 30, 3, 44])
+sheet_base(db, "Vue d'ensemble", "Choisissez un mois. Tout se met à jour.", [3, 24, 15, 15, 15, 30, 3, 44])
 db["B5"] = "Mois"; db["B5"].font = font(11, True)
 db["C5"] = MONTHS[today.month - 1]; cellstyle(db["C5"], True, bold=True)
 db["D5"] = "Année"; db["D5"].font = font(11, True); db["D5"].alignment = Alignment(horizontal="right")
@@ -223,7 +225,7 @@ OUT = f'SUMIFS({R("C")},{R("D")},"Dépense",{R("B")},">="&$J$2,{R("B")},"<="&$J$
 tiles = [
     ("B", "Rentrées", f"={IN}", TEAL),
     ("C", "Dépensé", f"={OUT}", "B4541F"),
-    ("D", "Factures à payer", '=SUM(Factures!$C$6:$C$30)-SUMIFS(Factures!$C$6:$C$30,Factures!$E$6:$E$30,TRUE)', "B4541F"),
+    ("D", "Factures à payer", '=SUM(Factures!$C$6:$C$30)-SUMIFS(Factures!$C$6:$C$30,Factures!$E$6:$E$30,"Oui")', "B4541F"),
     ("E", "Reste du mois", "=B8-C8-D8-Budget!$E$8", TEAL),
 ]
 for col, label, formula, colour in tiles:
@@ -257,15 +259,21 @@ db.conditional_formatting.add(f"F13:F{end}", FormulaRule(formula=["AND($C13>0,$D
 db.conditional_formatting.add(f"F13:F{end}", FormulaRule(formula=["AND($C13>0,$D13/$C13>0.8,$D13/$C13<=1)"], font=Font(name=F, color="C98A0B")))
 
 db["H12"] = "À surveiller"; db["H12"].font = font(11, True, "FFFFFF"); db["H12"].fill = fill(TEAL)
+soon = '(COUNTIFS(Factures!$F$6:$F$30,"Dans*")+COUNTIFS(Factures!$F$6:$F$30,"Aujourd\'hui"))'
+late = 'COUNTIFS(Factures!$F$6:$F$30,"En retard")'
+wait = 'COUNTIFS(Envies!$E$6:$E$30,"Encore*")'
 notes = [
-    ('=COUNTIFS(Factures!$F$6:$F$30,"Dans*")&" facture(s) à payer dans les 3 jours"', WARN),
-    ('=COUNTIFS(Factures!$F$6:$F$30,"⚠*")&" facture(s) en retard"', BAD),
-    ('=COUNTIFS(Envies!$E$6:$E$30,"⏳*")&" envie(s) en attente sur votre liste"', "E3E8FF"),
+    (f'=IF({soon}=0,"Aucune facture à payer dans les 3 jours",IF({soon}=1,"1 facture",{soon}&" factures")&" à payer dans les 3 jours")', WARN),
+    (f'=IF({late}=0,"Aucune facture en retard",IF({late}=1,"1 facture en retard",{late}&" factures en retard"))', BAD),
+    (f'=IF({wait}=0,"Aucune envie en attente",IF({wait}=1,"1 envie",{wait}&" envies")&" en attente sur votre liste")', "E3E8FF"),
     ('="Gardé en renonçant aux achats impulsifs : "&FIXED(Envies!$H$6,2)', OK),
 ]
 for i, (f, colour) in enumerate(notes):
     c = db.cell(13 + i * 2, 8, f); c.fill = fill(colour); c.font = font(11); c.border = box
     c.alignment = Alignment(vertical="center")
+for cell, prefix in (("H13", "Aucune"), ("H15", "Aucune"), ("H17", "Aucune")):
+    db.conditional_formatting.add(cell, FormulaRule(formula=[f'LEFT({cell},{len(prefix)})="{prefix}"'], fill=fill(OK)))
+db["H12"].alignment = Alignment(vertical="center")
 for r in range(13, 13 + len(CATS)):
     db.row_dimensions[r].height = 24
 
