@@ -1,4 +1,4 @@
-# Task: open an Etsy shop and publish twenty-three digital-download listings
+# Task: open an Etsy shop and publish twenty-four digital-download listings
 
 You are acting in the user's own browser, on the user's behalf. Everything to
 publish is already made: spreadsheet files, guides, photos and listing texts.
@@ -96,6 +96,9 @@ computer:
 - House: `house-bills/Roommate-Bill-Splitter.xlsx`, `house-bills/Start-Here-Guide.pdf`,
   and the photos `house-bills/images/01-dashboard.jpg`, `02-who-owes-whom.jpg`, `03-payments.jpg`,
   `04-split.jpg`, `05-chores.jpg`, `06-whats-inside.jpg`.
+- Party: `party/Party-Planner.xlsx`, `party/Start-Here-Guide.pdf`,
+  and the photos `party/images/01-dashboard.jpg`, `02-checklist.jpg`, `03-food.jpg`,
+  `04-guests.jpg`, `05-budget.jpg`, `06-whats-inside.jpg`.
 
 Files from different products share names (every product has a
 `Start-Here-Guide.pdf`), so prefix each file with its folder name when you
@@ -113,7 +116,7 @@ save it.
    lets you finish opening the shop after one listing exists.
 5. Payment, billing and security steps: **stop and hand over to the user**.
 
-## 3. The twenty-three listings
+## 3. The twenty-four listings
 
 Each listing's texts are in its `LISTING.md`: title, description, 13 tags,
 price, and which files and photos to upload. Read it at the base URL above,
@@ -144,6 +147,7 @@ followed by the path.
 | 21 | Travel planner | `travel-planner/LISTING.md` | 6.50 |
 | 22 | Reading tracker | `reading/LISTING.md` | 4.50 |
 | 23 | Roommate bill splitter | `house-bills/LISTING.md` | 6.50 |
+| 24 | Party planner | `party/LISTING.md` | 6.50 |
 
 The price column replaces the dollar prices in the LISTING.md files, because
 the shop is in euros.
