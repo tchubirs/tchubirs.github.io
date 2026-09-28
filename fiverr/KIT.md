@@ -327,8 +327,9 @@ Do you use Google Sheets or Excel (Windows or Mac)?
 
 ## Passo extra (opcional): anúncio 4, skill do Claude
 
-Os textos estão em [DISPATCH.md](DISPATCH.md), na seção "Gig 4". Crie este
-anúncio depois dos outros três, se quiser.
+Os textos estão em [DISPATCH.md](DISPATCH.md), nas seções "Gig 4" (skill do
+Claude) e "Gig 5" (extrato bancário em PDF para Excel). Crie esses anúncios
+depois dos outros três, se quiser.
 
 ---
 

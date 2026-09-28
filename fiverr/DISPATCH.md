@@ -259,6 +259,55 @@ I build skills AI-assisted and test each one before delivery.
   - Attach 2-3 examples of the output you want (files or text).
   - Which Claude app do you use (web, desktop, Claude Code)?
 
+### Gig 5 (optional): bank statement PDF to Excel
+
+- **Title:** I will convert your bank statement PDF to excel or csv, clean and checked
+- **Category:** Data → Data Entry (or Data Processing), service type: PDF to Excel.
+- **Search tags:** pdf to excel, bank statement, data entry, excel, bookkeeping
+- **Packages:**
+
+  | | Basic | Standard | Premium |
+  |---|---|---|---|
+  | Name | Up to 5 pages | Up to 25 pages | Up to 100 pages |
+  | Description | Transactions from up to 5 pages into one clean Excel or CSV file. | Up to 25 pages, several statements merged, plus a monthly summary. | Up to 100 pages, merged and categorised, with a monthly summary. |
+  | Delivery | 1 day | 2 days | 3 days |
+  | Revisions | 1 | 2 | 3 |
+  | Price | $10 | $30 | $80 |
+
+- **Description:**
+
+```
+Need your bank or card statements in a spreadsheet? Send the PDFs, get back a clean Excel file.
+
+What you get:
+- One row per transaction: date, description, money in, money out, balance
+- Several months or accounts merged into one sheet, sorted by date
+- A monthly summary (money in, money out, net)
+- A check of every row against the statement's running balance, so nothing is missing or doubled
+
+Great for bookkeeping, tax returns, budgeting, loan or visa applications.
+
+How it works:
+1. Send the PDF statements (text PDFs; for scanned paper statements, message me first).
+2. I confirm the page count and price before you order.
+3. You receive the Excel (or CSV) file, usually within a day.
+
+Your files are used only for your order and deleted after delivery. I work AI-assisted and check every file against the statement totals.
+```
+
+- **FAQ:**
+  - Q: Which banks do you support?
+    A: Any bank whose statements are text PDFs, in English, French, Portuguese or Spanish. Send one page first if you are unsure.
+  - Q: Can you do scanned statements?
+    A: Scanned or photographed statements need extra work; message me first with a sample page.
+  - Q: Is my data safe?
+    A: Files are used only for your order and deleted after delivery. You can hide account numbers before sending.
+- **Requirements** (all mandatory):
+  - Attach the PDF statements.
+  - Excel or CSV? Any specific columns or date format you need?
+  - Should categories be added (food, rent, transport...)? If yes, list the ones you want.
+- **Gallery:** gig5-statement-excel.png
+
 ## When you are done
 
 Publish all three gigs, then report back to the user:

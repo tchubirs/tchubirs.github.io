@@ -95,3 +95,15 @@ for i, h in enumerate(bars):
     d.rectangle((x, 600 - h, x + 40, 600), fill=AMBER if i == len(bars) - 1 else (98, 140, 160))
 img.save("img/gig3-sheets-excel.png")
 print("ok")
+
+# 5. Bank statement PDF to Excel
+img = base(); d = ImageDraw.Draw(img)
+text_block(d, [[("Bank", False), ("statement", False)], [("PDF", True), ("to", False), ("Excel", True)]],
+           "Sorted, clean, balance-checked", ["Excel · CSV", "Monthly summary"])
+window(d, (760, 120, 960, 420), "statement.pdf")
+for i in range(8):
+    d.rounded_rectangle((785, 190 + i * 26, 785 + 60 + (i * 37) % 110, 202 + i * 26), radius=4, fill=(70, 98, 114))
+d.polygon([(985, 250), (1025, 270), (985, 290)], fill=AMBER)
+table(d, 1040, 150, 2, 7, 85, 40)
+img.save("img/gig5-statement-excel.png")
+print("ok5")
