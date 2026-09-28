@@ -11,7 +11,7 @@ Envie, nesta ordem, as imagens da pasta `images/`: 01, 02, 03, 04, 05.
 
 - **Who made it?** I did
 - **What is it?** A finished product
-- **When was it made?** Made to order (2020 – 2026)
+- **When was it made?** 2020 – 2026
 - **Uso de IA (obrigatório na Etsy desde 2026):** quando a Etsy perguntar
   como o item foi feito, marque **Designed by** a sua loja. A frase sobre IA
   já está no fim da descrição.
