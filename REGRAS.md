@@ -22,3 +22,6 @@
 12. **Ser como a IA do vídeo (Automaton): criar coisas que vendem, sem parar.**
     Pedido dele em 28/09. Os US$ 5 que ele ofereceu não são necessários
     agora; o que falta são as contas de vendedor, que só ele pode abrir.
+13. **Trabalhar direto, sem pausa** (ele disse que o gasto é pouco). No fim de
+    cada bloco, agendar a continuação para 1 minuto depois. A rotina de hora
+    em hora é só a reserva.
