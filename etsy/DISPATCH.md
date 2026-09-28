@@ -1,4 +1,4 @@
-# Task: open an Etsy shop and publish eleven digital-download listings
+# Task: open an Etsy shop and publish twelve digital-download listings
 
 You are acting in the user's own browser, on the user's behalf. Everything to
 publish is already made: spreadsheet files, guides, photos and listing texts.
@@ -60,6 +60,9 @@ computer:
 - Paycheck: `paycheck/Paycheck-Budget-Planner.xlsx`, `paycheck/Start-Here-Guide.pdf`,
   and the photos `paycheck/images/01-dashboard.jpg`, `02-paychecks.jpg`,
   `03-bills.jpg`, `04-whats-inside.jpg`.
+- Landlord: `landlord/Landlord-Rental-Tracker.xlsx`, `landlord/Start-Here-Guide.pdf`,
+  and the photos `landlord/images/01-dashboard.jpg`, `02-rent-roll.jpg`,
+  `03-leases.jpg`, `04-whats-inside.jpg`.
 
 Files from different products share names (every product has a
 `Start-Here-Guide.pdf`), so prefix each file with its folder name when you
@@ -77,7 +80,7 @@ save it.
    lets you finish opening the shop after one listing exists.
 5. Payment, billing and security steps: **stop and hand over to the user**.
 
-## 3. The eleven listings
+## 3. The twelve listings
 
 Each listing's texts are in its `LISTING.md`: title, description, 13 tags,
 price, and which files and photos to upload. Read it at the base URL above,
@@ -96,6 +99,7 @@ followed by the path.
 | 9 | Vacation rental host tracker | `rental/LISTING.md` | 9.50 |
 | 10 | Fee and profit calculator | `fees/LISTING.md` | 6.50 |
 | 11 | Paycheck budget planner | `paycheck/LISTING.md` | 7.50 |
+| 12 | Landlord rental tracker | `landlord/LISTING.md` | 9.50 |
 
 The price column replaces the dollar prices in the LISTING.md files, because
 the shop is in euros.
