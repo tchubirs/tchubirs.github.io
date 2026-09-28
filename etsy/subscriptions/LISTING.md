@@ -39,7 +39,7 @@ For each subscription it shows:
 In the file:
 - Dashboard: totals per month and per year, the yearly cost of unused subscriptions, the yearly saving from the ones marked Cancel, and spending by category with bars
 - Subscriptions: one line each, with dropdown lists for category, billing and Keep, Cancel or Decide
-- Start Here: 5 steps, 2 minutes
+- Start Here: five short steps to set it up
 
 Works with Google Sheets (free) and Microsoft Excel, in any currency.
 
@@ -94,7 +94,7 @@ Pour chaque abonnement, il affiche :
 Le fichier a 3 onglets :
 - Tableau de bord : total par mois et par an, coût annuel des abonnements inutilisés, économies si vous résiliez ceux marqués Annuler, dépenses par catégorie
 - Abonnements : une ligne par abonnement, avec des listes déroulantes
-- Commencer ici : 5 étapes, 2 minutes
+- Commencer ici : cinq étapes courtes pour le mettre en place
 
 Fonctionne avec Google Sheets (gratuit) et Microsoft Excel, toutes devises.
 

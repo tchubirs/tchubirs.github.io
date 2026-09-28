@@ -60,7 +60,7 @@ In the file (7 tabs):
 - Bills: list each bill once. It turns green when paid, orange in the 3 days before it is due and red when overdue.
 - Impulse List: the 48-hour rule. Note what you want and decide two days later. It adds up the money you kept by not buying.
 - Goals: savings targets with progress bars
-- Start Here: 3 steps, 5 minutes
+- Start Here: six short steps to set it up
 
 You only type in the yellow cells. Example data shows how it works before you add your own.
 

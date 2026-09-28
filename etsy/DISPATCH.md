@@ -86,7 +86,7 @@ the shop is in euros.
 For every listing:
 
 - **About this listing:** Who made it? *I did*. What is it? *A finished
-  product*. When was it made? *2020 – 2026*.
+  product*. When was it made? *2020 - 2026*.
 - **AI disclosure (Etsy 2026 rule):** when Etsy asks how the item is made or
   whether AI was used, answer that it was **designed by the seller with AI
   assistance** (choose the "Designed by" option). The description already
@@ -100,7 +100,7 @@ For every listing:
 
 ## 4. French translations (optional, after all listings are live)
 
-Shop settings → languages → add **French**. For each listing, open the French
+Shop settings > languages > add **French**. For each listing, open the French
 tab and paste the French title, description and tags from the section of its
 LISTING.md headed "Tradução francesa".
 
