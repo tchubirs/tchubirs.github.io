@@ -65,28 +65,29 @@ for r in range(I0, I1 + 1):
     style(inc.cell(r, 4, s[2]), True, align="center")
     style(inc.cell(r, 5, s[3]), True, MONEY)
     style(inc.cell(r, 6, s[4]), True, DATE)
-    st = (f'=IF(OR(B{r}="",E{r}=""),"",IF(F{r}<>"","✓ Paid",IF(TODAY()-B{r}>{DUE_DAYS},'
-          f'"⚠ Overdue "&(TODAY()-B{r}-{DUE_DAYS})&" day(s)","Waiting "&(TODAY()-B{r})&" day(s)")))')
+    late, age = f"(TODAY()-B{r}-{DUE_DAYS})", f"(TODAY()-B{r})"
+    st = (f'=IF(OR(B{r}="",E{r}=""),"",IF(F{r}<>"","Paid",IF({age}>{DUE_DAYS},'
+          f'"Overdue by "&{late}&IF({late}=1," day"," days"),"Waiting "&{age}&IF({age}=1," day"," days"))))')
     style(inc.cell(r, 7, st), False)
 inc.freeze_panes = "B6"
-inc.conditional_formatting.add(f"G{I0}:G{I1}", FormulaRule(formula=[f'LEFT($G{I0},1)="✓"'], fill=fill(OK)))
-inc.conditional_formatting.add(f"G{I0}:G{I1}", FormulaRule(formula=[f'LEFT($G{I0},1)="⚠"'], fill=fill(BAD),
+inc.conditional_formatting.add(f"G{I0}:G{I1}", FormulaRule(formula=[f'$G{I0}="Paid"'], fill=fill(OK)))
+inc.conditional_formatting.add(f"G{I0}:G{I1}", FormulaRule(formula=[f'LEFT($G{I0},7)="Overdue"'], fill=fill(BAD),
                                                             font=Font(name=F, bold=True, color="9B1C1C")))
 inc.conditional_formatting.add(f"G{I0}:G{I1}", FormulaRule(formula=[f'LEFT($G{I0},7)="Waiting"'], fill=fill(WARN)))
 
 # ---------------------------------------------------------------- Expenses
 exp = wb.create_sheet("Expenses")
-sheet_base(exp, "Expenses: one line per purchase", "Keep the receipt: tick 'Receipt?' when you have it.",
+sheet_base(exp, "Expenses: one line per purchase", "Keep your receipts. Choose Yes under 'Receipt?' once you have it.",
            [3, 13, 24, 22, 13, 11, 30], rows=E1 + 2)
 header(exp, 5, 2, ["Date", "What", "Category", "Amount", "Receipt?", "Note"])
-sample_exp = [(d(-190), "Laptop repair", "Equipment", 180, True, ""),
-              (d(-140), "Accounting software", "Software & tools", 96, True, "yearly"),
-              (d(-75), "Design app yearly plan", "Software & tools", 239, True, ""),
-              (d(-60), "Train to client workshop", "Travel", 86.4, True, ""),
-              (d(-41), "Phone plan", "Phone & internet", 19.99, True, "monthly"),
-              (d(-33), "Monitor", "Equipment", 329, False, "find the invoice!"),
-              (d(-20), "Coworking day passes", "Office & coworking", 75, True, ""),
-              (d(-9), "Online course", "Training", 120, True, "")]
+sample_exp = [(d(-190), "Laptop repair", "Equipment", 180, "Yes", ""),
+              (d(-140), "Accounting software", "Software & tools", 96, "Yes", "yearly"),
+              (d(-75), "Design app yearly plan", "Software & tools", 239, "Yes", ""),
+              (d(-60), "Train to client workshop", "Travel", 86.4, "Yes", ""),
+              (d(-41), "Phone plan", "Phone & internet", 19.99, "Yes", "monthly"),
+              (d(-33), "Monitor", "Equipment", 329, "No", "receipt missing"),
+              (d(-20), "Coworking day passes", "Office & coworking", 75, "Yes", ""),
+              (d(-9), "Online course", "Training", 120, "Yes", "")]
 for r in range(E0, E1 + 1):
     s = sample_exp[r - E0] if r - E0 < len(sample_exp) else (None,) * 6
     style(exp.cell(r, 2, s[0]), True, DATE)
@@ -96,7 +97,7 @@ for r in range(E0, E1 + 1):
     style(exp.cell(r, 6, s[4]), True, align="center")
     style(exp.cell(r, 7, s[5]), True)
 dv_cat = DataValidation(type="list", formula1=f"={CAT_RANGE}", allow_blank=True)
-dv_rec = DataValidation(type="list", formula1='"TRUE,FALSE"', allow_blank=True)
+dv_rec = DataValidation(type="list", formula1='"Yes,No"', allow_blank=True)
 exp.add_data_validation(dv_cat)
 exp.add_data_validation(dv_rec)
 dv_cat.add(f"D{E0}:D{E1}")
@@ -117,7 +118,7 @@ for r in range(T0, T1 + 1):
 
 # ---------------------------------------------------------------- Dashboard
 db = wb.create_sheet("Dashboard", 0)
-sheet_base(db, "Your freelance year at a glance", "Only the Settings year counts. Paid income only.",
+sheet_base(db, "Freelance dashboard", "Shows the year set in Settings, and only income that has been paid.",
            [3, 22, 16, 16, 16, 16, 3, 40])
 IN = lambda col: f"Income!${col}${I0}:${col}${I1}"
 EX = lambda col: f"Expenses!${col}${E0}:${col}${E1}"
@@ -164,17 +165,26 @@ for q in range(4):
 db["H9"] = "Heads-up"
 db["H9"].font = font(11, True, "FFFFFF")
 db["H9"].fill = fill(TEAL)
+late_n, late_sum = f'COUNTIFS({IN("G")},"Overdue*")', f'SUMIFS({IN("E")},{IN("G")},"Overdue*")'
+wait_n, wait_sum = f'COUNTIFS({IN("G")},"Waiting*")', f'SUMIFS({IN("E")},{IN("G")},"Waiting*")'
+nor_n = f'COUNTIFS({EX("B")},"<>",{EX("F")},"<>Yes")'
 notes = [
-    (f'=COUNTIFS({IN("G")},"⚠*")&" overdue invoice(s): "&FIXED(SUMIFS({IN("E")},{IN("G")},"⚠*"),2)', BAD),
-    (f'=COUNTIFS({IN("G")},"Waiting*")&" invoice(s) waiting: "&FIXED(SUMIFS({IN("E")},{IN("G")},"Waiting*"),2)', WARN),
-    (f'=COUNTIFS({EX("B")},"<>",{EX("F")},"<>TRUE")&" expense(s) without a receipt"', WARN),
-    ('="Tax set-aside progress: "&IF(E7=0,"—",FIXED(MIN(1,F7/E7)*100,0)&"%")', INFO),
+    (f'=IF({late_n}=0,"No overdue invoices",IF({late_n}=1,"1 invoice is",{late_n}&" invoices are")'
+     f'&" overdue: "&FIXED({late_sum},2))', BAD),
+    (f'=IF({wait_n}=0,"No invoices waiting for payment",IF({wait_n}=1,"1 invoice",{wait_n}&" invoices")'
+     f'&" waiting for payment: "&FIXED({wait_sum},2))', WARN),
+    (f'=IF({nor_n}=0,"Every expense has a receipt",IF({nor_n}=1,"1 expense has",{nor_n}&" expenses have")'
+     f'&" no receipt yet")', WARN),
+    ('="Put aside for tax so far: "&IF(E7=0,"nothing due yet",FIXED(MIN(1,F7/E7)*100,0)&"% of the amount")', INFO),
 ]
 for k, (formula, colour) in enumerate(notes):
     c = db.cell(10 + k, 8, formula)
     c.fill = fill(colour)
     c.font = font(11)
     c.border = box
+for cell, prefix in (("H10", "No"), ("H11", "No"), ("H12", "Every")):
+    db.conditional_formatting.add(cell, FormulaRule(formula=[f'LEFT({cell},{len(prefix)})="{prefix}"'], fill=fill(OK)))
+db["H9"].alignment = Alignment(vertical="center")
 
 header(db, 16, 2, ["Expense category", "This year", "Share"])
 for k, cat in enumerate(EXP_CATS):
@@ -197,21 +207,21 @@ db.add_chart(chart, "H16")
 
 # ---------------------------------------------------------------- Start Here
 st = wb.create_sheet("Start Here")
-sheet_base(st, "Start here: 5 minutes", "Only type in YELLOW cells.", [3, 6, 100])
+sheet_base(st, "Start here", "Type only in the yellow cells. Everything else is calculated.", [3, 6, 100])
 steps = [
-    ("1", "Settings: the year, and the share of profit you put aside for tax (ask your accountant; 25-30% is cautious)."),
-    ("2", "Income: one line per invoice. Fill 'Paid on' when the money arrives. Late invoices turn red."),
-    ("3", "Expenses: one line per business purchase. Tick 'Receipt?' when you have the receipt."),
-    ("4", "Tax Savings: each time you move money aside for tax, add a line."),
-    ("★", "Dashboard: profit, what to put aside, what is still missing, quarter by quarter."),
+    ("1", "Settings: the year, and the share of profit you put aside for tax. Ask your accountant; 25 to 30% is careful."),
+    ("2", "Income: one line per invoice. Fill in 'Paid on' when the money arrives. Late invoices turn red."),
+    ("3", "Expenses: one line per business purchase. Choose Yes under 'Receipt?' once you have the receipt."),
+    ("4", "Tax Savings: add a line each time you move money aside for tax."),
+    ("5", "The Dashboard then shows your profit, what to put aside and what is still missing, by quarter."),
 ]
 for k, (n, text) in enumerate(steps):
     r = 5 + k * 2
     st.cell(r, 2, n).font = font(18, True, TEAL)
     st.cell(r, 3, text).font = font(13)
-st["C17"] = "This is a tracking tool, not tax advice. Tax rules differ by country: check your rate with an accountant."
+st["C17"] = "This file tracks numbers and does not give tax advice. Tax rules differ by country, so check your rate with an accountant."
 st["C17"].font = font(11, color=MUTED, italic=True)
-st["C19"] = "Works in Google Sheets and Microsoft Excel. Example lines show how it works: delete them and add yours."
+st["C19"] = "Works in Google Sheets and Microsoft Excel. The example lines show how it works; delete them and add your own."
 st["C19"].font = font(11, color=MUTED, italic=True)
 
 wb.active = 0

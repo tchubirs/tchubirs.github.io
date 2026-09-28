@@ -192,8 +192,8 @@ for k, (formula, colour) in enumerate(notes):
     c.fill = fill(colour)
     c.font = font(11)
     c.border = box
-for cell, start in (("H10", "No"), ("H11", "Nothing"), ("H12", "Every")):
-    db.conditional_formatting.add(cell, FormulaRule(formula=[f'LEFT({cell},{len(start)})="{start}"'], fill=fill(OK)))
+for cell, prefix in (("H10", "No"), ("H11", "Nothing"), ("H12", "Every")):
+    db.conditional_formatting.add(cell, FormulaRule(formula=[f'LEFT({cell},{len(prefix)})="{prefix}"'], fill=fill(OK)))
 db.conditional_formatting.add("H13", FormulaRule(formula=['LEFT(H13,4)="Over"'], fill=fill(BAD)))
 db["H9"].alignment = Alignment(vertical="center")
 

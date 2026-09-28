@@ -10,7 +10,7 @@ Pasta `images/`, nesta ordem: 01, 02, 03.
 ## Title
 
 ```
-Wedding Budget Planner Spreadsheet, Google Sheets & Excel, Wedding Vendor Payment Tracker, Guest List RSVP, Wedding Checklist
+Wedding Budget Planner Spreadsheet, Google Sheets & Excel, Wedding Vendor Payment Tracker, Guest List Rsvp, Wedding Checklist
 ```
 
 ## Type
@@ -27,32 +27,30 @@ Wedding Budget Planner Spreadsheet, Google Sheets & Excel, Wedding Vendor Paymen
 ## Description
 
 ```
-Plan the wedding without losing track of a single payment.
+Wedding budget spreadsheet for Google Sheets and Excel, for couples who want the budget, vendor payments and guest list in one file.
 
-THE DASHBOARD SHOWS
-• A countdown to the big day
-• Total budget, committed, paid so far, still to pay, and what is not allocated yet
-• Heads-up: overdue payments, payments due in the next 14 days, guests who have not answered
-• Every budget category: planned vs committed, with bars (red when a category goes over plan)
-• Guest numbers: invited, yes, pending, no, and meal counts for the caterer
+The Dashboard shows:
+- A countdown to the wedding day
+- Total budget, committed, paid so far, still to pay and not allocated yet
+- Overdue payments, payments due in the next 14 days and guests who have not answered
+- Each budget category, planned against committed, with a bar. The committed amount turns red when a category goes over plan.
+- Guest numbers (invited, yes, pending, no) and meal counts for the caterer
 
-WHAT'S INSIDE (5 tabs)
-• Budget: your total split into 11 categories with a common starting split you can change
-• Vendors: quote, paid so far, next payment date, and a status that updates itself
-• Guests: RSVP, plus ones, meal choice, table
-• Dashboard and Start Here
+In the file (5 tabs):
+- Budget: your total split into 11 categories. It starts with a common split and you can change every share.
+- Vendors: the quote, what you have paid so far and the next payment date. The status turns orange when a payment is due within 14 days, red when it is overdue and green when it is paid in full.
+- Guests: replies (yes, no or pending), plus ones, meal choice and table
+- Dashboard and Start Here
 
-PLAN TOGETHER
-• Share it in Google Sheets and both of you see the same numbers
-• Works in Microsoft Excel too, in any currency
+If you share it in Google Sheets, you both see the same numbers. It also works in Microsoft Excel, in any currency.
 
-YOU RECEIVE
-• Wedding-Budget-Planner.xlsx
-• Start-Here-Guide.pdf
+You get:
+- Wedding-Budget-Planner.xlsx
+- Start-Here-Guide.pdf
 
-Digital download; nothing will be shipped.
+This is a digital download and nothing will be shipped.
 
-Designed by me with the help of AI tools; formulas were checked with the example data before release.
+I designed this with the help of AI tools and checked the formulas with the example data before listing it.
 ```
 
 ## Tags (13)
