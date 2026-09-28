@@ -10,7 +10,7 @@ Pasta `images/`, nesta ordem: 01, 02, 03, 04, 05, 06.
 ## Title
 
 ```
-Moving Planner Spreadsheet, Moving Checklist, Box Inventory, Change of Address List, Moving Budget, Moving Day Countdown, Google Sheets & Excel
+Moving Planner Spreadsheet, Moving Checklist, Box Inventory, Change of Address List, Moving Budget, Moving Countdown, Google Sheets & Excel
 ```
 
 ## Type
