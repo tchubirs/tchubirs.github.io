@@ -8,3 +8,4 @@
 # o apanhava — a barra so casa com pastas, e um symlink nao e uma pasta.
 node_modules
 node_modules/
+__pycache__/
