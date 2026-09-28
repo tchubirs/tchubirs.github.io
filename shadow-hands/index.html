@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shadow Hands</title>
+<style>
+  html,body{margin:0;height:100%;background:#0c0a08;color:#f3e6cc;font:16px/1.5 system-ui,sans-serif}
+  #entrar{position:fixed;left:50%;bottom:10%;transform:translateX(-50%);padding:14px 28px;border-radius:999px;
+          border:1px solid #f3e6cc55;background:#2a2016;color:#f3e6cc;font-size:18px;cursor:pointer}
+  #entrar[disabled]{opacity:.5;cursor:default}
+</style>
+</head>
+<body>
+<button id="entrar" disabled>Checking for VR…</button>
+<script>
+  // ?emu liga o emulador de Quest 3 — so para testar sem oculos. No aparelho
+  // verdadeiro nao se carrega: o browser do Quest tem WebXR a serio.
+  (function(){
+    function carregar(src, depois){ var s = document.createElement('script'); s.src = src; s.onload = depois; document.body.appendChild(s); }
+    if (/[?&]emu\b/.test(location.search)) carregar('emu.js', function(){ carregar('app.js'); });
+    else carregar('app.js');
+  })();
+</script>
+</body>
+</html>
