@@ -22,10 +22,13 @@ M = 150  # page margin
 class Renders:
     """PDF render of a workbook; page(title) returns the sheet whose title starts with it."""
 
-    def __init__(self, xlsx, tmp, hide=None, hide_rows=None):
-        """hide = {sheet: [column letters]}, hide_rows = {sheet: [row numbers]}: render a copy for close-ups."""
+    def __init__(self, xlsx, tmp, hide=None, hide_rows=None, one_page=()):
+        """hide = {sheet: [column letters]}, hide_rows = {sheet: [row numbers]}: render a copy for close-ups.
+
+        Sheets with hidden rows, and the sheets named in one_page, are printed on a single page.
+        """
         os.makedirs(tmp, exist_ok=True)
-        if hide or hide_rows:
+        if hide or hide_rows or one_page:
             from openpyxl import load_workbook
             wb = load_workbook(xlsx)
             for name, cols in (hide or {}).items():
@@ -34,8 +37,8 @@ class Renders:
             for name, rows in (hide_rows or {}).items():
                 for row in rows:
                     wb[name].row_dimensions[row].hidden = True
-            for name in set(hide or {}) | set(hide_rows or {}):
-                wb[name].page_setup.fitToHeight = 1  # the close-up sheet on a single page
+            for name in set(hide_rows or {}) | set(one_page):
+                wb[name].page_setup.fitToHeight = 1
             xlsx = os.path.join(tmp, os.path.splitext(os.path.basename(xlsx))[0] + "-closeup.xlsx")
             wb.save(xlsx)
         env = dict(os.environ, HOME="/tmp/lohome")

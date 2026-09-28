@@ -26,7 +26,7 @@ detail(os.path.join(img_dir, "02-bookings.jpg"), "Every stay, with its payout an
        close.shot("Bookings", until=f"{bk.cell(last, 6).value:%d %b %Y}"),
        [("#E3E8FF", "Upcoming"), ("#D8F0DC", "Staying now"), ("#FFE2B8", "Payout not received")])
 
-left = Renders(xlsx, tmp, hide={"Dashboard": ["I", "J", "K"]})
+left = Renders(xlsx, tmp, hide={"Dashboard": ["I", "J", "K"]}, one_page={"Dashboard"})
 detail(os.path.join(img_dir, "03-months.jpg"), "Each month and each home",
        "Nights, occupancy, revenue, expenses and profit. Stays that cross a month end are split by nights.",
        left.shot("Rental dashboard", until="Shared costs"))
