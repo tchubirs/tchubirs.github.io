@@ -4,8 +4,8 @@ import pymupdf
 S = "font-family:sans-serif"
 HTML = f"""
 <h1 style="color:#15525A;{S}">Cash Envelope Budget</h1>
-<p style="{S};color:#5E6E72">Thanks for your order. Setting it up takes about fifteen minutes. After that, each
-payday takes about five minutes: type what goes into each envelope, take the cash out, and note what you spend.</p>
+<p style="{S};color:#5E6E72">Thanks for your order. Setting it up takes about fifteen minutes, and each payday
+about five.</p>
 <h2 style="color:#1F6F78;{S}">Opening the file</h2>
 <p style="{S}"><b>Google Sheets:</b> go to drive.google.com, click <i>New &gt; File upload</i> and pick
 <b>Cash-Envelope-Budget.xlsx</b>. Open it, then choose <i>File &gt; Save as Google Sheets</i>.<br/>
@@ -13,7 +13,9 @@ payday takes about five minutes: type what goes into each envelope, take the cas
 <h2 style="color:#1F6F78;{S}">Setting it up</h2>
 <ol style="{S}">
 <li><b>Settings:</b> how often you are paid, and the notes your bank gives out.</li>
-<li>Delete the example envelopes, paydays and spending: they are made up.</li>
+<li>Delete the example envelopes, paydays and spending: they are made up. Select their yellow cells and press
+Delete, rather than deleting whole rows. Keep each envelope on its line, since the Paydays columns follow the
+order of the list.</li>
 <li><b>Envelopes:</b> each envelope once, with what goes in it each payday, the largest note you want in it, and
 the cash already in it. A sinking fund, such as Christmas or car repairs, can have a target and a date.</li>
 </ol>
@@ -32,12 +34,10 @@ sign. To move cash to another envelope, pick where it goes under <i>Moved to</i>
 </ul>
 <h2 style="color:#1F6F78;{S}">Good to know</h2>
 <ul style="{S}">
-<li>The Dashboard shows the month set in Settings: what each envelope had at the start, what went in, what came
-out and what is left.</li>
+<li>The Dashboard shows the month set in Settings, envelope by envelope.</li>
 <li>An envelope is Low when less than a quarter of its plan is left. You can change the share in Settings.</li>
-<li>The Check columns flag a line that needs a look, such as one with no date or an envelope that is not on the
-list.</li>
-<li>Room for 16 envelopes, 200 paydays and 1,000 lines of spending.</li>
+<li>The Check columns flag a line that needs a look, such as one with no date. Room for 16 envelopes, 200
+paydays and 1,000 lines of spending.</li>
 </ul>
 <p style="{S};color:#5E6E72;font-size:9px">Made with the help of AI tools.</p>
 """

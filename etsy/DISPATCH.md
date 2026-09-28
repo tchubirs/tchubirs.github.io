@@ -1,4 +1,4 @@
-# Task: open an Etsy shop and publish forty-two digital-download listings
+# Task: open an Etsy shop and publish forty-three digital-download listings
 
 You are acting in the user's own browser, on the user's behalf. Everything to
 publish is already made: spreadsheet files, guides, photos and listing texts.
@@ -131,7 +131,7 @@ save it.
    lets you finish opening the shop after one listing exists.
 5. Payment, billing and security steps: **stop and hand over to the user**.
 
-## 3. The forty-two listings
+## 3. The forty-three listings
 
 Each listing's texts are in its `LISTING.md`: title, description, 13 tags,
 price, and which files and photos to upload. Read it at the base URL above,
@@ -181,6 +181,7 @@ followed by the path.
 | 40 | Social media content planner | `content-planner/LISTING.md` | 5.50 |
 | 41 | Donation and volunteer tracker | `donations/LISTING.md` | 6.50 |
 | 42 | Cash envelope budget | `envelopes/LISTING.md` | 5.50 |
+| 43 | Vegetable garden planner | `garden/LISTING.md` | 5.50 |
 
 The price column replaces the dollar prices in the LISTING.md files, because
 the shop is in euros.
