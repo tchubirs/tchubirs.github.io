@@ -16,7 +16,7 @@ then their balances. After that, five minutes at the end of each month.</p>
 <li><b>Balances:</b> each account once, with its type. Debts go in as the amount owed.</li>
 <li><b>Holdings:</b> the funds, shares and accounts that pay you, with their value now, so the yield can be worked
 out.</li>
-<li>Delete the example accounts, holdings and income: they are made up.</li>
+<li>Delete the example accounts, holdings and income: they are made up. Select the yellow cells and press Delete, rather than deleting whole rows.</li>
 </ol>
 <h2 style="color:#1F6F78;{S}">Each month</h2>
 <ul style="{S}">

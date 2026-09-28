@@ -13,7 +13,8 @@ group so everyone can add what they pay, from the Google Sheets app on their pho
 <b>Excel:</b> double-click the file.</p>
 <h2 style="color:#1F6F78;{S}">Setting it up</h2>
 <p style="{S}"><b>Setup:</b> the name of the trip, your home currency, the people on the trip (up to 12), and what
-each other currency is worth in your home currency, for example 1 EUR is worth 1.08 USD.</p>
+each other currency is worth in your home currency, for example 1 EUR is worth 1.08 USD. The example trip is
+made up. Select the yellow cells and press Delete, rather than deleting whole rows.</p>
 <h2 style="color:#1F6F78;{S}">During the trip</h2>
 <p style="{S}"><b>Expenses:</b> one line per expense, with the date, what it was, a category, the amount, the currency
 and who paid. Then choose who shares it:</p>

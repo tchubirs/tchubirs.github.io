@@ -15,7 +15,7 @@ app you can add a fill-up at the pump.<br/>
 <ol style="{S}">
 <li><b>Settings:</b> km or miles, litres or gallons, and how early you want a warning.</li>
 <li><b>Cars:</b> the example cars are made up, so delete them and add yours, up to five, with the odometer on the day
-you start and that date.</li>
+you start and that date. Select the yellow cells and press Delete, rather than deleting whole rows.</li>
 <li><b>Services:</b> what each car needs, every so far or every so many months, and the odometer and date it was last
 done. The handbook or your garage has the intervals.</li>
 <li><b>Documents:</b> insurance, tax, inspection and the rest, with the day each one ends.</li>

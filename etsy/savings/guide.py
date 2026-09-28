@@ -18,7 +18,7 @@ no deadline. Add what you had already saved before you started, and what you pla
 <li><b>Savings log:</b> one line each time you put money into a goal or take some out.</li>
 </ol>
 <p style="{S}">You only type in the <span style="background-color:#FFF4C2">yellow cells</span>. Delete the example goals
-and lines before you start.</p>
+and lines before you start. Select the yellow cells and press Delete, rather than deleting whole rows.</p>
 <h2 style="color:#1F6F78;{S}">Reading it</h2>
 <p style="{S}">Each goal shows what is saved, what is left and what it still needs per month and per payday to be ready
 by its date. It is <i>on track</i> when your plan per month covers that amount, and <i>short</i> when it does not.

@@ -15,7 +15,7 @@ topics. After that, a line for each post, and its numbers once it is out.</p>
 <li><b>Settings:</b> your platforms, each with a short name for the calendar and how many posts a week you aim for,
 and your topics.</li>
 <li><b>Stats:</b> your platforms again, with the followers at the end of each month.</li>
-<li>Delete the example shop's posts and numbers: they are made up.</li>
+<li>Delete the example shop's posts and numbers: they are made up. Select the yellow cells and press Delete, rather than deleting whole rows.</li>
 </ol>
 <h2 style="color:#1F6F78;{S}">As you plan and post</h2>
 <ul style="{S}">

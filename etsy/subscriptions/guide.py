@@ -17,7 +17,7 @@ HTML = f"""
 </ol>
 <h2 style="color:#1F6F78;{S}">Filling it in</h2>
 <p style="{S}">One line per subscription: name, category, cost, how often you pay and the date you were last charged.
-Choose Yes under <i>Free trial?</i> for trials. You only type in the <span style="background-color:#FFF4C2">yellow cells</span>. Delete the example lines first.</p>
+Choose Yes under <i>Free trial?</i> for trials. You only type in the <span style="background-color:#FFF4C2">yellow cells</span>. Delete the example lines first. Select the yellow cells and press Delete, rather than deleting whole rows.</p>
 <h2 style="color:#1F6F78;{S}">Once a week</h2>
 <p style="{S}">Open the Dashboard. Red means a free trial is about to charge. Orange means you have not used something for a month.
 Mark a subscription <b>Cancel</b> to see what you save per year, then cancel it with the company itself.</p>

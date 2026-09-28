@@ -16,7 +16,7 @@ HTML = f"""
 <li>Onglet <b>Journal</b> : une ligne à chaque dépense ou rentrée d'argent.</li>
 </ol>
 <p style="{S}">Tapez uniquement dans les <span style="background-color:#FFF4C2">cases jaunes</span>.
-Supprimez les lignes d'exemple quand vous êtes prêt.</p>
+Supprimez les lignes d'exemple quand vous êtes prêt. Sélectionnez les cases jaunes et appuyez sur Suppr, sans supprimer les lignes entières.</p>
 <h2 style="color:#1F6F78;{S}">Chaque jour</h2>
 <p style="{S}">Ouvrez le <b>Tableau de bord</b>. Le grand chiffre indique ce que vous pouvez dépenser par jour jusqu'à la fin du mois.
 Si vous avez envie d'un achat imprévu, notez-le dans l'onglet <b>Envies</b> et décidez 48 heures plus tard.</p>

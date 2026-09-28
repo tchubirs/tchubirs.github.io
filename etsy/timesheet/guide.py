@@ -4,8 +4,7 @@ import pymupdf
 S = "font-family:sans-serif"
 HTML = f"""
 <h1 style="color:#15525A;{S}">Timesheet and Invoice Maker</h1>
-<p style="{S};color:#5E6E72">Thanks for your order. Setting it up takes about ten minutes. After that, a line for each
-piece of work and each invoice keeps everything up to date.</p>
+<p style="{S};color:#5E6E72">Thanks for your order. Setting it up takes about ten minutes.</p>
 <h2 style="color:#1F6F78;{S}">Opening the file</h2>
 <p style="{S}"><b>Google Sheets:</b> go to drive.google.com, click <i>New &gt; File upload</i> and pick
 <b>Timesheet-Invoice-Maker.xlsx</b>. Open it, then choose <i>File &gt; Save as Google Sheets</i>.<br/>
@@ -15,7 +14,7 @@ piece of work and each invoice keeps everything up to date.</p>
 <li><b>Settings:</b> your details as the invoice shows them, the currency, the days a client has to pay, your bank
 details and a note. If you charge tax, add its name, the rate and your tax number. If not, leave the rate at 0%.</li>
 <li><b>Clients:</b> the example clients are made up, so delete them and add yours, with the rate per hour and any
-days to pay of their own.</li>
+days to pay of their own. Select the yellow cells and press Delete, rather than deleting whole rows.</li>
 <li><b>Projects:</b> only for a project with its own rate, or with a budget of hours you want to keep an eye on.</li>
 </ol>
 <h2 style="color:#1F6F78;{S}">As you work</h2>

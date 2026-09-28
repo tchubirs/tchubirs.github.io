@@ -11,7 +11,8 @@ HTML = f"""
 <b>Excel :</b> double-cliquez sur le fichier.</p>
 <h2 style="color:#1F6F78;{S}">Le remplir (onglet Dettes)</h2>
 <ol style="{S}">
-<li>Une ligne par dette : le solde actuel, le taux annuel (%) et le paiement minimum mensuel.</li>
+<li>Une ligne par dette : le solde actuel, le taux annuel (%) et le paiement minimum mensuel. Les dettes
+d'exemple sont inventées. Sélectionnez les cases jaunes et appuyez sur Suppr, sans supprimer les lignes entières.</li>
 <li>Le montant que vous pouvez payer en plus des minimums chaque mois. Même un petit montant avance la date.</li>
 <li>Le mois de votre premier paiement.</li>
 <li>La méthode : <b>Avalanche</b> paie le moins d'intérêts, <b>Boule de neige</b> solde d'abord les plus petites dettes.</li>

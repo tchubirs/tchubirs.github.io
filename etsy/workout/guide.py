@@ -19,7 +19,7 @@ you can log your sets on your phone at the gym.<br/>
 of each workout.</li>
 </ol>
 <p style="{S}">You only type in the <span style="background-color:#FFF4C2">yellow cells</span>. Delete the example log
-and weigh-ins before you start.</p>
+and weigh-ins before you start. Select the yellow cells and press Delete, rather than deleting whole rows.</p>
 <h2 style="color:#1F6F78;{S}">After each workout</h2>
 <p style="{S}"><b>Log:</b> one line per exercise, with the date, the workout, and the weight and reps of up to five sets.
 For a bodyweight exercise, leave the weight empty and type only the reps. The best set, an estimated max and the volume

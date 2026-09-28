@@ -14,7 +14,7 @@ a feed from your phone in the middle of the night, and share the file with your 
 <h2 style="color:#1F6F78;{S}">Setting it up</h2>
 <ol style="{S}">
 <li><b>Settings:</b> the baby's name and birthday, and your units: ml or oz, kg or lb, cm or inches.</li>
-<li>The example baby is made up: delete her lines on Feeds, Sleep, Nappies, Growth, Appointments and Milestones.</li>
+<li>The example baby is made up: delete her lines on Feeds, Sleep, Nappies, Growth, Appointments and Milestones. Select the yellow cells and press Delete, rather than deleting whole rows.</li>
 </ol>
 <h2 style="color:#1F6F78;{S}">Every day</h2>
 <ul style="{S}">

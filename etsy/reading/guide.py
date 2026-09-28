@@ -16,7 +16,7 @@ you can add a book from your phone.<br/>
 <li><b>Dashboard:</b> the year and how many books you want to read in it.</li>
 <li><b>Settings:</b> twelve genres, each with its colour on the bookshelf. Rename them to the genres you read. Each
 place on the list keeps its colour.</li>
-<li><b>Books:</b> the example books and authors are made up. Delete them and add yours.</li>
+<li><b>Books:</b> the example books and authors are made up. Delete them and add yours. Select the yellow cells and press Delete, rather than deleting whole rows.</li>
 </ol>
 <h2 style="color:#1F6F78;{S}">As you read</h2>
 <ul style="{S}">

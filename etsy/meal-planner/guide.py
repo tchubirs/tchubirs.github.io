@@ -20,7 +20,7 @@ section, the pack you buy (a dozen, a 1 lb box), how many units are in that pack
 <li><b>Settings:</b> the store sections in the order you walk through your store.</li>
 </ol>
 <p style="{S}">You only type in the <span style="background-color:#FFF4C2">yellow cells</span>. The example recipes,
-pantry and plan show how it works. Replace them with your own.</p>
+pantry and plan show how it works. Replace them with your own. Select the yellow cells and press Delete, rather than deleting whole rows.</p>
 <h2 style="color:#1F6F78;{S}">Each week</h2>
 <ol style="{S}">
 <li><b>Week plan:</b> type the first day, the number of people eating each day, and pick a recipe for each meal.

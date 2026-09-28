@@ -15,7 +15,7 @@ with you and you both see the same lists.<br/>
 <ol style="{S}">
 <li><b>Dashboard:</b> the name of the party, the date, the time it starts and your budget.</li>
 <li><b>Guests:</b> the example party is made up, so delete its guests and add yours, one line per guest or family,
-with how many adults and kids. An empty Adults cell counts as one adult.</li>
+with how many adults and kids. Select the yellow cells and press Delete, rather than deleting whole rows. An empty Adults cell counts as one adult.</li>
 <li><b>Tasks:</b> a checklist is ready, from 8 weeks before to the days after. Change the days before, add your
 own tasks or delete the ones you do not need. Every date is counted back from the day of the party.</li>
 <li><b>Food and drinks:</b> how much each adult and each kid will eat or drink over the whole party, and the size and

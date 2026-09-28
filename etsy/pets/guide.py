@@ -14,7 +14,7 @@ look after your pets, and with the Google Sheets app you have the vet details on
 <h2 style="color:#1F6F78;{S}">Setting it up</h2>
 <ol style="{S}">
 <li><b>Pets:</b> the example pets are made up, so delete them and add yours, with the birthday, chip, insurance and
-vet.</li>
+vet. Select the yellow cells and press Delete, rather than deleting whole rows.</li>
 <li><b>Health:</b> each vaccine or treatment, how many months apart, and the date it was last done. Your vet can tell
 you how often.</li>
 <li><b>Food:</b> each bag in use, its size, how much a day in the same unit, the day you opened it and the price.</li>

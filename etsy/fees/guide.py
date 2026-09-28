@@ -21,7 +21,8 @@ your material, packaging and label costs, and the minutes of work. You see every
 and the item price that would reach your target margin.</p>
 <p style="{S}"><b>Products:</b> one line per product. <i>Share from Offsite Ads</i> is the part of your orders that
 come from Etsy's ads on other websites; leave it empty if you do not know. The status shows which products are on
-target, below target or losing money, and the last column suggests a price.</p>
+target, below target or losing money, and the last column suggests a price. The example products are made up.
+Select the yellow cells and press Delete, rather than deleting whole rows.</p>
 <p style="{S};color:#5E6E72;font-size:9px">This file is not made or endorsed by Etsy. Made with the help of AI tools.</p>
 """
 story = pymupdf.Story(html=HTML)

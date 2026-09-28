@@ -19,7 +19,7 @@ Bills after they leave are no longer split with them.</li>
 and who usually pays it. For the split, leave it empty to share it equally, put an x under the people who share it,
 or type numbers, like the size of each room.</li>
 <li><b>Chores:</b> the jobs in the house. The rota shares them out and moves one step every Monday.</li>
-<li><b>Payments:</b> the example house and its people are made up. Delete their lines and start with yours.</li>
+<li><b>Payments:</b> the example house and its people are made up. Delete their lines and start with yours. Select the yellow cells and press Delete, rather than deleting whole rows.</li>
 </ol>
 <h2 style="color:#1F6F78;{S}">Every month</h2>
 <ul style="{S}">

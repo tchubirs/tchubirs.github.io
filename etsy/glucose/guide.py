@@ -17,7 +17,7 @@ can add a reading from your phone.<br/>
 numbers your doctor or nurse gave you. The example numbers are made up.</li>
 <li><b>Medicines:</b> each one with its dose, up to four times a day, and the day you started. When you stop one,
 type the day.</li>
-<li>Delete the example readings and doses.</li>
+<li>Delete the example readings and doses. Select the yellow cells and press Delete, rather than deleting whole rows.</li>
 </ol>
 <h2 style="color:#1F6F78;{S}">Every day</h2>
 <ul style="{S}">

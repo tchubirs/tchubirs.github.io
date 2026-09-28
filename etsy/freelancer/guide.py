@@ -15,6 +15,7 @@ Many freelancers put aside 25 to 30% to be safe.</li>
 <li><b>Income:</b> one line per invoice. Fill in <i>Paid on</i> when the money arrives. An invoice turns red when it is overdue.</li>
 <li><b>Expenses:</b> one line per business purchase. Choose <i>Yes</i> under <i>Receipt?</i> once you have the receipt.</li>
 <li><b>Tax Savings:</b> add a line each time you move money aside for tax.</li>
+<li>The example invoices, expenses and savings are made up. Select the yellow cells and press Delete, rather than deleting whole rows.</li>
 </ol>
 <h2 style="color:#1F6F78;{S}">Once a week</h2>
 <p style="{S}">Open the Dashboard. <b>Still to put aside</b> is the amount to move to your tax savings now.

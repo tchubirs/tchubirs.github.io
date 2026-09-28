@@ -16,7 +16,7 @@ app you can tick the chores from your phone.<br/>
 <li><b>Kids:</b> each child with a base amount a week, so much a point, and the shares to save and to give. The rest
 goes to Spend. Add a goal and its price if they are saving for something.</li>
 <li><b>Chores:</b> each chore for each child, its points, and an x on the days it is expected.</li>
-<li>Delete the example family on Kids, Chores, This week and Money: they are made up.</li>
+<li>Delete the example family on Kids, Chores, This week and Money: they are made up. Select the yellow cells and press Delete, rather than deleting whole rows.</li>
 </ol>
 <h2 style="color:#1F6F78;{S}">Each week</h2>
 <ul style="{S}">

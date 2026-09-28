@@ -17,7 +17,7 @@ HTML = f"""
 </ol>
 <h2 style="color:#1F6F78;{S}">Le remplir</h2>
 <p style="{S}">Une ligne par abonnement : nom, catégorie, prix, fréquence de paiement et date du dernier prélèvement.
-Choisissez Oui dans <i>Essai gratuit ?</i> pour les essais. Tapez uniquement dans les <span style="background-color:#FFF4C2">cases jaunes</span>, après avoir supprimé les lignes d'exemple.</p>
+Choisissez Oui dans <i>Essai gratuit ?</i> pour les essais. Tapez uniquement dans les <span style="background-color:#FFF4C2">cases jaunes</span>, après avoir supprimé les lignes d'exemple. Sélectionnez les cases jaunes et appuyez sur Suppr, sans supprimer les lignes entières.</p>
 <h2 style="color:#1F6F78;{S}">Une fois par semaine</h2>
 <p style="{S}">Ouvrez le Tableau de bord. Rouge : un essai gratuit va devenir payant. Orange : un abonnement n'a pas servi depuis un mois.
 Choisissez <b>Annuler</b> pour voir l'économie par an, puis résiliez directement auprès du service.</p>

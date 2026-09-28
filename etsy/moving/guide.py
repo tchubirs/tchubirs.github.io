@@ -17,7 +17,7 @@ with you, and with the Google Sheets app you can tick off boxes from your phone.
 <li><b>Settings:</b> the rooms of the home you are leaving.</li>
 <li><b>Tasks:</b> a checklist is ready, from 8 weeks before to 3 weeks after. Change the days before, add your own
 tasks or delete the ones you do not need. Every date is counted back from moving day.</li>
-<li>The example move is made up: delete its boxes, costs, quotes and names.</li>
+<li>The example move is made up: delete its boxes, costs, quotes and names. Select the yellow cells and press Delete, rather than deleting whole rows.</li>
 </ol>
 <h2 style="color:#1F6F78;{S}">Until moving day</h2>
 <ul style="{S}">

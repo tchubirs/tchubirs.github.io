@@ -20,7 +20,7 @@ you keep aside for surprises. Between 10 and 20% is usual.</li>
 count against the budget.</li>
 <li><b>Timeline:</b> set the project start date, then add each task with its start date, end date and status.</li>
 </ol>
-<p style="{S}">You only type in the <span style="background-color:#FFF4C2">yellow cells</span>. Delete the example lines before you start.</p>
+<p style="{S}">You only type in the <span style="background-color:#FFF4C2">yellow cells</span>. Delete the example lines before you start. Select the yellow cells and press Delete, rather than deleting whole rows.</p>
 <h2 style="color:#1F6F78;{S}">While the work goes on</h2>
 <p style="{S}">Each time you pay a contractor, update <i>Paid so far</i> and the date of the next payment.
 The Dashboard lists the next five payments, shows overdue ones in red and tells you when a room goes over its budget.</p>

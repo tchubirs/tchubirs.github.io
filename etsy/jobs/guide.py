@@ -15,7 +15,7 @@ app you can add a job from your phone.<br/>
 <ol style="{S}">
 <li><b>Settings:</b> how many applications a week you aim for, after how many days to follow up, and after how many
 days of silence a job counts as No reply.</li>
-<li>Delete the example jobs, interviews and contacts: they are made up.</li>
+<li>Delete the example jobs, interviews and contacts: they are made up. Select the yellow cells and press Delete, rather than deleting whole rows.</li>
 </ol>
 <h2 style="color:#1F6F78;{S}">As you go</h2>
 <ul style="{S}">

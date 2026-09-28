@@ -16,7 +16,7 @@ looks after the tools.<br/>
 <li><b>Settings:</b> the currency, how many days before a yearly charge you want a warning, and the categories.</li>
 <li><b>Cards:</b> each card or account the tools are paid with, and the last day of the month it expires. Only a name
 you recognise, such as Business card A: never the card number.</li>
-<li><b>Team:</b> everyone who uses the tools. The example business is made up, so delete it first.</li>
+<li><b>Team:</b> everyone who uses the tools. The example business is made up, so delete it first. Select the yellow cells and press Delete, rather than deleting whole rows.</li>
 <li><b>Tools:</b> each tool with its billing, price and card, and the date of a renewal. Any past renewal date works:
 the next charge is worked out from it. For a plan paid per seat, an x under Per seat and the number of seats.</li>
 <li><b>Access:</b> one line per person and tool. The seats used come from here.</li>

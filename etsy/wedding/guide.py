@@ -16,7 +16,7 @@ and pick <b>Wedding-Budget-Planner.xlsx</b>. Open it, choose <i>File &gt; Save a
 <li><b>Vendors:</b> add each vendor once you have a quote, with what you have paid and when the next payment is due.</li>
 <li><b>Guests:</b> one line per guest. Update the RSVP and meal as answers come in.</li>
 </ol>
-<p style="{S}">You only type in the <span style="background-color:#FFF4C2">yellow cells</span>. Delete the example vendors and guests before you start.</p>
+<p style="{S}">You only type in the <span style="background-color:#FFF4C2">yellow cells</span>. Delete the example vendors and guests before you start. Select the yellow cells and press Delete, rather than deleting whole rows.</p>
 <h2 style="color:#1F6F78;{S}">Once a week</h2>
 <p style="{S}">Look at the Heads-up box on the Dashboard. It lists overdue payments, payments due in the next 14 days and guests who have not answered.</p>
 <p style="{S};color:#5E6E72;font-size:9px">Made with the help of AI tools. Works with any currency.</p>

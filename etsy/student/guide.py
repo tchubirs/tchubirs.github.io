@@ -21,7 +21,7 @@ weights of a course should add up to 100%. Add the grade you are aiming for.</li
 <li><b>Timetable:</b> type a course in each hour you have class.</li>
 </ol>
 <p style="{S}">You only type in the <span style="background-color:#FFF4C2">yellow cells</span>. Delete the example term
-before you start.</p>
+before you start. Select the yellow cells and press Delete, rather than deleting whole rows.</p>
 <h2 style="color:#1F6F78;{S}">During the term</h2>
 <p style="{S}">When you hand something in, set its status to Done. When you get it back, type the score and what it
 was out of. Log your study time on the Study log tab. The Dashboard shows what is due next and what is late, your grade

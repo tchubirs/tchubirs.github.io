@@ -12,6 +12,7 @@ Open it, then choose <i>File &gt; Save as Google Sheets</i>.<br/><b>Excel:</b> d
 <ol style="{S}">
 <li><b>Products:</b> one line per product. Give it a short code (SKU), then the name, a category, what one unit costs you, your price, how many you have today, and the stock level at which you want to reorder.</li>
 <li><b>Stock Moves:</b> from now on, one line each time stock changes. <i>Purchase</i> is stock you bought or made, <i>Sale</i> is an order, <i>Return</i> is an item sent back, and <i>Adjustment</i> is for broken, lost or gifted items (type a negative number).</li>
+<li>The example products and stock moves are made up. Select the yellow cells and press Delete, rather than deleting whole rows.</li>
 </ol>
 <h2 style="color:#1F6F78;{S}">Once a week</h2>
 <p style="{S}">Open the Dashboard. <b>To reorder now</b> counts the products at or below their reorder level. On the Products tab they show in orange, or in red when sold out.

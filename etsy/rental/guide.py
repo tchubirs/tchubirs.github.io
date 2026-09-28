@@ -18,7 +18,7 @@ the cleaning fee and the fee the platform kept. Nights, payout and status are ca
 <li><b>Expenses:</b> one line per cost, with the property it belongs to. Choose <i>Shared</i> for costs such as one
 insurance for several homes.</li>
 </ol>
-<p style="{S}">You only type in the <span style="background-color:#FFF4C2">yellow cells</span>. Delete the example lines before you start.</p>
+<p style="{S}">You only type in the <span style="background-color:#FFF4C2">yellow cells</span>. Delete the example lines before you start. Select the yellow cells and press Delete, rather than deleting whole rows.</p>
 <h2 style="color:#1F6F78;{S}">Reading the dashboard</h2>
 <p style="{S}">Pick the year and a property, or All properties. The monthly table shows nights, occupancy, revenue,
 expenses and profit. A stay that crosses a month end is split by nights. Occupancy to date counts the months up to today.

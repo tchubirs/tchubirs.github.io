@@ -18,7 +18,7 @@ uses a package session, and after how many days a client who has not been back s
 <li><b>Clients:</b> one line per client, with the phone, email, birthday and notes you want to keep.</li>
 </ol>
 <p style="{S}">You only type in the <span style="background-color:#FFF4C2">yellow cells</span>. Delete the example
-clients, appointments and packages before you start.</p>
+clients, appointments and packages before you start. Select the yellow cells and press Delete, rather than deleting whole rows.</p>
 <h2 style="color:#1F6F78;{S}">Every day</h2>
 <ol style="{S}">
 <li><b>Appointments:</b> one line per booking, with the date, time, client and service. The status starts as Booked.

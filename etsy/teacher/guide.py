@@ -15,7 +15,7 @@ timetable and your students. After that, a line for each lesson and your marks a
 <li><b>Settings:</b> your class names (up to six), the pass mark and your grade scale.</li>
 <li><b>Timetable:</b> the class in each period of your usual week, with the start times.</li>
 <li><b>Class 1 to Class 6:</b> the students of each class, one on each line.</li>
-<li>Delete the example classes, students, lessons and absences: they are made up.</li>
+<li>Delete the example classes, students, lessons and absences: they are made up. Select the yellow cells and press Delete, rather than deleting whole rows.</li>
 </ol>
 <h2 style="color:#1F6F78;{S}">As the weeks go by</h2>
 <ul style="{S}">

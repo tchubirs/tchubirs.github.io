@@ -17,7 +17,7 @@ Due soon.</li>
 <li><b>Loans:</b> each loan once, lent or borrowed, with its date and amount. For a plan, add the number of payments,
 how often (every week, 2 weeks or month) and the first payment date. Leave the plan empty for a loan paid back
 whenever it suits.</li>
-<li>Delete the example people, loans and payments: they are made up.</li>
+<li>Delete the example people, loans and payments: they are made up. Select the yellow cells and press Delete, rather than deleting whole rows.</li>
 </ol>
 <h2 style="color:#1F6F78;{S}">As money comes in and goes out</h2>
 <ul style="{S}">

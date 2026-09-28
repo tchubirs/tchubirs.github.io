@@ -17,6 +17,7 @@ with.<br/>
 <li><b>Setup:</b> the name of the trip, how many travel, the first and last day, your home currency, and what the
 other currencies are worth in it. Each kind of booking counts in one budget category, which you can change.</li>
 <li><b>Dashboard:</b> your budget for flights, lodging, transport, food, activities, shopping and other.</li>
+<li>The example trip to Tokyo is made up. Select the yellow cells and press Delete, rather than deleting whole rows.</li>
 </ol>
 <h2 style="color:#1F6F78;{S}">As you plan</h2>
 <ul style="{S}">

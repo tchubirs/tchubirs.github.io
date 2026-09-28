@@ -15,7 +15,7 @@ each gift and each time someone helps keeps everything up to date.</p>
 <li><b>Settings:</b> your organisation's name and address, the line at the end of each statement (add your charity
 number or anything your rules ask for), the currency, and after how many months without a gift a donor counts as
 lapsed.</li>
-<li>Delete the example gifts, donors, campaigns, volunteers and hours: they are made up.</li>
+<li>Delete the example gifts, donors, campaigns, volunteers and hours: they are made up. Select the yellow cells and press Delete, rather than deleting whole rows.</li>
 <li><b>Donors</b> and <b>Campaigns:</b> each donor once, and what you raise money for, with a goal and dates if it
 has them.</li>
 </ol>

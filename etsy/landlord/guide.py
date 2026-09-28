@@ -18,7 +18,7 @@ the lease dates and the deposit you hold.</li>
 than the one it arrives in, for example when rent comes in early.</li>
 <li><b>Expenses:</b> one line per cost, with its property and a category.</li>
 </ol>
-<p style="{S}">You only type in the <span style="background-color:#FFF4C2">yellow cells</span>. Delete the example lines before you start.</p>
+<p style="{S}">You only type in the <span style="background-color:#FFF4C2">yellow cells</span>. Delete the example lines before you start. Select the yellow cells and press Delete, rather than deleting whole rows.</p>
 <h2 style="color:#1F6F78;{S}">Reading it</h2>
 <p style="{S}">The Rent roll shows each unit and month: green when paid in full, orange when part paid, red when late.
 Rent counts as late once the due day and the grace days have passed. The Dashboard shows rent received, rent owed now,

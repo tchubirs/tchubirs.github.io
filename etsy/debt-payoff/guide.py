@@ -11,7 +11,8 @@ HTML = f"""
 <b>Excel:</b> double-click the file, and click "Enable editing" if Excel asks.</p>
 <h2 style="color:#1F6F78;{S}">Setting it up (Debts tab)</h2>
 <ol style="{S}">
-<li>One line per debt: the current balance, the yearly interest rate (%) and the minimum monthly payment.</li>
+<li>One line per debt: the current balance, the yearly interest rate (%) and the minimum monthly payment. The
+example debts are made up. Select the yellow cells and press Delete, rather than deleting whole rows.</li>
 <li>The extra amount you can pay each month on top of the minimums. Even a small amount moves the date.</li>
 <li>The month of your first payment.</li>
 <li>The method: <b>Avalanche</b> pays the least interest, <b>Snowball</b> clears the smallest debts first.</li>

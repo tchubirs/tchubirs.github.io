@@ -16,7 +16,7 @@ HTML = """
 <li><b>Log</b> tab: one line each time you spend or get paid.</li>
 </ol>
 <p style="font-family:sans-serif">You only type in the <span style="background-color:#FFF4C2">yellow cells</span>.
-Delete the example lines when you are ready.</p>
+Delete the example lines when you are ready. Select the yellow cells and press Delete, rather than deleting whole rows.</p>
 <h2 style="color:#1F6F78;font-family:sans-serif">Each day</h2>
 <p style="font-family:sans-serif">Open the <b>Dashboard</b>. The big number is what you can spend per day for the rest of the month.
 If you want to buy something you had not planned, put it on the <b>Impulse List</b> and decide 48 hours later.</p>

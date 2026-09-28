@@ -15,7 +15,7 @@ you can log a watering from your phone, next to the plant.<br/>
 <ol style="{S}">
 <li><b>Settings:</b> the months your plants grow. North of the equator that is often March to September. South of
 it, pick September to March.</li>
-<li><b>Plants:</b> the example plants are made up, so delete them and add yours. For each one: its spot, its light,
+<li><b>Plants:</b> the example plants are made up, so delete them and add yours. Select the yellow cells and press Delete, rather than deleting whole rows. For each one: its spot, its light,
 the days between waterings in the growing season and in the resting months, how often to feed it and every how
 many months to repot it, with the date it was last potted if you know it.</li>
 <li><b>Care log:</b> delete the example lines, then add the last time you watered each plant.</li>

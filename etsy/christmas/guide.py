@@ -14,7 +14,7 @@ you can tick off gifts in the shop.<br/>
 <h2 style="color:#1F6F78;{S}">Setting it up</h2>
 <ol style="{S}">
 <li><b>Settings:</b> the year of the Christmas you are planning, and your currency.</li>
-<li><b>People:</b> the example family is made up, so delete it and add everyone you buy for, with a budget each.</li>
+<li><b>People:</b> the example family is made up, so delete it and add everyone you buy for, with a budget each. Select the yellow cells and press Delete, rather than deleting whole rows.</li>
 <li><b>Budget:</b> a budget for food, decorations, travel and the rest. The gifts add up the people's budgets.</li>
 </ol>
 <h2 style="color:#1F6F78;{S}">As you go</h2>

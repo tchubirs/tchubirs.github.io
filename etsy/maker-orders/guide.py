@@ -19,7 +19,7 @@ order: a share of the total and a fixed amount. The example fees are rough, so c
 with how much one item uses. The cost of each product then fills in by itself.</li>
 </ol>
 <p style="{S}">You only type in the <span style="background-color:#FFF4C2">yellow cells</span>. Delete the example
-orders and customers before you start.</p>
+orders and customers before you start. Select the yellow cells and press Delete, rather than deleting whole rows.</p>
 <h2 style="color:#1F6F78;{S}">Each order</h2>
 <p style="{S}">One line on the Orders tab: the order date, the customer, the product and quantity, any extras such as
 a custom label or rush fee, the shipping you charged, what was paid so far, the due date, the status and where it came

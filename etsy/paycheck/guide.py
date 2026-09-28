@@ -18,7 +18,7 @@ type its month under <i>Only in month</i>.</li>
 <li><b>Paychecks:</b> your paydays for the next 12 months are listed. When a paycheck is different, for example with
 overtime, type it under <i>Different amount</i>.</li>
 </ol>
-<p style="{S}">You only type in the <span style="background-color:#FFF4C2">yellow cells</span>. Delete the example bills before you start.</p>
+<p style="{S}">You only type in the <span style="background-color:#FFF4C2">yellow cells</span>. Delete the example bills before you start. Select the yellow cells and press Delete, rather than deleting whole rows.</p>
 <h2 style="color:#1F6F78;{S}">How to read it</h2>
 <p style="{S}">Each bill goes on the last paycheck before its due date, and that paycheck keeps the money for it.
 The Dashboard opens on the paycheck you are on today and lists its bills, what is left to spend and how much per day

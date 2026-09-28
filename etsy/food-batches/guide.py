@@ -18,7 +18,7 @@ allergen names used where you sell.</li>
 label.</li>
 <li><b>Products:</b> how many items one batch makes, how many days it keeps, and the price.</li>
 <li><b>Recipes:</b> what goes into one batch. Grams where you can, so the label lists the ingredients in order.</li>
-<li>Delete the example bakery on every tab: it is made up.</li>
+<li>Delete the example bakery on every tab: it is made up. Select the yellow cells and press Delete, rather than deleting whole rows.</li>
 </ol>
 <h2 style="color:#1F6F78;{S}">Each time you bake or cook</h2>
 <ul style="{S}">
