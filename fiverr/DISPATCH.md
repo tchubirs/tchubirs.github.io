@@ -16,10 +16,13 @@ Fiverr seller profile and three published gigs, using exactly the texts below.
 
 ## Setup
 
-1. Download these three images to the computer. You will upload one per gig.
+1. Download these images to the computer. You will upload one per gig (the
+   last two are for the optional gigs 4 and 5).
    - https://raw.githubusercontent.com/tchubirs/tchubirs.github.io/refs/heads/claude/ai-revenue-automation-map-g00jks/fiverr/img/gig1-web-scraping.png
    - https://raw.githubusercontent.com/tchubirs/tchubirs.github.io/refs/heads/claude/ai-revenue-automation-map-g00jks/fiverr/img/gig2-python-automation.png
    - https://raw.githubusercontent.com/tchubirs/tchubirs.github.io/refs/heads/claude/ai-revenue-automation-map-g00jks/fiverr/img/gig3-sheets-excel.png
+   - https://raw.githubusercontent.com/tchubirs/tchubirs.github.io/refs/heads/claude/ai-revenue-automation-map-g00jks/fiverr/img/gig4-claude-skill.png
+   - https://raw.githubusercontent.com/tchubirs/tchubirs.github.io/refs/heads/claude/ai-revenue-automation-map-g00jks/fiverr/img/gig5-statement-excel.png
 2. Open https://www.fiverr.com/start_selling, click **Become a Seller** and sign
    in with the user's Google account. If you are not signed in, ask the user to
    sign in.
@@ -264,6 +267,7 @@ I use AI tools to build skills, and I test each one before delivery.
   - Describe the task the skill should handle.
   - Attach 2 or 3 examples of the output you want, as files or text.
   - Which Claude app do you use (web, desktop, Claude Code)?
+- **Gallery:** gig4-claude-skill.png
 
 ### Gig 5 (optional): bank statement PDF to Excel
 

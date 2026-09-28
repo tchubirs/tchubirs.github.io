@@ -134,18 +134,23 @@ def write(rows, out, order):
     head = ["Date", "Description", "Money in", "Money out", "Balance"]
     ws.append(head)
     for c in ws[1]:
-        c.font = Font(bold=True, color="FFFFFF")
+        c.font = Font(name="Arial", bold=True, color="FFFFFF")
         c.fill = PatternFill("solid", start_color="1F6F78")
     for d, desc, amount, bal in rows:
         ws.append([d, desc, amount if amount > 0 else None, -amount if amount < 0 else None, bal])
     for r in range(2, ws.max_row + 1):
+        for c in range(1, 6):
+            ws.cell(r, c).font = Font(name="Arial")
         ws.cell(r, 1).number_format = "yyyy-mm-dd"
         for c in (3, 4, 5):
             ws.cell(r, c).number_format = "#,##0.00"
-    for i, w in enumerate([12, 60, 14, 14, 14], start=1):
+    for i, w in enumerate([12, 40, 13, 13, 13], start=1):
         ws.column_dimensions[get_column_letter(i)].width = w
     ws.freeze_panes = "A2"
     ws.auto_filter.ref = f"A1:E{ws.max_row}"
+    ws.page_setup.orientation = "landscape"  # prints on one page width
+    ws.page_setup.fitToWidth, ws.page_setup.fitToHeight = 1, 0
+    ws.sheet_properties.pageSetUpPr.fitToPage = True
 
     sm = wb.create_sheet("Monthly summary")
     sm.append(["Month", "Money in", "Money out", "Net"])

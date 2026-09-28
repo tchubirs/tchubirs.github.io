@@ -67,7 +67,7 @@ def content(img, keep=1.0, pad=36, until_y=None):
         for y in range(until_y, min(a.shape[0] - 1, until_y + 90)):
             if (np.abs(a[y, x0:x1] - border).sum(axis=1) < 45).mean() > 0.5:
                 return img.crop((max(0, x0 - pad), max(0, y0 - pad), x1 + pad, y + 3))
-        return img.crop((max(0, x0 - pad), max(0, y0 - pad), x1 + pad, until_y + 20))
+        return img.crop((max(0, x0 - pad), max(0, y0 - pad), x1 + pad, until_y + 8))
     if keep < 1:
         y1 = y0 + int((y1 - y0) * keep)
         # Snap up to the nearest cell border so no row is cut in half.
