@@ -7,10 +7,11 @@ Teste combinado em 28/09: quando a loja abrir, esperar 30 dias. Se nenhuma
 planilha vender, paro de fazer planilhas e a gente muda de ideia. Se ele disser
 "para", paro as planilhas novas na hora.
 
-1. **Etsy:** controle de contas da casa dividida (república, quem paga o quê).
-2. **Etsy:** planejador de festa ou evento (convidados, fornecedores, orçamento, tarefas).
-3. **Etsy:** controle de plantas (rega, adubo, luz, onde fica cada uma).
-4. **Herculano:** pausado. O jogo está 90% pronto; só volta se ele pedir.
+1. **Etsy:** publicador pela API (`etsy/publish.py`): lê os 22 LISTING.md, confere as regras da Etsy, cria cada anúncio com fotos e arquivos e publica. Fica pronto para quando ele liberar o app da API.
+2. **Etsy:** controle de contas da casa dividida (república, quem paga o quê).
+3. **Etsy:** planejador de festa ou evento (convidados, fornecedores, orçamento, tarefas).
+4. **Etsy:** controle de plantas (rega, adubo, luz, onde fica cada uma).
+5. **Herculano:** pausado. O jogo está 90% pronto; só volta se ele pedir.
 
 Feito até agora: Fiverr (5 anúncios prontos, com imagens de trabalho real, e o
 conversor de extrato testado), Etsy (orçamento TDAH, assinaturas, kit, quitar
