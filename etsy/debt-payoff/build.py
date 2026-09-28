@@ -100,7 +100,7 @@ def schedule(name, rank_col):
             c = DEBT_COL0 + 3 * k + t
             ws.cell(4, c, f"=IF(Debts!${rank_col}${dr}=\"\",\"\",Debts!${rank_col}${dr})").font = font(8, color=MUTED)
             ws.cell(5, c, typ).font = font(8, color=MUTED)
-            h = ws.cell(6, c, f'=IF(Debts!$B${dr}="","",Debts!$B${dr}&" · {typ.lower()}")' if typ != "Bal"
+            h = ws.cell(6, c, f'=IF(Debts!$B${dr}="","",Debts!$B${dr}&" ({typ.lower()})")' if typ != "Bal"
                         else f'=IF(Debts!$B${dr}="","",Debts!$B${dr})')
             h.font = font(9, True, "FFFFFF")
             h.fill = fill(TEAL if typ == "Bal" else "4F8A90")
@@ -161,7 +161,7 @@ def months_to_zero(sheet, col):
 
 # ---------------------------------------------------------------- Dashboard
 db = wb.create_sheet("Dashboard", 0)
-sheet_base(db, "Your way out of debt", "Change the method or the extra amount on the Debts tab: everything updates.",
+sheet_base(db, "Your debt payoff plan", "Change the method or the extra amount on the Debts tab and everything updates.",
            [3, 24, 16, 16, 16, 16, 3, 22, 18, 18])
 free = {m: months_to_zero(m, "G") for m in ("Snowball", "Avalanche")}
 interest = {m: f"SUM({m}!$F${first_row}:$F${last_row})" for m in ("Snowball", "Avalanche")}
@@ -254,7 +254,7 @@ cd_ws.sheet_state = "hidden"
 
 chart = AreaChart()
 chart.grouping = "stacked"
-chart.title = "Watch each debt disappear"
+chart.title = "What you owe on each debt"
 chart.height, chart.width = 8.5, 17
 chart.x_axis.title = "Months from now"
 chart.y_axis.majorGridlines = None
@@ -268,21 +268,21 @@ db.add_chart(chart, "H12")
 
 # ---------------------------------------------------------------- Start Here
 st = wb.create_sheet("Start Here")
-sheet_base(st, "Start here: 3 minutes", "Only type in YELLOW cells.", [3, 6, 100])
+sheet_base(st, "Start here", "Type only in the yellow cells. Everything else is calculated.", [3, 6, 100])
 steps = [
-    ("1", "Debts tab: one line per debt: balance, yearly interest %, minimum payment."),
-    ("2", "Debts tab: how much EXTRA you can pay every month (even 20 helps), and the first payment month."),
-    ("3", "Pick a method: Avalanche (least interest) or Snowball (quick wins). The Dashboard compares both."),
-    ("★", "Dashboard: your debt-free date, and ONE thing to do this month: which debt gets the extra money."),
-    ("↻", "Every month: update the balances from your statements. The plan re-calculates."),
+    ("1", "Debts tab: one line per debt, with the balance, yearly interest rate and minimum payment."),
+    ("2", "Debts tab: the extra amount you can pay each month (even 20 helps) and the month of the first payment."),
+    ("3", "Pick a method: Avalanche pays the least interest, Snowball clears small debts first. The Dashboard compares both."),
+    ("4", "Dashboard: your debt-free date, and which debt gets the extra money this month."),
+    ("5", "Each month, update the balances from your statements. The plan is worked out again."),
 ]
 for k, (n, text) in enumerate(steps):
     r = 5 + k * 2
     st.cell(r, 2, n).font = font(18, True, TEAL)
     st.cell(r, 3, text).font = font(13)
-st["C17"] = "Snowball and Avalanche tabs show the month-by-month plan. Green cell = the month a debt is gone."
+st["C17"] = "The Snowball and Avalanche tabs show the plan month by month. A green cell marks the month a debt is paid off."
 st["C17"].font = font(11, color=MUTED, italic=True)
-st["C19"] = "A planning tool, not financial advice. Works in Google Sheets and Microsoft Excel."
+st["C19"] = "This is a planning tool and does not give financial advice. Works in Google Sheets and Microsoft Excel."
 st["C19"].font = font(11, color=MUTED, italic=True)
 
 wb.active = 0

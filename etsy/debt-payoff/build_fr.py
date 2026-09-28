@@ -71,8 +71,8 @@ for r, label, value, fmt in settings:
 dv = DataValidation(type="list", formula1='"Avalanche,Boule de neige"', allow_blank=False)
 de.add_data_validation(dv)
 dv.add("J10")
-de["J15"] = "Avalanche : le taux le plus élevé d’abord (le moins d’intérêts)."
-de["J16"] = "Boule de neige : le plus petit solde d’abord (victoires rapides)."
+de["J15"] = "Avalanche : le taux le plus élevé d'abord (le moins d'intérêts)."
+de["J16"] = "Boule de neige : le plus petit solde d'abord (victoires rapides)."
 for a in ("J15", "J16"):
     de[a].font = font(10, color=MUTED, italic=True)
 EXTRA, METHOD, START = "Dettes!$J$7", "Dettes!$J$10", "Dettes!$J$13"
@@ -100,7 +100,7 @@ def schedule(name, rank_col):
             c = DEBT_COL0 + 3 * k + t
             ws.cell(4, c, f"=IF(Dettes!${rank_col}${dr}=\"\",\"\",Dettes!${rank_col}${dr})").font = font(8, color=MUTED)
             ws.cell(5, c, typ).font = font(8, color=MUTED)
-            h = ws.cell(6, c, f'=IF(Dettes!$B${dr}="","",Dettes!$B${dr}&" · {typ.lower()}")' if typ != "Bal"
+            h = ws.cell(6, c, f'=IF(Dettes!$B${dr}="","",Dettes!$B${dr}&" ({typ.lower()})")' if typ != "Bal"
                         else f'=IF(Dettes!$B${dr}="","",Dettes!$B${dr})')
             h.font = font(9, True, "FFFFFF")
             h.fill = fill(TEAL if typ == "Bal" else "4F8A90")
@@ -161,7 +161,7 @@ def months_to_zero(sheet, col):
 
 # ---------------------------------------------------------------- Dashboard
 db = wb.create_sheet("Tableau de bord", 0)
-sheet_base(db, "Votre sortie de l’endettement", "Changez la méthode ou le montant en plus dans l’onglet Dettes : tout se met à jour.",
+sheet_base(db, "Votre plan de remboursement", "Changez la méthode ou le montant en plus dans l'onglet Dettes et tout se met à jour.",
            [3, 24, 16, 16, 16, 16, 3, 22, 18, 18])
 free = {m: months_to_zero(m, "G") for m in ("Snowball", "Avalanche")}
 interest = {m: f"SUM({m}!$F${first_row}:$F${last_row})" for m in ("Snowball", "Avalanche")}
@@ -196,7 +196,7 @@ db["B9"] = "Ce mois-ci"
 db["B9"].font = font(12, True, "FFFFFF")
 db["B9"].fill = fill(TEAL)
 db["B10"] = (f'=IFERROR("Payez le minimum sur chaque dette, et "&FIXED({focus_pay},2)&" sur "&{focus}'
-             f'&". C’est votre dette prioritaire.","Ajoutez vos dettes dans l’onglet Dettes.")')
+             f'&". C\'est votre dette prioritaire.","Ajoutez vos dettes dans l\'onglet Dettes.")')
 db["B10"].font = font(13, True)
 db["B10"].fill = fill("FFFFFF")
 db.merge_cells("B10:F10")
@@ -210,7 +210,7 @@ for i, m in enumerate(("Avalanche", "Snowball")):
     style(db.cell(r, 3, f"={free[m]}"), False, "0", align="center")
     style(db.cell(r, 4, f'=IF(C{r}="","15+ ans",EDATE({START},C{r}-1))'), False, "MMM YYYY", align="center")
     style(db.cell(r, 5, f"={interest[m]}"), False, MONEY)
-style(db.cell(13, 6, '=IF(E14-E13>0.5,"économise "&FIXED(E14-E13,0)&" d’intérêts","mêmes intérêts")'), False)
+style(db.cell(13, 6, '=IF(E14-E13>0.5,"économise "&FIXED(E14-E13,0)&" d\'intérêts","mêmes intérêts")'), False)
 style(db.cell(14, 6, f'="1re dette soldée en "&MIN(Dettes!$M${D0}:$M${D1})&" mois (vs "&MIN(Dettes!$N${D0}:$N${D1})&")"'), False)
 # Google Sheets only accepts other-sheet references in conditional formatting through INDIRECT.
 db.conditional_formatting.add("B13:F14", FormulaRule(formula=['$B13=INDIRECT("Dettes!J10")'], fill=fill(OK)))
@@ -254,7 +254,7 @@ cd_ws.sheet_state = "hidden"
 
 chart = AreaChart()
 chart.grouping = "stacked"
-chart.title = "Regardez chaque dette disparaître"
+chart.title = "Ce que vous devez sur chaque dette"
 chart.height, chart.width = 8.5, 17
 chart.x_axis.title = "Mois à partir de maintenant"
 chart.y_axis.majorGridlines = None
@@ -268,21 +268,21 @@ db.add_chart(chart, "H12")
 
 # ---------------------------------------------------------------- Start Here
 st = wb.create_sheet("Commencer ici")
-sheet_base(st, "Commencer ici : 3 minutes", "Tapez uniquement dans les cases JAUNES.", [3, 6, 100])
+sheet_base(st, "Commencer ici", "Tapez uniquement dans les cases jaunes. Tout le reste est calculé.", [3, 6, 100])
 steps = [
-    ("1", "Onglet Dettes : une ligne par dette : solde, taux annuel %, paiement minimum."),
-    ("2", "Onglet Dettes : combien vous pouvez payer EN PLUS chaque mois (même 20 aide), et le mois du premier paiement."),
-    ("3", "Choisissez une méthode : Avalanche (moins d’intérêts) ou Boule de neige (victoires rapides). Le Tableau de bord compare les deux."),
-    ("★", "Tableau de bord : votre date de liberté, et UNE chose à faire ce mois-ci : quelle dette reçoit l’argent en plus."),
-    ("↻", "Chaque mois : mettez à jour les soldes d’après vos relevés. Le plan se recalcule."),
+    ("1", "Onglet Dettes : une ligne par dette, avec le solde, le taux annuel et le paiement minimum."),
+    ("2", "Onglet Dettes : le montant en plus que vous pouvez payer chaque mois (même 20 aide) et le mois du premier paiement."),
+    ("3", "Choisissez une méthode : Avalanche paie le moins d'intérêts, Boule de neige solde d'abord les petites dettes."),
+    ("4", "Tableau de bord : la date où vous n'aurez plus de dettes, et la dette qui reçoit l'argent en plus ce mois-ci."),
+    ("5", "Chaque mois, mettez à jour les soldes d'après vos relevés. Le plan est recalculé."),
 ]
 for k, (n, text) in enumerate(steps):
     r = 5 + k * 2
     st.cell(r, 2, n).font = font(18, True, TEAL)
     st.cell(r, 3, text).font = font(13)
-st["C17"] = "Les onglets Snowball et Avalanche montrent le plan mois par mois. Case verte = le mois où une dette disparaît."
+st["C17"] = "Les onglets Snowball et Avalanche montrent le plan mois par mois. Une case verte marque le mois où une dette est soldée."
 st["C17"].font = font(11, color=MUTED, italic=True)
-st["C19"] = "Outil de planification, pas un conseil financier. Fonctionne dans Google Sheets et Microsoft Excel."
+st["C19"] = "C'est un outil de planification : il ne donne pas de conseil financier. Fonctionne dans Google Sheets et Microsoft Excel."
 st["C19"].font = font(11, color=MUTED, italic=True)
 
 wb.active = 0
