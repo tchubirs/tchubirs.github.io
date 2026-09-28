@@ -328,7 +328,7 @@ Attach the Excel file or share a copy of the Google Sheet (edit access).
 Do you use Google Sheets or Excel (Windows or Mac)?
 ```
 
-**Gallery:** envie a imagem `img/gig3-sheets-excel.png`.
+**Gallery:** envie as 3 imagens, nesta ordem: `img/gig3-sheets-excel.png`, `img/gig3-dashboards.png` e `img/gig3-reports.png`. São planilhas que eu fiz e testei, então servem de portfólio.
 
 ---
 
