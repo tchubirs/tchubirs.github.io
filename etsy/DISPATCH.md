@@ -1,4 +1,4 @@
-# Task: open an Etsy shop and publish twenty-seven digital-download listings
+# Task: open an Etsy shop and publish twenty-eight digital-download listings
 
 You are acting in the user's own browser, on the user's behalf. Everything to
 publish is already made: spreadsheet files, guides, photos and listing texts.
@@ -108,6 +108,9 @@ computer:
 - Pets: `pets/Pet-Care-Tracker.xlsx`, `pets/Start-Here-Guide.pdf`,
   and the photos `pets/images/01-dashboard.jpg`, `02-health.jpg`, `03-food.jpg`,
   `04-costs.jpg`, `05-vet-visits.jpg`, `06-whats-inside.jpg`.
+- Car: `car/Car-Maintenance-Tracker.xlsx`, `car/Start-Here-Guide.pdf`,
+  and the photos `car/images/01-dashboard.jpg`, `02-services.jpg`, `03-fuel.jpg`,
+  `04-papers.jpg`, `05-year.jpg`, `06-whats-inside.jpg`.
 
 Files from different products share names (every product has a
 `Start-Here-Guide.pdf`), so prefix each file with its folder name when you
@@ -125,7 +128,7 @@ save it.
    lets you finish opening the shop after one listing exists.
 5. Payment, billing and security steps: **stop and hand over to the user**.
 
-## 3. The twenty-seven listings
+## 3. The twenty-eight listings
 
 Each listing's texts are in its `LISTING.md`: title, description, 13 tags,
 price, and which files and photos to upload. Read it at the base URL above,
@@ -160,6 +163,7 @@ followed by the path.
 | 25 | Plant care tracker | `plants/LISTING.md` | 4.50 |
 | 26 | Moving planner | `moving/LISTING.md` | 6.50 |
 | 27 | Pet care tracker | `pets/LISTING.md` | 5.50 |
+| 28 | Car maintenance tracker | `car/LISTING.md` | 6.50 |
 
 The price column replaces the dollar prices in the LISTING.md files, because
 the shop is in euros.
