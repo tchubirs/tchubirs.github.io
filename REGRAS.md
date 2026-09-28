@@ -25,3 +25,18 @@
 13. **Trabalhar direto, sem pausa** (ele disse que o gasto é pouco). No fim de
     cada bloco, agendar a continuação para 1 minuto depois. A rotina de hora
     em hora é só a reserva.
+14. **Nada com cara de IA** (pedido dele em 28/09). Vale para textos,
+    planilhas, imagens, anúncios e mensagens para ele.
+    - Texto: sem travessão nem meia-risca no meio da frase, sem marcadores
+      decorativos (bolinha, estrela, visto, alerta, seta, ponto do meio,
+      reticências prontas, aspas curvas, emoji) e sem títulos em maiúsculas.
+    - Sem frases de efeito: "X, não Y", "não é só", trios de adjetivos,
+      "(s)" para plural, e palavras de propaganda como *at a glance*, <!-- ia-ok -->
+      *stress-free*, *seamless*, *effortless*, *take control*, <!-- ia-ok -->
+      *peace of mind*, *say goodbye*, *ultimate*, *game-changer*. <!-- ia-ok -->
+      Frases curtas, concretas, com números de verdade.
+    - Visual: sem fundo creme, sem tudo centralizado, sem pílulas
+      arredondadas e sombras iguais em todas as imagens.
+    - Antes de cada commit, `python3 tools/sem_ia.py` tem que passar.
+    - O aviso de que usei IA continua no fim dos anúncios: a Etsy exige, e
+      esconder isso seria enganar o comprador.
