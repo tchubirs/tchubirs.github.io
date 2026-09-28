@@ -15,7 +15,8 @@ Debt Payoff Planner Spreadsheet, Snowball & Avalanche Calculator, Google Sheets 
 
 ## Type
 
-**Digital files.** Envie `Debt-Payoff-Planner.xlsx` e `Start-Here-Guide.pdf`.
+**Digital files.** Envie `Debt-Payoff-Planner.xlsx`, `Start-Here-Guide.pdf`,
+`Plan-Remboursement-Dettes.xlsx` (versão em francês) e `Guide-Demarrage.pdf`.
 
 ## Price
 
@@ -53,6 +54,7 @@ WORKS WITH
 YOU RECEIVE
 • Debt-Payoff-Planner.xlsx
 • Start-Here-Guide.pdf
+• A French version: Plan-Remboursement-Dettes.xlsx + Guide-Demarrage.pdf
 
 Digital download; nothing will be shipped. A planning tool, not financial advice: each lender may calculate interest slightly differently.
 
@@ -75,4 +77,63 @@ loan calculator
 finance planner
 adhd budget
 money planner
+```
+
+## Tradução francesa (opcional)
+
+Mesmo esquema: aba **Français** do anúncio.
+
+**Titre**
+```
+Plan de Remboursement de Dettes, Méthode Boule de Neige et Avalanche, Tableur Google Sheets & Excel, Date de Fin des Dettes
+```
+
+**Description**
+```
+UNE date à viser (le mois où vous serez libre de dettes) et UNE chose à faire chaque mois.
+
+Saisissez vos dettes une fois. Le tableur calcule, mois par mois, quand chaque dette disparaît, avec les deux méthodes classiques côte à côte :
+• Avalanche : le taux le plus élevé d'abord, pour payer le moins d'intérêts
+• Boule de neige : le plus petit solde d'abord, pour des victoires rapides
+Il montre laquelle vous fait économiser le plus, et laquelle solde votre première dette le plus vite.
+
+LE TABLEAU DE BORD MONTRE
+• Votre mois de liberté et le nombre de mois restants
+• Le total des intérêts avec votre plan
+• « Ce mois-ci » : payez le minimum partout et mettez X sur votre dette prioritaire
+• La date où chaque dette sera soldée, dans l'ordre
+• Un graphique de chaque dette qui fond jusqu'à zéro
+
+COMMENT ÇA MARCHE
+• Jusqu'à 10 dettes : cartes de crédit, prêts, cartes de magasin, frais médicaux
+• Ajoutez un montant en plus chaque mois et regardez la date se rapprocher
+• Effet boule de neige intégré : quand une dette est soldée, son minimum passe à la suivante
+• Plans mois par mois jusqu'à 15 ans
+
+FONCTIONNE AVEC Google Sheets (gratuit) et Microsoft Excel, toutes devises.
+
+VOUS RECEVEZ
+• Plan-Remboursement-Dettes.xlsx + Guide-Demarrage.pdf (en français)
+• La version anglaise : Debt-Payoff-Planner.xlsx + Start-Here-Guide.pdf
+
+Fichier numérique : rien n'est expédié. Outil de planification, pas un conseil financier.
+
+Conçu par moi avec l'aide d'outils d'IA ; les formules ont été vérifiées avec les données d'exemple.
+```
+
+**Tags**
+```
+remboursement dette
+boule de neige
+methode avalanche
+dettes
+tableur excel
+google sheets
+budget
+credit
+plan financier
+liberte financiere
+gestion budget
+budget tdah
+finances perso
 ```
