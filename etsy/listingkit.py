@@ -22,15 +22,20 @@ M = 150  # page margin
 class Renders:
     """PDF render of a workbook; page(title) returns the sheet whose title starts with it."""
 
-    def __init__(self, xlsx, tmp, hide=None):
-        """hide = {sheet name: [column letters]} renders a copy with those columns hidden, for close-ups."""
+    def __init__(self, xlsx, tmp, hide=None, hide_rows=None):
+        """hide = {sheet: [column letters]}, hide_rows = {sheet: [row numbers]}: render a copy for close-ups."""
         os.makedirs(tmp, exist_ok=True)
-        if hide:
+        if hide or hide_rows:
             from openpyxl import load_workbook
             wb = load_workbook(xlsx)
-            for name, cols in hide.items():
+            for name, cols in (hide or {}).items():
                 for col in cols:
                     wb[name].column_dimensions[col].hidden = True
+            for name, rows in (hide_rows or {}).items():
+                for row in rows:
+                    wb[name].row_dimensions[row].hidden = True
+            for name in set(hide or {}) | set(hide_rows or {}):
+                wb[name].page_setup.fitToHeight = 1  # the close-up sheet on a single page
             xlsx = os.path.join(tmp, os.path.splitext(os.path.basename(xlsx))[0] + "-closeup.xlsx")
             wb.save(xlsx)
         env = dict(os.environ, HOME="/tmp/lohome")
@@ -101,18 +106,18 @@ def _wrap(d, text, font, width):
     return lines + [line]
 
 
-def title(img, text, sub=None, dark=False, y=130, width=2400, size=118):
+def title(img, text, sub=None, dark=False, y=130, width=2400, size=118, x=M):
     """Left-aligned title and an optional line under it. Returns the y below the text."""
     d = ImageDraw.Draw(img)
     ft = f(XB, size)
     for line in [w for part in text.split("\n") for w in _wrap(d, part, ft, width)]:
-        d.text((M, y), line, font=ft, fill="#FFFFFF" if dark else TEAL_D)
+        d.text((x, y), line, font=ft, fill="#FFFFFF" if dark else TEAL_D)
         y += int(size * 1.12)
     if sub:
         fs = f(MD, 56)
         y += 18
         for line in _wrap(d, sub, fs, width):
-            d.text((M, y), line, font=fs, fill=SOFT if dark else MUTED)
+            d.text((x, y), line, font=fs, fill=SOFT if dark else MUTED)
             y += 70
     return y
 
@@ -194,9 +199,24 @@ def grid(img, cells, top, cols=2):
 
 
 def detail(path, heading, sub, shot, key=None, max_h=1250):
-    """One sheet close up on the light page, with an optional colour key, centred as a block."""
+    """One sheet close up on the light page, with an optional colour key, centred as a block.
+
+    A tall, narrow close-up goes on the left with the text beside it instead of above it.
+    """
     img = canvas()
     d = ImageDraw.Draw(img)
+    if shot.width * min((W - 2 * M) / shot.width, max_h / shot.height) < 1600:
+        k = min(1450 / shot.width, (H - 260) / shot.height)
+        sw, sh = int(shot.width * k), int(shot.height * k)
+        sheet(img, shot, (M, (H - sh) // 2, M + sw, (H + sh) // 2))
+        x = M + sw + 140
+        lines = [w for part in heading.split("\n") for w in _wrap(d, part, f(XB, 104), W - x - M)]
+        text_h = len(lines) * 116 + 18 + 70 * len(_wrap(d, sub or "", f(MD, 56), W - x - M)) + (110 * len(key) + 60 if key else 0)
+        y = title(img, heading, sub, y=(H - text_h) // 2, width=W - x - M, size=104, x=x)
+        for k2, item in enumerate(key or []):
+            legend(img, [item], y + 60 + 110 * k2, x=x)
+        save(img, path)
+        return
     lines = [w for part in heading.split("\n") for w in _wrap(d, part, f(XB, 118), 2400)]
     subs = _wrap(d, sub, f(MD, 56), 2400) if sub else []
     th = len(lines) * int(118 * 1.12) + (18 + 70 * len(subs) if subs else 0)

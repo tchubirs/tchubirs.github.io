@@ -1,4 +1,4 @@
-# Task: open an Etsy shop and publish eight digital-download listings
+# Task: open an Etsy shop and publish nine digital-download listings
 
 You are acting in the user's own browser, on the user's behalf. Everything to
 publish is already made: spreadsheet files, guides, photos and listing texts.
@@ -51,6 +51,9 @@ computer:
   `renovation/Start-Here-Guide.pdf`, and the photos
   `renovation/images/01-dashboard.jpg`, `02-quotes.jpg`, `03-timeline.jpg`,
   `04-whats-inside.jpg`.
+- Rental: `rental/Vacation-Rental-Host-Tracker.xlsx`, `rental/Start-Here-Guide.pdf`,
+  and the photos `rental/images/01-dashboard.jpg`, `02-bookings.jpg`,
+  `03-months.jpg`, `04-whats-inside.jpg`.
 
 Files from different products share names (every product has a
 `Start-Here-Guide.pdf`), so prefix each file with its folder name when you
@@ -68,7 +71,7 @@ save it.
    lets you finish opening the shop after one listing exists.
 5. Payment, billing and security steps: **stop and hand over to the user**.
 
-## 3. The eight listings
+## 3. The nine listings
 
 Each listing's texts are in its `LISTING.md`: title, description, 13 tags,
 price, and which files and photos to upload. Read it at the base URL above,
@@ -84,6 +87,7 @@ followed by the path.
 | 6 | Wedding budget planner | `wedding/LISTING.md` | 8.50 |
 | 7 | Inventory & sales tracker | `inventory/LISTING.md` | 7.50 |
 | 8 | Home renovation budget planner | `renovation/LISTING.md` | 8.50 |
+| 9 | Vacation rental host tracker | `rental/LISTING.md` | 9.50 |
 
 The price column replaces the dollar prices in the LISTING.md files, because
 the shop is in euros.
