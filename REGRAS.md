@@ -17,3 +17,8 @@
    completo, e-mail e dados bancários dele nunca entram neste repositório,
    que é público.
 10. **Cuidar dos tokens:** nada de fluxos gigantes com dezenas de agentes.
+11. **Se os tokens acabarem, esperar e continuar quando voltarem.** Uma rotina
+    me retoma sozinha a cada 3 horas.
+12. **Ser como a IA do vídeo (Automaton): criar coisas que vendem, sem parar.**
+    Pedido dele em 28/09. Os US$ 5 que ele ofereceu não são necessários
+    agora; o que falta são as contas de vendedor, que só ele pode abrir.
