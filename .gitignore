@@ -9,3 +9,6 @@
 node_modules
 node_modules/
 __pycache__/
+
+# Chaves e tokens da API da Etsy (etsy/publish.py).
+/.etsy-secret

@@ -10,7 +10,7 @@ Pasta `images/`, nesta ordem: 01, 02, 03.
 ## Title
 
 ```
-Debt Payoff Planner Spreadsheet, Snowball & Avalanche Calculator, Google Sheets & Excel, Debt Free Date, Debt Tracker Template
+Debt Payoff Planner Spreadsheet, Snowball and Avalanche Calculator, Google Sheets & Excel, Debt Free Date, Debt Tracker Template
 ```
 
 ## Type
