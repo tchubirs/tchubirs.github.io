@@ -1,4 +1,4 @@
-# Task: open an Etsy shop and publish seventeen digital-download listings
+# Task: open an Etsy shop and publish eighteen digital-download listings
 
 You are acting in the user's own browser, on the user's behalf. Everything to
 publish is already made: spreadsheet files, guides, photos and listing texts.
@@ -78,6 +78,9 @@ computer:
 - Orders: `maker-orders/Handmade-Order-Tracker.xlsx`, `maker-orders/Start-Here-Guide.pdf`,
   and the photos `maker-orders/images/01-dashboard.jpg`, `02-orders.jpg`, `03-products.jpg`,
   `04-materials.jpg`, `05-calendar.jpg`, `06-whats-inside.jpg`.
+- Habits: `habits/Habit-Mood-Tracker.xlsx`, `habits/Start-Here-Guide.pdf`,
+  and the photos `habits/images/01-dashboard.jpg`, `02-month.jpg`, `03-year-in-pixels.jpg`,
+  `04-streaks.jpg`, `05-whats-inside.jpg`.
 
 Files from different products share names (every product has a
 `Start-Here-Guide.pdf`), so prefix each file with its folder name when you
@@ -95,7 +98,7 @@ save it.
    lets you finish opening the shop after one listing exists.
 5. Payment, billing and security steps: **stop and hand over to the user**.
 
-## 3. The seventeen listings
+## 3. The eighteen listings
 
 Each listing's texts are in its `LISTING.md`: title, description, 13 tags,
 price, and which files and photos to upload. Read it at the base URL above,
@@ -120,6 +123,7 @@ followed by the path.
 | 15 | Client and appointment tracker | `client-book/LISTING.md` | 8.50 |
 | 16 | Workout log and progress tracker | `workout/LISTING.md` | 6.50 |
 | 17 | Handmade order tracker | `maker-orders/LISTING.md` | 8.50 |
+| 18 | Habit and mood tracker | `habits/LISTING.md` | 5.50 |
 
 The price column replaces the dollar prices in the LISTING.md files, because
 the shop is in euros.
