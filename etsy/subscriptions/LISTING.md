@@ -15,7 +15,8 @@ Subscription Tracker Spreadsheet, Google Sheets & Excel, Free Trial Reminder, Ca
 
 ## Type
 
-**Digital files.** Envie `Subscription-Tracker.xlsx` e `Start-Here-Guide.pdf`.
+**Digital files.** Envie `Subscription-Tracker.xlsx`, `Start-Here-Guide.pdf`,
+`Abonnements-Suivi.xlsx` (versão em francês) e `Guide-Demarrage.pdf`.
 
 ## Price
 
@@ -51,6 +52,7 @@ WORKS WITH
 YOU RECEIVE
 • Subscription-Tracker.xlsx
 • Start-Here-Guide.pdf (how to open it, and where to find all your subscriptions)
+• A French version: Abonnements-Suivi.xlsx + Guide-Demarrage.pdf
 
 This is a digital download; nothing will be shipped. The tracker does not cancel anything for you: it shows you what to cancel.
 
@@ -73,4 +75,57 @@ monthly expenses
 finance planner
 spending tracker
 cancel reminder
+```
+
+## Tradução francesa (opcional)
+
+Mesmo esquema do orçamento: aba **Français** do anúncio.
+
+**Titre**
+```
+Suivi des Abonnements, Tableur Google Sheets & Excel, Rappel Fin d'Essai Gratuit, Résilier les Abonnements Inutilisés, Budget
+```
+
+**Description**
+```
+Combien vous coûtent vraiment vos abonnements par an ? La plupart des gens sous-estiment de moitié.
+
+Ce tableur réunit tous vos abonnements et vous dit, automatiquement :
+• Combien vous payez par mois ET par an
+• Quels essais gratuits vont bientôt devenir payants (alerte rouge, avec les jours restants)
+• Quels abonnements vous n'utilisez plus depuis 30 jours (orange : ça vaut encore le coup ?)
+• Combien vous économisez par an en résiliant ceux marqués « Annuler »
+• La date du prochain prélèvement, même en facturation hebdo, trimestrielle ou annuelle
+
+DANS LE FICHIER
+• Tableau de bord : par mois, par an, argent dormant, économies, dépenses par catégorie
+• Abonnements : une ligne chacun, avec des listes déroulantes
+• Commencer ici : 5 étapes, 2 minutes
+
+FONCTIONNE AVEC Google Sheets (gratuit) et Microsoft Excel, toutes devises.
+
+VOUS RECEVEZ
+• Abonnements-Suivi.xlsx + Guide-Demarrage.pdf (en français)
+• La version anglaise : Subscription-Tracker.xlsx + Start-Here-Guide.pdf
+
+Fichier numérique : rien n'est expédié. Le tableur ne résilie rien à votre place : il vous montre quoi résilier.
+
+Conçu par moi avec l'aide d'outils d'IA ; les formules ont été vérifiées avec les données d'exemple.
+```
+
+**Tags**
+```
+suivi abonnements
+abonnement
+essai gratuit
+google sheets
+tableur excel
+budget mensuel
+budget tdah
+economies
+gestion budget
+depenses mensuelles
+planificateur
+finances perso
+resiliation
 ```
