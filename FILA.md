@@ -3,6 +3,10 @@
 Pego o primeiro item, entrego, commito e passo para o próximo. Tudo segue a
 regra 14 (nada com cara de IA) e passa em `python3 tools/sem_ia.py`.
 
+Teste combinado em 28/09: quando a loja abrir, esperar 30 dias. Se nenhuma
+planilha vender, paro de fazer planilhas e a gente muda de ideia. Se ele disser
+"para", paro as planilhas novas na hora.
+
 1. **Etsy:** planilha de refeições da semana com lista de compras que se
    monta sozinha.
 2. **Etsy:** controle de metas de poupança com vários potes (viagem,
