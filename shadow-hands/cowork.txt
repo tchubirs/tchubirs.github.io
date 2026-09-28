@@ -1,0 +1,122 @@
+INSTRUCOES PARA O COWORK (no PC do Tchubi) — Shadow Hands, Meta VR Start Developer Competition 2026
+Prazo: 18/11/2026, 12:00 hora do Pacifico.
+
+1. Descarregar o video: https://tchubirs.github.io/shadow-hands/demo.mp4
+2. Carregar esse video no YouTube do Tchubi, como "Nao listado".
+   Titulo: Shadow Hands — hand shadow puppets in WebXR (hands only)
+   Descricao: o "Elevator pitch" abaixo + https://tchubirs.github.io/shadow-hands/
+3. No Devpost, na pagina do Meta VR Start Developer Competition 2026 onde o Tchubi ja
+   esta inscrito, criar a submissao do projecto "Shadow Hands" com o texto abaixo.
+   Link do jogo: https://tchubirs.github.io/shadow-hands/
+   Link do video: o do passo 2.
+   Categoria: Best New Entertainment Experience.
+4. Antes de carregar em "Submit", mostrar tudo ao Tchubi e so submeter com o OK dele.
+
+================ TEXTO DA SUBMISSAO (ingles) ================
+## Elevator pitch (máx. 200 caracteres)
+
+> The oldest game there is, in VR: make shadow animals with your hands, and when the
+> shape is right, the shadow comes alive and walks off the wall. Hands only. No menus.
+
+## About the project
+
+### Inspiration
+
+Every child has done it: hands between a lamp and a wall, and a rabbit appears.
+Hand tracking on Quest finally sees every joint of your fingers — so the headset can
+tell when your shadow *is* a rabbit, and let it hop away.
+
+### What it does
+
+You sit facing a paper wall. A lantern warms up behind you. Raise your hands and
+their shadows fall on the wall — finger by finger, the real shadow of your real
+hands.
+
+The wall teaches you four classic shadow figures: a **rabbit**, a **dog**, a
+**bird** and a **crocodile**. Next to the request, the faint shadow of the right hand shape breathes on
+the wall. If you get stuck, the wall tells you **one thing only — the thing that is
+wrong**: *"Tuck your thumb over them."* *"Drop your little finger — the mouth."*
+*"Hook your thumbs together."*
+
+When the shape is right, a chime rings and your shadow comes alive: the rabbit
+twitches its ears and hops off, the dog barks and trots away wagging its tail, the
+bird beats its wings and flies up the wall, the crocodile snaps three times and crawls away. Each sound comes from where the animal
+is. After the four, the wall says *"Now the light is yours."*
+
+No controllers, no menus, no buttons — nothing to install. It runs in the Quest
+browser from a link.
+
+### How we built it
+
+- **WebXR + three.js**, hand tracking with all 25 joints per hand. The hand shadow is
+  built from the joints themselves (a sphere per joint, a capsule per bone) and cast
+  by a real spotlight onto the wall — there is no hand model.
+- **The figure is judged by its shadow, not by the hand.** The recogniser projects
+  the joints onto the wall plane: a finger pointed at the wall is an ear in 3D but a
+  dot on the wall, and it does not count.
+- **The same rules recognise the figure and write the hint**, so the two never
+  disagree.
+- **All sound is synthesised in code** — the lantern crackle, the chime, the hop, the
+  bark, the chirp, the wings, the snap. No audio files, nothing third-party. Positional (HRTF).
+- **The shadows that come alive are hands too** — classic two-hand shadow puppets
+  (dog, rabbit, bird, crocodile), animated joint by joint. Every 1/30 s of every
+  puppet's life is checked in code to be something two real hands can do: joint
+  angles within anatomical limits, at most one left and one right hand, no finger
+  passing through another, the two hands and forearms never passing through each
+  other, wrists within limits, arms coming from the player's body, and each hand
+  within reach of its shoulder. 17,568 puppet positions, all possible.
+- **All art is code**: rice-paper texture, dust drifting in the beam, a hand shadow
+  with a real palm and the skin between thumb and index.
+- Built and tested without a headset, in Meta's **IWER** emulator running an
+  emulated Quest 3 inside a headless browser.
+
+### Measured, not claimed
+
+- The same feasibility check caught two of our own taught poses: the rabbit's thumb
+  sank 9 mm into the ring finger, and our first bird needed both forearms in the same
+  place. The bird is now the classic crossed-wrist bird.
+- Every test hand is built from **joint angles within the limits of a real hand**,
+  with bone lengths measured on the real captured hand that ships with IWER. An
+  impossible pose cannot be written — the builder refuses it.
+- 27 of 27 fixed cases: the four figures, and **19 hands that are not figures** —
+  including the three real captured poses shipped with IWER (rest, pinch, point) and
+  the near-misses (rabbit pointed at the wall, "three" with the thumb out, dog with
+  its mouth closed, bird with the thumbs apart…).
+- Robustness, 2000 hands per case, rotated and trembling: up to 20° and 4 mm of
+  tracking noise, **96–100% recognised, and the worst false positive is 0.3%**. At 30°
+  and 6 mm the dog drops to 55% and the bird and crocodile to 38% — which is why the
+  game teaches the pose.
+- Every rule was broken on purpose to check that a test catches it.
+- 21 of 21 near-misses receive the right hint.
+
+### Challenges
+
+Deciding by the **shadow** instead of the hand. And false positives: a figure that
+lights up when you did not make it ruins the magic, so every rule had to reject
+real, relaxed hands first.
+
+### What we learned
+
+A measurement is only as honest as its reference: several of our own "improvements"
+were rejected by the test bench — including one rule that looked useless in the fixed
+tests but kept false positives at 0.3% instead of 2.0% once the hand tilts.
+
+### What's next
+
+More figures (the snail, the deer), a daily shadow to come back for,
+and — the one thing we could not do — hours of play with real hands on a real
+headset.
+
+### Honest note
+
+This is a solo project, built with AI coding assistance. It was developed and tested
+entirely in the emulator; **it has not yet been played on a physical headset**.
+
+## Built with
+
+`webxr` `three.js` `javascript` `web-audio` `iwer` `hand-tracking`
+
+## Try it out
+
+- App: https://tchubirs.github.io/shadow-hands/
+- Video: (link do passo 2)
