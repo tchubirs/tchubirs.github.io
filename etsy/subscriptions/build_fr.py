@@ -27,22 +27,22 @@ wb = Workbook()
 # ---------------------------------------------------------------- Subscriptions
 sub = wb.active
 sub.title = "Abonnements"
-sheet_base(sub, "Tous vos abonnements, au même endroit", "Tapez dans les cases jaunes. Dates et totaux se calculent tout seuls.",
+sheet_base(sub, "Vos abonnements", "Tapez dans les cases jaunes. Dates et totaux se calculent tout seuls.",
            [3, 22, 13, 11, 12, 14, 9, 14, 10, 12, 12, 34])
 header(sub, 5, 2, ["Nom", "Catégorie", "Prix", "Facturation", "Début ou dernier prélèvement", "Essai gratuit ?",
                    "Dernière utilisation", "Garder ?", "Par mois", "Par an", "Et ensuite"])
 d = lambda k: today + dt.timedelta(days=k)
 sample = [
-    ("Streaming vidéo", "Streaming", 15.49, "Mensuel", d(-28), False, d(-1), "Garder"),
-    ("2e service vidéo", "Streaming", 9.99, "Mensuel", d(-12), False, d(-41), "Décider"),
-    ("Appli musique", "Musique", 10.99, "Mensuel", d(-3), False, d(0), "Garder"),
-    ("Stockage cloud 2 To", "Cloud", 99.99, "Annuel", d(-360), False, d(-2), "Garder"),
-    ("Appli de langues", "Applis", 12.99, "Mensuel", d(-20), False, d(-63), "Annuler"),
-    ("Box repas", "Shopping", 59.9, "Hebdo", d(-5), True, d(-5), "Décider"),
-    ("Retouche photo", "Applis", 4.99, "Mensuel", d(-28), True, d(-10), "Décider"),
-    ("Salle de sport", "Sport", 29.9, "Mensuel", d(-9), False, d(-19), "Garder"),
-    ("Site d’info", "Presse", 36, "Trimestriel", d(-80), False, d(-33), "Décider"),
-    ("Abonnement jeux", "Jeux", 14.99, "Mensuel", d(-15), False, d(-4), "Garder"),
+    ("Streaming vidéo", "Streaming", 15.49, "Mensuel", d(-28), "Non", d(-1), "Garder"),
+    ("2e service vidéo", "Streaming", 9.99, "Mensuel", d(-12), "Non", d(-41), "Décider"),
+    ("Appli musique", "Musique", 10.99, "Mensuel", d(-3), "Non", d(0), "Garder"),
+    ("Stockage cloud 2 To", "Cloud", 99.99, "Annuel", d(-360), "Non", d(-2), "Garder"),
+    ("Appli de langues", "Applis", 12.99, "Mensuel", d(-20), "Non", d(-63), "Annuler"),
+    ("Box repas", "Shopping", 59.9, "Hebdo", d(-5), "Oui", d(-5), "Décider"),
+    ("Retouche photo", "Applis", 4.99, "Mensuel", d(-28), "Oui", d(-10), "Décider"),
+    ("Salle de sport", "Sport", 29.9, "Mensuel", d(-9), "Non", d(-19), "Garder"),
+    ("Site d'info", "Presse", 36, "Trimestriel", d(-80), "Non", d(-33), "Décider"),
+    ("Abonnement jeux", "Jeux", 14.99, "Mensuel", d(-15), "Non", d(-4), "Garder"),
 ]
 for i in range(FIRST, LAST + 1):
     s = sample[i - FIRST] if i - FIRST < len(sample) else (None,) * 8
@@ -62,26 +62,27 @@ for i in range(FIRST, LAST + 1):
     nxt = (f'IF(F{i}>=TODAY(),F{i},IF(E{i}="Hebdo",F{i}+7*ROUNDUP((TODAY()-F{i})/7,0),'
            f'EDATE(F{i},{months}*ROUNDUP((DATEDIF(F{i},TODAY(),"m")+1)/{months},0))))')
     days = f'({nxt}-TODAY())'
-    status = (f'=IF(OR(B{i}="",F{i}=""),"",IF(I{i}="Annuler","✗ À annuler sous "&{days}&" jour(s)",'
-              f'IF(G{i}=TRUE,"⚠ Fin de l’essai dans "&{days}&" jour(s)",'
-              f'IF(AND(H{i}<>"",TODAY()-H{i}>30),"💤 Pas utilisé depuis "&(TODAY()-H{i})&" jours : ça vaut encore le coup ?",'
-              f'"Renouvellement dans "&{days}&" jour(s)"))))')
+    n_days = f'{days}&IF({days}<=1," jour"," jours")'
+    status = (f'=IF(OR(B{i}="",F{i}=""),"",IF(I{i}="Annuler","À annuler sous "&{n_days},'
+              f'IF(G{i}="Oui","Fin de l\'essai dans "&{n_days},'
+              f'IF(AND(H{i}<>"",TODAY()-H{i}>30),"Pas utilisé depuis "&(TODAY()-H{i})&" jours",'
+              f'"Renouvellement dans "&{n_days}))))')
     style(sub.cell(i, 12, status), False)
 sub.freeze_panes = "C6"
-for col, options in (("C", CATEGORIES), ("E", BILLING), ("G", ["TRUE", "FALSE"]), ("I", ["Garder", "Annuler", "Décider"])):
+for col, options in (("C", CATEGORIES), ("E", BILLING), ("G", ["Oui", "Non"]), ("I", ["Garder", "Annuler", "Décider"])):
     dv = DataValidation(type="list", formula1='"' + ",".join(options) + '"', allow_blank=True)
     sub.add_data_validation(dv)
     dv.add(f"{col}{FIRST}:{col}{LAST}")
 rng = f"L{FIRST}:L{LAST}"
-sub.conditional_formatting.add(rng, FormulaRule(formula=[f'LEFT($L{FIRST},1)="✗"'], fill=fill(INFO)))
-sub.conditional_formatting.add(rng, FormulaRule(formula=[f'LEFT($L{FIRST},1)="⚠"'], fill=fill(BAD),
+sub.conditional_formatting.add(rng, FormulaRule(formula=[f'LEFT($L{FIRST},9)="À annuler"'], fill=fill(INFO)))
+sub.conditional_formatting.add(rng, FormulaRule(formula=[f'LEFT($L{FIRST},6)="Fin de"'], fill=fill(BAD),
                                                 font=Font(name=F, bold=True, color="9B1C1C")))
-sub.conditional_formatting.add(rng, FormulaRule(formula=[f'LEFT($L{FIRST},2)="💤"'], fill=fill(WARN)))
+sub.conditional_formatting.add(rng, FormulaRule(formula=[f'LEFT($L{FIRST},3)="Pas"'], fill=fill(WARN)))
 sub.conditional_formatting.add(rng, FormulaRule(formula=[f'LEFT($L{FIRST},6)="Renouv"'], fill=fill(OK)))
 
 # ---------------------------------------------------------------- Dashboard
 db = wb.create_sheet("Tableau de bord", 0)
-sheet_base(db, "Où part l’argent chaque mois", "Mis à jour à chaque ouverture.", [3, 26, 16, 16, 16, 34, 3, 40])
+sheet_base(db, "Ce que coûtent vos abonnements", "Mis à jour à chaque ouverture.", [3, 26, 16, 16, 16, 34, 3, 40])
 R = lambda col: f"Abonnements!${col}${FIRST}:${col}${LAST}"
 tiles = [
     ("B", "Par mois", f"=SUM({R('J')})", TEAL),
@@ -110,7 +111,7 @@ db["F7"].number_format = MONEY
 db["F7"].font = font(24, True, "FFFFFF")
 db["F7"].fill = fill(TEAL_D)
 db["F7"].alignment = Alignment(horizontal="center", vertical="center")
-db["F8"] = "par an pour des choses que vous n’utilisez pas"
+db["F8"] = "par an pour des choses que vous n'utilisez pas"
 db["F8"].font = font(9, color=MUTED, italic=True)
 db["F8"].alignment = Alignment(horizontal="center")
 db.row_dimensions[7].height = 40
@@ -128,14 +129,22 @@ for k, cat in enumerate(CATEGORIES):
     db.row_dimensions[r].height = 22
 
 db["H10"] = "À surveiller"
+db["H10"].alignment = Alignment(vertical="center")
 db["H10"].font = font(11, True, "FFFFFF")
 db["H10"].fill = fill(TEAL)
+trial_n = f'COUNTIFS({R("L")},"Fin de*")'
+soon_n = "(" + "+".join(f'COUNTIFS({R("L")},"Renouvellement dans {k} jour*")' for k in range(4)) + ")"
+idle_n = f'COUNTIFS({R("L")},"Pas utilisé*")'
+open_n = f'COUNTIFS({R("I")},"Décider")'
 notes = [
-    (f'=COUNTIFS({R("L")},"⚠*")&" essai(s) gratuit(s) bientôt payant(s)"', BAD),
-    (f'=COUNTIFS({R("L")},"Renouvellement dans 0 jour*")+COUNTIFS({R("L")},"Renouvellement dans 1 jour*")+COUNTIFS({R("L")},"Renouvellement dans 2 jour*")'
-     f'+COUNTIFS({R("L")},"Renouvellement dans 3 jour*")&" renouvellement(s) dans les 3 jours"', WARN),
-    (f'=COUNTIFS({R("L")},"💤*")&" abonnement(s) pas utilisé(s) depuis un mois"', WARN),
-    (f'=COUNTIFS({R("I")},"Décider")&" encore à décider : garder ou annuler ?"', INFO),
+    (f'=IF({trial_n}=0,"Aucun essai gratuit ne va devenir payant",IF({trial_n}=1,"1 essai gratuit va bientôt devenir payant",'
+     f'{trial_n}&" essais gratuits vont bientôt devenir payants"))', BAD),
+    (f'=IF({soon_n}=0,"Aucun renouvellement dans les 3 jours",IF({soon_n}=1,"1 renouvellement",{soon_n}&" renouvellements")'
+     f'&" dans les 3 jours")', WARN),
+    (f'=IF({idle_n}=0,"Tout a servi le mois dernier",IF({idle_n}=1,"1 abonnement n\'a pas servi",{idle_n}&" abonnements n\'ont pas servi")'
+     f'&" depuis plus d\'un mois")', WARN),
+    (f'=IF({open_n}=0,"Plus rien à décider",IF({open_n}=1,"1 abonnement",{open_n}&" abonnements")'
+     f'&" encore à décider : garder ou annuler")', INFO),
 ]
 for k, (formula, colour) in enumerate(notes):
     c = db.cell(11 + k * 2, 8, formula)
@@ -143,25 +152,27 @@ for k, (formula, colour) in enumerate(notes):
     c.font = font(11)
     c.border = box
     c.alignment = Alignment(vertical="center")
+for cell, prefix in (('H11', 'Aucun'), ('H13', 'Aucun'), ('H15', 'Tout'), ('H17', 'Plus')):
+    db.conditional_formatting.add(cell, FormulaRule(formula=[f'LEFT({cell},{len(prefix)})="{prefix}"'], fill=fill(OK)))
 
 # ---------------------------------------------------------------- Start Here
 st = wb.create_sheet("Commencer ici")
-sheet_base(st, "Commencer ici : 2 minutes", "Tapez uniquement dans les cases JAUNES.", [3, 6, 100])
+sheet_base(st, "Commencer ici", "Tapez uniquement dans les cases jaunes. Tout le reste est calculé.", [3, 6, 100])
 steps = [
-    ("1", "Onglet Abonnements : ajoutez chaque abonnement (relevé bancaire + magasin d’applis du téléphone pour les retrouver)."),
+    ("1", "Onglet Abonnements : ajoutez chaque abonnement. Le relevé bancaire et le magasin d'applis du téléphone aident à les retrouver."),
     ("2", "Début ou dernier prélèvement : la date du dernier débit. Le prochain est calculé pour vous."),
-    ("3", "Essai gratuit ? Mettez TRUE : alerte rouge avec les jours restants avant le premier débit."),
-    ("4", "Dernière utilisation : mettez-la à jour de temps en temps. Plus de 30 jours = orange."),
-    ("5", "Garder ? Choisissez Garder, Annuler ou Décider. Le Tableau de bord montre l’économie par an."),
+    ("3", "Essai gratuit : choisissez Oui et le statut passe en rouge, avec les jours restants avant le premier débit."),
+    ("4", "Dernière utilisation : mettez-la à jour de temps en temps. Après 30 jours sans utilisation, le statut passe en orange."),
+    ("5", "Garder : choisissez Garder, Annuler ou Décider. Le Tableau de bord montre l'économie par an."),
 ]
 for k, (n, text) in enumerate(steps):
     r = 5 + k * 2
     st.cell(r, 2, n).font = font(18, True, TEAL)
     st.cell(r, 3, text).font = font(13)
     st.row_dimensions[r].height = 24
-st["C17"] = "Les lignes d’exemple montrent comment ça marche. Supprimez-les et ajoutez les vôtres."
+st["C17"] = "Les lignes d'exemple montrent comment ça marche. Supprimez-les et ajoutez les vôtres."
 st["C17"].font = font(11, color=MUTED, italic=True)
-st["C19"] = "Fonctionne dans Google Sheets (importez dans Drive, puis Fichier → Enregistrer au format Google Sheets) et dans Microsoft Excel."
+st["C19"] = "Fonctionne dans Google Sheets (importez-le dans Drive, puis Fichier > Enregistrer au format Google Sheets) et dans Microsoft Excel."
 st["C19"].font = font(11, color=MUTED, italic=True)
 
 wb.active = 0

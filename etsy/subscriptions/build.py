@@ -27,22 +27,22 @@ wb = Workbook()
 # ---------------------------------------------------------------- Subscriptions
 sub = wb.active
 sub.title = "Subscriptions"
-sheet_base(sub, "Every subscription, in one place", "Type in the yellow cells. Dates and totals work themselves out.",
+sheet_base(sub, "Your subscriptions", "Type in the yellow cells. Dates and totals work themselves out.",
            [3, 22, 13, 11, 12, 14, 9, 14, 10, 12, 12, 34])
 header(sub, 5, 2, ["Name", "Category", "Cost", "Billing", "Start or last renewal", "Free trial?",
                    "Last time I used it", "Keep?", "Per month", "Per year", "What's next"])
 d = lambda k: today + dt.timedelta(days=k)
 sample = [
-    ("Video streaming", "Streaming", 15.49, "Monthly", d(-28), False, d(-1), "Keep"),
-    ("Second video service", "Streaming", 9.99, "Monthly", d(-12), False, d(-41), "Decide"),
-    ("Music app", "Music", 10.99, "Monthly", d(-3), False, d(0), "Keep"),
-    ("Cloud storage 2 TB", "Cloud", 99.99, "Yearly", d(-360), False, d(-2), "Keep"),
-    ("Language app", "Apps", 12.99, "Monthly", d(-20), False, d(-63), "Cancel"),
-    ("Meal kit", "Shopping", 59.9, "Weekly", d(-5), True, d(-5), "Decide"),
-    ("Photo editor", "Apps", 4.99, "Monthly", d(-28), True, d(-10), "Decide"),
-    ("Gym", "Fitness", 29.9, "Monthly", d(-9), False, d(-19), "Keep"),
-    ("News site", "News", 36, "Quarterly", d(-80), False, d(-33), "Decide"),
-    ("Game pass", "Gaming", 14.99, "Monthly", d(-15), False, d(-4), "Keep"),
+    ("Video streaming", "Streaming", 15.49, "Monthly", d(-28), "No", d(-1), "Keep"),
+    ("Second video service", "Streaming", 9.99, "Monthly", d(-12), "No", d(-41), "Decide"),
+    ("Music app", "Music", 10.99, "Monthly", d(-3), "No", d(0), "Keep"),
+    ("Cloud storage 2 TB", "Cloud", 99.99, "Yearly", d(-360), "No", d(-2), "Keep"),
+    ("Language app", "Apps", 12.99, "Monthly", d(-20), "No", d(-63), "Cancel"),
+    ("Meal kit", "Shopping", 59.9, "Weekly", d(-5), "Yes", d(-5), "Decide"),
+    ("Photo editor", "Apps", 4.99, "Monthly", d(-28), "Yes", d(-10), "Decide"),
+    ("Gym", "Fitness", 29.9, "Monthly", d(-9), "No", d(-19), "Keep"),
+    ("News site", "News", 36, "Quarterly", d(-80), "No", d(-33), "Decide"),
+    ("Game pass", "Gaming", 14.99, "Monthly", d(-15), "No", d(-4), "Keep"),
 ]
 for i in range(FIRST, LAST + 1):
     s = sample[i - FIRST] if i - FIRST < len(sample) else (None,) * 8
@@ -62,26 +62,27 @@ for i in range(FIRST, LAST + 1):
     nxt = (f'IF(F{i}>=TODAY(),F{i},IF(E{i}="Weekly",F{i}+7*ROUNDUP((TODAY()-F{i})/7,0),'
            f'EDATE(F{i},{months}*ROUNDUP((DATEDIF(F{i},TODAY(),"m")+1)/{months},0))))')
     days = f'({nxt}-TODAY())'
-    status = (f'=IF(OR(B{i}="",F{i}=""),"",IF(I{i}="Cancel","✗ Cancel within "&{days}&" day(s)",'
-              f'IF(G{i}=TRUE,"⚠ Trial ends in "&{days}&" day(s)",'
-              f'IF(AND(H{i}<>"",TODAY()-H{i}>30),"💤 Unused "&(TODAY()-H{i})&" days: still worth it?",'
-              f'"Renews in "&{days}&" day(s)"))))')
+    n_days = f'{days}&IF({days}=1," day"," days")'
+    status = (f'=IF(OR(B{i}="",F{i}=""),"",IF(I{i}="Cancel","Cancel within "&{n_days},'
+              f'IF(G{i}="Yes","Trial ends in "&{n_days},'
+              f'IF(AND(H{i}<>"",TODAY()-H{i}>30),"Not used for "&(TODAY()-H{i})&" days",'
+              f'"Renews in "&{n_days}))))')
     style(sub.cell(i, 12, status), False)
 sub.freeze_panes = "C6"
-for col, options in (("C", CATEGORIES), ("E", BILLING), ("G", ["TRUE", "FALSE"]), ("I", ["Keep", "Cancel", "Decide"])):
+for col, options in (("C", CATEGORIES), ("E", BILLING), ("G", ["Yes", "No"]), ("I", ["Keep", "Cancel", "Decide"])):
     dv = DataValidation(type="list", formula1='"' + ",".join(options) + '"', allow_blank=True)
     sub.add_data_validation(dv)
     dv.add(f"{col}{FIRST}:{col}{LAST}")
 rng = f"L{FIRST}:L{LAST}"
-sub.conditional_formatting.add(rng, FormulaRule(formula=[f'LEFT($L{FIRST},1)="✗"'], fill=fill(INFO)))
-sub.conditional_formatting.add(rng, FormulaRule(formula=[f'LEFT($L{FIRST},1)="⚠"'], fill=fill(BAD),
+sub.conditional_formatting.add(rng, FormulaRule(formula=[f'LEFT($L{FIRST},6)="Cancel"'], fill=fill(INFO)))
+sub.conditional_formatting.add(rng, FormulaRule(formula=[f'LEFT($L{FIRST},5)="Trial"'], fill=fill(BAD),
                                                 font=Font(name=F, bold=True, color="9B1C1C")))
-sub.conditional_formatting.add(rng, FormulaRule(formula=[f'LEFT($L{FIRST},2)="💤"'], fill=fill(WARN)))
+sub.conditional_formatting.add(rng, FormulaRule(formula=[f'LEFT($L{FIRST},8)="Not used"'], fill=fill(WARN)))
 sub.conditional_formatting.add(rng, FormulaRule(formula=[f'LEFT($L{FIRST},6)="Renews"'], fill=fill(OK)))
 
 # ---------------------------------------------------------------- Dashboard
 db = wb.create_sheet("Dashboard", 0)
-sheet_base(db, "Where the monthly money goes", "Updated every time you open it.", [3, 26, 16, 16, 16, 34, 3, 40])
+sheet_base(db, "What your subscriptions cost", "Updated every time you open it.", [3, 26, 16, 16, 16, 34, 3, 40])
 R = lambda col: f"Subscriptions!${col}${FIRST}:${col}${LAST}"
 tiles = [
     ("B", "Per month", f"=SUM({R('J')})", TEAL),
@@ -128,14 +129,21 @@ for k, cat in enumerate(CATEGORIES):
     db.row_dimensions[r].height = 22
 
 db["H10"] = "Heads-up"
+db["H10"].alignment = Alignment(vertical="center")
 db["H10"].font = font(11, True, "FFFFFF")
 db["H10"].fill = fill(TEAL)
+trial_n = f'COUNTIFS({R("L")},"Trial*")'
+soon_n = "(" + "+".join(f'COUNTIFS({R("L")},"Renews in {k} day*")' for k in range(4)) + ")"
+idle_n = f'COUNTIFS({R("L")},"Not used*")'
+open_n = f'COUNTIFS({R("I")},"Decide")'
 notes = [
-    (f'=COUNTIFS({R("L")},"⚠*")&" free trial(s) will start charging soon"', BAD),
-    (f'=COUNTIFS({R("L")},"Renews in 0 day*")+COUNTIFS({R("L")},"Renews in 1 day*")+COUNTIFS({R("L")},"Renews in 2 day*")'
-     f'+COUNTIFS({R("L")},"Renews in 3 day*")&" renewal(s) in the next 3 days"', WARN),
-    (f'=COUNTIFS({R("L")},"💤*")&" subscription(s) you have not used in a month"', WARN),
-    (f'=COUNTIFS({R("I")},"Decide")&" still to decide: keep or cancel?"', INFO),
+    (f'=IF({trial_n}=0,"No free trial is about to charge",IF({trial_n}=1,"1 free trial will start charging soon",'
+     f'{trial_n}&" free trials will start charging soon"))', BAD),
+    (f'=IF({soon_n}=0,"No renewals in the next 3 days",IF({soon_n}=1,"1 renewal",{soon_n}&" renewals")&" in the next 3 days")', WARN),
+    (f'=IF({idle_n}=0,"Everything was used in the last month",IF({idle_n}=1,"1 subscription has",{idle_n}&" subscriptions have")'
+     f'&" not been used for over a month")', WARN),
+    (f'=IF({open_n}=0,"Nothing left to decide",IF({open_n}=1,"1 subscription",{open_n}&" subscriptions")'
+     f'&" still to decide: keep or cancel")', INFO),
 ]
 for k, (formula, colour) in enumerate(notes):
     c = db.cell(11 + k * 2, 8, formula)
@@ -143,25 +151,27 @@ for k, (formula, colour) in enumerate(notes):
     c.font = font(11)
     c.border = box
     c.alignment = Alignment(vertical="center")
+for cell, prefix in (('H11', 'No'), ('H13', 'No'), ('H15', 'Everything'), ('H17', 'Nothing')):
+    db.conditional_formatting.add(cell, FormulaRule(formula=[f'LEFT({cell},{len(prefix)})="{prefix}"'], fill=fill(OK)))
 
 # ---------------------------------------------------------------- Start Here
 st = wb.create_sheet("Start Here")
-sheet_base(st, "Start here: 2 minutes", "Only type in YELLOW cells.", [3, 6, 100])
+sheet_base(st, "Start here", "Type only in the yellow cells. Everything else is calculated.", [3, 6, 100])
 steps = [
-    ("1", "Subscriptions tab: add every subscription (bank statement + phone app store help you find them)."),
+    ("1", "Subscriptions tab: add every subscription. Your bank statement and phone app store help you find them."),
     ("2", "Start or last renewal: the date you were last charged. The next charge is worked out for you."),
-    ("3", "Free trial? Put TRUE: you get a red warning with the days left before it charges."),
-    ("4", "Last time I used it: update it now and then. Unused for 30+ days turns orange."),
-    ("5", "Keep? Choose Keep, Cancel or Decide. The Dashboard shows what cancelling saves per year."),
+    ("3", "Free trial: choose Yes and the status turns red, with the days left before the first charge."),
+    ("4", "Last time I used it: update it now and then. After 30 days without use the status turns orange."),
+    ("5", "Keep: choose Keep, Cancel or Decide. The Dashboard shows what cancelling saves per year."),
 ]
 for k, (n, text) in enumerate(steps):
     r = 5 + k * 2
     st.cell(r, 2, n).font = font(18, True, TEAL)
     st.cell(r, 3, text).font = font(13)
     st.row_dimensions[r].height = 24
-st["C17"] = "The example lines show how it works. Delete them and add yours."
+st["C17"] = "The example lines show how it works. Delete them and add your own."
 st["C17"].font = font(11, color=MUTED, italic=True)
-st["C19"] = "Works in Google Sheets (upload to Drive, then File → Save as Google Sheets) and in Microsoft Excel."
+st["C19"] = "Works in Google Sheets (upload it to Drive, then File > Save as Google Sheets) and in Microsoft Excel."
 st["C19"].font = font(11, color=MUTED, italic=True)
 
 wb.active = 0
