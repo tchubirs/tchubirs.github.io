@@ -1,4 +1,4 @@
-# Task: open an Etsy shop and publish nineteen digital-download listings
+# Task: open an Etsy shop and publish twenty digital-download listings
 
 You are acting in the user's own browser, on the user's behalf. Everything to
 publish is already made: spreadsheet files, guides, photos and listing texts.
@@ -84,6 +84,9 @@ computer:
 - Student: `student/Student-Planner.xlsx`, `student/Start-Here-Guide.pdf`,
   and the photos `student/images/01-dashboard.jpg`, `02-grades.jpg`, `03-assignments.jpg`,
   `04-timetable.jpg`, `05-whats-inside.jpg`.
+- Trip: `trip-split/Trip-Expense-Splitter.xlsx`, `trip-split/Start-Here-Guide.pdf`,
+  and the photos `trip-split/images/01-dashboard.jpg`, `02-expenses.jpg`, `03-settle-up.jpg`,
+  `04-setup.jpg`, `05-whats-inside.jpg`.
 
 Files from different products share names (every product has a
 `Start-Here-Guide.pdf`), so prefix each file with its folder name when you
@@ -101,7 +104,7 @@ save it.
    lets you finish opening the shop after one listing exists.
 5. Payment, billing and security steps: **stop and hand over to the user**.
 
-## 3. The nineteen listings
+## 3. The twenty listings
 
 Each listing's texts are in its `LISTING.md`: title, description, 13 tags,
 price, and which files and photos to upload. Read it at the base URL above,
@@ -128,6 +131,7 @@ followed by the path.
 | 17 | Handmade order tracker | `maker-orders/LISTING.md` | 8.50 |
 | 18 | Habit and mood tracker | `habits/LISTING.md` | 5.50 |
 | 19 | Student planner and grade tracker | `student/LISTING.md` | 6.50 |
+| 20 | Group trip expense splitter | `trip-split/LISTING.md` | 4.50 |
 
 The price column replaces the dollar prices in the LISTING.md files, because
 the shop is in euros.
