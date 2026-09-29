@@ -2,6 +2,7 @@
 
     python3 etsy/test_publish.py
 """
+import hashlib
 import json, re, sys, tempfile, time, urllib.parse
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -34,6 +35,9 @@ def fake_post(url, data=None, timeout=None):
     if data["grant_type"] == "authorization_code":
         assert data["code"] == "THECODE" and data["redirect_uri"] == P.REDIRECT
         assert data["code_verifier"] and len(data["code_verifier"]) >= 43
+        challenge = P.b64(hashlib.sha256(data["code_verifier"].encode()).digest())
+        assert challenge in shop["challenges"], "verifier does not match any link"
+        shop["used"].append(challenge)
     else:
         assert data["grant_type"] == "refresh_token" and data["refresh_token"].startswith("r")
     return R(200, {"access_token": f"77.tok{shop['tokens']}", "refresh_token": f"r{shop['tokens']}", "expires_in": 3600})
@@ -100,6 +104,7 @@ with contextlib.redirect_stdout(out):
     P.main(["auth"])
 link = out.getvalue().strip()
 q = urllib.parse.parse_qs(urllib.parse.urlparse(link).query)
+shop["challenges"], shop["used"] = [q["code_challenge"][0]], []
 assert q["client_id"] == ["KEY"] and q["code_challenge_method"] == ["S256"] and q["redirect_uri"] == [P.REDIRECT]
 assert set(q["scope"][0].split()) == {"listings_r", "listings_w", "shops_r", "transactions_r"}
 try:
@@ -107,7 +112,17 @@ try:
     raise AssertionError("a wrong state went through")
 except SystemExit as e:
     print("wrong state refused:", e)
+# a second link: the address from the first one still works, with the first link's verifier
+out = io.StringIO()
+with contextlib.redirect_stdout(out):
+    P.main(["auth"])
+q2 = urllib.parse.parse_qs(urllib.parse.urlparse(out.getvalue().strip()).query)
+assert q2["state"] != q["state"]
+shop["challenges"].append(q2["code_challenge"][0])
 P.main(["token", P.REDIRECT + f"?code=THECODE&state={q['state'][0]}"])
+assert shop["used"][-1] == q["code_challenge"][0], "the first link's address used the wrong verifier"
+P.main(["token", P.REDIRECT + f"?code=THECODE&state={q2['state'][0]}"])
+assert shop["used"][-1] == q2["code_challenge"][0], "the second link's address used the wrong verifier"
 assert json.loads(P.SECRET.read_text())["shop_id"] == 4242
 
 # first run: listing 1 is already in the shop, 2 fails on its third photo
@@ -133,7 +148,7 @@ for n in ("2", "22"):
     assert [nm for _, nm in li["files"]] == [nm for _, nm in want["files"]], li["files"]
     assert li["state"] == "active" and li["data"]["price"] == f"{want['price']:.2f}" and li["data"]["taxonomy_id"] == 1281
     print(n, "photos", len(li["images"]), "files", [nm for _, nm in li["files"]], li["data"]["price"])
-assert shop["tokens"] == 2, "the token was not refreshed once"
+assert shop["tokens"] == 3, "the token was not refreshed once"  # two logins (old and new link) and one refresh
 # a third run does nothing new
 before = len(shop["calls"])
 P.main(["publish", "--taxonomy", "1281", "2", "22"])

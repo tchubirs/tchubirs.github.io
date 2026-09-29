@@ -195,6 +195,8 @@ def b64(raw):
 
 def auth():
     s = load()
+    if s.get("state"):     # an older link keeps working if its address comes back
+        s["older"] = dict(list(s.get("older", {}).items())[-4:] + [(s["state"], s["code_verifier"])])
     s["code_verifier"] = b64(secrets.token_bytes(48))
     s["state"] = secrets.token_urlsafe(16)
     save(s)
@@ -219,11 +221,13 @@ def token(address):
     q = urllib.parse.parse_qs(urllib.parse.urlparse(address).query)
     if q.get("error"):
         sys.exit(f"Etsy said: {q['error'][0]} {q.get('error_description', [''])[0]}")
-    if q.get("state", [""])[0] != s.get("state"):
-        sys.exit("this address belongs to an older link: run auth again")
+    state = q.get("state", [""])[0]
+    verifier = s["code_verifier"] if state == s.get("state") else s.get("older", {}).get(state)
+    if not verifier:
+        sys.exit("this address belongs to a link I no longer know: run auth again")
     r = requests.post(TOKEN_URL, data={"grant_type": "authorization_code", "client_id": s["keystring"],
                                        "redirect_uri": REDIRECT, "code": q["code"][0],
-                                       "code_verifier": s["code_verifier"]}, timeout=60)
+                                       "code_verifier": verifier}, timeout=60)
     keep_token(s, r.json())
     me = call(s, "GET", "/users/me")
     s["user_id"], s["shop_id"] = me["user_id"], me.get("shop_id")
