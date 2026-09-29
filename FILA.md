@@ -13,7 +13,7 @@ até alguma vender. O que eu faço agora:
 1. **Vender o que já existe:** feito em 29/09, os 44 anúncios estão no ar (https://www.etsy.com/shop/FocusBudgetSheets),
    conferidos com `python3 etsy/check_live.py`. A cada hora: `python3 etsy/publish.py sales`. Se entrar pedido, avisar
    ele. O teste de 30 dias vai até 29/10.
-   Capas novas (foto 1) nos 44 em 29/09 (`etsy/cover.py`). Quando ele ligar o inglês na loja: `python3 etsy/publish.py english` e conferir.
+   Capas novas (foto 1) nos 44 em 29/09 (`etsy/cover.py`). Vídeo de 11 s em cada um em 29/09 (`etsy/video.py`, enviado pelo `publish.py`). Quando ele ligar o inglês na loja: `python3 etsy/publish.py english` e conferir.
 2. **Fiverr:** assim que ele criar a conta, responder cada pedido no mesmo dia, com o trabalho pronto.
 
 Pausado até algo vender ou ele pedir: inventário da casa (rascunho em `etsy/home-inventory`), manutenção da casa,

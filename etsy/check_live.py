@@ -1,5 +1,5 @@
 """Check every published listing against its LISTING.md: active, price, category, the cover as photo 1,
-photo and file counts."""
+photo and file counts, and one video where video.py made one."""
 import json
 
 import publish as P
@@ -22,6 +22,11 @@ for li in P.listings():
         bad += 1
         continue
     files = P.call(s, "GET", f"/shops/{s['shop_id']}/listings/{lid}/files")["count"]
+    clips = P.call(s, "GET", f"/listings/{lid}/videos")["count"]
+    if (P.VIDEOS / f"{li['folder']}.mp4").exists() and clips != 1:
+        print(li["n"], lid, "videos:", clips)
+        bad += 1
+        continue
     price = x["price"]["amount"] / x["price"]["divisor"]
     ok = (x["state"] == "active" and abs(price - li["price"]) < 0.005 and x["taxonomy_id"] == cats[li["folder"]]
           and imgs == len(li["photos"]) and files == len(li["files"]) and x["title"] == li["title"])
