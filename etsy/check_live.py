@@ -1,4 +1,5 @@
-"""Check every published listing against its LISTING.md: active, price, category, photo and file counts."""
+"""Check every published listing against its LISTING.md: active, price, category, the cover as photo 1,
+photo and file counts."""
 import json
 
 import publish as P
@@ -13,7 +14,13 @@ for li in P.listings():
         print(li["n"], "not published"); bad += 1; continue
     lid = rec["listing_id"]
     x = P.call(s, "GET", f"/listings/{lid}")
-    imgs = P.call(s, "GET", f"/listings/{lid}/images")["count"]
+    shown = sorted(P.call(s, "GET", f"/listings/{lid}/images")["results"], key=lambda im: im["rank"])
+    imgs = len(shown)
+    # Photo 1 is the cover, and every photo has its own place.
+    if [im["rank"] for im in shown] != list(range(1, imgs + 1)) or not shown[0]["alt_text"].endswith("Sheets and Excel"):
+        print(li["n"], lid, "photo order:", [(im["rank"], im["alt_text"]) for im in shown])
+        bad += 1
+        continue
     files = P.call(s, "GET", f"/shops/{s['shop_id']}/listings/{lid}/files")["count"]
     price = x["price"]["amount"] / x["price"]["divisor"]
     ok = (x["state"] == "active" and abs(price - li["price"]) < 0.005 and x["taxonomy_id"] == cats[li["folder"]]

@@ -1,263 +1,307 @@
 {
  "1": {
+  "cover": true,
   "files": 4,
   "listing_id": 4584767730,
   "photos": 5,
   "state": "active"
  },
  "10": {
+  "cover": true,
   "files": 2,
   "listing_id": 4584768374,
   "photos": 4,
   "state": "active"
  },
  "11": {
+  "cover": true,
   "files": 2,
   "listing_id": 4584761143,
   "photos": 4,
   "state": "active"
  },
  "12": {
+  "cover": true,
   "files": 2,
   "listing_id": 4584768534,
   "photos": 4,
   "state": "active"
  },
  "13": {
+  "cover": true,
   "files": 2,
   "listing_id": 4584768586,
   "photos": 5,
   "state": "active"
  },
  "14": {
+  "cover": true,
   "files": 2,
   "listing_id": 4584761349,
   "photos": 6,
   "state": "active"
  },
  "15": {
+  "cover": true,
   "files": 2,
   "listing_id": 4584761443,
   "photos": 5,
   "state": "active"
  },
  "16": {
+  "cover": true,
   "files": 2,
   "listing_id": 4584768796,
   "photos": 6,
   "state": "active"
  },
  "17": {
+  "cover": true,
   "files": 2,
   "listing_id": 4584768886,
   "photos": 6,
   "state": "active"
  },
  "18": {
+  "cover": true,
   "files": 2,
   "listing_id": 4584768942,
   "photos": 5,
   "state": "active"
  },
  "19": {
+  "cover": true,
   "files": 2,
   "listing_id": 4584761735,
   "photos": 5,
   "state": "active"
  },
  "2": {
+  "cover": true,
   "files": 4,
   "listing_id": 4584760551,
   "photos": 3,
   "state": "active"
  },
  "20": {
+  "cover": true,
   "files": 2,
   "listing_id": 4584769048,
   "photos": 5,
   "state": "active"
  },
  "21": {
+  "cover": true,
   "files": 2,
   "listing_id": 4584761857,
   "photos": 5,
   "state": "active"
  },
  "22": {
+  "cover": true,
   "files": 2,
   "listing_id": 4584761923,
   "photos": 5,
   "state": "active"
  },
  "23": {
+  "cover": true,
   "files": 2,
   "listing_id": 4584761999,
   "photos": 6,
   "state": "active"
  },
  "24": {
+  "cover": true,
   "files": 2,
   "listing_id": 4584762073,
   "photos": 6,
   "state": "active"
  },
  "25": {
+  "cover": true,
   "files": 2,
   "listing_id": 4584769440,
   "photos": 5,
   "state": "active"
  },
  "26": {
+  "cover": true,
   "files": 2,
   "listing_id": 4584762239,
   "photos": 6,
   "state": "active"
  },
  "27": {
+  "cover": true,
   "files": 2,
   "listing_id": 4584762309,
   "photos": 6,
   "state": "active"
  },
  "28": {
+  "cover": true,
   "files": 2,
   "listing_id": 4584762387,
   "photos": 6,
   "state": "active"
  },
  "29": {
+  "cover": true,
   "files": 2,
   "listing_id": 4584769762,
   "photos": 6,
   "state": "active"
  },
  "3": {
+  "cover": true,
   "files": 4,
   "listing_id": 4584760625,
   "photos": 3,
   "state": "active"
  },
  "30": {
+  "cover": true,
   "files": 2,
   "listing_id": 4584762547,
   "photos": 6,
   "state": "active"
  },
  "31": {
+  "cover": true,
   "files": 2,
   "listing_id": 4584769926,
   "photos": 7,
   "state": "active"
  },
  "32": {
+  "cover": true,
   "files": 2,
   "listing_id": 4584762695,
   "photos": 6,
   "state": "active"
  },
  "33": {
+  "cover": true,
   "files": 2,
   "listing_id": 4584762781,
   "photos": 6,
   "state": "active"
  },
  "34": {
+  "cover": true,
   "files": 2,
   "listing_id": 4584762871,
   "photos": 6,
   "state": "active"
  },
  "35": {
+  "cover": true,
   "files": 2,
   "listing_id": 4584770248,
   "photos": 6,
   "state": "active"
  },
  "36": {
+  "cover": true,
   "files": 2,
   "listing_id": 4584763069,
   "photos": 7,
   "state": "active"
  },
  "37": {
+  "cover": true,
   "files": 2,
   "listing_id": 4584763175,
   "photos": 6,
   "state": "active"
  },
  "38": {
+  "cover": true,
   "files": 2,
   "listing_id": 4584770528,
   "photos": 5,
   "state": "active"
  },
  "39": {
+  "cover": true,
   "files": 2,
   "listing_id": 4584770592,
   "photos": 5,
   "state": "active"
  },
  "4": {
+  "cover": true,
   "files": 4,
   "listing_id": 4584760695,
   "photos": 6,
   "state": "active"
  },
  "40": {
+  "cover": true,
   "files": 2,
   "listing_id": 4584770706,
   "photos": 5,
   "state": "active"
  },
  "41": {
+  "cover": true,
   "files": 2,
   "listing_id": 4584763463,
   "photos": 6,
   "state": "active"
  },
  "42": {
+  "cover": true,
   "files": 2,
   "listing_id": 4584770856,
   "photos": 7,
   "state": "active"
  },
  "43": {
+  "cover": true,
   "files": 2,
   "listing_id": 4584770962,
   "photos": 7,
   "state": "active"
  },
  "44": {
+  "cover": true,
   "files": 2,
   "listing_id": 4584763731,
   "photos": 6,
   "state": "active"
  },
  "5": {
+  "cover": true,
   "files": 2,
   "listing_id": 4584768100,
   "photos": 3,
   "state": "active"
  },
  "6": {
+  "cover": true,
   "files": 2,
   "listing_id": 4584760825,
   "photos": 3,
   "state": "active"
  },
  "7": {
+  "cover": true,
   "files": 2,
   "listing_id": 4584760881,
   "photos": 3,
   "state": "active"
  },
  "8": {
+  "cover": true,
   "files": 2,
   "listing_id": 4584760933,
   "photos": 4,
   "state": "active"
  },
  "9": {
+  "cover": true,
   "files": 2,
   "listing_id": 4584761003,
   "photos": 4,

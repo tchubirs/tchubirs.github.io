@@ -48,7 +48,7 @@ KIT = {
               ("adhd-budget/Start-Here-Guide.pdf", "Budget-Guide.pdf"),
               ("subscriptions/Subscription-Tracker.xlsx", "Subscription-Tracker.xlsx"),
               ("subscriptions/Start-Here-Guide.pdf", "Subscriptions-Guide.pdf")],
-    "photos": ["bundle/images/01-bundle.jpg"] + [f"adhd-budget/images/{p}" for p in
+    "photos": ["bundle/images/00-cover.jpg", "bundle/images/01-bundle.jpg"] + [f"adhd-budget/images/{p}" for p in
                ("02-log.jpg", "03-bills.jpg", "04-impulse.jpg", "05-whats-inside.jpg")]
               + ["subscriptions/images/02-subscriptions.jpg"],
 }
@@ -68,6 +68,8 @@ def section(text, heading):
 
 def alt(name, photo):
     what = photo.stem.split("-", 1)[-1].replace("-", " ")
+    if what == "cover":
+        return f"{name} for Google Sheets and Excel"
     return f"{name}: what is inside the file" if what == "whats inside" else f"{name}: {what}"
 
 
@@ -331,11 +333,28 @@ def publish(numbers, taxonomy_id, draft):
             rec = {"listing_id": made["listing_id"], "photos": 0, "files": 0, "state": "draft"}
             note(li["n"], rec)
         lid = rec["listing_id"]
-        for k in range(rec["photos"], len(li["photos"])):
-            photo = li["photos"][k]
-            call(s, "POST", f"/shops/{shop}/listings/{lid}/images", data={"rank": k + 1, "alt_text": li["alts"][k]},
+        # The cover (00-cover.jpg) goes up last, as photo 1, so listings made before it existed get it too.
+        photos = [(p, a) for p, a in zip(li["photos"], li["alts"]) if not p.name.startswith("00-")]
+        cover = [(p, a) for p, a in zip(li["photos"], li["alts"]) if p.name.startswith("00-")]
+        for k in range(rec["photos"], len(photos)):
+            photo, text = photos[k]
+            call(s, "POST", f"/shops/{shop}/listings/{lid}/images", data={"rank": k + 1, "alt_text": text},
                  files={"image": (photo.name, photo.read_bytes(), MIME[".jpg"])})
             rec["photos"] = k + 1
+            note(li["n"], rec)
+        if cover and not rec.get("cover"):
+            photo, text = cover[0]
+            made = call(s, "POST", f"/shops/{shop}/listings/{lid}/images", data={"rank": 1, "alt_text": text},
+                        files={"image": (photo.name, photo.read_bytes(), MIME[".jpg"])})
+            # Etsy leaves the other photos where they were, so move them along to 2, 3, ... in their order.
+            rest = sorted((im for im in call(s, "GET", f"/listings/{lid}/images")["results"]
+                           if im["listing_image_id"] != made["listing_image_id"]),
+                          key=lambda im: (im["rank"], im["listing_image_id"]))
+            for k, im in enumerate(rest):
+                call(s, "POST", f"/shops/{shop}/listings/{lid}/images", data={
+                    "listing_image_id": im["listing_image_id"], "rank": k + 2,
+                    "alt_text": photos[k][1] if k < len(photos) else im.get("alt_text") or li["name"]})
+            rec["cover"] = True
             note(li["n"], rec)
         for k in range(rec["files"], len(li["files"])):
             path, name = li["files"][k]

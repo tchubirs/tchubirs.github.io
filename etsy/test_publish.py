@@ -13,7 +13,15 @@ T = Path(tempfile.mkdtemp())
 P.SECRET, P.DONE = T / ".etsy-secret", T / "published.json"
 time.sleep = lambda s: None
 
-shop = {"listings": {}, "next": 900, "calls": [], "fail_image_call": None, "image_calls": 0, "tokens": 0,
+
+def order(li):
+    """The photos in the order a buyer sees them, and whether each still has its alt text."""
+    ims = sorted(li["images"], key=lambda im: (im["rank"], im["id"]))
+    assert all(im["alt"] for im in ims), ims
+    return [im["name"] for im in ims]
+
+
+shop = {"listings": {}, "next": 900, "calls": [], "fail_image_call": None, "image_calls": 0, "tokens": 0, "image_ids": 0,
         "active": False}
 shop["listings"][555] = {"title": P.listings()[0]["title"], "state": "active", "images": [], "files": [], "data": {}}
 
@@ -64,15 +72,26 @@ def fake_request(method, url, timeout=None, params=None, data=None, files=None, 
         shop["next"] += 1
         shop["listings"][shop["next"]] = {"title": data["title"], "state": "draft", "images": [], "files": [], "data": data}
         return R(201, {"listing_id": shop["next"]})
+    m = re.fullmatch(r"/listings/(\d+)/images", path)
+    if m and method == "GET":
+        imgs = shop["listings"][int(m.group(1))]["images"]
+        return R(200, {"count": len(imgs), "results": [{"listing_image_id": im["id"], "rank": im["rank"],
+                                                        "alt_text": im["alt"]} for im in imgs]})
     m = re.fullmatch(r"/shops/4242/listings/(\d+)/images", path)
     if m:
+        imgs = shop["listings"][int(m.group(1))]["images"]
+        if "listing_image_id" in data:  # a photo already there, moved to another rank
+            im = next(im for im in imgs if im["id"] == data["listing_image_id"])
+            im["rank"], im["alt"] = int(data["rank"]), data.get("alt_text", "")
+            return R(201, {"listing_image_id": im["id"]})
         shop["image_calls"] += 1
         if shop["fail_image_call"] and shop["image_calls"] >= shop["fail_image_call"]:
             return R(500, {"error": "server busy"})
         name, raw, mime = files["image"]
         assert mime == "image/jpeg" and raw[:2] == b"\xff\xd8" and data["alt_text"]
-        shop["listings"][int(m.group(1))]["images"].append((data["rank"], name))
-        return R(201, {"listing_image_id": 1})
+        shop["image_ids"] += 1  # like Etsy, it goes in at its rank and the others stay where they are
+        imgs.append({"id": shop["image_ids"], "name": name, "rank": int(data["rank"]), "alt": data["alt_text"]})
+        return R(201, {"listing_image_id": shop["image_ids"]})
     m = re.fullmatch(r"/shops/4242/listings/(\d+)/files", path)
     if m:
         name, raw, mime = files["file"]
@@ -144,7 +163,7 @@ assert len(lis) == 2, "a listing was created twice"
 for n in ("2", "22"):
     li = shop["listings"][done[n]["listing_id"]]
     want = P.listings()[int(n) - 1]
-    assert [r for r, _ in li["images"]] == list(range(1, len(want["photos"]) + 1)), li["images"]
+    assert order(li) == [p.name for p in want["photos"]] and order(li)[0] == "00-cover.jpg", order(li)
     assert [nm for _, nm in li["files"]] == [nm for _, nm in want["files"]], li["files"]
     assert li["state"] == "active" and li["data"]["price"] == f"{want['price']:.2f}" and li["data"]["taxonomy_id"] == 1281
     print(n, "photos", len(li["images"]), "files", [nm for _, nm in li["files"]], li["data"]["price"])
@@ -160,5 +179,13 @@ cats = json.loads(P.CATS.read_text())
 li = shop["listings"][done["3"]["listing_id"]]
 assert li["data"]["taxonomy_id"] == cats[P.listings()[2]["folder"]], li["data"]["taxonomy_id"]
 assert all(li["folder"] in cats for li in P.listings()), "a listing has no category"
+# a listing put up before covers existed gets its cover as photo 1 on the next run, and nothing else twice
+del done["3"]["cover"]
+P.DONE.write_text(json.dumps(done))
+li["images"] = [im for im in li["images"] if im["name"] != "00-cover.jpg"]
+for k, im in enumerate(sorted(li["images"], key=lambda im: (im["rank"], im["id"]))):
+    im["rank"] = k + 1
+P.main(["publish", "3"])
+assert order(li) == [p.name for p in P.listings()[2]["photos"]], order(li)
 P.main(["sales"])
 print("all good")
