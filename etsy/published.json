@@ -1,0 +1,50 @@
+{
+ "1": {
+  "files": 4,
+  "listing_id": 4584767730,
+  "photos": 5,
+  "state": "active"
+ },
+ "2": {
+  "files": 4,
+  "listing_id": 4584760551,
+  "photos": 3,
+  "state": "active"
+ },
+ "3": {
+  "files": 4,
+  "listing_id": 4584760625,
+  "photos": 3,
+  "state": "active"
+ },
+ "4": {
+  "files": 4,
+  "listing_id": 4584760695,
+  "photos": 6,
+  "state": "active"
+ },
+ "5": {
+  "files": 2,
+  "listing_id": 4584768100,
+  "photos": 3,
+  "state": "active"
+ },
+ "6": {
+  "files": 2,
+  "listing_id": 4584760825,
+  "photos": 3,
+  "state": "active"
+ },
+ "7": {
+  "files": 2,
+  "listing_id": 4584760881,
+  "photos": 3,
+  "state": "active"
+ },
+ "8": {
+  "files": 0,
+  "listing_id": 4584760933,
+  "photos": 3,
+  "state": "draft"
+ }
+}
