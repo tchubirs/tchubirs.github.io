@@ -10,10 +10,10 @@ planilha vender, paro de fazer planilhas e a gente muda de ideia. Se ele disser
 **Decisão dele em 28/09 à noite:** um mês sem nenhum centavo, então foco em dinheiro. Não crio planilha nova
 até alguma vender. O que eu faço agora:
 
-1. **Vender o que já existe:** a cada hora, `python3 etsy/publish.py ping`. Quando disser "active", mandar o link de
-   autorização e publicar as outras 43 (o publicador pula as que já estiverem na loja).
+1. **Vender o que já existe:** feito em 29/09, os 44 anúncios estão no ar (https://www.etsy.com/shop/FocusBudgetSheets),
+   conferidos com `python3 etsy/check_live.py`. A cada hora: `python3 etsy/publish.py sales`. Se entrar pedido, avisar
+   ele. O teste de 30 dias vai até 29/10.
 2. **Fiverr:** assim que ele criar a conta, responder cada pedido no mesmo dia, com o trabalho pronto.
-3. **Pacote das 5 que mais vendem** (`etsy/anuncios-top5.zip`): pronto. Ele publica à mão se quiser (25 min).
 
 Pausado até algo vender ou ele pedir: inventário da casa (rascunho em `etsy/home-inventory`), manutenção da casa,
 galinhas no quintal, férias da equipe, Herculano.
