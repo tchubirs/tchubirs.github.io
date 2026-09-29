@@ -21,7 +21,7 @@ def order(li):
     return [im["name"] for im in ims]
 
 
-shop = {"listings": {}, "next": 900, "calls": [], "fail_image_call": None, "image_calls": 0, "tokens": 0, "image_ids": 0,
+shop = {"listings": {}, "next": 900, "calls": [], "fail_image_call": None, "image_calls": 0, "tokens": 0, "image_ids": 0, "languages": ["pt"],
         "active": False}
 shop["listings"][555] = {"title": P.listings()[0]["title"], "state": "active", "images": [], "files": [], "data": {}}
 
@@ -104,6 +104,18 @@ def fake_request(method, url, timeout=None, params=None, data=None, files=None, 
         assert li["images"], "Etsy needs a photo before it goes live"
         li["state"] = data["state"]
         return R(200, {})
+    if path == "/shops/4242" and method == "GET":
+        return R(200, {"shop_id": 4242, "languages": shop["languages"]})
+    m = re.fullmatch(r"/shops/4242/listings/(\d+)/translations/(\w+)", path)
+    if m:
+        li, lang = shop["listings"][int(m.group(1))], m.group(2)
+        if lang not in shop["languages"]:
+            return R(400, {"error": "You must add this language as a shop language in Shop Manager"})
+        if method == "POST" and lang in li.setdefault("translations", {}):
+            return R(409, {"error": "translation exists"})
+        assert data["title"] and data["description"] and len(data["tags"].split(",")) == 13
+        li["translations"][lang] = data
+        return R(200, {"language": lang})
     if path == "/shops/4242/receipts":
         return R(200, {"count": 2, "results": [{"grandtotal": {"amount": 450, "divisor": 100, "currency_code": "EUR"}},
                                                 {"grandtotal": {"amount": 790, "divisor": 100, "currency_code": "EUR"}}]})
@@ -187,5 +199,23 @@ for k, im in enumerate(sorted(li["images"], key=lambda im: (im["rank"], im["id"]
     im["rank"] = k + 1
 P.main(["publish", "3"])
 assert order(li) == [p.name for p in P.listings()[2]["photos"]], order(li)
+# English versions: refused until English is a shop language, then added once to each published listing
+try:
+    P.main(["english"])
+    raise AssertionError("English went in before it was a shop language")
+except SystemExit as e:
+    print("no English yet:", e)
+shop["languages"].append("en")
+done = json.loads(P.DONE.read_text())
+shop["listings"][done["2"]["listing_id"]]["translations"] = {"en": {"title": "old"}}  # one already there
+P.main(["english"])
+for n, rec in json.loads(P.DONE.read_text()).items():
+    if rec.get("made_by_hand"):
+        continue
+    got = shop["listings"][rec["listing_id"]]["translations"]["en"]
+    assert rec["en"] and got["title"] == P.listings()[int(n) - 1]["title"], (n, got)
+before = len(shop["calls"])
+P.main(["english"])
+assert all(c[0] == "GET" for c in shop["calls"][before:]), "English was sent twice"
 P.main(["sales"])
 print("all good")

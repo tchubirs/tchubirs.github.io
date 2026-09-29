@@ -8,6 +8,7 @@
     python3 etsy/publish.py taxonomy WORD         categories whose name has that word, with their numbers
     python3 etsy/publish.py publish [N ...] [--taxonomy ID] [--draft]
                                                   create, fill and publish the listings (all, or only numbers N)
+    python3 etsy/publish.py english [N ...]       add each listing's text as its English version (see english())
     python3 etsy/publish.py sales                 orders of the last 30 days
 
 The listings are the rows of the table in DISPATCH.md, with the euro prices. Their texts come from each
@@ -246,8 +247,10 @@ def bearer(s):
     return s["access_token"]
 
 
-def call(s, method, path, **kw):
-    """One API request, again after a pause when Etsy is busy. Stops the run on any other error."""
+def call(s, method, path, allow=(), **kw):
+    """One API request, again after a pause when Etsy is busy. Stops the run on any other error.
+
+    An answer whose status is in `allow` comes back as None instead of stopping the run."""
     import requests
     for attempt in range(6):
         auth_header = "Bearer " + bearer(s)
@@ -256,6 +259,8 @@ def call(s, method, path, **kw):
         if r.status_code != 429 and r.status_code < 500:
             break
         time.sleep(2 ** attempt)
+    if r.status_code in allow:
+        return None
     if not r.ok:
         sys.exit(f"{method} {path}: {r.status_code} {r.text[:800]}")
     time.sleep(0.25)
@@ -369,6 +374,26 @@ def publish(numbers, taxonomy_id, draft):
         print(li["n"], li["name"], rec["state"], f"https://www.etsy.com/listing/{lid}")
 
 
+def english(numbers):
+    """The shop's first language is Portuguese, so Etsy files the English texts as Portuguese. This adds each
+    listing's text again as its English version, which English searches and buyers use."""
+    s = load()
+    if "en" not in call(s, "GET", f"/shops/{s['shop_id']}").get("languages", []):
+        sys.exit("add English to the shop first: Shop Manager > Settings > Languages and translations")
+    done = json.loads(DONE.read_text()) if DONE.exists() else {}
+    for li in listings():
+        rec = done.get(str(li["n"]))
+        if (numbers and li["n"] not in numbers) or not rec or rec.get("en"):
+            continue
+        path = f"/shops/{s['shop_id']}/listings/{rec['listing_id']}/translations/en"
+        text = {"title": li["title"], "description": li["description"], "tags": ",".join(li["tags"])}
+        if call(s, "POST", path, allow=(400, 409), data=text) is None:  # already there: write over it
+            call(s, "PUT", path, data=text)
+        rec["en"] = True
+        DONE.write_text(json.dumps(done, indent=1, sort_keys=True) + "\n")
+        print(li["n"], li["name"], "in English")
+
+
 def sales():
     s = load()
     since = int(time.time()) - 30 * 86400
@@ -404,6 +429,8 @@ def main(args):
             tax = int(rest.pop(at + 1))
         numbers = {int(a) for a in rest if a.isdigit()}
         publish(numbers, tax, "--draft" in rest)
+    elif args[0] == "english":
+        english({int(a) for a in args[1:] if a.isdigit()})
     elif args[0] == "sales":
         sales()
     else:
