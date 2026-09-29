@@ -12,3 +12,6 @@ __pycache__/
 
 # Chaves e tokens da API da Etsy (etsy/publish.py).
 /.etsy-secret
+
+# Videos dos anúncios: o etsy/video.py refaz, não precisam ir para o git.
+/etsy/videos/

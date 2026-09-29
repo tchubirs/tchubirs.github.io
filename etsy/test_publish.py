@@ -11,6 +11,9 @@ import publish as P
 
 T = Path(tempfile.mkdtemp())
 P.SECRET, P.DONE = T / ".etsy-secret", T / "published.json"
+P.VIDEOS = T / "videos"
+P.VIDEOS.mkdir()
+(P.VIDEOS / f"{P.listings()[21]['folder']}.mp4").write_bytes(b"\x00\x00\x00\x18ftypmp42" + b"\x00" * 64)
 time.sleep = lambda s: None
 
 
@@ -92,6 +95,12 @@ def fake_request(method, url, timeout=None, params=None, data=None, files=None, 
         shop["image_ids"] += 1  # like Etsy, it goes in at its rank and the others stay where they are
         imgs.append({"id": shop["image_ids"], "name": name, "rank": int(data["rank"]), "alt": data["alt_text"]})
         return R(201, {"listing_image_id": shop["image_ids"]})
+    m = re.fullmatch(r"/shops/4242/listings/(\d+)/videos", path)
+    if m:
+        name, raw, mime = files["video"]
+        assert mime == "video/mp4" and raw[4:8] == b"ftyp" and data["name"] == name, (name, mime)
+        shop["listings"][int(m.group(1))].setdefault("videos", []).append(name)
+        return R(201, {"video_id": 1})
     m = re.fullmatch(r"/shops/4242/listings/(\d+)/files", path)
     if m:
         name, raw, mime = files["file"]
@@ -179,6 +188,8 @@ for n in ("2", "22"):
     assert [nm for _, nm in li["files"]] == [nm for _, nm in want["files"]], li["files"]
     assert li["state"] == "active" and li["data"]["price"] == f"{want['price']:.2f}" and li["data"]["taxonomy_id"] == 1281
     print(n, "photos", len(li["images"]), "files", [nm for _, nm in li["files"]], li["data"]["price"])
+assert shop["listings"][done["22"]["listing_id"]].get("videos") == [f"{P.listings()[21]['folder']}.mp4"]
+assert not shop["listings"][done["2"]["listing_id"]].get("videos"), "a listing without a video file got one"
 assert shop["tokens"] == 3, "the token was not refreshed once"  # two logins (old and new link) and one refresh
 # a third run does nothing new
 before = len(shop["calls"])

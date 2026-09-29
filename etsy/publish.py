@@ -34,13 +34,14 @@ HERE = Path(__file__).resolve().parent
 SECRET = HERE.parent / ".etsy-secret"
 DONE = HERE / "published.json"
 CATS = HERE / "taxonomy.json"       # the Etsy category of each folder
+VIDEOS = HERE / "videos"  # made by video.py, not kept in git
 API = "https://api.etsy.com/v3/application"
 TOKEN_URL = "https://api.etsy.com/v3/public/oauth/token"
 CONNECT = "https://www.etsy.com/oauth/connect"
 REDIRECT = "https://tchubirs.github.io/"
 SCOPES = "listings_r listings_w shops_r transactions_r"
 MIME = {".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", ".pdf": "application/pdf",
-        ".jpg": "image/jpeg"}
+        ".jpg": "image/jpeg", ".mp4": "video/mp4"}
 AI_NOTE = "with the help of AI tools"
 
 # The kit is made of the files and photos of two other listings.
@@ -366,6 +367,12 @@ def publish(numbers, taxonomy_id, draft):
             call(s, "POST", f"/shops/{shop}/listings/{lid}/files", data={"name": name, "rank": k + 1},
                  files={"file": (name, path.read_bytes(), MIME[path.suffix])})
             rec["files"] = k + 1
+            note(li["n"], rec)
+        video = VIDEOS / f"{li['folder']}.mp4"
+        if video.exists() and not rec.get("video"):
+            call(s, "POST", f"/shops/{shop}/listings/{lid}/videos", data={"name": video.name},
+                 files={"video": (video.name, video.read_bytes(), MIME[".mp4"])})
+            rec["video"] = True
             note(li["n"], rec)
         if not draft and rec["state"] != "active":
             call(s, "PATCH", f"/shops/{shop}/listings/{lid}", data={"state": "active"})
