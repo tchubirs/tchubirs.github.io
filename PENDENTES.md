@@ -14,4 +14,13 @@ destrava.
 
 Se esta sessão acabar e a autorização se perder, eu te mando um link novo (1 min: abrir, Allow access, me mandar o endereço). Para a chave do app não se perder junto, você pode pôr ETSY_KEYSTRING e ETSY_SHARED_SECRET nas variáveis do ambiente (menu do ambiente na barra de título da sessão, Editar).
 
+**29/09: conectores (MCP) que você pediu, só os oficiais (8 min).** Cada um vale para todas as sessões:
+1. Vercel: https://claude.com/connectors/vercel , toque em conectar e faça login na Vercel.
+2. Netlify: https://claude.com/connectors/netlify , mesmo jeito.
+3. Stripe: https://claude.com/connectors/stripe , faça login e escolha a conta. Antes de mexer em dinheiro eu sempre te pergunto.
+4. Etsy (só a documentação da API, não mexe na loja): em https://claude.ai/customize/connectors toque em adicionar conector personalizado, nome `Etsy API`, endereço `https://mcp.api.etsycloud.com/mcp`. Sem login.
+5. Depois abra uma sessão nova (os conectores só entram quando a sessão começa) e escreva "testa os MCPs".
+
+Pulados: Cloudflare, Figma, Linear, Firecrawl e Browserbase (sem conta), banco de dados (nenhum), Discord (sem servidor oficial). O Canva já está conectado e funcionando.
+
 Quando terminar um item, me mande "feito #N".
