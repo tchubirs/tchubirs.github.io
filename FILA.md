@@ -13,7 +13,9 @@ até alguma vender. O que eu faço agora:
 1. **Vender o que já existe:** os 44 anúncios estão ativos desde 29/09, conferidos com `python3 etsy/check_live.py`,
    mas o público só vê depois que ele pagar a taxa de abertura de € 16 (PENDENTES, item 2). A cada hora:
    `python3 etsy/publish.py sales` e a contagem pública de anúncios ativos (quando passar de 0, a loja abriu). Se entrar
-   pedido, avisar ele. O teste de 30 dias começa no dia em que a loja abrir.
+   pedido, avisar ele. O teste começa no dia em que a loja abrir. Proposta a ele em 30/09: 4 meses em vez de 30 dias,
+   porque os anúncios duram 4 meses sem custo novo e lojas parecidas vendem mais do segundo mês em diante
+   (`python3 etsy/market.py`).
    Capas novas (foto 1) nos 44 em 29/09 (`etsy/cover.py`). Vídeo de 11 s em cada um em 29/09 (`etsy/video.py`, enviado pelo `publish.py`). Quando ele ligar o inglês na loja: `python3 etsy/publish.py english` e conferir.
 2. **Fiverr:** assim que ele criar a conta, responder cada pedido no mesmo dia, com o trabalho pronto.
 
