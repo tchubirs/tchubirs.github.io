@@ -25,6 +25,17 @@ Se esta sessão acabar e a autorização se perder, eu te mando um link novo (1 
 4. Etsy (só a documentação da API, não mexe na loja): em https://claude.ai/customize/connectors toque em adicionar conector personalizado, nome `Etsy API`, endereço `https://mcp.api.etsycloud.com/mcp`. Sem login.
 5. Depois abra uma sessão nova (os conectores só entram quando a sessão começa) e escreva "testa os MCPs".
 
+No terminal do seu computador (Claude Code), cole um comando por vez. O `--scope user` faz valer em todas as conversas daquele computador:
+
+```
+claude mcp add --scope user --transport http vercel https://mcp.vercel.com
+claude mcp add --scope user --transport http netlify https://netlify-mcp.netlify.app/mcp
+claude mcp add --scope user --transport http stripe https://mcp.stripe.com/
+claude mcp add --scope user --transport http etsy https://mcp.api.etsycloud.com/mcp
+```
+
+Depois abra o Claude Code, escreva `/mcp`, escolha Vercel, Netlify e Stripe, um por vez, e faça o login no navegador. A Etsy não pede login. Para conferir: `claude mcp list`. Canva, Google Drive e Gmail não precisam de comando: entram sozinhos no Claude Code se ele estiver logado na mesma conta do claude.ai.
+
 Pulados: Cloudflare, Figma, Linear, Firecrawl e Browserbase (sem conta), banco de dados (nenhum), Discord (sem servidor oficial). O Canva já está conectado e funcionando.
 
 Quando terminar um item, me mande "feito #N".
