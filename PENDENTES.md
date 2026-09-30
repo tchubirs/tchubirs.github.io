@@ -5,7 +5,7 @@ destrava.
 
 | # | O quê | Tempo | Destrava | Como |
 |---|---|---|---|---|
-| 1 | Criar a conta de vendedor no Fiverr, com o perfil e 1 anúncio | 15 a 30 min | Venda de serviços: eu faço o trabalho, você cola as mensagens | [fiverr/KIT.md](fiverr/KIT.md), https://www.fiverr.com/start_selling |
+| 1 | Fiverr: conta criada em 30/09. Falta o perfil (Passo 1 do kit) e o anúncio 1 (Passo 2) | 20 min | Venda de serviços: eu faço o trabalho, você cola as mensagens | [fiverr/KIT.md](fiverr/KIT.md), https://www.fiverr.com/start_selling |
 | 2 | Abrir a loja da Etsy: pagar a taxa única de abertura (€ 16) | 3 min | Os 44 anúncios aparecem e vendem sozinhos: o cliente paga e baixa, sem conversa | https://www.etsy.com/your/shops/me/onboarding |
 
 **29/09, 21:40: achei o motivo, a loja nunca foi aberta.** A abertura parou no passo da cobrança: a Etsy pede uma taxa única de abertura de € 16 (US$ 19) e só depois abre a loja. Até lá ninguém vê os 44 anúncios. Falta você (3 min): em https://www.etsy.com/your/shops/me/onboarding confira o cartão, toque em "Rever comissão de configuração e continuar", siga os passos até "Abrir loja" e me avise. Custos: € 16 agora, uma vez, e € 0,18 por anúncio (os 44 dão cerca de € 8 na fatura do mês). A "oferta especial" para recuperar a taxa pede o Etsy Plus pago por 6 meses, então não compensa. Depois disso, ligue o inglês como idioma da loja (Definições > Idiomas e traduções) para eu pôr a versão em inglês dos 44 com `python3 etsy/publish.py english`.

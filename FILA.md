@@ -21,7 +21,7 @@ até alguma vender. O que eu faço agora:
    vir. Nos temas lotados (orçamento, poupança, dívidas) duas lojas novas que vendem bem cobram US$ 3,99 e € 3,90
    pela planilha de orçamento, e a nossa custa € 7,50: se a loja abrir, baixar as de orçamento para perto de € 4.
    Capas novas (foto 1) nos 44 em 29/09 (`etsy/cover.py`). Vídeo de 11 s em cada um em 29/09 (`etsy/video.py`, enviado pelo `publish.py`). Quando ele ligar o inglês na loja: `python3 etsy/publish.py english` e conferir.
-2. **Fiverr:** assim que ele criar a conta, responder cada pedido no mesmo dia, com o trabalho pronto.
+2. **Fiverr:** conta criada por ele em 30/09. Guiar o perfil e o anúncio 1 pelo kit; depois responder cada pedido no mesmo dia, com o trabalho pronto.
 
 Pausado até algo vender ou ele pedir: inventário da casa (rascunho em `etsy/home-inventory`), manutenção da casa,
 galinhas no quintal, férias da equipe, Herculano.
