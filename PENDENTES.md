@@ -16,6 +16,8 @@ destrava.
 
 Se esta sessão acabar e a autorização se perder, eu te mando um link novo (1 min: abrir, Allow access, me mandar o endereço). Para a chave do app não se perder junto, você pode pôr ETSY_KEYSTRING e ETSY_SHARED_SECRET nas variáveis do ambiente (menu do ambiente na barra de título da sessão, Editar).
 
+**30/09, conferido na sua conta:** Vercel, Netlify, Stripe e Etsy ainda não estão conectados, por isso não aparecem nas outras conversas. O Linear ficou com o login pela metade. Canva, Google Drive e Gmail estão conectados. O que você instalar pelo terminal com `claude mcp add` só vale no Claude Code daquele computador.
+
 **29/09: conectores (MCP) que você pediu, só os oficiais (8 min).** Cada um vale para todas as sessões:
 1. Vercel: https://claude.com/connectors/vercel , toque em conectar e faça login na Vercel.
 2. Netlify: https://claude.com/connectors/netlify , mesmo jeito.
