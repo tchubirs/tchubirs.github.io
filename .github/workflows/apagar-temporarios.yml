@@ -1,0 +1,25 @@
+# Apaga os videos temporarios do Postador (ramos tmp-<hora>-<aleatorio>).
+# Cada ramo guarda um video so enquanto o Instagram o vai buscar; o numero no
+# nome e a hora (segundos desde 1970, UTC) a partir da qual ja pode ser apagado.
+name: apagar-temporarios
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apagar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          agora=$(date +%s)
+          git ls-remote --heads origin 'tmp-*' | awk '{print $2}' | sed 's#refs/heads/##' | while read -r r; do
+            quando=$(echo "$r" | cut -d- -f2)
+            case $quando in ''|*[!0-9]*) continue ;; esac
+            if [ "$quando" -lt "$agora" ]; then git push -q origin --delete "$r" && echo "apagado: $r"; fi
+          done
