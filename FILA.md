@@ -10,9 +10,10 @@ planilha vender, paro de fazer planilhas e a gente muda de ideia. Se ele disser
 **Decisão dele em 28/09 à noite:** um mês sem nenhum centavo, então foco em dinheiro. Não crio planilha nova
 até alguma vender. O que eu faço agora:
 
-1. **Vender o que já existe:** feito em 29/09, os 44 anúncios estão no ar (https://www.etsy.com/shop/FocusBudgetSheets),
-   conferidos com `python3 etsy/check_live.py`. A cada hora: `python3 etsy/publish.py sales`. Se entrar pedido, avisar
-   ele. O teste de 30 dias vai até 29/10.
+1. **Vender o que já existe:** os 44 anúncios estão ativos desde 29/09, conferidos com `python3 etsy/check_live.py`,
+   mas o público só vê depois que ele pagar a taxa de abertura de € 16 (PENDENTES, item 2). A cada hora:
+   `python3 etsy/publish.py sales` e a contagem pública de anúncios ativos (quando passar de 0, a loja abriu). Se entrar
+   pedido, avisar ele. O teste de 30 dias começa no dia em que a loja abrir.
    Capas novas (foto 1) nos 44 em 29/09 (`etsy/cover.py`). Vídeo de 11 s em cada um em 29/09 (`etsy/video.py`, enviado pelo `publish.py`). Quando ele ligar o inglês na loja: `python3 etsy/publish.py english` e conferir.
 2. **Fiverr:** assim que ele criar a conta, responder cada pedido no mesmo dia, com o trabalho pronto.
 
