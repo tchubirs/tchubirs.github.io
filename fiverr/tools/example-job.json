@@ -1,0 +1,4 @@
+{"start": "https://books.toscrape.com/", "item": "article.product_pod",
+ "fields": {"title": "h3 a@title", "price": "p.price_color", "stock": "p.instock.availability",
+            "rating": "p.star-rating@class", "link": "h3 a@href"},
+ "numbers": ["price"], "next": "li.next a@href", "max_pages": 3, "delay": 1}
