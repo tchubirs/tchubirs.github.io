@@ -5,10 +5,9 @@ destrava.
 
 | # | O quê | Tempo | Destrava | Como |
 |---|---|---|---|---|
-| 1 | Fiverr: você disse "feito" em 02/10. O Fiverr bloqueia robôs, então eu não consigo ver se o perfil e os 3 anúncios estão no ar. Mande aqui o link do seu perfil ou um print da página dos anúncios. Se o Claude no Chrome parou no meio, diga em que passo | 1 min | Venda de serviços: eu faço o trabalho, você cola as mensagens | https://www.fiverr.com (se faltar algo: https://claude.com/claude-in-chrome e a tarefa em https://raw.githubusercontent.com/tchubirs/tchubirs.github.io/refs/heads/claude/ai-revenue-automation-map-g00jks/fiverr/DISPATCH.md) |
+| 1 | Fiverr: o link que você mandou em 02/10 é do perfil de comprador. O Fiverr bloqueia robôs, então eu não consigo ver se o perfil de vendedor e os 3 anúncios estão no ar. Mande um print da página dos anúncios (no modo vendedor, menu Gigs). Se o Claude no Chrome parou no meio, diga em que passo | 1 min | Venda de serviços: eu faço o trabalho, você cola as mensagens | https://www.fiverr.com (se faltar algo: https://claude.com/claude-in-chrome e a tarefa em https://raw.githubusercontent.com/tchubirs/tchubirs.github.io/refs/heads/claude/ai-revenue-automation-map-g00jks/fiverr/DISPATCH.md) |
 | 2 | App do Fiverr no celular, com as notificações ligadas. Quando um cliente escrever, cole a mensagem aqui ou mande um print; eu respondo e faço o trabalho | 2 min | Responder em até 24 horas, que o Fiverr mede e mostra no perfil | Android: https://play.google.com/store/apps/details?id=com.fiverr.fiverr , iPhone: https://apps.apple.com/app/id346080608 |
 | 3 | Abrir a loja da Etsy: pagar a taxa única de abertura (€ 16). Não recomendo agora (nota de 30/09 abaixo) | 3 min | Os 44 anúncios aparecem e vendem sozinhos: o cliente paga e baixa, sem conversa | https://www.etsy.com/your/shops/me/onboarding |
-| 4 | Conectores pela metade: Vercel e Linear (login incompleto), Etsy API e Canva (pedem para conectar de novo). Em cada um, tocar em conectar | 2 min | Os mesmos conectores em todas as conversas | https://claude.ai/customize/connectors |
 
 **29/09, 21:40: achei o motivo, a loja nunca foi aberta.** A abertura parou no passo da cobrança: a Etsy pede uma taxa única de abertura de € 16 (US$ 19) e só depois abre a loja. Até lá ninguém vê os 44 anúncios. Se um dia decidir abrir (3 min): em https://www.etsy.com/your/shops/me/onboarding confira o cartão, toque em "Rever comissão de configuração e continuar", siga os passos até "Abrir loja" e me avise. Custos: € 16 agora, uma vez, e € 0,18 por anúncio (os 44 dão cerca de € 8 na fatura do mês). A "oferta especial" para recuperar a taxa pede o Etsy Plus pago por 6 meses, então não compensa. Depois disso, ligue o inglês como idioma da loja (Definições > Idiomas e traduções) para eu pôr a versão em inglês dos 44 com `python3 etsy/publish.py english`.
 
@@ -18,7 +17,7 @@ destrava.
 
 Se esta sessão acabar e a autorização se perder, eu te mando um link novo (1 min: abrir, Allow access, me mandar o endereço). Para a chave do app não se perder junto, você pode pôr ETSY_KEYSTRING e ETSY_SHARED_SECRET nas variáveis do ambiente (menu do ambiente na barra de título da sessão, Editar).
 
-**02/10, conferido na sua conta:** Netlify, Stripe, Google Drive e Gmail estão conectados. Vercel e Linear ficaram com o login pela metade; Etsy API e Canva pedem para conectar de novo (item 4). O que você instalar pelo terminal com `claude mcp add` só vale no Claude Code daquele computador.
+**02/10, conferido na sua conta depois que você conectou:** Vercel, Linear, Canva, Netlify, Stripe e Google Drive conectados; testei o Vercel e o Linear daqui e respondem. Os novos entram em cada conversa nova. O Etsy API ainda aparece pela metade para mim, mas não faz falta: eu já uso a API da Etsy direto. O que você instalar pelo terminal com `claude mcp add` só vale no Claude Code daquele computador.
 
 **29/09: conectores (MCP) que você pediu, só os oficiais (8 min).** Cada um vale para todas as sessões:
 1. Vercel: https://claude.com/connectors/vercel , toque em conectar e faça login na Vercel.

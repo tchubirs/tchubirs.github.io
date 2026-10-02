@@ -23,14 +23,15 @@ Fiverr seller profile and three published gigs, using exactly the texts below.
    - https://raw.githubusercontent.com/tchubirs/tchubirs.github.io/refs/heads/claude/ai-revenue-automation-map-g00jks/fiverr/img/gig3-sheets-excel.png
    - https://raw.githubusercontent.com/tchubirs/tchubirs.github.io/refs/heads/claude/ai-revenue-automation-map-g00jks/fiverr/img/gig4-claude-skill.png
    - https://raw.githubusercontent.com/tchubirs/tchubirs.github.io/refs/heads/claude/ai-revenue-automation-map-g00jks/fiverr/img/gig5-statement-excel.png
-2. Open https://www.fiverr.com/start_selling, click **Become a Seller** and sign
-   in with the user's Google account. If you are not signed in, ask the user to
-   sign in.
+2. The user already has a Fiverr account. Open https://www.fiverr.com/start_selling
+   and click **Become a Seller**. If Fiverr asks to sign in, ask the user to sign
+   in. If the seller profile or some gigs already exist, check them against this
+   page and fill in only what is missing or different.
 
 ## Step 1: seller profile
 
-- **Username** (it cannot be changed later): the first one available of
-  `scriptdesk`, `tidyscript`, `datapipe_studio`. If none is free, ask the user.
+- **Username:** the account already has one, and Fiverr does not allow changing
+  it. Keep it.
 - **Display name:** leave the user's own name, or ask.
 - **Profile photo:** ask the user (see above).
 - **Description:**
