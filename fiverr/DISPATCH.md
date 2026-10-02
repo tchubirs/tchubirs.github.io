@@ -26,7 +26,9 @@ Fiverr seller profile and three published gigs, using exactly the texts below.
 2. The user already has a Fiverr account. Open https://www.fiverr.com/start_selling
    and click **Become a Seller**. If Fiverr asks to sign in, ask the user to sign
    in. If the seller profile or some gigs already exist, check them against this
-   page and fill in only what is missing or different.
+   page and fill in only what is missing or different. When Fiverr offers to
+   upload your experience (a CV or LinkedIn), choose **Fill out profile
+   manually** instead.
 
 ## Step 1: seller profile
 
