@@ -21,9 +21,9 @@ até alguma vender. O que eu faço agora:
    vir. Nos temas lotados (orçamento, poupança, dívidas) duas lojas novas que vendem bem cobram US$ 3,99 e € 3,90
    pela planilha de orçamento, e a nossa custa € 7,50: se a loja abrir, baixar as de orçamento para perto de € 4.
    Capas novas (foto 1) nos 44 em 29/09 (`etsy/cover.py`). Vídeo de 11 s em cada um em 29/09 (`etsy/video.py`, enviado pelo `publish.py`). Quando ele ligar o inglês na loja: `python3 etsy/publish.py english` e conferir.
-2. **Fiverr:** conta criada por ele em 30/09. Em 02/10 a página dos anúncios dele caiu no início do cadastro de vendedor:
-   o perfil de vendedor e os anúncios ainda não existem. Falta ele rodar o Claude no Chrome com `fiverr/DISPATCH.md`.
-   Depois, responder cada pedido no mesmo dia, com o trabalho pronto.
+2. **Fiverr:** conta criada por ele em 30/09. Em 02/10 o Claude no Chrome criou o perfil e os 5 anúncios como rascunho
+   (Basic do 1 e do 3 a US$ 30, mínimo do Fiverr nessas categorias; o 4 em Software Development). Falta ele fazer a
+   verificação de identidade e o W-8BEN, e depois publicar. Então, responder cada pedido no mesmo dia, com o trabalho pronto.
    Ferramenta do anúncio 1 pronta em 01/10: `fiverr/tools/scrape.py` (um arquivo JSON descreve o site; sai Excel,
    CSV e JSON). Testada num site local (`test_scrape.py`) e ao vivo em books.toscrape.com, 60 linhas em 3 páginas.
    Em 02/10 ela passou a abrir a página de cada item (`detail`) e a ler sites montados por JavaScript no Chromium

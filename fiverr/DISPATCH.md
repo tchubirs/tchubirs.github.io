@@ -1,5 +1,9 @@
 # Task: set up a Fiverr seller account with three gigs
 
+Done on 2 October as drafts: the profile and all five gigs. Fiverr asks for at least $30 in
+the categories of gigs 1 and 3, so their Basic package is $30. Publishing waits for the user's ID
+check and tax form.
+
 You are acting in the user's own browser, on the user's behalf. The goal is a
 Fiverr seller profile and three published gigs, using exactly the texts below.
 
@@ -70,7 +74,7 @@ Premium). Leave extras, videos and PDFs out.
   | Description | 1 website, up to 500 rows, delivered as Excel or CSV. | 1 website with pagination, up to 5,000 rows. Excel, CSV and JSON. | Up to 20,000 rows, plus the Python script and a guide to re-run it. |
   | Delivery | 2 days | 3 days | 5 days |
   | Revisions | 1 | 2 | 3 |
-  | Price | $20 | $50 | $120 |
+  | Price | $30 | $50 | $120 |
 
 - **Description:**
 
@@ -183,7 +187,7 @@ Message me first with your task. If a script is not the right solution, I will t
   | Description | Up to 5 formulas written or fixed: lookups, sums, conditions, dates. | One workflow automated with Apps Script or a VBA macro, with a guide. | Several sheets automated, plus a summary dashboard with charts. |
   | Delivery | 2 days | 3 days | 5 days |
   | Revisions | 1 | 2 | 3 |
-  | Price | $20 | $50 | $110 |
+  | Price | $30 | $50 | $110 |
 
 - **Description:**
 
@@ -224,7 +228,7 @@ I use AI tools to work faster, and I test everything in your actual file.
 ### Gig 4 (optional): custom Claude skill
 
 - **Title:** I will build a custom claude skill to automate a task you repeat
-- **Category:** Programming & Tech > AI Development (or the AI agents/automation subcategory Fiverr offers).
+- **Category:** Programming & Tech > Software Development. AI Development asks for at least $90 per package.
 - **Search tags:** claude, claude skill, ai agent, ai automation, prompt engineering
 - **Packages:**
 
