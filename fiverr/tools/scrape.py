@@ -21,6 +21,18 @@ A field is a CSS selector inside the item, and "@name" at the end takes that att
 the text. Links come out as full addresses. "start" can also be a list of pages. The fields named in
 "numbers" become real numbers in Excel. The run stops at the page limit, when there is no next page,
 or when the site's robots.txt does not allow the page.
+
+Optional keys (example-detail-job.json uses the first one):
+  "detail": {"link": "link", "fields": {"upc": "table tr td"}}
+        opens the page in each row's "link" field and adds these fields, read from that whole page.
+        A page that fails or that robots.txt keeps out leaves them empty, and the About sheet counts it.
+  "render": true
+        opens every page in headless Chromium first, for sites that build their content with
+        JavaScript (needs: pip install playwright)
+  "wait_for": "article.item"
+        with "render", waits until this selector is on the page
+  "key": "link"
+        rows with the same value in this list field are duplicates (by default the whole row must match)
 """
 import argparse
 import csv
@@ -39,6 +51,7 @@ from openpyxl.styles import Font, PatternFill
 from openpyxl.utils import get_column_letter
 
 AGENT = "Mozilla/5.0 (compatible; scrape.py data export)"
+RETRY = (429, 500, 502, 503, 504)
 
 
 def pick(node, rule, base):
@@ -77,10 +90,26 @@ def number(text):
     return -value if negative else value
 
 
+def columns(job):
+    extra = job.get("detail", {}).get("fields", {})
+    return list(job["fields"]) + [name for name in extra if name not in job["fields"]]
+
+
 class Fetcher:
+    errors = (requests.RequestException,)   # what a page that cannot be read raises
+
     def __init__(self, delay=1.0, agent=AGENT):
         self.delay, self.session, self.robots, self.last = delay, requests.Session(), {}, 0.0
         self.session.headers["User-Agent"] = agent
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self.close()
+
+    def close(self):
+        self.session.close()
 
     def allowed(self, url):
         root = "{0.scheme}://{0.netloc}".format(urllib.parse.urlparse(url))
@@ -95,22 +124,69 @@ class Fetcher:
             self.robots[root] = rp
         return self.robots[root].can_fetch(self.session.headers["User-Agent"], url)
 
+    def pause(self):
+        wait = self.last + self.delay - time.time()
+        if wait > 0:
+            time.sleep(wait)
+        self.last = time.time()
+
     def get(self, url):
         for attempt in range(4):
-            wait = self.last + self.delay - time.time()
-            if wait > 0:
-                time.sleep(wait)
-            self.last = time.time()
+            self.pause()
             r = self.session.get(url, timeout=60)
-            if r.status_code not in (429, 500, 502, 503, 504):
-                r.raise_for_status()
-                return r.text
+            if r.status_code not in RETRY:
+                break
             time.sleep(2 ** (attempt + 1))
         r.raise_for_status()
+        return r.text
+
+
+class Browser(Fetcher):
+    """For sites that build their pages with JavaScript: the same as Fetcher, but every page is opened in
+    headless Chromium and read once it has loaded. robots.txt is still read the plain way."""
+
+    def __init__(self, delay=1.0, agent=AGENT, wait_for=None):
+        super().__init__(delay, agent)
+        from playwright.sync_api import Error, TimeoutError, sync_playwright   # only needed here
+        self.errors, self.timeout, self.wait_for = (requests.RequestException, Error), TimeoutError, wait_for
+        self.pw = sync_playwright().start()
+        self.browser = self.pw.chromium.launch()
+        self.page = self.browser.new_page(user_agent=agent)
+
+    def close(self):
+        self.browser.close()
+        self.pw.stop()
+        super().close()
+
+    def get(self, url):
+        for attempt in range(4):
+            self.pause()
+            r = self.page.goto(url, wait_until="load", timeout=60000)
+            status = r.status if r else 200
+            if status not in RETRY:
+                break
+            time.sleep(2 ** (attempt + 1))
+        if status >= 400:
+            raise requests.HTTPError(f"{status} for {url}")
+        if self.wait_for:
+            self.page.wait_for_selector(self.wait_for, timeout=30000)
+        else:
+            try:
+                self.page.wait_for_load_state("networkidle", timeout=10000)
+            except self.timeout:
+                pass    # some sites never go quiet; what has loaded by now is used
+        return self.page.content()
 
 
 def scrape(job, fetcher=None, log=print):
-    fetcher = fetcher or Fetcher(job.get("delay", 1), job.get("user_agent", AGENT))
+    if fetcher:
+        return collect(job, fetcher, log)
+    settings = job.get("delay", 1), job.get("user_agent", AGENT)
+    with Browser(*settings, job.get("wait_for")) if job.get("render") else Fetcher(*settings) as fetcher:
+        return collect(job, fetcher, log)
+
+
+def collect(job, fetcher, log):
     queue = [job["start"]] if isinstance(job["start"], str) else list(job["start"])
     seen, rows, pages = set(), [], 0
     while queue and pages < job.get("max_pages", 50):
@@ -128,9 +204,6 @@ def scrape(job, fetcher=None, log=print):
         nxt = pick(soup, job["next"], url) if job.get("next") else ""
         if nxt and nxt not in seen:
             queue.insert(0, nxt)
-    for row in rows:
-        for name in job.get("numbers", []):
-            row[name] = number(row[name])
     key = job.get("key")
     unique, keys = [], set()
     for row in rows:
@@ -138,36 +211,64 @@ def scrape(job, fetcher=None, log=print):
         if k not in keys:
             keys.add(k)
             unique.append(row)
-    return unique, {"pages": pages, "found": len(rows), "duplicates": len(rows) - len(unique)}
+    stats = {"pages": pages, "found": len(rows), "duplicates": len(rows) - len(unique)}
+    if job.get("detail"):
+        stats.update(details(job["detail"], unique, fetcher, log))
+    for row in unique:
+        for name in job.get("numbers", []):
+            row[name] = number(row[name])
+    return unique, stats
+
+
+def details(detail, rows, fetcher, log):
+    """Opens the page in each row's link field and adds the detail fields, read from that whole page."""
+    read = 0
+    for i, row in enumerate(rows, start=1):
+        url, soup = row[detail["link"]], None
+        if url and not fetcher.allowed(url):
+            log(f"robots.txt does not allow {url}, its detail fields stay empty")
+        elif url:
+            try:
+                soup = BeautifulSoup(fetcher.get(url), "html.parser")
+                read += 1
+            except fetcher.errors as e:
+                log(f"could not read {url} ({e}), its detail fields stay empty")
+        for name, rule in detail["fields"].items():
+            row[name] = pick(soup, rule, url) if soup else ""
+        if i % 100 == 0:
+            log(f"detail pages: {i} of {len(rows)}")
+    return {"details": read, "details_missing": len(rows) - read}
 
 
 def write(rows, stats, job, out):
-    columns = list(job["fields"])
-    missing = {c: sum(1 for r in rows if r[c] in ("", None)) for c in columns}
+    names = columns(job)
+    missing = {c: sum(1 for r in rows if r[c] in ("", None)) for c in names}
 
     wb = Workbook()
     ws = wb.active
     ws.title = "Data"
-    ws.append(columns)
+    ws.append(names)
     for c in ws[1]:
         c.font = Font(name="Arial", bold=True, color="FFFFFF")
         c.fill = PatternFill("solid", start_color="1F6F78")
     for row in rows:
-        ws.append([row[c] for c in columns])
-    for i, name in enumerate(columns, start=1):
+        ws.append([row[c] for c in names])
+    for i, name in enumerate(names, start=1):
         longest = max([len(str(name))] + [len(str(r[name] or "")) for r in rows[:500]])
         ws.column_dimensions[get_column_letter(i)].width = min(60, max(10, longest + 2))
         if name in job.get("numbers", []):
             for (cell,) in ws.iter_rows(min_row=2, min_col=i, max_col=i):
                 cell.number_format = "#,##0.00"
     ws.freeze_panes = "A2"
-    ws.auto_filter.ref = f"A1:{get_column_letter(len(columns))}{ws.max_row}"
+    ws.auto_filter.ref = f"A1:{get_column_letter(len(names))}{ws.max_row}"
 
     about = wb.create_sheet("About")
     start = job["start"] if isinstance(job["start"], str) else job["start"][0]
-    for line in [("Source", start), ("Extracted", dt.date.today().isoformat()), ("Pages read", stats["pages"]),
-                 ("Rows", len(rows)), ("Duplicate rows removed", stats["duplicates"])] + \
-                [(f"Empty values in {c}", n) for c, n in missing.items()]:
+    lines = [("Source", start), ("Extracted", dt.date.today().isoformat()), ("Pages read", stats["pages"]),
+             ("Rows", len(rows)), ("Duplicate rows removed", stats["duplicates"])]
+    if "details" in stats:
+        lines += [("Detail pages read", stats["details"]), ("Detail pages not read", stats["details_missing"])]
+    for line in lines + [(f"Empty values in {c}", n) for c, n in missing.items()]:
         about.append(line)
     about.column_dimensions["A"].width = 32
     about.column_dimensions["B"].width = 60
@@ -176,7 +277,7 @@ def write(rows, stats, job, out):
     wb.save(f"{out}.xlsx")
 
     with open(f"{out}.csv", "w", newline="", encoding="utf-8-sig") as f:   # the BOM makes Excel read UTF-8
-        w = csv.DictWriter(f, fieldnames=columns)
+        w = csv.DictWriter(f, fieldnames=names)
         w.writeheader()
         w.writerows(rows)
     with open(f"{out}.json", "w", encoding="utf-8") as f:
@@ -195,6 +296,8 @@ def main(argv=None):
     missing = write(rows, stats, job, a.out)
     dup = stats["duplicates"]
     print(f"{len(rows)} rows from {stats['pages']} pages, {dup} duplicate{'' if dup == 1 else 's'} removed")
+    if "details" in stats:
+        print(f"  {stats['details']} detail pages read, {stats['details_missing']} not read")
     for name, n in missing.items():
         if n:
             print(f"  {n} empty values in {name}")

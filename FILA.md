@@ -24,6 +24,9 @@ até alguma vender. O que eu faço agora:
 2. **Fiverr:** conta criada por ele em 30/09. Guiar o perfil e o anúncio 1 pelo kit; depois responder cada pedido no mesmo dia, com o trabalho pronto.
    Ferramenta do anúncio 1 pronta em 01/10: `fiverr/tools/scrape.py` (um arquivo JSON descreve o site; sai Excel,
    CSV e JSON). Testada num site local (`test_scrape.py`) e ao vivo em books.toscrape.com, 60 linhas em 3 páginas.
+   Em 02/10 ela passou a abrir a página de cada item (`detail`) e a ler sites montados por JavaScript no Chromium
+   (`render`). Testado ao vivo: 20 livros com categoria, código e descrição (`example-detail-job.json`) e 2 páginas
+   de quotes.toscrape.com/js.
 
 Pausado até algo vender ou ele pedir: inventário da casa (rascunho em `etsy/home-inventory`), manutenção da casa,
 galinhas no quintal, férias da equipe, Herculano.
