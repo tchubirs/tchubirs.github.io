@@ -24,6 +24,10 @@ test('o premio sai de dentro do HTML, com a virgula dos milhares', () => {
   assert.equal(valorEmDinheiro('$<span class="h1" data-x="2">40,000</span>'), 40000);
   assert.equal(valorEmDinheiro(''), 0);
   assert.equal(valorEmDinheiro(null), 0);
+  // rupias nao sao dolares (InterWell Hack2.0, 03/10/2026: ₹1,000 aparecia como $1.000)
+  assert.equal(valorEmDinheiro('₹ <span data-currency-value>1,000</span>'), 11);
+  assert.equal(valorEmDinheiro('€<span data-currency-value>2,000</span>'), 2100);
+  assert.equal(valorEmDinheiro('¥<span data-currency-value>2,000</span>'), 0);
 });
 
 // Um prazo ilegível não pode parecer que fecha hoje: isso eliminava concursos

@@ -16,10 +16,18 @@ const dorme = (ms) => new Promise((r) => setTimeout(r, ms));
  * Tirar as etiquetas antes de procurar o número, senão os dígitos que às vezes
  * aparecem dentro dos atributos entram na conta.
  */
+// Moedas que nao sao dolares: o Devpost escreve o simbolo antes do numero
+// (₹1,000 sao rupias, cerca de 11 dolares, nao mil). Taxas aproximadas, de proposito
+// por baixo: o radar deve subestimar um premio, nunca inflaciona-lo.
+const DOLARES_POR = { '₹': 1 / 90, '€': 1.05, '£': 1.25 };
+
 function valorEmDinheiro(bruto) {
-  const texto = String(bruto ?? '').replace(/<[^>]+>/g, '').replace(/,/g, '');
+  const texto = String(bruto ?? '').replace(/<[^>]+>/g, '').replace(/,/g, '').trim();
   const m = texto.match(/[0-9]+(?:\.[0-9]+)?/);
-  return m ? Number(m[0]) : 0;
+  if (!m) return 0;
+  const antes = texto.slice(0, m.index).trim();
+  const taxa = antes === '' || antes.endsWith('$') ? 1 : DOLARES_POR[antes.slice(-1)];
+  return taxa === undefined ? 0 : Math.round(Number(m[0]) * taxa);
 }
 
 /**
