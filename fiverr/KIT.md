@@ -345,3 +345,7 @@ depois dos outros três, se quiser.
 Quando chegar uma mensagem ou um pedido no Fiverr, copie o texto do cliente
 (e os arquivos, se tiver) e cole aqui. Eu te devolvo a resposta pronta e o
 trabalho feito; você só cola e envia.
+
+Os "Briefs" também chegam na caixa de mensagens: é um pedido que o Fiverr manda
+só para alguns vendedores. Cole aqui assim que chegar, porque o Fiverr dá 72
+horas para responder ou mandar a oferta. Eu escrevo a resposta e a oferta.
