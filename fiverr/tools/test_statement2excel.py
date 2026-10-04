@@ -34,7 +34,8 @@ def make(path, eu, n=45, seed=1):
             page = doc.new_page()
             page.insert_text((50, 40), "RELEVE DE COMPTE" if eu else "ACCOUNT STATEMENT", fontsize=12)
             page.insert_text((50, 60), f"Page {doc.page_count}", fontsize=8)
-            page.insert_text((50, 90), "Date      Libelle / Description                         Montant     Solde", fontsize=8)
+            page.insert_text((50, 90), "Date      Libelle / Description                         Montant     Solde",
+                             fontsize=8)
             y = 110
         day += dt.timedelta(days=rnd.randint(0, 2))
         shop = rnd.choice(SHOPS)
@@ -70,10 +71,122 @@ def check(eu):
             assert abs(gb - tb) < 0.005, (gb, tb)
         checks = {r[0].value: r[1].value for r in wb["Checks"].iter_rows()}
         assert checks["Balance mismatches"] == 0, checks
-        assert any("REF 8841" in (r[1].value or "") for r in ws.iter_rows(min_row=2)), "wrapped line lost"
+        descs = [r[1].value or "" for r in ws.iter_rows(min_row=2)]
+        assert any("REF 8841" in d for d in descs), "wrapped line lost"
+        assert not [d for d in descs if "RELEVE" in d or "STATEMENT" in d], "a page heading went into a description"
         print(("EU" if eu else "US"), "layout:", len(got), "transactions match, balances reconcile")
+
+
+def make_columns(path, us, n=40, seed=3):
+    """Money out and money in in separate columns, without signs, between opening and closing balance lines.
+    French: no balance column, dates without a year from December to January, a value date after each
+    date and an amount inside one description. US: a balance column carried to the next page, a summary
+    above the table whose previous balance is not the table's, then a daily balance table and a savings
+    account with the same columns, which must stay out."""
+    rnd = random.Random(seed)
+    opening = bal = 1234.56
+    truth = []
+    doc = pymupdf.open()
+    out_x, in_x, bal_x = (360, 430, 500) if us else (400, 470, None)
+    state = {"page": None, "y": 0}
+
+    def put(x, text):
+        state["page"].insert_text((x, state["y"]), text, fontsize=9)
+
+    def new_page():
+        if state["page"] is not None and us:
+            put(115, "BALANCE CARRIED FORWARD")
+            put(bal_x, fmt(bal, False))
+        state["page"], state["y"] = doc.new_page(), 40
+        put(50, "ACCOUNT STATEMENT 12/01/2026 to 01/31/2027" if us else "RELEVE DE COMPTE du 01/12/2026 au 31/01/2027")
+        state["y"] = 70
+        heads = ([(50, "Date"), (115, "Description"), (out_x, "Withdrawals"), (in_x, "Deposits"), (bal_x, "Balance")]
+                 if us else [(50, "Date"), (95, "Valeur"), (140, "Libellé"), (out_x, "Débit"), (in_x, "Crédit")])
+        for x, word in heads:
+            put(x, word)
+        state["y"] = 90
+        if us:
+            put(115, "BALANCE BROUGHT FORWARD")
+            put(bal_x, fmt(bal, False))
+            state["y"] += 14
+
+    new_page()
+    if not us:
+        put(140, "SOLDE PRECEDENT AU 30/11/2026")
+        put(in_x, fmt(opening, True))
+        state["y"] += 14
+    day = dt.date(2026, 12, 1)
+    for i in range(n):
+        if state["y"] > 600:
+            new_page()
+        day += dt.timedelta(days=rnd.randint(0, 2))
+        pay = day.day in (5, 6) and not any(t[0].month == day.month and t[1] > 0 for t in truth)
+        shop = "VIR SALAIRE ACME" if pay else ("RETRAIT DAB 50,00" if i == 9 else "CB " + rnd.choice(SHOPS))
+        amount = 2150.00 if pay else (-50.00 if i == 9 else -round(rnd.uniform(3, 180), 2))
+        bal = round(bal + amount, 2)
+        truth.append((day, amount, bal if us else None))
+        if us:
+            put(50, day.strftime("%m/%d/%Y"))
+            put(115, shop)
+        else:
+            put(50, day.strftime("%d/%m"))
+            put(95, (day + dt.timedelta(days=rnd.randint(0, 2))).strftime("%d/%m"))
+            put(140, shop)
+        put(in_x if amount > 0 else out_x, fmt(abs(amount), not us))
+        if us:
+            put(bal_x, fmt(bal, False))
+        state["y"] += 14
+    if not us:
+        put(140, "TOTAL DES OPERATIONS")
+        put(out_x, fmt(-sum(t[1] for t in truth if t[1] < 0), True))
+        put(in_x, fmt(sum(t[1] for t in truth if t[1] > 0), True))
+        state["y"] += 14
+    put(115 if us else 140, "CLOSING BALANCE" if us else "NOUVEAU SOLDE AU 31/01/2027")
+    put(bal_x if us else (in_x if bal > 0 else out_x), fmt(abs(bal), not us))
+    if us:
+        first = doc[0]
+        first.insert_text((50, 52), "Previous balance $999.99", fontsize=9)
+        first.insert_text((50, 62), f"Ending balance ${fmt(bal, False)}", fontsize=9)
+        heads = [(50, "Date"), (115, "Description"), (out_x, "Withdrawals"), (in_x, "Deposits"), (bal_x, "Balance")]
+        for x_words in ([(50, "DAILY BALANCE SUMMARY")],
+                        [(50, "Date"), (150, "Amount"), (250, "Date"), (350, "Amount")],
+                        [(50, "12/01/2026"), (150, "$1,100.00"), (250, "12/02/2026"), (350, "$900.00")],
+                        [(50, "SAVINGS Account Number: 9999")], heads,
+                        [(50, "12/15/2026"), (115, "TRANSFER"), (in_x, "100.00"), (bal_x, "2,000.00")]):
+            state["y"] += 14
+            for x, word in x_words:
+                put(x, word)
+    doc.save(path)
+    return truth, opening, bal
+
+
+def check_columns(us):
+    with tempfile.TemporaryDirectory() as tmp:
+        pdf, out = os.path.join(tmp, "c.pdf"), os.path.join(tmp, "c.xlsx")
+        truth, opening, closing = make_columns(pdf, us)
+        assert s2e.main([pdf, "-o", out]) == 0
+        wb = load_workbook(out)
+        ws = wb["Transactions"]
+        got = [(r[0].value.date(), (r[2].value or 0) - (r[3].value or 0), r[4].value, r[1].value)
+               for r in ws.iter_rows(min_row=2)]
+        assert len(got) == len(truth), (len(got), len(truth))
+        for (gd, ga, gb, desc), (td, ta, tb) in zip(got, truth):
+            assert (gd, round(ga, 2), gb) == (td, ta, tb), ((gd, ga, gb, desc), (td, ta, tb))
+            assert not s2e.LEADING_DATE.match(desc or ""), desc
+            assert not any(w in (desc or "") for w in ("RELEVE", "STATEMENT", "BALANCE", "Date")), desc
+        assert got[-1][0].year == 2027 and any(g[3] == "RETRAIT DAB 50,00" for g in got) or us, got[-3:]
+        checks = {r[0].value: r[1].value for r in wb["Checks"].iter_rows()}
+        assert (checks["Opening balance"], checks["Closing balance"]) == (opening, closing), checks
+        assert checks["Opening balance plus movements gives the closing balance"] == "yes", checks
+        assert checks["Balance mismatches"] == 0, checks
+        assert checks["Balance steps checked"] == (len(truth) if us else 0), checks
+        assert checks.get("Other transaction tables left out") == (1 if us else None), checks
+        print(("US withdrawals and deposits" if us else "French debit and credit") + " columns:", len(got),
+              "transactions with the right sign, opening and closing balances agree")
 
 
 if __name__ == "__main__":
     check(eu=True)
     check(eu=False)
+    check_columns(us=False)
+    check_columns(us=True)

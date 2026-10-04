@@ -33,6 +33,11 @@ até alguma vender. O que eu faço agora:
    e lista o que está errado: os erros e a célula que causa cada um, referência circular, referência a célula apagada,
    fórmula diferente das vizinhas, número digitado como texto e cálculo manual. Testada (`test_audit_sheet.py`) e ao
    vivo nas 47 planilhas da Etsy: nenhum erro, e os 2 avisos (pets e aluguel por temporada) são de propósito.
+   Conversor de extrato do anúncio 5 (`statement2excel.py`) melhorado em 04/10: lê débito e crédito em colunas
+   separadas, o saldo inicial e o final, datas sem ano que passam de dezembro para janeiro, e para no fim da tabela
+   (cheques, saldos diários ou outra conta ficam de fora e aparecem contados na aba Checks). Corrigido um defeito
+   antigo: o cabeçalho da página entrava na descrição da última transação. Testado em 4 formatos e ao vivo num
+   extrato de exemplo público de um banco americano: as 47 transações certas, todos os saldos batem.
 
 Pausado até algo vender ou ele pedir: inventário da casa (rascunho em `etsy/home-inventory`), manutenção da casa,
 galinhas no quintal, férias da equipe, Herculano.
