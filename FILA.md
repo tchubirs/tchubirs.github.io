@@ -44,6 +44,9 @@ até alguma vender. O que eu faço agora:
    palavras em `categories.json`, em inglês, francês, português e espanhol, editável para cada cliente) e uma aba
    By category com fórmulas; saída em CSV (`-o arquivo.csv`, com `--sep ";" --decimal ","` para o Excel em
    francês ou português) e `--date-format dd/mm/yyyy`. Testado; as fórmulas conferidas no LibreOffice.
+   Também em 04/10: datas com o nome do mês nos 4 idiomas ("1 February", "Nov 01"), linhas sem data (os bancos
+   ingleses põem a data só na primeira transação do dia) e cabeçalho quebrado em várias linhas; um número não
+   gruda mais no seguinte ("5,000 505,491.59" virava um número só). Testado num formato inglês novo.
    Kit do anúncio 4 pronto em 04/10: `fiverr/tools/skill_kit.py` confere a skill pelas regras da documentação
    oficial da Anthropic (lida hoje) e gera o zip no formato que o claude.ai aceita, com um guia de instalação em
    inglês para o cliente (app e Claude Code). Testado; as 42 skills de exemplo da Anthropic passam na conferência.

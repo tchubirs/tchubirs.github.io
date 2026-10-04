@@ -32,14 +32,23 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
 from openpyxl.utils import get_column_letter
 
-MONTHS = {m: i for i, m in enumerate(
-    ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"], start=1)}
-MONTHS.update({"fév": 2, "fev": 2, "avr": 4, "mai": 5, "juin": 6, "juil": 7, "aoû": 8, "aou": 8, "déc": 12})
+# Month names and abbreviations in English, French, Portuguese and Spanish, without accents.
+MONTHS = {word: month for month, words in enumerate([
+    "jan january janv janvier ene enero janeiro", "feb february fev fevr fevrier febrero fevereiro",
+    "mar march mars marzo marco", "apr april avr avril abr abril", "may mai mayo maio",
+    "jun june juin junio junho", "jul july juil juillet julio julho", "aug august aou aout ago agosto",
+    "sep sept september septembre septiembre set setembro", "oct october octobre octubre out outubro",
+    "nov november novembre noviembre novembro", "dec december decembre dic diciembre dez dezembro"], start=1)
+    for word in words.split()}
 
 DATE_RE = re.compile(
     r"^(?P<d>\d{1,2})[./-](?P<m>\d{1,2})(?:[./-](?P<y>\d{2,4}))?\b"         # 12/09/2026, 12.09.26, 12/09
     r"|^(?P<iy>\d{4})-(?P<im>\d{2})-(?P<id>\d{2})\b"                          # 2026-09-12
-    r"|^(?P<td>\d{1,2})\s+(?P<tm>[A-Za-zéû]{3,4})\.?(?:\s+(?P<ty>\d{4}))?\b")  # 12 Sep 2026, 12 sept.
+    r"|^(?P<td>\d{1,2})(?:st|nd|rd|th|er)?\s+(?P<tm>[^\W\d_]{3,10})\.?(?:,?\s+(?P<ty>\d{4}))?\b"   # 1 February 2026
+    r"|^(?P<mm>[^\W\d_]{3,10})\.?\s*(?:[\u2013-]\s*)?(?P<md>\d{1,2})(?:st|nd|rd|th)?"
+    r"(?:,?\s+(?P<my>\d{4}))?\b")                                                # Nov 01, Nov - 01, Nov 1, 2019
+TOTALS = re.compile(r"(?i)^(sub-?)?totals?\b(\s+(money|amount|debits?|credits?|withdrawals|deposits|paid|in|out|"
+                    r"for|of)\b|\s*:?\s*$)|^(totaux|sous-total)\b")
 RULES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "categories.json")
 LEADING_DATE = re.compile(r"^\d{1,2}[./-]\d{1,2}(?:[./-]\d{2,4})?\s+")   # the value date after the operation date
 OPENING = re.compile(r"(?i)solde pr[ée]c[ée]dent|ancien solde|solde (initial|d'ouverture)|previous balance|"
@@ -47,8 +56,8 @@ OPENING = re.compile(r"(?i)solde pr[ée]c[ée]dent|ancien solde|solde (initial|d
 CLOSING = re.compile(r"(?i)nouveau solde|solde final|closing balance|new balance|ending balance|saldo final|"
                      r"saldo atual|saldo actual")
 EITHER = re.compile(r"(?i)solde (cr[ée]diteur|d[ée]biteur|au)\b")   # opening before the transactions, closing after
-CARRIED = re.compile(r"(?i)carried forward|[àa] reporter|report de la page|suma y sigue|a transportar|"
-                     r"total des op[ée]rations|totaux")
+CARRIED = re.compile(r"(?i)carried forward|[àa] reporter|report de la page|suma y sigue|a transportar")
+PAGE_TOTAL = re.compile(r"(?i)total des op[ée]rations|totaux")
 HEADS = {"debit": "out", "debits": "out", "withdrawal": "out", "withdrawals": "out", "out": "out",
          "debito": "out", "debitos": "out", "retiros": "out", "cargos": "out", "saidas": "out",
          "levantamentos": "out", "depenses": "out",
@@ -59,7 +68,8 @@ HEADS = {"debit": "out", "debits": "out", "withdrawal": "out", "withdrawals": "o
 DATE_WORDS = {"date", "dates", "fecha", "data", "datum"}
 AMOUNT_RE = re.compile(
     r"(?<![\w.,])(?P<neg>[-−(])?\s?(?P<cur>[$€£])?\s?"
-    r"(?P<num>\d{1,3}(?:[ ,.  ]\d{3})*(?:[.,]\d{2})|\d+[.,]\d{2})"
+    # One kind of thousands separator per number, so "5,000 505,491.59" stays two numbers.
+    r"(?P<num>\d{1,3}(?:(?P<sep>[ ,.\u202f\u00a0])\d{3}(?:(?P=sep)\d{3})*)?[.,]\d{2}|\d+[.,]\d{2})"
     r"\)?\s?(?P<sign>CR|DR|Cr|Dr|-)?(?![\w])")
 
 
@@ -76,19 +86,19 @@ def parse_amount(m):
 
 
 def parse_date(m, order, year_hint):
-    if m.group("iy"):
-        return dt.date(int(m.group("iy")), int(m.group("im")), int(m.group("id")))
-    if m.group("td"):
-        mon = MONTHS.get(m.group("tm")[:3].lower()) or MONTHS.get(m.group("tm").lower())
-        if not mon:
-            return None
-        year = int(m.group("ty")) if m.group("ty") else year_hint
-        return dt.date(year, mon, int(m.group("td")))
-    a, b = int(m.group("d")), int(m.group("m"))
-    y = m.group("y")
-    year = year_hint if not y else (int(y) + 2000 if len(y) == 2 else int(y))
-    day, month = (a, b) if order == "dmy" else (b, a)
+    """The date a DATE_RE match stands for, or None when it is not a real date (2 PIZZAS, 31 February)."""
     try:
+        if m.group("iy"):
+            return dt.date(int(m.group("iy")), int(m.group("im")), int(m.group("id")))
+        if m.group("td") or m.group("mm"):
+            day, word, year = (m.group("td"), m.group("tm"), m.group("ty")) if m.group("td") else \
+                (m.group("md"), m.group("mm"), m.group("my"))
+            month = MONTHS.get(plain_word(word))
+            return dt.date(int(year) if year else year_hint, month, int(day)) if month else None
+        a, b = int(m.group("d")), int(m.group("m"))
+        y = m.group("y")
+        year = year_hint if not y else (int(y) + 2000 if len(y) == 2 else int(y))
+        day, month = (a, b) if order == "dmy" else (b, a)
         return dt.date(year, month, day)
     except ValueError:
         return None
@@ -169,15 +179,18 @@ def extract(paths, order=None):
         if y:
             year_hint = int(y.group(1))
             break
-    tx, cols, closed, extra, opening, closings, last = [], None, False, 0, None, [], None
+    tx, cols, closed, extra, opening, closings, last, recent = [], None, False, 0, None, [], None, []
     for line, words in lines:
         amounts = list(AMOUNT_RE.finditer(line))
-        heads = None if amounts else heading(words)
+        # A heading can be spread over two or three lines ("Money" above "out"); look at them together.
+        recent = (recent + [words])[-3:] if not amounts else []
+        heads = None if amounts else heading(words) or heading(sorted(w for ws in recent for w in ws))
         if heads:
             if closed and tx:
                 extra += 1
             else:
                 cols, closed = heads, False
+            recent = []
             continue
         if cols and not amounts and foreign(words):
             cols, closed = None, True
@@ -186,30 +199,34 @@ def extract(paths, order=None):
             continue
         placed = [(a, parse_amount(a), column(cols, words, a) if cols else None) for a in amounts]
         placed = [p for p in placed if p[2] != "text"]
+        if placed and PAGE_TOTAL.search(line):
+            continue                                 # the totals of a page or of the statement
         if placed and (OPENING.search(line) or CLOSING.search(line) or EITHER.search(line) or CARRIED.search(line)):
             value = signed(*placed[-1][1:])
             if CARRIED.search(line):
-                pass                                 # a page total or a balance carried to the next page
+                closings.append(value)               # the last one carried is the closing balance
             elif OPENING.search(line) or (EITHER.search(line) and not tx):
                 opening = value if not tx else opening   # the table's own line comes after any summary
             else:
                 closings.append(value)
             continue
         dm = DATE_RE.match(line)
-        if dm and placed:
+        date = parse_date(dm, order, year_hint) if dm else None
+        if date and last and not any(dm.group(g) for g in ("y", "iy", "ty", "my")) and (last - date).days > 180:
+            year_hint += 1                           # December, then January
             date = parse_date(dm, order, year_hint)
-            yearless = not (dm.group("y") or dm.group("iy") or dm.group("ty"))
-            if date and yearless and last and (last - date).days > 180:
-                year_hint += 1                       # December, then January
-                date = parse_date(dm, order, year_hint)
-            if not date or (cols and all(k == "balance" for _, _, k in placed)):
-                continue                             # no date, or a balance printed on a row of its own
-            desc = LEADING_DATE.sub("", line[dm.end():placed[0][0].start()].strip(" -|"))
-            after = [x0 for x0, _, _, start, _ in words if start >= dm.end()]
-            tx.append({"date": date, "desc": desc, "values": [v for _, v, _ in placed],
+        # Many banks print the date only on the first row of each day: with money columns known, a row
+        # without a date takes the date of the row above.
+        if placed and (date or (cols and tx)):
+            start = dm.end() if date else 0
+            desc = LEADING_DATE.sub("", line[start:placed[0][0].start()].strip(" -|"))
+            if cols and all(k == "balance" for _, _, k in placed) or not date and TOTALS.match(desc):
+                continue                             # a balance on a row of its own, or a total
+            after = [x0 for x0, _, _, begin, _ in words if begin >= start]
+            tx.append({"date": date or tx[-1]["date"], "desc": desc, "values": [v for _, v, _ in placed],
                        "kinds": [k for _, _, k in placed], "desc_x": after[0] if after else None})
-            last = date
-        elif tx and line.strip() and not amounts and not dm:
+            last = date or last
+        elif tx and line.strip() and not amounts and not date:
             # A wrapped description starts under the description; a page heading starts at the margin.
             under = tx[-1]["desc_x"] is not None and words[0][0] >= tx[-1]["desc_x"] - 5
             if under and len(tx[-1]["desc"]) < 120 and not re.search(r"(?i)page \d|balance|solde|total", line):

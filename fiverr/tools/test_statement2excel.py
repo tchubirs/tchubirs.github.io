@@ -1,6 +1,8 @@
 """Round-trip test: draw synthetic statements (EU and US layouts), extract, compare."""
+import contextlib
 import csv
 import datetime as dt
+import io
 import json
 import os
 import random
@@ -188,6 +190,68 @@ def check_columns(us):
               "transactions with the right sign, opening and closing balances agree")
 
 
+UK_SHOPS = ["TESCO STORES 2041", "CARD PAYMENT TO COSTA COFFEE", "DIRECT DEBIT EE LIMITED", "TFL TRAVEL CH",
+            "AMAZON MKTPLACE", "2 FOR 1 PIZZA CO"]
+
+
+def make_uk(path, n=36, seed=5):
+    """A UK layout: the heading spread over three lines (Paid above out and in), dates like 3 February only
+    on the first row of each day, and the balance brought forward at the top and carried forward at the end."""
+    rnd = random.Random(seed)
+    opening = bal = 2500.00
+    truth = []
+    doc = pymupdf.open()
+    page = doc.new_page()
+
+    def put(x, y, text):
+        page.insert_text((x, y), text, fontsize=9)
+
+    put(50, 40, "Your statement 1 February to 1 March 2026")
+    for x, y, word in [(330, 70, "Paid"), (400, 70, "Paid"), (50, 80, "Date"), (110, 80, "Description"),
+                       (330, 90, "out"), (400, 90, "in"), (470, 90, "Balance")]:
+        put(x, y, word)
+    y = 110
+    put(110, y, "Balance brought forward")
+    put(470, y, fmt(bal, False))
+    day, shown = dt.date(2026, 2, 1), None
+    for i in range(n):
+        y += 14
+        day += dt.timedelta(days=rnd.choice([0, 0, 1, 2]))
+        amount = 2400.00 if i == 10 else -round(rnd.uniform(2, 120), 2)
+        bal = round(bal + amount, 2)
+        truth.append((day, amount, bal))
+        if day != shown:
+            put(50, y, f"{day.day} {day.strftime('%B')}")
+            shown = day
+        put(110, y, "SALARY ACME LTD" if i == 10 else rnd.choice(UK_SHOPS))
+        put(330 if amount < 0 else 400, y, fmt(abs(amount), False))
+        put(470, y, fmt(bal, False))
+    put(110, y + 14, "Balance carried forward")
+    put(470, y + 14, fmt(bal, False))
+    doc.save(path)
+    return truth, opening, bal
+
+
+def check_uk():
+    with tempfile.TemporaryDirectory() as tmp:
+        pdf, out = os.path.join(tmp, "uk.pdf"), os.path.join(tmp, "uk.xlsx")
+        truth, opening, closing = make_uk(pdf)
+        with contextlib.redirect_stdout(io.StringIO()):
+            assert s2e.main([pdf, "-o", out]) == 0
+        wb = load_workbook(out)
+        got = [(r[0].date(), round((r[2] or 0) - (r[3] or 0), 2), r[4], r[1])
+               for r in wb["Transactions"].iter_rows(min_row=2, values_only=True)]
+        assert [g[:3] for g in got] == truth, [(g, t) for g, t in zip(got, truth) if g[:3] != t][:3]
+        assert any(g[3] == "2 FOR 1 PIZZA CO" for g in got), "a description that starts like a date was lost"
+        checks = {r[0].value: r[1].value for r in wb["Checks"].iter_rows()}
+        assert (checks["Opening balance"], checks["Closing balance"]) == (opening, closing), checks
+        assert checks["Opening balance plus movements gives the closing balance"] == "yes", checks
+        assert checks["Balance mismatches"] == 0, checks
+    shared = sum(1 for a, b in zip(truth, truth[1:]) if a[0] == b[0])
+    print(f"UK layout: {len(got)} transactions, {shared} of them without a printed date, the heading on three "
+          "lines, balances brought and carried forward")
+
+
 EXPECTED = {"CARREFOUR MARKET": "Groceries", "SNCF VOYAGES": "Transport", "AMAZON EU SARL": "Shopping",
             "PHARMACIE CENTRALE": "Health", "SALAIRE ACME SAS": "Salary and income",
             "LOYER AGENCE DU PORT": "Housing", "BOULANGERIE PAUL": "Groceries", "FREE MOBILE": "Phone and internet",
@@ -248,6 +312,7 @@ if __name__ == "__main__":
     check(eu=False)
     check_columns(us=False)
     check_columns(us=True)
+    check_uk()
     check_rules()
     check_categories()
     print("all good")
