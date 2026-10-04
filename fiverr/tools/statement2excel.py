@@ -4,8 +4,11 @@ Used to fulfil the Fiverr gig "convert bank statement PDF to Excel". Works on
 text-based PDFs (not scans). Every bank lays pages out differently, so this is
 a strong first pass that is then checked against the statement's own totals.
 
-Usage: python3 statement2excel.py statement.pdf [more.pdf ...] -o out.xlsx
+Usage: python3 statement2excel.py statement.pdf [more.pdf ...] -o out.xlsx   (or out.csv)
        [--dates dmy|mdy] (default: guess from the data)
+       [--categories [rules.json]]  a Category column and a By category sheet; categories.json is the
+                                    default list of keywords, copied and edited when a client wants others
+       [--date-format dd/mm/yyyy] [--sep ";" --decimal ","]  for the client's Excel
 
 Separate debit and credit columns are read from the heading line (Debit/Credit, Withdrawals/Deposits,
 Paid out/Paid in, Débit/Crédit, Cargos/Abonos and so on): a number under the debit heading is money out.
@@ -16,7 +19,10 @@ heading of any other table (cheques, daily balances, a loan) ends it, and a seco
 after that, usually another account, is counted in the Checks sheet instead of being mixed in.
 """
 import argparse
+import csv
 import datetime as dt
+import json
+import os
 import re
 import sys
 import unicodedata
@@ -34,6 +40,7 @@ DATE_RE = re.compile(
     r"^(?P<d>\d{1,2})[./-](?P<m>\d{1,2})(?:[./-](?P<y>\d{2,4}))?\b"         # 12/09/2026, 12.09.26, 12/09
     r"|^(?P<iy>\d{4})-(?P<im>\d{2})-(?P<id>\d{2})\b"                          # 2026-09-12
     r"|^(?P<td>\d{1,2})\s+(?P<tm>[A-Za-zéû]{3,4})\.?(?:\s+(?P<ty>\d{4}))?\b")  # 12 Sep 2026, 12 sept.
+RULES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "categories.json")
 LEADING_DATE = re.compile(r"^\d{1,2}[./-]\d{1,2}(?:[./-]\d{2,4})?\s+")   # the value date after the operation date
 OPENING = re.compile(r"(?i)solde pr[ée]c[ée]dent|ancien solde|solde (initial|d'ouverture)|previous balance|"
                      r"opening balance|balance (brought )?forward|brought forward|saldo anterior|saldo inicial")
@@ -234,27 +241,76 @@ def columns(tx, opening=None):
     return rows
 
 
-def write(rows, out, order, opening=None, closings=(), extra=0):
+def fold(text):
+    return unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode().lower()
+
+
+def load_rules(path):
+    """Categories in the order they are tried, each with one pattern made of its keywords. A keyword
+    matches whole words, accents and capitals aside; one ending in * also matches longer words."""
+    with open(path, encoding="utf-8") as f:
+        rules = json.load(f)
+    out = []
+    for category, words in rules.items():
+        parts = [re.escape(fold(w).strip()[:-1]) if w.strip().endswith("*")
+                 else re.escape(fold(w).strip()) + r"(?![a-z0-9])" for w in words]
+        out.append((category, re.compile(r"(?<![a-z0-9])(?:" + "|".join(parts) + ")")))
+    return out
+
+
+def categorise(rows, rules):
+    """The first category whose keywords appear in each description, or "" when none does."""
+    return [next((name for name, rx in rules if rx.search(fold(desc or ""))), "") for _, desc, _, _ in rows]
+
+
+def checks(rows, order, opening=None, closings=(), extra=0):
+    """The Checks sheet as (label, value) pairs, and how many balance checks failed."""
+    bals = ([(-1, opening)] if opening is not None else []) + [(i, b) for i, (_, _, _, b) in enumerate(rows)
+                                                                if b is not None]
+    mismatches = 0
+    for (i0, b0), (i1, b1) in zip(bals, bals[1:]):
+        moved = sum(rows[k][2] for k in range(i0 + 1, i1 + 1))
+        if abs((b1 - b0) - moved) > 0.01:
+            mismatches += 1
+    closes, closing = "not checked", (closings[-1] if closings else None)
+    if closings and bals:
+        start, base = bals[-1]
+        reached = base + sum(r[2] for r in rows[start + 1:])
+        same = [c for c in closings if abs(reached - c) < 0.01]
+        closing, closes = (same[0], "yes") if same else (closings[-1], "no")
+        mismatches += closes == "no"
+    pairs = [("Transactions", len(rows)), ("Date order used", order),
+             ("Opening balance", opening if opening is not None else "not on the statement"),
+             ("Closing balance", closing if closing is not None else "not on the statement"),
+             ("Opening balance plus movements gives the closing balance", closes),
+             ("Balance steps checked", max(0, len(bals) - 1)), ("Balance mismatches", mismatches)]
+    if extra:
+        pairs.append(("Other transaction tables left out", extra))
+    return pairs, mismatches
+
+
+def write(rows, out, order, opening=None, closings=(), extra=0, cats=None, date_format="yyyy-mm-dd"):
     wb = Workbook()
     ws = wb.active
     ws.title = "Transactions"
-    head = ["Date", "Description", "Money in", "Money out", "Balance"]
+    head = ["Date", "Description", "Money in", "Money out", "Balance"] + (["Category"] if cats else [])
     ws.append(head)
     for c in ws[1]:
         c.font = Font(name="Arial", bold=True, color="FFFFFF")
         c.fill = PatternFill("solid", start_color="1F6F78")
-    for d, desc, amount, bal in rows:
-        ws.append([d, desc, amount if amount > 0 else None, -amount if amount < 0 else None, bal])
+    for i, (d, desc, amount, bal) in enumerate(rows):
+        ws.append([d, desc, amount if amount > 0 else None, -amount if amount < 0 else None, bal]
+                  + ([cats[i] or "Other"] if cats else []))
     for r in range(2, ws.max_row + 1):
-        for c in range(1, 6):
+        for c in range(1, len(head) + 1):
             ws.cell(r, c).font = Font(name="Arial")
-        ws.cell(r, 1).number_format = "yyyy-mm-dd"
+        ws.cell(r, 1).number_format = date_format
         for c in (3, 4, 5):
             ws.cell(r, c).number_format = "#,##0.00"
-    for i, w in enumerate([12, 40, 13, 13, 13], start=1):
+    for i, w in enumerate([12, 40, 13, 13, 13, 24], start=1):
         ws.column_dimensions[get_column_letter(i)].width = w
     ws.freeze_panes = "A2"
-    ws.auto_filter.ref = f"A1:E{ws.max_row}"
+    ws.auto_filter.ref = f"A1:{get_column_letter(len(head))}{ws.max_row}"
     ws.page_setup.orientation = "landscape"  # prints on one page width
     ws.page_setup.fitToWidth, ws.page_setup.fitToHeight = 1, 0
     ws.sheet_properties.pageSetUpPr.fitToPage = True
@@ -271,44 +327,69 @@ def write(rows, out, order, opening=None, closings=(), extra=0):
     for i in (1, 2, 3, 4):
         sm.column_dimensions[get_column_letter(i)].width = 14
 
+    if cats:
+        # Formulas, so the totals follow when the client moves a row to another category.
+        bc = wb.create_sheet("By category")
+        bc.append(["Category", "Money in", "Money out", "Net", "Rows"])
+        names = list(dict.fromkeys(c or "Other" for c in cats))
+        last = len(rows) + 1
+        for r, name in enumerate(names, start=2):
+            bc.append([name, f"=SUMIFS(Transactions!$C$2:$C${last},Transactions!$F$2:$F${last},A{r})",
+                       f"=SUMIFS(Transactions!$D$2:$D${last},Transactions!$F$2:$F${last},A{r})", f"=B{r}-C{r}",
+                       f"=COUNTIFS(Transactions!$F$2:$F${last},A{r})"])
+            for c in (2, 3, 4):
+                bc.cell(r, c).number_format = "#,##0.00"
+        for c in bc[1]:
+            c.font = Font(bold=True)
+        for i, w in enumerate([24, 14, 14, 14, 8], start=1):
+            bc.column_dimensions[get_column_letter(i)].width = w
+
     ck = wb.create_sheet("Checks")
-    bals = ([(-1, opening)] if opening is not None else []) + [(i, b) for i, (_, _, _, b) in enumerate(rows)
-                                                                if b is not None]
-    mismatches = 0
-    for (i0, b0), (i1, b1) in zip(bals, bals[1:]):
-        moved = sum(rows[k][2] for k in range(i0 + 1, i1 + 1))
-        if abs((b1 - b0) - moved) > 0.01:
-            mismatches += 1
-    closes, closing = "not checked", (closings[-1] if closings else None)
-    if closings and bals:
-        start, base = bals[-1]
-        reached = base + sum(r[2] for r in rows[start + 1:])
-        same = [c for c in closings if abs(reached - c) < 0.01]
-        closing, closes = (same[0], "yes") if same else (closings[-1], "no")
-        mismatches += closes == "no"
-    ck.append(["Transactions", len(rows)])
-    ck.append(["Date order used", order])
-    ck.append(["Opening balance", opening if opening is not None else "not on the statement"])
-    ck.append(["Closing balance", closing if closing is not None else "not on the statement"])
-    ck.append(["Opening balance plus movements gives the closing balance", closes])
-    ck.append(["Balance steps checked", max(0, len(bals) - 1)])
-    ck.append(["Balance mismatches", mismatches])
-    if extra:
-        ck.append(["Other transaction tables left out", extra])
+    pairs, mismatches = checks(rows, order, opening, closings, extra)
+    if cats:
+        pairs.append(("Rows without a category, under Other", sum(1 for c in cats if not c)))
+    for pair in pairs:
+        ck.append(list(pair))
     ck.column_dimensions["A"].width = 52
     wb.save(out)
     return mismatches
 
 
+def write_csv(rows, out, cats=None, date_format="yyyy-mm-dd", sep=",", decimal="."):
+    """The Transactions sheet as CSV, with a byte order mark so Excel reads the accents."""
+    when = {"yyyy-mm-dd": "%Y-%m-%d", "dd/mm/yyyy": "%d/%m/%Y", "mm/dd/yyyy": "%m/%d/%Y"}[date_format]
+
+    def money(v):
+        return "" if v is None else f"{v:.2f}".replace(".", decimal)
+
+    with open(out, "w", newline="", encoding="utf-8-sig") as f:
+        w = csv.writer(f, delimiter=sep)
+        w.writerow(["Date", "Description", "Money in", "Money out", "Balance"] + (["Category"] if cats else []))
+        for i, (d, desc, amount, bal) in enumerate(rows):
+            w.writerow([d.strftime(when), desc, money(amount) if amount > 0 else "",
+                        money(-amount) if amount < 0 else "", money(bal)] + ([cats[i] or "Other"] if cats else []))
+
+
 def main(argv=None):
-    ap = argparse.ArgumentParser()
+    ap = argparse.ArgumentParser(description="Bank statement PDFs to one Excel or CSV file.")
     ap.add_argument("pdfs", nargs="+")
-    ap.add_argument("-o", "--out", default="statement.xlsx")
-    ap.add_argument("--dates", choices=["dmy", "mdy"])
+    ap.add_argument("-o", "--out", default="statement.xlsx", help="ends in .xlsx or .csv")
+    ap.add_argument("--dates", choices=["dmy", "mdy"], help="how the statement writes dates (default: guessed)")
+    ap.add_argument("--categories", nargs="?", const=RULES, metavar="RULES.json",
+                    help="add a Category column; without a file, the rules in categories.json")
+    ap.add_argument("--date-format", choices=["yyyy-mm-dd", "dd/mm/yyyy", "mm/dd/yyyy"], default="yyyy-mm-dd")
+    ap.add_argument("--sep", default=",", help="CSV separator, for example ; for Excel in French or Portuguese")
+    ap.add_argument("--decimal", default=".", help="CSV decimal mark")
     a = ap.parse_args(argv)
     tx, order, opening, closings, extra = extract(a.pdfs, a.dates)
     rows = columns(tx, opening)
-    bad = write(rows, a.out, order, opening, closings, extra)
+    cats = categorise(rows, load_rules(a.categories)) if a.categories else None
+    if a.out.lower().endswith(".csv"):
+        write_csv(rows, a.out, cats, a.date_format, a.sep, a.decimal)
+        pairs, bad = checks(rows, order, opening, closings, extra)
+        print("; ".join(f"{label}: {value}" for label, value in pairs))
+    else:
+        bad = write(rows, a.out, order, opening, closings, extra, cats, a.date_format)
     print(f"{len(rows)} transactions, dates {order}, balance mismatches {bad} -> {a.out}")
     return 0 if rows else 1
 

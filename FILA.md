@@ -38,6 +38,10 @@ até alguma vender. O que eu faço agora:
    (cheques, saldos diários ou outra conta ficam de fora e aparecem contados na aba Checks). Corrigido um defeito
    antigo: o cabeçalho da página entrava na descrição da última transação. Testado em 4 formatos e ao vivo num
    extrato de exemplo público de um banco americano: as 47 transações certas, todos os saldos batem.
+   Ainda em 04/10, o que o anúncio 5 promete e faltava: `--categories` põe a categoria de cada linha (lista de
+   palavras em `categories.json`, em inglês, francês, português e espanhol, editável para cada cliente) e uma aba
+   By category com fórmulas; saída em CSV (`-o arquivo.csv`, com `--sep ";" --decimal ","` para o Excel em
+   francês ou português) e `--date-format dd/mm/yyyy`. Testado; as fórmulas conferidas no LibreOffice.
 
 Pausado até algo vender ou ele pedir: inventário da casa (rascunho em `etsy/home-inventory`), manutenção da casa,
 galinhas no quintal, férias da equipe, Herculano.

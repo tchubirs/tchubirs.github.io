@@ -1,5 +1,7 @@
 """Round-trip test: draw synthetic statements (EU and US layouts), extract, compare."""
+import csv
 import datetime as dt
+import json
 import os
 import random
 import sys
@@ -9,6 +11,7 @@ import pymupdf
 from openpyxl import load_workbook
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import audit_sheet  # noqa: E402
 import statement2excel as s2e  # noqa: E402
 
 SHOPS = ["CARREFOUR MARKET", "SNCF VOYAGES", "AMAZON EU SARL", "PHARMACIE CENTRALE", "SALAIRE ACME SAS",
@@ -185,8 +188,66 @@ def check_columns(us):
               "transactions with the right sign, opening and closing balances agree")
 
 
+EXPECTED = {"CARREFOUR MARKET": "Groceries", "SNCF VOYAGES": "Transport", "AMAZON EU SARL": "Shopping",
+            "PHARMACIE CENTRALE": "Health", "SALAIRE ACME SAS": "Salary and income",
+            "LOYER AGENCE DU PORT": "Housing", "BOULANGERIE PAUL": "Groceries", "FREE MOBILE": "Phone and internet",
+            "VIREMENT MAMAN": "Transfers", "UBER EATS": "Restaurants and takeaway"}
+
+
+def check_rules():
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, "rules.json")
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump({"Health": ["pharmac*"], "Going out": ["bar"], "Food": ["épicerie"]}, f)
+        rules = s2e.load_rules(path)
+        rows = [(None, d, 0, None) for d in ["CB PHARMACIE DU PORT", "BARCLAYS FEE", "BAR TABAC", "EPICERIE FINE", "X"]]
+        assert s2e.categorise(rows, rules) == ["Health", "", "Going out", "Food", ""]
+    print("category rules: whole words, a * for longer words, accents and capitals ignored")
+
+
+def check_categories():
+    """Categories on the EU statement, the By category formulas recalculated in LibreOffice, and CSV."""
+    with tempfile.TemporaryDirectory() as tmp:
+        pdf, out, out_csv = (os.path.join(tmp, name) for name in ("s.pdf", "s.xlsx", "s.csv"))
+        make(pdf, eu=True, seed=7)
+        assert s2e.main([pdf, "-o", out, "--categories", "--date-format", "dd/mm/yyyy"]) == 0
+        wb = load_workbook(out)
+        ws = wb["Transactions"]
+        assert [c.value for c in ws[1]][-1] == "Category" and ws["A2"].number_format == "dd/mm/yyyy"
+        rows = list(ws.iter_rows(min_row=2, values_only=True))
+        for r in rows:
+            shop = next(k for k in EXPECTED if k in r[1])
+            assert r[5] == EXPECTED[shop], (r[1], r[5])
+        assert {r[0].value: r[1].value for r in wb["Checks"].iter_rows()}["Rows without a category, under Other"] == 0
+
+        found = audit_sheet.audit_files([out])[0]
+        assert not found["must_fix"] and not found["odd"], found
+        calc = load_workbook(audit_sheet.recalculate([out], tempfile.mkdtemp(dir=tmp))[0], data_only=True)
+        totals = {r[0]: r[1:] for r in calc["By category"].iter_rows(min_row=2, values_only=True)}
+        assert set(totals) == set(EXPECTED.values()), totals
+        for name, (inn, out_, net, count) in totals.items():
+            mine = [r for r in rows if r[5] == name]
+            assert abs(inn - sum(r[2] or 0 for r in mine)) < 0.005 and abs(out_ - sum(r[3] or 0 for r in mine)) < 0.005
+            assert abs(net - (inn - out_)) < 0.005 and count == len(mine), (name, totals[name])
+
+        assert s2e.main([pdf, "-o", out_csv, "--categories", "--date-format", "dd/mm/yyyy",
+                         "--sep", ";", "--decimal", ","]) == 0
+        with open(out_csv, encoding="utf-8-sig", newline="") as f:
+            lines = list(csv.reader(f, delimiter=";"))
+        assert lines[0] == ["Date", "Description", "Money in", "Money out", "Balance", "Category"], lines[0]
+        assert len(lines) == len(rows) + 1
+        for line, r in zip(lines[1:], rows):
+            money = ["" if v is None else f"{v:.2f}".replace(".", ",") for v in r[2:5]]
+            assert line == [r[0].strftime("%d/%m/%Y"), r[1], *money, r[5]], (line, r)
+    print("categories:", len(rows), "rows sorted into", len(totals), "categories; the By category formulas give the "
+          "same totals in LibreOffice; the CSV with ; and decimal commas matches the Excel file")
+
+
 if __name__ == "__main__":
     check(eu=True)
     check(eu=False)
     check_columns(us=False)
     check_columns(us=True)
+    check_rules()
+    check_categories()
+    print("all good")
