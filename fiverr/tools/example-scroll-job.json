@@ -1,0 +1,3 @@
+{"start": "https://quotes.toscrape.com/scroll", "item": "div.quote",
+ "fields": {"text": "span.text", "author": "small.author", "tags": "div.tags"},
+ "render": true, "scroll": 15, "delay": 1}

@@ -28,7 +28,9 @@ até alguma vender. O que eu faço agora:
    CSV e JSON). Testada num site local (`test_scrape.py`) e ao vivo em books.toscrape.com, 60 linhas em 3 páginas.
    Em 02/10 ela passou a abrir a página de cada item (`detail`) e a ler sites montados por JavaScript no Chromium
    (`render`). Testado ao vivo: 20 livros com categoria, código e descrição (`example-detail-job.json`) e 2 páginas
-   de quotes.toscrape.com/js.
+   de quotes.toscrape.com/js. Em 04/10 passou a rolar a página (`scroll`) ou clicar em "ver mais" (`click_more`)
+   nos sites que carregam itens aos poucos; ao vivo, as 100 citações de quotes.toscrape.com/scroll
+   (`example-scroll-job.json`).
    Ferramenta do anúncio 3 pronta em 04/10: `fiverr/tools/audit_sheet.py` recalcula a planilha do cliente no LibreOffice
    e lista o que está errado: os erros e a célula que causa cada um, referência circular, referência a célula apagada,
    fórmula diferente das vizinhas, número digitado como texto e cálculo manual. Testada (`test_audit_sheet.py`) e ao

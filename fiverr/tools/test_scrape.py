@@ -37,8 +37,45 @@ PAGES = {
     "private/two.html": "<html><body><p class='desc'>Hidden</p></body></html>",
     "js/list.html": """<html><body><div id="list"></div><script>
 setTimeout(function () {
-  document.getElementById("list").innerHTML = '<article class="p"><h3><a href="a.html" title="Built">Built</a></h3></article>'
+  document.getElementById("list").innerHTML =
+    '<article class="p"><h3><a href="a.html" title="Built">Built</a></h3></article>'
 }, 300)
+</script></body></html>""",
+    "js/scroll.html": """<html><body style="margin:0"><div id="list"></div><script>
+var n = 0, busy = false;
+function add(k, height) {
+  for (var i = 0; i < k; i++) {
+    n += 1;
+    var a = document.createElement("article");
+    a.className = "p";
+    a.style.height = height + "px";
+    a.innerHTML = '<h3><a href="item' + n + '.html" title="Item ' + n + '">'
+      + 'Item ' + n + '</a></h3>';
+    document.getElementById("list").appendChild(a);
+  }
+}
+add(5, 400);
+window.addEventListener("scroll", function () {
+  if (busy || n >= 20 || window.innerHeight + window.scrollY < document.body.scrollHeight - 50) return;
+  busy = true;
+  setTimeout(function () { add(5, 400); busy = false; }, 200);
+});
+</script></body></html>""",
+    "js/more.html": """<html><body><div id="list"></div><button id="more">More</button><script>
+var n = 0;
+function add(k) {
+  for (var i = 0; i < k; i++) {
+    n += 1;
+    var a = document.createElement("article");
+    a.className = "p";
+    a.innerHTML = '<h3><a href="item' + n + '.html" title="Item ' + n + '">Item ' + n + '</a></h3>';
+    document.getElementById("list").appendChild(a);
+  }
+}
+add(5);
+document.getElementById("more").onclick = function () {
+  setTimeout(function () { add(5); if (n >= 20) document.getElementById("more").remove(); }, 200);
+};
 </script></body></html>""",
 }
 
@@ -141,11 +178,28 @@ def render(base):
     print("render: the page built by JavaScript came out in Chromium, with and without wait_for")
 
 
+def more(base):
+    try:
+        import playwright  # noqa: F401
+    except ImportError:
+        print("scroll and click_more: skipped, Playwright is not installed here")
+        return
+    job = {"start": base + "/js/scroll.html", "item": "article.p", "delay": 0, "render": True, "scroll_wait": 1,
+           "fields": {"name": "h3 a@title"}}
+    counts = [len(scrape.scrape(dict(job, **extra), log=lambda *a: None)[0])
+              for extra in ({}, {"scroll": 1}, {"scroll": 10})]
+    assert counts == [5, 10, 20], counts
+    rows, _ = scrape.scrape(dict(job, start=base + "/js/more.html", click_more="#more"), log=lambda *a: None)
+    assert [r["name"] for r in rows] == [f"Item {i}" for i in range(1, 21)], rows
+    print("scroll and click_more: 5 items without, 10 after one scroll, all 20 by scrolling or clicking to the end")
+
+
 if __name__ == "__main__":
     numbers()
     base, root, server = serve()
     site(base, root)
     deep(base, root)
     render(base)
+    more(base)
     server.shutdown()
     print("all good")

@@ -22,7 +22,7 @@ the text. Links come out as full addresses. "start" can also be a list of pages.
 "numbers" become real numbers in Excel. The run stops at the page limit, when there is no next page,
 or when the site's robots.txt does not allow the page.
 
-Optional keys (example-detail-job.json uses the first one):
+Optional keys (example-detail-job.json uses "detail", example-scroll-job.json uses "render" and "scroll"):
   "detail": {"link": "link", "fields": {"upc": "table tr td"}}
         opens the page in each row's "link" field and adds these fields, read from that whole page.
         A page that fails or that robots.txt keeps out leaves them empty, and the About sheet counts it.
@@ -31,6 +31,12 @@ Optional keys (example-detail-job.json uses the first one):
         JavaScript (needs: pip install playwright)
   "wait_for": "article.item"
         with "render", waits until this selector is on the page
+  "scroll": 20
+        with "render", scrolls to the bottom of each listing page up to 20 times, for pages that load more
+        items as you scroll, and stops as soon as a scroll brings nothing new ("scroll_wait" seconds, 5)
+  "click_more": "button.load-more"
+        with "render", clicks this button instead of scrolling, up to "scroll" times (20 if not set),
+        until it is gone or a click brings nothing new
   "key": "link"
         rows with the same value in this list field are duplicates (by default the whole row must match)
 """
@@ -130,7 +136,7 @@ class Fetcher:
             time.sleep(wait)
         self.last = time.time()
 
-    def get(self, url):
+    def get(self, url, listing=False):
         for attempt in range(4):
             self.pause()
             r = self.session.get(url, timeout=60)
@@ -145,10 +151,12 @@ class Browser(Fetcher):
     """For sites that build their pages with JavaScript: the same as Fetcher, but every page is opened in
     headless Chromium and read once it has loaded. robots.txt is still read the plain way."""
 
-    def __init__(self, delay=1.0, agent=AGENT, wait_for=None):
+    def __init__(self, delay=1.0, agent=AGENT, wait_for=None, scroll=0, click_more=None, scroll_wait=5, item=None):
         super().__init__(delay, agent)
         from playwright.sync_api import Error, TimeoutError, sync_playwright   # only needed here
         self.errors, self.timeout, self.wait_for = (requests.RequestException, Error), TimeoutError, wait_for
+        self.loads = scroll or (20 if click_more else 0)
+        self.click_more, self.scroll_wait, self.item = click_more, scroll_wait, item
         self.pw = sync_playwright().start()
         self.browser = self.pw.chromium.launch()
         self.page = self.browser.new_page(user_agent=agent)
@@ -158,7 +166,7 @@ class Browser(Fetcher):
         self.pw.stop()
         super().close()
 
-    def get(self, url):
+    def get(self, url, listing=False):
         for attempt in range(4):
             self.pause()
             r = self.page.goto(url, wait_until="load", timeout=60000)
@@ -175,14 +183,38 @@ class Browser(Fetcher):
                 self.page.wait_for_load_state("networkidle", timeout=10000)
             except self.timeout:
                 pass    # some sites never go quiet; what has loaded by now is used
+        if listing:
+            self.load_more()
         return self.page.content()
+
+    def load_more(self):
+        """Scroll to the bottom, or click the "more" button, until no new item comes or the limit."""
+        for _ in range(self.loads):
+            # New items are the sign. The page height is not: a "loading" line makes it grow before anything
+            # comes, and it stays put while the page is shorter than the window.
+            before = [self.item, self.page.locator(self.item).count() if self.item else 0,
+                      self.page.evaluate("document.body.scrollHeight")]
+            if self.click_more:
+                button = self.page.locator(self.click_more).first
+                if not button.count() or not button.is_visible():
+                    break
+                button.click()
+            else:
+                self.page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+            try:
+                self.page.wait_for_function(
+                    "([item, n, h]) => item ? document.querySelectorAll(item).length > n"
+                    " : document.body.scrollHeight > h", arg=before, timeout=self.scroll_wait * 1000)
+            except self.timeout:
+                break   # nothing new came
 
 
 def scrape(job, fetcher=None, log=print):
     if fetcher:
         return collect(job, fetcher, log)
     settings = job.get("delay", 1), job.get("user_agent", AGENT)
-    with Browser(*settings, job.get("wait_for")) if job.get("render") else Fetcher(*settings) as fetcher:
+    more = job.get("wait_for"), job.get("scroll", 0), job.get("click_more"), job.get("scroll_wait", 5), job["item"]
+    with Browser(*settings, *more) if job.get("render") else Fetcher(*settings) as fetcher:
         return collect(job, fetcher, log)
 
 
@@ -197,7 +229,7 @@ def collect(job, fetcher, log):
         if not fetcher.allowed(url):
             log(f"robots.txt does not allow {url}, stopping there")
             break
-        soup = BeautifulSoup(fetcher.get(url), "html.parser")
+        soup = BeautifulSoup(fetcher.get(url, listing=True), "html.parser")
         pages += 1
         for node in soup.select(job["item"]):
             rows.append({name: pick(node, rule, url) for name, rule in job["fields"].items()})
