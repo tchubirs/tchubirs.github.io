@@ -42,6 +42,9 @@ até alguma vender. O que eu faço agora:
    palavras em `categories.json`, em inglês, francês, português e espanhol, editável para cada cliente) e uma aba
    By category com fórmulas; saída em CSV (`-o arquivo.csv`, com `--sep ";" --decimal ","` para o Excel em
    francês ou português) e `--date-format dd/mm/yyyy`. Testado; as fórmulas conferidas no LibreOffice.
+   Kit do anúncio 4 pronto em 04/10: `fiverr/tools/skill_kit.py` confere a skill pelas regras da documentação
+   oficial da Anthropic (lida hoje) e gera o zip no formato que o claude.ai aceita, com um guia de instalação em
+   inglês para o cliente (app e Claude Code). Testado; as 42 skills de exemplo da Anthropic passam na conferência.
 
 Pausado até algo vender ou ele pedir: inventário da casa (rascunho em `etsy/home-inventory`), manutenção da casa,
 galinhas no quintal, férias da equipe, Herculano.
