@@ -82,12 +82,13 @@ def check(eu):
         print(("EU" if eu else "US"), "layout:", len(got), "transactions match, balances reconcile")
 
 
-def make_columns(path, us, n=40, seed=3):
+def make_columns(path, us, n=40, seed=3, split=False):
     """Money out and money in in separate columns, without signs, between opening and closing balance lines.
     French: no balance column, dates without a year from December to January, a value date after each
     date and an amount inside one description. US: a balance column carried to the next page, a summary
     above the table whose previous balance is not the table's, then a daily balance table and a savings
-    account with the same columns, which must stay out."""
+    account with the same columns, which must stay out. With `split`, the heading of the later pages is on
+    two lines, the first of which looks like the heading of some other table."""
     rnd = random.Random(seed)
     opening = bal = 1234.56
     truth = []
@@ -107,6 +108,12 @@ def make_columns(path, us, n=40, seed=3):
         state["y"] = 70
         heads = ([(50, "Date"), (115, "Description"), (out_x, "Withdrawals"), (in_x, "Deposits"), (bal_x, "Balance")]
                  if us else [(50, "Date"), (95, "Valeur"), (140, "Libellé"), (out_x, "Débit"), (in_x, "Crédit")])
+        if split and doc.page_count > 1:
+            heads = heads[:2] + [(250, "Reference")]
+            for x, word in [(out_x, "Withdrawals"), (in_x, "Deposits"), (bal_x, "Balance")]:
+                state["y"] = 80
+                put(x, word)
+            state["y"] = 70
         for x, word in heads:
             put(x, word)
         state["y"] = 90
@@ -165,10 +172,10 @@ def make_columns(path, us, n=40, seed=3):
     return truth, opening, bal
 
 
-def check_columns(us):
+def check_columns(us, split=False):
     with tempfile.TemporaryDirectory() as tmp:
         pdf, out = os.path.join(tmp, "c.pdf"), os.path.join(tmp, "c.xlsx")
-        truth, opening, closing = make_columns(pdf, us)
+        truth, opening, closing = make_columns(pdf, us, split=split)
         assert s2e.main([pdf, "-o", out]) == 0
         wb = load_workbook(out)
         ws = wb["Transactions"]
@@ -186,8 +193,28 @@ def check_columns(us):
         assert checks["Balance mismatches"] == 0, checks
         assert checks["Balance steps checked"] == (len(truth) if us else 0), checks
         assert checks.get("Other transaction tables left out") == (1 if us else None), checks
-        print(("US withdrawals and deposits" if us else "French debit and credit") + " columns:", len(got),
+        print(("US withdrawals and deposits" if us else "French debit and credit") + " columns"
+              + (", heading on two lines after page 1" if split else "") + ":", len(got),
               "transactions with the right sign, opening and closing balances agree")
+
+
+def check_bank_header():
+    """A bank name and a card line above the table ("CREDIT AGRICOLE", "Carte de debit", "Date d'arret")
+    must not be taken for the money columns of a statement that has one amount column."""
+    with tempfile.TemporaryDirectory() as tmp:
+        pdf, out = os.path.join(tmp, "s.pdf"), os.path.join(tmp, "s.xlsx")
+        truth = make(pdf, eu=True, seed=7)
+        doc = pymupdf.open(pdf)
+        for page in doc:
+            for y, text in ((18, "CREDIT AGRICOLE"), (26, "Carte de débit"), (34, "Date d'arrêté du relevé")):
+                page.insert_text((50, y), text, fontsize=8)
+        doc.saveIncr()
+        with contextlib.redirect_stdout(io.StringIO()):
+            assert s2e.main([pdf, "-o", out]) == 0
+        got = [(r[0].date(), round((r[2] or 0) - (r[3] or 0), 2), r[4])
+               for r in load_workbook(out)["Transactions"].iter_rows(min_row=2, values_only=True)]
+        assert got == truth, [(g, t) for g, t in zip(got, truth) if g != t][:3]
+    print("bank name above the table: not taken for debit and credit columns")
 
 
 UK_SHOPS = ["TESCO STORES 2041", "CARD PAYMENT TO COSTA COFFEE", "DIRECT DEBIT EE LIMITED", "TFL TRAVEL CH",
@@ -312,7 +339,9 @@ if __name__ == "__main__":
     check(eu=False)
     check_columns(us=False)
     check_columns(us=True)
+    check_columns(us=True, split=True)
     check_uk()
+    check_bank_header()
     check_rules()
     check_categories()
     print("all good")

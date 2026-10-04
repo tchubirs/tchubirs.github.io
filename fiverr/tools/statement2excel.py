@@ -120,16 +120,23 @@ def plain_word(word):
 
 
 def heading(words):
-    """x positions of the money columns named on a heading line, or None when the line is not one."""
+    """x positions of the money columns named on a heading line, or None when the line is not one.
+
+    In a table the money columns sit well to the right of the date and apart from each other; that keeps
+    a bank name and a card line ("CREDIT AGRICOLE", "Carte de debit") from passing for a heading."""
     names = [plain_word(w) for _, _, w, _, _ in words]
-    if not DATE_WORDS & set(names):
+    dates = [x0 for (x0, *_), name in zip(words, names) if name in DATE_WORDS]
+    if not dates:
         return None
     found = {}
     for (x0, x1, *_), name in zip(words, names):
         kind = HEADS.get(name)
         if kind and kind not in found:
             found[kind] = (x0, x1)
-    return found if "out" in found and "in" in found else None
+    if "out" not in found or "in" not in found:
+        return None
+    out_x, in_x = found["out"][0], found["in"][0]
+    return found if min(out_x, in_x) > min(dates) + 100 and abs(out_x - in_x) > 20 else None
 
 
 def foreign(words):
@@ -180,7 +187,16 @@ def extract(paths, order=None):
             year_hint = int(y.group(1))
             break
     tx, cols, closed, extra, opening, closings, last, recent = [], None, False, 0, None, [], None, []
-    for line, words in lines:
+    def ahead(i):
+        """The words of this line and of up to two lines after it, while none of them has an amount."""
+        out = []
+        for k in range(i, min(i + 3, len(lines))):
+            if AMOUNT_RE.search(lines[k][0]):
+                break
+            out += lines[k][1]
+        return sorted(out)
+
+    for i, (line, words) in enumerate(lines):
         amounts = list(AMOUNT_RE.finditer(line))
         # A heading can be spread over two or three lines ("Money" above "out"); look at them together.
         recent = (recent + [words])[-3:] if not amounts else []
@@ -192,7 +208,8 @@ def extract(paths, order=None):
                 cols, closed = heads, False
             recent = []
             continue
-        if cols and not amounts and foreign(words):
+        # The first line of a heading spread over two lines can look like another table's heading.
+        if cols and not amounts and foreign(words) and not heading(ahead(i)):
             cols, closed = None, True
             continue
         if closed:
