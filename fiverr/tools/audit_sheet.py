@@ -6,6 +6,8 @@ is not touched. Reads .xlsx, .xlsm, .xls and .ods. A Google Sheet is checked fro
 Microsoft Excel.
 
 Usage: python3 audit_sheet.py book.xlsx [more files] [-o report.txt]
+       python3 audit_sheet.py --compare before.xlsx after.xlsx [-o changes.txt]
+              what our work changed: formulas, typed values, and every result that moved, recalculated
        (needs LibreOffice, the soffice command, and pip install openpyxl)
 
 Must fix, and the exit code is 1 when there is any:
@@ -564,14 +566,108 @@ def audit_files(paths):
         shutil.rmtree(work, ignore_errors=True)
 
 
+def contents(path, recalculated):
+    """Formulas and typed values as saved, and the recalculated result of every formula, by cell."""
+    openxml = os.path.splitext(path)[1].lower() in (".xlsx", ".xlsm")
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        book = load_workbook(path if openxml else recalculated)
+        values = load_workbook(recalculated, data_only=True)
+    formulas, typed, results = {}, {}, {}
+    for ws in book.worksheets:
+        out = values[ws.title] if ws.title in values.sheetnames else None
+        for (r, c), cell in ws._cells.items():
+            if cell.data_type == "f":
+                text = cell.value if isinstance(cell.value, str) else getattr(cell.value, "text", None)
+                if text:
+                    formulas[(ws.title, r, c)] = text if text.startswith("=") else "=" + text
+                    v = out._cells.get((r, c)) if out else None
+                    results[(ws.title, r, c)] = v.value if v is not None else None
+            elif cell.value is not None:
+                typed[(ws.title, r, c)] = cell.value
+    return book.sheetnames, formulas, typed, results
+
+
+def same(a, b):
+    if a in ("", None) and b in ("", None):
+        return True
+    numbers = (int, float)
+    if isinstance(a, numbers) and isinstance(b, numbers) and not isinstance(a, bool) and not isinstance(b, bool):
+        return abs(a - b) <= 1e-9 * max(1, abs(a), abs(b))
+    return a == b
+
+
+def compare(before, after):
+    """What changed from one version of a file to the other, both recalculated in LibreOffice."""
+    work = tempfile.mkdtemp(prefix="compare-")
+    try:
+        done = recalculate([before, after], work)
+        if not all(done):
+            return {"failed": True, "names": (before, after)}
+        (sheets0, f0, t0, r0), (sheets1, f1, t1, r1) = contents(before, done[0]), contents(after, done[1])
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+
+    def key(cell):
+        return sheets0.index(cell[0]) if cell[0] in sheets0 else len(sheets0), cell[1], cell[2]
+
+    def norm(cell, text):
+        return signature(tokens(text), cell[1], cell[2]) if text else None
+
+    formulas = [(where(*k), f0.get(k), f1.get(k)) for k in sorted(set(f0) | set(f1), key=key)
+                if norm(k, f0.get(k)) != norm(k, f1.get(k))]
+    typed = [(where(*k), t0.get(k), t1.get(k)) for k in sorted(set(t0) | set(t1), key=key)
+             if not same(t0.get(k), t1.get(k)) and k not in f0 and k not in f1]
+    results = [(where(*k), r0.get(k), r1.get(k)) for k in sorted(set(r0) | set(r1), key=key)
+               if not same(r0.get(k), r1.get(k))]
+    return {"failed": False, "names": (before, after), "added": [s for s in sheets1 if s not in sheets0],
+            "removed": [s for s in sheets0 if s not in sheets1], "formulas": formulas, "typed": typed,
+            "results": results}
+
+
+def describe_changes(c):
+    before, after = c["names"]
+    lines = [f"{before} -> {after}"]
+    if c["failed"]:
+        return lines + ["  LibreOffice could not open one of the two files."]
+    if c["added"] or c["removed"]:
+        lines.append(f"  Sheets added: {', '.join(c['added']) or 'none'}; removed: {', '.join(c['removed']) or 'none'}")
+
+    def shown(v):
+        return "(empty)" if v in (None, "") else short(v, 40) if isinstance(v, str) else f"{v:g}" \
+            if isinstance(v, float) else short(v, 40)
+
+    for title, items in (("Formulas changed", c["formulas"]), ("Typed values changed", c["typed"]),
+                         ("Results that changed", c["results"])):
+        if items:
+            lines.append(f"  {title} ({len(items)}):")
+            lines += [f"    {place}  {shown(a)}  ->  {shown(b)}" for place, a, b in items[:15]]
+            if len(items) > 15:
+                lines.append(f"    and {len(items) - 15} more")
+    if len(lines) == 1:
+        lines.append("  No change in formulas, typed values or results.")
+    return lines
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description="Recalculate spreadsheets in LibreOffice and list what is wrong.")
     ap.add_argument("files", nargs="+", help=".xlsx, .xlsm, .xls or .ods files")
     ap.add_argument("-o", "--out", help="also write the report to this file")
+    ap.add_argument("--compare", action="store_true", help="list what changed from the first file to the second")
     a = ap.parse_args(argv)
     if not shutil.which("soffice"):
         print("LibreOffice is needed: the soffice command was not found.")
         return 2
+    if a.compare:
+        if len(a.files) != 2:
+            ap.error("--compare takes two files: before and after")
+        changes = compare(*a.files)
+        text = "\n".join(describe_changes(changes))
+        print(text)
+        if a.out:
+            with open(a.out, "w", encoding="utf-8") as fh:
+                fh.write(text + "\n")
+        return 1 if changes["failed"] else 0
     found = audit_files(a.files)
     text = "\n\n".join("\n".join(describe(f)) for f in found)
     print(text)

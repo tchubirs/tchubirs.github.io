@@ -6,7 +6,7 @@ import sys
 import tempfile
 import zipfile
 
-from openpyxl import Workbook
+from openpyxl import Workbook, load_workbook
 from openpyxl.formatting.rule import FormulaRule
 from openpyxl.workbook.defined_name import DefinedName
 from openpyxl.worksheet.datavalidation import DataValidation
@@ -137,10 +137,38 @@ def drops(paths, root):
     print("openpyxl limits: macros, shapes and the extension it warned about are listed")
 
 
+def changes(root):
+    """Fix two things in the client file and check that the compare report names them and what moved."""
+    before, after, out = (os.path.join(root, n) for n in ("before.xlsx", "after.xlsx", "changes.txt"))
+    client(before)
+    wb = load_workbook(before)
+    wb["Data"]["D4"] = "=B4*C4"      # the formula copied wrong, fixed
+    wb["Data"]["B6"] = 12.5          # the price typed as text, now a number
+    wb.save(after)
+    c = audit_sheet.compare(before, after)
+    assert not c["failed"] and c["added"] == c["removed"] == [], c
+    assert c["formulas"] == [("Data!D4", "=B4*C3", "=B4*C4")], c["formulas"]
+    assert c["typed"] == [("Data!B6", "12,50", 12.5)], c["typed"]
+    assert c["results"] == [("Data!D4", 35, 21), ("Data!B7", 25, 37.5)], c["results"]
+    with contextlib.redirect_stdout(io.StringIO()):
+        assert audit_sheet.main(["--compare", before, after, "-o", out]) == 0
+    with open(out, encoding="utf-8") as f:
+        report = f.read()
+    for line in ["Formulas changed (1):", "Data!D4  =B4*C3  ->  =B4*C4", "Typed values changed (1):",
+                 "Results that changed (2):", "Data!B7  25  ->  37.5"]:
+        assert line in report, (line, report)
+    same = audit_sheet.compare(before, before)
+    assert (same["formulas"], same["typed"], same["results"]) == ([], [], []), same
+    assert "No change" in "\n".join(audit_sheet.describe_changes(same))
+    print("compare: the fixed formula, the number no longer typed as text and the 2 results that moved, "
+          "nothing else; the same file twice shows no change")
+
+
 if __name__ == "__main__":
     helpers()
     root = tempfile.mkdtemp()
     paths = files(root)
     cli(paths, root)
     drops(paths, root)
+    changes(root)
     print("all good")
