@@ -46,6 +46,11 @@ def files(folder):
     return out
 
 
+def clean(text):
+    """SKILL.md as Claude's own tools expect it: no byte order mark, plain line endings."""
+    return text.lstrip("\ufeff").replace("\r\n", "\n").replace("\r", "\n")
+
+
 def check(folder):
     """(errors, warnings): errors stop an upload, warnings are advice."""
     folder = Path(folder)
@@ -56,7 +61,13 @@ def check(folder):
     extra = [str(f) for f in files(folder) if f.name == "SKILL.md" and f != Path("SKILL.md")]
     if extra:
         errors.append(f"more than one SKILL.md ({', '.join(extra)}); rename the others, for example references/x.md")
-    text = skill_md.read_text(encoding="utf-8")
+    try:
+        text = skill_md.read_bytes().decode("utf-8")
+    except UnicodeDecodeError:
+        return errors + ["SKILL.md is not UTF-8 text; save it as UTF-8"], warnings
+    if clean(text) != text:
+        warnings.append("SKILL.md has Windows line endings or a byte order mark; pack writes it without them")
+        text = clean(text)
     m = re.match(r"^---\n(.*?)\n---(?:\n|$)", text, re.DOTALL)
     if not m:
         return errors + ["SKILL.md must start with YAML frontmatter between two --- lines"], warnings
@@ -149,8 +160,11 @@ def pack(folder, out_dir=".", example=None):
     target = Path(out_dir) / f"{folder.name}.zip"
     with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as z:
         for rel in files(folder):
-            z.write(folder / rel, str(Path(folder.name) / rel))
-    text = (folder / "SKILL.md").read_text(encoding="utf-8")
+            if rel == Path("SKILL.md"):
+                z.writestr(str(Path(folder.name) / rel), clean((folder / rel).read_text(encoding="utf-8")))
+            else:
+                z.write(folder / rel, str(Path(folder.name) / rel))
+    text = clean((folder / "SKILL.md").read_text(encoding="utf-8"))
     description = " ".join(str(yaml.safe_load(text.split("---")[1])["description"]).split())
     ask = f'ask for the task, for example: "{example}"' if example else "ask for the task the skill handles"
     guide = GUIDE.format(name=folder.name, ask=ask, description=description)

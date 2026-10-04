@@ -92,9 +92,27 @@ def advice(root):
     print("advice: SKILL.md too long, a file it points to is missing")
 
 
+def windows(root):
+    """A SKILL.md saved on Windows, with a byte order mark and CRLF line endings, as a client may send it."""
+    folder = os.path.join(root, "win-skill")
+    os.makedirs(folder)
+    text = GOOD.replace("invoice-writer", "win-skill").replace("references/format.md", "https://example.com")
+    with open(os.path.join(folder, "SKILL.md"), "wb") as f:
+        f.write(("\ufeff" + text.replace("\n", "\r\n")).encode("utf-8"))
+    errors, warnings = skill_kit.check(folder)
+    assert errors == [] and len(warnings) == 1 and "Windows line endings" in warnings[0], (errors, warnings)
+    with contextlib.redirect_stdout(io.StringIO()):
+        assert skill_kit.main(["pack", folder, "-o", os.path.join(root, "dist")]) == 0
+    with zipfile.ZipFile(os.path.join(root, "dist", "win-skill.zip")) as z:
+        packed = z.read("win-skill/SKILL.md").decode("utf-8")
+    assert packed.startswith("---\nname: win-skill") and "\r" not in packed, repr(packed[:40])
+    print("Windows file: read despite the byte order mark and CRLF, packed with plain line endings")
+
+
 if __name__ == "__main__":
     with tempfile.TemporaryDirectory() as tmp:
         good_skill(tmp)
         broken(tmp)
         advice(tmp)
+        windows(tmp)
     print("all good")
