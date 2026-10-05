@@ -26,9 +26,11 @@ next year when the statement crosses 31 December. Once a table with money column
 heading of any other table (cheques, daily balances, a loan) ends it, and a second transaction table
 after that, usually another account, is counted in the Checks sheet instead of being mixed in.
 
-Amounts without cents are read only with --whole, and then only under the money columns of a heading:
-without cents a document number or the 3 of "cuota 3 de 12" looks like an amount. When nothing was
-read and the lines that start with a date hold such amounts, the console says to run again with it.
+Amounts without cents are read only with --whole, because without cents a document number or the 3 of
+"cuota 3 de 12" looks like an amount too. They are read under the money columns of a heading or, when
+the statement has a single amount column, at the end of a row (the amount, then the balance). When
+nothing was read and the lines that start with a date hold such amounts, the console says to run again
+with it.
 """
 import argparse
 import csv
@@ -99,6 +101,7 @@ WHOLE_RE = re.compile(
     r"(?P<num>\d{1,3}(?:(?P<sep>[ ,.\u202f\u00a0])\d{3}(?:(?P=sep)\d{3})*)?[.,]\d{2}|\d+[.,]\d{2}"
     r"|\d{1,3}(?:(?P<group>[.,])\d{3}(?:(?P=group)\d{3})*)|[1-9]\d{0,2}|0)"
     r"\)?\s?(?P<sign>CR|DR|Cr|Dr|-)?(?![\w/:]|[.,]\d|-\w)")
+GAP = re.compile(r"[\s$€£+|]*")                  # what can stand between the amount and the balance
 
 
 def parse_amount(m):
@@ -309,8 +312,8 @@ def extract(paths, order=None, ocr=False, lang=None, whole=False):
     """Transactions as {date, desc, values, kinds, unsure}, the date order, the opening balance, every
     closing balance the statement prints, how many other transaction tables were left out, how many
     pages were read from a scan and how many lines that start with a date have an amount without cents
-    (1.250.000). With ocr, every page is read as a scan; with whole, amounts without cents are read too,
-    under the money columns of a heading only."""
+    (1.250.000). With ocr, every page is read as a scan; with whole, amounts without cents are read too.
+    """
     lines, unsure, scanned = [], {}, 0
     for p in paths:
         doc = pymupdf.open(p)
@@ -342,11 +345,20 @@ def extract(paths, order=None, ocr=False, lang=None, whole=False):
 
     def money(k):
         """The amounts on line k. Without cents a document number or the 3 of "3 de 12" looks like an
-        amount too, so then only the numbers under the money columns count."""
+        amount too, so then only the numbers under the money columns count or, with no money columns,
+        the numbers at the end of the line."""
         text, words = lines[k]
-        if not (whole and cols):
+        if not whole:
             return list(AMOUNT_RE.finditer(text))
-        return [m for m in WHOLE_RE.finditer(text) if column(cols, words, m) != "text"]
+        found = list(WHOLE_RE.finditer(text))
+        if cols:
+            return [m for m in found if column(cols, words, m) != "text"]
+        end = found[-1:]
+        for m in reversed(found[:-1]):
+            if not GAP.fullmatch(text, m.end(), end[0].start()):
+                break
+            end.insert(0, m)
+        return end
 
     def ahead(i):
         """The words of this line and of up to two lines after it, while none of them has an amount."""
@@ -369,9 +381,10 @@ def extract(paths, order=None, ocr=False, lang=None, whole=False):
                 cols, closed = heads, False
             recent = []
             continue
-        # The first line of a heading spread over two lines can look like another table's heading.
+        # The first line of a heading spread over two lines can look like another table's heading. Before
+        # any transaction, the money columns were those of a summary box: this table has none.
         if cols and not amounts and foreign(words) and not heading(ahead(i)):
-            cols, closed = None, True
+            cols, closed = None, bool(tx)
             continue
         if closed:
             continue
@@ -588,7 +601,7 @@ def main(argv=None):
     ap.add_argument("--lang", help="languages for the OCR, for example fra or eng+spa (default: eng, fra, por "
                                    "and spa, those installed)")
     ap.add_argument("--whole", action="store_true",
-                    help="also amounts without cents (12.990), read under the money columns only")
+                    help="also amounts without cents (12.990), under the money columns or at the end of a row")
     a = ap.parse_args(argv)
     try:
         tx, order, opening, closings, extra, scanned, plain = extract(a.pdfs, a.dates, a.ocr, a.lang, a.whole)
@@ -614,9 +627,6 @@ def main(argv=None):
     if not a.whole and plain >= 3 and plain > len(rows):
         print(f"{plain} lines that start with a date have amounts without cents (like 12.990), which are read "
               "only with --whole. Run again with --whole.")
-    elif a.whole and not rows:
-        print("With --whole, amounts without cents are read only under a heading that names the money columns "
-              "(Cargos and Abonos, Debit and Credit and so on).")
     return 0 if rows else 1
 
 

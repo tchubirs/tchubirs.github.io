@@ -92,10 +92,10 @@ so ("not checked") with the reason:
   words), `--date-format dd/mm/yyyy`, `--dates dmy` or `mdy` when the guess is wrong, and for CSV
   `-o statements.csv` (`--sep ";" --decimal ","` for Excel in French or Portuguese).
 - Amounts without cents (`12.990`, `1.250.000`, banks in Chile): add `--whole`. The console says so when it
-  read nothing for that reason. They are read only under a heading with money columns (Cargos and Abonos,
-  Debit and Credit): a statement with one amount column needs the rows typed by hand or a new rule. A
-  document number of one to three digits right next to the Cargos column can pass for an amount: the
-  balance check then names its row.
+  read nothing for that reason. They are read under the money columns (Cargos and Abonos, Debit and Credit)
+  or, with one amount column (Monto), at the end of each row. A document number of one to three digits
+  right next to the Cargos column can pass for an amount: the balance check then names its row. A second
+  description line that ends in a number is left out: add it by hand if the client needs it.
 - Read the Checks sheet before delivering. "Balance mismatches" must be 0 and "Opening balance plus
   movements gives the closing balance" must be "yes". "Other transaction tables left out" means another
   account in the same file: convert it on its own. "Rows without a category" are under Other: add the

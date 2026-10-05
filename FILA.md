@@ -98,6 +98,10 @@ até alguma vender. O que eu faço agora:
    extrato chileno, com texto e escaneado (10 variações): valores e saldos exatos. Sem a opção, o console avisa.
    No teste apareceu outro defeito, agora corrigido: com data no formato `15.03.2026` (Alemanha, Suíça) a
    descrição saía vazia.
+   Às 20h40 o mesmo para extrato com uma coluna só de valor (`Monto` e `Saldo`, como nas contas digitais): o valor
+   e o saldo são os últimos números da linha. Também corrigido: um quadro de resumo acima da tabela com as
+   palavras Cargos e Abonos era tomado pelas colunas da tabela, e o extrato saía vazio. Testado com texto e
+   escaneado de cabeça para baixo a 150 dpi; os outros 5 formatos dão o mesmo resultado com e sem `--whole`.
 
 Pausado até algo vender ou ele pedir: inventário da casa (rascunho em `etsy/home-inventory`), manutenção da casa,
 galinhas no quintal, férias da equipe, Herculano.
