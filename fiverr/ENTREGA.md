@@ -29,8 +29,11 @@ Client files stay in the session's scratchpad and are deleted after delivery: ne
 ## Gig 2: Python scripts
 
 - Ask: what the script should do, a sample of the real input, Windows or Mac.
-- Write the script with a test on that sample. Deliver the script and a README with the exact commands
-  to install and run it.
+- Write the script with a test on that sample. Then `python3 fiverr/tools/py_kit.py check my-tool/`: it must parse
+  as Python 3.10, and it lists the packages to install and warns about Windows-only modules and paths of one
+  computer. `py_kit.py pack my-tool/ --run "main.py input.xlsx" --title "..." --what "..." -o dist` writes the zip
+  with run-windows.bat, run-mac.command, run-linux.sh, requirements.txt and HOW-TO-RUN.txt. Deliver
+  `dist/my-tool.zip`: the client installs Python once and double-clicks the launcher.
 
 ## Gig 3: Google Sheets and Excel
 

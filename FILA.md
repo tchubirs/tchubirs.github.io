@@ -53,6 +53,9 @@ até alguma vender. O que eu faço agora:
    Ainda em 05/10, os textos dos anúncios 1 e 5 em `fiverr/DISPATCH.md` passaram a dizer o que as ferramentas
    novas fazem (lojas Shopify; extratos escaneados, com uma página de amostra antes). O topo do arquivo avisa o
    Claude no Chrome para atualizar os rascunhos antes de publicar.
+   Kit do anúncio 2 em 05/10: `fiverr/tools/py_kit.py` confere o script do cliente (Python 3.10, pacotes, módulos
+   só de Windows, caminhos de um computador só) e gera o zip com um arquivo de dois cliques para Windows, Mac e
+   Linux e o guia. Testado; o de Linux rodou de verdade (montou o ambiente na primeira vez e rodou o script).
    Conversor de extrato do anúncio 5 (`statement2excel.py`) melhorado em 04/10: lê débito e crédito em colunas
    separadas, o saldo inicial e o final, datas sem ano que passam de dezembro para janeiro, e para no fim da tabela
    (cheques, saldos diários ou outra conta ficam de fora e aparecem contados na aba Checks). Corrigido um defeito
