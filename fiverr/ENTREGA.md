@@ -45,6 +45,12 @@ Client files stay in the session's scratchpad and are deleted after delivery: ne
   names as needing Windows or Excel (Scripting.Dictionary, RemoveDuplicates, Outlook) are tested by the client:
   say so in the delivery message, and avoid Scripting.Dictionary for a Mac. Deliver the module as a .bas file with
   the steps to import it (Alt+F11, then File > Import File).
+- An Apps Script: download the Google Sheet as Excel, then `python3 fiverr/tools/run_gas.py client.xlsx Code.gs
+  --run functionName` (`--edit "Sheet1!C2=Done"` for onEdit, `--open` for the menus). Emails are listed and not
+  sent, alerts and prompts get `--answer` and `--input`, an address the script fetches needs a saved answer
+  (`--fetch URL=answer.json`). The report gives every change, or the file, line and error where it stopped. What it
+  lists under "Not in this test" (DriveApp, CalendarApp and so on) is checked in Google: say so in the delivery
+  message and ask the client to run the script once on a copy of the sheet.
 - After the work, `audit_sheet.py fixed.xlsx` must say "Nothing to fix", and
   `audit_sheet.py --compare client.xlsx fixed.xlsx -o changes.txt` lists every formula, typed value and
   result that changed. Send changes.txt with the file.
