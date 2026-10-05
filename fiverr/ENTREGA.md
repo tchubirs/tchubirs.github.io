@@ -15,10 +15,14 @@ Client files stay in the session's scratchpad and are deleted after delivery: ne
 ## Gig 1: web scraping
 
 - Ask: the pages, the fields, how many items, Excel, CSV or JSON.
-- Only public pages: no login, nothing robots.txt forbids (scrape.py checks it), a delay between pages.
+- Only public pages: no login, nothing robots.txt forbids (scrape.py checks it, wildcards included, and keeps
+  its Crawl-delay), a delay between pages.
 - Write a job file. Start from `tools/example-job.json` (pages with a next link),
   `tools/example-detail-job.json` (open each item's page) or `tools/example-scroll-job.json` (a page
   that loads more as you scroll). The keys are explained at the top of `tools/scrape.py`.
+- A Shopify store: `tools/example-shopify-job.json` with the store's address. It reads /products.json,
+  one row per variant with SKU, price, stock and the description as text, 250 products a page. A site
+  whose page fills itself from a JSON address (the browser's Network tab shows it): use "json" the same way.
 - Run `python3 fiverr/tools/scrape.py job.json -o result`, which writes result.xlsx, .csv and .json.
 - Check the row count against the site, the "empty values" lines, and 5 rows by hand.
 

@@ -31,6 +31,11 @@ até alguma vender. O que eu faço agora:
    de quotes.toscrape.com/js. Em 04/10 passou a rolar a página (`scroll`) ou clicar em "ver mais" (`click_more`)
    nos sites que carregam itens aos poucos; ao vivo, as 100 citações de quotes.toscrape.com/scroll
    (`example-scroll-job.json`).
+   Em 05/10 passou a ler lojas Shopify pela API pública da loja (`/products.json`): uma linha por variação, com
+   SKU, preço, estoque e a descrição em texto (`example-shopify-job.json`). Ao vivo numa loja Shopify: 100 produtos,
+   965 linhas, em 4 segundos. No mesmo dia, o robots.txt passou a ser lido como manda a RFC 9309 (curingas, a regra
+   mais longa vale, Crawl-delay). O leitor do Python deixava passar tudo depois de um "Allow: /", e nessa
+   mesma loja liberava endereços que ela proíbe.
    Ferramenta do anúncio 3 pronta em 04/10: `fiverr/tools/audit_sheet.py` recalcula a planilha do cliente no LibreOffice
    e lista o que está errado: os erros e a célula que causa cada um, referência circular, referência a célula apagada,
    fórmula diferente das vizinhas, número digitado como texto e cálculo manual. Testada (`test_audit_sheet.py`) e ao

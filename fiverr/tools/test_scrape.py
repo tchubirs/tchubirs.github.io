@@ -7,14 +7,19 @@ import os
 import sys
 import tempfile
 import threading
+import urllib.parse
 
+import requests
 from openpyxl import load_workbook
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import scrape  # noqa: E402
 
 PAGES = {
-    "robots.txt": "User-agent: *\nDisallow: /private/\n",
+    # Like many shops: everything allowed first, then the exceptions, some with wildcards.
+    "robots.txt": "User-agent: *\nAllow: /\nDisallow: /private/\nDisallow: /*?*sort=\n",
+    "api/one.json": '{"data": {"items": [{"name": "A", "n": 1}, {"name": "B", "n": 2}]}, "links": {"next": "two.json"}}',
+    "api/two.json": '{"data": {"items": [{"name": "C", "n": 3}]}, "links": {"next": null}}',
     "shop/page1.html": """<html><body>
 <article class="p"><h3><a href="item/a.html" title="Alpha">Alpha</a></h3><p class="price">£1,234.50</p>
 <p class="star-rating Three"></p></article>
@@ -80,9 +85,32 @@ document.getElementById("more").onclick = function () {
 }
 
 
+# A shop that answers like Shopify's /products.json, a page at a time.
+SHOP = [{"id": n, "title": f"Runner {n}", "vendor": "Acme", "tags": ["shoes", f"size-{n}"],
+         "body_html": f"<p>Light shoe, <strong>number {n}</strong>.</p><ul><li>Mesh</li><li>Rubber</li></ul>",
+         "images": [{"src": f"https://cdn.test/{n}a.jpg"}, {"src": f"https://cdn.test/{n}b.jpg"}],
+         "variants": [{"title": size, "sku": f"R{n}-{size}", "price": f"{50 + n}.50", "available": size != "44"}
+                      for size in ["40", "42", "44"][:(1 + n % 3) if n < 6 else 0]]} for n in range(1, 7)]
+REQUESTED = []
+
+
 class Quiet(http.server.SimpleHTTPRequestHandler):
     def log_message(self, *args):
         pass
+
+    def do_GET(self):
+        REQUESTED.append(self.path)
+        url = urllib.parse.urlsplit(self.path)
+        if url.path != "/store/products.json":
+            return super().do_GET()
+        ask = dict(urllib.parse.parse_qsl(url.query))
+        page, limit = int(ask.get("page", 1)), int(ask.get("limit", 30))
+        body = json.dumps({"products": SHOP[(page - 1) * limit:page * limit]}).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
 
 def numbers():
@@ -138,7 +166,116 @@ def site(base, root):
 
     hidden, stats = scrape.scrape(dict(job, start=base + "/private/x.html"), log=lambda *a: None)
     assert hidden == [] and stats["pages"] == 0, (hidden, stats)
-    print("robots.txt: the disallowed page was not fetched")
+    sorted_out, stats = scrape.scrape(dict(job, start=base + "/shop/page1.html?sort=price"), log=lambda *a: None)
+    assert sorted_out == [] and stats["pages"] == 0, (sorted_out, stats)
+    assert not [p for p in REQUESTED if p.startswith("/private/x") or "sort=" in p], REQUESTED
+    print("robots.txt: after Allow: / the disallowed page and the address a wildcard rule matches were not fetched")
+
+
+def robots():
+    text = """# Shop rules
+User-agent: Googlebot
+Disallow: /
+
+User-agent: *
+Allow: /
+Disallow: /cart
+Allow: /cart/public
+Disallow: /*?*sort_by=
+Disallow: /*.pdf$
+Allow: /page
+Disallow: /page
+Crawl-delay: 2
+
+User-agent: scrape.py
+User-agent: another-bot
+Disallow: /mine/
+"""
+    anyone = scrape.Robots(text, "Mozilla/5.0 (X11; Linux x86_64) Chrome/120.0")
+    cases = {"/": True, "/cart": False, "/cart/x": False, "/cart/public/x": True, "/shop?a=1&sort_by=price": False,
+             "/shop?sort=price": True, "/files/a.pdf": False, "/files/a.pdf?v=2": True, "/page": True,
+             "/robots.txt": True}
+    for path, want in cases.items():
+        assert anyone.allowed("https://shop.test" + path) == want, (path, want)
+    assert anyone.delay == 2
+    named = scrape.Robots(text, scrape.AGENT)          # a group that names scrape.py replaces the * group
+    assert named.allowed("https://shop.test/cart") and not named.allowed("https://shop.test/mine/a") and not named.delay
+    root_only = scrape.Robots("User-agent: *\nAllow: /$\nDisallow: /\n", scrape.AGENT)
+    assert root_only.allowed("https://x.test/") and not root_only.allowed("https://x.test/a")
+
+    class Answer:
+        def __init__(self, code, text=""):
+            self.status_code, self.text = code, text
+
+    def down(url, timeout):
+        raise requests.ConnectionError("no answer")
+    fetcher = scrape.Fetcher(delay=0)
+    for answer, allowed, said in [(lambda url, timeout: Answer(404), True, ""),
+                                  (lambda url, timeout: Answer(503), False, "robots.txt answered 503"),
+                                  (lambda url, timeout: Answer(403), False, "robots.txt answered 403"),
+                                  (down, False, "robots.txt could not be read (ConnectionError)")]:
+        fetcher.robots.clear()
+        fetcher.session.get = answer
+        assert fetcher.allowed("https://x.test/a") == allowed and said in fetcher.refusal("https://x.test/a"), said
+
+    class Quick(scrape.Fetcher):
+        def get(self, url, listing=False):
+            return "<html></html>"
+    slow, said = Quick(delay=0), []
+    slow.robots["http://x.test"] = scrape.Robots("User-agent: *\nCrawl-delay: 0.1\n", scrape.AGENT)
+    scrape.scrape({"start": ["http://x.test/a", "http://x.test/b"], "item": "p", "fields": {"t": "p"}}, slow,
+                  said.append)
+    assert said == ["robots.txt asks for 0.1 seconds between pages, so the run waits that long"], said
+    print(f"robots.txt rules: {len(cases)} addresses read as RFC 9309 says (longest rule, wildcards, $, Allow on a "
+          "tie), Crawl-delay, the group naming scrape.py; missing allows all, 403, 503 or no answer allows nothing")
+
+
+def shop(base, root):
+    """A store's JSON, one row per variant over numbered pages, then one row per product, then a JSON API
+    whose answer gives the address of the next page."""
+    job = {"start": base + "/store/products.json?limit=2", "json": "products", "page_param": "page",
+           "rows": "variants", "delay": 0, "numbers": ["price"], "plain": ["description"],
+           "fields": {"product": "title", "vendor": "vendor", "tags": "tags", "description": "body_html",
+                      "variant": "variants.*.title", "sku": "variants.*.sku", "price": "variants.*.price",
+                      "in_stock": "variants.*.available", "image": "images.0.src", "images": "images.*.src"}}
+    rows, stats = scrape.scrape(job, log=lambda *a: None)
+    variants = [(p, v) for p in SHOP for v in p["variants"] or [None]]
+    assert stats == {"pages": 4, "found": len(variants), "duplicates": 0}, stats      # page 4 is empty
+    assert [r["sku"] for r in rows] == [v["sku"] if v else "" for _, v in variants], rows
+    first = rows[0]
+    assert first == {"product": "Runner 1", "vendor": "Acme", "tags": "shoes, size-1",
+                     "description": "Light shoe, number 1. Mesh Rubber", "variant": "40", "sku": "R1-40", "price": 51.5,
+                     "in_stock": True, "image": "https://cdn.test/1a.jpg",
+                     "images": "https://cdn.test/1a.jpg, https://cdn.test/1b.jpg"}, first
+    assert [r["in_stock"] for r in rows if r["variant"] == "44"] == [False, False], rows
+    assert rows[-1]["product"] == "Runner 6" and rows[-1]["price"] is None, rows[-1]
+
+    out = os.path.join(root, "shop")
+    scrape.write(rows, stats, job, out)
+    sheet = [[c.value for c in r] for r in load_workbook(out + ".xlsx")["Data"].iter_rows()]
+    assert sheet[1][6] == 51.5 and sheet[1][7] is True and len(sheet) == len(variants) + 1, sheet[:2]
+
+    try:
+        scrape.scrape(dict(job, rows=None, fields={"product": "title"}), log=lambda *a: None)
+        raise AssertionError("a job whose numbers name a missing field ran")
+    except ValueError as e:
+        assert "price, description" in str(e), e
+    per_product = dict(job, rows=None, plain=[], fields={"product": "title", "price": "variants.0.price",
+                                                         "skus": "variants.*.sku"})
+    rows, stats = scrape.scrape(per_product, log=lambda *a: None)
+    assert len(rows) == len(SHOP) and rows[1] == {"product": "Runner 2", "price": 52.5,
+                                                   "skus": "R2-40, R2-42, R2-44"}, rows
+
+    api = {"start": base + "/api/one.json", "json": "data.items", "next": "links.next", "delay": 0,
+           "fields": {"name": "name", "n": "n"}}
+    rows, stats = scrape.scrape(api, log=lambda *a: None)
+    assert [(r["name"], r["n"]) for r in rows] == [("A", 1), ("B", 2), ("C", 3)] and stats["pages"] == 2, rows
+
+    said = []
+    rows, stats = scrape.scrape(dict(api, start=base + "/shop/page1.html"), log=said.append)
+    assert rows == [] and "did not answer with JSON" in said[0], said
+    print(f"JSON: {len(variants)} variant rows from a store over 4 pages, prices as numbers, HTML as text, "
+          f"{len(SHOP)} product rows, a next link read from the answer, an HTML page refused")
 
 
 def deep(base, root):
@@ -196,8 +333,10 @@ def more(base):
 
 if __name__ == "__main__":
     numbers()
+    robots()
     base, root, server = serve()
     site(base, root)
+    shop(base, root)
     deep(base, root)
     render(base)
     more(base)

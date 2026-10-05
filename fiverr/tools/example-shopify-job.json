@@ -1,0 +1,14 @@
+{
+  "start": "https://shop.example.com/products.json?limit=250",
+  "json": "products",
+  "page_param": "page",
+  "rows": "variants",
+  "fields": {"product": "title", "vendor": "vendor", "type": "product_type", "handle": "handle", "tags": "tags",
+             "description": "body_html", "variant": "variants.*.title", "sku": "variants.*.sku",
+             "price": "variants.*.price", "compare_at": "variants.*.compare_at_price",
+             "in_stock": "variants.*.available", "image": "images.0.src"},
+  "numbers": ["price", "compare_at"],
+  "plain": ["description"],
+  "max_pages": 50,
+  "delay": 2
+}
