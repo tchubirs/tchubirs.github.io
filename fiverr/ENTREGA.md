@@ -4,6 +4,19 @@ Runbook for Claude, so any session can take an order from the first message to t
 same way. The owner pastes the client's message and files; Claude writes the reply and does the work.
 Client files stay in the session's scratchpad and are deleted after delivery: never in this repository.
 
+## Setup, once per session
+
+The container starts fresh each session. LibreOffice, Node.js, Chromium and the Python packages the tools use
+are there already; Tesseract (scanned statements, gig 5) and XlsxWriter (one test of run_vba.py) are not:
+
+    apt-get install -y tesseract-ocr tesseract-ocr-fra tesseract-ocr-por tesseract-ocr-spa
+    pip install xlsxwriter
+
+Then the tests of every tool, about 3 minutes; each prints "all good", and a test that cannot run here says
+so ("not checked") with the reason:
+
+    for t in fiverr/tools/test_*.py; do python3 $t | grep -E "not checked|all good"; done
+
 ## Every order
 
 1. Reply fast: Fiverr shows the response time, and a Brief only stays open for 72 hours.
@@ -71,8 +84,7 @@ Client files stay in the session's scratchpad and are deleted after delivery: ne
 
 - Ask: the PDFs as downloaded from online banking (for a scan, one sample page first), Excel or CSV, date format,
   categories.
-- Scans: once per session, `apt-get install -y tesseract-ocr tesseract-ocr-fra tesseract-ocr-por tesseract-ocr-spa`.
-  A page that is only a picture is then read with OCR, turned upright and straightened; `--ocr` does the same for a
+- Scans need Tesseract (see Setup). A page that is only a picture is read with OCR, turned upright and straightened; `--ocr` does the same for a
   scan whose text layer is poor, `--lang fra` when it is in one language. Tested on scans tilted up to 2.5 degrees,
   upside down, on their side, at 150 dpi. A phone photo taken at an angle was not tested: ask for a flat scan.
 - Run `python3 fiverr/tools/statement2excel.py a.pdf b.pdf -o statements.xlsx`, adding as needed:
