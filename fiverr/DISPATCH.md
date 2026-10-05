@@ -4,6 +4,10 @@ Done on 2 October as drafts: the profile and all five gigs. Fiverr asks for at l
 the categories of gigs 1 and 3, so their Basic package is $30. Publishing waits for the user's ID
 check and tax form.
 
+Changed on 5 October, after the drafts were made: the description of gig 1 (the line "Typical jobs")
+and the description and FAQ of gig 5 (scanned statements). Before publishing, update those drafts to
+the texts below.
+
 You are acting in the user's own browser, on the user's behalf. The goal is a
 Fiverr seller profile and three published gigs, using exactly the texts below.
 
@@ -94,7 +98,7 @@ You get:
 
 Delivery takes 2, 3 or 5 days, depending on the package. On bigger jobs you get a sample first, then the full file.
 
-Typical jobs: product lists and prices, business directories, real estate or job listings, reviews, tables spread over many pages.
+Typical jobs: product lists and prices, a Shopify store's whole catalog with every variant and SKU, business directories, real estate or job listings, reviews, tables spread over many pages.
 
 Message me the link before you order. I check the site and tell you what I can extract and what it costs.
 
@@ -296,7 +300,7 @@ I use AI tools to build skills, and I test each one before delivery.
 ```
 I convert bank and card statement PDFs into a spreadsheet.
 
-You send the statements as PDF files. PDFs downloaded from online banking are fine. For scanned paper statements, message me first.
+You send the statements as PDF files, downloaded from online banking or scanned from paper. For a scan, send me one sample page first.
 
 You get an Excel or CSV file with:
 - One row per transaction: date, description, money in, money out, balance
@@ -313,9 +317,9 @@ I use AI tools for the conversion, and I check every file against the statement 
 
 - **FAQ:**
   - Q: Which banks do you support?
-    A: Any bank, if the statements are text PDFs in English, French, Portuguese or Spanish. If you are not sure, send me one page first.
+    A: Any bank, for statements in English, French, Portuguese or Spanish. If you are not sure, send me one page first.
   - Q: Can you do scanned statements?
-    A: Scanned or photographed statements take extra work. Message me first with one sample page.
+    A: Yes. Scans are read with text recognition and every row is checked against the balances. Send me one sample page first, and I confirm the price. A photo taken with a phone at an angle may not work.
   - Q: Is my data safe?
     A: I use your files only for your order and delete them after delivery. You can hide account numbers before you send them.
 - **Requirements** (all mandatory):

@@ -50,6 +50,9 @@ até alguma vender. O que eu faço agora:
    da planilha (baixada como Excel), com o SpreadsheetApp imitado, e lista o que mudou, os e-mails que mandaria
    (sem mandar), menus, gatilhos e o erro com a linha. Testado com 15 casos: onEdit, onOpen, arquivar linhas,
    lembretes por e-mail, perguntas, datas, download com resposta salva e um laço sem fim.
+   Ainda em 05/10, os textos dos anúncios 1 e 5 em `fiverr/DISPATCH.md` passaram a dizer o que as ferramentas
+   novas fazem (lojas Shopify; extratos escaneados, com uma página de amostra antes). O topo do arquivo avisa o
+   Claude no Chrome para atualizar os rascunhos antes de publicar.
    Conversor de extrato do anúncio 5 (`statement2excel.py`) melhorado em 04/10: lê débito e crédito em colunas
    separadas, o saldo inicial e o final, datas sem ano que passam de dezembro para janeiro, e para no fim da tabela
    (cheques, saldos diários ou outra conta ficam de fora e aparecem contados na aba Checks). Corrigido um defeito
