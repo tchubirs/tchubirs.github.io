@@ -7,6 +7,7 @@ import io
 import json
 import os
 import random
+import re
 import shutil
 import sys
 import tempfile
@@ -449,6 +450,58 @@ def check_categories():
           "same totals in LibreOffice; the CSV with ; and decimal commas matches the Excel file")
 
 
+def csv_rows(path, encoding="utf-8"):
+    with open(path, encoding=encoding, newline="") as f:
+        return list(csv.reader(f))
+
+
+def check_imports():
+    """The files to upload to QuickBooks Online and Xero, in the formats their help pages give: for
+    QuickBooks Date, Description and Amount, money out below zero, no currency sign or thousands separator,
+    one date format, no symbol in a description, 1,000 lines a file at most and no amount of 0; for Xero
+    Date and Amount with Payee, Description and Reference. The amounts are those of the Excel file."""
+    with tempfile.TemporaryDirectory() as tmp:
+        pdf, out = os.path.join(tmp, "s.pdf"), os.path.join(tmp, "s.xlsx")
+        for us in (False, True):
+            make_columns(pdf, us=us)
+            code, rows, _, said = read(pdf, out, "--for", "quickbooks", "--for", "xero")
+            assert code == 0, said
+            when = "%m/%d/%Y" if us else "%d/%m/%Y"
+            moves = [(r[0].strftime(when), r[1] or "", f"{(r[2] or 0) - (r[3] or 0):.2f}") for r in rows]
+            qb = csv_rows(os.path.join(tmp, "s-quickbooks.csv"), "ascii")
+            assert qb[0] == ["Date", "Description", "Amount"] and len(qb) == len(rows) + 1, qb[:2]
+            for line, (date, desc, amount) in zip(qb[1:], moves):
+                assert line[0] == date and line[2] == amount, (line, date, amount)
+                words = " ".join(re.split(r"\W+", desc)).strip()
+                assert re.fullmatch(r"[A-Za-z0-9 '-]+", line[1]) and line[1] == words, (line[1], desc)
+            assert "RETRAIT DAB 50 00" in [line[1] for line in qb], "the comma of RETRAIT DAB 50,00"
+            xero = csv_rows(os.path.join(tmp, "s-xero.csv"))
+            assert xero[0] == ["Date", "Amount", "Payee", "Description", "Reference"], xero[0]
+            assert [(line[0], line[2], line[1]) for line in xero[1:]] == moves, "Xero rows differ from the Excel file"
+            for name in ("s-quickbooks.csv", "s-xero.csv"):
+                assert f"{name} ({len(rows)} rows)" in said, said
+            assert f"dates {'mm/dd/yyyy' if us else 'dd/mm/yyyy'}" in said, said
+
+        code, _, _, said = read(pdf, out, "--for", "quickbooks", "--date-format", "dd/mm/yyyy")
+        first = dt.datetime.strptime(moves[0][0], "%m/%d/%Y").strftime("%d/%m/%Y")
+        assert code == 0 and csv_rows(os.path.join(tmp, "s-quickbooks.csv"))[1][0] == first, "--date-format lost"
+
+        rows = [(dt.date(2026, 1, 1) + dt.timedelta(days=i % 300), f"CAFÉ {i} & CO, LTD. (50%)",
+                 0.0 if i in (5, 77) else round(-1.5 - i, 2), None) for i in range(2345)]
+        files, left = s2e.write_import(rows, os.path.join(tmp, "big.xlsx"), "quickbooks", "dd/mm/yyyy")
+        assert [(os.path.basename(path), n) for path, n in files] == [
+            ("big-quickbooks-1.csv", 1000), ("big-quickbooks-2.csv", 1000), ("big-quickbooks-3.csv", 343)], files
+        assert left == 2 and all(os.path.getsize(path) <= 350 * 1024 for path, _ in files)
+        lines = [line for path, _ in files for line in csv_rows(path, "ascii")[1:]]
+        assert len(lines) == 2343 and lines[0] == ["01/01/2026", "CAFE 0 CO LTD 50", "-1.50"], lines[0]
+        assert "0.00" not in {line[2] for line in lines} and "-0.00" not in {line[2] for line in lines}
+        assert abs(sum(float(line[2]) for line in lines) - sum(r[2] for r in rows)) < 0.005
+    print("QuickBooks and Xero: the upload files hold every row of the Excel file with its sign, dates in the "
+          "statement's day and month order unless --date-format says otherwise, descriptions without symbols "
+          "for QuickBooks, and a statement of 2,345 rows split into files of 1,000 lines with the two rows of 0 "
+          "left out")
+
+
 def scan(src, dst, angle, dpi=200, turn=0, seed=1):
     """What a scanner makes of a printed PDF: each page a grey JPEG picture, tilted by `angle` degrees,
     grainy and a little blurred, and turned by `turn` degrees (90 is on its side, 180 upside down)."""
@@ -569,6 +622,7 @@ if __name__ == "__main__":
     check_bank_header()
     check_rules()
     check_categories()
+    check_imports()
     check_footer_page()
     check_scans()
     print("all good")

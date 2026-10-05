@@ -96,6 +96,12 @@ so ("not checked") with the reason:
   or, with one amount column (Monto), at the end of each row. A document number of one to three digits
   right next to the Cargos column can pass for an amount: the balance check then names its row. A second
   description line that ends in a number is left out: add it by hand if the client needs it.
+- QuickBooks Online or Xero: add `--for quickbooks` or `--for xero` (or both). Next to the Excel file come
+  `statements-quickbooks.csv` and `statements-xero.csv`, in the format of their bank statement upload: one
+  amount, money out below zero, dates in the statement's own day and month order unless `--date-format`
+  says otherwise (ask which one the client's QuickBooks or Xero uses). For QuickBooks the descriptions
+  lose their symbols, a file holds 1,000 rows at most and a row of 0 is left out; the console says how
+  many. Deliver the Excel file too, for the checks.
 - Read the Checks sheet before delivering. "Balance mismatches" must be 0 and "Opening balance plus
   movements gives the closing balance" must be "yes". "Other transaction tables left out" means another
   account in the same file: convert it on its own. "Rows without a category" are under Other: add the

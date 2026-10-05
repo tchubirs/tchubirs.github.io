@@ -102,6 +102,10 @@ até alguma vender. O que eu faço agora:
    e o saldo são os últimos números da linha. Também corrigido: um quadro de resumo acima da tabela com as
    palavras Cargos e Abonos era tomado pelas colunas da tabela, e o extrato saía vazio. Testado com texto e
    escaneado de cabeça para baixo a 150 dpi; os outros 5 formatos dão o mesmo resultado com e sem `--whole`.
+   Às 21h40, o arquivo para importar no QuickBooks Online e no Xero (`--for quickbooks`, `--for xero`), no formato
+   que as páginas de ajuda deles pedem: no QuickBooks, Data, Descrição e Valor, até 1.000 linhas por arquivo, sem
+   símbolos na descrição e sem linha de valor 0; no Xero, Data e Valor com sinal. Testado. Contador pede muito
+   isso, então o anúncio 5 passou a oferecer (texto, a tag `quickbooks` e uma pergunta nova no FAQ).
 
 Pausado até algo vender ou ele pedir: inventário da casa (rascunho em `etsy/home-inventory`), manutenção da casa,
 galinhas no quintal, férias da equipe, Herculano.

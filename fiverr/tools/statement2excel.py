@@ -12,6 +12,8 @@ Usage: python3 statement2excel.py statement.pdf [more.pdf ...] -o out.xlsx   (or
        [--ocr]  read every page as a scan, also pages with text (a scan whose text layer is poor)
        [--lang fra]  the languages of the scan (default: English, French, Portuguese and Spanish)
        [--whole]  also amounts without cents (12.990, 1.250.000), as banks in Chile print them
+       [--for quickbooks] [--for xero]  also the CSV file to upload to QuickBooks Online or Xero, next to
+                                         the output: out-quickbooks.csv, out-xero.csv
 
 A page that is only a picture is read with Tesseract (apt-get install tesseract-ocr tesseract-ocr-fra
 tesseract-ocr-por tesseract-ocr-spa): it is turned upright if it was scanned sideways or upside down,
@@ -83,6 +85,9 @@ HEADS = {"debit": "out", "debits": "out", "withdrawal": "out", "withdrawals": "o
          "recettes": "in",
          "balance": "balance", "solde": "balance", "saldo": "balance"}
 DATE_WORDS = {"date", "dates", "fecha", "data", "datum"}
+WHEN = {"yyyy-mm-dd": "%Y-%m-%d", "dd/mm/yyyy": "%d/%m/%Y", "mm/dd/yyyy": "%m/%d/%Y"}
+IMPORTS = {"quickbooks": "QuickBooks Online", "xero": "Xero"}
+QUICKBOOKS_LINES = 1000          # lines in one upload to QuickBooks Online, which also takes 350 KB at most
 OCR_DPI = 300
 OCR_LANGS = ("eng", "fra", "por", "spa")
 UNSURE = 80                       # Tesseract's confidence, 0 to 100, under which a word is worth a look
@@ -574,7 +579,7 @@ def write(rows, out, order, opening=None, closings=(), extra=0, cats=None, date_
 
 def write_csv(rows, out, cats=None, date_format="yyyy-mm-dd", sep=",", decimal="."):
     """The Transactions sheet as CSV, with a byte order mark so Excel reads the accents."""
-    when = {"yyyy-mm-dd": "%Y-%m-%d", "dd/mm/yyyy": "%d/%m/%Y", "mm/dd/yyyy": "%m/%d/%Y"}[date_format]
+    when = WHEN[date_format]
 
     def money(v):
         return "" if v is None else f"{v:.2f}".replace(".", decimal)
@@ -587,6 +592,41 @@ def write_csv(rows, out, cats=None, date_format="yyyy-mm-dd", sep=",", decimal="
                         money(-amount) if amount < 0 else "", money(bal)] + ([cats[i] or "Other"] if cats else []))
 
 
+
+def no_symbols(text):
+    """A description QuickBooks takes: accents dropped, and only letters, digits, spaces, hyphens and
+    apostrophes. Its help pages say a special character in a description can stop the upload, and its
+    list of characters that are safe in names leaves out $ % ( ) " : and the slash."""
+    text = unicodedata.normalize("NFKD", text or "").encode("ascii", "ignore").decode()
+    return " ".join(re.sub(r"[^A-Za-z0-9 '-]", " ", text).split())
+
+
+def write_import(rows, out, target, date_format):
+    """The CSV files to upload as a bank statement, next to out: QuickBooks Online (Date, Description,
+    Amount) or Xero (Date, Amount, Payee, Description, Reference). One amount, money out below zero, with
+    no currency sign or thousands separator, and every date in one format. QuickBooks takes up to 1,000
+    lines a file and no amount of 0, so a longer statement is split and a row of 0 is left out. Returns
+    the files written with their number of rows, and how many rows were left out."""
+    when = WHEN[date_format]
+    stem = os.path.splitext(out)[0] + "-" + target
+    if target == "quickbooks":
+        head = ["Date", "Description", "Amount"]
+        lines = [[d.strftime(when), no_symbols(desc), f"{amount:.2f}"] for d, desc, amount, _ in rows if amount]
+        parts = [lines[i:i + QUICKBOOKS_LINES] for i in range(0, len(lines), QUICKBOOKS_LINES)] or [[]]
+    else:
+        head = ["Date", "Amount", "Payee", "Description", "Reference"]
+        lines = [[d.strftime(when), f"{amount:.2f}", desc or "", "", ""] for d, desc, amount, _ in rows]
+        parts = [lines]
+    files = []
+    for n, part in enumerate(parts, start=1):
+        path = f"{stem}.csv" if len(parts) == 1 else f"{stem}-{n}.csv"
+        with open(path, "w", newline="", encoding="utf-8") as f:
+            w = csv.writer(f)
+            w.writerow(head)
+            w.writerows(part)
+        files.append((path, len(part)))
+    return files, len(rows) - len(lines)
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description="Bank statement PDFs to one Excel or CSV file.")
     ap.add_argument("pdfs", nargs="+")
@@ -594,7 +634,8 @@ def main(argv=None):
     ap.add_argument("--dates", choices=["dmy", "mdy"], help="how the statement writes dates (default: guessed)")
     ap.add_argument("--categories", nargs="?", const=RULES, metavar="RULES.json",
                     help="add a Category column; without a file, the rules in categories.json")
-    ap.add_argument("--date-format", choices=["yyyy-mm-dd", "dd/mm/yyyy", "mm/dd/yyyy"], default="yyyy-mm-dd")
+    ap.add_argument("--date-format", choices=list(WHEN),
+                    help="default yyyy-mm-dd; in the files of --for, the day and month order of the statement")
     ap.add_argument("--sep", default=",", help="CSV separator, for example ; for Excel in French or Portuguese")
     ap.add_argument("--decimal", default=".", help="CSV decimal mark")
     ap.add_argument("--ocr", action="store_true", help="read every page as a scan, also pages that have text")
@@ -602,6 +643,8 @@ def main(argv=None):
                                    "and spa, those installed)")
     ap.add_argument("--whole", action="store_true",
                     help="also amounts without cents (12.990), under the money columns or at the end of a row")
+    ap.add_argument("--for", dest="imports", action="append", choices=list(IMPORTS), default=[],
+                    help="also the CSV file to upload to QuickBooks Online or Xero (may be given twice)")
     a = ap.parse_args(argv)
     try:
         tx, order, opening, closings, extra, scanned, plain = extract(a.pdfs, a.dates, a.ocr, a.lang, a.whole)
@@ -611,11 +654,12 @@ def main(argv=None):
     rows = columns(tx, opening)
     cats = categorise(rows, load_rules(a.categories)) if a.categories else None
     if a.out.lower().endswith(".csv"):
-        write_csv(rows, a.out, cats, a.date_format, a.sep, a.decimal)
+        write_csv(rows, a.out, cats, a.date_format or "yyyy-mm-dd", a.sep, a.decimal)
         pairs, bad, where = checks(rows, order, opening, closings, extra, scanned)
         print("; ".join(f"{label}: {value}" for label, value in pairs))
     else:
-        bad, where = write(rows, a.out, order, opening, closings, extra, cats, a.date_format, scanned)
+        bad, where = write(rows, a.out, order, opening, closings, extra, cats, a.date_format or "yyyy-mm-dd",
+                           scanned)
     print(f"{len(rows)} transactions, dates {order}, balance mismatches {bad} -> {a.out}")
     if where:
         print("The balance does not follow between these rows of Transactions:",
@@ -624,6 +668,12 @@ def main(argv=None):
         unsure = [str(i + 2) for i, t in enumerate(tx) if t["unsure"]]
         print(f"Pages read from a scan: {scanned}. Rows of Transactions with a date or amount the OCR was unsure of:",
               ", ".join(unsure) or "none")
+    for target in dict.fromkeys(a.imports):
+        when = a.date_format or ("mm/dd/yyyy" if order == "mdy" else "dd/mm/yyyy")
+        files, left = write_import(rows, a.out, target, when)
+        print(f"For {IMPORTS[target]}, dates {when}:", ", ".join(f"{path} ({n} rows)" for path, n in files))
+        if left:
+            print(f"{left} rows with an amount of 0 left out, as QuickBooks does not take them")
     if not a.whole and plain >= 3 and plain > len(rows):
         print(f"{plain} lines that start with a date have amounts without cents (like 12.990), which are read "
               "only with --whole. Run again with --whole.")

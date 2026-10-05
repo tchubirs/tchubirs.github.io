@@ -5,8 +5,8 @@ the categories of gigs 1 and 3, so their Basic package is $30. Publishing waits 
 check and tax form.
 
 Changed on 5 October, after the drafts were made: the description of gig 1 (the line "Typical jobs")
-and the description and FAQ of gig 5 (scanned statements). Before publishing, update those drafts to
-the texts below.
+and the description, FAQ, search tags and requirements of gig 5 (scanned statements, QuickBooks and Xero).
+Before publishing, update those drafts to the texts below.
 
 You are acting in the user's own browser, on the user's behalf. The goal is a
 Fiverr seller profile and three published gigs, using exactly the texts below.
@@ -284,7 +284,7 @@ I use AI tools to build skills, and I test each one before delivery.
 
 - **Title:** I will convert your bank statement PDF to excel or csv and check every row
 - **Category:** Data > Data Entry (or Data Processing), service type: PDF to Excel.
-- **Search tags:** pdf to excel, bank statement, data entry, excel, bookkeeping
+- **Search tags:** pdf to excel, bank statement, data entry, quickbooks, bookkeeping
 - **Packages:**
 
   | | Basic | Standard | Premium |
@@ -307,6 +307,7 @@ You get an Excel or CSV file with:
 - Several months or accounts merged into one sheet, sorted by date
 - A monthly summary: money in, money out and net
 - Every row checked against the running balance, so nothing is missing or counted twice
+- For QuickBooks Online or Xero, a CSV file in the format of their bank statement upload
 
 Delivery takes 1 day for up to 5 pages, 2 days for up to 25 and 3 days for up to 100. I confirm the page count and the price before you order.
 
@@ -320,11 +321,13 @@ I use AI tools for the conversion, and I check every file against the statement 
     A: Any bank, for statements in English, French, Portuguese or Spanish. If you are not sure, send me one page first.
   - Q: Can you do scanned statements?
     A: Yes. Scans are read with text recognition and every row is checked against the balances. Send me one sample page first, and I confirm the price. A photo taken with a phone at an angle may not work.
+  - Q: Can I import the file into QuickBooks or Xero?
+    A: Yes. Tell me which one when you order. You get a CSV file in the format of its bank statement upload, with your date format. For QuickBooks, a long statement comes in files of 1,000 rows, its limit per upload.
   - Q: Is my data safe?
     A: I use your files only for your order and delete them after delivery. You can hide account numbers before you send them.
 - **Requirements** (all mandatory):
   - Attach the PDF statements.
-  - Excel or CSV? Any specific columns or date format you need?
+  - Excel, CSV, or a file to upload to QuickBooks Online or Xero? Any specific columns or date format you need?
   - Do you want categories added, for example food, rent and transport? If yes, list the ones you want.
 - **Gallery:** gig5-statement-excel.png
 
