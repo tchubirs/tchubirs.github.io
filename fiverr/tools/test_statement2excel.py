@@ -1,4 +1,5 @@
-"""Round-trip test: draw synthetic statements (EU and US layouts), extract, compare."""
+"""Round-trip test: draw synthetic statements (EU, US, French and UK layouts), extract, compare; then
+scan them and read them back with OCR."""
 import contextlib
 import csv
 import datetime as dt
@@ -6,11 +7,15 @@ import io
 import json
 import os
 import random
+import shutil
 import sys
 import tempfile
+from difflib import SequenceMatcher
 
+import numpy as np
 import pymupdf
 from openpyxl import load_workbook
+from PIL import Image, ImageFilter
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import audit_sheet  # noqa: E402
@@ -157,8 +162,8 @@ def make_columns(path, us, n=40, seed=3, split=False):
     put(bal_x if us else (in_x if bal > 0 else out_x), fmt(abs(bal), not us))
     if us:
         first = doc[0]
-        first.insert_text((50, 52), "Previous balance $999.99", fontsize=9)
-        first.insert_text((50, 62), f"Ending balance ${fmt(bal, False)}", fontsize=9)
+        first.insert_text((50, 50), "Previous balance $999.99", fontsize=9)
+        first.insert_text((50, 60), f"Ending balance ${fmt(bal, False)}", fontsize=9)
         heads = [(50, "Date"), (115, "Description"), (out_x, "Withdrawals"), (in_x, "Deposits"), (bal_x, "Balance")]
         for x_words in ([(50, "DAILY BALANCE SUMMARY")],
                         [(50, "Date"), (150, "Amount"), (250, "Date"), (350, "Amount")],
@@ -334,6 +339,84 @@ def check_categories():
           "same totals in LibreOffice; the CSV with ; and decimal commas matches the Excel file")
 
 
+def scan(src, dst, angle, dpi=200, turn=0, seed=1):
+    """What a scanner makes of a printed PDF: each page a grey JPEG picture, tilted by `angle` degrees,
+    grainy and a little blurred, and turned by `turn` degrees (90 is on its side, 180 upside down)."""
+    grain = np.random.default_rng(seed)
+    out = pymupdf.open()
+    for page in pymupdf.open(src):
+        pix = page.get_pixmap(dpi=dpi, colorspace=pymupdf.csGRAY)
+        img = Image.frombytes("L", (pix.width, pix.height), pix.samples)
+        img = img.rotate(angle, resample=Image.BICUBIC, fillcolor=255).rotate(turn, expand=True)
+        dots = np.asarray(img, dtype=np.float64) * 0.9 + 12 + grain.normal(0, 14, (img.height, img.width))
+        img = Image.fromarray(np.clip(dots, 0, 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(0.6))
+        buf = io.BytesIO()
+        img.save(buf, "JPEG", quality=60)
+        w, h = (page.rect.width, page.rect.height)[::1 if turn % 180 == 0 else -1]
+        sheet = out.new_page(width=w, height=h)
+        sheet.insert_image(sheet.rect, stream=buf.getvalue())
+    out.save(dst)
+
+
+def read(pdf, out, *flags):
+    """Exit code, Transactions rows, Checks sheet and what was printed."""
+    with contextlib.redirect_stdout(io.StringIO()) as said:
+        code = s2e.main([pdf, "-o", out, *flags])
+    if code:
+        return code, [], {}, said.getvalue()
+    wb = load_workbook(out)
+    return (code, list(wb["Transactions"].iter_rows(min_row=2, values_only=True)),
+            {r[0]: r[1] for r in wb["Checks"].iter_rows(values_only=True)}, said.getvalue())
+
+
+def check_scans():
+    """Each layout printed, scanned and read back with OCR must give what its text PDF gives: tilted up to
+    2.5 degrees either way, upside down, on its side, at 150 or 200 dpi, grainy and blurred by JPEG."""
+    if not shutil.which("tesseract"):
+        print("scans: not checked, Tesseract is not installed (apt-get install tesseract-ocr tesseract-ocr-fra "
+              "tesseract-ocr-por tesseract-ocr-spa)")
+        return
+    cases = [("EU, tilted 1.5 degrees", lambda p: make(p, eu=True, seed=7), {"angle": 1.5}),
+             ("US withdrawals and deposits, upside down", lambda p: make_columns(p, us=True),
+              {"angle": -0.7, "turn": 180}),
+             ("French debit and credit, on its side and tilted 2.5 degrees", lambda p: make_columns(p, us=False),
+              {"angle": 2.5, "turn": 90}),
+             ("UK at 150 dpi, tilted 2.5 degrees the other way", make_uk, {"angle": -2.5, "dpi": 150})]
+    with tempfile.TemporaryDirectory() as tmp:
+        pdf, scanned = os.path.join(tmp, "text.pdf"), os.path.join(tmp, "scan.pdf")
+        for name, build, how in cases:
+            build(pdf)
+            scan(pdf, scanned, **how)
+            _, want, want_checks, _ = read(pdf, os.path.join(tmp, "text.xlsx"))
+            code, got, checks, said = read(scanned, os.path.join(tmp, "scan.xlsx"))
+            assert code == 0 and checks.pop("Pages read from a scan (OCR)") == pymupdf.open(pdf).page_count, name
+            assert checks == want_checks, (name, checks, want_checks)
+            assert [(r[0], r[2:5]) for r in got] == [(r[0], r[2:5]) for r in want], \
+                (name, [(a, b) for a, b in zip(got, want) if (a[0], a[2:5]) != (b[0], b[2:5])][:3])
+            alike = [SequenceMatcher(None, a[1] or "", b[1] or "").ratio() for a, b in zip(got, want)]
+            assert min(alike) > 0.8 and sum(alike) / len(alike) > 0.97, (name, min(alike), sum(alike) / len(alike))
+            assert "Pages read from a scan: " in said, said
+            print(f"scan, {name}: the {len(got)} dates, amounts and balances of the text PDF, and the same checks")
+
+        # The last statement again: forced through the OCR although it has text, then without Tesseract.
+        code, got, checks, _ = read(pdf, os.path.join(tmp, "forced.xlsx"), "--ocr")
+        assert code == 0 and checks["Pages read from a scan (OCR)"] == 1, checks
+        assert [(r[0], r[2:5]) for r in got] == [(r[0], r[2:5]) for r in want]
+        which = shutil.which
+        shutil.which = lambda name: None
+        try:
+            code, _, _, said = read(scanned, os.path.join(tmp, "none.xlsx"))
+        finally:
+            shutil.which = which
+        assert code == 2 and "scan.pdf page 1 is a scanned image" in said and "apt-get install" in said, said
+        assert not os.path.exists(os.path.join(tmp, "none.xlsx"))
+        code, _, _, said = read(scanned, os.path.join(tmp, "none.xlsx"), "--lang", "xyz")
+        assert code == 2 and "Tesseract could not read the page" in said and "xyz" in said, said
+        assert not os.path.exists(os.path.join(tmp, "none.xlsx"))
+    print("scan: --ocr reads a text PDF as a scan; without Tesseract, or with a language it does not have, the "
+          "page is named and nothing is written")
+
+
 if __name__ == "__main__":
     check(eu=True)
     check(eu=False)
@@ -344,4 +427,5 @@ if __name__ == "__main__":
     check_bank_header()
     check_rules()
     check_categories()
+    check_scans()
     print("all good")

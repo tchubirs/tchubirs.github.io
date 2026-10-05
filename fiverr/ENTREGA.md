@@ -50,7 +50,12 @@ Client files stay in the session's scratchpad and are deleted after delivery: ne
 
 ## Gig 5: bank statement PDF to Excel
 
-- Ask: the PDFs as downloaded from online banking (a scan needs OCR first), Excel or CSV, date format, categories.
+- Ask: the PDFs as downloaded from online banking (for a scan, one sample page first), Excel or CSV, date format,
+  categories.
+- Scans: once per session, `apt-get install -y tesseract-ocr tesseract-ocr-fra tesseract-ocr-por tesseract-ocr-spa`.
+  A page that is only a picture is then read with OCR, turned upright and straightened; `--ocr` does the same for a
+  scan whose text layer is poor, `--lang fra` when it is in one language. Tested on scans tilted up to 2.5 degrees,
+  upside down, on their side, at 150 dpi. A phone photo taken at an angle was not tested: ask for a flat scan.
 - Run `python3 fiverr/tools/statement2excel.py a.pdf b.pdf -o statements.xlsx`, adding as needed:
   `--categories` (or `--categories rules.json`, a copy of `tools/categories.json` with the client's
   words), `--date-format dd/mm/yyyy`, `--dates dmy` or `mdy` when the guess is wrong, and for CSV
@@ -59,5 +64,7 @@ Client files stay in the session's scratchpad and are deleted after delivery: ne
   movements gives the closing balance" must be "yes". "Other transaction tables left out" means another
   account in the same file: convert it on its own. "Rows without a category" are under Other: add the
   client's words to the rules and run again.
-- When a balance check fails, open the PDF at that row and fix the row by hand.
+- When a balance check fails, the console names the two rows between which it fails: open the PDF there and fix
+  the row by hand. After a scan it also lists the rows whose date or amount the OCR was unsure of: compare them
+  with the PDF.
 - Count the transactions against the statement and say in the message which checks passed.

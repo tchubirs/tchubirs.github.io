@@ -56,6 +56,11 @@ até alguma vender. O que eu faço agora:
    oficial da Anthropic (lida hoje) e gera o zip no formato que o claude.ai aceita, com um guia de instalação em
    inglês para o cliente (app e Claude Code). Testado; as 42 skills de exemplo da Anthropic passam na conferência.
    Também aceita a skill que o cliente manda salva no Windows (fim de linha `CRLF` e marca `BOM`) e empacota limpa.
+   Em 05/10 o conversor do anúncio 5 passou a ler extrato escaneado: a página que é só imagem é lida com OCR
+   (Tesseract), virada para cima se veio de lado ou de cabeça para baixo, e endireitada. Testado nos 4 formatos
+   escaneados (inclinados até 2,5 graus, de cabeça para baixo, de lado, a 150 dpi): as mesmas datas, valores e saldos
+   do PDF com texto. Ao vivo: o extrato público de 6 páginas de um banco americano, escaneado, deu as mesmas
+   47 transações do PDF com texto. Quando um saldo não bate, o console diz entre quais duas linhas.
 
 Pausado até algo vender ou ele pedir: inventário da casa (rascunho em `etsy/home-inventory`), manutenção da casa,
 galinhas no quintal, férias da equipe, Herculano.

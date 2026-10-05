@@ -1,14 +1,21 @@
 """Bank statement PDF -> clean Excel (Transactions + Monthly summary + checks).
 
-Used to fulfil the Fiverr gig "convert bank statement PDF to Excel". Works on
-text-based PDFs (not scans). Every bank lays pages out differently, so this is
-a strong first pass that is then checked against the statement's own totals.
+Used to fulfil the Fiverr gig "convert bank statement PDF to Excel". Works on PDFs
+downloaded from online banking and on scans. Every bank lays pages out differently,
+so this is a strong first pass that is then checked against the statement's own totals.
 
 Usage: python3 statement2excel.py statement.pdf [more.pdf ...] -o out.xlsx   (or out.csv)
        [--dates dmy|mdy] (default: guess from the data)
        [--categories [rules.json]]  a Category column and a By category sheet; categories.json is the
                                     default list of keywords, copied and edited when a client wants others
        [--date-format dd/mm/yyyy] [--sep ";" --decimal ","]  for the client's Excel
+       [--ocr]  read every page as a scan, also pages with text (a scan whose text layer is poor)
+       [--lang fra]  the languages of the scan (default: English, French, Portuguese and Spanish)
+
+A page that is only a picture is read with Tesseract (apt-get install tesseract-ocr tesseract-ocr-fra
+tesseract-ocr-por tesseract-ocr-spa): it is turned upright if it was scanned sideways or upside down,
+straightened, and read as one block, so each line of the table is one row. The console then lists the
+rows whose date or amount the OCR was unsure of, and every failed balance check names its two rows.
 
 Separate debit and credit columns are read from the heading line (Debit/Credit, Withdrawals/Deposits,
 Paid out/Paid in, Débit/Crédit, Cargos/Abonos and so on): a number under the debit heading is money out.
@@ -21,9 +28,12 @@ after that, usually another account, is counted in the Checks sheet instead of b
 import argparse
 import csv
 import datetime as dt
+import io
 import json
 import os
 import re
+import shutil
+import subprocess
 import sys
 import unicodedata
 
@@ -44,7 +54,7 @@ MONTHS = {word: month for month, words in enumerate([
 DATE_RE = re.compile(
     r"^(?P<d>\d{1,2})[./-](?P<m>\d{1,2})(?:[./-](?P<y>\d{2,4}))?\b"         # 12/09/2026, 12.09.26, 12/09
     r"|^(?P<iy>\d{4})-(?P<im>\d{2})-(?P<id>\d{2})\b"                          # 2026-09-12
-    r"|^(?P<td>\d{1,2})(?:st|nd|rd|th|er)?\s+(?P<tm>[^\W\d_]{3,10})\.?(?:,?\s+(?P<ty>\d{4}))?\b"   # 1 February 2026
+    r"|^(?P<td>\d{1,2})(?:st|nd|rd|th|er)?\s*(?P<tm>[^\W\d_]{3,10})\.?(?:,?\s+(?P<ty>\d{4}))?\b"   # 1 February 2026, 02FEB
     r"|^(?P<mm>[^\W\d_]{3,10})\.?\s*(?:[\u2013-]\s*)?(?P<md>\d{1,2})(?:st|nd|rd|th)?"
     r"(?:,?\s+(?P<my>\d{4}))?\b")                                                # Nov 01, Nov - 01, Nov 1, 2019
 TOTALS = re.compile(r"(?i)^(sub-?)?totals?\b(\s+(money|amount|debits?|credits?|withdrawals|deposits|paid|in|out|"
@@ -66,6 +76,12 @@ HEADS = {"debit": "out", "debits": "out", "withdrawal": "out", "withdrawals": "o
          "recettes": "in",
          "balance": "balance", "solde": "balance", "saldo": "balance"}
 DATE_WORDS = {"date", "dates", "fecha", "data", "datum"}
+OCR_DPI = 300
+OCR_LANGS = ("eng", "fra", "por", "spa")
+UNSURE = 80                       # Tesseract's confidence, 0 to 100, under which a word is worth a look
+DIGITS = str.maketrans("OolI|SB", "0011158")
+NUMBER = re.compile(r"[-(]?[$€£]?\d[\d.,/]*\d\)?-?")
+THOUSANDS = re.compile(r"[-(]?[$€£]?\d{1,3}(?:[:;]\d{3})+[.,]\d{2}\)?")    # 1:127,12 read for 1.127,12
 AMOUNT_RE = re.compile(
     r"(?<![\w.,])(?P<neg>[-−(])?\s?(?P<cur>[$€£])?\s?"
     # One kind of thousands separator per number, so "5,000 505,491.59" stays two numbers.
@@ -161,23 +177,142 @@ def signed(value, kind):
     return -abs(value) if kind == "out" else abs(value) if kind == "in" else value
 
 
-def extract(paths, order=None):
-    """Transactions as {date, desc, values, kinds}, the date order, the opening balance, every closing
-    balance the statement prints, and how many other transaction tables were left out."""
+class Unreadable(Exception):
+    """A scanned page and no Tesseract to read it."""
+
+
+def text_lines(page):
+    """The lines of a page with text, as (text, words, unsure): words sharing a baseline, left to right,
+    each with where it sits and where it is in the text. Text pages have no unsure words."""
+    rows = {}
+    for x0, y0, x1, y1, word, *_ in page.get_text("words"):
+        rows.setdefault(round(y1 / 3), []).append((x0, x1, word))
     lines = []
+    for key in sorted(rows):
+        text, words = "", []
+        for x0, x1, word in sorted(rows[key]):
+            text += " " if text else ""
+            words.append((x0, x1, word, len(text), len(text) + len(word)))
+            text += word
+        lines.append((text, words, []))
+    return lines
+
+
+def is_scan(page):
+    """A page that is a picture: an image over at least half of it and almost no text."""
+    if len(page.get_text("words")) >= 20:
+        return False
+    return any(abs(pymupdf.Rect(info["bbox"]) & page.rect) >= abs(page.rect) / 2 for info in page.get_image_info())
+
+
+def tesseract(img, *args, dpi=OCR_DPI, must=False):
+    """What Tesseract prints for a page image. When it fails: "" (orientation on a page with little text),
+    or with must, Unreadable with Tesseract's own words (a language that is not installed)."""
+    buf = io.BytesIO()
+    img.save(buf, "PNG")
+    done = subprocess.run(["tesseract", "stdin", "stdout", "--dpi", str(dpi), *args], input=buf.getvalue(),
+                          capture_output=True)
+    if done.returncode and must:
+        said = done.stderr.decode("utf-8", "replace").strip().splitlines()
+        raise Unreadable("Tesseract could not read the page: " + (said[0] if said else f"exit {done.returncode}"))
+    return done.stdout.decode("utf-8", "replace") if done.returncode == 0 else ""
+
+
+def ocr_langs():
+    """English, French, Portuguese and Spanish, those of them installed for Tesseract."""
+    listed = subprocess.run(["tesseract", "--list-langs"], capture_output=True, text=True).stdout.split()
+    return "+".join(lang for lang in OCR_LANGS if lang in listed) or "eng"
+
+
+def upright(img):
+    """The page turned the right way up, when Tesseract finds it was scanned sideways or upside down."""
+    osd = tesseract(img.reduce(2), "--psm", "0", dpi=OCR_DPI // 2)     # half the size is enough, and faster
+    turn = re.search(r"Rotate: (\d+)", osd)
+    sure = re.search(r"Orientation confidence: ([\d.]+)", osd)
+    if turn and int(turn.group(1)) and sure and float(sure.group(1)) >= 2:
+        return img.rotate(-int(turn.group(1)), expand=True, fillcolor=255)
+    return img
+
+
+def skew(img):
+    """The angle, up to 5 degrees either way, that makes the lines of text level: the one where the rows
+    with ink and the white rows between them are most sharply apart."""
+    import numpy as np
+    small = img.copy()
+    small.thumbnail((1200, 1200))
+    ink = small.point(lambda v: 255 if v < 160 else 0)
+
+    def sharpness(angle):
+        rows = np.asarray(ink.rotate(angle), dtype=np.float64).sum(axis=1)
+        return float(np.square(np.diff(rows)).sum())
+    best = max((a / 2 for a in range(-10, 11)), key=sharpness)
+    return max((best + a / 10 for a in range(-4, 5)), key=sharpness)
+
+
+def ocr_word(word):
+    """A word as Tesseract read it, with plain hyphens for dashes, digits for the letters it can take for
+    digits inside a number (1,2O4.56 is 1,204.56) and a thousands separator for a colon (1:127,12)."""
+    word = word.replace("\u2014", "-").replace("\u2013", "-")
+    if THOUSANDS.fullmatch(word):
+        word = re.sub(r"(?<=\d)[:;](?=\d{3})", "." if word.rstrip(")")[-3] == "," else ",", word)
+    if sum(c.isdigit() for c in word) >= 2:
+        fixed = word.translate(DIGITS)
+        if fixed != word and NUMBER.fullmatch(fixed) and sum(a != b for a, b in zip(word, fixed)) <= 2:
+            return fixed
+    return word
+
+
+def ocr_lines(page, lang):
+    """The lines of a scanned page, read by Tesseract once the page is upright and level, as
+    (text, words, unsure) like a text page's; unsure holds where in the text the words are that
+    Tesseract was not sure of."""
+    from PIL import Image
+    pix = page.get_pixmap(dpi=OCR_DPI, colorspace=pymupdf.csGRAY)
+    img = upright(Image.frombytes("L", (pix.width, pix.height), pix.samples))
+    angle = skew(img)
+    if abs(angle) >= 0.1:
+        img = img.rotate(angle, resample=Image.BICUBIC, expand=True, fillcolor=255)
+    found = {}
+    # One block of text: each line then runs across the whole table, so it holds one row.
+    for row in tesseract(img, "--psm", "6", "-l", lang, "tsv", must=True).splitlines()[1:]:
+        f = row.split("\t")
+        if len(f) == 12 and f[0] == "5" and f[11].strip():
+            line = tuple(int(n) for n in f[2:5])
+            found.setdefault(line, []).append((int(f[6]), int(f[8]), ocr_word(f[11].strip()), float(f[10])))
+    lines, scale = [], 72 / OCR_DPI
+    for key in sorted(found):
+        text, words, unsure = "", [], []
+        for left, width, word, conf in sorted(found[key]):
+            text += " " if text else ""
+            words.append((left * scale, (left + width) * scale, word, len(text), len(text) + len(word)))
+            if conf < UNSURE:
+                unsure.append((len(text), len(text) + len(word)))
+            text += word
+        lines.append((text, words, unsure))
+    return lines
+
+
+def extract(paths, order=None, ocr=False, lang=None):
+    """Transactions as {date, desc, values, kinds, unsure}, the date order, the opening balance, every
+    closing balance the statement prints, how many other transaction tables were left out and how many
+    pages were read from a scan. With ocr, every page is read as a scan."""
+    lines, unsure, scanned = [], {}, 0
     for p in paths:
         doc = pymupdf.open(p)
-        for page in doc:
-            # Rebuild visual lines: words sharing a baseline, left to right, with where each one sits.
-            rows = {}
-            for x0, y0, x1, y1, word, *_ in page.get_text("words"):
-                rows.setdefault(round(y1 / 3), []).append((x0, x1, word))
-            for key in sorted(rows):
-                text, words = "", []
-                for x0, x1, word in sorted(rows[key]):
-                    text += " " if text else ""
-                    words.append((x0, x1, word, len(text), len(text) + len(word)))
-                    text += word
+        for number, page in enumerate(doc, start=1):
+            if ocr or is_scan(page):
+                if not shutil.which("tesseract"):
+                    raise Unreadable(f"{os.path.basename(p)} page {number} is a scanned image. To read it, install "
+                                     "Tesseract: apt-get install tesseract-ocr tesseract-ocr-fra tesseract-ocr-por "
+                                     "tesseract-ocr-spa")
+                lang = lang or ocr_langs()
+                read = ocr_lines(page, lang)
+                scanned += 1
+            else:
+                read = text_lines(page)
+            for text, words, doubt in read:
+                if doubt:
+                    unsure[len(lines)] = doubt
                 lines.append((text, words))
     order = order or guess_order([text for text, _ in lines])
     year_hint = dt.date.today().year
@@ -240,15 +375,19 @@ def extract(paths, order=None):
             if cols and all(k == "balance" for _, _, k in placed) or not date and TOTALS.match(desc):
                 continue                             # a balance on a row of its own, or a total
             after = [x0 for x0, _, _, begin, _ in words if begin >= start]
+            # The OCR was unsure of a word in the date or in one of the amounts.
+            spans = [(a.start(), a.end()) for a, _, _ in placed] + ([dm.span()] if date else [])
+            doubt = any(s0 < e1 and e0 > s1 for s0, e0 in spans for s1, e1 in unsure.get(i, ()))
             tx.append({"date": date or tx[-1]["date"], "desc": desc, "values": [v for _, v, _ in placed],
-                       "kinds": [k for _, _, k in placed], "desc_x": after[0] if after else None})
+                       "kinds": [k for _, _, k in placed], "desc_x": after[0] if after else None,
+                       "unsure": doubt})
             last = date or last
         elif tx and line.strip() and not amounts and not date:
             # A wrapped description starts under the description; a page heading starts at the margin.
             under = tx[-1]["desc_x"] is not None and words[0][0] >= tx[-1]["desc_x"] - 5
             if under and len(tx[-1]["desc"]) < 120 and not re.search(r"(?i)page \d|balance|solde|total", line):
                 tx[-1]["desc"] = (tx[-1]["desc"] + " " + line.strip()).strip()
-    return tx, order, opening, closings, extra
+    return tx, order, opening, closings, extra, scanned
 
 
 def columns(tx, opening=None):
@@ -297,15 +436,17 @@ def categorise(rows, rules):
     return [next((name for name, rx in rules if rx.search(fold(desc or ""))), "") for _, desc, _, _ in rows]
 
 
-def checks(rows, order, opening=None, closings=(), extra=0):
-    """The Checks sheet as (label, value) pairs, and how many balance checks failed."""
+def checks(rows, order, opening=None, closings=(), extra=0, scanned=0):
+    """The Checks sheet as (label, value) pairs, how many balance checks failed, and for each failure the
+    two rows of the Transactions sheet between which the balance does not follow."""
     bals = ([(-1, opening)] if opening is not None else []) + [(i, b) for i, (_, _, _, b) in enumerate(rows)
                                                                 if b is not None]
-    mismatches = 0
+    mismatches, where = 0, []
     for (i0, b0), (i1, b1) in zip(bals, bals[1:]):
         moved = sum(rows[k][2] for k in range(i0 + 1, i1 + 1))
         if abs((b1 - b0) - moved) > 0.01:
             mismatches += 1
+            where.append((i0 + 2 if i0 >= 0 else None, i1 + 2))    # rows of the sheet; None: the opening balance
     closes, closing = "not checked", (closings[-1] if closings else None)
     if closings and bals:
         start, base = bals[-1]
@@ -320,10 +461,12 @@ def checks(rows, order, opening=None, closings=(), extra=0):
              ("Balance steps checked", max(0, len(bals) - 1)), ("Balance mismatches", mismatches)]
     if extra:
         pairs.append(("Other transaction tables left out", extra))
-    return pairs, mismatches
+    if scanned:
+        pairs.append(("Pages read from a scan (OCR)", scanned))
+    return pairs, mismatches, where
 
 
-def write(rows, out, order, opening=None, closings=(), extra=0, cats=None, date_format="yyyy-mm-dd"):
+def write(rows, out, order, opening=None, closings=(), extra=0, cats=None, date_format="yyyy-mm-dd", scanned=0):
     wb = Workbook()
     ws = wb.active
     ws.title = "Transactions"
@@ -379,14 +522,14 @@ def write(rows, out, order, opening=None, closings=(), extra=0, cats=None, date_
             bc.column_dimensions[get_column_letter(i)].width = w
 
     ck = wb.create_sheet("Checks")
-    pairs, mismatches = checks(rows, order, opening, closings, extra)
+    pairs, mismatches, where = checks(rows, order, opening, closings, extra, scanned)
     if cats:
         pairs.append(("Rows without a category, under Other", sum(1 for c in cats if not c)))
     for pair in pairs:
         ck.append(list(pair))
     ck.column_dimensions["A"].width = 52
     wb.save(out)
-    return mismatches
+    return mismatches, where
 
 
 def write_csv(rows, out, cats=None, date_format="yyyy-mm-dd", sep=",", decimal="."):
@@ -414,17 +557,31 @@ def main(argv=None):
     ap.add_argument("--date-format", choices=["yyyy-mm-dd", "dd/mm/yyyy", "mm/dd/yyyy"], default="yyyy-mm-dd")
     ap.add_argument("--sep", default=",", help="CSV separator, for example ; for Excel in French or Portuguese")
     ap.add_argument("--decimal", default=".", help="CSV decimal mark")
+    ap.add_argument("--ocr", action="store_true", help="read every page as a scan, also pages that have text")
+    ap.add_argument("--lang", help="languages for the OCR, for example fra or eng+spa (default: eng, fra, por "
+                                   "and spa, those installed)")
     a = ap.parse_args(argv)
-    tx, order, opening, closings, extra = extract(a.pdfs, a.dates)
+    try:
+        tx, order, opening, closings, extra, scanned = extract(a.pdfs, a.dates, a.ocr, a.lang)
+    except Unreadable as e:
+        print(e)
+        return 2
     rows = columns(tx, opening)
     cats = categorise(rows, load_rules(a.categories)) if a.categories else None
     if a.out.lower().endswith(".csv"):
         write_csv(rows, a.out, cats, a.date_format, a.sep, a.decimal)
-        pairs, bad = checks(rows, order, opening, closings, extra)
+        pairs, bad, where = checks(rows, order, opening, closings, extra, scanned)
         print("; ".join(f"{label}: {value}" for label, value in pairs))
     else:
-        bad = write(rows, a.out, order, opening, closings, extra, cats, a.date_format)
+        bad, where = write(rows, a.out, order, opening, closings, extra, cats, a.date_format, scanned)
     print(f"{len(rows)} transactions, dates {order}, balance mismatches {bad} -> {a.out}")
+    if where:
+        print("The balance does not follow between these rows of Transactions:",
+              ", ".join(f"{first or 'the opening balance'} and {second}" for first, second in where))
+    if scanned:
+        unsure = [str(i + 2) for i, t in enumerate(tx) if t["unsure"]]
+        print(f"Pages read from a scan: {scanned}. Rows of Transactions with a date or amount the OCR was unsure of:",
+              ", ".join(unsure) or "none")
     return 0 if rows else 1
 
 
