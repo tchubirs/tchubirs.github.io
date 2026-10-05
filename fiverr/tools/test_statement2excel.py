@@ -95,7 +95,7 @@ def make_columns(path, us, n=40, seed=3, split=False, start=dt.date(2026, 12, 1)
     French: no balance column, dates without a year from December to January, a value date after each
     date and an amount inside one description. US: a balance column carried to the next page, a summary
     above the table whose previous balance is not the table's, then a daily balance table and a savings
-    account with the same columns, which must stay out. With `split`, the heading of the later pages is on
+    account with the same columns and its own balance brought forward, which must stay out. With `split`, the heading of the later pages is on
     two lines, the first of which looks like the heading of some other table."""
     rnd = random.Random(seed)
     bal = opening
@@ -172,6 +172,7 @@ def make_columns(path, us, n=40, seed=3, split=False, start=dt.date(2026, 12, 1)
                         [(50, "Date"), (150, "Amount"), (250, "Date"), (350, "Amount")],
                         [(50, "12/01/2026"), (150, "$1,100.00"), (250, "12/02/2026"), (350, "$900.00")],
                         [(50, "SAVINGS Account Number: 9999")], heads,
+                        [(115, "BALANCE BROUGHT FORWARD"), (bal_x, "1,900.00")],
                         [(50, "12/15/2026"), (115, "TRANSFER"), (in_x, "100.00"), (bal_x, "2,000.00")]):
             state["y"] += 14
             for x, word in x_words:
@@ -535,9 +536,10 @@ def read(pdf, out, *flags):
 
 def check_merge():
     """Several statements of one account in one file: three US months sent out of order, each with its
-    daily balance table and savings account at the end, come out complete and in date order; a month sent
-    twice is read once; a missing month is named; UK statements of December and January, whose dates have
-    no year, get the right years. Before, only the first statement was read and the checks still passed."""
+    daily balance table and savings account at the end, come out complete and in date order, and so do
+    the three joined in one PDF; a month sent twice is read once; a missing month is named; UK statements
+    of December and January, whose dates have no year, get the right years. Before, only the first
+    statement was read and the checks still passed."""
     first, latest = dt.date(2026, 1, 1), dt.date(2026, 1, 1)
     assert s2e.year_for(dt.date(2000, 12, 3), first, latest) == 2025          # "1 December to 1 January 2026"
     assert s2e.year_for(dt.date(2000, 1, 3), dt.date(2025, 1, 1), dt.date(2025, 12, 31)) == 2025
@@ -566,6 +568,16 @@ def check_merge():
         assert checks["Left out: 2026-01 (1).pdf"] == "the same transactions as 2026-01.pdf", checks
         assert "Files in date order: 2026-01.pdf (20 rows), 2026-02.pdf (20 rows), 2026-03.pdf (20 rows)" in said, said
 
+        joined = pymupdf.open()
+        for month in months:
+            joined.insert_pdf(pymupdf.open(month[0]))
+        joined.save(os.path.join(tmp, "2026-q1.pdf"))
+        code, rows, checks, said = read(os.path.join(tmp, "2026-q1.pdf"), out)
+        assert [(r[0].date(), round((r[2] or 0) - (r[3] or 0), 2), r[4]) for r in rows] == [
+            row for m in months for row in m[1]], "three months joined in one PDF"
+        assert checks["Balance mismatches"] == 0 and checks["Other transaction tables left out"] == 3, checks
+        assert "Other transaction tables left out: 3. That is another account" in said, said
+
         code, rows, checks, said = read([months[0][0], months[2][0]], out)
         assert checks["Each file starts at the closing balance of the one before"] == "no: 2026-01.pdf to 2026-03.pdf"
         assert checks["Balance mismatches"] >= 1 and "2026-03.pdf does not start at the closing balance of " \
@@ -581,9 +593,9 @@ def check_merge():
         assert (checks["Opening balance"], checks["Closing balance"]) == (dec_opening, jan_closing), checks
         assert checks["Balance mismatches"] == 0 and checks["Each file starts at the closing balance of the one "
                                                             "before"] == "yes", checks
-    print("several statements: three US months sent out of order come out complete and in date order, a month "
-          "sent twice is read once, a missing month is named, and UK dates without a year get 2025 and 2026 "
-          "from the period the statements print")
+    print("several statements: three US months sent out of order come out complete and in date order, and "
+          "so do the three joined in one PDF; a month sent twice is read once, a missing month is named, and "
+          "UK dates without a year get 2025 and 2026 from the period the statements print")
 
 
 def check_footer_page():

@@ -28,7 +28,8 @@ the dates the statement prints above its transactions ("1 December to 1 January 
 in 2025), and move to the next year when the statement crosses 31 December. Once a table with money
 columns has been read, the heading of any other table (cheques, daily balances, a loan) ends it, and a
 second transaction table after that, usually another account, is counted in the Checks sheet instead
-of being mixed in.
+of being mixed in. When that table starts with an opening balance equal to where the first one ended,
+it is the next month of the same account joined in the same PDF, and it is read.
 
 Each PDF is read on its own, then the files are put in the order of their first transaction, so
 statements sent out of order come out in date order. A file with the same transactions as another is
@@ -408,7 +409,7 @@ def parse(lines, unsure, order, whole):
                 and any(re.search(r"[.,]\d{3}$", m.group("num")) for m in WHOLE_RE.finditer(text)))
     tx, cols, closed, extra, opening, closings, last, recent = [], None, False, 0, None, [], None, []
 
-    def money(k):
+    def money(k, under):
         """The amounts on line k. Without cents a document number or the 3 of "3 de 12" looks like an
         amount too, so then only the numbers under the money columns count or, with no money columns,
         the numbers at the end of the line."""
@@ -416,8 +417,8 @@ def parse(lines, unsure, order, whole):
         if not whole:
             return list(AMOUNT_RE.finditer(text))
         found = list(WHOLE_RE.finditer(text))
-        if cols:
-            return [m for m in found if column(cols, words, m) != "text"]
+        if under:
+            return [m for m in found if column(under, words, m) != "text"]
         end = found[-1:]
         for m in reversed(found[:-1]):
             if not GAP.fullmatch(text, m.end(), end[0].start()):
@@ -429,18 +430,33 @@ def parse(lines, unsure, order, whole):
         """The words of this line and of up to two lines after it, while none of them has an amount."""
         out = []
         for k in range(i, min(i + 3, len(lines))):
-            if money(k):
+            if money(k, cols):
                 break
             out += lines[k][1]
         return sorted(out)
 
+    def continues(i, heads):
+        """Whether the table under the heading on line i is the next statement of the same account, as in
+        several months joined in one PDF: its first amount is an opening balance equal to where the
+        transactions read so far end. Another account starts elsewhere."""
+        reached = closings[-1] if closings else next(
+            (v for t in reversed(tx) for v, k in zip(t["values"], t["kinds"]) if k == "balance"), None)
+        for k in range(i + 1, min(i + 6, len(lines))):
+            placed = [(parse_amount(a), column(heads, lines[k][1], a)) for a in money(k, heads)]
+            placed = [p for p in placed if p[1] != "text"]
+            if placed:
+                text = lines[k][0]
+                return (reached is not None and bool(OPENING.search(text) or EITHER.search(text))
+                        and abs(signed(*placed[-1]) - reached) < 0.005)
+        return False
+
     for i, (line, words) in enumerate(lines):
-        amounts = money(i)
+        amounts = money(i, cols)
         # A heading can be spread over two or three lines ("Money" above "out"); look at them together.
         recent = (recent + [words])[-3:] if not amounts else []
         heads = None if amounts else heading(words) or heading(sorted(w for ws in recent for w in ws))
         if heads:
-            if closed and tx:
+            if closed and tx and not continues(i, heads):
                 extra += 1
             else:
                 cols, closed = heads, False
@@ -791,14 +807,18 @@ def main(argv=None):
               ", ".join(f"{first or 'the opening balance'} and {second}" for first, second in where))
     if got.scanned:
         unsure = [str(i + 2) for i, t in enumerate(got.tx) if t["unsure"]]
-        print(f"Pages read from a scan: {got.scanned}. Rows of Transactions with a date or amount the OCR was unsure of:",
-              ", ".join(unsure) or "none")
+        print(f"Pages read from a scan: {got.scanned}. Rows of Transactions with a date or amount the OCR was "
+              "unsure of:", ", ".join(unsure) or "none")
     for target in dict.fromkeys(a.imports):
         when = a.date_format or ("mm/dd/yyyy" if got.order == "mdy" else "dd/mm/yyyy")
         files, left = write_import(rows, a.out, target, when)
         print(f"For {IMPORTS[target]}, dates {when}:", ", ".join(f"{path} ({n} rows)" for path, n in files))
         if left:
             print(f"{left} rows with an amount of 0 left out, as QuickBooks does not take them")
+    if got.extra:
+        print(f"Other transaction tables left out: {got.extra}. That is another account, or a statement of this "
+              "account out of date order inside one PDF: then split the PDF, one file per statement, and run "
+              "again.")
     if not a.whole and got.plain >= 3 and got.plain > len(rows):
         print(f"{got.plain} lines that start with a date have amounts without cents (like 12.990), which are read "
               "only with --whole. Run again with --whole.")

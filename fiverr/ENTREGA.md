@@ -104,7 +104,8 @@ so ("not checked") with the reason:
   many. Deliver the Excel file too, for the checks.
 - Read the Checks sheet before delivering. "Balance mismatches" must be 0 and "Opening balance plus
   movements gives the closing balance" must be "yes". "Other transaction tables left out" means another
-  account in the same file: convert it on its own. "Rows without a category" are under Other: add the
+  account in the same file (convert it on its own), or a month of this account out of date order inside
+  one PDF: split that PDF, one file per statement, and run again; the console says the same. "Rows without a category" are under Other: add the
   client's words to the rules and run again.
 - Several statements: give all the PDFs in one run, in any order; they come out in date order. With more
   than one file, "Each file starts at the closing balance of the one before" must be "yes": a "no"

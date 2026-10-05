@@ -112,6 +112,10 @@ até alguma vender. O que eu faço agora:
    saem em ordem de data mesmo mandados fora de ordem, o repetido fica de fora e a folha de conferência diz
    se falta um mês entre dois. Corrigido também o ano das datas sem ano: extrato de dezembro feito em janeiro
    saía com o ano seguinte. Testado com 3 meses fora de ordem, um repetido, um faltando e dezembro com janeiro.
+   Às 23h40, o mesmo defeito quando o cliente junta os meses num PDF só: lia 20 de 60 transações e dizia que
+   estava certo. Agora a tabela que começa com o saldo anterior igual ao saldo final do mês de antes é lida
+   como o mês seguinte; outra conta continua de fora. Se os meses estiverem fora de ordem dentro do PDF, o
+   console manda separar o PDF, um arquivo por mês.
 
 Pausado até algo vender ou ele pedir: inventário da casa (rascunho em `etsy/home-inventory`), manutenção da casa,
 galinhas no quintal, férias da equipe, Herculano.
