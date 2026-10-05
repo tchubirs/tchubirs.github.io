@@ -1,5 +1,5 @@
-"""Round-trip test: draw synthetic statements (EU, US, French and UK layouts), extract, compare; then
-scan them and read them back with OCR."""
+"""Round-trip test: draw synthetic statements (EU, US, French, UK and Chilean layouts), extract, compare;
+then scan them and read them back with OCR."""
 import contextlib
 import csv
 import datetime as dt
@@ -32,7 +32,7 @@ def fmt(x, eu):
     return ("-" if x < 0 else "") + s
 
 
-def make(path, eu, n=45, seed=1):
+def make(path, eu, n=45, seed=1, dots=False):
     rnd = random.Random(seed)
     bal = 1200.00
     truth = []
@@ -52,7 +52,7 @@ def make(path, eu, n=45, seed=1):
         amount = round(rnd.uniform(2100, 2400), 2) if shop.startswith("SALAIRE") else -round(rnd.uniform(3, 180), 2)
         bal = round(bal + amount, 2)
         truth.append((day, amount, bal))
-        date_s = day.strftime("%d/%m/%Y") if eu else day.strftime("%m/%d/%Y")
+        date_s = day.strftime("%d.%m.%Y" if dots else "%d/%m/%Y") if eu else day.strftime("%m/%d/%Y")
         page.insert_text((50, y), date_s, fontsize=9)
         page.insert_text((115, y), f"{'CB ' if amount < 0 else ''}{shop}", fontsize=9)
         page.insert_text((400, y), fmt(amount, eu), fontsize=9)
@@ -65,10 +65,10 @@ def make(path, eu, n=45, seed=1):
     return truth
 
 
-def check(eu):
+def check(eu, dots=False):
     with tempfile.TemporaryDirectory() as tmp:
         pdf, out = os.path.join(tmp, "s.pdf"), os.path.join(tmp, "s.xlsx")
-        truth = make(pdf, eu, seed=7 if eu else 11)
+        truth = make(pdf, eu, seed=7 if eu else 11, dots=dots)
         assert s2e.main([pdf, "-o", out]) == 0
         wb = load_workbook(out)
         ws = wb["Transactions"]
@@ -83,8 +83,10 @@ def check(eu):
         assert checks["Balance mismatches"] == 0, checks
         descs = [r[1].value or "" for r in ws.iter_rows(min_row=2)]
         assert any("REF 8841" in d for d in descs), "wrapped line lost"
+        assert all(any(s in d for s in SHOPS) for d in descs), [d for d in descs if not any(s in d for s in SHOPS)][:3]
         assert not [d for d in descs if "RELEVE" in d or "STATEMENT" in d], "a page heading went into a description"
-        print(("EU" if eu else "US"), "layout:", len(got), "transactions match, balances reconcile")
+        print(("EU" if eu else "US"), "layout" + (" with dates like 02.07.2026" if dots else "") + ":", len(got),
+              "transactions match, balances reconcile")
 
 
 def make_columns(path, us, n=40, seed=3, split=False):
@@ -284,6 +286,104 @@ def check_uk():
           "lines, balances brought and carried forward")
 
 
+
+CL_SHOPS = ["COMPRA LIDER EXPRESS", "COMPRA COPEC LAS CONDES", "PAGO SERVIPAG ENEL", "GIRO CAJERO AUTOMATICO",
+            "COMPRA FARMACIA AHUMADA", "PAC SEGURO AUTO", "COMPRA UBER TRIP", "COMPRA JUMBO"]
+
+
+def cl(x):
+    """A whole amount as banks in Chile print it: 1.250.000."""
+    return f"{x:,}".replace(",", ".")
+
+
+def make_whole(path, n=28, seed=9):
+    """A cartola from a bank in Chile: amounts without cents (12.990, 1.250.000) right-aligned under Cargos,
+    Abonos and Saldo, document numbers just left of them, a RUT and a "cuota 3 de 12" in the descriptions,
+    a fee under 1.000, a summary box above the table and a page footer."""
+    rnd = random.Random(seed)
+    opening = bal = 1234567
+    truth, doc = [], pymupdf.open()
+    page = doc.new_page()
+
+    def put(x, y, text, right=False):
+        page.insert_text((x - pymupdf.get_text_length(text, fontsize=9) if right else x, y), text, fontsize=9)
+
+    put(40, 40, "CARTOLA DE CUENTA CORRIENTE N° 45")
+    put(40, 52, "Fecha de emisión: 01/04/2026   Periodo: 01/03/2026 al 31/03/2026")
+    for x, word in [(40, "Fecha"), (95, "Descripción"), (315, "N° Docto")]:
+        put(x, 110, word)
+    for x, word in [(395, "Cargos"), (465, "Abonos"), (545, "Saldo")]:
+        put(x, 110, word, right=True)
+    y = 126
+    put(95, y, "SALDO ANTERIOR")
+    put(545, y, cl(opening), right=True)
+    day = dt.date(2026, 3, 2)
+    special = {4: ("ABONO REMUNERACION ACME SPA", 1250000), 8: ("TRANSF A 12.345.678-9", -350000),
+               12: ("CUOTA 3 DE 12 CREDITO CONSUMO", -85430), 15: ("COMISION MANTENCION", -4990),
+               16: ("IVA COMISION", -948)}
+    for i in range(n):
+        y += 13
+        day += dt.timedelta(days=rnd.randint(0, 2))
+        desc, amount = special.get(i) or (rnd.choice(CL_SHOPS), -rnd.randrange(99, 8999) * 10)
+        bal += amount
+        truth.append((day, amount, bal))
+        put(40, y, day.strftime("%d/%m/%Y"))
+        put(95, y, desc)
+        if i not in (15, 16):
+            put(315, y, f"{rnd.randrange(1, 10 ** 7):07d}")
+        put(395 if amount < 0 else 465, y, cl(abs(amount)), right=True)
+        put(545, y, cl(bal), right=True)
+        if i == 8:                                   # what the transfer was for, on a second line
+            y += 13
+            put(95, y, "ARRIENDO MARZO DEPTO 21")
+    put(95, y + 13, "SALDO FINAL")
+    put(545, y + 13, cl(bal), right=True)
+    spent, got = -sum(t[1] for t in truth if t[1] < 0), sum(t[1] for t in truth if t[1] > 0)
+    for x, label, value in [(40, "Saldo anterior", opening), (160, "Total cargos", spent),
+                            (280, "Total abonos", got), (400, "Saldo final", bal)]:
+        put(x, 70, label)
+        put(x, 82, cl(value))
+    put(270, 800, "Página 1 de 1")
+    doc.save(path)
+    return truth, opening, bal
+
+
+def check_whole():
+    """The cartola read with --whole: every amount and balance exact, the document numbers, the RUT, the
+    3 of "cuota 3 de 12" and the page footer not taken for amounts. Without --whole nothing is read and
+    the console says to use it. The other layouts with money columns read the same with --whole."""
+    found = [m.group() for m in s2e.WHOLE_RE.finditer("RUT 15.432.876-K 12.990- 0045217 15.03.2026 10:45 948 4.990")]
+    assert found == ["12.990-", "948", "4.990"], found
+    words = [(40, 62, "Fecha", 0, 5), (300, 324, "Cargo", 6, 11), (380, 405, "Abono", 12, 17),
+             (460, 482, "Saldo", 18, 23)]
+    assert s2e.heading(words) == {"out": (300, 324), "in": (380, 405), "balance": (460, 482)}, s2e.heading(words)
+    with tempfile.TemporaryDirectory() as tmp:
+        pdf, out = os.path.join(tmp, "cl.pdf"), os.path.join(tmp, "cl.xlsx")
+        truth, opening, closing = make_whole(pdf)
+        code, rows, checks, said = read(pdf, out, "--whole")
+        got = [(r[0].date(), round((r[2] or 0) - (r[3] or 0), 2), r[4]) for r in rows]
+        assert code == 0 and got == truth, (said, [(g, t) for g, t in zip(got, truth) if g != t][:3], len(got))
+        assert (checks["Opening balance"], checks["Closing balance"]) == (opening, closing), checks
+        assert checks["Opening balance plus movements gives the closing balance"] == "yes", checks
+        assert checks["Balance mismatches"] == 0 and checks["Balance steps checked"] == len(truth), checks
+        descs = [r[1] for r in rows]
+        assert any("TRANSF A 12.345.678-9" in d and d.endswith("ARRIENDO MARZO DEPTO 21") for d in descs), descs
+        assert "CUOTA 3 DE 12 CREDITO CONSUMO" in " ".join(descs) and not any("Página" in d for d in descs), descs
+        assert "--whole" not in said, said
+
+        code, rows, _, said = read(pdf, out)
+        assert code == 1 and not rows and f"{len(truth)} lines that start with a date" in said, said
+        assert "Run again with --whole" in said, said
+
+        for name, build in [("US", lambda p: make_columns(p, us=True)), ("French", lambda p: make_columns(p, us=False)),
+                            ("UK", make_uk)]:
+            build(pdf)
+            plain, whole = read(pdf, out), read(pdf, out, "--whole")
+            assert plain[0] == 0 and plain[1:3] == whole[1:3] and "--whole" not in plain[3], (name, plain[3])
+    print(f"Chilean cartola with --whole: {len(truth)} amounts without cents and their balances exact, document "
+          "numbers, a RUT and the page footer left out; without it nothing is read and the console says why; "
+          "the US, French and UK layouts read the same with --whole")
+
 EXPECTED = {"CARREFOUR MARKET": "Groceries", "SNCF VOYAGES": "Transport", "AMAZON EU SARL": "Shopping",
             "PHARMACIE CENTRALE": "Health", "SALAIRE ACME SAS": "Salary and income",
             "LOYER AGENCE DU PORT": "Housing", "BOULANGERIE PAUL": "Groceries", "FREE MOBILE": "Phone and internet",
@@ -408,14 +508,15 @@ def check_scans():
               {"angle": -0.7, "turn": 180}),
              ("French debit and credit, on its side and tilted 2.5 degrees", lambda p: make_columns(p, us=False),
               {"angle": 2.5, "turn": 90}),
+             ("Chilean cartola without cents, tilted 1 degree", make_whole, {"angle": 1.0}, "--whole"),
              ("UK at 150 dpi, tilted 2.5 degrees the other way", make_uk, {"angle": -2.5, "dpi": 150})]
     with tempfile.TemporaryDirectory() as tmp:
         pdf, scanned = os.path.join(tmp, "text.pdf"), os.path.join(tmp, "scan.pdf")
-        for name, build, how in cases:
+        for name, build, how, *flags in cases:
             build(pdf)
             scan(pdf, scanned, **how)
-            _, want, want_checks, _ = read(pdf, os.path.join(tmp, "text.xlsx"))
-            code, got, checks, said = read(scanned, os.path.join(tmp, "scan.xlsx"))
+            _, want, want_checks, _ = read(pdf, os.path.join(tmp, "text.xlsx"), *flags)
+            code, got, checks, said = read(scanned, os.path.join(tmp, "scan.xlsx"), *flags)
             assert code == 0 and checks.pop("Pages read from a scan (OCR)") == pymupdf.open(pdf).page_count, name
             assert checks == want_checks, (name, checks, want_checks)
             assert [(r[0], r[2:5]) for r in got] == [(r[0], r[2:5]) for r in want], \
@@ -447,10 +548,12 @@ def check_scans():
 if __name__ == "__main__":
     check(eu=True)
     check(eu=False)
+    check(eu=True, dots=True)
     check_columns(us=False)
     check_columns(us=True)
     check_columns(us=True, split=True)
     check_uk()
+    check_whole()
     check_bank_header()
     check_rules()
     check_categories()

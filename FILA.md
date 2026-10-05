@@ -92,6 +92,12 @@ até alguma vender. O que eu faço agora:
    escaneados (inclinados até 2,5 graus, de cabeça para baixo, de lado, a 150 dpi): as mesmas datas, valores e saldos
    do PDF com texto. Ao vivo: o extrato público de 6 páginas de um banco americano, escaneado, deu as mesmas
    47 transações do PDF com texto. Quando um saldo não bate, o console diz entre quais duas linhas.
+   Ainda em 05/10, o anúncio promete extrato em espanhol, mas bancos do Chile escrevem valores sem centavos
+   (`12.990`, `1.250.000`) e o conversor devolvia o extrato vazio. Agora `--whole` lê esses valores, só sob as
+   colunas Cargos, Abonos e Saldo, para não confundir número de documento, RUT e "cuota 3 de 12". Testado num
+   extrato chileno, com texto e escaneado (10 variações): valores e saldos exatos. Sem a opção, o console avisa.
+   No teste apareceu outro defeito, agora corrigido: com data no formato `15.03.2026` (Alemanha, Suíça) a
+   descrição saía vazia.
 
 Pausado até algo vender ou ele pedir: inventário da casa (rascunho em `etsy/home-inventory`), manutenção da casa,
 galinhas no quintal, férias da equipe, Herculano.

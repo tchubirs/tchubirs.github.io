@@ -11,6 +11,7 @@ Usage: python3 statement2excel.py statement.pdf [more.pdf ...] -o out.xlsx   (or
        [--date-format dd/mm/yyyy] [--sep ";" --decimal ","]  for the client's Excel
        [--ocr]  read every page as a scan, also pages with text (a scan whose text layer is poor)
        [--lang fra]  the languages of the scan (default: English, French, Portuguese and Spanish)
+       [--whole]  also amounts without cents (12.990, 1.250.000), as banks in Chile print them
 
 A page that is only a picture is read with Tesseract (apt-get install tesseract-ocr tesseract-ocr-fra
 tesseract-ocr-por tesseract-ocr-spa): it is turned upright if it was scanned sideways or upside down,
@@ -24,6 +25,10 @@ opening balance plus every movement must give the closing balance. Dates without
 next year when the statement crosses 31 December. Once a table with money columns has been read, the
 heading of any other table (cheques, daily balances, a loan) ends it, and a second transaction table
 after that, usually another account, is counted in the Checks sheet instead of being mixed in.
+
+Amounts without cents are read only with --whole, and then only under the money columns of a heading:
+without cents a document number or the 3 of "cuota 3 de 12" looks like an amount. When nothing was
+read and the lines that start with a date hold such amounts, the console says to run again with it.
 """
 import argparse
 import csv
@@ -69,10 +74,10 @@ EITHER = re.compile(r"(?i)solde (cr[ée]diteur|d[ée]biteur|au)\b")   # opening 
 CARRIED = re.compile(r"(?i)carried forward|[àa] reporter|report de la page|suma y sigue|a transportar")
 PAGE_TOTAL = re.compile(r"(?i)total des op[ée]rations|totaux")
 HEADS = {"debit": "out", "debits": "out", "withdrawal": "out", "withdrawals": "out", "out": "out",
-         "debito": "out", "debitos": "out", "retiros": "out", "cargos": "out", "saidas": "out",
-         "levantamentos": "out", "depenses": "out",
+         "debito": "out", "debitos": "out", "retiros": "out", "giros": "out", "cargo": "out", "cargos": "out",
+         "saidas": "out", "levantamentos": "out", "depenses": "out",
          "credit": "in", "credits": "in", "deposit": "in", "deposits": "in", "in": "in", "credito": "in",
-         "creditos": "in", "abonos": "in", "ingresos": "in", "entradas": "in", "depositos": "in",
+         "creditos": "in", "abono": "in", "abonos": "in", "ingresos": "in", "entradas": "in", "depositos": "in",
          "recettes": "in",
          "balance": "balance", "solde": "balance", "saldo": "balance"}
 DATE_WORDS = {"date", "dates", "fecha", "data", "datum"}
@@ -86,7 +91,14 @@ AMOUNT_RE = re.compile(
     r"(?<![\w.,])(?P<neg>[-−(])?\s?(?P<cur>[$€£])?\s?"
     # One kind of thousands separator per number, so "5,000 505,491.59" stays two numbers.
     r"(?P<num>\d{1,3}(?:(?P<sep>[ ,.\u202f\u00a0])\d{3}(?:(?P=sep)\d{3})*)?[.,]\d{2}|\d+[.,]\d{2})"
-    r"\)?\s?(?P<sign>CR|DR|Cr|Dr|-)?(?![\w])")
+    r"\)?\s?(?P<sign>CR|DR|Cr|Dr|-)?(?![\w]|[.,]\d)")          # 15.03 in the date 15.03.2026 is not one
+# With --whole, also amounts without cents (12.990, 1.250.000, 948), as banks in Chile print them. A
+# document number (0045217, 452173), a date, a time or a RUT (12.345.678-9) is none of them.
+WHOLE_RE = re.compile(
+    r"(?<![\w.,/:-])(?P<neg>[-−(])?\s?(?P<cur>[$€£])?\s?"
+    r"(?P<num>\d{1,3}(?:(?P<sep>[ ,.\u202f\u00a0])\d{3}(?:(?P=sep)\d{3})*)?[.,]\d{2}|\d+[.,]\d{2}"
+    r"|\d{1,3}(?:(?P<group>[.,])\d{3}(?:(?P=group)\d{3})*)|[1-9]\d{0,2}|0)"
+    r"\)?\s?(?P<sign>CR|DR|Cr|Dr|-)?(?![\w/:]|[.,]\d|-\w)")
 
 
 def parse_amount(m):
@@ -293,10 +305,12 @@ def ocr_lines(page, lang):
     return lines
 
 
-def extract(paths, order=None, ocr=False, lang=None):
+def extract(paths, order=None, ocr=False, lang=None, whole=False):
     """Transactions as {date, desc, values, kinds, unsure}, the date order, the opening balance, every
-    closing balance the statement prints, how many other transaction tables were left out and how many
-    pages were read from a scan. With ocr, every page is read as a scan."""
+    closing balance the statement prints, how many other transaction tables were left out, how many
+    pages were read from a scan and how many lines that start with a date have an amount without cents
+    (1.250.000). With ocr, every page is read as a scan; with whole, amounts without cents are read too,
+    under the money columns of a heading only."""
     lines, unsure, scanned = [], {}, 0
     for p in paths:
         doc = pymupdf.open(p)
@@ -322,18 +336,29 @@ def extract(paths, order=None, ocr=False, lang=None):
         if y:
             year_hint = int(y.group(1))
             break
+    plain = sum(1 for text, _ in lines if DATE_RE.match(text)
+                and any(re.search(r"[.,]\d{3}$", m.group("num")) for m in WHOLE_RE.finditer(text)))
     tx, cols, closed, extra, opening, closings, last, recent = [], None, False, 0, None, [], None, []
+
+    def money(k):
+        """The amounts on line k. Without cents a document number or the 3 of "3 de 12" looks like an
+        amount too, so then only the numbers under the money columns count."""
+        text, words = lines[k]
+        if not (whole and cols):
+            return list(AMOUNT_RE.finditer(text))
+        return [m for m in WHOLE_RE.finditer(text) if column(cols, words, m) != "text"]
+
     def ahead(i):
         """The words of this line and of up to two lines after it, while none of them has an amount."""
         out = []
         for k in range(i, min(i + 3, len(lines))):
-            if AMOUNT_RE.search(lines[k][0]):
+            if money(k):
                 break
             out += lines[k][1]
         return sorted(out)
 
     for i, (line, words) in enumerate(lines):
-        amounts = list(AMOUNT_RE.finditer(line))
+        amounts = money(i)
         # A heading can be spread over two or three lines ("Money" above "out"); look at them together.
         recent = (recent + [words])[-3:] if not amounts else []
         heads = None if amounts else heading(words) or heading(sorted(w for ws in recent for w in ws))
@@ -386,9 +411,10 @@ def extract(paths, order=None, ocr=False, lang=None):
         elif tx and line.strip() and not amounts and not date:
             # A wrapped description starts under the description; a page heading starts at the margin.
             under = tx[-1]["desc_x"] is not None and words[0][0] >= tx[-1]["desc_x"] - 5
-            if under and len(tx[-1]["desc"]) < 120 and not re.search(r"(?i)page \d|balance|solde|total", line):
+            footer = re.search(r"(?i)p[aá]g(e|ina) \d|balance|solde|saldo|total", line)
+            if under and len(tx[-1]["desc"]) < 120 and not footer:
                 tx[-1]["desc"] = (tx[-1]["desc"] + " " + line.strip()).strip()
-    return tx, order, opening, closings, extra, scanned
+    return tx, order, opening, closings, extra, scanned, plain
 
 
 def columns(tx, opening=None):
@@ -561,9 +587,11 @@ def main(argv=None):
     ap.add_argument("--ocr", action="store_true", help="read every page as a scan, also pages that have text")
     ap.add_argument("--lang", help="languages for the OCR, for example fra or eng+spa (default: eng, fra, por "
                                    "and spa, those installed)")
+    ap.add_argument("--whole", action="store_true",
+                    help="also amounts without cents (12.990), read under the money columns only")
     a = ap.parse_args(argv)
     try:
-        tx, order, opening, closings, extra, scanned = extract(a.pdfs, a.dates, a.ocr, a.lang)
+        tx, order, opening, closings, extra, scanned, plain = extract(a.pdfs, a.dates, a.ocr, a.lang, a.whole)
     except Unreadable as e:
         print(e)
         return 2
@@ -583,6 +611,12 @@ def main(argv=None):
         unsure = [str(i + 2) for i, t in enumerate(tx) if t["unsure"]]
         print(f"Pages read from a scan: {scanned}. Rows of Transactions with a date or amount the OCR was unsure of:",
               ", ".join(unsure) or "none")
+    if not a.whole and plain >= 3 and plain > len(rows):
+        print(f"{plain} lines that start with a date have amounts without cents (like 12.990), which are read "
+              "only with --whole. Run again with --whole.")
+    elif a.whole and not rows:
+        print("With --whole, amounts without cents are read only under a heading that names the money columns "
+              "(Cargos and Abonos, Debit and Credit and so on).")
     return 0 if rows else 1
 
 
