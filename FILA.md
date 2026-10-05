@@ -106,6 +106,12 @@ até alguma vender. O que eu faço agora:
    que as páginas de ajuda deles pedem: no QuickBooks, Data, Descrição e Valor, até 1.000 linhas por arquivo, sem
    símbolos na descrição e sem linha de valor 0; no Xero, Data e Valor com sinal. Testado. Contador pede muito
    isso, então o anúncio 5 passou a oferecer (texto, a tag `quickbooks` e uma pergunta nova no FAQ).
+   Às 22h40, um defeito grave corrigido: com vários extratos de uma vez (os pacotes Standard e Premium prometem
+   juntar), o conversor lia só o primeiro quando o extrato termina com outra tabela, como o saldo diário dos
+   bancos americanos, e a conferência dizia que estava tudo certo. Agora cada PDF é lido separado, os extratos
+   saem em ordem de data mesmo mandados fora de ordem, o repetido fica de fora e a folha de conferência diz
+   se falta um mês entre dois. Corrigido também o ano das datas sem ano: extrato de dezembro feito em janeiro
+   saía com o ano seguinte. Testado com 3 meses fora de ordem, um repetido, um faltando e dezembro com janeiro.
 
 Pausado até algo vender ou ele pedir: inventário da casa (rascunho em `etsy/home-inventory`), manutenção da casa,
 galinhas no quintal, férias da equipe, Herculano.

@@ -106,6 +106,10 @@ so ("not checked") with the reason:
   movements gives the closing balance" must be "yes". "Other transaction tables left out" means another
   account in the same file: convert it on its own. "Rows without a category" are under Other: add the
   client's words to the rules and run again.
+- Several statements: give all the PDFs in one run, in any order; they come out in date order. With more
+  than one file, "Each file starts at the closing balance of the one before" must be "yes": a "no"
+  names the two files, and a statement is probably missing between them, so ask the client for it.
+  "Left out" names a file the client sent twice.
 - When a balance check fails, the console names the two rows between which it fails: open the PDF there and fix
   the row by hand. After a scan it also lists the rows whose date or amount the OCR was unsure of: compare them
   with the PDF.

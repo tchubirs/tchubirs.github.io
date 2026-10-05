@@ -23,10 +23,17 @@ rows whose date or amount the OCR was unsure of, and every failed balance check 
 Separate debit and credit columns are read from the heading line (Debit/Credit, Withdrawals/Deposits,
 Paid out/Paid in, Débit/Crédit, Cargos/Abonos and so on): a number under the debit heading is money out.
 The opening and closing balance lines are not transactions; they go to the Checks sheet, where the
-opening balance plus every movement must give the closing balance. Dates without a year move to the
-next year when the statement crosses 31 December. Once a table with money columns has been read, the
-heading of any other table (cheques, daily balances, a loan) ends it, and a second transaction table
-after that, usually another account, is counted in the Checks sheet instead of being mixed in.
+opening balance plus every movement must give the closing balance. Dates without a year take it from
+the dates the statement prints above its transactions ("1 December to 1 January 2026" puts 3 December
+in 2025), and move to the next year when the statement crosses 31 December. Once a table with money
+columns has been read, the heading of any other table (cheques, daily balances, a loan) ends it, and a
+second transaction table after that, usually another account, is counted in the Checks sheet instead
+of being mixed in.
+
+Each PDF is read on its own, then the files are put in the order of their first transaction, so
+statements sent out of order come out in date order. A file with the same transactions as another is
+read once. With several files, the Checks sheet gives the rows of each one and whether each starts at
+the closing balance of the one before: where it does not, a statement may be missing.
 
 Amounts without cents are read only with --whole, because without cents a document number or the 3 of
 "cuota 3 de 12" looks like an amount too. They are read under the money columns of a heading or, when
@@ -35,6 +42,7 @@ nothing was read and the lines that start with a date hold such amounts, the con
 with it.
 """
 import argparse
+import collections
 import csv
 import datetime as dt
 import io
@@ -86,6 +94,13 @@ HEADS = {"debit": "out", "debits": "out", "withdrawal": "out", "withdrawals": "o
          "balance": "balance", "solde": "balance", "saldo": "balance"}
 DATE_WORDS = {"date", "dates", "fecha", "data", "datum"}
 WHEN = {"yyyy-mm-dd": "%Y-%m-%d", "dd/mm/yyyy": "%d/%m/%Y", "mm/dd/yyyy": "%m/%d/%Y"}
+# A date with its year anywhere in a line: the period of a statement, the day it was made.
+FULL_DATE = re.compile(
+    r"(?<![\d/.-])(?P<a>\d{1,2})[./-](?P<b>\d{1,2})[./-](?P<y>20\d{2})(?!\d)"
+    r"|(?<!\d)(?P<iy>20\d{2})-(?P<im>\d{2})-(?P<id>\d{2})(?!\d)"
+    r"|(?<!\w)(?P<td>\d{1,2})(?:st|nd|rd|th|er)?\s+(?P<tm>[^\W\d_]{3,10})\.?,?\s+(?P<ty>20\d{2})(?!\d)"
+    r"|(?<!\w)(?P<mm>[^\W\d_]{3,10})\.?\s+(?P<md>\d{1,2})(?:st|nd|rd|th)?,?\s+(?P<my>20\d{2})(?!\d)")
+Read = collections.namedtuple("Read", "tx order opening closings extra scanned plain files twice")
 IMPORTS = {"quickbooks": "QuickBooks Online", "xero": "Xero"}
 QUICKBOOKS_LINES = 1000          # lines in one upload to QuickBooks Online, which also takes 350 KB at most
 OCR_DPI = 300
@@ -313,32 +328,77 @@ def ocr_lines(page, lang):
     return lines
 
 
-def extract(paths, order=None, ocr=False, lang=None, whole=False):
-    """Transactions as {date, desc, values, kinds, unsure}, the date order, the opening balance, every
-    closing balance the statement prints, how many other transaction tables were left out, how many
-    pages were read from a scan and how many lines that start with a date have an amount without cents
-    (1.250.000). With ocr, every page is read as a scan; with whole, amounts without cents are read too.
-    """
-    lines, unsure, scanned = [], {}, 0
-    for p in paths:
-        doc = pymupdf.open(p)
-        for number, page in enumerate(doc, start=1):
-            if ocr or is_scan(page):
-                if not shutil.which("tesseract"):
-                    raise Unreadable(f"{os.path.basename(p)} page {number} is a scanned image. To read it, install "
-                                     "Tesseract: apt-get install tesseract-ocr tesseract-ocr-fra tesseract-ocr-por "
-                                     "tesseract-ocr-spa")
-                lang = lang or ocr_langs()
-                read = ocr_lines(page, lang)
-                scanned += 1
+def full_dates(text, order):
+    """Every date with a year in a line, wherever it is in the line: 01/12/2025, 2025-12-01, 1 December 2025,
+    December 1, 2025."""
+    found = []
+    for m in FULL_DATE.finditer(text):
+        try:
+            if m.group("y"):
+                a, b = int(m.group("a")), int(m.group("b"))
+                day, month = (a, b) if order == "dmy" else (b, a)
+                found.append(dt.date(int(m.group("y")), month, day))
+            elif m.group("iy"):
+                found.append(dt.date(int(m.group("iy")), int(m.group("im")), int(m.group("id"))))
             else:
-                read = text_lines(page)
-            for text, words, doubt in read:
-                if doubt:
-                    unsure[len(lines)] = doubt
-                lines.append((text, words))
-    order = order or guess_order([text for text, _ in lines])
-    year_hint = dt.date.today().year
+                day, word, year = ((m.group("td"), m.group("tm"), m.group("ty")) if m.group("td") else
+                                   (m.group("md"), m.group("mm"), m.group("my")))
+                month = MONTHS.get(plain_word(word))
+                if month:
+                    found.append(dt.date(int(year), month, int(day)))
+        except ValueError:
+            pass
+    return found
+
+
+def year_for(day, first, latest):
+    """The year of the first date a statement prints without one (day holds its day and month), from the
+    dates with a year that it prints above its transactions: between the first and the latest of them,
+    or within a week of them, or else the last one before the latest. "1 December to 1 January 2026"
+    puts 3 December in 2025."""
+    options = []
+    for year in (latest.year - 1, latest.year, latest.year + 1):
+        try:
+            options.append(day.replace(year=year))
+        except ValueError:                           # 29 February
+            pass
+    week = dt.timedelta(days=7)
+    inside = [d for d in options if first <= d <= latest]
+    near = [d for d in options if first - week <= d <= latest + week]
+    before = [d for d in options if d <= latest + week]
+    return (inside[0] if inside else near[0] if near else before[-1] if before else options[0]).year
+
+
+def read_pdf(path, ocr, lang):
+    """The lines of one PDF as (text, words), the words the OCR was unsure of by line, how many pages
+    were read from a scan, and the OCR languages (looked up at the first scanned page)."""
+    lines, unsure, scanned = [], {}, 0
+    for number, page in enumerate(pymupdf.open(path), start=1):
+        if ocr or is_scan(page):
+            if not shutil.which("tesseract"):
+                raise Unreadable(f"{os.path.basename(path)} page {number} is a scanned image. To read it, install "
+                                 "Tesseract: apt-get install tesseract-ocr tesseract-ocr-fra tesseract-ocr-por "
+                                 "tesseract-ocr-spa")
+            lang = lang or ocr_langs()
+            read = ocr_lines(page, lang)
+            scanned += 1
+        else:
+            read = text_lines(page)
+        for text, words, doubt in read:
+            if doubt:
+                unsure[len(lines)] = doubt
+            lines.append((text, words))
+    return lines, unsure, scanned, lang
+
+
+def parse(lines, unsure, order, whole):
+    """The transactions of one statement file as {date, desc, values, kinds, unsure}, its opening balance,
+    every closing balance it prints, how many other transaction tables were left out and how many lines
+    that start with a date have an amount without cents (1.250.000)."""
+    first = next((i for i, (text, _) in enumerate(lines) if DATE_RE.match(text) and
+                  (AMOUNT_RE.search(text) or whole and WHOLE_RE.search(text))), len(lines))
+    stated = sorted(d for text, _ in lines[:first + 1] for d in full_dates(text, order))
+    year_hint, anchored = dt.date.today().year, False
     for text, _ in lines:
         y = re.search(r"\b(20\d{2})\b", text)
         if y:
@@ -408,9 +468,14 @@ def extract(paths, order=None, ocr=False, lang=None, whole=False):
             continue
         dm = DATE_RE.match(line)
         date = parse_date(dm, order, year_hint) if dm else None
-        if date and last and not any(dm.group(g) for g in ("y", "iy", "ty", "my")) and (last - date).days > 180:
-            year_hint += 1                           # December, then January
-            date = parse_date(dm, order, year_hint)
+        if dm and not any(dm.group(g) for g in ("y", "iy", "ty", "my")):
+            day = parse_date(dm, order, 2000)        # 2000 has a 29 February
+            if day and stated and not anchored:
+                year_hint, anchored = year_for(day, stated[0], stated[-1]), True
+                date = parse_date(dm, order, year_hint)
+            elif date and last and (last - date).days > 180:
+                year_hint += 1                       # December, then January
+                date = parse_date(dm, order, year_hint)
         # Many banks print the date only on the first row of each day: with money columns known, a row
         # without a date takes the date of the row above.
         if placed and (date or (cols and tx)):
@@ -432,7 +497,44 @@ def extract(paths, order=None, ocr=False, lang=None, whole=False):
             footer = re.search(r"(?i)p[aá]g(e|ina) \d|balance|solde|saldo|total", line)
             if under and len(tx[-1]["desc"]) < 120 and not footer:
                 tx[-1]["desc"] = (tx[-1]["desc"] + " " + line.strip()).strip()
-    return tx, order, opening, closings, extra, scanned, plain
+    return tx, opening, closings, extra, plain
+
+
+def extract(paths, order=None, ocr=False, lang=None, whole=False):
+    """Every file read on its own, then put in the order of its first transaction, so statements sent out
+    of order come out in date order, and a file with the same transactions as another is read once. With
+    ocr, every page is read as a scan; with whole, amounts without cents are read too.
+
+    Returns a Read: the transactions, the date order, the opening balance of the first file, the closing
+    balances in file order, the other transaction tables left out, the pages read from a scan, the lines
+    with amounts without cents, each file kept {name, rows, first, last, opening, closing} and each file
+    left out as (its name, the name of the file it repeats)."""
+    files = []
+    for path in paths:
+        lines, unsure, scanned, lang = read_pdf(path, ocr, lang)
+        files.append((os.path.basename(path), lines, unsure, scanned))
+    order = order or guess_order([text for _, lines, _, _ in files for text, _ in lines])
+    parts = []
+    for name, lines, unsure, scanned in files:
+        tx, opening, closings, extra, plain = parse(lines, unsure, order, whole)
+        parts.append({"name": name, "tx": tx, "opening": opening, "closings": closings, "extra": extra,
+                      "plain": plain, "scanned": scanned})
+    parts.sort(key=lambda part: part["tx"][0]["date"] if part["tx"] else dt.date.max)
+    kept, seen, twice = [], {}, []
+    for part in parts:
+        same = tuple((t["date"], t["desc"], tuple(t["values"])) for t in part["tx"])
+        if part["tx"] and same in seen:
+            twice.append((part["name"], seen[same]))
+            continue
+        seen.setdefault(same, part["name"])
+        kept.append(part)
+    tx = [t for part in kept for t in part["tx"]]
+    listed = [{"name": part["name"], "rows": len(part["tx"]), "first": part["tx"][0]["date"] if part["tx"] else None,
+               "last": part["tx"][-1]["date"] if part["tx"] else None, "opening": part["opening"],
+               "closing": part["closings"][-1] if part["closings"] else None} for part in kept]
+    return Read(tx, order, kept[0]["opening"] if kept else None, [c for part in kept for c in part["closings"]],
+                sum(part["extra"] for part in kept), sum(part["scanned"] for part in parts),
+                sum(part["plain"] for part in kept), listed, twice)
 
 
 def columns(tx, opening=None):
@@ -481,9 +583,11 @@ def categorise(rows, rules):
     return [next((name for name, rx in rules if rx.search(fold(desc or ""))), "") for _, desc, _, _ in rows]
 
 
-def checks(rows, order, opening=None, closings=(), extra=0, scanned=0):
-    """The Checks sheet as (label, value) pairs, how many balance checks failed, and for each failure the
-    two rows of the Transactions sheet between which the balance does not follow."""
+def checks(rows, got):
+    """The Checks sheet as (label, value) pairs, how many balance checks failed, for each failure the two
+    rows of the Transactions sheet between which the balance does not follow, and the files after which
+    the next one does not start at the closing balance (a statement may be missing there)."""
+    order, opening, closings = got.order, got.opening, got.closings
     bals = ([(-1, opening)] if opening is not None else []) + [(i, b) for i, (_, _, _, b) in enumerate(rows)
                                                                 if b is not None]
     mismatches, where = 0, []
@@ -504,14 +608,30 @@ def checks(rows, order, opening=None, closings=(), extra=0, scanned=0):
              ("Closing balance", closing if closing is not None else "not on the statement"),
              ("Opening balance plus movements gives the closing balance", closes),
              ("Balance steps checked", max(0, len(bals) - 1)), ("Balance mismatches", mismatches)]
-    if extra:
-        pairs.append(("Other transaction tables left out", extra))
-    if scanned:
-        pairs.append(("Pages read from a scan (OCR)", scanned))
-    return pairs, mismatches, where
+    if got.extra:
+        pairs.append(("Other transaction tables left out", got.extra))
+    if got.scanned:
+        pairs.append(("Pages read from a scan (OCR)", got.scanned))
+    breaks = []
+    if len(got.files) > 1:
+        start = 2
+        for k, f in enumerate(got.files, start=1):
+            span = (f"rows {start} to {start + f['rows'] - 1}, {f['first']:%Y-%m-%d} to {f['last']:%Y-%m-%d}"
+                    if f["rows"] else "no transactions")
+            pairs.append((f"File {k}: {f['name']}", span))
+            start += f["rows"]
+        steps = [(a, b) for a, b in zip(got.files, got.files[1:])
+                 if a["closing"] is not None and b["opening"] is not None]
+        breaks = [(a["name"], b["name"]) for a, b in steps if abs(a["closing"] - b["opening"]) > 0.005]
+        pairs.append(("Each file starts at the closing balance of the one before",
+                      "no: " + ", ".join(f"{a} to {b}" for a, b in breaks) if breaks else "yes" if steps
+                      else "not checked"))
+    for name, same in got.twice:
+        pairs.append((f"Left out: {name}", f"the same transactions as {same}"))
+    return pairs, mismatches, where, breaks
 
 
-def write(rows, out, order, opening=None, closings=(), extra=0, cats=None, date_format="yyyy-mm-dd", scanned=0):
+def write(rows, out, got, cats=None, date_format="yyyy-mm-dd"):
     wb = Workbook()
     ws = wb.active
     ws.title = "Transactions"
@@ -567,14 +687,14 @@ def write(rows, out, order, opening=None, closings=(), extra=0, cats=None, date_
             bc.column_dimensions[get_column_letter(i)].width = w
 
     ck = wb.create_sheet("Checks")
-    pairs, mismatches, where = checks(rows, order, opening, closings, extra, scanned)
+    pairs, mismatches, where, breaks = checks(rows, got)
     if cats:
         pairs.append(("Rows without a category, under Other", sum(1 for c in cats if not c)))
     for pair in pairs:
         ck.append(list(pair))
     ck.column_dimensions["A"].width = 52
     wb.save(out)
-    return mismatches, where
+    return mismatches, where, breaks
 
 
 def write_csv(rows, out, cats=None, date_format="yyyy-mm-dd", sep=",", decimal="."):
@@ -647,35 +767,40 @@ def main(argv=None):
                     help="also the CSV file to upload to QuickBooks Online or Xero (may be given twice)")
     a = ap.parse_args(argv)
     try:
-        tx, order, opening, closings, extra, scanned, plain = extract(a.pdfs, a.dates, a.ocr, a.lang, a.whole)
+        got = extract(a.pdfs, a.dates, a.ocr, a.lang, a.whole)
     except Unreadable as e:
         print(e)
         return 2
-    rows = columns(tx, opening)
+    rows = columns(got.tx, got.opening)
     cats = categorise(rows, load_rules(a.categories)) if a.categories else None
     if a.out.lower().endswith(".csv"):
         write_csv(rows, a.out, cats, a.date_format or "yyyy-mm-dd", a.sep, a.decimal)
-        pairs, bad, where = checks(rows, order, opening, closings, extra, scanned)
+        pairs, bad, where, breaks = checks(rows, got)
         print("; ".join(f"{label}: {value}" for label, value in pairs))
     else:
-        bad, where = write(rows, a.out, order, opening, closings, extra, cats, a.date_format or "yyyy-mm-dd",
-                           scanned)
-    print(f"{len(rows)} transactions, dates {order}, balance mismatches {bad} -> {a.out}")
+        bad, where, breaks = write(rows, a.out, got, cats, a.date_format or "yyyy-mm-dd")
+    print(f"{len(rows)} transactions, dates {got.order}, balance mismatches {bad} -> {a.out}")
+    if len(got.files) > 1:
+        print("Files in date order:", ", ".join(f"{f['name']} ({f['rows']} rows)" for f in got.files))
+    for name, same in got.twice:
+        print(f"Left out {name}: the same transactions as {same}")
+    for first, second in breaks:
+        print(f"{second} does not start at the closing balance of {first}: is a statement missing between them?")
     if where:
         print("The balance does not follow between these rows of Transactions:",
               ", ".join(f"{first or 'the opening balance'} and {second}" for first, second in where))
-    if scanned:
-        unsure = [str(i + 2) for i, t in enumerate(tx) if t["unsure"]]
-        print(f"Pages read from a scan: {scanned}. Rows of Transactions with a date or amount the OCR was unsure of:",
+    if got.scanned:
+        unsure = [str(i + 2) for i, t in enumerate(got.tx) if t["unsure"]]
+        print(f"Pages read from a scan: {got.scanned}. Rows of Transactions with a date or amount the OCR was unsure of:",
               ", ".join(unsure) or "none")
     for target in dict.fromkeys(a.imports):
-        when = a.date_format or ("mm/dd/yyyy" if order == "mdy" else "dd/mm/yyyy")
+        when = a.date_format or ("mm/dd/yyyy" if got.order == "mdy" else "dd/mm/yyyy")
         files, left = write_import(rows, a.out, target, when)
         print(f"For {IMPORTS[target]}, dates {when}:", ", ".join(f"{path} ({n} rows)" for path, n in files))
         if left:
             print(f"{left} rows with an amount of 0 left out, as QuickBooks does not take them")
-    if not a.whole and plain >= 3 and plain > len(rows):
-        print(f"{plain} lines that start with a date have amounts without cents (like 12.990), which are read "
+    if not a.whole and got.plain >= 3 and got.plain > len(rows):
+        print(f"{got.plain} lines that start with a date have amounts without cents (like 12.990), which are read "
               "only with --whole. Run again with --whole.")
     return 0 if rows else 1
 

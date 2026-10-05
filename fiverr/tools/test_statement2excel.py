@@ -90,7 +90,7 @@ def check(eu, dots=False):
               "transactions match, balances reconcile")
 
 
-def make_columns(path, us, n=40, seed=3, split=False):
+def make_columns(path, us, n=40, seed=3, split=False, start=dt.date(2026, 12, 1), opening=1234.56):
     """Money out and money in in separate columns, without signs, between opening and closing balance lines.
     French: no balance column, dates without a year from December to January, a value date after each
     date and an amount inside one description. US: a balance column carried to the next page, a summary
@@ -98,7 +98,7 @@ def make_columns(path, us, n=40, seed=3, split=False):
     account with the same columns, which must stay out. With `split`, the heading of the later pages is on
     two lines, the first of which looks like the heading of some other table."""
     rnd = random.Random(seed)
-    opening = bal = 1234.56
+    bal = opening
     truth = []
     doc = pymupdf.open()
     out_x, in_x, bal_x = (360, 430, 500) if us else (400, 470, None)
@@ -135,7 +135,7 @@ def make_columns(path, us, n=40, seed=3, split=False):
         put(140, "SOLDE PRECEDENT AU 30/11/2026")
         put(in_x, fmt(opening, True))
         state["y"] += 14
-    day = dt.date(2026, 12, 1)
+    day = start
     for i in range(n):
         if state["y"] > 600:
             new_page()
@@ -229,11 +229,11 @@ UK_SHOPS = ["TESCO STORES 2041", "CARD PAYMENT TO COSTA COFFEE", "DIRECT DEBIT E
             "AMAZON MKTPLACE", "2 FOR 1 PIZZA CO"]
 
 
-def make_uk(path, n=36, seed=5):
+def make_uk(path, n=36, seed=5, start=dt.date(2026, 2, 1), opening=2500.00):
     """A UK layout: the heading spread over three lines (Paid above out and in), dates like 3 February only
     on the first row of each day, and the balance brought forward at the top and carried forward at the end."""
     rnd = random.Random(seed)
-    opening = bal = 2500.00
+    bal = opening
     truth = []
     doc = pymupdf.open()
     page = doc.new_page()
@@ -241,14 +241,15 @@ def make_uk(path, n=36, seed=5):
     def put(x, y, text):
         page.insert_text((x, y), text, fontsize=9)
 
-    put(50, 40, "Your statement 1 February to 1 March 2026")
+    end = (start + dt.timedelta(days=31)).replace(day=1)
+    put(50, 40, f"Your statement {start.day} {start:%B} to {end.day} {end:%B} {end.year}")
     for x, y, word in [(330, 70, "Paid"), (400, 70, "Paid"), (50, 80, "Date"), (110, 80, "Description"),
                        (330, 90, "out"), (400, 90, "in"), (470, 90, "Balance")]:
         put(x, y, word)
     y = 110
     put(110, y, "Balance brought forward")
     put(470, y, fmt(bal, False))
-    day, shown = dt.date(2026, 2, 1), None
+    day, shown = start, None
     for i in range(n):
         y += 14
         day += dt.timedelta(days=rnd.choice([0, 0, 1, 2]))
@@ -522,14 +523,67 @@ def scan(src, dst, angle, dpi=200, turn=0, seed=1):
 
 
 def read(pdf, out, *flags):
-    """Exit code, Transactions rows, Checks sheet and what was printed."""
+    """Exit code, Transactions rows, Checks sheet and what was printed; pdf may be a list of files."""
     with contextlib.redirect_stdout(io.StringIO()) as said:
-        code = s2e.main([pdf, "-o", out, *flags])
+        code = s2e.main([*(pdf if isinstance(pdf, list) else [pdf]), "-o", out, *flags])
     if code:
         return code, [], {}, said.getvalue()
     wb = load_workbook(out)
     return (code, list(wb["Transactions"].iter_rows(min_row=2, values_only=True)),
             {r[0]: r[1] for r in wb["Checks"].iter_rows(values_only=True)}, said.getvalue())
+
+
+def check_merge():
+    """Several statements of one account in one file: three US months sent out of order, each with its
+    daily balance table and savings account at the end, come out complete and in date order; a month sent
+    twice is read once; a missing month is named; UK statements of December and January, whose dates have
+    no year, get the right years. Before, only the first statement was read and the checks still passed."""
+    first, latest = dt.date(2026, 1, 1), dt.date(2026, 1, 1)
+    assert s2e.year_for(dt.date(2000, 12, 3), first, latest) == 2025          # "1 December to 1 January 2026"
+    assert s2e.year_for(dt.date(2000, 1, 3), dt.date(2025, 1, 1), dt.date(2025, 12, 31)) == 2025
+    assert s2e.year_for(dt.date(2000, 2, 29), dt.date(2024, 2, 1), dt.date(2024, 3, 1)) == 2024
+    assert s2e.full_dates("Period 01/12/2025 to 31.12.2025, made 2026-01-02, due January 15, 2026", "dmy") == [
+        dt.date(2025, 12, 1), dt.date(2025, 12, 31), dt.date(2026, 1, 2), dt.date(2026, 1, 15)]
+    with tempfile.TemporaryDirectory() as tmp:
+        months, opening = [], 1234.56
+        for k, month in enumerate((1, 2, 3)):
+            path = os.path.join(tmp, f"2026-{month:02d}.pdf")
+            truth, start_balance, closing = make_columns(path, us=True, n=20, seed=3 + k,
+                                                         start=dt.date(2026, month, 1), opening=opening)
+            months.append((path, truth, start_balance, closing))
+            opening = closing
+        twice = os.path.join(tmp, "2026-01 (1).pdf")
+        shutil.copy(months[0][0], twice)
+        out = os.path.join(tmp, "all.xlsx")
+        code, rows, checks, said = read([months[2][0], months[0][0], twice, months[1][0]], out)
+        got = [(r[0].date(), round((r[2] or 0) - (r[3] or 0), 2), r[4]) for r in rows]
+        assert code == 0 and got == [row for m in months for row in m[1]], said
+        assert (checks["Opening balance"], checks["Closing balance"]) == (months[0][2], months[2][3]), checks
+        assert checks["Opening balance plus movements gives the closing balance"] == "yes", checks
+        assert checks["Balance mismatches"] == 0 and checks["Other transaction tables left out"] == 3, checks
+        assert checks["File 2: 2026-02.pdf"] == f"rows 22 to 41, {months[1][1][0][0]} to {months[1][1][-1][0]}", checks
+        assert checks["Each file starts at the closing balance of the one before"] == "yes", checks
+        assert checks["Left out: 2026-01 (1).pdf"] == "the same transactions as 2026-01.pdf", checks
+        assert "Files in date order: 2026-01.pdf (20 rows), 2026-02.pdf (20 rows), 2026-03.pdf (20 rows)" in said, said
+
+        code, rows, checks, said = read([months[0][0], months[2][0]], out)
+        assert checks["Each file starts at the closing balance of the one before"] == "no: 2026-01.pdf to 2026-03.pdf"
+        assert checks["Balance mismatches"] >= 1 and "2026-03.pdf does not start at the closing balance of " \
+            "2026-01.pdf: is a statement missing between them?" in said, said
+
+        december, january = os.path.join(tmp, "dec.pdf"), os.path.join(tmp, "jan.pdf")
+        dec_truth, dec_opening, dec_closing = make_uk(december, n=20, start=dt.date(2025, 12, 1))
+        jan_truth, _, jan_closing = make_uk(january, n=20, seed=6, start=dt.date(2026, 1, 1), opening=dec_closing)
+        code, rows, checks, said = read([january, december], out)
+        got = [(r[0].date(), round((r[2] or 0) - (r[3] or 0), 2), r[4]) for r in rows]
+        want = dec_truth + jan_truth
+        assert code == 0 and got == want, [(g, w) for g, w in zip(got, want) if g != w][:2]
+        assert (checks["Opening balance"], checks["Closing balance"]) == (dec_opening, jan_closing), checks
+        assert checks["Balance mismatches"] == 0 and checks["Each file starts at the closing balance of the one "
+                                                            "before"] == "yes", checks
+    print("several statements: three US months sent out of order come out complete and in date order, a month "
+          "sent twice is read once, a missing month is named, and UK dates without a year get 2025 and 2026 "
+          "from the period the statements print")
 
 
 def check_footer_page():
@@ -619,6 +673,7 @@ if __name__ == "__main__":
     check_columns(us=True, split=True)
     check_uk()
     check_whole()
+    check_merge()
     check_bank_header()
     check_rules()
     check_categories()
