@@ -56,6 +56,10 @@ até alguma vender. O que eu faço agora:
    Kit do anúncio 2 em 05/10: `fiverr/tools/py_kit.py` confere o script do cliente (Python 3.10, pacotes, módulos
    só de Windows, caminhos de um computador só) e gera o zip com um arquivo de dois cliques para Windows, Mac e
    Linux e o guia. Testado; o de Linux rodou de verdade (montou o ambiente na primeira vez e rodou o script).
+   Revisão das ferramentas de 05/10 antes do primeiro cliente: 10 defeitos achados e corrigidos, cada um com um
+   teste que o reproduz. Os maiores: o zip do `py_kit.py` crescia sem parar quando era salvo dentro da própria
+   pasta; uma página com erro no meio de uma raspagem perdia tudo o que já tinha sido lido; a última página de
+   um extrato com imagem de fundo era tomada por escaneada e, sem o Tesseract, a conversão inteira parava.
    Conversor de extrato do anúncio 5 (`statement2excel.py`) melhorado em 04/10: lê débito e crédito em colunas
    separadas, o saldo inicial e o final, datas sem ano que passam de dezembro para janeiro, e para no fim da tabela
    (cheques, saldos diários ou outra conta ficam de fora e aparecem contados na aba Checks). Corrigido um defeito

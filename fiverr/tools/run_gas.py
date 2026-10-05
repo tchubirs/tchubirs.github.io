@@ -247,7 +247,7 @@ def main(argv=None):
         edit = {"sheet": m.group(1) or m.group(2), "cell": m.group(3).upper(), "value": typed(m.group(4))}
     fetch = {}
     for item in a.fetch:
-        url, _, path = item.partition("=")
+        url, _, path = item.rpartition("=")           # the address can have = in it, the file name not
         fetch[url] = pathlib.Path(path).read_text(encoding="utf-8")
     properties = dict(item.partition("=")[::2] for item in a.property)
     try:

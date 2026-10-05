@@ -369,6 +369,33 @@ def read(pdf, out, *flags):
             {r[0]: r[1] for r in wb["Checks"].iter_rows(values_only=True)}, said.getvalue())
 
 
+def check_footer_page():
+    """A bank's own last page: a background image over the whole page and "Page 3 of 3". It is not a scan,
+    so the statement converts even without Tesseract, and an image alone is still a scan."""
+    with tempfile.TemporaryDirectory() as tmp:
+        pdf, out = os.path.join(tmp, "s.pdf"), os.path.join(tmp, "s.xlsx")
+        truth = make(pdf, eu=True, seed=7)
+        doc = pymupdf.open(pdf)
+        grey = io.BytesIO()
+        Image.new("L", (850, 1100), 235).save(grey, "PNG")
+        for words in ("Page 3 of 3", ""):
+            page = doc.new_page()
+            page.insert_image(page.rect, stream=grey.getvalue())
+            if words:
+                page.insert_text((50, 800), words, fontsize=8)
+        assert not s2e.is_scan(doc[-2]) and s2e.is_scan(doc[-1])
+        doc.delete_page(-1)
+        doc.saveIncr()
+        which = shutil.which
+        shutil.which = lambda name: None
+        try:
+            code, rows, checks, _ = read(pdf, out)
+        finally:
+            shutil.which = which
+        assert code == 0 and len(rows) == len(truth) and "Pages read from a scan (OCR)" not in checks, (code, checks)
+    print("a last page with a background image and a footer: read as text, no OCR needed; an image alone is a scan")
+
+
 def check_scans():
     """Each layout printed, scanned and read back with OCR must give what its text PDF gives: tilted up to
     2.5 degrees either way, upside down, on its side, at 150 or 200 dpi, grainy and blurred by JPEG."""
@@ -427,5 +454,6 @@ if __name__ == "__main__":
     check_bank_header()
     check_rules()
     check_categories()
+    check_footer_page()
     check_scans()
     print("all good")

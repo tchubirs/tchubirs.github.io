@@ -169,6 +169,12 @@ def site(base, root):
     sorted_out, stats = scrape.scrape(dict(job, start=base + "/shop/page1.html?sort=price"), log=lambda *a: None)
     assert sorted_out == [] and stats["pages"] == 0, (sorted_out, stats)
     assert not [p for p in REQUESTED if p.startswith("/private/x") or "sort=" in p], REQUESTED
+    said = []
+    kept, stats = scrape.scrape(dict(job, start=[base + "/shop/page1.html", base + "/gone.html"], next=None),
+                                log=said.append)
+    assert [r["name"] for r in kept] == ["Alpha", "Beta", "Gamma"] and stats["pages"] == 1, (kept, stats)
+    assert said and "could not read" in said[0] and "gone.html" in said[0], said
+    print("a page that cannot be read: the run stops there and keeps the 3 rows read before it")
     print("robots.txt: after Allow: / the disallowed page and the address a wildcard rule matches were not fetched")
 
 

@@ -40,7 +40,7 @@ import audit_sheet  # noqa: E402
 NORMAL, CLASS = 1, 2                     # com.sun.star.script.ModuleType
 HEADER = re.compile(r"(?i)^(?:rem attribute vba_moduletype=|option vbasupport 1|option classmodule)")
 PROC_START = re.compile(r"(?i)^(?:(?:public|private|friend)\s+)?(?:static\s+)?"
-                        r"(?:sub|function|property\s+(?:get|let|set))\s+(\w+)\s*(?:\((.*)\))?")
+                        r"(?:sub|function|property\s+(?:get|let|set))\s+(\w+)")
 PROC_END = re.compile(r"(?i)^end\s+(?:sub|function|property)\b")
 # Lines that cannot have a statement put in front of them.
 UNTOUCHED = re.compile(r"(?i)^(?:case\b|else\b|elseif\b|end\b|next\b|loop\b|wend\b|#|'|rem\b|\d+\s|[a-z_]\w*:(?!=))")
@@ -73,7 +73,7 @@ Public FiverrTyped As String
 Public Function FiverrAnswer(Prompt, Optional Buttons) As Integer
     Dim kind As Integer
     If Not IsMissing(Buttons) Then kind = Buttons And 7
-    FiverrAsked = FiverrAsked & "MsgBox: " & Prompt & Chr(10)
+    FiverrAsked = FiverrAsked & "MsgBox: " & Prompt & Chr(2)
     If kind = 3 Or kind = 4 Then
         FiverrAnswer = IIf(FiverrSays = "no", 7, 6)
     ElseIf kind = 1 Or kind = 5 Then
@@ -86,7 +86,7 @@ Public Function FiverrAnswer(Prompt, Optional Buttons) As Integer
 End Function
 
 Public Function FiverrInput(Prompt) As String
-    FiverrAsked = FiverrAsked & "InputBox: " & Prompt & Chr(10)
+    FiverrAsked = FiverrAsked & "InputBox: " & Prompt & Chr(2)
     FiverrInput = FiverrTyped
 End Function
 '''
@@ -212,14 +212,15 @@ def running(group):
 
 def read_bas(path):
     """A module exported from the VBA editor (.bas): its name and its code as the editor shows it, without
-    the Attribute lines. Excel writes these files in the Windows code page."""
+    the Attribute lines, the module's and those Excel writes under a recorded macro with a shortcut key.
+    Excel writes these files in the Windows code page."""
     raw = pathlib.Path(path).read_bytes()
     try:
         text = raw.decode("utf-8-sig")
     except UnicodeDecodeError:
         text = raw.decode("cp1252")
     name = re.search(r'(?m)^Attribute VB_Name = "([^"]+)"', text)
-    code = "\n".join(line for line in text.splitlines() if not line.startswith("Attribute VB_"))
+    code = "\n".join(line for line in text.splitlines() if not line.startswith("Attribute "))
     return (name.group(1) if name else pathlib.Path(path).stem), code
 
 
@@ -251,13 +252,31 @@ def traced(module, source):
     return "\n".join(out)
 
 
+def parameters(text):
+    """What is inside the parentheses that open the parameter list, strings skipped, so that a comment after
+    them, Sub Main() ' (Ctrl+M), is not taken for parameters; "" when there are none."""
+    if not text.startswith("("):
+        return ""
+    depth, quoted = 0, False
+    for i, ch in enumerate(text):
+        if ch == '"':
+            quoted = not quoted
+        elif not quoted and ch in "()":
+            depth += 1 if ch == "(" else -1
+            if depth == 0:
+                return text[1:i].strip()
+    return text[1:].strip()             # the list goes on to the next line, after a _
+
+
 def procedures(source):
     """The Sub and Function names of a module, with their parameters, and whether each is Private."""
     found = {}
     for line in source.splitlines():
-        m = PROC_START.match(line.strip())
+        text = line.strip()
+        m = PROC_START.match(text)
         if m:
-            found[m.group(1).lower()] = (m.group(1), (m.group(2) or "").strip(), line.strip().lower().startswith("private"))
+            found[m.group(1).lower()] = (m.group(1), parameters(text[m.end():].lstrip()),
+                                         text.lower().startswith("private"))
     return found
 
 
@@ -440,7 +459,7 @@ def call(doc, library, home, timeout):
     if not value:
         return {"status": "ended", "seconds": seconds}
     parts = value.split("\x01")
-    asked = [q for q in parts[1].split("\n") if q]
+    asked = [" ".join(q.split()) for q in parts[1].split("\x02") if q.strip()]    # a prompt on several lines is one
     if parts[0] == "ok":
         return {"status": "ok", "seconds": seconds, "asked": asked}
     at, number, message = (parts + ["", "", ""])[2:5]

@@ -76,6 +76,15 @@ def good(root):
                  "double-click run-windows.bat", "It installs: openpyxl.", "python main.py sales.csv"]:
         assert part in guide, (part, guide)
     assert not [i for line in guide.splitlines() for i in sem_ia.issues_in(line, False)], guide
+    # Packed into the folder itself (-o inside it): the zip must not take itself in, and the next pack
+    # elsewhere must not take that older zip in either.
+    with contextlib.redirect_stdout(io.StringIO()):
+        assert py_kit.main(["pack", folder, "--run", "main.py sales.csv", "-o", folder]) == 0
+        assert py_kit.main(["pack", folder, "--run", "main.py sales.csv", "-o", os.path.join(root, "dist2")]) == 0
+    for place in (folder, os.path.join(root, "dist2")):
+        with zipfile.ZipFile(os.path.join(place, "sales-report.zip")) as z:
+            assert z.testzip() is None and "sales-report/sales-report.zip" not in z.namelist(), z.namelist()
+            assert len(z.namelist()) == 8, z.namelist()
     print("good folder: openpyxl required at its major version, the local module and the cache left out, .env "
           "kept out with a warning, launchers runnable, the Windows one with Windows line endings")
 

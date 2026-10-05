@@ -140,6 +140,39 @@ def cli(path, code, root):
           "menu listed")
 
 
+def fetch_cli(path, code, root):
+    """--fetch takes an address with a query string: the address ends at the last =."""
+    answer = os.path.join(root, "rates.json")
+    with open(answer, "w", encoding="utf-8") as f:
+        json.dump({"EUR": 0.92}, f)
+    with contextlib.redirect_stdout(io.StringIO()) as said:
+        code_ = run_gas.main([path, code, "--run", "importRates", "--property", "API_KEY=k123",
+                              "--fetch", f"https://api.example.com/rates?key=k123={answer}"])
+    assert code_ == 0 and "https://api.example.com/rates?key=k123" in said.getvalue(), said.getvalue()
+    print("--fetch: an address with ?key= and its saved answer")
+
+
+def big(root):
+    """A sheet of 3000 rows sorted, and getLastRow asked 300 times: quick, as in Google."""
+    path = os.path.join(root, "big.xlsx")
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Data"
+    for i in range(3000):
+        ws.append([f"item {i}", (i * 7919) % 3001, i % 5, "x", "y", "z", i, i * 2])
+    wb.save(path)
+    script = os.path.join(root, "Big.gs")
+    with open(script, "w", encoding="utf-8") as f:
+        f.write("function tidy() {\n  const sheet = SpreadsheetApp.getActive().getSheetByName('Data');\n"
+                "  sheet.getDataRange().sort({column: 2, ascending: false});\n"
+                "  for (let i = 0; i < 300; i++) sheet.getLastRow();\n}\n")
+    result = run_gas.run(path, [script], "tidy", changes=False, timeout=30)
+    assert result["status"] == "ok" and result["seconds"] < 10, (result["status"], result["seconds"])
+    top = sorted(((i * 7919) % 3001 for i in range(3000)), reverse=True)[0]
+    assert [1, 2, top, ""] in result["sheets"][0]["changes"], "the largest value is not on top"
+    print(f"big sheet: 3000 rows sorted and getLastRow asked 300 times in {result['seconds']:.1f} s")
+
+
 def archive(path, code, root):
     out = os.path.join(root, "archived.xlsx")
     result = run_gas.run(path, [code], "archiveDone", keep=out)
@@ -203,6 +236,21 @@ def services(path, code):
     assert [2, 6, "Due 06/10/2026", ""] in changes and [4, 6, "Due 08/10/2026", ""] in changes, changes
     assert not [c for c in changes if c[0] == 3], changes
 
+    root = os.path.dirname(path)
+    broken = os.path.join(root, "Broken.gs")
+    with open(broken, "w", encoding="utf-8") as f:
+        f.write("function later() {\n  foo bar\n}\n")
+    result = run_gas.run(path, [code, broken], "openCount", changes=False)
+    assert result["status"] == "error" and result["error"]["at"] == {"file": "Broken.gs", "line": 2}, result["error"]
+
+    check = os.path.join(root, "Check.gs")
+    with open(check, "w", encoding="utf-8") as f:
+        f.write('function onEdit(e) {\n  e.range.offset(0, 1).setValue(e.value === "TRUE" ? "ticked" : "not ticked");\n'
+                '  e.range.offset(0, 2).setValue(e.oldValue === undefined ? "was empty" : "was " + e.oldValue);\n}\n')
+    result = run_gas.run(path, [check], edit={"sheet": "Tasks", "cell": "H2", "value": True}, changes=False)
+    changes = result["sheets"][0]["changes"]
+    assert [2, 8, True, ""] in changes and [2, 9, "ticked", ""] in changes and [2, 10, "was empty", ""] in changes, changes
+
     try:
         go("nothing")
         raise AssertionError("an unknown function ran")
@@ -222,4 +270,6 @@ if __name__ == "__main__":
         cli(path, code, tmp)
         archive(path, code, tmp)
         services(path, code)
+        fetch_cli(path, code, tmp)
+        big(tmp)
     print("all good")

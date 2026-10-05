@@ -69,6 +69,10 @@ Sub MailIt()
     Set app = CreateObject("Outlook.Application")
 End Sub
 
+Sub Report() ' run with (Ctrl+R)
+    MsgBox "Done" & vbCrLf & "Rows: " & 5
+End Sub
+
 Sub CountItems()
     Dim seen As Object
     Set seen = CreateObject("Scripting.Dictionary")
@@ -127,6 +131,22 @@ def line_of(text, code):
     return next(i for i, line in enumerate(shown, start=1) if line.strip() == code)
 
 
+def reading(root):
+    """What the module files say, read without LibreOffice: the parameters of a Sub with a comment in
+    parentheses after it, and the Attribute lines Excel writes under a recorded macro with a shortcut key."""
+    found = run_vba.procedures("Sub Main() ' run with (Ctrl+M)\nFunction Fee(rate As Double) As Double\n"
+                               "Private Sub Two(a As Long, _\n    b As Long)\n")
+    assert found == {"main": ("Main", "", False), "fee": ("Fee", "rate As Double", False),
+                     "two": ("Two", "a As Long, _", True)}, found
+    path = os.path.join(root, "Recorded.bas")
+    with open(path, "w", encoding="cp1252", newline="\r\n") as f:
+        f.write('Attribute VB_Name = "Recorded"\nSub Macro1()\nAttribute Macro1.VB_ProcData.VB_Invoke_Func = "m\\n14"\n'
+                '    Range("A1").Value = 1\nEnd Sub\n')
+    name, code = run_vba.read_bas(path)
+    assert (name, code.splitlines()) == ("Recorded", ["Sub Macro1()", '    Range("A1").Value = 1', "End Sub"]), code
+    print("reading: no parameters taken from a comment, the Attribute line of a recorded macro left out")
+
+
 def cli(book, modules, root):
     out, said = os.path.join(root, "after.xlsx"), io.StringIO()
     with contextlib.redirect_stdout(said):
@@ -151,6 +171,9 @@ def paths(book, modules):
     def go(macro, *more, **how):
         result = run_vba.run(book, macro, [modules["Module1"], *more], changes=False, **how)
         return result, "\n".join(run_vba.report(result, how.get("answer", "yes")))
+
+    result, report = go("Report")
+    assert result["status"] == "ok" and result["asked"] == ["MsgBox: Done Rows: 5"], report
 
     result, report = go("AskName", typed="Ana")
     assert result["status"] == "ok" and result["asked"] == ["InputBox: Who checked the totals?"], report
@@ -218,6 +241,7 @@ def workbook_macro(root):
 if __name__ == "__main__":
     with tempfile.TemporaryDirectory() as tmp:
         book, modules = files(tmp)
+        reading(tmp)
         cli(book, modules, tmp)
         paths(book, modules)
         workbook_macro(tmp)

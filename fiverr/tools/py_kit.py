@@ -220,9 +220,12 @@ def pack(folder, run, out_dir=".", title=None, what=None, extra=()):
     made["HOW-TO-RUN.txt"] = re.sub(r"\n{3,}", "\n\n", made["HOW-TO-RUN.txt"])     # no blank lines left by an empty --what
     made["HOW-TO-RUN.txt"] = made["HOW-TO-RUN.txt"].replace("\n", "\r\n")      # readable in Notepad
     os.makedirs(out_dir, exist_ok=True)
-    target = Path(out_dir) / zip_name
+    target = (Path(out_dir) / zip_name).resolve()
+    # Listed before the zip exists: with -o inside the folder it would otherwise pack itself, and an older
+    # zip of the same folder stays out.
+    entries = [rel for rel in files(folder) if rel != Path(zip_name) and (folder / rel).resolve() != target]
     with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as z:
-        for rel in files(folder):
+        for rel in entries:
             z.write(folder / rel, f"{folder.name}/{rel.as_posix()}")
         for name, text in made.items():
             info = zipfile.ZipInfo(f"{folder.name}/{name}", date_time=time.localtime()[:6])

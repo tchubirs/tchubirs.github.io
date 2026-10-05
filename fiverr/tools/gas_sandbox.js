@@ -110,9 +110,13 @@ class Grid {
   maxRows() { return Math.max(1000, this.lastRow()); }        // a new Google sheet has 1000 rows
   maxColumns() { return Math.max(26, this.lastColumn()); }    // and 26 columns
   snapshot() {
-    const cells = new Map();
-    for (let r = 1; r <= this.lastRow(); r++) {
-      for (let c = 1; c <= this.lastColumn(); c++) cells.set(`${r},${c}`, [this.get(r, c), this.formula(r, c)]);
+    // The cells that hold something; the size is worked out once, not at every step of the loops.
+    const cells = new Map(), height = this.lastRow(), width = this.lastColumn();
+    for (let r = 1; r <= height; r++) {
+      for (let c = 1; c <= width; c++) {
+        const value = this.get(r, c), formula = this.formula(r, c);
+        if (!empty(value) || formula) cells.set(`${r},${c}`, [value, formula]);
+      }
     }
     return cells;
   }
@@ -207,8 +211,9 @@ class Range {
   sort(spec) {
     const specs = (Array.isArray(spec) ? spec : [spec]).map(s => (typeof s === "number" ? {column: s, ascending: true}
       : {column: s.column, ascending: s.ascending !== false}));
-    const rows = this.getValues().map((values, i) => ({values, formulas: this.getFormulas()[i]}));
-    rows.sort((a, b) => {
+    const formulas = this.getFormulas();
+    const lines = this.getValues().map((values, i) => ({values, formulas: formulas[i]}));
+    lines.sort((a, b) => {
       for (const s of specs) {
         const x = a.values[s.column - this.col], y = b.values[s.column - this.col];
         if (empty(x) !== empty(y)) return empty(x) ? 1 : -1;     // empty cells go last either way
@@ -217,7 +222,7 @@ class Range {
       }
       return 0;
     });
-    this.cells((r, c, i, j) => this.grid.put(r, c, rows[i].values[j], rows[i].formulas[j]));
+    this.cells((r, c, i, j) => this.grid.put(r, c, lines[i].values[j], lines[i].formulas[j]));
     return this;
   }
   format(key, value) {
@@ -592,7 +597,7 @@ for (const name of ["DriveApp", "DocumentApp", "CalendarApp", "FormApp", "Slides
 function place(error) {
   const names = files.map(f => path.basename(f));
   for (const line of String(error && error.stack || "").split("\n")) {
-    const m = /\(?([^()\s]+):(\d+):(\d+)\)?\s*$/.exec(line);
+    const m = /\(?([^()\s:]+):(\d+)(?::\d+)?\)?\s*$/.exec(line);    // a SyntaxError gives file:line, no column
     if (m && names.includes(path.basename(m[1]))) return {file: path.basename(m[1]), line: +m[2]};
   }
   return null;
@@ -609,7 +614,10 @@ try {
     if (!sheet) throw fail(`No sheet named ${job.edit.sheet} for the edit`);
     const range = sheet.getRange(job.edit.cell), oldValue = range.getValue();
     range.setValue(job.edit.value);
-    context.$edit = {range, value: job.edit.value, oldValue, source: spreadsheet, user, authMode: "LIMITED", triggerUid: "1"};
+    // As Google sends them: e.value as text ("TRUE" for a ticked checkbox), no e.oldValue for a cell that was empty.
+    const text = v => (typeof v === "boolean" ? String(v).toUpperCase() : isDate(v) ? display(v) : String(v));
+    context.$edit = {range, value: text(job.edit.value), oldValue: empty(oldValue) ? undefined : text(oldValue),
+                     source: spreadsheet, user, authMode: "LIMITED", triggerUid: "1"};
   }
   if (job.open) context.$open = {source: spreadsheet, user, authMode: "LIMITED"};
   const call = job.edit ? "onEdit($edit)" : job.open ? "onOpen($open)" : `${job.run}()`;

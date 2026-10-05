@@ -372,7 +372,11 @@ def collect(job, fetcher, log):
         if site.delay > fetcher.delay and site not in told:
             told.add(site)          # it changes how long the order takes
             log(f"robots.txt asks for {site.delay:g} seconds between pages, so the run waits that long")
-        body = fetcher.get(url, listing=True)
+        try:
+            body = fetcher.get(url, listing=True)
+        except fetcher.errors as e:
+            log(f"could not read {url} ({e}), stopping there; the rows read so far are kept")
+            break
         pages += 1
         if "json" in job:
             try:

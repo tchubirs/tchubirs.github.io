@@ -199,8 +199,9 @@ def text_lines(page):
 
 
 def is_scan(page):
-    """A page that is a picture: an image over at least half of it and almost no text."""
-    if len(page.get_text("words")) >= 20:
+    """A page that is a picture: an image over at least half of it and no text, or two words at most (a
+    scanner's stamp). A bank's own page with a background image and a few words, "Page 3 of 3", is not one."""
+    if len(page.get_text("words")) >= 3:
         return False
     return any(abs(pymupdf.Rect(info["bbox"]) & page.rect) >= abs(page.rect) / 2 for info in page.get_image_info())
 
