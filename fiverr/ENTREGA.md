@@ -39,6 +39,12 @@ Client files stay in the session's scratchpad and are deleted after delivery: ne
   numbers typed as text. If it prints "Saving with openpyxl would lose", do not edit the file with openpyxl:
   edit it in LibreOffice or in the XML.
 - For Excel 2019 or older, do not use the functions listed under "Needs Excel 2021 or later".
+- A VBA macro: `python3 fiverr/tools/run_vba.py client.xlsm MacroName` runs it on a copy in LibreOffice (a module
+  I wrote: add `--code Module1.bas`). MsgBox gets `--answer yes` or `no`, InputBox gets `--input`. The report lists
+  every change, or the module, line and error where the macro stopped; `-o after.xlsx` keeps the result. Lines it
+  names as needing Windows or Excel (Scripting.Dictionary, RemoveDuplicates, Outlook) are tested by the client:
+  say so in the delivery message, and avoid Scripting.Dictionary for a Mac. Deliver the module as a .bas file with
+  the steps to import it (Alt+F11, then File > Import File).
 - After the work, `audit_sheet.py fixed.xlsx` must say "Nothing to fix", and
   `audit_sheet.py --compare client.xlsx fixed.xlsx -o changes.txt` lists every formula, typed value and
   result that changed. Send changes.txt with the file.

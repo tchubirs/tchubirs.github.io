@@ -42,6 +42,10 @@ até alguma vender. O que eu faço agora:
    vivo nas 47 planilhas da Etsy: nenhum erro, e os 2 avisos (pets e aluguel por temporada) são de propósito.
    `--compare antes.xlsx depois.xlsx` lista o que o trabalho mudou: fórmulas, valores digitados e cada resultado
    que se mexeu, recalculado. Vai junto com a entrega, para o cliente ver que nada mais mudou. Testado.
+   Em 05/10, `fiverr/tools/run_vba.py`: roda a macro VBA do cliente (ou a minha) numa cópia da planilha no
+   LibreOffice e diz o que mudou, ou o módulo, a linha e o erro onde parou. Responde MsgBox e InputBox sozinho e
+   para um laço sem fim. Testado com 10 casos e num .xlsm feito no Excel. Das macros típicas de pedido do Fiverr,
+   7 de 9 rodam aqui; Scripting.Dictionary e RemoveDuplicates não existem no LibreOffice e o relatório avisa.
    Conversor de extrato do anúncio 5 (`statement2excel.py`) melhorado em 04/10: lê débito e crédito em colunas
    separadas, o saldo inicial e o final, datas sem ano que passam de dezembro para janeiro, e para no fim da tabela
    (cheques, saldos diários ou outra conta ficam de fora e aparecem contados na aba Checks). Corrigido um defeito

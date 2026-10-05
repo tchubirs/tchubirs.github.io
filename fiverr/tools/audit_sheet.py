@@ -31,6 +31,7 @@ import os
 import pathlib
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -101,12 +102,16 @@ def recalculate(paths, work):
         copies.append(os.path.join(work, f"in{i}{os.path.splitext(path)[1].lower()}"))
         shutil.copyfile(path, copies[-1])
     out = os.path.join(work, "out")
+    proc = subprocess.Popen(["soffice", "--headless", "--norestore", f"-env:UserInstallation={profile.as_uri()}",
+                             "--convert-to", "xlsx", "--outdir", out, *copies], env=dict(os.environ, HOME=work),
+                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
     try:
-        subprocess.run(["soffice", "--headless", "--norestore", f"-env:UserInstallation={profile.as_uri()}",
-                        "--convert-to", "xlsx", "--outdir", out, *copies],
-                       env=dict(os.environ, HOME=work), capture_output=True, timeout=120 + 60 * len(paths))
+        proc.wait(timeout=120 + 60 * len(paths))
     except subprocess.TimeoutExpired:
-        pass    # whatever it finished is used; the rest is reported as not opened
+        # Whatever it finished is used; the rest is reported as not opened. soffice runs soffice.bin under
+        # it, so the whole group is stopped, or soffice.bin would keep running.
+        os.killpg(proc.pid, signal.SIGKILL)
+        proc.wait()
     done = [os.path.join(out, f"in{i}.xlsx") for i in range(len(paths))]
     return [p if os.path.exists(p) else None for p in done]
 
