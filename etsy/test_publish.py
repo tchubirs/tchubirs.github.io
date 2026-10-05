@@ -8,6 +8,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import requests
 import publish as P
+import check_live
 
 T = Path(tempfile.mkdtemp())
 P.SECRET, P.DONE = T / ".etsy-secret", T / "published.json"
@@ -25,7 +26,9 @@ def order(li):
 
 
 shop = {"listings": {}, "next": 900, "calls": [], "fail_image_call": None, "image_calls": 0, "tokens": 0, "image_ids": 0, "languages": ["pt"],
-        "active": False}
+        "active": False, "fail_move": 0, "busy_gets": 0, "drops": 0,
+        "receipts": [{"grandtotal": {"amount": 450, "divisor": 100, "currency_code": "EUR"}},
+                     {"grandtotal": {"amount": 790, "divisor": 100, "currency_code": "EUR"}}]}
 shop["listings"][555] = {"title": P.listings()[0]["title"], "state": "active", "images": [], "files": [], "data": {}}
 
 
@@ -62,6 +65,12 @@ def fake_request(method, url, timeout=None, params=None, data=None, files=None, 
     assert headers["Authorization"].startswith("Bearer 77.tok")
     path = url[len(P.API):]
     shop["calls"].append((method, path))
+    if method == "GET" and shop["drops"]:
+        shop["drops"] -= 1
+        raise requests.ConnectionError("connection dropped")
+    if method == "GET" and shop["busy_gets"]:
+        shop["busy_gets"] -= 1
+        return R(503, {"error": "busy"})
     if path == "/users/me":
         return R(200, {"user_id": 77, "shop_id": 4242})
     m = re.fullmatch(r"/shops/4242/listings", path)
@@ -84,6 +93,9 @@ def fake_request(method, url, timeout=None, params=None, data=None, files=None, 
     if m:
         imgs = shop["listings"][int(m.group(1))]["images"]
         if "listing_image_id" in data:  # a photo already there, moved to another rank
+            if shop["fail_move"]:
+                shop["fail_move"] -= 1
+                return R(500, {"error": "server busy"})
             im = next(im for im in imgs if im["id"] == data["listing_image_id"])
             im["rank"], im["alt"] = int(data["rank"]), data.get("alt_text", "")
             return R(201, {"listing_image_id": im["id"]})
@@ -95,6 +107,14 @@ def fake_request(method, url, timeout=None, params=None, data=None, files=None, 
         shop["image_ids"] += 1  # like Etsy, it goes in at its rank and the others stay where they are
         imgs.append({"id": shop["image_ids"], "name": name, "rank": int(data["rank"]), "alt": data["alt_text"]})
         return R(201, {"listing_image_id": shop["image_ids"]})
+    m = re.fullmatch(r"/listings/(\d+)", path)
+    if m and method == "GET":
+        li = shop["listings"][int(m.group(1))]
+        return R(200, {"state": li["state"], "title": li["title"], "taxonomy_id": li["data"].get("taxonomy_id"),
+                       "price": {"amount": round(float(li["data"].get("price", 0)) * 100), "divisor": 100}})
+    m = re.fullmatch(r"/listings/(\d+)/videos", path)
+    if m and method == "GET":
+        return R(200, {"count": len(shop["listings"][int(m.group(1))].get("videos", []))})
     m = re.fullmatch(r"/shops/4242/listings/(\d+)/videos", path)
     if m:
         name, raw, mime = files["video"]
@@ -102,6 +122,8 @@ def fake_request(method, url, timeout=None, params=None, data=None, files=None, 
         shop["listings"][int(m.group(1))].setdefault("videos", []).append(name)
         return R(201, {"video_id": 1})
     m = re.fullmatch(r"/shops/4242/listings/(\d+)/files", path)
+    if m and method == "GET":
+        return R(200, {"count": len(shop["listings"][int(m.group(1))]["files"])})
     if m:
         name, raw, mime = files["file"]
         assert raw[:2] in (b"PK", b"%P"), name
@@ -126,8 +148,8 @@ def fake_request(method, url, timeout=None, params=None, data=None, files=None, 
         li["translations"][lang] = data
         return R(200, {"language": lang})
     if path == "/shops/4242/receipts":
-        return R(200, {"count": 2, "results": [{"grandtotal": {"amount": 450, "divisor": 100, "currency_code": "EUR"}},
-                                                {"grandtotal": {"amount": 790, "divisor": 100, "currency_code": "EUR"}}]})
+        page = shop["receipts"][params["offset"]:params["offset"] + params["limit"]]
+        return R(200, {"count": len(shop["receipts"]), "results": page})
     raise AssertionError(("unexpected", method, path))
 
 
@@ -135,6 +157,7 @@ requests.request, requests.post = fake_request, fake_post
 
 # keys, auth link, token
 P.main(["key", "KEY", "SECRET"])
+assert P.SECRET.stat().st_mode & 0o777 == 0o600, oct(P.SECRET.stat().st_mode)
 assert P.main(["ping"]) == 1, "keys not switched on yet"
 shop["active"] = True
 assert P.main(["ping"]) == 0, "keys switched on"
@@ -171,6 +194,8 @@ try:
     P.main(["publish", "1", "2", "22", "--taxonomy", "1281"])
 except SystemExit as e:
     print("stopped as expected:", str(e)[:60])
+    assert "may have done it anyway" in str(e), e
+assert shop["image_calls"] == 3, "a photo upload was sent again after a server error"
 done = json.loads(P.DONE.read_text())
 assert done["1"]["made_by_hand"] and done["1"]["listing_id"] == 555, done
 assert done["2"]["photos"] == 2 and done["2"]["files"] == 0 and done["2"]["state"] == "draft", done
@@ -208,8 +233,45 @@ P.DONE.write_text(json.dumps(done))
 li["images"] = [im for im in li["images"] if im["name"] != "00-cover.jpg"]
 for k, im in enumerate(sorted(li["images"], key=lambda im: (im["rank"], im["id"]))):
     im["rank"] = k + 1
+shop["fail_move"] = 1          # the cover goes up, then moving the next photo fails: it must not go up twice
+try:
+    P.main(["publish", "3"])
+    raise AssertionError("the failed move did not stop the run")
+except SystemExit:
+    pass
+assert isinstance(json.loads(P.DONE.read_text())["3"]["cover"], int)
 P.main(["publish", "3"])
 assert order(li) == [p.name for p in P.listings()[2]["photos"]], order(li)
+assert json.loads(P.DONE.read_text())["3"]["cover"] is True
+print("cover: sent once although the run stopped right after it, and the photos then put in order")
+
+# an empty draft with listing 4's title, as a run that stopped right after making it leaves: carried on with
+shop["next"] += 1
+draft_id = shop["next"]
+shop["listings"][draft_id] = {"title": P.listings()[3]["title"], "state": "draft", "images": [], "files": [],
+                              "data": {"taxonomy_id": 1281, "price": f"{P.listings()[3]['price']:.2f}"}}
+made_before = shop["next"]
+P.main(["publish", "4", "--taxonomy", "1281"])
+done = json.loads(P.DONE.read_text())
+assert done["4"]["listing_id"] == draft_id and shop["next"] == made_before and not done["4"].get("made_by_hand"), done["4"]
+assert shop["listings"][draft_id]["state"] == "active" and order(shop["listings"][draft_id])[0] == "00-cover.jpg"
+print("empty draft: carried on with, no second listing made")
+
+# the hourly check: nothing wrong on the listings put up here, then a listing without photos, a first photo
+# without alt text and a video gone, each reported without stopping the check
+s = json.loads(P.SECRET.read_text())
+done = json.loads(P.DONE.read_text())
+mine = {n: rec for n, rec in done.items() if not rec.get("made_by_hand")}
+cats = {P.listings()[int(n) - 1]["folder"]: shop["listings"][rec["listing_id"]]["data"]["taxonomy_id"] for n, rec in mine.items()}
+said = [line for line in check_live.check(s, mine, cats) if not line.endswith("not published")]
+assert said == [], said
+shop["listings"][mine["2"]["listing_id"]]["images"] = []
+first = sorted(shop["listings"][mine["3"]["listing_id"]]["images"], key=lambda im: im["rank"])[0]
+first["alt"] = None
+shop["listings"][mine["22"]["listing_id"]]["videos"] = []
+said = [line for line in check_live.check(s, mine, {}) if not line.endswith("not published")]
+assert [line.split()[0] for line in said] == ["2", "3", "22"] and "videos: 0" in said[2], said
+print("live check: a listing without photos, a photo without alt text and a missing video reported, none stopped it")
 # English versions: refused until English is a shop language, then added once to each published listing
 try:
     P.main(["english"])
@@ -228,5 +290,16 @@ for n, rec in json.loads(P.DONE.read_text()).items():
 before = len(shop["calls"])
 P.main(["english"])
 assert all(c[0] == "GET" for c in shop["calls"][before:]), "English was sent twice"
-P.main(["sales"])
+out = io.StringIO()
+with contextlib.redirect_stdout(out):
+    P.main(["sales"])
+assert out.getvalue().strip() == "2 orders in 30 days, 12.40 EUR", out.getvalue()
+shop["receipts"] = ([{"grandtotal": {"amount": 450, "divisor": 100, "currency_code": "EUR"}}] * 120
+                    + [{"grandtotal": {"amount": 790, "divisor": 100, "currency_code": "USD"}}] * 30)
+shop["busy_gets"], shop["drops"] = 1, 1      # Etsy busy once and the connection dropped once: both asked again
+out = io.StringIO()
+with contextlib.redirect_stdout(out):
+    P.main(["sales"])
+assert out.getvalue().strip() == "150 orders in 30 days, 540.00 EUR, 237.00 USD", out.getvalue()
+print("sales: 150 orders over two pages, each currency on its own; a busy answer and a dropped connection asked again")
 print("all good")

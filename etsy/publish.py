@@ -176,8 +176,11 @@ def load():
 
 
 def save(s):
-    SECRET.write_text(json.dumps(s, indent=1))
-    SECRET.chmod(0o600)
+    # Made readable by its owner only from the start, not for a moment by anyone, as write_text would.
+    fd = os.open(SECRET, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as f:
+        f.write(json.dumps(s, indent=1))
+    SECRET.chmod(0o600)     # a file made earlier with wider rights
 
 
 def ping():
@@ -249,21 +252,32 @@ def bearer(s):
 
 
 def call(s, method, path, allow=(), **kw):
-    """One API request, again after a pause when Etsy is busy. Stops the run on any other error.
+    """One API request. Stops the run on an error, after asking again when Etsy is busy: a GET, PUT or
+    PATCH after a 429, a server error or a dropped connection, since the same request twice does the same
+    thing; a POST only after a 429, which Etsy gives before doing anything. After a server error a POST
+    may have made the listing or the photo anyway, and sending it again would make two.
 
     An answer whose status is in `allow` comes back as None instead of stopping the run."""
     import requests
+    again = method.upper() != "POST"
+    maybe = "; Etsy may have done it anyway: look at the listing before running this again"
     for attempt in range(6):
         auth_header = "Bearer " + bearer(s)
-        r = requests.request(method, API + path, timeout=180, **kw, headers={
-            "x-api-key": f"{s['keystring']}:{s['shared_secret']}", "Authorization": auth_header})
-        if r.status_code != 429 and r.status_code < 500:
+        try:
+            r = requests.request(method, API + path, timeout=180, **kw, headers={
+                "x-api-key": f"{s['keystring']}:{s['shared_secret']}", "Authorization": auth_header})
+        except (requests.ConnectionError, requests.Timeout) as e:
+            if not again or attempt == 5:
+                sys.exit(f"{method} {path}: {type(e).__name__}" + ("" if again else maybe))
+            time.sleep(2 ** attempt)
+            continue
+        if not (r.status_code == 429 or again and r.status_code >= 500) or attempt == 5:
             break
         time.sleep(2 ** attempt)
     if r.status_code in allow:
         return None
     if not r.ok:
-        sys.exit(f"{method} {path}: {r.status_code} {r.text[:800]}")
+        sys.exit(f"{method} {path}: {r.status_code} {r.text[:800]}" + (maybe if r.status_code >= 500 and not again else ""))
     time.sleep(0.25)
     return r.json() if r.content else {}
 
@@ -324,9 +338,15 @@ def publish(numbers, taxonomy_id, draft):
         rec = done.get(str(li["n"]), {})
         if not rec and li["title"].lower() in in_shop:
             lid, state = in_shop[li["title"].lower()]
-            note(li["n"], {"listing_id": lid, "state": state, "made_by_hand": True})
-            print(li["n"], li["name"], f"already in the shop ({state}), left alone")
-            continue
+            if state == "draft" and not call(s, "GET", f"/listings/{lid}/images")["count"]:
+                # An empty draft with this title: most likely made by a run that stopped before noting it.
+                rec = {"listing_id": lid, "photos": 0, "files": 0, "state": "draft"}
+                note(li["n"], rec)
+                print(li["n"], li["name"], "an empty draft with this title is in the shop: carrying on with it")
+            else:
+                note(li["n"], {"listing_id": lid, "state": state, "made_by_hand": True})
+                print(li["n"], li["name"], f"already in the shop ({state}), left alone")
+                continue
         if rec.get("made_by_hand"):
             continue
         if not rec.get("listing_id"):
@@ -348,13 +368,16 @@ def publish(numbers, taxonomy_id, draft):
                  files={"image": (photo.name, photo.read_bytes(), MIME[".jpg"])})
             rec["photos"] = k + 1
             note(li["n"], rec)
-        if cover and not rec.get("cover"):
+        if cover and rec.get("cover") is not True:
             photo, text = cover[0]
-            made = call(s, "POST", f"/shops/{shop}/listings/{lid}/images", data={"rank": 1, "alt_text": text},
-                        files={"image": (photo.name, photo.read_bytes(), MIME[".jpg"])})
+            if not rec.get("cover"):
+                made = call(s, "POST", f"/shops/{shop}/listings/{lid}/images", data={"rank": 1, "alt_text": text},
+                            files={"image": (photo.name, photo.read_bytes(), MIME[".jpg"])})
+                rec["cover"] = made["listing_image_id"]     # noted at once: a stop below must not send it twice
+                note(li["n"], rec)
             # Etsy leaves the other photos where they were, so move them along to 2, 3, ... in their order.
             rest = sorted((im for im in call(s, "GET", f"/listings/{lid}/images")["results"]
-                           if im["listing_image_id"] != made["listing_image_id"]),
+                           if im["listing_image_id"] != rec["cover"]),
                           key=lambda im: (im["rank"], im["listing_image_id"]))
             for k, im in enumerate(rest):
                 call(s, "POST", f"/shops/{shop}/listings/{lid}/images", data={
@@ -402,12 +425,25 @@ def english(numbers):
 
 
 def sales():
+    """The orders of the last 30 days, every page of them, with the total in each currency."""
     s = load()
     since = int(time.time()) - 30 * 86400
-    page = call(s, "GET", f"/shops/{s['shop_id']}/receipts", params={"min_created": since, "limit": 100})
-    total = sum(r["grandtotal"]["amount"] / r["grandtotal"]["divisor"] for r in page["results"])
-    print(f"{page['count']} orders in 30 days, {total:.2f} {page['results'][0]['grandtotal']['currency_code']}"
-          if page["count"] else "no orders in 30 days")
+    receipts, offset = [], 0
+    while True:
+        page = call(s, "GET", f"/shops/{s['shop_id']}/receipts",
+                    params={"min_created": since, "limit": 100, "offset": offset})
+        receipts += page["results"]
+        offset += 100
+        if offset >= page["count"] or not page["results"]:
+            break
+    if not receipts:
+        print("no orders in 30 days")
+        return
+    totals = {}
+    for r in receipts:
+        money = r["grandtotal"]
+        totals[money["currency_code"]] = totals.get(money["currency_code"], 0) + money["amount"] / money["divisor"]
+    print(f"{len(receipts)} orders in 30 days, " + ", ".join(f"{v:.2f} {k}" for k, v in totals.items()))
 
 
 def main(args):

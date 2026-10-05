@@ -63,6 +63,11 @@ até alguma vender. O que eu faço agora:
    Depois, a mesma revisão no `audit_sheet.py` e no `skill_kit.py`: mais 10 defeitos corrigidos e testados. Os
    maiores: o kit de skill punha o `.env` (senhas) e a pasta `.git` no zip do cliente; na comparação, uma fórmula
    trocada pelo valor parecia célula apagada, e uma mudança de centavos aparecia igual dos dois lados.
+   Por último o publicador da Etsy, antes de ele mexer de novo na loja: não repete mais um envio que cria algo
+   (anúncio, foto) depois de erro do servidor, o que podia duplicar; retoma uma capa e um rascunho vazio sem
+   duplicar; a checagem de hora em hora não para num anúncio sem foto e confere o vídeo pelo `published.json`
+   (antes dependia de uma pasta fora do git); as vendas somam todas as páginas e cada moeda separada.
+   Conferido ao vivo, só leitura: os 44 sem problema.
    Conversor de extrato do anúncio 5 (`statement2excel.py`) melhorado em 04/10: lê débito e crédito em colunas
    separadas, o saldo inicial e o final, datas sem ano que passam de dezembro para janeiro, e para no fim da tabela
    (cheques, saldos diários ou outra conta ficam de fora e aparecem contados na aba Checks). Corrigido um defeito
