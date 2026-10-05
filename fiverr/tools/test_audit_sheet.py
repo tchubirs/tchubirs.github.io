@@ -137,6 +137,42 @@ def drops(paths, root):
     print("openpyxl limits: macros, shapes and the extension it warned about are listed")
 
 
+def edges(root):
+    """A file that is not there, a formula pasted as its value, a cent that changed and a link to another
+    workbook whose sheet name has a space."""
+    good = os.path.join(root, "b", "book.xlsx")
+    found = audit_sheet.audit_files([good, os.path.join(root, "nowhere.xlsx")])
+    assert not found[0]["failed"] and found[1] == {"name": os.path.join(root, "nowhere.xlsx"), "failed": True,
+                                                    "reason": "the file was not found"}, found[1]
+    c = audit_sheet.compare(good, os.path.join(root, "nowhere.xlsx"))
+    assert c["failed"] and "was not found" in "\n".join(audit_sheet.describe_changes(c)), c
+
+    before, after = os.path.join(root, "paste0.xlsx"), os.path.join(root, "paste1.xlsx")
+    for path, b5, price in ((before, "=SUM(B2:B4)", 5), (after, 27, 5.01)):
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Sales"
+        for row in (["Month", "Units"], ["Jan", 10], ["Feb", 12], ["Mar", 5], ["Total", b5],
+                    ["Price", price * 2469.134]):
+            ws.append(row)
+        wb.save(path)
+    c = audit_sheet.compare(before, after)
+    assert c["formulas"] == [("Sales!B5", "=SUM(B2:B4)", 27)] and c["results"] == [], c
+    report = "\n".join(audit_sheet.describe_changes(c))
+    assert "Sales!B5  =SUM(B2:B4)  ->  27" in report and "Sales!B6  12345.67  ->  12370.36134" in report, report
+
+    linked = os.path.join(root, "linked.xlsx")
+    wb = Workbook()
+    wb.active.title = "Data"
+    wb.active["A1"] = "='[1]My Sheet'!A1"
+    wb.active["A2"] = 5
+    wb.save(linked)
+    found = audit_sheet.audit_files([linked])[0]
+    assert [place for place, _ in found["external"]] == ["Data!A1"], found["external"]
+    print("edges: a missing file reported without stopping the others, a formula pasted as its value shown with "
+          "the value, a change in the cents shown, a link to '[1]My Sheet' found")
+
+
 def changes(root):
     """Fix two things in the client file and check that the compare report names them and what moved."""
     before, after, out = (os.path.join(root, n) for n in ("before.xlsx", "after.xlsx", "changes.txt"))
@@ -170,5 +206,6 @@ if __name__ == "__main__":
     paths = files(root)
     cli(paths, root)
     drops(paths, root)
+    edges(root)
     changes(root)
     print("all good")

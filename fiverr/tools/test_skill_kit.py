@@ -54,6 +54,37 @@ def good_skill(root):
     print("good skill: no errors, packed with the folder at the root, without caches or evals, with its guide")
 
 
+def inside(root):
+    """Packed into its own folder twice, with a .env, a .git folder and --- inside the description: the zip
+    holds only the skill, and the guide has the whole description."""
+    text = GOOD.replace("name: invoice-writer", "name: own-folder").replace(
+        "Writes invoices in the company format", "Writes invoices --- fast --- in the company format")
+    folder = make(root, "own-folder", {"SKILL.md": text, "references/format.md": "Lines and totals.",
+                                       "scripts/fill.py": "print('ok')", ".env": "API_KEY=secret",
+                                       ".git/config": "[core]", "node_modules/x.js": "x"})
+    for _ in range(2):
+        with contextlib.redirect_stdout(io.StringIO()) as said:
+            assert skill_kit.main(["pack", folder, "-o", folder]) == 0
+        assert "with 3 files" in said.getvalue(), said.getvalue()
+    with zipfile.ZipFile(os.path.join(folder, "own-folder.zip")) as z:
+        assert z.testzip() is None and sorted(z.namelist()) == ["own-folder/SKILL.md", "own-folder/references/format.md",
+                                                                "own-folder/scripts/fill.py"], z.namelist()
+    with open(os.path.join(folder, "INSTALL-own-folder.md"), encoding="utf-8") as f:
+        assert "Writes invoices --- fast --- in the company format" in f.read()
+    _, warnings = skill_kit.check(folder)
+    assert warnings == [".env stays out of the zip: it may hold passwords"], warnings
+
+    text = GOOD.replace("name: invoice-writer", "name: pointers").replace(
+        "references/format.md", "../shared/rules.md").replace("`scripts/fill.py`", "`node_modules/x.js`")
+    folder = make(root, "pointers", {"SKILL.md": text, "node_modules/x.js": "x"})
+    make(root, "shared", {"rules.md": "x"})
+    _, warnings = skill_kit.check(folder)
+    assert any("../shared/rules.md, which is outside the folder" in w for w in warnings), warnings
+    assert any("node_modules/x.js, which is left out of the zip" in w for w in warnings), warnings
+    print("own folder: packed twice into itself and still only the skill, .env and .git left out, the whole "
+          "description in the guide; pointers outside the folder or left out of the zip warned about")
+
+
 def broken(root):
     front = "---\nname: {name}\ndescription: {desc}\n{more}---\n\nBody.\n"
     cases = {
@@ -112,6 +143,7 @@ def windows(root):
 if __name__ == "__main__":
     with tempfile.TemporaryDirectory() as tmp:
         good_skill(tmp)
+        inside(tmp)
         broken(tmp)
         advice(tmp)
         windows(tmp)

@@ -24,9 +24,9 @@ from pathlib import Path
 import yaml
 
 KEYS = {"name", "description", "license", "allowed-tools", "metadata", "compatibility"}
-SKIP_DIRS = {"__pycache__", "node_modules"}          # left out at any depth
+SKIP_DIRS = {"__pycache__", "node_modules", ".git", ".venv", "venv"}      # left out at any depth
 SKIP_TOP = {"evals"}                                 # left out only at the top of the folder
-SKIP_FILES = {".DS_Store"}
+SKIP_FILES = {".DS_Store", ".env", "Thumbs.db"}      # .env may hold passwords
 SKIP_GLOBS = ("*.pyc",)
 LINK = re.compile(r"\]\((?!https?:|mailto:|#)([^)\s]+)\)")                  # [text](references/x.md)
 CODE_PATH = re.compile(r"`((?:[\w.-]+/)+[\w.-]+\.\w+)`")                    # `scripts/fill.py`
@@ -116,9 +116,19 @@ def check(folder):
     # Word files is a path inside a document, not one of the skill's files.
     pointed = {link.split("#")[0] for link in LINK.findall(body)}
     pointed |= {path for path in CODE_PATH.findall(body) if (folder / Path(path).parts[0]).is_dir()}
+    packed, root = {f.as_posix() for f in files(folder)}, folder.resolve()
     for target in sorted(pointed):
-        if target and Path(target).parts[0] not in SKIP_TOP and not (folder / target).exists():
+        if not target or Path(target).parts[0] in SKIP_TOP:
+            continue
+        path = (folder / target).resolve()
+        if not path.is_relative_to(root):
+            warnings.append(f"SKILL.md points to {target}, which is outside the folder and does not go into the zip")
+        elif not path.exists():
             warnings.append(f"SKILL.md points to {target}, which is not in the folder")
+        elif path.is_file() and path.relative_to(root).as_posix() not in packed:
+            warnings.append(f"SKILL.md points to {target}, which is left out of the zip")
+    if (folder / ".env").exists():
+        warnings.append(".env stays out of the zip: it may hold passwords")
     return errors, warnings
 
 
@@ -154,22 +164,27 @@ Skills work on the Pro, Max, Team and Enterprise plans.
 
 def pack(folder, out_dir=".", example=None):
     """Write <folder name>.zip with the folder at its root, as Claude expects, and the install guide
-    INSTALL-<folder name>.md. Returns the zip's path."""
+    INSTALL-<folder name>.md. Returns the zip's path and how many files went in."""
     folder = Path(folder).resolve()
     os.makedirs(out_dir, exist_ok=True)
-    target = Path(out_dir) / f"{folder.name}.zip"
+    target = (Path(out_dir) / f"{folder.name}.zip").resolve()
+    # Listed before the zip exists: with -o inside the folder it would otherwise take itself in, and the zip
+    # and guide of an earlier run stay out.
+    made = {Path(f"{folder.name}.zip"), Path(f"INSTALL-{folder.name}.md")}
+    entries = [rel for rel in files(folder) if rel not in made and (folder / rel).resolve() != target]
     with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as z:
-        for rel in files(folder):
+        for rel in entries:
             if rel == Path("SKILL.md"):
                 z.writestr(str(Path(folder.name) / rel), clean((folder / rel).read_text(encoding="utf-8")))
             else:
                 z.write(folder / rel, str(Path(folder.name) / rel))
     text = clean((folder / "SKILL.md").read_text(encoding="utf-8"))
-    description = " ".join(str(yaml.safe_load(text.split("---")[1])["description"]).split())
+    front = re.match(r"^---\n(.*?)\n---(?:\n|$)", text, re.DOTALL).group(1)     # as check reads it
+    description = " ".join(str(yaml.safe_load(front)["description"]).split())
     ask = f'ask for the task, for example: "{example}"' if example else "ask for the task the skill handles"
     guide = GUIDE.format(name=folder.name, ask=ask, description=description)
     (Path(out_dir) / f"INSTALL-{folder.name}.md").write_text(guide, encoding="utf-8")
-    return target
+    return target, len(entries)
 
 
 def main(argv=None):
@@ -187,8 +202,8 @@ def main(argv=None):
     if errors:
         return 1
     if a.action == "pack":
-        target = pack(a.folder, a.out, a.example)
-        print(f"wrote {target} with {len(files(a.folder))} files, and INSTALL-{target.stem}.md")
+        target, count = pack(a.folder, a.out, a.example)
+        print(f"wrote {target} with {count} files, and INSTALL-{target.stem}.md")
     else:
         print(f"ok: {len(files(a.folder))} files would be packed")
     return 0

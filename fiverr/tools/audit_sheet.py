@@ -65,7 +65,7 @@ BROKEN = "#REF!"  # ia-ok
 GOOGLE = re.compile(r'__xludf\.DUMMYFUNCTION\(\s*"\s*([A-Za-z][\w.]*)\s*\(', re.I)
 SHEET_REF = re.compile(r"^(?:(?P<sheet>'(?:[^']|'')+'|[^'!\[\]]+)!)?(?P<addr>[^!]+)$")
 NUMBER_TEXT = re.compile(r"^(?:[$€£¥]|R\$)?\s?[-+]?(?:\d{1,3}(?:[,.  ]\d{3})+|\d+)(?:[.,]\d+)?\s?(?:%|[$€£])?$")
-OTHER_FILE = re.compile(r"\[\d+\]")   # [1]Sheet1!A1, how a file stores a link to another workbook
+OTHER_FILE = re.compile(r"'?\[\d+\]")   # [1]Sheet1!A1 or '[1]My Sheet'!A1: a link to another workbook
 CELL = re.compile(r"(?<![\w.])(\$?)([A-Z]{1,3})(\$?)(\d+)(?![\w.(])")
 COLUMNS = re.compile(r"^(\$?)([A-Z]{1,3}):(\$?)([A-Z]{1,3})$")
 ROWS = re.compile(r"^(\$?)(\d+):(\$?)(\d+)$")
@@ -99,8 +99,9 @@ def recalculate(paths, work):
     (profile / "user" / "registrymodifications.xcu").write_text(RECALC, encoding="utf-8")
     copies = []
     for i, path in enumerate(paths):
-        copies.append(os.path.join(work, f"in{i}{os.path.splitext(path)[1].lower()}"))
-        shutil.copyfile(path, copies[-1])
+        if os.path.isfile(path):                    # a missing file comes back as None, the others are done
+            copies.append(os.path.join(work, f"in{i}{os.path.splitext(path)[1].lower()}"))
+            shutil.copyfile(path, copies[-1])
     out = os.path.join(work, "out")
     proc = subprocess.Popen(["soffice", "--headless", "--norestore", f"-env:UserInstallation={profile.as_uri()}",
                              "--convert-to", "xlsx", "--outdir", out, *copies], env=dict(os.environ, HOME=work),
@@ -425,6 +426,7 @@ def audit(path, recalculated):
         count = defaultdict(lambda: [0, 0, 0])   # col -> numbers, numbers typed as text, other text
         for (r, c), v in cells.items():
             top[(title, c)] = min(r, top.get((title, c), r))
+        mine = []                                   # this sheet's numbers typed as text
         for (r, c), v in cells.items():
             if r == top[(title, c)]:
                 continue                            # the first cell of a column is usually its heading
@@ -433,9 +435,10 @@ def audit(path, recalculated):
             elif v.data_type == "s" and looks_numeric(v.value):
                 count[c][1] += 1
                 textual[(title, r, c)] = v.value
+                mine.append((title, r, c))
             elif v.data_type == "s":
                 count[c][2] += 1
-        for cell in [k for k in textual if k[0] == title]:
+        for cell in mine:
             n, t, o = count[cell[2]]
             if n >= 3 and n >= (n + t + o) / 2:
                 textual[cell] = (textual[cell], True)
@@ -452,10 +455,11 @@ def audit(path, recalculated):
         if target:
             files.append(re.split(r"[\\/]", target)[-1])
 
-    odd = []
+    odd, by_sheet = [], defaultdict(dict)
+    for (t, r, c), tokens_ in toks.items():     # once, not once a sheet
+        by_sheet[t][(r, c)] = tokens_
     for title, formulas in sheets.items():
-        mine = {(r, c): toks[(t, r, c)] for t, r, c in toks if t == title}
-        odd += [(where(title, r, c), text, want) for (r, c), text, want in odd_ones(formulas, mine)]
+        odd += [(where(title, r, c), text, want) for (r, c), text, want in odd_ones(formulas, by_sheet[title])]
 
     newer, google = Counter(), Counter()
     for cell, ks in kinds.items():
@@ -562,6 +566,9 @@ def audit_files(paths):
     try:
         found = []
         for path, done in zip(paths, recalculate(paths, work)):
+            if not os.path.isfile(path):
+                found.append({"name": path, "failed": True, "reason": "the file was not found"})
+                continue
             try:
                 found.append(audit(path, done))
             except Exception as e:   # one unreadable file should not stop the others
@@ -606,6 +613,9 @@ def compare(before, after):
     """What changed from one version of a file to the other, both recalculated in LibreOffice."""
     work = tempfile.mkdtemp(prefix="compare-")
     try:
+        missing = [p for p in (before, after) if not os.path.isfile(p)]
+        if missing:
+            return {"failed": True, "names": (before, after), "reason": f"{missing[0]} was not found"}
         done = recalculate([before, after], work)
         if not all(done):
             return {"failed": True, "names": (before, after)}
@@ -619,12 +629,14 @@ def compare(before, after):
     def norm(cell, text):
         return signature(tokens(text), cell[1], cell[2]) if text else None
 
-    formulas = [(where(*k), f0.get(k), f1.get(k)) for k in sorted(set(f0) | set(f1), key=key)
+    # A formula replaced by its value (paste values), or the other way: the side without a formula shows
+    # the value typed there, so the cell does not look cleared.
+    formulas = [(where(*k), f0.get(k, t0.get(k)), f1.get(k, t1.get(k))) for k in sorted(set(f0) | set(f1), key=key)
                 if norm(k, f0.get(k)) != norm(k, f1.get(k))]
     typed = [(where(*k), t0.get(k), t1.get(k)) for k in sorted(set(t0) | set(t1), key=key)
              if not same(t0.get(k), t1.get(k)) and k not in f0 and k not in f1]
-    results = [(where(*k), r0.get(k), r1.get(k)) for k in sorted(set(r0) | set(r1), key=key)
-               if not same(r0.get(k), r1.get(k))]
+    results = [(where(*k), r0.get(k, t0.get(k)), r1.get(k, t1.get(k))) for k in sorted(set(r0) | set(r1), key=key)
+               if not same(r0.get(k, t0.get(k)), r1.get(k, t1.get(k)))]
     return {"failed": False, "names": (before, after), "added": [s for s in sheets1 if s not in sheets0],
             "removed": [s for s in sheets0 if s not in sheets1], "formulas": formulas, "typed": typed,
             "results": results}
@@ -634,12 +646,13 @@ def describe_changes(c):
     before, after = c["names"]
     lines = [f"{before} -> {after}"]
     if c["failed"]:
-        return lines + ["  LibreOffice could not open one of the two files."]
+        return lines + [f"  {c.get('reason') or 'LibreOffice could not open one of the two files'}."]
     if c["added"] or c["removed"]:
         lines.append(f"  Sheets added: {', '.join(c['added']) or 'none'}; removed: {', '.join(c['removed']) or 'none'}")
 
     def shown(v):
-        return "(empty)" if v in (None, "") else short(v, 40) if isinstance(v, str) else f"{v:g}" \
+        # Ten significant digits: 12345.67 -> 12345.68 must not show as 12345.7 on both sides.
+        return "(empty)" if v in (None, "") else short(v, 40) if isinstance(v, str) else f"{v:.10g}" \
             if isinstance(v, float) else short(v, 40)
 
     for title, items in (("Formulas changed", c["formulas"]), ("Typed values changed", c["typed"]),
