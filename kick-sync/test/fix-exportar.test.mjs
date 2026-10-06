@@ -195,16 +195,22 @@ test('o 9:16 a gravar tranca o editor; fechar pára-o, e um 16:9 cancelado não 
     await previaDeVerdade(p, 5000);
 
     await p.click('#guardarRetrato');
-    await p.waitForFunction(() => window.__estado.clipe?.aGravar === true, null, { timeout: 20000 });
-    for (const id of ['inicioMenos', 'fimMais', 'verClipe', 'canalClipe', 'guardarClipe', 'modoDois']) {
-      assert.equal(await p.evaluate((i) => document.getElementById(i).disabled, id), true,
-        `#${id} ficou vivo durante a gravação`);
-    }
-    const x0 = await p.evaluate(() => window.__estado.clipe.rects[0].x);
-    await p.focus('#recortes .recorte');
-    await p.keyboard.press('ArrowLeft');
-    assert.equal(await p.evaluate(() => window.__estado.clipe.rects[0].x), x0,
-      'o recorte mexeu-se por baixo da gravação');
+    // Tudo lido no mesmo instante em que a gravação arranca, na página: com a máquina
+    // carregada (a bateria inteira a correr) o vídeo de teste pode acabar em poucos segundos,
+    // e a gravação acaba com ele e destranca o editor, como deve.
+    const visto = await (await p.waitForFunction(() => {
+      const c = window.__estado.clipe;
+      if (c?.aGravar !== true) return null;
+      const vivos = ['inicioMenos', 'fimMais', 'verClipe', 'canalClipe', 'guardarClipe', 'modoDois']
+        .filter((i) => !document.getElementById(i).disabled);
+      const x0 = c.rects[0].x;
+      const caixa = document.querySelector('#recortes .recorte');
+      caixa.focus();
+      caixa.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+      return { vivos, mexeu: c.rects[0].x !== x0 };
+    }, null, { timeout: 20000, polling: 10 })).jsonValue();
+    assert.deepEqual(visto.vivos, [], 'estes ficaram vivos durante a gravação');
+    assert.equal(visto.mexeu, false, 'o recorte mexeu-se por baixo da gravação');
 
     // Esc fecha, e fechar pára a gravação: nenhum ficheiro, nenhum erro num modal escondido.
     await p.keyboard.press('Escape');

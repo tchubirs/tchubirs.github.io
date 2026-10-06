@@ -80,8 +80,11 @@
 
   /* ── estado ──────────────────────────────────────────────────────────── */
   /* Não são acentos: pertencem à informação, e não à decoração. */
-  --perigo: #E0574F;
-  --perigo-eco: #e0574f1f;
+  /* O vermelho é o texto dos avisos (12,5 px), e tem de se ler em todas as
+     superfícies e sobre o seu próprio eco: 5,3:1 no pior caso (--sup-3) e
+     4,6:1 sobre o eco. O #E0574F de antes dava 4,2:1 no botão do ao vivo. */
+  --perigo: #EE7068;
+  --perigo-eco: #ee706818;
   --ok: #5FAE72;             /* esteve no ar, ficou pronto */
   --ok-eco: #5fae7226;
   --aviso: #D9A441;

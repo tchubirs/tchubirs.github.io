@@ -214,6 +214,20 @@ test('cada clipe sabe a que kill pertence', () => {
   assert.deepEqual(soASegunda.map((c) => c.prefixo), ['02a', '02b']);
 });
 
+// Numa noite de evento passa-se das cem kills. Com dois algarismos o editor
+// punha o 100a, o 101a... entre o 09 e o 10: o numero tem de ter a largura da
+// montagem inteira.
+test('com cem kills ou mais, os nomes continuam a cair por ordem', () => {
+  const lista = Array.from({ length: 120 }, (_, i) => novoMomento(T + i * 10_000, 'eu'));
+  const plano = planoDaMontagem(lista, ['eu']);
+  const nomes = plano.map((c) => c.prefixo);
+  assert.deepEqual([...nomes].sort(), nomes, 'por ordem de bytes, como o editor os poe');
+  assert.equal(nomes[0], '001a');
+  assert.equal(nomes[119], '120a');
+  // E abaixo de cem fica como estava.
+  assert.equal(planoDaMontagem(lista.slice(0, 12), ['eu'])[0].prefixo, '01a');
+});
+
 // ── o combate inteiro, e as margens por fora ────────────────────────────────
 //
 // "O 8 é o mais próximo de ser um clipe correcto, porém falta tempo antes e

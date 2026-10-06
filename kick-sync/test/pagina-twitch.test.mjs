@@ -301,7 +301,7 @@ test('os botões de tempo dizem para que lado andam, em todas as línguas',
       assert.match(await texto('mais10s'), /^\+/, idioma);
       assert.match(await texto('mais1m'), /^\+/, idioma);
       assert.notEqual(await texto('menos1m'), await texto('mais1m'));
-      assert.equal(await p.evaluate(() => document.documentElement.lang), idioma);
+      assert.equal(await p.evaluate(() => document.documentElement.lang), idioma === 'pt' ? 'pt-BR' : idioma);
       await p.close();
     }
   });

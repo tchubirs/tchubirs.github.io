@@ -23,7 +23,7 @@ import {
 import { agruparPorNoite, rotuloDaNoite } from './noites.js';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
-  alternarVitima, filtrar, temMorte, clipesDoMomento, comAjuste,
+  alternarVitima, filtrar, temMorte, clipesDoMomento, comAjuste, numeroNaMontagem,
 } from './momentos.js';
 import {
   planearCorte, executarCorte, nomeDoFicheiro, largarOQueNaoServe, oQueFalta,
@@ -92,6 +92,11 @@ const estado = {
   // e um tiro e passa a procurar O MESMO SOM.
   estouros: [],
   exemplo: null,
+  // O que o "quem morreu" viu em cada kill: as imagens, as notas e se a caixa
+  // esta aberta. Vivia so no DOM, e o primeiro clique num cartao redesenhava a
+  // lista e levava as imagens todas; na busca automatica nem chegavam a ver-se.
+  // So em memoria: sao imagens, e voltar a olhar e um clique.
+  olhares: new Map(),
   tique: 0,
   selecao: new Set(),
   filtro: 'todos',
@@ -988,6 +993,15 @@ function verMomento(ms) {
   estado.previa = clipe
     ? { ms, de: clipe.deMs, ate: clipe.ateMs }
     : { ms, de: ms - (m.protagonistaAntesS ?? 5) * 1000, ate: ms + (m.protagonistaDepoisS ?? 2) * 1000 };
+  // E o ângulo é o MESMO que vai para o ficheiro: o de quem matou. Tocava o que
+  // estivesse em foco, e quem revia quinze kills a olhar para a vítima aprovava
+  // clipes que não tinha visto; com esse ângulo fora do ar nesse instante, a
+  // prévia nem andava. É o mesmo gesto de carregar no quadrado dele.
+  if (m.protagonista && !ehPrincipal(m.protagonista) && estado.linhas.some((l) => l.slug === m.protagonista)) {
+    if (ehFoco(m.protagonista)) estado.focos = [m.protagonista, ...estado.focos.filter((s) => s !== m.protagonista)];
+    else estado.focos = [m.protagonista];
+    aplicarFoco();
+  }
   // Sair da pausa antes de saltar, e nao depois: o `irPara` e que manda tocar.
   if (estado.parado) alternarPausa();
   irPara(estado.previa.de);
@@ -1622,10 +1636,24 @@ async function procurarKills() {
   const botao = $('procurarKills');
   const nota = $('estadoMontagem');
 
+  // Tudo no relógio da noite, que é o dos momentos e o do cursor. O início e o
+  // fim do canal estão no relógio do VOD dele, e o ajuste leva de um ao outro:
+  // misturar os dois punha cada kill fora do sítio pelo ajuste inteiro.
+  const nudge = estado.nudges[canal] || 0;
+  const inicio = linha.inicio - nudge;
+  const fim = linha.fim - nudge;
   const pedido = Number($('janelaAuto').value) * 1000;
-  const deMs = Math.max(linha.inicio, estado.agoraMs);
-  const ateMs = pedido ? Math.min(linha.fim, deMs + pedido) : linha.fim;
-  if (!(ateMs > deMs)) return;
+  // "A noite toda" é a noite toda. Começava no cursor, e com o cursor a meio
+  // metade da noite ficava por ouvir com o rótulo a prometer tudo.
+  const deMs = pedido ? Math.max(inicio, estado.agoraMs) : inicio;
+  const ateMs = pedido ? Math.min(fim, deMs + pedido) : fim;
+  nota.classList.remove('mau');
+  if (!(ateMs > deMs)) {
+    // O cursor depois do fim do canal. O clique não fazia nada e não dizia
+    // nada, que é o pior dos dois mundos: parece avariado.
+    nota.textContent = t('auto.depoisDoFim', { canal, hora: `${relogioCurto(fim)}Z` });
+    return;
+  }
 
   const mb = custoVarrerMB(ateMs - deMs);
   if (!confirm(t('auto.custo', { min: Math.round((ateMs - deMs) / 60000), mb, canal }))) return;
@@ -1633,13 +1661,13 @@ async function procurarKills() {
   const controlo = new AbortController();
   estado.varredura = controlo;
   trocarRotulo(botao, 'montagem.parar');
-  nota.classList.remove('mau');
 
   try {
     const r = await varrerNoite({
       linha,
       deMs,
       ateMs,
+      nudgeMs: nudge,
       sinal: controlo.signal,
       // 24 kHz, e nao os 8 do alinhamento: o tiro vive no agudo.
       lerSom: (l, quandoMs, duracaoS, opcoes) => somDoCanal(l, quandoMs, duracaoS, { ...opcoes, taxa: TAXA_TIROS }),
@@ -1651,6 +1679,9 @@ async function procurarKills() {
     });
 
     estado.estouros = r.estouros || [];
+    // Os bocados que a Kick nao mandou, ditos. Sem isto um buraco de rede a
+    // meio da noite passava por uma hora sem tiroteios.
+    const falhas = r.falhados ? t('auto.falhados', { n: r.falhados }) : '';
     if (!r.candidatos.length) {
       // Dizer o que se ouviu, e nao so que nao se achou. "Da isso, porem eu sei
       // que ta tendo tiroteio" — e sem estes tres numeros nao ha como saber se
@@ -1660,7 +1691,8 @@ async function procurarKills() {
       nota.textContent = t('auto.nenhum', { canal })
         + (!o ? ''
           : !o.altos ? t('auto.ouviNada')
-            : t('auto.ouvi', o));
+            : t('auto.ouvi', o))
+        + falhas;
       return;
     }
 
@@ -1677,27 +1709,42 @@ async function procurarKills() {
     guardar();
 
     // E agora a outra metade: quem morreu em cada um.
+    //
+    // Com um canal só não há ecrãs para comparar, e o botão dessa parte nem é
+    // desenhado. A busca chamava-a na mesma, rebentava num null, e a mensagem
+    // falava de uma sincronia que ele nunca pediu.
     let comMorte = 0;
-    for (const [i, c] of r.candidatos.entries()) {
+    for (const [i, c] of (soUmCanal() ? [] : r.candidatos).entries()) {
       if (controlo.signal.aborted) break;
       nota.textContent = t('auto.aVer', { feito: i + 1, total: r.candidatos.length });
-      const antes = estado.momentos.find((m) => Math.abs(m.ms - c.ms) < 2000);
+      // A kill DESTE canal. Uma marca de outro streamer a menos de dois
+      // segundos é outra kill, e não pode ser re-cronometrada por esta.
+      const antes = estado.momentos.find((m) => m.protagonista === canal && Math.abs(m.ms - c.ms) < 2000);
       if (!antes) continue;
       // eslint-disable-next-line no-await-in-loop
       const houve = await verQuemMorreu(antes.ms, { silencioso: true });
       if (houve) comMorte++;
     }
 
-    nota.textContent = t('auto.achei', { n: r.candidatos.length, canal })
-      + (comMorte ? t('auto.comMorte', { n: comMorte }) : '');
+    // Redesenhar PRIMEIRO, e só depois escrever o resultado: o `pintarMomentos`
+    // acaba a pôr o resumo da montagem nesta mesma linha, e o "N tiroteios em X"
+    // de uma busca de minutos sumia no instante em que aparecia.
     pintarMomentos();
     guardar();
+    nota.textContent = t('auto.achei', { n: r.candidatos.length, canal })
+      + (comMorte ? t('auto.comMorte', { n: comMorte }) : '')
+      + falhas;
   } catch (e) {
     nota.classList.add('mau');
+    // O erro desta busca é desta busca: o `alinhar.erro` falava de sincronia e
+    // mandava alinhar à mão, que não é o que falhou nem o que resolve.
     nota.textContent = e.name === 'AbortError' ? t('alinhar.cancelado')
       : e.name === 'SEM-DESCODIFICADOR' ? t('auto.semCodec')
-        : t('alinhar.erro', { erro: e.message });
+        : t('auto.erro', { canal });
   } finally {
+    // No `finally`, e não no fim do caminho feliz: a busca que não acha nada
+    // sai mais cedo, e o botão ficava com o Parar até recarregar a página, com
+    // a mensagem a mandar escolher outro trecho.
     estado.varredura = null;
     trocarRotulo(botao, 'auto.botao');
   }
@@ -1745,12 +1792,17 @@ function marcarKill() {
  * é pior do que não existir.
  */
 async function verQuemMorreu(ms, { silencioso = false } = {}) {
+  const momento = estado.momentos.find((m) => m.ms === ms);
+  if (!momento) return false;
+  // A linha da lista pode não estar desenhada, e a conta não precisa dela.
+  // O filtro "com vítima" (que se guarda de uma noite para a outra) esconde
+  // justamente as kills novas da busca automática, e era aí que a busca
+  // desistia calada de ver quem morreu em todas.
   const li = $('listaMomentos').querySelector(`li[data-ms="${ms}"]`);
-  if (!li) return false;
-  const caixa = li.querySelector('.olhar');
-  const botao = li.querySelector('.verMortes');
-  botao.disabled = true;
-  if (!silencioso) {
+  const caixa = li?.querySelector('.olhar');
+  const botao = li?.querySelector('.verMortes');
+  if (botao) botao.disabled = true;
+  if (!silencioso && caixa) {
     caixa.hidden = false;
     caixa.innerHTML = `<span class="nota">${t('montagem.aOlhar')}</span>`;
   }
@@ -1789,13 +1841,18 @@ async function verQuemMorreu(ms, { silencioso = false } = {}) {
         notas[l.slug] = null;
       }
       vistos += 1;
-      if (!silencioso) {
+      if (!silencioso && caixa) {
         caixa.innerHTML = `<span class="nota">${t('montagem.aOlharQuantos',
           { feito: vistos, total: estado.linhas.length })}</span>`;
       }
     }));
 
-    ({ sugeridos, ordenados } = quemMorreu(notas));
+    // O protagonista entra na conta como termo de comparação, e nunca como
+    // sugestão. A saquear o morto o ecrã dele também escurece, e ficava com um
+    // dos dois lugares: "parece que morreu: tchubi", a segunda vítima de fora,
+    // a bissecção a acertar o instante pelo ecrã DELE, e a kill contada como
+    // "com vítima identificada" sem vítima nenhuma.
+    ({ sugeridos, ordenados } = quemMorreu(notas, { excluir: [momento.protagonista] }));
     // Marcar já os sugeridos: o objectivo é ele não ter de escolher nada
     // quando a página acertou.
     if (sugeridos.length) {
@@ -1836,24 +1893,38 @@ async function verQuemMorreu(ms, { silencioso = false } = {}) {
 
   const msFinal = afinado ?? ms;
 
-  // Redesenhar a lista PRIMEIRO, e só depois pôr os cartões.
+  // O que se viu fica guardado, e é o `pintarMomentos` que desenha os cartões.
   //
-  // Ao contrário, os cartões apareciam e desapareciam no mesmo instante: o
-  // `pintarMomentos` no fim reconstruía a linha inteira e levava-os com ela.
+  // Viviam só no DOM: o primeiro clique num cartão redesenhava a lista e
+  // levava-os todos, e ver a segunda vítima obrigava a ir buscar outra vez um
+  // frame a cada canal. Em busca automática ficam guardados mas fechados:
+  // vinte tiroteios abertos ao mesmo tempo eram uma página de dois metros, e o
+  // "Identificar vítimas" dessa kill abre-os sem voltar a olhar.
+  estado.olhares.delete(ms);
+  estado.olhares.set(msFinal, {
+    notas,
+    imagens,
+    sugeridos,
+    ordenados,
+    acertei: afinado != null && afinado !== ms ? afinado : null,
+    aberto: !silencioso,
+  });
   pintarMomentos();
-  const li2 = $('listaMomentos').querySelector(`li[data-ms="${msFinal}"]`);
-  const caixa2 = li2?.querySelector('.olhar');
-  if (!caixa2) return sugeridos.length > 0;
-  // Em busca automática os cartões ficam guardados mas fechados: vinte
-  // tiroteios abertos ao mesmo tempo eram uma página de dois metros.
-  caixa2.hidden = silencioso;
+  return sugeridos.length > 0;
+}
 
+/** Os cartões de uma kill, a partir do que o "quem morreu" guardou dela. */
+function cartoesDoOlhar(m, o) {
   const cartoes = estado.linhas.map((l) => {
-    const n = notas[l.slug];
-    const eSugerido = sugeridos.includes(l.slug);
-    const posicao = ordenados.findIndex((o) => o.canal === l.slug);
-    return `<button class="cartao ${eSugerido ? 'morreu' : ''}" data-canal="${escapar(l.slug)}">`
-      + (imagens[l.slug] ? `<img src="${imagens[l.slug]}" alt="">`
+    const n = o.notas[l.slug];
+    const eSugerido = o.sugeridos.includes(l.slug);
+    // O cartão diz o estado da kill AGORA, e não o da sugestão: é nele que ele
+    // corrige, e o clique tem de se ver no sítio onde foi dado.
+    const marcado = (m.vitimas || []).includes(l.slug);
+    const posicao = o.ordenados.findIndex((x) => x.canal === l.slug);
+    return `<button class="cartao ${marcado ? 'morreu' : ''}" data-canal="${escapar(l.slug)}"`
+      + ` aria-pressed="${marcado}">`
+      + (o.imagens[l.slug] ? `<img src="${o.imagens[l.slug]}" alt="">`
         : `<span class="semImagem">${t('montagem.semImagem')}</span>`)
       + `<b>${escapar(l.slug)}</b>`
       + `<span class="nota">${n ? `${eSugerido ? t('montagem.morreu') : ''}${posicao + 1}º`
@@ -1861,26 +1932,15 @@ async function verQuemMorreu(ms, { silencioso = false } = {}) {
       + '</button>';
   }).join('');
 
-  const semNada = !Object.values(notas).some(Boolean);
-  const dito = afinado != null && afinado !== ms
-    ? t('montagem.acerteiInstante', { hora: `${relogioCurto(afinado)}Z` })
+  const semNada = !Object.values(o.notas).some(Boolean);
+  const dito = o.acertei != null
+    ? t('montagem.acerteiInstante', { hora: `${relogioCurto(o.acertei)}Z` })
     : '';
-  caixa2.innerHTML = (semNada
+  return (semNada
     ? `<span class="nota mau">${t('montagem.naoVi')}</span>`
-    : `<span class="nota">${sugeridos.length
-      ? t('montagem.pareceMorreu', { lista: escapar(sugeridos.join(', ')) })
+    : `<span class="nota">${o.sugeridos.length
+      ? t('montagem.pareceMorreu', { lista: escapar(o.sugeridos.join(', ')) })
       : t('montagem.ninguem')}${dito}</span>`) + cartoes;
-
-  for (const b of caixa2.querySelectorAll('.cartao')) {
-    b.onclick = () => {
-      estado.momentos = estado.momentos.map((m) => (m.ms === msFinal ? alternarVitima(m, b.dataset.canal) : m));
-      pintarMomentos();
-      guardar();
-    };
-  }
-  const botao2 = li2.querySelector('.verMortes');
-  if (botao2) botao2.disabled = false;
-  return sugeridos.length > 0;
 }
 
 /**
@@ -1893,7 +1953,12 @@ async function verQuemMorreu(ms, { silencioso = false } = {}) {
 async function afinarInstante(apanhador, slug, ms, { janelaS = 6, precisaoMs = 250 } = {}) {
   const inicio = ms - janelaS * 1000;
   const fim = ms + janelaS * 1000;
-  const [vivo, morto] = await Promise.all([apanhador.frame(slug, inicio), apanhador.frame(slug, fim)]);
+  // Uma ponta de cada vez. O apanhador tem UM leitor por canal, e pedir as
+  // duas ao mesmo tempo mandava-o saltar para o fim antes de chegar ao
+  // princípio: as duas imagens saíam do mesmo sítio, iguais, e o limiar dava
+  // "sem diferença" em todas as kills. O instante nunca era acertado.
+  const vivo = await apanhador.frame(slug, inicio);
+  const morto = vivo ? await apanhador.frame(slug, fim) : null;
   if (!vivo || !morto) return null;
   const lim = limiar(medir(vivo.pixeis), medir(morto.pixeis));
   // Sem diferença entre as pontas não há fronteira nenhuma a encontrar, e
@@ -1931,6 +1996,8 @@ function pintarMomentos() {
   // marcado voltava a contar no "3 seleccionados" para sempre.
   const vivos = new Set(lista.map((m) => m.ms));
   for (const ms of estado.selecao) if (!vivos.has(ms)) estado.selecao.delete(ms);
+  // E o que o "quem morreu" viu de uma kill apagada vai com ela.
+  for (const ms of estado.olhares.keys()) if (!vivos.has(ms)) estado.olhares.delete(ms);
 
   $('listaMomentos').innerHTML = visiveis.map((m) => {
     // O numero e a posicao na montagem INTEIRA e nao na lista filtrada: e este
@@ -1945,17 +2012,24 @@ function pintarMomentos() {
     const dur = seg ? Math.round((seg.ateMs - seg.deMs) / 1000) : 0;
     // As fichas de quem morreu. Sem isto a página cortava todos os ângulos em
     // cada kill, e saíam quatro clipes de lixo por cada um bom.
+    //
+    // Cada ficha é um interruptor, e diz o estado em `aria-pressed`: a cor
+    // sozinha não chega a quem usa um leitor de ecrã. E a razão de uma ficha
+    // apagada vai no nome dela, e não só no `title`, que nem o toque nem os
+    // leitores de ecrã mostram.
     const fichas = sozinho ? '' : canais.filter((c) => c !== m.protagonista).map((c) => {
       const morreu = (m.vitimas || []).includes(c);
       const havia = filmava(c, m.ms - 3000, m.ms + 3000);
-      return `<button class="vit ${morreu ? 'sim' : ''}" data-canal="${escapar(c)}"`
-        + `${havia ? '' : ` disabled title="${t('montagem.naoFilmava')}"`}>${escapar(c)}</button>`;
+      return `<button class="vit ${morreu ? 'sim' : ''}" data-canal="${escapar(c)}" aria-pressed="${morreu}"`
+        + `${havia ? '' : ` disabled title="${t('montagem.naoFilmava')}"`
+          + ` aria-label="${escapar(c)}: ${t('montagem.naoFilmava')}"`}>${escapar(c)}</button>`;
     }).join('');
+    const olhar = estado.olhares.get(m.ms);
     return `<li data-ms="${m.ms}" class="${Math.abs(m.ms - estado.agoraMs) < 1500 ? 'aqui' : ''}`
       + `${temMorte(m) ? ' confirmada' : ''}">`
       + `<input type="checkbox" class="pega" ${estado.selecao.has(m.ms) ? 'checked' : ''}`
       + ` aria-label="${relogioCurto(m.ms)}">`
-      + `<b class="n">${String(i + 1).padStart(2, '0')}</b>`
+      + `<b class="n">${numeroNaMontagem(i, lista.length)}</b>`
       + `<span>${relogioCurto(m.ms)}Z</span>`
       + `<span class="quem">${escapar(m.protagonista || '—')}</span>`
       + `<button class="ver ${estado.previa?.ms === m.ms ? 'aVer' : ''}">`
@@ -1979,7 +2053,7 @@ function pintarMomentos() {
       + (sozinho ? '' : `<span class="vitimas${temMorte(m) ? ' ha' : ''}">`
         + `<span class="nota">${t(temMorte(m) ? 'montagem.matou' : 'montagem.quemMorreu')}</span>`
         + `${fichas}</span>`)
-      + '<div class="olhar" hidden></div></li>';
+      + `<div class="olhar"${olhar?.aberto ? '' : ' hidden'}>${olhar ? cartoesDoOlhar(m, olhar) : ''}</div></li>`;
   }).join('') || `<li class="nota">${t('montagem.vazia')}</li>`;
 
   for (const li of $('listaMomentos').querySelectorAll('li[data-ms]')) {
@@ -1996,7 +2070,22 @@ function pintarMomentos() {
       if (m) baixarMontagem([m]);
     };
     const vm = li.querySelector('.verMortes');
-    if (vm) vm.onclick = () => verQuemMorreu(ms);
+    if (vm) {
+      vm.onclick = () => {
+        // O que a busca automática viu e guardou fechado abre-se sem voltar a
+        // olhar: são dois frames por canal, e já foram buscados.
+        const o = estado.olhares.get(ms);
+        if (o && !o.aberto) { o.aberto = true; pintarMomentos(); return; }
+        verQuemMorreu(ms);
+      };
+    }
+    for (const b of li.querySelectorAll('.olhar .cartao')) {
+      b.onclick = () => {
+        estado.momentos = estado.momentos.map((m) => (m.ms === ms ? alternarVitima(m, b.dataset.canal) : m));
+        pintarMomentos();
+        guardar();
+      };
+    }
     li.querySelector('.fora').onclick = () => {
       estado.momentos = remover(estado.momentos, ms);
       pintarMomentos();
@@ -2424,7 +2513,10 @@ function aprenderCom(ms) {
   const perto = estado.estouros
     .filter((e) => Math.abs(e.ms - ms) < 4000)
     .sort((a, b) => b.altura - a.altura)[0];
-  if (!perto) { $('estadoMontagem').textContent = t('auto.semSom'); return; }
+  // A varredura correu (o botão só existe com estouros guardados), por isso
+  // "corra a detecção primeiro" não era o próximo passo: o que falta é um som
+  // alto perto DESTA kill.
+  if (!perto) { $('estadoMontagem').textContent = t('auto.semEstouroPerto'); return; }
 
   estado.exemplo = perto.recorte;
   const iguais = juntarPerto(parecidos(estado.exemplo, estado.estouros));
@@ -2432,10 +2524,24 @@ function aprenderCom(ms) {
 
   // A lista passa a ser esta. Os candidatos velhos eram o palpite; estes sao o
   // som que ele confirmou — deitar fora o palpite e o ponto todo.
-  const canal = estado.focos[0] || estado.linhas[0]?.slug;
-  const antigos = estado.momentos.filter((m) => !m.auto);
-  estado.momentos = [...antigos];
-  for (const g of iguais.slice(0, 60)) {
+  //
+  // O palpite, e só ele. Uma kill da busca em que ele já confirmou a vítima,
+  // ou já guardou o corte e o 9:16, é trabalho dele e fica. E o que sai pode
+  // voltar com o Anular, como num apagar à mão.
+  //
+  // Os achados são de quem foi OUVIDO, e não de quem está em foco no clique:
+  // ele foi espreitar outro ângulo e a lista inteira passava a cortar a POV
+  // errada.
+  const canal = perto.canal || estado.focos[0] || estado.linhas[0]?.slug;
+  const fica = (m) => !m.auto || temMorte(m) || m.ajuste;
+  const fora = estado.momentos.filter((m) => !fica(m));
+  estado.momentos = estado.momentos.filter(fica);
+  if (fora.length) {
+    estado.apagados = fora;
+    $('anularApagar').hidden = false;
+  }
+  const usados = iguais.slice(0, 60);
+  for (const g of usados) {
     estado.momentos = acrescentar(
       estado.momentos,
       novoMomento(g.ms, canal, { ...tamanhos(), auto: true, tiros: g.quantos }),
@@ -2443,7 +2549,9 @@ function aprenderCom(ms) {
   }
   pintarMomentos();
   guardar();
-  $('estadoMontagem').textContent = t('auto.aprendi', { n: iguais.length });
+  // O número dito é o que ficou na lista, e não o que se achou: com mais de
+  // sessenta, dizia setenta e mostrava sessenta.
+  $('estadoMontagem').textContent = t('auto.aprendi', { n: usados.length });
 }
 
 /**
@@ -3914,8 +4022,11 @@ async function abrirLinkKick() {
       combateDeMs: playlist.inicio, combateAteMs: playlist.fim });
   } catch (e) {
     nota.classList.add('mau');
-    nota.textContent = e.name === 'SEM-CLIPE' ? t('link.semClipe')
-      : t('alinhar.erro', { erro: e.message });
+    // Uma mensagem deste caixa, e não a da sincronia: essa dizia "a sincronia
+    // falhou, alinhe à mão", que não é o que falhou nem o que resolve, e
+    // colava o erro cru ("Failed to fetch", "clipe sem relógio") no meio do
+    // inglês e do espanhol.
+    nota.textContent = e.name === 'SEM-CLIPE' ? t('link.semClipe') : t('link.erro');
   } finally { botao.disabled = false; }
 }
 $('abrirLink').onclick = abrirLinkKick;

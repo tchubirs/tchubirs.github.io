@@ -58,6 +58,13 @@ Fontes no `ESTUDO.md` (136 afirmações conferidas na fonte, 44 descartadas).
 7. **Fácil de entender só de olhar.** Uma tela inicial com duas portas, um passo de cada vez, nomes de
    botão que dizem o que fazem, e um exemplo pronto para quem chega sem nada.
 
+**Andamento em 06/10, 12h:** 1, 2, 3, 6 e 7 feitos e testados (5 testes de browser do fluxo inteiro, e um
+teste contra a Kick real: 24 canais de Rust ao vivo no mapa em 5 s, lance aberto no segundo certo). Do 4, o
+mapa anda com o relógio e há um botão para ir ao ao vivo; seguir o ao vivo dentro da grelha fica para depois da
+rodada de correções. Também feito: picos do chat do time no mapa, e um exemplo pronto com o Rust ao vivo.
+Falta o 5. A busca pelo som precisa do descodificador de áudio da Kick (AAC): corre no Chrome e no Edge, e
+diz isso quando o browser não o tem.
+
 Depois do evento: índice do evento feito num servidor (chat e som de todos os 500, de uma vez), e
 integração com os dados de abates do servidor do evento quando o organizador os puder dar (o Rust Kick
 Off 2 publicou 20.702 abates com estatísticas por jogador).

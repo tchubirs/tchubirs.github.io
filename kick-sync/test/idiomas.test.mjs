@@ -87,7 +87,7 @@ test('as variaveis de cada frase sao as mesmas em todas as linguas', () => {
 const IGUAIS_DE_PROPOSITO = {
   // Nome do produto, simbolos de navegacao, e frases que sao so numeros e datas.
   en: new Set([
-    'app.nome', 'canais.vods', 'marca.feita',
+    'app.nome', 'canais.vods', 'marca.feita', 'evento.zoom',
     'tempo.menos1m', 'tempo.menos10s', 'tempo.mais10s', 'tempo.mais1m',
     'tempo.menos5m', 'tempo.menos3s', 'tempo.mais3s', 'tempo.mais5m',
     'montagem.umaKill', 'montagem.kills',
@@ -97,8 +97,10 @@ const IGUAIS_DE_PROPOSITO = {
   ]),
   // O espanhol e o portugues escrevem estas exactamente da mesma maneira.
   es: new Set([
-    // "Abrir evento" e "Evento" escrevem-se igual nas duas.
-    'evento.abrir', 'evento.semNome',
+    // "pico de chat" diz-se igual em português e em espanhol.
+    'evento.legendaPico',
+    // "Abrir evento", "Evento" e "Zoom" escrevem-se igual nas duas.
+    'evento.abrir', 'evento.semNome', 'evento.zoom',
     'app.nome', 'canais.vods', 'marca.feita', 'clipe.tempo',
     // "Abrir", "Editar", "Guardar ajustes" e "ajustado" escrevem-se igual.
     'link.abrir', 'fila.editar', 'alinhar.aComparar', 'montagem.aPreparar', 'montagem.ajustado',
