@@ -802,6 +802,7 @@ function limparPalco() {
   estado.players.clear();
   for (const tile of tiles()) tile.querySelector('video')?.pause?.();
   quadros.clear();
+  esquecerVista();
   $('palcoFoco').innerHTML = '';
   $('grade').innerHTML = '';
   $('faixas').querySelectorAll('.faixa').forEach((f) => f.remove());
@@ -979,6 +980,43 @@ const tiles = () => [...quadros.values()];
 const tileDe = (slug) => quadros.get(slug) || null;
 const ehFoco = (slug) => estado.focos.includes(slug);
 const ehPrincipal = (slug) => estado.focos[0] === slug;
+
+// Os quadros da grelha que estão fora da vista: abaixo da dobra, ou
+// escondidos pela procura da grelha.
+//
+// Cada salto movia todos os secundários para o novo instante, e cada um ia
+// buscar um pedaço de vídeo para isso. Com quinhentos ângulos eram quinhentos
+// pedidos por salto (uns 140 MB) para quadros que ninguém estava a ver. Um
+// quadro fora da vista fica com o leitor que tinha e só é posto no instante
+// certo quando volta a aparecer: é aí que alguém olha para ele.
+const foraDaVista = new Set();
+const porAcertar = new Set();
+const vigiaDaVista = typeof IntersectionObserver === 'function'
+  ? new IntersectionObserver((entradas) => {
+    for (const e of entradas) {
+      const slug = e.target.dataset.slug;
+      if (e.isIntersecting) {
+        foraDaVista.delete(slug);
+        if (porAcertar.delete(slug)) acertarSecundario(slug);
+      } else foraDaVista.add(slug);
+    }
+  })
+  : null;
+const naoSeVe = (slug) => foraDaVista.has(slug) && tileDe(slug) !== estado.aparte?.tile;
+function esquecerVista() {
+  vigiaDaVista?.disconnect();
+  foraDaVista.clear();
+  porAcertar.clear();
+}
+
+/** Pôr um secundário que voltou à vista no instante em que a grelha está. */
+function acertarSecundario(slug) {
+  const linha = estado.linhas.find((l) => l.slug === slug);
+  const tile = tileDe(slug);
+  if (!linha || !tile || ehFoco(slug)) return;
+  const r = onde(linha, estado.agoraMs, { nudgeMs: estado.nudges[slug] || 0 });
+  if (r.estado === 'toca') tocar(linha, r, tile.querySelector('video'), { alta: false, correr: false });
+}
 
 /**
  * Qual dos dois manda: o principal é o que tem som e o que corre em qualidade.
@@ -1284,6 +1322,7 @@ function montarGrade() {
   estado.players.clear();
   if (leitorFora) estado.players.set(ficaFora.dataset.slug, leitorFora);
   quadros.clear();
+  esquecerVista();
 
   for (const linha of estado.linhas) {
     if (ficaFora && linha.slug === ficaFora.dataset.slug) {
@@ -1402,6 +1441,7 @@ function montarGrade() {
     };
     $('grade').append(tile);
     quadros.set(linha.slug, tile);
+    vigiaDaVista?.observe(tile);
   }
   aplicarFoco();
 }
@@ -1521,7 +1561,11 @@ function irPara(quandoMs) {
     // olhar para os dois. Vem depois do principal, e não ao mesmo tempo — que
     // era o que fazia o par demorar o dobro a aparecer.
     for (const [l, r, v] of segundo) tocar(l, r, v, { alta: true, correr: true, comSom: temSom(l.slug) });
-    for (const [l, r, v] of secundarios) tocar(l, r, v, { alta: false, correr: false });
+    for (const [l, r, v] of secundarios) {
+      if (naoSeVe(l.slug)) { porAcertar.add(l.slug); continue; }
+      porAcertar.delete(l.slug);
+      tocar(l, r, v, { alta: false, correr: false });
+    }
   }, 220);
 }
 
