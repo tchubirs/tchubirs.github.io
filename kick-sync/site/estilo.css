@@ -1458,10 +1458,13 @@ body:has(#palco:not([hidden])) #evento:not(.comMapa) > :not(.barraEvento) { disp
 body:has(#palco:not([hidden])) #evento.comMapa .mapaRolo { height: 34vh; }
 body.mesa:has(#palco:not([hidden])) > #evento { flex: 0 0 auto; margin-bottom: var(--e2); padding: var(--e3) var(--e4); }
 .dica { margin: 0; }
-.reguaEvento { position: relative; height: 18px; color: var(--tinta-3); font-family: var(--letra-mono); font-size: var(--t-micro); }
+.reguaEvento { position: relative; height: 18px; margin: 0 1px; overflow: hidden; color: var(--tinta-3); font-family: var(--letra-mono); font-size: var(--t-micro); }
 .reguaEvento span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
 .mapaCaixa { display: grid; gap: var(--e3); grid-template-columns: minmax(0, 1fr); }
 @media (min-width: 1000px) { .mapaCaixa:has(#lance:not([hidden])) { grid-template-columns: minmax(0, 1fr) 320px; } }
+.mapaColuna { display: grid; gap: var(--e1); min-width: 0; }
+/* A altura é a do conteúdo até 62% do ecrã (posta pelo evento-ui.js): com dois times, uma caixa de
+   640 px era um buraco preto debaixo de quatro faixas. */
 .mapaRolo {
   position: relative; height: min(62vh, 640px); overflow-y: auto; overflow-x: hidden;
   background: var(--sup-1); border: 1px solid var(--linha); border-radius: var(--r-2); cursor: crosshair;

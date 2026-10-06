@@ -287,11 +287,16 @@
     <button id="fecharEvento" class="so-icone discreto" data-t-aria="evento.fechar" title="✕">✕</button>
   </div>
   <p class="nota dica" data-t="evento.dica">Clique numa faixa para escolher o streamer e o instante. Clique no nome de um time para abrir ou fechar. Ctrl e a roda do mouse aproximam o tempo.</p>
-  <div id="reguaEvento" class="reguaEvento" aria-hidden="true"></div>
+  <p id="avisosEvento" class="nota mau" hidden></p>
   <div class="mapaCaixa">
-    <div id="mapaRolo" class="mapaRolo" tabindex="0" data-t-aria="evento.mapa">
-      <canvas id="mapa"></canvas>
-      <div id="mapaAltura" class="mapaAltura"></div>
+    <!-- A régua mora na mesma coluna do mapa: com ela por cima da caixa toda, as horas ficavam
+         desalinhadas das faixas pela largura da borda e do painel do lance. -->
+    <div class="mapaColuna">
+      <div id="reguaEvento" class="reguaEvento" aria-hidden="true"></div>
+      <div id="mapaRolo" class="mapaRolo" tabindex="0" data-t-aria="evento.mapa">
+        <canvas id="mapa"></canvas>
+        <div id="mapaAltura" class="mapaAltura"></div>
+      </div>
     </div>
     <aside id="lance" class="lance" hidden>
       <h3 id="lanceTitulo" class="lanceTitulo"></h3>

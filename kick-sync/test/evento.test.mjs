@@ -1,0 +1,137 @@
+// O evento, de ponta a ponta, num browser a sério: colar o elenco, ver o mapa, clicar num lance, abrir
+// o lance com o time, voltar ao mapa, partilhar o link do lance e abri-lo noutra janela.
+//
+// A Kick é a de test/falsa.mjs: dois canais com vídeo (tchubi e outro, das 21:00 às 21:10 de 30/08) e
+// um terceiro que não existe.
+
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { kickFalsa, T } from './falsa.mjs';
+import { montarPalco, podeCorrer } from './palco.mjs';
+
+let PORTA = 0;
+const { abrir } = montarPalco((p) => { PORTA = p; });
+
+const ELENCO = 'Time Alfa: tchubi, outro\nTime Beta: terceiro';
+
+/** Clicar no mapa na faixa de `canal`, no instante `ms`. */
+async function clicarNoMapa(p, canal, ms) {
+  const alvo = await p.evaluate(({ canal: c, ms: m }) => {
+    const ev = window.__evento;
+    const rolo = document.getElementById('mapaRolo');
+    const l = ev.mapa.linhas.find((x) => x.canal === c);
+    const caixa = rolo.getBoundingClientRect();
+    const x = ((m - ev.vista.deMs) / (ev.vista.ateMs - ev.vista.deMs)) * rolo.clientWidth;
+    return { x: caixa.left + x, y: caixa.top + l.y - ev.topo + l.altura / 2 };
+  }, { canal, ms });
+  await p.mouse.click(alvo.x, alvo.y);
+}
+
+async function abrirEvento(p) {
+  await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+  await p.fill('#elenco', ELENCO);
+  await p.click('#abrirElenco');
+  await p.waitForFunction(() => window.__evento?.mapa && window.__evento.vista, null, { timeout: 15000 });
+}
+
+test('colar o elenco abre o mapa, com os times e quem não existe dito pelo nome',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'outro'] });
+    await abrirEvento(p);
+    assert.match(await p.locator('#resumoEvento').innerText(), /2 times · 3 canais · 2 com vídeo/);
+    assert.match(await p.locator('#avisosEvento').innerText(), /terceiro: não existe na Kick/);
+    // As portas saem do caminho: o que se faz a seguir é no mapa.
+    assert.equal(await p.locator('#portaEvento').isVisible(), false);
+    assert.equal(await p.locator('#entrada').isVisible(), false);
+    const canais = await p.evaluate(() => window.__evento.mapa.linhas.filter((l) => l.tipo === 'canal').map((l) => l.canal));
+    assert.deepEqual(canais, ['tchubi', 'outro', 'terceiro']);
+    assert.deepEqual(erros, []);
+  });
+
+test('um clique no mapa escolhe o lance, e "ver" abre o time naquele instante',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'outro'] });
+    await abrirEvento(p);
+    const ms = T + 5 * 60_000;
+    await clicarNoMapa(p, 'outro', ms);
+    await p.waitForSelector('#lance:not([hidden])');
+    assert.match(await p.locator('#lanceTitulo').innerText(), /^outro · /);
+    assert.match(await p.locator('#lanceTime').innerText(), /Time Alfa · 2 do time no ar/);
+    const escolhido = await p.evaluate(() => window.__evento.escolha.ms);
+    assert.ok(Math.abs(escolhido - ms) < 5000, `escolheu ${new Date(escolhido).toISOString()}`);
+
+    await p.click('#verLance');
+    await p.waitForSelector('.tile', { timeout: 15000 });
+    assert.equal(await p.locator('.tile').count(), 2, 'o time inteiro, os dois que estavam no ar');
+    const noite = await p.evaluate(() => ({ agora: window.__estado.agoraMs, focos: window.__estado.focos }));
+    assert.ok(Math.abs(noite.agora - escolhido) < 2000, 'o vídeo abre no instante do lance');
+    assert.deepEqual(noite.focos, ['outro'], 'e com quem se clicou em foco');
+
+    // O mapa encolhe numa barra, e volta com um botão.
+    assert.equal(await p.locator('#mapaRolo').isVisible(), false);
+    await p.click('#mostrarMapa');
+    assert.equal(await p.locator('#mapaRolo').isVisible(), true);
+    assert.equal(await p.locator('#mostrarMapa').getAttribute('aria-expanded'), 'true');
+    await p.click('#mostrarMapa');
+    assert.equal(await p.locator('#mapaRolo').isVisible(), false);
+    assert.deepEqual(erros, []);
+  });
+
+test('o link do lance abre o evento noutra janela, no mesmo instante',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'outro'] });
+    await abrirEvento(p);
+    const ms = T + 3 * 60_000;
+    await clicarNoMapa(p, 'tchubi', ms);
+    await p.waitForSelector('#lance:not([hidden])');
+    // Sem permissão de área de transferência o link aparece escrito, que é o que se lê aqui.
+    await p.evaluate(() => { Object.defineProperty(navigator, 'clipboard', { value: { writeText: () => Promise.reject(new Error('não')) } }); });
+    await p.click('#partilharEvento');
+    const url = await p.locator('#estadoPartilhaEvento').innerText();
+    assert.match(url, /#evento=[A-Za-z0-9_-]+&t=\d+$/);
+
+    const { p: q, erros: erros2 } = await abrir();
+    await kickFalsa(q, { canais: ['tchubi', 'outro'] });
+    await q.goto(url, { waitUntil: 'networkidle' });
+    await q.waitForFunction(() => window.__evento?.escolha, null, { timeout: 15000 });
+    const e = await q.evaluate(() => window.__evento.escolha);
+    assert.equal(e.canal, 'tchubi');
+    assert.ok(Math.abs(e.ms - ms) < 5000);
+    assert.equal(await q.locator('#nomeEvento').innerText(), await p.locator('#nomeEvento').innerText());
+    assert.deepEqual([...erros, ...erros2], []);
+  });
+
+test('fechar o evento devolve as duas portas',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'outro'] });
+    await abrirEvento(p);
+    await p.click('#fecharEvento');
+    assert.equal(await p.locator('#evento').isVisible(), false);
+    assert.equal(await p.locator('#portaEvento').isVisible(), true);
+    assert.equal(await p.locator('#entrada').isVisible(), true);
+    assert.deepEqual(erros, []);
+  });
+
+test('durante o jogo a busca pelo som não serve para achar rivais',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { cedoDemais, ATRASO_MIN } = await import('../site/evento-ui.js');
+    const agora = Date.parse('2026-10-06T12:00:00Z');
+    assert.equal(cedoDemais(agora - 5 * 60_000, ATRASO_MIN, agora), true, 'há 5 min: cedo demais');
+    assert.equal(cedoDemais(agora - 20 * 60_000, ATRASO_MIN, agora), false, 'há 20 min: pode');
+    assert.equal(cedoDemais(agora - 1000, 0, agora), false, 'o organizador pode tirar o atraso');
+
+    // Num link com um atraso enorme, o lance de agosto ainda é "recente": a busca recusa e diz porquê.
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'outro'] });
+    await abrirEvento(p);
+    await clicarNoMapa(p, 'tchubi', T + 4 * 60_000);
+    await p.waitForSelector('#lance:not([hidden])');
+    await p.evaluate(() => { window.__evento.atrasoMin = 10_000_000; });
+    await p.click('#procurarOutros');
+    assert.match(await p.locator('#estadoLance').innerText(), /trapaça/);
+    assert.deepEqual(erros, []);
+  });

@@ -37,6 +37,7 @@ import { MAXIMO_S, mover, janelaInicial, nomeDoClipe, posicaoDaCabeca } from './
 import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js';
 import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js';
 import { escapar } from './escapar.js';
+import { montarEvento } from './evento-ui.js';
 
 /* Os glifos dos controlos do vídeo são DESENHO e não emoji.
    Um ⏸ ou um 🔇 sai diferente em cada sistema — no iPhone sai a cores, no
@@ -104,6 +105,9 @@ const estado = {
   // estava. A lista de VOD de um canal não muda depois de a live acabar, e a
   // playlist de um VOD nunca muda — por isso ficam aqui, por canal e por VOD.
   vodsPorCanal: new Map(),
+  // As listas de VOD que o evento já leu (até 500 canais). Ficam só em memória: guardá-las com as da
+  // noite eram megabytes no localStorage a cada Carregar, para servir uma vez, quando o lance abre.
+  vodsDoEvento: new Map(),
   pecasLidas: new Map(),
   volume: {},
   parado: false,
@@ -362,7 +366,7 @@ async function carregar() {
   // people is what gets a free tool rate-limited for everyone on day one.
   for (const [i, nome] of nomes.entries()) {
     const chave = String(nome).trim().replace(/^@/, '').toLowerCase();
-    const memo = estado.vodsPorCanal.get(chave);
+    const memo = estado.vodsPorCanal.get(chave) || estado.vodsDoEvento.get(chave);
     // Um canal que já deu certo não se pede outra vez; um que deu erro
     // (rate-limit, rede) pede-se, porque da próxima pode dar.
     if (memo && memo.estado === 'ok') { canais.push(memo); continue; }
@@ -525,7 +529,9 @@ async function lerNoite(noite) {
   for (const { slug, v } of noite.itens) {
     if (!v.master) continue;
     const chave = `${slug}|${v.id}`;
-    const lida = estado.pecasLidas.get(chave);
+    // A playlist de um VOD acabado nunca muda; a de quem está no ar cresce a cada segmento. Guardada,
+    // abrir um lance de agora mostrava o vídeo de quando se carregou da primeira vez.
+    const lida = v.aoVivo ? null : estado.pecasLidas.get(chave);
     if (lida) {
       if (!porCanal.has(slug)) porCanal.set(slug, []);
       porCanal.get(slug).push(lida);
@@ -3728,8 +3734,11 @@ aplicarIdioma();
 // A sessao sobrevive a um F5, a um travanco e a um link partilhado. E volta a
 // carregar sozinha: devolver a caixa de texto preenchida mas vazia de video
 // obrigava a repetir a espera toda.
+// Um link de evento abre o evento, e não a última noite guardada: as duas ao mesmo tempo punham a
+// grelha da noite antiga por cima do mapa que o link pediu.
+const vemDeEvento = /[#&]evento=/.test(location.hash);
 const guardado = doLink(new URLSearchParams(location.search).get('s') || '')
-  || doLink(localStorage.getItem('replay') || '');
+  || (vemDeEvento ? null : doLink(localStorage.getItem('replay') || ''));
 
 reporVods();
 try { rolarPendente = Number(localStorage.getItem('replay.rolar')) || null; } catch { /* nada */ }
@@ -3742,6 +3751,30 @@ if (guardado) {
   estado.restaurar = guardado;
   if (guardado.canais.length) carregar();
 }
+
+// ── o evento ────────────────────────────────────────────────────────────────
+//
+// O mapa do evento entrega à página de sempre os canais de um lance e o instante dele. Daqui para a
+// frente é uma noite como outra qualquer: a grelha, o alinhamento, a montagem e o clipe.
+async function abrirLanceDoEvento(canais, ms, foco) {
+  $('canais').value = canais.join('\n');
+  // O lance manda: o instante e o foco são os dele, e as kills e a marca de uma noite anterior não
+  // vêm atrás.
+  estado.restaurar = { agora: ms, focos: foco ? [foco] : [], marca: null, momentos: [] };
+  guardar();
+  await carregar();
+  window.scrollTo({ top: 0 });
+}
+const evento = montarEvento({
+  abrirLance: abrirLanceDoEvento,
+  memorizarVods: (resultados) => {
+    estado.vodsDoEvento.clear();
+    for (const r of resultados) if (r?.estado === 'ok') estado.vodsDoEvento.set(r.slug, r);
+  },
+});
+// Para os testes de página, como o `__estado` da noite.
+window.__evento = evento.estado;
+if (vemDeEvento) evento.abrirDoLink();
 
 // O `beforeunload` fica como ultima rede: num telemovel muitas vezes nunca
 // corre, e por isso e que a gravacao a serio acontece a cada mudanca.
