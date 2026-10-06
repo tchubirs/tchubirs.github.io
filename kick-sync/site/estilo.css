@@ -449,6 +449,19 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 }
 .tile.semImagem { border-style: dashed; }
 
+/* Os players da Twitch (twitch.html). A Twitch pede pelo menos 400 px de
+   largura para o embed, e a barra de controlo do player fica em baixo: com o
+   quadro 16:9 do tile e o cabeçalho por cima, o fundo do player ficava
+   cortado e não se via o play nem o volume. Aqui o tile cresce com o player. */
+.grade.gradeTw { grid-template-columns: repeat(auto-fill, minmax(min(400px, 100%), 1fr)); }
+.tile.tw { aspect-ratio: auto; display: flex; flex-direction: column; cursor: default; }
+.tile.tw .cabeca {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--e2);
+  padding: var(--e2) var(--e3);
+}
+.tile.tw .quadro { aspect-ratio: 16/9; min-height: 225px; }
+.tile.tw .estadoTile { inset: auto var(--e3) 50% var(--e3); }
+
 /* Os controlos por cima do vídeo. UMA barra no fundo com dois grupos, e não
    um botão colado a cada canto: colados, batiam uns nos outros assim que o
    quadrado ficava pequeno — e com dezassete na grelha, todos ficam pequenos. */
