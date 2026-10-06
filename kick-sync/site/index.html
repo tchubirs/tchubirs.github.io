@@ -756,6 +756,12 @@
   </div>
 </div>
 
+<!-- Parar a sincronia pelo som que está a correr. Ela já sabia parar e
+     nenhum botão lhe chegava, e a única saída de uma noite inteira a ouvir
+     era fechar o separador. A montagem, a detecção e o corte de cada canal
+     param pelo próprio botão, que passa a dizer Parar enquanto correm. -->
+<button id="parar" class="parar" hidden data-t-titulo="tarefa.pararAjuda" title="Para a sincronia por áudio que está rodando"><svg class="ic ic-p" aria-hidden="true"><use href="#i-parar"/></svg><span data-t="tarefa.parar">Parar</span></button>
+
 <footer>
   <!-- A versao, a serio e visivel. O GitHub Pages serve com max-age=600 e um
        telemovel guarda o app.js antigo; sem isto, "ja corrigi" e "continua

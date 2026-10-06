@@ -17,6 +17,17 @@ const API = 'https://kick.com/api/v2';
 export const DESCONHECIDO = null;
 
 /**
+ * O slug da Kick para um nome escrito à mão: sem espaços nas pontas, sem o @
+ * da frente e em minúsculas.
+ *
+ * Num sítio só porque a caixa de texto guarda o nome como ele o escreveu
+ * ("Gaules", "@Coringa") e tudo o que vem da Kick traz o slug. Comparar os dois
+ * crus falhava calado: o ✕ não tirava o canal, o "você quis dizer" trocava
+ * nada e a ordem de adição mandava os nomes com maiúscula para o fim.
+ */
+export const slugDoNome = (nome) => String(nome || '').trim().replace(/^@/, '').toLowerCase();
+
+/**
  * The VODs a channel has, newest first.
  *
  * Every failure mode is a normal state with a name, because each one is a real
@@ -24,7 +35,7 @@ export const DESCONHECIDO = null;
  * expired, a name typed wrong. None of them may render as an empty tile.
  */
 export async function vodsDoCanal(slug, { buscar = fetch } = {}) {
-  const nome = String(slug || '').trim().replace(/^@/, '').toLowerCase();
+  const nome = slugDoNome(slug);
   // Deliberately loose. I do not know Kick's minimum username length, and a
   // validator built on a guess rejects a real channel and blames the user for
   // it. This only refuses what cannot be a path segment at all; anything else

@@ -193,6 +193,33 @@ test('quem chega sem elenco abre um exemplo com o Rust que está ao vivo',
     assert.deepEqual(erros, []);
   });
 
+test('procurar por palavras que passa do limite de páginas diz que a lista ficou cortada',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    let pedidos = 0;
+    await p.route('https://kick.com/stream/livestreams/**', (rota) => {
+      const n = Number(new URL(rota.request().url()).searchParams.get('page'));
+      pedidos++;
+      return rota.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        // A Kick diz sempre que há mais: a busca pára nas 30 páginas.
+        body: JSON.stringify({
+          current_page: n,
+          next_page_url: `https://kick.com/stream/livestreams/en?page=${n + 1}`,
+          data: [{ slug: `emissao-${n}`, session_title: 'Rust Kick Off', viewer_count: 1000 - n, tags: [], channel: { slug: `canal${n}` } }],
+        }),
+      });
+    });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.evaluate(() => { document.getElementById('palavrasAoVivo').value = 'kick off'; document.getElementById('procurarAoVivo').click(); });
+    await p.waitForFunction(() => /espectadores/.test(document.getElementById('estadoEvento').textContent), null, { timeout: 15000 });
+    assert.equal(pedidos, 30);
+    assert.match(await p.locator('#estadoEvento').innerText(), /Achei 30 lives, mas só li as mais vistas/);
+    assert.equal((await p.locator('#elenco').inputValue()).split('\n').length, 30);
+    assert.deepEqual(erros, []);
+  });
+
 test('o mapa abre no trecho em que a maioria esteve no ar, e não no mês inteiro de VODs', async () => {
   const { trechoDoEvento } = await import('../site/evento-ui.js');
   const H = 3600_000;

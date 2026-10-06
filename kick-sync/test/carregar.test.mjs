@@ -164,8 +164,10 @@ test('e desiste ao fim de `tentativas`, devolvendo o último estado tal como vei
   }
 });
 
-test('um canal à espera de voltar a tentar não segura o lugar dos outros', async () => {
-  const k = kickFalsa({ roteiro: { a: [429, 200] }, demora: () => 1 });
+test('um canal à espera depois de um erro do servidor não segura o lugar dos outros', async () => {
+  // Um 503 é desse canal; um 429 é a Kick a pedir calma a todos, e esse
+  // segura (ver o teste da pausa, mais abaixo).
+  const k = kickFalsa({ roteiro: { a: [503, 200] }, demora: () => 1 });
   const r = await carregarCanais(['a', 'b', 'c'], { buscar: k.buscar, paralelos: 1, esperar: () => dormir(25) });
   assert.deepEqual(r.map((x) => x.estado), ['ok', 'ok', 'ok']);
   // b e c passam enquanto a espera; a volta depois, sem ter bloqueado ninguém.
@@ -245,6 +247,104 @@ test('um 429 que já saiu com o limite novo corta outra vez, mas nunca abaixo de
   assert.ok(vistos.every((v, i) => i === 0 || v <= vistos[i - 1]));
 });
 
+test('depois de um 429 não sai nenhum pedido enquanto o canal espera: a pausa é de todos', async () => {
+  // Antes, o lugar do canal castigado ia logo para outro: depois de um 429 o
+  // ritmo só caía para metade e nunca parava, justamente quando a Kick pedia
+  // menos.
+  const k = kickFalsa({ roteiro: { c03: [429, 200] }, demora: () => 1 });
+  const durante = [];
+  let inicioDaPausa;
+  const esperar = async () => {
+    const antes = k.chamadas.length;
+    inicioDaPausa = antes;
+    await dormir(30);
+    durante.push(k.chamadas.length - antes);
+  };
+  const r = await carregarCanais(nomes(20), { buscar: k.buscar, paralelos: 4, esperar });
+  assert.ok(r.every((x) => x.estado === 'ok'));
+  assert.deepEqual(durante, [0], 'nos 30 ms de espera não saiu nenhum');
+  // E quem volta é o castigado, à frente dos que ainda não foram. Conta-se a
+  // partir do começo da pausa e não do momento em que a Kick falsa deu o 429:
+  // entre os dois, a resposta 200 de outro canal ainda pode estar a ser lida
+  // e libertar o lugar dela, e isso não é a pausa a falhar.
+  const depois = k.chamadas.findIndex((c) => c.slug === 'c03' && c.n === 2);
+  assert.equal(depois, inicioDaPausa);
+});
+
+test('com a Kick a recusar tudo, desiste sem gastar as tentativas de todos', async () => {
+  // A sonda do revisor: 100 canais, todos 429. Antes eram 400 pedidos a ritmo
+  // constante. Quando um canal sobe a escada toda (1, 2 e 4 s) e nesse tempo
+  // ninguém teve outra resposta, só ele pergunta mais, depois de 15, 30 e
+  // 60 s. Só se ainda for 429 o resto fica 'rate-limit' sem se pedir.
+  //
+  // (Este teste dizia antes que ninguém esperava mais de 4 s: desistir ao fim
+  // da escada era a regressão que o teste seguinte apanha. Agora diz que a
+  // sonda espera, e que mesmo assim os pedidos ficam poucos.)
+  const roteiro = Object.fromEntries(nomes(100).map((s) => [s, Array(9).fill(429)]));
+  const k = kickFalsa({ roteiro });
+  const progresso = [];
+  const esperar = semEspera();
+  const r = await carregarCanais(nomes(100), { buscar: k.buscar, esperar, aoProgredir: (p) => progresso.push(p) });
+  assert.ok(r.every((x) => x.estado === 'rate-limit'));
+  assert.deepEqual(r.map((x) => x.slug), nomes(100));
+  assert.ok(k.chamadas.length <= 24, `saíram ${k.chamadas.length}`);
+  assert.equal(progresso.at(-1).feitos, 100, 'a barra chega ao fim');
+  assert.deepEqual(esperar.esperas.filter((ms) => ms > 4000), [15000, 30000, 60000], 'uma sonda só');
+});
+
+test('uma janela de 429 de 12 s ou de 30 s passa, e a carga de 500 acaba toda', async () => {
+  // A sonda do revisor: desistir ao fim da escada de um canal (7 s) deixava
+  // os 500 em 'rate-limit' com 17 pedidos, e antes a mesma carga recompunha-se
+  // quando a janela acabava. O relógio é falso: cada espera avança-o.
+  for (const fechadaAte of [12000, 30000]) {
+    let agora = 0;
+    let pedidos = 0;
+    const buscar = async () => {
+      pedidos++;
+      await dormir(0);
+      return agora < fechadaAte ? resposta(429, { message: 'x' }) : resposta(200, UM_VOD);
+    };
+    const esperar = async (ms) => { agora += ms; await dormir(0); };
+    const r = await carregarCanais(nomes(500), { buscar, esperar });
+    const ok = r.filter((x) => x.estado === 'ok').length;
+    assert.equal(ok, 500, `fechada até ${fechadaAte} ms: ${ok} ok`);
+    assert.ok(pedidos <= 540, `fechada até ${fechadaAte} ms: ${pedidos} pedidos`);
+  }
+});
+
+test('um canal que leva 429 sozinho não dá a Kick por fechada', async () => {
+  // Com 1 de cada vez, a pausa do c00 não deixa mais ninguém perguntar: só um
+  // canal recusado não prova nada sobre os outros.
+  const k = kickFalsa({ roteiro: { c00: Array(9).fill(429) } });
+  const r = await carregarCanais(nomes(6), { buscar: k.buscar, paralelos: 1, esperar: semEspera() });
+  assert.deepEqual(r.map((x) => x.estado), ['rate-limit', 'ok', 'ok', 'ok', 'ok', 'ok']);
+  assert.equal(k.porCanal.get('c00'), 4);
+  assert.equal(k.chamadas.length, 9);
+});
+
+test('um 429 atrasado de um pedido que saiu antes do corte não corta outra vez, mas pára os outros', async () => {
+  // O c00 sai com o limite de 8 e só volta depois de o c01 ter cortado para 4
+  // e de muitos pedidos com o limite novo terem passado. Esse 429 é notícia
+  // velha sobre os 8 (o que veio depois diz que os 4 aguentam): não corta. Mas
+  // a pausa vale para ele como para qualquer outro.
+  const k = kickFalsa({ roteiro: { c00: [429, 200], c01: [429, 200] }, demora: (slug, n) => (slug === 'c00' && n === 1 ? 40 : 1) });
+  const progresso = [];
+  const durante = [];
+  const esperar = async () => {
+    const antes = k.chamadas.length;
+    await dormir(10);
+    durante.push(k.chamadas.length - antes);
+  };
+  const r = await carregarCanais(nomes(60), {
+    buscar: k.buscar, paralelos: 8, esperar, aoProgredir: (p) => progresso.push(p),
+  });
+  assert.ok(r.every((x) => x.estado === 'ok'));
+  assert.equal(k.cortes.length, 2);
+  assert.ok(k.cortes[1] - k.cortes[0] > 8, 'entre os dois 429 passaram pedidos com o limite novo');
+  assert.equal(progresso.at(-1).paralelos, 4);
+  assert.deepEqual(durante, [0, 0]);
+});
+
 test('quem pediu 3 desce para 2, e quem pediu 1 fica em 1 (o piso nunca sobe o limite)', async () => {
   for (const [paralelos, fica] of [[3, 2], [1, 1], [2, 2]]) {
     const k = kickFalsa({ roteiro: { c01: [429], c05: [429] } });
@@ -272,6 +372,20 @@ test('aoProgredir: uma vez por canal, quando o canal fica decidido', async () =>
   const porSlug = Object.fromEntries(progresso.map((p) => [p.slug, p.estado]));
   // O b aparece UMA vez, já com o estado final e não com os 429 do caminho.
   assert.deepEqual(porSlug, { a: 'ok', b: 'ok', c: 'ok', d: 'canal-nao-existe', e: 'ok' });
+});
+
+test('depois de a carga rejeitar, o aoProgredir não é chamado outra vez', async () => {
+  // A sonda do revisor: 4 em paralelo e o aoProgredir rebenta na primeira.
+  // Os outros três acabavam depois e chamavam-no na mesma: a página mostrava
+  // progresso depois de mostrar o erro.
+  const k = kickFalsa({ demora: (slug) => 1 + Number(slug.slice(1)) * 3 });
+  let chamadas = 0;
+  await assert.rejects(carregarCanais(nomes(4), {
+    buscar: k.buscar, paralelos: 4, esperar: semEspera(), aoProgredir: () => { chamadas++; throw new Error('x'); },
+  }));
+  await dormir(40);
+  assert.equal(k.chamadas.length, 4);
+  assert.equal(chamadas, 1);
 });
 
 test('um erro no aoProgredir da página pára a carga: não sai mais nenhum pedido', async () => {
@@ -461,9 +575,20 @@ test('pára em maxPaginas, para um paginador que nunca acaba', async () => {
   const g = aoVivoFalso(paginas, { proximaSempre: true });
   await procurarAoVivo({ buscar: g.buscar });
   assert.equal(g.pedidos.length, 30, 'por defeito, 30');
-  const h = aoVivoFalso(paginas, { proximaSempre: true });
-  await procurarAoVivo({ buscar: h.buscar, maxPaginas: 0 });
-  assert.equal(h.pedidos.length, 1, 'pelo menos uma página');
+  // Cortado em maxPaginas com a Kick a dizer que há mais: a lista diz que
+  // está incompleta, em vez de passar pela lista inteira.
+  assert.equal(r.incompleto, true);
+  const acabou = await procurarAoVivo({ buscar: aoVivoFalso([[item({ canal: 'a' })]]).buscar, maxPaginas: 1 });
+  assert.equal(acabou.incompleto, false, 'acabou na última página: está completa');
+});
+
+test('maxPaginas que não é um inteiro >= 1 é um erro de quem chama, e não sai pedido nenhum', async () => {
+  // Antes um 0 virava 1 e pedia-se uma página que ninguém pediu.
+  for (const maxPaginas of [0, -3, 1.5, NaN, 'x']) {
+    const h = aoVivoFalso([[item({ canal: 'a' })]], { proximaSempre: true });
+    await assert.rejects(procurarAoVivo({ buscar: h.buscar, maxPaginas }), RangeError, String(maxPaginas));
+    assert.equal(h.pedidos.length, 0);
+  }
 });
 
 test('usa o slug do CANAL, não o da emissão, e lê os campos', async () => {
@@ -556,6 +681,64 @@ test('"kickoff" encontra "Kick-Off" e "kick off" encontra "#RustKickOff"', async
   assert.deepEqual(await q('kick-off'), ['hifen', 'hashtag', 'emoji']);
 });
 
+test('uma palavra dentro de outra palavra não conta, nem colada entre título e etiquetas', async () => {
+  // As sondas do revisor: com o texto todo colado, "rust" achava "Trust",
+  // "off" achava "Office", "dia" achava "India" e "2" achava "2026".
+  const f = aoVivoFalso([[
+    item({ canal: 'trust', titulo: 'Trust me bro' }),
+    item({ canal: 'office', titulo: 'Office hours' }),
+    item({ canal: 'india', titulo: 'India server' }),
+    item({ canal: 'ano', titulo: 'Rust 2026 wipe' }),
+    item({ canal: 'campos', titulo: 'Rust', tags: ['Kick'] }),
+    item({ canal: 'big', titulo: 'big kick', tags: ['offline'] }),
+  ]]);
+  const q = async (palavras) => (await procurarAoVivo({ buscar: f.buscar, palavras })).map((x) => x.slug);
+  assert.deepEqual(await q('trust'), ['trust']);
+  assert.deepEqual(await q('rust'), ['ano', 'campos']);
+  assert.deepEqual(await q('off'), []);
+  assert.deepEqual(await q('dia'), []);
+  assert.deepEqual(await q('2'), []);
+  assert.deepEqual(await q('2026'), ['ano']);
+  assert.deepEqual(await q('stk'), [], 'não cola o fim do título ao começo da etiqueta');
+  assert.deepEqual(await q('kickoff'), [], 'nem "kick" do título com "off" da etiqueta');
+  assert.deepEqual(await q('rust kick'), ['campos'], 'mas cada palavra pode estar num campo');
+});
+
+test('as partes de uma palavra colada contam: maiúsculas a meio e letras com números', async () => {
+  const f = aoVivoFalso([[
+    item({ canal: 'camelo', titulo: '#RustKickOff2' }),
+    item({ canal: 'caps', titulo: 'KICKOFF' }),
+    item({ canal: 'dia2', titulo: 'kick off dia2' }),
+  ]]);
+  const q = async (palavras) => (await procurarAoVivo({ buscar: f.buscar, palavras })).map((x) => x.slug);
+  // "KICKOFF" em maiúsculas não diz onde acaba "kick": entra (ver o teste
+  // seguinte, das palavras coladas sem maiúsculas).
+  assert.deepEqual(await q('kick'), ['camelo', 'caps', 'dia2']);
+  assert.deepEqual(await q('kick off'), ['camelo', 'caps', 'dia2']);
+  assert.deepEqual(await q('dia 2'), ['dia2']);
+  assert.deepEqual(await q('rustkickoff2'), ['camelo']);
+});
+
+test('dentro de uma palavra colada sem maiúsculas também conta: "#rustkickoff", "RUSTKICKOFF", japonês', async () => {
+  // As sondas do revisor: as etiquetas da Kick vêm quase sempre em minúsculas
+  // ("rustkickoff"), e partir só nas maiúsculas deixava estes de fora sem
+  // ninguém saber.
+  const f = aoVivoFalso([[
+    item({ canal: 'hash', titulo: '#rustkickoff day 1' }),
+    item({ canal: 'caps', titulo: 'RUSTKICKOFF' }),
+    item({ canal: 'etiqueta', titulo: 'rust', tags: ['rustkickoff'] }),
+    item({ canal: 'jp', titulo: 'ラストイベント' }),
+    item({ canal: 'camelo', titulo: 'TwitchConRust' }),
+    item({ canal: 'fora', titulo: 'Office hours', tags: ['offline'] }),
+  ]]);
+  const q = async (palavras) => (await procurarAoVivo({ buscar: f.buscar, palavras })).map((x) => x.slug);
+  assert.deepEqual(await q('kick off'), ['hash', 'caps', 'etiqueta']);
+  assert.deepEqual(await q('kickoff'), ['hash', 'caps', 'etiqueta']);
+  assert.deepEqual(await q('イベント'), ['jp']);
+  assert.deepEqual(await q('twitchcon'), ['camelo']);
+  assert.deepEqual(await q('off'), [], 'três letras não entram dentro de "offline"');
+});
+
 test('sem palavras vêm todos', async () => {
   const f = aoVivoFalso([[item({ canal: 'a', titulo: 'x' }), item({ canal: 'b', titulo: '' })]]);
   for (const palavras of [undefined, null, '', '   ', [], ['  '], '!!! ---']) {
@@ -600,7 +783,7 @@ test('uma página que falha diz qual, porquê, e o que já se tinha achado', asy
   ];
   for (const [paginas, estado, pagina, quantos] of casos) {
     const f = aoVivoFalso(paginas);
-    await assert.rejects(procurarAoVivo({ buscar: f.buscar }), (e) => {
+    await assert.rejects(procurarAoVivo({ buscar: f.buscar, esperar: semEspera() }), (e) => {
       assert.equal(e.name, 'SEM-LISTA-AO-VIVO');
       assert.equal(e.estado, estado);
       assert.equal(e.pagina, pagina);
@@ -608,6 +791,44 @@ test('uma página que falha diz qual, porquê, e o que já se tinha achado', asy
       return true;
     }, estado);
   }
+});
+
+test('uma falha passageira numa página volta a ser pedida, à espera de 1 s, 2 s, 4 s', async () => {
+  // Antes, um 429 na página 12 de 16 deitava a busca toda fora.
+  const paginaBoa = [item({ canal: 'a' }), item({ canal: 'b' })];
+  for (const falha of [() => resposta(429, {}), () => resposta(503, {}), () => { throw new TypeError('Failed to fetch'); }]) {
+    let n = 0;
+    const segunda = () => (++n <= 2 ? falha() : resposta(200, { data: [item({ canal: 'c' })], next_page_url: null }));
+    const f = aoVivoFalso([paginaBoa, segunda]);
+    const esperar = semEspera();
+    const r = await procurarAoVivo({ buscar: f.buscar, esperar });
+    assert.deepEqual(r.map((x) => x.slug), ['a', 'b', 'c']);
+    assert.deepEqual(esperar.esperas, [1000, 2000]);
+    assert.equal(f.pedidos.length, 4);
+  }
+  // O que não é passageiro não se repete.
+  const g = aoVivoFalso([() => resposta(404, {})]);
+  const esperar = semEspera();
+  await assert.rejects(procurarAoVivo({ buscar: g.buscar, esperar }), (e) => e.estado === 'http-404');
+  assert.equal(g.pedidos.length, 1);
+  assert.deepEqual(esperar.esperas, []);
+});
+
+test('procurarAoVivo: cancelar rejeita logo, mesmo que a `buscar` nunca largue o pedido', async () => {
+  const c = new AbortController();
+  const buscar = () => new Promise(() => {});
+  const p = procurarAoVivo({ buscar, sinal: c.signal });
+  await dormir(2);
+  c.abort();
+  const depressa = await Promise.race([p.then(() => 'ok', (e) => e), dormir(50).then(() => 'pendurado')]);
+  assert.ok(ehCancelado(depressa), String(depressa));
+  // E a meio de uma espera de 4 s também não espera os 4 s.
+  const d = new AbortController();
+  const lenta = procurarAoVivo({ buscar: async () => resposta(503, {}), sinal: d.signal, esperar: () => new Promise(() => {}) });
+  await dormir(2);
+  d.abort();
+  const r = await Promise.race([lenta.then(() => 'ok', (e) => e), dormir(50).then(() => 'pendurado')]);
+  assert.ok(ehCancelado(r), String(r));
 });
 
 test('procurarAoVivo: cancelar antes de começar e a meio', async () => {

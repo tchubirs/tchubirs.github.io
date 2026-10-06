@@ -6,7 +6,7 @@
 // problem rather than a server problem.
 
 import {
-  vodsDoCanal, lerMaster, lerPlaylist, procurarCanais, lerLinkKick, clipeDaKick, DESCONHECIDO,
+  vodsDoCanal, lerMaster, lerPlaylist, procurarCanais, lerLinkKick, clipeDaKick, DESCONHECIDO, slugDoNome,
 } from './kick.js';
 import {
   linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo,
@@ -127,6 +127,12 @@ const estado = {
   // Trinta e seis clipes de doze megas sao quase meio giga de RAM presa, e
   // ninguem os liberta sozinho — foi por aqui que a pagina comecou a travar.
   ficheiros: [],
+  // O que pára a sincronia pelo som em curso. Ela escreve aqui o seu `abort` e
+  // volta a pôr null no fim; escrever aqui mostra ou esconde o botão Parar.
+  // A montagem, a detecção e o corte de cada canal têm o seu, logo abaixo.
+  pararTarefa: null,
+  get cancelar() { return this.pararTarefa; },
+  set cancelar(fn) { this.pararTarefa = fn || null; pintarParar(); },
   // Os trabalhos longos que se podem parar, cada um com o seu: a montagem, a
   // detecção automática, e o corte de cada canal. Um só `cancelar` para todos
   // parava o que não era, e nunca ninguém o chamava.
@@ -140,6 +146,12 @@ const estado = {
   procuraEmCurso: null,
   timerSecundarios: null,
 };
+
+/** O botão Parar só existe enquanto há alguma coisa para parar. */
+function pintarParar() {
+  const b = $('parar');
+  if (b) b.hidden = !estado.pararTarefa;
+}
 
 const hhmmss = (ms) => {
   const s = Math.max(0, Math.floor(ms / 1000));
@@ -221,8 +233,12 @@ function guardarRolar() {
  */
 const listaDeCanais = () => $('canais').value.split('\n').map((s) => s.trim()).filter(Boolean);
 
+// Já lá está, mesmo que escrito de outra maneira: "Tchubi" e "tchubi" são o
+// mesmo canal, e a caixa guarda o nome como ele o escreveu.
+const jaNaLista = (slug) => listaDeCanais().some((n) => slugDoNome(n) === slugDoNome(slug));
+
 function acrescentarCanal(slug) {
-  if (listaDeCanais().includes(slug)) return;
+  if (jaNaLista(slug)) return;
   const v = $('canais').value.replace(/\s*$/, '');
   $('canais').value = v ? `${v}\n${slug}` : slug;
   $('procurar').value = '';
@@ -237,9 +253,8 @@ function fecharSugestoes() {
 }
 
 function pintarSugestoes(canais) {
-  const jaLa = listaDeCanais();
   $('sugestoes').innerHTML = canais.map((c, i) => {
-    const ja = jaLa.includes(c.slug);
+    const ja = jaNaLista(c.slug);
     return `<li data-slug="${escapar(c.slug)}" data-i="${i}" class="${ja ? 'ja' : ''}" role="option">`
       + `<span>${escapar(c.slug)}${c.aoVivo ? ` <b class="vivo">${t('procurar.aoVivo')}</b>` : ''}</span>`
       + `<span class="quantos">${ja ? t('procurar.jaEsta')
@@ -369,8 +384,40 @@ function temPlayer() {
   return false;
 }
 
-async function carregar() {
-  const nomes = [...new Set(listaDeCanais())];
+/**
+ * Uma carga de cada vez.
+ *
+ * O ✕ de uma ficha, o "você quis dizer" e um link colado chamam isto
+ * directamente, e não pelo botão: com uma carga a meio corriam duas ao mesmo
+ * tempo, em fila cada uma, com o dobro dos pedidos à Kick e o ecrã decidido
+ * por quem acabasse por último. E um link colado com o botão cinzento não
+ * carregava nada e não dizia nada.
+ *
+ * Quem pede a meio não perde o pedido: fica marcado, e a carga em curso volta
+ * a correr uma vez no fim, já com a caixa como ele a deixou.
+ */
+let cargaEmCurso = null;
+let cargaPendente = false;
+function carregar() {
+  if (cargaEmCurso) { cargaPendente = true; return cargaEmCurso; }
+  cargaEmCurso = (async () => {
+    try {
+      do {
+        cargaPendente = false;
+        // eslint-disable-next-line no-await-in-loop
+        await carregarAgora();
+      } while (cargaPendente);
+    } finally {
+      cargaEmCurso = null;
+    }
+  })();
+  return cargaEmCurso;
+}
+
+async function carregarAgora() {
+  // Pelo slug: "Tchubi" e "@tchubi" na mesma caixa são um canal, e não dois
+  // pedidos à Kick e duas fichas iguais.
+  const nomes = [...new Set(listaDeCanais().map(slugDoNome))];
   if (!nomes.length) return;
   temPlayer();
   $('carregar').disabled = true;
@@ -380,7 +427,7 @@ async function carregar() {
   // Sequential, and that is deliberate: thirty parallel calls from five hundred
   // people is what gets a free tool rate-limited for everyone on day one.
   for (const [i, nome] of nomes.entries()) {
-    const chave = String(nome).trim().replace(/^@/, '').toLowerCase();
+    const chave = slugDoNome(nome);
     const memo = estado.vodsPorCanal.get(chave) || estado.vodsDoEvento.get(chave);
     // Um canal que já deu certo não se pede outra vez; um que deu erro
     // (rate-limit, rede) pede-se, porque da próxima pode dar.
@@ -453,7 +500,10 @@ function pintarCanais(canais) {
   }).join('');
   for (const li of $('listaCanais').querySelectorAll('li[data-slug]')) {
     li.querySelector('.tirar').onclick = () => {
-      $('canais').value = listaDeCanais().filter((n) => n !== li.dataset.slug).join('\n');
+      // Pelo slug, e não pelo texto: a ficha traz o slug da Kick e a caixa o
+      // nome como ele o escreveu. "Gaules" nunca era igual a "gaules", e o ✕
+      // recarregava tudo sem tirar nada.
+      $('canais').value = listaDeCanais().filter((n) => slugDoNome(n) !== li.dataset.slug).join('\n');
       guardar();
       if (listaDeCanais().length) carregar();
       else { li.remove(); $('estadoCarga').textContent = t('canais.semCanais'); }
@@ -485,8 +535,8 @@ async function sugerirParecidos(maus) {
         // Trocar o nome na caixa, e não acrescentar: quem escreveu mal quer o
         // certo no lugar do errado, senão fica a carregar os dois.
         $('canais').value = listaDeCanais()
-          .map((n) => (n === c.slug ? b.dataset.slug : n))
-          .filter((n, i, a) => a.indexOf(n) === i)
+          .map((n) => (slugDoNome(n) === c.slug ? b.dataset.slug : n))
+          .filter((n, i, a) => a.findIndex((x) => slugDoNome(x) === slugDoNome(n)) === i)
           .join('\n');
         carregar();
       };
@@ -513,18 +563,43 @@ let vezNoite = 0;
  * a página — com a sessão dele lá dentro.
  */
 async function abrirNoite(noite) {
+  // A vez DESTA leitura. O `lerNoite` soma-a logo na primeira linha, antes de
+  // esperar por nada. Comparar com uma variável escrita ao mesmo tempo que a
+  // outra dava sempre verdade, e a leitura velha que acabava destrancava o
+  // selector com a nova ainda a meio.
+  const minhaVez = vezNoite + 1;
   try {
     return await lerNoite(noite);
   } finally {
-    if (vezNoite === vezNoiteEmCurso) $('noite').disabled = false;
+    if (vezNoite === minhaVez) $('noite').disabled = false;
   }
 }
 
-let vezNoiteEmCurso = 0;
+/**
+ * O texto de uma playlist da Kick, ou um erro.
+ *
+ * O `fetch` só rebenta sem rede. Um 403 ou um 503 do CDN chegam como uma
+ * resposta normal, e o corpo (uma página de erro em XML) era lido como uma
+ * playlist sem relógio: o canal sumia da grelha sem aviso, e a peça estragada
+ * ficava guardada para todos os Carregar seguintes.
+ *
+ * E com tempo limite: são dois pedidos por canal, em fila, e um só pendurado
+ * deixava "lendo os relógios…" no ecrã para sempre, com o selector trancado.
+ */
+async function lerTexto(url, { limiteMs = 20_000 } = {}) {
+  const controlo = new AbortController();
+  const relogio = setTimeout(() => controlo.abort(), limiteMs);
+  try {
+    const r = await fetch(url, { signal: controlo.signal });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return await r.text();
+  } finally {
+    clearTimeout(relogio);
+  }
+}
 
 async function lerNoite(noite) {
   const minhaVez = ++vezNoite;
-  vezNoiteEmCurso = minhaVez;
   const desactualizada = () => minhaVez !== vezNoite;
   const dizer = (frase) => { if (!desactualizada()) $('estadoNoite').textContent = frase; };
   // O selector fecha-se enquanto lê: trinta canais são sessenta pedidos, e
@@ -541,7 +616,12 @@ async function lerNoite(noite) {
     };
   }
   const porCanal = new Map();
+  // Quem não se conseguiu ler, para o dizer pelo nome no fim.
+  const naoLidos = new Set();
   for (const { slug, v } of noite.itens) {
+    // Uma leitura que já não interessa a ninguém pára aqui. Continuava a pedir
+    // as playlists todas até ao fim, ao mesmo tempo que a nova.
+    if (desactualizada()) break;
     if (!v.master) continue;
     const chave = `${slug}|${v.id}`;
     // A playlist de um VOD acabado nunca muda; a de quem está no ar cresce a cada segmento. Guardada,
@@ -553,28 +633,35 @@ async function lerNoite(noite) {
       continue;
     }
     try {
-      const master = lerMaster(await (await fetch(v.master)).text(), v.master);
-      if (!master.length) continue;
+      const master = lerMaster(await lerTexto(v.master), v.master);
+      if (!master.length) { naoLidos.add(slug); continue; }
       const barato = master.at(-1);
-      const playlist = lerPlaylist(await (await fetch(barato.url)).text(), barato.url);
+      const playlist = lerPlaylist(await lerTexto(barato.url), barato.url);
       const peca = { vod: v, playlist, escada: master, barato };
-      estado.pecasLidas.set(chave, peca);
+      // Só se guarda o que tem relógio. Uma peça sem ele não entra na linha do
+      // canal, e guardada impedia o Carregar seguinte de a tentar outra vez.
+      if (Number.isFinite(playlist.inicio)) estado.pecasLidas.set(chave, peca);
       if (!porCanal.has(slug)) porCanal.set(slug, []);
       porCanal.get(slug).push(peca);
-    } catch { /* a channel that cannot be read is shown as such below */ }
+    } catch { naoLidos.add(slug); }
   }
-  $('noite').disabled = false;
+  if (!desactualizada()) $('noite').disabled = false;
   // Se ele mudou de noite outra vez enquanto isto lia, esta resposta já não
   // interessa a ninguém — e escrevê-la no ecrã seria mostrar-lhe a noite
   // errada com ar de certa.
   if (desactualizada()) return;
-  dizer('');
+  // Os que não vieram, pelo nome. Um canal sem playlist legível não tem linha
+  // nem quadrado, e sumia da grelha sem ninguém dizer nada: com quinhentos
+  // canais ninguém dá pela falta de quinze.
+  const faltam = naoLidos.size
+    ? t('noite.naoLidos', { lista: [...naoLidos].join(', ') }) : '';
+  dizer(faltam);
 
   // Pela ordem em que ELE os escreveu, e não pela ordem por que a Kick os
   // devolveu. "Está difícil achar as POV em baixo": com vinte e três canais,
   // procurar um nome numa grelha em ordem desconhecida é trabalho a sério, e a
   // lista de fichas lá em cima já está na ordem certa.
-  const ordem = listaDeCanais();
+  const ordem = listaDeCanais().map(slugDoNome);
   const posicao = (slug) => {
     const i = ordem.indexOf(slug);
     // Um canal que já não está na caixa de texto vai para o fim, e não para o
@@ -596,7 +683,7 @@ async function lerNoite(noite) {
     // encontrava nada para parar e os quadrados respondiam a nada. Uma noite
     // que não abre tem de deixar o ecrã vazio e dizer porquê.
     limparPalco();
-    dizer(t('noite.semRelogio'));
+    dizer(faltam || t('noite.semRelogio'));
     return;
   }
 
@@ -718,10 +805,25 @@ function mostrarPalco() {
 }
 
 /** Deitar fora tudo o que estava no ecrã, sem deixar leitores a tocar sozinhos. */
+/**
+ * Fechar a janela à parte sem esperar por ela. O do PiP de vídeo devolve uma
+ * promessa, que rejeita se ele já saiu.
+ */
+function fecharAparte() {
+  const aparte = estado.aparte;
+  estado.aparte = null;
+  try { Promise.resolve(aparte?.fechar?.()).catch(() => {}); } catch { /* já fechada */ }
+}
+
 function limparPalco() {
+  // A janela à parte também: o leitor dela vai com os outros, e deixá-la
+  // aberta era um quadro preto no segundo monitor a fingir que está vivo.
+  if (estado.aparte) fecharAparte();
   estado.players.forEach((p) => p.destroy?.());
   estado.players.clear();
   for (const tile of tiles()) tile.querySelector('video')?.pause?.();
+  quadros.clear();
+  esquecerVista();
   $('palcoFoco').innerHTML = '';
   $('grade').innerHTML = '';
   $('faixas').querySelectorAll('.faixa').forEach((f) => f.remove());
@@ -780,13 +882,21 @@ function pintarFaixas() {
     f.dataset.slug = linha.slug;
     f.innerHTML = `<span class="nome" title="${escapar(linha.slug)}">${escapar(linha.slug)}</span>`
       + `<div class="trilho">${linha.pecas.map((p) => {
+        // Só o que cai dentro da vista. Com a linha do tempo aproximada, um VOD
+        // que acabou antes dela dava um `left` de 0 e a largura mínima, e cada
+        // faixa ganhava um risco aceso no princípio a fingir vídeo que lá não
+        // está. O trilho só esconde o que passa à direita.
+        if (p.playlist.fim - nudge <= inicio || p.playlist.inicio - nudge >= fim) return '';
         const de = Math.max(0, pct(p.playlist.inicio - nudge));
         const ate = Math.min(100, pct(p.playlist.fim - nudge));
         return `<i style="left:${de}%;width:${Math.max(0.4, ate - de)}%"></i>`;
       }).join('')}</div>`;
-    // Clicar na faixa vai directo ao instante.
+    // Clicar na faixa vai directo ao instante. E desliga a prévia, como
+    // qualquer navegação à mão: sem isso, o ciclo da kill que estava a tocar
+    // puxava-o de volta no quadro seguinte e o clique parecia não ter feito nada.
     f.querySelector('.trilho').onclick = (e) => {
       const r = e.currentTarget.getBoundingClientRect();
+      largarPrevia();
       irPara(Math.round(inicio + ((fim - inicio) * (e.clientX - r.left)) / r.width));
     };
     alvo.append(f);
@@ -856,7 +966,8 @@ function pintarRegua() {
   }
   alvo.innerHTML = partes.join('');
   for (const b of alvo.querySelectorAll('.kill')) {
-    b.onclick = () => irPara(Number(b.dataset.ms));
+    // A marca de outra kill desliga a prévia desta, senão volta para trás logo.
+    b.onclick = () => { largarPrevia(); irPara(Number(b.dataset.ms)); };
   }
 }
 
@@ -877,16 +988,56 @@ function marcarFaixas() {
  * é pior, porque o ângulo ficava a andar sozinho com ar de estar sincronizado.
  *
  * Por isso nada aqui procura quadrados por si: procuram-se por aqui.
+ *
+ * E por um mapa do slug para o quadro, preenchido no `montarGrade`, e não por
+ * um `querySelectorAll` a cada pergunta. O `irPara`, o `aplicarFoco` e o
+ * cursor de volume perguntam por cada canal, e com o documento inteiro varrido
+ * a cada pergunta isso era quadrático: com quinhentos canais, um +10s
+ * prendia a página quase um segundo e um clique num quadro dois. O quadro da
+ * janela à parte está no mapa como os outros, porque é o mesmo nó.
  */
-const tiles = () => {
-  const lista = [...document.querySelectorAll('#palcoFoco .tile, #grade .tile')];
-  const fora = estado.aparte?.tile;
-  if (fora && !lista.includes(fora)) lista.push(fora);
-  return lista;
-};
-const tileDe = (slug) => tiles().find((x) => x.dataset.slug === slug) || null;
+const quadros = new Map();
+const tiles = () => [...quadros.values()];
+const tileDe = (slug) => quadros.get(slug) || null;
 const ehFoco = (slug) => estado.focos.includes(slug);
 const ehPrincipal = (slug) => estado.focos[0] === slug;
+
+// Os quadros da grelha que estão fora da vista: abaixo da dobra, ou
+// escondidos pela procura da grelha.
+//
+// Cada salto movia todos os secundários para o novo instante, e cada um ia
+// buscar um pedaço de vídeo para isso. Com quinhentos ângulos eram quinhentos
+// pedidos por salto (uns 140 MB) para quadros que ninguém estava a ver. Um
+// quadro fora da vista fica com o leitor que tinha e só é posto no instante
+// certo quando volta a aparecer: é aí que alguém olha para ele.
+const foraDaVista = new Set();
+const porAcertar = new Set();
+const vigiaDaVista = typeof IntersectionObserver === 'function'
+  ? new IntersectionObserver((entradas) => {
+    for (const e of entradas) {
+      const slug = e.target.dataset.slug;
+      if (e.isIntersecting) {
+        foraDaVista.delete(slug);
+        if (porAcertar.delete(slug)) acertarSecundario(slug);
+      } else foraDaVista.add(slug);
+    }
+  })
+  : null;
+const naoSeVe = (slug) => foraDaVista.has(slug) && tileDe(slug) !== estado.aparte?.tile;
+function esquecerVista() {
+  vigiaDaVista?.disconnect();
+  foraDaVista.clear();
+  porAcertar.clear();
+}
+
+/** Pôr um secundário que voltou à vista no instante em que a grelha está. */
+function acertarSecundario(slug) {
+  const linha = estado.linhas.find((l) => l.slug === slug);
+  const tile = tileDe(slug);
+  if (!linha || !tile || ehFoco(slug)) return;
+  const r = onde(linha, estado.agoraMs, { nudgeMs: estado.nudges[slug] || 0 });
+  if (r.estado === 'toca') tocar(linha, r, tile.querySelector('video'), { alta: false, correr: false });
+}
 
 /**
  * Qual dos dois manda: o principal é o que tem som e o que corre em qualidade.
@@ -1182,28 +1333,36 @@ function pintarFiltroDaGrelha() {
 }
 
 function montarGrade() {
-  // A janela à parte segura um quadrado desta grelha, e a grelha vai ser
-  // deitada fora. Sem a fechar, ficava um leitor destruído e parado no
-  // segundo monitor, e o `tiles()` continuava a contá-lo como vivo ao lado do
-  // quadrado novo com o mesmo canal: o pause e o volume iam para os dois.
-  if (estado.aparte) {
-    const aparte = estado.aparte;
-    estado.aparte = null;
-    // O do PiP de vídeo devolve uma promessa, que rejeita se ele já saiu.
-    try { Promise.resolve(aparte.fechar?.()).catch(() => {}); } catch { /* já fechada */ }
-  }
+  // O quadro da janela à parte fica vivo, com o leitor dele, se o canal
+  // continuar nesta noite. Juntar um streamer reconstrói a grelha toda, e o
+  // segundo monitor ficava com um quadro de leitor destruído: preto, com
+  // controlos que pareciam vivos e já não mandavam em nada. Um canal que saiu
+  // da noite fecha a janela, que é o que ela mostraria de qualquer maneira.
+  // O PiP de vídeo não leva quadro nenhum: o vídeo dele é o de um quadro que
+  // vai ser deitado fora, e por isso fecha sempre.
+  const fora = estado.aparte?.tile || null;
+  const ficaFora = fora && estado.linhas.some((l) => l.slug === fora.dataset.slug) ? fora : null;
+  if (estado.aparte && !ficaFora) fecharAparte();
+  const leitorFora = ficaFora ? estado.players.get(ficaFora.dataset.slug) : null;
   $('grade').innerHTML = '';
   $('palcoFoco').innerHTML = '';
-  estado.players.forEach((p) => p.destroy?.());
+  estado.players.forEach((p) => { if (p !== leitorFora) p.destroy?.(); });
   estado.players.clear();
+  if (leitorFora) estado.players.set(ficaFora.dataset.slug, leitorFora);
+  quadros.clear();
+  esquecerVista();
 
   for (const linha of estado.linhas) {
+    if (ficaFora && linha.slug === ficaFora.dataset.slug) {
+      quadros.set(linha.slug, ficaFora);
+      continue;
+    }
     const tile = document.createElement('div');
     tile.className = 'tile';
     tile.dataset.slug = linha.slug;
     tile.innerHTML = '<video muted playsinline preload="none"></video>'
       + `<span class="rotulo">${linha.slug}`
-      + `${linha.relogio !== 'exato' ? ` <b class="aviso" title="${t('tile.relogioIncerto')}">≈</b>` : ''}`
+      + `${linha.relogio !== 'exato' ? ` <b class="aviso" data-t-titulo="tile.relogioIncerto" title="${t('tile.relogioIncerto')}">≈</b>` : ''}`
       + ' <b class="posicao"></b></span>'
       + '<span class="estadoTile"></span>'
       // Os dois grupos numa barra só, e não cada um colado ao seu canto.
@@ -1217,17 +1376,17 @@ function montarGrade() {
       // Twitch, da Kick e do YouTube. Um controlo que toda a gente já sabe
       // usar não se põe noutro sítio só porque dá jeito.
       + '<span class="som" hidden>'
-      + `<button class="pausa" title="${t('tile.pausa')}">${ICONE('pausa')}</button>`
-      + `<button class="somBtn" aria-label="${t('tile.pausa')}">${ICONE('mudo')}</button>`
+      + `<button class="pausa" data-t-titulo="tile.pausa" title="${t('tile.pausa')}">${ICONE('pausa')}</button>`
+      + `<button class="somBtn" data-t-aria="tile.pausa" aria-label="${t('tile.pausa')}">${ICONE('mudo')}</button>`
       + '<input class="vol" type="range" min="0" max="100" value="100" aria-label="volume">'
       + '</span>'
       // O relógio da Kick põe cada ângulo dentro de um segmento da verdade, o
       // que já está dentro do que o dono pediu. Isto é para o resto: um stream
       // com mais buffer, ou um olho que diz "este está meio segundo à frente".
       + '<span class="ajuste">'
-      + `<button data-passo="-1" title="${t('tile.atrasar')}">−</button>`
+      + `<button data-passo="-1" data-t-titulo="tile.atrasar" title="${t('tile.atrasar')}">−</button>`
       + '<b class="nudge">0.0s</b>'
-      + `<button data-passo="1" title="${t('tile.adiantar')}">+</button>`
+      + `<button data-passo="1" data-t-titulo="tile.adiantar" title="${t('tile.adiantar')}">+</button>`
       + '</span>'
       + '</span>'
       // Ecrã cheio e janela à parte, no canto de cima à direita — o mesmo sítio
@@ -1235,9 +1394,9 @@ function montarGrade() {
       // diferente em cada sistema, e no iPhone sai a cores.
       + '<span class="fora">'
       + `<button class="par" title="${t('tile.par')}" aria-label="${t('tile.par')}">${ICONE('lado-a-lado')}</button>`
-      + `<button class="ecraCheio" title="${t('tile.ecraCheio')}" aria-label="${t('tile.ecraCheio')}">`
+      + `<button class="ecraCheio" data-t-titulo="tile.ecraCheio" data-t-aria="tile.ecraCheio" title="${t('tile.ecraCheio')}" aria-label="${t('tile.ecraCheio')}">`
       + `${ICONE('ecra-cheio')}</button>`
-      + `<button class="aparte" title="${t('tile.aparte')}" aria-label="${t('tile.aparte')}" hidden>`
+      + `<button class="aparte" data-t-titulo="tile.aparte" data-t-aria="tile.aparte" title="${t('tile.aparte')}" aria-label="${t('tile.aparte')}" hidden>`
       + `${ICONE('janela')}</button>`
       + '</span>';
 
@@ -1292,7 +1451,15 @@ function montarGrade() {
       // mudo e pequeno seria tirar o ângulo errado.
       if (!ehFoco(linha.slug)) { estado.focos = [linha.slug]; aplicarFoco(); irPara(estado.agoraMs); }
       estado.aparte = await abrirJanela(tile, {
-        aoFechar: () => { estado.aparte = null; aplicarFoco(); },
+        aoFechar: () => {
+          estado.aparte = null;
+          // A grelha pode ter sido refeita com ele lá fora, e o sítio de onde
+          // saiu já não existe: volta para a grelha, se ainda é o quadro dele.
+          if (quadros.get(linha.slug) === tile && !$('grade').contains(tile) && !$('palcoFoco').contains(tile)) {
+            $('grade').append(tile);
+          }
+          aplicarFoco();
+        },
       }).catch(() => null);
     };
     tile.querySelector('.pausa').onclick = (e) => { e.stopPropagation(); alternarPausa(); };
@@ -1309,6 +1476,8 @@ function montarGrade() {
       guardar();
     };
     $('grade').append(tile);
+    quadros.set(linha.slug, tile);
+    vigiaDaVista?.observe(tile);
   }
   aplicarFoco();
 }
@@ -1428,8 +1597,29 @@ function irPara(quandoMs) {
     // olhar para os dois. Vem depois do principal, e não ao mesmo tempo — que
     // era o que fazia o par demorar o dobro a aparecer.
     for (const [l, r, v] of segundo) tocar(l, r, v, { alta: true, correr: true, comSom: temSom(l.slug) });
-    for (const [l, r, v] of secundarios) tocar(l, r, v, { alta: false, correr: false });
+    for (const [l, r, v] of secundarios) {
+      if (naoSeVe(l.slug)) {
+        porAcertar.add(l.slug);
+        // Quem saiu do foco volta para a grelha, e quase sempre para um lugar
+        // fora da vista. Sem isto ficava com o leitor de 1080p (trinta
+        // segundos de buffer, a andar) até alguém rolar até ele, e cada troca
+        // de foco deixava mais um. Largado aqui não pede nada à Kick; o
+        // `porAcertar` cria-lhe o de 160p quando voltar a aparecer.
+        if (leitorCaro(l, r, v)) pararTile(l.slug, v);
+        continue;
+      }
+      porAcertar.delete(l.slug);
+      tocar(l, r, v, { alta: false, correr: false });
+    }
   }, 220);
+}
+
+/** Um leitor que não é o de um secundário: degrau de cima, ou a andar. */
+function leitorCaro(linha, r, video) {
+  const p = estado.players.get(linha.slug);
+  if (!p) return false;
+  const peca = linha.pecasCompletas.find((x) => x.vod.id === r.peca.vod.id) || r.peca;
+  return p.url !== peca.barato.url || !video.paused;
 }
 
 /**
@@ -1450,10 +1640,25 @@ function primeiroFrame(video, limiteMs) {
 
 const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
+/**
+ * Tirar o `src` e mandar `load()`. Só tirar o atributo não chega: pela regra
+ * do HTML isso não volta a correr o carregamento, e o elemento fica com o
+ * vídeo que tinha e continua a tocá-lo, com som. No caminho do hls.js nunca se
+ * viu porque o `destroy` dele já faz o `load()`; no Safari, onde o vídeo é
+ * nativo, o quadro dizia "fora do ar" e mostrava o instante anterior.
+ */
+function largarVideo(video) {
+  // Um quadro já vazio não precisa de outro `load()`: com quinhentos canais o
+  // `irPara` passa aqui por cada um que está fora do ar, a cada salto.
+  if (!video.hasAttribute('src') && !video.currentSrc) return;
+  video.removeAttribute('src');
+  video.load?.();
+}
+
 function pararTile(slug, video) {
   const p = estado.players.get(slug);
   if (p) { p.destroy(); estado.players.delete(slug); }
-  video.removeAttribute('src');
+  largarVideo(video);
 }
 
 /**
@@ -1491,9 +1696,23 @@ function tocar(linha, r, video, { alta = false, correr = false, comSom = false }
     // (`backBufferLength` infinito de origem). Com trinta ângulos numa noite
     // de horas era essa a memória que crescia até o separador cair.
     const hls = new window.Hls({ startPosition: r.tempoS, maxBufferLength: alta ? 30 : correr ? 8 : 2, backBufferLength: alta ? 30 : 10 });
+    const leitor = { url: alvo.url, destroy: () => hls.destroy() };
+    // Um erro fatal (403, 429, a rede que caiu) faz o hls.js parar de carregar
+    // de vez. O leitor ficava guardado com o mesmo endereço, cada salto a seguir
+    // reaproveitava-o, e o quadro ficava preto até ao fim da sessão sem dizer
+    // porquê. Esquecido aqui, o próximo salto ou clique cria um novo.
+    hls.on?.(window.Hls.Events?.ERROR || 'hlsError', (_, dados) => {
+      if (!dados?.fatal || estado.players.get(linha.slug) !== leitor) return;
+      hls.destroy();
+      estado.players.delete(linha.slug);
+      const tile = tileDe(linha.slug);
+      tile?.classList.add('vazio');
+      const nota = tile?.querySelector('.estadoTile');
+      if (nota) nota.textContent = t('tile.erroVideo');
+    });
     hls.loadSource(alvo.url);
     hls.attachMedia(video);
-    estado.players.set(linha.slug, { url: alvo.url, destroy: () => hls.destroy() });
+    estado.players.set(linha.slug, leitor);
   } else {
     // O Safari toca HLS de raiz, e o hls.js recusa-se a trabalhar la — no
     // iPhone nem sequer ha MediaSource. Por isso este ramo NAO e um caso de
@@ -1505,7 +1724,7 @@ function tocar(linha, r, video, { alta = false, correr = false, comSom = false }
     const irAoSitio = () => { try { video.currentTime = r.tempoS; } catch { /* ainda nao */ } };
     if (video.readyState >= 1) irAoSitio();
     else video.addEventListener('loadedmetadata', irAoSitio, { once: true });
-    estado.players.set(linha.slug, { url: alvo.url, destroy: () => { video.removeAttribute('src'); } });
+    estado.players.set(linha.slug, { url: alvo.url, destroy: () => largarVideo(video) });
   }
   // Propriedade E atributo. A propriedade e que manda no som, mas deixar o
   // atributo `muted` do HTML para tras faz o quadrado dizer uma coisa e fazer
@@ -1550,6 +1769,9 @@ function pintarResumoMargens() {
  */
 async function alinhar() {
   if (!estado.linhas.length || !estado.janela) return;
+  // A noite que se vai medir. Medir demora minutos, e se entretanto ele abriu
+  // outra noite, os ajustes desta iam parar aos canais com o mesmo nome dela.
+  const linhasMedidas = estado.linhas;
   const controlo = new AbortController();
   const botao = $('alinhar');
   const nota = $('estadoAlinhar');
@@ -1567,6 +1789,9 @@ async function alinhar() {
   const mb = custoEstimadoMB(faltam);
   if (mb > 80 && !confirm(t('alinhar.custo', { n: faltam, mb }))) return;
   botao.disabled = true;
+  // O botão Parar serve também aqui. O controlo existia e ninguém lhe chegava:
+  // a única saída de uma sincronia de centenas de MB era fechar o separador.
+  estado.cancelar = () => controlo.abort();
 
   try {
     const r = await alinharPeloSom({
@@ -1579,9 +1804,15 @@ async function alinhar() {
           ? t('alinhar.aOuvir', {
             canal: p.canal, feito: p.feito, total: p.total, mb: (p.bytes / 1048576).toFixed(0),
           })
-          : t('alinhar.aComparar');
+          : p.total ? t('alinhar.aCompararQuantos', { feito: p.feito, total: p.total })
+            : t('alinhar.aComparar');
       },
     });
+    if (estado.linhas !== linhasMedidas) {
+      nota.classList.add('mau');
+      nota.textContent = t('alinhar.noiteMudou');
+      return;
+    }
 
     // Substitui, não soma: correr duas vezes seguidas não pode empurrar o
     // dobro. E o que foi medido à mão para um canal sem ligação fica de pé.
@@ -1601,15 +1832,22 @@ async function alinhar() {
         : '');
     nota.classList.toggle('mau', !Object.keys(r.ajustesMs).length);
     pintarConfianca();
-    montarGrade();
+    // Sem reconstruir a grelha: o `irPara` já põe cada leitor no relógio novo,
+    // e só cria um leitor onde o ajuste mudou de VOD. O `montarGrade` deitava
+    // fora todos os leitores (e o da janela à parte com eles) para os pedir
+    // outra vez à Kick logo a seguir. As faixas andam com o ajuste, como no
+    // `empurrar`.
+    pintarFaixas();
     irPara(estado.agoraMs);
   } catch (e) {
     nota.classList.add('mau');
     nota.textContent = e.name === 'AbortError' ? t('alinhar.cancelado')
       : e.name === 'SEM-DESCODIFICADOR' ? t('alinhar.semCodec')
         : t('alinhar.erro', { erro: e.message });
+  } finally {
+    botao.disabled = false;
+    estado.cancelar = null;
   }
-  botao.disabled = false;
 }
 
 // ── procurar as kills sozinho ───────────────────────────────────────────────
@@ -1989,6 +2227,11 @@ async function afinarInstante(apanhador, slug, ms, { janelaS = 6, precisaoMs = 2
 const soUmCanal = () => estado.linhas.length < 2;
 
 function pintarMomentos() {
+  // Uma prévia de uma kill que já não existe pára aqui. O Remover e o apagar
+  // aos molhos tiravam a kill e deixavam o ciclo a tocar, e o botão Parar
+  // estava na linha que acabara de sair: a única maneira de o desligar era
+  // recarregar a página.
+  if (estado.previa && !estado.momentos.some((m) => m.ms === estado.previa.ms)) estado.previa = null;
   const canais = estado.linhas.map((l) => l.slug);
   const sozinho = soUmCanal();
   const lista = ordenar(estado.momentos);
@@ -3570,6 +3813,9 @@ function verClipe() {
   const duracaoS = (c.ateMs - c.deMs) / 1000;
   let inicioS = null;
   let esperas = 0;
+  // Onde o vídeo estava da última vez que andou, e desde quando.
+  let ultimoS = null;
+  let paradoDesde = 0;
   const vigiar = () => {
     if (!estado.clipe?.aVer) return;
     if (inicioS === null) {
@@ -3588,6 +3834,14 @@ function verClipe() {
       inicioS = v.currentTime;
     }
     if (v.currentTime - inicioS >= duracaoS) { pararVer(); return; }
+    // Um vídeo que acabou, deu erro ou deixou de andar também acaba aqui. Um
+    // pedaço que atravessa uma reconexão chega ao fim da primeira peça antes
+    // do fim do pedaço, e o ⏹ ficava aceso para sempre com a grelha parada
+    // por trás. Cinco segundos sem andar é desistir, como na espera de cima.
+    if (v.ended || v.error) { pararVer(); return; }
+    const agora = performance.now();
+    if (v.currentTime !== ultimoS) { ultimoS = v.currentTime; paradoDesde = agora; }
+    else if (agora - paradoDesde > 5000) { pararVer(); return; }
     porCabeca(c.deMs + (v.currentTime - inicioS) * 1000);
     c.vigia = requestAnimationFrame(vigiar);
   };
@@ -3807,6 +4061,7 @@ window.__estado = estado;
 // ── ligações ────────────────────────────────────────────────────────────────
 
 $('carregar').onclick = carregar;
+$('parar').onclick = () => estado.cancelar?.();
 
 /**
  * Passar esta noite pronta a outra pessoa.
@@ -3878,6 +4133,10 @@ $('partilhar').onclick = async () => {
     history.replaceState(null, '', u);
     nota.textContent = t('partilha.falhou');
     nota.classList.add('mau');
+    // E fica lá tempo para se ler. Sem isto o relógio da grelha reescrevia a
+    // frase do link no segundo seguinte, e ele nunca sabia onde o link foi parar.
+    clearTimeout(voltarAPartilha);
+    voltarAPartilha = setTimeout(() => { voltarAPartilha = 0; pintarPartilha(); }, 15_000);
   }
 };
 // Qualquer navegacao a mao desliga a previa: se ele foi procurar outra coisa,
@@ -3970,7 +4229,9 @@ async function abrirLinkKick() {
     // Um canal não tem nada de especial: é o caminho normal, com a caixa cheia.
     $('canais').value = [$('canais').value.trim(), lido.slug].filter(Boolean).join('\n');
     nota.textContent = '';
-    $('carregar').click();
+    // Directo, e não pelo botão: com uma carga a meio o botão está cinzento e
+    // o clique não fazia nada.
+    carregar();
     return;
   }
   if (lido.tipo === 'vod') {
@@ -3986,7 +4247,7 @@ async function abrirLinkKick() {
       if (!slug) throw new Error('sem canal');
       $('canais').value = [$('canais').value.trim(), slug].filter(Boolean).join('\n');
       nota.textContent = '';
-      $('carregar').click();
+      carregar();
     } catch {
       nota.classList.add('mau');
       nota.textContent = t('link.semClipe');
@@ -4170,8 +4431,9 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'm' || e.key === 'M') $('marcarKill').click();
   if (e.key === 'i' || e.key === 'I') $('marcarIn').click();
   if (e.key === 'o' || e.key === 'O') $('marcarOut').click();
-  if (e.key === 'j' || e.key === 'ArrowLeft') irPara(estado.agoraMs - passo);
-  if (e.key === 'l' || e.key === 'ArrowRight') irPara(estado.agoraMs + passo);
+  // Andar à mão desliga a prévia, como os botões de saltar.
+  if (e.key === 'j' || e.key === 'ArrowLeft') { largarPrevia(); irPara(estado.agoraMs - passo); }
+  if (e.key === 'l' || e.key === 'ArrowRight') { largarPrevia(); irPara(estado.agoraMs + passo); }
   // O ângulo em foco anda sozinho: alinhar à vista, sem tirar a mão do teclado.
   if (e.key === ',' && estado.focos[0]) empurrar(estado.focos[0], -passo);
   if (e.key === '.' && estado.focos[0]) empurrar(estado.focos[0], passo);
@@ -4274,7 +4536,13 @@ function trocarIdioma(codigo) {
   // nova ida à Kick: trocar de idioma não pode custar pedidos a ninguém.
   if (ultimosCanais.length) pintarCanais(ultimosCanais);
   if (estado.linhas.length) {
-    montarGrade();
+    // Os quadros traduzem-se no sítio, e não se reconstroem. O `montarGrade`
+    // destruía todos os leitores e voltava a pedir cada playlist e cada pedaço
+    // à Kick: com quinhentos canais, trocar de língua a meio de um evento
+    // deixava a grelha preta. O `aplicarIdioma` de cima já tratou os quadros
+    // que estão nesta página; o da janela à parte vive noutro documento.
+    if (estado.aparte?.tile) aplicarIdioma(estado.aparte.tile);
+    aplicarFoco();
     pintarFaixas();
     irPara(estado.agoraMs);
     pintarMarca();

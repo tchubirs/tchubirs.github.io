@@ -1511,6 +1511,16 @@ body.mesa:has(#palco:not([hidden])) > #evento { flex: 0 0 auto; margin-bottom: v
   .porta { gap: var(--e3); }
 }
 
+/* escala: o Parar da tarefa longa. Num canto fixo, por cima de tudo menos das
+   janelas: o progresso de cada tarefa vive numa secção diferente, e quem quer
+   parar não pode ter de rolar a página à procura de onde ela está. */
+.parar {
+  position: fixed; right: var(--e5); bottom: var(--e5); z-index: 90;
+  background: var(--sup-2); color: var(--perigo);
+  border-color: color-mix(in srgb, var(--perigo) 45%, transparent);
+  box-shadow: var(--sombra-janela);
+}
+.parar:hover:not(:disabled) { background: var(--sup-4); border-color: var(--perigo); }
 /* Num ecrã estreito o lance fica preso ao fundo, por cima do fim do mapa, como uma folha que sobe: o
    título e o botão que abre o vídeo estão sempre à vista enquanto se mexe no mapa. */
 @media (max-width: 999px) {

@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
-  vodsDoCanal, lerMaster, lerPlaylist, segmentosNaJanela, tempoDeMidia, lerLinkKick,
+  vodsDoCanal, lerMaster, lerPlaylist, segmentosNaJanela, tempoDeMidia, lerLinkKick, slugDoNome,
 } from '../site/kick.js';
 
 // The fixtures are real responses recorded from Kick on 31/08/2026. That is the
@@ -87,6 +87,20 @@ test('every way a channel can fail has a name', async () => {
     assert.equal(r.estado, esperado, `${slug} -> ${esperado}`);
     assert.deepEqual(r.vods, []);
   }
+});
+
+// A página compara o que ele escreveu com o que a Kick devolve. As duas pontas
+// têm de passar pela mesma conta, senão "Gaules" e "gaules" são dois canais.
+test('o slug de um nome escrito à mão é o mesmo que a Kick pede', async () => {
+  assert.equal(slugDoNome('  @Gaules '), 'gaules');
+  assert.equal(slugDoNome('xQc'), 'xqc');
+  assert.equal(slugDoNome(null), '');
+  let pedido = '';
+  const r = await vodsDoCanal(' @Gaules ', {
+    buscar: async (u) => { pedido = u; return { ok: true, status: 200, json: async () => [] }; },
+  });
+  assert.equal(r.slug, slugDoNome(' @Gaules '));
+  assert.match(pedido, /\/channels\/gaules\//);
 });
 
 test('the network being down is a state, not a crash', async () => {

@@ -69,6 +69,9 @@ function transitorio(estado) {
   return estado === 'rate-limit' || estado === 'sem-rede' || /^http-5\d\d$/.test(estado);
 }
 
+/** As esperas da sonda quando a Kick parece fechada (ver "a pausa"). */
+const ESPERAS_DA_SONDA = [15000, 30000, 60000];
+
 /**
  * Os VODs de muitos canais, na MESMA ordem em que foram pedidos.
  *
@@ -135,17 +138,24 @@ export async function carregarCanais(slugs, {
   let emVoo = 0;
   const fila = [];
   let parar = false;
+  // Quantos canais estão agora a cumprir a espera de um 429. Enquanto houver
+  // um, não sai pedido nenhum (ver "a pausa", abaixo).
+  let pausas = 0;
 
-  const vez = (primeiro) => new Promise((ok) => {
-    if (emVoo < limite && !fila.length) { emVoo++; ok(); return; }
+  const andar = () => {
+    while (!parar && !pausas && !sonda && emVoo < limite && fila.length) { emVoo++; fila.shift()(); }
+  };
+  const vez = (primeiro) => {
     // Quem volta a tentar passa à frente: já esperou o castigo dele, e se
     // fosse para o fim de 500 só se sabia dele no fim da carga.
-    if (primeiro) fila.unshift(ok); else fila.push(ok);
-  });
-  const libertar = () => {
-    emVoo--;
-    while (!parar && emVoo < limite && fila.length) { emVoo++; fila.shift()(); }
+    const p = new Promise((ok) => { if (primeiro) fila.unshift(ok); else fila.push(ok); });
+    // Só depois de quem pediu estar à espera desta promessa. Soltá-la já aqui
+    // punha-a atrás dos outros soltos na mesma volta, e o primeiro da fila
+    // saía depois deles.
+    queueMicrotask(andar);
+    return p;
   };
+  const libertar = () => { emVoo--; andar(); };
 
   // ── o abrandamento ────────────────────────────────────────────────────────
   // Depois de um 429, o limite passa a metade até ao fim da carga.
@@ -157,8 +167,37 @@ export async function carregarCanais(slugs, {
   // que saiu, e só um 429 da geração corrente corta — um 429 de um pedido
   // que já saiu com o limite novo quer dizer que a metade ainda não chegou,
   // e esse sim corta outra vez. (É a mesma ideia do TCP: um corte por ida e
-  // volta, não um por pacote perdido.)
+  // volta, não um por pacote perdido.) Um 429 atrasado de antes do corte
+  // não corta, mas pára toda a gente como qualquer outro.
   let geracao = 0;
+
+  // ── a pausa ───────────────────────────────────────────────────────────────
+  // Um 429 é a Kick a pedir calma a TODOS, não só a este canal. Se o lugar do
+  // canal castigado fosse logo para outro, o ritmo só caía para metade e nunca
+  // parava, justamente quando a Kick pedia menos: com o limite a durar, cada
+  // canal gastava as tentativas todas (100 canais, 400 pedidos). Por isso a
+  // espera depois de um 429 vale para a carga inteira. Um 503 ou uma falha de
+  // rede são desse canal, e esses esperam sozinhos.
+  //
+  // E se a Kick parece fechada, não se gastam as tentativas de todos: quando
+  // um canal sobe a escada toda só com 429 e nesse tempo outros também
+  // levaram 429 e ninguém teve outra resposta, esse canal passa a ser a
+  // sonda. Só ele pergunta, depois de 15, 30 e 60 s, e ninguém mais sai
+  // enquanto isso. Os que chegarem ao fim da escada entretanto esperam pela
+  // resposta dela. Se a Kick abrir, todos seguem; se ao fim de uns dois
+  // minutos ainda só houver 429, o resto fica 'rate-limit' sem se pedir.
+  //
+  // Os dois minutos não são ao acaso: uma janela de 429 da Kick de 10 a 60 s
+  // é normal, e desistir ao fim da escada (7 s) deitava fora uma carga de
+  // 500 que antes se recompunha sozinha quando a janela acabava.
+  //
+  // Um canal sozinho a levar 429 não prova nada sobre os outros, por isso
+  // esse não abre sonda.
+  let recusas = 0;
+  let outras = 0;
+  let fechada = false;
+  /** Enquanto há sonda, uma promessa que diz se a Kick abriu. */
+  let sonda = null;
 
   const abortado = quandoCancelar(sinal);
   // O sinal vai até ao fetch, para um pedido a meio ser largado de facto e
@@ -166,35 +205,93 @@ export async function carregarCanais(slugs, {
   const buscarComSinal = sinal ? (url, op) => buscar(url, { ...op, signal: sinal }) : buscar;
 
   async function umCanal(chave) {
+    let antes = null;
     for (let feitas = 0; ; feitas++) {
       await vez(feitas > 0);
       if (parar || sinal?.aborted) { libertar(); throw cancelado(); }
+      if (fechada) { libertar(); return { slug: chave, estado: 'rate-limit', vods: [] }; }
       const minhaGeracao = geracao;
       let r;
       try {
         r = await vodsDoCanal(chave, { buscar: buscarComSinal });
         // ANTES de libertar o lugar: se fosse depois, o lugar livre ia já para
         // o próximo da fila com o limite antigo, e o corte chegava atrasado.
-        if (r.estado === 'rate-limit' && minhaGeracao === geracao) {
-          limite = Math.max(piso, Math.floor(limite / 2));
-          geracao++;
+        if (r.estado === 'rate-limit') {
+          recusas++;
+          if (minhaGeracao === geracao) {
+            limite = Math.max(piso, Math.floor(limite / 2));
+            geracao++;
+          }
+        } else {
+          outras++;
         }
       } finally {
         libertar();
       }
       // Um fetch largado pelo sinal volta como 'sem-rede', que é transitório e
       // seria tentado outra vez. Não pode: a pessoa mandou parar.
-      if (sinal?.aborted) throw cancelado();
-      if (!transitorio(r.estado) || feitas >= tentativas) return r;
+      if (sinal?.aborted || parar) throw cancelado();
+      const de429 = r.estado === 'rate-limit';
+      if (de429 && !antes) antes = { recusas: recusas - 1, outras: outras };
+      if (!transitorio(r.estado) || feitas >= tentativas) {
+        const seco = de429 && antes && outras === antes.outras && recusas - antes.recusas > feitas + 1;
+        if (!seco || fechada) return r;
+        if (sonda) {
+          // Uma última vez, à frente da fila, se a sonda disser que abriu.
+          if (!(await sonda)) return r;
+          antes = null;
+          feitas = tentativas - 1;
+          continue;
+        }
+        return sondar(chave, r);
+      }
       // A espera não precisa de correr contra o sinal aqui dentro: quem
       // chamou já recebeu o AbortError pela corrida lá de baixo, e quando
       // esta espera acabar o canal dá com o `parar` antes de pedir o que seja.
-      await esperar(1000 * 2 ** feitas);
+      if (de429) pausas++;
+      try {
+        await esperar(1000 * 2 ** feitas);
+      } finally {
+        if (de429) pausas--;
+      }
+    }
+  }
+
+  async function sondar(chave, ultima) {
+    let abriu = false;
+    let dizer;
+    sonda = new Promise((ok) => { dizer = ok; });
+    let r = ultima;
+    try {
+      for (const ms of ESPERAS_DA_SONDA) {
+        pausas++;
+        try { await esperar(ms); } finally { pausas--; }
+        if (parar || sinal?.aborted) throw cancelado();
+        // Sem passar pela fila: com a sonda no ar a fila não anda.
+        emVoo++;
+        try {
+          r = await vodsDoCanal(chave, { buscar: buscarComSinal });
+          if (r.estado === 'rate-limit') recusas++; else outras++;
+        } finally {
+          emVoo--;
+        }
+        if (sinal?.aborted || parar) throw cancelado();
+        if (r.estado !== 'rate-limit') { abriu = true; break; }
+      }
+      return r;
+    } finally {
+      if (!abriu) fechada = true;
+      sonda = null;
+      dizer(abriu);
+      andar();
     }
   }
 
   let feitos = 0;
   const trabalho = Promise.all(unicos.map((chave) => umCanal(chave).then((r) => {
+    // Depois de a carga ter rejeitado (o aoProgredir rebentou, por exemplo),
+    // a página já mostrou o erro: não pode voltar a ver progresso.
+    if (parar) throw cancelado();
     feitos++;
     aoProgredir?.({ feitos, total, slug: r.slug, estado: r.estado, paralelos: limite });
     return r;
@@ -233,32 +330,115 @@ const AO_VIVO = 'https://kick.com/stream/livestreams/en';
 const DOBRAS = { ı: 'i', ł: 'l', ø: 'o', đ: 'd', ß: 'ss' };
 
 /**
- * Texto pronto a comparar: sem maiúsculas e sem acentos.
+ * Texto pronto a comparar: sem acentos e com as letras próprias dobradas. As
+ * maiúsculas ficam: `partes` precisa delas para ver onde começa cada palavra
+ * de um "#RustKickOff". Quem compara baixa-as depois.
  *
  * NFKD e não só NFD. A NFD tira os acentos; a K também desfaz as letras
  * "estilizadas". Medido em 06/10/2026 sobre 295 títulos ao vivo: 16 mudam
  * entre uma e outra, e entre eles "ᵒˡᵃᵇⁱˡⁱʳ" (letras em expoente) e
  * "³⁰⁰gang". Quem procura escreve com o teclado normal, e com a NFD esses
  * títulos eram invisíveis.
- *
- * Depois disto, nos dois lados, tudo o que não é letra nem número sai: as
- * palavras procuradas partem-se aí, e o texto onde se procura fica COLADO.
- * Assim "kickoff" encontra "Kick-Off" e "KICK OFF", e "kick off" encontra
- * "#RustKickOff". Um falso positivo aparece na lista com o título ao lado e
- * tira-se com um clique; um participante que falta não aparece em lado
- * nenhum, e é esse o erro caro.
  */
 function dobrar(texto) {
   return String(texto ?? '')
     .normalize('NFKD')
     .replace(/\p{M}+/gu, '')
-    .toLowerCase()
-    .replace(/[ıłøđß]/g, (c) => DOBRAS[c]);
+    .replace(/[ıłøđßŁØĐ]/g, (c) => {
+      const d = DOBRAS[c.toLowerCase()];
+      return c === c.toLowerCase() ? d : d.toUpperCase();
+    });
+}
+
+/**
+ * As partes de um campo (o título, ou uma etiqueta), em minúsculas.
+ *
+ * Parte-se em tudo o que não é letra nem número, onde uma minúscula passa a
+ * maiúscula ("RustKickOff" dá rust, kick, off) e onde uma letra passa a número
+ * ("Off2" dá off, 2). Uma palavra procurada tem de ser uma ou mais partes
+ * SEGUIDAS do mesmo campo: assim "kickoff" encontra "Kick-Off" e "#RustKickOff",
+ * mas "rust" não encontra "Trust", "off" não encontra "Office", "2" não
+ * encontra "2026", e o fim do título não se cola ao começo de uma etiqueta.
+ * (Antes o texto ia todo colado, e uma palavra curta do evento como "dia"
+ * puxava para a lista quem tinha "India" no título.)
+ *
+ * Cada parte diz também se é "colada": só minúsculas ou só maiúsculas, como
+ * "#rustkickoff" ou "RUSTKICKOFF". Aí não há maiúsculas a dizer onde começa
+ * cada palavra, e as etiquetas da Kick vêm quase sempre assim. Ver `bate`.
+ */
+function partes(campo) {
+  return dobrar(campo)
+    .replace(/(\p{Ll})(\p{Lu})/gu, '$1 $2')
+    .replace(/(\p{L})(\p{N})|(\p{N})(\p{L})/gu, (_, a, b, c, d) => (a ? `${a} ${b}` : `${c} ${d}`))
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter(Boolean)
+    .map((p) => {
+      const texto = p.toLowerCase();
+      return { texto, colada: /\p{L}/u.test(p) && (p === texto || p === p.toUpperCase()) };
+    });
 }
 
 function palavrasDe(palavras) {
   const cru = Array.isArray(palavras) ? palavras.join(' ') : String(palavras ?? '');
-  return dobrar(cru).split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+  return dobrar(cru).toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+}
+
+/**
+ * Todos os textos que se podem formar colando partes seguidas de um campo, e
+ * à parte as partes coladas (ver `partes`). Um título tem poucas dezenas de
+ * partes, por isso isto são umas centenas de textos curtos, o que não pesa
+ * nem com 30 páginas.
+ */
+function pedacosDe(campos) {
+  const pedacos = new Set();
+  const coladas = [];
+  for (const campo of campos) {
+    const p = partes(campo);
+    for (let i = 0; i < p.length; i++) {
+      if (p[i].colada) coladas.push(p[i].texto);
+      let colado = '';
+      for (let j = i; j < p.length && j < i + 12; j++) { colado += p[j].texto; pedacos.add(colado); }
+    }
+  }
+  return { pedacos, coladas };
+}
+
+/**
+ * Escritas sem espaços entre palavras: aí uma palavra está sempre dentro de
+ * outro texto ("イベント" em "ラストイベント"), e partir não serve de nada.
+ */
+const SEM_ESPACOS = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Thai}\p{Script=Lao}\p{Script=Khmer}\p{Script=Myanmar}]/u;
+
+/**
+ * Um texto procurado está no campo: é uma ou mais partes seguidas, ou está
+ * dentro de uma parte colada. Dentro de uma colada só a partir de 4 letras,
+ * para "off" não achar "offline" nem "dia" achar "rustdia" por acaso; numa
+ * escrita sem espaços, sempre.
+ *
+ * Isto deixa entrar "rust" em "trust" escrito todo em minúsculas. É o erro
+ * barato: um a mais na lista vê-se e tira-se. Um participante que falta não
+ * aparece em lado nenhum, e "#rustkickoff" sem "kickoff" era isso.
+ */
+function tem(colado, { pedacos, coladas }) {
+  if (pedacos.has(colado)) return true;
+  if (colado.length < 4 && !SEM_ESPACOS.test(colado)) return false;
+  return coladas.some((c) => c.includes(colado));
+}
+
+/**
+ * Cada palavra procurada tem de aparecer. Palavras seguidas da busca também
+ * podem aparecer coladas: "kick off" encontra a etiqueta "kickoff".
+ */
+function bate(procurar, campo) {
+  const coberta = procurar.map(() => false);
+  for (let i = 0; i < procurar.length; i++) {
+    let colado = '';
+    for (let j = i; j < procurar.length; j++) {
+      colado += procurar[j];
+      if (tem(colado, campo)) for (let k = i; k <= j; k++) coberta[k] = true;
+    }
+  }
+  return coberta.every(Boolean);
 }
 
 /**
@@ -303,63 +483,103 @@ function semLista(estado, pagina, parcial, detalhe) {
  * só: a lista vem por espectadores e mexe enquanto se pagina, e o mesmo canal
  * pode saltar de uma página para a seguinte.
  *
- * Uma página que falha atira `SEM-LISTA-AO-VIVO` com `estado`, `pagina` e o
- * `parcial` já encontrado. Devolver só o parcial calado era mentir: "estes
- * são os participantes" quando são só os das primeiras páginas, e quem falta
- * nunca seria procurado.
+ * Uma falha passageira (429, 5xx, rede) volta a ser pedida, à espera de 1 s,
+ * 2 s e 4 s, como em `carregarCanais`: um soluço na página 12 de 16 não pode
+ * deitar fora a busca toda. Uma página que falha mesmo atira
+ * `SEM-LISTA-AO-VIVO` com `estado`, `pagina` e o `parcial` já encontrado.
+ * Devolver só o parcial calado era mentir: "estes são os participantes"
+ * quando são só os das primeiras páginas, e quem falta nunca seria procurado.
+ *
+ * Pela mesma razão, a lista devolvida leva `incompleto: true` quando parou em
+ * `maxPaginas` com a Kick a dizer que ainda havia mais. Com 32 por página, 30
+ * páginas são os mil mais vistos, e numa categoria cheia os participantes com
+ * poucos espectadores ficavam de fora sem ninguém saber.
+ *
+ * `sinal` cancela logo, mesmo que a `buscar` não largue o pedido, e mesmo a
+ * meio de uma espera.
  */
 export async function procurarAoVivo({
   palavras, subcategoria = 'rust', buscar = fetch, maxPaginas = 30, sinal,
+  tentativas = 3, esperar = (ms) => new Promise((ok) => setTimeout(ok, ms)),
 } = {}) {
+  // Um 0 não quer dizer "uma página": é um erro de quem chama, e dizê-lo já é
+  // melhor do que pedir o que ninguém pediu.
+  if (!Number.isInteger(maxPaginas) || maxPaginas < 1) {
+    throw new RangeError(`maxPaginas tem de ser um inteiro >= 1 (veio ${maxPaginas})`);
+  }
+  if (!Number.isInteger(tentativas) || tentativas < 0) {
+    throw new RangeError(`tentativas tem de ser um inteiro >= 0 (veio ${tentativas})`);
+  }
   const procurar = palavrasDe(palavras);
-  const ultima = Math.max(1, Math.floor(Number(maxPaginas)) || 1);
   const vistos = new Set();
   const achados = [];
+  let incompleto = false;
+  const abortado = quandoCancelar(sinal);
+  // O que estiver à espera corre contra o cancelamento, como em carregarCanais.
+  const ouCancelar = (p) => (sinal ? Promise.race([p, abortado.promessa]) : p);
 
-  for (let pagina = 1; pagina <= ultima; pagina++) {
-    if (sinal?.aborted) throw cancelado();
+  /** Uma página, já lida, ou { estado, detalhe } quando falhou. */
+  async function umaPagina(pagina) {
     const q = new URLSearchParams({ page: String(pagina), limit: '100' });
     // Sem subcategoria, a Kick inteira — para um evento que começa em "Just
     // Chatting" antes de entrar no servidor.
     if (subcategoria) q.set('subcategory', String(subcategoria));
     q.set('sort', 'desc');
-
     let r;
     try {
-      r = await buscar(`${AO_VIVO}?${q}`, { signal: sinal });
+      r = await ouCancelar(buscar(`${AO_VIVO}?${q}`, { signal: sinal }));
     } catch (e) {
       if (sinal?.aborted) throw cancelado();
-      throw semLista('sem-rede', pagina, achados, e?.message);
+      return { estado: 'sem-rede', detalhe: e?.message };
     }
-    if (r.status === 429) throw semLista('rate-limit', pagina, achados);
-    if (!r.ok) throw semLista(`http-${r.status}`, pagina, achados);
-    let j;
-    try { j = await r.json(); } catch {
+    if (r.status === 429) return { estado: 'rate-limit' };
+    if (!r.ok) return { estado: `http-${r.status}` };
+    try {
+      return { j: await ouCancelar(r.json()) };
+    } catch {
       if (sinal?.aborted) throw cancelado();
-      throw semLista('resposta-ilegivel', pagina, achados);
+      return { estado: 'resposta-ilegivel' };
     }
-    const dados = j?.data;
-    if (!Array.isArray(dados)) throw semLista('formato-inesperado', pagina, achados);
+  }
 
-    for (const d of dados) {
-      const slug = typeof d?.channel?.slug === 'string' ? d.channel.slug.trim().toLowerCase() : '';
-      if (!slug || vistos.has(slug)) continue;
-      const etiquetas = Array.isArray(d.tags) ? d.tags.filter((t) => typeof t === 'string') : [];
-      // Título e etiquetas num só texto, colado: uma palavra pode estar num e
-      // outra noutra ("rust" na etiqueta, "kick off" no título).
-      const onde = dobrar([d.session_title, ...etiquetas].join(' ')).replace(/[^\p{L}\p{N}]+/gu, '');
-      if (!procurar.every((p) => onde.includes(p))) continue;
-      vistos.add(slug);
-      achados.push({
-        slug,
-        titulo: typeof d.session_title === 'string' ? d.session_title : DESCONHECIDO,
-        espectadores: Number.isFinite(d.viewer_count) ? d.viewer_count : DESCONHECIDO,
-        idioma: typeof d.language === 'string' ? d.language : DESCONHECIDO,
-        inicioMs: instanteUtc(d.start_time),
-      });
+  try {
+    for (let pagina = 1; pagina <= maxPaginas; pagina++) {
+      if (sinal?.aborted) throw cancelado();
+      let lida;
+      for (let feitas = 0; ; feitas++) {
+        lida = await umaPagina(pagina);
+        if (lida.j !== undefined || !transitorio(lida.estado) || feitas >= tentativas) break;
+        await ouCancelar(esperar(1000 * 2 ** feitas));
+        if (sinal?.aborted) throw cancelado();
+      }
+      if (lida.j === undefined) throw semLista(lida.estado, pagina, achados, lida.detalhe);
+      const { j } = lida;
+      const dados = j?.data;
+      if (!Array.isArray(dados)) throw semLista('formato-inesperado', pagina, achados);
+
+      for (const d of dados) {
+        const slug = typeof d?.channel?.slug === 'string' ? d.channel.slug.trim().toLowerCase() : '';
+        if (!slug || vistos.has(slug)) continue;
+        const etiquetas = Array.isArray(d.tags) ? d.tags.filter((t) => typeof t === 'string') : [];
+        // Cada campo à parte: uma palavra pode estar num e outra noutra ("rust"
+        // na etiqueta, "kick off" no título), mas uma palavra não se forma
+        // com o fim de um e o começo do outro.
+        if (procurar.length && !bate(procurar, pedacosDe([d.session_title, ...etiquetas]))) continue;
+        vistos.add(slug);
+        achados.push({
+          slug,
+          titulo: typeof d.session_title === 'string' ? d.session_title : DESCONHECIDO,
+          espectadores: Number.isFinite(d.viewer_count) ? d.viewer_count : DESCONHECIDO,
+          idioma: typeof d.language === 'string' ? d.language : DESCONHECIDO,
+          inicioMs: instanteUtc(d.start_time),
+        });
+      }
+      if (!dados.length || !j.next_page_url) break;
+      if (pagina === maxPaginas) incompleto = true;
     }
-    if (!dados.length || !j.next_page_url) break;
+  } finally {
+    abortado.largar();
   }
   if (sinal?.aborted) throw cancelado();
-  return achados;
+  return Object.assign(achados, { incompleto });
 }

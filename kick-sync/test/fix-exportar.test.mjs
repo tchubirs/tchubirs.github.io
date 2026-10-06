@@ -495,6 +495,11 @@ test('sem MSE a prévia pede o vídeo com crossOrigin', semNavegador, async () =
 
 // Refazer a grelha com um ângulo numa janela à parte deixava um leitor destruído no segundo
 // monitor, contado como vivo.
+//
+// Este teste refazia a grelha trocando de língua. Trocar de língua deixou de refazer a grelha
+// (destruía e voltava a pedir à Kick todos os leitores, quinhentos num evento), e por isso a
+// janela à parte já não tem de fechar aí: o leitor dela continua vivo. A grelha refaz-se agora
+// ao tirar um canal, e é aí que se vê o que o teste quer: a janela de um canal que saiu fecha.
 test('refazer a grelha fecha a janela à parte, em vez de a deixar com um leitor morto',
   semNavegador, async () => {
     const { p, erros } = await abrir();
@@ -503,13 +508,20 @@ test('refazer a grelha fecha a janela à parte, em vez de a deixar com um leitor
       window.__fechadas = 0;
       window.__estado.aparte = {
         modo: 'documento',
-        tile: document.querySelector('#grade .tile, #palcoFoco .tile'),
+        tile: document.querySelector('.tile[data-slug="outro"]'),
         fechar: () => { window.__fechadas++; },
       };
     });
-    // Trocar de língua refaz a grelha inteira.
+    // Trocar de língua não refaz nada: a janela fica, e o quadro dela também.
     await p.selectOption('#idioma', 'en');
     await p.waitForFunction(() => document.documentElement.lang === 'en', null, { timeout: 5000 });
+    assert.equal(await p.evaluate(() => window.__fechadas), 0, 'trocar de língua fechou a janela à parte');
+    assert.ok(await p.evaluate(() => window.__estado.aparte?.tile?.isConnected));
+
+    // Tirar o canal dela refaz a grelha sem ele: a janela fecha.
+    await p.locator('#listaCanais li[data-slug="outro"] .tirar').click();
+    await p.waitForFunction(() => !document.querySelector('#grade .tile[data-slug="outro"], #palcoFoco .tile[data-slug="outro"]')
+      && document.querySelectorAll('.tile').length === 1, null, { timeout: 15000 });
     assert.equal(await p.evaluate(() => window.__fechadas), 1, 'a janela à parte ficou aberta');
     assert.equal(await p.evaluate(() => window.__estado.aparte), null);
     assert.deepEqual(erros, []);

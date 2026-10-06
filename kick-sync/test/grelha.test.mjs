@@ -23,6 +23,17 @@ test('quem já não está na caixa vai para o fim, e não para o princípio', ()
   );
 });
 
+// "Gaules", "@Coringa" e "xQc" são como os nomes aparecem na Kick, e é assim
+// que um organizador cola o elenco. Os quadrados trazem o slug, em minúsculas e
+// sem o @: comparar os dois crus mandava todos os nomes com maiúscula para o
+// fim, e a grelha de um evento saía por ordem alfabética em vez de por time.
+test('por ordem de adição mesmo com maiúsculas e @ na caixa', () => {
+  assert.deepEqual(
+    ordemDosAngulos(linhas('zeta', 'alpha', 'mike'), 'adicionado', ['Zeta', ' @Mike ', 'Alpha']),
+    ['zeta', 'mike', 'alpha'],
+  );
+});
+
 test('alfabética ignora maiúsculas', () => {
   // Com um `<` seco, "Xlibano" vinha antes de "ay_zarite" porque as maiúsculas
   // são menores em código — e uma lista alfabética fora de ordem alfabética é

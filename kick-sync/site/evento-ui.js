@@ -298,7 +298,9 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
     // Vão para a caixa do elenco, e não direto para o mapa: quem procurou por palavra quase sempre
     // apanha um ou outro que não é do evento, e tem de poder tirá-los antes.
     $('elenco').value = achados.map((a) => a.slug).join('\n');
-    $('estadoEvento').textContent = t('evento.achadosAoVivo', { n: achados.length });
+    // Parou no limite de páginas com a Kick a dizer que havia mais: quem tem poucos espectadores
+    // pode não estar aqui, e isso tem de se dizer.
+    $('estadoEvento').textContent = t(achados.incompleto ? 'evento.achadosCortados' : 'evento.achadosAoVivo', { n: achados.length });
     // O próximo passo é o Abrir, que ficou lá em cima: o botão diz quantos abre e recebe o foco.
     $('abrirElencoTexto').textContent = t('evento.abrirN', { n: achados.length });
     $('elenco').scrollIntoView({ block: 'nearest' });
