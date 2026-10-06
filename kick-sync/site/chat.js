@@ -25,6 +25,11 @@
 
 const API = 'https://kick.com/api/v2';
 
+// O máximo que uma página de chat trouxe, medido. Não diz que uma página mais
+// curta é o fim (veio uma de 19 com mais para trás); só serve para reconhecer
+// uma página CHEIA de mensagens já vistas, que é um cursor que não andou.
+const PAGINA = 25;
+
 /** O mesmo erro que o resto da página usa para "o utilizador desistiu". */
 function cancelado() {
   return new DOMException('cancelado', 'AbortError');
@@ -58,9 +63,12 @@ function instante(texto) {
  */
 export async function idDoCanal(slug, { buscar = fetch, sinal } = {}) {
   // A mesma regra de nome de `vodsDoCanal`: só se recusa o que não pode ser
-  // um bocado de endereço. O resto vai à Kick, que é quem sabe.
+  // um bocado de endereço. O resto vai à Kick, que é quem sabe. E, como em
+  // `elenco.js`, pelo menos uma letra ou um algarismo: `encodeURIComponent`
+  // não escapa pontos, e "." ou ".." iam a kick.com/api/v2/channels/ ou a
+  // kick.com/api/v2/, onde um `id` qualquer passava por número de canal.
   const nome = String(slug || '').trim().replace(/^@/, '').toLowerCase();
-  if (!nome || !/^[a-z0-9_.-]{1,60}$/.test(nome)) return null;
+  if (!nome || !/^[a-z0-9_.-]{1,60}$/.test(nome) || !/[a-z0-9]/.test(nome)) return null;
   let r;
   try {
     r = await buscar(`${API}/channels/${encodeURIComponent(nome)}`, { signal: sinal });
@@ -70,7 +78,11 @@ export async function idDoCanal(slug, { buscar = fetch, sinal } = {}) {
   }
   if (!r?.ok) return null;
   let j;
-  try { j = await r.json(); } catch { return null; }
+  try { j = await r.json(); } catch (e) {
+    // Cancelar a meio do corpo também é desistir, como em `mensagensEntre`.
+    if (e?.name === 'AbortError' || sinal?.aborted) throw cancelado();
+    return null;
+  }
   // O `id` de cima, e nunca `chatroom.id`: ver o topo do ficheiro.
   const id = Number(j?.id);
   return Number.isSafeInteger(id) && id > 0 ? id : null;
@@ -87,7 +99,8 @@ export async function idDoCanal(slug, { buscar = fetch, sinal } = {}) {
  *   - `incompleto`: true se parou antes de chegar a `deMs`;
  *   - `motivo`: porquê ('max-pedidos', 'rate-limit', 'sem-rede',
  *     'canal-nao-existe', 'http-<n>', 'resposta-ilegivel',
- *     'formato-inesperado', 'cursor-parado', 'sem-canal'), ou null;
+ *     'formato-inesperado', 'cursor-parado', 'sem-canal',
+ *     'janela-invalida'), ou null;
  *   - `pedidos`: quantos pedidos custou.
  *
  * Parar a meio não atira: devolve o que já tem e diz que é só isso. Para um
@@ -123,8 +136,15 @@ export async function mensagensEntre(id, deMs, ateMs, {
     motivo = 'sem-canal';
     return entregar();
   }
+  // Uma ponta que não é número (uma data que não se leu, ou Infinity por
+  // "até agora") não é uma janela calada: nada foi perguntado à Kick, e uma
+  // lista vazia "completa" jurava que o canal não disse nada.
+  if (!Number.isFinite(deMs) || !Number.isFinite(ateMs)) {
+    motivo = 'janela-invalida';
+    return entregar();
+  }
   // Uma janela vazia ou invertida não tem mensagens, e isso não é uma falha.
-  if (!Number.isFinite(deMs) || !Number.isFinite(ateMs) || ateMs <= deMs) return entregar();
+  if (ateMs <= deMs) return entregar();
 
   // Microssegundos inteiros: é a unidade do cursor da própria Kick. Cabe num
   // número normal sem perder nada (2^53 µs são uns 285 anos).
@@ -164,11 +184,13 @@ export async function mensagensEntre(id, deMs, ateMs, {
     if (!pagina.length) break;
 
     let maisVelha = Infinity;
+    let maisNova = -Infinity;
     let novas = 0;
     for (const m of pagina) {
       const ms = instante(m?.created_at);
       if (!Number.isFinite(ms)) continue;
       if (ms < maisVelha) maisVelha = ms;
+      if (ms > maisNova) maisNova = ms;
       // A Kick manda sempre `id`. Se um dia não mandar, a chave composta ainda
       // apanha a mensagem repetida na fronteira das páginas, que é o caso que
       // importa; perde-se no máximo um "kkk" repetido pela mesma pessoa no
@@ -203,14 +225,25 @@ export async function mensagensEntre(id, deMs, ateMs, {
     // "igual": as datas vêm ao segundo, e pode haver mais mensagens do mesmo
     // segundo de `deMs` na página seguinte.
     if (chegouMs < deMs) break;
-    // Uma página só com mensagens já vistas é uma página vazia disfarçada.
-    // Sem isto, um cursor que repete a fronteira prendia o ciclo até ao
-    // travão e marcava como incompleto um canal que já tinha dado tudo.
-    if (!novas) break;
+    // Uma página só com mensagens já vistas. Se é a fronteira repetida (tudo
+    // do segundo mais velho a que já se chegou, numa página que não vem
+    // cheia), é uma página vazia disfarçada: o fim, e completo. Sem isto, um
+    // cursor que repete a fronteira prendia o ciclo até ao travão e marcava
+    // como incompleto um canal que já tinha dado tudo.
+    // Mas a mesma página outra vez (mensagens mais novas do que onde se ia),
+    // ou uma página cheia de um segundo só que o cursor de recurso não passa,
+    // é um cursor que não serviu, e o resto da noite ficou por ler. Dizer
+    // "acabou" aí era a lista parcial calada que o topo desta função proíbe.
+    if (!novas) {
+      if (maisNova > chegouMs || pagina.length >= PAGINA) motivo = 'cursor-parado';
+      break;
+    }
 
     // O cursor da Kick e, se um dia faltar, o segundo da mensagem mais velha
     // (mais um, porque as datas vêm truncadas ao segundo e a mais velha ainda
-    // pode ter irmãs desse segundo; as repetidas caem fora pelo `id`).
+    // pode ter irmãs desse segundo; as repetidas caem fora pelo `id`). Andando
+    // ao segundo, um segundo com uma página cheia de mensagens não se
+    // atravessa: aí pára como 'cursor-parado', e não como fim.
     const doServidor = Number(j.data.cursor);
     const proximo = j.data.cursor != null && Number.isSafeInteger(doServidor) && doServidor > 0
       ? doServidor
@@ -261,10 +294,19 @@ function mediana(valores) {
  * menos `minimo` mensagens. As duas condições, porque cada uma sozinha falha:
  *
  *   - Só o fator: num canal quase calado (mediana 1) três "oi" no mesmo
- *     minuto são 3x e não são lance nenhum. Pior, se a janela apanhar horas
- *     com o canal desligado a mediana cai a zero e TUDO passa a ser pico.
+ *     minuto são 3x e não são lance nenhum.
  *   - Só o mínimo: num canal grande, oito mensagens num minuto é um minuto
  *     qualquer.
+ *
+ * A mediana conta só os baldes com mensagens. Os minutos a zero são quase
+ * sempre o canal desligado, e numa noite do evento cada um entra no ar à sua
+ * hora: com eles, um canal no ar menos de metade da janela tinha mediana 0,
+ * o limite caía no mínimo, a noite inteira ficava acima dele e saía UM pico
+ * só, com os outros lances perdidos. Num canal no ar quase não há minutos a
+ * zero, e num quase calado é o mínimo que decide, por isso tirá-los não
+ * muda nada onde a mediana já estava certa. O que isto não resolve: se a
+ * conversa com o canal desligado for a maior parte dos minutos com
+ * mensagens, ainda puxa a mediana para baixo.
  *
  * A mediana e não a média, pela mesma razão do `chao` em `tiros.js`: a média
  * de uma noite com lances é puxada pelos próprios lances. A medição que fixa
@@ -282,7 +324,7 @@ function mediana(valores) {
 export function picos(calor, { fator = 3, minimo = 8 } = {}) {
   const n = calor?.length || 0;
   if (!n) return [];
-  const limite = Math.max(fator * mediana(calor), minimo);
+  const limite = Math.max(fator * mediana(Array.from(calor).filter((v) => v > 0)), minimo);
   const saida = [];
   let melhor = -1;
   for (let i = 0; i <= n; i++) {

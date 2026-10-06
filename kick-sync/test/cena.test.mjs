@@ -166,11 +166,14 @@ test('um canal 50x mais baixo continua a ser "estava"', async () => {
 });
 
 test('cliques sem nada em comum dão "nao", e sem desvio', async () => {
-  // Sementes escolhidas de propósito. Em 60 comboios de cliques sem nada em
-  // comum com a referência, 6 passaram de 5 na primeira janela (o máximo foi
-  // 5,75 — perto dos 5,6 medidos em som real entre canais separados), e foi a
-  // segunda janela que derrubou todos. As três primeiras daqui são dessas; as
-  // outras três ficam abaixo de 5 à primeira.
+  // Sementes escolhidas de propósito, para passar pelos dois caminhos: as três
+  // primeiras caem entre 5 e 6 na primeira janela e é a segunda que as derruba,
+  // as outras três ficam abaixo de 5 à primeira.
+  //
+  // Isto NÃO mede a taxa de acaso, que vem do som real (MESMA-CENA.md). Este
+  // gerador tem a cauda mais pesada: nas sementes 3 a 202 contra REF, 37 de 200
+  // passam de 5 e 2 passam de 6 (o teste seguinte mostra uma). Das 35 que
+  // ficaram entre 5 e 6, a segunda janela derrubou todas.
   const sementes = [644, 712, 304, 100, 151, 185];
   const nomes = sementes.map((x) => `longe${x}`);
   const fontes = { ref: REF };
@@ -194,6 +197,17 @@ test('cliques sem nada em comum dão "nao", e sem desvio', async () => {
   assert.ok(quantasSegundas >= 2, `só ${quantasSegundas} coincidências chegaram à segunda janela`);
 });
 
+// Escrito para ninguém ler o teste de cima como "um canal sem nada em comum dá
+// sempre 'nao'". O 6 separou sem erro 87 janelas de som real; não é uma
+// garantia, e o módulo não finge que é: diz a força, e um acaso destes chega
+// perto do limite (6,6), longe dos 13,8 medidos entre quem estava junto.
+test('acima de 6 é "estava" mesmo quando é acaso: o limite é o medido, não uma garantia', async () => {
+  const somDe = somDeFontes({ ref: REF, longe55: longe(55) });
+  const [r] = await tudo(procurarAngulos({ quandoMs: QUANDO, referencia: 'ref', candidatos: ['longe55'], somDe }));
+  assert.ok(r.forca >= FORCA_ESTAVA && r.forca < 7, `força ${r.forca.toFixed(2)}`);
+  assert.equal(r.estado, 'estava');
+});
+
 // ── sem som ───────────────────────────────────────────────────────────────
 
 test('sem som, pouco som e silêncio digital são "sem-som" — nunca "nao"', async () => {
@@ -214,7 +228,50 @@ test('sem som, pouco som e silêncio digital são "sem-som" — nunca "nao"', as
     assert.equal(rs[nome].forca, 0, nome);
     assert.equal(rs[nome].desvioS, null, nome);
   }
+  // Só o curto tinha som: é o único a quem se deve uma explicação.
+  assert.match(rs.curto.aviso, /3\.0 s/);
+  assert.equal(rs.nulo.aviso, undefined);
+  assert.equal(rs.mudo.aviso, undefined);
   assert.equal(rs.colega.estado, 'estava');
+});
+
+// ── janelas cortadas ──────────────────────────────────────────────────────
+
+/** `fonte` só até `fimS` do relógio: o VOD acaba ali, ou ao vivo ainda não foi gravado. */
+const ate = (fonte, fimS) => (deMs, duracaoS) => {
+  const de = s((deMs - T0) / 1000);
+  return fonte.subarray(de, Math.max(de, Math.min(s(fimS), de + s(duracaoS))));
+};
+
+test('uma janela cortada (o VOD acaba a meio dela) não é medida: fica "sem-som", com aviso', async () => {
+  // Os limites 6 e 5 foram medidos em janelas de 20 s. Com menos som, a mesma
+  // procura de 8 s para cada lado deixa o acaso chegar lá: com este gerador,
+  // 80 comboios sem nada em comum cortados a 8 s davam 27 "estava" (inteiros,
+  // nenhum). O colega estava mesmo junto, mas 12 s não chegam para o dizer
+  // com os números medidos, e um "estava" que é sorte vale menos do que um
+  // "não deu para medir" dito.
+  const fontes = { ref: REF, colega: ate(junto(0.4, 3), 32) };
+  for (let i = 0; i < 12; i++) fontes[`longe${1000 + i * 7}`] = ate(longe(1000 + i * 7), 28);
+  const nomes = Object.keys(fontes).filter((k) => k !== 'ref');
+  const rs = porCanal(await tudo(procurarAngulos({
+    quandoMs: QUANDO, referencia: 'ref', candidatos: nomes, somDe: somDeFontes(fontes),
+  })));
+  for (const nome of nomes) {
+    const r = rs[nome];
+    assert.equal(r.estado, 'sem-som', `${nome} deu ${r.estado} com força ${r.forca.toFixed(2)}`);
+    assert.equal(r.forca, 0, nome);
+    assert.equal(r.desvioS, null, nome);
+    assert.match(r.aviso, nome === 'colega' ? /12\.0 s/ : /8\.0 s/, nome);
+  }
+});
+
+test('uns décimos a menos no fim da janela ainda contam como janela inteira', async () => {
+  // O som descodificado pode vir umas dezenas de ms mais curto do que a
+  // playlist diz (frames de AAC, arredondamentos). Isso não é um VOD a acabar.
+  const somDe = somDeFontes({ ref: ate(REF, 39.6), colega: ate(junto(0.4, 3), 39.6) });
+  const [r] = await tudo(procurarAngulos({ quandoMs: QUANDO, referencia: 'ref', candidatos: ['colega'], somDe }));
+  assert.equal(r.estado, 'estava');
+  assert.equal(r.aviso, undefined);
 });
 
 test('um canal que falha fica "sem-som" com a razão, e não leva os outros', async () => {
@@ -231,16 +288,36 @@ test('um canal que falha fica "sem-som" com a razão, e não leva os outros', as
   assert.equal(rs.colega.estado, 'estava');
 });
 
-test('um browser sem AAC acaba com a procura toda', async () => {
-  const base = somDeFontes({ ref: REF });
+test('um browser sem AAC acaba com a procura toda, e dá por isso na referência', async () => {
+  const registo = [];
+  const base = somDeFontes({ ref: REF, a: junto(0.4, 3) }, { registo });
   const somDe = async (canal, deMs, duracaoS, op) => {
-    if (canal !== 'ref') throw Object.assign(new Error('sem AAC'), { name: 'SEM-DESCODIFICADOR' });
+    if (canal === 'ref') throw Object.assign(new Error('sem AAC'), { name: 'SEM-DESCODIFICADOR' });
     return base(canal, deMs, duracaoS, op);
   };
   await assert.rejects(
     tudo(procurarAngulos({ quandoMs: QUANDO, referencia: 'ref', candidatos: ['a', 'b', 'c'], somDe })),
     { name: 'SEM-DESCODIFICADOR' },
   );
+  assert.equal(registo.length, 0, 'nenhum candidato chegou a ser pedido');
+});
+
+test('um canal que não se descodifica fica "sem-som" com a razão, e não leva os outros', async () => {
+  // A referência já se descodificou neste browser: AAC há. Um canal que mesmo
+  // assim dá SEM-DESCODIFICADOR tem um problema só dele (um segmento que não
+  // começa num cabeçalho ADTS, uma configuração de áudio que o browser recusa),
+  // e há 500 à espera.
+  const base = somDeFontes({ ref: REF, colega: junto(0.4, 3) });
+  const somDe = async (canal, deMs, duracaoS, op) => {
+    if (canal === 'esquisito') throw Object.assign(new Error('sem AAC'), { name: 'SEM-DESCODIFICADOR' });
+    return base(canal, deMs, duracaoS, op);
+  };
+  const rs = porCanal(await tudo(procurarAngulos({
+    quandoMs: QUANDO, referencia: 'ref', candidatos: ['esquisito', 'colega'], somDe, paralelos: 1,
+  })));
+  assert.equal(rs.esquisito.estado, 'sem-som');
+  assert.equal(rs.esquisito.erro, 'sem AAC');
+  assert.equal(rs.colega.estado, 'estava');
 });
 
 test('a referência sem som é dita como tal, e ninguém mais é descarregado', async () => {
@@ -248,6 +325,9 @@ test('a referência sem som é dita como tal, e ninguém mais é descarregado', 
     ['nula', null],
     ['muda', new Float32Array(N)],
     ['curta', () => REF.subarray(s(20), s(23))],
+    // 12 s: o VOD da referência acaba a meio da janela. Medir assim punha
+    // todos os candidatos contra uma janela onde o acaso chega a 6.
+    ['cortada', () => REF.subarray(s(20), s(32))],
     ['partida', () => { throw new Error('segmento 404'); }],
   ]) {
     const registo = [];
@@ -257,6 +337,7 @@ test('a referência sem som é dita como tal, e ninguém mais é descarregado', 
       (e) => {
         assert.equal(e.name, 'REFERENCIA-SEM-SOM', porque);
         if (porque === 'partida') assert.equal(e.cause.message, 'segmento 404');
+        if (porque === 'cortada') assert.match(e.message, /12\.0 s/);
         return true;
       },
     );
@@ -333,13 +414,15 @@ test('um somDe síncrono também serve', async () => {
  * e o teste partia por uma razão que não é deste módulo.
  */
 const acharTalvez = (() => {
-  let achado;
-  return () => {
-    if (achado) return achado;
-    const refEnv = envolvente(REF.subarray(s(20), s(40)));
+  const achados = new Map();
+  // A primeira janela por defeito é a de 20 a 40 s; outra `janelaS` muda-a.
+  return (deS = 20, ateS = 40) => {
+    const chave = `${deS}-${ateS}`;
+    if (achados.has(chave)) return achados.get(chave);
+    const refEnv = envolvente(REF.subarray(s(deS), s(ateS)));
     const proprio = misturar([cliques(31), 1], [ruido(32), 1]);
     const comAlfa = (alfa) => misturar([atrasado(CENA, 0.4), alfa], [proprio, 1]);
-    const medir = (alfa) => desvio(envolvente(comAlfa(alfa).subarray(s(20), s(40))), refEnv, { limiteS: 8 });
+    const medir = (alfa) => desvio(envolvente(comAlfa(alfa).subarray(s(deS), s(ateS))), refEnv, { limiteS: 8 });
     let baixo = 0;
     let alto = 0.5;
     for (let i = 0; i < 16; i++) {
@@ -347,7 +430,8 @@ const acharTalvez = (() => {
       const m = medir(alfa);
       const certo = Math.abs(m.desvioS - 0.4) <= 0.05;
       if (certo && m.forca >= 5.15 && m.forca <= 5.85) {
-        achado = { primeira: comAlfa(alfa), forca: m.forca };
+        const achado = { primeira: comAlfa(alfa), forca: m.forca };
+        achados.set(chave, achado);
         return achado;
       }
       if (certo && m.forca > 5.85) alto = alfa; else baixo = alfa;
@@ -417,15 +501,47 @@ test('se a segunda janela falhar, fica "talvez" com a razão', async () => {
 
 test('se a referência só tiver a primeira janela, o talvez fica e não se gasta outro download', async () => {
   const { primeira } = acharTalvez();
-  const registo = [];
-  const refCurta = (deMs, duracaoS) => {
-    const de = s((deMs - T0) / 1000);
-    return REF.subarray(de, de + Math.min(s(duracaoS), s(20)));
-  };
-  const somDe = somDeFontes({ ref: refCurta, quase: emendar(primeira, junto(0.4, 33), 40) }, { registo });
+  // 20 s: a segunda janela da referência não existe; 28 s: tem só 8 s, e
+  // medida assim decidia com os limites de uma janela inteira.
+  for (const segundosDaRef of [20, 28]) {
+    const registo = [];
+    const somDe = somDeFontes({ ref: ate(REF, 20 + segundosDaRef), quase: emendar(primeira, junto(0.4, 33), 40) }, { registo });
+    const [r] = await tudo(procurarAngulos({ quandoMs: QUANDO, referencia: 'ref', candidatos: ['quase'], somDe }));
+    assert.equal(r.estado, 'talvez', `referência com ${segundosDaRef} s`);
+    assert.equal(registo.filter((c) => c.canal === 'quase').length, 1, `referência com ${segundosDaRef} s`);
+  }
+});
+
+test('entre 5 e 6, uma segunda janela cortada não decide: fica "talvez", com aviso', async () => {
+  // O VOD do candidato acaba 8 s depois da primeira janela. Esses 8 s até
+  // batem com a referência, mas os limites são de janelas inteiras.
+  const { primeira, forca } = acharTalvez();
+  const somDe = somDeFontes({ ref: REF, quase: ate(emendar(primeira, junto(0.4, 33), 40), 48) });
   const [r] = await tudo(procurarAngulos({ quandoMs: QUANDO, referencia: 'ref', candidatos: ['quase'], somDe }));
   assert.equal(r.estado, 'talvez');
-  assert.equal(registo.filter((c) => c.canal === 'quase').length, 1);
+  assert.equal(r.forca, forca);
+  assert.ok(Math.abs(r.desvioS - 0.4) <= 0.05);
+  assert.match(r.aviso, /segunda janela/);
+  assert.match(r.aviso, /8\.0 s/);
+});
+
+test('com janelaS 30 as janelas são de 30 s: a da referência, a do candidato e a segunda', async () => {
+  // Nenhum outro teste muda a janela, e um 20 escrito à mão no módulo (no
+  // tamanho da janela ou no início da segunda) passava em todos eles.
+  const { primeira, forca } = acharTalvez(15, 45);
+  assert.ok(forca >= FORCA_TALVEZ && forca < FORCA_ESTAVA, `pré-condição: ${forca}`);
+  const registo = [];
+  const somDe = somDeFontes({ ref: REF, quase: emendar(primeira, junto(0.4, 33), 45) }, { registo });
+  const [r] = await tudo(procurarAngulos({
+    quandoMs: QUANDO, referencia: 'ref', candidatos: ['quase'], somDe, janelaS: 30,
+  }));
+  assert.equal(r.estado, 'estava');
+  assert.equal(r.forca, forca, 'a força é a de 30 s contra 30 s');
+  assert.deepEqual(registo.map((c) => [c.canal, c.deMs, c.duracaoS]), [
+    ['ref', QUANDO - 15_000, 60],
+    ['quase', QUANDO - 15_000, 30],
+    ['quase', QUANDO + 15_000, 30],
+  ]);
 });
 
 // ── a ordem de chegada e o tecto ──────────────────────────────────────────
@@ -550,6 +666,25 @@ test('cancelar enquanto a referência descarrega rejeita logo', async () => {
   assert.deepEqual(registo.map((x) => x.canal), ['ref']);
 });
 
+test('cancelar com quem lê ocupado (fora do next) também pára os pedidos', async () => {
+  const registo = [];
+  // Estes IGNORAM o sinal, como uma cache, um somDe síncrono por dentro, ou o
+  // somDoCanal quando devolve null antes de ir à rede.
+  const somDe = somDeFontes({ ref: REF }, { registo, demora: (c) => (c === 'ref' ? 0 : 5) });
+  const c = new AbortController();
+  const gerado = procurarAngulos({
+    quandoMs: QUANDO, referencia: 'ref', candidatos: Array.from({ length: 20 }, (_, i) => `c${i}`),
+    somDe, paralelos: 1, sinal: c.signal,
+  });
+  await gerado.next();
+  c.abort();
+  const aoCancelar = registo.length;
+  // A página ainda está a desenhar o resultado anterior: ninguém chama next().
+  await esperar(100);
+  assert.equal(registo.length, aoCancelar, `${registo.length - aoCancelar} pedidos saíram depois de cancelar`);
+  await assert.rejects(gerado.next(), { name: 'AbortError' });
+});
+
 test('resultados à espera não saem depois de cancelar', async () => {
   const somDe = somDeFontes({ ref: REF }, { demora: (c) => (c === 'ref' ? 0 : 5) });
   const c = new AbortController();
@@ -602,6 +737,13 @@ test('entradas erradas são ditas, não penduradas', async () => {
   await assert.rejects(tudo(procurarAngulos({ ...base, paralelos: 0 })), RangeError);
   await assert.rejects(tudo(procurarAngulos({ ...base, paralelos: 2.5 })), RangeError);
   await assert.rejects(tudo(procurarAngulos({ ...base, janelaS: 0 })), RangeError);
+  // Abaixo de 5 s nem há medida; abaixo de 20 s há, mas os limites 6 e 5 já
+  // não valem (com este gerador, janelas de 10 s puseram 28 de 150 comboios
+  // sem nada em comum acima de 6, contra 2 de 150 com 20 s). O erro é de quem
+  // chama, e não da referência "sem som".
+  await assert.rejects(tudo(procurarAngulos({ ...base, janelaS: 5 })), RangeError);
+  await assert.rejects(tudo(procurarAngulos({ ...base, janelaS: 12 })), RangeError);
+  await assert.rejects(tudo(procurarAngulos({ ...base, janelaS: NaN })), RangeError);
   await assert.rejects(tudo(procurarAngulos({ ...base, limiteS: -1 })), RangeError);
   await assert.rejects(tudo(procurarAngulos({ ...base, quandoMs: NaN })), TypeError);
   await assert.rejects(tudo(procurarAngulos({ ...base, candidatos: 'tchubi' })), TypeError);
