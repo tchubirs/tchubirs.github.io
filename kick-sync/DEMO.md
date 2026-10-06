@@ -39,7 +39,7 @@ Os nomes entre aspas são os botões da página.
 
 - **Um canal aparece em vermelho, "não achado".** O nome está errado no elenco. Aperte "Corrigir elenco":
   a página volta ao texto com esse nome já selecionado.
-- **"A Kick pediu calma".** Foram pedidos demais de uma vez. Espere um minuto e abra de novo.
+- **"A Kick pediu para ir mais devagar".** Foram pedidos demais de uma vez. Espere um minuto e abra de novo.
 - **A busca pelo som não roda.** O navegador não decodifica o áudio da Kick. Use o Chrome ou o Edge.
 - **Sem internet boa no local.** Use o celular como roteador; o mapa pesa pouco, os vídeos pesam como uma
   live normal.
