@@ -1,0 +1,827 @@
+// O elenco de um evento, lido de tudo o que um organizador pode mandar.
+//
+// Sem rede: o módulo não faz pedidos, e a página de times que aqui se usa é
+// reconstruída com a marcação e os canais REAIS da rustkickoff.com/teams,
+// medida em 06/10/2026 — 10 times de 15, com o texto dos links diferente do
+// canal ("Pheetus" -> impheetus) e um link em http. Um elenco errado não dá
+// erro nenhum: dá um ângulo de outra pessoa na grelha. Por isso os testes
+// comparam o resultado inteiro e não só contagens.
+
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { lerElenco, paraTexto, codificar, descodificar, contar, canalDe } from '../site/elenco.js';
+
+const NBSP = String.fromCharCode(0xa0);
+const BOM = String.fromCharCode(0xfeff);
+
+// O elenco real do Rust Kick Off 2, por ordem da página (capitão, vice, resto).
+const REAL = `Team Oilrats: oilrats trausi posty purpluu qaixx smokin impheetus goes mammoth gelotris roledyr blueberrygabi swizz chad sven
+Team Krolay: krolay ravenrust noragee toxxicbrofr zb0ub skull_sensei folldarmee twixgauche klawz abaraii swidy skidohunter risesfr needex packam
+Team Spoonkid: spoonkid throat luckyllama kickz vincentsmg wally1k enardo twig toofreezy jteles fredplayspoker franzj jakknife judelow walski
+Team Panpots: panpots v2unstoppable murloc_cg m2cg lukasito_cg edinz xguiry starwraith notoriuspig danikongi agusss04 mills_rp neptuno naoww ludovici
+Team Welyn: welyn picco gorliac chickencoop riqqeloff ezbompany m0hr jennifer potatokai disfigure poetic bcjfps trey24k jonk kayli_j
+Team CoconutB: coconutb winnie xkevv toonyx gevad1ch jennaxl awecoop chinaslime xultra irisk alle basharam dezignful aikobliss spinky
+Team Ricoy: ricoy dilanzito uruguayo28 tchubi kodd ciscoo s3kox poionako xomegaa lautaarg00 gustavocsgo kzeco zeko artzinwww itrol
+Team Willjum: willjum sinks skrust wash cheese albin imvertzo solutize jozukai morgausse arkhram vgumiho itzmino rhino ledoo
+Team Erobb221: erobb221 angelaoreo lifestomper galaaxxy hardstuck r00t9r coma moons domerrust funfps bloomerr dyanna snipernamedg goosey basetrade
+Team hJune: hjune frost hutnik chasetb20 snuffyfluffy blooprint alpacasita lost4k ninirust dapr hyperrattv zikzlol chap frexs jdxl`
+  .split('\n').map((l) => {
+    const [nome, resto] = l.split(': ');
+    return { nome, canais: resto.split(' ') };
+  });
+
+// O que a página mostra não é o canal. Estes quatro são da página medida.
+const MOSTRADO = { impheetus: 'Pheetus', blueberrygabi: 'Gabi', roledyr: 'RoleDyr', xkevv: 'xKevv.' };
+const HREF = { posty: 'http://kick.com/posty', roledyr: 'https://kick.com/RoleDyr', blueberrygabi: 'https://kick.com/BlueberryGabi' };
+const link = (c) => `<a href="${HREF[c] || `https://kick.com/${c}`}" target="_blank" rel="noopener"
+                            class="text-xs font-bold uppercase hover:text-primary-container">${MOSTRADO[c] || c}</a>`;
+
+/** Um cartão como os da página: cabeçalho, capitão e vice, e o elenco. */
+function cartao({ nome, canais }, n, { repetirCapitaes = false } = {}) {
+  const [cpt, vice, ...resto] = canais;
+  const elenco = repetirCapitaes ? canais : resto;
+  return `
+                <div class="group relative overflow-hidden bg-surface-container-low">
+                        <!-- Captain banner background -->
+            <img src="/assets/img/captain-banners/${nome.replace(/ /g, '_')}.webp" alt="${nome} banner" loading="lazy" class="absolute inset-0">
+            <div class="absolute inset-0 bg-gradient-to-b"></div>
+                        <!-- Team header -->
+            <div class="relative z-10 p-5">
+                <div class="flex items-center justify-between">
+                    <h3 class="font-headline text-xl sm:text-2xl font-black uppercase tracking-tight italic">${nome}</h3>
+                    <span class="text-[10px] font-black uppercase tracking-widest">TEAM ${n}</span>
+                </div>
+                <!-- Captain & Co-Captain -->
+                <div class="mt-3 flex gap-2">
+                    <a href="https://kick.com/${cpt}" target="_blank" rel="noopener">
+                            <span>CPT</span>
+                            <span>${MOSTRADO[cpt] || cpt}</span>
+                        </a>
+                    <a href="https://kick.com/${vice}" target="_blank" rel="noopener">
+                            <span>CO-CPT</span>
+                            <span>${vice}</span>
+                        </a>
+                </div>
+            </div>
+            <!-- Roster -->
+            <div class="relative z-10 px-5 pb-5">
+                <p class="text-[10px] uppercase">Roster (${canais.length})</p>
+                <div class="flex flex-wrap gap-x-3">
+                    ${elenco.map(link).join('\n                    ')}
+                </div>
+            </div>
+            <!-- Hover border effect -->
+            <div class="absolute inset-0 border-2 border-transparent"></div>
+        </div>`;
+}
+
+function paginaDeTimes(times, opcoes) {
+  const jsonLd = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    itemListElement: times.map((t, i) => ({
+      '@type': 'ListItem', position: i + 1, item: { '@type': 'SportsTeam', name: t.nome, sport: 'Rust' },
+    })),
+  });
+  return `<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Teams | Rust Kick Off</title>
+<script type="application/ld+json">${jsonLd}</script>
+<script>window.__x = '<h3>Team Falso</h3><a href="https://kick.com/falso">falso</a>';</script>
+<style>.glow-orb { position: absolute; }</style>
+</head><body>
+<nav class="fixed top-0"><a href="/">Home</a><a href="https://kick.com/category/rust">Watch Rust</a>
+<a href="https://kick.com/rustkickoff">Live on KICK</a></nav>
+<!-- Minimalist Hero Section -->
+<section class="relative"><img alt="Rust Landscape" src="/assets/img/team_bg.png"/>
+<span>10 Teams. 150 Creators. $100K.</span>
+<h1 class="font-headline">
+                COMPETING <span class="text-primary-container">TEAMS</span>
+</h1>
+<p>Meet the squads battling it out for their share of the prize pool. Every creator streaming live on KICK.</p>
+</section>
+<!-- Official Roster Section -->
+<div class="relative"><div class="text-center"><h2 class="font-headline">Official <span>Roster</span></h2>
+<p>10 teams. 150 content creators. All streaming live on KICK.</p></div>
+<div class="grid gap-6">${times.map((t, i) => cartao(t, i + 1, opcoes?.(i))).join('')}
+</div></div>
+<footer class="border-t"><a href="https://kick.com/category/rust">Rust on KICK</a>
+<a href="https://kick.com/rustkickoff">rustkickoff</a><a href="https://twitter.com/rustkickoff">X</a></footer>
+</body></html>`;
+}
+
+const html = (corpo) => `<html><body>${corpo}</body></html>`;
+const so = (e) => ({ times: e.times, soltos: e.soltos });
+
+// ── canais ──────────────────────────────────────────────────────────────────
+
+test('um canal escreve-se de muitas maneiras e é sempre o mesmo', () => {
+  const casos = [
+    ['Ricoy', 'ricoy'],
+    ['@Ricoy', 'ricoy'],
+    ['  ricoy  ', 'ricoy'],
+    ['https://kick.com/RoleDyr', 'roledyr'],
+    ['http://kick.com/posty', 'posty'],
+    ['kick.com/ricoy', 'ricoy'],
+    ['//kick.com/ricoy', 'ricoy'],
+    ['https://www.kick.com/ricoy/videos', 'ricoy'],
+    ['https://kick.com/ricoy?ref=rko#x', 'ricoy'],
+    ['https://kick.com/popout/ricoy/chat', 'ricoy'],
+    ['https://player.kick.com/ricoy', 'ricoy'],
+    ['<https://kick.com/ricoy>', 'ricoy'],
+    ['(kick.com/ricoy)', 'ricoy'],
+    ['xKevv.', 'xkevv'],
+    ['skull_sensei', 'skull_sensei'],
+    ['mills-rp', 'mills-rp'],
+    ['a'.repeat(60), 'a'.repeat(60)],
+  ];
+  for (const [entrada, esperado] of casos) assert.equal(canalDe(entrada), esperado, entrada);
+});
+
+test('o que não é um canal da Kick é null, e nunca um palpite', () => {
+  const casos = [
+    '', '   ', null, undefined, '@', '-', '...', 'nome com espaço', 'tchübi', 'a'.repeat(61), 'a/b',
+    'kick.com', 'https://kick.com/', 'https://kick.com/category/rust', 'kick.com/categories',
+    'https://kick.com/video/abc', 'https://kick.com/videos/abc', 'kick.com/clips/clip_01', 'kick.com/search?q=x',
+    'kick.com/browse', 'kick.com/following', 'kick.com/dashboard', 'kick.com/about', 'kick.com/terms-of-service',
+    'kick.com/privacy-policy', 'kick.com/community-guidelines', 'kick.com/help', 'kick.com/settings',
+    'kick.com/subscriptions', 'kick.com/signup', 'kick.com/login', 'category',
+    'twitch.tv/ricoy', 'https://twitch.tv/ricoy', 'https://notkick.com/ricoy', 'https://kick.com.evil.io/ricoy',
+    'https://kick.com/%E0%A4%A', 'javascript:alert(1)',
+  ];
+  for (const c of casos) assert.equal(canalDe(c), null, String(c));
+});
+
+// ── HTML ────────────────────────────────────────────────────────────────────
+
+test('a página real de times dá os 10 times e os 150 canais, pela ordem da página', () => {
+  const e = lerElenco(paginaDeTimes(REAL));
+  assert.deepEqual(e.times, REAL, 'o texto dos links nunca é o canal: Pheetus é impheetus');
+  assert.deepEqual(e.soltos, ['rustkickoff'], 'o canal do evento, no menu e no rodapé, fica sem time');
+  assert.deepEqual(e.avisos, []);
+  assert.deepEqual(contar(e), { times: 10, canais: 151 });
+  // Nada do que está em <script> conta: nem o JSON-LD nem HTML dentro de uma string.
+  assert.ok(!JSON.stringify(e).includes('falso'));
+});
+
+test('capitão e vice repetidos no mesmo cartão contam uma vez e não dão aviso', () => {
+  const e = lerElenco(paginaDeTimes(REAL, () => ({ repetirCapitaes: true })));
+  assert.deepEqual(e.times, REAL);
+  assert.deepEqual(e.avisos, []);
+});
+
+test('cada link vai para o título mais próximo acima dele, de qualquer nível', () => {
+  const e = lerElenco(html(`
+    <a href="https://kick.com/organizador">org</a>
+    <h2>Grupo A</h2>
+    <h4>Os Brabos</h4><p><a href="https://kick.com/a1">A1</a> <a href='https://kick.com/a2'>A2</a></p>
+    <h5>Lobos</h5><ul><li><a href=https://kick.com/b1>B1</a></li></ul>
+    <h1>Final</h1><a class="x" href="https://kick.com/organizador">org outra vez</a><a href="https://kick.com/c1">c</a>
+  `));
+  assert.deepEqual(so(e), {
+    times: [
+      { nome: 'Os Brabos', canais: ['a1', 'a2'] },
+      { nome: 'Lobos', canais: ['b1'] },
+      // O organizador apareceu solto antes; dentro de um time passa a ser do time.
+      { nome: 'Final', canais: ['organizador', 'c1'] },
+    ],
+    soltos: [],
+  });
+  assert.deepEqual(e.avisos, []);
+});
+
+test('o link pertence ao título onde fecha: dentro ou à volta do título', () => {
+  const e = lerElenco(html(`
+    <h3>Team Velho</h3><a href="https://kick.com/v1">v1</a>
+    <a href="https://kick.com/ricoy"><h3>Team Ricoy</h3></a><a href="https://kick.com/tchubi">t</a>
+    <h3><a href="https://kick.com/willjum">Team Willjum</a></h3><a href="https://kick.com/sinks">s</a>
+  `));
+  assert.deepEqual(e.times, [
+    { nome: 'Team Velho', canais: ['v1'] },
+    { nome: 'Team Ricoy', canais: ['ricoy', 'tchubi'] },
+    { nome: 'Team Willjum', canais: ['willjum', 'sinks'] },
+  ]);
+});
+
+test('um subtítulo de papel não é um time; uma secção sem time manda para os soltos', () => {
+  const e = lerElenco(html(`
+    <h2>Teams</h2>
+    <h3>Team Ricoy</h3>
+      <h4>Captain</h4><a href="https://kick.com/ricoy">Ricoy</a>
+      <h4>Co-Captain</h4><a href="https://kick.com/dilanzito">Dilanzito</a>
+      <h4>Players (2)</h4><a href="https://kick.com/tchubi">Tchubi</a><a href="https://kick.com/kodd">Kod</a>
+      <h4>Substitutes</h4><a href="https://kick.com/itrol">Itrol</a>
+    <h3>Team Willjum</h3>
+      <h4>Jogadores</h4><a href="https://kick.com/willjum">Willjum</a>
+    <h2>Streamers</h2><a href="https://kick.com/convidado">convidado</a>
+    <h3>Free Agents</h3><a href="https://kick.com/livre">livre</a>
+  `));
+  assert.deepEqual(so(e), {
+    times: [
+      { nome: 'Team Ricoy', canais: ['ricoy', 'dilanzito', 'tchubi', 'kodd', 'itrol'] },
+      { nome: 'Team Willjum', canais: ['willjum'] },
+    ],
+    soltos: ['convidado', 'livre'],
+  });
+});
+
+test('um subtítulo que se repete em times diferentes é rótulo; o mesmo cartão repetido junta-se', () => {
+  const rotulos = lerElenco(html(`
+    <h3>Team A</h3><h4>Main</h4><a href="https://kick.com/a1">1</a><h4>Bench</h4><a href="https://kick.com/a2">2</a>
+    <h3>Team B</h3><h4>Main</h4><a href="https://kick.com/b1">1</a><h4>Bench</h4><a href="https://kick.com/b2">2</a>
+  `));
+  assert.deepEqual(rotulos.times, [
+    { nome: 'Team A', canais: ['a1', 'a2'] },
+    { nome: 'Team B', canais: ['b1', 'b2'] },
+  ]);
+  // A versão de telemóvel da mesma grelha: os mesmos títulos debaixo do MESMO pai.
+  const responsivo = lerElenco(html(`
+    <h2>Roster oficial</h2>
+    <div class="md:hidden"><h3>Team A</h3><a href="https://kick.com/a1">1</a><h3>Team B</h3><a href="https://kick.com/b1">1</a></div>
+    <div class="hidden md:block"><h3>TEAM A</h3><a href="https://kick.com/a1">1</a><h3>Team B</h3><a href="https://kick.com/b1">1</a></div>
+  `));
+  assert.deepEqual(so(responsivo), {
+    times: [{ nome: 'Team A', canais: ['a1'] }, { nome: 'Team B', canais: ['b1'] }],
+    soltos: [],
+  });
+  assert.deepEqual(responsivo.avisos, []);
+});
+
+test('um canal em dois times fica no primeiro, e o aviso diz os dois', () => {
+  const e = lerElenco(html(`
+    <h3>Team Ricoy</h3><a href="https://kick.com/tchubi">t</a><a href="https://kick.com/ricoy">r</a>
+    <h3>Team Willjum</h3><a href="https://kick.com/willjum">w</a><a href="https://kick.com/Tchubi">t</a>
+  `));
+  assert.deepEqual(e.times, [
+    { nome: 'Team Ricoy', canais: ['tchubi', 'ricoy'] },
+    { nome: 'Team Willjum', canais: ['willjum'] },
+  ]);
+  assert.equal(e.avisos.length, 1);
+  assert.match(e.avisos[0], /tchubi/);
+  assert.match(e.avisos[0], /Team Ricoy/);
+  assert.match(e.avisos[0], /Team Willjum/);
+});
+
+test('o rodapé do site não é do último time, mas o rodapé de um cartão é', () => {
+  const e = lerElenco(html(`
+    <h3>Team A</h3><a href="https://kick.com/a1">1</a>
+    <article><h3>Team B</h3><a href="https://kick.com/b1">1</a><footer><a href="https://kick.com/b2">capitão</a></footer></article>
+    <footer><a href="https://kick.com/patrocinador">Patrocinador</a></footer>
+  `));
+  assert.deepEqual(so(e), {
+    times: [{ nome: 'Team A', canais: ['a1'] }, { nome: 'Team B', canais: ['b1', 'b2'] }],
+    soltos: ['patrocinador'],
+  });
+});
+
+test('títulos sem texto, com entidades ou com marcação perigosa', () => {
+  const e = lerElenco(html(`
+    <h3><img src="logo.png" alt="Team Águia"></h3><a href="https://kick.com/a1">1</a>
+    <h3>   </h3><a href="https://kick.com/b1">1</a>
+    <h3>Ricoy &amp; Tchubi&#39;s &lt;b&gt;crew&lt;/b&gt; &#x1F525;</h3><a href="https://kick.com/c1">1</a>
+    <h3>&lt;img src=x onerror=alert(1)&gt;Team Mau</h3><a href="https://kick.com/d1">1</a>
+    <h3>Vazio</h3>
+    <h3>Team &quot;Lobo&quot;</h3><a href="https://kick.com/e1?a=1&amp;b=2">1</a>
+  `));
+  assert.deepEqual(e.times, [
+    { nome: 'Team Águia', canais: ['a1'] },
+    { nome: 'Time 2', canais: ['b1'] },
+    { nome: "Ricoy & Tchubi's bcrew/b 🔥", canais: ['c1'] },
+    { nome: 'img src=x onerror=alert(1)Team Mau', canais: ['d1'] },
+    { nome: 'Team "Lobo"', canais: ['e1'] },
+  ]);
+  for (const t of e.times) assert.ok(!/[<>]/.test(t.nome), 'um nome nunca pode virar marcação');
+});
+
+test('uma página montada por JavaScript ainda dá os canais, sem time e com aviso', () => {
+  const spa = `<!doctype html><html><body><div id="root"></div>
+    <script id="__NEXT_DATA__" type="application/json">{"teams":[{"name":"Team Ricoy","links":["https:\\/\\/kick.com\\/ricoy","https:\\/\\/kick.com\\/tchubi"]},{"x":"https://kick.com/category/rust"}]}</script>
+    </body></html>`;
+  const e = lerElenco(spa);
+  assert.deepEqual(so(e), { times: [], soltos: ['ricoy', 'tchubi'] });
+  assert.equal(e.avisos.length, 1);
+  assert.match(e.avisos[0], /sem time/);
+
+  const nada = lerElenco('<html><body><h1>Teams</h1><a href="/teams/1">Team 1</a></body></html>');
+  assert.deepEqual(so(nada), { times: [], soltos: [] });
+  assert.match(nada.avisos.join(' '), /não encontrei nenhum canal/);
+});
+
+test('400 mil títulos por fechar (2,4 MB) acabam depressa', () => {
+  const lixo = `<h3>${'<h3>x '.repeat(400_000)}`;
+  const t0 = performance.now();
+  const e = lerElenco(lixo);
+  // ~1,5 s aqui. Varrer a página inteira por cada título seriam horas: o
+  // limite só tem de separar as duas coisas, não medir a máquina.
+  assert.ok(performance.now() - t0 < 15_000, 'não pode varrer a página inteira por cada título');
+  assert.deepEqual(so(e), { times: [], soltos: [] });
+});
+
+// ── texto ───────────────────────────────────────────────────────────────────
+
+test('uma linha por time, com vírgulas, ponto e vírgula, barras ou espaços', () => {
+  const e = lerElenco([
+    'Team Ricoy: ricoy, tchubi; kodd | ciscoo',
+    'Team Willjum: willjum sinks skrust wash',
+    'Team Erobb221:erobb221,@angelaoreo,https://kick.com/LifeStomper,kick.com/galaaxxy',
+    'Time 1: Os Brabos: a1, a2',
+    'Lobos - @b1, @b2',
+  ].join('\n'));
+  assert.deepEqual(so(e), {
+    times: [
+      { nome: 'Team Ricoy', canais: ['ricoy', 'tchubi', 'kodd', 'ciscoo'] },
+      { nome: 'Team Willjum', canais: ['willjum', 'sinks', 'skrust', 'wash'] },
+      { nome: 'Team Erobb221', canais: ['erobb221', 'angelaoreo', 'lifestomper', 'galaaxxy'] },
+      { nome: 'Time 1: Os Brabos', canais: ['a1', 'a2'] },
+      { nome: 'Lobos', canais: ['b1', 'b2'] },
+    ],
+    soltos: [],
+  });
+  assert.deepEqual(e.avisos, []);
+});
+
+test('o elenco real escrito à mão, um time por linha com 15 canais separados por espaços', () => {
+  const texto = REAL.map((t) => `${t.nome}: ${t.canais.join(' ')}`).join('\n');
+  assert.deepEqual(lerElenco(texto).times, REAL);
+});
+
+test('um nome de time e um canal por linha, até à linha em branco', () => {
+  const e = lerElenco([
+    'Team Ricoy',
+    'ricoy',
+    '@tchubi',
+    '',
+    'Los Pibes',
+    '- kodd',
+    '- ciscoo',
+    '',
+    'Time 3:',
+    '1. itrol',
+    '2) zeko',
+    '',
+    '## Águias',
+    '* https://kick.com/s3kox',
+    '',
+    '**Lobos**',
+    'kick.com/poionako',
+  ].join('\n'));
+  assert.deepEqual(so(e), {
+    times: [
+      { nome: 'Team Ricoy', canais: ['ricoy', 'tchubi'] },
+      { nome: 'Los Pibes', canais: ['kodd', 'ciscoo'] },
+      { nome: 'Time 3', canais: ['itrol', 'zeko'] },
+      { nome: 'Águias', canais: ['s3kox'] },
+      { nome: 'Lobos', canais: ['poionako'] },
+    ],
+    soltos: [],
+  });
+});
+
+test('um nome que também podia ser canal só é nome quando o texto está em blocos', () => {
+  const blocos = lerElenco('Oilrats\noilrats\ntrausi\n\nKrolay\nkrolay\nravenrust\n');
+  assert.deepEqual(blocos.times, [
+    { nome: 'Oilrats', canais: ['oilrats', 'trausi'] },
+    { nome: 'Krolay', canais: ['krolay', 'ravenrust'] },
+  ]);
+  // Uma lista simples nunca perde o primeiro canal para um time fantasma.
+  const lista = lerElenco('Oilrats\noilrats\ntrausi\nposty');
+  assert.deepEqual(so(lista), { times: [], soltos: ['oilrats', 'trausi', 'posty'] });
+  // Várias linhas de canais com espaços também não são um nome e os seus membros.
+  const linhas = lerElenco('ricoy tchubi kodd ciscoo\nwilljum sinks skrust wash');
+  assert.deepEqual(so(linhas), {
+    times: [],
+    soltos: ['ricoy', 'tchubi', 'kodd', 'ciscoo', 'willjum', 'sinks', 'skrust', 'wash'],
+  });
+});
+
+test('CSV com cabeçalho, em qualquer ordem de colunas e com colunas a mais', () => {
+  const simples = lerElenco('time,canal\nTeam Ricoy,ricoy\nTeam Ricoy,tchubi\nTeam Willjum,willjum\n');
+  assert.deepEqual(simples.times, [
+    { nome: 'Team Ricoy', canais: ['ricoy', 'tchubi'] },
+    { nome: 'Team Willjum', canais: ['willjum'] },
+  ]);
+  const pontoEVirgula = lerElenco('Time;Canal\r\nRicoy;ricoy\r\nRicoy;@tchubi\r\n');
+  assert.deepEqual(pontoEVirgula.times, [{ nome: 'Ricoy', canais: ['ricoy', 'tchubi'] }]);
+  // A exportação de um formulário: carimbo, nome, e-mail, e o time e o canal pelo meio.
+  const formulario = lerElenco([
+    'Carimbo de data/hora,Nome,E-mail,Time,Canal da Kick',
+    '2026/10/01 18:00:00,Ana,ana@exemplo.com,Team Ricoy,https://kick.com/ricoy',
+    '2026/10/01 18:02:13,Bruno,bruno@exemplo.com,Team Ricoy,@Tchubi',
+    '2026/10/01 18:05:41,Caio,caio@exemplo.com,,convidado',
+  ].join('\n'));
+  assert.deepEqual(so(formulario), {
+    times: [{ nome: 'Team Ricoy', canais: ['ricoy', 'tchubi'] }],
+    soltos: ['convidado'],
+  });
+  // Um time por linha, um jogador por coluna, com aspas à volta de um nome com vírgula.
+  const porLinha = lerElenco([
+    'Time,Capitão,Jogador 2,Jogador 3,Jogador 4',
+    '"Ricoy, Tchubi & Cia",ricoy,tchubi,kodd,ciscoo',
+    'Team Willjum,willjum,sinks,,wash',
+  ].join('\n'));
+  assert.deepEqual(porLinha.times, [
+    { nome: 'Ricoy, Tchubi & Cia', canais: ['ricoy', 'tchubi', 'kodd', 'ciscoo'] },
+    { nome: 'Team Willjum', canais: ['willjum', 'sinks', 'wash'] },
+  ]);
+  assert.deepEqual(porLinha.avisos, []);
+});
+
+test('CSV sem cabeçalho: o time é a coluna que se repete', () => {
+  const comEspacos = lerElenco('Team Ricoy,ricoy\nTeam Ricoy,tchubi\nTeam Willjum;willjum');
+  assert.deepEqual(comEspacos.times, [
+    { nome: 'Team Ricoy', canais: ['ricoy', 'tchubi'] },
+    { nome: 'Team Willjum', canais: ['willjum'] },
+  ]);
+  const umaPalavra = lerElenco('ricoy,ricoy\nricoy,tchubi\nwilljum,willjum\nwilljum,sinks');
+  assert.deepEqual(umaPalavra.times, [
+    { nome: 'ricoy', canais: ['ricoy', 'tchubi'] },
+    { nome: 'willjum', canais: ['willjum', 'sinks'] },
+  ]);
+  // Sem repetição, "a,b" são dois canais e não o time "a".
+  assert.deepEqual(so(lerElenco('ricoy, tchubi')), { times: [], soltos: ['ricoy', 'tchubi'] });
+});
+
+test('uma folha de cálculo colada (tabs) e uma tabela Markdown', () => {
+  const folha = lerElenco('Team Ricoy\tricoy\ttchubi\tkodd\tciscoo\nTeam Willjum\twilljum\tsinks\n');
+  assert.deepEqual(folha.times, [
+    { nome: 'Team Ricoy', canais: ['ricoy', 'tchubi', 'kodd', 'ciscoo'] },
+    { nome: 'Team Willjum', canais: ['willjum', 'sinks'] },
+  ]);
+  const tabela = lerElenco('| Time | Canal |\n|---|---|\n| Team Ricoy | ricoy |\n| Team Ricoy | @tchubi |\n');
+  assert.deepEqual(tabela.times, [{ nome: 'Team Ricoy', canais: ['ricoy', 'tchubi'] }]);
+});
+
+test('canais soltos, e o que fica de fora diz porquê', () => {
+  const e = lerElenco([
+    'ricoy',
+    '@tchubi',
+    'https://kick.com/kodd',
+    'kick.com/ciscoo/videos',
+    'www.kick.com/itrol?ref=x',
+    'twitch.tv/zeko',
+    'kick.com/category/rust',
+    '@tchübi',
+    'ricoy',
+  ].join('\n'));
+  assert.deepEqual(so(e), { times: [], soltos: ['ricoy', 'tchubi', 'kodd', 'ciscoo', 'itrol'] });
+  assert.equal(e.avisos.length, 3);
+  assert.match(e.avisos[0], /twitch\.tv\/zeko.*não é da Kick/);
+  assert.match(e.avisos[1], /category\/rust.*não um canal/);
+  assert.match(e.avisos[2], /tchübi.*não é um nome de canal/);
+});
+
+test('uma mensagem de Discord inteira, com prosa, papéis e quem não tem time', () => {
+  const e = lerElenco([
+    '# Rust Kick Off 3 — times',
+    'Boa sorte a todos, e bom jogo!',
+    '',
+    '**Team Ricoy**',
+    '1. kick.com/Ricoy',
+    '2. @tchubi',
+    '3. [Kod](https://kick.com/kodd)',
+    '4. ciscoo',
+    '',
+    'Team Willjum: willjum, sinks; skrust | wash',
+    'Reservas: ledoo',
+    'Capitão: willjum',
+    '',
+    'Team Erobb221 @erobb221 @angelaoreo',
+    '',
+    'Sem time: rustkickoff, @kickstreaming',
+    'Não esquecer de ligar o OBS antes das 18:00.',
+    'Nota: o evento começa às 18h.',
+    '',
+    'Team Spoonkid: spoonkid, throat, luckyllama.',
+  ].join('\n'));
+  assert.deepEqual(so(e), {
+    times: [
+      { nome: 'Team Ricoy', canais: ['ricoy', 'tchubi', 'kodd', 'ciscoo'] },
+      { nome: 'Team Willjum', canais: ['willjum', 'sinks', 'skrust', 'wash', 'ledoo'] },
+      { nome: 'Team Erobb221', canais: ['erobb221', 'angelaoreo'] },
+      // Um ponto no fim de uma lista é pontuação, não uma frase.
+      { nome: 'Team Spoonkid', canais: ['spoonkid', 'throat', 'luckyllama'] },
+    ],
+    soltos: ['rustkickoff', 'kickstreaming'],
+  });
+  assert.deepEqual(e.avisos, []);
+});
+
+test('repetições no texto: o mesmo time junta-se, o primeiro time ganha o canal', () => {
+  const e = lerElenco([
+    'convidado',
+    '',
+    'Team Ricoy: ricoy, tchubi, ricoy',
+    'TEAM RICOY: kodd',
+    'Team Willjum: willjum, tchubi, convidado',
+    '',
+    'Sem time: willjum, solto',
+  ].join('\n'));
+  assert.deepEqual(so(e), {
+    times: [
+      { nome: 'Team Ricoy', canais: ['ricoy', 'tchubi', 'kodd'] },
+      { nome: 'Team Willjum', canais: ['willjum', 'convidado'] },
+    ],
+    soltos: ['solto'],
+  });
+  assert.equal(e.avisos.length, 1, 'repetir no mesmo time, ou voltar a pôr solto, não é aviso');
+  assert.match(e.avisos[0], /"tchubi" aparece em "Team Ricoy" e em "Team Willjum"; ficou em "Team Ricoy"/);
+});
+
+test('times vazios saem, e entradas vazias dão um elenco vazio', () => {
+  assert.deepEqual(lerElenco('Team Vazio:\n\nTeam Ricoy: ricoy\nTeam Nada'), {
+    times: [{ nome: 'Team Ricoy', canais: ['ricoy'] }], soltos: [], avisos: [],
+  });
+  for (const vazio of ['', '   \n\t\n', null, undefined]) {
+    assert.deepEqual(lerElenco(vazio), { times: [], soltos: [], avisos: [] }, String(vazio));
+  }
+  assert.deepEqual(lerElenco(42), { times: [], soltos: ['42'], avisos: [] });
+  const so_lixo = lerElenco('Olá! Isto não tem canais nenhuns, só conversa.');
+  assert.deepEqual(so(so_lixo), { times: [], soltos: [] });
+  assert.match(so_lixo.avisos.join(' '), /não encontrei nenhum canal/);
+});
+
+test('BOM, espaços que não partem e quebras de linha do Windows não mudam nada', () => {
+  const e = lerElenco(`${BOM}Team${NBSP}Ricoy:${NBSP}ricoy,${NBSP}tchubi\r\nTeam Willjum: willjum\r\n`);
+  assert.deepEqual(so(e), {
+    times: [{ nome: 'Team Ricoy', canais: ['ricoy', 'tchubi'] }, { nome: 'Team Willjum', canais: ['willjum'] }],
+    soltos: [],
+  });
+});
+
+test('demasiados avisos são resumidos em vez de encher o ecrã', () => {
+  const e = lerElenco(Array.from({ length: 100 }, (_, i) => `@inválido${i}`).join('\n'));
+  // 40 avisos, o resumo, e à cabeça o único que explica os outros todos.
+  assert.equal(e.avisos.length, 42);
+  assert.match(e.avisos[0], /não encontrei nenhum canal/);
+  assert.equal(e.avisos.at(-1), 'e mais 60 avisos');
+});
+
+// ── paraTexto ───────────────────────────────────────────────────────────────
+
+test('paraTexto escreve uma linha por time e os soltos no fim', () => {
+  const e = { times: [{ nome: 'Team Ricoy', canais: ['ricoy', 'tchubi'] }, { nome: 'Lobos', canais: ['a1'] }], soltos: ['org', 'x'] };
+  assert.equal(paraTexto(e), 'Team Ricoy: ricoy, tchubi\nLobos: a1\n\nSem time: org, x');
+  assert.equal(paraTexto({ times: [], soltos: ['org'] }), 'Sem time: org');
+  assert.equal(paraTexto({ times: [], soltos: [] }), '');
+  assert.equal(paraTexto(null), '');
+});
+
+test('paraTexto e lerElenco vão e voltam sem perder nada', () => {
+  const casos = [
+    lerElenco(paginaDeTimes(REAL)),
+    { times: REAL, soltos: [] },
+    { times: [], soltos: ['ricoy'] },
+    { times: [], soltos: ['team', 'players', 'sem', 'time', 'canal', 'kick'] },
+    { times: [{ nome: 'x', canais: ['x'] }], soltos: ['y'] },
+    {
+      times: [
+        { nome: 'Time 1: Os Brabos', canais: ['a1', 'a2'] },
+        { nome: 'Ricoy, Tchubi & Cia', canais: ['b1'] },
+        { nome: '#1 Squad', canais: ['c1'] },
+        { nome: '100 Thieves', canais: ['d1'] },
+        { nome: 'Team (BR) | Norte; Sul', canais: ['e1'] },
+        { nome: 'Águias do Norte 🔥', canais: ['f1'] },
+        { nome: 'A - B', canais: ['g1'] },
+        { nome: 'http://exemplo.com/time', canais: ['h1'] },
+        { nome: 'kick.com/ricoy', canais: ['i1'] },
+        { nome: 'Time "Lobo"', canais: ['j1.x', 'j_2', 'j-3'] },
+        { nome: '@Team', canais: ['k1'] },
+        { nome: 'Os Players United', canais: ['l1'] },
+        { nome: '12:30 Squad', canais: ['m1'] },
+      ],
+      soltos: ['s1', 's2'],
+    },
+  ];
+  for (const e of casos) {
+    const volta = lerElenco(paraTexto(e));
+    assert.deepEqual(so(volta), so(e), paraTexto(e));
+    assert.deepEqual(volta.avisos, []);
+  }
+});
+
+test('ida e volta com nomes e canais aleatórios: o texto é um ponto fixo', () => {
+  let semente = 12345;
+  const rnd = () => ((semente = (Math.imul(semente, 1103515245) + 12345) >>> 0) / 0x100000000);
+  const escolher = (s) => s[Math.floor(rnd() * s.length)];
+  const PEDACOS = ['Team', 'Time', ' ', ':', ': ', ',', ';', '|', '-', ' - ', '#', '1.', '**', '`', '<b>', '@', 'kick.com/',
+    'https://', 'Águia', 'Ricoy', 'ricoy', '(BR)', '"', "'", '🔥', NBSP, '\t', '[x](y)', 'Players', 'Sem time', '12:30'];
+  const LETRAS = 'abcdefghijklmnopqrstuvwxyz0123456789_.-';
+  for (let volta = 0; volta < 300; volta++) {
+    const bruto = {
+      times: Array.from({ length: 1 + Math.floor(rnd() * 5) }, () => ({
+        nome: Array.from({ length: 1 + Math.floor(rnd() * 5) }, () => escolher(PEDACOS)).join(''),
+        canais: Array.from({ length: 1 + Math.floor(rnd() * 4) }, () => (
+          Array.from({ length: 1 + Math.floor(rnd() * 10) }, () => escolher(LETRAS)).join(''))),
+      })),
+      soltos: Array.from({ length: Math.floor(rnd() * 3) }, () => `s${Math.floor(rnd() * 50)}`),
+    };
+    // A primeira passagem limpa o que um elenco feito à mão traz de inválido;
+    // a partir daí escrever e ler de volta não pode mudar nada.
+    const limpo = lerElenco(paraTexto(bruto));
+    const outraVez = lerElenco(paraTexto(limpo));
+    assert.deepEqual(so(outraVez), so(limpo), `${JSON.stringify(bruto)}\n${paraTexto(limpo)}`);
+    assert.deepEqual(outraVez.avisos, []);
+  }
+});
+
+test('paraTexto arruma um elenco feito à mão com as regras de sempre', () => {
+  const e = {
+    times: [
+      { nome: '  Team   Ricoy: ', canais: ['@Ricoy', 'https://kick.com/Tchubi', 'ricoy', 'inválido!'] },
+      { nome: 'team ricoy', canais: ['kodd'] },
+      { nome: 'Players', canais: ['solto1'] },
+      { nome: 'Vazio', canais: [] },
+      { canais: ['semnome'] },
+    ],
+    soltos: ['@org', 'kodd'],
+  };
+  assert.equal(paraTexto(e), 'Team Ricoy: ricoy, tchubi, kodd\n\nSem time: solto1, semnome, org');
+});
+
+// ── link ────────────────────────────────────────────────────────────────────
+
+/** Um gerador de canais com a mesma cara dos reais: cadeia de Markov de ordem 1 sobre os 150 reais.
+ *  Medido: comprime PIOR do que canais reais que o gerador nunca viu (5,4 contra 5,0 bytes por canal),
+ *  por isso o teste de tamanho não passa por sorte. */
+function geradorDeCanais(semente) {
+  let s = semente >>> 0;
+  const rnd = () => ((s = (Math.imul(s, 1103515245) + 12345) >>> 0) / 0x100000000);
+  const reais = REAL.flatMap((t) => t.canais);
+  const proximo = new Map();
+  for (const r of reais) {
+    const w = `^${r}$`;
+    for (let i = 1; i < w.length; i++) {
+      if (!proximo.has(w[i - 1])) proximo.set(w[i - 1], []);
+      proximo.get(w[i - 1]).push(w[i]);
+    }
+  }
+  const vistos = new Set(reais);
+  return () => {
+    for (;;) {
+      let w = '^';
+      while (w.length < 30) {
+        const op = proximo.get(w.at(-1));
+        const c = op[Math.floor(rnd() * op.length)];
+        if (c === '$') break;
+        w += c;
+      }
+      const canal = w.slice(1);
+      if (canal.length >= 3 && canal.length <= 16 && !vistos.has(canal)) { vistos.add(canal); return canal; }
+    }
+  };
+}
+
+/** 125 times de 4, com os nomes como os da página real: "Team <capitão>", e um em cada cinco com
+ *  maiúsculas fora do sítio, como "Team hJune" e "Team CoconutB". */
+function eventoDe500(semente = 7) {
+  const novo = geradorDeCanais(semente);
+  return {
+    times: Array.from({ length: 125 }, (_, i) => {
+      const canais = [novo(), novo(), novo(), novo()];
+      const c = canais[0];
+      const nome = i % 5 === 4 ? `Team ${c.slice(0, -1)}${c.slice(-1).toUpperCase()}` : `Team ${c[0].toUpperCase()}${c.slice(1)}`;
+      return { nome, canais };
+    }),
+    soltos: [],
+    avisos: [],
+  };
+}
+
+test('125 times de 4 cabem num link com menos de 4000 caracteres, e voltam iguais', async () => {
+  for (const semente of [7, 42, 2026]) {
+    const e = eventoDe500(semente);
+    assert.equal(contar(e).canais, 500);
+    const s = await codificar(e);
+    assert.match(s, /^[A-Za-z0-9_-]+$/, 'só caracteres que um endereço aceita sem escapar');
+    assert.ok(s.length < 4000, `${s.length} caracteres`);
+    assert.deepEqual(await descodificar(s), e);
+  }
+});
+
+test('codificar e descodificar vão e voltam em todos os feitios de elenco', async () => {
+  const casos = [
+    lerElenco(paginaDeTimes(REAL)),
+    { times: [], soltos: [], avisos: [] },
+    { times: [], soltos: ['org', 'x'], avisos: [] },
+    {
+      times: [
+        { nome: 'Team Ricoy', canais: ['ricoy', 'tchubi'] },
+        { nome: 'team ricoy jr', canais: ['ricoyjr'] },
+        { nome: 'ricoy2', canais: ['ricoy2'] },
+        { nome: 'Os do ricoy3 e do Ricoy3', canais: ['ricoy3'] },
+        { nome: '1st Squad', canais: ['1st'] },
+        { nome: 'Águias 🔥 "BR"', canais: ['a.b', 'c_d', 'e-f'] },
+      ],
+      soltos: ['s1'],
+      avisos: [],
+    },
+  ];
+  for (const e of casos) {
+    const s = await codificar(e);
+    assert.deepEqual(await descodificar(s), e, JSON.stringify(e));
+    assert.deepEqual(await descodificar(`  ${s}\n`), e, 'espaços à volta, de um copiar e colar');
+  }
+});
+
+test('codificar arruma o elenco antes de o pôr no link', async () => {
+  const s = await codificar({ times: [{ nome: 'A', canais: ['@Ricoy', 'kick.com/Tchubi', 'tchübi', 'a b'] }], soltos: ['ricoy', '@Org'] });
+  assert.deepEqual(await descodificar(s), {
+    times: [{ nome: 'A', canais: ['ricoy', 'tchubi'] }], soltos: ['org'], avisos: [],
+  });
+  assert.deepEqual(await descodificar(await codificar(null)), { times: [], soltos: [], avisos: [] });
+});
+
+/** Empacota qualquer coisa como `codificar` empacota, para fabricar links estragados. */
+async function empacotar(texto) {
+  const fluxo = new Blob([texto]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+  const bytes = new Uint8Array(await new Response(fluxo).arrayBuffer());
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+test('um link estragado é null, nunca meio elenco', async () => {
+  const bom = await codificar({ times: [{ nome: 'Team Ricoy', canais: ['ricoy', 'tchubi'] }], soltos: [] });
+  const casos = [
+    // Lixo DEPOIS do fim do deflate não está aqui de propósito: o Node aceita-o
+    // e o Chrome recusa-o, e o elenco lido é o inteiro nos dois casos.
+    '', '   ', '!!!!', 'não é base64', 'abc', 'A', bom.slice(0, -5), `${bom.slice(0, 10)}${bom.slice(11)}x`,
+    `${bom}=`, `#${bom}`, `${bom.slice(0, 20)}+/${bom.slice(20)}`,
+    await empacotar('isto não é JSON'),
+    await empacotar('null'),
+    await empacotar('[1,[],""]'),
+    await empacotar('{"v":2,"t":[],"s":""}'),
+    await empacotar('{"v":1,"t":{},"s":""}'),
+    await empacotar('{"v":1,"t":[["A"]],"s":""}'),
+    await empacotar('{"v":1,"t":[["A",["a"]]],"s":""}'),
+    await empacotar('{"v":1,"t":[[1,"a"]],"s":""}'),
+    await empacotar('{"v":1,"t":[],"s":["a"]}'),
+    // Mais canais do que um evento real pode ter: é um ataque, não um elenco.
+    await empacotar(JSON.stringify({ v: 1, t: [], s: Array.from({ length: 2001 }, (_, i) => `c${i}`).join(' ') })),
+    'A'.repeat(200_001),
+  ];
+  for (const s of casos) assert.equal(await descodificar(s), null, String(s).slice(0, 80));
+  for (const s of [null, undefined, 42, {}, [bom]]) assert.equal(await descodificar(s), null, String(s));
+});
+
+test('uma bomba de descompressão desiste cedo em vez de pendurar o separador', async () => {
+  const bomba = await empacotar(`{"v":1,"t":[],"s":"${' '.repeat(20 << 20)}"}`);
+  assert.ok(bomba.length < 100_000, `${bomba.length}`);
+  const t0 = performance.now();
+  assert.equal(await descodificar(bomba), null);
+  assert.ok(performance.now() - t0 < 2000);
+});
+
+test('um link de outra pessoa passa pelas mesmas regras do texto colado', async () => {
+  const s = await empacotar(JSON.stringify({
+    v: 1,
+    t: [
+      ['*<script>', 'ricoy <img/src=x> TCHUBI ricoy'],
+      ['Team Willjum', 'willjum tchubi'],
+      ['Players', 'jogador'],
+      ['Vazio', ''],
+    ],
+    s: 'org ricoy kick.com/category/rust',
+  }));
+  const e = await descodificar(s);
+  assert.deepEqual(so(e), {
+    times: [{ nome: 'Ricoyscript', canais: ['ricoy', 'tchubi'] }, { nome: 'Team Willjum', canais: ['willjum'] }],
+    soltos: ['jogador', 'org'],
+  });
+  assert.equal(e.avisos.length, 3);
+  assert.match(e.avisos.join('\n'), /img\/src=x/);
+  assert.match(e.avisos.join('\n'), /"tchubi" aparece em "Ricoyscript" e em "Team Willjum"/);
+  assert.match(e.avisos.join('\n'), /category\/rust/);
+});
+
+// ── contar ──────────────────────────────────────────────────────────────────
+
+test('contar conta times com gente e cada canal uma vez', () => {
+  assert.deepEqual(contar(lerElenco(paginaDeTimes(REAL))), { times: 10, canais: 151 });
+  assert.deepEqual(contar({ times: [{ nome: 'A', canais: ['a', 'b'] }, { nome: 'B', canais: ['b'] }, { nome: 'C', canais: [] }], soltos: ['a', 'c'] }),
+    { times: 1, canais: 3 });
+  for (const vazio of [null, undefined, {}, { times: 'x', soltos: 3 }]) {
+    assert.deepEqual(contar(vazio), { times: 0, canais: 0 });
+  }
+});
+
+// ── nunca atira ─────────────────────────────────────────────────────────────
+
+test('lixo aleatório nunca atira e dá sempre um elenco bem formado', () => {
+  let semente = 99;
+  const rnd = () => ((semente = (Math.imul(semente, 1103515245) + 12345) >>> 0) / 0x100000000);
+  const PEDACOS = ['<h3>', '</h3>', '<a href="https://kick.com/', '">', '</a>', '<a href=', 'kick.com/', '@', ':', ',', ';',
+    '|', '\t', '\n', '\n\n', ' ', 'Team ', 'ricoy', 'tchubi', 'Players', 'Sem time', '"', '#', '**', '-', '1.', 'é', '🔥',
+    '<footer>', '<nav>', '<article>', '</article>', 'time,canal\n', '&amp;', '&#0;', '&#x110000;', '<script>', '<!--'];
+  for (let i = 0; i < 500; i++) {
+    const texto = Array.from({ length: Math.floor(rnd() * 60) }, () => PEDACOS[Math.floor(rnd() * PEDACOS.length)]).join('');
+    const e = lerElenco(texto);
+    const todos = [...e.times.flatMap((t) => t.canais), ...e.soltos];
+    assert.equal(new Set(todos).size, todos.length, `um canal num só sítio: ${JSON.stringify(texto)}`);
+    for (const c of todos) assert.match(c, /^[a-z0-9_.-]{1,60}$/);
+    for (const t of e.times) {
+      assert.ok(t.canais.length > 0);
+      assert.ok(t.nome && !/[<>]/.test(t.nome));
+    }
+    assert.ok(Array.isArray(e.avisos));
+  }
+});
