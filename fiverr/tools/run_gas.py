@@ -25,6 +25,11 @@ A script run from a menu works on what the client has open: getActiveSheet and g
 sheet and the cells selected. The run starts on the sheet open in the file, with A1 selected, or with
 the cells --select gives; an edit selects the edited cell, as in Google. The report says when the result
 depends on it. Hidden rows and columns and frozen rows come from the file.
+
+A macro recorded in Google Sheets (Extensions > Macros > Record macro) runs as it is: activate, the current
+cell, range lists, R1C1 formulas, fill down, filters, pastes. Formulas pasted, filled or sorted move their
+references as in Sheets. A formula the script writes has no result here (LibreOffice works it out at the
+end), so a sort by such formulas, or a paste of their values, is listed to check in Google.
 """
 import argparse
 import datetime as dt
@@ -149,6 +154,8 @@ def apply(base, result, out):
             ws.cell(r, c).value = formula or from_json(value)
         for key, fmt in s["formats"].items():
             cell = ws.cell(*map(int, key.split(",")))
+            if fmt.get("cleared"):
+                cell.style = "Normal"
             if color(fmt.get("background")):
                 cell.fill = PatternFill("solid", start_color=color(fmt["background"]))
             if "bold" in fmt or color(fmt.get("color")):

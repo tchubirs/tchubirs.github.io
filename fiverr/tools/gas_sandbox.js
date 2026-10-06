@@ -71,6 +71,54 @@ function colLetters(n) {
   return s;
 }
 
+// A cell reference in an A1 formula; text in quotes, and sheet names in single quotes, are matched first and
+// left alone. A name followed by ( is a function (LOG10), one followed by ! a sheet (Q1!A1).
+const A1_REF = /("(?:[^"]|"")*"|'(?:[^']|'')*')|(?<![\w.$])(\$?)([A-Z]{1,3})(\$?)(\d+)(?![\w(!])/g;
+const R1C1_REF = /("(?:[^"]|"")*"|'(?:[^']|'')*')|(?<![\w.$])R(\[-?\d+\]|\d+)?C(\[-?\d+\]|\d+)?(?![\w(!])/g;
+
+// A formula copied dr rows and dc columns away, as Sheets does when it is pasted, filled or sorted: relative
+// references move with it, those with $ stay, and one pushed off the sheet becomes #REF!.
+function moved(formula, dr, dc) {
+  if (!formula || (!dr && !dc)) return formula;
+  return formula.replace(A1_REF, (all, quoted, fixCol, letters, fixRow, row) => {
+    if (quoted) return quoted;
+    const c = fixCol ? colNumber(letters) : colNumber(letters) + dc, r = fixRow ? +row : +row + dr;
+    return c < 1 || r < 1 ? "#REF!" : `${fixCol}${colLetters(c)}${fixRow}${r}`;
+  });
+}
+
+// R1C1 (what the macro recorder writes: R[1]C[-1] relative, R2C3 absolute) as A1, for the cell at row, col.
+function fromR1C1(formula, row, col) {
+  return String(formula).replace(R1C1_REF, (all, quoted, r, c) => {
+    if (quoted) return quoted;
+    const part = (spec, here) => (spec === undefined ? [here, ""] : spec[0] === "[" ? [here + Number(spec.slice(1, -1)), ""]
+                                                                     : [Number(spec), "$"]);
+    const [rr, fixRow] = part(r, row), [cc, fixCol] = part(c, col);
+    return rr < 1 || cc < 1 ? "#REF!" : `${fixCol}${colLetters(cc)}${fixRow}${rr}`;
+  });
+}
+
+function toR1C1(formula, row, col) {
+  if (!formula) return "";
+  return formula.replace(A1_REF, (all, quoted, fixCol, letters, fixRow, r) => {
+    if (quoted) return quoted;
+    const part = (fix, n, here) => (fix ? String(n) : n === here ? "" : `[${n - here}]`);
+    return `R${part(fixRow, +r, row)}C${part(fixCol, colNumber(letters), col)}`;
+  });
+}
+
+// Several ranges as one (getActiveRangeList, getRangeList): each call goes to every range.
+function rangeList(ranges) {
+  const out = new Proxy({}, {
+    get(_, prop) {
+      if (typeof prop === "symbol" || prop === "then") return undefined;
+      if (prop === "getRanges") return () => list(ranges);
+      return (...args) => { ranges.forEach(r => r[prop](...args)); return out; };
+    },
+  });
+  return out;
+}
+
 class Grid {
   constructor(name, origin, values = [], formulas = [], view = {}) {
     this.name = name;
@@ -190,9 +238,22 @@ class Range {
   }
   setFormula(formula) { this.cells((r, c) => this.grid.put(r, c, "", formula)); return this; }
   setFormulas(formulas) { this.cells((r, c, i, j) => this.grid.put(r, c, "", formulas[i][j])); return this; }
-  clear() { this.cells((r, c) => this.grid.put(r, c, "")); return this; }
-  clearContent() { return this.clear(); }
-  clearFormat() { return this; }
+  setFormulaR1C1(formula) { this.cells((r, c) => this.grid.put(r, c, "", fromR1C1(formula, r, c))); return this; }
+  setFormulasR1C1(formulas) { this.cells((r, c, i, j) => this.grid.put(r, c, "", fromR1C1(formulas[i][j], r, c))); return this; }
+  getFormulaR1C1() { return toR1C1(this.getFormula(), this.row, this.col); }
+  getFormulasR1C1() { return rows(this.cells((r, c) => toR1C1(this.grid.formula(r, c), r, c))); }
+  // clear() takes both the contents and the formatting, as in Google; {contentsOnly: true} or {formatOnly: true}
+  // only one of them. A cleared format goes back to the plain style in the file saved with -o.
+  clear(options) {
+    const o = options || {}, other = o.commentsOnly || o.validationsOnly;
+    this.cells((r, c) => {
+      if (!o.formatOnly && !other) this.grid.put(r, c, "");
+      if (!o.contentsOnly && !other) this.grid.formats[`${r},${c}`] = {cleared: true};
+    });
+    return this;
+  }
+  clearContent() { return this.clear({contentsOnly: true}); }
+  clearFormat() { return this.clear({formatOnly: true}); }
   clearDataValidations() { return this; }
   clearNote() { return this; }
   getRow() { return this.row; }
@@ -245,7 +306,7 @@ class Range {
       }));
       if (!seen.has(key)) { seen.add(key); kept.push(i); }
     });
-    this.cells((r, c, i, j) => (i < kept.length ? this.grid.put(r, c, values[kept[i]][j], formulas[kept[i]][j])
+    this.cells((r, c, i, j) => (i < kept.length ? this.grid.put(r, c, values[kept[i]][j], moved(formulas[kept[i]][j], i - kept[i], 0))
                                                 : this.grid.put(r, c, "")));
     return new Range(this.sheet, this.row, this.col, Math.max(1, kept.length), this.cols);
   }
@@ -258,26 +319,90 @@ class Range {
   setNote() { return this; }
   merge() { return this; }
   breakApart() { return this; }
-  copyTo(target) {
-    const values = this.getValues(), formulas = this.getFormulas();
-    new Range(target.sheet, target.row, target.col, this.rows, this.cols)
-      .cells((r, c, i, j) => target.grid.put(r, c, formulas[i][j] ? "" : values[i][j], formulas[i][j]));
+  // As a paste: formulas move their relative references; a target as big as the range, or a multiple of it,
+  // is filled, else the range lands at its first cell. PASTE_VALUES takes the results, PASTE_FORMAT only the
+  // formatting, PASTE_FORMULA no formatting; {contentsOnly} and {formatOnly} say the same.
+  copyTo(target, how, transposed) {
+    const kind = typeof how === "string" ? how : how && how.formatOnly ? "PASTE_FORMAT"
+      : how && how.contentsOnly ? "PASTE_FORMULA" : "PASTE_NORMAL";
+    if (!["PASTE_NORMAL", "PASTE_NO_BORDERS", "PASTE_VALUES", "PASTE_FORMAT", "PASTE_FORMULA"].includes(kind)) {
+      this.notApplied(kind.toLowerCase().replace("paste_", "pasted ").replace(/_/g, " "));
+      return;
+    }
+    const values = this.getValues(), formulas = this.getFormulas(), formats = this.cells((r, c) => this.grid.formats[`${r},${c}`]);
+    if (kind === "PASTE_VALUES" && formulas.some((row, i) => row.some((f, j) => f && empty(values[i][j])))) {
+      missing("Range.copyTo of the values of formulas the script wrote, whose results only Google works out");
+    }
+    const [h, w] = transposed ? [this.cols, this.rows] : [this.rows, this.cols];
+    const fits = target.rows % h === 0 && target.cols % w === 0;
+    new Range(target.sheet, target.row, target.col, fits ? target.rows : h, fits ? target.cols : w).cells((r, c, i, j) => {
+      const [si, sj] = transposed ? [j % w, i % h] : [i % h, j % w];
+      const f = formulas[si][sj], dr = r - (this.row + si), dc = c - (this.col + sj);
+      if (kind === "PASTE_VALUES") target.grid.put(r, c, values[si][sj]);
+      else if (kind !== "PASTE_FORMAT") target.grid.put(r, c, f ? "" : values[si][sj], moved(f, dr, dc));
+      if (["PASTE_NORMAL", "PASTE_NO_BORDERS", "PASTE_FORMAT"].includes(kind) && formats[si][sj]) {
+        target.grid.formats[`${r},${c}`] = {...formats[si][sj]};
+      }
+    });
+  }
+  // As the fill handle: destination holds this range and goes on from it in one direction. Formulas move their
+  // references; with DEFAULT_SERIES numbers go on as a series (1, 2 gives 3, 4) and dates by the same step,
+  // with ALTERNATE_SERIES everything is copied. One number or date alone counts up by 1, as Google's help says,
+  // and the report asks to check it.
+  autoFill(destination, series) {
+    const d = destination, down = d.cols === this.cols && d.col === this.col, across = d.rows === this.rows && d.row === this.row;
+    if (d.sheet !== this.sheet || !(down || across) || d.row > this.row || d.col > this.col
+        || d.getLastRow() < this.getLastRow() || d.getLastColumn() < this.getLastColumn()) {
+      throw fail("The destination of autoFill has to hold the range and go on from it in one direction.");
+    }
+    const length = down ? this.rows : this.cols, copies = series === "ALTERNATE_SERIES";
+    const line = k => (down ? this.cells((r, c) => [r, c]).map(row => row[k]) : this.cells((r, c) => [r, c])[k]);
+    for (let k = 0; k < (down ? this.cols : this.rows); k++) {
+      const source = line(k).map(([r, c]) => ({r, c, v: this.grid.get(r, c), f: this.grid.formula(r, c)}));
+      const numbers = source.every(s => !s.f && typeof s.v === "number"), dates = source.every(s => !s.f && isDate(s.v));
+      const xs = source.map(s => (dates ? s.v.getTime() : s.v)), mean = xs.reduce((a, b) => a + b, 0) / length;
+      const half = (length - 1) / 2, spread = source.reduce((a, _, i) => a + (i - half) ** 2, 0);
+      const step = length === 1 ? (dates ? 86400000 : 1) : source.reduce((a, _, i) => a + (i - half) * (xs[i] - mean), 0) / spread;
+      const even = xs.every((x, i) => i === 0 || x - xs[i - 1] === step);
+      const counts = !copies && (numbers || (dates && even));
+      if (counts && length === 1) missing("Range.autoFill from one number or date, counted up by 1: check the numbers in Google");
+      const span = down ? d.rows : d.cols, first = down ? this.row - d.row : this.col - d.col;
+      for (let p = 0; p < span; p++) {
+        const i = p - first;
+        if (i >= 0 && i < length) continue;
+        const s = source[((i % length) + length) % length];
+        const [r, c] = down ? [d.row + p, s.c] : [s.r, d.col + p];
+        if (counts) {
+          const x = mean + (i - half) * step;
+          this.grid.put(r, c, dates ? new RealmDate(x) : Math.round(x * 1e9) / 1e9);
+        } else this.grid.put(r, c, s.f ? "" : s.v, moved(s.f, r - s.r, c - s.c));
+        if (this.grid.formats[`${s.r},${s.c}`]) this.grid.formats[`${r},${c}`] = {...this.grid.formats[`${s.r},${s.c}`]};
+      }
+    }
+    return this;
   }
   sort(spec) {
     const specs = (Array.isArray(spec) ? spec : [spec]).map(s => (typeof s === "number" ? {column: s, ascending: true}
       : {column: s.column, ascending: s.ascending !== false}));
     const formulas = this.getFormulas();
-    const lines = this.getValues().map((values, i) => ({values, formulas: formulas[i]}));
+    const lines = this.getValues().map((values, i) => ({values, formulas: formulas[i], from: i}));
+    if (specs.some(s => lines.some(l => l.formulas[s.column - this.col] && empty(l.values[s.column - this.col])))) {
+      missing("Range.sort by formulas the script wrote, whose results only Google works out");
+    }
+    // As Sheets sorts: numbers and dates before text, text without regard to letter case, other values last.
+    const rank = v => (typeof v === "number" || isDate(v) ? 0 : typeof v === "string" ? 1 : 2);
+    const key = v => (isDate(v) ? v.getTime() : typeof v === "string" ? v.toLowerCase() : v);
     lines.sort((a, b) => {
       for (const s of specs) {
         const x = a.values[s.column - this.col], y = b.values[s.column - this.col];
         if (empty(x) !== empty(y)) return empty(x) ? 1 : -1;     // empty cells go last either way
-        if (x < y) return s.ascending ? -1 : 1;
-        if (x > y) return s.ascending ? 1 : -1;
+        if (empty(x)) continue;
+        const order = rank(x) - rank(y) || (key(x) < key(y) ? -1 : key(x) > key(y) ? 1 : 0);
+        if (order) return s.ascending ? order : -order;
       }
       return 0;
     });
-    this.cells((r, c, i, j) => this.grid.put(r, c, lines[i].values[j], lines[i].formulas[j]));
+    this.cells((r, c, i, j) => this.grid.put(r, c, lines[i].values[j], moved(lines[i].formulas[j], i - lines[i].from, 0)));
     return this;
   }
   format(key, value) {
@@ -301,7 +426,26 @@ class Range {
   setBorder() { return this.notApplied("borders"); }
   setDataValidation() { return this.notApplied("data validation"); }
   protect() { this.notApplied("protection"); return strict({setDescription() { return this; }, setWarningOnly() { return this; }, removeEditors() { return this; }, addEditor() { return this; }}, "Protection"); }
-  createFilter() { this.notApplied("filters"); return strict({remove() {}, setColumnFilterCriteria() { return this; }}, "Filter"); }
+  // The filter is kept on the sheet for getFilter, and sorts the rows under its heading; which rows its
+  // criteria would hide is not worked out.
+  createFilter() {
+    if (this.grid.filter) throw fail("A filter already exists in this sheet.");
+    this.notApplied("filters");
+    const range = this, grid = this.grid;
+    const filter = strict({
+      getRange: () => range,
+      remove() { grid.filter = null; },
+      sort(column, ascending) {
+        if (range.rows > 1) new Range(range.sheet, range.row + 1, range.col, range.rows - 1, range.cols).sort({column, ascending});
+        return filter;
+      },
+      setColumnFilterCriteria() { return filter; },
+      removeColumnFilterCriteria() { return filter; },
+      getColumnFilterCriteria: () => null,
+    }, "Filter");
+    grid.filter = filter;
+    return filter;
+  }
 }
 
 // Google's TextFinder: letter case, accents and partial matches allowed unless asked otherwise, in what the
@@ -377,7 +521,7 @@ class Sheet {
   getSheetId() { return this.grid.id; }
   getIndex() { return this.spreadsheet.sheets.indexOf(this) + 1; }
   getParent() { return this.spreadsheet; }
-  activate() { this.spreadsheet.active = this; return this; }
+  activate() { this.spreadsheet.setActiveSheet(this); return this; }
   getRange(a, b, c, d) {
     if (typeof a === "string") return this.a1(a);
     return new Range(this, a, b, c === undefined ? 1 : c, d === undefined ? 1 : d);
@@ -455,7 +599,9 @@ class Sheet {
   setColumnWidths() { return this; }
   setRowHeight() { return this; }
   getCharts() { return []; }
-  getFilter() { return null; }
+  getFilter() { return this.grid.filter || null; }
+  getActiveRangeList() { return this.spreadsheet.getActiveRangeList(); }
+  getRangeList(notations) { return rangeList(Array.from(notations, a1 => this.getRange(a1))); }
   copyTo(spreadsheet) {
     const copy = spreadsheet.addGrid(`Copy of ${this.getName()}`);
     copy.grid.values = this.grid.values.map(row => row.slice());
@@ -470,6 +616,7 @@ class Spreadsheet {
     for (const s of sheets) this.sheets.push(new Sheet(this, new Grid(s.name, s.name, s.values, s.formulas, s)));
     this.removed = [];
     this.selections = new Map();      // each sheet keeps its own selection, A1 until one is made
+    this.picked = false;              // whether the script chose a sheet or cells itself (as a recorded macro does)
     this.active = this.sheets.find(s => s.getName() === active) || this.sheets[0];
     return strict(this, "Spreadsheet");
   }
@@ -487,17 +634,34 @@ class Spreadsheet {
   getNumSheets() { return this.sheets.length; }
   getSheetByName(name) { return this.sheets.find(s => s.getName() === name) || null; }
   getSheetById(id) { return this.sheets.find(s => s.getSheetId() === id) || null; }
-  getActiveSheet() { result.uses.sheet = true; return this.active; }
-  setActiveSheet(sheet) { this.active = sheet; return sheet; }
-  getActiveRange() { result.uses.selection = true; return this.selections.get(this.active) || this.active.getRange("A1"); }
+  // What the script reads before choosing anything itself is what the client had open: the report says so.
+  getActiveSheet() { if (!this.picked) result.uses.sheet = true; return this.active; }
+  setActiveSheet(sheet) { this.active = sheet; this.picked = true; return sheet; }
+  getActiveRange() {
+    if (!this.picked) result.uses.selection = true;
+    return this.selections.get(this.active) || this.active.getRange("A1");
+  }
   getActiveCell() { return this.getActiveRange().getCell(1, 1); }
   getCurrentCell() { return this.getActiveCell(); }
-  setActiveRange(range) { this.active = range.getSheet(); this.selections.set(this.active, range); return range; }
+  setActiveRange(range) { this.active = range.getSheet(); this.selections.set(this.active, range); this.picked = true; return range; }
   setActiveSelection(range) { return this.setActiveRange(typeof range === "string" ? this.getRange(range) : range); }
+  getActiveRangeList() { return rangeList([this.getActiveRange()]); }
   getSelection() {
     const book = this;
-    return strict({getActiveRange: () => book.getActiveRange(), getActiveSheet: () => book.getActiveSheet(),
-                   getCurrentCell: () => book.getCurrentCell()}, "Selection");
+    return strict({
+      getActiveRange: () => book.getActiveRange(), getActiveSheet: () => book.getActiveSheet(),
+      getCurrentCell: () => book.getCurrentCell(), getActiveRangeList: () => book.getActiveRangeList(),
+      // As Ctrl, Shift and an arrow key: the selection stretched from its edge to the next cell with data.
+      getNextDataRange(direction) {
+        const range = book.getActiveRange(), cell = book.getCurrentCell(), way = String(direction);
+        const from = range.getSheet().getRange(way === "DOWN" ? range.getLastRow() : way === "UP" ? range.getRow() : cell.getRow(),
+          way === "NEXT" ? range.getLastColumn() : way === "PREVIOUS" ? range.getColumn() : cell.getColumn());
+        const to = from.getNextDataCell(direction);
+        const top = Math.min(range.getRow(), to.getRow()), left = Math.min(range.getColumn(), to.getColumn());
+        return new Range(range.getSheet(), top, left, Math.max(range.getLastRow(), to.getRow()) - top + 1,
+                         Math.max(range.getLastColumn(), to.getColumn()) - left + 1);
+      },
+    }, "Selection");
   }
   createTextFinder(text) { return finder(this.sheets.map(s => s.getDataRange()), text); }
   getRange(text) {
@@ -515,7 +679,7 @@ class Spreadsheet {
       throw fail(`A sheet with the name "${name}" already exists. Please enter another name.`);
     }
     const sheet = this.addGrid(name, index);
-    this.active = sheet;
+    this.setActiveSheet(sheet);
     return sheet;
   }
   deleteSheet(sheet) {
@@ -524,6 +688,10 @@ class Spreadsheet {
     if (this.active === sheet) this.active = this.sheets[0];
   }
   duplicateActiveSheet() { return this.active.copyTo(this); }
+  moveActiveSheet(position) {
+    this.sheets.splice(this.sheets.indexOf(this.active), 1);
+    this.sheets.splice(position - 1, 0, this.active);
+  }
   toast(text, title) { result.ui.push(`toast: ${title ? title + ": " : ""}${text}`); }
   getOwner() { return user; }
   getEditors() { return []; }
@@ -681,6 +849,9 @@ const globals = {
     newConditionalFormatRule() { const b = new Proxy({}, {get: (_, p) => (p === "build" ? () => ({}) : () => b)}); return b; },
     BorderStyle: {}, Dimension: {COLUMNS: "COLUMNS", ROWS: "ROWS"}, WrapStrategy: {}, ProtectionType: {},
     Direction: {UP: "UP", DOWN: "DOWN", PREVIOUS: "PREVIOUS", NEXT: "NEXT"},
+    AutoFillSeries: {DEFAULT_SERIES: "DEFAULT_SERIES", ALTERNATE_SERIES: "ALTERNATE_SERIES"},
+    CopyPasteType: Object.fromEntries(["PASTE_NORMAL", "PASTE_NO_BORDERS", "PASTE_FORMAT", "PASTE_FORMULA",
+      "PASTE_DATA_VALIDATION", "PASTE_VALUES", "PASTE_CONDITIONAL_FORMATTING", "PASTE_COLUMN_WIDTHS"].map(k => [k, k])),
   }, "SpreadsheetApp"),
   Browser: strict({
     msgBox(title, prompt, buttons) { result.ui.push(`msgBox: ${prompt === undefined ? title : `${title}: ${prompt}`}`); return answer(buttons).toLowerCase(); },
@@ -750,6 +921,7 @@ Object.assign(context, globals);
 if (job.select) {
   const sheet = job.select.sheet ? spreadsheet.getSheetByName(job.select.sheet) : spreadsheet.active;
   spreadsheet.setActiveRange(sheet.getRange(job.select.cells));
+  spreadsheet.picked = false;
 }
 const startedOn = spreadsheet.active, startedWith = spreadsheet.selections.get(startedOn);
 result.start = {sheet: startedOn.getName(), cells: startedWith ? startedWith.getA1Notation() : "A1",
@@ -765,6 +937,7 @@ try {
     const range = sheet.getRange(job.edit.cell), oldValue = range.getValue();
     range.setValue(job.edit.value);
     spreadsheet.setActiveRange(range);
+    spreadsheet.picked = false;
     // As Google sends them: e.value as text ("TRUE" for a ticked checkbox), no e.oldValue for a cell that was empty.
     const text = v => (typeof v === "boolean" ? String(v).toUpperCase() : isDate(v) ? display(v) : String(v));
     context.$edit = {range, value: text(job.edit.value), oldValue: empty(oldValue) ? undefined : text(oldValue),

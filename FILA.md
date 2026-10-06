@@ -162,6 +162,14 @@ até alguma vender. O que eu faço agora:
    substituir (`createTextFinder`, com as opções) e `getNextDataCell` (a última linha com dado). Corrigidos
    dois defeitos: no onEdit, `getActiveCell` dava A1 em vez da célula editada (padrão de muito script antigo
    de data automática), e ao apagar ou inserir linhas as cores postas pelo script ficavam na linha errada.
+   Às 7h40, macro gravada no Google Sheets (o cliente grava em vez de programar, e é pedido comum): parava na
+   segunda linha, porque o gravador usa funções que o teste não tinha. Agora roda inteira: lista de células,
+   célula atual, fórmula em R1C1, preencher para baixo (com série 1, 2, 3), filtro com ordenação, colar
+   (normal, só valores, só formato) e limpar com opções. Corrigidos três defeitos que davam resultado
+   errado sem aviso: fórmula copiada, preenchida ou ordenada não ajustava as referências (o total da linha 3
+   ia para a linha 5 e continuava somando a linha 3); a ordenação punha "Bruno" antes de "ana" (o Google
+   ignora maiúscula); e `clear()` não apagava a formatação. O que só o Google calcula (ordenar por fórmula
+   que o script acabou de escrever, colar o valor dela) aparece no relatório para conferir lá.
 
 Pausado até algo vender ou ele pedir: inventário da casa (rascunho em `etsy/home-inventory`), manutenção da casa,
 galinhas no quintal, férias da equipe, Herculano.

@@ -9,6 +9,7 @@ import sys
 import tempfile
 
 from openpyxl import Workbook, load_workbook
+from openpyxl.styles import Font
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import run_gas  # noqa: E402
@@ -451,6 +452,125 @@ def sheet_tools(root):
           "sheets, the last row with getNextDataCell, and the edited cell as the active cell in onEdit")
 
 
+RECORDED = """/** @OnlyCurrentDoc */
+
+function FormatReport() {
+  var spreadsheet = SpreadsheetApp.getActive();
+  spreadsheet.getRange('A1:D1').activate();
+  spreadsheet.getActiveRangeList().setFontWeight('bold').setBackground('#cfe2f3');
+  spreadsheet.getRange('D1').activate();
+  spreadsheet.getCurrentCell().setValue('Total');
+  spreadsheet.getRange('D2').activate();
+  spreadsheet.getCurrentCell().setFormulaR1C1('=R[0]C[-2]*R[0]C[-1]');
+  spreadsheet.getActiveRange().autoFill(spreadsheet.getRange('D2:D6'), SpreadsheetApp.AutoFillSeries.DEFAULT_SERIES);
+  spreadsheet.getRange('E1').activate();
+  spreadsheet.getCurrentCell().setFormulaR1C1('=SUM(R2C4:R6C4)');
+  spreadsheet.getRange('A1:D6').activate();
+  spreadsheet.getActiveRange().createFilter();
+  spreadsheet.getActiveSheet().getFilter().sort(2, true);
+  spreadsheet.getRange('A2').activate();
+  spreadsheet.getSelection().getNextDataRange(SpreadsheetApp.Direction.DOWN).activate();
+  Logger.log(spreadsheet.getActiveRange().getA1Notation());
+  spreadsheet.getRange('C2:C6').activate();
+  spreadsheet.getActiveRangeList().setNumberFormat('#,##0.00');
+  spreadsheet.getRange('A2:D2').copyTo(spreadsheet.getRange('A9'), SpreadsheetApp.CopyPasteType.PASTE_NORMAL, false);
+  spreadsheet.getRange('A3:C3').copyTo(spreadsheet.getRange('A10'), SpreadsheetApp.CopyPasteType.PASTE_VALUES, false);
+  spreadsheet.getRange('J1').copyTo(spreadsheet.getRange('J2'), SpreadsheetApp.CopyPasteType.PASTE_VALUES, false);
+  spreadsheet.getRange('F2').activate();
+  spreadsheet.getCurrentCell().setValue(1);
+  spreadsheet.getRange('F3').setValue(2);
+  spreadsheet.getRange('F2:F3').autoFill(spreadsheet.getRange('F2:F6'), SpreadsheetApp.AutoFillSeries.DEFAULT_SERIES);
+  spreadsheet.getActiveSheet().setFrozenRows(1);
+  spreadsheet.getRange('G1').clear({contentsOnly: true, skipFilteredRows: true});
+  spreadsheet.getRange('H1').clear();
+};
+
+function CountUp() {
+  var spreadsheet = SpreadsheetApp.getActive();
+  spreadsheet.getRange('H2').setValue(10);
+  spreadsheet.getRange('H2').autoFill(spreadsheet.getRange('H2:H4'), SpreadsheetApp.AutoFillSeries.DEFAULT_SERIES);
+  spreadsheet.getRange('I2').setValue('x');
+  spreadsheet.getRange('I2').autoFill(spreadsheet.getRange('I2:I3'), SpreadsheetApp.AutoFillSeries.DEFAULT_SERIES);
+  spreadsheet.insertSheet('Summary');
+  spreadsheet.moveActiveSheet(1);
+};
+
+function SortNames() {
+  var sheet = SpreadsheetApp.getActive().getSheetByName('Sales');
+  sheet.getRange('L1:L6').setValues([['Bruno'], [3], ['ana'], [''], ['carla'], [10]]);
+  sheet.getRange('L1:L6').sort(12);
+  Logger.log(sheet.getRange('L1:L6').getValues().map(function (r) { return r[0]; }).join(' '));
+};
+
+function SortByTotal() {
+  var spreadsheet = SpreadsheetApp.getActive();
+  spreadsheet.getRange('D2:D6').setFormulaR1C1('=RC[-2]*RC[-1]');
+  spreadsheet.getRange('A2:D6').sort({column: 4, ascending: false});
+  spreadsheet.getRange('D2').copyTo(spreadsheet.getRange('K2'), SpreadsheetApp.CopyPasteType.PASTE_VALUES, false);
+  Logger.log(spreadsheet.getRange('D3').getFormulaR1C1());
+};
+"""
+
+
+def recorded(root):
+    """A macro in the words the macro recorder of Google Sheets uses: activate, the current cell, range lists,
+    R1C1 formulas filled down, a filter sorted, the next data range, pastes, a series and clear with options.
+    Before, it stopped at the second line (getActiveRangeList was not in the test)."""
+    path = os.path.join(root, "sales.xlsx")
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Sales"
+    for row in [["Item", "Qty", "Price"], ["Pens", 3, 1.5], ["Paper", 9, 4], ["Ink", 1, 12], ["Tape", 5, 2],
+                ["Clips", 7, 0.5]]:
+        ws.append(row)
+    ws["G1"], ws["H1"], ws["J1"] = "draft", "old", "=SUM(B2:B6)"
+    ws["G1"].font = ws["H1"].font = Font(bold=True)
+    wb.save(path)
+    script = os.path.join(root, "macros.gs")
+    with open(script, "w", encoding="utf-8") as f:
+        f.write(RECORDED)
+    out = os.path.join(root, "recorded.xlsx")
+    result = run_gas.run(path, [script], "FormatReport", keep=out)
+    report = "\n".join(run_gas.report(result, "yes"))
+    assert result["status"] == "ok" and result["log"] == ["A2:A6"], report
+    assert not result["missing"], result["missing"]
+    assert "It works on the" not in report, report       # it selects its own cells, as a recorded macro does
+    for line in ["Sales!E1  (empty)  ->  =SUM($D$2:$D$6)", "Sales!D9  (empty)  ->  =B9*C9", "Sales!E1  (empty)  ->  66",
+                 "Sales!D6  (empty)  ->  36", "Sales!D9  (empty)  ->  12"]:
+        assert line in report, (line, report)
+    wb = load_workbook(out)
+    ws = wb["Sales"]
+    table = [[ws.cell(r, c).value for c in range(1, 5)] for r in range(1, 11)]
+    assert table == [["Item", "Qty", "Price", "Total"], ["Ink", 1, 12, "=B2*C2"], ["Pens", 3, 1.5, "=B3*C3"],
+                     ["Tape", 5, 2, "=B4*C4"], ["Clips", 7, 0.5, "=B5*C5"], ["Paper", 9, 4, "=B6*C6"],
+                     [None] * 4, [None] * 4, ["Ink", 1, 12, "=B9*C9"], ["Pens", 3, 1.5, None]], table
+    assert [ws.cell(r, 6).value for r in range(2, 7)] == [1, 2, 3, 4, 5], "the series"
+    assert ws["A1"].font.b and ws["D1"].fill.start_color.rgb == "FFCFE2F3", "the heading"
+    assert ws["C2"].number_format == "#,##0.00" and ws.freeze_panes == "A2", "number format and frozen row"
+    assert ws["G1"].value is None and ws["G1"].font.b, "contentsOnly took the format too"
+    assert ws["H1"].value is None and not ws["H1"].font.b, "clear() left the format"
+    assert ws["C9"].number_format == "#,##0.00" and ws["C10"].number_format == "General", "formats pasted"
+    assert ws["J2"].value == 25, ws["J2"].value                  # the result of =SUM(B2:B6), not the formula
+
+    result = run_gas.run(path, [script], "CountUp", changes=False)
+    assert [s["name"] for s in result["sheets"]] == ["Summary", "Sales"], result["sheets"]
+    changes = result["sheets"][1]["changes"]
+    assert [3, 8, 11, ""] in changes and [4, 8, 12, ""] in changes and [3, 9, "x", ""] in changes, changes
+    assert result["missing"] == ["Range.autoFill from one number or date, counted up by 1: check the numbers in "
+                                 "Google"], result["missing"]
+    result = run_gas.run(path, [script], "SortNames", changes=False)
+    assert result["log"] == ["3 10 ana Bruno carla "], result["log"]      # the empty cell last
+    result = run_gas.run(path, [script], "SortByTotal", changes=False)
+    assert result["missing"] == ["Range.sort by formulas the script wrote, whose results only Google works out",
+                                 "Range.copyTo of the values of formulas the script wrote, whose results only "
+                                 "Google works out"], result["missing"]
+    assert result["log"] == ["=RC[-2]*RC[-1]"], result["log"]
+    print("recorded macro: getActiveRangeList, the current cell, an R1C1 formula filled down (=B2*C2 to =B6*C6), "
+          "a filter sorted with each total kept on its row, the next data range, pastes that move formulas, "
+          "a series 1, 2 to 5, a frozen row and clear with its options; one number filled down and a sort by "
+          "formulas the script wrote are named for checking in Google")
+
+
 if __name__ == "__main__":
     if not shutil.which("node"):
         print("Apps Script: not checked, Node.js is not installed")
@@ -463,4 +583,5 @@ if __name__ == "__main__":
         fetch_cli(path, code, tmp)
         big(tmp)
         sheet_tools(tmp)
+        recorded(tmp)
     print("all good")
