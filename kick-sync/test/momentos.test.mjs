@@ -7,7 +7,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  PADRAO, novoMomento, ordenar, acrescentar, remover, clipesDoMomento, planoDaMontagem, alternarVitima, removerVarios, filtrar, temMorte, comAjuste, semAjuste,
+  PADRAO, novoMomento, ordenar, acrescentar, remover, clipesDoMomento, planoDaMontagem, alternarVitima, removerVarios, filtrar, temMorte, comAjuste, semAjuste, ajusteDe, ajustesQueContam,
 } from '../site/momentos.js';
 
 const T = Date.parse('2026-08-30T22:00:00.000Z');
@@ -345,4 +345,31 @@ test('um ajuste invalido nao entra, e tirar o ajuste devolve o momento', () => {
   assert.notEqual(com, m, 'e um momento novo, nunca o mesmo mudado no sitio');
   assert.deepEqual(semAjuste(com), m);
   assert.equal(semAjuste(m), m);
+});
+
+// Um ajuste só por momento: guardar o da vítima apagava sem aviso o corte e o
+// 9:16 da POV dele, e desmarcar a vítima deixava a lista a dizer "9:16" por
+// um clipe que já não saía.
+test('cada angulo guarda o seu ajuste, e so contam os que ainda entram na kill', () => {
+  const m = alternarVitima(novoMomento(T, 'tchubi'), 'vitima1');
+  const rects = [{ x: 1, y: 1, largura: 9, altura: 9 }, { x: 2, y: 2, largura: 9, altura: 9 }];
+  const meu = comAjuste(m, { deMs: T - 20_000, ateMs: T + 4000, canal: 'tchubi', formato: 'dois', rects });
+  const os2 = comAjuste(meu, { deMs: T - 3000, ateMs: T + 1000, canal: 'vitima1' });
+  const c = clipesDoMomento(os2, DOIS, 0);
+  const dele = c.find((x) => x.canal === 'tchubi');
+  const dela = c.find((x) => x.canal === 'vitima1');
+  assert.equal(dele.deMs, T - 20_000, 'o corte dele continua');
+  assert.equal(dele.ateMs, T + 4000);
+  assert.equal(dele.retrato?.modo, 'dois', 'e o 9:16 dele tambem');
+  assert.equal(dela.deMs, T - 3000);
+  assert.equal(dela.retrato, null);
+  assert.equal(os2.ajuste.canal, 'vitima1', 'o ultimo guardado e o da vitima');
+
+  // So o da vitima com 9:16; desmarcada, ele ja nao conta.
+  const soDela = comAjuste(m, { deMs: T - 3000, ateMs: T + 1000, canal: 'vitima1', formato: 'um', rects });
+  assert.equal(ajustesQueContam(soDela).length, 1);
+  const fora = alternarVitima(soDela, 'vitima1');
+  assert.deepEqual(ajustesQueContam(fora), [], 'sem clipe, nao ha ajuste a mostrar');
+  assert.equal(ajusteDe(alternarVitima(fora, 'vitima1'), 'vitima1').formato, 'um', 'marcada outra vez, volta');
+  assert.deepEqual(semAjuste(os2), m);
 });

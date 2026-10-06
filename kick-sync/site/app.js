@@ -24,6 +24,7 @@ import { agruparPorNoite, rotuloDaNoite } from './noites.js';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
   alternarVitima, filtrar, temMorte, clipesDoMomento, comAjuste, numeroNaMontagem,
+  ajusteDe, ajustesQueContam,
 } from './momentos.js';
 import {
   planearCorte, executarCorte, nomeDoFicheiro, largarOQueNaoServe, oQueFalta,
@@ -2006,6 +2007,7 @@ function pintarMomentos() {
     const i = lista.indexOf(m);
     const clipes = planoDaMontagem([m], canais, { filmava });
     const n = clipes.length;
+    const ajustados = ajustesQueContam(m);
     // Quanto dura o clipe dele. Os tiroteios vao de quatro segundos a noventa,
     // e sem este numero ele so descobre o tamanho depois de exportar.
     const seg = clipes.find((c) => c.papel === 'protagonista') || clipes[0];
@@ -2043,7 +2045,8 @@ function pintarMomentos() {
       + `${tn(n, 'montagem.umClipe', 'montagem.clipes')}</span>`
       // A kill que já tem ajustes guardados diz-o — é assim que ele sabe por
       // onde vai, numa lista de trinta.
-      + (m.ajuste ? `<span class="ajustado">${t(m.ajuste.formato
+      // Só os ajustes de ângulos que ainda entram na kill (ver `ajustesQueContam`).
+      + (ajustados.length ? `<span class="ajustado">${t(ajustados.some((a) => a.formato)
         ? 'montagem.ajustadoRetrato' : 'montagem.ajustado')}</span>` : '')
       // "Vítimas" só quando há alguma. Antes a etiqueta estava lá sempre, em
       // cima de uma fila de nomes que ninguém tinha medido — e dizer "Vítimas"
@@ -2533,7 +2536,7 @@ function aprenderCom(ms) {
   // ele foi espreitar outro ângulo e a lista inteira passava a cortar a POV
   // errada.
   const canal = perto.canal || estado.focos[0] || estado.linhas[0]?.slug;
-  const fica = (m) => !m.auto || temMorte(m) || m.ajuste;
+  const fica = (m) => !m.auto || temMorte(m) || m.ajuste || m.ajustes;
   const fora = estado.momentos.filter((m) => !fica(m));
   estado.momentos = estado.momentos.filter(fica);
   if (fora.length) {
@@ -2780,12 +2783,14 @@ function abrirClipe(momento = null) {
   // Um editor que fecha a meio de uma gravação ou de uma exportação pára-a
   // (ver `fecharClipe`); abrir outro por cima faz o mesmo.
   if (estado.clipe) fecharClipe();
-  const aj = momento?.ajuste;
-  // No ângulo em que o ajuste foi feito: os enquadramentos guardados estão em
+  // No ângulo do último ajuste guardado: os enquadramentos guardados estão em
   // pixels DESSE vídeo, e abri-los noutro punha as caixas no sítio errado.
-  const canal = (aj?.canal && estado.linhas.some((l) => l.slug === aj.canal) ? aj.canal : null)
+  const ultimo = momento?.ajuste?.canal;
+  const canal = (ultimo && estado.linhas.some((l) => l.slug === ultimo) ? ultimo : null)
     || momento?.protagonista || estado.focos[0] || estado.linhas[0].slug;
   const linha = estado.linhas.find((l) => l.slug === canal) || estado.linhas[0];
+  // Cada ângulo tem o seu ajuste (ver `comAjuste`): o deste, e só o deste.
+  const aj = momento ? ajusteDe(momento, linha.slug) : null;
   // Não deixar escolher um pedaço que este ângulo não filmou: os limites são
   // os do vídeo dele, e não os da noite.
   const limites = { inicio: linha.inicio, fim: linha.fim };

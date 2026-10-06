@@ -338,3 +338,43 @@ test('o resto de um corte partido por uma reconexão pede-se ao VOD seguinte, e 
   const inteiro = await planearCorte({ linha, deMs: T + 10_000, ateMs: T + 30_000, buscar });
   assert.equal(oQueFalta(linha, inteiro, T + 30_000), null);
 });
+
+// Numa ligação lenta mas viva os quatro pedaços ao mesmo tempo dividem a
+// ligação: cada um leva quatro vezes mais do que sozinho. Um prazo para o
+// pedido inteiro dava-os todos por perdidos e o corte voltava 'incompleto';
+// o prazo tem de contar só o silêncio.
+test('a slow but live link finishes: the deadline counts silence, not the whole request', async () => {
+  const PEDACO = 1100;
+  const POR_MS = PEDACO / 300; // sozinho, um pedaço leva 300 ms
+  const activos = new Set();
+  const buscar = async (url, { signal } = {}) => {
+    const d = { falta: PEDACO, fila: [], espera: null, fim: false, erro: null };
+    activos.add(d);
+    const tick = setInterval(() => {
+      const n = Math.min(d.falta, Math.ceil((POR_MS * 10) / activos.size));
+      d.falta -= n;
+      d.fila.push(new Uint8Array(n));
+      if (d.falta <= 0) { d.fim = true; clearInterval(tick); activos.delete(d); }
+      d.espera?.(); d.espera = null;
+    }, 10);
+    signal?.addEventListener('abort', () => {
+      clearInterval(tick); activos.delete(d); d.erro = new DOMException('a', 'AbortError'); d.espera?.();
+    });
+    const leitor = {
+      async read() {
+        for (;;) {
+          if (d.erro) throw d.erro;
+          if (d.fila.length) return { done: false, value: d.fila.shift() };
+          if (d.fim) return { done: true };
+          await new Promise((ok) => { d.espera = ok; });
+        }
+      },
+    };
+    return { ok: true, status: 200, body: { getReader: () => leitor } };
+  };
+  const segmentos = Array.from({ length: 8 }, (_, i) => ({ url: `s${i}.ts`, inicio: i * 10000, duracaoS: 10 }));
+  // Sozinho cabe duas vezes no prazo; com quatro a dividir a ligação, não.
+  const r = await executarCorte({ estado: 'ok', segmentos, nome: 'x.ts' }, { buscar, prazoMs: 600 });
+  assert.equal(r.estado, 'pronto', r.falhas?.[0]?.erro);
+  assert.equal(r.bytes.length, 8 * PEDACO);
+});

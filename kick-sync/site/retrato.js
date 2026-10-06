@@ -547,6 +547,14 @@ export async function gravar(video, {
   // dois quando a página volta, dá o mesmo ficheiro que se teria à vista: o
   // tempo em pausa não entra nele.
   let escondida = false;
+  // Um pincel só, sempre: limpar o anterior antes de arrancar outro. O
+  // separador pode esconder-se e voltar durante o `await video.play()` do
+  // início, e os dois sítios que arrancam o pincel deixavam um a correr sem
+  // ninguém o parar.
+  const arrancarPincel = () => {
+    clearInterval(pincel);
+    pincel = setInterval(pintar, 1000 / 30);
+  };
   const aoMudarDeVista = () => {
     if (parar) return;
     if (pagina?.hidden && !escondida) {
@@ -561,7 +569,7 @@ export async function gravar(video, {
       ultimoS = video.currentTime;
       if (gravador.state === 'paused') gravador.resume?.();
       video.play().catch(() => {});
-      pincel = setInterval(pintar, 1000 / 30);
+      arrancarPincel();
     }
   };
   pagina?.addEventListener?.('visibilitychange', aoMudarDeVista);
@@ -578,8 +586,11 @@ export async function gravar(video, {
     desenhar(ctx, video, rects, modo, divisao);
     gravador.start();
     await video.play().catch(() => {});
-    pintar();
-    pincel = setInterval(pintar, 1000 / 30);
+    // Escondida enquanto o `play()` esperava: o vídeo e o gravador já estão em
+    // pausa, e pintar agora punha o detector de "não andou" a contar sobre um
+    // vídeo parado. O pincel arranca quando a página voltar.
+    if (escondida) video.pause();
+    else { pintar(); arrancarPincel(); }
     // Já escondida quando começou (a montagem chegou a este 9:16 com ele
     // noutra janela): fica logo em pausa até ele voltar.
     if (pagina?.hidden) aoMudarDeVista();

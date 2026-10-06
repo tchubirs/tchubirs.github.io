@@ -31,9 +31,15 @@ const TENTATIVAS = 3;
 //
 // Um pedido que pára sem fechar nunca acaba sozinho: sem prazo, a montagem
 // ficava presa nesse pedaço para sempre, com o botão apagado, e a única saída
-// era recarregar a página e perder o que já estava pronto. Sessenta segundos
-// chegam para um pedaço de 10 s a 1080p60 (cerca de 11 MB) numa ligação de
-// 2 Mbit/s; mais lento do que isso, o pedaço conta como falha e é tentado outra vez.
+// era recarregar a página e perder o que já estava pronto.
+//
+// O prazo conta o SILÊNCIO, não o pedido inteiro: cada bocado do corpo que
+// chega volta a pôr o relógio a zero. Um prazo para o pedido inteiro falhava
+// numa ligação lenta mas viva, porque os pedaços vêm quatro de cada vez
+// (`AO_MESMO_TEMPO`) e cada um só leva um quarto da ligação: a 2 Mbit/s um
+// pedaço de 11 MB demora mais de seis minutos, e cada tentativa recomeçava do
+// zero até o corte voltar 'incompleto'. Assim só conta como falha um pedido
+// que passa sessenta segundos sem mandar nada.
 export const PRAZO_MS = 60_000;
 
 /**
@@ -46,7 +52,13 @@ async function comPrazo(fazer, { sinal, prazoMs = PRAZO_MS } = {}) {
   const vigia = new AbortController();
   const largar = () => vigia.abort();
   if (sinal?.aborted) vigia.abort(); else sinal?.addEventListener('abort', largar, { once: true });
-  const relogio = setTimeout(() => vigia.abort(), prazoMs);
+  let relogio = setTimeout(() => vigia.abort(), prazoMs);
+  // Sinal de vida: quem recebe dados chama isto e o prazo recomeça.
+  const vivo = () => {
+    if (vigia.signal.aborted) return;
+    clearTimeout(relogio);
+    relogio = setTimeout(() => vigia.abort(), prazoMs);
+  };
   const desistir = new Promise((_, nao) => {
     const recusar = () => nao(sinal?.aborted
       ? new DOMException('cancelado', 'AbortError')
@@ -54,7 +66,7 @@ async function comPrazo(fazer, { sinal, prazoMs = PRAZO_MS } = {}) {
     if (vigia.signal.aborted) recusar(); else vigia.signal.addEventListener('abort', recusar, { once: true });
   });
   try {
-    return await Promise.race([fazer(vigia.signal), desistir]);
+    return await Promise.race([fazer(vigia.signal, vivo), desistir]);
   } finally {
     clearTimeout(relogio);
     sinal?.removeEventListener('abort', largar);
@@ -78,6 +90,23 @@ export function nomeDoFicheiro({ canal, quandoMs, sufixo = 'ts' }) {
  * ran, so every failure carries the URL and the reason rather than resolving
  * to an empty buffer that looks like a very short clip.
  */
+/** O corpo inteiro, chamando `vivo` a cada bocado que chega. */
+async function lerCorpo(r, vivo) {
+  const leitor = r.body?.getReader?.();
+  if (!leitor) return r.arrayBuffer();
+  const bocados = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await leitor.read();
+    if (done) break;
+    if (value?.byteLength) { bocados.push(value); total += value.byteLength; vivo(); }
+  }
+  const junto = new Uint8Array(total);
+  let i = 0;
+  for (const c of bocados) { junto.set(c, i); i += c.byteLength; }
+  return junto.buffer;
+}
+
 async function pegarSegmento(url, { buscar, sinal, aoTentar, prazoMs }) {
   let ultimo = null;
   for (let tentativa = 1; tentativa <= TENTATIVAS; tentativa++) {
@@ -85,11 +114,14 @@ async function pegarSegmento(url, { buscar, sinal, aoTentar, prazoMs }) {
     try {
       // O prazo cobre o pedido E o corpo: um servidor que manda os
       // cabeçalhos e depois se cala prendia o `arrayBuffer()` para sempre.
-      const b = await comPrazo(async (signal) => {
+      // O corpo lê-se aos bocados para que cada bocado conte como sinal de
+      // vida (ver `PRAZO_MS`).
+      const b = await comPrazo(async (signal, vivo) => {
         const r = await buscar(url, { signal });
         if (r.status === 404 || r.status === 403) { const p = new Error(`HTTP ${r.status}`); p.permanente = true; throw p; }
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.arrayBuffer();
+        vivo();
+        return lerCorpo(r, vivo);
       }, { sinal, prazoMs });
       if (!b.byteLength) throw new Error('segmento vazio');
       return new Uint8Array(b);

@@ -843,3 +843,59 @@ test('a prova de formato corre uma vez por gravador, e limpa mesmo quando rebent
     if (antes) globalThis.AudioContext = antes; else delete globalThis.AudioContext;
   }
 });
+
+// O separador esconde-se enquanto o `play()` do início ainda espera: o pincel
+// arrancava na mesma sobre um vídeo em pausa (e o detector dava "o vídeo não
+// andou"), e ao voltar a página arrancava um segundo pincel que ficava vivo
+// depois de a gravação acabar.
+test('esconder o separador durante o play() inicial não pinta às escondidas nem deixa pincéis vivos', async () => {
+  const v = {
+    videoWidth: 1920, videoHeight: 1080, currentTime: 10, seeking: false, readyState: 4, tocando: false,
+    // Como no browser: um pause() a meio cancela a promessa do play().
+    play: () => {
+      v.pendente = true;
+      return new Promise((ok, nao) => setTimeout(() => {
+        if (!v.pendente) return nao(new Error('interrompido pelo pause'));
+        v.pendente = false; v.tocando = true; ok();
+      }, 100));
+    },
+    pause: () => { v.pendente = false; v.tocando = false; },
+    captureStream: () => ({ getAudioTracks: () => [], getTracks: () => [] }),
+  };
+  let pintadasEscondida = 0;
+  const pagina = new EventTarget();
+  pagina.hidden = false;
+  const ctx = {
+    drawImage() { if (pagina.hidden) pintadasEscondida++; if (v.tocando) v.currentTime += 0.05; },
+    fillRect() {},
+  };
+  const tela = { width: 0, height: 0, getContext: () => ctx, captureStream: () => ({ addTrack() {} }) };
+  class MR {
+    constructor() { this.state = 'inactive'; }
+    start() { this.state = 'recording'; }
+    pause() { this.state = 'paused'; }
+    resume() { this.state = 'recording'; }
+    stop() { this.state = 'inactive'; this.ondataavailable?.({ data: new Blob(['x']) }); this.onstop?.(); }
+  }
+  const vivos = new Set();
+  const { setInterval: si, clearInterval: ci } = globalThis;
+  globalThis.setInterval = (...a) => { const h = si(...a); vivos.add(h); return h; };
+  globalThis.clearInterval = (h) => { vivos.delete(h); ci(h); };
+  const mudar = (hidden) => { pagina.hidden = hidden; pagina.dispatchEvent(new Event('visibilitychange')); };
+  try {
+    const feito = gravar(v, {
+      rects: [{ x: 0, y: 0, largura: 1080, altura: 1080 }], duracaoS: 0.6, formato: 'video/webm',
+      criarTela: () => tela, MR, pagina,
+    });
+    setTimeout(() => mudar(true), 30);
+    await new Promise((ok) => setTimeout(ok, 400));
+    assert.equal(pintadasEscondida, 0, 'escondida, não se pinta');
+    mudar(false);
+    const { blob } = await feito;
+    assert.ok(blob.size > 0);
+    assert.equal(vivos.size, 0, 'nenhum pincel fica a correr depois de gravar');
+  } finally {
+    globalThis.setInterval = si;
+    globalThis.clearInterval = ci;
+  }
+});
