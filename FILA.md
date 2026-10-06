@@ -132,6 +132,9 @@ até alguma vender. O que eu faço agora:
    Às 3h, PDF com senha (muito banco manda assim) derrubava o conversor com erro técnico. Agora ele pede a senha
    (`--password`), avisa quando está errada, e arquivo quebrado ou página da web salva como PDF dá mensagem
    clara. Foto do extrato em JPG ou PNG é lida como escaneado. O anúncio 5 pede a senha junto com os PDFs.
+   Às 3h40, anúncio 3: o auditor de planilhas dava como erro a corrigir uma fórmula com `LAMBDA` que no Excel 365
+   está certa (o LibreOffice daqui não tem `LAMBDA` e devolve `#VALUE!`). Agora ela vai para "não conferido aqui",
+   como `XLOOKUP` e `LET`, e só o erro de verdade fica em "Must fix".
 
 Pausado até algo vender ou ele pedir: inventário da casa (rascunho em `etsy/home-inventory`), manutenção da casa,
 galinhas no quintal, férias da equipe, Herculano.

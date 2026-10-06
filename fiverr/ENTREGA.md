@@ -55,6 +55,8 @@ so ("not checked") with the reason:
   numbers typed as text. If it prints "Saving with openpyxl would lose", do not edit the file with openpyxl:
   edit it in LibreOffice or in the XML.
 - For Excel 2019 or older, do not use the functions listed under "Needs Excel 2021 or later".
+- "Not checked here" lists formulas this LibreOffice cannot work out (XLOOKUP, FILTER, LET and `LAMBDA` in
+  version 24.2): their results come from Excel only. Say so in the delivery message when they matter.
 - A VBA macro: `python3 fiverr/tools/run_vba.py client.xlsm MacroName` runs it on a copy in LibreOffice (a module
   I wrote: add `--code Module1.bas`). MsgBox gets `--answer yes` or `no`, InputBox gets `--input`. The report lists
   every change, or the module, line and error where the macro stopped; `-o after.xlsx` keeps the result. Lines it
