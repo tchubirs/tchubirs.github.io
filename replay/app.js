@@ -36,6 +36,7 @@ import { somDoCanal } from './alinhar.js?v=e671918e16';
 import { MAXIMO_S, mover, janelaInicial, nomeDoClipe, posicaoDaCabeca } from './clipe.js?v=e671918e16';
 import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=e671918e16';
 import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=e671918e16';
+import { escapar } from './escapar.js?v=seg1006';
 
 /* Os glifos dos controlos do vídeo são DESENHO e não emoji.
    Um ⏸ ou um 🔇 sai diferente em cada sistema — no iPhone sai a cores, no
@@ -220,8 +221,8 @@ function pintarSugestoes(canais) {
   const jaLa = listaDeCanais();
   $('sugestoes').innerHTML = canais.map((c, i) => {
     const ja = jaLa.includes(c.slug);
-    return `<li data-slug="${c.slug}" data-i="${i}" class="${ja ? 'ja' : ''}" role="option">`
-      + `<span>${c.slug}${c.aoVivo ? ` <b class="vivo">${t('procurar.aoVivo')}</b>` : ''}</span>`
+    return `<li data-slug="${escapar(c.slug)}" data-i="${i}" class="${ja ? 'ja' : ''}" role="option">`
+      + `<span>${escapar(c.slug)}${c.aoVivo ? ` <b class="vivo">${t('procurar.aoVivo')}</b>` : ''}</span>`
       + `<span class="quantos">${ja ? t('procurar.jaEsta')
         : t('procurar.seguidores', { n: c.seguidores.toLocaleString(idiomaActual()) })}</span></li>`;
   }).join('');
@@ -423,8 +424,8 @@ function pintarCanais(canais) {
   };
   $('listaCanais').innerHTML = canais.map((c) => {
     const mau = c.estado !== 'ok';
-    return `<li class="${mau ? 'mau' : ''}" data-slug="${c.slug}" data-estado="${c.estado}"><b>${c.slug}</b>`
-      + `<span class="nota">${mau ? (rotulo[c.estado] || c.estado)
+    return `<li class="${mau ? 'mau' : ''}" data-slug="${escapar(c.slug)}" data-estado="${escapar(c.estado)}"><b>${escapar(c.slug)}</b>`
+      + `<span class="nota">${mau ? (rotulo[c.estado] || escapar(c.estado))
         : t('canais.vods', { n: c.vods.length })}</span>`
       + '<span class="parecidos"></span>'
       // Tirar um canal daqui. Um nome mal escrito ficava na lista para sempre,
@@ -459,7 +460,7 @@ async function sugerirParecidos(maus) {
     } catch { /* sem sugestões é um resultado, não um erro a mostrar */ }
     if (!achados.length) continue;
     li.innerHTML = `<span class="nota">${t('canais.quisesteDizer')}</span>`
-      + achados.map((x) => `<button data-slug="${x.slug}">${x.slug}</button>`).join('');
+      + achados.map((x) => `<button data-slug="${escapar(x.slug)}">${escapar(x.slug)}</button>`).join('');
     for (const b of li.querySelectorAll('button')) {
       b.onclick = () => {
         // Trocar o nome na caixa, e não acrescentar: quem escreveu mal quer o
@@ -756,7 +757,7 @@ function pintarFaixas() {
     const f = document.createElement('div');
     f.className = 'faixa';
     f.dataset.slug = linha.slug;
-    f.innerHTML = `<span class="nome" title="${linha.slug}">${linha.slug}</span>`
+    f.innerHTML = `<span class="nome" title="${escapar(linha.slug)}">${escapar(linha.slug)}</span>`
       + `<div class="trilho">${linha.pecas.map((p) => {
         const de = Math.max(0, pct(p.playlist.inicio - nudge));
         const ate = Math.min(100, pct(p.playlist.fim - nudge));
@@ -1563,7 +1564,7 @@ async function alinhar() {
     nota.classList.add('mau');
     nota.textContent = e.name === 'AbortError' ? t('alinhar.cancelado')
       : e.name === 'SEM-DESCODIFICADOR' ? t('alinhar.semCodec')
-        : t('alinhar.erro', { erro: e.message });
+        : t('alinhar.erro', { erro: escapar(e.message) });
   }
   botao.disabled = false;
 }
@@ -1664,7 +1665,7 @@ async function procurarKills() {
     nota.classList.add('mau');
     nota.textContent = e.name === 'AbortError' ? t('alinhar.cancelado')
       : e.name === 'SEM-DESCODIFICADOR' ? t('auto.semCodec')
-        : t('alinhar.erro', { erro: e.message });
+        : t('alinhar.erro', { erro: escapar(e.message) });
   }
   botao.disabled = false;
   estado.cancelar = null;
@@ -1819,10 +1820,10 @@ async function verQuemMorreu(ms, { silencioso = false } = {}) {
     const n = notas[l.slug];
     const eSugerido = sugeridos.includes(l.slug);
     const posicao = ordenados.findIndex((o) => o.canal === l.slug);
-    return `<button class="cartao ${eSugerido ? 'morreu' : ''}" data-canal="${l.slug}">`
+    return `<button class="cartao ${eSugerido ? 'morreu' : ''}" data-canal="${escapar(l.slug)}">`
       + (imagens[l.slug] ? `<img src="${imagens[l.slug]}" alt="">`
         : `<span class="semImagem">${t('montagem.semImagem')}</span>`)
-      + `<b>${l.slug}</b>`
+      + `<b>${escapar(l.slug)}</b>`
       + `<span class="nota">${n ? `${eSugerido ? t('montagem.morreu') : ''}${posicao + 1}º`
         : t('montagem.naoFilmava')}</span>`
       + '</button>';
@@ -1835,7 +1836,7 @@ async function verQuemMorreu(ms, { silencioso = false } = {}) {
   caixa2.innerHTML = (semNada
     ? `<span class="nota mau">${t('montagem.naoVi')}</span>`
     : `<span class="nota">${sugeridos.length
-      ? t('montagem.pareceMorreu', { lista: sugeridos.join(', ') })
+      ? t('montagem.pareceMorreu', { lista: escapar(sugeridos.join(', ')) })
       : t('montagem.ninguem')}${dito}</span>`) + cartoes;
 
   for (const b of caixa2.querySelectorAll('.cartao')) {
@@ -1915,8 +1916,8 @@ function pintarMomentos() {
     const fichas = sozinho ? '' : canais.filter((c) => c !== m.protagonista).map((c) => {
       const morreu = (m.vitimas || []).includes(c);
       const havia = filmava(c, m.ms - 3000, m.ms + 3000);
-      return `<button class="vit ${morreu ? 'sim' : ''}" data-canal="${c}"`
-        + `${havia ? '' : ` disabled title="${t('montagem.naoFilmava')}"`}>${c}</button>`;
+      return `<button class="vit ${morreu ? 'sim' : ''}" data-canal="${escapar(c)}"`
+        + `${havia ? '' : ` disabled title="${t('montagem.naoFilmava')}"`}>${escapar(c)}</button>`;
     }).join('');
     return `<li data-ms="${m.ms}" class="${Math.abs(m.ms - estado.agoraMs) < 1500 ? 'aqui' : ''}`
       + `${temMorte(m) ? ' confirmada' : ''}">`
@@ -1924,7 +1925,7 @@ function pintarMomentos() {
       + ` aria-label="${relogioCurto(m.ms)}">`
       + `<b class="n">${String(i + 1).padStart(2, '0')}</b>`
       + `<span>${relogioCurto(m.ms)}Z</span>`
-      + `<span class="quem">${m.protagonista || '—'}</span>`
+      + `<span class="quem">${escapar(m.protagonista || '—')}</span>`
       + `<button class="ver ${estado.previa?.ms === m.ms ? 'aVer' : ''}">`
       + `${t(estado.previa?.ms === m.ms ? 'montagem.parar' : 'montagem.ver')}</button>`
       + `<button class="cliparUma">${t('montagem.clipar')}</button>`
@@ -2079,12 +2080,12 @@ async function baixarMontagem(soEsta = null) {
         linha, deMs: clipe.deMs + nudge, ateMs: clipe.ateMs + nudge, cache,
       });
       if (p.estado !== 'ok') {
-        item.innerHTML = `<b>${clipe.prefixo} ${clipe.canal}</b> <span class="nota">${p.estado}</span>`;
+        item.innerHTML = `<b>${clipe.prefixo} ${escapar(clipe.canal)}</b> <span class="nota">${escapar(p.estado)}</span>`;
         continue;
       }
       const r = await executarCorte(p, { sinal: controlo.signal, jaTemos });
       if (r.estado !== 'pronto') {
-        item.innerHTML = `<b>${clipe.prefixo} ${clipe.canal}</b> `
+        item.innerHTML = `<b>${clipe.prefixo} ${escapar(clipe.canal)}</b> `
           + `<span class="nota mau">${t('corte.incompleto', { obtidos: r.obtidos ?? 0, total: r.total ?? 0 })}</span>`;
         continue;
       }
@@ -2118,13 +2119,13 @@ async function baixarMontagem(soEsta = null) {
           });
         } catch (e) {
           if (e.name === 'AbortError') break;
-          item2.innerHTML = `<b>${clipe.prefixo} ${clipe.canal} · 9:16</b> `
-            + `<span class="nota mau">${t('fila.retratoFalhou', { erro: e.message })}</span>`;
+          item2.innerHTML = `<b>${clipe.prefixo} ${escapar(clipe.canal)} · 9:16</b> `
+            + `<span class="nota mau">${t('fila.retratoFalhou', { erro: escapar(e.message) })}</span>`;
         }
       }
     } catch (e) {
       if (e.name === 'AbortError') break;
-      item.innerHTML = `<b>${clipe.prefixo} ${clipe.canal}</b> <span class="nota mau">${e.message}</span>`;
+      item.innerHTML = `<b>${clipe.prefixo} ${escapar(clipe.canal)}</b> <span class="nota mau">${escapar(e.message)}</span>`;
     }
   }
 
@@ -2317,8 +2318,8 @@ function pintarCorte() {
 
   $('listaCorte').innerHTML = presentes.map((l) => {
     const m = estado.margens[l.slug] || {};
-    return `<li data-slug="${l.slug}">`
-      + `<b>${l.slug}</b>`
+    return `<li data-slug="${escapar(l.slug)}">`
+      + `<b>${escapar(l.slug)}</b>`
       + `<label>${t('corte.antes')} <input class="antes" type="number" value="${m.antesS || 0}" min="0" max="120" step="1">s</label>`
       + `<label>${t('corte.depois')} <input class="depois" type="number" value="${m.depoisS || 0}" min="0" max="120" step="1">s</label>`
       + '<span class="dur"></span>'
@@ -2385,7 +2386,7 @@ async function baixarUm(slug) {
     });
   } else if (r.estado === 'incompleto') {
     nota.classList.add('mau');
-    item.innerHTML = `<b>${slug}</b> <span class="nota mau">`
+    item.innerHTML = `<b>${escapar(slug)}</b> <span class="nota mau">`
       + `${t('corte.incompleto', { obtidos: r.obtidos, total: r.total })}</span>`;
   } else {
     const porque = {
@@ -2393,7 +2394,7 @@ async function baixarUm(slug) {
       'fora-da-noite': t('corte.foraDaNoite'),
       'sem-segmentos': t('corte.semSegmentos'),
     };
-    item.innerHTML = `<b>${slug}</b> <span class="nota">${porque[r.estado] || r.estado}</span>`;
+    item.innerHTML = `<b>${escapar(slug)}</b> <span class="nota">${porque[r.estado] || escapar(r.estado)}</span>`;
   }
 }
 
@@ -2467,7 +2468,7 @@ function abrirClipe(momento = null) {
   }
 
   $('canalClipe').innerHTML = estado.linhas
-    .map((l) => `<option value="${l.slug}"${l.slug === linha.slug ? ' selected' : ''}>${l.slug}</option>`)
+    .map((l) => `<option value="${escapar(l.slug)}"${l.slug === linha.slug ? ' selected' : ''}>${escapar(l.slug)}</option>`)
     .join('');
   $('tituloClipe').value = '';
   $('estadoClipe').textContent = '';
@@ -2896,7 +2897,7 @@ async function guardarRetrato() {
   } catch (e) {
     $('estadoClipe').textContent = e.name === 'SEM-GRAVADOR' ? t('retrato.semGravador')
       : e.name === 'GRAVACAO-PARADA' ? t('retrato.parou')
-        : t('clipe.naoDeu', { erro: e.message });
+        : t('clipe.naoDeu', { erro: escapar(e.message) });
   } finally {
     // A marca sai mesmo que a gravação rebente: senão o `acordarPrevia` fica
     // calado para sempre e a prévia nunca mais carrega uma imagem.
@@ -3144,7 +3145,7 @@ async function guardarClipe() {
     a.click();
     fecharClipe();
   } catch (e) {
-    $('estadoClipe').textContent = t('clipe.naoDeu', { erro: e.message });
+    $('estadoClipe').textContent = t('clipe.naoDeu', { erro: escapar(e.message) });
     $('guardarClipe').disabled = false;
   }
 }
@@ -3180,7 +3181,7 @@ function guardarFicheiro(blob, { auxiliar = false } = {}) {
  * que não ter botão nenhum.
  */
 function linhaDeFicheiro(item, { nome, url, nota, momentoMs = null }) {
-  item.innerHTML = `<a href="${url}" download="${nome}">${nome}</a> `
+  item.innerHTML = `<a href="${escapar(url)}" download="${escapar(nome)}">${escapar(nome)}</a> `
     + `<span class="nota">${nota}</span>`
     // "Depois que eu clico exportar montagem, também queria um botão de editar
     // os clipes na exportação." Abre a mesma kill no editor; ao guardar e
@@ -3468,7 +3469,7 @@ async function abrirLinkKick() {
   } catch (e) {
     nota.classList.add('mau');
     nota.textContent = e.name === 'SEM-CLIPE' ? t('link.semClipe')
-      : t('alinhar.erro', { erro: e.message });
+      : t('alinhar.erro', { erro: escapar(e.message) });
   } finally { botao.disabled = false; }
 }
 $('abrirLink').onclick = abrirLinkKick;

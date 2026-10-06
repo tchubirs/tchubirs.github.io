@@ -16,6 +16,7 @@ import { t, aplicarIdioma, definirIdioma, idiomaActual, idiomaDoBrowser, IDIOMAS
 import { procurarCanais, vodsDoCanal, pecaDoVod, enderecoDoPlayer } from './twitch.js?v=e671918e16';
 import { linhaDoCanal, onde, janelaComum, quantosNoAr } from './relogio.js?v=e671918e16';
 import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=e671918e16';
+import { escapar } from './escapar.js?v=seg1006';
 
 const $ = (id) => document.getElementById(id);
 const estado = {
@@ -47,9 +48,9 @@ async function procurar() {
   try {
     const achados = await procurarCanais(termo);
     $('sugestoes').innerHTML = achados.length
-      ? achados.map((c) => `<button class="sug" data-slug="${c.slug}">`
-        + `${c.imagem ? `<img src="${c.imagem}" alt="" width="24" height="24">` : ''}`
-        + `<span>${c.nome}</span> <span class="nota">${c.slug}</span></button>`).join('')
+      ? achados.map((c) => `<button class="sug" data-slug="${escapar(c.slug)}">`
+        + `${c.imagem ? `<img src="${escapar(c.imagem)}" alt="" width="24" height="24">` : ''}`
+        + `<span>${escapar(c.nome)}</span> <span class="nota">${escapar(c.slug)}</span></button>`).join('')
       : `<span class="nota">${t('procurar.nada')}</span>`;
     for (const b of $('sugestoes').querySelectorAll('.sug')) {
       b.onclick = () => {
@@ -60,7 +61,7 @@ async function procurar() {
       };
     }
   } catch (e) {
-    $('sugestoes').innerHTML = `<span class="nota mau">${t('tw.erro', { erro: e.message })}</span>`;
+    $('sugestoes').innerHTML = `<span class="nota mau">${t('tw.erro', { erro: escapar(e.message) })}</span>`;
   }
 }
 
@@ -156,11 +157,11 @@ function fecharPlayers() {
  * players a falar ao mesmo tempo e inutilizavel, e ele liga o som do que quer.
  */
 function montarGrade() {
-  $('grade').innerHTML = estado.linhas.map((l) => `<div class="tile tw" data-slug="${l.slug}">`
-    + `<div class="cabeca"><b>${l.slug}</b>`
+  $('grade').innerHTML = estado.linhas.map((l) => `<div class="tile tw" data-slug="${escapar(l.slug)}">`
+    + `<div class="cabeca"><b>${escapar(l.slug)}</b>`
     + `<label class="pequeno"><input type="checkbox" class="ligarSom"> ${t('tw.mudo')}</label>`
     + '</div>'
-    + `<div class="quadro" id="pl-${l.slug}"></div>`
+    + `<div class="quadro" id="pl-${escapar(l.slug)}"></div>`
     + '<span class="nota estadoTile"></span></div>').join('');
 
   for (const l of estado.linhas) {
