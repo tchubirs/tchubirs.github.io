@@ -101,6 +101,38 @@ test('com um canal so nao ha com quem comparar, e diz-se isso', () => {
   assert.equal(r.ordenados.length, 1);
 });
 
+// Tres canais, dois morreram. A "mediana" dos dois de baixo era o de CIMA
+// deles (o indice len/2 de uma lista par), ou seja a outra vitima: e ninguem
+// passava a 1,6x dela.
+test('com tres canais e dois mortos, aponta os dois', () => {
+  const nota = (n) => ({ nota: n });
+  assert.deepEqual(quemMorreu({ a: nota(0.5), b: nota(0.45), c: nota(0.05) }).sugeridos.sort(), ['a', 'b']);
+});
+
+// O protagonista entra na conta como termo de comparacao, mas nunca e
+// sugerido. Ele a abrir o saco do morto escurece o ecra como uma morte, e
+// ficava com um dos dois lugares: "parece que morreu: tchubi", e a segunda
+// vitima de verdade de fora.
+test('quem matou nunca ocupa o lugar de uma vitima', () => {
+  const notas = {
+    tchubi: notaDeMorte(JOGO, MORTE),
+    v1: notaDeMorte(JOGO, MORTE),
+    v2: notaDeMorte(JOGO, MORTE),
+    a: notaDeMorte(JOGO, OUTRO_JOGO),
+    b: notaDeMorte(JOGO, JOGO),
+    c: notaDeMorte(OUTRO_JOGO, JOGO),
+  };
+  const r = quemMorreu(notas, { excluir: ['tchubi'] });
+  assert.deepEqual(r.sugeridos.sort(), ['v1', 'v2']);
+  assert.ok(r.ordenados.some((o) => o.canal === 'tchubi'), 'continua na lista, para os cartoes');
+});
+
+test('com dois canais, o protagonista ainda serve de comparacao', () => {
+  const r = quemMorreu({ tchubi: notaDeMorte(JOGO, OUTRO_JOGO), v: notaDeMorte(JOGO, MORTE) },
+    { excluir: ['tchubi'] });
+  assert.deepEqual(r.sugeridos, ['v']);
+});
+
 test('canais sem frame nao entram na conta', () => {
   const r = quemMorreu({ a: notaDeMorte(JOGO, MORTE), b: null, c: notaDeMorte(JOGO, OUTRO_JOGO) });
   assert.deepEqual(r.ordenados.map((x) => x.canal), ['a', 'c']);
