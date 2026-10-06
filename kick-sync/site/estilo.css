@@ -356,6 +356,10 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 }
 .sugestoes button:hover, .sugestoes li.eSugerido button { background: var(--sup-3); border-color: transparent; }
 .sugestoes .ja { color: var(--tinta-3); }
+.sugestoes li { padding: var(--e2) var(--e3); border-radius: var(--r-1); cursor: pointer; }
+.sugestoes li.ja { cursor: default; }
+/* As setas mexem numa escolha que tem de se ver: e o que o Enter vai acrescentar. */
+.sugestoes li:hover, .sugestoes li[aria-selected="true"] { background: var(--sup-3); }
 
 /* A barra da noite: o selector, a confiança e o partilhar numa linha. */
 .barraSessao { align-items: flex-end; gap: var(--e4); }
@@ -371,8 +375,11 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
   background: var(--sup-1); color: var(--tinta-2);
 }
 .confianca:empty { display: none; }
-.confianca.ha { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent); background: var(--ok-eco); }
-.confianca.mau { color: var(--perigo); border-color: color-mix(in srgb, var(--perigo) 40%, transparent); background: var(--perigo-eco); }
+.confianca.ha, .confianca.exacto { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent); background: var(--ok-eco); }
+.confianca.mau, .confianca.nenhum { color: var(--perigo); border-color: color-mix(in srgb, var(--perigo) 40%, transparent); background: var(--perigo-eco); }
+/* O veredicto tem de levar a cor: o pintarConfianca escreve exacto, parcial
+   ou nenhum, e sem regras para estes nomes os tres saiam no mesmo cinzento. */
+.confianca.parcial { color: var(--aviso); border-color: color-mix(in srgb, var(--aviso) 40%, transparent); background: var(--aviso-eco); }
 
 /* ── o estado de cada canal ─────────────────────────────────────────────── */
 #canaisEstado { margin-top: var(--e4); }
@@ -457,7 +464,11 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
   display: flex; align-items: center; justify-content: space-between; gap: var(--e2);
   opacity: 0; transition: opacity var(--mov);
 }
-.tile:hover .controlos, .tile.foco .controlos, .tile .controlos:focus-within { opacity: 1; }
+/* Invisivel e nao tocavel: com opacity 0 os botoes continuavam a receber o
+   toque, e no telemovel um toque na miniatura caia no + escondido e punha o
+   angulo fora de tempo sem ninguem ver. */
+.tile .controlos { pointer-events: none; }
+.tile:hover .controlos, .tile.foco .controlos, .tile .controlos:focus-within { opacity: 1; pointer-events: auto; }
 .tile .fora {
   position: absolute; inset: var(--e2) var(--e2) auto auto; z-index: 3;
   display: flex; gap: var(--e2); opacity: 0; transition: opacity var(--mov);
@@ -472,7 +483,8 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
    para o foco é o mesmo nó a mudar de pai, e assim os botões aparecem e
    desaparecem com ele sem uma linha de JavaScript. */
 #grade .tile .ecraCheio, #grade .tile .aparte { display: none; }
-.tile:hover .fora, .tile.foco .fora, .tile .fora:focus-within { opacity: 1; }
+.tile .fora { pointer-events: none; }
+.tile:hover .fora, .tile.foco .fora, .tile .fora:focus-within { opacity: 1; pointer-events: auto; }
 
 /* Um botão sobre a imagem: vidro escuro, sem fio, do tamanho de um polegar. */
 .tile .controlos button, .tile .fora button {
@@ -825,6 +837,8 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
   padding: var(--e5); background: var(--vidro);
   backdrop-filter: blur(3px);
 }
+/* O foco entra na caixa ao abrir (para o leitor de ecra), sem anel a volta dela. */
+.modalCaixa:focus { outline: none; }
 .modalCaixa {
   width: min(980px, 100%); max-height: calc(100vh - var(--e7));
   overflow-y: auto; display: flex; flex-direction: column; gap: var(--e4);

@@ -7,7 +7,12 @@
 <meta name="description" content="Abra um evento da Kick inteiro numa linha do tempo, veja cada lance de todos os ângulos e corte o clipe em poucos cliques.">
 <meta property="og:title" content="Povix — todos os ângulos de cada lance">
 <meta property="og:description" content="Cada lance do evento, de todos os ângulos.">
-<meta property="og:image" content="povix-partilha.png">
+<!-- Endereço inteiro: o Discord, o WhatsApp e o X não resolvem um caminho
+     relativo, e a pré-visualização do link saía sem imagem. É o endereço
+     publicado de agora; muda-se aqui quando o domínio próprio existir. -->
+<meta property="og:url" content="https://tchubirs.github.io/kick-sync/site/">
+<meta property="og:image" content="https://tchubirs.github.io/kick-sync/site/povix-partilha.png">
+<meta name="twitter:image" content="https://tchubirs.github.io/kick-sync/site/povix-partilha.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#131211">
 <!-- O que a página pode carregar e com quem pode falar. Scripts só daqui; dados e vídeo só da Kick
@@ -250,7 +255,7 @@
     <h1><svg class="ic" aria-hidden="true"><use href="#i-povix"/></svg><span data-t="app.nome">Povix</span></h1>
     <a class="paraTwitch" href="twitch.html"><svg class="ic" aria-hidden="true"><use href="#i-twitch"/></svg><span data-t="app.twitch">Versão Twitch</span></a>
     <button id="ajuda" class="discreto" data-t-aria="ajuda.abrir" aria-haspopup="dialog"><svg class="ic" aria-hidden="true"><use href="#i-ajuda"/></svg></button>
-    <select id="idioma" aria-label="idioma"></select>
+    <select id="idioma" data-t-aria="idioma.rotulo" aria-label="idioma"></select>
   </div>
   <!-- O caminho todo, em três passos e sem scroll.
        Quem chega não sabe o que isto faz nem por onde começa; via duas caixas
@@ -385,9 +390,10 @@
         <span class="rotuloCampo" data-t="procurar.label">Procurar um canal</span>
         <span class="procura">
           <input id="procurar" type="search" autocomplete="off" spellcheck="false"
+            role="combobox" aria-autocomplete="list" aria-controls="sugestoes" aria-expanded="false"
             data-t-aria="procurar.label" data-t-ph="procurar.ph" placeholder="nome do streamer">
           <svg class="ic lupa" aria-hidden="true"><use href="#i-procurar"/></svg>
-          <ul id="sugestoes" class="sugestoes" hidden></ul>
+          <ul id="sugestoes" class="sugestoes" role="listbox" hidden></ul>
         </span>
       </label>
       <label class="campo">
@@ -398,7 +404,7 @@
     </div>
     <div class="linha">
       <button id="carregar" class="principal"><svg class="ic ic-p" aria-hidden="true"><use href="#i-seta"/></svg><span data-t="canais.carregar">Carregar</span></button>
-      <span id="estadoCarga" class="nota"></span>
+      <span id="estadoCarga" class="nota" role="status" aria-live="polite"></span>
     </div>
     <!-- Próprio sítio, e não a linha de progresso: o aviso do leitor tem de
          sobreviver ao texto que muda a cada canal carregado. -->
@@ -417,8 +423,8 @@
       <output id="confianca" class="confianca"></output>
       <!-- Passar a noite pronta a outra pessoa. O que vai no link não é a lista
            de nomes — é o TRABALHO: os ajustes que ele acertou um a um. -->
-      <button id="partilhar" data-t="partilha.botao" data-t-titulo="partilha.ajuda"
-        title="Copia um link com o projeto de agora">Compartilhar projeto<svg class="ic ic-p" aria-hidden="true"><use href="#i-copiar"/></svg><span data-t="partilha.botao">Compartilhar projeto</span></button>
+      <button id="partilhar" data-t-titulo="partilha.ajuda"
+        title="Copia um link com o projeto de agora"><svg class="ic ic-p" aria-hidden="true"><use href="#i-copiar"/></svg><span data-t="partilha.botao">Compartilhar projeto</span></button>
       <output id="estadoPartilha" class="nota"></output>
     </div>
     <!-- O que está a acontecer, AO PÉ do controlo que o desencadeia.
@@ -501,7 +507,7 @@
        aqui e não na coluna do relógio, que num portátil não tinha altura para
        ele — os saltos escorriam por cima do botão. -->
   <div class="linha sincronizar">
-      <button id="alinhar" data-t="alinhar.botao" data-t-titulo="alinhar.ajuda" title="Analisa o áudio de cada ângulo e corrige o desvio">Sincronizar por áudio<svg class="ic ic-p" aria-hidden="true"><use href="#i-onda"/></svg><span data-t="alinhar.botao">Sincronizar por áudio</span></button>
+      <button id="alinhar" data-t-titulo="alinhar.ajuda" title="Analisa o áudio de cada ângulo e corrige o desvio"><svg class="ic ic-p" aria-hidden="true"><use href="#i-onda"/></svg><span data-t="alinhar.botao">Sincronizar por áudio</span></button>
       <span id="estadoAlinhar" class="nota" role="status" aria-live="polite"></span>
     </div>
   <section id="automatico">
@@ -643,7 +649,7 @@
       <button id="selecionarNada" data-t="sel.nada">Limpar seleção</button>
       <button id="apagarSelecionados" disabled><svg class="ic ic-p" aria-hidden="true"><use href="#i-lixo"/></svg><span data-t="sel.apagar">Remover selecionados</span></button>
       <button id="anularApagar" hidden><svg class="ic ic-p" aria-hidden="true"><use href="#i-anular"/></svg><span data-t="sel.anular">Anular</span></button>
-      <span id="estadoSelecao" class="nota"></span>
+      <span id="estadoSelecao" class="nota" role="status" aria-live="polite"></span>
     </div>
     <ul id="listaMomentos" class="momentos"></ul>
     <div class="linha">
@@ -743,7 +749,7 @@
     <label for="tituloClipe" data-t="clipe.tituloLabel">Título do clipe</label>
     <input id="tituloClipe" type="text" maxlength="80" data-t-ph="clipe.tituloPh" placeholder="opcional, entra no nome do arquivo">
     <div class="linha fim">
-      <span id="estadoClipe" class="nota"></span>
+      <span id="estadoClipe" class="nota" role="status" aria-live="polite"></span>
       <button id="cancelarClipe" data-t="clipe.cancelar">Cancelar</button>
       <!-- So aparece quando o editor veio de uma kill da lista. Guarda as
            pontas e o enquadramento NA KILL, sem exportar nada: "ai vou fazendo
