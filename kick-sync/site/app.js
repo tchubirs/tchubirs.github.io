@@ -4699,7 +4699,11 @@ if (guardado) {
 async function abrirLanceDoEvento(canais, ms, foco) {
   $('canais').value = canais.join('\n');
   // O lance manda: o instante e o foco são os dele, e as kills e a marca de uma noite anterior não
-  // vêm atrás.
+  // vêm atrás. Atrás no ecrã, mas não fora do disco: as kills da noite aberta passam para
+  // `momentosFora`, e o `lerNoite` devolve à nova as que caírem dentro dela. Com `momentos: []`
+  // e nada mais, o guardar seguinte apagava-as do localStorage.
+  estado.momentosFora = unirMomentos(estado.momentos, estado.momentosFora);
+  estado.momentos = [];
   estado.restaurar = { agora: ms, focos: foco ? [foco] : [], marca: null, momentos: [] };
   guardar();
   await carregar();
@@ -4714,7 +4718,17 @@ const evento = montarEvento({
 });
 // Para os testes de página, como o `__estado` da noite.
 window.__evento = evento.estado;
+// Para os testes de página: o lance sem ter de montar o mapa inteiro.
+window.__abrirLanceDoEvento = abrirLanceDoEvento;
 if (vemDeEvento) evento.abrirDoLink();
+
+// Um link #s= colado num separador onde a pagina ja esta aberta muda so o #, e o
+// browser nao recarrega: o link nao fazia nada. Recarregar e o mesmo caminho do
+// arranque (juntar com a sessao, tirar o s= do endereco), e o beforeunload guarda
+// antes o que ele tinha.
+window.addEventListener('hashchange', () => {
+  if (new URLSearchParams(location.hash.slice(1)).get('s')) location.reload();
+});
 
 // O `beforeunload` fica como ultima rede: num telemovel muitas vezes nunca
 // corre, e por isso e que a gravacao a serio acontece a cada mudanca.

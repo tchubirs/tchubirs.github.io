@@ -131,6 +131,42 @@ test('o link copiado leva a noite depois do #, que não vai ao servidor', comNav
   await q.close();
 });
 
+test('um link #s= aberto num separador onde a página já está abre a noite', comNavegador, async () => {
+  // Só o # muda, e o browser não recarrega: sem quem ouça o hashchange o link não fazia nada.
+  const { p, erros } = await abrir();
+  await kickFalsa(p, { canais: ['tchubi', 'outro'] });
+  await p.goto(raiz(), { waitUntil: 'networkidle' });
+  const link = Buffer.from(JSON.stringify({ v: 2, canais: ['tchubi', 'outro'] })).toString('base64');
+  await p.goto(`${raiz()}#s=${encodeURIComponent(link)}`, { waitUntil: 'networkidle' });
+  await p.waitForSelector('.tile', { timeout: 15000 });
+  assert.equal(await p.locator('.tile').count(), 2);
+  assert.doesNotMatch(p.url(), /[?#&]s=/, 'o link fica no endereço e volta a mandar no F5');
+  assert.deepEqual(erros, []);
+  await p.close();
+});
+
+test('abrir um lance do evento noutra noite não apaga as kills da noite aberta', comNavegador, async () => {
+  const { p, erros } = await abrir();
+  await kickFalsa(p, { canais: ['tchubi', 'outro'], noites: 2 });
+  await abrirNoite(p, ['tchubi', 'outro']);
+  const primeira = await p.evaluate(() => window.__estado.janela.inicio);
+  const outra = (primeira >= T + DIA ? T : T + DIA) + 120_000;
+  await marcarKill(p);
+
+  await p.evaluate((ms) => window.__abrirLanceDoEvento(['tchubi', 'outro'], ms, 'tchubi'), outra);
+  await p.waitForFunction((ms) => {
+    const j = window.__estado.janela;
+    return j && ms >= j.inicio && ms <= j.fim && !document.getElementById('noite').disabled;
+  }, outra, { timeout: 15000 });
+  assert.equal(await p.locator('#listaMomentos li[data-ms]').count(), 0, 'a noite do lance não tem kills');
+  assert.equal(await killsGuardadas(p), 1, 'a kill da noite que estava aberta saiu do localStorage');
+
+  await irParaNoite(p, primeira);
+  assert.equal(await p.locator('#listaMomentos li[data-ms]').count(), 1, 'a kill não voltou');
+  assert.deepEqual(erros, []);
+  await p.close();
+});
+
 test('o F5 devolve a caixa inteira, e não só os canais que entraram na noite', comNavegador, async () => {
   const { p, erros } = await abrir();
   // `fantasma` não existe na Kick (404) e por isso não entra na noite.
