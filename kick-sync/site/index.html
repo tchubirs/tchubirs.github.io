@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt">
+<html lang="pt-BR">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -272,23 +272,26 @@
      porque 500 faixas de uma vez não cabem nem no ecrã nem no tempo de um quadro. -->
 <section id="evento" class="bloco evento" hidden>
   <div class="linha barraEvento">
+    <!-- Fechar fica à cabeça e com palavra, longe do Copiar link: um ✕ ao lado dele era tocado sem querer
+         no telemóvel, e o evento ia-se sem volta. -->
+    <button id="fecharEvento" class="discreto fecharEvento" data-t-aria="evento.fechar"><svg class="ic ic-p" aria-hidden="true"><use href="#i-fechar"/></svg><span data-t="evento.fecharCurto">Fechar</span></button>
     <h2 id="nomeEvento" class="nomeEvento"></h2>
     <span id="seloAoVivo" class="seloAoVivo" hidden data-t="evento.aoVivo">ao vivo</span>
     <output id="resumoEvento" class="nota"></output>
     <span class="espaco"></span>
     <input id="procurarEvento" type="search" autocomplete="off" spellcheck="false" data-t-aria="evento.procurar"
       data-t-ph="evento.procurarPh" placeholder="procurar streamer ou time">
-    <button id="afastar" class="so-icone" data-t-aria="evento.afastar" title="−">−</button>
-    <button id="aproximar" class="so-icone" data-t-aria="evento.aproximar" title="+">+</button>
-    <button id="verTudo" data-t="evento.verTudo">Tudo</button>
+    <span class="nota" data-t="evento.zoom">Zoom</span>
+    <button id="afastar" class="so-icone" data-t-aria="evento.afastar" data-t-titulo="evento.afastar" title="Ver mais tempo">−</button>
+    <button id="aproximar" class="so-icone" data-t-aria="evento.aproximar" data-t-titulo="evento.aproximar" title="Ver menos tempo, com mais detalhe">+</button>
+    <button id="verTudo" data-t="evento.verTudo">Evento inteiro</button>
     <button id="mostrarMapa" class="mostrarMapa" aria-expanded="false" data-t="evento.mostrarMapa">Mapa do evento</button>
-    <button id="irAoVivo" class="irAoVivo" hidden><svg class="ic ic-p" aria-hidden="true"><use href="#i-tocar"/></svg><span data-t="evento.irAoVivo">Ir para o ao vivo</span></button>
-    <button id="partilharEvento"><svg class="ic ic-p" aria-hidden="true"><use href="#i-copiar"/></svg><span data-t="evento.partilhar">Copiar link</span></button>
+    <button id="irAoVivo" class="irAoVivo" hidden><svg class="ic ic-p" aria-hidden="true"><use href="#i-tocar"/></svg><span data-t="evento.irAoVivo">Ver ao vivo agora</span></button>
+    <button id="partilharEvento"><svg class="ic ic-p" aria-hidden="true"><use href="#i-copiar"/></svg><span id="partilharEventoTexto" data-t="evento.partilharEvento">Copiar link do evento</span></button>
     <output id="estadoPartilhaEvento" class="nota"></output>
-    <button id="fecharEvento" class="so-icone discreto" data-t-aria="evento.fechar" title="✕">✕</button>
   </div>
-  <p class="nota dica" data-t="evento.dica">Clique numa faixa para escolher o streamer e o instante. Clique no nome de um time para abrir ou fechar. Ctrl e a roda do mouse aproximam o tempo.</p>
-  <p id="avisosEvento" class="nota mau" hidden></p>
+  <p class="nota dica" data-t="evento.dica">Clique numa faixa para escolher o streamer e o instante. Clique no nome de um time para abrir ou fechar. Ctrl + roda do mouse: zoom no tempo.</p>
+  <div id="avisosEvento" class="nota mau avisosEvento" hidden><span id="avisosTexto"></span> <button id="corrigirElenco" hidden data-t="evento.corrigir">Corrigir elenco</button></div>
   <div class="mapaCaixa">
     <!-- A régua mora na mesma coluna do mapa: com ela por cima da caixa toda, as horas ficavam
          desalinhadas das faixas pela largura da borda e do painel do lance. -->
@@ -302,12 +305,17 @@
     <aside id="lance" class="lance" hidden>
       <h3 id="lanceTitulo" class="lanceTitulo"></h3>
       <p id="lanceTime" class="nota"></p>
-      <button id="verLance" class="principal"><svg class="ic ic-p" aria-hidden="true"><use href="#i-seta"/></svg><span data-t="lance.ver">Ver este lance com o time</span></button>
-      <button id="procurarOutros"><svg class="ic ic-p" aria-hidden="true"><use href="#i-procurar"/></svg><span data-t="lance.outros">Achar outros ângulos pelo som</span></button>
+      <!-- O texto do botão diz quantos ângulos abre ("Ver este lance · 4 ângulos" ou "Ver só fulano"):
+           posto pelo evento-ui.js a cada escolha, e por isso sem data-t. -->
+      <button id="verLance" class="principal"><svg class="ic ic-p" aria-hidden="true"><use href="#i-seta"/></svg><span id="verLanceTexto"></span></button>
+      <label class="campo" id="juntarCampo" hidden><span class="rotuloCampo" data-t="lance.juntar">Juntar outro time a este lance</span><select id="juntarTime"></select></label>
+      <div id="juntados" class="linha juntados"></div>
+      <button id="procurarOutros"><svg class="ic ic-p" aria-hidden="true"><use href="#i-procurar"/></svg><span id="procurarOutrosTexto" data-t="lance.outros">Achar quem mais estava no lance</span></button>
+      <p id="notaOutros" class="nota" hidden></p>
       <output id="estadoLance" class="nota"></output>
       <output id="estadoChat" class="nota"></output>
       <ul id="lanceAchados" class="lanceAchados"></ul>
-      <p class="nota" data-t="lance.comoFunciona">Quem ouviu o mesmo som no mesmo segundo estava no lance. Os achados entram junto quando você abre o lance.</p>
+      <p class="nota" data-t="lance.comoFunciona">O Povix escuta o som do jogo e acha quem estava no mesmo lugar nesse segundo. Quem ele achar entra junto quando você abrir o lance.</p>
     </aside>
   </div>
 </section>
@@ -327,19 +335,23 @@
       <textarea id="elenco" rows="4" spellcheck="false" data-t-aria="evento.elenco" data-t-ph="evento.elencoPh"
         placeholder="Time Alfa: canal1, canal2, canal3, canal4"></textarea>
     </label>
-    <p class="nota" data-t="evento.explica">Cole a página de times do evento, uma lista de canais, ou uma linha por time. Até 500 canais.</p>
+    <!-- Colar a página de times funciona de verdade: o evento-ui.js lê o HTML colado, onde estão os
+         links da Kick (o texto visível só traz os nomes de exibição, que não são os canais). -->
+    <p class="nota explicaLonga" data-t="evento.explica">Abra a página de times do evento, aperte Ctrl+A e Ctrl+C (no Mac, Cmd) e cole aqui. Também serve uma lista de canais ou uma linha por time (Time: canal1, canal2). Até 500 canais.</p>
+    <p class="nota explicaCurta" data-t="evento.explicaCurta">Cole a lista de times do evento (do Discord ou do site do torneio) ou uma lista de canais.</p>
     <div class="linha">
-      <button id="abrirElenco" class="principal"><svg class="ic ic-p" aria-hidden="true"><use href="#i-seta"/></svg><span data-t="evento.abrir">Abrir evento</span></button>
+      <button id="abrirElenco" class="principal"><svg class="ic ic-p" aria-hidden="true"><use href="#i-seta"/></svg><span id="abrirElencoTexto" data-t="evento.abrir">Abrir evento</span></button>
     </div>
-    <div class="linha aoVivoLinha">
-      <input id="palavrasAoVivo" type="search" autocomplete="off" spellcheck="false" data-t-aria="evento.palavras"
-        data-t-ph="evento.palavrasPh" placeholder="palavra do título, ex.: kick off">
-      <button id="procurarAoVivo"><svg class="ic ic-p" aria-hidden="true"><use href="#i-procurar"/></svg><span data-t="evento.procurarAoVivo">Achar quem está ao vivo no Rust</span></button>
-    </div>
-    <output id="estadoEvento" class="nota"></output>
     <!-- Quem chega sem elenco nenhum vê o que isto faz com o Rust que está no ar agora: um exemplo que
          nunca envelhece, ao contrário de um evento gravado cujos VODs somem em 7 a 30 dias. -->
-    <button id="exemploAoVivo" class="discreto exemplo"><svg class="ic ic-p" aria-hidden="true"><use href="#i-tocar"/></svg><span data-t="evento.exemplo">Ver um exemplo: o Rust ao vivo agora</span></button>
+    <button id="exemploAoVivo" class="exemplo"><svg class="ic ic-p" aria-hidden="true"><use href="#i-tocar"/></svg><span data-t="evento.exemplo">Ver um exemplo: o Rust ao vivo agora</span></button>
+    <span class="rotuloCampo aoVivoRotulo" data-t="evento.aoVivoRotulo">Ou monte a lista com quem está ao vivo no Rust agora</span>
+    <div class="linha aoVivoLinha">
+      <input id="palavrasAoVivo" type="search" autocomplete="off" spellcheck="false" data-t-aria="evento.palavras"
+        data-t-ph="evento.palavrasPh" placeholder="filtrar pelo título (opcional), ex.: kick off">
+      <button id="procurarAoVivo"><svg class="ic ic-p" aria-hidden="true"><use href="#i-procurar"/></svg><span data-t="evento.procurarAoVivo">Montar lista</span></button>
+    </div>
+    <output id="estadoEvento" class="nota"></output>
   </section>
 
   <section id="entrada" class="bloco porta">

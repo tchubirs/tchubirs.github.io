@@ -1430,7 +1430,13 @@ body:not(.mesa) #sugestoes button { width: auto; min-height: 30px; font-size: va
 .cabecaPorta .nota { margin: 0; }
 .portaEvento textarea { width: 100%; }
 .aoVivoLinha { flex-wrap: nowrap; gap: var(--e3); }
-.portaEvento .exemplo { justify-self: start; color: var(--acento); }
+.portaEvento .exemplo { justify-self: stretch; width: 100%; color: var(--acento); border-color: var(--acento-fio); }
+.explicaCurta { display: none; }
+.fecharEvento { order: -1; }
+.juntados { gap: var(--e1); flex-wrap: wrap; }
+.juntados:empty { display: none; }
+.juntados .chip { min-height: 30px; padding: 0 var(--e2); font-size: var(--t-menor); background: var(--sup-3); }
+.avisosEvento { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2); }
 .aoVivoLinha input { flex: 1 1 auto; min-width: 0; }
 #entrada { max-width: none; }
 @media (min-width: 1000px) {
@@ -1484,7 +1490,22 @@ body.mesa:has(#palco:not([hidden])) > #evento { flex: 0 0 auto; margin-bottom: v
 /* No telemóvel as duas portas têm de caber com o botão de cada uma no primeiro ecrã. A explicação do
    elenco sai (o exemplo dentro da caixa já mostra o formato) e a caixa fica com duas linhas. */
 @media (max-width: 699px) {
-  .portaEvento > p.nota { display: none; }
+  .portaEvento > p.explicaLonga { display: none; }
+  /* Montar a lista pelos títulos é trabalho de organizador, num computador; no telemóvel fica o
+     exemplo, que é um toque só, e as duas portas cabem no primeiro ecrã. */
+  .portaEvento .aoVivoRotulo, .portaEvento .aoVivoLinha { display: none; }
+  .portaEvento > p.explicaCurta { display: block; }
+  #resumoEvento { flex-basis: 100%; }
+  #procurarEvento { flex: 1 1 100%; }
   #elenco { height: 4.2em; min-height: 0; }
   .porta { gap: var(--e3); }
+}
+
+/* Num ecrã estreito o lance fica preso ao fundo, por cima do fim do mapa, como uma folha que sobe: o
+   título e o botão que abre o vídeo estão sempre à vista enquanto se mexe no mapa. */
+@media (max-width: 999px) {
+  .lance { position: sticky; bottom: 0; z-index: 2; max-height: 50vh; overflow-y: auto; box-shadow: var(--sombra-flutua); }
+}
+@media (pointer: coarse) {
+  #fecharEvento { min-width: 44px; min-height: 44px; }
 }
