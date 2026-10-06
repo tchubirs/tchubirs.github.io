@@ -270,3 +270,165 @@ test('quando nao acha nada, diz o que ouviu', async () => {
   assert.ok(r.ouvido.maiorGrupo >= 0 && r.ouvido.maiorGrupo <= r.ouvido.passaram,
     `maiorGrupo ${r.ouvido.maiorGrupo} nao pode passar os ${r.ouvido.passaram} que sobreviveram`);
 });
+
+// ── deteccao: o que a varredura perdia ou guardava a mais ───────────────────
+
+/**
+ * Um canal com pecas, como o `linhaDoCanal` as da, e um `lerSom` que se porta
+ * como o `somDoCanal`: nada fora de uma peca, e so ate ao fim da peca onde o
+ * pedido comeca.
+ */
+function canalComPecas(som, T, pecasS) {
+  const linha = {
+    slug: 'tchubi',
+    pecas: pecasS.map(([de, ate]) => ({ playlist: { inicio: T + de * 1000, fim: T + ate * 1000 } })),
+  };
+  const pedidos = [];
+  const lerSom = async (l, quandoMs, duracaoS) => {
+    pedidos.push((quandoMs - T) / 1000);
+    const peca = l.pecas.find((p) => quandoMs >= p.playlist.inicio && quandoMs < p.playlist.fim);
+    if (!peca) return null;
+    const ateMs = Math.min(peca.playlist.fim, quandoMs + duracaoS * 1000);
+    const de = Math.round(((quandoMs - T) / 1000) * TAXA);
+    const ate = Math.round(((ateMs - T) / 1000) * TAXA);
+    return ate - de > TAXA * 5 ? som.subarray(de, ate) : null;
+  };
+  return { linha, lerSom, pedidos };
+}
+
+// "Guarda-se a envolvente e deita-se fora o som" dizia o comentario, e o
+// codigo guardava o som de cada bocado ate ao fim: uma hora a 24 kHz sao 345 MB
+// presos, e a noite toda deitava o separador abaixo.
+test('a varredura nao fica com o som de cada bocado ate ao fim', async () => {
+  const v8 = await import('node:v8');
+  const vm = await import('node:vm');
+  v8.setFlagsFromString('--expose-gc');
+  const gc = vm.runInNewContext('gc');
+  const T = Date.parse('2026-08-30T22:00:00Z');
+  const vivos = [];
+  let presos = 0;
+  await varrerNoite({
+    linha: { slug: 'tchubi' },
+    deMs: T,
+    ateMs: T + 8 * 30_000,
+    bocadoS: 30,
+    lerSom: async (linha, quandoMs) => {
+      // Dar a vez ao relogio antes de olhar: um WeakRef so larga no fim da tarefa.
+      await new Promise((ok) => setImmediate(ok));
+      gc();
+      // O bocado anterior ainda pode estar a ser medido; os de antes dele nao.
+      presos = Math.max(presos, vivos.slice(0, -1).filter((w) => w.deref()).length);
+      const som = somComRajadas(30, (quandoMs - T) % 60_000 ? [] : [10], { semente: quandoMs % 97 });
+      vivos.push(new WeakRef(som.buffer));
+      return som;
+    },
+  });
+  assert.equal(presos, 0, `${presos} bocados de som continuavam em memoria`);
+});
+
+// Um canal desligado durante mais de metade da janela enchia o chao de zeros:
+// a mediana dava zero, e com um chao a zero nao ha nada "acima do chao".
+test('os bocados que nao se ouviram nao baixam o chao da noite', async () => {
+  const T = Date.parse('2026-08-30T22:00:00Z');
+  const som = somComRajadas(660, [450]);
+  const r = await varrerNoite({
+    linha: { slug: 'x' },
+    deMs: T,
+    ateMs: T + 600 * 1000,
+    bocadoS: 60,
+    lerSom: async (linha, quandoMs, duracaoS) => {
+      // Seis bocados de dez sem nada: o canal so voltou ao ar aos 360 s.
+      if (quandoMs < T + 360_000) return null;
+      const de = Math.round(((quandoMs - T) / 1000) * TAXA);
+      return som.subarray(de, de + Math.round(duracaoS * TAXA));
+    },
+  });
+  assert.equal(r.candidatos.length, 1, `deu ${r.candidatos.length} candidatos`);
+  assert.ok(Math.abs((r.candidatos[0].ms - T) / 1000 - 450) < 6);
+  assert.ok(r.ouvido.altos > 0, 'tem de dizer que ouviu sons altos, e nao que nao ouviu nada');
+});
+
+// Um 503 na hora cinco deitava fora as cinco horas anteriores.
+test('um bocado que falha nao deita fora a varredura inteira', async () => {
+  const T = Date.parse('2026-08-30T22:00:00Z');
+  const som = somComRajadas(660, [450]);
+  const r = await varrerNoite({
+    linha: { slug: 'x' },
+    deMs: T,
+    ateMs: T + 600 * 1000,
+    bocadoS: 100,
+    lerSom: async (linha, quandoMs, duracaoS) => {
+      if (quandoMs === T + 100_000) throw new Error('segmento 503');
+      const de = Math.round(((quandoMs - T) / 1000) * TAXA);
+      return som.subarray(de, de + Math.round(duracaoS * TAXA));
+    },
+  });
+  assert.equal(r.candidatos.length, 1);
+  assert.equal(r.falhados, 1, 'e diz quantos bocados nao se ouviram');
+});
+
+// Mas quando nada se ouviu, o erro e a unica resposta que ha.
+test('se nenhum bocado se ouve, o erro chega a quem pediu', async () => {
+  const T = Date.parse('2026-08-30T22:00:00Z');
+  await assert.rejects(varrerNoite({
+    linha: { slug: 'x' }, deMs: T, ateMs: T + 200_000, bocadoS: 100,
+    lerSom: async () => { throw new Error('segmento 503'); },
+  }), /segmento 503/);
+});
+
+// O streamer caiu e voltou: dois VODs com um buraco no meio. O bocado que
+// comecava antes do buraco so lia ate ao fim da primeira peca, e o tiroteio
+// logo a seguir ao regresso ficava por ouvir.
+test('uma queda a meio da noite nao deixa minutos por ouvir', async () => {
+  const T = Date.parse('2026-08-30T22:00:00Z');
+  const som = somComRajadas(960, [500]);
+  const { linha, lerSom, pedidos } = canalComPecas(som, T, [[0, 400], [450, 900]]);
+  const r = await varrerNoite({ linha, deMs: T, ateMs: T + 900_000, bocadoS: 300, lerSom });
+  assert.ok(pedidos.includes(450), `o regresso aos 450 s nunca foi pedido: ${pedidos.join(', ')}`);
+  assert.ok(!pedidos.some((s) => s > 400 && s < 450), 'pediu som dentro do buraco');
+  assert.equal(r.candidatos.length, 1, `deu ${r.candidatos.length} candidatos`);
+  assert.ok(Math.abs((r.candidatos[0].ms - T) / 1000 - 500) < 6);
+});
+
+// Os momentos vivem no relogio da noite, e o ajuste do canal leva desse relogio
+// ao do proprio VOD. A varredura lia o VOD no relogio da noite e devolvia esse
+// mesmo numero: cada kill ficava deslocada pelo ajuste do protagonista.
+test('o ajuste do canal entra na varredura, e os instantes saem no relogio da noite', async () => {
+  const T = Date.parse('2026-08-30T22:00:00Z');
+  const som = somComRajadas(960, [500]);
+  const nudgeMs = 5700;
+  const { linha, lerSom, pedidos } = canalComPecas(som, T, [[0, 900]]);
+  const r = await varrerNoite({
+    linha, deMs: T - nudgeMs, ateMs: T + 900_000 - nudgeMs, bocadoS: 300, lerSom, nudgeMs,
+  });
+  assert.equal(pedidos[0], 0, 'o primeiro pedido tem de ser no relogio do VOD');
+  assert.equal(r.candidatos.length, 1);
+  const c = r.candidatos[0];
+  const s = (ms) => (ms - T) / 1000;
+  // No VOD o tiroteio e aos ~500 s; na noite, 5,7 s antes.
+  assert.ok(Math.abs(s(c.ms) - (500 - 5.7)) < 6, `ficou aos ${s(c.ms)} s`);
+  assert.ok(s(c.combateDeMs) < 500 - 5.7 + 1 && s(c.combateDeMs) > 500 - 5.7 - 2,
+    `o combate comeca aos ${s(c.combateDeMs)} s, e o tiroteio no VOD e aos 500`);
+  for (const e of r.estouros) assert.ok(s(e.ms) < 500 - 5.7 + 6, 'os estouros tambem no relogio da noite');
+});
+
+// "O brilho do tiroteio verdadeiro dele mede 0,005 a 0,118" (tiros.js). Os
+// recortes para aprender guardavam so os que passavam 0,10 de brilho, e o
+// "Usar como referencia" num tiro verdadeiro nao achava nada ao pe.
+test('os recortes para aprender nao passam pelo filtro de brilho', async () => {
+  const taxa = TAXA;
+  const som = new Float32Array(taxa * 60);
+  for (let i = 0; i < som.length; i++) som[i] = Math.sin((2 * Math.PI * 200 * i) / taxa) * 0.02;
+  for (let k = 0; k < 30; k++) {
+    const o = Math.round((2 + k * 1.9) * taxa);
+    for (let i = o; i < o + 60 && i < som.length; i++) {
+      som[i] = Math.sin((2 * Math.PI * 200 * (i - o)) / taxa) * 0.9;
+    }
+  }
+  const r = await varrerNoite({
+    linha: { slug: 'tchubi' }, deMs: 0, ateMs: 60000, bocadoS: 60, lerSom: async () => som,
+  });
+  assert.ok(r.ouvido.chumbados > 0, 'o caso e mesmo o de sons altos sem brilho');
+  assert.ok(r.estouros.length > 0, 'os sons altos sem brilho tambem tem de ficar guardados');
+  assert.ok(r.estouros.every((e) => e.canal === 'tchubi'), 'e cada recorte diz de que canal veio');
+});
