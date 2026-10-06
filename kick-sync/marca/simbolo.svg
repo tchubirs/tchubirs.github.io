@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Povix">
+  <!-- Três câmaras, três feixes que se abrem para o mesmo ponto: o instante, em âmbar como os marcadores de
+       tempo do site. É o produto inteiro: muitos pontos de vista sobre um momento só. -->
+  <rect width="64" height="64" rx="15" fill="#131211"/>
+  <path d="M6.0 12.0 L20.1 32.6 L29.1 21.4 Z" fill="#2FB3C4" fill-opacity="0.95"/>
+  <path d="M58.0 9.0 L34.1 21.3 L43.9 31.8 Z" fill="#46C6D6" fill-opacity="0.85"/>
+  <path d="M44.0 61.0 L42.4 38.9 L29.1 44.6 Z" fill="#2FB3C4" fill-opacity="0.75"/>
+  <circle cx="32" cy="33" r="7.5" fill="#E4A13A"/>
+  <circle cx="32" cy="33" r="2.6" fill="#131211"/>
+</svg>

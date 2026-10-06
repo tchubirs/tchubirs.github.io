@@ -15,3 +15,6 @@ __pycache__/
 
 # Videos dos anúncios: o etsy/video.py refaz, não precisam ir para o git.
 /etsy/videos/
+
+# Cópias de trabalho dos agentes (git worktree), nunca do repositório
+.claude/worktrees/
