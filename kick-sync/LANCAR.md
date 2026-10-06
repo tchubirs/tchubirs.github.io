@@ -23,9 +23,23 @@ renovação, em dólares):
 próprio domínio obriga), o que é uma camada de segurança a menos para esquecer. `getpovix.com` é a reserva
 com `.com`.
 
-Falta ainda: **conferir se a marca "Povix" está registrada** por outra empresa (o `povix.com` tem dono e um
-site atrás de proteção contra robôs). A busca na web deste dia esgotou antes desta verificação; fica para a
-próxima rodada, antes de qualquer compra.
+**A marca, conferida em 06/10/2026:** pode usar, com um risco moderado a saber.
+
+- Nos EUA, "POVIX" foi pedida por uma empresa chinesa (Hunan Weilichi) para móveis, eletrodomésticos e
+  brinquedos; o pedido dos brinquedos foi abandonado. Nenhum pedido em software ou vídeo
+  ([Trademarkia](https://www.trademarkia.com/povix-98966556),
+  [Justia](https://trademark.justia.com/989/55/povix-98955552.html)).
+- O mais perto do nosso ramo: uma loja tcheca vende óculos com câmera de ponto de vista chamados
+  "MyPovix™" ([mypovix.store](https://mypovix.store/products/mypovix)), e existe uma empresa tcheca
+  POVIX PLUS s.r.o. ([D&B](https://www.dnb.com/business-directory/company-profiles.povix_plus_sro.1dee8f1181d713d4826af40b0ab81313.html)).
+  É vídeo em primeira pessoa, perto o bastante para um advogado de um comprador perguntar.
+- "Povix" também é marca de um antisséptico em Bangladesh (outro ramo, sem conflito).
+- O `povix.com` tem dono.
+
+As alternativas do estudo de nome não saíram melhores: "Vizync" (todos os domínios livres) soa quase igual a
+"ViZiSync", um app de manutenção de bombas de incêndio; "Synorama" tem o `.com` ocupado; "Flankcam" lê-se como
+uma câmera física. Mantém-se Povix. Se a Kick comprar, o mais provável é virar um recurso com o nome dela, e o
+valor está no produto e nos números do piloto, não no nome.
 
 ## Onde hospedar
 
@@ -56,7 +70,7 @@ tráfego.
 
 ## Passos, quando o dono decidir
 
-1. Conferir a marca "Povix" (eu faço na próxima rodada).
+1. ~~Conferir a marca "Povix".~~ Feito em 06/10 (acima).
 2. Comprar `povix.app` (dono).
 3. Criar o projeto no Cloudflare Pages ligado ao repositório, pasta `kick-sync/replay` (dono, 5 min; o
    resto eu faço).
