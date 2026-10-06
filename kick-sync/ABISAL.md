@@ -75,6 +75,24 @@ marca cada luta no mapa sem precisar do som.
 8. Um teste com 500 canais reais. Medido até agora na Kick real: 120 canais em 8 s; os 500 em menos de um minuto
    são uma conta a partir disso, não uma medição.
 
+## A teia do lance (ideia do dono, 06/10; a desenhar)
+
+O objetivo é fluidez: trocar entre atacante, quem morreu, time atacante e time defensor em 1 ou 2 segundos, sem
+voltar ao mapa.
+
+- **Como é hoje:** trocar o ângulo em foco entre os que já abriram é rápido, porque os outros já estão carregados
+  em baixa qualidade e o escolhido sobe para a alta (o tempo exato não foi medido). Trocar o grupo (do time
+  atacante para o defensor) obriga a voltar ao painel e abrir de novo: são vários passos e alguns segundos. Marcar
+  quem morreu existe na parte antiga (marcar kill e escolher a vítima), escondido.
+- **A ideia:** ao escolher um momento, aparece a teia. Cada bolinha é um streamer que estava ali, com a cor do
+  time; cada fio é uma ligação: mesmo time, ouviu o mesmo tiro, matou ou morreu. Clicar numa bolinha põe esse POV
+  em grande; clicar num fio põe as duas pontas lado a lado (atacante e vítima); clicar num time abre o time. Com
+  atalhos: "Atacante", "Atacante e vítima", "Time A", "Time B", "Todos".
+- **Para ser em 1 ou 2 segundos:** todos os POVs da teia já carregados em baixa qualidade e parados no instante
+  certo (até uns 12), para a troca ser só subir a qualidade de quem foi escolhido. Medir antes de prometer.
+- **De onde vêm os fios:** time e "ouviu o mesmo" já temos. "Quem matou quem" com certeza só vem do log do servidor
+  do evento; sem ele, a nossa detecção de morte é um palpite e tem de aparecer como tal.
+
 ## Riscos
 
 - A Kick ainda não deu permissão escrita. Num piloto gratuito e com o organizador de acordo, o risco é baixo, mas
