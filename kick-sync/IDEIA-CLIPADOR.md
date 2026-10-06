@@ -24,6 +24,30 @@ em menos de 2 minutos.
   no mercado; o multi-POV de evento não.
 - **Limite:** o multi-POV só brilha quando há evento. Fora dele, o produto é um cortador com fila de postagem.
 
+## Regra do dono: os outros dependem de nós, e não o contrário
+
+A ideia dele é o ponto de partida, não a planta. Antes de construir, estudar o mercado todo e montar a melhor
+versão, pegando o que os outros fazem bem e evitando o que fazem mal.
+
+- **O que é nosso e não se terceiriza:** a sincronia dos POVs, a busca pelo som, o mapa do evento, os picos do
+  chat e o corte. É isto que ninguém tem, e é isto que um comprador paga.
+- **O que pode vir de fora, mas trocável:** a postagem nas redes. Se usarmos um serviço pronto no começo, fica
+  atrás de uma peça nossa, para trocar de fornecedor ou fazer a nossa sem refazer o resto.
+
+## Estudo dos concorrentes (a fazer)
+
+Para cada um: o que faz, preço, como o clipador usa no dia a dia, o que reclamam, e o que copiaríamos ou faríamos
+melhor. Com fonte em cada número.
+
+- **Corte com IA:** OpusClip, Vizard, Klap, Eklipse, Powder (já encerrado?), StreamLadder, Crossclip.
+- **Postagem automática em várias redes:** o site que o dono usou, Buffer, Later, Metricool, Repurpose.io,
+  Ayrshare (API para desenvolvedores).
+- **Multi-POV e eventos:** o Multi-View da Kick, o MultiKick, o squad stream da Twitch, e o que os organizadores
+  de evento usam hoje.
+- **Agências e programas de clipes:** como trabalham e o que pagam (Clipping, o programa de clipes da Kick).
+
+Daí sai: o que oferecer de graça, o que cobrar, e o preço.
+
 ## O que precisamos estudar (barato, antes de construir)
 
 1. **Postar em várias redes:** usar um serviço pronto em vez de ligar cada rede à mão. Cada rede (TikTok,
