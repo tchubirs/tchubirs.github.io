@@ -1266,8 +1266,9 @@ test('todas as mensagens de erro dizem o próximo passo', async () => {
     // Não são erros: um é o rodapé da página da Twitch (a palavra "erro"
     // aparece lá a dizer quanto vale a sincronia), o outro é um resumo.
     'tw.rodape', 'montagem.semVitima',
-    // Rótulo do painel do lance, não um erro: o canal escolhido não está em time nenhum do elenco.
-    'lance.semTime']);
+    // Rótulos do evento, não erros: o canal escolhido não está em time nenhum do elenco, e o grupo
+    // do mapa onde ficam os canais sem time.
+    'lance.semTime', 'evento.semTime']);
   const curtas = [];
   for (const [chave, frase] of Object.entries(_TEXTOS.pt)) {
     if (!/erro|falh|não deu|nenhum|sem |não consegui|inválido|passa dos/i.test(frase)) continue;
