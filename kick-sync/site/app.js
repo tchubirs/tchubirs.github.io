@@ -9,7 +9,7 @@ import {
   vodsDoCanal, lerMaster, lerPlaylist, procurarCanais, lerLinkKick, clipeDaKick, DESCONHECIDO, slugDoNome,
 } from './kick.js';
 import {
-  linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo,
+  linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, seguirAncora,
   passoDoArrasto, ARRASTO_INTERVALO_MS, ARRASTO_ESPERA_MS, vistaDaLinha, saiuDaVista,
 } from './relogio.js';
 import { cortarTodosOsAngulos } from './baixar.js';
@@ -1109,8 +1109,10 @@ function seguirVideo() {
     estado.tique = requestAnimationFrame(passo);
     if (!estado.ancora || estado.parado || !estado.janela) return;
     const v = tileDe(estado.ancora.slug)?.querySelector('video');
-    const ms = instanteSeguindo(estado.ancora, v);
-    if (ms == null) return;
+    const passo1 = seguirAncora(estado.ancora, v);
+    if (passo1.ms == null) return;
+    const { ms } = passo1;
+    estado.ancora = passo1.ancora;
     estado.agoraMs = ms;
     pintarRelogio(ms);
 
