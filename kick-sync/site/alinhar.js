@@ -248,14 +248,17 @@ export async function alinharPeloSom({
   const totalPares = (nomes.length * (nomes.length - 1)) / 2;
   let feitosPares = 0;
   let desdeVez = Date.now();
-  const darAVez = async () => {
-    if (Date.now() - desdeVez < 50) return;
+  const darAVez = async (jaAgora = false) => {
+    if (!jaAgora && Date.now() - desdeVez < 50) return;
     await new Promise((pronto) => setTimeout(pronto, 0));
     desdeVez = Date.now();
     if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
     aoProgresso({ fase: 'comparar', feito: feitosPares, total: totalPares });
   };
   aoProgresso({ fase: 'comparar', feito: 0, total: totalPares });
+  // Uma vez logo à entrada, para o "a comparar" chegar ao ecrã e o Parar ser
+  // visto mesmo quando a comparação (pela FFT) acaba em menos de 50 ms.
+  await darAVez(true);
   for (let i = 0; i < nomes.length; i++) {
     for (let k = i + 1; k < nomes.length; k++) {
       const medicoes = [];
@@ -271,7 +274,7 @@ export async function alinharPeloSom({
       if (!medicoes.length) continue;
       const c = consolidar(medicoes);
       detalhe.push({ a: nomes[i], b: nomes[k], ...c });
-      if (c.desvioS != null) pares.push({ a: nomes[i], b: nomes[k], desvioS: c.desvioS });
+      if (c.desvioS != null) pares.push({ a: nomes[i], b: nomes[k], desvioS: c.desvioS, peso: c.peso });
     }
   }
 

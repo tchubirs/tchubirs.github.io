@@ -169,3 +169,83 @@ test('sem um único par, ninguém é alinhado', () => {
   assert.deepEqual(r.ajustes, {});
   assert.deepEqual(r.semLigacao, ['a', 'b']);
 });
+
+// ── defeitos do motor de sincronia (grupo "sincronia") ──────────────────────
+
+// Os dois ciclos da definição, tal como eram: é contra isto que a FFT se mede.
+function correlacaoIngenua(a, b, limiteS = 20) {
+  const m = Math.min(a.length, b.length);
+  const n = Math.min(Math.round(limiteS * FPS), m - 1);
+  const c = new Float64Array(2 * n + 1);
+  for (let d = -n; d <= n; d++) {
+    let s = 0;
+    for (let i = Math.max(0, -d); i < Math.min(m, m - d); i++) s += a[i] * b[i + d];
+    c[d + n] = s / m;
+  }
+  let iPico = 0;
+  for (let i = 1; i < c.length; i++) if (c[i] > c[iPico]) iPico = i;
+  return -(iPico - n) / FPS;
+}
+
+function aleatorio(n, semente) {
+  let s = semente >>> 0;
+  return Float32Array.from({ length: n }, () => ((s = (Math.imul(s, 1103515245) + 12345) >>> 0) / 2 ** 32) - 0.5);
+}
+
+test('a correlação pela FFT dá o mesmo pico que os dois ciclos', () => {
+  for (const [atraso, ma, mb] of [[37, 3000, 3000], [-512, 2500, 2700], [0, 1200, 900]]) {
+    const base = aleatorio(Math.max(ma, mb) + 1200, 7 + atraso);
+    const a = base.subarray(600, 600 + ma);
+    const b = base.subarray(600 - atraso, 600 - atraso + mb);
+    const r = desvio(a, b);
+    assert.equal(r.desvioS, correlacaoIngenua(a, b), `atraso ${atraso}`);
+    assert.ok(Math.abs(r.desvioS + atraso / FPS) < 1e-9, `atraso ${atraso} deu ${r.desvioS}`);
+  }
+});
+
+// Medido no relatório: 87 ms por par e janela com os dois ciclos, 435 pares
+// para 30 ângulos. Pela FFT, com o espectro de cada envolvente guardado, um
+// par custa uns milissegundos.
+test('comparar trinta ângulos não leva minutos', () => {
+  const env = Array.from({ length: 30 }, (_, i) => aleatorio(12_000, 100 + i));
+  desvio(env[0], env[1]);
+  const t0 = performance.now();
+  let pares = 0;
+  for (let i = 0; i < env.length && pares < 60; i++) {
+    for (let k = i + 1; k < env.length && pares < 60; k++) { desvio(env[i], env[k]); pares++; }
+  }
+  const porPar = (performance.now() - t0) / pares;
+  assert.ok(porPar < 30, `${porPar.toFixed(1)} ms por par (os dois ciclos davam ~87)`);
+});
+
+// Equipas de 4 espalhadas pelo mapa: cada uma ouve-se a si mesma e mais
+// ninguém. Antes só a equipa da âncora levava ajuste.
+test('cada grupo que se ouve é alinhado, não só o da âncora', () => {
+  const pares = [
+    { a: 'a1', b: 'a2', desvioS: 0 }, { a: 'a2', b: 'a3', desvioS: 0 },
+    { a: 'a3', b: 'a4', desvioS: 0 }, { a: 'a1', b: 'a3', desvioS: 0 },
+    { a: 'b1', b: 'b2', desvioS: 0 }, { a: 'b2', b: 'b3', desvioS: 0 },
+    { a: 'b3', b: 'b4', desvioS: -1.2 },
+  ];
+  const canais = ['a1', 'a2', 'a3', 'a4', 'b1', 'b2', 'b3', 'b4', 'sozinho'];
+  const { ajustes, semLigacao } = resolver(pares, canais);
+  assert.deepEqual(semLigacao, ['sozinho']);
+  assert.ok(Math.abs((ajustes.b4 - ajustes.b3) - 1.2) < 1e-9, 'b4 mediu +1,2 s contra b3');
+  for (const c of ['a1', 'a2', 'a3', 'a4']) assert.equal(ajustes[c], 0);
+});
+
+// A-C passou à justa numa música em loop (+8 s); A-B e B-C, fortes, dizem que
+// C está a 0,1 s. Antes ganhava quem chegasse primeiro ao grafo.
+test('o par fraco não manda contra dois pares fortes', () => {
+  const { ajustes } = resolver([
+    { a: 'A', b: 'C', desvioS: -8, peso: 10.2 },
+    { a: 'A', b: 'B', desvioS: 0, peso: 27 },
+    { a: 'B', b: 'C', desvioS: -0.1, peso: 25 },
+  ], ['A', 'B', 'C']);
+  assert.ok(Math.abs((ajustes.C - ajustes.A) - 0.1) < 1e-9, `C ficou a ${ajustes.C - ajustes.A} s de A`);
+});
+
+test('consolidar diz quanto vale o par', () => {
+  const r = consolidar([{ desvioS: 3, forca: 9 }, { desvioS: 3.2, forca: 7 }, { desvioS: -10, forca: 6 }]);
+  assert.equal(r.peso, 16, 'a força das janelas que concordaram');
+});
