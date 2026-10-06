@@ -46,6 +46,20 @@ minutos poupados. É o que entra na conversa com a Kick (`PITCH-KICK.md`).
    clipes.
 4. Durante o evento: acompanhar, corrigir na hora, contar os números.
 
+## Com contato direto (atualizado 06/10)
+
+Há contato direto com quem organiza, com os desenvolvedores do evento e com pessoas da Kick. Isso muda a ordem:
+
+1. **Desenvolvedores do evento primeiro.** Mostrar o vídeo de 30 segundos e o link a quem constrói o evento: são
+   eles que dizem ao organizador "isto funciona e não dá trabalho". Perguntar o que já usam (página de times,
+   placar, log do servidor) para o Povix ler direto dali.
+2. **Os streamers responsáveis pelo evento.** Se eles usarem e postarem clipes no Povix, os outros seguem.
+3. **Pessoas da Kick.** Não pedir compra. Pedir duas coisas: o "pode usar" por escrito para o piloto, e o
+   contato certo para falar dos números depois do evento. Com o piloto feito, a conversa de venda vem sozinha.
+
+O log do servidor com o horário de cada abate e explosão (pergunta 2 do `ESTUDO.md`) vale ouro: com ele, o Povix
+marca cada luta no mapa sem precisar do som.
+
 ## O que tem de estar pronto antes (por ordem de valor)
 
 1. O site no ar com domínio próprio (o dono escolhe a hospedagem; recomendação em `LANCAR.md`).
