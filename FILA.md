@@ -141,6 +141,10 @@ até alguma vender. O que eu faço agora:
    teste, o auditor conferiu 19 de 22 fórmulas, contra 8 antes. O auditor e o executor de Apps Script usam a
    mais nova que acharem. Com ela apareceram dois falsos erros, corrigidos: fórmula do Google Sheets dentro
    do `IFERROR` que o Google escreve, e `SUM(#REF!)` mostrado como `#NAME?` em vez de `#REF!`.
+   Às 4h40, teste com planilhas reais de governo (orçamento da Comissão de Energia da Califórnia, com macros):
+   2.817 fórmulas, todas certas, mas o auditor dizia "corrigir: 16 referências a células apagadas". Eram nomes
+   que nenhuma fórmula usa, sobra antiga. Agora nome assim vai para "vale olhar" (pode apagar), e só o nome
+   quebrado que uma fórmula usa fica em "corrigir", com `#REF!` na fórmula como o Excel mostra.
 
 Pausado até algo vender ou ele pedir: inventário da casa (rascunho em `etsy/home-inventory`), manutenção da casa,
 galinhas no quintal, férias da equipe, Herculano.

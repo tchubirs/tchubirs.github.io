@@ -53,6 +53,8 @@ def client(path):
     calc["A4"] = '=IFERROR(__xludf.DUMMYFUNCTION("QUERY(Data!A1:D6,""select A"")"),"Item")'
     calc["A5"] = "=_xlfn.LAMBDA(_xlpm.x,_xlpm.x+1)(2)"   # 3 in Excel 365; LibreOffice gives #VALUE!
     wb.defined_names["Old"] = DefinedName("Old", attr_text="#REF!")  # ia-ok
+    wb.defined_names["Rate"] = DefinedName("Rate", attr_text="#REF!")  # ia-ok
+    calc["A6"] = "=Rate*2"                   # reads a named range whose cells were deleted
     dv = DataValidation(type="list", formula1="#REF!")  # ia-ok
     ws.add_data_validation(dv)
     dv.add("C2:C6")
@@ -82,9 +84,10 @@ def files(root):
     bad, good = audit_sheet.audit_files(paths)
 
     assert not bad["failed"] and bad["must_fix"], bad
-    assert (bad["sheets"], bad["formulas"], bad["on_purpose"]) == (2, 16, 1), bad
-    assert [(p, v) for p, _, v in bad["sources"]] == [("Calc!A3", "#NAME?"), ("Data!E2", "#DIV/0!"),
-                                                      ("Data!E4", "#REF!")], bad["sources"]  # ia-ok
+    assert (bad["sheets"], bad["formulas"], bad["on_purpose"]) == (2, 17, 1), bad
+    assert [(p, v) for p, _, v in bad["sources"]] == [  # ia-ok
+        ("Calc!A3", "#NAME?"), ("Calc!A6", "#REF!"), ("Data!E2", "#DIV/0!"),  # ia-ok
+        ("Data!E4", "#REF!")], bad["sources"]  # ia-ok
     assert bad["repeats"] == ["Data!E3"] and bad["circle"] == ["Data!G1", "Data!H1"], bad
     # LibreOffice before 24.8 has no XLOOKUP: then that cell and the one reading it are set apart. It has no
     # LAMBDA, whose #VALUE! there is set apart too, and not taken for an error of the client's; nor QUERY, to
@@ -92,22 +95,25 @@ def files(root):
     assert "Calc!A5" in bad["lacking"] and set(bad["lacking"]) <= {"Calc!A1", "Calc!A4", "Calc!A5"}, bad
     assert bad["unchecked"] == (["Calc!A2"] if "Calc!A1" in bad["lacking"] else []), bad
     assert sorted(bad["broken"]) == ["conditional formatting on Data!D2:D6", "data validation on Data!C2:C6",
-                                     "named range Old"], bad["broken"]
+                                     "named range Rate"], bad["broken"]
+    assert bad["unused"] == ["Old"], bad["unused"]          # left over: no formula reads it
     assert bad["odd"] == [("Data!D4", "=B4*C3", "=B4*C4")], bad["odd"]
     assert bad["text_numbers"] == [("Data!B6", "12,50")], bad["text_numbers"]
     assert bad["manual"] and bad["newer"] == {"XLOOKUP": 1, "LAMBDA": 1} and bad["google"] == {"QUERY": 1}, bad
     assert bad["external"] == [] and bad["drops"] == [], bad
 
     report = "\n".join(audit_sheet.describe(bad))
-    for line in ["Cause an error (3):", "Data!E2  =B2/F2  #DIV/0!, division by zero or by an empty cell",
+    for line in ["Cause an error (4):", "Data!E2  =B2/F2  #DIV/0!, division by zero or by an empty cell",
                  "Only repeat an error from the cells they read (1): Data!E3",
                  "Circular references, the formula reads its own result (2): Data!G1, Data!H1",
                  "Data!D4  =B4*C3", "they suggest  =B4*C4", 'Data!B6 "12,50"', "Calculation is set to manual",
                  "1 with #N/A on purpose from NA()", "checked only in Google Sheets: QUERY (1 cell)",
-                 "Needs Excel 2021 or later, or Microsoft 365: XLOOKUP (1 cell)"]:
+                 "Needs Excel 2021 or later, or Microsoft 365: XLOOKUP (1 cell)",
+                 "Named ranges that point to deleted cells, which no formula uses (1): Old. Deleting them"]:
         assert line in report, (line, report)
-    print("client file: 3 errors and the cell that repeats one, the circle, 3 broken references, the odd "
-          "formula, the number typed as text, manual calculation, XLOOKUP, LAMBDA and QUERY, all found")
+    print("client file: 4 errors and the cell that repeats one, the circle, 3 broken references and a left-over "
+          "named range, the odd formula, the number typed as text, manual calculation, XLOOKUP, LAMBDA and QUERY, "
+          "all found")
 
     assert not good["must_fix"] and (good["formulas"], good["sources"], good["odd"]) == (4, [], []), good
     assert "  Nothing to fix." in audit_sheet.describe(good), audit_sheet.describe(good)

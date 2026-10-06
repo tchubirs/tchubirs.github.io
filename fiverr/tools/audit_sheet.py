@@ -418,21 +418,39 @@ def audit(path, recalculated):
             if cell not in unchecked and cell not in circle:
                 unchecked.add(cell)
                 todo.append(cell)
+    # A named range that points to deleted cells breaks only what uses it: formulas, data validation,
+    # conditional formatting or other names. One that nothing uses is left over and only worth deleting.
+    scoped = [(n, dn, None) for n, dn in book.defined_names.items()]
+    scoped += [(n, dn, ws.title) for ws in book.worksheets for n, dn in ws.defined_names.items()]
+    dead = {(n, title): re.compile(r"(?<![\w.])" + re.escape(n) + r"(?![\w(])", re.I)
+            for n, dn, title in scoped if BROKEN in (dn.attr_text or "")}
+    texts = [t for cells in sheets.values() for t in cells.values() if t]
+    texts += [dn.attr_text for _, dn, _ in scoped if dn.attr_text]
+    for ws in book.worksheets:
+        texts += [f for dv in ws.data_validations.dataValidation for f in (dv.formula1, dv.formula2) if f]
+        texts += [f for cf in ws.conditional_formatting for rule in cf.rules for f in (rule.formula or ())]
+    broken, unused = [], []
+    for (n, title), name in dead.items():
+        place = n + (f" on {title}" if title else "")
+        if any(name.search(t) for t in texts):
+            broken.append(f"named range {place}")
+        else:
+            unused.append(place)
+
     sources, repeats = [], []
     for cell in sorted(errors):
         if cell in circle or cell in unchecked:
             continue
         text = sheets[cell[0]].get(cell[1:])
-        if text is None or BROKEN in text.upper() or not graph[cell] - {cell}:
-            # A formula that holds #REF! shows #REF! in Excel; LibreOffice 26.8 says #NAME? for SUM(#REF!).
-            sources.append((where(*cell), text, BROKEN if text and BROKEN in text.upper() else errors[cell]))
+        # A formula that holds #REF!, or a named range pointing to deleted cells, shows #REF! in Excel;
+        # LibreOffice 26.8 says #NAME? for SUM(#REF!) and for such a name.
+        deleted = bool(text) and (BROKEN in text.upper() or any(name.search(text) for name in dead.values()))
+        if text is None or deleted or not graph[cell] - {cell}:
+            sources.append((where(*cell), text, BROKEN if deleted else errors[cell]))
         else:
             repeats.append(where(*cell))
 
-    broken = [f"named range {n}" for n, dn in book.defined_names.items() if BROKEN in (dn.attr_text or "")]
     for ws in book.worksheets:
-        broken += [f"named range {n} on {ws.title}" for n, dn in ws.defined_names.items()
-                   if BROKEN in (dn.attr_text or "")]
         for dv in ws.data_validations.dataValidation:
             if any(BROKEN in (f or "") for f in (dv.formula1, dv.formula2)):
                 broken.append(f"data validation on {ws.title}!{dv.sqref}")
@@ -491,7 +509,8 @@ def audit(path, recalculated):
 
     found.update(sheets=len(sheets), formulas=len(reads), errors=len(errors), on_purpose=len(on_purpose),
                  sources=sources, repeats=repeats,
-                 circle=[where(*c) for c in sorted(circle)], broken=broken, odd=odd, text_numbers=text_numbers,
+                 circle=[where(*c) for c in sorted(circle)], broken=broken, unused=unused, macros=macros, odd=odd,
+                 text_numbers=text_numbers,
                  external=external, files=files, manual=book.calculation.calcMode == "manual",
                  lacking=[where(*c) for c in sorted(lacking)],
                  unchecked=[where(*c) for c in sorted(unchecked - lacking)],
@@ -557,6 +576,10 @@ def describe(f):
                     + (f"; files: {some(f['files'], 5)}" if f["files"] else ""))
     if f["manual"]:
         look.append("Calculation is set to manual, so results only change after F9.")
+    if f["unused"]:
+        look.append(f"Named ranges that point to deleted cells, which no formula uses ({len(f['unused'])}): "
+                    f"{some(f['unused'])}. Deleting them in the Name Manager changes no result"
+                    + (", but check first that no macro uses them." if f["macros"] else "."))
 
     unchecked = []
     if f["lacking"]:
