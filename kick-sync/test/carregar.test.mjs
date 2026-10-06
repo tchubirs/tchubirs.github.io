@@ -271,11 +271,15 @@ test('depois de um 429 não sai nenhum pedido enquanto o canal espera: a pausa �
   assert.equal(depois, inicioDaPausa);
 });
 
-test('com a Kick a recusar tudo, desiste depressa em vez de gastar as tentativas de todos', async () => {
+test('com a Kick a recusar tudo, desiste sem gastar as tentativas de todos', async () => {
   // A sonda do revisor: 100 canais, todos 429. Antes eram 400 pedidos a ritmo
   // constante. Quando um canal sobe a escada toda (1, 2 e 4 s) e nesse tempo
-  // ninguém teve outra resposta, a Kick não está a pedir calma, está fechada:
-  // o resto fica 'rate-limit' sem se pedir, e a página diz para esperar.
+  // ninguém teve outra resposta, só ele pergunta mais, depois de 15, 30 e
+  // 60 s. Só se ainda for 429 o resto fica 'rate-limit' sem se pedir.
+  //
+  // (Este teste dizia antes que ninguém esperava mais de 4 s: desistir ao fim
+  // da escada era a regressão que o teste seguinte apanha. Agora diz que a
+  // sonda espera, e que mesmo assim os pedidos ficam poucos.)
   const roteiro = Object.fromEntries(nomes(100).map((s) => [s, Array(9).fill(429)]));
   const k = kickFalsa({ roteiro });
   const progresso = [];
@@ -283,10 +287,29 @@ test('com a Kick a recusar tudo, desiste depressa em vez de gastar as tentativas
   const r = await carregarCanais(nomes(100), { buscar: k.buscar, esperar, aoProgredir: (p) => progresso.push(p) });
   assert.ok(r.every((x) => x.estado === 'rate-limit'));
   assert.deepEqual(r.map((x) => x.slug), nomes(100));
-  assert.ok(k.chamadas.length <= 20, `saíram ${k.chamadas.length}`);
+  assert.ok(k.chamadas.length <= 24, `saíram ${k.chamadas.length}`);
   assert.equal(progresso.at(-1).feitos, 100, 'a barra chega ao fim');
-  // Ninguém esperou mais do que a escada de um canal.
-  assert.ok(Math.max(...esperar.esperas) <= 4000);
+  assert.deepEqual(esperar.esperas.filter((ms) => ms > 4000), [15000, 30000, 60000], 'uma sonda só');
+});
+
+test('uma janela de 429 de 12 s ou de 30 s passa, e a carga de 500 acaba toda', async () => {
+  // A sonda do revisor: desistir ao fim da escada de um canal (7 s) deixava
+  // os 500 em 'rate-limit' com 17 pedidos, e antes a mesma carga recompunha-se
+  // quando a janela acabava. O relógio é falso: cada espera avança-o.
+  for (const fechadaAte of [12000, 30000]) {
+    let agora = 0;
+    let pedidos = 0;
+    const buscar = async () => {
+      pedidos++;
+      await dormir(0);
+      return agora < fechadaAte ? resposta(429, { message: 'x' }) : resposta(200, UM_VOD);
+    };
+    const esperar = async (ms) => { agora += ms; await dormir(0); };
+    const r = await carregarCanais(nomes(500), { buscar, esperar });
+    const ok = r.filter((x) => x.estado === 'ok').length;
+    assert.equal(ok, 500, `fechada até ${fechadaAte} ms: ${ok} ok`);
+    assert.ok(pedidos <= 540, `fechada até ${fechadaAte} ms: ${pedidos} pedidos`);
+  }
 });
 
 test('um canal que leva 429 sozinho não dá a Kick por fechada', async () => {
@@ -688,10 +711,32 @@ test('as partes de uma palavra colada contam: maiúsculas a meio e letras com n�
     item({ canal: 'dia2', titulo: 'kick off dia2' }),
   ]]);
   const q = async (palavras) => (await procurarAoVivo({ buscar: f.buscar, palavras })).map((x) => x.slug);
-  assert.deepEqual(await q('kick'), ['camelo', 'dia2']);
+  // "KICKOFF" em maiúsculas não diz onde acaba "kick": entra (ver o teste
+  // seguinte, das palavras coladas sem maiúsculas).
+  assert.deepEqual(await q('kick'), ['camelo', 'caps', 'dia2']);
   assert.deepEqual(await q('kick off'), ['camelo', 'caps', 'dia2']);
   assert.deepEqual(await q('dia 2'), ['dia2']);
   assert.deepEqual(await q('rustkickoff2'), ['camelo']);
+});
+
+test('dentro de uma palavra colada sem maiúsculas também conta: "#rustkickoff", "RUSTKICKOFF", japonês', async () => {
+  // As sondas do revisor: as etiquetas da Kick vêm quase sempre em minúsculas
+  // ("rustkickoff"), e partir só nas maiúsculas deixava estes de fora sem
+  // ninguém saber.
+  const f = aoVivoFalso([[
+    item({ canal: 'hash', titulo: '#rustkickoff day 1' }),
+    item({ canal: 'caps', titulo: 'RUSTKICKOFF' }),
+    item({ canal: 'etiqueta', titulo: 'rust', tags: ['rustkickoff'] }),
+    item({ canal: 'jp', titulo: 'ラストイベント' }),
+    item({ canal: 'camelo', titulo: 'TwitchConRust' }),
+    item({ canal: 'fora', titulo: 'Office hours', tags: ['offline'] }),
+  ]]);
+  const q = async (palavras) => (await procurarAoVivo({ buscar: f.buscar, palavras })).map((x) => x.slug);
+  assert.deepEqual(await q('kick off'), ['hash', 'caps', 'etiqueta']);
+  assert.deepEqual(await q('kickoff'), ['hash', 'caps', 'etiqueta']);
+  assert.deepEqual(await q('イベント'), ['jp']);
+  assert.deepEqual(await q('twitchcon'), ['camelo']);
+  assert.deepEqual(await q('off'), [], 'três letras não entram dentro de "offline"');
 });
 
 test('sem palavras vêm todos', async () => {

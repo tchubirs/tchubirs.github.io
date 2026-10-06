@@ -69,6 +69,9 @@ function transitorio(estado) {
   return estado === 'rate-limit' || estado === 'sem-rede' || /^http-5\d\d$/.test(estado);
 }
 
+/** As esperas da sonda quando a Kick parece fechada (ver "a pausa"). */
+const ESPERAS_DA_SONDA = [15000, 30000, 60000];
+
 /**
  * Os VODs de muitos canais, na MESMA ordem em que foram pedidos.
  *
@@ -140,7 +143,7 @@ export async function carregarCanais(slugs, {
   let pausas = 0;
 
   const andar = () => {
-    while (!parar && !pausas && emVoo < limite && fila.length) { emVoo++; fila.shift()(); }
+    while (!parar && !pausas && !sonda && emVoo < limite && fila.length) { emVoo++; fila.shift()(); }
   };
   const vez = (primeiro) => {
     // Quem volta a tentar passa à frente: já esperou o castigo dele, e se
@@ -176,13 +179,25 @@ export async function carregarCanais(slugs, {
   // espera depois de um 429 vale para a carga inteira. Um 503 ou uma falha de
   // rede são desse canal, e esses esperam sozinhos.
   //
-  // E se a Kick está fechada, não se insiste: quando um canal sobe a escada
-  // toda só com 429 e nesse tempo outros também levaram 429 e ninguém teve
-  // outra resposta, o resto fica 'rate-limit' sem se pedir. Um canal sozinho
-  // a levar 429 não prova nada sobre os outros, por isso esse não fecha.
+  // E se a Kick parece fechada, não se gastam as tentativas de todos: quando
+  // um canal sobe a escada toda só com 429 e nesse tempo outros também
+  // levaram 429 e ninguém teve outra resposta, esse canal passa a ser a
+  // sonda. Só ele pergunta, depois de 15, 30 e 60 s, e ninguém mais sai
+  // enquanto isso. Os que chegarem ao fim da escada entretanto esperam pela
+  // resposta dela. Se a Kick abrir, todos seguem; se ao fim de uns dois
+  // minutos ainda só houver 429, o resto fica 'rate-limit' sem se pedir.
+  //
+  // Os dois minutos não são ao acaso: uma janela de 429 da Kick de 10 a 60 s
+  // é normal, e desistir ao fim da escada (7 s) deitava fora uma carga de
+  // 500 que antes se recompunha sozinha quando a janela acabava.
+  //
+  // Um canal sozinho a levar 429 não prova nada sobre os outros, por isso
+  // esse não abre sonda.
   let recusas = 0;
   let outras = 0;
   let fechada = false;
+  /** Enquanto há sonda, uma promessa que diz se a Kick abriu. */
+  let sonda = null;
 
   const abortado = quandoCancelar(sinal);
   // O sinal vai até ao fetch, para um pedido a meio ser largado de facto e
@@ -219,8 +234,16 @@ export async function carregarCanais(slugs, {
       const de429 = r.estado === 'rate-limit';
       if (de429 && !antes) antes = { recusas: recusas - 1, outras: outras };
       if (!transitorio(r.estado) || feitas >= tentativas) {
-        if (de429 && antes && outras === antes.outras && recusas - antes.recusas > feitas + 1) fechada = true;
-        return r;
+        const seco = de429 && antes && outras === antes.outras && recusas - antes.recusas > feitas + 1;
+        if (!seco || fechada) return r;
+        if (sonda) {
+          // Uma última vez, à frente da fila, se a sonda disser que abriu.
+          if (!(await sonda)) return r;
+          antes = null;
+          feitas = tentativas - 1;
+          continue;
+        }
+        return sondar(chave, r);
       }
       // A espera não precisa de correr contra o sinal aqui dentro: quem
       // chamou já recebeu o AbortError pela corrida lá de baixo, e quando
@@ -231,6 +254,36 @@ export async function carregarCanais(slugs, {
       } finally {
         if (de429) pausas--;
       }
+    }
+  }
+
+  async function sondar(chave, ultima) {
+    let abriu = false;
+    let dizer;
+    sonda = new Promise((ok) => { dizer = ok; });
+    let r = ultima;
+    try {
+      for (const ms of ESPERAS_DA_SONDA) {
+        pausas++;
+        try { await esperar(ms); } finally { pausas--; }
+        if (parar || sinal?.aborted) throw cancelado();
+        // Sem passar pela fila: com a sonda no ar a fila não anda.
+        emVoo++;
+        try {
+          r = await vodsDoCanal(chave, { buscar: buscarComSinal });
+          if (r.estado === 'rate-limit') recusas++; else outras++;
+        } finally {
+          emVoo--;
+        }
+        if (sinal?.aborted || parar) throw cancelado();
+        if (r.estado !== 'rate-limit') { abriu = true; break; }
+      }
+      return r;
+    } finally {
+      if (!abriu) fechada = true;
+      sonda = null;
+      dizer(abriu);
+      andar();
     }
   }
 
@@ -308,14 +361,21 @@ function dobrar(texto) {
  * encontra "2026", e o fim do título não se cola ao começo de uma etiqueta.
  * (Antes o texto ia todo colado, e uma palavra curta do evento como "dia"
  * puxava para a lista quem tinha "India" no título.)
+ *
+ * Cada parte diz também se é "colada": só minúsculas ou só maiúsculas, como
+ * "#rustkickoff" ou "RUSTKICKOFF". Aí não há maiúsculas a dizer onde começa
+ * cada palavra, e as etiquetas da Kick vêm quase sempre assim. Ver `bate`.
  */
 function partes(campo) {
   return dobrar(campo)
     .replace(/(\p{Ll})(\p{Lu})/gu, '$1 $2')
     .replace(/(\p{L})(\p{N})|(\p{N})(\p{L})/gu, (_, a, b, c, d) => (a ? `${a} ${b}` : `${c} ${d}`))
-    .toLowerCase()
     .split(/[^\p{L}\p{N}]+/u)
-    .filter(Boolean);
+    .filter(Boolean)
+    .map((p) => {
+      const texto = p.toLowerCase();
+      return { texto, colada: /\p{L}/u.test(p) && (p === texto || p === p.toUpperCase()) };
+    });
 }
 
 function palavrasDe(palavras) {
@@ -324,33 +384,58 @@ function palavrasDe(palavras) {
 }
 
 /**
- * Todos os textos que se podem formar colando partes seguidas de um campo.
- * Um título tem poucas dezenas de partes, por isso isto são umas centenas de
- * textos curtos, o que não pesa nem com 30 páginas.
+ * Todos os textos que se podem formar colando partes seguidas de um campo, e
+ * à parte as partes coladas (ver `partes`). Um título tem poucas dezenas de
+ * partes, por isso isto são umas centenas de textos curtos, o que não pesa
+ * nem com 30 páginas.
  */
 function pedacosDe(campos) {
   const pedacos = new Set();
+  const coladas = [];
   for (const campo of campos) {
     const p = partes(campo);
     for (let i = 0; i < p.length; i++) {
+      if (p[i].colada) coladas.push(p[i].texto);
       let colado = '';
-      for (let j = i; j < p.length && j < i + 12; j++) { colado += p[j]; pedacos.add(colado); }
+      for (let j = i; j < p.length && j < i + 12; j++) { colado += p[j].texto; pedacos.add(colado); }
     }
   }
-  return pedacos;
+  return { pedacos, coladas };
+}
+
+/**
+ * Escritas sem espaços entre palavras: aí uma palavra está sempre dentro de
+ * outro texto ("イベント" em "ラストイベント"), e partir não serve de nada.
+ */
+const SEM_ESPACOS = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Thai}\p{Script=Lao}\p{Script=Khmer}\p{Script=Myanmar}]/u;
+
+/**
+ * Um texto procurado está no campo: é uma ou mais partes seguidas, ou está
+ * dentro de uma parte colada. Dentro de uma colada só a partir de 4 letras,
+ * para "off" não achar "offline" nem "dia" achar "rustdia" por acaso; numa
+ * escrita sem espaços, sempre.
+ *
+ * Isto deixa entrar "rust" em "trust" escrito todo em minúsculas. É o erro
+ * barato: um a mais na lista vê-se e tira-se. Um participante que falta não
+ * aparece em lado nenhum, e "#rustkickoff" sem "kickoff" era isso.
+ */
+function tem(colado, { pedacos, coladas }) {
+  if (pedacos.has(colado)) return true;
+  if (colado.length < 4 && !SEM_ESPACOS.test(colado)) return false;
+  return coladas.some((c) => c.includes(colado));
 }
 
 /**
  * Cada palavra procurada tem de aparecer. Palavras seguidas da busca também
  * podem aparecer coladas: "kick off" encontra a etiqueta "kickoff".
  */
-function bate(procurar, pedacos) {
+function bate(procurar, campo) {
   const coberta = procurar.map(() => false);
   for (let i = 0; i < procurar.length; i++) {
     let colado = '';
     for (let j = i; j < procurar.length; j++) {
       colado += procurar[j];
-      if (pedacos.has(colado)) for (let k = i; k <= j; k++) coberta[k] = true;
+      if (tem(colado, campo)) for (let k = i; k <= j; k++) coberta[k] = true;
     }
   }
   return coberta.every(Boolean);
