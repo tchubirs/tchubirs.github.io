@@ -135,3 +135,47 @@ test('durante o jogo a busca pelo som não serve para achar rivais',
     assert.match(await p.locator('#estadoLance').innerText(), /trapaça/);
     assert.deepEqual(erros, []);
   });
+
+test('quem chega sem elenco abre um exemplo com o Rust que está ao vivo',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'outro'] });
+    await p.route('https://kick.com/stream/livestreams/**', (rota) => rota.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        current_page: 1,
+        next_page_url: null,
+        data: ['tchubi', 'outro'].map((slug, i) => ({
+          slug: `emissao-${i}`, session_title: 'rust', viewer_count: 100 - i, language: 'Portuguese',
+          start_time: '2026-08-30 21:00:00', tags: [], channel: { slug },
+        })),
+      }),
+    }));
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.click('#exemploAoVivo');
+    await p.waitForFunction(() => window.__evento?.mapa, null, { timeout: 15000 });
+    assert.match(await p.locator('#nomeEvento').innerText(), /Rust ao vivo agora/);
+    const canais = await p.evaluate(() => window.__evento.mapa.linhas.filter((l) => l.tipo === 'canal').map((l) => l.canal));
+    assert.deepEqual(canais, ['tchubi', 'outro']);
+    assert.deepEqual(erros, []);
+  });
+
+test('o mapa abre no trecho em que a maioria esteve no ar, e não no mês inteiro de VODs', async () => {
+  const { trechoDoEvento } = await import('../site/evento-ui.js');
+  const H = 3600_000;
+  const t = Date.parse('2026-10-01T18:00:00Z');
+  // Dez canais juntos das 18:00 às 22:00 do dia 1, e cada um com VODs soltos ao longo do mês.
+  const coberturas = new Map();
+  for (let c = 0; c < 10; c++) {
+    coberturas.set(`c${c}`, [
+      [t - (20 + c) * 24 * H, t - (20 + c) * 24 * H + 3 * H],
+      [t + c * 60_000, t + 4 * H],
+      [t + (5 + c) * 24 * H, t + (5 + c) * 24 * H + 2 * H],
+    ]);
+  }
+  const r = trechoDoEvento(coberturas);
+  assert.ok(r.deMs >= t - 30 * 60_000 && r.deMs <= t, `começa ${new Date(r.deMs).toISOString()}`);
+  assert.ok(r.ateMs >= t + 4 * H && r.ateMs <= t + 4 * H + 30 * 60_000, `acaba ${new Date(r.ateMs).toISOString()}`);
+  assert.equal(trechoDoEvento(new Map()), null);
+});

@@ -1430,6 +1430,7 @@ body:not(.mesa) #sugestoes button { width: auto; min-height: 30px; font-size: va
 .cabecaPorta .nota { margin: 0; }
 .portaEvento textarea { width: 100%; }
 .aoVivoLinha { flex-wrap: nowrap; gap: var(--e3); }
+.portaEvento .exemplo { justify-self: start; color: var(--acento); }
 .aoVivoLinha input { flex: 1 1 auto; min-width: 0; }
 #entrada { max-width: none; }
 @media (min-width: 1000px) {

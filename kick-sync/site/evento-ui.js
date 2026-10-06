@@ -62,6 +62,39 @@ export function indiceDeTimes(elenco) {
   return porCanal;
 }
 
+/**
+ * O trecho do evento: à volta do instante em que mais canais estavam no ar, enquanto pelo menos metade
+ * desse pico continuar no ar, com 15 minutos de folga de cada lado.
+ *
+ * Os VODs de um canal cobrem 7 a 30 dias. Medido com o Rust ao vivo de 06/10: aberto "tudo", o mapa
+ * mostrava um mês e o evento era uma risca de poucos píxeis no fim. O evento é onde a maioria esteve
+ * junta, e é aí que o mapa tem de abrir.
+ */
+export function trechoDoEvento(coberturas, { folgaMs = 15 * 60_000 } = {}) {
+  const pontos = [];
+  for (const lista of coberturas.values()) {
+    for (const [de, ate] of lista) { pontos.push([de, 1]); pontos.push([ate, -1]); }
+  }
+  if (!pontos.length) return null;
+  // Num empate, as saídas antes das entradas: um canal que acaba quando outro começa não conta como dois.
+  pontos.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  let n = 0;
+  let pico = 0;
+  let iPico = 0;
+  const contagem = [];
+  for (const [i, [ms, d]] of pontos.entries()) {
+    n += d;
+    contagem.push(n);
+    if (n > pico) { pico = n; iPico = i; }
+  }
+  const metade = Math.max(1, Math.ceil(pico / 2));
+  let i0 = iPico;
+  while (i0 > 0 && contagem[i0 - 1] >= metade) i0--;
+  let i1 = iPico;
+  while (i1 < pontos.length - 1 && contagem[i1] >= metade) i1++;
+  return { deMs: pontos[i0][0] - folgaMs, ateMs: pontos[i1][0] + folgaMs };
+}
+
 /** Quem estava no ar num instante: só esses podem ter ouvido o lance. */
 export function noArEm(coberturas, slug, ms) {
   return (coberturas.get(slug) || []).some(([de, ate]) => ms >= de && ms <= ate);
@@ -135,7 +168,10 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
     ev.abertos = new Set(ev.times.length <= 12 ? ev.times.map((x) => x.nome) : []);
     remontar();
     ev.limites = { deMs: ev.mapa.inicioMs, ateMs: ev.mapa.fimMs };
-    ev.vista = { ...ev.limites };
+    const trecho = trechoDoEvento(ev.coberturas);
+    ev.vista = trecho
+      ? { deMs: Math.max(ev.limites.deMs, trecho.deMs), ateMs: Math.min(ev.limites.ateMs, trecho.ateMs) }
+      : { ...ev.limites };
     if (Number.isFinite(quandoMs)) ev.vista = zoom(ev.vista, quandoMs, 0.1, ev.limites);
     ev.link = await codificar(elenco);
     pintar();
@@ -193,6 +229,23 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
     // apanha um ou outro que não é do evento, e tem de poder tirá-los antes.
     $('elenco').value = achados.map((a) => a.slug).join('\n');
     $('estadoEvento').textContent = t('evento.achadosAoVivo', { n: achados.length });
+  }
+
+  // Um evento de exemplo feito na hora: os canais de Rust mais vistos que estão no ar agora, sem time.
+  // Abre direto no mapa, para quem chega sem elenco perceber em segundos o que a página faz.
+  const EXEMPLO_CANAIS = 24;
+  async function abrirExemplo() {
+    $('estadoEvento').textContent = t('evento.aProcurar');
+    let achados = [];
+    try {
+      achados = await procurarAoVivo({ palavras: [], buscar, maxPaginas: 1 });
+    } catch (e) {
+      achados = e?.parcial || [];
+    }
+    if (!achados.length) { $('estadoEvento').textContent = t('evento.semExemplo'); return; }
+    $('estadoEvento').textContent = '';
+    const soltos = achados.slice(0, EXEMPLO_CANAIS).map((a) => a.slug);
+    await abrirElenco({ nome: t('evento.exemploNome'), times: [], soltos, avisos: [] });
   }
 
   // ── o mapa ─────────────────────────────────────────────────────────────
@@ -262,13 +315,22 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
     // As pontas ficam de fora: um rótulo centrado no x=0 saía metade para fora da caixa.
     const margem = 24;
     // Um traço a cada passo "redondo" que dê uns 6 a 10 rótulos na largura do ecrã.
-    const passos = [60e3, 5 * 60e3, 15 * 60e3, 30 * 60e3, 3600e3, 2 * 3600e3, 6 * 3600e3];
+    const DIA = 86400e3;
+    const passos = [60e3, 5 * 60e3, 15 * 60e3, 30 * 60e3, 3600e3, 2 * 3600e3, 6 * 3600e3, 12 * 3600e3, DIA, 2 * DIA, 7 * DIA];
     const passo = passos.find((p) => span / p <= 10) || passos.at(-1);
+    // Em passos de dia o rótulo é a data; nos outros é a hora, e a data aparece à meia-noite.
+    const rotulo = (ms) => {
+      const d = new Date(ms);
+      const data = d.toLocaleDateString([], { day: '2-digit', month: '2-digit' });
+      if (passo >= DIA) return data;
+      const hora = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      return d.getHours() === 0 && d.getMinutes() === 0 && span > DIA / 2 ? `${data} ${hora}` : hora;
+    };
     let html = '';
     for (let ms = Math.ceil(ev.vista.deMs / passo) * passo; ms <= ev.vista.ateMs; ms += passo) {
       const x = xDoTempo(ms, ev.vista, largura);
       if (x < margem || x > largura - margem) continue;
-      html += `<span style="left:${x}px">${new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>`;
+      html += `<span style="left:${x}px">${rotulo(ms)}</span>`;
     }
     regua.innerHTML = html;
   }
@@ -437,6 +499,7 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
   function ligar() {
     $('abrirElenco').onclick = abrirDoTexto;
     $('procurarAoVivo').onclick = procurarParticipantes;
+    $('exemploAoVivo').onclick = abrirExemplo;
     $('procurarEvento').oninput = () => { remontar(); pintar(); };
     $('mapaRolo').onscroll = () => { ev.topo = $('mapaRolo').scrollTop; pintar(); };
     $('mapaRolo').onclick = (e) => escolher(aquiDe(e));
