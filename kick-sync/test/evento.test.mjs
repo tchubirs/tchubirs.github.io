@@ -250,3 +250,31 @@ test('no telemóvel o painel do lance fica preso ao fundo sem tapar o mapa',
     assert.equal(await p.locator('#verLance').isVisible(), true);
     assert.deepEqual(erros, []);
   });
+
+test('o mapa anda-se pelo teclado: setas, Enter para escolher e o que está sob o cursor é dito',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'outro'] });
+    await abrirEvento(p);
+    await p.focus('#mapaRolo');
+    // Linhas: Time Alfa, tchubi, outro, Time Beta, terceiro. O cursor começa na primeira.
+    await p.keyboard.press('ArrowDown');
+    await p.keyboard.press('ArrowDown');
+    assert.match(await p.locator('#mapaVoz').textContent(), /^outro · Time Alfa · .* · no ar$/);
+    const antes = await p.evaluate(() => window.__evento.cursor.ms);
+    await p.keyboard.press('ArrowRight');
+    const depois = await p.evaluate(() => window.__evento.cursor.ms);
+    assert.ok(depois > antes, 'a seta para a direita anda no tempo');
+    await p.keyboard.press('Enter');
+    await p.waitForSelector('#lance:not([hidden])');
+    const e = await p.evaluate(() => window.__evento.escolha);
+    assert.deepEqual([e.canal, e.ms], ['outro', depois]);
+    // As setas no mapa não mexem no vídeo nem rolam a página.
+    assert.equal(await p.evaluate(() => scrollY), 0);
+    // Enter num time fecha-o, e o cursor fica no cabeçalho dele.
+    await p.keyboard.press('ArrowUp');
+    await p.keyboard.press('ArrowUp');
+    await p.keyboard.press('Enter');
+    assert.match(await p.locator('#mapaVoz').textContent(), /^Time Alfa · 2 canais · fechado$/);
+    assert.deepEqual(erros, []);
+  });

@@ -812,6 +812,26 @@ function contorno(ctx, ry, alto, { largura, altura, c }) {
 }
 
 /**
+ * O cursor do teclado: contorno de 2 px na cor do acento, e um traço no
+ * instante dentro da linha. Cortado ao ecrã como tudo o resto.
+ */
+function pintarCursor(ctx, l, ry, ms, { largura, altura, c, e }) {
+  const de = Math.max(0, ry);
+  const ate = Math.min(altura, ry + l.altura);
+  if (ate - de < 2 || largura < 4) return;
+  ctx.fillStyle = c.cobertura;
+  if (ry >= 0) ctx.fillRect(0, ry, largura, 2);
+  if (ry + l.altura <= altura) ctx.fillRect(0, ry + l.altura - 2, largura, 2);
+  ctx.fillRect(0, de, 2, ate - de);
+  ctx.fillRect(largura - 2, de, 2, ate - de);
+  if (e && l.tipo === 'canal' && Number.isFinite(ms) && ms >= e.de && ms <= e.ate) {
+    const x = Math.min(Math.max(Math.round(((ms - e.de) / e.span) * e.largura) - 1, 0), largura - 2);
+    ctx.fillStyle = c.texto;
+    ctx.fillRect(x, de, 2, ate - de);
+  }
+}
+
+/**
  * Pintar o pedaço do mapa que está no ecrã.
  *
  * `topo` é quanto já se rolou, `altura` e `largura` são as do canvas em px
@@ -823,6 +843,9 @@ function contorno(ctx, ry, alto, { largura, altura, c }) {
  * `CORES`, e `cores.marcas` dá uma cor a cada tipo de marca ({ tiro: '#…' }).
  * `semTime` é o nome do grupo sem time, para a página o passar já traduzido,
  * e `letra` é a família da letra (o canvas não lê variáveis de CSS).
+ * `cursor` ({ i, ms }) é onde está o teclado: a linha `i` de `mapa.linhas`
+ * com um contorno de 2 px e um traço no instante `ms`. Só se passa com o
+ * mapa focado pelo teclado.
  * `realcados` (Set de slugs) são os colegas de quem se escolheu, com uma
  * risca à esquerda; `falhados` (Set de slugs) são os canais que não existem
  * na Kick, com o nome a vermelho seguido de `naoAchado`.
@@ -833,7 +856,7 @@ function contorno(ctx, ry, alto, { largura, altura, c }) {
  */
 export function pintarMapa(ctx, mapa, {
   topo = 0, altura, largura, vista, agoraMs = null, marcas, cores, escolhido = null,
-  semTime = 'Sem time', letra = LETRA, realcados = null, falhados = null, naoAchado = '',
+  semTime = 'Sem time', letra = LETRA, realcados = null, falhados = null, naoAchado = '', cursor = null,
 } = {}) {
   if (!ctx || !(largura > 0) || !(altura > 0)) return;
   const t0 = Number.isFinite(topo) ? topo : 0;
@@ -861,6 +884,9 @@ export function pintarMapa(ctx, mapa, {
 
   const preso = cabecalhoPreso(mapa, t0);
   if (preso && preso.altura <= altura) pintarCabecalho(ctx, preso, 0, o);
+
+  const lc = Number.isInteger(cursor?.i) ? mapa.linhas?.[cursor.i] : null;
+  if (lc) pintarCursor(ctx, lc, lc.y - t0, cursor.ms, o);
 
   // A cabeça por cima de tudo, até do cabeçalho preso: é a única coisa no
   // mapa que diz "é aqui que estás", e não pode ficar tapada por nada.

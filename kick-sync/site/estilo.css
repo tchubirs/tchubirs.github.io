@@ -1439,6 +1439,8 @@ body:not(.mesa) #sugestoes button { width: auto; min-height: 30px; font-size: va
 .avisosEvento { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2); }
 /* Os picos de chat: a legenda tem a mesma bandeirinha que o mapa pinta (5 px de âmbar com contorno
    escuro), e os botões levam a cada pico pela hora. */
+/* Só para leitores de ecrã: fora da vista, mas lido. */
+.soLeitor { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .legenda { display: inline-flex; align-items: center; gap: var(--e1); }
 .legendaPico { display: inline-block; width: 7px; height: 7px; background: var(--marca); box-shadow: 0 0 0 1px var(--sup-0); }
 .picosChat { gap: var(--e1); }

@@ -291,17 +291,19 @@
     <button id="partilharEvento"><svg class="ic ic-p" aria-hidden="true"><use href="#i-copiar"/></svg><span id="partilharEventoTexto" data-t="evento.partilharEvento">Copiar link do evento</span></button>
     <output id="estadoPartilhaEvento" class="nota"></output>
   </div>
-  <p class="nota dica" data-t="evento.dica">Clique numa faixa para escolher o streamer e o instante. Clique no nome de um time para abrir ou fechar. Ctrl + roda do mouse: zoom no tempo.</p>
+  <p id="dicaEvento" class="nota dica" data-t="evento.dica">Clique numa faixa para escolher o streamer e o instante. Clique no nome de um time para abrir ou fechar. Ctrl + roda do mouse: zoom no tempo.</p>
   <div id="avisosEvento" class="nota mau avisosEvento" hidden><span id="avisosTexto"></span> <button id="corrigirElenco" hidden data-t="evento.corrigir">Corrigir elenco</button></div>
   <div class="mapaCaixa">
     <!-- A régua mora na mesma coluna do mapa: com ela por cima da caixa toda, as horas ficavam
          desalinhadas das faixas pela largura da borda e do painel do lance. -->
     <div class="mapaColuna">
       <div id="reguaEvento" class="reguaEvento" aria-hidden="true"></div>
-      <div id="mapaRolo" class="mapaRolo" tabindex="0" data-t-aria="evento.mapa">
+      <div id="mapaRolo" class="mapaRolo" tabindex="0" role="application" aria-describedby="dicaEvento mapaTeclas" data-t-aria="evento.mapa">
         <canvas id="mapa"></canvas>
         <div id="mapaAltura" class="mapaAltura"></div>
       </div>
+      <p id="mapaTeclas" class="soLeitor" data-t="ajuda.mapa">No mapa: ↑ ↓ trocam de faixa, ← → andam no tempo (Shift: mais rápido), Enter escolhe, + e − dão zoom</p>
+      <output id="mapaVoz" class="soLeitor" aria-live="polite"></output>
     </div>
     <aside id="lance" class="lance" hidden>
       <h3 id="lanceTitulo" class="lanceTitulo"></h3>
@@ -669,6 +671,7 @@
       <dt><kbd>C</kbd></dt><dd data-t="ajuda.clipe">Abre o clipe</dd>
       <dt><kbd>,</kbd> <kbd>.</kbd></dt><dd data-t="ajuda.ajuste">Ajusta o ângulo em foco</dd>
       <dt><kbd data-t="ajuda.teclaEsc">Esc</kbd></dt><dd data-t="ajuda.fecha">Fecha esta janela</dd>
+      <dt><kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd></dt><dd data-t="ajuda.mapa">No mapa: ↑ ↓ trocam de faixa, ← → andam no tempo (Shift: mais rápido), Enter escolhe, + e − dão zoom</dd>
     </dl>
   </div>
 </div>

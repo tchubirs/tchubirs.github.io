@@ -99,6 +99,8 @@ const IGUAIS_DE_PROPOSITO = {
   es: new Set([
     // "pico de chat" diz-se igual em português e em espanhol.
     'evento.legendaPico',
+    // "1 canal" também.
+    'evento.canalUm',
     // "Abrir evento", "Evento" e "Zoom" escrevem-se igual nas duas.
     'evento.abrir', 'evento.semNome', 'evento.zoom',
     'app.nome', 'canais.vods', 'marca.feita', 'clipe.tempo',

@@ -146,6 +146,8 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
     feitos: 0,
     // Os canais que a Kick não conhece: o mapa pinta o nome deles a vermelho.
     falhados: new Set(),
+    // Onde está o teclado no mapa: a linha `i` de ev.mapa.linhas e o instante `ms`.
+    cursor: null,
   };
 
   // ── abrir ──────────────────────────────────────────────────────────────
@@ -158,6 +160,7 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
     ev.juntados = new Set();
     ev.extrasDoLink = [];
     ev.escolha = null;
+    ev.cursor = null;
     ev.falhados = new Set();
     $('lance').hidden = true;
     $('picosChat').innerHTML = '';
@@ -370,6 +373,7 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
         realcados: ev.escolha ? new Set(canaisDoLance(ev.escolha)) : null,
         falhados: ev.falhados,
         naoAchado: t('evento.naoAchado'),
+        cursor: ev.cursor && rolo.matches(':focus-visible') ? ev.cursor : null,
         cores: coresDoTema(),
         semTime: t('evento.semTime'),
       });
@@ -463,6 +467,73 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
     if (!estreito() || $('lance').hidden) return;
     const falta = $('mapaRolo').getBoundingClientRect().bottom - $('lance').getBoundingClientRect().top + 8;
     if (falta > 0) window.scrollBy({ top: falta, behavior: semMovimento() ? 'auto' : 'smooth' });
+  }
+
+  // ── o teclado no mapa ──────────────────────────────────────────────────
+  //
+  // O mapa é um canvas: sem isto só se escolhia um lance com o rato ou o dedo. ↑ ↓ trocam de linha,
+  // ← → andam no tempo (com Shift, mais depressa), Home e End vão às pontas da vista, Enter ou Espaço
+  // escolhem (num time, abrem ou fecham), + e − dão zoom. O que fica sob o cursor é dito a quem usa
+  // leitor de ecrã, em #mapaVoz.
+  function teclaNoMapa(e) {
+    if (!ev.mapa?.linhas.length || !ev.vista || e.altKey || e.ctrlKey || e.metaKey) return;
+    const linhas = ev.mapa.linhas;
+    const span = ev.vista.ateMs - ev.vista.deMs;
+    if (!ev.cursor || !linhas[ev.cursor.i]) {
+      const i = ev.escolha ? linhas.findIndex((l) => l.canal === ev.escolha.canal) : -1;
+      ev.cursor = { i: Math.max(0, i), ms: ev.escolha?.ms ?? (ev.vista.deMs + ev.vista.ateMs) / 2 };
+    }
+    let { i, ms } = ev.cursor;
+    switch (e.key) {
+      case 'ArrowUp': i = Math.max(0, i - 1); break;
+      case 'ArrowDown': i = Math.min(linhas.length - 1, i + 1); break;
+      case 'ArrowLeft': ms -= span / (e.shiftKey ? 5 : 20); break;
+      case 'ArrowRight': ms += span / (e.shiftKey ? 5 : 20); break;
+      case 'Home': ms = ev.vista.deMs; break;
+      case 'End': ms = ev.vista.ateMs; break;
+      case '+': case '=': $('aproximar').click(); break;
+      case '-': case '_': $('afastar').click(); break;
+      case 'Enter': case ' ': break;
+      default: return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    if (ev.limites) ms = Math.min(Math.max(ms, ev.limites.deMs), ev.limites.ateMs);
+    // Sair da vista arrasta a vista atrás do cursor, do mesmo tamanho.
+    if (ms < ev.vista.deMs) ev.vista = { deMs: ms, ateMs: ms + span };
+    else if (ms > ev.vista.ateMs) ev.vista = { deMs: ms - span, ateMs: ms };
+    ev.cursor = { i, ms };
+    if (e.key === 'Enter' || e.key === ' ') {
+      const l = linhas[i];
+      if (l.tipo === 'canal') escolher({ tipo: 'canal', canal: l.canal, ms, time: l.time });
+      else {
+        escolher({ tipo: l.tipo, time: l.time });
+        // Abrir ou fechar um time muda as linhas: o cursor fica no cabeçalho dele.
+        ev.cursor.i = Math.max(0, ev.mapa.linhas.findIndex((x) => x.tipo === 'time' && x.time === l.time));
+      }
+    }
+    verCursor();
+    dizerCursor();
+    pintar();
+  }
+
+  /** Rolar as faixas até a linha do cursor se ver, por baixo do cabeçalho preso do time. */
+  function verCursor() {
+    const l = ev.mapa.linhas[ev.cursor.i];
+    const rolo = $('mapaRolo');
+    const cabeca = l.tipo === 'time' ? 0 : ev.mapa.linhas[ev.mapa.cabecalhos[0]]?.altura ?? 0;
+    if (l.y - cabeca < rolo.scrollTop) rolo.scrollTop = Math.max(0, l.y - cabeca);
+    else if (l.y + l.altura > rolo.scrollTop + rolo.clientHeight) rolo.scrollTop = l.y + l.altura - rolo.clientHeight;
+    ev.topo = rolo.scrollTop;
+  }
+
+  function dizerCursor() {
+    const l = ev.mapa.linhas[ev.cursor.i];
+    const time = l.time ?? t('evento.semTime');
+    $('mapaVoz').textContent = l.tipo === 'canal'
+      ? [l.canal, time, horaLocal(ev.cursor.ms),
+        t(ev.falhados.has(l.canal) ? 'evento.naoAchado' : noArEm(ev.coberturas, l.canal, ev.cursor.ms) ? 'evento.noAr' : 'evento.foraDoArCurto')].join(' · ')
+      : [time, tn(l.canais?.length ?? 0, 'evento.canalUm', 'evento.canaisN'), t(l.aberto ? 'evento.aberto' : 'evento.fechado')].join(' · ');
   }
 
   // ── o chat ─────────────────────────────────────────────────────────────
@@ -793,6 +864,10 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
     $('procurarEvento').oninput = () => { remontar(); pintar(); };
     $('mapaRolo').onscroll = () => { ev.topo = $('mapaRolo').scrollTop; pintar(); };
     $('mapaRolo').onclick = (e) => escolher(aquiDe(e));
+    $('mapaRolo').onkeydown = teclaNoMapa;
+    // O cursor só aparece com o foco do teclado: um clique de rato não o deve deixar pintado.
+    $('mapaRolo').onfocus = () => pintar();
+    $('mapaRolo').onblur = () => pintar();
     $('mapaRolo').onmousemove = (e) => {
       const alvo = aquiDe(e);
       $('mapaRolo').title = alvo?.canal ? `${alvo.canal} · ${horaLocal(alvo.ms)}` : (alvo?.time ?? '');

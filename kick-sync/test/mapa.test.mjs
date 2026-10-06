@@ -974,3 +974,14 @@ test('num ecrã estreito, o nome de um canal que não existe não é comido pelo
     .filter((c) => c.nome === 'fillText').map((c) => c.args[0]);
   assert.ok(textos.includes('terceiro · não achado'), textos.join(' | '));
 });
+
+test('o cursor do teclado contorna a linha e marca o instante, sem sair do ecrã', () => {
+  const m = montarMapa({ times: [{ nome: 'A', canais: ['a', 'b'] }], coberturas: new Map([['a', [[T, T + H]]]]), abertos: new Set(['A']) });
+  const chamadas = pintar(m, { cursor: { i: 1, ms: T + 12 * MIN } });
+  const azuis = chamadas.filter((c) => c.nome === 'fillRect' && c.fillStyle === CORES.cobertura && (c.args[2] === 2 || c.args[3] === 2)).map((c) => c.args);
+  assert.deepEqual(azuis, [[0, 24, 1000, 2], [0, 42, 1000, 2], [0, 24, 2, 20], [998, 24, 2, 20]]);
+  const traco = chamadas.filter((c) => c.nome === 'fillRect' && c.fillStyle === CORES.texto && c.args[2] === 2).map((c) => c.args);
+  assert.deepEqual(traco, [[99, 24, 2, 20]]);
+  // Uma linha que não existe não pinta nada.
+  assert.doesNotThrow(() => pintar(m, { cursor: { i: 99, ms: T } }));
+});
