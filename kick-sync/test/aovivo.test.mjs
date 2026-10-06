@@ -254,6 +254,22 @@ test('uma leitura atrasada de uma janela que desliza nao e um recomeco', () => {
   assert.equal(atrasada.recuou, true);
 });
 
+// A guardada fica com tudo o que já se viu, por isso numa janela que desliza
+// falta sempre o princípio à leitura seguinte. Isso não é estar atrasada.
+test('a mesma janela lida outra vez, sem nada de novo, nao e uma leitura atrasada', () => {
+  const vista = novosSegmentos(leitura({ quantos: 20 }), leitura({ quantos: 20, primeiro: 5 })).playlist;
+  const outraVez = novosSegmentos(vista, leitura({ quantos: 20, primeiro: 5 }));    // ainda 5..24
+  assert.deepEqual(outraVez.novos, []);
+  assert.equal(outraVez.recomecou, false);
+  assert.equal(outraVez.recuou, false, 'em dia, so ainda sem segmento novo');
+  assert.equal(outraVez.playlist.segmentos.length, 25, 'continua com 0..24');
+  assert.deepEqual(nomes(novosSegmentos(outraVez.playlist, leitura({ quantos: 20, primeiro: 6 }))), ['25.ts']);
+  // Atrasada no fim é atrasada, deslize ou não o princípio.
+  const atrasada = novosSegmentos(vista, leitura({ quantos: 19, primeiro: 5 }));    // 5..23
+  assert.equal(atrasada.recuou, true);
+  assert.equal(atrasada.playlist, vista);
+});
+
 test('faltar o primeiro segmento na leitura anterior nao faz da seguinte um recomeco', () => {
   const b = leitura({ quantos: 10 });
   const a = { ...b, segmentos: b.segmentos.slice(1, 9) };                     // 1..8

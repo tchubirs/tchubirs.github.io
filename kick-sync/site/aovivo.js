@@ -106,7 +106,8 @@ function juntar(nova, faltam) {
  *               ordem da playlist
  *   recomecou   `nova` é outra transmissão: não tem nenhum segmento de
  *               `antiga` e não é mais velha do que ela
- *   recuou      `nova` não trouxe nada e falta-lhe o que `antiga` tinha, ou
+ *   recuou      `nova` não trouxe nada e falta-lhe o que `antiga` tinha (sem
+ *               contar o princípio que uma janela a deslizar deixou cair), ou
  *               é uma cópia de uma transmissão mais VELHA do que a guardada:
  *               um CDN com uma cópia atrasada
  *   playlist    a leitura a guardar para a próxima comparação
@@ -144,6 +145,7 @@ export function novosSegmentos(antiga, nova) {
   // aparecer no meio (um que faltava na leitura anterior), também é novo.
   const idx = indice(velhos);
   const novos = agora.filter((s) => !conhecido(idx, s));
+  const inicioNova = primeiroInstante(agora);
 
   if (novos.length === agora.length) {
     // Nada em comum. Uma transmissão nova começa DEPOIS da anterior; se esta
@@ -151,7 +153,6 @@ export function novosSegmentos(antiga, nova) {
     // um recomeço no mesmo caminho, que volta a chamar `0.ts`). Tomá-la por
     // recomeço trocava a guardada por ela, a seguinte parecia outro recomeço,
     // e o ao vivo andava para trás e para a frente com tudo a repetir-se.
-    const inicioNova = primeiroInstante(agora);
     const inicioAntiga = primeiroInstante(velhos);
     if (inicioNova != null && inicioAntiga != null && inicioNova < inicioAntiga) {
       return { novos: [], recomecou: false, recuou: true, playlist: antiga };
@@ -161,7 +162,14 @@ export function novosSegmentos(antiga, nova) {
 
   const idxNova = indice(agora);
   const faltam = velhos.filter((s) => !conhecido(idxNova, s));
-  const recuou = !novos.length && faltam.length > 0;
+  // Faltar SÓ o que vem antes do primeiro segmento de `nova` é a janela a
+  // deslizar, não uma cópia atrasada. Como a guardada fica com tudo o que já
+  // se viu, numa janela que desliza falta-lhe sempre o princípio, e sem isto
+  // cada leitura em dia sem nada de novo (o normal entre dois segmentos)
+  // dizia `recuou`.
+  const soOPrincipio = inicioNova != null
+    && faltam.every((s) => Number.isFinite(s.inicio) && s.inicio < inicioNova);
+  const recuou = !novos.length && faltam.length > 0 && !soOPrincipio;
   const playlist = recuou ? antiga : faltam.length ? juntar(nova, faltam) : nova;
   return { novos, recomecou: false, recuou, playlist };
 }
