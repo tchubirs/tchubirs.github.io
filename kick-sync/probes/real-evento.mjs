@@ -49,6 +49,13 @@ await p.mouse.click(alvo.x, alvo.y);
 await p.waitForSelector('#lance:not([hidden])');
 passo(`lance: ${await p.locator('#lanceTitulo').innerText()}`);
 await p.screenshot({ path: path.join(SAIDA, '2-lance.png') });
+// Os outros ângulos pelo som, com a busca liberada para o lance de há 20 min (o atraso de jogo é de 15).
+if (process.env.COM_SOM) {
+  await p.click('#procurarOutros');
+  await p.waitForFunction(() => /ângulos com o mesmo som|não decodifica|Não consegui|não tem som/.test(document.getElementById('estadoLance').textContent), null, { timeout: 240000 });
+  passo(`som: ${await p.locator('#estadoLance').innerText()} | achados: ${await p.locator('#lanceAchados').innerText()}`);
+  await p.screenshot({ path: path.join(SAIDA, '2b-angulos.png') });
+}
 await p.click('#verLance');
 await p.waitForSelector('.tile', { timeout: 60000 });
 await p.waitForTimeout(6000);
