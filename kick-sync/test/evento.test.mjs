@@ -112,6 +112,30 @@ test('o link do lance abre o evento noutra janela, no mesmo instante',
     assert.deepEqual([...erros, ...erros2], []);
   });
 
+test('um elenco grande demais para um link diz isso, em vez de copiar um link estragado',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'outro'] });
+    await abrirEvento(p);
+    // O `codificar` da própria página, com 2001 canais: dá null, porque nenhum link com tantos abre.
+    const link = await p.evaluate(async () => {
+      const { codificar } = await import('./elenco.js');
+      window.__evento.link = await codificar({ times: [], soltos: Array.from({ length: 2001 }, (_, i) => `c${i}`) });
+      return window.__evento.link;
+    });
+    assert.equal(link, null);
+    await p.evaluate(() => {
+      window.__copiado = null;
+      Object.defineProperty(navigator, 'clipboard', { value: { writeText: (t) => { window.__copiado = t; return Promise.resolve(); } } });
+    });
+    const antes = await p.evaluate(() => location.href);
+    await p.click('#partilharEvento');
+    assert.match(await p.locator('#estadoPartilhaEvento').innerText(), /grande demais para caber num link/);
+    assert.equal(await p.evaluate(() => window.__copiado), null, 'nada foi copiado');
+    assert.equal(await p.evaluate(() => location.href), antes, 'e nenhum "#evento=null" foi para a barra de endereço');
+    assert.deepEqual(erros, []);
+  });
+
 test('fechar o evento devolve as duas portas',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
     const { p, erros } = await abrir();

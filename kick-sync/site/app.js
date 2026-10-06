@@ -24,8 +24,11 @@ import { agruparPorNoite, rotuloDaNoite } from './noites.js';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
   alternarVitima, filtrar, temMorte, clipesDoMomento, comAjuste, numeroNaMontagem,
+  ajusteDe, ajustesQueContam,
 } from './momentos.js';
-import { planearCorte, executarCorte, nomeDoFicheiro } from './baixar.js';
+import {
+  planearCorte, executarCorte, nomeDoFicheiro, largarOQueNaoServe, oQueFalta,
+} from './baixar.js';
 import { criarZip, crc32 } from './zip.js';
 import { queFazerComOLeitor } from './leitor.js';
 import { criarApanhador } from './frames.js';
@@ -33,7 +36,9 @@ import { varrerNoite, custoVarrerMB } from './procurar-momentos.js';
 import { TAXA_TIROS } from './tiros.js';
 import { parecidos, juntarPerto } from './aprender.js';
 import { somDoCanal } from './alinhar.js';
-import { MAXIMO_S, mover, janelaInicial, nomeDoClipe, posicaoDaCabeca } from './clipe.js';
+import {
+  MAXIMO_S, mover, janelaInicial, nomeDoClipe, posicaoDaCabeca, dentroDosLimites, duracaoCurta,
+} from './clipe.js';
 import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js';
 import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js';
 import { escapar } from './escapar.js';
@@ -122,7 +127,12 @@ const estado = {
   // Trinta e seis clipes de doze megas sao quase meio giga de RAM presa, e
   // ninguem os liberta sozinho — foi por aqui que a pagina comecou a travar.
   ficheiros: [],
-  cancelar: null,
+  // Os trabalhos longos que se podem parar, cada um com o seu: a montagem, a
+  // detecção automática, e o corte de cada canal. Um só `cancelar` para todos
+  // parava o que não era, e nunca ninguém o chamava.
+  montagem: null,
+  varredura: null,
+  aBaixar: new Map(),
   geracao: 0,
   sugestoes: [],
   escolhido: -1,
@@ -1172,6 +1182,16 @@ function pintarFiltroDaGrelha() {
 }
 
 function montarGrade() {
+  // A janela à parte segura um quadrado desta grelha, e a grelha vai ser
+  // deitada fora. Sem a fechar, ficava um leitor destruído e parado no
+  // segundo monitor, e o `tiles()` continuava a contá-lo como vivo ao lado do
+  // quadrado novo com o mesmo canal: o pause e o volume iam para os dois.
+  if (estado.aparte) {
+    const aparte = estado.aparte;
+    estado.aparte = null;
+    // O do PiP de vídeo devolve uma promessa, que rejeita se ele já saiu.
+    try { Promise.resolve(aparte.fechar?.()).catch(() => {}); } catch { /* já fechada */ }
+  }
   $('grade').innerHTML = '';
   $('palcoFoco').innerHTML = '';
   estado.players.forEach((p) => p.destroy?.());
@@ -1608,6 +1628,9 @@ async function alinhar() {
  * decidir uma coisa que não sei.
  */
 async function procurarKills() {
+  // A correr, o mesmo botão pára. Ouvir uma noite inteira leva minutos, e sem
+  // isto a única saída era recarregar a página.
+  if (estado.varredura) { estado.varredura.abort(); return; }
   if (!estado.linhas.length || !estado.janela) return;
   const canal = estado.focos[0] || estado.linhas[0].slug;
   const linha = estado.linhas.find((l) => l.slug === canal);
@@ -1637,8 +1660,8 @@ async function procurarKills() {
   if (!confirm(t('auto.custo', { min: Math.round((ateMs - deMs) / 60000), mb, canal }))) return;
 
   const controlo = new AbortController();
-  estado.cancelar = () => controlo.abort();
-  botao.disabled = true;
+  estado.varredura = controlo;
+  trocarRotulo(botao, 'montagem.parar');
 
   try {
     const r = await varrerNoite({
@@ -1721,10 +1744,10 @@ async function procurarKills() {
         : t('auto.erro', { canal });
   } finally {
     // No `finally`, e não no fim do caminho feliz: a busca que não acha nada
-    // sai mais cedo, e o botão ficava cinzento até recarregar a página, com a
-    // mensagem a mandar escolher outro trecho.
-    botao.disabled = false;
-    estado.cancelar = null;
+    // sai mais cedo, e o botão ficava com o Parar até recarregar a página, com
+    // a mensagem a mandar escolher outro trecho.
+    estado.varredura = null;
+    trocarRotulo(botao, 'auto.botao');
   }
 }
 
@@ -1984,6 +2007,7 @@ function pintarMomentos() {
     const i = lista.indexOf(m);
     const clipes = planoDaMontagem([m], canais, { filmava });
     const n = clipes.length;
+    const ajustados = ajustesQueContam(m);
     // Quanto dura o clipe dele. Os tiroteios vao de quatro segundos a noventa,
     // e sem este numero ele so descobre o tamanho depois de exportar.
     const seg = clipes.find((c) => c.papel === 'protagonista') || clipes[0];
@@ -2013,7 +2037,7 @@ function pintarMomentos() {
       + `<button class="ver ${estado.previa?.ms === m.ms ? 'aVer' : ''}">`
       + `${t(estado.previa?.ms === m.ms ? 'montagem.parar' : 'montagem.ver')}</button>`
       + `<button class="cliparUma">${t('montagem.clipar')}</button>`
-      + `<button class="baixarUma" ${n ? '' : 'disabled'}>${t('montagem.baixarUma')}</button>`
+      + `<button class="baixarUma" ${n && !estado.montagem ? '' : 'disabled'}>${t('montagem.baixarUma')}</button>`
       + (estado.estouros.length ? `<button class="foiKill">${t('auto.foiKill')}</button>` : '')
       + `<button class="fora">${t('montagem.apagar')}</button>`
       + (sozinho ? '' : `<button class="verMortes">${t('montagem.verMortes')}</button>`)
@@ -2021,7 +2045,8 @@ function pintarMomentos() {
       + `${tn(n, 'montagem.umClipe', 'montagem.clipes')}</span>`
       // A kill que já tem ajustes guardados diz-o — é assim que ele sabe por
       // onde vai, numa lista de trinta.
-      + (m.ajuste ? `<span class="ajustado">${t(m.ajuste.formato
+      // Só os ajustes de ângulos que ainda entram na kill (ver `ajustesQueContam`).
+      + (ajustados.length ? `<span class="ajustado">${t(ajustados.some((a) => a.formato)
         ? 'montagem.ajustadoRetrato' : 'montagem.ajustado')}</span>` : '')
       // "Vítimas" só quando há alguma. Antes a etiqueta estava lá sempre, em
       // cima de uma fila de nomes que ninguém tinha medido — e dizer "Vítimas"
@@ -2085,7 +2110,10 @@ function pintarMomentos() {
   pintarSelecao();
   pintarPassos();
   const total = planoDaMontagem(lista, canais, { filmava }).length;
-  $('baixarMontagem').disabled = !total;
+  // A correr, o botão é o Parar dela e fica sempre aceso; parado, só acende
+  // quando há o que exportar.
+  trocarRotulo($('baixarMontagem'), estado.montagem ? 'montagem.parar' : 'montagem.baixar');
+  $('baixarMontagem').disabled = estado.montagem ? false : !total;
   const semVitima = sozinho ? 0 : lista.filter((m) => !temMorte(m)).length;
   const escondidos = lista.length - visiveis.length;
   $('estadoMontagem').textContent = total
@@ -2148,6 +2176,14 @@ function anularApagar() {
  *   elas juntam-se em baixo.
  */
 async function baixarMontagem(soEsta = null) {
+  // Uma exportação de cada vez.
+  //
+  // Qualquer redesenho da lista (marcar quem morreu, filtrar, Rever) voltava a
+  // acender o botão a meio, e um segundo clique corria o `limparFila` por
+  // cima da primeira: os links dos clipes já prontos deixavam de abrir, e as
+  // duas corridas disputavam a linha de estado e o ZIP. Agora, enquanto uma
+  // corre, o botão é o Parar dela e os botões de cada kill ficam apagados.
+  if (estado.montagem) return;
   const canais = estado.linhas.map((l) => l.slug);
   const todas = ordenar(estado.momentos);
   // A numeração é sempre a da montagem inteira, mesmo a pedir uma só: é este
@@ -2155,85 +2191,238 @@ async function baixarMontagem(soEsta = null) {
   const plano = planoDaMontagem(todas, canais, { filmava })
     .filter((c) => !soEsta || soEsta.some((m) => m.ms === c.ms));
   const controlo = new AbortController();
-  estado.cancelar = () => controlo.abort();
-  $('baixarMontagem').disabled = true;
+  estado.montagem = controlo;
   if (!soEsta) limparFila();
+  pintarMomentos();
+  $('estadoMontagem').classList.remove('mau');
 
   const cache = new Map();
+  // Os pedaços já baixados, para o mesmo canal não os pedir duas vezes quando
+  // duas kills dele se tocam. Só ficam enquanto um clipe que falta os puder
+  // usar (ver `largarOQueNaoServe`): guardar tudo até ao fim eram gigas numa
+  // noite de quarenta kills, e o separador morria antes de entregar o ZIP.
   const jaTemos = new Map();
+  const sitios = new Map();
+  const noRelogioDaPlaylist = (c) => {
+    const n = estado.nudges[c.canal] || 0;
+    return { canal: c.canal, deMs: c.deMs + n, ateMs: c.ateMs + n };
+  };
   // A soma de controlo calcula-se agora, com os bytes ja na mao. Guardar os
   // clipes para os reler no fim era pedir meio giga de memoria uma segunda vez.
   const paraZip = [];
-  let feitos = 0;
+  // Os que SAIRAM, e nao os que se tentaram. "36/36 exportados" com a rede
+  // em baixo e todos a falhar mandava-o para casa a pensar que tinha tudo.
+  let prontos = 0;
+  let falhas = 0;
+  const mau = (item, clipe, texto) => {
+    item.innerHTML = `<b>${clipe.prefixo} ${escapar(clipe.canal)}</b> <span class="nota mau">${escapar(texto)}</span>`;
+  };
 
-  for (const clipe of plano) {
+  for (const [i, clipe] of plano.entries()) {
     if (controlo.signal.aborted) break;
     const linha = estado.linhas.find((l) => l.slug === clipe.canal);
     const nudge = estado.nudges[clipe.canal] || 0;
-    $('estadoMontagem').textContent = `${++feitos}/${plano.length} — ${clipe.prefixo} ${clipe.canal}`;
+    $('estadoMontagem').textContent = `${i + 1}/${plano.length}: ${clipe.prefixo} ${clipe.canal}`;
 
     const item = document.createElement('li');
     $('fila').append(item);
     try {
       const p = await planearCorte({
-        linha, deMs: clipe.deMs + nudge, ateMs: clipe.ateMs + nudge, cache,
+        linha, deMs: clipe.deMs + nudge, ateMs: clipe.ateMs + nudge, cache, sinal: controlo.signal,
+        saltar: clipe.saltar,
       });
       if (p.estado !== 'ok') {
-        item.innerHTML = `<b>${clipe.prefixo} ${escapar(clipe.canal)}</b> <span class="nota">${escapar(p.estado)}</span>`;
+        mau(item, clipe, porqueNaoSaiu(p));
+        falhas++;
         continue;
       }
       const r = await executarCorte(p, { sinal: controlo.signal, jaTemos });
+      for (const s of p.segmentos) {
+        sitios.set(s.url, { canal: clipe.canal, inicio: s.inicio, fim: s.inicio + s.duracaoS * 1000 });
+      }
+      largarOQueNaoServe(jaTemos, sitios, plano.slice(i + 1).map(noRelogioDaPlaylist));
+      if (controlo.signal.aborted) { item.remove(); break; }
       if (r.estado !== 'pronto') {
         item.innerHTML = `<b>${clipe.prefixo} ${escapar(clipe.canal)}</b> `
           + `<span class="nota mau">${t('corte.incompleto', { obtidos: r.obtidos ?? 0, total: r.total ?? 0 })}</span>`;
+        falhas++;
         continue;
       }
       const nome = `${clipe.prefixo}_${nomeDoFicheiro({ canal: clipe.canal, quandoMs: clipe.deMs })}`;
       const blob = new Blob([r.bytes], { type: r.tipo });
       paraZip.push({ nome, blob, crc: crc32(r.bytes), tamanho: r.bytes.length });
+      prontos++;
+      // A live caiu e voltou a meio deste clipe: o resto está noutro VOD do
+      // mesmo canal, e entra na fila logo a seguir, como um ficheiro com o
+      // mesmo número e a hora de onde continua (ver `oQueFalta`). Sem isto o
+      // clipe saía cortado na queda, e a kill podia estar do lado de lá.
+      const resto = oQueFalta(linha, p, clipe.ateMs + nudge, clipe.saltar);
+      if (resto) {
+        plano.splice(i + 1, 0, {
+          ...clipe, deMs: resto.deMs - nudge, saltar: resto.saltar, parte: (clipe.parte || 1) + 1, retrato: null,
+        });
+      }
+      const sobra = notaDaSobra(p, { continua: Boolean(resto), parte: clipe.parte });
       linhaDeFicheiro(item, {
         nome,
         url: guardarFicheiro(blob),
         nota: `${(r.bytes.length / 1048576).toFixed(1)} MB · `
-          + `${clipe.papel === 'protagonista' ? t('fila.tuaPov') : t('fila.quemMorreu')}`,
+          + `${clipe.papel === 'protagonista' ? t('fila.tuaPov') : t('fila.quemMorreu')}`
+          // Só quando falta pedaço ou o clipe se parte em dois: na montagem a
+          // folga de cada lado é a de sempre, mas um clipe cortado por uma
+          // reconexão tem de se ver aqui e não na linha do tempo do editor.
+          + (sobra.falta || sobra.partido ? ` · ${sobra.texto}` : ''),
         momentoMs: clipe.ms,
       });
+      if (sobra.falta) item.querySelector('.nota')?.classList.add('mau');
       // E o 9:16, quando ele guardou o enquadramento nesta kill. "Faça tudo
       // funcionar perfeitamente, o 9x16 no modo automático" — o vertical sai
       // na mesma volta que o resto, e não um a um à mão.
       if (clipe.retrato) {
         const item2 = document.createElement('li');
         $('fila').append(item2);
-        $('estadoMontagem').textContent = `${feitos}/${plano.length} — ${clipe.prefixo} ${clipe.canal} · 9:16`;
+        const rotulo = `${i + 1}/${plano.length}: ${clipe.prefixo} ${clipe.canal} · 9:16`;
+        $('estadoMontagem').textContent = rotulo;
         try {
-          const { blob: b2, tipo: t2 } = await renderizarRetrato(linha, clipe, { sinal: controlo.signal });
+          const { blob: b2, tipo: t2, gravadoS } = await renderizarRetrato(linha, clipe, {
+            sinal: controlo.signal,
+            aoProgresso: ({ emPausa }) => {
+              $('estadoMontagem').textContent = emPausa ? t('retrato.emPausa') : rotulo;
+            },
+          });
           const nome2 = `${nome.replace(/\.[a-z0-9]+$/i, '')}-retrato.${extensaoDe(t2)}`;
           const bytes2 = new Uint8Array(await b2.arrayBuffer());
           paraZip.push({ nome: nome2, blob: b2, crc: crc32(bytes2), tamanho: bytes2.length });
+          const curto = notaDoRetratoCurto(gravadoS, (clipe.ateMs - clipe.deMs) / 1000);
           linhaDeFicheiro(item2, {
             nome: nome2,
             url: guardarFicheiro(b2),
-            nota: `${(b2.size / 1048576).toFixed(1)} MB · ${t('fila.retratoDe')} ${clipe.prefixo}`,
+            nota: `${(b2.size / 1048576).toFixed(1)} MB · ${t('fila.retratoDe')} ${clipe.prefixo}`
+              + (curto ? ` · ${curto}` : ''),
             momentoMs: clipe.ms,
           });
+          if (curto) item2.querySelector('.nota')?.classList.add('mau');
         } catch (e) {
-          if (e.name === 'AbortError') break;
+          if (e.name === 'AbortError') { item2.remove(); break; }
+          falhas++;
           item2.innerHTML = `<b>${clipe.prefixo} ${escapar(clipe.canal)} · 9:16</b> `
-            + `<span class="nota mau">${t('fila.retratoFalhou', { erro: escapar(e.message) })}</span>`;
+            + `<span class="nota mau">${t('fila.retratoFalhou', { erro: escapar(motivoDoRetrato(e)) })}</span>`;
         }
       }
     } catch (e) {
-      if (e.name === 'AbortError') break;
-      item.innerHTML = `<b>${clipe.prefixo} ${escapar(clipe.canal)}</b> <span class="nota mau">${escapar(e.message)}</span>`;
+      if (e.name === 'AbortError' || controlo.signal.aborted) { item.remove(); break; }
+      falhas++;
+      mau(item, clipe, porqueNaoSaiu({ estado: 'erro', erro: e.message }));
     }
   }
 
-  $('estadoMontagem').textContent = t('montagem.pronto', { feitos, total: plano.length });
+  const parada = controlo.signal.aborted;
+  jaTemos.clear();
+  estado.montagem = null;
+  // Redesenhar devolve o botão e os de cada kill ao normal; a frase do fim vem
+  // depois, para não ser tapada pelo resumo da lista.
+  pintarMomentos();
+  $('estadoMontagem').classList.toggle('mau', Boolean(falhas) && !parada);
+  $('estadoMontagem').textContent = parada
+    ? t('montagem.parada', { feitos: prontos, total: plano.length })
+    : t('montagem.pronto', { feitos: prontos, total: plano.length })
+      + (falhas ? t('montagem.falharam', { n: falhas }) : '');
   // O ZIP é da montagem inteira. A pedir uma kill só, juntar num ZIP era pôr
   // ali um botão que só levava a última coisa que ele carregou.
   if (!soEsta) oferecerZip(paraZip);
-  $('baixarMontagem').disabled = false;
-  estado.cancelar = null;
+}
+
+/**
+ * O porquê de um corte não ter saído, numa frase que diz o que fazer a seguir.
+ *
+ * Saíam os códigos internos ("janela-invalida", "master-falhou") e, no editor,
+ * um "tente de novo, ou encurte o clipe" que não ajudava em nenhum deles.
+ */
+function porqueNaoSaiu(r) {
+  switch (r?.estado) {
+    case 'buraco': return t('corte.porqueBuraco');
+    case 'fora-da-noite': return t('corte.porqueForaDaNoite');
+    case 'sem-segmentos': return t('corte.porqueSemSegmentos');
+    case 'janela-invalida': return t('corte.porqueJanela');
+    case 'master-falhou': return t('corte.porqueMaster', { http: r.http ?? '?' });
+    case 'sem-renditions': return t('corte.porqueSemQualidade');
+    case 'playlist-falhou': return t('corte.porquePlaylist', { http: r.http ?? '?' });
+    default: return t('corte.porqueRede', { erro: r?.erro || r?.estado || '?' });
+  }
+}
+
+/**
+ * O que o ficheiro tem a mais ou a menos do que se pediu, dito por extenso.
+ *
+ * Sem recodificar, um corte começa e acaba onde começam e acabam os pedaços
+ * de 10 s: até quase 10 s a mais de cada lado. E quando o vídeo do canal
+ * acaba a meio do pedido (a live caiu e voltou noutro VOD) o ficheiro sai
+ * mais curto. As duas coisas tinham de ser ditas, e só uma era, e só num sítio.
+ */
+function notaDaSobra(plano, { continua = false, parte = 1 } = {}) {
+  const partes = [];
+  // Numa parte que continua outra, o buraco do início é o da própria queda,
+  // e não um "o canal ainda não estava no ar".
+  const seguinte = parte > 1;
+  const faltaInicio = plano.sobraInicioS < -0.05 && !seguinte;
+  const corteNoFim = plano.sobraFimS < -0.05;
+  if (seguinte) partes.push(t('corte.continuacao'));
+  else {
+    partes.push(faltaInicio
+      ? t('corte.faltaInicio', { s: (-plano.sobraInicioS).toFixed(1) })
+      : t('corte.comeca', { s: Math.max(0, plano.sobraInicioS).toFixed(1) }));
+  }
+  if (corteNoFim) {
+    partes.push(continua ? t('corte.continua') : t('corte.faltaFim', { s: (-plano.sobraFimS).toFixed(1) }));
+  } else if (plano.sobraFimS > 0.05) partes.push(t('corte.acaba', { s: plano.sobraFimS.toFixed(1) }));
+  return {
+    texto: partes.join(' · '),
+    falta: faltaInicio || (corteNoFim && !continua),
+    partido: seguinte || (corteNoFim && continua),
+  };
+}
+
+/**
+ * O porquê de um 9:16 não ter saído, curto, para caber entre parênteses.
+ *
+ * Saía o `e.message`, que é uma frase interna em português ("sem gravador",
+ * "o vídeo não andou") e aparecia assim mesmo no meio do inglês e do espanhol.
+ * Um erro sem nome conhecido é do browser (o `MediaRecorder` a falhar) e
+ * já vem na língua dele.
+ */
+function motivoDoRetrato(e) {
+  const chave = {
+    'SEM-GRAVADOR': 'retrato.motivoSemGravador',
+    'GRAVACAO-PARADA': 'retrato.motivoParou',
+    'GRAVACAO-VAZIA': 'retrato.motivoVazio',
+    'SEM-IMAGEM': 'retrato.motivoSemImagem',
+  }[e?.name];
+  return chave ? t(chave) : (e?.message || String(e));
+}
+
+/**
+ * O aviso de um 9:16 que saiu mais curto do que o clipe, ou nada.
+ *
+ * O vídeo do canal pode acabar a meio do clipe (a live caiu e voltou noutro
+ * VOD). O gravador entrega o que gravou até ali, e isso tem de ser dito na
+ * linha do ficheiro: um vertical de 4 s com cara de pronto era a mesma
+ * mentira do 16:9 cortado pela reconexão.
+ */
+function notaDoRetratoCurto(gravadoS, totalS) {
+  if (!(gravadoS >= 0) || gravadoS >= totalS - 0.5) return '';
+  return t('retrato.curto', { feito: gravadoS.toFixed(1), total: totalS.toFixed(1) });
+}
+
+/**
+ * Um botão que passa a ser o Parar do trabalho que lançou, e volta.
+ *
+ * Pelo `data-t` e não só pelo texto: trocar de língua a meio repõe o rótulo
+ * pela chave, e o Parar continuava a dizer Exportar.
+ */
+function trocarRotulo(botao, chave) {
+  const alvo = botao.querySelector('span[data-t]') || botao;
+  alvo.dataset.t = chave;
+  alvo.textContent = t(chave);
 }
 
 /**
@@ -2248,13 +2437,18 @@ async function baixarMontagem(soEsta = null) {
  * Os enquadramentos foram guardados em pixels do degrau de cima; é esse o
  * degrau que se usa aqui, e é por isso que os números batem.
  */
-async function renderizarRetrato(linha, clipe, { sinal } = {}) {
+async function renderizarRetrato(linha, clipe, { sinal, aoProgresso } = {}) {
   const nudge = estado.nudges[clipe.canal] || 0;
   const r = onde(linha, clipe.deMs, { nudgeMs: nudge });
-  if (r.estado !== 'toca') throw new Error(r.estado);
+  if (r.estado !== 'toca') throw new Error(porqueNaoSaiu({ estado: r.estado === 'buraco' ? 'buraco' : 'fora-da-noite' }));
   const peca = linha.pecasCompletas?.find((p) => p.vod.id === r.peca.vod.id) || r.peca;
   const alvo = peca.escada[0] || peca.barato;
   const v = document.createElement('video');
+  // Sem MSE (um iPhone sem ManagedMediaSource) o vídeo vem directo da CDN,
+  // que é outro domínio: sem `crossOrigin` a tela fica "suja" e o gravador
+  // não tira dela frame nenhum. A CDN responde com
+  // `access-control-allow-origin: *`, por isso 'anonymous' basta.
+  v.crossOrigin = 'anonymous';
   v.muted = true;
   v.playsInline = true;
   v.preload = 'auto';
@@ -2271,9 +2465,12 @@ async function renderizarRetrato(linha, clipe, { sinal } = {}) {
       v.currentTime = r.tempoS;
     }
     await new Promise((ok, mal) => {
-      const fim = setTimeout(() => mal(new Error('sem imagem em 20 s')), 20000);
+      // Com nome, e não só com a frase: a frase é portuguesa e interna, e a
+      // linha da montagem traduz pelo nome (ver `motivoDoRetrato`).
+      const semImagem = (porque) => Object.assign(new Error(porque), { name: 'SEM-IMAGEM' });
+      const fim = setTimeout(() => mal(semImagem('sem imagem em 20 s')), 20000);
       v.addEventListener('loadeddata', () => { clearTimeout(fim); ok(); }, { once: true });
-      v.addEventListener('error', () => { clearTimeout(fim); mal(new Error('o vídeo não carregou')); }, { once: true });
+      v.addEventListener('error', () => { clearTimeout(fim); mal(semImagem('o vídeo não carregou')); }, { once: true });
       sinal?.addEventListener('abort', () => { clearTimeout(fim); mal(new DOMException('cancelado', 'AbortError')); }, { once: true });
     });
     if (Math.abs(v.currentTime - r.tempoS) > 0.5) v.currentTime = r.tempoS;
@@ -2290,6 +2487,7 @@ async function renderizarRetrato(linha, clipe, { sinal } = {}) {
       duracaoS: (clipe.ateMs - clipe.deMs) / 1000,
       formato,
       sinal,
+      aoProgresso,
     });
   } finally {
     hls?.destroy();
@@ -2338,7 +2536,7 @@ function aprenderCom(ms) {
   // ele foi espreitar outro ângulo e a lista inteira passava a cortar a POV
   // errada.
   const canal = perto.canal || estado.focos[0] || estado.linhas[0]?.slug;
-  const fica = (m) => !m.auto || temMorte(m) || m.ajuste;
+  const fica = (m) => !m.auto || temMorte(m) || m.ajuste || m.ajustes;
   const fora = estado.momentos.filter((m) => !fica(m));
   estado.momentos = estado.momentos.filter(fica);
   if (fora.length) {
@@ -2391,7 +2589,8 @@ function oferecerZip(ficheiros) {
 
 // ── marcar e cortar ─────────────────────────────────────────────────────────
 
-const mmssCurto = (s) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
+/** O máximo de cada margem da lista de corte, o mesmo `max` dos campos. */
+const MARGEM_MAX_S = 120;
 
 function pintarMarca() {
   const { de, ate } = estado.marca;
@@ -2441,7 +2640,7 @@ function pintarCorte() {
       + `<label>${t('corte.antes')} <input class="antes" type="number" value="${m.antesS || 0}" min="0" max="120" step="1">s</label>`
       + `<label>${t('corte.depois')} <input class="depois" type="number" value="${m.depoisS || 0}" min="0" max="120" step="1">s</label>`
       + '<span class="dur"></span>'
-      + `<button class="baixarUm">${t('corte.baixar')}</button>`
+      + `<button class="baixarUm">${t(estado.aBaixar.has(l.slug) ? 'montagem.parar' : 'corte.baixar')}</button>`
       + `<span class="estadoCorte nota"></span>`
       + `</li>`;
   }).join('')
@@ -2450,11 +2649,32 @@ function pintarCorte() {
   for (const li of $('listaCorte').querySelectorAll('li[data-slug]')) {
     const slug = li.dataset.slug;
     const ler = () => {
-      const antesS = Math.max(0, Number(li.querySelector('.antes').value) || 0);
-      const depoisS = Math.max(0, Number(li.querySelector('.depois').value) || 0);
+      // O `max="120"` do campo só vale para as setas: escrito à mão, passava
+      // tudo. Preso aqui, que é onde o número é lido.
+      const margem = (campo) => Math.min(MARGEM_MAX_S, Math.max(0, Number(li.querySelector(campo).value) || 0));
+      const antesS = margem('.antes');
+      const depoisS = margem('.depois');
       estado.margens[slug] = { antesS, depoisS };
       guardar();
-      li.querySelector('.dur').textContent = mmssCurto((ate - de) / 1000 + antesS + depoisS);
+      const durS = (ate - de) / 1000 + antesS + depoisS;
+      const dur = li.querySelector('.dur');
+      dur.textContent = duracaoCurta(durS);
+      // O mesmo tecto do editor. Sem ele, uma marca de três horas (o I às
+      // 20:00 esquecido e o O às 23:00) eram mil pedaços de 11 MB pedidos
+      // para a memória do separador, e o separador morria.
+      const longo = durS > MAXIMO_S;
+      dur.classList.toggle('mau', longo);
+      const nota = li.querySelector('.estadoCorte');
+      if (longo) {
+        nota.textContent = t('corte.longoDemais', { dur: duracaoCurta(durS), max: MAXIMO_S });
+        nota.classList.add('mau');
+        nota.dataset.longo = '1';
+      } else if (nota.dataset.longo) {
+        nota.textContent = '';
+        nota.classList.remove('mau');
+        delete nota.dataset.longo;
+      }
+      if (!estado.aBaixar.has(slug)) li.querySelector('.baixarUm').disabled = longo;
     };
     li.querySelector('.antes').oninput = ler;
     li.querySelector('.depois').oninput = ler;
@@ -2465,54 +2685,75 @@ function pintarCorte() {
 
 async function baixarUm(slug) {
   const linha = estado.linhas.find((l) => l.slug === slug);
-  const li = $('listaCorte').querySelector(`li[data-slug="${CSS.escape(slug)}"]`);
+  // A linha procura-se de cada vez, e não se guarda: marcar outra vez o I ou
+  // o O redesenha a lista a meio de um corte, e o progresso ia para uma linha
+  // que já não está no ecrã.
+  const aqui = () => $('listaCorte').querySelector(`li[data-slug="${CSS.escape(slug)}"]`);
+  const li = aqui();
   if (!linha || !li) return;
-  const botao = li.querySelector('.baixarUm');
-  const nota = li.querySelector('.estadoCorte');
+  // O mesmo botão pára o corte que lançou.
+  const emCurso = estado.aBaixar.get(slug);
+  if (emCurso) { emCurso.abort(); return; }
+
+  const { de, ate } = estado.marca;
+  const m = estado.margens[slug] || {};
+  if ((ate - de) / 1000 + (m.antesS || 0) + (m.depoisS || 0) > MAXIMO_S) return;
+
+  const nota = () => aqui()?.querySelector('.estadoCorte') || document.createElement('span');
+  const botao = () => aqui()?.querySelector('.baixarUm') || document.createElement('button');
   const controlo = new AbortController();
-  estado.cancelar = () => controlo.abort();
-  botao.disabled = true;
-  nota.classList.remove('mau');
+  estado.aBaixar.set(slug, controlo);
+  trocarRotulo(botao(), 'montagem.parar');
+  nota().classList.remove('mau');
 
-  const [r] = await cortarTodosOsAngulos({
-    linhas: [linha],
-    deMs: estado.marca.de,
-    ateMs: estado.marca.ate,
-    sinal: controlo.signal,
-    nudges: estado.nudges,
-    margens: estado.margens,
-    aoProgresso: (p) => {
-      nota.textContent = p.fase === 'planear' ? t('montagem.aPreparar')
-        : t('montagem.pedacos', { prontos: p.prontos, total: p.total });
-    },
-  });
+  let r;
+  // Tudo o que pode rebentar fica dentro do `try`. Sem ele, uma falha de rede
+  // a pedir a lista de qualidades deixava o botão apagado e o aviso de "preparando"
+  // no ecrã até alguém redesenhar a lista.
+  try {
+    [r] = await cortarTodosOsAngulos({
+      linhas: [linha],
+      deMs: de,
+      ateMs: ate,
+      sinal: controlo.signal,
+      nudges: estado.nudges,
+      margens: estado.margens,
+      aoProgresso: (p) => {
+        nota().textContent = p.fase === 'planear' ? t('montagem.aPreparar')
+          : t('montagem.pedacos', { prontos: p.prontos, total: p.total });
+      },
+    });
+  } catch (e) {
+    r = { estado: 'erro', erro: e?.message || String(e) };
+  } finally {
+    estado.aBaixar.delete(slug);
+    trocarRotulo(botao(), 'corte.baixar');
+    nota().textContent = '';
+  }
 
-  botao.disabled = false;
-  estado.cancelar = null;
-  nota.textContent = '';
+  if (controlo.signal.aborted) {
+    nota().textContent = t('corte.parado');
+    return;
+  }
   const item = document.createElement('li');
   $('fila').prepend(item);
 
-  if (r.estado === 'pronto') {
+  if (r?.estado === 'pronto') {
     // A sobra não é um pedido de desculpas — é o número por onde aparar no editor.
+    const sobra = notaDaSobra(r.plano);
     linhaDeFicheiro(item, {
       nome: r.nome,
       url: guardarFicheiro(new Blob([r.bytes], { type: r.tipo })),
       nota: `${(r.bytes.length / 1048576).toFixed(1)} MB · `
-        + `${r.plano.qualidade.altura}p${r.plano.qualidade.fps} · `
-        + t('corte.comeca', { s: r.plano.sobraInicioS.toFixed(1) }),
+        + `${r.plano.qualidade.altura}p${r.plano.qualidade.fps} · ${sobra.texto}`,
     });
-  } else if (r.estado === 'incompleto') {
-    nota.classList.add('mau');
+    if (sobra.falta) item.querySelector('.nota')?.classList.add('mau');
+  } else if (r?.estado === 'incompleto') {
+    nota().classList.add('mau');
     item.innerHTML = `<b>${escapar(slug)}</b> <span class="nota mau">`
       + `${t('corte.incompleto', { obtidos: r.obtidos, total: r.total })}</span>`;
   } else {
-    const porque = {
-      buraco: t('corte.buraco'),
-      'fora-da-noite': t('corte.foraDaNoite'),
-      'sem-segmentos': t('corte.semSegmentos'),
-    };
-    item.innerHTML = `<b>${escapar(slug)}</b> <span class="nota">${porque[r.estado] || escapar(r.estado)}</span>`;
+    item.innerHTML = `<b>${escapar(slug)}</b> <span class="nota mau">${escapar(porqueNaoSaiu(r))}</span>`;
   }
 }
 
@@ -2539,22 +2780,35 @@ const CONTEXTO_S = 150;   // o que a barra mostra de cada lado do instante
  */
 function abrirClipe(momento = null) {
   if (!estado.linhas.length) return;
-  const canal = momento?.protagonista || estado.focos[0] || estado.linhas[0].slug;
+  // Um editor que fecha a meio de uma gravação ou de uma exportação pára-a
+  // (ver `fecharClipe`); abrir outro por cima faz o mesmo.
+  if (estado.clipe) fecharClipe();
+  // No ângulo do último ajuste guardado: os enquadramentos guardados estão em
+  // pixels DESSE vídeo, e abri-los noutro punha as caixas no sítio errado.
+  const ultimo = momento?.ajuste?.canal;
+  const canal = (ultimo && estado.linhas.some((l) => l.slug === ultimo) ? ultimo : null)
+    || momento?.protagonista || estado.focos[0] || estado.linhas[0].slug;
   const linha = estado.linhas.find((l) => l.slug === canal) || estado.linhas[0];
+  // Cada ângulo tem o seu ajuste (ver `comAjuste`): o deste, e só o deste.
+  const aj = momento ? ajusteDe(momento, linha.slug) : null;
   // Não deixar escolher um pedaço que este ângulo não filmou: os limites são
   // os do vídeo dele, e não os da noite.
   const limites = { inicio: linha.inicio, fim: linha.fim };
   const centro = Math.min(Math.max(momento?.ms ?? estado.agoraMs, limites.inicio), limites.fim);
-  // O ajuste que ele guardou manda; sem ajuste, o combate medido; sem
-  // nenhum dos dois, quinze segundos para cada lado.
-  const aj = momento?.ajuste;
+  // O ajuste que ele guardou manda; sem ajuste, o MESMO pedaço que a
+  // montagem exporta (o combate e as margens por fora); sem kill nenhuma,
+  // quinze segundos para cada lado.
+  //
+  // Abria com o combate cru, ou com ±15 s numa kill marcada à mão, enquanto a
+  // montagem e o Rever usavam as margens. Quem abria só para enquadrar o
+  // 9:16 e carregava em Salvar ajustes mudava o clipe sem saber: a kill
+  // automática perdia os 5 s de entrada, e a manual passava de 7 s para 30.
+  const daKill = momento ? clipesDoMomento(momento, [linha.slug], 0) : [];
+  const daMontagem = daKill.find((c) => c.canal === linha.slug) || daKill[0] || null;
   const janela = aj
-    ? mover({ deMs: aj.deMs, ateMs: aj.ateMs }, 'ate', aj.ateMs, { limites })
-    : momento?.combateDeMs && momento?.combateAteMs
-      ? mover(
-        { deMs: momento.combateDeMs, ateMs: momento.combateAteMs },
-        'ate', momento.combateAteMs, { limites },
-      )
+    ? dentroDosLimites({ deMs: aj.deMs, ateMs: aj.ateMs }, limites)
+    : daMontagem
+      ? dentroDosLimites({ deMs: daMontagem.deMs, ateMs: daMontagem.ateMs }, limites)
       : null;
 
   estado.clipe = {
@@ -2575,6 +2829,15 @@ function abrirClipe(momento = null) {
     rects: (aj?.rects || []).map((r) => ({ ...r })),
     // Quanto do 9:16 fica para o quadro de cima. Só conta no modo de dois.
     divisao: Number.isFinite(aj?.divisao) ? aj.divisao : DIVISAO_OMISSAO,
+    // Se ele mexeu no 9:16. O editor do retrato abre sempre, com um
+    // enquadramento de partida, e era isso que o "Salvar ajustes" lia: toda a
+    // kill ajustada saía também em 9:16, que a montagem grava em tempo real
+    // (quinze minutos a mais numa noite de trinta kills). Só conta se ele o
+    // escolheu: arrastou, redimensionou, trocou de modo ou mexeu no divisor.
+    retratoMexido: Boolean(aj?.formato),
+    // O tamanho da fonte em que os enquadramentos estão medidos, para os
+    // levar com ele quando a fonte muda de tamanho (outro ângulo).
+    rectsFonte: null,
     // De que kill da lista isto veio, se veio de alguma. É o que liga o
     // "Guardar ajustes" à kill certa.
     momentoMs: momento?.ms ?? null,
@@ -2590,6 +2853,7 @@ function abrirClipe(momento = null) {
     .join('');
   $('tituloClipe').value = '';
   $('estadoClipe').textContent = '';
+  trancarEditor(false);
   $('guardarClipe').disabled = false;
   $('modalClipe').hidden = false;
   // Fechado até o editor do retrato existir. Estava aberto desde o princípio,
@@ -2657,7 +2921,9 @@ function prepararRetrato() {
     // pode atirar fora os enquadramentos que ele já arrastou.
     if (!c.rects.length) {
       c.rects = enquadramentoInicial(fonte.largura, fonte.altura, c.modo, c.divisao);
+      c.rectsFonte = { ...fonte };
     }
+    acertarRecortes();
     $('ladoRetrato').hidden = false;
     $('recortes').hidden = false;
     pintarRecortes();
@@ -2680,9 +2946,13 @@ function prepararRetrato() {
   v.addEventListener('loadeddata', estado.ouvinteFrames);
   // Substituir e não acumular: o modal abre muitas vezes por sessão, e cada
   // abertura deixava mais um ouvinte pendurado no mesmo `<video>`.
+  //
+  // O que se tira tem de ser o MESMO que se pôs. Guardava-se o `ligar` e
+  // pendurava-se uma seta nova, e por isso nada saía: cada abertura deixava
+  // mais um ouvinte, e cada um arrancava mais um ciclo de pintura do 9:16.
   v.removeEventListener('loadedmetadata', estado.ouvinteRetrato || (() => {}));
-  estado.ouvinteRetrato = ligar;
-  v.addEventListener('loadedmetadata', () => { ligar(); acenderExportar(); });
+  estado.ouvinteRetrato = () => { ligar(); acenderExportar(); };
+  v.addEventListener('loadedmetadata', estado.ouvinteRetrato);
   ligar();
   acenderExportar();
 
@@ -2727,7 +2997,8 @@ function pintarRecortes(linhas = []) {
   };
   pintarFaixasRetrato();
   alvo.innerHTML = linhas.map((n) => `<div class="guia" style="${GUIAS[n] || ''}"></div>`).join('')
-    + c.rects.map((r, i) => `<div class="recorte" data-i="${i}" style="`
+    + c.rects.map((r, i) => `<div class="recorte" data-i="${i}" tabindex="0" role="button"`
+    + ` aria-label="${t('retrato.recorteTeclado', { n: i + 1 })}" style="`
     + `left:${(r.x / fonte.largura) * 100}%;top:${(r.y / fonte.altura) * 100}%;`
     + `width:${(r.largura / fonte.largura) * 100}%;height:${(r.altura / fonte.altura) * 100}%">`
     + (c.rects.length > 1 ? `<b class="ordem">${i === 0 ? '1' : '2'}</b>` : '')
@@ -2759,6 +3030,8 @@ function ligarArrasto(caixa) {
   const comecar = (e, redimensionar) => {
     e.preventDefault();
     e.stopPropagation();
+    // A gravar, o recorte é o que o gravador está a ler, no mesmo objecto.
+    if (estado.clipe?.aGravar) return;
     const canto = e.target.dataset?.canto || 'se';
     const p0 = emPixels(e);
     const r0 = { ...estado.clipe.rects[i] };
@@ -2766,6 +3039,8 @@ function ligarArrasto(caixa) {
     if (!fonte) return;
     const mover = (m) => {
       const c = estado.clipe;
+      if (!c || c.aGravar) return;
+      c.retratoMexido = true;
       const dx = (m.clientX - p0.x) * p0.escala;
       const dy = (m.clientY - p0.y) * p0.escala;
 
@@ -2820,6 +3095,38 @@ function ligarArrasto(caixa) {
   for (const p of caixa.querySelectorAll('.puxar')) {
     p.addEventListener('pointerdown', (e) => comecar(e, true));
   }
+  // E pelo teclado, como o divisor: as setas movem (com Shift, mais longe), o
+  // + e o - mudam o tamanho à volta do centro. Só com rato ou dedo, quem usa
+  // teclado abria o editor do 9:16 e não conseguia pôr a webcam no sítio.
+  caixa.addEventListener('keydown', (e) => {
+    const c = estado.clipe;
+    const fonte = fonteDoClipe();
+    const r = c?.rects[i];
+    if (!c || !fonte || !r || c.aGravar) return;
+    const passo = fonte.largura * (e.shiftKey ? 0.05 : 0.01);
+    const mexer = {
+      ArrowLeft: [-passo, 0], ArrowRight: [passo, 0], ArrowUp: [0, -passo], ArrowDown: [0, passo],
+    }[e.key];
+    const zoom = { '+': 1.05, '=': 1.05, '-': 1 / 1.05 }[e.key];
+    if (!mexer && !zoom) return;
+    e.preventDefault();
+    let novo;
+    if (mexer) {
+      novo = { ...r, x: r.x + mexer[0], y: r.y + mexer[1] };
+    } else {
+      const largura = r.largura * zoom;
+      if (largura < 40) return;
+      const altura = largura * (r.altura / r.largura);
+      novo = {
+        x: r.x + (r.largura - largura) / 2, y: r.y + (r.altura - altura) / 2, largura, altura,
+      };
+    }
+    c.rects[i] = limitar(novo, fonte);
+    c.retratoMexido = true;
+    pintarRecortes();
+    // O redesenho troca as caixas por novas: o foco tem de voltar a esta.
+    $('recortes').querySelector(`.recorte[data-i="${i}"]`)?.focus();
+  });
 }
 
 /** O 9:16 a sério, pintado enquanto o modal estiver aberto. */
@@ -2886,7 +3193,8 @@ function ligarDivisor() {
   const aplicar = (d) => {
     const c = estado.clipe;
     const v = $('previaClipe');
-    if (!c || !fonteDoClipe()) return;
+    if (!c || !fonteDoClipe() || c.aGravar) return;
+    c.retratoMexido = true;
     c.divisao = limparDivisao(d);
     c.rects = reformar(c.rects, {
       modo: c.modo,
@@ -2920,25 +3228,56 @@ function ligarDivisor() {
 }
 
 function seguirRetrato() {
+  // Um ciclo só. O `ligar` chama isto a cada `loadeddata` e `loadedmetadata`
+  // (e outra vez a cada troca de ângulo), e cada chamada arrancava mais um:
+  // medido, quatro ciclos depois da primeira abertura e onze depois da oitava,
+  // cada um a pintar 1080x1920 a cada frame.
+  if (estado.ciclo9x16) return;
   const tela = $('telaRetrato');
   const ctx = tela.getContext('2d');
   const passo = () => {
     const c = estado.clipe;
-    if (!c || $('modalClipe').hidden) return;
+    if (!c || $('modalClipe').hidden) { estado.ciclo9x16 = null; return; }
     if (c.rects.length) desenhar(ctx, $('previaClipe'), c.rects, c.modo, c.divisao);
-    requestAnimationFrame(passo);
+    estado.ciclo9x16 = requestAnimationFrame(passo);
   };
-  requestAnimationFrame(passo);
+  estado.ciclo9x16 = requestAnimationFrame(passo);
+}
+
+/**
+ * Levar os enquadramentos para a fonte nova, quando ela muda de tamanho.
+ *
+ * Os recortes estão em pixels da fonte. Trocar de um streamer a 1080p para um
+ * a 720p deixava uma caixa em x=1300 numa imagem de 1280 de largura: desenhada
+ * fora da imagem, e no 9:16 exportado uma faixa preta. Escalam-se com a fonte
+ * e mantêm a forma, que é a da faixa do 9:16 e não a da imagem.
+ */
+function acertarRecortes() {
+  const c = estado.clipe;
+  const f = fonteDoClipe();
+  if (!c || !f) return;
+  const antes = c.rectsFonte;
+  if (antes && c.rects.length && (antes.largura !== f.largura || antes.altura !== f.altura)) {
+    const sx = f.largura / antes.largura;
+    const sy = f.altura / antes.altura;
+    c.rects = c.rects.map((r) => {
+      const largura = r.largura * sx;
+      return limitar({ x: r.x * sx, y: r.y * sy, largura, altura: largura * (r.altura / r.largura) }, f);
+    });
+  }
+  c.rectsFonte = { largura: f.largura, altura: f.altura };
 }
 
 function trocarModo(modo) {
   const c = estado.clipe;
   const v = $('previaClipe');
   const fonte = fonteDoClipe();
-  if (!c || !fonte) return;
+  if (!c || !fonte || c.aGravar) return;
+  c.retratoMexido = true;
   c.modo = modo;
   c.divisao = DIVISAO_OMISSAO;
   c.rects = enquadramentoInicial(fonte.largura, fonte.altura, modo, c.divisao);
+  c.rectsFonte = { ...fonte };
   for (const b of document.querySelectorAll('.modoRetrato')) {
     b.setAttribute('aria-pressed', String(b.dataset.modo === modo));
   }
@@ -2960,17 +3299,33 @@ async function guardarRetrato() {
   const volumeAntes = v.volume;
   const devolverSom = () => { v.muted = mudoAntes; v.volume = volumeAntes; };
   const botao = $('guardarRetrato');
+  // O que acontece depois de um `await` só vale se este editor ainda for o
+  // que está aberto. Fechar e abrir outra kill a meio punha as mensagens (e o
+  // botão aceso) no editor da outra.
+  const aindaEste = () => estado.clipe === c;
   if (!c || !c.rects.length) {
     // Nunca em silêncio. Era assim que estava, e "o botão nem fez nada quando
     // apertava" é exactamente o que se sente do outro lado.
     $('estadoClipe').textContent = t('retrato.semPrevia');
     return;
   }
+  if (c.aGravar) return;
+  // O início do clipe tem de estar no ar. Num buraco a prévia nem salta (ver
+  // `preverClipe`), e o vídeo ficava onde estava: o 9:16 gravava a duração
+  // do clipe a partir do último sítio espreitado, e dizia que estava pronto.
+  const linha = estado.linhas.find((l) => l.slug === c.canal);
+  if (onde(linha, c.deMs, { nudgeMs: estado.nudges[c.canal] || 0 }).estado !== 'toca') {
+    $('estadoClipe').textContent = t('retrato.foraDoAr', { canal: c.canal });
+    return;
+  }
   botao.disabled = true;
   const duracaoS = (c.ateMs - c.deMs) / 1000;
+  const controlo = new AbortController();
+  c.pararGravacao = () => controlo.abort();
 
   try {
     const formato = await formatoQueFunciona();
+    if (!aindaEste()) return;
     if (!formato) {
       $('estadoClipe').textContent = t('retrato.semGravador');
       botao.disabled = false;
@@ -2978,22 +3333,33 @@ async function guardarRetrato() {
     }
     // Do princípio do clipe, e não de onde a pré-visualização parou.
     await preverClipe(c.deMs);
+    if (!aindaEste()) return;
     // A partir daqui ninguém pode pausar isto por baixo — nem o `acordarPrevia`
     // com um pause adiado, nem um `preverClipe` que chegue tarde.
     c.aGravar = true;
+    // E o editor fica quieto. O ▶, as pegas, os ±0,5 s e a troca de ângulo
+    // mexem todos no MESMO `<video>` que está a ser gravado: um "fim +0,5 s"
+    // a meio saltava o vídeo para o fim e o 9:16 saía com três segundos, e o
+    // ▶ gravava o início duas vezes. O Exportar 16:9 fechava o editor por
+    // baixo da gravação. Fechar (Esc, ✕, Cancelar) pára a gravação.
+    trancarEditor(true);
     // E sem som não vale nada: um `captureStream` de um vídeo em mudo dá uma
     // faixa de áudio SILENCIOSA. O volume fica a zero para não se ouvir a
     // gravação na sala, mas a faixa passa a ter sinal.
     v.muted = false;
     v.volume = 0;
-    const { blob, tipo } = await gravar(v, {
-      rects: c.rects,
+    const { blob, tipo, gravadoS } = await gravar(v, {
+      // Uma cópia: o gravador lê os recortes a cada frame, e um arrasto que
+      // escapasse à tranca mexia no ficheiro a meio.
+      rects: c.rects.map((r) => ({ ...r })),
       modo: c.modo,
       divisao: c.divisao,
       duracaoS,
       formato,
-      aoProgresso: ({ feito, total }) => {
-        $('estadoClipe').textContent = t('retrato.aGravar', {
+      sinal: controlo.signal,
+      aoProgresso: ({ feito, total, emPausa }) => {
+        if (!aindaEste()) return;
+        $('estadoClipe').textContent = emPausa ? t('retrato.emPausa') : t('retrato.aGravar', {
           feito: feito.toFixed(1), total: total.toFixed(1),
         });
       },
@@ -3003,30 +3369,62 @@ async function guardarRetrato() {
     const url = guardarFicheiro(blob);
     const item = document.createElement('li');
     $('fila').prepend(item);
+    const curto = notaDoRetratoCurto(gravadoS, duracaoS);
     linhaDeFicheiro(item, {
       nome, url,
-      nota: `${(blob.size / 1048576).toFixed(1)} MB · ${RETRATO.largura}x${RETRATO.altura}`,
+      nota: `${(blob.size / 1048576).toFixed(1)} MB · ${RETRATO.largura}x${RETRATO.altura}`
+        + (curto ? ` · ${curto}` : ''),
     });
+    if (curto) item.querySelector('.nota')?.classList.add('mau');
     const a = document.createElement('a');
     a.href = url;
     a.download = nome;
     a.click();
-    $('estadoClipe').textContent = t('retrato.pronto');
+    if (aindaEste()) $('estadoClipe').textContent = curto || t('retrato.pronto');
   } catch (e) {
+    // Parada por quem fechou o editor: não há a quem dizer nada.
+    if (e.name === 'AbortError' || !aindaEste()) return;
     $('estadoClipe').textContent = e.name === 'SEM-GRAVADOR' ? t('retrato.semGravador')
       : e.name === 'GRAVACAO-PARADA' ? t('retrato.parou')
-        : t('clipe.naoDeu', { erro: e.message });
+        : e.name === 'GRAVACAO-VAZIA' ? t('retrato.vazio')
+          : t('clipe.naoDeu', { erro: motivoDoRetrato(e) });
   } finally {
     // A marca sai mesmo que a gravação rebente: senão o `acordarPrevia` fica
-    // calado para sempre e a prévia nunca mais carrega uma imagem.
-    if (estado.clipe) estado.clipe.aGravar = false;
+    // calado para sempre e a prévia nunca mais carrega uma imagem. E é a
+    // deste clipe, e não a de outro que entretanto se tenha aberto.
+    c.aGravar = false;
+    c.pararGravacao = null;
     devolverSom();
+    if (aindaEste()) {
+      trancarEditor(false);
+      botao.disabled = false;
+    }
   }
-  botao.disabled = false;
+}
+
+/**
+ * Trancar o editor enquanto o 9:16 grava, e destrancá-lo no fim.
+ *
+ * Os botões ficam apagados para se ver que estão parados; as pegas e os
+ * recortes, que se arrastam, verificam `aGravar` por si.
+ */
+function trancarEditor(sim) {
+  for (const id of ['inicioMenos', 'inicioMais', 'fimMenos', 'fimMais', 'verClipe', 'canalClipe',
+    'guardarClipe', 'guardarAjustes', 'modoUm', 'modoDois', 'divisor']) {
+    const el = $(id);
+    if (el) el.disabled = sim;
+  }
+  for (const p of $('barraClipe').querySelectorAll('.pega')) p.disabled = sim;
 }
 
 function fecharClipe() {
   clearTimeout(estado.esperaRetrato);
+  // Fechar é desistir do que este editor tinha a correr. Sem isto, um 16:9
+  // que acabasse depois guardava um ficheiro que ele já não queria e fechava
+  // o editor da kill seguinte, com o que ele lá tinha mexido; e um 9:16 a
+  // meio continuava a gravar um vídeo que já não estava lá.
+  estado.clipe?.pararExportar?.();
+  estado.clipe?.pararGravacao?.();
   const retomarGrelha = estado.clipe?.retomarGrelha;
   pararVer();
   estado.clipe?.hls?.destroy();
@@ -3053,6 +3451,19 @@ const porCabeca = (ms) => {
 function pintarClipe() {
   const c = estado.clipe;
   if (!c) return;
+  // A barra mostra ±150 s à volta da kill, e o pedaço escolhido pode passar
+  // disso: um combate de 170 s que acaba na kill, os ±0,5 s a empurrar uma
+  // ponta para fora, ou outro ângulo. A pega ficava fora da barra, invisível
+  // e impossível de agarrar. Quando sai, a vista volta a centrar-se no pedaço.
+  // Arrastar nunca dispara isto: o arrasto fica preso à largura da barra.
+  if (c.deMs < c.vista.inicio || c.ateMs > c.vista.fim) {
+    const meio = (c.deMs + c.ateMs) / 2;
+    const meia = Math.max(CONTEXTO_S * 1000, (c.ateMs - c.deMs) / 2 + 10_000);
+    c.vista = {
+      inicio: Math.max(c.limites.inicio, Math.min(c.deMs, meio - meia)),
+      fim: Math.min(c.limites.fim, Math.max(c.ateMs, meio + meia)),
+    };
+  }
   $('barraClipe').querySelector('.seleccao').style.cssText =
     `left:${posClipe(c.deMs)}%;width:${Math.max(0.5, posClipe(c.ateMs) - posClipe(c.deMs))}%`;
   $('barraClipe').querySelector('.pega.de').style.left = `${posClipe(c.deMs)}%`;
@@ -3086,7 +3497,13 @@ function preverClipe(quandoMs) {
       c.hls = hls;
       hls.loadSource(alvo.url);
       hls.attachMedia(v);
-    } else { v.src = alvo.url; }
+    } else {
+      // Directo da CDN, que é outro domínio: sem `crossOrigin` a tela do 9:16
+      // fica "suja" e o gravador não tira dela frame nenhum (ver
+      // `renderizarRetrato`).
+      v.crossOrigin = 'anonymous';
+      v.src = alvo.url;
+    }
   }
   // O instante pedido, guardado: é por ele que o ▶ sabe se o salto já
   // assentou antes de começar a contar (ver `verClipe`).
@@ -3138,7 +3555,7 @@ function acordarPrevia() {
  */
 function verClipe() {
   const c = estado.clipe;
-  if (!c) return;
+  if (!c || c.aGravar) return;
   const v = $('previaClipe');
   c.retomar = !estado.parado;
   if (c.retomar) alternarPausa();
@@ -3201,6 +3618,7 @@ function pararVer() {
 function arrastar(qual) {
   return (ev) => {
     ev.preventDefault();
+    if (!estado.clipe || estado.clipe.aGravar) return;
     const barra = $('barraClipe');
     const mexer = (e) => {
       const r = barra.getBoundingClientRect();
@@ -3223,24 +3641,35 @@ function arrastar(qual) {
 
 async function guardarClipe() {
   const c = estado.clipe;
-  if (!c) return;
+  if (!c || c.aGravar || c.pararExportar) return;
   const linha = estado.linhas.find((l) => l.slug === c.canal);
   const nudge = estado.nudges[c.canal] || 0;
+  // Fechar o editor (Esc, ✕, Cancelar) pára isto. E tudo o que vem depois de
+  // um `await` só mexe no editor se ele ainda for ESTE: um 16:9 que acabava
+  // tarde fechava o editor da kill seguinte, com o que ele lá tinha mexido.
+  const controlo = new AbortController();
+  c.pararExportar = () => controlo.abort();
+  const aindaEste = () => estado.clipe === c && !controlo.signal.aborted;
   $('guardarClipe').disabled = true;
   $('estadoClipe').textContent = t('montagem.aPreparar');
 
   try {
-    const plano = await planearCorte({ linha, deMs: c.deMs + nudge, ateMs: c.ateMs + nudge });
+    const plano = await planearCorte({
+      linha, deMs: c.deMs + nudge, ateMs: c.ateMs + nudge, sinal: controlo.signal,
+    });
+    if (!aindaEste()) return;
     if (plano.estado !== 'ok') {
-      $('estadoClipe').textContent = t('clipe.naoDeu', { erro: plano.estado });
+      $('estadoClipe').textContent = porqueNaoSaiu(plano);
       $('guardarClipe').disabled = false;
       return;
     }
     const r = await executarCorte(plano, {
+      sinal: controlo.signal,
       aoProgresso: (p) => {
-        $('estadoClipe').textContent = t('montagem.pedacos', { prontos: p.prontos, total: p.total });
+        if (aindaEste()) $('estadoClipe').textContent = t('montagem.pedacos', { prontos: p.prontos, total: p.total });
       },
     });
+    if (!aindaEste()) return;
     if (r.estado !== 'pronto') {
       $('estadoClipe').textContent = t('corte.incompleto', { obtidos: r.obtidos ?? 0, total: r.total ?? 0 });
       $('guardarClipe').disabled = false;
@@ -3250,21 +3679,33 @@ async function guardarClipe() {
     const url = guardarFicheiro(new Blob([r.bytes], { type: r.tipo }));
     const item = document.createElement('li');
     $('fila').prepend(item);
+    // O editor deixa apurar ao décimo de segundo, e o ▶ toca exactamente o
+    // pedaço escolhido; o ficheiro, sem recodificar, começa e acaba nos
+    // pedaços de 10 s da Kick. Dito na linha do ficheiro, que é o que fica
+    // depois de o editor fechar.
+    const sobra = notaDaSobra(plano);
     linhaDeFicheiro(item, {
       nome,
       url,
-      nota: `${(r.bytes.length / 1048576).toFixed(1)} MB · ${plano.qualidade.altura}p${plano.qualidade.fps}`,
+      nota: `${(r.bytes.length / 1048576).toFixed(1)} MB · ${plano.qualidade.altura}p${plano.qualidade.fps}`
+        + ` · ${sobra.texto}`,
     });
+    if (sobra.falta) item.querySelector('.nota')?.classList.add('mau');
     // Guardar já, sem obrigar a caçar o link na lista: quem carregou em
     // "Guardar clipe" quis o ficheiro, não uma linha para clicar depois.
     const a = document.createElement('a');
     a.href = url;
     a.download = nome;
     a.click();
-    fecharClipe();
+    c.pararExportar = null;
+    // Com um 9:16 a gravar no mesmo editor, fechar era matá-lo.
+    if (!c.aGravar) fecharClipe();
   } catch (e) {
-    $('estadoClipe').textContent = t('clipe.naoDeu', { erro: e.message });
+    if (!aindaEste()) return;
+    $('estadoClipe').textContent = porqueNaoSaiu({ estado: 'erro', erro: e.message });
     $('guardarClipe').disabled = false;
+  } finally {
+    c.pararExportar = null;
   }
 }
 
@@ -3500,7 +3941,7 @@ $('filtroMomentos').onchange = (e) => {
 $('procurarKills').onclick = procurarKills;
 // Seta, e nao a funcao directamente: o `onclick` passa o evento como primeiro
 // argumento, e ele ia parar ao `soEsta` como se fosse uma lista de kills.
-$('baixarMontagem').onclick = () => baixarMontagem();
+$('baixarMontagem').onclick = () => (estado.montagem ? estado.montagem.abort() : baixarMontagem());
 $('limparFila').onclick = limparFila;
 // Sem argumento nenhum, e não `= abrirClipe`: assim o objecto do clique ia
 // como momento, e um dia em que ele passe a ter um `.ms` isto abre o clipe no
@@ -3608,15 +4049,25 @@ $('fecharClipe').onclick = fecharClipe;
  */
 function guardarAjustes() {
   const c = estado.clipe;
-  if (!c || c.momentoMs == null) return;
-  const querRetrato = !$('ladoRetrato').hidden && c.rects.length > 0;
-  estado.momentos = estado.momentos.map((m) => (m.ms === c.momentoMs
-    ? comAjuste(m, {
-      deMs: c.deMs, ateMs: c.ateMs,
+  if (!c || c.momentoMs == null || c.aGravar) return;
+  const m = estado.momentos.find((x) => x.ms === c.momentoMs);
+  if (!m) return;
+  // O ajuste vale para o clipe do ângulo em que foi feito (ver
+  // `clipesDoMomento`). Um ângulo que não entra nesta kill não tem clipe nenhum
+  // onde o pôr: guardá-lo era perder o trabalho em silêncio.
+  if (c.canal !== m.protagonista && !(m.vitimas || []).includes(c.canal)) {
+    $('estadoClipe').textContent = t('clipe.anguloForaDaKill', { canal: c.canal });
+    return;
+  }
+  // O 9:16 só vai junto se ele mexeu nele (ver `retratoMexido`).
+  const querRetrato = c.retratoMexido && c.rects.length > 0;
+  estado.momentos = estado.momentos.map((x) => (x.ms === c.momentoMs
+    ? comAjuste(x, {
+      deMs: c.deMs, ateMs: c.ateMs, canal: c.canal,
       formato: querRetrato ? c.modo : null, rects: c.rects, divisao: c.divisao,
     })
-    : m));
-  const n = ordenar(estado.momentos).findIndex((m) => m.ms === c.momentoMs) + 1;
+    : x));
+  const n = ordenar(estado.momentos).findIndex((x) => x.ms === c.momentoMs) + 1;
   guardar();
   pintarMomentos();
   fecharClipe();
@@ -3644,13 +4095,22 @@ ligarDivisor();
 // deixa de bater certo e o pill fica ao lado da linha por onde o vídeo parte.
 window.addEventListener('resize', () => { if (estado.clipe) pintarDivisor(); });
 $('canalClipe').onchange = () => {
+  const c = estado.clipe;
   const l = estado.linhas.find((x) => x.slug === $('canalClipe').value);
-  if (!l || !estado.clipe) return;
-  estado.clipe.hls?.destroy();
-  Object.assign(estado.clipe, { canal: l.slug, hls: null, url: null, limites: { inicio: l.inicio, fim: l.fim } });
-  Object.assign(estado.clipe, mover(estado.clipe, 'de', estado.clipe.deMs, { limites: estado.clipe.limites }));
+  if (!l || !c) return;
+  if (c.aGravar) { $('canalClipe').value = c.canal; return; }
+  c.hls?.destroy();
+  Object.assign(c, { canal: l.slug, hls: null, url: null, limites: { inicio: l.inicio, fim: l.fim } });
+  // O pedaço inteiro para dentro do vídeo do outro, e não só o início: com o
+  // `mover` de uma pega só, um ângulo que entrou no ar depois do fim dava um
+  // pedaço ao contrário, e o exportar respondia "janela-invalida".
+  Object.assign(c, dentroDosLimites(c, c.limites));
   pintarClipe();
-  preverClipe(estado.clipe.deMs);
+  preverClipe(c.deMs);
+  // A fonte nova pode ter outro tamanho: os recortes vão com ela.
+  acertarRecortes();
+  pintarRecortes();
+  pintarDivisor();
 };
 $('barraClipe').querySelector('.pega.de').onpointerdown = arrastar('de');
 $('barraClipe').querySelector('.pega.ate').onpointerdown = arrastar('ate');
@@ -3667,7 +4127,7 @@ for (const [id, qual, delta] of [
   ['fimMenos', 'ate', -1], ['fimMais', 'ate', 1],
 ]) {
   $(id).onclick = (e) => {
-    if (!estado.clipe) return;
+    if (!estado.clipe || estado.clipe.aGravar) return;
     // Meio segundo, e não um. "Fiz o teste, às vezes um segundo passa do ponto
     // que eu quero" — e passa mesmo: entre o disparo e a morte cabem menos de
     // dois segundos, e um passo de um segundo salta metade disso de uma vez.

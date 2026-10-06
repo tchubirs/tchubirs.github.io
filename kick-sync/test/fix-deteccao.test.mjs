@@ -87,7 +87,8 @@ const momentos = (p) => p.evaluate(() => window.__estado.momentos);
 async function detectar(p, { janela = '0' } = {}) {
   await p.selectOption('#janelaAuto', janela);
   await p.click('#procurarKills');
-  await p.waitForFunction(() => window.__varrer && !document.getElementById('procurarKills').disabled
+  // A correr, o botão não se apaga (é o Parar dela): o fim é a `varredura` voltar a nada.
+  await p.waitForFunction(() => window.__varrer && window.__estado.varredura === null
     && !/Ouvindo|Identificando/.test(document.getElementById('estadoMontagem').textContent),
   null, { timeout: 20000 });
 }
@@ -121,7 +122,10 @@ test('uma detecção que não acha nada deixa o botão pronto para outro trecho'
   await detectar(p);
   assert.match(await textoMontagem(p), /Nenhum tiroteio de tchubi/);
   assert.equal(await p.locator('#procurarKills').isDisabled(), false);
-  assert.equal(await p.evaluate(() => window.__estado.cancelar), null);
+  // O `estado.cancelar` único deu lugar a um por trabalho (a busca é `varredura`), e o botão
+  // não fica cinzento a correr: passa a ser o Parar dela e volta ao rótulo no fim.
+  assert.equal(await p.evaluate(() => window.__estado.varredura), null);
+  assert.equal(await p.locator('#procurarKills span').innerText(), 'Detecção automática');
   assert.deepEqual(erros, []);
   await p.close();
 });

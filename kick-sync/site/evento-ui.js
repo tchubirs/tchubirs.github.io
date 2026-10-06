@@ -900,6 +900,9 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
     $('irAoVivo').onclick = irAoVivo;
     $('procurarOutros').onclick = procurarOutros;
     $('partilharEvento').onclick = async () => {
+      // `codificar` dá null a um elenco que não se poderia abrir de um link (mais de 2000 canais):
+      // um "#evento=null" chegava a quem o recebe como um link estragado, sem dizer porquê.
+      if (ev.link === null) { $('estadoPartilhaEvento').textContent = t('evento.linkGrande'); return; }
       const e = ev.escolha;
       // O link do lance leva o streamer escolhido e os ângulos a mais: sem isso quem o abria ficava com
       // o primeiro streamer do primeiro time, que é quase sempre outro.
