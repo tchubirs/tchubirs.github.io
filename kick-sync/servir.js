@@ -32,7 +32,7 @@ const servidor = http.createServer((req, res) => {
 // tiveres outra coisa aberta, e isso é um erro que não sabes o que quer dizer.
 servidor.listen(0, '127.0.0.1', () => {
   const url = `http://127.0.0.1:${servidor.address().port}/`;
-  console.log(`\n  Replay aberto em  ${url}\n`);
+  console.log(`\n  Povix aberto em  ${url}\n`);
   console.log('  Cola os canais, um por linha, e carrega em "Carregar a noite".');
   console.log('  Para fechar: fecha esta janela preta.\n');
   const abrir = process.platform === 'win32' ? ['cmd', ['/c', 'start', '""', url]]

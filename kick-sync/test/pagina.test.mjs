@@ -989,7 +989,7 @@ test('a pagina fala portugues, ingles e espanhol, e troca sem perder nada',
     await p.waitForFunction(() => document.getElementById('carregar').textContent === 'Load',
       null, { timeout: 5000 });
     assert.equal(await p.locator('html').getAttribute('lang'), 'en');
-    assert.match(await p.title(), /many angles/);
+    assert.match(await p.title(), /every angle/);
     // O que ja estava no ecra tambem muda, e nao so os botoes parados.
     assert.match(await p.locator('#angulos').innerText(), /of \d+ angles/);
     assert.match(await p.locator('#comoCortar').innerText(), /Mark with/);

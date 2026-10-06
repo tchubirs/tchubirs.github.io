@@ -18,6 +18,8 @@ cd "$(dirname "$0")"
 
 V=$(cat site/*.js site/*.css site/index.html | sha1sum | cut -c1-10)
 cp site/*.html site/*.js site/*.css "$DESTINO/"
+# A imagem que aparece quando alguém partilha o link (og:image).
+cp site/*.png "$DESTINO/"
 # A letra vive connosco e nao num CDN (ver a nota em estilo.css). Sem esta
 # linha o site sai publicado a apontar para cinco ficheiros que nao estao la,
 # e a pagina inteira cai para a letra do sistema — que e exactamente o que

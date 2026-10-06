@@ -1,7 +1,7 @@
 <meta charset="utf-8">
-<title data-t="tw.titulo">Replay Twitch — os POVs lado a lado</title>
+<title data-t="tw.titulo">Povix Twitch — os POVs lado a lado</title>
 <meta name="theme-color" content="#131211">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%23131211'/%3E%3Cg fill='%232FB3C4'%3E%3Crect x='3.4' y='5.6' width='11' height='3' rx='1.5' opacity='.7'/%3E%3Crect x='6.4' y='10.5' width='13.2' height='3' rx='1.5'/%3E%3Crect x='5' y='15.4' width='9' height='3' rx='1.5' opacity='.7'/%3E%3Crect x='11.6' y='3' width='1.8' height='18' rx='.9'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' role='img' aria-label='Povix'%3E%3Crect width='64' height='64' rx='15' fill='%23131211'/%3E%3Cpath d='M6.0 12.0 L20.1 32.6 L29.1 21.4 Z' fill='%232FB3C4' fill-opacity='0.95'/%3E%3Cpath d='M58.0 9.0 L34.1 21.3 L43.9 31.8 Z' fill='%2346C6D6' fill-opacity='0.85'/%3E%3Cpath d='M44.0 61.0 L42.4 38.9 L29.1 44.6 Z' fill='%232FB3C4' fill-opacity='0.75'/%3E%3Ccircle cx='32' cy='33' r='7.5' fill='%23E4A13A'/%3E%3Ccircle cx='32' cy='33' r='2.6' fill='%23131211'/%3E%3C/svg%3E">
 <!-- A letra vive no repositório, em letra/ — ver a nota em estilo.css. -->
 <link rel="preload" as="font" type="font/woff2" href="letra/ibm-plex-sans-400.woff2" crossorigin>
 <link rel="preload" as="font" type="font/woff2" href="letra/ibm-plex-sans-600.woff2" crossorigin>
@@ -14,13 +14,14 @@
      index.html; aqui só entra o que se vê, para a página não carregar
      trinta desenhos por causa de dois. -->
 <svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
-  <symbol id="i-replay" viewBox="0 0 24 24">
+  <symbol id="i-povix" viewBox="0 0 24 24">
     <g fill="currentColor">
-      <rect x="2.4" y="4.4" width="13.4" height="4.2" rx="2.1" opacity=".7"/>
-      <rect x="6.2" y="9.9" width="15.4" height="4.2" rx="2.1"/>
-      <rect x="4" y="15.4" width="11" height="4.2" rx="2.1" opacity=".7"/>
-      <rect x="11.2" y="2.4" width="1.6" height="19.2" rx=".8"/>
+      <path d="M2.25 4.5 L7.54 12.23 L10.91 8.03 Z"/>
+      <path d="M21.75 3.38 L12.79 7.99 L16.46 11.93 Z" opacity=".85"/>
+      <path d="M16.5 22.88 L15.9 14.59 L10.91 16.73 Z" opacity=".7"/>
     </g>
+    <circle cx="12" cy="12.38" r="2.9" fill="#E4A13A"/>
+    <circle cx="12" cy="12.38" r="1" fill="#131211"/>
   </symbol>
   <symbol id="i-twitch" viewBox="0 0 24 24">
     <path fill="currentColor" d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/>
@@ -33,7 +34,7 @@
 
 <header>
   <div class="topo">
-    <h1><svg class="ic" aria-hidden="true"><use href="#i-replay"/></svg><a href="./" class="voltar">Replay</a>
+    <h1><svg class="ic" aria-hidden="true"><use href="#i-povix"/></svg><a href="./" class="voltar">Povix</a>
       <span class="marca"><svg class="ic ic-p" aria-hidden="true"><use href="#i-twitch"/></svg>Twitch</span></h1>
     <select id="idioma" aria-label="idioma"></select>
   </div>

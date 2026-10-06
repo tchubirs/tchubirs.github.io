@@ -1,5 +1,5 @@
 @echo off
-title Replay - varios angulos, um relogio
+title Povix - todos os angulos de cada lance
 cd /d "%~dp0"
 where node >nul 2>nul || (
   echo.

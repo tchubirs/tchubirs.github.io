@@ -3,12 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title data-t="app.titulo">Replay — vários ângulos, um relógio</title>
+<title data-t="app.titulo">Povix — todos os ângulos de cada lance</title>
+<meta name="description" content="Abra um evento da Kick inteiro numa linha do tempo, veja cada lance de todos os ângulos e corte o clipe em poucos cliques.">
+<meta property="og:title" content="Povix — todos os ângulos de cada lance">
+<meta property="og:description" content="Cada lance do evento, de todos os ângulos.">
+<meta property="og:image" content="povix-partilha.png">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#131211">
 <!-- O icone do separador e a marca desta casa: tres gravacoes de comprimentos
      diferentes e a agulha a atravessa-las no mesmo instante. Em SVG dentro do
      endereco, sem um pedido a rede so para isto. -->
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%23131211'/%3E%3Cg fill='%232FB3C4'%3E%3Crect x='3.4' y='5.6' width='11' height='3' rx='1.5' opacity='.55'/%3E%3Crect x='6.4' y='10.5' width='13.2' height='3' rx='1.5'/%3E%3Crect x='5' y='15.4' width='9' height='3' rx='1.5' opacity='.55'/%3E%3Crect x='11.6' y='3' width='1.8' height='18' rx='.9'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' role='img' aria-label='Povix'%3E%3Crect width='64' height='64' rx='15' fill='%23131211'/%3E%3Cpath d='M6.0 12.0 L20.1 32.6 L29.1 21.4 Z' fill='%232FB3C4' fill-opacity='0.95'/%3E%3Cpath d='M58.0 9.0 L34.1 21.3 L43.9 31.8 Z' fill='%2346C6D6' fill-opacity='0.85'/%3E%3Cpath d='M44.0 61.0 L42.4 38.9 L29.1 44.6 Z' fill='%232FB3C4' fill-opacity='0.75'/%3E%3Ccircle cx='32' cy='33' r='7.5' fill='%23E4A13A'/%3E%3Ccircle cx='32' cy='33' r='2.6' fill='%23131211'/%3E%3C/svg%3E">
 <!-- A letra vive no repositorio, em letra/. Uma letra que depende de um CDN e
      uma letra que as vezes nao ha — e em dados moveis isso e metade das
      vezes. As medidas do ecra deixam de mudar com a rede. As caras vao
@@ -53,13 +58,14 @@
   <!-- ── a marca desta casa ────────────────────────────────────────────────
        Três gravações de comprimentos diferentes e uma agulha a atravessá-las
        no mesmo instante. É literalmente o que o sítio faz. -->
-  <symbol id="i-replay" viewBox="0 0 24 24">
+  <symbol id="i-povix" viewBox="0 0 24 24">
     <g fill="currentColor">
-      <rect x="2.4" y="4.4" width="13.4" height="4.2" rx="2.1" opacity=".7"/>
-      <rect x="6.2" y="9.9" width="15.4" height="4.2" rx="2.1"/>
-      <rect x="4" y="15.4" width="11" height="4.2" rx="2.1" opacity=".7"/>
-      <rect x="11.2" y="2.4" width="1.6" height="19.2" rx=".8"/>
+      <path d="M2.25 4.5 L7.54 12.23 L10.91 8.03 Z"/>
+      <path d="M21.75 3.38 L12.79 7.99 L16.46 11.93 Z" opacity=".85"/>
+      <path d="M16.5 22.88 L15.9 14.59 L10.91 16.73 Z" opacity=".7"/>
     </g>
+    <circle cx="12" cy="12.38" r="2.9" fill="#E4A13A"/>
+    <circle cx="12" cy="12.38" r="1" fill="#131211"/>
   </symbol>
 
   <!-- ── transporte, cheio ─────────────────────────────────────────────────
@@ -236,7 +242,7 @@
 
 <header>
   <div class="topo">
-    <h1><svg class="ic" aria-hidden="true"><use href="#i-replay"/></svg><span data-t="app.nome">Replay</span></h1>
+    <h1><svg class="ic" aria-hidden="true"><use href="#i-povix"/></svg><span data-t="app.nome">Povix</span></h1>
     <a class="paraTwitch" href="twitch.html"><svg class="ic" aria-hidden="true"><use href="#i-twitch"/></svg><span data-t="app.twitch">Twitch</span></a>
     <button id="ajuda" class="discreto" data-t-aria="ajuda.abrir" aria-haspopup="dialog"><svg class="ic" aria-hidden="true"><use href="#i-ajuda"/></svg></button>
     <select id="idioma" aria-label="idioma"></select>

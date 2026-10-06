@@ -162,7 +162,7 @@ test('t() poe as variaveis no sitio, em qualquer lingua', () => {
 // um codigo a meio do ecra.
 test('uma chave em falta cai para o portugues, e nunca mostra a chave', () => {
   definirIdioma('en');
-  assert.equal(t('app.nome'), 'Replay');
+  assert.equal(t('app.nome'), 'Povix');
   assert.equal(t('chave.que.nao.existe'), 'chave.que.nao.existe');
   definirIdioma('pt');
 });
