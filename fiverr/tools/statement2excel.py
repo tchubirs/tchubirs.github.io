@@ -237,8 +237,12 @@ class Unreadable(Exception):
 def text_lines(page):
     """The lines of a page with text, as (text, words, unsure): words sharing a baseline, left to right,
     each with where it sits and where it is in the text. Text pages have no unsure words."""
-    rows = {}
+    rows, seen = {}, {}
     for x0, y0, x1, y1, word, *_ in page.get_text("words"):
+        # The same word drawn again on itself: bold made by printing twice, or a text layer repeated.
+        if any(abs(x0 - a) < 1.5 and abs(y1 - b) < 1.5 for a, b in seen.get(word, ())):
+            continue
+        seen.setdefault(word, []).append((x0, y1))
         rows.setdefault(round(y1 / 3), []).append((x0, x1, word, y1 - y0))
     lines = []
     for key in sorted(rows):

@@ -126,6 +126,9 @@ até alguma vender. O que eu faço agora:
    "Balance by Date" era lida como depósitos; "Previous Statement Balance" e "Beginning balance" não eram
    o saldo inicial; e as tabelas separadas (depósitos, saques, cheques) saíam fora de ordem de data. Agora o
    exemplo sai com as 10 transações certas e o saldo inicial mais o movimento dá o final.
+   Às 2h40, o exemplo do CommBank (Austrália) tinha cada palavra 4 vezes no texto do PDF, no mesmo lugar; o
+   mesmo acontece com negrito feito imprimindo duas vezes. O conversor leria cada valor 2 ou 4 vezes. Agora a
+   palavra repetida no mesmo lugar é lida uma vez só. Testado com negrito duplo e com o texto repetido 4 vezes.
 
 Pausado até algo vender ou ele pedir: inventário da casa (rascunho em `etsy/home-inventory`), manutenção da casa,
 galinhas no quintal, férias da equipe, Herculano.

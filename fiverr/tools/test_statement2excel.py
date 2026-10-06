@@ -776,6 +776,27 @@ def check_merge():
           "UK dates without a year get 2025 and 2026 from the period the statements print")
 
 
+def check_overprint():
+    """Text drawn more than once on itself, as bold made by printing twice a third of a point off, or a text
+    layer repeated four times, as in the sample statement a council in Australia publishes: each word is
+    read once, and the result is that of the plain PDF. Before, each amount was read two or four times."""
+    with tempfile.TemporaryDirectory() as tmp:
+        pdf, bold, out = (os.path.join(tmp, name) for name in ("s.pdf", "bold.pdf", "s.xlsx"))
+        make_columns(pdf, us=True)
+        _, want, want_checks, _ = read(pdf, out)
+        for shifts in ([(0.3, 0.2)], [(0, 0)] * 3):
+            src, doc = pymupdf.open(pdf), pymupdf.open()
+            for k, page in enumerate(src):
+                new = doc.new_page(width=page.rect.width, height=page.rect.height)
+                for dx, dy in [(0, 0)] + shifts:
+                    new.show_pdf_page(new.rect + (dx, dy, dx, dy), src, k)
+            doc.save(bold)
+            code, got, checks, said = read(bold, out)
+            assert code == 0 and got == want and checks == want_checks, (shifts, said, len(got), len(want))
+    print("text drawn twice for bold, or a text layer repeated four times: each word read once, the same "
+          "rows and checks as the plain PDF")
+
+
 def check_footer_page():
     """A bank's own last page: a background image over the whole page and "Page 3 of 3". It is not a scan,
     so the statement converts even without Tesseract, and an image alone is still a scan."""
@@ -866,6 +887,7 @@ if __name__ == "__main__":
     check_merge()
     check_canada()
     check_us_checks()
+    check_overprint()
     check_bank_header()
     check_rules()
     check_categories()
