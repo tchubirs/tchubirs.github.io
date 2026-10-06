@@ -1598,11 +1598,28 @@ function irPara(quandoMs) {
     // era o que fazia o par demorar o dobro a aparecer.
     for (const [l, r, v] of segundo) tocar(l, r, v, { alta: true, correr: true, comSom: temSom(l.slug) });
     for (const [l, r, v] of secundarios) {
-      if (naoSeVe(l.slug)) { porAcertar.add(l.slug); continue; }
+      if (naoSeVe(l.slug)) {
+        porAcertar.add(l.slug);
+        // Quem saiu do foco volta para a grelha, e quase sempre para um lugar
+        // fora da vista. Sem isto ficava com o leitor de 1080p (trinta
+        // segundos de buffer, a andar) até alguém rolar até ele, e cada troca
+        // de foco deixava mais um. Largado aqui não pede nada à Kick; o
+        // `porAcertar` cria-lhe o de 160p quando voltar a aparecer.
+        if (leitorCaro(l, r, v)) pararTile(l.slug, v);
+        continue;
+      }
       porAcertar.delete(l.slug);
       tocar(l, r, v, { alta: false, correr: false });
     }
   }, 220);
+}
+
+/** Um leitor que não é o de um secundário: degrau de cima, ou a andar. */
+function leitorCaro(linha, r, video) {
+  const p = estado.players.get(linha.slug);
+  if (!p) return false;
+  const peca = linha.pecasCompletas.find((x) => x.vod.id === r.peca.vod.id) || r.peca;
+  return p.url !== peca.barato.url || !video.paused;
 }
 
 /**

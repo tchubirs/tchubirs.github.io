@@ -168,3 +168,37 @@ test('um salto só move os quadros que se vêem, e os outros acertam quando apar
     assert.deepEqual(erros, []);
     await p.close();
   });
+
+test('o principal que sai do foco para um lugar fora da vista larga o leitor de 1080p',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const canais = Array.from({ length: 60 }, (_, i) => `canal${String(i).padStart(2, '0')}`);
+    const { p, erros } = await abrirNoite({ canais, ecra: { width: 1000, height: 600 } });
+    await p.waitForFunction((n) => document.querySelectorAll('.tile').length === n, canais.length, { timeout: 30000 });
+    await p.waitForFunction(() => /1080p/.test(window.__estado.players.get('canal00')?.url || ''), null, { timeout: 15000 });
+    const altos = () => p.evaluate(() => [...window.__estado.players]
+      .filter(([, l]) => /1080p/.test(l.url)).map(([s]) => s).sort());
+    const visivel = (s) => p.evaluate((slug) => {
+      const r = document.querySelector(`.tile[data-slug="${slug}"]`).getBoundingClientRect();
+      return r.bottom > 0 && r.top < innerHeight && r.width > 0;
+    }, s);
+
+    for (const s of ['canal55', 'canal57', 'canal05', 'canal58']) {
+      const tile = p.locator(`.tile[data-slug="${s}"]`);
+      await tile.scrollIntoViewIfNeeded();
+      await tile.click();
+      await p.waitForFunction((slug) => /1080p/.test(window.__estado.players.get(slug)?.url || ''), s, { timeout: 15000 });
+      await p.waitForTimeout(600);
+      if (s === 'canal55') {
+        assert.equal(await visivel('canal00'), false, 'o antigo principal ficou à vista e o teste não prova nada');
+        assert.ok(!/1080p/.test((await p.evaluate(() => window.__estado.players.get('canal00')?.url)) || ''),
+          'o antigo principal ficou com o leitor de 1080p fora da vista');
+      }
+    }
+    assert.deepEqual(await altos(), ['canal58'], 'trocas de foco deixaram leitores de 1080p para trás');
+
+    // Ao voltar à vista, o antigo principal tem o leitor barato dos secundários.
+    await p.locator('.tile[data-slug="canal00"]').scrollIntoViewIfNeeded();
+    await p.waitForFunction(() => /160p/.test(window.__estado.players.get('canal00')?.url || ''), null, { timeout: 5000 });
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
