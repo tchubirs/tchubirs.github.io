@@ -130,7 +130,8 @@ test('uma detecção que não acha nada deixa o botão pronto para outro trecho'
 // depois do fim do canal o clique não fazia nada nem dizia nada.
 test('a noite toda é a noite toda, e com o cursor depois do fim diz porquê', comNavegador, async () => {
   const { p, erros } = await abrir();
-  await kickFalsa(p, { canais: ['tchubi', 'outro'], comecosS: { outro: 300 } });
+  // O relógio do outro (o PROGRAM-DATE-TIME) começa 300 s depois: vai dos 300 aos 900.
+  await kickFalsa(p, { canais: ['tchubi', 'outro'], desviosS: { outro: 300 } });
   await varreduraFalsa(p, []);
   await abrirNoite(p, ['tchubi', 'outro']);
   p.on('dialog', (d) => d.accept());
@@ -142,11 +143,21 @@ test('a noite toda é a noite toda, e com o cursor depois do fim diz porquê', c
   assert.equal(v.deMs, T, 'a noite toda começa no princípio do canal, e não no cursor');
   assert.equal(v.ateMs, T + 600_000);
 
+  // Uma kill aos 100 s, quando o outro ainda não estava no ar: a ficha dele
+  // fica apagada, e a razão vai no nome dela (o `title` nem o toque nem um
+  // leitor de ecrã mostram).
+  await p.evaluate((t) => { window.__estado.agoraMs = t + 100_000; }, T);
+  await p.click('#marcarKill');
+  await p.waitForSelector('#listaMomentos .vit[data-canal="outro"]', { timeout: 5000 });
+  const ficha = p.locator('#listaMomentos .vit[data-canal="outro"]');
+  assert.equal(await ficha.isDisabled(), true);
+  assert.match(await ficha.getAttribute('aria-label'), /^outro: não estava gravando$/);
+
   // O tchubi acaba aos 600 s; o outro continua até aos 900.
   await p.evaluate((t) => { window.__varrer = null; window.__estado.agoraMs = t + 700_000; }, T);
   await p.selectOption('#janelaAuto', '1800');
   await p.click('#procurarKills');
-  await p.waitForFunction(() => /tchubi/.test(document.getElementById('estadoMontagem').textContent),
+  await p.waitForFunction(() => /saiu do ar/.test(document.getElementById('estadoMontagem').textContent),
     null, { timeout: 5000 });
   const texto = await textoMontagem(p);
   assert.match(texto, /saiu do ar/);
