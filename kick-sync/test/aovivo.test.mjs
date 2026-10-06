@@ -197,6 +197,104 @@ test('ao longo de muitas leituras cada segmento e novo exactamente uma vez', () 
   assert.deepEqual(vistos, Array.from({ length: 25 }, (_, i) => `${i}.ts`));
 });
 
+// O que a versão anterior só provava com leituras atrasadas que eram o
+// princípio da mesma lista. Aqui entram as três que a partiam: uma atrasada
+// que preenche um buraco, uma cópia velha da transmissão de antes de um
+// recomeço, e uma atrasada de uma janela que desliza.
+const nome = (s) => `${s.url.split('/').at(-1)}@${s.inicio}`;
+const nomes = (r) => r.novos.map((s) => s.url.split('/').at(-1));
+
+test('uma leitura atrasada que preenche um buraco junta as duas, e nada se repete depois', () => {
+  const b = leitura({ quantos: 12 });
+  const a = { ...b, segmentos: b.segmentos.filter((_, i) => i !== 2) };     // 0..11 sem o 2
+  const r = novosSegmentos(a, leitura({ quantos: 9 }));                      // atrasada: 0..8, com o 2
+  assert.deepEqual(nomes(r), ['2.ts']);
+  assert.equal(r.recomecou, false);
+  assert.equal(r.recuou, false, 'trouxe uma coisa nova');
+  assert.deepEqual(r.playlist.segmentos.map((s) => s.url.split('/').at(-1)),
+    Array.from({ length: 12 }, (_, i) => `${i}.ts`), 'fica tudo, pela ordem');
+  assert.equal(r.playlist.fim, b.fim, 'o fim e o da leitura mais comprida');
+  assert.equal(r.playlist.inicio, b.inicio);
+  assert.equal(r.playlist.fonteDoRelogio, 'program-date-time');
+  const r2 = novosSegmentos(r.playlist, leitura({ quantos: 14 }));
+  assert.deepEqual(nomes(r2), ['12.ts', '13.ts'], 'o 9, o 10 e o 11 ja tinham sido vistos');
+});
+
+test('uma copia velha da transmissao de antes de um recomeco nao a traz de volta', () => {
+  const s1 = leitura({ quantos: 30 });
+  const s2 = (n) => leitura({ inicioMs: T + 3_600_000, quantos: n });       // o mesmo caminho, uma hora depois
+  const r1 = novosSegmentos(null, s1);
+  const r2 = novosSegmentos(r1.playlist, s2(3));
+  assert.equal(r2.recomecou, true);
+  const r3 = novosSegmentos(r2.playlist, s1);                                 // o CDN ainda serve a de antes
+  assert.equal(r3.recomecou, false, 'mais velha do que a guardada nao e uma transmissao nova');
+  assert.equal(r3.recuou, true);
+  assert.deepEqual(r3.novos, []);
+  assert.equal(r3.playlist, r2.playlist, 'continua a guardar a transmissao de agora');
+  const r4 = novosSegmentos(r3.playlist, s2(5));
+  assert.equal(r4.recomecou, false);
+  assert.deepEqual(nomes(r4), ['3.ts', '4.ts']);
+  const total = [r1, r2, r3, r4].reduce((n, r) => n + r.novos.length, 0);
+  assert.equal(total, 35, '30 da primeira e 5 da segunda, cada um uma vez');
+});
+
+test('uma leitura atrasada de uma janela que desliza nao e um recomeco', () => {
+  // A primeira leitura que se viu já tinha deslizado: 2, 3 e 4 nunca vieram.
+  const a = leitura({ quantos: 20, primeiro: 5 });                            // 5..24
+  const r = novosSegmentos(a, leitura({ quantos: 20, primeiro: 2 }));         // atrasada: 2..21
+  assert.equal(r.recomecou, false);
+  assert.deepEqual(nomes(r), ['2.ts', '3.ts', '4.ts'], 'so os que nunca tinham vindo');
+  assert.equal(r.playlist.segmentos.length, 23, 'de 2 a 24: nao perde o 22, o 23 e o 24');
+  assert.deepEqual(nomes(novosSegmentos(r.playlist, leitura({ quantos: 20, primeiro: 6 }))), ['25.ts']);
+  // E com a janela vista a deslizar desde o princípio, a atrasada não traz nada.
+  const vista = novosSegmentos(leitura({ quantos: 20 }), a).playlist;          // 0..19 e depois 5..24
+  const atrasada = novosSegmentos(vista, leitura({ quantos: 20, primeiro: 2 }));
+  assert.deepEqual(atrasada.novos, []);
+  assert.equal(atrasada.recomecou, false);
+  assert.equal(atrasada.recuou, true);
+});
+
+test('faltar o primeiro segmento na leitura anterior nao faz da seguinte um recomeco', () => {
+  const b = leitura({ quantos: 10 });
+  const a = { ...b, segmentos: b.segmentos.slice(1, 9) };                     // 1..8
+  const r = novosSegmentos(a, b);
+  assert.equal(r.recomecou, false);
+  assert.deepEqual(nomes(r), ['0.ts', '9.ts']);
+});
+
+test('com leituras atrasadas, buracos, um recomeco e uma janela que desliza, cada segmento e novo uma vez', () => {
+  const S2 = T + 3_600_000;
+  const b7 = leitura({ quantos: 7 });
+  const guiao = [
+    [leitura({ quantos: 3 }), false],
+    [{ ...b7, segmentos: b7.segmentos.filter((_, i) => i !== 4) }, false],   // 0..6 sem o 4
+    [leitura({ quantos: 5 }), false],                                       // atrasada, traz o 4
+    [leitura({ quantos: 10 }), false],
+    [{ segmentos: [] }, false],
+    [leitura({ inicioMs: S2, quantos: 2 }), true],                          // recomeçou no mesmo caminho
+    [leitura({ quantos: 10 }), false],                                      // cópia velha da de antes
+    [leitura({ inicioMs: S2, quantos: 1 }), false],                         // atrasada da nova
+    [leitura({ inicioMs: S2, quantos: 5 }), false],
+    [leitura({ inicioMs: S2, quantos: 6, primeiro: 3 }), false],            // a janela desliza: 3..8
+    [leitura({ inicioMs: S2, quantos: 6, primeiro: 1 }), false],            // atrasada da janela: 1..6
+    [leitura({ inicioMs: S2, quantos: 6, primeiro: 6 }), false],            // 6..11
+  ];
+  let guardada = null;
+  const vistos = [];
+  for (const [i, [nova, recomeco]] of guiao.entries()) {
+    const r = novosSegmentos(guardada, nova);
+    assert.equal(r.recomecou, recomeco, `leitura ${i}`);
+    vistos.push(...r.novos.map(nome));
+    guardada = r.playlist;
+  }
+  const esperados = [
+    ...Array.from({ length: 10 }, (_, i) => `${i}.ts@${T + i * 10_000}`),
+    ...Array.from({ length: 12 }, (_, i) => `${i}.ts@${S2 + i * 10_000}`),
+  ];
+  assert.deepEqual([...vistos].sort(), [...esperados].sort());
+  assert.equal(new Set(vistos).size, vistos.length, 'nenhum duas vezes');
+});
+
 // ── bordaAoVivo ────────────────────────────────────────────────────────────
 
 /** Um canal ao vivo cujo último segmento acabou `atrasS` antes de `agora`. */
@@ -297,6 +395,45 @@ test('os ajustes de cada canal mexem na borda no sentido de onde()', () => {
   const c = bordaAoVivo(linhas, { agoraMs: AGORA, nudges: { b: -1500 } });
   assert.equal(c.porCanal.get('b'), AGORA - 2500);
   assert.equal(c.comumMs, AGORA - 2500);
+});
+
+// Medido: -5,71 s (SINCRONIA.md, lautaarg00), e canais 2,2 s atrás do ar. No
+// relógio partilhado o vídeo desse canal vai até 3,5 s DEPOIS do agora.
+test('um ajuste negativo nao poe a borda no futuro nem o atraso abaixo de zero', () => {
+  const so = bordaAoVivo([canalAoVivo('lautaarg00', AGORA, 2.2)], { agoraMs: AGORA, nudges: { lautaarg00: -5710 } });
+  assert.equal(so.porCanal.get('lautaarg00'), AGORA + 3510, 'a barra do canal mostra o que ele tem');
+  assert.equal(so.comumMs, AGORA, 'a borda nao passa do agora');
+  assert.equal(so.atrasoMs, 0);
+  assert.equal(so.agoraMs, AGORA);
+  // Com outro canal mais atrás, a borda é a dele, e o teto não mexe em nada.
+  const dois = bordaAoVivo([canalAoVivo('lautaarg00', AGORA, 2.2), canalAoVivo('b', AGORA, 11.8)],
+    { agoraMs: AGORA, nudges: { lautaarg00: -5710 } });
+  assert.equal(dois.comumMs, AGORA - 11_800);
+  assert.equal(dois.atrasoMs, 11_800);
+  // Um ajuste de -10 min mexido à mão no link não manda ninguém para fora do ar.
+  const mexido = bordaAoVivo([canalAoVivo('a', AGORA, 3), canalAoVivo('b', AGORA, 5)],
+    { agoraMs: AGORA, nudges: { a: -600_000 } });
+  assert.deepEqual(mexido.vivos.sort(), ['a', 'b']);
+  assert.equal(mexido.comumMs, AGORA - 5000);
+  assert.ok(mexido.atrasoMs >= 0);
+});
+
+// Organizadores colam listas à mão: o mesmo streamer duas vezes acontece.
+test('um slug repetido conta uma vez, pelo fim mais recente, seja qual for a ordem', () => {
+  const x = canalAoVivo('x', AGORA, 3);
+  const y = canalAoVivo('y', AGORA, 4);
+  const xVelho = canalAoVivo('x', AGORA, 600);
+  for (const linhas of [[x, y, xVelho], [xVelho, y, x], [y, xVelho, x]]) {
+    const b = bordaAoVivo(linhas, { agoraMs: AGORA });
+    assert.deepEqual([...b.vivos].sort(), ['x', 'y']);
+    assert.deepEqual(b.foraDoAr, [], 'x esta no ar: nao pode estar nas duas listas');
+    assert.equal(b.comumMs, AGORA - 4000);
+    assert.equal(b.atrasoMs, 4000);
+    assert.equal(b.porCanal.get('x'), AGORA - 3000);
+    assert.equal(b.porCanal.size, 2);
+    assert.deepEqual(b.repetidos, ['x'], 'dito pelo nome, para a pagina avisar');
+  }
+  assert.deepEqual(bordaAoVivo([x, y], { agoraMs: AGORA }).repetidos, []);
 });
 
 test('um ajuste que nao e numero (link mexido a mao) conta como zero', () => {
@@ -461,12 +598,19 @@ test('com o separador escondido nao pede nada, e ao voltar pede logo', async () 
   const ctl = new AbortController();
   const quando = [];
   // Visível até aos 25 s, escondido até aos 95 s, visível depois.
-  const visivel = () => r.t < 25_000 || r.t >= 95_000;
+  const mudancas = [25_000, 95_000];
+  const visivel = () => r.t < mudancas[0] || r.t >= mudancas[1];
+  // Como `dormir`: acorda na mudança de visibilidade, e não só no fim do
+  // tempo. Sem isto o teste aceitava uma volta 5 s depois do regresso.
+  const esperar = async (ms) => {
+    const acorda = mudancas.find((m) => m > r.t && m < r.t + ms);
+    await r.esperar((acorda ?? r.t + ms) - r.t);
+  };
   await agendar({
     atualizar: async () => { quando.push(r.t); if (quando.length === 5) ctl.abort(); },
-    visivel, esperar: r.esperar, agora: r.agora, sinal: ctl.signal,
+    visivel, esperar, agora: r.agora, sinal: ctl.signal,
   });
-  assert.deepEqual(quando, [0, 10_000, 20_000, 100_000, 110_000]);
+  assert.deepEqual(quando, [0, 10_000, 20_000, 95_000, 105_000], 'no instante em que volta, nao 5 s depois');
 });
 
 test('escondida desde o inicio nao chama nada ate ficar visivel', async () => {
@@ -583,6 +727,88 @@ test('um aviso de erro que rebenta nao para o relogio', async () => {
   assert.equal(chamadas, 3);
 });
 
+test('um aviso de erro assincrono que rejeita nao fica solto', async () => {
+  const r = relogioFalso();
+  const ctl = new AbortController();
+  const soltas = [];
+  const ouvir = (e) => soltas.push(e);
+  process.on('unhandledRejection', ouvir);
+  let chamadas = 0;
+  try {
+    const fim = await agendar({
+      atualizar: async () => { if (++chamadas === 3) ctl.abort(); throw new Error('x'); },
+      visivel: () => true, esperar: r.esperar, agora: r.agora, sinal: ctl.signal,
+      aoErro: async () => { throw new Error('o ecra partiu, depois'); },
+    });
+    assert.deepEqual(fim, { voltas: 2, erros: 2 });
+    await new Promise((ok) => setTimeout(ok, 20));
+  } finally {
+    process.off('unhandledRejection', ouvir);
+  }
+  assert.deepEqual(soltas.map((e) => e.message), [], 'no node, uma rejeicao solta derruba o processo');
+});
+
+// O `visivel` vem de quem chama. Se rebentar, não se sabe se a página está à
+// vista: pede-se como se estivesse (o ritmo continua a ser o do intervalo), e
+// o erro vai para o ecrã em vez de parar o ao vivo de vez.
+test('um visivel que rebenta nao para o ao vivo, e o erro e dito', async () => {
+  const r = relogioFalso();
+  const ctl = new AbortController();
+  const quando = [];
+  const avisos = [];
+  let vezes = 0;
+  const fim = await agendar({
+    atualizar: async () => { quando.push(r.t); if (quando.length === 3) ctl.abort(); },
+    visivel: () => { if (++vezes === 2) throw new Error('documento foi-se'); return true; },
+    esperar: r.esperar, agora: r.agora, sinal: ctl.signal,
+    aoErro: (e, info) => avisos.push({ msg: e.message, ...info }),
+  });
+  assert.deepEqual(quando, [0, 10_000, 20_000]);
+  assert.deepEqual(fim, { voltas: 3, erros: 0 }, 'a volta correu: nao e um erro da Kick');
+  assert.deepEqual(avisos, [{ msg: 'documento foi-se', esperaMs: 0, seguidos: 0, de: 'visivel' }]);
+});
+
+// O temporizador é a peça que impede o ciclo sem pausa. Partido, não há
+// maneira segura de continuar: pára alto, como uma configuração errada.
+test('um esperar que rebenta para o ciclo alto, sem pedir mais nada', async () => {
+  const ctl = new AbortController();
+  let chamadas = 0;
+  let t = 0;
+  await assert.rejects(agendar({
+    atualizar: async () => { if (++chamadas === 5) ctl.abort(); },
+    visivel: () => true, agora: () => t, sinal: ctl.signal,
+    esperar: async () => { throw new Error('sem temporizador'); },
+  }), /sem temporizador/);
+  assert.equal(chamadas, 1);
+});
+
+test('um relogio que nao da numeros para tudo alto, em vez de pedir sem pausa', async () => {
+  for (const mau of [NaN, undefined, null, 'agora', Infinity]) {
+    // Com travão: se a validação faltasse, isto era o ciclo sem pausa, e o
+    // teste tem de FALHAR, não ficar pendurado.
+    const ctl = new AbortController();
+    let chamadas = 0;
+    await assert.rejects(agendar({
+      atualizar: async () => { if (++chamadas === 3) ctl.abort(); },
+      visivel: () => true, agora: () => mau, sinal: ctl.signal,
+      esperar: async () => {},
+    }), RangeError, `relogio ${String(mau)}`);
+    assert.equal(chamadas, 0, 'nem chegou a pedir');
+  }
+  // E um que se estraga a meio: pára na volta seguinte, sem martelar.
+  const ctl = new AbortController();
+  let chamadas = 0;
+  let leituras = 0;
+  let t = 0;
+  await assert.rejects(agendar({
+    atualizar: async () => { if (++chamadas === 50) ctl.abort(); },
+    visivel: () => true, sinal: ctl.signal,
+    agora: () => (++leituras > 3 ? NaN : t),
+    esperar: async (ms) => { t += ms; },
+  }), RangeError);
+  assert.ok(chamadas <= 2, `chamou ${chamadas} vezes`);
+});
+
 test('um erro sincrono em atualizar tambem e apanhado', async () => {
   const r = relogioFalso();
   const ctl = new AbortController();
@@ -607,6 +833,19 @@ test('configuracao errada parte alto, antes de pedir o que quer que seja', async
       intervaloMs: mau, visivel: () => true, sinal: ctl.signal,
     }), RangeError, `intervalo ${mau}`);
     assert.equal(chamadas, 0, 'e nao chegou a pedir nada');
+  }
+  // O teto também: um NaN ali desligava a espera depois de um erro, e cada
+  // 429 era seguido de outro pedido 10 s depois, para sempre.
+  for (const mau of [NaN, 0, -1, Infinity, '60000', null]) {
+    const ctl = new AbortController();
+    let chamadas = 0;
+    let t = 0;
+    await assert.rejects(agendar({
+      atualizar: async () => { if (++chamadas === 3) ctl.abort(); throw new Error('429'); },
+      tetoMs: mau, visivel: () => true, sinal: ctl.signal,
+      agora: () => t, esperar: async (ms) => { t += ms; },
+    }), RangeError, `teto ${String(mau)}`);
+    assert.equal(chamadas, 0);
   }
 });
 
