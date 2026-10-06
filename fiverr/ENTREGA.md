@@ -89,6 +89,8 @@ so ("not checked") with the reason:
   upside down, on their side, at 150 dpi. A phone photo taken at an angle was not tested: ask for a flat scan.
 - Tested on real layouts too: the public sample statements of RBC and `CIBC` (Canada) and TD Bank (US, with
   a table of cheques) convert row for row, with the right year and the opening and closing balances.
+- A PDF locked with a password: the console says so; ask the client for it and add `--password 1503` (more
+  than one may be given). A photo or scan sent as JPG or PNG is read like a scanned page.
 - Run `python3 fiverr/tools/statement2excel.py a.pdf b.pdf -o statements.xlsx`, adding as needed:
   `--categories` (or `--categories rules.json`, a copy of `tools/categories.json` with the client's
   words), `--date-format dd/mm/yyyy`, `--dates dmy` or `mdy` when the guess is wrong, and for CSV

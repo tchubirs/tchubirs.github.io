@@ -129,6 +129,9 @@ até alguma vender. O que eu faço agora:
    Às 2h40, o exemplo do CommBank (Austrália) tinha cada palavra 4 vezes no texto do PDF, no mesmo lugar; o
    mesmo acontece com negrito feito imprimindo duas vezes. O conversor leria cada valor 2 ou 4 vezes. Agora a
    palavra repetida no mesmo lugar é lida uma vez só. Testado com negrito duplo e com o texto repetido 4 vezes.
+   Às 3h, PDF com senha (muito banco manda assim) derrubava o conversor com erro técnico. Agora ele pede a senha
+   (`--password`), avisa quando está errada, e arquivo quebrado ou página da web salva como PDF dá mensagem
+   clara. Foto do extrato em JPG ou PNG é lida como escaneado. O anúncio 5 pede a senha junto com os PDFs.
 
 Pausado até algo vender ou ele pedir: inventário da casa (rascunho em `etsy/home-inventory`), manutenção da casa,
 galinhas no quintal, férias da equipe, Herculano.

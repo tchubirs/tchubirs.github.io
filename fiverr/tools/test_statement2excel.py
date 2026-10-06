@@ -797,6 +797,37 @@ def check_overprint():
           "rows and checks as the plain PDF")
 
 
+def check_locked():
+    """A statement locked with a password, as many banks send them: without --password the console asks for
+    it, a wrong one is named, the right one gives the rows of the open PDF. A broken file, or a web page
+    saved as .pdf, is named instead of stopping with an error. A statement saved as a picture (JPG) is read
+    like a scan."""
+    with tempfile.TemporaryDirectory() as tmp:
+        pdf, locked, out = (os.path.join(tmp, name) for name in ("s.pdf", "locked.pdf", "s.xlsx"))
+        make(pdf, eu=True, n=20, seed=7)
+        _, want, want_checks, _ = read(pdf, out)
+        pymupdf.open(pdf).save(locked, encryption=pymupdf.PDF_ENCRYPT_AES_256, user_pw="1503", owner_pw="bank")
+        code, _, _, said = read(locked, out)
+        assert code == 2 and "locked.pdf is locked with a password" in said and "--password" in said, said
+        code, _, _, said = read(locked, out, "--password", "0000")
+        assert code == 2 and "None of the passwords given opens it" in said, said
+        code, got, checks, _ = read(locked, out, "--password", "0000", "--password", "1503")
+        assert code == 0 and got == want and checks == want_checks, (code, len(got), len(want))
+        for name, data in (("broken.pdf", bytes(range(256)) * 4), ("page.pdf", b"<html><body>Not found</body></html>")):
+            with open(os.path.join(tmp, name), "wb") as f:
+                f.write(data)
+            code, _, _, said = read(os.path.join(tmp, name), out)
+            assert code == 2 and name in said and "download it again" in said, said
+        if shutil.which("tesseract"):
+            picture = os.path.join(tmp, "statement.jpg")
+            pymupdf.open(pdf)[0].get_pixmap(dpi=200).save(picture, jpg_quality=80)
+            code, got, _, said = read(picture, out)
+            assert code == 0 and [(r[0], r[2:5]) for r in got] == [(r[0], r[2:5]) for r in want], said
+    print("locked statements: asked for the password, a wrong one named, the right one opens it; a broken file "
+          "and a web page named; a JPG picture read like a scan" + ("" if shutil.which("tesseract") else
+                                                                   " (not checked: no Tesseract)"))
+
+
 def check_footer_page():
     """A bank's own last page: a background image over the whole page and "Page 3 of 3". It is not a scan,
     so the statement converts even without Tesseract, and an image alone is still a scan."""
@@ -888,6 +919,7 @@ if __name__ == "__main__":
     check_canada()
     check_us_checks()
     check_overprint()
+    check_locked()
     check_bank_header()
     check_rules()
     check_categories()

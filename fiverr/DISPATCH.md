@@ -5,7 +5,8 @@ the categories of gigs 1 and 3, so their Basic package is $30. Publishing waits 
 check and tax form.
 
 Changed on 5 October, after the drafts were made: the description of gig 1 (the line "Typical jobs")
-and the description, FAQ, search tags and requirements of gig 5 (scanned statements, QuickBooks and Xero).
+and the description, FAQ, search tags and requirements of gig 5 (scanned statements, QuickBooks and Xero,
+the password of a locked PDF).
 Before publishing, update those drafts to the texts below.
 
 You are acting in the user's own browser, on the user's behalf. The goal is a
@@ -326,7 +327,7 @@ I use AI tools for the conversion, and I check every file against the statement 
   - Q: Is my data safe?
     A: I use your files only for your order and delete them after delivery. You can hide account numbers before you send them.
 - **Requirements** (all mandatory):
-  - Attach the PDF statements.
+  - Attach the PDF statements. If they are locked with a password, write it here.
   - Excel, CSV, or a file to upload to QuickBooks Online or Xero? Any specific columns or date format you need?
   - Do you want categories added, for example food, rent and transport? If yes, list the ones you want.
 - **Gallery:** gig5-statement-excel.png

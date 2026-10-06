@@ -12,6 +12,7 @@ Usage: python3 statement2excel.py statement.pdf [more.pdf ...] -o out.xlsx   (or
        [--ocr]  read every page as a scan, also pages with text (a scan whose text layer is poor)
        [--lang fra]  the languages of the scan (default: English, French, Portuguese and Spanish)
        [--whole]  also amounts without cents (12.990, 1.250.000), as banks in Chile print them
+       [--password 1503]  for a statement locked with a password (JPG and PNG pictures are read as scans)
        [--for quickbooks] [--for xero]  also the CSV file to upload to QuickBooks Online or Xero, next to
                                          the output: out-quickbooks.csv, out-xero.csv
 
@@ -400,11 +401,24 @@ def year_for(day, stated):
     return min(options, key=lambda d: (min(abs((d - s).days) for s in stated), d)).year
 
 
-def read_pdf(path, ocr, lang):
+def read_pdf(path, ocr, lang, passwords=()):
     """The lines of one PDF as (text, words), the words the OCR was unsure of by line, how many pages
-    were read from a scan, and the OCR languages (looked up at the first scanned page)."""
+    were read from a scan, and the OCR languages (looked up at the first scanned page). A picture (JPG,
+    PNG) is read as a scanned page. A file that cannot be opened, is neither a PDF nor a picture, or is
+    locked with a password none of passwords opens, raises Unreadable with what to ask the client."""
+    name = os.path.basename(path)
+    try:
+        doc = pymupdf.open(path)
+    except (RuntimeError, OSError) as e:             # broken, empty or missing
+        raise Unreadable(f"{name} cannot be opened ({e}). Ask the client to download it again.") from e
+    if not (doc.is_pdf or doc.metadata.get("format") == "Image"):
+        raise Unreadable(f"{name} is not a PDF or a picture (it reads as {doc.metadata.get('format')}). Ask the "
+                         "client to download it again.")
+    if doc.needs_pass and not any(doc.authenticate(password) for password in passwords):
+        raise Unreadable(f"{name} is locked with a password. " + ("None of the passwords given opens it."
+                         if passwords else "Ask the client for it and run again with --password."))
     lines, unsure, scanned = [], {}, 0
-    for number, page in enumerate(pymupdf.open(path), start=1):
+    for number, page in enumerate(doc, start=1):
         if ocr or is_scan(page):
             if not shutil.which("tesseract"):
                 raise Unreadable(f"{os.path.basename(path)} page {number} is a scanned image. To read it, install "
@@ -573,7 +587,7 @@ def parse(lines, unsure, order, whole):
     return tx, opening, closings, extra, plain
 
 
-def extract(paths, order=None, ocr=False, lang=None, whole=False):
+def extract(paths, order=None, ocr=False, lang=None, whole=False, passwords=()):
     """Every file read on its own, then put in the order of its first transaction, so statements sent out
     of order come out in date order, and a file with the same transactions as another is read once. With
     ocr, every page is read as a scan; with whole, amounts without cents are read too.
@@ -584,7 +598,7 @@ def extract(paths, order=None, ocr=False, lang=None, whole=False):
     left out as (its name, the name of the file it repeats)."""
     files = []
     for path in paths:
-        lines, unsure, scanned, lang = read_pdf(path, ocr, lang)
+        lines, unsure, scanned, lang = read_pdf(path, ocr, lang, passwords)
         files.append((os.path.basename(path), lines, unsure, scanned))
     order = order or guess_order([text for _, lines, _, _ in files for text, _ in lines])
     parts = []
@@ -836,11 +850,13 @@ def main(argv=None):
                                    "and spa, those installed)")
     ap.add_argument("--whole", action="store_true",
                     help="also amounts without cents (12.990), under the money columns or at the end of a row")
+    ap.add_argument("--password", action="append", default=[],
+                    help="the password of a locked PDF, as the client sends it (may be given more than once)")
     ap.add_argument("--for", dest="imports", action="append", choices=list(IMPORTS), default=[],
                     help="also the CSV file to upload to QuickBooks Online or Xero (may be given twice)")
     a = ap.parse_args(argv)
     try:
-        got = extract(a.pdfs, a.dates, a.ocr, a.lang, a.whole)
+        got = extract(a.pdfs, a.dates, a.ocr, a.lang, a.whole, a.password)
     except Unreadable as e:
         print(e)
         return 2
