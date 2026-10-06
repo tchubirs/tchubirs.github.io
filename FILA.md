@@ -7,6 +7,15 @@ Teste combinado em 28/09: quando a loja abrir, esperar 30 dias. Se nenhuma
 planilha vender, paro de fazer planilhas e a gente muda de ideia. Se ele disser
 "para", paro as planilhas novas na hora.
 
+**Prioridade dele em 06/10, acima de tudo o resto:** o projeto de clipes da Kick (`kick-sync`, publicado em
+`replay/`). Ele vai a um evento de Rust com uns 500 streamers na Kick (times de 4) e quer mostrar o produto
+lá, e depois vender (para a Kick ou outra empresa). Pediu: estudo com fontes de por que isso é útil para a
+Kick e os eventos que ela patrocina; o produto redondo, fácil de entender só de olhar, sem bugs; nome
+comercial, perfil e banner; domínios; segurança; tudo decidido por estudo, sem perguntar a ele. O que eu
+precisar dele vai numa lista só, no fim. Trabalhar sem parar até ele mandar parar. As tarefas do Fiverr e
+da Etsy abaixo continuam, mas só a conferência de vendas de hora em hora até o projeto ficar pronto.
+Andamento em `kick-sync/PLANO.md`.
+
 **Decisão dele em 28/09 à noite:** um mês sem nenhum centavo, então foco em dinheiro. Não crio planilha nova
 até alguma vender. O que eu faço agora:
 
