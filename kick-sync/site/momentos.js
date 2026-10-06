@@ -95,7 +95,16 @@ export function filtrar(momentos, filtro) {
   return momentos;
 }
 
-const dois = (n) => String(n).padStart(2, '0');
+/**
+ * O numero de uma kill, com a largura da montagem inteira.
+ *
+ * Dois algarismos chegavam para uma noite de amigos. Numa noite de evento
+ * passa-se das cem, e o editor (que ordena por bytes) punha o 100a e o 101a
+ * entre o 09 e o 10. Com a largura do total, o 001 vem antes do 010 e este
+ * antes do 100; abaixo de cem continua a ser 01, 02...
+ */
+export const numeroNaMontagem = (indice, total = 0) => String(indice + 1)
+  .padStart(Math.max(2, String(total).length), '0');
 
 /**
  * Os clipes de um momento, na ordem em que entram na montagem.
@@ -106,7 +115,7 @@ const dois = (n) => String(n).padStart(2, '0');
  *
  * @param {(slug:string, deMs:number, ateMs:number) => boolean} filmava
  */
-export function clipesDoMomento(momento, canais, indice, { filmava = () => true } = {}) {
+export function clipesDoMomento(momento, canais, indice, { filmava = () => true, total = 0 } = {}) {
   const saida = [];
   // O combate INTEIRO, e as margens dele por fora.
   //
@@ -149,7 +158,7 @@ export function clipesDoMomento(momento, canais, indice, { filmava = () => true 
       ms: momento.ms,
       // O nome carrega a ordem: no editor os ficheiros caem já certos, e
       // ninguém tem de andar a adivinhar qual vem antes de qual.
-      prefixo: `${dois(indice + 1)}${letra}`,
+      prefixo: `${numeroNaMontagem(indice, total)}${letra}`,
     });
   };
 
@@ -169,7 +178,8 @@ export function clipesDoMomento(momento, canais, indice, { filmava = () => true 
 
 /** A montagem inteira: todos os momentos, todos os clipes, já em ordem. */
 export function planoDaMontagem(momentos, canais, opcoes = {}) {
-  return ordenar(momentos).flatMap((m, i) => clipesDoMomento(m, canais, i, opcoes));
+  const total = momentos.length;
+  return ordenar(momentos).flatMap((m, i) => clipesDoMomento(m, canais, i, { total, ...opcoes }));
 }
 
 

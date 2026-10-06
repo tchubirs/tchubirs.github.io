@@ -373,3 +373,38 @@ test('um pico de meio segundo nao e um tiroteio', () => {
   for (let i = 10 * FPS; i < 10.3 * FPS; i++) b[i] = 60;
   assert.equal(regioes(b, 1, {}).length, 0, 'trezentos milissegundos nao sao uma troca');
 });
+
+// Dez minutos de explosoes de raid, ou de musica alta, eram UMA regiao de
+// 600 s, a primeira da lista por ter mais tempo quente, e um clipe de dez
+// minutos para ele rever. As `lutas` ja tinham um tecto de noventa segundos.
+test('uma regiao alta durante dez minutos nao vira um clipe de dez minutos', () => {
+  const b = new Float32Array(700 * FPS).fill(1);
+  for (let i = 50 * FPS; i < 650 * FPS; i++) b[i] = 20;
+  const rs = regioes(b, 1, {});
+  assert.ok(rs.length > 1, `deu ${rs.length} regiao`);
+  for (const r of rs) assert.ok(r.fimS - r.inicioS <= 90, `uma regiao de ${(r.fimS - r.inicioS).toFixed(0)} s`);
+  // E os pedacos cobrem os dez minutos, sem buracos entre eles.
+  const cobre = rs.reduce((s, r) => s + (r.fimS - r.inicioS), 0);
+  assert.ok(cobre >= 590, `so cobriu ${cobre.toFixed(0)} s dos 600`);
+});
+
+// O `impulsos` ordenava por `quenteS` e `pico`, campos que um impulso nao tem.
+// A conta dava NaN, que o `sort` trata como empate, e a ordem do relogio so
+// sobrevivia por o `sort` do V8 ser estavel. O `lutas` depende dessa ordem.
+test('os impulsos saem pela ordem do relogio, sem comparar campos que nao existem', () => {
+  const b = new Float32Array(10 * FPS).fill(1);
+  for (const s of [7, 2, 5]) b[Math.round(s * FPS)] = 50 + s;
+  const original = Array.prototype.sort;
+  let semNumero = 0;
+  Array.prototype.sort = function (cmp) {
+    if (cmp) {
+      const vigiado = (x, y) => { const r = cmp(x, y); if (Number.isNaN(r)) semNumero++; return r; };
+      return original.call(this, vigiado);
+    }
+    return original.call(this);
+  };
+  let imps;
+  try { imps = impulsos(b, 1); } finally { Array.prototype.sort = original; }
+  assert.deepEqual(imps.map((i) => i.bloco / FPS), [2, 5, 7]);
+  assert.equal(semNumero, 0, 'o comparador devolveu NaN');
+});

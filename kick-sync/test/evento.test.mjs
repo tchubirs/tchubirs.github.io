@@ -40,7 +40,8 @@ test('colar o elenco abre o mapa, com os times e quem não existe dito pelo nome
     await kickFalsa(p, { canais: ['tchubi', 'outro'] });
     await abrirEvento(p);
     assert.match(await p.locator('#resumoEvento').innerText(), /2 times · 3 canais · 2 com vídeo/);
-    assert.match(await p.locator('#avisosEvento').innerText(), /terceiro: não existe na Kick/);
+    assert.match(await p.locator('#avisosEvento').innerText(), /1 canal não existe na Kick: terceiro\./);
+    assert.equal(await p.locator('#corrigirElenco').isVisible(), true, 'e um botão para voltar ao elenco');
     // As portas saem do caminho: o que se faz a seguir é no mapa.
     assert.equal(await p.locator('#portaEvento').isVisible(), false);
     assert.equal(await p.locator('#entrada').isVisible(), false);
@@ -90,8 +91,10 @@ test('o link do lance abre o evento noutra janela, no mesmo instante',
     // Sem permissão de área de transferência o link aparece escrito, que é o que se lê aqui.
     await p.evaluate(() => { Object.defineProperty(navigator, 'clipboard', { value: { writeText: () => Promise.reject(new Error('não')) } }); });
     await p.click('#partilharEvento');
-    const url = await p.locator('#estadoPartilhaEvento').innerText();
-    assert.match(url, /#evento=[A-Za-z0-9_-]+&t=\d+$/);
+    // Sem área de transferência o link vai para a barra de endereço, e o ecrã diz para o copiar de lá.
+    const url = await p.evaluate(() => location.href);
+    assert.match(url, /#evento=[A-Za-z0-9_-]+&t=\d+&c=tchubi$/);
+    assert.match(await p.locator('#estadoPartilhaEvento').innerText(), /barra de endereço/);
 
     const { p: q, erros: erros2 } = await abrir();
     await kickFalsa(q, { canais: ['tchubi', 'outro'] });
@@ -100,6 +103,9 @@ test('o link do lance abre o evento noutra janela, no mesmo instante',
     const e = await q.evaluate(() => window.__evento.escolha);
     assert.equal(e.canal, 'tchubi');
     assert.ok(Math.abs(e.ms - ms) < 5000);
+    // Quem recebe o link de um lance cai direto no lance, com o vídeo no instante.
+    await q.waitForSelector('.tile', { timeout: 15000 });
+    assert.deepEqual(await q.evaluate(() => window.__estado.focos[0]), 'tchubi');
     assert.equal(await q.locator('#nomeEvento').innerText(), await p.locator('#nomeEvento').innerText());
     assert.deepEqual([...erros, ...erros2], []);
   });

@@ -145,9 +145,36 @@ test('idDoCanal: cada falha é null, e um nome impossível nem chega a pedir', a
   }
 });
 
+test('idDoCanal: um nome só de pontos não vira outro endereço da API', async () => {
+  // `encodeURIComponent` não escapa pontos: ".." ia a kick.com/api/v2/ e "."
+  // a kick.com/api/v2/channels/, e um `id` qualquer dessas respostas passava
+  // por número de canal. É a regra de `elenco.js`: um nome tem pelo menos uma
+  // letra ou um algarismo.
+  let pedidos = 0;
+  const buscar = async () => { pedidos++; return resposta(200, { id: 7 }); };
+  for (const nome of ['.', '..', '...', '@..', '-', '_', '.-_']) {
+    assert.equal(await idDoCanal(nome, { buscar }), null, nome);
+  }
+  assert.equal(pedidos, 0);
+  // Pontos no meio de um nome a sério continuam a ir à Kick, que é quem sabe.
+  assert.equal(await idDoCanal('a.b', { buscar }), 7);
+});
+
 test('idDoCanal: cancelar atira em vez de fingir que o canal não tem chat', async () => {
   const ctl = new AbortController();
   const buscar = async () => { ctl.abort(); throw new DOMException('aborted', 'AbortError'); };
+  await assert.rejects(idDoCanal('tchubi', { buscar, sinal: ctl.signal }), { name: 'AbortError' });
+});
+
+test('idDoCanal: cancelar enquanto se lê a resposta também atira', async () => {
+  // O `fetch` já respondeu e o corpo ainda vem a caminho: cancelar aqui é
+  // o mesmo desistir, e não um "este canal não tem chat".
+  const ctl = new AbortController();
+  const buscar = async () => ({
+    status: 200,
+    ok: true,
+    json: async () => { ctl.abort(); throw new DOMException('aborted', 'AbortError'); },
+  });
   await assert.rejects(idDoCanal('tchubi', { buscar, sinal: ctl.signal }), { name: 'AbortError' });
 });
 
@@ -327,6 +354,41 @@ test('mensagensEntre: sem cursor na resposta, anda pelo segundo da mais velha', 
   assert.equal(lista.incompleto, false);
 });
 
+test('mensagensEntre: sem cursor, um segundo com mais de uma página não passa por completo', async () => {
+  // 30 mensagens no mesmo segundo e 10 mais velhas. Sem o cursor da Kick só
+  // se anda ao segundo: o pedido seguinte devolve as mesmas 25, e dizer
+  // "acabou" deixava 15 de fora com a lista a jurar que estava inteira.
+  const cheio = T0 + 30 * MIN;
+  const registo = [
+    ...Array.from({ length: 30 }, (_, i) => ({ id: `c${i}`, us: cheio * 1000 + i * 1000, texto: 'KEKW' })),
+    ...Array.from({ length: 10 }, (_, i) => ({ id: `v${i}`, us: (T0 + 10 * MIN + i * 1000) * 1000, texto: 'oi' })),
+  ];
+  const k = kickDoChat(registo, { semCursor: true });
+  const lista = await mensagensEntre(ID, T0, T0 + 60 * MIN, { buscar: k.buscar });
+  assert.equal(lista.length, 25);
+  assert.equal(lista.incompleto, true);
+  assert.equal(lista.motivo, 'cursor-parado');
+  assert.equal(k.pedidos.length, 2);
+});
+
+test('mensagensEntre: uma Kick que ignora o cursor e repete a página não passa por fim', async () => {
+  // A mesma página outra vez, com um cursor que até anda para trás: o cursor
+  // não serviu de nada, e o resto da noite ficou por ler.
+  // Também com uma página curta (veio uma de 19, medido): não ser cheia não
+  // a torna a fronteira, porque traz mensagens mais novas do que onde se ia.
+  const registo = chatSintetico(HORA, { texto: textoDaHora });
+  for (const tamanho of [25, 19]) {
+    const primeira = [...registo].sort((a, b) => b.us - a.us).slice(0, tamanho).map(paraKick);
+    const mesma = ({ cursor }) => resposta(200, { data: { messages: primeira, cursor: String(cursor - 1000) } });
+    const k = kickDoChat(registo, { roteiro: { 1: mesma, 2: mesma, 3: mesma } });
+    const lista = await mensagensEntre(ID, T0, T0 + 60 * MIN, { buscar: k.buscar });
+    assert.equal(lista.length, tamanho);
+    assert.equal(lista.incompleto, true, `página de ${tamanho}`);
+    assert.equal(lista.motivo, 'cursor-parado', `página de ${tamanho}`);
+    assert.equal(k.pedidos.length, 2, 'não insiste numa Kick que não anda');
+  }
+});
+
 test('mensagensEntre: as pontas da janela — [de, ate), ao segundo', async () => {
   const s = (ms, extraUs = 0) => ms * 1000 + extraUs;
   const registo = [
@@ -399,12 +461,20 @@ test('mensagensEntre: um travão que não é número pára logo, e diz porquê',
   assert.equal(semFim.incompleto, false);
 });
 
-test('mensagensEntre: janela vazia ou canal sem id não pedem nada', async () => {
+test('mensagensEntre: janela vazia, janela que não é número ou canal sem id não pedem nada', async () => {
   const k = kickDoChat(chatSintetico([4]));
-  for (const [de, ate] of [[T0, T0], [T0 + MIN, T0], [NaN, T0], [T0, Infinity]]) {
+  for (const [de, ate] of [[T0, T0], [T0 + MIN, T0]]) {
     const lista = await mensagensEntre(ID, de, ate, { buscar: k.buscar });
     assert.equal(lista.length, 0);
     assert.equal(lista.incompleto, false);
+  }
+  // Uma data que não se leu (NaN) ou um "até agora" passado como Infinity não
+  // é uma janela calada: é uma pergunta que não se fez, e diz-se.
+  for (const [de, ate] of [[NaN, T0], [T0, Infinity], [-Infinity, T0], [undefined, T0], [T0, '2026-10-03']]) {
+    const lista = await mensagensEntre(ID, de, ate, { buscar: k.buscar });
+    assert.equal(lista.length, 0, `${de}..${ate}`);
+    assert.equal(lista.incompleto, true, `${de}..${ate}`);
+    assert.equal(lista.motivo, 'janela-invalida', `${de}..${ate}`);
   }
   for (const id of [null, undefined, '']) {
     const lista = await mensagensEntre(id, T0, T0 + MIN, { buscar: k.buscar });
@@ -515,11 +585,24 @@ test('picos: um pico no princípio ou no fim também conta', () => {
 
 test('picos: um canal quase calado não tem picos de três mensagens', () => {
   const calado = [0, 0, 1, 0, 3, 0, 0, 1, 0];
-  assert.deepEqual(picos(calado), [], 'mediana 0: sem o mínimo, tudo seria pico');
+  assert.deepEqual(picos(calado), [], 'mediana 1: só o fator fazia do 3 um lance, e é o mínimo que não deixa');
   assert.deepEqual(picos(calado, { minimo: 2 }), [4]);
-  // Desligado metade da janela: os zeros puxam a mediana para baixo, e é o
-  // mínimo que impede o vaivém normal de virar lance.
+  // Desligado metade da janela: os zeros não contam para a mediana (5,5), e
+  // o vaivém normal de 4 a 7 fica abaixo do limite.
   assert.deepEqual(picos([0, 0, 0, 0, 0, 0, 5, 6, 4, 7, 5, 20]), [11]);
+});
+
+test('picos: horas desligado na janela não puxam o limite para o chão', () => {
+  // A noite do evento em que o canal só entrou no ar ao minuto 300 de 480, a
+  // uns 40 por minuto, com dois lances. Com os 300 zeros na mediana ela era
+  // 0, o limite caía no mínimo (8), a noite inteira ficava acima dele e saía
+  // um pico só: o segundo lance perdia-se.
+  const r = aleatorio(11);
+  const c = new Float64Array(480);
+  for (let i = 300; i < 480; i++) c[i] = 30 + Math.floor(r() * 21);
+  c[350] = 200;
+  c[420] = 180;
+  assert.deepEqual(picos(c), [350, 420]);
 });
 
 test('picos: o fator conta sobre a mediana', () => {
@@ -529,8 +612,10 @@ test('picos: o fator conta sobre a mediana', () => {
 });
 
 test('picos: a mediana de um número par de baldes é a média das duas do meio', () => {
-  // Mediana 3 (e não 6): limite 2 x 3 = 6, e os dois 6 são um pico só.
-  assert.deepEqual(picos([0, 0, 6, 6], { fator: 2, minimo: 1 }), [2]);
+  // Por ordem são 1, 2, 4, 7: as do meio são 2 e 4, a mediana é 3 e o limite
+  // 2 x 3 = 6, por isso só o 7 passa. Com a de baixo (2) o limite era 4 e o 4
+  // também passava; com a de cima (4) era 8 e não passava nenhum.
+  assert.deepEqual(picos([4, 1, 7, 2], { fator: 2, minimo: 1 }), [2]);
 });
 
 test('picos: vazio, lista simples e valores estragados', () => {

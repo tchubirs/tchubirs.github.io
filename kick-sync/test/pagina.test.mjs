@@ -983,7 +983,7 @@ test('a pagina fala portugues, ingles e espanhol, e troca sem perder nada',
     const instante = await p.locator('#agora').innerText();
 
     assert.equal(await p.locator('#carregar').innerText(), 'Carregar');
-    assert.equal(await p.locator('html').getAttribute('lang'), 'pt');
+    assert.equal(await p.locator('html').getAttribute('lang'), 'pt-BR', 'o português daqui é o do Brasil');
 
     await p.selectOption('#idioma', 'en');
     await p.waitForFunction(() => document.getElementById('carregar').textContent === 'Load',
