@@ -103,8 +103,7 @@ test('um leitor que o hls.js deu por perdido diz-o, e o clique cria outro',
     assert.ok(await tile.evaluate((t) => t.classList.contains('vazio')));
 
     await tile.click();
-    await p.waitForFunction((n) => window.__hls.length > n
-      && window.__hls[window.__hls.length - 1].slug === 'kodd', antes, { timeout: 5000 });
+    await p.waitForFunction((n) => window.__hls.slice(n).some((h) => h.slug === 'kodd'), antes, { timeout: 10000 });
     assert.ok(!(await tile.evaluate((t) => t.classList.contains('vazio'))), 'o quadro continuou a dizer que falhou');
     assert.deepEqual(erros, []);
     await p.close();

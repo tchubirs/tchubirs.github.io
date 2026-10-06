@@ -2,7 +2,9 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MAXIMO_S, mover, janelaInicial, nomeDoClipe, posicaoDaCabeca } from '../site/clipe.js';
+import {
+  MAXIMO_S, mover, janelaInicial, nomeDoClipe, posicaoDaCabeca, dentroDosLimites, duracaoCurta,
+} from '../site/clipe.js';
 
 const T = Date.parse('2026-08-30T22:00:00.000Z');
 const s = (n) => n * 1000;
@@ -102,4 +104,36 @@ test('a cabeca nunca sai do pedaco escolhido', () => {
 test('uma vista sem largura nao rebenta a conta', () => {
   const c = { deMs: T, ateMs: T, vista: { inicio: T, fim: T } };
   assert.equal(Number.isFinite(posicaoDaCabeca(c, T)), true);
+});
+
+// ── exportar: trocar de ângulo e o tempo da lista de corte ──────────────────
+
+// Um ângulo que só entrou no ar depois do pedaço escolhido dava um clipe com o
+// fim antes do início, e o exportar respondia "janela-invalida".
+test('mover nunca devolve uma janela ao contrario, mesmo inteira fora dos limites', () => {
+  const limites = { inicio: s(100), fim: s(200) };
+  const antes = mover({ deMs: 0, ateMs: s(30) }, 'de', 0, { limites });
+  assert.ok(antes.ateMs - antes.deMs >= 1000, `${JSON.stringify(antes)} esta ao contrario`);
+  assert.ok(antes.deMs >= limites.inicio && antes.ateMs <= limites.fim);
+  const depois = mover({ deMs: s(300), ateMs: s(330) }, 'de', s(300), { limites });
+  assert.ok(depois.ateMs - depois.deMs >= 1000, `${JSON.stringify(depois)} nao tem duracao`);
+  assert.ok(depois.deMs >= limites.inicio && depois.ateMs <= limites.fim);
+});
+
+test('trocar de angulo: meio de fora corta a ponta, inteiro de fora desliza com a mesma duracao', () => {
+  const limites = { inicio: s(100), fim: s(200) };
+  assert.deepEqual(dentroDosLimites({ deMs: s(90), ateMs: s(120) }, limites), { deMs: s(100), ateMs: s(120) });
+  assert.deepEqual(dentroDosLimites({ deMs: s(110), ateMs: s(140) }, limites), { deMs: s(110), ateMs: s(140) },
+    'dentro, nao mexe');
+  assert.deepEqual(dentroDosLimites({ deMs: 0, ateMs: s(30) }, limites), { deMs: s(100), ateMs: s(130) });
+  assert.deepEqual(dentroDosLimites({ deMs: s(300), ateMs: s(330) }, limites), { deMs: s(170), ateMs: s(200) });
+  const curto = dentroDosLimites({ deMs: 0, ateMs: s(30) }, { inicio: s(100), fim: s(110) });
+  assert.deepEqual(curto, { deMs: s(100), ateMs: s(110) }, 'um video mais curto do que o clipe da o video todo');
+});
+
+test('a duracao da lista de corte nunca mostra ":60"', () => {
+  assert.equal(duracaoCurta(119.6), '2:00');
+  assert.equal(duracaoCurta(59.5), '1:00');
+  assert.equal(duracaoCurta(10), '0:10');
+  assert.equal(duracaoCurta(15.4), '0:15');
 });

@@ -95,7 +95,16 @@ export function filtrar(momentos, filtro) {
   return momentos;
 }
 
-const dois = (n) => String(n).padStart(2, '0');
+/**
+ * O numero de uma kill, com a largura da montagem inteira.
+ *
+ * Dois algarismos chegavam para uma noite de amigos. Numa noite de evento
+ * passa-se das cem, e o editor (que ordena por bytes) punha o 100a e o 101a
+ * entre o 09 e o 10. Com a largura do total, o 001 vem antes do 010 e este
+ * antes do 100; abaixo de cem continua a ser 01, 02...
+ */
+export const numeroNaMontagem = (indice, total = 0) => String(indice + 1)
+  .padStart(Math.max(2, String(total).length), '0');
 
 /**
  * Os clipes de um momento, na ordem em que entram na montagem.
@@ -106,7 +115,7 @@ const dois = (n) => String(n).padStart(2, '0');
  *
  * @param {(slug:string, deMs:number, ateMs:number) => boolean} filmava
  */
-export function clipesDoMomento(momento, canais, indice, { filmava = () => true } = {}) {
+export function clipesDoMomento(momento, canais, indice, { filmava = () => true, total = 0 } = {}) {
   const saida = [];
   // O combate INTEIRO, e as margens dele por fora.
   //
@@ -127,9 +136,14 @@ export function clipesDoMomento(momento, canais, indice, { filmava = () => true 
   //  ai vou fazendo em tudo e depois baixo tudo junto." O ajuste sao as pontas
   // que ele apurou no editor, e vale so para a POV dele — e a dele que ele
   // corta a mao; as dos outros continuam a sair pelas margens.
-  const aj = momento.ajuste;
+  //
+  // O ajuste é do ângulo em que ele o fez (ver `ajusteDe`). Sem isto, trocar
+  // para a POV de quem morreu, aparar e enquadrar a webcam dele aplicava esses
+  // tempos e esse recorte ao vídeo do protagonista, que é outra fonte, às
+  // vezes noutra resolução.
   const junta = (slug, antesS, depoisS, papel, letra) => {
-    const ajustado = papel === 'protagonista' && aj
+    const aj = ajusteDe(momento, slug);
+    const ajustado = !!aj
       && Number.isFinite(aj.deMs) && Number.isFinite(aj.ateMs) && aj.ateMs > aj.deMs;
     const deMs = ajustado ? aj.deMs : combateDe - antesS * 1000;
     const ateMs = ajustado ? aj.ateMs : combateAte + depoisS * 1000;
@@ -149,7 +163,7 @@ export function clipesDoMomento(momento, canais, indice, { filmava = () => true 
       ms: momento.ms,
       // O nome carrega a ordem: no editor os ficheiros caem já certos, e
       // ninguém tem de andar a adivinhar qual vem antes de qual.
-      prefixo: `${dois(indice + 1)}${letra}`,
+      prefixo: `${numeroNaMontagem(indice, total)}${letra}`,
     });
   };
 
@@ -169,7 +183,8 @@ export function clipesDoMomento(momento, canais, indice, { filmava = () => true 
 
 /** A montagem inteira: todos os momentos, todos os clipes, já em ordem. */
 export function planoDaMontagem(momentos, canais, opcoes = {}) {
-  return ordenar(momentos).flatMap((m, i) => clipesDoMomento(m, canais, i, opcoes));
+  const total = momentos.length;
+  return ordenar(momentos).flatMap((m, i) => clipesDoMomento(m, canais, i, { total, ...opcoes }));
 }
 
 
@@ -179,26 +194,69 @@ export function planoDaMontagem(momentos, canais, opcoes = {}) {
  * Devolve um momento novo — os momentos nunca se mudam no sitio, e assim o
  * `guardar()` da sessao e o desenho da lista ficam sempre certos. `formato`
  * nulo quer dizer "so 16:9"; 'um' ou 'dois' quer dizer "e o 9:16 tambem, com
- * estes enquadramentos".
+ * estes enquadramentos". `canal` e o angulo em que ele os fez: os recortes
+ * estao em pixels DESSE video.
  */
-export function comAjuste(momento, { deMs, ateMs, formato = null, rects = [], divisao } = {}) {
+export function comAjuste(momento, {
+  deMs, ateMs, formato = null, rects = [], divisao, canal,
+} = {}) {
   if (!Number.isFinite(deMs) || !Number.isFinite(ateMs) || ateMs <= deMs) return momento;
+  const ajuste = {
+    ...(typeof canal === 'string' && canal ? { canal } : {}),
+    deMs: Math.round(deMs),
+    ateMs: Math.round(ateMs),
+    formato: formato === 'um' || formato === 'dois' ? formato : null,
+    rects: rects.map((r) => ({ x: r.x, y: r.y, largura: r.largura, altura: r.altura })),
+    divisao: Number.isFinite(divisao) ? divisao : undefined,
+  };
+  // Um ajuste por ângulo. Havia um só por momento, e guardar o da vítima
+  // apagava sem aviso o corte e o 9:16 que ele tinha feito na POV dele.
+  // `ajuste` continua a ser o último guardado (é por ele que o editor reabre);
+  // `ajustes` guarda todos, pelo canal.
   return {
     ...momento,
-    ajuste: {
-      deMs: Math.round(deMs),
-      ateMs: Math.round(ateMs),
-      formato: formato === 'um' || formato === 'dois' ? formato : null,
-      rects: rects.map((r) => ({ x: r.x, y: r.y, largura: r.largura, altura: r.altura })),
-      divisao: Number.isFinite(divisao) ? divisao : undefined,
-    },
+    ajuste,
+    ajustes: { ...ajustesDe(momento), [ajuste.canal || momento.protagonista]: ajuste },
   };
+}
+
+/**
+ * Os ajustes do momento, pelo canal em que foram feitos.
+ *
+ * Um momento guardado antes de haver `ajustes` só tem o `ajuste`; um ajuste
+ * sem canal é dos que se guardavam antes de o canal ir junto, e esses eram
+ * sempre da POV dele.
+ */
+export function ajustesDe(momento) {
+  const saida = { ...(momento?.ajustes || {}) };
+  const aj = momento?.ajuste;
+  const dele = aj?.canal || momento?.protagonista;
+  if (aj && dele && !saida[dele]) saida[dele] = aj;
+  return saida;
+}
+
+/** O ajuste de um ângulo deste momento, ou null. */
+export function ajusteDe(momento, canal) {
+  return ajustesDe(momento)[canal] || null;
+}
+
+/**
+ * Os ajustes que ainda têm clipe onde cair: os do protagonista e os das
+ * vítimas marcadas. Desmarcar uma vítima deixa o ajuste dela guardado (volta
+ * se ele a marcar outra vez), mas a lista não pode dizer "ajustado · 9:16"
+ * por um clipe que não sai.
+ */
+export function ajustesQueContam(momento) {
+  const dentro = new Set([momento?.protagonista, ...(momento?.vitimas || [])]);
+  return Object.entries(ajustesDe(momento))
+    .filter(([canal]) => dentro.has(canal))
+    .map(([, aj]) => aj);
 }
 
 /** Tirar o ajuste: volta ao combate medido e as margens. */
 export function semAjuste(momento) {
-  if (!momento.ajuste) return momento;
-  const { ajuste, ...resto } = momento;
-  void ajuste;
+  if (!momento.ajuste && !momento.ajustes) return momento;
+  const { ajuste, ajustes, ...resto } = momento;
+  void ajuste; void ajustes;
   return resto;
 }

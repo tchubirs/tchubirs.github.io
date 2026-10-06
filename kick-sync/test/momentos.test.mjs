@@ -7,7 +7,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  PADRAO, novoMomento, ordenar, acrescentar, remover, clipesDoMomento, planoDaMontagem, alternarVitima, removerVarios, filtrar, temMorte, comAjuste, semAjuste,
+  PADRAO, novoMomento, ordenar, acrescentar, remover, clipesDoMomento, planoDaMontagem, alternarVitima, removerVarios, filtrar, temMorte, comAjuste, semAjuste, ajusteDe, ajustesQueContam,
 } from '../site/momentos.js';
 
 const T = Date.parse('2026-08-30T22:00:00.000Z');
@@ -214,6 +214,20 @@ test('cada clipe sabe a que kill pertence', () => {
   assert.deepEqual(soASegunda.map((c) => c.prefixo), ['02a', '02b']);
 });
 
+// Numa noite de evento passa-se das cem kills. Com dois algarismos o editor
+// punha o 100a, o 101a... entre o 09 e o 10: o numero tem de ter a largura da
+// montagem inteira.
+test('com cem kills ou mais, os nomes continuam a cair por ordem', () => {
+  const lista = Array.from({ length: 120 }, (_, i) => novoMomento(T + i * 10_000, 'eu'));
+  const plano = planoDaMontagem(lista, ['eu']);
+  const nomes = plano.map((c) => c.prefixo);
+  assert.deepEqual([...nomes].sort(), nomes, 'por ordem de bytes, como o editor os poe');
+  assert.equal(nomes[0], '001a');
+  assert.equal(nomes[119], '120a');
+  // E abaixo de cem fica como estava.
+  assert.equal(planoDaMontagem(lista.slice(0, 12), ['eu'])[0].prefixo, '01a');
+});
+
 // ── o combate inteiro, e as margens por fora ────────────────────────────────
 //
 // "O 8 é o mais próximo de ser um clipe correcto, porém falta tempo antes e
@@ -297,6 +311,31 @@ test('sem ajuste nada muda, e um ajuste sem 9:16 e so as pontas', () => {
   assert.equal(c.retrato, null, 'formato nulo quer dizer so 16:9');
 });
 
+// "'Guardar ajustes' drops the angle chosen in the editor": trocar para a POV
+// de quem morreu, aparar e enquadrar a webcam dele aplicava tudo isso ao vídeo
+// do protagonista.
+test('o ajuste feito noutro angulo vale para o clipe desse angulo, e nao para o protagonista', () => {
+  const m = alternarVitima(novoMomento(T, 'tchubi'), 'vitima1');
+  const rects = [{ x: 5, y: 6, largura: 70, altura: 80 }];
+  const aj = comAjuste(m, {
+    deMs: T - 9000, ateMs: T + 1000, formato: 'um', rects, canal: 'vitima1',
+  });
+  assert.equal(aj.ajuste.canal, 'vitima1');
+  const c = clipesDoMomento(aj, DOIS, 0);
+  const meu = c.find((x) => x.papel === 'protagonista');
+  const dela = c.find((x) => x.canal === 'vitima1');
+  assert.equal(meu.retrato, null, 'o recorte foi medido no video de outro canal');
+  assert.notEqual(meu.deMs, T - 9000, 'o protagonista continua pelas margens');
+  assert.equal(dela.deMs, T - 9000);
+  assert.equal(dela.ateMs, T + 1000);
+  assert.deepEqual(dela.retrato.rects, rects);
+
+  // Um ajuste antigo, sem canal, continua a ser da POV dele.
+  const velho = comAjuste(m, { deMs: T - 3000, ateMs: T + 1000 });
+  assert.equal(velho.ajuste.canal, undefined);
+  assert.equal(clipesDoMomento(velho, DOIS, 0)[0].deMs, T - 3000);
+});
+
 test('um ajuste invalido nao entra, e tirar o ajuste devolve o momento', () => {
   const m = novoMomento(T, 'tchubi');
   assert.equal(comAjuste(m, { deMs: T, ateMs: T }).ajuste, undefined, 'zero segundos nao e um clipe');
@@ -306,4 +345,31 @@ test('um ajuste invalido nao entra, e tirar o ajuste devolve o momento', () => {
   assert.notEqual(com, m, 'e um momento novo, nunca o mesmo mudado no sitio');
   assert.deepEqual(semAjuste(com), m);
   assert.equal(semAjuste(m), m);
+});
+
+// Um ajuste só por momento: guardar o da vítima apagava sem aviso o corte e o
+// 9:16 da POV dele, e desmarcar a vítima deixava a lista a dizer "9:16" por
+// um clipe que já não saía.
+test('cada angulo guarda o seu ajuste, e so contam os que ainda entram na kill', () => {
+  const m = alternarVitima(novoMomento(T, 'tchubi'), 'vitima1');
+  const rects = [{ x: 1, y: 1, largura: 9, altura: 9 }, { x: 2, y: 2, largura: 9, altura: 9 }];
+  const meu = comAjuste(m, { deMs: T - 20_000, ateMs: T + 4000, canal: 'tchubi', formato: 'dois', rects });
+  const os2 = comAjuste(meu, { deMs: T - 3000, ateMs: T + 1000, canal: 'vitima1' });
+  const c = clipesDoMomento(os2, DOIS, 0);
+  const dele = c.find((x) => x.canal === 'tchubi');
+  const dela = c.find((x) => x.canal === 'vitima1');
+  assert.equal(dele.deMs, T - 20_000, 'o corte dele continua');
+  assert.equal(dele.ateMs, T + 4000);
+  assert.equal(dele.retrato?.modo, 'dois', 'e o 9:16 dele tambem');
+  assert.equal(dela.deMs, T - 3000);
+  assert.equal(dela.retrato, null);
+  assert.equal(os2.ajuste.canal, 'vitima1', 'o ultimo guardado e o da vitima');
+
+  // So o da vitima com 9:16; desmarcada, ele ja nao conta.
+  const soDela = comAjuste(m, { deMs: T - 3000, ateMs: T + 1000, canal: 'vitima1', formato: 'um', rects });
+  assert.equal(ajustesQueContam(soDela).length, 1);
+  const fora = alternarVitima(soDela, 'vitima1');
+  assert.deepEqual(ajustesQueContam(fora), [], 'sem clipe, nao ha ajuste a mostrar');
+  assert.equal(ajusteDe(alternarVitima(fora, 'vitima1'), 'vitima1').formato, 'um', 'marcada outra vez, volta');
+  assert.deepEqual(semAjuste(os2), m);
 });

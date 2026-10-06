@@ -15,6 +15,19 @@ comercial, perfil e banner; domínios; segurança; tudo decidido por estudo, sem
 precisar dele vai numa lista só, no fim. Trabalhar sem parar até ele mandar parar. As tarefas do Fiverr e
 da Etsy abaixo continuam, mas só a conferência de vendas de hora em hora até o projeto ficar pronto.
 Andamento em `kick-sync/PLANO.md`.
+Feito até 06/10 15h: nome Povix e marca; estudo com fontes (`ESTUDO.md`); tela inicial com duas portas; evento
+ligado de ponta a ponta (elenco, mapa por time, lance com o time, outros ângulos pelo som, picos do chat, link do
+lance, exemplo com o Rust ao vivo, ao vivo), testado contra a Kick real; falha de segurança corrigida no ramo;
+política de segurança na página; textos em português do Brasil; notas de domínio e hospedagem (`LANCAR.md`);
+rascunho para a Kick (`PITCH-KICK.md`); crítica de usabilidade aplicada na tela do evento; correções juntadas da
+cena, do ao vivo, do chat e da detecção automática; módulo do clipe de vários ângulos com o nome de cada streamer;
+no mapa, o streamer escolhido bem marcado, os picos do chat com botões de hora e os nomes errados em vermelho; no
+celular o painel do lance não tapa mais o mapa; o vermelho dos avisos com contraste certo.
+Também feito: correções da leitura do elenco e da exportação juntadas (803 testes passam); mapa pelo teclado; a
+correção de segurança publicada no site no ar (autorizada por ele em 06/10).
+Em curso: correções de desempenho com muitos canais e do carregamento dos 500 canais (dois agentes).
+Falta: sessão, teclado, sincronia, Twitch, CI e mapa; ligar o clipe de vários ângulos na tela; travessões nos
+textos da página; publicar o Povix.
 
 **Decisão dele em 28/09 à noite:** um mês sem nenhum centavo, então foco em dinheiro. Não crio planilha nova
 até alguma vender. O que eu faço agora:

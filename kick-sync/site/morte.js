@@ -84,18 +84,30 @@ export function notaDeMorte(antes, depois) {
  * quando ele se destaca dos outros, e nunca mais do que dois — em Rust morre
  * um, às vezes dois, nunca a equipa inteira.
  */
-export function quemMorreu(notas, { destaqueMin = 1.6, maximo = 2 } = {}) {
+export function quemMorreu(notas, { destaqueMin = 1.6, maximo = 2, excluir = [] } = {}) {
   const validos = Object.entries(notas).filter(([, v]) => v && Number.isFinite(v.nota));
   if (validos.length < 2) return { sugeridos: [], ordenados: validos.map(([c, v]) => ({ canal: c, ...v })) };
 
   const ordenados = validos.map(([canal, v]) => ({ canal, ...v })).sort((x, y) => y.nota - x.nota);
-  const restantes = ordenados.slice(1).map((x) => x.nota);
-  const mediana = restantes.length
-    ? [...restantes].sort((x, y) => x - y)[Math.floor(restantes.length / 2)]
-    : 0;
+  // Quem pode ser apontado. O protagonista fica de fora daqui mas nao da
+  // conta: e o termo de comparacao que existe com dois canais, e sem ele um
+  // par "eu e a vitima" nunca apontava ninguem. Dentro dos lugares e que nao
+  // pode estar: ele a abrir o saco do morto escurece o ecra como uma morte, e
+  // ficava com um dos dois, a frente da segunda vitima de verdade.
+  const elegiveis = ordenados.filter((x) => !excluir.includes(x.canal));
+  const restantes = ordenados.filter((x) => x !== elegiveis[0]).map((x) => x.nota)
+    .sort((x, y) => x - y);
+  // A mediana a serio, com a media dos dois do meio quando sao um numero par.
+  // O indice len/2 de uma lista par e o de CIMA dos dois: com tres canais e
+  // dois mortos, a "mediana" dos dois de baixo era a outra vitima, e ninguem
+  // passava a 1,6x dela.
+  const meio = Math.floor(restantes.length / 2);
+  const mediana = !restantes.length ? 0
+    : restantes.length % 2 ? restantes[meio]
+      : (restantes[meio - 1] + restantes[meio]) / 2;
 
   const sugeridos = [];
-  for (const c of ordenados.slice(0, maximo)) {
+  for (const c of elegiveis.slice(0, maximo)) {
     // Destacar-se do MEIO do grupo, e não do segundo: com dois mortos, o
     // segundo também está alto e escondia o primeiro.
     if (mediana > 0 ? c.nota >= mediana * destaqueMin : c.nota > 0.08) sugeridos.push(c.canal);

@@ -40,10 +40,9 @@ consequências:
    nomes de quem morreu, mensagens de erro, títulos e imagens da pesquisa da Twitch) passa por
    `site/escapar.js`. `test/seguranca.test.mjs` abre a página com o link armadilhado e falha no código
    antigo.
-   **Atenção: o site publicado (`tchubirs.github.io/replay/`, servido pelo ramo `main`) ainda tem a
-   falha.** Conferido em 06/10 com `probes/checar-publicado.mjs` sobre a cópia do `main`: o link
-   armadilhado corre. A mesma correção aplicada só a essa cópia (5 ficheiros) foi testada e fecha a falha
-   sem estragar a página, mas publicar no `main` precisa da autorização do dono.
+   O site publicado (`tchubirs.github.io/replay/`, servido pelo ramo `main`) também já está corrigido:
+   publicado em 06/10 com a autorização do dono (commit a9d59f6), depois de `probes/checar-publicado.mjs`
+   confirmar na cópia do `main` que o link armadilhado já não corre e que a página continua a funcionar.
 3. ~~Política de segurança de conteúdo.~~ Feito em 06/10: `index.html` traz a política num `<meta>` (só
    scripts do próprio site; dados e vídeo só de `kick.com`, `stream.kick.com` e `clips.kick.com`), e os
    testes de página correm com ela ligada. `site/_headers` tem a mesma política em cabeçalho, mais HSTS e
