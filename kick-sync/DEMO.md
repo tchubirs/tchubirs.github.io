@@ -32,7 +32,7 @@ Os nomes entre aspas são os botões da página.
 - "Guarda os vídeos?" Não. Nada é gravado em servidor nosso.
 - "Serve durante o jogo?" Sim. A live em andamento fica de 2 a 12 segundos atrás do ao vivo. A busca pelo som
   só olha momentos com mais de 15 minutos, para ninguém usar isso para achar rivais no meio da partida.
-- "E os direitos dos streamers?" O arquivo de cada clipe leva o nome do canal, e o link abre a live dele.
+- "E os direitos dos streamers?" O arquivo de cada clipe leva o nome do canal.
   O clipe de vários ângulos, com o nome de cada canal gravado no vídeo e a opção sem som, está a caminho.
 
 ## Se algo der errado
