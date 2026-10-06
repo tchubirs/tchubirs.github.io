@@ -11,6 +11,21 @@ const LARGURA = 160;
 const ALTURA = 90;
 
 /**
+ * Este navegador sabe mostrar o video da Kick (H.264)?
+ *
+ * Perguntado de uma vez, e nao adivinhado pelo relogio de cada leitor: um
+ * navegador sem o codec ficava em readyState 0 para sempre, e esperar por cada
+ * angulo so para chegar ao mesmo "nao vi nada" eram segundos a olhar para uma
+ * pagina parada, vezes o numero de canais.
+ */
+export function podeVerKick() {
+  const MS = window.MediaSource || window.ManagedMediaSource;
+  if (MS?.isTypeSupported?.('video/mp4; codecs="avc1.42E01E"')) return true;
+  // O Safari antigo toca HLS sem MediaSource nenhuma.
+  return Boolean(document.createElement('video').canPlayType('application/vnd.apple.mpegurl'));
+}
+
+/**
  * Um apanhador de frames, com um leitor por canal reaproveitado entre buscas.
  *
  * Criar e destruir um leitor por cada frame fazia doze arranques de vídeo para
@@ -35,13 +50,20 @@ export function criarApanhador({ linhas, nudges = {}, limiteMs = 6000 } = {}) {
     return estado;
   }
 
+  /** Devolve se o leitor chegou MESMO ao instante pedido. */
   async function carregar(estado, url, tempoS) {
     if (estado.url !== url) {
       estado.hls?.destroy();
       estado.url = url;
+      estado.falhou = false;
       if (window.Hls?.isSupported()) {
         const hls = new window.Hls({ startPosition: tempoS, maxBufferLength: 4 });
         estado.hls = hls;
+        // Um erro fatal do hls.js e a resposta que antes se adivinhava pelo
+        // relogio: quando chega, nao vale a pena esperar mais.
+        if (hls.on && window.Hls.Events?.ERROR) {
+          hls.on(window.Hls.Events.ERROR, (_, d) => { if (d?.fatal) estado.falhou = true; });
+        }
         hls.loadSource(url);
         hls.attachMedia(estado.video);
       } else {
@@ -49,25 +71,32 @@ export function criarApanhador({ linhas, nudges = {}, limiteMs = 6000 } = {}) {
       }
     }
     estado.video.currentTime = tempoS;
-    await new Promise((pronto) => {
+    return new Promise((pronto) => {
       // Sempre com desistência: um canal que não carrega não pode deixar os
       // outros cinco à espera para sempre.
-      const acabou = () => {
+      const acabou = (chegou) => {
         clearTimeout(t);
         clearInterval(vigia);
-        estado.video.removeEventListener('seeked', acabou);
-        pronto();
+        estado.video.removeEventListener('seeked', aoChegar);
+        pronto(chegou);
       };
-      const t = setTimeout(acabou, limiteMs);
-      // E desistir DEPRESSA quando não há nada a vir: um navegador sem o codec
-      // da Kick fica em readyState 0 para sempre, e esperar seis segundos por
-      // cada ângulo só para chegar ao mesmo "não vi nada" são seis segundos a
-      // olhar para uma página parada, vezes o número de canais.
-      const desde = performance.now();
+      const aoChegar = () => acabou(true);
+      const t = setTimeout(() => acabou(false), limiteMs);
+      // E desistir DEPRESSA quando o leitor diz que nao vai dar: um erro do
+      // video ou um erro fatal do hls.js.
+      //
+      // Antes desistia-se ao fim de 900 ms em readyState 0, a pensar no
+      // navegador sem o codec da Kick. Mas um arranque frio normal tambem esta
+      // em readyState 0 durante esse tempo: a playlist de 160p sao 354 KB em
+      // 0,42 s, e o primeiro bocado de video mais 0,2 a 0,9 s. Cada "quem
+      // morreu" comeca com todos os canais a frio, e o "antes" de todos caia
+      // na desistencia: os cartoes diziam "nao estava gravando" de quem estava.
+      // O navegador sem codec e apanhado antes de pedir o que quer que seja,
+      // em `podeVerKick`.
       const vigia = setInterval(() => {
-        if (estado.video.readyState === 0 && performance.now() - desde > 900) acabou();
+        if (estado.falhou || estado.video.error) acabou(false);
       }, 150);
-      estado.video.addEventListener('seeked', acabou, { once: true });
+      estado.video.addEventListener('seeked', aoChegar, { once: true });
     });
   }
 
@@ -75,10 +104,12 @@ export function criarApanhador({ linhas, nudges = {}, limiteMs = 6000 } = {}) {
   tela.width = LARGURA;
   tela.height = ALTURA;
   const pincel = tela.getContext('2d', { willReadFrequently: true });
+  const podeVer = podeVerKick();
 
   return {
     /** Os pixéis de um canal naquele instante, ou null se ele não filmava. */
     async frame(slug, quandoMs) {
+      if (!podeVer) return null;
       const linha = linhas.find((l) => l.slug === slug);
       if (!linha) return null;
       const r = onde(linha, quandoMs, { nudgeMs: nudges[slug] || 0 });
@@ -86,8 +117,11 @@ export function criarApanhador({ linhas, nudges = {}, limiteMs = 6000 } = {}) {
       const peca = linha.pecasCompletas?.find((p) => p.vod.id === r.peca.vod.id) || r.peca;
       const estado = leitorDe(slug);
       try {
-        await carregar(estado, peca.barato.url, r.tempoS);
-        if (!estado.video.videoWidth) return null;
+        // Sem ter chegado ao instante nao ha frame: o que o leitor mostra e o
+        // sitio ANTERIOR. Desenha-lo como se fosse este punha a bisseccao do
+        // `afinarInstante` a decidir com a imagem errada, numa rede lenta.
+        const chegou = await carregar(estado, peca.barato.url, r.tempoS);
+        if (!chegou || !estado.video.videoWidth) return null;
         pincel.drawImage(estado.video, 0, 0, LARGURA, ALTURA);
         return { pixeis: pincel.getImageData(0, 0, LARGURA, ALTURA).data, imagem: tela.toDataURL('image/jpeg', 0.6) };
       } catch { return null; }

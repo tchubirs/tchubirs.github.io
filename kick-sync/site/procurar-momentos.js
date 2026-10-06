@@ -1,4 +1,6 @@
-import { medir, chao, impulsos, regioes, FPS, TAXA_TIROS } from './tiros.js';
+import {
+  medir, chao, impulsos, regioes, FPS, TAXA_TIROS, BLOCO_MS, REFRACTARIO_MS,
+} from './tiros.js';
 import { recortar } from './aprender.js';
 
 // Achar as kills sozinho — pela forca do som.
@@ -32,24 +34,62 @@ export function custoVarrerMB(duracaoMs) {
  */
 export async function varrerNoite({
   linha, deMs, ateMs, bocadoS = 300, lerSom, sinal, aoProgresso = () => {},
-  opcoes = {}, taxaSom = TAXA_TIROS,
+  opcoes = {}, taxaSom = TAXA_TIROS, nudgeMs = 0,
 }) {
   const partes = [];
-  const total = Math.max(1, Math.ceil((ateMs - deMs) / (bocadoS * 1000)));
+  // Os bocados cortados pelas pecas do canal, e nao so pelo relogio.
+  //
+  // O `somDoCanal` so le a peca onde o pedido comeca, e devolve nada quando o
+  // pedido cai num buraco. Um bocado de cinco minutos que comecava num buraco,
+  // ou que passava o fim de um VOD para o seguinte, perdia ate cinco minutos
+  // do regresso do streamer, e e logo a seguir a cair que ele volta a lutar.
+  //
+  // `deMs`/`ateMs` e tudo o que sai daqui estao no relogio da noite, o mesmo
+  // dos momentos. O ajuste do canal (`nudgeMs`) so entra no pedido de som,
+  // que e no relogio do proprio VOD, como o `onde` da grelha faz.
+  const trechos = [];
+  const pecas = linha?.pecas?.length
+    ? linha.pecas.map((p) => [p.playlist.inicio - nudgeMs, p.playlist.fim - nudgeMs])
+    : [[deMs, ateMs]];
+  for (const [inicio, fim] of pecas) {
+    const de = Math.max(deMs, inicio);
+    const ate = Math.min(ateMs, fim);
+    for (let t = de; t < ate; t += bocadoS * 1000) trechos.push([t, Math.min(ate, t + bocadoS * 1000)]);
+  }
+  const total = Math.max(1, trechos.length);
   let feitos = 0;
   let ouvidoMs = 0;
   let bytes = 0;
+  let falhados = 0;
+  let ultimoErro = null;
+  // Os estouros candidatos, ja recortados. O som de cada bocado nao pode ficar
+  // ate ao fim: uma hora a 24 kHz sao 345 MB, e a noite toda deitava o
+  // separador abaixo. Por isso os recortes tiram-se JA, com o som na mao, e o
+  // som vai-se embora com o bocado.
+  const poco = [];
 
-  for (let t = deMs; t < ateMs; t += bocadoS * 1000) {
+  for (const [t, fimT] of trechos) {
     if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
-    const duracaoS = Math.min(bocadoS, (ateMs - t) / 1000);
+    const duracaoS = (fimT - t) / 1000;
     aoProgresso({ feito: ++feitos, total, bytes, ouvidoS: ouvidoMs / 1000 });
-    const som = await lerSom(linha, t, duracaoS, {
-      contador: (n) => { bytes += n; },
-      sinal,
-    });
+    let som = null;
+    try {
+      som = await lerSom(linha, t + nudgeMs, duracaoS, {
+        contador: (n) => { bytes += n; },
+        sinal,
+      });
+    } catch (e) {
+      // Um 503 na hora cinco nao pode deitar fora as cinco anteriores: o
+      // bocado fica por ouvir, como um que caiu num buraco, e conta-se.
+      // Cancelar e um navegador sem descodificador nao sao falhas de um
+      // bocado: sao a resposta para a noite inteira.
+      if (e.name === 'AbortError' || e.name === 'SEM-DESCODIFICADOR') throw e;
+      falhados++;
+      ultimoErro = e;
+    }
     // Um bocado que não se consegue ouvir não pode deslocar o resto no tempo:
-    // guarda-se o silêncio equivalente para a linha continuar a bater certo.
+    // cada bocado vai para o seu sítio do relógio, e o que fica no meio fica a
+    // zero na curva, mas fora da conta do chão (ver abaixo).
     // A energia em blocos de 2 ms, e nao a envolvente normalizada.
     //
     // A `envolvente` divide o som pelo seu proprio RMS a cada pedaco. Isso e
@@ -57,12 +97,17 @@ export async function varrerNoite({
     // forma — e e o contrario do que aqui e preciso: "quando acontece um som
     // de disparo, e o pico praticamente mais alto do grafico". A forca ERA o
     // sinal, e eu dividia-a fora antes de olhar.
-    const vazio = Math.round(duracaoS * FPS);
-    const m = som ? medir(som, taxaSom)
-      : { energia: new Float32Array(vazio), brilho: new Float32Array(vazio) };
-    partes.push({ t, env: m.energia, brilho: m.brilho, som });
+    if (som) {
+      const m = medir(som, taxaSom);
+      const parte = { t, env: m.energia, brilho: m.brilho };
+      partes.push(parte);
+      recolherEstouros(poco, parte, som, taxaSom, opcoes);
+    }
     ouvidoMs += duracaoS * 1000;
   }
+  // Nada se ouviu e houve erros: o erro e a unica resposta que ha. Dizer
+  // "nao ouvi som nenhum" escondia um problema de rede atras de um de canal.
+  if (falhados && !partes.length) throw ultimoErro;
 
   // Colar tudo numa só, com cada bocado no seu sítio do relógio.
   const fps = FPS;
@@ -83,24 +128,19 @@ export async function varrerNoite({
   // O chao e da NOITE INTEIRA e nao de cada bocado: senao um bocado calado
   // passa a ter os seus proprios "picos mais altos", e a lista enche-se de
   // silencio com estalidos.
-  const piso = chao(tudo);
+  //
+  // Mas so do que SE OUVIU. Os bocados que faltaram estao a zero na curva, e
+  // com mais de metade da janela fora do ar a mediana dava zero, e com o
+  // chao a zero nao ha nada "acima do chao": o tiroteio verdadeiro sumia e a
+  // mensagem dizia que nao se tinha ouvido som nenhum.
+  const ouvidos = new Float32Array(partes.reduce((s, p) => s + p.env.length, 0));
+  let k = 0;
+  for (const p of partes) { ouvidos.set(p.env, k); k += p.env.length; }
+  const piso = chao(ouvidos);
   // Guardar a FORMA de cada estouro, para depois se poder aprender com uma
   // kill que ele confirme. Sao 60 ms cada um: uma noite inteira cabe em
   // dezenas de megas, e sem isto aprender obrigava a baixar a noite outra vez.
-  const estouros = [];
-  for (const parte of partes) {
-    const { t, env, som } = parte;
-    if (!som) continue;
-    const piso2 = piso;
-    for (const im of impulsos(env, piso2, { brilhos: parte.brilho, ...opcoes })) {
-      const recorte = recortar(som, taxaSom, im.bloco / FPS);
-      if (recorte) estouros.push({ ms: Math.round(t + (im.bloco / FPS) * 1000), altura: im.altura, recorte });
-    }
-  }
-  // Um tecto: numa noite muito barulhenta isto podia crescer sem fim, e o que
-  // interessa sao os mais altos.
-  estouros.sort((a, b) => b.altura - a.altura);
-  estouros.length = Math.min(estouros.length, 4000);
+  const estouros = estourosAcimaDo(poco, piso, opcoes, linha?.slug);
   // Ordenadas pelo tiro mais alto, e cortadas por cima. Numa noite de seis
   // horas cortar as mais baixas e cortar as que ele nao quer ver: o headshot e
   // o som mais alto do jogo. Quinze por hora e o que ele consegue rever.
@@ -142,6 +182,78 @@ export async function varrerNoite({
     })),
     estouros,
     bytes,
+    falhados,
     curva: tudo,
   };
+}
+
+// Um tecto: numa noite muito barulhenta isto podia crescer sem fim, e o que
+// interessa sao os mais altos.
+const TECTO_ESTOUROS = 4000;
+
+/**
+ * Os blocos de um bocado que podem vir a ser estouros, ja com o recorte.
+ *
+ * O que decide um estouro e a altura contra o chao da NOITE, e o chao so se
+ * conhece no fim. O resto nao depende dele: o salto contra os 2 ms anteriores
+ * e uma razao do proprio bocado. Por isso guardam-se aqui os que saltam, com a
+ * energia, e a altura decide-se depois em `estourosAcimaDo`.
+ *
+ * Sem o filtro de brilho, de proposito: o tiroteio verdadeiro dele mede 0,005
+ * a 0,118 de brilho (ver `regioes` em `tiros.js`), e com o filtro os recortes
+ * deixavam de fora os tiros que ele aponta como referencia. Quem separa um
+ * tiro de uma silaba aqui e a forma de onda, em `parecidos`.
+ */
+function recolherEstouros(poco, parte, som, taxa, { saltoMin = 6 } = {}) {
+  const { env } = parte;
+  const novos = [];
+  for (let b = 1; b < env.length; b++) {
+    if (!(env[b] > 0) || env[b] / (env[b - 1] + 1e-9) < saltoMin) continue;
+    novos.push(b);
+  }
+  // Os mais fortes primeiro: se o bocado der mais do que o tecto, os que
+  // sobram sao os que nunca iam passar a frente dos outros.
+  novos.sort((a, b) => env[b] - env[a]);
+  for (const b of novos.slice(0, TECTO_ESTOUROS * 2)) {
+    const recorte = recortar(som, taxa, b / FPS);
+    if (recorte) poco.push({ parte, bloco: b, energia: env[b], recorte });
+  }
+  // O poco tambem tem tecto, com folga para a regra dos 70 ms poder tirar
+  // alguns sem a lista final ficar curta.
+  if (poco.length > TECTO_ESTOUROS * 3) {
+    poco.sort((a, b) => b.energia - a.energia);
+    poco.length = TECTO_ESTOUROS * 2;
+  }
+}
+
+/**
+ * Os estouros a serio, agora que o chao da noite e conhecido: as mesmas
+ * regras de `impulsos` (altura contra o chao, e um estalo conta uma vez)
+ * sobre os candidatos que o `recolherEstouros` guardou.
+ */
+function estourosAcimaDo(poco, piso, {
+  alturaMin = 8, refractarioMs = REFRACTARIO_MS,
+} = {}, canal = null) {
+  if (!piso) return [];
+  const refractario = Math.round(refractarioMs / BLOCO_MS);
+  const ordem = poco
+    .filter((c) => c.energia / piso >= alturaMin)
+    .sort((a, b) => (a.parte.t - b.parte.t) || (a.bloco - b.bloco));
+  const estouros = [];
+  let ultimo = null;
+  for (const c of ordem) {
+    if (ultimo && ultimo.parte === c.parte && c.bloco - ultimo.bloco < refractario) continue;
+    ultimo = c;
+    estouros.push({
+      ms: Math.round(c.parte.t + (c.bloco / FPS) * 1000),
+      altura: c.energia / piso,
+      recorte: c.recorte,
+      // De que canal veio o som. O "Usar como referencia" punha os achados no
+      // canal em foco na altura do clique, e os sons eram de quem foi ouvido.
+      canal,
+    });
+  }
+  estouros.sort((a, b) => b.altura - a.altura);
+  estouros.length = Math.min(estouros.length, TECTO_ESTOUROS);
+  return estouros;
 }
