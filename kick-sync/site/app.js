@@ -6,7 +6,7 @@
 // problem rather than a server problem.
 
 import {
-  vodsDoCanal, lerMaster, lerPlaylist, procurarCanais, lerLinkKick, clipeDaKick, DESCONHECIDO, slugDoNome,
+  vodsDoCanal, lerMaster, lerPlaylist, procurarCanais, lerLinkKick, clipeDaKick, vodDaKick, DESCONHECIDO, slugDoNome,
 } from './kick.js';
 import {
   linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo,
@@ -76,6 +76,10 @@ const estado = {
   margens: {},
   mudo: {},
   momentos: [],
+  // As kills das outras noites. A lista de cima so mostra as da noite aberta,
+  // e mudar de noite filtrava-as para fora de vez: quarenta kills do dia 1
+  // sumiam por se ter ido espreitar o dia 2. Ficam aqui, e vao no guardar.
+  momentosFora: [],
   // A seleccao e o filtro sao a maneira de ele lidar com uma noite varrida:
   // dezenas de candidatos de que a maioria nao e kill. A seleccao vive so
   // enquanto a pagina estiver aberta — guardar caixas marcadas de ontem seria
@@ -170,23 +174,51 @@ const relogioCurto = (ms) => new Date(ms).toISOString().slice(11, 19);
  * de meia hora a procurar o momento devolvia uma caixa de texto vazia.
  */
 let timerGuardar = null;
+// Depois do "Recomecar" confirmado nao se guarda mais nada: o `beforeunload`
+// escrevia a sessao inteira outra vez no sitio de onde ela acabava de sair.
+let semGuardar = false;
+
+/** As kills todas, as da noite aberta e as das outras, sem repetir nenhuma. */
+function unirMomentos(...listas) {
+  const porMs = new Map();
+  for (const l of listas) for (const m of l || []) if (!porMs.has(m.ms)) porMs.set(m.ms, m);
+  return [...porMs.values()].sort((a, b) => a.ms - b.ms);
+}
+
+/**
+ * A sessao como vai para o localStorage.
+ *
+ * Os canais sao os da caixa de texto, e nao os que entraram na noite aberta:
+ * guardar so esses deixava de fora quem nao transmitiu nesta noite, quem a Kick
+ * travou por excesso de pedidos e quem ainda nao tinha carregado, e o F5 a
+ * seguir escrevia a lista curta por cima da caixa. O `·clipe` de um link colado
+ * tambem nao e um canal, e na caixa partia o Carregar seguinte.
+ */
+function sessaoParaGuardar() {
+  const caixa = listaDeCanais();
+  return paraLink({
+    canais: caixa.length ? caixa
+      : estado.linhas.map((l) => l.slug).filter((c) => !c.endsWith('·clipe')),
+    janela: estado.janela,
+    nudges: estado.nudges,
+    marca: estado.marca,
+    agoraMs: estado.agoraMs,
+    focos: estado.focos,
+    margens: estado.margens,
+    mudo: estado.mudo,
+    volume: estado.volume,
+    momentos: unirMomentos(estado.momentos, estado.momentosFora),
+  });
+}
+
 function guardar() {
   clearTimeout(timerGuardar);
+  if (semGuardar) return;
   timerGuardar = setTimeout(() => {
+    if (semGuardar) return;
     guardarRolar();
     try {
-      localStorage.setItem('replay', paraLink({
-        canais: estado.linhas.length ? estado.linhas.map((l) => l.slug) : listaDeCanais(),
-        janela: estado.janela,
-        nudges: estado.nudges,
-        marca: estado.marca,
-        agoraMs: estado.agoraMs,
-        focos: estado.focos,
-        margens: estado.margens,
-        mudo: estado.mudo,
-        volume: estado.volume,
-        momentos: estado.momentos,
-      }));
+      localStorage.setItem('replay', sessaoParaGuardar());
     } catch { /* janela privada, quota, o que for — nunca partir a pagina por isto */ }
   }, 400);
 }
@@ -731,8 +763,10 @@ async function lerNoite(noite) {
     if (g.marca && g.marca.de >= estado.janela.inicio && g.marca.ate <= estado.janela.fim) {
       estado.marca = g.marca;
     }
-    estado.momentos = (g.momentos || [])
-      .filter((m) => m.ms >= estado.janela.inicio && m.ms <= estado.janela.fim);
+    const todas = unirMomentos(g.momentos, estado.momentosFora);
+    const naNoite = (m) => m.ms >= estado.janela.inicio && m.ms <= estado.janela.fim;
+    estado.momentos = todas.filter(naNoite);
+    estado.momentosFora = todas.filter((m) => !naNoite(m));
     estado.restaurar = null;
   }
   mostrarPalco();
@@ -1618,7 +1652,7 @@ function irPara(quandoMs) {
 function leitorCaro(linha, r, video) {
   const p = estado.players.get(linha.slug);
   if (!p) return false;
-  const peca = linha.pecasCompletas.find((x) => x.vod.id === r.peca.vod.id) || r.peca;
+  const peca = linha.pecasCompletas?.find((x) => x.vod.id === r.peca.vod.id) || r.peca;
   return p.url !== peca.barato.url || !video.paused;
 }
 
@@ -1673,7 +1707,7 @@ function aplicar(video, ordem) {
 }
 
 function tocar(linha, r, video, { alta = false, correr = false, comSom = false } = {}) {
-  const peca = linha.pecasCompletas.find((p) => p.vod.id === r.peca.vod.id) || r.peca;
+  const peca = linha.pecasCompletas?.find((p) => p.vod.id === r.peca.vod.id) || r.peca;
   // Focus gets the best rung the ladder has; everything else stays at 160p.
   // A qualidade segue o PRINCIPAL, e não o facto de estar a correr: o segundo
   // do par corre, mas a 160p — dois degraus de cima ao mesmo tempo era o que
@@ -3023,6 +3057,7 @@ const CONTEXTO_S = 150;   // o que a barra mostra de cada lado do instante
  */
 function abrirClipe(momento = null) {
   if (!estado.linhas.length) return;
+  const daLista = momento != null && estado.momentos.some((x) => x.ms === momento.ms);
   // Um editor que fecha a meio de uma gravação ou de uma exportação pára-a
   // (ver `fecharClipe`); abrir outro por cima faz o mesmo.
   if (estado.clipe) fecharClipe();
@@ -3083,10 +3118,13 @@ function abrirClipe(momento = null) {
     rectsFonte: null,
     // De que kill da lista isto veio, se veio de alguma. É o que liga o
     // "Guardar ajustes" à kill certa.
-    momentoMs: momento?.ms ?? null,
+    // So uma kill que esta mesmo na lista. Um clipe colado abre com um
+    // momento feito na hora, e o "Guardar ajustes" aparecia para nao guardar
+    // em sitio nenhum e dizer que tinha guardado.
+    momentoMs: daLista ? momento.ms : null,
   };
   // O botão de guardar só existe quando há uma kill onde guardar.
-  $('guardarAjustes').hidden = momento == null;
+  $('guardarAjustes').hidden = !daLista;
   for (const b of document.querySelectorAll('.modoRetrato')) {
     b.setAttribute('aria-pressed', String(b.dataset.modo === estado.clipe.modo));
   }
@@ -4042,15 +4080,21 @@ function limparFila() {
  * juntar e o que ninguém quer perder por engano.
  */
 function recomecar() {
+  const quantas = unirMomentos(estado.momentos, estado.momentosFora).length;
+  const aviso = quantas ? t('recomecar.comKills', { n: quantas }) : t('recomecar.semKills');
+  // Pergunta antes de apagar seja o que for: um Cancelar tem de deixar tudo
+  // como estava, e apagava a memoria dos VODs, o que com quinhentos canais
+  // eram quinhentos pedidos a Kick no Carregar seguinte.
+  if (!confirm(aviso)) return;
   // O memo vai junto: Repor é a maneira de forçar a Kick outra vez.
   estado.vodsPorCanal.clear();
   estado.pecasLidas.clear();
-  try { localStorage.removeItem('replay.vods'); localStorage.removeItem('replay.rolar'); } catch { /* nada */ }
-  const quantas = estado.momentos.length;
-  const aviso = quantas ? t('recomecar.comKills', { n: quantas }) : t('recomecar.semKills');
-  if (!confirm(aviso)) return;
   limparFila();
-  try { localStorage.removeItem('replay'); } catch { /* janela privada */ }
+  semGuardar = true;
+  clearTimeout(timerGuardar);
+  try {
+    for (const k of ['replay', 'replay.vods', 'replay.rolar']) localStorage.removeItem(k);
+  } catch { /* janela privada */ }
   location.href = location.pathname;
 }
 
@@ -4113,7 +4157,10 @@ function linkDaNoite() {
     agoraMs: estado.agoraMs,
   });
   const base = `${location.origin}${location.pathname}`;
-  return `${base}?s=${encodeURIComponent(magro)}`;
+  // Depois do #, e nao no ?s=: o que vem depois do # nao vai ao servidor. Uma
+  // noite de quinhentos canais da um link de trinta mil letras, e o GitHub
+  // Pages responde 414 a partir das oito mil.
+  return `${base}#s=${encodeURIComponent(magro)}`;
 }
 
 $('partilhar').onclick = async () => {
@@ -4241,16 +4288,25 @@ async function abrirLinkKick() {
     try {
       botao.disabled = true;
       nota.textContent = t('link.aLer');
-      const r = await fetch(`https://kick.com/api/v2/video/${encodeURIComponent(lido.id)}`);
-      const v = await r.json();
-      const slug = v?.livestream?.channel?.slug;
-      if (!slug) throw new Error('sem canal');
-      $('canais').value = [$('canais').value.trim(), slug].filter(Boolean).join('\n');
+      const { slug, inicioMs } = await vodDaKick(lido.id);
+      const ja = listaDeCanais().map(slugDoNome);
+      if (!ja.includes(slugDoNome(slug))) {
+        $('canais').value = [$('canais').value.trim(), slug].filter(Boolean).join('\n');
+      }
       nota.textContent = '';
+      // A noite DESTE vídeo, e não a mais recente do canal: o `carregar` volta
+      // à noite onde cai o instante a restaurar. As kills que já havia vão
+      // junto, e as de fora da noite ficam guardadas (ver `momentosFora`).
+      if (inicioMs != null) {
+        estado.restaurar = {
+          agora: inicioMs, focos: [slugDoNome(slug)], marca: null,
+          momentos: estado.momentos,
+        };
+      }
       carregar();
-    } catch {
+    } catch (e) {
       nota.classList.add('mau');
-      nota.textContent = t('link.semClipe');
+      nota.textContent = e.name === 'SEM-VOD' ? t('link.semVod') : t('link.erroVod');
     } finally { botao.disabled = false; }
     return;
   }
@@ -4266,7 +4322,7 @@ async function abrirLinkKick() {
     const slug = `${c.canal}·clipe`;
     estado.linhas = [
       ...estado.linhas.filter((l) => l.slug !== slug),
-      linhaDoCanal(slug, [peca]),
+      { ...linhaDoCanal(slug, [peca]), pecasCompletas: [peca] },
     ];
     estado.focos = [slug];
     estado.janela = janelaComum(estado.linhas);
@@ -4501,23 +4557,27 @@ window.addEventListener('blur', pararArrasto);
 async function verSeEstaVelha() {
   const escrita = $('versao').textContent.trim();
   // Em desenvolvimento não há ficheiro nenhum, e não há nada a comparar.
-  if (!escrita || escrita === 'dev') return;
+  if (!escrita || escrita === 'dev') return false;
   try {
     const r = await fetch(`versao.txt?t=${Date.now()}`, { cache: 'no-store' });
-    if (!r.ok) return;
+    if (!r.ok) return false;
     const servidor = (await r.text()).trim();
-    if (!servidor || servidor === escrita) return;
+    if (!servidor || servidor === escrita) return false;
     const jaTentei = sessionStorage.getItem('replay.recarga');
     if (jaTentei === servidor) {
       $('versao').textContent = `${escrita} → ${servidor}`;
       $('versao').classList.add('mau');
-      return;
+      return false;
     }
     sessionStorage.setItem('replay.recarga', servidor);
     location.reload();
-  } catch { /* sem rede: fica com o que tem, que é melhor do que nada */ }
+    return true;
+  } catch { return false; /* sem rede: fica com o que tem, que é melhor do que nada */ }
 }
-verSeEstaVelha();
+// O restauro lá em baixo espera por esta resposta: a versão velha recarregava a
+// página a meio dos pedidos à Kick, e com quinhentos canais cada deploy fazia
+// toda a gente pedir tudo duas vezes.
+const versaoVista = verSeEstaVelha();
 
 // ── idioma ──────────────────────────────────────────────────────────────────
 
@@ -4577,8 +4637,48 @@ aplicarIdioma();
 // Um link de evento abre o evento, e não a última noite guardada: as duas ao mesmo tempo punham a
 // grelha da noite antiga por cima do mapa que o link pediu.
 const vemDeEvento = /[#&]evento=/.test(location.hash);
-const guardado = doLink(new URLSearchParams(location.search).get('s') || '')
-  || (vemDeEvento ? null : doLink(localStorage.getItem('replay') || ''));
+// O link partilhado vem no # (ver `linkDaNoite`); os de antes vinham no ?s=.
+const sDoHash = new URLSearchParams(location.hash.slice(1)).get('s');
+const doEndereco = doLink(new URLSearchParams(location.search).get('s') || sDoHash || '');
+let local = null;
+// Com os dados do site bloqueados o localStorage atira um SecurityError, e aqui
+// isso parava o arranque inteiro, com o guardar e o beforeunload por registar.
+try { local = vemDeEvento ? null : doLink(localStorage.getItem('replay') || ''); } catch { /* sem armazenamento */ }
+
+/**
+ * Um link partilhado JUNTA-SE ao que ele ja tinha, e nao o apaga.
+ *
+ * O link traz os canais, a noite e os acertos de quem o fez, e nunca as kills.
+ * Abri-lo substituia a sessao inteira: as kills que ele tinha marcado sumiam do
+ * ecra e, no guardar seguinte, do localStorage. Os acertos dele para canais que
+ * o link nao acerta tambem ficam.
+ */
+function juntarComLocal(link, meu) {
+  if (!meu) return link;
+  return {
+    ...link,
+    nudges: { ...meu.nudges, ...link.nudges },
+    margens: { ...meu.margens, ...link.margens },
+    mudo: { ...meu.mudo, ...link.mudo },
+    volume: { ...meu.volume, ...link.volume },
+    marca: link.marca || meu.marca,
+    momentos: unirMomentos(link.momentos, meu.momentos),
+  };
+}
+const guardado = doEndereco ? juntarComLocal(doEndereco, local) : local;
+// E sai do endereco depois de lido. Ficava la, e cada F5 aplicava o link outra
+// vez por cima do que ele tinha feito desde que o abriu.
+if (doEndereco) {
+  const q = new URLSearchParams(location.search);
+  q.delete('s');
+  let hash = location.hash;
+  if (sDoHash) {
+    const h = new URLSearchParams(location.hash.slice(1));
+    h.delete('s');
+    hash = h.toString() ? `#${h}` : '';
+  }
+  history.replaceState(null, '', `${location.pathname}${q.toString() ? `?${q}` : ''}${hash}`);
+}
 
 reporVods();
 try { rolarPendente = Number(localStorage.getItem('replay.rolar')) || null; } catch { /* nada */ }
@@ -4589,7 +4689,7 @@ if (guardado) {
   estado.mudo = guardado.mudo || {};
   estado.volume = guardado.volume || {};
   estado.restaurar = guardado;
-  if (guardado.canais.length) carregar();
+  if (guardado.canais.length) versaoVista.then((vaiRecarregar) => { if (!vaiRecarregar) carregar(); });
 }
 
 // ── o evento ────────────────────────────────────────────────────────────────
@@ -4621,19 +4721,9 @@ if (vemDeEvento) evento.abrirDoLink();
 window.addEventListener('beforeunload', () => {
   clearTimeout(timerGuardar);
   timerGuardar = null;
+  if (semGuardar) return;
   guardarRolar();
   try {
-    localStorage.setItem('replay', paraLink({
-      canais: estado.linhas.length ? estado.linhas.map((l) => l.slug) : listaDeCanais(),
-      janela: estado.janela,
-      nudges: estado.nudges,
-      marca: estado.marca,
-      agoraMs: estado.agoraMs,
-      focos: estado.focos,
-      margens: estado.margens,
-      mudo: estado.mudo,
-      volume: estado.volume,
-      momentos: estado.momentos,
-    }));
+    localStorage.setItem('replay', sessaoParaGuardar());
   } catch { /* nunca partir a pagina por causa disto */ }
 });

@@ -126,6 +126,13 @@ export function comNudge(sessao, slug, ms) {
  * ajustes, a marca e o tamanho de cada corte. Perder isto por causa de uma
  * página que travou é perder meia hora de procura.
  */
+// Os tectos de uma sessao lida. Eram 50 canais e 300 kills, e o evento tem
+// quinhentos streamers: um F5 deixava cinquenta na caixa e o guardar seguinte
+// gravava esses cinquenta por cima da lista inteira. Continua a haver tecto,
+// para um link escrito a mao nao pedir cinquenta mil canais a Kick.
+export const MAXIMO_CANAIS = 1000;
+export const MAXIMO_MOMENTOS = 5000;
+
 export function paraLink(sessao) {
   const magro = {
     v: 2,
@@ -139,7 +146,7 @@ export function paraLink(sessao) {
     margens: sessao.margens || {},
     mudo: sessao.mudo || {},
     volume: sessao.volume || {},
-    momentos: Array.isArray(sessao.momentos) ? sessao.momentos.slice(0, 300) : [],
+    momentos: Array.isArray(sessao.momentos) ? sessao.momentos.slice(0, MAXIMO_MOMENTOS) : [],
   };
   return btoa(unescape(encodeURIComponent(JSON.stringify(magro))));
 }
@@ -155,19 +162,26 @@ export function doLink(texto) {
     // versão não a perde por causa de um número que mudou.
     if (!j || (j.v !== 1 && j.v !== 2) || !Array.isArray(j.canais)) return null;
     const objecto = (x) => (x && typeof x === 'object' && !Array.isArray(x) ? x : {});
+    // E o que vem dentro de cada objecto tambem se le. Um nudge em texto virava
+    // conta de juntar letras no `onde`, e um volume 'x' dava NaN, que o
+    // <video> recusa com um erro que parava a noite a meio de abrir.
+    const so = (x, valido) => Object.fromEntries(Object.entries(objecto(x))
+      .filter(([, v]) => valido(v)));
+    const numero = (v) => typeof v === 'number' && Number.isFinite(v);
     return {
-      canais: j.canais.filter((c) => typeof c === 'string').slice(0, 50),
-      nudges: objecto(j.nudges),
+      canais: j.canais.filter((c) => typeof c === 'string').slice(0, MAXIMO_CANAIS),
+      nudges: so(j.nudges, numero),
       marca: j.marca && Number.isFinite(j.marca.de) && Number.isFinite(j.marca.ate) ? j.marca : null,
       agora: Number.isFinite(j.agora) ? j.agora : null,
       focos: (Array.isArray(j.focos) ? j.focos : []).filter((c) => typeof c === 'string').slice(0, 2),
-      margens: objecto(j.margens),
-      mudo: objecto(j.mudo),
-      volume: objecto(j.volume),
+      margens: so(j.margens, (m) => m && typeof m === 'object'
+        && ['antesS', 'depoisS'].every((k) => m[k] == null || (numero(m[k]) && m[k] >= 0))),
+      mudo: so(j.mudo, (v) => typeof v === 'boolean'),
+      volume: so(j.volume, (v) => numero(v) && v >= 0 && v <= 1),
       // As kills marcadas sao o que mais custa a juntar: uma hora de video
       // vista a procurar. Perde-las num F5 e perder a tarde.
       momentos: (Array.isArray(j.momentos) ? j.momentos : [])
-        .filter((m) => m && Number.isFinite(m.ms)).slice(0, 300),
+        .filter((m) => m && Number.isFinite(m.ms)).slice(0, MAXIMO_MOMENTOS),
       de: Number.isFinite(j.de) ? j.de : null,
     };
   } catch { return null; }

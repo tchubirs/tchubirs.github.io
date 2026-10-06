@@ -266,6 +266,26 @@ export function lerLinkKick(texto) {
   return null;
 }
 
+/**
+ * O canal e o início de um VOD colado pelo endereço.
+ *
+ * Pela v1: a `/api/v2/video/<uuid>` não existe (404 com `{"message":""}`,
+ * medido em 06/10), e a `/api/v1/video/<uuid>` responde com o canal dentro de
+ * `livestream`, com CORS aberto como o resto.
+ */
+export async function vodDaKick(id, { buscar = fetch, sinal } = {}) {
+  const r = await buscar(`https://kick.com/api/v1/video/${encodeURIComponent(id)}`, { signal: sinal });
+  if (!r.ok) throw Object.assign(new Error(`vod ${r.status}`), { name: 'SEM-VOD' });
+  const v = await r.json();
+  const slug = v?.livestream?.channel?.slug;
+  if (!slug) throw Object.assign(new Error('vod sem canal'), { name: 'SEM-VOD' });
+  const quando = v.livestream.start_time || v.start_time;
+  // Sem fuso, como na lista de VODs: é UTC.
+  const txt = String(quando || '').replace(' ', 'T');
+  const inicioMs = txt ? Date.parse(/(Z|[+-]\d\d:?\d\d)$/.test(txt) ? txt : `${txt}Z`) : NaN;
+  return { slug, inicioMs: Number.isFinite(inicioMs) ? inicioMs : null };
+}
+
 /** Um clipe da Kick: o que é preciso para o pôr no relógio e para o cortar. */
 export async function clipeDaKick(id, { buscar = fetch, sinal } = {}) {
   const r = await buscar(`https://kick.com/api/v2/clips/${encodeURIComponent(id)}`, { signal: sinal });

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo,
+  linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo, MAXIMO_CANAIS,
   passoDoArrasto, ARRASTO_INTERVALO_MS, vistaDaLinha, saiuDaVista,
 } from '../site/relogio.js';
 
@@ -165,9 +165,36 @@ test('a broken link restores nothing rather than something wrong', () => {
   assert.equal(semMarca.marca, null, 'a mark with a broken number is no mark');
 });
 
+// O tecto era 50, e este teste prendia-o: com o evento de 500 streamers, um F5
+// devolvia 50 canais e o guardar seguinte gravava-os por cima da lista toda
+// (app-3#3, sync-engine#3). O tecto fica, mas acima do evento.
 test('a link cannot be used to open fifty thousand channels', () => {
-  const muitos = Array.from({ length: 500 }, (_, i) => `c${i}`);
-  assert.equal(doLink(btoa(JSON.stringify({ v: 1, canais: muitos }))).canais.length, 50);
+  const muitos = Array.from({ length: 50_000 }, (_, i) => `c${i}`);
+  assert.equal(doLink(btoa(JSON.stringify({ v: 1, canais: muitos }))).canais.length, MAXIMO_CANAIS);
+});
+
+test('uma sessao de 500 canais e 450 kills volta inteira de um F5', () => {
+  const canais = Array.from({ length: 500 }, (_, i) => `c${i}`);
+  const momentos = Array.from({ length: 450 }, (_, i) => ({ ms: T + i * 1000, protagonista: 'c0' }));
+  const v = doLink(paraLink({ canais, momentos, janela: { inicio: T, fim: T + 3_600_000 } }));
+  assert.equal(v.canais.length, 500);
+  assert.equal(v.momentos.length, 450);
+});
+
+// app-1#19, sync-engine#18: um volume 'x' dava NaN, que o <video> recusa com
+// um erro, e um nudge em texto juntava letras em vez de somar.
+test('um link escrito a mao nao traz valores do tipo errado', () => {
+  const v = doLink(btoa(JSON.stringify({
+    v: 2, canais: ['a', 'b'],
+    nudges: { a: '500', b: 1500, c: null },
+    volume: { a: 'x', b: 0.5, c: 7 },
+    mudo: { a: 'sim', b: true },
+    margens: { a: { antesS: 'x' }, b: { antesS: 3, depoisS: 2 }, c: 5 },
+  })));
+  assert.deepEqual(v.nudges, { b: 1500 });
+  assert.deepEqual(v.volume, { b: 0.5 });
+  assert.deepEqual(v.mudo, { b: true });
+  assert.deepEqual(v.margens, { b: { antesS: 3, depoisS: 2 } });
 });
 
 test('comNudge does not mutate the session it was given', () => {
