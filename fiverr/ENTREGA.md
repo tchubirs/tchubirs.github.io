@@ -12,6 +12,16 @@ are there already; Tesseract (scanned statements, gig 5) and XlsxWriter (one tes
     apt-get install -y tesseract-ocr tesseract-ocr-fra tesseract-ocr-por tesseract-ocr-spa
     pip install xlsxwriter
 
+For gig 3, a newer LibreOffice next to that one, about 3 minutes and 730 MB. Version 24.2, which Ubuntu
+installs, cannot work out XLOOKUP, FILTER, LET and the rest of Excel 2021; 26.8 can, and audit_sheet.py
+and run_gas.py use the newest one they find under /opt (run_vba.py stays on 24.2). Take the newest
+folder listed at https://download.documentfoundation.org/libreoffice/stable/ in place of 26.8.1:
+
+    V=26.8.1; U=https://download.documentfoundation.org/libreoffice/stable/$V/deb/x86_64
+    curl -sSL -o /tmp/lo.tar.gz $U/LibreOffice_${V}_Linux_x86-64_deb.tar.gz
+    tar xzf /tmp/lo.tar.gz -C /tmp && mkdir -p /opt/lo26
+    for d in /tmp/LibreOffice_*/DEBS/*.deb; do dpkg-deb -x $d /opt/lo26; done  # ia-ok
+
 Then the tests of every tool, about 3 minutes; each prints "all good", and a test that cannot run here says
 so ("not checked") with the reason:
 
@@ -55,8 +65,9 @@ so ("not checked") with the reason:
   numbers typed as text. If it prints "Saving with openpyxl would lose", do not edit the file with openpyxl:
   edit it in LibreOffice or in the XML.
 - For Excel 2019 or older, do not use the functions listed under "Needs Excel 2021 or later".
-- "Not checked here" lists formulas this LibreOffice cannot work out (XLOOKUP, FILTER, LET and `LAMBDA` in
-  version 24.2): their results come from Excel only. Say so in the delivery message when they matter.
+- "Not checked here" lists formulas this LibreOffice cannot work out: XLOOKUP, FILTER, LET and the rest of
+  Excel 2021 with version 24.2 (unpack 26.8, see Setup, and run again), `LAMBDA` even with 26.8, and the
+  functions of Google Sheets. Their results come from Excel or Google only: say so in the delivery message.
 - A VBA macro: `python3 fiverr/tools/run_vba.py client.xlsm MacroName` runs it on a copy in LibreOffice (a module
   I wrote: add `--code Module1.bas`). MsgBox gets `--answer yes` or `no`, InputBox gets `--input`. The report lists
   every change, or the module, line and error where the macro stopped; `-o after.xlsx` keeps the result. Lines it

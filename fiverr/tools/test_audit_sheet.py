@@ -87,8 +87,10 @@ def files(root):
                                                       ("Data!E4", "#REF!")], bad["sources"]  # ia-ok
     assert bad["repeats"] == ["Data!E3"] and bad["circle"] == ["Data!G1", "Data!H1"], bad
     # LibreOffice before 24.8 has no XLOOKUP: then that cell and the one reading it are set apart. It has no
-    # LAMBDA, whose #VALUE! there is set apart too, and not taken for an error of the client's.
-    assert (bad["lacking"], bad["unchecked"]) in ((["Calc!A1", "Calc!A5"], ["Calc!A2"]), (["Calc!A5"], [])), bad
+    # LAMBDA, whose #VALUE! there is set apart too, and not taken for an error of the client's; nor QUERY, to
+    # which 26.8 gives #VALUE! inside the IFERROR of Google.
+    assert "Calc!A5" in bad["lacking"] and set(bad["lacking"]) <= {"Calc!A1", "Calc!A4", "Calc!A5"}, bad
+    assert bad["unchecked"] == (["Calc!A2"] if "Calc!A1" in bad["lacking"] else []), bad
     assert sorted(bad["broken"]) == ["conditional formatting on Data!D2:D6", "data validation on Data!C2:C6",
                                      "named range Old"], bad["broken"]
     assert bad["odd"] == [("Data!D4", "=B4*C3", "=B4*C4")], bad["odd"]

@@ -27,6 +27,7 @@ the work is done in Excel or LibreOffice when that line shows up.
 import argparse
 import bisect
 import functools
+import glob
 import os
 import pathlib
 import re
@@ -87,6 +88,20 @@ RECALC = """<?xml version="1.0" encoding="UTF-8"?>
 """
 
 
+def office():
+    """The LibreOffice that recalculates: $SOFFICE, else the newest one unpacked under /opt, else the one on
+    the PATH. 24.2, which Ubuntu installs, cannot work out XLOOKUP, FILTER, LET and the rest of Excel 2021;
+    26.8 can (ENTREGA.md, Setup, says how to unpack it)."""
+    if os.environ.get("SOFFICE"):
+        return os.environ["SOFFICE"]
+    found = glob.glob("/opt/libreoffice*/program/soffice") + glob.glob("/opt/*/opt/libreoffice*/program/soffice")
+
+    def version(path):
+        m = re.search(r"libreoffice(\d+)\.(\d+)", path)
+        return (int(m[1]), int(m[2])) if m else (0, 0)
+    return max(found, key=version) if found else "soffice"
+
+
 def recalculate(paths, work):
     """For each file, the path of a copy that LibreOffice recalculated and saved as .xlsx, or None.
 
@@ -103,7 +118,7 @@ def recalculate(paths, work):
             copies.append(os.path.join(work, f"in{i}{os.path.splitext(path)[1].lower()}"))
             shutil.copyfile(path, copies[-1])
     out = os.path.join(work, "out")
-    proc = subprocess.Popen(["soffice", "--headless", "--norestore", f"-env:UserInstallation={profile.as_uri()}",
+    proc = subprocess.Popen([office(), "--headless", "--norestore", f"-env:UserInstallation={profile.as_uri()}",
                              "--convert-to", "xlsx", "--outdir", out, *copies], env=dict(os.environ, HOME=work),
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
     try:
@@ -386,11 +401,13 @@ def audit(path, recalculated):
     graph = {cell: {hit for box in reads.get(cell, ()) for hit in hits(error_index, box)} for cell in errors}
     circle = loops(graph)
     # LibreOffice lacks a newer function when a cell calling it got #NAME?. It has no LAMBDA either, and a
-    # LAMBDA called on the spot, LAMBDA(x, x+1)(2), gives #VALUE! there: no error of Excel's.
+    # LAMBDA called on the spot, LAMBDA(x, x+1)(2), gives #VALUE! there: no error of Excel's. Nor does it
+    # work out a function of Google Sheets, which 26.8 answers with #VALUE! inside the IFERROR Google writes.
     lacked = {n for cell in errors if errors[cell] == "#NAME?" for n in reasons(kinds.get(cell, ()))} | {"LAMBDA"}
     lacking = {cell for cell in errors if cell not in circle and (
         errors[cell] == "#NAME?" and reasons(kinds.get(cell, ()))
-        or {n for k, n in kinds.get(cell, ()) if k == "newer"} & lacked)}
+        or {n for k, n in kinds.get(cell, ()) if k == "newer"} & lacked
+        or any(k == "google" for k, _ in kinds.get(cell, ())))}
     readers = defaultdict(set)
     for cell, parents in graph.items():
         for p in parents:
@@ -407,7 +424,8 @@ def audit(path, recalculated):
             continue
         text = sheets[cell[0]].get(cell[1:])
         if text is None or BROKEN in text.upper() or not graph[cell] - {cell}:
-            sources.append((where(*cell), text, errors[cell]))
+            # A formula that holds #REF! shows #REF! in Excel; LibreOffice 26.8 says #NAME? for SUM(#REF!).
+            sources.append((where(*cell), text, BROKEN if text and BROKEN in text.upper() else errors[cell]))
         else:
             repeats.append(where(*cell))
 
@@ -677,8 +695,8 @@ def main(argv=None):
     ap.add_argument("-o", "--out", help="also write the report to this file")
     ap.add_argument("--compare", action="store_true", help="list what changed from the first file to the second")
     a = ap.parse_args(argv)
-    if not shutil.which("soffice"):
-        print("LibreOffice is needed: the soffice command was not found.")
+    if not shutil.which(office()):
+        print(f"LibreOffice is needed: {office()} was not found.")
         return 2
     if a.compare:
         if len(a.files) != 2:

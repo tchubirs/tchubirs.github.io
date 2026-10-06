@@ -135,6 +135,12 @@ até alguma vender. O que eu faço agora:
    Às 3h40, anúncio 3: o auditor de planilhas dava como erro a corrigir uma fórmula com `LAMBDA` que no Excel 365
    está certa (o LibreOffice daqui não tem `LAMBDA` e devolve `#VALUE!`). Agora ela vai para "não conferido aqui",
    como `XLOOKUP` e `LET`, e só o erro de verdade fica em "Must fix".
+   (O commit 04fe7a6 saiu com a mensagem do commit anterior por engano: o conteúdo dele são estas notas.)
+   Ainda às 3h40: o LibreOffice 24.2 do Ubuntu não calcula `XLOOKUP`, `FILTER`, `LET`, e planilha nova usa muito.
+   A versão 26.8, baixada do site oficial e aberta em /opt sem mexer na do sistema, calcula: numa planilha de
+   teste, o auditor conferiu 19 de 22 fórmulas, contra 8 antes. O auditor e o executor de Apps Script usam a
+   mais nova que acharem. Com ela apareceram dois falsos erros, corrigidos: fórmula do Google Sheets dentro
+   do `IFERROR` que o Google escreve, e `SUM(#REF!)` mostrado como `#NAME?` em vez de `#REF!`.
 
 Pausado até algo vender ou ele pedir: inventário da casa (rascunho em `etsy/home-inventory`), manutenção da casa,
 galinhas no quintal, férias da equipe, Herculano.
