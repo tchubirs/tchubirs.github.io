@@ -38,7 +38,7 @@ export const ZOOM_MINIMO_MS = 30_000;
 
 /**
  * As cores de omissão: as mesmas do tokens.css (--sup-0, --sup-1, --sup-2,
- * --linha, --tinta, --tinta-2, --acento, --marca).
+ * --linha, --tinta, --tinta-2, --acento, --marca, --perigo, --acento-eco).
  *
  * A página passa as do tema; estas servem para o mapa ter a cara do resto
  * quando ninguém passa nada (um teste, uma página sem o CSS), em vez de sair
@@ -53,6 +53,11 @@ export const CORES = Object.freeze({
   texto2: '#B4AEA4',
   cobertura: '#2FB3C4',
   marca: '#E4A13A',
+  // O nome de um canal que não existe na Kick: o mesmo vermelho dos avisos.
+  perigo: '#EE7068',
+  // O fundo da faixa escolhida, por cima do da faixa. Meio transparente, para
+  // ser o mesmo realce em qualquer tema.
+  escolha: '#2fb3c424',
   // A cabeça é branca e não âmbar: o âmbar já são as marcas, e no clipe.js a
   // cabeça é "a barra branca que diz onde está o vídeo". A mesma coisa tem de
   // ter a mesma cor nos dois sítios.
@@ -677,6 +682,9 @@ function barras(ctx, lista, e, y0, y1, aoPintar) {
   }
 }
 
+/** O lado da bandeirinha de uma marca, em px: o contorno de 1 px e 5 px de cor. */
+const BANDEIRA = 7;
+
 /** Os traços das marcas, um caminho por cor. */
 function tracos(ctx, grupos, e, y0, y1, c) {
   const porCor = new Map();
@@ -693,7 +701,7 @@ function tracos(ctx, grupos, e, y0, y1, c) {
   }
   for (const [cor, xs] of porCor) {
     ctx.strokeStyle = cor;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 3;
     ctx.beginPath();
     for (const x of xs.values()) {
       const xx = Math.min(Math.max(x, 1), e.largura - 1);
@@ -701,6 +709,18 @@ function tracos(ctx, grupos, e, y0, y1, c) {
       ctx.lineTo(xx, y1);
     }
     ctx.stroke();
+    // Uma bandeirinha no topo de cada marca. Um traço âmbar sobre a barra
+    // azul quase não se distingue dela (1,1:1); um quadrado com contorno escuro
+    // lê-se como "aqui há qualquer coisa" mesmo entre centenas de faixas.
+    if (y1 - y0 < BANDEIRA) continue;
+    for (const x of xs.values()) {
+      const bx = Math.min(Math.max(Math.round(x) - (BANDEIRA - 1) / 2, 0), e.largura - BANDEIRA);
+      if (bx < 0) continue;
+      ctx.fillStyle = c.fundo;
+      ctx.fillRect(bx, y0, BANDEIRA, BANDEIRA);
+      ctx.fillStyle = cor;
+      ctx.fillRect(bx + 1, y0 + 1, BANDEIRA - 2, BANDEIRA - 2);
+    }
   }
 }
 
@@ -712,9 +732,19 @@ function pintarFaixa(ctx, l, ry, o) {
   if (ate <= de) return;
   const escolhida = o.escolhido != null
     && (l.tipo === 'canal' ? l.canal === o.escolhido : (l.canais || []).includes(o.escolhido));
+  // Os colegas de quem se escolheu: são os que o lance vai abrir, e quem
+  // escolhe tem de os ver antes de carregar no botão.
+  const realcada = escolhida || (l.tipo === 'canal' && o.realcados?.has(l.canal));
+  const falhou = l.tipo === 'canal' && o.falhados?.has(l.canal);
 
-  ctx.fillStyle = escolhida ? c.time : c.faixa;
+  ctx.fillStyle = c.faixa;
   ctx.fillRect(0, de, largura, ate - de);
+  // A faixa escolhida tinha só o fundo um tom acima (1,06:1): entre centenas
+  // de faixas, perdia-se qual era. Agora tem fundo de acento e contorno.
+  if (escolhida) {
+    ctx.fillStyle = c.escolha;
+    ctx.fillRect(0, de, largura, ate - de);
+  }
   const fio = ry + l.altura - 1;
   if (fio >= de && fio < ate) {
     ctx.fillStyle = c.linha;
@@ -746,14 +776,39 @@ function pintarFaixa(ctx, l, ry, o) {
   }
 
   const texto = l.tipo === 'canal' ? l.canal : (l.canais || []).join(' · ');
+  // Um nome que a Kick não conhece fica a vermelho e diz porquê: a faixa
+  // vazia dele era igual à de quem só não transmitiu.
   rotulo(ctx, texto, 16, ry + l.altura / 2, {
-    ...o, tam: 11, cor: l.tipo === 'canal' ? c.texto : c.texto2,
+    ...o,
+    tam: 12,
+    peso: escolhida ? 600 : 400,
+    cor: falhou ? c.perigo : l.tipo === 'canal' ? c.texto : c.texto2,
+    sufixo: falhou && o.naoAchado ? ` · ${o.naoAchado}` : '',
+    // Um canal que não existe não tem barras por baixo: o nome pode usar a linha toda, e num telemóvel
+    // o "não achado" já não comia o nome até "t…".
+    ate: falhou ? Infinity : undefined,
   });
 
-  if (escolhida) {
+  if (realcada) {
     ctx.fillStyle = c.cobertura;
     ctx.fillRect(0, de, Math.min(3, largura), ate - de);
   }
+  if (escolhida) contorno(ctx, ry, l.altura, o);
+}
+
+/**
+ * Um contorno de 1 px à volta da faixa escolhida, feito com fillRect (o mapa
+ * não usa strokeRect) e cortado ao ecrã: um lado fora do ecrã não se pinta.
+ */
+function contorno(ctx, ry, alto, { largura, altura, c }) {
+  const de = Math.max(0, ry);
+  const ate = Math.min(altura, ry + alto);
+  if (ate <= de || largura < 2) return;
+  ctx.fillStyle = c.texto;
+  if (ry >= 0) ctx.fillRect(0, ry, largura, 1);
+  if (ry + alto - 1 >= 0 && ry + alto <= altura) ctx.fillRect(0, ry + alto - 1, largura, 1);
+  ctx.fillRect(0, de, 1, ate - de);
+  ctx.fillRect(largura - 1, de, 1, ate - de);
 }
 
 /**
@@ -768,6 +823,9 @@ function pintarFaixa(ctx, l, ry, o) {
  * `CORES`, e `cores.marcas` dá uma cor a cada tipo de marca ({ tiro: '#…' }).
  * `semTime` é o nome do grupo sem time, para a página o passar já traduzido,
  * e `letra` é a família da letra (o canvas não lê variáveis de CSS).
+ * `realcados` (Set de slugs) são os colegas de quem se escolheu, com uma
+ * risca à esquerda; `falhados` (Set de slugs) são os canais que não existem
+ * na Kick, com o nome a vermelho seguido de `naoAchado`.
  *
  * Só toca no canvas com fillRect, fillText, beginPath, moveTo, lineTo,
  * stroke, save e restore (e as propriedades de cor, letra e alfa). Nada sai
@@ -775,7 +833,7 @@ function pintarFaixa(ctx, l, ry, o) {
  */
 export function pintarMapa(ctx, mapa, {
   topo = 0, altura, largura, vista, agoraMs = null, marcas, cores, escolhido = null,
-  semTime = 'Sem time', letra = LETRA,
+  semTime = 'Sem time', letra = LETRA, realcados = null, falhados = null, naoAchado = '',
 } = {}) {
   if (!ctx || !(largura > 0) || !(altura > 0)) return;
   const t0 = Number.isFinite(topo) ? topo : 0;
@@ -783,6 +841,9 @@ export function pintarMapa(ctx, mapa, {
   const e = escala(vista, largura);
   const o = {
     largura, altura, c, e, escolhido, semTime, letra,
+    realcados: realcados instanceof Set ? realcados : null,
+    falhados: falhados instanceof Set ? falhados : null,
+    naoAchado: typeof naoAchado === 'string' ? naoAchado : '',
     lerMarcas: marcas ? leitor(marcas) : null,
   };
 
@@ -805,6 +866,11 @@ export function pintarMapa(ctx, mapa, {
   // mapa que diz "é aqui que estás", e não pode ficar tapada por nada.
   if (e && Number.isFinite(agoraMs) && agoraMs >= e.de && agoraMs <= e.ate) {
     const x = xDoTempo(agoraMs, vista, largura);
+    // Um fio escuro de cada lado: a cabeça branca sobre as barras azuis dava
+    // 2,5:1, e é a única coisa que diz onde se está.
+    ctx.fillStyle = c.fundo;
+    if (x - 2 >= 0) ctx.fillRect(x - 2, 0, 1, altura);
+    if (x + 2 <= largura) ctx.fillRect(x + 1, 0, 1, altura);
     ctx.strokeStyle = c.cabeca;
     ctx.lineWidth = 2;
     ctx.beginPath();

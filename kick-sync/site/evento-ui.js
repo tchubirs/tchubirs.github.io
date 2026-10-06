@@ -43,6 +43,8 @@ const tocar = () => window.matchMedia?.('(pointer: coarse)').matches === true;
 const estreito = () => window.matchMedia?.('(max-width: 999px)').matches === true;
 const semMovimento = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
 const horaLocal = (ms) => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+// Sem segundos: um pico de chat é um minuto inteiro, e os segundos dele eram sempre ":30".
+const horaCurta = (ms) => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
 /** Um VOD que ainda está a ser gravado: a Kick marca-o com `is_live` e duração 0 (medido em 06/10). */
 const aoVivoVod = (v) => v.aoVivo === true || v.duracaoMs === 0;
@@ -142,6 +144,8 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
     extrasDoLink: [],
     trecho: null,
     feitos: 0,
+    // Os canais que a Kick não conhece: o mapa pinta o nome deles a vermelho.
+    falhados: new Set(),
   };
 
   // ── abrir ──────────────────────────────────────────────────────────────
@@ -154,7 +158,9 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
     ev.juntados = new Set();
     ev.extrasDoLink = [];
     ev.escolha = null;
+    ev.falhados = new Set();
     $('lance').hidden = true;
+    $('picosChat').innerHTML = '';
     const todos = [...new Set([...elenco.times.flatMap((x) => x.canais), ...elenco.soltos])];
     if (!todos.length) { $('estadoEvento').textContent = t('evento.vazio'); return; }
     $('evento').hidden = false;
@@ -232,7 +238,8 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
     for (const [m, slugs] of porMotivo) partes.push(`${nomes(slugs)}: ${m}`);
     $('avisosEvento').hidden = !partes.length;
     $('avisosTexto').textContent = partes.join(' · ');
-    $('corrigirElenco').hidden = !ev.resultados.some((r) => r && RUINS.includes(r.estado));
+    ev.falhados = new Set(ev.resultados.filter((r) => r && RUINS.includes(r.estado)).map((r) => r.slug));
+    $('corrigirElenco').hidden = !ev.falhados.size;
   }
 
   function corrigirElenco() {
@@ -359,6 +366,10 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
         agoraMs: ev.escolha?.ms ?? null,
         marcas: ev.marcas,
         escolhido: ev.escolha?.canal ?? null,
+        // Quem o lance vai abrir fica com uma risca: é o que muda ao juntar um time ou achar pelo som.
+        realcados: ev.escolha ? new Set(canaisDoLance(ev.escolha)) : null,
+        falhados: ev.falhados,
+        naoAchado: t('evento.naoAchado'),
         cores: coresDoTema(),
         semTime: t('evento.semTime'),
       });
@@ -372,6 +383,7 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
     return {
       fundo: v('--sup-0'), faixa: v('--sup-1'), time: v('--sup-2'), linha: v('--linha'),
       texto: v('--tinta'), texto2: v('--tinta-2'), cobertura: v('--acento'), marca: v('--marca'),
+      perigo: v('--perigo'), escolha: v('--acento-eco'),
       marcas: { chat: v('--marca') },
     };
   }
@@ -440,10 +452,17 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
     $('estadoLance').textContent = '';
     pintarLance();
     pintar();
-    // Num ecrã estreito o lance fica por baixo do mapa: trazê-lo à vista, senão o botão que abre o
-    // vídeo estava fora do ecrã e só se via uma risca branca a mexer.
-    if (estreito()) $('lance').scrollIntoView({ block: 'nearest', behavior: semMovimento() ? 'auto' : 'smooth' });
+    destaparMapa();
     lerChatDoTime(ev.escolha);
+  }
+
+  // Num ecrã estreito o lance fica preso ao fundo do ecrã (o botão que abre o vídeo está sempre à
+  // vista), e por isso tapava o mapa: medido num 390x844, o painel ia de 480 a 844 px e o mapa de 500
+  // a 726, e a faixa que se acabou de tocar sumia. Rola-se a página até o mapa ficar por cima dele.
+  function destaparMapa() {
+    if (!estreito() || $('lance').hidden) return;
+    const falta = $('mapaRolo').getBoundingClientRect().bottom - $('lance').getBoundingClientRect().top + 8;
+    if (falta > 0) window.scrollBy({ top: falta, behavior: semMovimento() ? 'auto' : 'smooth' });
   }
 
   // ── o chat ─────────────────────────────────────────────────────────────
@@ -452,18 +471,23 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
   // canal pequeno custou 12 pedidos, medido em 06/10), por isso lê-se sozinho a cada escolha, e só do
   // time: os 500 de uma vez eram dezenas de milhares de pedidos.
   const CHAT_JANELA_MS = 2 * 3600e3;
+  // A janela começa numa meia hora certa: duas escolhas perto uma da outra (um pico e o seguinte) caem
+  // na mesma janela e não leem o chat outra vez. Com o início ao minuto, cada clique era uma janela
+  // nova e uns 12 pedidos por hora e por canal. A escolha fica sempre com 1 h antes e 30 min depois.
+  const CHAT_GRELHA_MS = 30 * 60e3;
+  const PICOS_BOTOES = 8;
   const chatLido = new Set();
   let chatControlo = null;
   async function lerChatDoTime(e) {
     chatControlo?.abort();
     const controlo = new AbortController();
     chatControlo = controlo;
-    const deMs = Math.floor((e.ms - CHAT_JANELA_MS / 2) / 60_000) * 60_000;
+    const deMs = Math.floor((e.ms - CHAT_JANELA_MS / 2) / CHAT_GRELHA_MS) * CHAT_GRELHA_MS;
     const ateMs = Math.min(Date.now(), deMs + CHAT_JANELA_MS);
-    const canais = colegas(e.canal).filter((c) => noArEm(ev.coberturas, c, e.ms) && !chatLido.has(`${c}|${deMs}`));
-    if (!canais.length) return;
+    const doTime = colegas(e.canal).filter((c) => noArEm(ev.coberturas, c, e.ms));
+    const canais = doTime.filter((c) => !chatLido.has(`${c}|${deMs}`));
     let feitos = 0;
-    $('estadoChat').textContent = t('lance.aLerChat', { feitos, total: canais.length });
+    if (canais.length) $('estadoChat').textContent = t('lance.aLerChat', { feitos, total: canais.length });
     for (const c of canais) {
       if (controlo.signal.aborted) return;
       try {
@@ -480,8 +504,41 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
       $('estadoChat').textContent = t('lance.aLerChat', { feitos, total: canais.length });
       pintar();
     }
-    const n = canais.reduce((s, c) => s + (ev.marcas.get(c) || []).filter((m) => m.ms >= deMs && m.ms <= ateMs).length, 0);
-    $('estadoChat').textContent = tn(n, 'lance.umPicoChat', 'lance.picosChat');
+    if (controlo.signal.aborted) return;
+    pintarPicos(e, doTime, deMs, ateMs);
+  }
+
+  // Os picos do time também como botões com a hora: no telemóvel uma marca de 3 px no mapa é difícil
+  // de acertar, e o botão diz logo a que horas foi. Ficam os mais perto do momento escolhido.
+  function pintarPicos(e, doTime, deMs, ateMs) {
+    const porMinuto = new Map();
+    for (const c of doTime) {
+      for (const m of ev.marcas.get(c) || []) {
+        if (m.ms < deMs || m.ms > ateMs) continue;
+        const minuto = Math.floor(m.ms / 60_000);
+        // Dois colegas com um pico no mesmo minuto são o mesmo lance: fica o de quem se escolheu.
+        if (!porMinuto.has(minuto) || c === e.canal) porMinuto.set(minuto, { canal: c, ms: m.ms });
+      }
+    }
+    const todos = [...porMinuto.values()];
+    $('estadoChat').textContent = !doTime.length ? ''
+      : todos.length ? tn(todos.length, 'lance.umPicoChat', 'lance.picosChat') : t('lance.semPicoChat');
+    const perto = todos.sort((a, b) => Math.abs(a.ms - e.ms) - Math.abs(b.ms - e.ms))
+      .slice(0, PICOS_BOTOES).sort((a, b) => a.ms - b.ms);
+    $('picosChat').innerHTML = perto.length
+      ? `<span class="nota">${escapar(t('lance.picosBotoes'))}</span>${perto.map((p) => (
+        `<button type="button" class="pico" data-ms="${p.ms}" data-canal="${escapar(p.canal)}" title="${escapar(p.canal)}">${escapar(horaCurta(p.ms))}</button>`
+      )).join('')}`
+      : '';
+    pintarLegenda();
+    // A legenda aparece por cima do mapa e empurra-o para baixo: no telemóvel, por baixo do lance.
+    if (ev.escolha === e) destaparMapa();
+  }
+
+  // A legenda das marcas aparece quando há alguma no mapa: sem ela, ninguém sabe o que são.
+  function pintarLegenda() {
+    const canais = ev.elenco ? [...ev.elenco.times.flatMap((x) => x.canais), ...ev.elenco.soltos] : [];
+    $('legendaPico').hidden = !canais.some((c) => ev.marcas.get(c)?.length);
   }
 
   // ── o lance ────────────────────────────────────────────────────────────
@@ -543,6 +600,8 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
       $('notaOutros').textContent = t('lance.liberadoAs', { hora: horaLocal(e.ms + ev.atrasoMin * 60_000), min: ev.atrasoMin });
     }
     pintarJuntar(e);
+    // As riscas do mapa dizem quem o lance abre, e isso muda ao juntar um time ou achar alguém pelo som.
+    pintar();
   }
 
   // Juntar outro time ao lance: um raid tem dois, e o time do outro lado só entrava pelo som (que está
@@ -796,6 +855,12 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
       const nome = $('juntarTime').value;
       if (nome) ev.juntados.add(nome);
       pintarLance();
+    };
+    $('picosChat').onclick = (evento) => {
+      const b = evento.target.closest('button[data-ms]');
+      if (!b) return;
+      const canal = b.dataset.canal;
+      escolher({ tipo: 'canal', canal, ms: Number(b.dataset.ms), time: indiceDeTimes(ev.elenco).get(canal) ?? null });
     };
     window.addEventListener('popstate', () => {
       if (/[#&]evento=/.test(location.hash) && !ev.elenco) abrirDoLink();
