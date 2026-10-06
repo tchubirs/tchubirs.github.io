@@ -34,8 +34,12 @@ consequências:
 ## O que falta (por ordem)
 
 1. Apagar a chave do YouTube no Google Cloud Console (coisa do dono, 2 min).
-2. Corrigir o que a revisão do código achar de injeção de HTML (nomes de canal e links partilhados
-   entram na página; tudo o que vem de fora tem de entrar como texto). Em curso.
+2. ~~Injeção de HTML por link partilhado.~~ Corrigido em 06/10: um link `?s=` com
+   `<img onerror=…>` no lugar de um nome de canal corria código na página de quem o abrisse (o nome
+   recusado pela Kick voltava para a lista tal como veio). Agora todo o texto de fora (nomes de canal,
+   nomes de quem morreu, mensagens de erro, títulos e imagens da pesquisa da Twitch) passa por
+   `site/escapar.js`. `test/seguranca.test.mjs` abre a página com o link armadilhado e falha no código
+   antigo.
 3. Uma política de segurança de conteúdo (`Content-Security-Policy`) quando o site tiver domínio próprio:
    só scripts do próprio site, ligações só para `kick.com` e o CDN da Kick.
 4. Repositório privado para o produto antes de mostrar o código a um comprador.
