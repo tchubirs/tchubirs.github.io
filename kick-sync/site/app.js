@@ -4497,6 +4497,18 @@ function ondeSeEscreve(el) {
   return el.tagName === 'INPUT' && ESCREVER.test(el.type || 'text');
 }
 
+// Quem chegou a um botão pelo Tab, e quem lá ficou de um clique. O
+// `:focus-visible` não serve: o Chromium passa a dá-lo a QUALQUER foco assim
+// que se carrega numa tecla, e o espaço deixava de pausar depois de um clique.
+const focadosPeloTeclado = new WeakSet();
+let ultimoFoiTeclado = false;
+document.addEventListener('keydown', (e) => { if (e.key === 'Tab') ultimoFoiTeclado = true; }, true);
+document.addEventListener('pointerdown', () => { ultimoFoiTeclado = false; }, true);
+document.addEventListener('focusin', (e) => {
+  if (ultimoFoiTeclado) focadosPeloTeclado.add(e.target);
+  else focadosPeloTeclado.delete(e.target);
+});
+
 document.addEventListener('keydown', (e) => {
   const alvo = e.target;
   // Ctrl, Cmd e Alt são do sistema: Ctrl+C copia, Ctrl+A escolhe tudo, Ctrl+D
@@ -4527,7 +4539,7 @@ document.addEventListener('keydown', (e) => {
   // em qualquer página. Só o foco que ficou de um clique de rato (sem anel)
   // deixa o espaço pausar, senão o Pausar deixava de funcionar depois de
   // carregar num botão qualquer.
-  const tabulado = alvo !== document.body && alvo?.matches?.(':focus-visible')
+  const tabulado = focadosPeloTeclado.has(alvo)
     && alvo.matches('button, summary, a[href], [role="button"], input');
   const cursor = alvo?.tagName === 'INPUT' && alvo.type === 'range';
   // Antes de haver noite não há nada para parar nem para andar: a pausa ficava

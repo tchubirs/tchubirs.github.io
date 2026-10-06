@@ -464,11 +464,14 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
   display: flex; align-items: center; justify-content: space-between; gap: var(--e2);
   opacity: 0; transition: opacity var(--mov);
 }
-/* Invisivel e nao tocavel: com opacity 0 os botoes continuavam a receber o
-   toque, e no telemovel um toque na miniatura caia no + escondido e punha o
-   angulo fora de tempo sem ninguem ver. */
-.tile .controlos { pointer-events: none; }
-.tile:hover .controlos, .tile.foco .controlos, .tile .controlos:focus-within { opacity: 1; pointer-events: auto; }
+/* Num ecra de toque nao ha hover que os mostre antes do toque: invisiveis, os
+   botoes continuavam a receber o dedo, e um toque na miniatura caia no +
+   escondido e punha o angulo fora de tempo sem ninguem ver. Com rato, o
+   ponteiro passa por cima e eles aparecem antes do clique. */
+.tile:hover .controlos, .tile.foco .controlos, .tile .controlos:focus-within { opacity: 1; }
+@media (hover: none) {
+  .tile:not(.foco) .controlos, .tile:not(.foco) .fora { pointer-events: none; }
+}
 .tile .fora {
   position: absolute; inset: var(--e2) var(--e2) auto auto; z-index: 3;
   display: flex; gap: var(--e2); opacity: 0; transition: opacity var(--mov);
@@ -483,8 +486,7 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
    para o foco é o mesmo nó a mudar de pai, e assim os botões aparecem e
    desaparecem com ele sem uma linha de JavaScript. */
 #grade .tile .ecraCheio, #grade .tile .aparte { display: none; }
-.tile .fora { pointer-events: none; }
-.tile:hover .fora, .tile.foco .fora, .tile .fora:focus-within { opacity: 1; pointer-events: auto; }
+.tile:hover .fora, .tile.foco .fora, .tile .fora:focus-within { opacity: 1; }
 
 /* Um botão sobre a imagem: vidro escuro, sem fio, do tamanho de um polegar. */
 .tile .controlos button, .tile .fora button {

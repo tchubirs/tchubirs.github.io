@@ -248,6 +248,11 @@ test('os botões de partilhar e de sincronizar guardam o ícone', semNavegador, 
 
 test('os botões escondidos de uma miniatura não se deixam tocar', semNavegador, async () => {
   const { p, erros } = await abrirNoite(['tchubi', 'outro'], { ecra: { width: 412, height: 915 } });
+  // Um telemóvel: sem hover. É aí que o toque cai num botão que não se vê.
+  const cdp = await p.context().newCDPSession(p);
+  await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
+  await cdp.send('Emulation.setEmulatedMedia', { features: [{ name: 'hover', value: 'none' }, { name: 'pointer', value: 'coarse' }] });
+  assert.equal(await p.evaluate(() => matchMedia('(hover: none)').matches), true);
   await carregar(p);
   await p.mouse.move(0, 0);
   const acerta = await p.evaluate(() => {
