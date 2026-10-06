@@ -371,12 +371,29 @@ test('o rodapé de um cartão feito com <div> é do cartão; o do site não é',
   });
 });
 
-test('só o atributo href conta, e nele o ponto no fim é do endereço', () => {
+test('só o atributo href conta, e o ponto no fim sai como num texto', () => {
   const e = lerElenco(html(`<h3>T</h3><a data-href="https://kick.com/errado" href="https://kick.com/certo">x</a>
     <a href="https://kick.com/abc.">abc.</a>`));
-  assert.deepEqual(e.times, [{ nome: 'T', canais: ['certo', 'abc.'] }]);
-  // Num texto escrito à mão continua a ser pontuação.
+  // Um nome da Kick não acaba em ponto: o do href sai como o de um texto, e o
+  // elenco é o mesmo depois de "Corrigir elenco" e depois de um link.
+  assert.deepEqual(e.times, [{ nome: 'T', canais: ['certo', 'abc'] }]);
   assert.equal(canalDe('kick.com/abc.'), 'abc');
+});
+
+test('um elenco lido de uma página volta igual de paraTexto e do link', async () => {
+  const e = lerElenco('<h3>T</h3><a href="https://kick.com/certo">x</a><a href="https://kick.com/abc.">abc.</a>');
+  assert.deepEqual(lerElenco(paraTexto(e)).times, e.times);
+  assert.deepEqual((await descodificar(await codificar(e))).times, e.times);
+});
+
+test('o texto solto de uma página ao lado dos links não vira time', () => {
+  const e = lerElenco('<h3>Team A</h3><a href="https://kick.com/a1">a1</a>\nWelcome everyone\nsponsor\nhome');
+  assert.deepEqual(e, { times: [{ nome: 'Team A', canais: ['a1'] }], soltos: [], avisos: [] });
+  // O texto do organizador com "Nome: canais" continua a contar.
+  const org = lerElenco('<h3>Team A</h3><a href="https://kick.com/a1">a1</a>\nWelcome everyone\nTeam B: b1, b2');
+  assert.deepEqual(so(org), {
+    times: [{ nome: 'Team A', canais: ['a1'] }, { nome: 'Team B', canais: ['b1', 'b2'] }], soltos: [],
+  });
 });
 
 test('cem mil <script> e <!-- por fechar acabam depressa, e não escondem o que veio antes', () => {
@@ -744,6 +761,30 @@ test('CSV sem cabeçalho: um time de uma linha só ainda é um time, e na dúvid
   // Um CSV num bloco não muda a leitura de uma lista noutro bloco.
   const separados = lerElenco('alpha,a1\nalpha,a2\n\nricoy, tchubi');
   assert.deepEqual(separados, { times: [{ nome: 'alpha', canais: ['a1', 'a2'] }], soltos: ['ricoy', 'tchubi'], avisos: [] });
+});
+
+test('uma lista "nome, link" sem cabeçalho são canais, e não um time por streamer', () => {
+  const soltos = { times: [], soltos: ['ricoy', 'tchubi', 'kodd'], avisos: [] };
+  assert.deepEqual(lerElenco('Ricoy,https://kick.com/ricoy\nTchubi,https://kick.com/tchubi\nKodd,https://kick.com/kodd'), soltos);
+  assert.deepEqual(lerElenco('Ricoy\thttps://kick.com/ricoy\nTchubi\thttps://kick.com/tchubi\nKodd\thttps://kick.com/kodd'), soltos);
+  assert.deepEqual(lerElenco('ricoy,@ricoy\ntchubi,@tchubi\nkodd,@kodd'), soltos);
+  const misto = lerElenco('Team Alpha: ricoy, tchubi\nTeam Bravo: kodd\n\nRicoy,https://kick.com/ricoy2\nX,https://kick.com/x');
+  assert.deepEqual(so(misto), {
+    times: [{ nome: 'Team Alpha', canais: ['ricoy', 'tchubi'] }, { nome: 'Team Bravo', canais: ['kodd'] }],
+    soltos: ['ricoy2', 'x'],
+  });
+});
+
+test('um time com os membros escritos "Nome, link" continua a ser um time', () => {
+  const e = lerElenco('Team Alpha\nRicoy, https://kick.com/ricoy\nTchubi, https://kick.com/tchubi');
+  assert.deepEqual(e, { times: [{ nome: 'Team Alpha', canais: ['ricoy', 'tchubi'] }], soltos: [], avisos: [] });
+});
+
+test('CSV sem cabeçalho lido só pelos links diz que leu um time por linha', () => {
+  const e = lerElenco('Alpha,https://kick.com/a1\nBravo,https://kick.com/b1');
+  assert.deepEqual(e.times, [{ nome: 'Alpha', canais: ['a1'] }, { nome: 'Bravo', canais: ['b1'] }]);
+  assert.equal(e.avisos.length, 1);
+  assert.match(e.avisos[0], /um time por linha/);
 });
 
 test('o cabeçalho conhece os nomes mais comuns da coluna do canal, e uma linha de dados não é cabeçalho', () => {

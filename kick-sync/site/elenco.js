@@ -78,10 +78,8 @@ function pareceLink(t) {
  * Recusa em vez de corrigir: tirar os espaços a "Mills RP" dava "millsrp",
  * que pode ser outra pessoa. Um canal errado no elenco é um ângulo errado na
  * grelha, e ninguém dá por ele.
- *
- * `noAtributo` é para o href de uma página: aí não há pontuação de frase.
  */
-function lerCanal(cru, { noAtributo = false } = {}) {
+function lerCanal(cru) {
   let t = String(cru ?? '').trim();
   // Uma menção do Discord copiada crua (<@123...>) é o número da pessoa no
   // Discord. Sem os < > e o @ ficava só o número, que passa na regra de canal.
@@ -106,10 +104,10 @@ function lerCanal(cru, { noAtributo = false } = {}) {
     t = t.replace(/^@+/, '');
   }
   // O ponto final sai. A página medida mostra "xKevv." e o canal é xkevv: um
-  // ponto no fim de um nome é pontuação muito mais vezes do que é nome. Num
-  // href não: ali o ponto é do endereço, e tirá-lo podia dar outro canal.
-  t = t.toLowerCase();
-  if (!noAtributo) t = t.replace(/\.+$/, '');
+  // nome da Kick não acaba em ponto. Sai também de um href, para o canal ser
+  // um só: o elenco passa por texto em "Corrigir elenco" e no link, e lá o
+  // ponto sai sempre.
+  t = t.toLowerCase().replace(/\.+$/, '');
   if (NAO_SAO_CANAIS.has(t)) return { motivo: 'nao-e-canal', texto };
   // Só pontuação ("-", "...") passa na regra da Kick mas não é nome de ninguém,
   // e aparece sempre que se parte uma frase como "Time 1 - Os Brabos".
@@ -128,9 +126,9 @@ export function canalDe(texto) {
 }
 
 /** Numa página só conta um link para a Kick: um href relativo é do site do evento. */
-function canalDeLink(href, noAtributo = false) {
+function canalDeLink(href) {
   const h = String(href || '').trim();
-  return pareceLink(h) ? lerCanal(h, { noAtributo }).slug ?? null : null;
+  return pareceLink(h) ? lerCanal(h).slug ?? null : null;
 }
 
 // ── nomes ───────────────────────────────────────────────────────────────────
@@ -584,7 +582,7 @@ function lerHtml(html, ac, textos = [], cru = html) {
     else if (!/\/\s*$/.test(m[3])) elementos.abrir(tag, { pos: m.index, abertos });
     if (tag === 'a') {
       largar();
-      if (!fecha) pendente = canalDeLink(atributo(m[3], 'href'), true);
+      if (!fecha) pendente = canalDeLink(atributo(m[3], 'href'));
     } else if (tag === 'nav' || tag === 'footer') {
       if (!fecha && !noCartao()) { largar(); atual = null; nivelAtual = 0; papel = null; }
     } else if (!fecha && /^h[1-6]$/.test(tag)) {
@@ -640,11 +638,26 @@ function lerHtml(html, ac, textos = [], cru = html) {
  * Uma página inteira (com <html>) é toda página. Um pedaço de HTML no meio de
  * uma mensagem não apaga a mensagem: as linhas sem marcação, fora de qualquer
  * elemento, lêem-se como texto, cada uma no seu sítio.
+ *
+ * Mas só o que tem cara de elenco escrito: num grupo de linhas seguidas, a
+ * partir da primeira com um "Nome: canais", um @ ou um link. "Bem-vindos" e "sponsor" soltos ao lado
+ * dos links são texto da página, e lidos como mensagem davam um time inventado.
  */
 function lerPagina(cru, ac) {
   const limpo = semComentariosNemScripts(cru);
-  const { inicios, daPagina } = linhasDaPagina(limpo);
+  const { inicios, daPagina: marcadas } = linhasDaPagina(limpo);
   const linhas = limpo.split('\n');
+  const daPagina = [...marcadas];
+  for (let k = 0; k < linhas.length;) {
+    if (daPagina[k] || !linhas[k].trim()) { k++; continue; }
+    let fim = k;
+    while (fim < linhas.length && !daPagina[fim] && linhas[fim].trim()) fim++;
+    // O que vem antes da primeira linha assim é da página; o que vem depois
+    // pode ser um membro por linha debaixo de "Time A:".
+    const i = linhas.slice(k, fim).findIndex(temCaraDeElenco);
+    for (let j = k; j < (i < 0 ? fim : k + i); j++) daPagina[j] = true;
+    k = fim;
+  }
   const textos = [];
   let aberto = null;
   for (let k = 0; k < linhas.length; k++) {
@@ -664,6 +677,12 @@ function lerPagina(cru, ac) {
     }
   }
   lerHtml(linhas.join('\n'), ac, textos.map((t) => ({ inicio: t.inicio, texto: t.linhas.join('\n') })), crus.join('\n'));
+}
+
+/** Uma linha escrita pelo organizador: "Nome: a, b", um @canal ou um link. */
+function temCaraDeElenco(linha) {
+  const { s } = prepararLinha(linha);
+  return Boolean(s) && (Boolean(dividirNome(s)) || tokens(s).some(canalEscrito));
 }
 
 // ── texto ───────────────────────────────────────────────────────────────────
@@ -836,11 +855,19 @@ const ehFrase = (s) => /[.!?]$/.test(s) && s.split(/\s+/).length >= 3 && !/@|kic
  * se repete (num CSV vem uma linha por canal), ou o canal escrito como link ou
  * @ em todas as linhas, com o time escrito como nome. Aí todas as linhas do
  * bloco são time,canal, também a de um time com um canal só.
+ *
+ * Só pelos links é mais fraco: "Ricoy, kick.com/ricoy" é a lista mais comum de
+ * todas, o nome de cada streamer e o link dele. Por isso conta só quando o
+ * bloco é todo de pares (um título por cima é um time com os membros assim) e
+ * nenhum nome é o do próprio canal. Devolve 'repete', 'links' ou false.
  */
 function ehCsvDeTimes(bloco) {
   const pares = [];
+  let linhas = 0;
   for (const { s } of bloco) {
-    if (!s || dividirNome(s)) continue;
+    if (!s) continue;
+    linhas++;
+    if (dividirNome(s)) continue;
     const sep = separadorDe(s);
     if (!sep) continue;
     const celulas = partirCelulas(s, sep).filter(Boolean);
@@ -848,8 +875,16 @@ function ehCsvDeTimes(bloco) {
   }
   const vezes = new Map();
   for (const [a] of pares) vezes.set(a.toLowerCase(), (vezes.get(a.toLowerCase()) || 0) + 1);
-  return [...vezes.values()].some((n) => n >= 2)
-    || (pares.length >= 2 && pares.every(([a, b]) => canalEscrito(b) && !canalEscrito(a)));
+  if ([...vezes.values()].some((n) => n >= 2)) return 'repete';
+  return pares.length >= 2 && pares.length === linhas
+    && pares.every(([a, b]) => canalEscrito(b) && !canalEscrito(a) && !nomeDoCanal(a, b)) ? 'links' : false;
+}
+
+/** "Ricoy" e kick.com/ricoy: o nome escrito é o do próprio canal, e não um time. */
+function nomeDoCanal(nome, canal) {
+  const slug = lerCanal(canal).slug;
+  const so = (x) => String(x).toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+  return Boolean(slug) && so(nome).length > 0 && so(nome) === so(slug);
 }
 
 /**
@@ -920,6 +955,10 @@ function classificar({ s, marcado }, ctx) {
         return { tipo: 'time', nome: primeira, canais: celulas.slice(1) };
       }
       if (celulas.length === 2 && ctx.csv) return { tipo: 'linha', nome: primeira, canais: [celulas[1]] };
+      // "Ricoy, kick.com/ricoy": o nome do streamer e o link dele são um canal só.
+      if (celulas.length === 2 && canalEscrito(celulas[1]) && nomeDoCanal(primeira, celulas[1])) {
+        return { tipo: 'canais', canais: [celulas[1]] };
+      }
       // "ricoy,tchubi" sem nada que diga que é time,canal: dois canais, e se o
       // bloco tem mais linhas assim, um aviso (ver `lerTexto`).
       return { tipo: 'canais', canais: celulas, par: celulas.length === 2 ? sep : null };
@@ -978,6 +1017,10 @@ function lerTexto(texto, ac) {
 
   const lidos = blocos.map((bloco) => {
     const ctx = { tabela: null, colunas: colunasDoBloco(bloco), csv: ehCsvDeTimes(bloco) };
+    if (ctx.csv === 'links') {
+      const primeira = bloco.find((l) => l.s)?.s;
+      ac.aviso(`as linhas como "${primeira}" foram lidas como time,canal, um time por linha; se a primeira coluna for o nome do streamer, apague-a`);
+    }
     const lido = [];
     for (const l of bloco) {
       const c = classificar(l, ctx);
