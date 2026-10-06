@@ -23,9 +23,11 @@ rascunho para a Kick (`PITCH-KICK.md`); crítica de usabilidade aplicada na tela
 cena, do ao vivo, do chat e da detecção automática; módulo do clipe de vários ângulos com o nome de cada streamer;
 no mapa, o streamer escolhido bem marcado, os picos do chat com botões de hora e os nomes errados em vermelho; no
 celular o painel do lance não tapa mais o mapa; o vermelho dos avisos com contraste certo.
-Em curso: as correções da leitura do elenco e da exportação (dois agentes por vez, por causa do limite de uso).
-Falta: as outras correções (escala, sessão, teclado, sincronia, Twitch, CI), ligar o clipe de vários ângulos na
-tela, publicar.
+Também feito: correções da leitura do elenco e da exportação juntadas (803 testes passam); mapa pelo teclado; a
+correção de segurança publicada no site no ar (autorizada por ele em 06/10).
+Em curso: correções de desempenho com muitos canais e do carregamento dos 500 canais (dois agentes).
+Falta: sessão, teclado, sincronia, Twitch, CI e mapa; ligar o clipe de vários ângulos na tela; travessões nos
+textos da página; publicar o Povix.
 
 **Decisão dele em 28/09 à noite:** um mês sem nenhum centavo, então foco em dinheiro. Não crio planilha nova
 até alguma vender. O que eu faço agora:
