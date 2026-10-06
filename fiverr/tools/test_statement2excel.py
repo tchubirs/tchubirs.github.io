@@ -616,6 +616,99 @@ def check_canada():
           "opening balance, and the form version and the footer kept out of the descriptions")
 
 
+def make_us_checks(path, checks_first):
+    """A US statement laid out as the sample TD Bank publishes, with made-up rows: a summary with two-digit
+    years (10/14/18), a table of cheques paid (number, date and amount, two to a line, a * after a number
+    where the sequence skips), the other transactions with dates without a year, and a table of balances
+    by date, which must stay out. checks_first puts the cheques above the other transactions, as TD does;
+    else they come below, as on a Chase statement."""
+    doc = pymupdf.open()
+    page = doc.new_page()
+
+    def put(x, y, text, right=False):
+        page.insert_text((x - pymupdf.get_text_length(text, fontsize=9) if right else x, y), text, fontsize=9)
+
+    opening = 300.00
+    rows = [("10/17", "POS Debit 10/15", -63.00, "Sneaker World"), ("10/21", "Deposit", 43.25, None),
+            ("10/25", "Withdrawal 10/25", -20.00, None), ("11/05", "Deposit", 43.25, None),
+            ("11/12", "Deposit", 125.00, None)]
+    cheques = [("101", "10/25", 17.75), ("102", "10/25", 9.45), ("104*", "11/06", 18.00)]
+    closing = round(opening + sum(r[2] for r in rows) - sum(c[2] for c in cheques), 2)
+    put(40, 40, "SAMPLE CHECKING ACCOUNT STATEMENT")
+    put(40, 52, "Statement Date 11/15/18")
+    for y, label, value in [(70, "Previous Statement Balance as of 10/14/18", opening),
+                            (82, "Current Statement Balance as of 11/15/18", closing)]:
+        put(40, y, label + " " + "." * 30)
+        put(420, y, f"{value:,.2f}", right=True)
+    truth, state = [], {"y": 110}
+
+    def cheque_table():
+        y = state["y"]
+        put(40, y, "***Checking Transactions***")
+        for x, word in [(40, "Serial"), (90, "Date"), (150, "Amount"), (240, "Serial"), (290, "Date"), (350, "Amount")]:
+            put(x, y + 13, word)
+        for k, (number, date, amount) in enumerate(cheques):
+            row_y, left = y + 26 + 13 * (k // 2), 0 if k % 2 == 0 else 200
+            put(40 + left, row_y, number)
+            put(90 + left, row_y, date)
+            put(185 + left, row_y, f"{amount:,.2f}", right=True)    # the second one next to the Debits column
+            truth.append((date, -amount, "Check " + number.rstrip("*")))
+        y += 26 + 13 * ((len(cheques) + 1) // 2)
+        put(40, y, "Total Checks Paid")
+        put(420, y, f"{sum(c[2] for c in cheques):,.2f}", right=True)
+        state["y"] = y + 26
+
+    def other_table():
+        y = state["y"]
+        put(40, y, "***Checking Account Transactions***")
+        for x, word in [(40, "Date"), (90, "Description")]:
+            put(x, y + 13, word)
+        for x, word in [(420, "Debits"), (500, "Credits")]:
+            put(x, y + 13, word, right=True)
+        y += 26
+        for date, desc, amount, wrapped in rows:
+            put(40, y, date)
+            put(90, y, desc)
+            put(420 if amount < 0 else 500, y, f"{abs(amount):,.2f}", right=True)
+            truth.append((date, amount, desc + (" " + wrapped if wrapped else "")))
+            if wrapped:
+                y += 13
+                put(90, y, wrapped)
+            y += 13
+        state["y"] = y + 13
+
+    for table in (cheque_table, other_table) if checks_first else (other_table, cheque_table):
+        table()
+    y = state["y"]
+    put(40, y, "***Balance by Date***")
+    for k, (date, value) in enumerate([("10/15", 300.00), ("11/06", 258.30), ("10/25", 233.05), ("11/14", closing)]):
+        put(40 + 400 * (k % 2), y + 13 + 13 * (k // 2), date)        # the balances under Debits and Credits
+        put(420 + 80 * (k % 2), y + 13 + 13 * (k // 2), f"{value:,.2f}", right=True)
+    doc.save(path)
+    truth = sorted(truth, key=lambda t: (t[0], truth.index(t)))
+    return [(dt.date(2018, int(d[:2]), int(d[3:])), amount, desc) for d, amount, desc in truth], opening, closing
+
+
+def check_us_checks():
+    """The US layout with a table of cheques, above the other transactions and below them: every cheque
+    read as money out, the years from 10/14/18 in the summary, the balances by date left out, the rows
+    in date order, and the opening balance plus the movements gives the closing balance. Before, the
+    cheques were missing, the balances by date were read as deposits and the dates went to this year."""
+    with tempfile.TemporaryDirectory() as tmp:
+        pdf, out = os.path.join(tmp, "us.pdf"), os.path.join(tmp, "us.xlsx")
+        for checks_first in (True, False):
+            truth, opening, closing = make_us_checks(pdf, checks_first)
+            code, rows, checks, said = read(pdf, out)
+            got = [(r[0].date(), round((r[2] or 0) - (r[3] or 0), 2), r[1]) for r in rows]
+            assert code == 0 and got == truth, (checks_first, [(g, w) for g, w in zip(got, truth) if g != w][:3],
+                                                len(got), len(truth))
+            assert (checks["Opening balance"], checks["Closing balance"]) == (opening, closing), checks
+            assert checks["Opening balance plus movements gives the closing balance"] == "yes", checks
+            assert checks["Balance mismatches"] == 0, checks
+    print("US cheques: the table of cheques read above and below the other transactions, two to a line, as money "
+          "out; years from 10/14/18; balances by date left out; rows in date order; the balances agree")
+
+
 def check_merge():
     """Several statements of one account in one file: three US months sent out of order, each with its
     daily balance table and savings account at the end, come out complete and in date order, and so do
@@ -772,6 +865,7 @@ if __name__ == "__main__":
     check_whole()
     check_merge()
     check_canada()
+    check_us_checks()
     check_bank_header()
     check_rules()
     check_categories()

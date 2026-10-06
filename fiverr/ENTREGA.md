@@ -87,8 +87,8 @@ so ("not checked") with the reason:
 - Scans need Tesseract (see Setup). A page that is only a picture is read with OCR, turned upright and straightened; `--ocr` does the same for a
   scan whose text layer is poor, `--lang fra` when it is in one language. Tested on scans tilted up to 2.5 degrees,
   upside down, on their side, at 150 dpi. A phone photo taken at an angle was not tested: ask for a flat scan.
-- Tested on real layouts too: the public sample statements of RBC and `CIBC` (Canada) convert row for row,
-  with the right year and the opening and closing balances.
+- Tested on real layouts too: the public sample statements of RBC and `CIBC` (Canada) and TD Bank (US, with
+  a table of cheques) convert row for row, with the right year and the opening and closing balances.
 - Run `python3 fiverr/tools/statement2excel.py a.pdf b.pdf -o statements.xlsx`, adding as needed:
   `--categories` (or `--categories rules.json`, a copy of `tools/categories.json` with the client's
   words), `--date-format dd/mm/yyyy`, `--dates dmy` or `mdy` when the guess is wrong, and for CSV

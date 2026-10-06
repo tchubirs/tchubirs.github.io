@@ -121,6 +121,11 @@ até alguma vender. O que eu faço agora:
    31.148,11; o rodapé "1 of 2" e um `1.0` da margem entravam na descrição; o ano saía errado quando o
    cabeçalho tinha uma data de outro ano (defeito meu da véspera); "Balance carried forward" no topo não era o
    saldo inicial. Agora os dois extratos saem linha por linha certos.
+   À 1h40, o exemplo do TD Bank (EUA) mostrou mais 5, corrigidos com teste: o ano de 2 dígitos (`11/15/18`)
+   era ignorado e as datas iam para 2026; a tabela de cheques (número, data, valor) ficava de fora; a tabela
+   "Balance by Date" era lida como depósitos; "Previous Statement Balance" e "Beginning balance" não eram
+   o saldo inicial; e as tabelas separadas (depósitos, saques, cheques) saíam fora de ordem de data. Agora o
+   exemplo sai com as 10 transações certas e o saldo inicial mais o movimento dá o final.
 
 Pausado até algo vender ou ele pedir: inventário da casa (rascunho em `etsy/home-inventory`), manutenção da casa,
 galinhas no quintal, férias da equipe, Herculano.

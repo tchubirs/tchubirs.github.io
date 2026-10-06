@@ -30,6 +30,9 @@ columns has been read, the heading of any other table (cheques, daily balances, 
 second transaction table after that, usually another account, is counted in the Checks sheet instead
 of being mixed in. When that table starts with an opening balance equal to where the first one ended,
 it is the next month of the same account joined in the same PDF, and it is read.
+A table of cheques (number, date, amount, as US banks print them) is read as money out, and a table
+of daily balances (Balance by Date) ends the transactions. The rows of each file come out in date
+order, as the deposits, withdrawals and cheques of one statement are often in separate tables.
 
 Each PDF is read on its own, then the files are put in the order of their first transaction, so
 statements sent out of order come out in date order. A file with the same transactions as another is
@@ -76,7 +79,7 @@ DATE_RE = re.compile(
     r"|^(?P<mm>[^\W\d_]{3,10})\.?\s*(?:[\u2013-]\s*)?(?P<md>\d{1,2})(?:st|nd|rd|th)?"
     r"(?:,?\s+(?P<my>\d{4}))?\b")                                                # Nov 01, Nov - 01, Nov 1, 2019
 TOTALS = re.compile(r"(?i)^(sub-?)?totals?\b(\s+(money|amount|debits?|credits?|withdrawals|deposits|paid|in|out|"
-                    r"for|of)\b|\s*:?\s*$)|^(totaux|sous-total)\b")
+                    r"for|of|checks|cheques)\b|\s*:?\s*$)|^(totaux|sous-total)\b")
 RULES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "categories.json")
 LEADING_DATE = re.compile(r"^\d{1,2}[./-]\d{1,2}(?:[./-]\d{2,4})?\s+")   # the value date after the operation date
 
@@ -85,10 +88,17 @@ def phrase(pattern):
     return re.compile("(?i)" + pattern.replace(" ", r"\s+"))
 
 
-OPENING = phrase(r"solde pr[ée]c[ée]dent|ancien solde|solde (initial|d'ouverture)|previous balance|"
-                 r"opening balance|balance (brought )?forward|brought forward|saldo anterior|saldo inicial")
-CLOSING = phrase(r"nouveau solde|solde final|closing balance|new balance|ending balance|saldo final|"
-                 r"saldo atual|saldo actual")
+OPENING = phrase(r"solde pr[ée]c[ée]dent|ancien solde|solde (initial|d'ouverture)|previous (statement )?balance|"
+                 r"opening balance|beginning balance|starting balance|balance (brought )?forward|brought forward|"
+                 r"saldo anterior|saldo inicial")
+CLOSING = phrase(r"nouveau solde|solde final|closing balance|new balance|ending balance|current statement balance|"
+                 r"saldo final|saldo atual|saldo actual")
+# The title of a table of daily balances, which ends the table of transactions.
+DAILY = phrase(r"daily (ending |ledger )?balances?|balances? by date|daily balance summary")
+# A cheque paid, in the table of cheques of a US statement: number, date, amount, often two or three a line.
+CHECK_ROW = re.compile(r"(?<![\w/.,])(?P<no>\d{1,8})\s*[*^]?\s+(?P<date>\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?)\s+"
+                       r"\$?\s?(?P<amount>\d{1,3}(?:,\d{3})*\.\d{2}|\d+\.\d{2})(?![\w.,])")
+CHECK_WORDS = {"check", "checks", "cheque", "cheques", "serial", "chk", "no", "number", "#"}
 EITHER = phrase(r"solde (cr[ée]diteur|d[ée]biteur|au)\b")       # opening before the transactions, closing after
 CARRIED = phrase(r"carried forward|[àa] reporter|report de la page|suma y sigue|a transportar")
 PAGE_TOTAL = phrase(r"total des op[ée]rations|totaux")
@@ -104,7 +114,7 @@ DATE_WORDS = {"date", "dates", "fecha", "data", "datum"}
 WHEN = {"yyyy-mm-dd": "%Y-%m-%d", "dd/mm/yyyy": "%d/%m/%Y", "mm/dd/yyyy": "%m/%d/%Y"}
 # A date with its year anywhere in a line: the period of a statement, the day it was made.
 FULL_DATE = re.compile(
-    r"(?<![\d/.-])(?P<a>\d{1,2})[./-](?P<b>\d{1,2})[./-](?P<y>20\d{2})(?!\d)"
+    r"(?<![\d/.-])(?P<a>\d{1,2})[./-](?P<b>\d{1,2})[./-](?P<y>20\d{2}|\d{2})(?!\d)"
     r"|(?<!\d)(?P<iy>20\d{2})-(?P<im>\d{2})-(?P<id>\d{2})(?!\d)"
     r"|(?<!\w)(?P<td>\d{1,2})(?:st|nd|rd|th|er)?\s+(?P<tm>[^\W\d_]{3,10})\.?,?\s+(?P<ty>20\d{2})(?!\d)"
     r"|(?<!\w)(?P<mm>[^\W\d_]{3,10})\.?\s+(?P<md>\d{1,2})(?:st|nd|rd|th)?,?\s+(?P<my>20\d{2})(?!\d)")
@@ -175,7 +185,7 @@ def guess_order(lines):
 
 
 def plain_word(word):
-    return unicodedata.normalize("NFKD", word).encode("ascii", "ignore").decode().lower().strip(".:()/")
+    return unicodedata.normalize("NFKD", word).encode("ascii", "ignore").decode().lower().strip(".:()/*")
 
 
 def heading(words):
@@ -357,7 +367,8 @@ def full_dates(text, order):
             if m.group("y"):
                 a, b = int(m.group("a")), int(m.group("b"))
                 day, month = (a, b) if order == "dmy" else (b, a)
-                found.append(dt.date(int(m.group("y")), month, day))
+                year = int(m.group("y"))
+                found.append(dt.date(year + 2000 if year < 100 else year, month, day))
             elif m.group("iy"):
                 found.append(dt.date(int(m.group("iy")), int(m.group("im")), int(m.group("id"))))
             else:
@@ -423,6 +434,22 @@ def parse(lines, unsure, order, whole):
     plain = sum(1 for text, _ in lines if DATE_RE.match(text)
                 and any(re.search(r"[.,]\d{3}$", m.group("num")) for m in WHOLE_RE.finditer(text)))
     tx, cols, closed, extra, opening, closings, last, recent = [], None, False, 0, None, [], None, []
+    cheques = False                                   # in a table of cheques: number, date, amount
+
+    def dated(dm):
+        """The date a DATE_RE match stands for. A date printed without a year takes it from the dates
+        the statement prints above its transactions, then moves to the next year after December."""
+        nonlocal year_hint, anchored
+        date = parse_date(dm, order, year_hint)
+        if not any(dm.group(g) for g in ("y", "iy", "ty", "my")):
+            day = parse_date(dm, order, 2000)        # 2000 has a 29 February
+            if day and stated and not anchored:
+                year_hint, anchored = year_for(day, stated), True
+                date = parse_date(dm, order, year_hint)
+            elif date and last and (last - date).days > 180:
+                year_hint += 1                       # December, then January
+                date = parse_date(dm, order, year_hint)
+        return date
 
     def money(k, under):
         """The amounts on line k. Without cents a document number or the 3 of "3 de 12" looks like an
@@ -466,6 +493,20 @@ def parse(lines, unsure, order, whole):
         return False
 
     for i, (line, words) in enumerate(lines):
+        names = {plain_word(w) for _, _, w, _, _ in words}
+        if cheques and not closed:
+            paid = [(m, DATE_RE.match(m.group("date"))) for m in CHECK_ROW.finditer(line)]
+            paid = [(m, dated(dm)) for m, dm in paid if dm]
+            if paid and all(date for _, date in paid):
+                for m, date in paid:
+                    tx.append({"date": date, "desc": f"Check {m.group('no')}", "unsure": False, "desc_x": None,
+                               "values": [parse_amount(AMOUNT_RE.search(m.group("amount")))], "kinds": ["out"]})
+                    last = max(last, date) if last else date
+                continue
+            cheques = not any(c.isalpha() for c in line)   # a title or a heading ends the table
+        if names & CHECK_WORDS and {"date", "amount"} <= names and not names & set(HEADS):
+            cheques = True                           # Serial Date Amount, Check No. Date Paid Amount
+            continue
         amounts = money(i, cols)
         # A heading can be spread over two or three lines ("Money" above "out"); look at them together.
         recent = (recent + [words])[-3:] if not amounts else []
@@ -481,6 +522,9 @@ def parse(lines, unsure, order, whole):
         # any transaction, the money columns were those of a summary box: this table has none.
         if cols and not amounts and foreign(words) and not heading(ahead(i)):
             cols, closed = None, bool(tx)
+            continue
+        if not amounts and len(words) <= 6 and DAILY.search(line):
+            cols, closed = None, bool(tx)            # Balance by Date, Daily ledger balances
             continue
         if closed:
             continue
@@ -498,15 +542,7 @@ def parse(lines, unsure, order, whole):
                 closings.append(value)
             continue
         dm = DATE_RE.match(line)
-        date = parse_date(dm, order, year_hint) if dm else None
-        if dm and not any(dm.group(g) for g in ("y", "iy", "ty", "my")):
-            day = parse_date(dm, order, 2000)        # 2000 has a 29 February
-            if day and stated and not anchored:
-                year_hint, anchored = year_for(day, stated), True
-                date = parse_date(dm, order, year_hint)
-            elif date and last and (last - date).days > 180:
-                year_hint += 1                       # December, then January
-                date = parse_date(dm, order, year_hint)
+        date = dated(dm) if dm else None
         # Many banks print the date only on the first row of each day: with money columns known, a row
         # without a date takes the date of the row above.
         if placed and (date or (cols and tx)):
@@ -529,6 +565,7 @@ def parse(lines, unsure, order, whole):
                 any(c.isalpha() for c in line)
             if under and len(tx[-1]["desc"]) < 120 and not FOOTER.search(line):
                 tx[-1]["desc"] = " ".join((tx[-1]["desc"] + " " + line).split())
+    tx.sort(key=lambda t: t["date"])                 # stable: rows of one day keep their order
     return tx, opening, closings, extra, plain
 
 
