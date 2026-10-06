@@ -346,6 +346,13 @@ const TEXTOS = {
     'lance.semDescodificador': 'Este navegador não decodifica o áudio da Kick, então a busca pelo som não roda. Abra no Chrome ou no Edge.',
     'lance.referenciaSemSom': '{canal} não tem som nesse instante. Escolha um ponto um pouco antes ou depois, ou outro streamer do lance.',
     'evento.achadosParcial': 'A Kick parou de responder no meio da lista: achei {n} lives até ali. Confira, tente de novo para completar, ou clique em Abrir evento.',
+    // escala
+    'noite.naoLidos': 'Não consegui ler o vídeo de {lista} na Kick. Clique em Carregar para tentar de novo.',
+    'alinhar.aCompararQuantos': 'comparando {feito} de {total} pares…',
+    'alinhar.noiteMudou': 'A noite mudou durante a sincronia, então não apliquei nada. Clique em Sincronizar por áudio para medir de novo.',
+    'tarefa.parar': 'Parar',
+    'tarefa.pararAjuda': 'Para a sincronia, a detecção ou a exportação que está rodando',
+    'tile.erroVideo': 'o vídeo não carregou: clique no quadro para tentar de novo',
   },
 
   en: {
@@ -683,6 +690,13 @@ const TEXTOS = {
     'lance.semDescodificador': 'This browser cannot decode Kick audio, so the sound search does not run. Open it in Chrome or Edge.',
     'lance.referenciaSemSom': '{canal} has no sound at that moment. Pick a point a little earlier or later, or another streamer in the play.',
     'evento.achadosParcial': 'Kick stopped answering partway through the list: I found {n} streams up to there. Check them, try again to complete it, or click Open event.',
+    // escala
+    'noite.naoLidos': 'Could not read the video of {lista} from Kick. Click Load to try again.',
+    'alinhar.aCompararQuantos': 'comparing {feito} of {total} pairs…',
+    'alinhar.noiteMudou': 'The night changed during the sync, so nothing was applied. Click Sync by audio to measure again.',
+    'tarefa.parar': 'Stop',
+    'tarefa.pararAjuda': 'Stops the sync, detection or export that is running',
+    'tile.erroVideo': 'the video did not load: click the tile to try again',
   },
 
   es: {
@@ -1020,6 +1034,13 @@ const TEXTOS = {
     'lance.semDescodificador': 'Este navegador no decodifica el audio de Kick, así que la búsqueda por sonido no funciona. Ábrelo en Chrome o Edge.',
     'lance.referenciaSemSom': '{canal} no tiene sonido en ese instante. Elige un punto un poco antes o después, u otro streamer de la jugada.',
     'evento.achadosParcial': 'Kick dejó de responder a mitad de la lista: encontré {n} directos hasta ahí. Revísalos, inténtalo de nuevo para completarla o haz clic en Abrir evento.',
+    // escala
+    'noite.naoLidos': 'No pude leer el vídeo de {lista} en Kick. Haz clic en Cargar para intentarlo de nuevo.',
+    'alinhar.aCompararQuantos': 'comparando el par {feito} de {total}…',
+    'alinhar.noiteMudou': 'La noche cambió durante la sincronización, así que no apliqué nada. Haz clic en Sincronizar por audio para medir de nuevo.',
+    'tarefa.parar': 'Detener',
+    'tarefa.pararAjuda': 'Detiene la sincronización, la detección o la exportación en curso',
+    'tile.erroVideo': 'el vídeo no cargó: haz clic en el recuadro para intentarlo de nuevo',
   },
 };
 

@@ -237,16 +237,37 @@ export async function alinharPeloSom({
     }
   }
 
-  aoProgresso({ fase: 'comparar', feito: passos, total: passos });
   const nomes = linhas.map((l) => l.slug);
   const pares = [];
   const detalhe = [];
+  // Comparar é um par de cada vez, e cada `desvio` são dezenas de milhões de
+  // contas: trinta ângulos dão 435 pares, quinhentos dão 124 750. Num ciclo
+  // só, a página ficava presa minutos (ou horas) com "a página não responde",
+  // sem barra a andar e sem o Parar a funcionar. Por isso devolve-se a vez ao
+  // browser a cada pouco, e é aí que se vê se ele mandou parar.
+  const totalPares = (nomes.length * (nomes.length - 1)) / 2;
+  let feitosPares = 0;
+  let desdeVez = Date.now();
+  const darAVez = async () => {
+    if (Date.now() - desdeVez < 50) return;
+    await new Promise((pronto) => setTimeout(pronto, 0));
+    desdeVez = Date.now();
+    if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
+    aoProgresso({ fase: 'comparar', feito: feitosPares, total: totalPares });
+  };
+  aoProgresso({ fase: 'comparar', feito: 0, total: totalPares });
   for (let i = 0; i < nomes.length; i++) {
     for (let k = i + 1; k < nomes.length; k++) {
-      const medicoes = instantes
-        .map((t) => [envelopes.get(`${t}|${nomes[i]}`), envelopes.get(`${t}|${nomes[k]}`)])
-        .filter(([a, b]) => a?.length && b?.length)
-        .map(([a, b]) => desvio(a, b));
+      const medicoes = [];
+      for (const t of instantes) {
+        const a = envelopes.get(`${t}|${nomes[i]}`);
+        const b = envelopes.get(`${t}|${nomes[k]}`);
+        if (!a?.length || !b?.length) continue;
+        // eslint-disable-next-line no-await-in-loop
+        await darAVez();
+        medicoes.push(desvio(a, b));
+      }
+      feitosPares++;
       if (!medicoes.length) continue;
       const c = consolidar(medicoes);
       detalhe.push({ a: nomes[i], b: nomes[k], ...c });

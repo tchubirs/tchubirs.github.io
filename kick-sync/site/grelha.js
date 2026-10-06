@@ -22,6 +22,8 @@
 // exactamente o tipo de coisa que se escreve à pressa e sai errada num caso
 // que ninguém experimenta — um nome repetido, um vazio, um acento.
 
+import { slugDoNome } from './kick.js';
+
 export const ORDENS = ['adicionado', 'az'];
 
 /**
@@ -46,9 +48,15 @@ export function ordemDosAngulos(linhas, modo = 'adicionado', escritos = []) {
 
   // Um canal que já não está na caixa de texto vai para o FIM, e não para o
   // princípio — que é onde um `indexOf` de -1 o punha.
+  //
+  // E o que ele escreveu passa a slug antes de comparar: a caixa guarda
+  // "xQc" ou "@Gaules" tal e qual, e os quadrados vêm com o slug da Kick. Cru,
+  // nenhum nome com maiúscula batia certo e a grelha saía por ordem alfabética
+  // em vez de por time, que é o problema que esta ordem existe para resolver.
+  const ordem = escritos.map(slugDoNome);
   const posicao = (s) => {
-    const i = escritos.indexOf(s);
-    return i === -1 ? escritos.length : i;
+    const i = ordem.indexOf(s);
+    return i === -1 ? ordem.length : i;
   };
   return unicos.sort((a, b) => posicao(a) - posicao(b) || a.localeCompare(b));
 }

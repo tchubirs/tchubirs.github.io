@@ -148,6 +148,27 @@ test('o cancelamento é respeitado', async () => {
   );
 });
 
+// Comparar são dezenas de milhões de contas por par, e os pares crescem com o
+// quadrado dos canais. Num ciclo só, sem devolver a vez, a página ficava presa
+// ("a página não responde") e o Parar nem chegava a correr: o cancelamento só
+// era visto a baixar, nunca a comparar.
+test('a comparar devolve a vez ao browser e pára quando se manda parar', async () => {
+  const { linhas, janela, lerSom } = montar({ a: 0, b: 1.5, c: -2, d: 0.7 });
+  const c = new AbortController();
+  const totais = [];
+  const r = alinharPeloSom({
+    linhas, janela, lerSom, sinal: c.signal, duracaoS: 120, janelas: 3,
+    aoProgresso: (p) => {
+      if (p.fase !== 'comparar') return;
+      // Um temporizador só corre se a comparação largar a vez pelo caminho.
+      if (!totais.length) setTimeout(() => c.abort(), 0);
+      totais.push(p.total);
+    },
+  });
+  await assert.rejects(r, (e) => e.name === 'AbortError');
+  assert.equal(totais[0], 6, 'o progresso conta pares, e quatro canais são seis');
+});
+
 // Três janelas seguidas medem três vezes o mesmo minuto. Se esse minuto for de
 // música em loop, as três concordam no sítio errado — que é precisamente o
 // erro que a repetição devia apanhar.

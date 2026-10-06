@@ -1486,3 +1486,14 @@ body.mesa:has(#palco:not([hidden])) > #evento { flex: 0 0 auto; margin-bottom: v
   #elenco { height: 4.2em; min-height: 0; }
   .porta { gap: var(--e3); }
 }
+
+/* escala: o Parar da tarefa longa. Num canto fixo, por cima de tudo menos das
+   janelas: o progresso de cada tarefa vive numa secção diferente, e quem quer
+   parar não pode ter de rolar a página à procura de onde ela está. */
+.parar {
+  position: fixed; right: var(--e5); bottom: var(--e5); z-index: 90;
+  background: var(--sup-2); color: var(--perigo);
+  border-color: color-mix(in srgb, var(--perigo) 45%, transparent);
+  box-shadow: var(--sombra-janela);
+}
+.parar:hover:not(:disabled) { background: var(--sup-4); border-color: var(--perigo); }
