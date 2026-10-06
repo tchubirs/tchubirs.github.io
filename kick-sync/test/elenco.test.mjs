@@ -306,6 +306,101 @@ test('uma página montada por JavaScript ainda dá os canais, sem time e com avi
   assert.match(nada.avisos.join(' '), /não encontrei nenhum canal/);
 });
 
+test('o mesmo time em duas fases continua a ser um time, e não um papel', () => {
+  const a = (c) => `<a href="https://kick.com/${c}">${c}</a>`;
+  const fases = lerElenco(html(`
+    <h2>Group Stage</h2><h3>Team A</h3>${a('a1')}<h3>Team B</h3>${a('b1')}
+    <h2>Playoffs</h2><h3>Team A</h3>${a('a2')}<h3>Team B</h3>${a('b2')}
+  `));
+  assert.deepEqual(so(fases), {
+    times: [{ nome: 'Team A', canais: ['a1', 'a2'] }, { nome: 'Team B', canais: ['b1', 'b2'] }],
+    soltos: [],
+  });
+  assert.deepEqual(fases.avisos, []);
+  // Sem "Team" no nome decide a conta: três times em duas fases são times...
+  const nomes = lerElenco(html(`
+    <h2>Fase 1</h2><h3>Águias</h3>${a('a1')}<h3>Lobos</h3>${a('b1')}<h3>Ursos</h3>${a('c1')}
+    <h2>Final</h2><h3>Águias</h3>${a('a2')}<h3>Lobos</h3>${a('b2')}<h3>Ursos</h3>${a('c2')}
+  `));
+  assert.deepEqual(nomes.times, [
+    { nome: 'Águias', canais: ['a1', 'a2'] },
+    { nome: 'Lobos', canais: ['b1', 'b2'] },
+    { nome: 'Ursos', canais: ['c1', 'c2'] },
+  ]);
+  // ...e dois subtítulos em três times são papéis.
+  const papeis = lerElenco(html(['A', 'B', 'C'].map((t) => (
+    `<h3>Team ${t}</h3><h4>Main</h4>${a(`${t.toLowerCase()}1`)}<h4>Bench</h4>${a(`${t.toLowerCase()}2`)}`)).join('')));
+  assert.deepEqual(papeis.times, [
+    { nome: 'Team A', canais: ['a1', 'a2'] },
+    { nome: 'Team B', canais: ['b1', 'b2'] },
+    { nome: 'Team C', canais: ['c1', 'c2'] },
+  ]);
+});
+
+test('um título sem nome recebe um número que não é o de outro título', () => {
+  const e = lerElenco(html(`<h1>COMPETING TEAMS</h1><h2>Official Roster</h2>
+    <h3></h3><a href="https://kick.com/a1">1</a><h3>Time 3</h3><a href="https://kick.com/b1">1</a>`));
+  assert.deepEqual(so(e), {
+    times: [{ nome: 'Time 1', canais: ['a1'] }, { nome: 'Time 3', canais: ['b1'] }],
+    soltos: [],
+  });
+  assert.equal(e.avisos.length, 1);
+  assert.match(e.avisos[0], /"Time 1"/);
+  // O número seguinte já é um título da página: salta-se, em vez de juntar dois times.
+  const colisao = lerElenco(html(`<h3>Team X</h3><a href="https://kick.com/x1">1</a>
+    <h3></h3><a href="https://kick.com/a1">1</a><h3>Time 2</h3><a href="https://kick.com/b1">1</a>`));
+  assert.deepEqual(colisao.times, [
+    { nome: 'Team X', canais: ['x1'] },
+    { nome: 'Time 3', canais: ['a1'] },
+    { nome: 'Time 2', canais: ['b1'] },
+  ]);
+});
+
+test('o rodapé de um cartão feito com <div> é do cartão; o do site não é', () => {
+  const e = lerElenco(html(`
+    <div class="grelha">
+      <div><h3>Team A</h3><a href="https://kick.com/a1">1</a>
+        <footer><a href="https://kick.com/a2">2</a></footer><a href="https://kick.com/a3">3</a></div>
+      <div><h3>Team B</h3><a href="https://kick.com/b1">1</a></div>
+    </div>
+    <footer><a href="https://kick.com/patrocinador">Patrocinador</a></footer>
+  `));
+  assert.deepEqual(so(e), {
+    times: [{ nome: 'Team A', canais: ['a1', 'a2', 'a3'] }, { nome: 'Team B', canais: ['b1'] }],
+    soltos: ['patrocinador'],
+  });
+});
+
+test('só o atributo href conta, e nele o ponto no fim é do endereço', () => {
+  const e = lerElenco(html(`<h3>T</h3><a data-href="https://kick.com/errado" href="https://kick.com/certo">x</a>
+    <a href="https://kick.com/abc.">abc.</a>`));
+  assert.deepEqual(e.times, [{ nome: 'T', canais: ['certo', 'abc.'] }]);
+  // Num texto escrito à mão continua a ser pontuação.
+  assert.equal(canalDe('kick.com/abc.'), 'abc');
+});
+
+test('cem mil <script> e <!-- por fechar acabam depressa, e não escondem o que veio antes', () => {
+  const t0 = performance.now();
+  const script = lerElenco(`<h3>T</h3><a href="https://kick.com/a1">1</a>${'<script>x'.repeat(100_000)}`);
+  const comentario = lerElenco(`<h3>T</h3><a href="https://kick.com/a1">1</a>${'<!--x'.repeat(100_000)}`);
+  // Uma regex por cada abertura sem fecho varria o resto da página de cada vez: ~25 s aqui.
+  assert.ok(performance.now() - t0 < 3000, `${Math.round(performance.now() - t0)} ms`);
+  assert.deepEqual(script.times, [{ nome: 'T', canais: ['a1'] }]);
+  assert.deepEqual(comentario.times, [{ nome: 'T', canais: ['a1'] }]);
+});
+
+test('texto antes e depois de um pedaço de HTML também é lido', () => {
+  const e = lerElenco('Team A: a1, a2\n<h3>Team B</h3><a href="https://kick.com/b1">b1</a>\nSem time: org');
+  assert.deepEqual(so(e), {
+    times: [{ nome: 'Team A', canais: ['a1', 'a2'] }, { nome: 'Team B', canais: ['b1'] }],
+    soltos: ['org'],
+  });
+  assert.deepEqual(e.avisos, []);
+  // O texto de um link na mesma linha da marcação é da página, não do organizador.
+  const cortado = lerElenco('<h3>Team B</h3><a href="https://kick.com/impheetus">Pheetus');
+  assert.deepEqual(so(cortado), { times: [{ nome: 'Team B', canais: ['impheetus'] }], soltos: [] });
+});
+
 test('400 mil títulos por fechar (2,4 MB) acabam depressa', () => {
   const lixo = `<h3>${'<h3>x '.repeat(400_000)}`;
   const t0 = performance.now();
@@ -393,6 +488,84 @@ test('um nome que também podia ser canal só é nome quando o texto está em bl
   });
 });
 
+test('debaixo de um nome, uma linha que não é canal fica de fora com aviso e não abre outro time', () => {
+  const gralha = lerElenco('Team Ricoy\nricoy\ntchübi\nkodd\nciscoo');
+  assert.deepEqual(so(gralha), { times: [{ nome: 'Team Ricoy', canais: ['ricoy', 'kodd', 'ciscoo'] }], soltos: [] });
+  assert.equal(gralha.avisos.length, 1);
+  assert.match(gralha.avisos[0], /"tchübi" ficou de fora de "Team Ricoy"/);
+  // O que nunca pode ser o canal sai: enfeites sem letras, a numeração "1 - " e as notas de papel.
+  const COROA = String.fromCodePoint(0x1f451);
+  for (const [texto, canais] of [
+    [`Team Ricoy\n${COROA} ricoy\ntchubi\nkodd`, ['ricoy', 'tchubi', 'kodd']],
+    ['Team Ricoy\n1 - ricoy\n2 - tchubi', ['ricoy', 'tchubi']],
+    ['Team Ricoy\nricoy - capitão\ntchubi\nkodd', ['ricoy', 'tchubi', 'kodd']],
+    ['Team Ricoy\nricoy (C)\ntchubi\n[CPT] kodd', ['ricoy', 'tchubi', 'kodd']],
+  ]) {
+    const e = lerElenco(texto);
+    assert.deepEqual(so(e), { times: [{ nome: 'Team Ricoy', canais }], soltos: [] }, texto);
+    assert.deepEqual(e.avisos, [], texto);
+  }
+  // Um nome com espaço não se parte em dois canais, nem se escolhe um deles à sorte.
+  const nomes = lerElenco('Team Ricoy\nricoy\nMills RP\nGabi (blueberrygabi)\nkodd');
+  assert.deepEqual(so(nomes), { times: [{ nome: 'Team Ricoy', canais: ['ricoy', 'kodd'] }], soltos: [] });
+  assert.equal(nomes.avisos.length, 2);
+  assert.match(nomes.avisos[0], /"Mills RP" ficou de fora de "Team Ricoy"/);
+  assert.match(nomes.avisos[1], /"Gabi \(blueberrygabi\)" ficou de fora/);
+  // Uma linha só, com três canais ou mais, ainda é a lista do time; e "Team ..." ainda abre outro time.
+  assert.deepEqual(lerElenco('Team Ricoy\nricoy tchubi kodd ciscoo').times,
+    [{ nome: 'Team Ricoy', canais: ['ricoy', 'tchubi', 'kodd', 'ciscoo'] }]);
+  assert.deepEqual(lerElenco('Team Ricoy\nricoy\nTeam Willjum\nwilljum').times,
+    [{ nome: 'Team Ricoy', canais: ['ricoy'] }, { nome: 'Team Willjum', canais: ['willjum'] }]);
+});
+
+test('um canal logo depois de uma linha "Time: a, b" fica sem time, e com aviso', () => {
+  const e = lerElenco('Team A: a1, a2\nTeam B: b1, b2\nrustkickoff');
+  assert.deepEqual(so(e), {
+    times: [{ nome: 'Team A', canais: ['a1', 'a2'] }, { nome: 'Team B', canais: ['b1', 'b2'] }],
+    soltos: ['rustkickoff'],
+  });
+  assert.equal(e.avisos.length, 1);
+  assert.match(e.avisos[0], /"rustkickoff" veio logo depois de "Team B"/);
+  // Com a linha em branco não há dúvida, e um papel ("Reservas:") continua a ser do time de cima.
+  const claro = lerElenco('Team A: a1, a2\nReservas: a3\n\nrustkickoff');
+  assert.deepEqual(so(claro), { times: [{ nome: 'Team A', canais: ['a1', 'a2', 'a3'] }], soltos: ['rustkickoff'] });
+  assert.deepEqual(claro.avisos, []);
+});
+
+test('um grupo com nome de papel fica sem time, mas diz porquê', () => {
+  const e = lerElenco('Staff: a1, a2\nThe Streamers: b1\nBench: c1\nOthers: d1');
+  assert.deepEqual(so(e), { times: [], soltos: ['a1', 'a2', 'b1', 'c1', 'd1'] });
+  assert.equal(e.avisos.length, 3, '"Others" já diz que não tem time');
+  for (const nome of ['Staff', 'The Streamers', 'Bench']) assert.match(e.avisos.join('\n'), new RegExp(`"${nome}" parece um papel`));
+  // Debaixo de um time, o papel é desse time.
+  const dentro = lerElenco('Team Ricoy: ricoy\nBench: c1');
+  assert.deepEqual(so(dentro), { times: [{ nome: 'Team Ricoy', canais: ['ricoy', 'c1'] }], soltos: [] });
+  assert.deepEqual(dentro.avisos, []);
+});
+
+test('uma menção do Discord copiada crua não é um canal', () => {
+  const e = lerElenco('Team A: <@123456789012345678>, <@!42>, ricoy');
+  assert.deepEqual(so(e), { times: [{ nome: 'Team A', canais: ['ricoy'] }], soltos: [] });
+  assert.equal(e.avisos.length, 2);
+  for (const a of e.avisos) assert.match(a, /menção do Discord/);
+  for (const m of ['<@123456789012345678>', '<#123456789012345678>', '<@&42>']) assert.equal(canalDe(m), null, m);
+});
+
+test('emojis compostos e nomes compridos não se partem', () => {
+  const FAMILIA = String.fromCodePoint(0x1f468, 0x200d, 0x1f469, 0x200d, 0x1f467);
+  assert.equal(lerElenco(`Team ${FAMILIA}: a1`).times[0].nome, `Team ${FAMILIA}`);
+  // 80 caracteres no máximo, mas sem meio emoji no fim.
+  const longo = lerElenco(`${'a'.repeat(79)}${String.fromCodePoint(0x1f600)}: b1`).times[0].nome;
+  assert.equal(longo, 'a'.repeat(79));
+});
+
+test('o nome de um título limpa-se até ao fim: ler, escrever e ler outra vez dá o mesmo', async () => {
+  const e = lerElenco(html(`<h3>${'- '.repeat(20)}Team</h3><a href="https://kick.com/a1">1</a>`));
+  assert.deepEqual(e.times, [{ nome: 'Team', canais: ['a1'] }]);
+  assert.deepEqual(so(lerElenco(paraTexto(e))), so(e));
+  assert.deepEqual(so(await descodificar(await codificar(e))), so(e));
+});
+
 test('CSV com cabeçalho, em qualquer ordem de colunas e com colunas a mais', () => {
   const simples = lerElenco('time,canal\nTeam Ricoy,ricoy\nTeam Ricoy,tchubi\nTeam Willjum,willjum\n');
   assert.deepEqual(simples.times, [
@@ -437,7 +610,59 @@ test('CSV sem cabeçalho: o time é a coluna que se repete', () => {
     { nome: 'willjum', canais: ['willjum', 'sinks'] },
   ]);
   // Sem repetição, "a,b" são dois canais e não o time "a".
-  assert.deepEqual(so(lerElenco('ricoy, tchubi')), { times: [], soltos: ['ricoy', 'tchubi'] });
+  assert.deepEqual(lerElenco('ricoy, tchubi'), { times: [], soltos: ['ricoy', 'tchubi'], avisos: [] });
+});
+
+test('CSV sem cabeçalho: um time de uma linha só ainda é um time, e na dúvida há aviso', () => {
+  const um = lerElenco('alpha,a1\nalpha,a2\nbeta,b1\ngamma,g1\ngamma,g2');
+  assert.deepEqual(so(um), {
+    times: [{ nome: 'alpha', canais: ['a1', 'a2'] }, { nome: 'beta', canais: ['b1'] }, { nome: 'gamma', canais: ['g1', 'g2'] }],
+    soltos: [],
+  });
+  assert.deepEqual(um.avisos, []);
+  // O canal escrito como link ou @ em todas as linhas diz qual das duas colunas é o time.
+  const links = lerElenco('Alpha,https://kick.com/a1\nBravo,https://kick.com/b1');
+  assert.deepEqual(so(links), {
+    times: [{ nome: 'Alpha', canais: ['a1'] }, { nome: 'Bravo', canais: ['b1'] }],
+    soltos: [],
+  });
+  // Sem nada que o diga, ficam canais, e o aviso explica como dizer que é time;canal.
+  const duvida = lerElenco('Alpha;a1\nBravo;b1');
+  assert.deepEqual(so(duvida), { times: [], soltos: ['alpha', 'a1', 'bravo', 'b1'] });
+  assert.equal(duvida.avisos.length, 1);
+  assert.match(duvida.avisos[0], /"time;canal"/);
+  // Um CSV num bloco não muda a leitura de uma lista noutro bloco.
+  const separados = lerElenco('alpha,a1\nalpha,a2\n\nricoy, tchubi');
+  assert.deepEqual(separados, { times: [{ nome: 'alpha', canais: ['a1', 'a2'] }], soltos: ['ricoy', 'tchubi'], avisos: [] });
+});
+
+test('o cabeçalho conhece os nomes mais comuns da coluna do canal, e uma linha de dados não é cabeçalho', () => {
+  for (const cab of ['Team Name,Kick Username', 'Team,Channel Name', 'Team,Kick Channel', 'Time,Nome do canal',
+    'Team,Kick URL', 'Equipa,Nome na Kick']) {
+    const e = lerElenco(`${cab}\nAlpha,a1\nAlpha,a2\nBeta,b1`);
+    assert.deepEqual(so(e), {
+      times: [{ nome: 'Alpha', canais: ['a1', 'a2'] }, { nome: 'Beta', canais: ['b1'] }],
+      soltos: [],
+    }, cab);
+  }
+  // "Time 1,player1" tem cara de cabeçalho, mas "Time 1" volta a aparecer na mesma coluna.
+  const dados = lerElenco('Time 1,player1\nTime 1,ricoy\nTime 2,tchubi\nTime 2,kodd');
+  assert.deepEqual(dados.times, [
+    { nome: 'Time 1', canais: ['player1', 'ricoy'] },
+    { nome: 'Time 2', canais: ['tchubi', 'kodd'] },
+  ]);
+});
+
+test('uma tabela com cabeçalho acaba na linha em branco; uma linha vazia da folha não a acaba', () => {
+  const e = lerElenco('time,canal\nAlpha,a1\nAlpha,a2\n\nTeam B: b1, b2, b3');
+  assert.deepEqual(so(e), {
+    times: [{ nome: 'Alpha', canais: ['a1', 'a2'] }, { nome: 'Team B', canais: ['b1', 'b2', 'b3'] }],
+    soltos: [],
+  });
+  assert.deepEqual(e.avisos, []);
+  const folha = lerElenco('Time\tCanal\nAlpha\ta1\n\t\nAlpha\ta2\nBeta\tb1');
+  assert.deepEqual(folha.times, [{ nome: 'Alpha', canais: ['a1', 'a2'] }, { nome: 'Beta', canais: ['b1'] }]);
+  assert.deepEqual(folha.avisos, []);
 });
 
 test('uma folha de cálculo colada (tabs) e uma tabela Markdown', () => {
@@ -670,15 +895,31 @@ function geradorDeCanais(semente) {
   };
 }
 
-/** 125 times de 4, com os nomes como os da página real: "Team <capitão>", e um em cada cinco com
- *  maiúsculas fora do sítio, como "Team hJune" e "Team CoconutB". */
-function eventoDe500(semente = 7) {
+const ADJETIVOS = ['Night', 'Iron', 'Red', 'Black', 'Silent', 'Golden', 'Frozen', 'Wild', 'Rusty', 'Toxic',
+  'Savage', 'Lost', 'Dark', 'Crimson', 'Steel', 'Ghost', 'Lucky', 'Mad', 'Feral', 'Electric'];
+const BICHOS = ['Raiders', 'Wolves', 'Bandits', 'Rats', 'Kings', 'Hunters', 'Nomads', 'Vipers', 'Outlaws', 'Ravens',
+  'Scrappers', 'Goats', 'Bears', 'Pirates', 'Snakes', 'Sharks', 'Reapers', 'Miners', 'Owls', 'Crabs'];
+
+/** 125 times de 4. Com `capitao`, os nomes são como os da página real: "Team <capitão>", e um em cada
+ *  cinco com maiúsculas fora do sítio, como "Team hJune" e "Team CoconutB". Sem ele, duas palavras
+ *  que não têm nada a ver com os canais ("Night Raiders"), como num evento que inventa os nomes. */
+function eventoDe500(semente = 7, { capitao = true } = {}) {
   const novo = geradorDeCanais(semente);
+  let s = (semente * 7919) >>> 0;
+  const rnd = () => ((s = (Math.imul(s, 1103515245) + 12345) >>> 0) / 0x100000000);
+  const usados = new Set();
+  const inventado = () => {
+    for (;;) {
+      const n = `${ADJETIVOS[Math.floor(rnd() * 20)]} ${BICHOS[Math.floor(rnd() * 20)]}`;
+      if (!usados.has(n)) { usados.add(n); return n; }
+    }
+  };
   return {
     times: Array.from({ length: 125 }, (_, i) => {
       const canais = [novo(), novo(), novo(), novo()];
       const c = canais[0];
-      const nome = i % 5 === 4 ? `Team ${c.slice(0, -1)}${c.slice(-1).toUpperCase()}` : `Team ${c[0].toUpperCase()}${c.slice(1)}`;
+      const nome = !capitao ? inventado()
+        : i % 5 === 4 ? `Team ${c.slice(0, -1)}${c.slice(-1).toUpperCase()}` : `Team ${c[0].toUpperCase()}${c.slice(1)}`;
       return { nome, canais };
     }),
     soltos: [],
@@ -686,7 +927,7 @@ function eventoDe500(semente = 7) {
   };
 }
 
-test('125 times de 4 cabem num link com menos de 4000 caracteres, e voltam iguais', async () => {
+test('125 times de 4 cabem num link de menos de 4000 caracteres com os nomes da página real, e voltam iguais', async () => {
   for (const semente of [7, 42, 2026]) {
     const e = eventoDe500(semente);
     assert.equal(contar(e).canais, 500);
@@ -695,6 +936,26 @@ test('125 times de 4 cabem num link com menos de 4000 caracteres, e voltam iguai
     assert.ok(s.length < 4000, `${s.length} caracteres`);
     assert.deepEqual(await descodificar(s), e);
   }
+});
+
+test('com nomes de time inventados o link passa dos 4000 caracteres, mas não muito, e volta igual', async () => {
+  // Os 4000 só se garantem quando o nome repete o capitão, que é o que `marcarNome` aproveita.
+  // Nomes que não têm nada a ver com os canais custam 4142 a 4347 (medido com estas sementes):
+  // o link abre na mesma, mas pode não caber numa mensagem do Discord de 4000.
+  for (const semente of [7, 42, 2026]) {
+    const e = eventoDe500(semente, { capitao: false });
+    assert.equal(contar(e).canais, 500);
+    const s = await codificar(e);
+    assert.ok(s.length < 4600, `${s.length} caracteres`);
+    assert.deepEqual(await descodificar(s), e);
+  }
+});
+
+test('um elenco que não se poderia abrir de um link dá null em codificar, em vez de um link estragado', async () => {
+  const soltos = (n) => Array.from({ length: n }, (_, i) => `c${i}`);
+  assert.equal(await codificar({ times: [], soltos: soltos(2001) }), null);
+  assert.deepEqual(await descodificar(await codificar({ times: [], soltos: soltos(2000) })),
+    { times: [], soltos: soltos(2000), avisos: [] });
 });
 
 test('codificar e descodificar vão e voltam em todos os feitios de elenco', async () => {
@@ -787,7 +1048,8 @@ test('um link de outra pessoa passa pelas mesmas regras do texto colado', async 
     times: [{ nome: 'Ricoyscript', canais: ['ricoy', 'tchubi'] }, { nome: 'Team Willjum', canais: ['willjum'] }],
     soltos: ['jogador', 'org'],
   });
-  assert.equal(e.avisos.length, 3);
+  assert.equal(e.avisos.length, 4);
+  assert.match(e.avisos.join('\n'), /"Players" parece um papel/);
   assert.match(e.avisos.join('\n'), /img\/src=x/);
   assert.match(e.avisos.join('\n'), /"tchubi" aparece em "Ricoyscript" e em "Team Willjum"/);
   assert.match(e.avisos.join('\n'), /category\/rust/);

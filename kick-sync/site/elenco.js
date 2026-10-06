@@ -65,10 +65,15 @@ function pareceLink(t) {
  * Recusa em vez de corrigir: tirar os espaços a "Mills RP" dava "millsrp",
  * que pode ser outra pessoa. Um canal errado no elenco é um ângulo errado na
  * grelha, e ninguém dá por ele.
+ *
+ * `noAtributo` é para o href de uma página: aí não há pontuação de frase.
  */
-function lerCanal(cru) {
-  let t = String(cru ?? '').trim()
-    .replace(/^[(\[{<"'“‘«]+/, '')
+function lerCanal(cru, { noAtributo = false } = {}) {
+  let t = String(cru ?? '').trim();
+  // Uma menção do Discord copiada crua (<@123...>) é o número da pessoa no
+  // Discord. Sem os < > e o @ ficava só o número, que passa na regra de canal.
+  if (/^<(?:@[!&]?|#)\d+>$/.test(t)) return { motivo: 'mencao', texto: t.slice(0, 60) };
+  t = t.replace(/^[(\[{<"'“‘«]+/, '')
     .replace(/[)\]}>"'”’»,;:!?]+$/, '');
   const texto = t.slice(0, 60);
   if (!t) return { motivo: 'vazio', texto };
@@ -88,8 +93,10 @@ function lerCanal(cru) {
     t = t.replace(/^@+/, '');
   }
   // O ponto final sai. A página medida mostra "xKevv." e o canal é xkevv: um
-  // ponto no fim de um nome é pontuação muito mais vezes do que é nome.
-  t = t.toLowerCase().replace(/\.+$/, '');
+  // ponto no fim de um nome é pontuação muito mais vezes do que é nome. Num
+  // href não: ali o ponto é do endereço, e tirá-lo podia dar outro canal.
+  t = t.toLowerCase();
+  if (!noAtributo) t = t.replace(/\.+$/, '');
   if (NAO_SAO_CANAIS.has(t)) return { motivo: 'nao-e-canal', texto };
   // Só pontuação ("-", "...") passa na regra da Kick mas não é nome de ninguém,
   // e aparece sempre que se parte uma frase como "Time 1 - Os Brabos".
@@ -108,9 +115,9 @@ export function canalDe(texto) {
 }
 
 /** Numa página só conta um link para a Kick: um href relativo é do site do evento. */
-function canalDeLink(href) {
+function canalDeLink(href, noAtributo = false) {
   const h = String(href || '').trim();
-  return pareceLink(h) ? lerCanal(h).slug ?? null : null;
+  return pareceLink(h) ? lerCanal(h, { noAtributo }).slug ?? null : null;
 }
 
 // ── nomes ───────────────────────────────────────────────────────────────────
@@ -124,20 +131,28 @@ function canalDeLink(href) {
  * pinta com innerHTML em muitos sítios, por isso um nome nunca abre uma tag.
  * As aspas ficam ("Team "Lobo"", "Tchubi's") — quem puser um nome DENTRO de
  * um atributo continua a ter de o escapar.
+ *
+ * O U+200C e o U+200D ficam: são eles que juntam um emoji de família ou de
+ * profissão, e sem eles o nome mudava de cara. Sozinhos nas pontas saem.
  */
 function limparNome(cru) {
   let n = String(cru ?? '')
-    .replace(/[\u0000-\u001f\u007f-\u009f\u00a0\u2000-\u200f\u2028-\u202f\u205f\u3000\ufeff]/g, ' ')
+    .replace(/[\u0000-\u001f\u007f-\u009f\u00a0\u2000-\u200b\u200e\u200f\u2028-\u202f\u205f\u3000\ufeff]/g, ' ')
     .replace(/\[([^\]]*)\]\(\s*([^)\s]*)\s*\)/g, ' $2 ')
     .replace(/[<>*`]/g, '')
     .replace(/\s+/g, ' ')
     .trim();
-  for (let i = 0; i < 8; i++) {
+  // Até já não mudar, sem limite de voltas: cada volta que muda encurta o nome,
+  // e com um limite o nome lido uma vez não era o mesmo lido duas vezes.
+  for (;;) {
     const antes = n;
     n = n.replace(/^#{1,6}(?:\s+|$)/, '')
-      .replace(/^(?:[-•·+]|\d{1,3}[.)])(?:\s+|$)/, '')
+      .replace(/^(?:[-•·+]|\d{1,3}[.)]|\d{1,3}\s*[-\u2013\u2014])(?:\s+|$)/, '')
       .slice(0, 80)
-      .replace(/[\s:]+$/, '')
+      // Cortar aos 80 pode deixar meio emoji no fim.
+      .replace(/[\ud800-\udbff]$/, '')
+      .replace(/[\s:\u200c\u200d]+$/, '')
+      .replace(/^[\u200c\u200d]+/, '')
       .trim();
     if (n === antes) break;
   }
@@ -165,6 +180,18 @@ const ehSoltos = (n) => SOLTOS.test(n);
 
 const PALAVRAS_DE_TIME = new Set(['team', 'teams', 'time', 'times', 'equipa', 'equipas', 'equipe',
   'equipes', 'squad', 'clan', 'clã', 'grupo', 'group']);
+
+const dizTime = (n) => String(n).split(/\s+/).some((p) => PALAVRAS_DE_TIME.has(p.toLowerCase()));
+
+// O aviso de quando um grupo com nome de papel fica sem time. Quase sempre é
+// isso mesmo ("Streamers: a, b, c" é uma lista sem times), mas um time que se
+// chame "Staff" perdia-se calado.
+const avisoDePapel = (n) => `"${n}" parece um papel e não o nome de um time; os canais dele ficaram sem time`;
+
+// Notas de papel ao lado de um membro: "ricoy (C)", "[CPT] kodd", "ricoy - capitão".
+// "CPT" e "CO-CPT" são os da página medida; os outros são os títulos de papel.
+const NOTA = /^(?:c|vc|cc|cpt|capt|co-?\s?(?:c|cpt|capt))\.?$/i;
+const ehNota = (n) => NOTA.test(n) || ehRotulo(n);
 
 // ── acumulador ──────────────────────────────────────────────────────────────
 
@@ -206,7 +233,9 @@ function novoAcumulador() {
       }
       return t;
     },
-    quantosTimes: () => times.length,
+    /** Só os times com gente: um título de decoração não é o time número N. */
+    quantosTimes: () => times.filter((t) => t.canais.length).length,
+    existe: (nome) => porChave.has(limparNome(nome).toLowerCase()),
     juntar(slug, time) {
       const atual = dono.get(slug);
       if (time) {
@@ -228,6 +257,7 @@ function novoAcumulador() {
       if (r.motivo === 'outro-site') ac.aviso(`"${r.texto}" não é da Kick; ficou de fora`);
       else if (r.motivo === 'nao-e-canal') ac.aviso(`"${r.texto}" é uma página da Kick, não um canal; ficou de fora`);
       else if (r.motivo === 'invalido') ac.aviso(`"${r.texto}" não é um nome de canal da Kick; ficou de fora`);
+      else if (r.motivo === 'mencao') ac.aviso(`"${r.texto}" é uma menção do Discord, não um canal da Kick; ficou de fora`);
       return false;
     },
     totalDeCanais: () => dono.size,
@@ -262,9 +292,20 @@ function decodificarEntidades(s) {
 
 const pareceHtml = (s) => /<(?:a|h[1-6])(?=[\s>])[^>]*>/i.test(s) || /<(?:!doctype\s+html|html|body)\b/i.test(s);
 
+/**
+ * O valor de um atributo, lido atributo a atributo.
+ *
+ * Procurar `\bhref=` no texto todo apanhava `data-href=` (o `\b` casa depois
+ * do traço), e um link guardado num atributo de dados passava à frente do
+ * link de verdade.
+ */
 function atributo(attrs, nome) {
-  const m = String(attrs).match(new RegExp(`\\b${nome}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, 'i'));
-  return m ? decodificarEntidades(m[1] ?? m[2] ?? m[3]) : null;
+  for (const m of String(attrs).matchAll(/([^\s"'<>\/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+)))?/g)) {
+    if (m[1].toLowerCase() !== nome) continue;
+    const valor = m[2] ?? m[3] ?? m[4];
+    return valor === undefined ? null : decodificarEntidades(valor);
+  }
+  return null;
 }
 
 /**
