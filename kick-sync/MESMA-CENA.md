@@ -50,3 +50,27 @@ python3 probes/mesma-cena.py 2026-10-03T01:00:00Z 20 wowi kodd
 
 Os VODs da Kick somem depois de algumas semanas: os do evento de 30/08 medidos em `SINCRONIA.md` já não
 existem em 06/10. Para repetir mais tarde, escolha duas noites recentes.
+
+## Ao vivo: a gravação anda 2 a 12 s atrás
+
+Medido em 06/10/2026, cerca de 09:30 UTC, em três canais de Rust que estavam ao vivo (`danikongi`,
+`ciscoo`, `posty`). A transmissão em curso já aparece na lista de VODs do canal, com a mesma playlist de
+segmentos e o mesmo `PROGRAM-DATE-TIME`, e cada pedido devolve a playlist até ao último segmento pronto.
+O fim do último segmento estava entre **2,2 e 11,8 s** atrás do relógio, em duas leituras com 30 s de
+intervalo.
+
+Quer dizer que o que o site já faz com uma noite gravada funciona durante o evento: basta pedir as
+playlists de novo a cada poucos segundos. Voltar um lance e vê-lo de todos os ângulos fica possível
+enquanto o evento acontece, e não só no dia seguinte.
+
+## A API, do browser
+
+- `kick.com/api/v2/...` responde ao browser de qualquer origem (o cabeçalho `access-control-allow-origin`
+  devolve a origem que pediu, testado com quatro origens). Um domínio próprio funciona sem servidor.
+- 120 pedidos de lista de VODs, com 4 e 8 ao mesmo tempo, deram todos `200` em 8,4 s, sem `429`.
+  Ler os 500 canais de um evento leva da ordem de 20 a 40 s, não minutos.
+- A lista de transmissões ao vivo de uma categoria (`/stream/livestreams/<idioma>?subcategory=rust`) traz
+  título, idioma, espectadores e canal: é por aí que se acham os participantes de um evento pelo título ou
+  pela etiqueta.
+- O chat gravado lê-se em qualquer instante passado: `api/v2/channels/<id>/messages?cursor=<microssegundos>`
+  devolve as 25 mensagens anteriores a esse instante. Picos de chat marcam momentos sem baixar vídeo.
