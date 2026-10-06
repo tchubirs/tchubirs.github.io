@@ -164,8 +164,10 @@ test('e desiste ao fim de `tentativas`, devolvendo o último estado tal como vei
   }
 });
 
-test('um canal à espera de voltar a tentar não segura o lugar dos outros', async () => {
-  const k = kickFalsa({ roteiro: { a: [429, 200] }, demora: () => 1 });
+test('um canal à espera depois de um erro do servidor não segura o lugar dos outros', async () => {
+  // Um 503 é desse canal; um 429 é a Kick a pedir calma a todos, e esse
+  // segura (ver o teste da pausa, mais abaixo).
+  const k = kickFalsa({ roteiro: { a: [503, 200] }, demora: () => 1 });
   const r = await carregarCanais(['a', 'b', 'c'], { buscar: k.buscar, paralelos: 1, esperar: () => dormir(25) });
   assert.deepEqual(r.map((x) => x.estado), ['ok', 'ok', 'ok']);
   // b e c passam enquanto a espera; a volta depois, sem ter bloqueado ninguém.
@@ -243,6 +245,76 @@ test('um 429 que já saiu com o limite novo corta outra vez, mas nunca abaixo de
   const vistos = progresso.map((p) => p.paralelos);
   assert.deepEqual([...new Set(vistos)], [8, 4, 2]);
   assert.ok(vistos.every((v, i) => i === 0 || v <= vistos[i - 1]));
+});
+
+test('depois de um 429 não sai nenhum pedido enquanto o canal espera: a pausa é de todos', async () => {
+  // Antes, o lugar do canal castigado ia logo para outro: depois de um 429 o
+  // ritmo só caía para metade e nunca parava, justamente quando a Kick pedia
+  // menos.
+  const k = kickFalsa({ roteiro: { c03: [429, 200] }, demora: () => 1 });
+  const durante = [];
+  const esperar = async () => {
+    const antes = k.chamadas.length;
+    await dormir(30);
+    durante.push(k.chamadas.length - antes);
+  };
+  const r = await carregarCanais(nomes(20), { buscar: k.buscar, paralelos: 4, esperar });
+  assert.ok(r.every((x) => x.estado === 'ok'));
+  assert.deepEqual(durante, [0], 'nos 30 ms de espera não saiu nenhum');
+  // E quem volta é o castigado, à frente dos que ainda não foram.
+  const depois = k.chamadas.findIndex((c) => c.slug === 'c03' && c.n === 2);
+  assert.equal(depois, k.cortes[0]);
+});
+
+test('com a Kick a recusar tudo, desiste depressa em vez de gastar as tentativas de todos', async () => {
+  // A sonda do revisor: 100 canais, todos 429. Antes eram 400 pedidos a ritmo
+  // constante. Quando um canal sobe a escada toda (1, 2 e 4 s) e nesse tempo
+  // ninguém teve outra resposta, a Kick não está a pedir calma, está fechada:
+  // o resto fica 'rate-limit' sem se pedir, e a página diz para esperar.
+  const roteiro = Object.fromEntries(nomes(100).map((s) => [s, Array(9).fill(429)]));
+  const k = kickFalsa({ roteiro });
+  const progresso = [];
+  const esperar = semEspera();
+  const r = await carregarCanais(nomes(100), { buscar: k.buscar, esperar, aoProgredir: (p) => progresso.push(p) });
+  assert.ok(r.every((x) => x.estado === 'rate-limit'));
+  assert.deepEqual(r.map((x) => x.slug), nomes(100));
+  assert.ok(k.chamadas.length <= 20, `saíram ${k.chamadas.length}`);
+  assert.equal(progresso.at(-1).feitos, 100, 'a barra chega ao fim');
+  // Ninguém esperou mais do que a escada de um canal.
+  assert.ok(Math.max(...esperar.esperas) <= 4000);
+});
+
+test('um canal que leva 429 sozinho não dá a Kick por fechada', async () => {
+  // Com 1 de cada vez, a pausa do c00 não deixa mais ninguém perguntar: só um
+  // canal recusado não prova nada sobre os outros.
+  const k = kickFalsa({ roteiro: { c00: Array(9).fill(429) } });
+  const r = await carregarCanais(nomes(6), { buscar: k.buscar, paralelos: 1, esperar: semEspera() });
+  assert.deepEqual(r.map((x) => x.estado), ['rate-limit', 'ok', 'ok', 'ok', 'ok', 'ok']);
+  assert.equal(k.porCanal.get('c00'), 4);
+  assert.equal(k.chamadas.length, 9);
+});
+
+test('um 429 atrasado de um pedido que saiu antes do corte não corta outra vez, mas pára os outros', async () => {
+  // O c00 sai com o limite de 8 e só volta depois de o c01 ter cortado para 4
+  // e de muitos pedidos com o limite novo terem passado. Esse 429 é notícia
+  // velha sobre os 8 (o que veio depois diz que os 4 aguentam): não corta. Mas
+  // a pausa vale para ele como para qualquer outro.
+  const k = kickFalsa({ roteiro: { c00: [429, 200], c01: [429, 200] }, demora: (slug, n) => (slug === 'c00' && n === 1 ? 40 : 1) });
+  const progresso = [];
+  const durante = [];
+  const esperar = async () => {
+    const antes = k.chamadas.length;
+    await dormir(10);
+    durante.push(k.chamadas.length - antes);
+  };
+  const r = await carregarCanais(nomes(60), {
+    buscar: k.buscar, paralelos: 8, esperar, aoProgredir: (p) => progresso.push(p),
+  });
+  assert.ok(r.every((x) => x.estado === 'ok'));
+  assert.equal(k.cortes.length, 2);
+  assert.ok(k.cortes[1] - k.cortes[0] > 8, 'entre os dois 429 passaram pedidos com o limite novo');
+  assert.equal(progresso.at(-1).paralelos, 4);
+  assert.deepEqual(durante, [0, 0]);
 });
 
 test('quem pediu 3 desce para 2, e quem pediu 1 fica em 1 (o piso nunca sobe o limite)', async () => {
