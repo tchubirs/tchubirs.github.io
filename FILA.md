@@ -25,8 +25,10 @@ no mapa, o streamer escolhido bem marcado, os picos do chat com botões de hora 
 celular o painel do lance não tapa mais o mapa; o vermelho dos avisos com contraste certo.
 Também feito: correções da leitura do elenco e da exportação juntadas (803 testes passam); mapa pelo teclado; a
 correção de segurança publicada no site no ar (autorizada por ele em 06/10).
-Em curso: correções de desempenho com muitos canais e do carregamento dos 500 canais (dois agentes).
-Falta: sessão, teclado, sincronia, Twitch, CI e mapa; ligar o clipe de vários ângulos na tela; travessões nos
+Também juntadas: desempenho com muitos canais e carregamento dos 500 (826 testes passam). Roteiro da demonstração
+em `kick-sync/DEMO.md`.
+Em curso: sessão, teclado, sincronia, Twitch, CI e mapa (dois agentes por vez).
+Falta: ligar o clipe de vários ângulos na tela; travessões nos
 textos da página; publicar o Povix.
 
 **Decisão dele em 28/09 à noite:** um mês sem nenhum centavo, então foco em dinheiro. Não crio planilha nova
