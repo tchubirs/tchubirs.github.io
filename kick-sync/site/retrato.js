@@ -237,6 +237,15 @@ export function melhorFormato(MR = globalThis.MediaRecorder) {
   return FORMATOS.find((t) => MR.isTypeSupported(t)) || null;
 }
 
+// A resposta da prova, uma por gravador.
+//
+// O comentário da função a seguir promete "uma vez por sessão" e ela não
+// guardava nada: cada 9:16 voltava a gravar meio segundo por formato e abria outro
+// `AudioContext`, e numa montagem com trinta kills enquadradas isso eram
+// trinta provas. Fica guardada por gravador (e não numa variável solta) para
+// que dois gravadores diferentes, como nos testes, não partilhem a resposta.
+const provados = new WeakMap();
+
 /**
  * O que o browser sabe gravar A SÉRIO.
  *
@@ -258,27 +267,38 @@ export function melhorFormato(MR = globalThis.MediaRecorder) {
  *   segundo plano o rAF quase não corre, e o ciclo ficava PENDURADO — foi
  *   assim que esta função se estreou.
  */
-export async function formatoQueFunciona({
-  MR = globalThis.MediaRecorder,
+export async function formatoQueFunciona(opcoes = {}) {
+  const MR = opcoes.MR === undefined ? globalThis.MediaRecorder : opcoes.MR;
+  if (!MR?.isTypeSupported) return null;
+  if (!provados.has(MR)) provados.set(MR, provarFormatos({ ...opcoes, MR }));
+  const tipo = await provados.get(MR);
+  // Um "nenhum" não fica guardado: pode ter sido um acaso (um separador em
+  // segundo plano, a placa ocupada), e guardá-lo calava o 9:16 a noite inteira.
+  if (!tipo) provados.delete(MR);
+  return tipo;
+}
+
+async function provarFormatos({
+  MR,
   criarTela = () => document.createElement('canvas'),
   msPorTentativa = 500,
 } = {}) {
-  if (!MR?.isTypeSupported) return null;
   for (const tipo of FORMATOS) {
     if (!MR.isTypeSupported(tipo)) continue;
     let pincel = null;
+    let fluxo = null;
+    let audio = null;
     try {
       const tela = criarTela();
       tela.width = 320; tela.height = 180;
       const ctx = tela.getContext('2d');
-      const fluxo = tela.captureStream(30);
+      fluxo = tela.captureStream(30);
       // Com uma faixa de SOM, como a gravação a sério tem.
       //
       // A prova era só de vídeo, e por isso aprovava um formato que grava
       // imagem e deita o áudio fora — foi assim que um clipe saiu mudo depois
       // de eu mexer nesta lista. Uma pista de áudio silenciosa é o suficiente:
       // o que se está a perguntar é se o gravador ACEITA áudio neste formato.
-      let audio = null;
       try {
         const Ctx = globalThis.AudioContext || globalThis.webkitAudioContext;
         if (Ctx) {
@@ -307,13 +327,16 @@ export async function formatoQueFunciona({
       await new Promise((k) => setTimeout(k, msPorTentativa));
       if (g.state !== 'inactive') g.stop();
       await parou;
-      for (const f of fluxo.getTracks()) f.stop();
-      await audio?.close?.().catch?.(() => {});
       if (bytes > 0) return tipo;
     } catch {
       /* o próximo */
     } finally {
+      // Aqui e não no fim do `try`: um `new MR(...)` ou um `start()` que
+      // rebente saltava a limpeza, e cada formato recusado deixava uma faixa
+      // de captura e um contexto de áudio vivos até a página fechar.
       if (pincel) clearInterval(pincel);
+      for (const f of fluxo?.getTracks?.() || []) f.stop?.();
+      await audio?.close?.()?.catch?.(() => {});
     }
   }
   return null;
@@ -321,6 +344,9 @@ export async function formatoQueFunciona({
 
 /** A extensão que combina com o tipo. */
 export const extensaoDe = (tipo) => (String(tipo).startsWith('video/mp4') ? 'mp4' : 'webm');
+
+/** Quanto a gravação espera que o salto do vídeo aterre (ver `gravar`). */
+export const ESPERA_PROCURA_MS = 15_000;
 
 /**
  * Esperar que o `<video>` tenha MESMO o frame onde diz estar.
@@ -372,14 +398,17 @@ export function noSitio(video, { esperaMs = 2000 } = {}) {
  * @param {Array} opcoes.rects - enquadramentos, em pixels da fonte
  * @param {'um'|'dois'} opcoes.modo
  * @param {number} opcoes.duracaoS
- * @param {(p: {feito: number, total: number}) => void} [opcoes.aoProgresso]
+ * @param {(p: {feito: number, total: number, emPausa?: boolean}) => void} [opcoes.aoProgresso]
  * @param {AbortSignal} [opcoes.sinal]
+ * @param {Document} [opcoes.pagina] - quem diz se o separador está à vista
  */
 export async function gravar(video, {
   rects, modo = 'um', divisao = DIVISAO_OMISSAO, duracaoS, aoProgresso = () => {}, sinal, formato,
   criarTela = () => document.createElement('canvas'),
   MR = globalThis.MediaRecorder,
+  pagina = globalThis.document,
 } = {}) {
+  if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
   const tipo = formato || await formatoQueFunciona({ MR, criarTela });
   if (!tipo) throw Object.assign(new Error('sem gravador'), { name: 'SEM-GRAVADOR' });
 
@@ -397,10 +426,18 @@ export async function gravar(video, {
   const fluxo = tela.captureStream(30);
   // O som vem do vídeo, quando o browser o deixa sair. Sem isto o retrato sai
   // mudo, e um clipe de Rust mudo não vale nada — o tiro É o clipe.
+  let somDoVideo = null;
   try {
-    const somDoVideo = video.captureStream?.() || video.mozCaptureStream?.();
+    somDoVideo = video.captureStream?.() || video.mozCaptureStream?.();
     for (const faixa of somDoVideo?.getAudioTracks?.() || []) fluxo.addTrack(faixa);
   } catch { /* sem som: o vídeo continua a valer, o silêncio não o impede */ }
+  // As faixas de captura vivem até alguém as parar. Sem isto, cada 9:16
+  // deixava uma tela de 1080x1920 e uma captura do vídeo presas na memória
+  // até a página fechar, e numa montagem com quarenta kills isso acumulava.
+  const soltarFaixas = () => {
+    for (const f of fluxo.getTracks?.() || []) f.stop?.();
+    for (const f of somDoVideo?.getTracks?.() || []) f.stop?.();
+  };
 
   const gravador = new MR(fluxo, {
     mimeType: tipo, videoBitsPerSecond: BITS_VIDEO, audioBitsPerSecond: BITS_SOM,
@@ -410,7 +447,15 @@ export async function gravar(video, {
 
   // O frame certo ANTES de medir seja o que for: `inicio` lido em cima de uma
   // procura a meio é a posição de onde ele veio, não a do início do clipe.
-  await noSitio(video);
+  //
+  // Quinze segundos e não os dois de omissão: depois de um salto o vídeo tem
+  // de ir buscar um pedaço inteiro de 1080p60 (perto de 11 MB), e a menos de
+  // ~40 Mbit/s isso leva mais de dois segundos. Desistir aos dois gravava o
+  // frame velho, que é exactamente o lixo que esta espera existe para tirar.
+  await noSitio(video, { esperaMs: ESPERA_PROCURA_MS });
+  // Cancelado durante a espera: o ouvinte do `abort` só se pendura mais à
+  // frente, e um sinal que já disparou não volta a disparar para ninguém.
+  if (sinal?.aborted) { soltarFaixas(); throw new DOMException('cancelado', 'AbortError'); }
   const inicio = video.currentTime;
   let parar = false;
   let pincel = null;
@@ -425,7 +470,13 @@ export async function gravar(video, {
   // app). Isto é o travão para a PRÓXIMA causa, seja ela qual for: se ao fim
   // de três segundos o relógio do vídeo não andou nada, isto rebenta com um
   // nome próprio em vez de entregar uma fotografia.
+  //
+  // "Não andou" conta-se desde a ÚLTIMA pincelada, e não desde o início. A
+  // conta antiga olhava para o progresso total: passados os primeiros 0,05 s
+  // ela zerava a cada volta, e um vídeo que congelasse a meio (a rede caiu, o
+  // hls.js desistiu) deixava a gravação pendurada para sempre.
   let voltas = 0;
+  let ultimoS = inicio;
   const PARADO_MAX = 90;                    // 3 s a 30 pinceladas por segundo
   // Um relógio próprio, e não o ritmo a que o vídeo entrega frames.
   //
@@ -440,8 +491,10 @@ export async function gravar(video, {
   const pintar = () => {
     if (parar) return;
     desenhar(ctx, video, rects, modo, divisao);
-    const feito = Math.max(0, video.currentTime - inicio);
-    voltas = feito > 0.05 ? 0 : voltas + 1;
+    const agora = video.currentTime;
+    const feito = Math.max(0, agora - inicio);
+    voltas = agora > ultimoS ? 0 : voltas + 1;
+    ultimoS = Math.max(ultimoS, agora);
     if (voltas > PARADO_MAX) {
       parar = true;
       clearInterval(pincel);
@@ -468,21 +521,59 @@ export async function gravar(video, {
     if (gravador.state !== 'inactive') gravador.stop();
   }, { once: true });
 
-  // Pintar ANTES de `start()`, e não depois.
+  // Com o separador escondido, a gravação espera por ele.
   //
-  // A tela acabada de criar é transparente, e `captureStream` publica-a na
-  // mesma: o gravador arranca, o `await` do `play()` devolve a volta ao
-  // browser, e o que fica gravado nesse intervalo são frames PRETOS. Foram
-  // 0,27 s medidos no ficheiro dele. Uma pincelada antes de gravar custa um
-  // frame e o clipe passa a começar na imagem certa.
-  desenhar(ctx, video, rects, modo, divisao);
-  gravador.start();
-  await video.play().catch(() => {});
-  pintar();
-  pincel = setInterval(pintar, 1000 / 30);
-  const blob = await acabou;
-  clearInterval(pincel);
-  video.pause();
+  // Escondido, o Chrome corre o `setInterval` uma vez por segundo (só poupa
+  // as páginas que se OUVEM, e esta toca com o volume a zero) e deixa de
+  // descodificar a imagem do vídeo. Uma montagem com 9:16 deixada a correr
+  // por trás do Discord saía em slides de uma imagem por segundo, ou com uma
+  // imagem parada e som. Parar o vídeo e o gravador juntos, e voltar com os
+  // dois quando a página volta, dá o mesmo ficheiro que se teria à vista: o
+  // tempo em pausa não entra nele.
+  let escondida = false;
+  const aoMudarDeVista = () => {
+    if (parar) return;
+    if (pagina?.hidden && !escondida) {
+      escondida = true;
+      clearInterval(pincel);
+      video.pause();
+      if (gravador.state === 'recording') gravador.pause?.();
+      aoProgresso({ feito: Math.max(0, video.currentTime - inicio), total: duracaoS, emPausa: true });
+    } else if (!pagina?.hidden && escondida) {
+      escondida = false;
+      voltas = 0;
+      ultimoS = video.currentTime;
+      if (gravador.state === 'paused') gravador.resume?.();
+      video.play().catch(() => {});
+      pincel = setInterval(pintar, 1000 / 30);
+    }
+  };
+  pagina?.addEventListener?.('visibilitychange', aoMudarDeVista);
+
+  let blob;
+  try {
+    // Pintar ANTES de `start()`, e não depois.
+    //
+    // A tela acabada de criar é transparente, e `captureStream` publica-a na
+    // mesma: o gravador arranca, o `await` do `play()` devolve a volta ao
+    // browser, e o que fica gravado nesse intervalo são frames PRETOS. Foram
+    // 0,27 s medidos no ficheiro dele. Uma pincelada antes de gravar custa um
+    // frame e o clipe passa a começar na imagem certa.
+    desenhar(ctx, video, rects, modo, divisao);
+    gravador.start();
+    await video.play().catch(() => {});
+    pintar();
+    pincel = setInterval(pintar, 1000 / 30);
+    // Já escondida quando começou (a montagem chegou a este 9:16 com ele
+    // noutra janela): fica logo em pausa até ele voltar.
+    if (pagina?.hidden) aoMudarDeVista();
+    blob = await acabou;
+  } finally {
+    clearInterval(pincel);
+    pagina?.removeEventListener?.('visibilitychange', aoMudarDeVista);
+    video.pause();
+    soltarFaixas();
+  }
   if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
   if (paradoDemais) {
     throw Object.assign(new Error('o vídeo não andou'), { name: 'GRAVACAO-PARADA' });

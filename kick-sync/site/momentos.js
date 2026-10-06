@@ -128,8 +128,15 @@ export function clipesDoMomento(momento, canais, indice, { filmava = () => true 
   // que ele apurou no editor, e vale so para a POV dele — e a dele que ele
   // corta a mao; as dos outros continuam a sair pelas margens.
   const aj = momento.ajuste;
+  // O ajuste é do ângulo em que ele o fez. Um ajuste sem canal é dos que se
+  // guardavam antes de o canal ir junto, e esses eram sempre da POV dele.
+  //
+  // Sem isto, trocar para a POV de quem morreu, aparar e enquadrar a webcam
+  // dele aplicava esses tempos e esse recorte ao vídeo do protagonista, que é
+  // outra fonte, às vezes noutra resolução.
+  const doAjuste = aj?.canal || momento.protagonista;
   const junta = (slug, antesS, depoisS, papel, letra) => {
-    const ajustado = papel === 'protagonista' && aj
+    const ajustado = slug === doAjuste && aj
       && Number.isFinite(aj.deMs) && Number.isFinite(aj.ateMs) && aj.ateMs > aj.deMs;
     const deMs = ajustado ? aj.deMs : combateDe - antesS * 1000;
     const ateMs = ajustado ? aj.ateMs : combateAte + depoisS * 1000;
@@ -179,13 +186,17 @@ export function planoDaMontagem(momentos, canais, opcoes = {}) {
  * Devolve um momento novo — os momentos nunca se mudam no sitio, e assim o
  * `guardar()` da sessao e o desenho da lista ficam sempre certos. `formato`
  * nulo quer dizer "so 16:9"; 'um' ou 'dois' quer dizer "e o 9:16 tambem, com
- * estes enquadramentos".
+ * estes enquadramentos". `canal` e o angulo em que ele os fez: os recortes
+ * estao em pixels DESSE video.
  */
-export function comAjuste(momento, { deMs, ateMs, formato = null, rects = [], divisao } = {}) {
+export function comAjuste(momento, {
+  deMs, ateMs, formato = null, rects = [], divisao, canal,
+} = {}) {
   if (!Number.isFinite(deMs) || !Number.isFinite(ateMs) || ateMs <= deMs) return momento;
   return {
     ...momento,
     ajuste: {
+      ...(typeof canal === 'string' && canal ? { canal } : {}),
       deMs: Math.round(deMs),
       ateMs: Math.round(ateMs),
       formato: formato === 'um' || formato === 'dois' ? formato : null,

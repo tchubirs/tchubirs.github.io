@@ -297,6 +297,31 @@ test('sem ajuste nada muda, e um ajuste sem 9:16 e so as pontas', () => {
   assert.equal(c.retrato, null, 'formato nulo quer dizer so 16:9');
 });
 
+// "'Guardar ajustes' drops the angle chosen in the editor": trocar para a POV
+// de quem morreu, aparar e enquadrar a webcam dele aplicava tudo isso ao vídeo
+// do protagonista.
+test('o ajuste feito noutro angulo vale para o clipe desse angulo, e nao para o protagonista', () => {
+  const m = alternarVitima(novoMomento(T, 'tchubi'), 'vitima1');
+  const rects = [{ x: 5, y: 6, largura: 70, altura: 80 }];
+  const aj = comAjuste(m, {
+    deMs: T - 9000, ateMs: T + 1000, formato: 'um', rects, canal: 'vitima1',
+  });
+  assert.equal(aj.ajuste.canal, 'vitima1');
+  const c = clipesDoMomento(aj, DOIS, 0);
+  const meu = c.find((x) => x.papel === 'protagonista');
+  const dela = c.find((x) => x.canal === 'vitima1');
+  assert.equal(meu.retrato, null, 'o recorte foi medido no video de outro canal');
+  assert.notEqual(meu.deMs, T - 9000, 'o protagonista continua pelas margens');
+  assert.equal(dela.deMs, T - 9000);
+  assert.equal(dela.ateMs, T + 1000);
+  assert.deepEqual(dela.retrato.rects, rects);
+
+  // Um ajuste antigo, sem canal, continua a ser da POV dele.
+  const velho = comAjuste(m, { deMs: T - 3000, ateMs: T + 1000 });
+  assert.equal(velho.ajuste.canal, undefined);
+  assert.equal(clipesDoMomento(velho, DOIS, 0)[0].deMs, T - 3000);
+});
+
 test('um ajuste invalido nao entra, e tirar o ajuste devolve o momento', () => {
   const m = novoMomento(T, 'tchubi');
   assert.equal(comAjuste(m, { deMs: T, ateMs: T }).ajuste, undefined, 'zero segundos nao e um clipe');

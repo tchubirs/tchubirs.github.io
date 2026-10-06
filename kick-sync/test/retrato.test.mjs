@@ -656,3 +656,164 @@ test('sem AudioContext a prova de formato continua a dar resposta', async () => 
     if (antes) globalThis.AudioContext = antes;
   }
 });
+
+// ── exportar: a gravação não pode ficar pendurada nem deixar lixo ───────────
+
+/** Um vídeo de mentira que anda 0,05 s por pincelada até `ateS`, e congela aí. */
+function videoQueCongela(ateS = Infinity) {
+  const v = {
+    videoWidth: 1920, videoHeight: 1080, currentTime: 10, seeking: false, readyState: 4,
+    tocando: false,
+    play: async () => { v.tocando = true; }, pause: () => { v.tocando = false; },
+    captureStream: () => ({ getAudioTracks: () => [], getTracks: () => [] }),
+  };
+  const ctx = {
+    drawImage() { if (v.tocando && v.currentTime < 10 + ateS) v.currentTime += 0.05; },
+    fillRect() {},
+  };
+  const tela = { width: 0, height: 0, getContext: () => ctx, captureStream: () => ({ addTrack() {} }) };
+  return { v, tela };
+}
+
+class MRQueGrava {
+  constructor() { this.state = 'inactive'; MRQueGrava.ultimo = this; }
+
+  start() { this.state = 'recording'; }
+
+  pause() { this.state = 'paused'; this.pausas = (this.pausas || 0) + 1; }
+
+  resume() { this.state = 'recording'; }
+
+  stop() {
+    this.state = 'inactive';
+    this.ondataavailable?.({ data: new Blob(['x']) });
+    this.onstop?.();
+  }
+}
+
+// "9:16 recorder's stall detector only works in the first 0.05 s": a conta
+// olhava para o progresso TOTAL, e um vídeo que andasse meio segundo e
+// congelasse deixava a gravação a correr para sempre.
+test('um vídeo que congela a meio do clipe rebenta, em vez de prender a gravação',
+  { timeout: 10_000 }, async () => {
+    const { v, tela } = videoQueCongela(0.5);
+    await assert.rejects(
+      () => gravar(v, {
+        rects: [{ x: 0, y: 0, largura: 1080, altura: 1080 }],
+        duracaoS: 10, formato: 'video/webm', criarTela: () => tela, MR: MRQueGrava, pagina: null,
+      }),
+      (e) => e.name === 'GRAVACAO-PARADA',
+    );
+    assert.ok(v.currentTime > 10.4, 'o vídeo chegou a andar antes de congelar');
+  });
+
+// Escondido, o Chrome pinta uma vez por segundo e o 9:16 saía em slides.
+test('com o separador escondido a gravação espera, e retoma quando ele volta', async () => {
+  const { v, tela } = videoQueCongela();
+  const pagina = new EventTarget();
+  pagina.hidden = false;
+  const vistos = [];
+  const feito = gravar(v, {
+    rects: [{ x: 0, y: 0, largura: 1080, altura: 1080 }],
+    duracaoS: 0.6, formato: 'video/webm', criarTela: () => tela, MR: MRQueGrava, pagina,
+    aoProgresso: (p) => vistos.push(p),
+  });
+  await new Promise((k) => setTimeout(k, 60));
+  pagina.hidden = true;
+  pagina.dispatchEvent(new Event('visibilitychange'));
+  const parado = v.currentTime;
+  await new Promise((k) => setTimeout(k, 200));
+  assert.equal(MRQueGrava.ultimo.state, 'paused', 'o gravador tinha de ficar em pausa');
+  assert.equal(v.tocando, false, 'e o vídeo também');
+  assert.equal(v.currentTime, parado, 'nada pintado nem contado enquanto estava escondida');
+  assert.ok(vistos.some((p) => p.emPausa), 'a pausa é dita a quem mostra o progresso');
+
+  pagina.hidden = false;
+  pagina.dispatchEvent(new Event('visibilitychange'));
+  const { blob } = await feito;
+  assert.ok(blob.size > 0, 'ao voltar, acaba como se nada fosse');
+  assert.equal(MRQueGrava.ultimo.pausas, 1);
+});
+
+// Um salto para um pedaço de 1080p60 leva mais de dois segundos numa rede
+// normal. Desistir aos dois gravava o frame velho à cabeça do ficheiro.
+test('gravar espera mais do que dois segundos pelo salto do vídeo', { timeout: 10_000 }, async () => {
+  const ouvintes = new Map();
+  const { v, tela } = videoQueCongela();
+  Object.assign(v, {
+    currentTime: 55, seeking: true, readyState: 1,
+    addEventListener: (n, f) => { ouvintes.set(n, [...(ouvintes.get(n) || []), f]); },
+    removeEventListener: (n, f) => { ouvintes.set(n, (ouvintes.get(n) || []).filter((x) => x !== f)); },
+  });
+  let arrancou = false;
+  class MR extends MRQueGrava { start() { super.start(); arrancou = true; } }
+  const feito = gravar(v, {
+    rects: [{ x: 0, y: 0, largura: 1080, altura: 1080 }],
+    duracaoS: 0.2, formato: 'video/webm', criarTela: () => tela, MR, pagina: null,
+  });
+  await new Promise((k) => setTimeout(k, 2300));
+  assert.equal(arrancou, false, 'desistiu aos dois segundos e gravou o frame velho');
+  Object.assign(v, { currentTime: 10, seeking: false, readyState: 4 });
+  for (const f of ouvintes.get('seeked') || []) f();
+  await feito;
+  assert.ok(arrancou);
+});
+
+// Cada 9:16 deixava a tela e a captura do vídeo vivas até a página fechar.
+test('no fim da gravação as faixas de captura são paradas', async () => {
+  const { v, tela } = videoQueCongela();
+  const paradas = [];
+  const faixa = (nome) => ({ stop: () => paradas.push(nome) });
+  tela.captureStream = () => ({ addTrack() {}, getTracks: () => [faixa('tela')] });
+  v.captureStream = () => ({ getAudioTracks: () => [], getTracks: () => [faixa('video')] });
+  await gravar(v, {
+    rects: [{ x: 0, y: 0, largura: 1080, altura: 1080 }],
+    duracaoS: 0.1, formato: 'video/webm', criarTela: () => tela, MR: MRQueGrava, pagina: null,
+  });
+  assert.deepEqual(paradas.sort(), ['tela', 'video']);
+});
+
+// "Custa uma vez por sessão", dizia o comentário, e cada 9:16 voltava a gravar
+// meio segundo por formato. E um gravador que rebentasse deixava a captura e o
+// contexto de áudio da prova vivos.
+test('a prova de formato corre uma vez por gravador, e limpa mesmo quando rebenta', async () => {
+  let provas = 0;
+  const paradas = [];
+  const tela = {
+    width: 0, height: 0,
+    getContext: () => ({ fillRect() {} }),
+    captureStream: () => ({ addTrack() {}, getTracks: () => [{ stop: () => paradas.push(1) }] }),
+  };
+  class MRBom {
+    static isTypeSupported() { return true; }
+    constructor() { provas++; this.state = 'inactive'; }
+    start() { this.state = 'recording'; this.ondataavailable?.({ data: { size: 10 } }); }
+    stop() { this.state = 'inactive'; this.onstop?.(); }
+  }
+  const a = await formatoQueFunciona({ MR: MRBom, criarTela: () => tela, msPorTentativa: 5 });
+  const b = await formatoQueFunciona({ MR: MRBom, criarTela: () => tela, msPorTentativa: 5 });
+  assert.equal(a, b);
+  assert.equal(provas, 1, 'a segunda pergunta não pode voltar a gravar');
+
+  let fechados = 0;
+  const antes = globalThis.AudioContext;
+  globalThis.AudioContext = class {
+    createMediaStreamDestination() { return { stream: { getAudioTracks: () => [] } }; }
+
+    createConstantSource() { return { connect() {} }; }
+
+    close() { fechados++; return Promise.resolve(); }
+  };
+  class MRQueRebenta {
+    static isTypeSupported() { return true; }
+    constructor() { throw new Error('não sei'); }
+  }
+  try {
+    paradas.length = 0;
+    assert.equal(await formatoQueFunciona({ MR: MRQueRebenta, criarTela: () => tela, msPorTentativa: 5 }), null);
+    assert.equal(paradas.length, FORMATOS.length, 'uma captura deixada viva por cada formato recusado');
+    assert.equal(fechados, FORMATOS.length, 'um contexto de áudio deixado aberto por cada formato recusado');
+  } finally {
+    if (antes) globalThis.AudioContext = antes; else delete globalThis.AudioContext;
+  }
+});

@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { nomeDoFicheiro, planearCorte, executarCorte, cortarTodosOsAngulos } from '../site/baixar.js';
+import {
+  nomeDoFicheiro, planearCorte, executarCorte, cortarTodosOsAngulos, largarOQueNaoServe,
+} from '../site/baixar.js';
 import { linhaDoCanal } from '../site/relogio.js';
 
 const T = Date.parse('2026-08-30T21:00:00.000Z');
@@ -213,4 +215,77 @@ test('the master playlist is fetched once for all angles, not once per angle', a
   });
   assert.equal(cdn.pedidos.filter((u) => u.endsWith('master.m3u8')).length, 1,
     'the three fakes share one master URL — asking three times is wasted rate limit');
+});
+
+// ── exportar: prazos, cancelar e memória ────────────────────────────────────
+
+// Um pedido que pára sem fechar prendia a montagem para sempre, com o botão
+// apagado. O `fetch` falso aqui faz o pior: nunca responde e ignora o sinal.
+test('a segment that never answers is given up after the deadline, not waited on forever', async () => {
+  const cdn = cdnFalso();
+  const p = await planearCorte({ linha: linhaFalsa('tchubi'), deMs: T, ateMs: T + 10_000, buscar: cdn.buscar });
+  let tentativas = 0;
+  const preso = () => { tentativas++; return new Promise(() => {}); };
+  const r = await executarCorte(p, { buscar: preso, prazoMs: 20 });
+  assert.equal(r.estado, 'incompleto', 'had to give up and say so');
+  assert.equal(tentativas, 3, 'and still retried, because a stall is a failure like any other');
+  assert.match(r.falhas[0].erro, /sem resposta/);
+});
+
+// O Parar tem de chegar também ao plano: a lista de qualidades e a playlist
+// eram pedidas sem sinal nenhum.
+test('planning stops on cancel and on a stalled playlist, instead of hanging', async () => {
+  const preso = () => new Promise(() => {});
+  const controlo = new AbortController();
+  const plano = planearCorte({
+    linha: linhaFalsa('tchubi'), deMs: T, ateMs: T + 10_000, buscar: preso, sinal: controlo.signal,
+  });
+  controlo.abort();
+  await assert.rejects(plano, (e) => e.name === 'AbortError');
+
+  await assert.rejects(
+    planearCorte({ linha: linhaFalsa('tchubi'), deMs: T, ateMs: T + 10_000, buscar: preso, prazoMs: 20 }),
+    (e) => e.name === 'PRAZO',
+  );
+});
+
+// "One network error leaves that channel's Export button disabled forever":
+// o `fetch` que rejeita passava direito pelo `cortarTodosOsAngulos`.
+test('a fetch that rejects on one angle comes back as an error, and the others still arrive', async () => {
+  const bom = cdnFalso();
+  const buscar = async (url, opcoes) => {
+    if (url.includes('/mau/')) throw new TypeError('Failed to fetch');
+    return bom.buscar(url, opcoes);
+  };
+  const mau = linhaDoCanal('mau', [{
+    vod: { id: 9, master: 'https://cdn/mau/master.m3u8' },
+    playlist: linhaFalsa('x').pecas[0].playlist,
+  }]);
+  const r = await cortarTodosOsAngulos({
+    linhas: [mau, linhaFalsa('bom')], deMs: T + 25_000, ateMs: T + 35_000, buscar,
+  });
+  assert.equal(r.length, 2);
+  assert.equal(r[0].estado, 'erro');
+  assert.match(r[0].erro, /Failed to fetch/);
+  assert.equal(r[1].estado, 'pronto');
+});
+
+// A montagem guardava cada pedaço até ao fim: perto de 11 MB por pedaço, e
+// numa noite de quarenta kills isso eram gigas e o separador morria.
+test('the montage cache keeps only what a later clip of the same channel will ask for', () => {
+  const jaTemos = new Map([
+    ['a/1.ts', new Uint8Array(1)], ['a/2.ts', new Uint8Array(1)], ['b/1.ts', new Uint8Array(1)],
+  ]);
+  const sitios = new Map([
+    ['a/1.ts', { canal: 'a', inicio: T, fim: T + 10_000 }],
+    ['a/2.ts', { canal: 'a', inicio: T + 10_000, fim: T + 20_000 }],
+    ['b/1.ts', { canal: 'b', inicio: T, fim: T + 10_000 }],
+  ]);
+  // Só o canal 'a' volta, e só a partir dos 15 s.
+  largarOQueNaoServe(jaTemos, sitios, [{ canal: 'a', deMs: T + 15_000, ateMs: T + 30_000 }]);
+  assert.deepEqual([...jaTemos.keys()], ['a/2.ts']);
+  assert.deepEqual([...sitios.keys()], ['a/2.ts'], 'the bookkeeping goes with the bytes');
+
+  largarOQueNaoServe(jaTemos, sitios, []);
+  assert.equal(jaTemos.size, 0, 'at the end of the montage nothing stays held');
 });
