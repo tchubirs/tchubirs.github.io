@@ -60,6 +60,42 @@ function conhecido(idx, s) {
   return inicios.some((t) => !Number.isFinite(t) || t === s.inicio);
 }
 
+/** O primeiro instante com relógio de uma lista de segmentos, ou null. */
+function primeiroInstante(segmentos) {
+  let min = Infinity;
+  for (const s of segmentos) if (Number.isFinite(s.inicio) && s.inicio < min) min = s.inicio;
+  return min === Infinity ? null : min;
+}
+
+/**
+ * Uma leitura feita de `nova` mais os segmentos de `antiga` que ela não tem,
+ * com a forma de `lerPlaylist` (quem a guardar pode dá-la a `linhaDoCanal`,
+ * que lê `inicio`, `fim` e `fonteDoRelogio`).
+ *
+ * A base é `nova` e não `antiga`: se o CDN assinar os endereços, os dela são
+ * os que ainda valem. Os `mediaT` ficam como vieram, porque o leitor carrega
+ * a playlist da Kick e não esta; o que esta junta é para a próxima
+ * comparação saber tudo o que já se viu.
+ */
+function juntar(nova, faltam) {
+  const segmentos = [...nova.segmentos, ...faltam];
+  // Pela ordem do relógio quando todos o têm. Sem ele não há ordem a
+  // recuperar, e para comparar a ordem não conta: os que faltavam vão no fim.
+  if (segmentos.every((s) => Number.isFinite(s.inicio))) segmentos.sort((a, b) => a.inicio - b.inicio);
+  const comRelogio = segmentos.filter((s) => Number.isFinite(s.inicio));
+  let fim = null;
+  for (const s of comRelogio) fim = Math.max(fim ?? -Infinity, s.inicio + (s.duracaoS || 0) * 1000);
+  return {
+    ...nova,
+    segmentos,
+    fonteDoRelogio: comRelogio.length === segmentos.length ? 'program-date-time'
+      : comRelogio.length ? 'program-date-time-parcial' : 'sem-relogio',
+    inicio: primeiroInstante(comRelogio),
+    fim,
+    duracaoS: segmentos.reduce((t, s) => t + (s.duracaoS || 0), 0),
+  };
+}
+
 /**
  * Os segmentos de `nova` que `antiga` ainda não tinha.
  *
@@ -68,23 +104,30 @@ function conhecido(idx, s) {
  *
  *   novos       os segmentos de `nova` que não estavam em `antiga`, pela
  *               ordem da playlist
- *   recomecou   `nova` não continua `antiga`: o primeiro segmento dela não
- *               existe na leitura anterior, logo é outra transmissão
- *   recuou      `nova` é uma leitura mais VELHA do que `antiga` (menos
- *               segmentos, nada novo) — um CDN com uma cópia atrasada
+ *   recomecou   `nova` é outra transmissão: não tem nenhum segmento de
+ *               `antiga` e não é mais velha do que ela
+ *   recuou      `nova` não trouxe nada e falta-lhe o que `antiga` tinha (sem
+ *               contar o princípio que uma janela a deslizar deixou cair), ou
+ *               é uma cópia de uma transmissão mais VELHA do que a guardada:
+ *               um CDN com uma cópia atrasada
  *   playlist    a leitura a guardar para a próxima comparação
  *
  * `playlist` vem já decidida, e não deixada ao chamador, pela mesma razão
  * por que `resolver` (em sinal.js) devolve o ajuste e não o desvio: é aqui
  * que o erro fácil mora. Quem guardasse sempre `nova` deitava fora, numa
  * leitura atrasada, os segmentos que já tinha — e na leitura seguinte eles
- * voltavam como "novos", e eram processados duas vezes.
+ * voltavam como "novos", e eram processados duas vezes. Pela mesma razão,
+ * uma leitura que traz alguma coisa nova mas a que falta o que `antiga` tinha
+ * (uma atrasada que preenche um buraco, uma janela que desliza) guarda-se
+ * JUNTA com a anterior, e não no lugar dela.
  *
- * "Continua" quer dizer que o primeiro segmento de `nova` existe em `antiga`,
- * e não que é o PRIMEIRO de `antiga`. Numa playlist EVENT é o mesmo; mas se a
- * Kick alguma vez cortar o princípio de uma transmissão de doze horas (uma
- * janela que desliza), a regra estreita dizia "recomeçou" em todas as
- * leituras, e cada leitura parecia uma transmissão nova.
+ * "Continua" quer dizer que `nova` tem pelo menos um segmento de `antiga`, e
+ * não que começa no PRIMEIRO de `antiga`. Numa playlist EVENT é o mesmo; mas
+ * se a Kick alguma vez cortar o princípio de uma transmissão de doze horas
+ * (uma janela que desliza), a regra estreita dizia "recomeçou" em todas as
+ * leituras, e cada leitura parecia uma transmissão nova. Nem chega olhar para
+ * o primeiro segmento de `nova`: numa cópia atrasada da janela ele já saiu da
+ * guardada, e a leitura inteira voltava como nova.
  */
 export function novosSegmentos(antiga, nova) {
   const velhos = antiga?.segmentos ?? [];
@@ -98,16 +141,37 @@ export function novosSegmentos(antiga, nova) {
   // A primeira leitura: tudo é novo, e não há nada de que recomeçar.
   if (!velhos.length) return { novos: [...agora], recomecou: false, recuou: false, playlist: nova };
 
-  const idx = indice(velhos);
-  if (!conhecido(idx, agora[0])) {
-    return { novos: [...agora], recomecou: true, recuou: false, playlist: nova };
-  }
-
   // Filtrar em vez de cortar a partir do último conhecido: se um segmento
   // aparecer no meio (um que faltava na leitura anterior), também é novo.
+  const idx = indice(velhos);
   const novos = agora.filter((s) => !conhecido(idx, s));
-  const recuou = !novos.length && agora.length < velhos.length;
-  return { novos, recomecou: false, recuou, playlist: recuou ? antiga : nova };
+  const inicioNova = primeiroInstante(agora);
+
+  if (novos.length === agora.length) {
+    // Nada em comum. Uma transmissão nova começa DEPOIS da anterior; se esta
+    // começa antes, é uma cópia velha que um CDN ainda serve (a de antes de
+    // um recomeço no mesmo caminho, que volta a chamar `0.ts`). Tomá-la por
+    // recomeço trocava a guardada por ela, a seguinte parecia outro recomeço,
+    // e o ao vivo andava para trás e para a frente com tudo a repetir-se.
+    const inicioAntiga = primeiroInstante(velhos);
+    if (inicioNova != null && inicioAntiga != null && inicioNova < inicioAntiga) {
+      return { novos: [], recomecou: false, recuou: true, playlist: antiga };
+    }
+    return { novos, recomecou: true, recuou: false, playlist: nova };
+  }
+
+  const idxNova = indice(agora);
+  const faltam = velhos.filter((s) => !conhecido(idxNova, s));
+  // Faltar SÓ o que vem antes do primeiro segmento de `nova` é a janela a
+  // deslizar, não uma cópia atrasada. Como a guardada fica com tudo o que já
+  // se viu, numa janela que desliza falta-lhe sempre o princípio, e sem isto
+  // cada leitura em dia sem nada de novo (o normal entre dois segmentos)
+  // dizia `recuou`.
+  const soOPrincipio = inicioNova != null
+    && faltam.every((s) => Number.isFinite(s.inicio) && s.inicio < inicioNova);
+  const recuou = !novos.length && faltam.length > 0 && !soOPrincipio;
+  const playlist = recuou ? antiga : faltam.length ? juntar(nova, faltam) : nova;
+  return { novos, recomecou: false, recuou, playlist };
 }
 
 // ── Até onde todos já chegaram ─────────────────────────────────────────────
@@ -129,6 +193,8 @@ export function novosSegmentos(antiga, nova) {
  *   foraDoAr   quem ficou de fora por não ter nada novo há mais de
  *              `limiteMs` — dito pelo nome, como em sinal.js, e não posto a
  *              zero em silêncio
+ *   repetidos  slugs que vieram mais de uma vez (ver abaixo), para a página
+ *              avisar quem montou a lista
  *   agoraMs    o "agora" que se usou (ver a correcção abaixo)
  *
  * Porquê deixar de fora quem saiu do ar: com 500 streamers há SEMPRE alguém
@@ -143,7 +209,19 @@ export function novosSegmentos(antiga, nova) {
  * mais cedo. Sem isto, a borda prometia 3 s que esse ângulo não tem.
  */
 export function bordaAoVivo(linhas, { agoraMs = Date.now(), limiteMs = LIMITE_FORA_DO_AR_MS, nudges = {} } = {}) {
-  const comFim = (linhas || []).filter((l) => l && Number.isFinite(l.fim));
+  // O mesmo slug duas vezes (o mesmo streamer colado em dois times, ou em
+  // duas linhas do elenco) é um canal só. Antes, um deles podia ir para
+  // `vivos` e o outro para `foraDoAr`, e a borda de todos ficava presa no fim
+  // do que estava fora do ar, conforme a ordem da lista. Conta o fim mais
+  // recente, como em quem caiu e voltou, e o slug fica em `repetidos`.
+  const fimDe = new Map();
+  const repetidos = new Set();
+  for (const l of linhas || []) {
+    if (!l || !Number.isFinite(l.fim)) continue;
+    if (fimDe.has(l.slug)) repetidos.add(l.slug);
+    fimDe.set(l.slug, Math.max(fimDe.get(l.slug) ?? -Infinity, l.fim));
+  }
+  const comFim = [...fimDe].map(([slug, fim]) => ({ slug, fim }));
   // Os ajustes viajam no link partilhado, que é texto de fora: um valor que
   // não seja um número conta como zero, em vez de pôr NaN na borda de todos.
   // Nem um "3000" entre aspas passa: em `onde` isso somava texto ao instante.
@@ -170,16 +248,22 @@ export function bordaAoVivo(linhas, { agoraMs = Date.now(), limiteMs = LIMITE_FO
   const foraDoAr = [];
   for (const l of comFim) (agora - l.fim > limiteMs ? foraDoAr : vivos).push(l.slug);
 
-  // Iterar `vivos` e não procurar o mínimo de outra maneira: dois canais com
-  // o mesmo slug (um erro de quem montou a lista) ficariam com o último fim no
-  // Map, e a conta tem de ser a mesma que o Map mostra.
-  const comumMs = vivos.length ? Math.min(...vivos.map((s) => porCanal.get(s))) : null;
+  // A borda não passa do agora. Um ajuste negativo (medido: -5,71 s) põe o
+  // fim desse canal DEPOIS do agora no relógio partilhado: com ele 2,2 s
+  // atrás do ar, a borda ficava 3,5 s no futuro e o atraso dava negativo.
+  // Puxar o `agora` para lá não serve: os ajustes vêm do link, que é texto de
+  // fora, e um de -10 min mexido à mão mandava toda a gente para fora do ar.
+  // No agora, todos os que estão no ar ainda têm vídeo (o mínimo deles é
+  // maior), e `porCanal` continua a mostrar até onde cada um chega.
+  const minimo = vivos.length ? Math.min(...vivos.map((s) => porCanal.get(s))) : null;
+  const comumMs = minimo == null ? null : Math.min(minimo, agora);
   return {
     comumMs,
     porCanal,
     atrasoMs: comumMs == null ? null : agora - comumMs,
     vivos,
     foraDoAr,
+    repetidos: [...repetidos],
     agoraMs: agora,
   };
 }
@@ -247,8 +331,13 @@ function visivelPorOmissao() {
  * não pode transformar uma espera de 10 s em zero ou numa hora.
  *
  * Devolve uma promessa que acaba quando `sinal` é cancelado, com quantas
- * voltas correram e quantas falharam. Um erro em `atualizar` nunca a rejeita
- * — é contado, passado a `aoErro`, e a volta seguinte espera mais.
+ * voltas correram e quantas falharam. Um erro em `atualizar` nunca a rejeita:
+ * é contado, passado a `aoErro`, e a volta seguinte espera mais. Um erro em
+ * `visivel` também não: a página conta como visível (o ritmo continua a ser
+ * o do intervalo) e o erro vai para `aoErro` com `de: 'visivel'`. Só a
+ * rejeitam as peças do próprio relógio: um `agora` que não dá números ou um
+ * `esperar` que rebenta. Sem elas não há maneira de continuar que não seja
+ * pedir sem pausa, por isso param alto, como uma configuração errada.
  */
 export async function agendar({
   atualizar,
@@ -266,22 +355,45 @@ export async function agendar({
   if (!(Number.isFinite(intervaloMs) && intervaloMs > 0)) {
     throw new RangeError(`agendar: intervalo inválido (${intervaloMs})`);
   }
+  // O teto pela mesma regra. Antes, um NaN (ou 0) aqui passava a ser o
+  // intervalo sem dizer nada, e a espera depois de um erro deixava de crescer:
+  // cada 429 era seguido de outro pedido ao ritmo normal.
+  if (!(Number.isFinite(tetoMs) && tetoMs > 0)) {
+    throw new RangeError(`agendar: teto inválido (${tetoMs})`);
+  }
   // Um intervalo pedido maior do que o teto não pode ENCOLHER depois de um
   // erro — isso era insistir mais depressa por ter falhado.
-  const teto = Math.max(Number(tetoMs) || 0, intervaloMs);
+  const teto = Math.max(tetoMs, intervaloMs);
+
+  // Um relógio que dê NaN torna falsa a comparação `falta > 0`, e as voltas
+  // saíam umas atrás das outras sem esperar: o ciclo sem pausa contra a Kick
+  // que o intervalo inválido já recusa. Lê-se sempre por aqui.
+  const relogio = () => {
+    const t = agora();
+    if (!Number.isFinite(t)) throw new RangeError(`agendar: o relógio deu ${t}`);
+    return t;
+  };
+  // O aviso é para o ecrã; um erro no ecrã não pode parar o relógio. Nem um
+  // `aoErro` assíncrono que rejeite: no node uma rejeição solta derruba o
+  // processo, e no browser suja a consola a cada volta.
+  const avisar = (e, info) => {
+    try { Promise.resolve(aoErro(e, info)).catch(() => {}); } catch { /* ver acima */ }
+  };
 
   let passo = intervaloMs;
-  let proxima = agora();
+  let proxima = relogio();
   let voltas = 0;
   let erros = 0;
   let seguidos = 0;
 
   while (!sinal?.aborted) {
-    const falta = proxima - agora();
+    const falta = proxima - relogio();
     if (falta > 0) { await esperar(falta, { sinal }); continue; }
-    if (!visivel()) { await esperar(intervaloMs, { sinal }); continue; }
+    let aVista = true;
+    try { aVista = visivel(); } catch (e) { avisar(e, { esperaMs: 0, seguidos, de: 'visivel' }); }
+    if (!aVista) { await esperar(intervaloMs, { sinal }); continue; }
 
-    const inicio = agora();
+    const inicio = relogio();
     try {
       await atualizar({ sinal });
       voltas++;
@@ -297,9 +409,8 @@ export async function agendar({
       erros++;
       seguidos++;
       passo = Math.min(passo * 2, teto);
-      proxima = agora() + passo;
-      // O aviso é para o ecrã; um erro no ecrã não pode parar o relógio.
-      try { aoErro(e, { esperaMs: passo, seguidos }); } catch { /* ver acima */ }
+      proxima = relogio() + passo;
+      avisar(e, { esperaMs: passo, seguidos });
     }
   }
   return { voltas, erros };

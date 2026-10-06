@@ -911,3 +911,77 @@ test('um canvas sem tamanho, ou sem contexto, não pinta nada nem rebenta', () =
   assert.doesNotThrow(() => pintarMapa(null, m, { ...TELA, vista: VISTA }));
   assert.doesNotThrow(() => pintarMapa(ctxFalso(), null, { ...TELA, vista: VISTA }));
 });
+
+test('a faixa escolhida tem fundo de acento, contorno e nome em negrito; os colegas têm a risca', () => {
+  const coberturas = new Map([['a', [[T, T + H]]], ['b', [[T, T + H]]], ['c', [[T, T + H]]]]);
+  const m = montarMapa({ times: [{ nome: 'A', canais: ['a', 'b', 'c'] }], coberturas, abertos: new Set(['A']) });
+  const chamadas = pintar(m, { escolhido: 'b', realcados: new Set(['a', 'b']) });
+  // As faixas: a de 24 a 44, b de 44 a 64, c de 64 a 84.
+  const fundoB = chamadas.filter((c) => c.nome === 'fillRect' && c.fillStyle === CORES.escolha).map((c) => c.args);
+  assert.deepEqual(fundoB, [[0, 44, 1000, 20]]);
+  const contorno = chamadas.filter((c) => c.nome === 'fillRect' && c.fillStyle === CORES.texto).map((c) => c.args);
+  assert.deepEqual(contorno, [[0, 44, 1000, 1], [0, 63, 1000, 1], [0, 44, 1, 20], [999, 44, 1, 20]]);
+  const riscas = chamadas
+    .filter((c) => c.nome === 'fillRect' && c.fillStyle === CORES.cobertura && c.args[0] === 0 && c.args[2] === 3)
+    .map((c) => c.args[1]);
+  assert.deepEqual(riscas, [24, 44], 'a e b vão abrir, c não');
+  const nome = (n) => chamadas.find((c) => c.nome === 'fillText' && c.args[0] === n);
+  assert.match(nome('b').font, /^600 12px/);
+  assert.match(nome('a').font, /^400 12px/);
+});
+
+test('um canal que não existe na Kick tem o nome a vermelho e diz porquê', () => {
+  const m = montarMapa({ times: [{ nome: 'A', canais: ['bom', 'gralha'] }], coberturas: new Map([['bom', [[T, T + H]]]]), abertos: new Set(['A']) });
+  const chamadas = pintar(m, { falhados: new Set(['gralha']), naoAchado: 'não achado' });
+  const textos = chamadas.filter((c) => c.nome === 'fillText');
+  const gralha = textos.find((c) => c.args[0].startsWith('gralha'));
+  assert.equal(gralha.args[0], 'gralha · não achado');
+  assert.equal(gralha.fillStyle, CORES.perigo);
+  assert.equal(textos.find((c) => c.args[0] === 'bom').fillStyle, CORES.texto);
+  // Sem o texto traduzido, fica só a cor.
+  const semTexto = pintar(m, { falhados: new Set(['gralha']) }).filter((c) => c.nome === 'fillText').map((c) => c.args[0]);
+  assert.ok(semTexto.includes('gralha'), semTexto.join(' | '));
+});
+
+test('cada marca tem uma bandeirinha no topo da faixa, presa ao ecrã', () => {
+  const m = montarMapa({ times: [{ nome: 'A', canais: ['a'] }], coberturas: new Map([['a', [[T, T + 2 * H]]]]), abertos: new Set(['A']) });
+  const marcas = new Map([['a', [{ ms: T + 12 * MIN, tipo: 'chat' }, { ms: T, tipo: 'chat' }, { ms: T + 2 * H, tipo: 'chat' }]]]);
+  const chamadas = pintar(m, { marcas });
+  const linhas = caminhos(chamadas).filter((p) => p.cor === CORES.marca);
+  assert.equal(linhas[0].largura, 3);
+  const quadrados = chamadas.filter((c) => c.nome === 'fillRect' && c.args[2] === 7 && c.args[3] === 7).map((c) => c.args);
+  // x=100 no meio, e as duas das pontas encostadas às beiras em vez de saírem do ecrã.
+  assert.deepEqual(quadrados, [[97, 25, 7, 7], [0, 25, 7, 7], [993, 25, 7, 7]]);
+  const cor = chamadas.filter((c) => c.nome === 'fillRect' && c.args[2] === 5 && c.args[3] === 5);
+  assert.ok(cor.every((c) => c.fillStyle === CORES.marca) && cor.length === 3);
+});
+
+test('a cabeça tem um fio escuro de cada lado, pintado antes dela', () => {
+  const { times, coberturas } = evento({ nTimes: 2 });
+  const m = montarMapa({ times, coberturas, abertos: todosAbertos(times) });
+  const agoraMs = T + H;
+  const chamadas = pintar(m, { agoraMs });
+  const x = xDoTempo(agoraMs, VISTA, TELA.largura);
+  const fios = chamadas.filter((c) => c.nome === 'fillRect' && c.fillStyle === CORES.fundo && c.args[2] === 1).map((c) => c.args);
+  assert.deepEqual(fios, [[x - 2, 0, 1, TELA.altura], [x + 1, 0, 1, TELA.altura]]);
+  const iStroke = chamadas.findLastIndex((c) => c.nome === 'stroke');
+  assert.ok(chamadas.findLastIndex((c) => c.nome === 'fillRect') < iStroke);
+});
+
+test('num ecrã estreito, o nome de um canal que não existe não é comido pelo aviso', () => {
+  const m = montarMapa({ times: [{ nome: 'A', canais: ['terceiro'] }], coberturas: new Map(), abertos: new Set(['A']) });
+  const textos = pintar(m, { largura: 365, falhados: new Set(['terceiro']), naoAchado: 'não achado' })
+    .filter((c) => c.nome === 'fillText').map((c) => c.args[0]);
+  assert.ok(textos.includes('terceiro · não achado'), textos.join(' | '));
+});
+
+test('o cursor do teclado contorna a linha e marca o instante, sem sair do ecrã', () => {
+  const m = montarMapa({ times: [{ nome: 'A', canais: ['a', 'b'] }], coberturas: new Map([['a', [[T, T + H]]]]), abertos: new Set(['A']) });
+  const chamadas = pintar(m, { cursor: { i: 1, ms: T + 12 * MIN } });
+  const azuis = chamadas.filter((c) => c.nome === 'fillRect' && c.fillStyle === CORES.cobertura && (c.args[2] === 2 || c.args[3] === 2)).map((c) => c.args);
+  assert.deepEqual(azuis, [[0, 24, 1000, 2], [0, 42, 1000, 2], [0, 24, 2, 20], [998, 24, 2, 20]]);
+  const traco = chamadas.filter((c) => c.nome === 'fillRect' && c.fillStyle === CORES.texto && c.args[2] === 2).map((c) => c.args);
+  assert.deepEqual(traco, [[99, 24, 2, 20]]);
+  // Uma linha que não existe não pinta nada.
+  assert.doesNotThrow(() => pintar(m, { cursor: { i: 99, ms: T } }));
+});

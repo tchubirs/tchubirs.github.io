@@ -9,7 +9,7 @@
 // diz que estavam lá. A grelha, o alinhamento fino e o clipe continuam a ser os da página de sempre:
 // este ficheiro só lhes entrega os canais certos e o instante certo.
 
-import { lerElenco, codificar, descodificar, contar } from './elenco.js';
+import { lerElenco, codificar, descodificar, contar, paraTexto } from './elenco.js';
 import { carregarCanais, procurarAoVivo } from './carregar.js';
 import {
   montarMapa, linhasVisiveis, tempoDoX, xDoTempo, zoom, oQueEstaAqui, filtrar, pintarMapa,
@@ -37,7 +37,14 @@ export function cedoDemais(ms, atrasoMin, agoraMs = Date.now()) {
   return Number.isFinite(ms) && ms > agoraMs - Math.max(0, atrasoMin) * 60_000;
 }
 
+const dataCurta = (ms) => new Date(ms).toLocaleDateString([], { day: '2-digit', month: '2-digit' });
+// Ecrã de toque e ecrã estreito: decidem a altura das faixas, a folga de um toque e onde fica o lance.
+const tocar = () => window.matchMedia?.('(pointer: coarse)').matches === true;
+const estreito = () => window.matchMedia?.('(max-width: 999px)').matches === true;
+const semMovimento = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
 const horaLocal = (ms) => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+// Sem segundos: um pico de chat é um minuto inteiro, e os segundos dele eram sempre ":30".
+const horaCurta = (ms) => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
 /** Um VOD que ainda está a ser gravado: a Kick marca-o com `is_live` e duração 0 (medido em 06/10). */
 const aoVivoVod = (v) => v.aoVivo === true || v.duracaoMs === 0;
@@ -132,6 +139,15 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
     cancelar: null,
     link: '',
     atrasoMin: ATRASO_MIN,
+    // Times que se juntaram ao lance (um raid tem dois), e os ângulos a mais que vieram num link.
+    juntados: new Set(),
+    extrasDoLink: [],
+    trecho: null,
+    feitos: 0,
+    // Os canais que a Kick não conhece: o mapa pinta o nome deles a vermelho.
+    falhados: new Set(),
+    // Onde está o teclado no mapa: a linha `i` de ev.mapa.linhas e o instante `ms`.
+    cursor: null,
   };
 
   // ── abrir ──────────────────────────────────────────────────────────────
@@ -141,6 +157,13 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
     const controlo = new AbortController();
     ev.cancelar = controlo;
     ev.elenco = elenco;
+    ev.juntados = new Set();
+    ev.extrasDoLink = [];
+    ev.escolha = null;
+    ev.cursor = null;
+    ev.falhados = new Set();
+    $('lance').hidden = true;
+    $('picosChat').innerHTML = '';
     const todos = [...new Set([...elenco.times.flatMap((x) => x.canais), ...elenco.soltos])];
     if (!todos.length) { $('estadoEvento').textContent = t('evento.vazio'); return; }
     $('evento').hidden = false;
@@ -165,7 +188,11 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
     ev.coberturas = coberturasDe(ev.resultados);
     const comVideo = ev.coberturas.size;
     const aoVivo = ev.resultados.filter((r) => r.estado === 'ok' && r.vods.some(aoVivoVod)).length;
-    $('resumoEvento').textContent = t('evento.resumo', { times, canais, comVideo, aoVivo });
+    $('resumoEvento').textContent = [
+      times ? tn(times, 'evento.resumoTimeUm', 'evento.resumoTimes', { times }) : '',
+      tn(canais, 'evento.resumoCanalUm', 'evento.resumoCanais', { canais, comVideo }),
+      aoVivo ? t('evento.resumoAoVivo', { aoVivo }) : '',
+    ].filter(Boolean).join(' · ');
     $('seloAoVivo').hidden = aoVivo === 0;
     ev.times = [...elenco.times];
     if (elenco.soltos.length) ev.times.push({ nome: null, canais: elenco.soltos });
@@ -178,32 +205,68 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
     ev.vista = trecho
       ? { deMs: Math.max(ev.limites.deMs, trecho.deMs), ateMs: Math.min(ev.limites.ateMs, trecho.ateMs) }
       : { ...ev.limites };
+    ev.trecho = { ...ev.vista };
     if (Number.isFinite(quandoMs)) ev.vista = zoom(ev.vista, quandoMs, 0.1, ev.limites);
     ev.link = await codificar(elenco);
+    $('partilharEventoTexto').textContent = t('evento.partilharEvento');
     pintar();
     seguirAoVivo(aoVivo > 0);
     $('mapaRolo').focus({ preventScroll: true });
   }
 
   // Quem não carregou, agrupado pelo motivo. Num elenco de 500 há sempre um nome mal escrito, e uma
-  // faixa vazia sem explicação parece um streamer que não transmitiu.
+  // faixa vazia sem explicação parece um streamer que não transmitiu. Os nomes que não existem têm um
+  // botão para voltar ao elenco com o primeiro deles já selecionado.
+  const RUINS = ['canal-nao-existe', 'nome-invalido'];
   function pintarAvisos() {
     const motivos = {
-      'canal-nao-existe': t('estado.canalNaoExiste'), 'nome-invalido': t('estado.nomeInvalido'),
+      'nome-invalido': t('estado.nomeInvalido'),
       'sem-vods': t('estado.semVods'), 'vods-indisponiveis': t('estado.vodsIndisponiveis'),
       'rate-limit': t('estado.rateLimit'), 'sem-rede': t('estado.semRede'),
     };
+    const nomes = (slugs) => slugs.slice(0, 12).join(', ') + (slugs.length > 12 ? ` +${slugs.length - 12}` : '');
+    const naoExistem = [];
     const porMotivo = new Map();
     for (const r of ev.resultados) {
       if (!r || r.estado === 'ok') continue;
+      if (r.estado === 'canal-nao-existe') { naoExistem.push(r.slug); continue; }
       const m = motivos[r.estado] || r.estado;
       if (!porMotivo.has(m)) porMotivo.set(m, []);
       porMotivo.get(m).push(r.slug);
     }
-    const aviso = $('avisosEvento');
-    aviso.hidden = porMotivo.size === 0;
-    aviso.textContent = [...porMotivo].map(([m, slugs]) => `${slugs.slice(0, 12).join(', ')}`
-      + `${slugs.length > 12 ? ` +${slugs.length - 12}` : ''}: ${m}`).join(' · ');
+    const partes = [];
+    if (naoExistem.length) {
+      partes.push(tn(naoExistem.length, 'evento.naoExisteUm', 'evento.naoExistem', { nomes: nomes(naoExistem) }));
+    }
+    for (const [m, slugs] of porMotivo) partes.push(`${nomes(slugs)}: ${m}`);
+    $('avisosEvento').hidden = !partes.length;
+    $('avisosTexto').textContent = partes.join(' · ');
+    ev.falhados = new Set(ev.resultados.filter((r) => r && RUINS.includes(r.estado)).map((r) => r.slug));
+    $('corrigirElenco').hidden = !ev.falhados.size;
+  }
+
+  function corrigirElenco() {
+    const ruins = ev.resultados.filter((r) => r && RUINS.includes(r.estado)).map((r) => r.slug);
+    const texto = paraTexto(ev.elenco);
+    fecharEvento();
+    $('elenco').value = texto;
+    $('elenco').focus();
+    const i = ruins.length ? texto.indexOf(ruins[0]) : -1;
+    if (i >= 0) $('elenco').setSelectionRange(i, i + ruins[0].length);
+  }
+
+  // Colar a página de times: o que interessa está nos links (kick.com/<canal>), e o texto visível só
+  // traz os nomes de exibição. Quando o que se cola tem HTML com links da Kick, lê-se o HTML.
+  function colarPagina(e) {
+    const html = e.clipboardData?.getData('text/html') || '';
+    if (!/kick\.com\//i.test(html)) return;
+    e.preventDefault();
+    const elenco = lerElenco(html);
+    if (!elenco.times.length && !elenco.soltos.length) { $('estadoEvento').textContent = t('evento.semCanais'); return; }
+    $('elenco').value = paraTexto(elenco);
+    const { times, canais } = contar(elenco);
+    $('estadoEvento').textContent = t('evento.paginaColada', { times, canais })
+      + (elenco.avisos.length ? ` ${elenco.avisos.slice(0, 3).join(' · ')}` : '');
   }
 
   async function abrirDoTexto() {
@@ -238,6 +301,10 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
     // Parou no limite de páginas com a Kick a dizer que havia mais: quem tem poucos espectadores
     // pode não estar aqui, e isso tem de se dizer.
     $('estadoEvento').textContent = t(achados.incompleto ? 'evento.achadosCortados' : 'evento.achadosAoVivo', { n: achados.length });
+    // O próximo passo é o Abrir, que ficou lá em cima: o botão diz quantos abre e recebe o foco.
+    $('abrirElencoTexto').textContent = t('evento.abrirN', { n: achados.length });
+    $('elenco').scrollIntoView({ block: 'nearest' });
+    $('abrirElenco').focus();
   }
 
   // Um evento de exemplo feito na hora: os canais de Rust mais vistos que estão no ar agora, sem time.
@@ -264,10 +331,14 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
     const times = texto ? filtrar(ev.times, texto) : ev.times;
     // A procurar, tudo aberto: quem escreveu um nome quer ver a faixa dele, e não um time fechado.
     const abertos = texto ? new Set(times.map((x) => x.nome)) : ev.abertos;
-    ev.mapa = montarMapa({ times, coberturas: ev.coberturas, abertos });
-    // A caixa tem a altura do conteúdo, até 62% do ecrã; daí para cima rola.
+    // Num ecrã de toque as faixas crescem para um dedo (36 px em vez de 20).
+    const alturas = tocar() ? { canal: 36, time: 40, resumo: 36 } : undefined;
+    ev.mapa = montarMapa({ times, coberturas: ev.coberturas, abertos, alturas });
+    // A caixa tem a altura do conteúdo, até 62% do ecrã (45% num ecrã estreito, para o lance caber por
+    // baixo); daí para cima rola.
     const rolo = $('mapaRolo');
-    const teto = Math.max(160, Math.round(window.innerHeight * ($('evento').classList.contains('comMapa') ? 0.34 : 0.62)));
+    const fracao = $('evento').classList.contains('comMapa') ? 0.34 : estreito() ? 0.45 : 0.62;
+    const teto = Math.max(160, Math.round(window.innerHeight * fracao));
     rolo.style.height = `${Math.min(teto, ev.mapa.altura + 2)}px`;
     // O espaçador é o resto da altura: o canvas por cima dele já ocupa a altura do que se vê.
     $('mapaAltura').style.height = `${Math.max(0, ev.mapa.altura - rolo.clientHeight)}px`;
@@ -300,6 +371,11 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
         agoraMs: ev.escolha?.ms ?? null,
         marcas: ev.marcas,
         escolhido: ev.escolha?.canal ?? null,
+        // Quem o lance vai abrir fica com uma risca: é o que muda ao juntar um time ou achar pelo som.
+        realcados: ev.escolha ? new Set(canaisDoLance(ev.escolha)) : null,
+        falhados: ev.falhados,
+        naoAchado: t('evento.naoAchado'),
+        cursor: ev.cursor && rolo.matches(':focus-visible') ? ev.cursor : null,
         cores: coresDoTema(),
         semTime: t('evento.semTime'),
       });
@@ -313,6 +389,7 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
     return {
       fundo: v('--sup-0'), faixa: v('--sup-1'), time: v('--sup-2'), linha: v('--linha'),
       texto: v('--tinta'), texto2: v('--tinta-2'), cobertura: v('--acento'), marca: v('--marca'),
+      perigo: v('--perigo'), escolha: v('--acento-eco'),
       marcas: { chat: v('--marca') },
     };
   }
@@ -359,6 +436,7 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
       // Um clique perto de um pico do chat vai ao pico: acertar numa risca de 2 px a seco é pedir
       // pontaria a quem só quer ver o momento.
       marcas: ev.marcas,
+      raioPx: tocar() ? 16 : 8,
     });
   }
 
@@ -374,10 +452,90 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
     ev.escolha = { canal: alvo.canal, ms: alvo.ms, time: alvo.time };
     ev.procura?.abort();
     ev.achados = [];
+    ev.extrasDoLink = [];
+    const proprio = indiceDeTimes(ev.elenco).get(alvo.canal);
+    if (proprio != null) ev.juntados.delete(proprio);
     $('estadoLance').textContent = '';
     pintarLance();
     pintar();
+    destaparMapa();
     lerChatDoTime(ev.escolha);
+  }
+
+  // Num ecrã estreito o lance fica preso ao fundo do ecrã (o botão que abre o vídeo está sempre à
+  // vista), e por isso tapava o mapa: medido num 390x844, o painel ia de 480 a 844 px e o mapa de 500
+  // a 726, e a faixa que se acabou de tocar sumia. Rola-se a página até o mapa ficar por cima dele.
+  function destaparMapa() {
+    if (!estreito() || $('lance').hidden) return;
+    const falta = $('mapaRolo').getBoundingClientRect().bottom - $('lance').getBoundingClientRect().top + 8;
+    if (falta > 0) window.scrollBy({ top: falta, behavior: semMovimento() ? 'auto' : 'smooth' });
+  }
+
+  // ── o teclado no mapa ──────────────────────────────────────────────────
+  //
+  // O mapa é um canvas: sem isto só se escolhia um lance com o rato ou o dedo. ↑ ↓ trocam de linha,
+  // ← → andam no tempo (com Shift, mais depressa), Home e End vão às pontas da vista, Enter ou Espaço
+  // escolhem (num time, abrem ou fecham), + e − dão zoom. O que fica sob o cursor é dito a quem usa
+  // leitor de ecrã, em #mapaVoz.
+  function teclaNoMapa(e) {
+    if (!ev.mapa?.linhas.length || !ev.vista || e.altKey || e.ctrlKey || e.metaKey) return;
+    const linhas = ev.mapa.linhas;
+    const span = ev.vista.ateMs - ev.vista.deMs;
+    if (!ev.cursor || !linhas[ev.cursor.i]) {
+      const i = ev.escolha ? linhas.findIndex((l) => l.canal === ev.escolha.canal) : -1;
+      ev.cursor = { i: Math.max(0, i), ms: ev.escolha?.ms ?? (ev.vista.deMs + ev.vista.ateMs) / 2 };
+    }
+    let { i, ms } = ev.cursor;
+    switch (e.key) {
+      case 'ArrowUp': i = Math.max(0, i - 1); break;
+      case 'ArrowDown': i = Math.min(linhas.length - 1, i + 1); break;
+      case 'ArrowLeft': ms -= span / (e.shiftKey ? 5 : 20); break;
+      case 'ArrowRight': ms += span / (e.shiftKey ? 5 : 20); break;
+      case 'Home': ms = ev.vista.deMs; break;
+      case 'End': ms = ev.vista.ateMs; break;
+      case '+': case '=': $('aproximar').click(); break;
+      case '-': case '_': $('afastar').click(); break;
+      case 'Enter': case ' ': break;
+      default: return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    if (ev.limites) ms = Math.min(Math.max(ms, ev.limites.deMs), ev.limites.ateMs);
+    // Sair da vista arrasta a vista atrás do cursor, do mesmo tamanho.
+    if (ms < ev.vista.deMs) ev.vista = { deMs: ms, ateMs: ms + span };
+    else if (ms > ev.vista.ateMs) ev.vista = { deMs: ms - span, ateMs: ms };
+    ev.cursor = { i, ms };
+    if (e.key === 'Enter' || e.key === ' ') {
+      const l = linhas[i];
+      if (l.tipo === 'canal') escolher({ tipo: 'canal', canal: l.canal, ms, time: l.time });
+      else {
+        escolher({ tipo: l.tipo, time: l.time });
+        // Abrir ou fechar um time muda as linhas: o cursor fica no cabeçalho dele.
+        ev.cursor.i = Math.max(0, ev.mapa.linhas.findIndex((x) => x.tipo === 'time' && x.time === l.time));
+      }
+    }
+    verCursor();
+    dizerCursor();
+    pintar();
+  }
+
+  /** Rolar as faixas até a linha do cursor se ver, por baixo do cabeçalho preso do time. */
+  function verCursor() {
+    const l = ev.mapa.linhas[ev.cursor.i];
+    const rolo = $('mapaRolo');
+    const cabeca = l.tipo === 'time' ? 0 : ev.mapa.linhas[ev.mapa.cabecalhos[0]]?.altura ?? 0;
+    if (l.y - cabeca < rolo.scrollTop) rolo.scrollTop = Math.max(0, l.y - cabeca);
+    else if (l.y + l.altura > rolo.scrollTop + rolo.clientHeight) rolo.scrollTop = l.y + l.altura - rolo.clientHeight;
+    ev.topo = rolo.scrollTop;
+  }
+
+  function dizerCursor() {
+    const l = ev.mapa.linhas[ev.cursor.i];
+    const time = l.time ?? t('evento.semTime');
+    $('mapaVoz').textContent = l.tipo === 'canal'
+      ? [l.canal, time, horaLocal(ev.cursor.ms),
+        t(ev.falhados.has(l.canal) ? 'evento.naoAchado' : noArEm(ev.coberturas, l.canal, ev.cursor.ms) ? 'evento.noAr' : 'evento.foraDoArCurto')].join(' · ')
+      : [time, tn(l.canais?.length ?? 0, 'evento.canalUm', 'evento.canaisN'), t(l.aberto ? 'evento.aberto' : 'evento.fechado')].join(' · ');
   }
 
   // ── o chat ─────────────────────────────────────────────────────────────
@@ -386,18 +544,23 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
   // canal pequeno custou 12 pedidos, medido em 06/10), por isso lê-se sozinho a cada escolha, e só do
   // time: os 500 de uma vez eram dezenas de milhares de pedidos.
   const CHAT_JANELA_MS = 2 * 3600e3;
+  // A janela começa numa meia hora certa: duas escolhas perto uma da outra (um pico e o seguinte) caem
+  // na mesma janela e não leem o chat outra vez. Com o início ao minuto, cada clique era uma janela
+  // nova e uns 12 pedidos por hora e por canal. A escolha fica sempre com 1 h antes e 30 min depois.
+  const CHAT_GRELHA_MS = 30 * 60e3;
+  const PICOS_BOTOES = 8;
   const chatLido = new Set();
   let chatControlo = null;
   async function lerChatDoTime(e) {
     chatControlo?.abort();
     const controlo = new AbortController();
     chatControlo = controlo;
-    const deMs = Math.floor((e.ms - CHAT_JANELA_MS / 2) / 60_000) * 60_000;
+    const deMs = Math.floor((e.ms - CHAT_JANELA_MS / 2) / CHAT_GRELHA_MS) * CHAT_GRELHA_MS;
     const ateMs = Math.min(Date.now(), deMs + CHAT_JANELA_MS);
-    const canais = colegas(e.canal).filter((c) => noArEm(ev.coberturas, c, e.ms) && !chatLido.has(`${c}|${deMs}`));
-    if (!canais.length) return;
+    const doTime = colegas(e.canal).filter((c) => noArEm(ev.coberturas, c, e.ms));
+    const canais = doTime.filter((c) => !chatLido.has(`${c}|${deMs}`));
     let feitos = 0;
-    $('estadoChat').textContent = t('lance.aLerChat', { feitos, total: canais.length });
+    if (canais.length) $('estadoChat').textContent = t('lance.aLerChat', { feitos, total: canais.length });
     for (const c of canais) {
       if (controlo.signal.aborted) return;
       try {
@@ -414,8 +577,41 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
       $('estadoChat').textContent = t('lance.aLerChat', { feitos, total: canais.length });
       pintar();
     }
-    const n = canais.reduce((s, c) => s + (ev.marcas.get(c) || []).filter((m) => m.ms >= deMs && m.ms <= ateMs).length, 0);
-    $('estadoChat').textContent = tn(n, 'lance.umPicoChat', 'lance.picosChat');
+    if (controlo.signal.aborted) return;
+    pintarPicos(e, doTime, deMs, ateMs);
+  }
+
+  // Os picos do time também como botões com a hora: no telemóvel uma marca de 3 px no mapa é difícil
+  // de acertar, e o botão diz logo a que horas foi. Ficam os mais perto do momento escolhido.
+  function pintarPicos(e, doTime, deMs, ateMs) {
+    const porMinuto = new Map();
+    for (const c of doTime) {
+      for (const m of ev.marcas.get(c) || []) {
+        if (m.ms < deMs || m.ms > ateMs) continue;
+        const minuto = Math.floor(m.ms / 60_000);
+        // Dois colegas com um pico no mesmo minuto são o mesmo lance: fica o de quem se escolheu.
+        if (!porMinuto.has(minuto) || c === e.canal) porMinuto.set(minuto, { canal: c, ms: m.ms });
+      }
+    }
+    const todos = [...porMinuto.values()];
+    $('estadoChat').textContent = !doTime.length ? ''
+      : todos.length ? tn(todos.length, 'lance.umPicoChat', 'lance.picosChat') : t('lance.semPicoChat');
+    const perto = todos.sort((a, b) => Math.abs(a.ms - e.ms) - Math.abs(b.ms - e.ms))
+      .slice(0, PICOS_BOTOES).sort((a, b) => a.ms - b.ms);
+    $('picosChat').innerHTML = perto.length
+      ? `<span class="nota">${escapar(t('lance.picosBotoes'))}</span>${perto.map((p) => (
+        `<button type="button" class="pico" data-ms="${p.ms}" data-canal="${escapar(p.canal)}" title="${escapar(p.canal)}">${escapar(horaCurta(p.ms))}</button>`
+      )).join('')}`
+      : '';
+    pintarLegenda();
+    // A legenda aparece por cima do mapa e empurra-o para baixo: no telemóvel, por baixo do lance.
+    if (ev.escolha === e) destaparMapa();
+  }
+
+  // A legenda das marcas aparece quando há alguma no mapa: sem ela, ninguém sabe o que são.
+  function pintarLegenda() {
+    const canais = ev.elenco ? [...ev.elenco.times.flatMap((x) => x.canais), ...ev.elenco.soltos] : [];
+    $('legendaPico').hidden = !canais.some((c) => ev.marcas.get(c)?.length);
   }
 
   // ── o lance ────────────────────────────────────────────────────────────
@@ -427,9 +623,20 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
     return [canal, ...doTime.filter((c) => c !== canal)];
   }
 
+  // Os canais que o lance abre: o time de quem se escolheu, os que o som achou, os times juntados à
+  // mão e os que vieram num link. Só quem estava no ar naquele instante.
+  function canaisDoLance(e) {
+    const doTime = (nome) => ev.elenco.times.find((x) => x.nome === nome)?.canais || [];
+    const juntados = [...ev.juntados].flatMap(doTime);
+    const achados = resumo(ev.achados).estava.map((a) => a.canal);
+    return [...new Set([...colegas(e.canal), ...achados, ...juntados, ...ev.extrasDoLink])]
+      .filter((c) => noArEm(ev.coberturas, c, e.ms));
+  }
+
   function pintarLance() {
     const e = ev.escolha;
     $('lance').hidden = !e;
+    $('partilharEventoTexto').textContent = t(e ? 'evento.partilharLance' : 'evento.partilharEvento');
     if (!e) return;
     const time = indiceDeTimes(ev.elenco).get(e.canal);
     const noAr = colegas(e.canal).filter((c) => noArEm(ev.coberturas, c, e.ms));
@@ -439,19 +646,62 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
       : t('lance.semTime');
     const r = resumo(ev.achados);
     // Os "talvez" também aparecem, marcados: ficaram entre 5 e 6 de força sem segunda janela para
-    // decidir (ao vivo, o trecho seguinte ainda não estava gravado). Quem olha decide.
+    // decidir (ao vivo, o trecho seguinte ainda não estava gravado). Quem olha decide. A força vai no
+    // título: um número solto no ecrã não diz nada a quem não fez a medição.
     $('lanceAchados').innerHTML = [
-      ...r.estava.map((a) => `<li><b>${escapar(a.canal)}</b><span class="nota">${t('lance.forca', { f: a.forca.toFixed(1) })}</span></li>`),
+      ...r.estava.map((a) => `<li title="${a.forca.toFixed(1)}"><b>${escapar(a.canal)}</b><span class="nota">${t('lance.forca')}</span></li>`),
       ...r.talvez.map((a) => `<li class="talvez"><b>${escapar(a.canal)}</b><span class="nota">${t('lance.talvez')}</span></li>`),
     ].join('');
-    $('verLance').disabled = !noArEm(ev.coberturas, e.canal, e.ms);
+
+    // O botão diz quantos ângulos abre. "Ver este lance com o time" abria um só no exemplo sem times,
+    // e quem chegava achava que a página não funcionava.
+    const noArAgora = noArEm(ev.coberturas, e.canal, e.ms);
+    const n = canaisDoLance(e).length;
+    $('verLanceTexto').textContent = n > 1 ? t('lance.verN', { n }) : t('lance.verSo', { canal: e.canal });
+    const cedo = cedoDemais(e.ms, ev.atrasoMin);
+    $('verLance').disabled = !noArAgora;
+    $('verLance').title = noArAgora ? '' : t('lance.foraDoAr', { canal: e.canal, hora: horaLocal(e.ms) });
+    if (!noArAgora && !ev.procura) $('estadoLance').textContent = t('lance.foraDoAr', { canal: e.canal, hora: horaLocal(e.ms) });
+    // Com um ângulo só e a busca liberada, o passo útil a seguir é procurar os outros: é ele que leva o
+    // destaque.
+    const buscaPrincipal = n === 1 && !cedo && noArAgora;
+    $('verLance').classList.toggle('principal', !buscaPrincipal);
+    $('procurarOutros').classList.toggle('principal', buscaPrincipal);
+    $('procurarOutros').disabled = !noArAgora || (cedo && !ev.procura);
+    $('notaOutros').hidden = !cedo;
+    if (cedo) {
+      $('notaOutros').textContent = t('lance.liberadoAs', { hora: horaLocal(e.ms + ev.atrasoMin * 60_000), min: ev.atrasoMin });
+    }
+    pintarJuntar(e);
+    // As riscas do mapa dizem quem o lance abre, e isso muda ao juntar um time ou achar alguém pelo som.
+    pintar();
+  }
+
+  // Juntar outro time ao lance: um raid tem dois, e o time do outro lado só entrava pelo som (que está
+  // fechado durante o jogo) ou escrevendo nomes à mão.
+  function pintarJuntar(e) {
+    const campo = $('juntarCampo');
+    const proprio = indiceDeTimes(ev.elenco).get(e.canal);
+    campo.hidden = ev.elenco.times.length < 2;
+    if (!campo.hidden) {
+      const opcoes = ev.elenco.times
+        .filter((x) => x.nome !== proprio && !ev.juntados.has(x.nome))
+        .map((x) => ({ nome: x.nome, n: x.canais.filter((c) => noArEm(ev.coberturas, c, e.ms)).length }))
+        .filter((x) => x.n > 0);
+      $('juntarTime').innerHTML = `<option value="">${escapar(t('lance.juntarPh'))}</option>`
+        + opcoes.map((x) => `<option value="${escapar(x.nome)}">${escapar(t('lance.noArN', { nome: x.nome, n: x.n }))}</option>`).join('');
+    }
+    $('juntados').innerHTML = [...ev.juntados].map((nome) => `<button class="chip" data-time="${escapar(nome)}"`
+      + ` aria-label="${escapar(t('lance.tirarTime', { time: nome }))}">${escapar(nome)} ✕</button>`).join('');
+    for (const b of $('juntados').querySelectorAll('button[data-time]')) {
+      b.onclick = () => { ev.juntados.delete(b.dataset.time); pintarLance(); };
+    }
   }
 
   async function verLance() {
     const e = ev.escolha;
     if (!e) return;
-    const outros = resumo(ev.achados).estava.map((a) => a.canal);
-    const canais = [...new Set([...colegas(e.canal), ...outros])].filter((c) => noArEm(ev.coberturas, c, e.ms));
+    const canais = canaisDoLance(e);
     mostrarMapa(false);
     await abrirLance(canais, e.ms, e.canal);
   }
@@ -480,6 +730,13 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
   }
 
   async function procurarOutros() {
+    // A meio de uma busca o botão é "Parar busca": com 500 canais ela pode levar minutos.
+    if (ev.procura) {
+      ev.procura.abort();
+      ev.procura = null;
+      $('estadoLance').textContent = t('lance.parado', { n: resumo(ev.achados).estava.length, feitos: ev.feitos });
+      return;
+    }
     const e = ev.escolha;
     if (!e) return;
     if (cedoDemais(e.ms, ev.atrasoMin)) {
@@ -499,16 +756,16 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
       noAr: (c) => noArEm(ev.coberturas, c, e.ms),
     });
     const total = candidatos.length;
-    let feitos = 0;
-    $('estadoLance').textContent = t('lance.aOuvir', { feitos, total });
-    $('procurarOutros').disabled = true;
+    ev.feitos = 0;
+    $('estadoLance').textContent = t('lance.aOuvir', { feitos: 0, total });
+    $('procurarOutrosTexto').textContent = t('lance.parar');
     try {
       for await (const r of procurarAngulos({
         quandoMs: e.ms, referencia: e.canal, candidatos, somDe, sinal: controlo.signal,
       })) {
-        feitos++;
+        ev.feitos++;
         ev.achados.push(r);
-        $('estadoLance').textContent = t('lance.aOuvir', { feitos, total });
+        $('estadoLance').textContent = t('lance.aOuvir', { feitos: ev.feitos, total });
         pintarLance();
       }
       const r = resumo(ev.achados);
@@ -521,7 +778,9 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
         : erro?.name === 'REFERENCIA-SEM-SOM' ? t('lance.referenciaSemSom', { canal: e.canal })
           : t('lance.erroSom');
     } finally {
-      $('procurarOutros').disabled = false;
+      if (ev.procura === controlo) ev.procura = null;
+      $('procurarOutrosTexto').textContent = t('lance.outros');
+      if (ev.escolha) pintarLance();
     }
   }
 
@@ -591,8 +850,11 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
     $('evento').hidden = true;
     $('lance').hidden = true;
     $('avisosEvento').hidden = true;
+    ev.juntados = new Set();
+    ev.extrasDoLink = [];
     mostrarMapa(false);
-    if (/[#&]evento=/.test(location.hash)) history.replaceState(null, '', location.pathname + location.search);
+    // pushState e não replaceState: o Voltar do browser traz o evento de volta (ver o popstate).
+    if (/[#&]evento=/.test(location.hash)) history.pushState(null, '', location.pathname + location.search);
   }
 
   // ── ligações ───────────────────────────────────────────────────────────
@@ -604,6 +866,10 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
     $('procurarEvento').oninput = () => { remontar(); pintar(); };
     $('mapaRolo').onscroll = () => { ev.topo = $('mapaRolo').scrollTop; pintar(); };
     $('mapaRolo').onclick = (e) => escolher(aquiDe(e));
+    $('mapaRolo').onkeydown = teclaNoMapa;
+    // O cursor só aparece com o foco do teclado: um clique de rato não o deve deixar pintado.
+    $('mapaRolo').onfocus = () => pintar();
+    $('mapaRolo').onblur = () => pintar();
     $('mapaRolo').onmousemove = (e) => {
       const alvo = aquiDe(e);
       $('mapaRolo').title = alvo?.canal ? `${alvo.canal} · ${horaLocal(alvo.ms)}` : (alvo?.time ?? '');
@@ -628,27 +894,58 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
       ev.vista = zoom(ev.vista, centro, 2, ev.limites);
       pintar();
     };
-    $('verTudo').onclick = () => { ev.vista = { ...ev.limites }; pintar(); };
+    // "Evento inteiro" é o trecho onde a maioria esteve, e não os 7 a 30 dias de VODs de cada canal.
+    $('verTudo').onclick = () => { ev.vista = { ...(ev.trecho || ev.limites) }; pintar(); };
     $('verLance').onclick = verLance;
     $('mostrarMapa').onclick = () => mostrarMapa(!$('evento').classList.contains('comMapa'));
     $('fecharEvento').onclick = fecharEvento;
     $('irAoVivo').onclick = irAoVivo;
     $('procurarOutros').onclick = procurarOutros;
     $('partilharEvento').onclick = async () => {
+      // `codificar` dá null a um elenco que não se poderia abrir de um link (mais de 2000 canais):
+      // um "#evento=null" chegava a quem o recebe como um link estragado, sem dizer porquê.
+      if (ev.link === null) { $('estadoPartilhaEvento').textContent = t('evento.linkGrande'); return; }
+      const e = ev.escolha;
+      // O link do lance leva o streamer escolhido e os ângulos a mais: sem isso quem o abria ficava com
+      // o primeiro streamer do primeiro time, que é quase sempre outro.
+      const extras = e ? canaisDoLance(e).filter((c) => !colegas(e.canal).includes(c)) : [];
       const url = `${location.origin}${location.pathname}#evento=${ev.link}`
-        + (ev.escolha ? `&t=${Math.round(ev.escolha.ms)}` : '')
+        + (e ? `&t=${Math.round(e.ms)}&c=${encodeURIComponent(e.canal)}` : '')
+        + (extras.length ? `&mais=${extras.map(encodeURIComponent).join(',')}` : '')
         + (ev.atrasoMin !== ATRASO_MIN ? `&atraso=${ev.atrasoMin}` : '');
       try {
         await navigator.clipboard.writeText(url);
-        $('estadoPartilhaEvento').textContent = t('evento.linkCopiado');
+        $('estadoPartilhaEvento').textContent = e
+          ? t('evento.lanceCopiado', { canal: e.canal, n: canaisDoLance(e).length, data: dataCurta(e.ms), hora: horaLocal(e.ms) })
+          : t('evento.linkCopiado');
       } catch {
-        $('estadoPartilhaEvento').textContent = url;
+        // Sem área de transferência, o link vai para a barra de endereço (de onde se copia), e não
+        // para o ecrã: com 500 canais são milhares de caracteres.
+        history.replaceState(null, '', url);
+        $('estadoPartilhaEvento').textContent = t('partilha.falhou');
       }
     };
+    $('corrigirElenco').onclick = corrigirElenco;
+    $('elenco').addEventListener('paste', colarPagina);
+    $('elenco').addEventListener('input', () => { $('abrirElencoTexto').textContent = t('evento.abrir'); });
+    $('juntarTime').onchange = () => {
+      const nome = $('juntarTime').value;
+      if (nome) ev.juntados.add(nome);
+      pintarLance();
+    };
+    $('picosChat').onclick = (evento) => {
+      const b = evento.target.closest('button[data-ms]');
+      if (!b) return;
+      const canal = b.dataset.canal;
+      escolher({ tipo: 'canal', canal, ms: Number(b.dataset.ms), time: indiceDeTimes(ev.elenco).get(canal) ?? null });
+    };
+    window.addEventListener('popstate', () => {
+      if (/[#&]evento=/.test(location.hash) && !ev.elenco) abrirDoLink();
+    });
     window.addEventListener('resize', () => { if (ev.mapa) remontar(); pintar(); });
   }
 
-  /** Abrir um evento que veio num link (#evento=...&t=...). Devolve true se havia um. */
+  /** Abrir um evento que veio num link (#evento=...&t=...&c=...&mais=...). Devolve true se havia um. */
   async function abrirDoLink(hash = location.hash) {
     const m = /[#&]evento=([^&]+)/.exec(hash);
     if (!m) return false;
@@ -656,14 +953,26 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
     if (!elenco) { $('estadoEvento').textContent = t('evento.linkEstragado'); return false; }
     const tq = /[&#]t=(\d+)/.exec(hash);
     const aq = /[&#]atraso=(\d+)/.exec(hash);
+    const cq = /[&#]c=([^&]+)/.exec(hash);
+    const mq = /[&#]mais=([^&]+)/.exec(hash);
     ev.atrasoMin = aq ? Number(aq[1]) : ATRASO_MIN;
     $('elenco').value = '';
     await abrirElenco(elenco, { quandoMs: tq ? Number(tq[1]) : null });
-    if (tq) {
-      const ms = Number(tq[1]);
-      const primeiro = ev.elenco.times[0]?.canais.find((c) => noArEm(ev.coberturas, c, ms));
-      if (primeiro) escolher({ tipo: 'canal', canal: primeiro, ms, time: ev.elenco.times[0].nome });
-    }
+    if (!tq) return true;
+    const ms = Number(tq[1]);
+    const ler = (x) => { try { return decodeURIComponent(x); } catch { return ''; } };
+    const pedido = cq ? ler(cq[1]) : '';
+    const todos = [...ev.elenco.times.flatMap((x) => x.canais), ...ev.elenco.soltos];
+    const canal = (pedido && noArEm(ev.coberturas, pedido, ms) ? pedido : null)
+      ?? todos.find((c) => noArEm(ev.coberturas, c, ms));
+    if (!canal) return true;
+    escolher({ tipo: 'canal', canal, ms, time: indiceDeTimes(ev.elenco).get(canal) ?? null });
+    ev.extrasDoLink = mq ? mq[1].split(',').map(ler).filter((c) => todos.includes(c)) : [];
+    pintarLance();
+    // Quem recebeu o link de um lance quer ver o lance, não um mapa: abre-se direto. Sem streamer no
+    // link (um link antigo), escolhe-se o primeiro no ar e diz-se o que fazer.
+    if (pedido && canal === pedido) await verLance();
+    else $('estadoLance').textContent = t('evento.lanceDoLink', { canal, hora: horaLocal(ms) });
     return true;
   }
 

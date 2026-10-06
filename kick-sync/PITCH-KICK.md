@@ -46,8 +46,8 @@ notable moments" ([rules](https://rustkickoff.com/about)).
 3. **Find the other angles by sound.** Streams that heard the same sound at the same second were there.
    Measured on real Kick VODs: two streamers who played together matched in 55 of 87 windows, two who
    did not matched in 0 of 87.
-4. **Live, not only after.** The in-progress VOD runs 2 to 12 s behind live, so the same flow works
-   during the event.
+4. **During the event too.** The in-progress VOD runs 2 to 12 s behind live, so the same flow works
+   while the matches are still being played.
 5. **Clip.** 16:9 by copying Kick's own segments (no re-encode), 9:16 with a framing editor. A share link
    reopens the event at that play.
 

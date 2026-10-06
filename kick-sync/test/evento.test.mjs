@@ -40,7 +40,10 @@ test('colar o elenco abre o mapa, com os times e quem não existe dito pelo nome
     await kickFalsa(p, { canais: ['tchubi', 'outro'] });
     await abrirEvento(p);
     assert.match(await p.locator('#resumoEvento').innerText(), /2 times · 3 canais · 2 com vídeo/);
-    assert.match(await p.locator('#avisosEvento').innerText(), /terceiro: não existe na Kick/);
+    assert.match(await p.locator('#avisosEvento').innerText(), /1 canal não existe na Kick: terceiro\./);
+    assert.equal(await p.locator('#corrigirElenco').isVisible(), true, 'e um botão para voltar ao elenco');
+    // E no mapa a faixa dele diz que o nome não foi achado, em vez de parecer alguém que não transmitiu.
+    assert.deepEqual(await p.evaluate(() => [...window.__evento.falhados]), ['terceiro']);
     // As portas saem do caminho: o que se faz a seguir é no mapa.
     assert.equal(await p.locator('#portaEvento').isVisible(), false);
     assert.equal(await p.locator('#entrada').isVisible(), false);
@@ -90,8 +93,10 @@ test('o link do lance abre o evento noutra janela, no mesmo instante',
     // Sem permissão de área de transferência o link aparece escrito, que é o que se lê aqui.
     await p.evaluate(() => { Object.defineProperty(navigator, 'clipboard', { value: { writeText: () => Promise.reject(new Error('não')) } }); });
     await p.click('#partilharEvento');
-    const url = await p.locator('#estadoPartilhaEvento').innerText();
-    assert.match(url, /#evento=[A-Za-z0-9_-]+&t=\d+$/);
+    // Sem área de transferência o link vai para a barra de endereço, e o ecrã diz para o copiar de lá.
+    const url = await p.evaluate(() => location.href);
+    assert.match(url, /#evento=[A-Za-z0-9_-]+&t=\d+&c=tchubi$/);
+    assert.match(await p.locator('#estadoPartilhaEvento').innerText(), /barra de endereço/);
 
     const { p: q, erros: erros2 } = await abrir();
     await kickFalsa(q, { canais: ['tchubi', 'outro'] });
@@ -100,8 +105,35 @@ test('o link do lance abre o evento noutra janela, no mesmo instante',
     const e = await q.evaluate(() => window.__evento.escolha);
     assert.equal(e.canal, 'tchubi');
     assert.ok(Math.abs(e.ms - ms) < 5000);
+    // Quem recebe o link de um lance cai direto no lance, com o vídeo no instante.
+    await q.waitForSelector('.tile', { timeout: 15000 });
+    assert.deepEqual(await q.evaluate(() => window.__estado.focos[0]), 'tchubi');
     assert.equal(await q.locator('#nomeEvento').innerText(), await p.locator('#nomeEvento').innerText());
     assert.deepEqual([...erros, ...erros2], []);
+  });
+
+test('um elenco grande demais para um link diz isso, em vez de copiar um link estragado',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'outro'] });
+    await abrirEvento(p);
+    // O `codificar` da própria página, com 2001 canais: dá null, porque nenhum link com tantos abre.
+    const link = await p.evaluate(async () => {
+      const { codificar } = await import('./elenco.js');
+      window.__evento.link = await codificar({ times: [], soltos: Array.from({ length: 2001 }, (_, i) => `c${i}`) });
+      return window.__evento.link;
+    });
+    assert.equal(link, null);
+    await p.evaluate(() => {
+      window.__copiado = null;
+      Object.defineProperty(navigator, 'clipboard', { value: { writeText: (t) => { window.__copiado = t; return Promise.resolve(); } } });
+    });
+    const antes = await p.evaluate(() => location.href);
+    await p.click('#partilharEvento');
+    assert.match(await p.locator('#estadoPartilhaEvento').innerText(), /grande demais para caber num link/);
+    assert.equal(await p.evaluate(() => window.__copiado), null, 'nada foi copiado');
+    assert.equal(await p.evaluate(() => location.href), antes, 'e nenhum "#evento=null" foi para a barra de endereço');
+    assert.deepEqual(erros, []);
   });
 
 test('fechar o evento devolve as duas portas',
@@ -222,6 +254,18 @@ test('escolher um lance lê o chat do time e marca no mapa onde ele explodiu',
     await clicarNoMapa(p, 'tchubi', T + 5 * 60_000 + 29_000);
     const e = await p.evaluate(() => window.__evento.escolha);
     assert.equal(e.ms, T + 5 * 60_000 + 30_000);
+    // A legenda diz o que são as marcas, e cada pico também é um botão com a hora.
+    assert.equal(await p.locator('#legendaPico').isVisible(), true);
+    await clicarNoMapa(p, 'outro', T + 2 * 60_000);
+    await p.waitForFunction(() => window.__evento.escolha?.canal === 'outro');
+    const botoes = p.locator('#picosChat button.pico');
+    await botoes.first().waitFor();
+    assert.equal(await botoes.count(), 1);
+    assert.equal(await botoes.first().getAttribute('data-canal'), 'tchubi');
+    assert.match(await botoes.first().innerText(), /^\d{2}:\d{2}$/);
+    await botoes.first().click();
+    const pelaHora = await p.evaluate(() => window.__evento.escolha);
+    assert.deepEqual([pelaHora.canal, pelaHora.ms], ['tchubi', T + 5 * 60_000 + 30_000]);
     assert.deepEqual(erros, []);
   });
 
@@ -239,3 +283,49 @@ test('no mapa, quem está ao vivo vai até agora, e uma duração desconhecida n
   assert.equal(c.has('semDuracao'), false);
   assert.equal(c.has('naoExiste'), false);
 });
+
+test('no telemóvel o painel do lance fica preso ao fundo sem tapar o mapa',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir({ ecra: { width: 390, height: 844 } });
+    await kickFalsa(p, { canais: ['tchubi', 'outro'] });
+    await abrirEvento(p);
+    await clicarNoMapa(p, 'tchubi', T + 2 * 60_000);
+    await p.waitForSelector('#lance:not([hidden])');
+    // O chat chega depois e muda o que está por cima do mapa: espera-se por ele, e pelo rolar suave.
+    await p.waitForFunction(() => /pico/.test(document.getElementById('estadoChat').textContent), null, { timeout: 15000 });
+    await p.waitForFunction(() => {
+      const mapa = document.getElementById('mapaRolo').getBoundingClientRect();
+      const lance = document.getElementById('lance').getBoundingClientRect();
+      return mapa.bottom <= lance.top && lance.bottom <= innerHeight + 1;
+    }, null, { timeout: 5000 });
+    assert.equal(await p.locator('#verLance').isVisible(), true);
+    assert.deepEqual(erros, []);
+  });
+
+test('o mapa anda-se pelo teclado: setas, Enter para escolher e o que está sob o cursor é dito',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'outro'] });
+    await abrirEvento(p);
+    await p.focus('#mapaRolo');
+    // Linhas: Time Alfa, tchubi, outro, Time Beta, terceiro. O cursor começa na primeira.
+    await p.keyboard.press('ArrowDown');
+    await p.keyboard.press('ArrowDown');
+    assert.match(await p.locator('#mapaVoz').textContent(), /^outro · Time Alfa · .* · no ar$/);
+    const antes = await p.evaluate(() => window.__evento.cursor.ms);
+    await p.keyboard.press('ArrowRight');
+    const depois = await p.evaluate(() => window.__evento.cursor.ms);
+    assert.ok(depois > antes, 'a seta para a direita anda no tempo');
+    await p.keyboard.press('Enter');
+    await p.waitForSelector('#lance:not([hidden])');
+    const e = await p.evaluate(() => window.__evento.escolha);
+    assert.deepEqual([e.canal, e.ms], ['outro', depois]);
+    // As setas no mapa não mexem no vídeo nem rolam a página.
+    assert.equal(await p.evaluate(() => scrollY), 0);
+    // Enter num time fecha-o, e o cursor fica no cabeçalho dele.
+    await p.keyboard.press('ArrowUp');
+    await p.keyboard.press('ArrowUp');
+    await p.keyboard.press('Enter');
+    assert.match(await p.locator('#mapaVoz').textContent(), /^Time Alfa · 2 canais · fechado$/);
+    assert.deepEqual(erros, []);
+  });
