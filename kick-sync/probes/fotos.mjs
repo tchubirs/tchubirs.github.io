@@ -56,6 +56,25 @@ for (const ecra of ECRAS) {
     await q.click('#abrirElenco');
     await q.waitForTimeout(3000);
     await q.screenshot({ path: path.join(SAIDA, `${nome}-3-evento.png`), fullPage: true });
+    // Um lance: o primeiro canal com vídeo, a meio da noite falsa.
+    const alvo = await q.evaluate(() => {
+      const ev = window.__evento;
+      const rolo = document.getElementById('mapaRolo');
+      const l = ev?.mapa?.linhas.find((x) => x.tipo === 'canal' && ev.coberturas.has(x.canal));
+      if (!l) return null;
+      const caixa = rolo.getBoundingClientRect();
+      const ms = (ev.vista.deMs + ev.vista.ateMs) / 2;
+      return { x: caixa.left + ((ms - ev.vista.deMs) / (ev.vista.ateMs - ev.vista.deMs)) * rolo.clientWidth, y: caixa.top + l.y - ev.topo + l.altura / 2 };
+    });
+    if (alvo) {
+      await q.mouse.click(alvo.x, alvo.y);
+      await q.waitForTimeout(1500);
+      await q.screenshot({ path: path.join(SAIDA, `${nome}-4-lance.png`), fullPage: true });
+      await q.click('#verLance');
+      await q.waitForSelector('.tile', { timeout: 15000 }).catch(() => {});
+      await q.waitForTimeout(1500);
+      await q.screenshot({ path: path.join(SAIDA, `${nome}-5-lance-aberto.png`) });
+    }
   }
   if (erros.length) console.log(nome, 'erros:', erros);
   await contexto.close();

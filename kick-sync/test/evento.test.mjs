@@ -186,7 +186,7 @@ test('escolher um lance lê o chat do time e marca no mapa onde ele explodiu',
     await kickFalsa(p, { canais: ['tchubi', 'outro'] });
     await abrirEvento(p);
     await clicarNoMapa(p, 'outro', T + 2 * 60_000);
-    await p.waitForFunction(() => /picos de chat/.test(document.getElementById('estadoChat').textContent), null, { timeout: 15000 });
+    await p.waitForFunction(() => /picos? de chat/.test(document.getElementById('estadoChat').textContent), null, { timeout: 15000 });
     const marcas = await p.evaluate(() => Object.fromEntries([...window.__evento.marcas].map(([c, l]) => [c, l.map((m) => m.ms)])));
     // O pico é o minuto 5 do tchubi (o balde do minuto, marcado a meio); o outro só teve conversa normal.
     assert.deepEqual(marcas.tchubi, [T + 5 * 60_000 + 30_000]);

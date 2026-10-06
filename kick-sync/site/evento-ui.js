@@ -18,7 +18,7 @@ import { procurarAngulos, ordenarCandidatos, resumo } from './cena.js';
 import { lerMaster, lerPlaylist } from './kick.js';
 import { linhaDoCanal } from './relogio.js';
 import { somDoCanal } from './alinhar.js';
-import { t } from './idiomas.js';
+import { t, tn } from './idiomas.js';
 import { escapar } from './escapar.js';
 import { idDoCanal, mensagensEntre, calor, picos } from './chat.js';
 import { agendar } from './aovivo.js';
@@ -325,7 +325,9 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
     // Um traço a cada passo "redondo" que dê uns 6 a 10 rótulos na largura do ecrã.
     const DIA = 86400e3;
     const passos = [60e3, 5 * 60e3, 15 * 60e3, 30 * 60e3, 3600e3, 2 * 3600e3, 6 * 3600e3, 12 * 3600e3, DIA, 2 * DIA, 7 * DIA];
-    const passo = passos.find((p) => span / p <= 10) || passos.at(-1);
+    // Quantos rótulos cabem: um a cada 70 px. Dez fixos embaralhavam a régua num telemóvel.
+    const cabem = Math.max(2, Math.floor(largura / 70));
+    const passo = passos.find((p) => span / p <= cabem) || passos.at(-1);
     // Em passos de dia o rótulo é a data; nos outros é a hora, e a data aparece à meia-noite.
     const rotulo = (ms) => {
       const d = new Date(ms);
@@ -411,7 +413,7 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
       pintar();
     }
     const n = canais.reduce((s, c) => s + (ev.marcas.get(c) || []).filter((m) => m.ms >= deMs && m.ms <= ateMs).length, 0);
-    $('estadoChat').textContent = t('lance.picosChat', { n });
+    $('estadoChat').textContent = tn(n, 'lance.umPicoChat', 'lance.picosChat');
   }
 
   // ── o lance ────────────────────────────────────────────────────────────
@@ -664,5 +666,10 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
   }
 
   ligar();
+  // Num ecrã de toque não há roda nem Ctrl: a dica fala dos botões − e +.
+  if (window.matchMedia?.('(hover: none)').matches) {
+    const dica = document.querySelector('#evento .dica');
+    if (dica) { dica.dataset.t = 'evento.dicaToque'; dica.textContent = t('evento.dicaToque'); }
+  }
   return { abrirElenco, abrirDoTexto, abrirDoLink, estado: ev };
 }
