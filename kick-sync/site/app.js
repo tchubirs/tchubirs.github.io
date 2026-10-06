@@ -1782,7 +1782,7 @@ async function alinhar() {
   // O que falta OUVIR, e não quantos canais há: perguntar "vais gastar 434 MB?"
   // para acrescentar um canal a uma noite já medida seria mentira, e ele dizia
   // que não a uma coisa que custava catorze.
-  const instantes = instantesParaOuvir(estado.linhas, estado.janela);
+  const instantes = instantesParaOuvir(estado.linhas, estado.janela, { memoria: estado.memoriaAlinhar });
   const faltam = estado.linhas.filter(
     (l) => instantes.some((i) => !estado.memoriaAlinhar.has(`${i}|${l.slug}`)),
   ).length;

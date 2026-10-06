@@ -28,16 +28,66 @@ export function custoEstimadoMB(quantosCanais, { janelas = 3, duracaoS = 120 } =
   return Math.round((quantosCanais * janelas * (duracaoS + MARGEM_S) * 280_000) / 8 / 1048576);
 }
 
-/** Onde ir buscar som: instantes com o maior número de ângulos no ar. */
-export function instantesParaOuvir(linhas, janela, { quantos = 3, duracaoS = 120 } = {}) {
-  const de = janela.haSobreposicao ? janela.sobreposicaoInicio : janela.inicio;
-  const ate = (janela.haSobreposicao ? janela.sobreposicaoFim : janela.fim) - duracaoS * 1000;
+/**
+ * Onde ir buscar som: instantes com o maior número de ângulos no ar.
+ *
+ * Antes isto partia a sobreposição de todos em quartos e, sem sobreposição,
+ * a noite inteira. Com quinhentos streamers quase nunca há um instante em que
+ * todos estão no ar, e os quartos da noite caíam onde só um ou dois estavam:
+ * descarregava-se tudo e nenhum par chegava às duas janelas que `consolidar`
+ * pede. Agora conta-se, minuto a minuto, quem está no ar do princípio ao fim
+ * da janela, e escolhe-se entre os minutos com perto do máximo.
+ *
+ * Os minutos são os do relógio (múltiplos de 60 s), não fracções da noite:
+ * assim um canal novo que muda a sobreposição não muda os instantes possíveis,
+ * e com `memoria` prefere-se os instantes já ouvidos. Sem isso, acrescentar um
+ * streamer que entrou uma hora depois mandava ouvir os trinta outra vez.
+ */
+export function instantesParaOuvir(linhas, janela, { quantos = 3, duracaoS = 120, memoria } = {}) {
+  const de = janela.inicio;
+  const ate = janela.fim - duracaoS * 1000;
   if (!(ate > de)) return [Math.max(janela.inicio, de)];
+
+  const MINUTO = 60_000;
+  const noAr = (l, t) => (l.pecas || []).some((p) => t >= p.playlist.inicio && t < p.playlist.fim);
+  const candidatos = [];
+  for (let t = Math.ceil(de / MINUTO) * MINUTO; t <= ate; t += MINUTO) {
+    const vivos = linhas.filter((l) => noAr(l, t) && noAr(l, t + duracaoS * 1000 - 1));
+    const ouvidos = memoria ? vivos.filter((l) => memoria.has(`${t}|${l.slug}`)).length : 0;
+    candidatos.push({ t, n: vivos.length, ouvidos: vivos.length ? ouvidos / vivos.length : 0 });
+  }
+  if (!candidatos.length) return [Math.round(de)];
+
+  const maximo = Math.max(...candidatos.map((c) => c.n));
+  const limiar = Math.ceil(0.9 * maximo);
+  let bons = candidatos.filter((c) => c.n >= limiar);
+  if (bons.length < quantos) bons = candidatos;
   // Espalhados pela noite de propósito. Três janelas seguidas medem três vezes
   // o mesmo minuto, e se esse minuto for de música em loop as três concordam
-  // no sítio errado — que é precisamente o erro que a repetição devia apanhar.
-  const passo = (ate - de) / (quantos + 1);
-  return Array.from({ length: quantos }, (_, i) => Math.round(de + passo * (i + 1)));
+  // no sítio errado, que é precisamente o erro que a repetição devia apanhar.
+  const inicioBom = Math.min(...bons.map((c) => c.t));
+  const fimBom = Math.max(...bons.map((c) => c.t));
+  const extensao = Math.max(1, fimBom - inicioBom);
+  const escolhidos = [];
+  while (escolhidos.length < quantos) {
+    let melhor = null;
+    let melhorNota = -Infinity;
+    for (const c of bons) {
+      if (escolhidos.some((e) => Math.abs(e.t - c.t) < duracaoS * 1000)) continue;
+      const longe = Math.min(
+        (c.t - inicioBom + extensao / (quantos + 1)) / extensao,
+        (fimBom - c.t + extensao / (quantos + 1)) / extensao,
+        ...escolhidos.map((e) => Math.abs(e.t - c.t) / extensao),
+      );
+      // Por ordem: quantos estão no ar, o que já se ouviu, e só depois o
+      // espalhar. Os dois primeiros valem mais do que qualquer distância.
+      const nota = (c.n >= limiar ? 4 : c.n / Math.max(1, maximo)) + 2 * c.ouvidos + longe;
+      if (nota > melhorNota) { melhorNota = nota; melhor = c; }
+    }
+    if (!melhor) break;
+    escolhidos.push(melhor);
+  }
+  return escolhidos.map((c) => c.t).sort((x, y) => x - y);
 }
 
 /**
@@ -203,7 +253,7 @@ export async function alinharPeloSom({
   sinal, aoProgresso = () => {}, buscar = fetch, descodificar, lerSom = somDoCanal,
   memoria = new Map(),
 } = {}) {
-  const instantes = instantesParaOuvir(linhas, janela, { quantos: janelas, duracaoS });
+  const instantes = instantesParaOuvir(linhas, janela, { quantos: janelas, duracaoS, memoria });
   const envelopes = memoria;
   const problemas = [];
   let bytes = 0;
