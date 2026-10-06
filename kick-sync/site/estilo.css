@@ -1437,6 +1437,12 @@ body:not(.mesa) #sugestoes button { width: auto; min-height: 30px; font-size: va
 .juntados:empty { display: none; }
 .juntados .chip { min-height: 30px; padding: 0 var(--e2); font-size: var(--t-menor); background: var(--sup-3); }
 .avisosEvento { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2); }
+/* Os picos de chat: a legenda tem a mesma bandeirinha que o mapa pinta (5 px de âmbar com contorno
+   escuro), e os botões levam a cada pico pela hora. */
+.legenda { display: inline-flex; align-items: center; gap: var(--e1); }
+.legendaPico { display: inline-block; width: 7px; height: 7px; background: var(--marca); box-shadow: 0 0 0 1px var(--sup-0); }
+.picosChat { gap: var(--e1); }
+.picosChat .pico { min-height: 30px; padding: 0 var(--e2); font-family: var(--letra-mono); font-size: var(--t-menor); }
 .aoVivoLinha input { flex: 1 1 auto; min-width: 0; }
 #entrada { max-width: none; }
 @media (min-width: 1000px) {
@@ -1470,7 +1476,9 @@ body.mesa:has(#palco:not([hidden])) > #evento { flex: 0 0 auto; margin-bottom: v
 .reguaEvento span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
 .mapaCaixa { display: grid; gap: var(--e3); grid-template-columns: minmax(0, 1fr); }
 @media (min-width: 1000px) { .mapaCaixa:has(#lance:not([hidden])) { grid-template-columns: minmax(0, 1fr) 320px; } }
-.mapaColuna { display: grid; gap: var(--e1); min-width: 0; }
+/* align-content: start, porque com o lance ao lado mais alto do que o mapa a grelha esticava a linha
+   da régua, e abria um buraco entre as horas e as faixas. */
+.mapaColuna { display: grid; gap: var(--e1); min-width: 0; align-content: start; }
 /* A altura é a do conteúdo até 62% do ecrã (posta pelo evento-ui.js): com dois times, uma caixa de
    640 px era um buraco preto debaixo de quatro faixas. */
 .mapaRolo {
@@ -1504,8 +1512,15 @@ body.mesa:has(#palco:not([hidden])) > #evento { flex: 0 0 auto; margin-bottom: v
 /* Num ecrã estreito o lance fica preso ao fundo, por cima do fim do mapa, como uma folha que sobe: o
    título e o botão que abre o vídeo estão sempre à vista enquanto se mexe no mapa. */
 @media (max-width: 999px) {
-  .lance { position: sticky; bottom: 0; z-index: 2; max-height: 50vh; overflow-y: auto; box-shadow: var(--sombra-flutua); }
+  /* Altura fixa e não só máxima: o painel crescia depois de aberto (o chat chega mais tarde), subia por
+     cima do mapa e tapava a faixa que se tinha tocado. Com a altura certa desde o início, a página rola
+     uma vez para o mapa ficar por cima dele (destaparMapa, em evento-ui.js). */
+  .lance { position: sticky; bottom: 0; z-index: 2; height: 45vh; max-height: 45vh; overflow-y: auto; box-shadow: var(--sombra-flutua); }
+  /* A explicação da busca pelo som é a mesma a cada lance; num painel preso ao fundo de um telemóvel
+     ela empurrava o resto para fora e o painel tapava o mapa. O botão diz o que faz. */
+  .lance .comoFunciona { display: none; }
 }
 @media (pointer: coarse) {
   #fecharEvento { min-width: 44px; min-height: 44px; }
+  .picosChat .pico { min-height: 44px; min-width: 56px; }
 }

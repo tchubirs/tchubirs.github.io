@@ -97,6 +97,8 @@ const IGUAIS_DE_PROPOSITO = {
   ]),
   // O espanhol e o portugues escrevem estas exactamente da mesma maneira.
   es: new Set([
+    // "pico de chat" diz-se igual em português e em espanhol.
+    'evento.legendaPico',
     // "Abrir evento", "Evento" e "Zoom" escrevem-se igual nas duas.
     'evento.abrir', 'evento.semNome', 'evento.zoom',
     'app.nome', 'canais.vods', 'marca.feita', 'clipe.tempo',

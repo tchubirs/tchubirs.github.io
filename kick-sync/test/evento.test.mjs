@@ -42,6 +42,8 @@ test('colar o elenco abre o mapa, com os times e quem não existe dito pelo nome
     assert.match(await p.locator('#resumoEvento').innerText(), /2 times · 3 canais · 2 com vídeo/);
     assert.match(await p.locator('#avisosEvento').innerText(), /1 canal não existe na Kick: terceiro\./);
     assert.equal(await p.locator('#corrigirElenco').isVisible(), true, 'e um botão para voltar ao elenco');
+    // E no mapa a faixa dele diz que o nome não foi achado, em vez de parecer alguém que não transmitiu.
+    assert.deepEqual(await p.evaluate(() => [...window.__evento.falhados]), ['terceiro']);
     // As portas saem do caminho: o que se faz a seguir é no mapa.
     assert.equal(await p.locator('#portaEvento').isVisible(), false);
     assert.equal(await p.locator('#entrada').isVisible(), false);
@@ -201,6 +203,18 @@ test('escolher um lance lê o chat do time e marca no mapa onde ele explodiu',
     await clicarNoMapa(p, 'tchubi', T + 5 * 60_000 + 29_000);
     const e = await p.evaluate(() => window.__evento.escolha);
     assert.equal(e.ms, T + 5 * 60_000 + 30_000);
+    // A legenda diz o que são as marcas, e cada pico também é um botão com a hora.
+    assert.equal(await p.locator('#legendaPico').isVisible(), true);
+    await clicarNoMapa(p, 'outro', T + 2 * 60_000);
+    await p.waitForFunction(() => window.__evento.escolha?.canal === 'outro');
+    const botoes = p.locator('#picosChat button.pico');
+    await botoes.first().waitFor();
+    assert.equal(await botoes.count(), 1);
+    assert.equal(await botoes.first().getAttribute('data-canal'), 'tchubi');
+    assert.match(await botoes.first().innerText(), /^\d{2}:\d{2}$/);
+    await botoes.first().click();
+    const pelaHora = await p.evaluate(() => window.__evento.escolha);
+    assert.deepEqual([pelaHora.canal, pelaHora.ms], ['tchubi', T + 5 * 60_000 + 30_000]);
     assert.deepEqual(erros, []);
   });
 
@@ -218,3 +232,21 @@ test('no mapa, quem está ao vivo vai até agora, e uma duração desconhecida n
   assert.equal(c.has('semDuracao'), false);
   assert.equal(c.has('naoExiste'), false);
 });
+
+test('no telemóvel o painel do lance fica preso ao fundo sem tapar o mapa',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir({ ecra: { width: 390, height: 844 } });
+    await kickFalsa(p, { canais: ['tchubi', 'outro'] });
+    await abrirEvento(p);
+    await clicarNoMapa(p, 'tchubi', T + 2 * 60_000);
+    await p.waitForSelector('#lance:not([hidden])');
+    // O chat chega depois e muda o que está por cima do mapa: espera-se por ele, e pelo rolar suave.
+    await p.waitForFunction(() => /pico/.test(document.getElementById('estadoChat').textContent), null, { timeout: 15000 });
+    await p.waitForFunction(() => {
+      const mapa = document.getElementById('mapaRolo').getBoundingClientRect();
+      const lance = document.getElementById('lance').getBoundingClientRect();
+      return mapa.bottom <= lance.top && lance.bottom <= innerHeight + 1;
+    }, null, { timeout: 5000 });
+    assert.equal(await p.locator('#verLance').isVisible(), true);
+    assert.deepEqual(erros, []);
+  });
