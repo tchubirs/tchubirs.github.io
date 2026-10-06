@@ -48,6 +48,11 @@ versão, pegando o que os outros fazem bem e evitando o que fazem mal.
   (`docs/GUIA-CORTES.md`: ordem real, sem câmera lenta, sem repetir partes, reação inteira, sem estragar a
   surpresa).
 
+**Cuidado, segundo o dono:** os dois projetos ainda não estão prontos e precisam melhorar muito. E boa parte do
+que fazem hoje é uma IA (o Claude) a trabalhar caso a caso, não um programa que roda sozinho: escolher os trechos
+e escrever títulos e legendas, por exemplo. Isso não se distribui nem se vende como está. Para entrar no produto,
+cada parte tem de virar código que roda sem ninguém, ou ficar de fora. Por agora é só uma ideia por cima.
+
 Como juntar (a desenhar): o Povix acha o lance e corta os ângulos; a fábrica põe legenda, gancho e título; o
 Postador agenda e publica; a fábrica mede as visualizações. Cada peça continua utilizável sozinha.
 
