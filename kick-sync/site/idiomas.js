@@ -117,7 +117,7 @@ const TEXTOS = {
     'tile.semEcraCheioAparte': 'O navegador não dá tela cheia para uma janela separada. Puxe o canto da janela, ou use o botão de maximizar dela.',
     'tile.semEcraCheio': 'O navegador recusou a tela cheia. Tente de novo, ou use a tecla F11.',
     'tile.volume': 'volume deste',
-    'idioma.rotulo': 'idioma',
+    'idioma.rotulo': 'idioma da página',
 
     'tempo.zoom': 'quanto tempo a linha mostra',
     'tempo.zoomTudo': 'a noite toda',
@@ -971,7 +971,7 @@ const TEXTOS = {
     'tile.semEcraCheioAparte': 'El navegador no da pantalla completa a una ventana aparte. Arrastra su esquina, o usa su botón de maximizar.',
     'tile.semEcraCheio': 'El navegador rechazó la pantalla completa. Prueba otra vez, o pulsa F11.',
     'tile.volume': 'volumen de este',
-    'idioma.rotulo': 'idioma',
+    'idioma.rotulo': 'idioma de la página',
 
     'tempo.zoom': 'cuánto tiempo muestra la línea',
     'tempo.zoomTudo': 'toda la noche',
