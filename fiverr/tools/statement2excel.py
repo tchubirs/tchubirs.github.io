@@ -79,13 +79,20 @@ TOTALS = re.compile(r"(?i)^(sub-?)?totals?\b(\s+(money|amount|debits?|credits?|w
                     r"for|of)\b|\s*:?\s*$)|^(totaux|sous-total)\b")
 RULES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "categories.json")
 LEADING_DATE = re.compile(r"^\d{1,2}[./-]\d{1,2}(?:[./-]\d{2,4})?\s+")   # the value date after the operation date
-OPENING = re.compile(r"(?i)solde pr[ée]c[ée]dent|ancien solde|solde (initial|d'ouverture)|previous balance|"
-                     r"opening balance|balance (brought )?forward|brought forward|saldo anterior|saldo inicial")
-CLOSING = re.compile(r"(?i)nouveau solde|solde final|closing balance|new balance|ending balance|saldo final|"
-                     r"saldo atual|saldo actual")
-EITHER = re.compile(r"(?i)solde (cr[ée]diteur|d[ée]biteur|au)\b")   # opening before the transactions, closing after
-CARRIED = re.compile(r"(?i)carried forward|[àa] reporter|report de la page|suma y sigue|a transportar")
-PAGE_TOTAL = re.compile(r"(?i)total des op[ée]rations|totaux")
+
+def phrase(pattern):
+    """A pattern of words that may be one or two spaces apart in a line (see apart), case aside."""
+    return re.compile("(?i)" + pattern.replace(" ", r"\s+"))
+
+
+OPENING = phrase(r"solde pr[ée]c[ée]dent|ancien solde|solde (initial|d'ouverture)|previous balance|"
+                 r"opening balance|balance (brought )?forward|brought forward|saldo anterior|saldo inicial")
+CLOSING = phrase(r"nouveau solde|solde final|closing balance|new balance|ending balance|saldo final|"
+                 r"saldo atual|saldo actual")
+EITHER = phrase(r"solde (cr[ée]diteur|d[ée]biteur|au)\b")       # opening before the transactions, closing after
+CARRIED = phrase(r"carried forward|[àa] reporter|report de la page|suma y sigue|a transportar")
+PAGE_TOTAL = phrase(r"total des op[ée]rations|totaux")
+FOOTER = phrase(r"p[aá]g(e|ina) \d|balance|solde|saldo|total|^\s*\d+\s*(of|de|sur|/)\s*\d+\s*$")   # not a description
 HEADS = {"debit": "out", "debits": "out", "withdrawal": "out", "withdrawals": "out", "out": "out",
          "debito": "out", "debitos": "out", "retiros": "out", "giros": "out", "cargo": "out", "cargos": "out",
          "saidas": "out", "levantamentos": "out", "depenses": "out",
@@ -113,13 +120,13 @@ THOUSANDS = re.compile(r"[-(]?[$€£]?\d{1,3}(?:[:;]\d{3})+[.,]\d{2}\)?")    # 
 AMOUNT_RE = re.compile(
     r"(?<![\w.,])(?P<neg>[-−(])?\s?(?P<cur>[$€£])?\s?"
     # One kind of thousands separator per number, so "5,000 505,491.59" stays two numbers.
-    r"(?P<num>\d{1,3}(?:(?P<sep>[ ,.\u202f\u00a0])\d{3}(?:(?P=sep)\d{3})*)?[.,]\d{2}|\d+[.,]\d{2})"
+    r"(?P<num>\d{1,3}(?:(?P<sep>[ ,.\u202f\u00a0])\d{3}(?:(?P=sep)\d{3})*)?[.,]\d{2}|\d+[.,]\d{2}|\.\d{2})"
     r"\)?\s?(?P<sign>CR|DR|Cr|Dr|-)?(?![\w]|[.,]\d)")          # 15.03 in the date 15.03.2026 is not one
 # With --whole, also amounts without cents (12.990, 1.250.000, 948), as banks in Chile print them. A
 # document number (0045217, 452173), a date, a time or a RUT (12.345.678-9) is none of them.
 WHOLE_RE = re.compile(
     r"(?<![\w.,/:-])(?P<neg>[-−(])?\s?(?P<cur>[$€£])?\s?"
-    r"(?P<num>\d{1,3}(?:(?P<sep>[ ,.\u202f\u00a0])\d{3}(?:(?P=sep)\d{3})*)?[.,]\d{2}|\d+[.,]\d{2}"
+    r"(?P<num>\d{1,3}(?:(?P<sep>[ ,.\u202f\u00a0])\d{3}(?:(?P=sep)\d{3})*)?[.,]\d{2}|\d+[.,]\d{2}|\.\d{2}"
     r"|\d{1,3}(?:(?P<group>[.,])\d{3}(?:(?P=group)\d{3})*)|[1-9]\d{0,2}|0)"
     r"\)?\s?(?P<sign>CR|DR|Cr|Dr|-)?(?![\w/:]|[.,]\d|-\w)")
 GAP = re.compile(r"[\s$€£+|]*")                  # what can stand between the amount and the balance
@@ -222,16 +229,25 @@ def text_lines(page):
     each with where it sits and where it is in the text. Text pages have no unsure words."""
     rows = {}
     for x0, y0, x1, y1, word, *_ in page.get_text("words"):
-        rows.setdefault(round(y1 / 3), []).append((x0, x1, word))
+        rows.setdefault(round(y1 / 3), []).append((x0, x1, word, y1 - y0))
     lines = []
     for key in sorted(rows):
-        text, words = "", []
-        for x0, x1, word in sorted(rows[key]):
-            text += " " if text else ""
+        text, words, right = "", [], None
+        height = max(h for *_, h in rows[key])
+        for x0, x1, word, _ in sorted(rows[key]):
+            text += apart(x0, right, height)
             words.append((x0, x1, word, len(text), len(text) + len(word)))
             text += word
+            right = x1
         lines.append((text, words, []))
     return lines
+
+
+def apart(left, right, height):
+    """What goes between two words of a line: one space, or two where they are farther apart than half
+    the height of the tallest word of the line, as between two columns. "Cheque #31" and "148.11" in the
+    next column then cannot read as 31 148.11, while the space inside 1 234,56 stays one."""
+    return "" if right is None else "  " if left - right > height / 2 else " "
 
 
 def is_scan(page):
@@ -315,12 +331,15 @@ def ocr_lines(page, lang):
         f = row.split("\t")
         if len(f) == 12 and f[0] == "5" and f[11].strip():
             line = tuple(int(n) for n in f[2:5])
-            found.setdefault(line, []).append((int(f[6]), int(f[8]), ocr_word(f[11].strip()), float(f[10])))
+            found.setdefault(line, []).append((int(f[6]), int(f[8]), ocr_word(f[11].strip()), float(f[10]),
+                                               int(f[9])))
     lines, scale = [], 72 / OCR_DPI
     for key in sorted(found):
-        text, words, unsure = "", [], []
-        for left, width, word, conf in sorted(found[key]):
-            text += " " if text else ""
+        text, words, unsure, right = "", [], [], None
+        height = max(h for *_, h in found[key])
+        for left, width, word, conf, _ in sorted(found[key]):
+            text += apart(left, right, height)
+            right = left + width
             words.append((left * scale, (left + width) * scale, word, len(text), len(text) + len(word)))
             if conf < UNSURE:
                 unsure.append((len(text), len(text) + len(word)))
@@ -352,22 +371,18 @@ def full_dates(text, order):
     return found
 
 
-def year_for(day, first, latest):
+def year_for(day, stated):
     """The year of the first date a statement prints without one (day holds its day and month), from the
-    dates with a year that it prints above its transactions: between the first and the latest of them,
-    or within a week of them, or else the last one before the latest. "1 December to 1 January 2026"
-    puts 3 December in 2025."""
+    dates with a year that it prints above its transactions: the year that puts it nearest one of them.
+    "1 December to 1 January 2026" puts 3 December in 2025; "For Dec 1 to Dec 31, 2022", with "as of
+    April 2, 2024" further down, puts Dec 30 in 2022."""
     options = []
-    for year in (latest.year - 1, latest.year, latest.year + 1):
+    for year in range(stated[0].year - 1, stated[-1].year + 2):
         try:
             options.append(day.replace(year=year))
         except ValueError:                           # 29 February
             pass
-    week = dt.timedelta(days=7)
-    inside = [d for d in options if first <= d <= latest]
-    near = [d for d in options if first - week <= d <= latest + week]
-    before = [d for d in options if d <= latest + week]
-    return (inside[0] if inside else near[0] if near else before[-1] if before else options[0]).year
+    return min(options, key=lambda d: (min(abs((d - s).days) for s in stated), d)).year
 
 
 def read_pdf(path, ocr, lang):
@@ -475,9 +490,9 @@ def parse(lines, unsure, order, whole):
             continue                                 # the totals of a page or of the statement
         if placed and (OPENING.search(line) or CLOSING.search(line) or EITHER.search(line) or CARRIED.search(line)):
             value = signed(*placed[-1][1:])
-            if CARRIED.search(line):
+            if CARRIED.search(line) and tx:
                 closings.append(value)               # the last one carried is the closing balance
-            elif OPENING.search(line) or (EITHER.search(line) and not tx):
+            elif OPENING.search(line) or ((EITHER.search(line) or CARRIED.search(line)) and not tx):
                 opening = value if not tx else opening   # the table's own line comes after any summary
             else:
                 closings.append(value)
@@ -487,7 +502,7 @@ def parse(lines, unsure, order, whole):
         if dm and not any(dm.group(g) for g in ("y", "iy", "ty", "my")):
             day = parse_date(dm, order, 2000)        # 2000 has a 29 February
             if day and stated and not anchored:
-                year_hint, anchored = year_for(day, stated[0], stated[-1]), True
+                year_hint, anchored = year_for(day, stated), True
                 date = parse_date(dm, order, year_hint)
             elif date and last and (last - date).days > 180:
                 year_hint += 1                       # December, then January
@@ -496,7 +511,7 @@ def parse(lines, unsure, order, whole):
         # without a date takes the date of the row above.
         if placed and (date or (cols and tx)):
             start = dm.end() if date else 0
-            desc = LEADING_DATE.sub("", line[start:placed[0][0].start()].strip(" -|"))
+            desc = " ".join(LEADING_DATE.sub("", line[start:placed[0][0].start()].strip(" -|")).split())
             if cols and all(k == "balance" for _, _, k in placed) or not date and TOTALS.match(desc):
                 continue                             # a balance on a row of its own, or a total
             after = [x0 for x0, _, _, begin, _ in words if begin >= start]
@@ -508,11 +523,12 @@ def parse(lines, unsure, order, whole):
                        "unsure": doubt})
             last = date or last
         elif tx and line.strip() and not amounts and not date:
-            # A wrapped description starts under the description; a page heading starts at the margin.
-            under = tx[-1]["desc_x"] is not None and words[0][0] >= tx[-1]["desc_x"] - 5
-            footer = re.search(r"(?i)p[aá]g(e|ina) \d|balance|solde|saldo|total", line)
-            if under and len(tx[-1]["desc"]) < 120 and not footer:
-                tx[-1]["desc"] = (tx[-1]["desc"] + " " + line.strip()).strip()
+            # A wrapped description starts under the description; a page heading starts at the margin. A
+            # line without a letter (1.0, the version of the form) is not part of a description.
+            under = tx[-1]["desc_x"] is not None and words[0][0] >= tx[-1]["desc_x"] - 5 and \
+                any(c.isalpha() for c in line)
+            if under and len(tx[-1]["desc"]) < 120 and not FOOTER.search(line):
+                tx[-1]["desc"] = " ".join((tx[-1]["desc"] + " " + line).split())
     return tx, opening, closings, extra, plain
 
 

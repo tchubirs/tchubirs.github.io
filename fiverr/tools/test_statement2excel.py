@@ -95,8 +95,9 @@ def make_columns(path, us, n=40, seed=3, split=False, start=dt.date(2026, 12, 1)
     French: no balance column, dates without a year from December to January, a value date after each
     date and an amount inside one description. US: a balance column carried to the next page, a summary
     above the table whose previous balance is not the table's, then a daily balance table and a savings
-    account with the same columns and its own balance brought forward, which must stay out. With `split`, the heading of the later pages is on
-    two lines, the first of which looks like the heading of some other table."""
+    account with the same columns and its own balance brought forward, which must stay out. With `split`,
+    the heading of the later pages is on two lines, the first of which looks like the heading of some
+    other table."""
     rnd = random.Random(seed)
     bal = opening
     truth = []
@@ -534,16 +535,100 @@ def read(pdf, out, *flags):
             {r[0]: r[1] for r in wb["Checks"].iter_rows(values_only=True)}, said.getvalue())
 
 
+def make_canada(path, cibc=False):
+    """Two Canadian chequing layouts, drawn after the sample statements RBC and CIBC publish, with made-up
+    rows. The date only on the first row of each day and the balance only on its last row; interest
+    printed as .15; cheque numbers in the description just left of the amount (Cheque #31 148.11, Cheque
+    105 250.00); a form version (1.0) and a page footer (1 of 1) under the description column. With
+    cibc, dates like Dec 30 under "For Dec 1 to Dec 31, 2022", an "as of April 2, 2024" above it in the
+    header, and the balance carried forward at the top of the table instead of an opening balance."""
+    doc = pymupdf.open()
+    page = doc.new_page()
+
+    def put(x, y, text, right=False):
+        page.insert_text((x - pymupdf.get_text_length(text, fontsize=9) if right else x, y), text, fontsize=9)
+
+    if cibc:
+        opening, year = 33781.82, 2022
+        days = [("Dec 30", [("ACCOUNT FEE", -4.00), ("BALANCE FEE WAIVER", 4.00), ("PAPER STMNT FEE", -3.50)]),
+                ("Dec 31", [("E-TRANSFER FROM SAVINGS", 250.00)])]
+        put(40, 40, "The names shown are based on our current records, as of April 2, 2024.")
+        put(40, 52, "Account Statement")
+        put(40, 64, "For Dec 1 to Dec 31, 2022")
+    else:
+        opening, year = 4247.14, 2026
+        days = [("15 Mar", [("Transfer from savings", 85.00), ("Interest paid", 0.15), ("ATM withdrawal", -100.00),
+                            ("Interac purchase - 1361 - Corner Grocer", -47.82)]),
+                ("17 Mar", [("Overdraft interest", -0.93)]),
+                ("18 Mar", [("Cheque #30", -40.00), ("Cheque #31", -148.11), ("Cheque 105", -250.00)]),
+                ("22 Mar", [("ATM withdrawal", -20.00), ("Interac purchase - 1361 - Hardware Store", -125.13)])]
+        put(40, 40, "Your personal chequing account statement")
+        put(40, 52, "From March 12, 2026 to April 12, 2026")
+        put(40, 80, f"Your opening balance on March 12, 2026 ${opening:,.2f}")
+    for x, word in [(40, "Date"), (95, "Description")]:
+        put(x, 120, word)
+    for x, word in [(380, "Withdrawals ($)"), (460, "Deposits ($)"), (545, "Balance ($)")]:
+        put(x, 120, word, right=True)
+    y, bal, truth = 134, opening, []
+    put(95, y, "Balance carried forward" if cibc else "Opening balance")
+    put(545, y, f"{opening:,.2f}", right=True)
+    for day, rows in days:
+        date = dt.datetime.strptime(f"{day} {year}", "%b %d %Y" if cibc else "%d %b %Y").date()
+        for k, (desc, amount) in enumerate(rows):
+            y += 13
+            bal = round(bal + amount, 2)
+            truth.append((date, amount, bal if k == len(rows) - 1 else None, desc))
+            if k == 0:
+                put(40, y, day)
+            put(95, y, desc)
+            put(380 if amount < 0 else 460, y, ".15" if desc == "Interest paid" else f"{abs(amount):,.2f}", right=True)
+            if k == len(rows) - 1:
+                put(545, y, f"{bal:,.2f}", right=True)
+            if desc == "PAPER STMNT FEE":
+                y += 13
+                put(95, y, "PER STATEMENT")
+    put(300, y + 13, "1.0")
+    put(95, y + 26, "Closing balance")
+    put(545, y + 26, f"{bal:,.2f}", right=True)
+    put(280, 800, "1 of 1")
+    doc.save(path)
+    return truth, opening, bal
+
+
+def check_canada():
+    """The two Canadian layouts: every row with its date, amount and end of day balance, nothing from the
+    margin or the footer in a description, the right year, and the opening and closing balances agree.
+    Before, .15 was not an amount, Cheque 105 250.00 read as 105,250.00 and Dec 30 went to 2024."""
+    with tempfile.TemporaryDirectory() as tmp:
+        pdf, out = os.path.join(tmp, "ca.pdf"), os.path.join(tmp, "ca.xlsx")
+        for cibc in (False, True):
+            truth, opening, closing = make_canada(pdf, cibc)
+            code, rows, checks, said = read(pdf, out)
+            got = [(r[0].date(), round((r[2] or 0) - (r[3] or 0), 2), r[4], r[1]) for r in rows]
+            want = [(date, amount, bal, desc + (" PER STATEMENT" if desc == "PAPER STMNT FEE" else ""))
+                    for date, amount, bal, desc in truth]
+            assert code == 0 and got == want, (cibc, [(g, w) for g, w in zip(got, want) if g != w][:3], len(got))
+            assert (checks["Opening balance"], checks["Closing balance"]) == (opening, closing), checks
+            assert checks["Opening balance plus movements gives the closing balance"] == "yes", checks
+            assert checks["Balance mismatches"] == 0, checks
+    print("Canadian layouts: interest of .15, cheque numbers next to the amount, end of day balances, Dec 30 "
+          "in 2022 despite a date of 2024 in the header, a balance carried forward at the top taken as the "
+          "opening balance, and the form version and the footer kept out of the descriptions")
+
+
 def check_merge():
     """Several statements of one account in one file: three US months sent out of order, each with its
     daily balance table and savings account at the end, come out complete and in date order, and so do
     the three joined in one PDF; a month sent twice is read once; a missing month is named; UK statements
     of December and January, whose dates have no year, get the right years. Before, only the first
     statement was read and the checks still passed."""
-    first, latest = dt.date(2026, 1, 1), dt.date(2026, 1, 1)
-    assert s2e.year_for(dt.date(2000, 12, 3), first, latest) == 2025          # "1 December to 1 January 2026"
-    assert s2e.year_for(dt.date(2000, 1, 3), dt.date(2025, 1, 1), dt.date(2025, 12, 31)) == 2025
-    assert s2e.year_for(dt.date(2000, 2, 29), dt.date(2024, 2, 1), dt.date(2024, 3, 1)) == 2024
+    assert s2e.year_for(dt.date(2000, 12, 3), [dt.date(2026, 1, 1)]) == 2025     # "1 December to 1 January 2026"
+    assert s2e.year_for(dt.date(2000, 1, 3), [dt.date(2025, 1, 1), dt.date(2025, 12, 31)]) == 2025
+    assert s2e.year_for(dt.date(2000, 2, 29), [dt.date(2024, 2, 1), dt.date(2024, 3, 1)]) == 2024
+    assert s2e.year_for(dt.date(2000, 12, 15), [dt.date(2025, 12, 1)]) == 2025      # only the first day printed
+    assert s2e.year_for(dt.date(2000, 12, 30), [dt.date(2022, 12, 1), dt.date(2022, 12, 31),
+                                               dt.date(2024, 4, 2)]) == 2022        # and "as of April 2, 2024"
+    assert s2e.year_for(dt.date(2000, 12, 30), [dt.date(2022, 12, 31), dt.date(2024, 4, 2)]) == 2022
     assert s2e.full_dates("Period 01/12/2025 to 31.12.2025, made 2026-01-02, due January 15, 2026", "dmy") == [
         dt.date(2025, 12, 1), dt.date(2025, 12, 31), dt.date(2026, 1, 2), dt.date(2026, 1, 15)]
     with tempfile.TemporaryDirectory() as tmp:
@@ -686,6 +771,7 @@ if __name__ == "__main__":
     check_uk()
     check_whole()
     check_merge()
+    check_canada()
     check_bank_header()
     check_rules()
     check_categories()

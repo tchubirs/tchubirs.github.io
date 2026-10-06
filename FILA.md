@@ -116,6 +116,11 @@ até alguma vender. O que eu faço agora:
    estava certo. Agora a tabela que começa com o saldo anterior igual ao saldo final do mês de antes é lida
    como o mês seguinte; outra conta continua de fora. Se os meses estiverem fora de ordem dentro do PDF, o
    console manda separar o PDF, um arquivo por mês.
+   Em 06/10, à 0h40, teste com extratos de exemplo que os bancos publicam (RBC e `CIBC`, do Canadá). Achou 5 defeitos,
+   todos corrigidos e com teste: o valor `.15` sem o zero não era lido; "Cheque #31" seguido de `148.11` virava
+   31.148,11; o rodapé "1 of 2" e um `1.0` da margem entravam na descrição; o ano saía errado quando o
+   cabeçalho tinha uma data de outro ano (defeito meu da véspera); "Balance carried forward" no topo não era o
+   saldo inicial. Agora os dois extratos saem linha por linha certos.
 
 Pausado até algo vender ou ele pedir: inventário da casa (rascunho em `etsy/home-inventory`), manutenção da casa,
 galinhas no quintal, férias da equipe, Herculano.
