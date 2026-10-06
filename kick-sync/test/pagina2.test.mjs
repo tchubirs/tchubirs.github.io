@@ -68,7 +68,7 @@ test('marcar uma kill a sério faz a página procurar o mesmo som na noite',
     await p.waitForSelector('#listaMomentos .foiKill', { timeout: 5000 });
 
     await p.locator('#listaMomentos .foiKill').first().click();
-    await p.waitForFunction(() => /Referência guardada/.test(document.getElementById('estadoMontagem').textContent),
+    await p.waitForFunction(() => /Referência salva/.test(document.getElementById('estadoMontagem').textContent),
       null, { timeout: 10000 });
 
     const marcados = await p.evaluate(() => window.__estado.momentos.map((m) => m.ms).sort((a, b) => a - b));
@@ -1222,7 +1222,7 @@ test('a confiança do alinhamento é dita, e diz o próximo passo',
 
     // Com PROGRAM-DATE-TIME nos dois, o relógio é exacto e diz isso.
     assert.ok(await p.locator('#confianca.exacto').isVisible());
-    assert.match(await p.locator('#confianca').innerText(), /exacto/i);
+    assert.match(await p.locator('#confianca').innerText(), /exato/i);
 
     // Um ajuste à mão passa a constar: é informação que muda a confiança.
     await p.locator('.tile[data-slug="outro"] .ajuste button[data-passo="1"]').click();
@@ -1265,13 +1265,15 @@ test('todas as mensagens de erro dizem o próximo passo', async () => {
     'tile.depois', 'tile.semVideo', 'montagem.naoFilmava', 'montagem.semImagem',
     // Não são erros: um é o rodapé da página da Twitch (a palavra "erro"
     // aparece lá a dizer quanto vale a sincronia), o outro é um resumo.
-    'tw.rodape', 'montagem.semVitima']);
+    'tw.rodape', 'montagem.semVitima',
+    // Rótulo do painel do lance, não um erro: o canal escolhido não está em time nenhum do elenco.
+    'lance.semTime']);
   const curtas = [];
   for (const [chave, frase] of Object.entries(_TEXTOS.pt)) {
     if (!/erro|falh|não deu|nenhum|sem |não consegui|inválido|passa dos/i.test(frase)) continue;
     if (fragmentos.has(chave)) continue;
-    // Um próximo passo é um verbo no imperativo: "tenta", "escolhe", "abre"…
-    if (!/\b(tenta|escolhe|abre|usa|move|encurta|guarda|confere|escreve|verifica|alinha|marca|corre|espera|sincroniza|desliga|recarrega|carrega|toca|vai)\b/i.test(frase)) {
+    // Um próximo passo é um verbo no imperativo: "tente", "escolha", "abra"…
+    if (!/\b(tente|escolha|abra|use|leve|encurte|salve|confira|escreva|alinhe|marque|rode|espere|sincronize|desligue|recarregue|carregue|toque|vá|clique|aperte|feche|apague|corrija|cole|procure|peça|mande|copie)\b/i.test(frase)) {
       curtas.push(chave);
     }
   }
@@ -1484,7 +1486,7 @@ test('ajeitar uma kill, guardar, e a kill lembra-se — sem exportar nada',
     await p.waitForFunction(() => document.getElementById('modalClipe').hidden, null, { timeout: 5000 });
 
     assert.equal(await p.locator('#listaMomentos .ajustado').count(), 1, 'a kill diz que esta ajustada');
-    assert.match(await p.locator('#estadoMontagem').innerText(), /guardados/i);
+    assert.match(await p.locator('#estadoMontagem').innerText(), /salvos/i);
     assert.equal(await p.locator('#fila li').count(), ficheirosAntes, 'guardar nao exporta nada');
 
     // Abrir outra vez traz o que ele apurou, e nao a janela de origem.

@@ -467,7 +467,7 @@ test('cada canal baixa sozinho, no seu tamanho, em qualidade maxima',
 
     const texto = await p.locator('#fila li').first().innerText();
     assert.match(texto, /1080p60/, 'exporta o degrau de cima, nao o 160p do ecra');
-    assert.match(texto, /come.a .* antes da tua marca/, 'diz onde o corte cai mesmo');
+    assert.match(texto, /come.a .* antes da sua marca/, 'diz onde o corte cai mesmo');
 
     const baixados = pedidos.segmentos - antes;
     assert.ok(baixados > 0 && baixados <= 12,
@@ -624,7 +624,7 @@ test('o alinhamento pelo som mede um desvio de 3 s e corrige-o',
 
     await p.click('#alinhar');
     await p.waitForFunction(
-      () => /alinhados|não deu|não descodifica/.test(document.getElementById('estadoAlinhar').textContent),
+      () => /alinhados|não deu|não decodifica/.test(document.getElementById('estadoAlinhar').textContent),
       null, { timeout: 120000 });
     const texto = await p.locator('#estadoAlinhar').innerText();
 
@@ -633,7 +633,7 @@ test('o alinhamento pelo som mede um desvio de 3 s e corrige-o',
     const a = await nudge('tchubi');
     const b = await nudge('outro');
 
-    if (/não descodifica/.test(texto)) {
+    if (/não decodifica/.test(texto)) {
       // O Chromium open-source não traz AAC, e sem AAC nem os VODs da Kick
       // tocam. A conta em si está coberta em test/alinhar.test.mjs e medida
       // contra áudio verdadeiro; o que se exige aqui é que a página o DIGA e
@@ -662,9 +662,9 @@ test('sem áudio nenhum, o alinhamento diz que não deu em vez de rebentar',
 
     await p.click('#alinhar');
     await p.waitForFunction(
-      () => /alinhados|não deu|não descodifica/.test(document.getElementById('estadoAlinhar').textContent),
+      () => /alinhados|não deu|não decodifica/.test(document.getElementById('estadoAlinhar').textContent),
       null, { timeout: 60000 });
-    assert.match(await p.locator('#estadoAlinhar').innerText(), /sem som em comum|0 de 2|não descodifica/);
+    assert.match(await p.locator('#estadoAlinhar').innerText(), /sem som em comum|0 de 2|não decodifica/);
     assert.equal(await p.locator('.tile.foco .nudge').innerText(), '0.0s',
       'não inventa um ajuste quando não mediu nada');
     assert.deepEqual(erros, []);
@@ -697,7 +697,7 @@ test('marcar kills gera a montagem, em ordem e com os ficheiros numerados',
     // Sem ninguem marcado como morto sai SO a POV do dono. Cortar todos os
     // angulos em cada kill dava quatro clipes de lixo por cada um bom — foi
     // exactamente isso que ele apanhou no uso real: 6 kills, 36 ficheiros.
-    assert.match(await p.locator('#estadoMontagem').innerText(), /2 kills · 2 ficheiros/);
+    assert.match(await p.locator('#estadoMontagem').innerText(), /2 kills · 2 arquivos/);
     assert.match(await p.locator('#estadoMontagem').innerText(), /2 sem ninguém marcado/);
 
     // Marcar quem morreu em cada uma. A lista e reconstruida a cada clique,
@@ -708,7 +708,7 @@ test('marcar kills gera a montagem, em ordem e com os ficheiros numerados',
       await p.locator('#listaMomentos li[data-ms]').nth(i)
         .locator('.vit[data-canal="vitima1"]').click();
     }
-    assert.match(await p.locator('#estadoMontagem').innerText(), /2 kills · 4 ficheiros/);
+    assert.match(await p.locator('#estadoMontagem').innerText(), /2 kills · 4 arquivos/);
 
     const antes = pedidos.segmentos;
     await p.click('#baixarMontagem');
@@ -724,7 +724,7 @@ test('marcar kills gera a montagem, em ordem e com os ficheiros numerados',
 
     // E a POV do protagonista tem de ser mais longa do que a de quem morreu.
     const linhas = await p.locator('#fila li').allInnerTexts();
-    assert.match(linhas[0], /a tua POV/);
+    assert.match(linhas[0], /a sua POV/);
     assert.match(linhas[1], /quem morreu/);
 
     const baixados = pedidos.segmentos - antes;
@@ -811,7 +811,7 @@ test('da para limpar a lista e recomecar, e a memoria e mesmo devolvida',
       null, { timeout: 30000 });
     // Dois, e nao tres: o ZIP e feito dos mesmos pedacos que ja estao na
     // lista, e soma-lo outra vez dizia-lhe o dobro do que esta mesmo preso.
-    assert.match(await p.locator('#memoria').innerText(), /2 ficheiros/, 'diz quanto esta preso');
+    assert.match(await p.locator('#memoria').innerText(), /2 arquivos/, 'diz quanto esta preso');
 
     // Os enderecos tem de ser SOLTOS, e nao so apagados da lista: apagar a
     // lista deixava os Blobs presos para sempre. O do ZIP conta aqui — nao
@@ -870,7 +870,7 @@ test('o botao de quem morreu olha por todos e nunca finge ter visto',
         'sem imagens nao se aponta ninguem');
       assert.equal(await p.locator('#listaMomentos .semImagem').count(), 2);
     } else {
-      assert.match(texto, /morreu|ninguém se destacou|não descodificar/);
+      assert.match(texto, /morreu|ninguém se destacou|não decodificar/);
       assert.ok(await p.locator('#listaMomentos .cartao.morreu').count() <= 2);
     }
 
@@ -1039,7 +1039,7 @@ test('a busca automatica nunca inventa kills que nao ouviu',
       // Todos os fins possiveis: achou, nao achou, ou o navegador nao
       // descodifica. Um destes TEM de aparecer — ficar calada era o pior dos
       // casos, e e isso que este limite de tempo apanha.
-      () => /detetados|Nenhum tiroteio|no firefight|descodifica|não deu/.test(
+      () => /detetados|Nenhum tiroteio|no firefight|decodifica|não deu/.test(
         document.getElementById('estadoMontagem').textContent),
       null, { timeout: 90000 },
     );

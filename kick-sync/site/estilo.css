@@ -1044,7 +1044,7 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
   body.mesa:has(#palco:not([hidden])) .topoTrabalho .rotuloCampo,
   body.mesa:has(#palco:not([hidden])) .topoTrabalho label[for],
   body.mesa:has(#palco:not([hidden])) #resumoNoite,
-  body.mesa:has(#palco:not([hidden])) #entrada > .campo:first-child { display: none; }
+  body.mesa:has(#palco:not([hidden])) #entrada > .campo:first-of-type { display: none; }
   body.mesa:has(#palco:not([hidden])) #entrada .entradaGrelha { display: flex; gap: var(--e3); flex: 1 1 auto; min-width: 0; }
   body.mesa:has(#palco:not([hidden])) #entrada .campo,
   body.mesa:has(#palco:not([hidden])) #noites .campo { flex: 1 1 0; min-width: 0; }
@@ -1419,3 +1419,67 @@ body:not(.mesa) > section > h2 { margin: 0; }
 body:not(.mesa) #sugestoes { position: static; display: flex; flex-wrap: wrap; gap: 6px; padding: 0; background: none; border: 0; box-shadow: none; }
 body:not(.mesa) #sugestoes:empty { display: none; }
 body:not(.mesa) #sugestoes button { width: auto; min-height: 30px; font-size: var(--t-menor); background: var(--sup-3); border-color: var(--linha-2); }
+
+/* ═══ O evento ══════════════════════════════════════════════════════════════
+ * As duas portas, lado a lado, e o mapa do evento (uma faixa por streamer, por time). O mapa é um canvas
+ * porque são até 500 faixas: elementos HTML para cada uma pesavam mais do que o próprio vídeo. */
+
+/* As portas. Cada uma diz no título para quem é, e a de cima não empurra a outra para fora do ecrã. */
+.cabecaPorta { display: grid; gap: var(--e1); }
+.tituloPorta { font-size: var(--t-titulo); font-weight: 600; line-height: var(--lh-apertado); margin: 0; text-wrap: balance; }
+.cabecaPorta .nota { margin: 0; }
+.portaEvento textarea { width: 100%; }
+.aoVivoLinha { flex-wrap: nowrap; gap: var(--e3); }
+.aoVivoLinha input { flex: 1 1 auto; min-width: 0; }
+#entrada { max-width: none; }
+@media (min-width: 1000px) {
+  .topoTrabalho:not(:has(#noites:not([hidden]))) { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); align-items: start; }
+}
+/* Com uma noite aberta a porta do evento sai do caminho: a noite é a de alguns canais. */
+.topoTrabalho:has(#noites:not([hidden])) #portaEvento,
+body:has(#palco:not([hidden])) #portaEvento { display: none; }
+body:has(#palco:not([hidden])) .cabecaPorta { display: none; }
+/* Com um evento aberto e ainda nenhum lance, as portas saem: o que se faz a seguir é no mapa. */
+body:has(#evento:not([hidden])):has(#palco[hidden]) .topoTrabalho { display: none; }
+
+.evento { display: flex; flex-direction: column; gap: var(--e2); margin-bottom: var(--e4); }
+.barraEvento { gap: var(--e2); }
+.barraEvento .espaco { flex: 1 1 auto; }
+.nomeEvento { margin: 0; font-size: var(--t-titulo); font-weight: 600; }
+.seloAoVivo {
+  background: var(--perigo); color: var(--sobre-acento); border-radius: var(--r-redondo); padding: 2px 10px;
+  font-size: var(--t-menor); font-weight: 600; letter-spacing: var(--letra-larga);
+}
+.mostrarMapa { display: none; }
+/* Com um lance aberto o mapa encolhe numa barra: a grelha dos ângulos precisa do ecrã. O botão
+   "Mapa do evento" volta a abri-lo por cima dela, mais baixo. */
+body:has(#palco:not([hidden])) .mostrarMapa { display: inline-flex; }
+body:has(#palco:not([hidden])) #evento:not(.comMapa) > :not(.barraEvento) { display: none; }
+body:has(#palco:not([hidden])) #evento.comMapa .mapaRolo { height: 34vh; }
+body.mesa:has(#palco:not([hidden])) > #evento { flex: 0 0 auto; margin-bottom: var(--e2); padding: var(--e3) var(--e4); }
+.dica { margin: 0; }
+.reguaEvento { position: relative; height: 18px; color: var(--tinta-3); font-family: var(--letra-mono); font-size: var(--t-micro); }
+.reguaEvento span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.mapaCaixa { display: grid; gap: var(--e3); grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 1000px) { .mapaCaixa:has(#lance:not([hidden])) { grid-template-columns: minmax(0, 1fr) 320px; } }
+.mapaRolo {
+  position: relative; height: min(62vh, 640px); overflow-y: auto; overflow-x: hidden;
+  background: var(--sup-1); border: 1px solid var(--linha); border-radius: var(--r-2); cursor: crosshair;
+}
+.mapaRolo:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+.mapaAltura { width: 1px; }
+/* O canvas fica preso ao topo da caixa e é o espaçador debaixo dele que dá a altura do rolo: o canvas
+   tem sempre o tamanho do que se vê, e a posição do rolo diz que faixas pintar. */
+.mapaRolo canvas { position: sticky; top: 0; left: 0; display: block; }
+.lance { display: flex; flex-direction: column; gap: var(--e2); background: var(--sup-3); border: 1px solid var(--linha); border-radius: var(--r-2); padding: var(--e3); align-self: start; }
+.lanceTitulo { margin: 0; font-size: var(--t-medio); font-family: var(--letra-mono); }
+.lanceAchados { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e1); }
+.lanceAchados:empty { display: none; }
+.lanceAchados li { display: flex; justify-content: space-between; gap: var(--e2); padding: var(--e1) var(--e2); background: var(--acento-eco); border-radius: var(--r-1); }
+/* No telemóvel as duas portas têm de caber com o botão de cada uma no primeiro ecrã. A explicação do
+   elenco sai (o exemplo dentro da caixa já mostra o formato) e a caixa fica com duas linhas. */
+@media (max-width: 699px) {
+  .portaEvento > p.nota { display: none; }
+  #elenco { height: 4.2em; min-height: 0; }
+  .porta { gap: var(--e3); }
+}

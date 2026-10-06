@@ -10,6 +10,11 @@
 <meta property="og:image" content="povix-partilha.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#131211">
+<!-- O que a página pode carregar e com quem pode falar. Scripts só daqui; dados e vídeo só da Kick
+     (a API em kick.com e o vídeo em stream.kick.com); nada de formulários, plugins ou <base> de fora.
+     Um nome de canal com código lá dentro que escapasse a `escapar` continuava sem poder correr. Em
+     <meta> porque o GitHub Pages não deixa pôr cabeçalhos; num domínio próprio passa para cabeçalho. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.kick.com; media-src 'self' blob: https://*.kick.com; connect-src 'self' blob: https://kick.com https://*.kick.com; worker-src 'self' blob:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <!-- O icone do separador e a marca desta casa: tres gravacoes de comprimentos
      diferentes e a agulha a atravessa-las no mesmo instante. Em SVG dentro do
      endereco, sem um pedido a rede so para isto. -->
@@ -243,7 +248,7 @@
 <header>
   <div class="topo">
     <h1><svg class="ic" aria-hidden="true"><use href="#i-povix"/></svg><span data-t="app.nome">Povix</span></h1>
-    <a class="paraTwitch" href="twitch.html"><svg class="ic" aria-hidden="true"><use href="#i-twitch"/></svg><span data-t="app.twitch">Twitch</span></a>
+    <a class="paraTwitch" href="twitch.html"><svg class="ic" aria-hidden="true"><use href="#i-twitch"/></svg><span data-t="app.twitch">Versão Twitch</span></a>
     <button id="ajuda" class="discreto" data-t-aria="ajuda.abrir" aria-haspopup="dialog"><svg class="ic" aria-hidden="true"><use href="#i-ajuda"/></svg></button>
     <select id="idioma" aria-label="idioma"></select>
   </div>
@@ -252,9 +257,9 @@
        vazias e um botão. O passo em que está fica aceso, e os outros dois
        dizem o que vem a seguir — que é a única explicação de que precisa. -->
   <ol id="passos" class="passos">
-    <li data-passo="1" class="aqui"><b>1</b><span data-t="passo.colar">Cola os canais</span></li>
-    <li data-passo="2"><b>2</b><span data-t="passo.rever">Revê alinhado</span></li>
-    <li data-passo="3"><b>3</b><span data-t="passo.exportar">Marca e exporta</span></li>
+    <li data-passo="1" class="aqui"><b>1</b><span data-t="passo.colar">Cole os canais</span></li>
+    <li data-passo="2"><b>2</b><span data-t="passo.rever">Confira alinhado</span></li>
+    <li data-passo="3"><b>3</b><span data-t="passo.exportar">Marque e exporte</span></li>
   </ol>
 </header>
 
@@ -263,8 +268,75 @@
      preto ao lado — e os nomes dos canais, que são o que ele precisa mesmo de
      ver todos, ficavam espremidos numa faixa em baixo. Aqui os nomes ficam ao
      lado e ficam TODOS: a lista cresce em quantas filas precisar. -->
+<!-- O evento aberto: uma faixa por streamer, agrupada por time. Só o que está no ecrã é desenhado,
+     porque 500 faixas de uma vez não cabem nem no ecrã nem no tempo de um quadro. -->
+<section id="evento" class="bloco evento" hidden>
+  <div class="linha barraEvento">
+    <h2 id="nomeEvento" class="nomeEvento"></h2>
+    <span id="seloAoVivo" class="seloAoVivo" hidden data-t="evento.aoVivo">ao vivo</span>
+    <output id="resumoEvento" class="nota"></output>
+    <span class="espaco"></span>
+    <input id="procurarEvento" type="search" autocomplete="off" spellcheck="false" data-t-aria="evento.procurar"
+      data-t-ph="evento.procurarPh" placeholder="procurar streamer ou time">
+    <button id="afastar" class="so-icone" data-t-aria="evento.afastar" title="−">−</button>
+    <button id="aproximar" class="so-icone" data-t-aria="evento.aproximar" title="+">+</button>
+    <button id="verTudo" data-t="evento.verTudo">Tudo</button>
+    <button id="mostrarMapa" class="mostrarMapa" aria-expanded="false" data-t="evento.mostrarMapa">Mapa do evento</button>
+    <button id="partilharEvento"><svg class="ic ic-p" aria-hidden="true"><use href="#i-copiar"/></svg><span data-t="evento.partilhar">Copiar link</span></button>
+    <output id="estadoPartilhaEvento" class="nota"></output>
+    <button id="fecharEvento" class="so-icone discreto" data-t-aria="evento.fechar" title="✕">✕</button>
+  </div>
+  <p class="nota dica" data-t="evento.dica">Clique numa faixa para escolher o streamer e o instante. Clique no nome de um time para abrir ou fechar. Ctrl e a roda do mouse aproximam o tempo.</p>
+  <div id="reguaEvento" class="reguaEvento" aria-hidden="true"></div>
+  <div class="mapaCaixa">
+    <div id="mapaRolo" class="mapaRolo" tabindex="0" data-t-aria="evento.mapa">
+      <canvas id="mapa"></canvas>
+      <div id="mapaAltura" class="mapaAltura"></div>
+    </div>
+    <aside id="lance" class="lance" hidden>
+      <h3 id="lanceTitulo" class="lanceTitulo"></h3>
+      <p id="lanceTime" class="nota"></p>
+      <button id="verLance" class="principal"><svg class="ic ic-p" aria-hidden="true"><use href="#i-seta"/></svg><span data-t="lance.ver">Ver este lance com o time</span></button>
+      <button id="procurarOutros"><svg class="ic ic-p" aria-hidden="true"><use href="#i-procurar"/></svg><span data-t="lance.outros">Achar outros ângulos pelo som</span></button>
+      <output id="estadoLance" class="nota"></output>
+      <ul id="lanceAchados" class="lanceAchados"></ul>
+      <p class="nota" data-t="lance.comoFunciona">Quem ouviu o mesmo som no mesmo segundo estava no lance. Os achados entram junto quando você abre o lance.</p>
+    </aside>
+  </div>
+</section>
+
 <div class="topoTrabalho">
-  <section id="entrada" class="bloco">
+  <!-- A porta do evento, ao lado da porta de sempre. Quem chega tem de ver as duas de uma vez e saber
+       pelo título qual é a sua: um torneio com dezenas ou centenas de streamers, ou meia dúzia de
+       canais de uma noite. Um evento de 500 não se escreve nome a nome: cola-se o elenco que o
+       organizador publicou (a página de times inteira serve) ou procura-se quem está ao vivo. -->
+  <section id="portaEvento" class="bloco porta portaEvento">
+    <div class="cabecaPorta">
+      <h2 class="tituloPorta" data-t="evento.titulo">Um evento inteiro</h2>
+      <p class="nota" data-t="evento.para">Torneio com dezenas ou centenas de streamers.</p>
+    </div>
+    <label class="campo">
+      <span class="rotuloCampo" data-t="evento.elenco">Elenco do evento</span>
+      <textarea id="elenco" rows="4" spellcheck="false" data-t-aria="evento.elenco" data-t-ph="evento.elencoPh"
+        placeholder="Time Alfa: canal1, canal2, canal3, canal4"></textarea>
+    </label>
+    <p class="nota" data-t="evento.explica">Cole a página de times do evento, uma lista de canais, ou uma linha por time. Até 500 canais.</p>
+    <div class="linha">
+      <button id="abrirElenco" class="principal"><svg class="ic ic-p" aria-hidden="true"><use href="#i-seta"/></svg><span data-t="evento.abrir">Abrir evento</span></button>
+    </div>
+    <div class="linha aoVivoLinha">
+      <input id="palavrasAoVivo" type="search" autocomplete="off" spellcheck="false" data-t-aria="evento.palavras"
+        data-t-ph="evento.palavrasPh" placeholder="palavra do título, ex.: kick off">
+      <button id="procurarAoVivo"><svg class="ic ic-p" aria-hidden="true"><use href="#i-procurar"/></svg><span data-t="evento.procurarAoVivo">Achar quem está ao vivo no Rust</span></button>
+    </div>
+    <output id="estadoEvento" class="nota"></output>
+  </section>
+
+  <section id="entrada" class="bloco porta">
+    <div class="cabecaPorta">
+      <h2 class="tituloPorta" data-t="entrada.titulo">Alguns canais</h2>
+      <p class="nota" data-t="entrada.para">Você e os amigos numa noite, ou um clipe que alguém mandou.</p>
+    </div>
     <!-- Duas caixas iguais e sem rótulo era o que um estranho via nos primeiros
          dez segundos: nenhuma dizia o que fazia nem qual vinha primeiro. Cada
          uma passa a ter o seu rótulo, e a procura fica visivelmente ao serviço
@@ -313,14 +385,14 @@
   <section id="noites" class="bloco" hidden>
     <div class="linha barraSessao">
       <label class="campo">
-        <span class="rotuloCampo" data-t="noite.label">Noite</span>
+        <span class="rotuloCampo" data-t="noite.label">Qual noite</span>
         <select id="noite" data-t-aria="noite.label"></select>
       </label>
       <output id="confianca" class="confianca"></output>
       <!-- Passar a noite pronta a outra pessoa. O que vai no link não é a lista
            de nomes — é o TRABALHO: os ajustes que ele acertou um a um. -->
       <button id="partilhar" data-t="partilha.botao" data-t-titulo="partilha.ajuda"
-        title="Copia um link com o projeto de agora"><svg class="ic ic-p" aria-hidden="true"><use href="#i-copiar"/></svg><span data-t="partilha.botao">Partilhar projeto</span></button>
+        title="Copia um link com o projeto de agora">Compartilhar projeto<svg class="ic ic-p" aria-hidden="true"><use href="#i-copiar"/></svg><span data-t="partilha.botao">Compartilhar projeto</span></button>
       <output id="estadoPartilha" class="nota"></output>
     </div>
     <!-- O que está a acontecer, AO PÉ do controlo que o desencadeia.
@@ -403,14 +475,14 @@
        aqui e não na coluna do relógio, que num portátil não tinha altura para
        ele — os saltos escorriam por cima do botão. -->
   <div class="linha sincronizar">
-      <button id="alinhar" data-t="alinhar.botao" data-t-titulo="alinhar.ajuda" title="Analisa o áudio de cada ângulo e corrige o desvio"><svg class="ic ic-p" aria-hidden="true"><use href="#i-onda"/></svg><span data-t="alinhar.botao">Sincronizar por áudio</span></button>
+      <button id="alinhar" data-t="alinhar.botao" data-t-titulo="alinhar.ajuda" title="Analisa o áudio de cada ângulo e corrige o desvio">Sincronizar por áudio<svg class="ic ic-p" aria-hidden="true"><use href="#i-onda"/></svg><span data-t="alinhar.botao">Sincronizar por áudio</span></button>
       <span id="estadoAlinhar" class="nota"></span>
     </div>
   <section id="automatico">
-    <h2><span data-t="auto.titulo">Deteção automática</span> <b class="etiqueta" data-t="auto.teste">teste</b></h2>
-    <p class="nota" data-t="auto.explica">Ouve a tua POV à procura de tiroteios.</p>
+    <h2><span data-t="auto.titulo">Detecção automática</span> <b class="etiqueta" data-t="auto.teste">teste</b></h2>
+    <p class="nota" data-t="auto.explica">Ouve a sua POV procurando tiroteios. Acerta a maioria, mas ainda marca menus e inventário: confira sempre com o Rever antes de exportar.</p>
     <div class="linha">
-      <button id="procurarKills"><svg class="ic ic-p" aria-hidden="true"><use href="#i-mira"/></svg><span data-t="auto.botao">Deteção automática</span></button>
+      <button id="procurarKills"><svg class="ic ic-p" aria-hidden="true"><use href="#i-mira"/></svg><span data-t="auto.botao">Detecção automática</span></button>
       <select id="janelaAuto" data-t-aria="auto.quanto">
         <option value="1800" data-t="auto.meiaHora">meia hora</option>
         <option value="3600" selected data-t="auto.umaHora">uma hora</option>
@@ -427,7 +499,7 @@
 
   <div class="linha">
     <button id="limparFila"><svg class="ic ic-p" aria-hidden="true"><use href="#i-lixo"/></svg><span data-t="fila.limpar">Limpar exportações</span></button>
-    <button id="recomecar"><svg class="ic ic-p" aria-hidden="true"><use href="#i-anular"/></svg><span data-t="fila.recomecar">Repor sessão</span></button>
+    <button id="recomecar"><svg class="ic ic-p" aria-hidden="true"><use href="#i-anular"/></svg><span data-t="fila.recomecar">Recomeçar</span></button>
     <span id="memoria" class="nota"></span>
   </div>
   <!-- Trinta e seis ficheiros num so. Aparece sozinho quando ha mais do que
@@ -524,7 +596,7 @@
           <label class="pequeno"><span data-t="montagem.minhaPov">minha POV</span> <input id="protAntes" type="number" value="5" min="0" max="120" step="1">s antes</label>
           <label class="pequeno"><input id="protDepois" type="number" value="2" min="0" max="120" step="1">s depois</label>
           <span id="margensVitima" class="linha" hidden>
-            <label class="pequeno"><span data-t="montagem.quemMorreu">quem morreu</span> <input id="vitAntes" type="number" value="1" min="0" max="60" step="1">s antes</label>
+            <label class="pequeno"><span data-t="montagem.quemMorreu">Quem morreu?</span> <input id="vitAntes" type="number" value="1" min="0" max="60" step="1">s antes</label>
             <label class="pequeno"><input id="vitDepois" type="number" value="2" min="0" max="60" step="1">s depois</label>
           </span>
         </div>
@@ -566,8 +638,8 @@
     </div>
     <dl class="atalhos">
       <dt><kbd data-t="ajuda.teclaEspaco">Espaço</kbd></dt><dd data-t="ajuda.pausa">Pausa e continua</dd>
-      <dt><kbd>J</kbd> <kbd>L</kbd></dt><dd data-t="ajuda.andar">Recua e avança 1 s (com Shift, 10 s)</dd>
-      <dt><kbd>A</kbd> <kbd>D</kbd></dt><dd data-t="ajuda.arrasto">Recua e avança 3 s — segura para correr a noite</dd>
+      <dt><kbd>J</kbd> <kbd>L</kbd></dt><dd data-t="ajuda.andar">Volta e avança 1 s (com Shift, 10 s)</dd>
+      <dt><kbd>A</kbd> <kbd>D</kbd></dt><dd data-t="ajuda.arrasto">Volta e avança 3 s. Segure para correr a noite</dd>
       <dt><kbd>I</kbd> <kbd>O</kbd></dt><dd data-t="ajuda.marca">Marca entrada e saída</dd>
       <dt><kbd>M</kbd></dt><dd data-t="ajuda.kill">Marca kill</dd>
       <dt><kbd>C</kbd></dt><dd data-t="ajuda.clipe">Abre o clipe</dd>
@@ -601,7 +673,7 @@
            iPhone a imagem pode não vir sozinha, e um toque resolve-o. -->
       <button id="semRetrato" class="semPrevia" hidden></button>
       <div class="clipeRetrato" hidden id="ladoRetrato">
-        <span class="rotuloCampo" data-t="retrato.retrato">Versão em retrato · 9:16</span>
+        <span class="rotuloCampo" data-t="retrato.retrato">Versão vertical · 9:16</span>
         <div id="molduraRetrato" class="molduraRetrato">
           <canvas id="telaRetrato" class="telaRetrato" width="1080" height="1920"></canvas>
           <!-- O divisor. Arrasta-se para dar mais altura ao quadro de cima ou
@@ -642,14 +714,14 @@
       <button id="fimMais" class="passo" data-t-titulo="clipe.avancar" title="meio segundo para a frente" aria-label="fim: meio segundo para a frente"><svg class="ic ic-p" aria-hidden="true"><use href="#i-seta2"/></svg></button>
     </div>
     <label for="tituloClipe" data-t="clipe.tituloLabel">Título do clipe</label>
-    <input id="tituloClipe" type="text" maxlength="80" data-t-ph="clipe.tituloPh" placeholder="opcional — entra no nome do ficheiro">
+    <input id="tituloClipe" type="text" maxlength="80" data-t-ph="clipe.tituloPh" placeholder="opcional, entra no nome do arquivo">
     <div class="linha fim">
       <span id="estadoClipe" class="nota"></span>
       <button id="cancelarClipe" data-t="clipe.cancelar">Cancelar</button>
       <!-- So aparece quando o editor veio de uma kill da lista. Guarda as
            pontas e o enquadramento NA KILL, sem exportar nada: "ai vou fazendo
            em tudo e depois baixo tudo junto". -->
-      <button id="guardarAjustes" class="principal" hidden><svg class="ic" aria-hidden="true"><use href="#i-certo"/></svg><span data-t="clipe.guardarAjustes">Guardar ajustes</span></button>
+      <button id="guardarAjustes" class="principal" hidden><svg class="ic" aria-hidden="true"><use href="#i-certo"/></svg><span data-t="clipe.guardarAjustes">Salvar ajustes</span></button>
       <button id="guardarRetrato"
         data-t-titulo="retrato.custo" title="Reconverte em tempo real"><svg class="ic ic-p" aria-hidden="true"><use href="#i-descarregar"/></svg><span data-t="retrato.exportar">Exportar 9:16</span></button>
       <button id="guardarClipe" class="principal"><svg class="ic" aria-hidden="true"><use href="#i-descarregar"/></svg><span data-t="clipe.guardar">Exportar 16:9</span></button>
@@ -661,7 +733,7 @@
   <!-- A versao, a serio e visivel. O GitHub Pages serve com max-age=600 e um
        telemovel guarda o app.js antigo; sem isto, "ja corrigi" e "continua
        igual" sao as duas verdadeiras ao mesmo tempo e ninguem sai dali. -->
-  <p class="nota"><span data-t="app.rodape">A sessão fica guardada neste dispositivo.</span> · <span id="versao">dev</span></p>
+  <p class="nota"><span data-t="app.rodape">A sessão fica salva neste aparelho.</span> · <span id="versao">dev</span></p>
 </footer>
 
 <!-- O hls.js é nosso, e não do cdnjs.

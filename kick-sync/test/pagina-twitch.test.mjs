@@ -164,7 +164,7 @@ test('quem não estava no ar diz que não estava, e não mostra o frame errado',
     for (let i = 0; i < 25; i++) await p.click('#menos1m');
     const foras = await p.locator('.tile.fora').count();
     assert.equal(foras, 1, 'só o que ainda não tinha entrado');
-    assert.match(await p.locator('.tile.fora .estadoTile').innerText(), /não estava a transmitir/);
+    assert.match(await p.locator('.tile.fora .estadoTile').innerText(), /não estava transmitindo/);
     assert.match(await p.locator('#noAr').innerText(), /1 de 2/);
     assert.deepEqual(erros, []);
     await p.close();
@@ -285,4 +285,23 @@ test('cada página tem o seu próprio título, em qualquer língua',
     await p.goto(`http://127.0.0.1:${PORTA}/index.html`, { waitUntil: 'networkidle' });
     assert.ok(!/Twitch/.test(await p.title()), await p.title());
     await p.close();
+  });
+
+test('os botões de tempo dizem para que lado andam, em todas as línguas',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    // A tradução troca o texto do elemento inteiro: com a chave no botão, "−1 min" e "+1 min" ficavam
+    // os dois "1 min" e só a posição dizia qual voltava.
+    for (const idioma of ['pt', 'en', 'es']) {
+      const { p } = await abrir();
+      await p.addInitScript((l) => { try { localStorage.setItem('replay.idioma', l); } catch { /* nada */ } }, idioma);
+      await p.goto(`http://127.0.0.1:${PORTA}/twitch.html`, { waitUntil: 'networkidle' });
+      const texto = (id) => p.locator(`#${id}`).evaluate((b) => b.textContent.trim());
+      assert.match(await texto('menos1m'), /^−/, idioma);
+      assert.match(await texto('menos10s'), /^−/, idioma);
+      assert.match(await texto('mais10s'), /^\+/, idioma);
+      assert.match(await texto('mais1m'), /^\+/, idioma);
+      assert.notEqual(await texto('menos1m'), await texto('mais1m'));
+      assert.equal(await p.evaluate(() => document.documentElement.lang), idioma);
+      await p.close();
+    }
   });

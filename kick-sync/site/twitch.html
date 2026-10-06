@@ -70,10 +70,10 @@
 <section id="palco" hidden>
   <div class="linha barraTempo">
     <button id="tocar" class="principal"><svg class="ic ic-p" aria-hidden="true"><use href="#i-tocar"/></svg><span data-t="tw.tocar">Reproduzir</span></button>
-    <button id="menos1m" data-t="tempo.menos1m">-1 min</button>
-    <button id="menos10s" data-t="tempo.menos10s">-10 s</button>
-    <button id="mais10s" data-t="tempo.mais10s">+10 s</button>
-    <button id="mais1m" data-t="tempo.mais1m">+1 min</button>
+    <button id="menos1m" data-t-aria="tempo.voltar1m">−<span data-t="tempo.menos1m">1 min</span></button>
+    <button id="menos10s" data-t-aria="tempo.voltar10s">−<span data-t="tempo.menos10s">10s</span></button>
+    <button id="mais10s" data-t-aria="tempo.avancar10s">+<span data-t="tempo.mais10s">10s</span></button>
+    <button id="mais1m" data-t-aria="tempo.avancar1m">+<span data-t="tempo.mais1m">1 min</span></button>
     <span id="relogio" class="tempo"></span>
     <span id="noAr" class="nota"></span>
   </div>
@@ -82,7 +82,7 @@
 </section>
 
 <footer class="nota">
-  <span data-t="tw.rodape"></span> · <span id="versao">dev</span>
+  <span data-t="tw.rodape">Sincronizado pela hora de transmissão de cada VOD. Dois segundos de erro, medidos.</span> · <span id="versao">dev</span>
 </footer>
 
 <script src="https://player.twitch.tv/js/embed/v1.js"></script>

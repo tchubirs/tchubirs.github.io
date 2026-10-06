@@ -40,6 +40,8 @@ consequências:
    nomes de quem morreu, mensagens de erro, títulos e imagens da pesquisa da Twitch) passa por
    `site/escapar.js`. `test/seguranca.test.mjs` abre a página com o link armadilhado e falha no código
    antigo.
-3. Uma política de segurança de conteúdo (`Content-Security-Policy`) quando o site tiver domínio próprio:
-   só scripts do próprio site, ligações só para `kick.com` e o CDN da Kick.
+3. ~~Política de segurança de conteúdo.~~ Feito em 06/10: `index.html` traz a política num `<meta>` (só
+   scripts do próprio site; dados e vídeo só de `kick.com`, `stream.kick.com` e `clips.kick.com`), e os
+   testes de página correm com ela ligada. `site/_headers` tem a mesma política em cabeçalho, mais HSTS e
+   companhia, para quando houver domínio próprio (ver `LANCAR.md`).
 4. Repositório privado para o produto antes de mostrar o código a um comprador.

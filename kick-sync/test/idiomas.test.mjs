@@ -27,7 +27,7 @@ test('nenhuma chave usada na página fica por escrever', () => {
       usadas.add(m[1]);
     }
   }
-  for (const f of ['../site/app.js', '../site/twitch-app.js']) {
+  for (const f of ['../site/app.js', '../site/twitch-app.js', '../site/evento-ui.js']) {
     const codigo = ler(f);
     for (const m of codigo.matchAll(/\bt\(\s*'([a-zA-Z0-9_.]+)'/g)) usadas.add(m[1]);
     for (const m of codigo.matchAll(/\btn\([^,]+,\s*'([a-zA-Z0-9_.]+)',\s*'([a-zA-Z0-9_.]+)'/g)) {
@@ -97,9 +97,11 @@ const IGUAIS_DE_PROPOSITO = {
   ]),
   // O espanhol e o portugues escrevem estas exactamente da mesma maneira.
   es: new Set([
+    // "Abrir evento" e "Evento" escrevem-se igual nas duas.
+    'evento.abrir', 'evento.semNome',
     'app.nome', 'canais.vods', 'marca.feita', 'clipe.tempo',
     // "Abrir", "Editar", "Guardar ajustes" e "ajustado" escrevem-se igual.
-    'link.abrir', 'fila.editar', 'clipe.guardarAjustes', 'montagem.ajustado',
+    'link.abrir', 'fila.editar', 'alinhar.aComparar', 'montagem.aPreparar', 'montagem.ajustado',
     'montagem.ajustadoRetrato', 'fila.retratoDe',
     'tempo.menos5m', 'tempo.menos3s', 'tempo.mais3s', 'tempo.mais5m',
     'tempo.menos1m', 'tempo.menos10s', 'tempo.mais10s', 'tempo.mais1m',

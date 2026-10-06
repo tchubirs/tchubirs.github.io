@@ -20,6 +20,10 @@ V=$(cat site/*.js site/*.css site/index.html | sha1sum | cut -c1-10)
 cp site/*.html site/*.js site/*.css "$DESTINO/"
 # A imagem que aparece quando alguém partilha o link (og:image).
 cp site/*.png "$DESTINO/"
+# Os cabeçalhos de segurança para quando o site estiver num domínio próprio (Cloudflare Pages e Netlify
+# leem este ficheiro; o GitHub Pages serve-o como texto e ignora-o, e é por isso que a página também
+# traz a política num <meta>).
+cp site/_headers "$DESTINO/"
 # A letra vive connosco e nao num CDN (ver a nota em estilo.css). Sem esta
 # linha o site sai publicado a apontar para cinco ficheiros que nao estao la,
 # e a pagina inteira cai para a letra do sistema — que e exactamente o que

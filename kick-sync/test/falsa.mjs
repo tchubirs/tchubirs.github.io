@@ -88,14 +88,14 @@ export async function kickFalsa(pagina, {
         start_time: new Date(T + i * DIA + (comecosS[slug] || 0) * 1000)
           .toISOString().replace('T', ' ').slice(0, 19),
         duration: quantos * 10000,
-        source: `https://cdn.fake/${slug}/n${i}/master.m3u8`,
+        source: `https://stream.kick.com/falsa/${slug}/n${i}/master.m3u8`,
         video: {},
         }))),
     });
   });
-  await pagina.route('https://cdn.fake/**', async (rota) => {
+  await pagina.route('https://stream.kick.com/falsa/**', async (rota) => {
     const u = rota.request().url();
-    const slug = u.match(/cdn\.fake\/([^/]+)\//)?.[1] || '';
+    const slug = u.match(/kick\.com\/falsa\/([^/]+)\//)?.[1] || '';
     const noite = Number(u.match(/\/n(\d+)\//)?.[1] ?? 0);
     const atraso = atrasoMsPorNoite[noite] || 0;
     if (atraso) await new Promise((k) => setTimeout(k, atraso));
