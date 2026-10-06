@@ -21,7 +21,7 @@
 // a voz. É por isso que os do mesmo time vão à frente na fila
 // (`ordenarCandidatos`): é onde já se sabe que a resposta é boa.
 
-import { envolvente, desvio, TAXA, SALTO } from './sinal.js';
+import { envolvente, desvio, TAXA } from './sinal.js';
 
 /**
  * A partir desta força o som em comum basta para dizer "estava lá".
@@ -49,6 +49,28 @@ export const FORCA_TALVEZ = 5;
  * primeiro desvio é ~3% de hipótese, e ainda tem de passar de 5 outra vez.
  */
 export const TOLERANCIA_S = 0.25;
+
+/**
+ * O comprimento de janela em que 6 e 5 foram medidos, e o mínimo que se aceita.
+ *
+ * Com menos som, a mesma procura de 8 s para cada lado compara menos pontos
+ * e o pico do acaso sobe. Medido aqui com o gerador de cliques dos testes, 150
+ * comboios sem nada em comum com a referência, os dois lados do mesmo
+ * comprimento: força >= 6 em 2 com 20 s, em 5 com 15 s, em 28 com 10 s. Mais
+ * comprido só desce (0 em 150 com 30 e 40 s). Abaixo de 20 s os limites
+ * deixavam de dizer o que dizem, e ninguém dava por isso.
+ */
+export const JANELA_S = 20;
+
+/**
+ * Quanto uma janela pode vir mais curta e ainda contar como inteira.
+ *
+ * O som descodificado pode acabar umas dezenas de ms antes do que a playlist
+ * diz (frames de AAC, arredondamentos), e isso não é um VOD a acabar. Meio
+ * segundo não mexe no acaso: 200 comboios sem nada em comum cortados a 19,5 s
+ * deram força >= 6 em 3, contra 2 com 20 s inteiros (16 com 12 s, 63 com 8 s).
+ */
+const FOLGA_S = 0.5;
 
 /** O mesmo erro que o resto da página usa para "o utilizador desistiu". */
 function cancelado() {
@@ -112,6 +134,9 @@ function temSom(som) {
 }
 
 const medida = (m) => m != null && Number.isFinite(m.forca) && Number.isFinite(m.desvioS);
+
+/** Quantos segundos de som vieram, para os avisos. */
+const segundos = (som) => (som.length / TAXA).toFixed(1);
 
 /**
  * A decisão, sozinha: de uma ou duas medições (`{ forca, desvioS }` de
@@ -193,22 +218,27 @@ export function ordenarCandidatos({ referencia, canais, timeDe = () => null, noA
  * Devolve cada candidato LOGO QUE fica decidido, e não pela ordem de entrada:
  * com 500 canais, quem esperasse pelo mais lento via a lista vazia durante um
  * minuto. Cada resultado é `{ canal, estado, forca, desvioS }`, e mais `erro`
- * quando o som desse canal falhou:
+ * quando o som desse canal falhou, e `aviso` quando veio só parte de uma
+ * janela (o VOD começa ou acaba lá dentro) e por isso não se mediu:
  *   - 'estava'  — o mesmo som, com força. `desvioS` positivo => o candidato
  *                 chegou à Kick com MAIS atraso do que a referência; para ver
  *                 nele o mesmo instante, avança-se `desvioS` (é exactamente o
  *                 ajuste relativo que `resolver` de sinal.js daria).
  *   - 'talvez'  — força entre 5 e 6 e a segunda janela não pôde ser ouvida.
+ *                 Também quando ela veio cortada (com `aviso`).
  *   - 'nao'     — sem som em comum. `desvioS` fica null: o pico de uma
  *                 coincidência não é um atraso, e não pode ir parar a um ajuste.
  *   - 'sem-som' — não havia som para comparar (fora do VOD, mudo, ou falhou).
+ *                 Também quando só veio parte da janela (com `aviso`).
  *
  * - `somDe(canal, deMs, duracaoS, { sinal })`: o som de um canal, mono a
  *   8 kHz, a começar EXACTAMENTE em `deMs`, ou null. Na página é
  *   `somDoCanal` de alinhar.js; o `sinal` que recebe é largado quando a
  *   procura acaba ou é cancelada, para um download a meio parar de facto.
  * - A primeira janela começa em `quandoMs - janelaS / 2`: o momento fica no
- *   meio, com som antes e depois dele.
+ *   meio, com som antes e depois dele. `janelaS` não desce de JANELA_S (20 s),
+ *   que é onde os limites foram medidos; uma janela que vem mais curta do que
+ *   `janelaS` (tirando FOLGA_S) não é medida.
  * - `limiteS`: o maior atraso procurado. 8 s é o que foi medido; a gravação ao
  *   vivo anda 2 a 12 s atrás, mas isso é atraso de TODOS e não entre dois.
  * - `paralelos`: chamadas a `somDe` no ar, no máximo, contando as segundas
@@ -222,13 +252,15 @@ export function ordenarCandidatos({ referencia, canais, timeDe = () => null, noA
  *   a meio (break) larga tudo da mesma maneira.
  *
  * Atira `REFERENCIA-SEM-SOM` quando a própria referência não tem som naquele
- * instante: sem ela não há com que comparar, e 500 "sem-som" escondiam que o
- * problema é um canal só. `SEM-DESCODIFICADOR` (o browser não sabe AAC) passa
- * também, porque não melhora de canal para canal.
+ * instante, ou só tem parte da janela: sem ela não há com que comparar, e 500
+ * "sem-som" escondiam que o problema é um canal só. `SEM-DESCODIFICADOR` vindo
+ * da referência passa também: é o primeiro som descodificado, e se o browser
+ * não sabe AAC não vai saber para canal nenhum. Vindo de um candidato, já
+ * depois de a referência se ter descodificado, é um problema só desse canal.
  */
 export async function* procurarAngulos({
   quandoMs, referencia, candidatos, somDe,
-  janelaS = 20, limiteS = 8, paralelos = 6, sinal,
+  janelaS = JANELA_S, limiteS = 8, paralelos = 6, sinal,
 } = {}) {
   if (!Number.isFinite(quandoMs)) {
     throw new TypeError(`quandoMs tem de ser um instante em ms (veio ${quandoMs})`);
@@ -246,8 +278,14 @@ export async function* procurarAngulos({
   if (!Number.isInteger(paralelos) || paralelos < 1) {
     throw new RangeError(`paralelos tem de ser um inteiro >= 1 (veio ${paralelos})`);
   }
-  if (!(janelaS > 0) || !(limiteS > 0)) {
-    throw new RangeError(`janelaS e limiteS têm de ser positivos (vieram ${janelaS} e ${limiteS})`);
+  if (!(limiteS > 0)) {
+    throw new RangeError(`limiteS tem de ser positivo (veio ${limiteS})`);
+  }
+  // Uma janela curta demais é um erro de quem chama: dito aqui, e não depois
+  // de descarregar a referência como se fosse ela a não ter som. E abaixo de
+  // 20 s ainda há medida, mas os limites 6 e 5 já não querem dizer o mesmo.
+  if (!(janelaS >= JANELA_S)) {
+    throw new RangeError(`janelaS tem de ser >= ${JANELA_S} s, onde os limites foram medidos (veio ${janelaS})`);
   }
   if (sinal?.aborted) throw cancelado();
 
@@ -267,17 +305,23 @@ export async function* procurarAngulos({
 
   const deMs = quandoMs - (janelaS * 1000) / 2;
   const n = Math.round(janelaS * TAXA);
-  // A mesma regra de `desvio`: com menos de 5 s de envolvente ele recusa-se a
-  // medir, e então cada candidato daria 'sem-som' depois de descarregado.
-  const minimo = 5 * (TAXA / SALTO);
+  // Menos do que isto é uma janela cortada (o VOD começa ou acaba lá dentro,
+  // ou ao vivo ainda não foi gravada), e os limites não valem para ela.
+  const cheia = n - Math.round(FOLGA_S * TAXA);
 
   // Um sinal só nosso, que segue para cada `somDe`. Dispara quando o de fora
   // dispara e também quando quem lê sai do ciclo a meio — o de fora não sabe
   // desse segundo caso, e sem isto os downloads continuavam para ninguém.
-  const interno = new AbortController();
-  const largar = () => interno.abort();
-  sinal?.addEventListener('abort', largar, { once: true });
+  //
+  // `parar` vai junto: é a única coisa que os trabalhadores olham, e um
+  // `somDe` que ignore o sinal (uma cache, um caminho que devolve null antes
+  // de ir à rede) acaba e deixa o trabalhador pedir o canal seguinte. Sem
+  // isto, cancelar com a página ocupada (fora do `next`) não parava nada até
+  // ela voltar a ler.
   let parar = false;
+  const interno = new AbortController();
+  const largar = () => { parar = true; interno.abort(); };
+  sinal?.addEventListener('abort', largar, { once: true });
 
   try {
     // ── a referência ──────────────────────────────────────────────────────
@@ -297,18 +341,26 @@ export async function* procurarAngulos({
       });
     }
     const ref1 = somRef?.length ? fatia(somRef, 0, n) : null;
-    const envRef = ref1 && temSom(ref1) ? envolvente(ref1) : new Float32Array(0);
-    if (envRef.length < minimo) {
+    if (!ref1 || !temSom(ref1)) {
       throw Object.assign(new Error('a referência não tem som naquele instante'), { name: 'REFERENCIA-SEM-SOM' });
     }
+    // Cortada, a janela da referência punha TODOS os candidatos contra uma
+    // medida onde o acaso passa de 6: uma lista cheia de "estava" falsos, sem
+    // nada que o mostrasse. Melhor dizê-lo, e a página pede outro instante.
+    if (ref1.length < cheia) {
+      throw Object.assign(new Error(
+        `a referência só tem ${segundos(ref1)} s de som naquele instante (a medida pede ${janelaS} s)`,
+      ), { name: 'REFERENCIA-SEM-SOM' });
+    }
+    const envRef = envolvente(ref1);
     // A segunda janela da referência só se calcula quando um "talvez" a pede:
-    // são ~95 ms de contas que a maior parte das procuras nunca usa.
+    // são ~95 ms de contas que a maior parte das procuras nunca usa. Cortada
+    // ou muda, não há com que comparar e o "talvez" fica "talvez".
     let envRef2;
     const segundaDaRef = () => {
       if (envRef2 !== undefined) return envRef2;
-      const ref2 = somRef.length > n ? fatia(somRef, n, 2 * n) : null;
-      const env = ref2 && temSom(ref2) ? envolvente(ref2) : null;
-      envRef2 = env && env.length >= minimo ? env : null;
+      const ref2 = fatia(somRef, n, 2 * n);
+      envRef2 = ref2.length >= cheia && temSom(ref2) ? envolvente(ref2) : null;
       return envRef2;
     };
 
@@ -318,16 +370,24 @@ export async function* procurarAngulos({
     let falha = null;
     const avisar = () => { const f = acordar; acordar = null; f?.(); };
 
-    // Os erros que acabam com a procura toda, em vez de só com um canal: o
-    // cancelamento, e um browser sem AAC — esse não passa a ter a meio.
-    const fatal = (e) => parar || e?.name === 'AbortError' || e?.name === 'SEM-DESCODIFICADOR';
+    // O único erro de um candidato que acaba com a procura toda é o
+    // cancelamento. SEM-DESCODIFICADOR não: a referência já se descodificou
+    // neste browser, por isso AAC há, e um canal que mesmo assim o atira tem
+    // um problema só dele (um segmento que não começa num cabeçalho ADTS, uma
+    // configuração de áudio que o browser recusa). Um streamer esquisito não
+    // pode deixar os outros 499 sem resposta.
+    const fatal = (e) => parar || e?.name === 'AbortError';
 
+    // Devolve a medição, null quando não há som, ou `{ cortadaS }` quando veio
+    // só parte da janela: os limites são de janelas inteiras, e numa cortada
+    // o acaso chega a 6 (ver JANELA_S). Não se mede, e diz-se porquê.
     const ouvir = async (canal, de, envDaRef) => {
       const som = await somDe(canal, de, janelaS, { sinal: interno.signal });
       if (parar) throw cancelado();
       if (!som?.length) return null;
       const janela = fatia(som, 0, n);
       if (!temSom(janela)) return null;
+      if (janela.length < cheia) return { cortadaS: segundos(janela) };
       // (candidato, referência) e não ao contrário: assim o desvio positivo
       // quer dizer "o candidato chegou mais tarde", que é o que a página
       // aplica nele. Fixado por um teste com um atraso conhecido.
@@ -337,6 +397,7 @@ export async function* procurarAngulos({
 
     const umCandidato = async (canal) => {
       let erro;
+      let aviso;
       let primeira = null;
       try {
         primeira = await ouvir(canal, deMs, envRef);
@@ -345,6 +406,10 @@ export async function* procurarAngulos({
         // Um canal que não se consegue ouvir não pode matar a procura dos
         // outros: fica 'sem-som', com a razão dita.
         erro = e?.message ?? String(e);
+      }
+      if (primeira?.cortadaS != null) {
+        aviso = `só ${primeira.cortadaS} s de som naquele instante (a medida pede ${janelaS} s): não se mediu`;
+        primeira = null;
       }
       let estado = classificar(primeira);
       if (estado === 'talvez') {
@@ -359,6 +424,10 @@ export async function* procurarAngulos({
             if (fatal(e)) throw e;
             erro = e?.message ?? String(e);
           }
+          if (segunda?.cortadaS != null) {
+            aviso = `a segunda janela só tem ${segunda.cortadaS} s de som (a medida pede ${janelaS} s): fica "talvez"`;
+            segunda = null;
+          }
           estado = classificar(primeira, segunda);
         }
       }
@@ -369,6 +438,7 @@ export async function* procurarAngulos({
         desvioS: estado === 'estava' || estado === 'talvez' ? primeira.desvioS : null,
       };
       if (erro !== undefined) r.erro = erro;
+      if (aviso !== undefined) r.aviso = aviso;
       return r;
     };
 
