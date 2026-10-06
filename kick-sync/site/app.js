@@ -4489,11 +4489,13 @@ $('modalAjuda').onclick = (e) => { if (e.target.id === 'modalAjuda') alternarAju
 
 // Onde se escreve, a tecla é do texto. Um `input` de escrever, e não todos: o
 // cursor da barra, o volume e as caixas das kills também são INPUT, e com eles
-// em foco os atalhos morriam até se clicar noutro sítio.
+// em foco os atalhos morriam até se clicar noutro sítio. O `select` também não
+// é sítio de escrever: o zoom, o filtro das kills e a noite ficam com o foco
+// depois de escolhidos com o rato, e com eles os atalhos morriam do mesmo modo.
 const ESCREVER = /^(text|search|email|url|tel|password|number|date|time|datetime-local|month|week)$/;
 function ondeSeEscreve(el) {
   if (!el?.tagName) return false;
-  if (el.isContentEditable || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT') return true;
+  if (el.isContentEditable || el.tagName === 'TEXTAREA') return true;
   return el.tagName === 'INPUT' && ESCREVER.test(el.type || 'text');
 }
 
@@ -4540,8 +4542,9 @@ document.addEventListener('keydown', (e) => {
   // deixa o espaço pausar, senão o Pausar deixava de funcionar depois de
   // carregar num botão qualquer.
   const tabulado = focadosPeloTeclado.has(alvo)
-    && alvo.matches('button, summary, a[href], [role="button"], input');
-  const cursor = alvo?.tagName === 'INPUT' && alvo.type === 'range';
+    && alvo.matches('button, summary, a[href], [role="button"], input, select');
+  // As setas num cursor ou num seletor são dele: mudam o valor ou a escolha.
+  const cursor = (alvo?.tagName === 'INPUT' && alvo.type === 'range') || alvo?.tagName === 'SELECT';
   // Antes de haver noite não há nada para parar nem para andar: a pausa ficava
   // guardada e a primeira noite abria parada, e as setas rebentavam.
   const haNoite = Boolean(estado.janela) && estado.linhas.length > 0;
@@ -4550,6 +4553,10 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault(); alternarPausa(); return;
   }
   if (!haNoite) return;
+  // Num seletor a letra também escolhe a opção que começa por ela: o A saltava
+  // para "a noite toda" ao mesmo tempo que recuava. A letra que é atalho fica
+  // só para o atalho.
+  if (alvo?.tagName === 'SELECT' && /^[cmiojlad]$/.test(tecla)) e.preventDefault();
   if (tecla === 'c') $('clipar').click();
   if (tecla === 'm') $('marcarKill').click();
   if (tecla === 'i') $('marcarIn').click();

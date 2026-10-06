@@ -143,6 +143,39 @@ test('depois de mexer na barra do tempo os atalhos continuam a funcionar', semNa
   await p.close();
 });
 
+test('com um seletor em foco os atalhos continuam a funcionar, e a letra não muda a escolha', semNavegador, async () => {
+  // O zoom, o filtro das kills e a noite ficam com o foco depois de se
+  // escolher com o rato. Contá-los como caixas de escrever matava o M, o J, o
+  // L e o resto até se clicar noutro sítio, o mesmo defeito da barra do tempo.
+  const { p, erros } = await abrirNoite();
+  await carregar(p);
+  await pausar(p);
+  await p.focus('#zoomTempo');
+  await p.selectOption('#zoomTempo', '3600');
+  assert.equal(await p.evaluate(() => document.activeElement.id), 'zoomTempo');
+  await p.keyboard.press('m');
+  await p.waitForFunction(() => document.querySelectorAll('#listaMomentos li[data-ms]').length === 1,
+    null, { timeout: 5000 });
+  // O A é atalho e também a primeira letra de "a noite toda": manda o atalho,
+  // e o zoom fica onde estava.
+  const antesA = await segundos(p);
+  await p.keyboard.press('a');
+  await p.waitForFunction((t) => {
+    const [h, m, s] = document.querySelector('#agora').innerText.replace('Z', '').split(':').map(Number);
+    return h * 3600 + m * 60 + s < t;
+  }, antesA, { timeout: 5000 });
+  assert.equal(await p.inputValue('#zoomTempo'), '3600');
+  await p.focus('#filtroMomentos');
+  const antes = await segundos(p);
+  await p.keyboard.press('l');
+  await p.waitForFunction((t) => {
+    const [h, m, s] = document.querySelector('#agora').innerText.replace('Z', '').split(':').map(Number);
+    return h * 3600 + m * 60 + s === t + 1;
+  }, antes, { timeout: 5000 });
+  assert.deepEqual(erros, []);
+  await p.close();
+});
+
 test('o Esc fecha o editor de clipe mesmo a escrever o título', semNavegador, async () => {
   const { p, erros } = await abrirNoite();
   await carregar(p);
