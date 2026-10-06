@@ -67,6 +67,13 @@ marca cada luta no mapa sem precisar do som.
 3. Os bugs que ficaram parados (sessão, teclado, sincronia, Twitch, CI, mapa).
 4. Uma página do evento com nome e link fixos, que abre direto no mapa.
 5. A contagem dos números do piloto (clipes e visualizações), sem guardar vídeo nenhum.
+6. Quem começa a live depois de o evento estar aberto aparecer sozinho. Hoje só aparece ao recarregar a página:
+   o ao vivo estende quem já estava no ar, mas não volta a pedir a lista de VODs.
+7. A lista do evento pronta num arquivo, atualizada de tempos em tempos (por exemplo no GitHub Actions): cada
+   pessoa que abre o evento faz 1 pedido em vez de 500 à Kick. Com muita gente a abrir, é o que evita a Kick
+   estranhar o volume.
+8. Um teste com 500 canais reais. Medido até agora na Kick real: 120 canais em 8 s; os 500 em menos de um minuto
+   são uma conta a partir disso, não uma medição.
 
 ## Riscos
 
