@@ -51,6 +51,7 @@ def client(path):
     calc["A2"] = "=A1*2"
     calc["A3"] = "=SUMM(1,2)"                # a typo
     calc["A4"] = '=IFERROR(__xludf.DUMMYFUNCTION("QUERY(Data!A1:D6,""select A"")"),"Item")'
+    calc["A5"] = "=_xlfn.LAMBDA(_xlpm.x,_xlpm.x+1)(2)"   # 3 in Excel 365; LibreOffice gives #VALUE!
     wb.defined_names["Old"] = DefinedName("Old", attr_text="#REF!")  # ia-ok
     dv = DataValidation(type="list", formula1="#REF!")  # ia-ok
     ws.add_data_validation(dv)
@@ -81,17 +82,18 @@ def files(root):
     bad, good = audit_sheet.audit_files(paths)
 
     assert not bad["failed"] and bad["must_fix"], bad
-    assert (bad["sheets"], bad["formulas"], bad["on_purpose"]) == (2, 15, 1), bad
+    assert (bad["sheets"], bad["formulas"], bad["on_purpose"]) == (2, 16, 1), bad
     assert [(p, v) for p, _, v in bad["sources"]] == [("Calc!A3", "#NAME?"), ("Data!E2", "#DIV/0!"),
                                                       ("Data!E4", "#REF!")], bad["sources"]  # ia-ok
     assert bad["repeats"] == ["Data!E3"] and bad["circle"] == ["Data!G1", "Data!H1"], bad
-    # LibreOffice before 24.8 has no XLOOKUP: then that cell and the one reading it are set apart.
-    assert (bad["lacking"], bad["unchecked"]) in ((["Calc!A1"], ["Calc!A2"]), ([], [])), bad
+    # LibreOffice before 24.8 has no XLOOKUP: then that cell and the one reading it are set apart. It has no
+    # LAMBDA, whose #VALUE! there is set apart too, and not taken for an error of the client's.
+    assert (bad["lacking"], bad["unchecked"]) in ((["Calc!A1", "Calc!A5"], ["Calc!A2"]), (["Calc!A5"], [])), bad
     assert sorted(bad["broken"]) == ["conditional formatting on Data!D2:D6", "data validation on Data!C2:C6",
                                      "named range Old"], bad["broken"]
     assert bad["odd"] == [("Data!D4", "=B4*C3", "=B4*C4")], bad["odd"]
     assert bad["text_numbers"] == [("Data!B6", "12,50")], bad["text_numbers"]
-    assert bad["manual"] and bad["newer"] == {"XLOOKUP": 1} and bad["google"] == {"QUERY": 1}, bad
+    assert bad["manual"] and bad["newer"] == {"XLOOKUP": 1, "LAMBDA": 1} and bad["google"] == {"QUERY": 1}, bad
     assert bad["external"] == [] and bad["drops"] == [], bad
 
     report = "\n".join(audit_sheet.describe(bad))
@@ -103,7 +105,7 @@ def files(root):
                  "Needs Excel 2021 or later, or Microsoft 365: XLOOKUP (1 cell)"]:
         assert line in report, (line, report)
     print("client file: 3 errors and the cell that repeats one, the circle, 3 broken references, the odd "
-          "formula, the number typed as text, manual calculation, XLOOKUP and QUERY, all found")
+          "formula, the number typed as text, manual calculation, XLOOKUP, LAMBDA and QUERY, all found")
 
     assert not good["must_fix"] and (good["formulas"], good["sources"], good["odd"]) == (4, [], []), good
     assert "  Nothing to fix." in audit_sheet.describe(good), audit_sheet.describe(good)

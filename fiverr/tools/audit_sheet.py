@@ -385,8 +385,12 @@ def audit(path, recalculated):
     error_index = index_of(errors)
     graph = {cell: {hit for box in reads.get(cell, ()) for hit in hits(error_index, box)} for cell in errors}
     circle = loops(graph)
-    lacking = {cell for cell in errors
-               if cell not in circle and errors[cell] == "#NAME?" and reasons(kinds.get(cell, ()))}
+    # LibreOffice lacks a newer function when a cell calling it got #NAME?. It has no LAMBDA either, and a
+    # LAMBDA called on the spot, LAMBDA(x, x+1)(2), gives #VALUE! there: no error of Excel's.
+    lacked = {n for cell in errors if errors[cell] == "#NAME?" for n in reasons(kinds.get(cell, ()))} | {"LAMBDA"}
+    lacking = {cell for cell in errors if cell not in circle and (
+        errors[cell] == "#NAME?" and reasons(kinds.get(cell, ()))
+        or {n for k, n in kinds.get(cell, ()) if k == "newer"} & lacked)}
     readers = defaultdict(set)
     for cell, parents in graph.items():
         for p in parents:
