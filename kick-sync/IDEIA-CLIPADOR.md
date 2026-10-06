@@ -34,6 +34,23 @@ versão, pegando o que os outros fazem bem e evitando o que fazem mal.
 - **O que pode vir de fora, mas trocável:** a postagem nas redes. Se usarmos um serviço pronto no começo, fica
   atrás de uma peça nossa, para trocar de fornecedor ou fazer a nossa sem refazer o resto.
 
+## O que o dono já tem e serve aqui (olhado em 06/10)
+
+- **Postador** (repositório `estudos`, pasta `postador/`): a nossa própria API de postagem, sem mensalidade.
+  Já publica no Instagram (Reels), no Facebook (Reels de Página), no TikTok (direto ou rascunho) e no YouTube
+  (Shorts). Um pedido publica em todas; agenda por hora (`--quando`) ou pelo próximo horário livre (`--fila`).
+  Roda no GitHub Actions. É a resposta à regra de não depender de ninguém: a fila de postagem do Povix chama o
+  Postador. Limite conhecido: o Instagram só aceita o vídeo por link, por isso o vídeo passa por um endereço
+  temporário que se apaga sozinho.
+- **Fábrica de clipes** (repositório `clipes`, pasta `clipfactory/`): transcreve, escolhe trechos com
+  validação, corta em 9:16 com legenda e gancho (ffmpeg, sem custo de API), escreve título, descrição e tags no
+  idioma do mercado, e mede as visualizações de cada clipe. Também tem regras de edição testadas na prática
+  (`docs/GUIA-CORTES.md`: ordem real, sem câmera lenta, sem repetir partes, reação inteira, sem estragar a
+  surpresa).
+
+Como juntar (a desenhar): o Povix acha o lance e corta os ângulos; a fábrica põe legenda, gancho e título; o
+Postador agenda e publica; a fábrica mede as visualizações. Cada peça continua utilizável sozinha.
+
 ## Estudo dos concorrentes (a fazer)
 
 Para cada um: o que faz, preço, como o clipador usa no dia a dia, o que reclamam, e o que copiaríamos ou faríamos
