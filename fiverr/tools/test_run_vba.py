@@ -8,6 +8,7 @@ import io
 import os
 import sys
 import tempfile
+import zipfile
 
 from openpyxl import Workbook, load_workbook
 
@@ -82,6 +83,11 @@ Sub Recorded365()
     Worksheets("Data").Range("E2:E4").Formula2R1C1 = "=RC[-3]*2"
     Worksheets("Data").Columns("C:C").Hidden = True
     Worksheets("Data").Rows("3:4").EntireRow.Hidden = True
+End Sub
+
+Sub StampHere()
+    Range("A1").Value = "stamped"
+    MsgBox ActiveSheet.Name
 End Sub
 '''
 HELPER = '''Attribute VB_Name = "Helper"
@@ -163,6 +169,7 @@ def cli(book, modules, root):
                  "Data!D2  (empty)  ->  20", "Data!D4  (empty)  ->  21", "Summary!B1  (empty)  ->  61",
                  "Summary!B2  (empty)  ->  =SUM(Data!D2:D4)", "Summary!A3  (empty)  ->  checked"]:
         assert line in report, (line, report)
+    assert "Started on the sheet" not in report, report         # one sheet: nothing to choose
     after = load_workbook(out)
     assert after.sheetnames == ["Data", "Summary"] and after["Data"]["D3"].value == 20, after.sheetnames
     with contextlib.redirect_stdout(io.StringIO()) as said:
@@ -236,6 +243,64 @@ def paths(book, modules):
           "arguments and unknown names refused")
 
 
+def sheets(root, modules):
+    """Where a macro that acts on the open sheet starts: on the sheet open when the file opens, on the one
+    --sheet names, or on the sheet with its button, as when the client clicks it there."""
+    two = os.path.join(root, "two.xlsx")
+    wb = Workbook()
+    wb.active.title = "Data"
+    wb.create_sheet("Notes")
+    wb.active = 1
+    wb.save(two)
+    result = run_vba.run(two, "StampHere", [modules["Module1"]], changes=False)
+    report = "\n".join(run_vba.report(result, "yes"))
+    assert result["asked"] == ["MsgBox: Notes"] and result["start"] == ("Notes", "open", []), report
+    assert "Started on the sheet Notes, the one open when the file opens; the macro works on the open sheet" \
+        in report, report
+
+    with contextlib.redirect_stdout(io.StringIO()) as said:
+        code = run_vba.main([two, "StampHere", "--code", modules["Module1"], "--sheet", "data"])
+    report = said.getvalue()
+    for line in ["Started on the sheet Data, as asked with --sheet.", "MsgBox: Data", "Data!A1  (empty)  ->  stamped"]:
+        assert code == 0 and line in report, (line, report)
+    assert "Notes!A1" not in report, report
+    try:
+        run_vba.run(two, "StampHere", [modules["Module1"]], changes=False, sheet="Sales")
+        raise AssertionError("ran on a sheet that is not there")
+    except run_vba.Unrunnable as e:
+        assert "There is no sheet Sales in the workbook. Sheets: Data, Notes" in str(e), e
+
+    try:
+        import xlsxwriter
+    except ImportError:
+        print("sheets: the open sheet and --sheet checked; buttons not, pip install xlsxwriter builds the test file")
+        return
+    # A form button on Report and, on Archive, a shape the macro is assigned to (XlsxWriter cannot assign one,
+    # so it is written into the drawing as Excel does).
+    made, path = os.path.join(root, "made.xlsm"), os.path.join(root, "buttons.xlsm")
+    wb = xlsxwriter.Workbook(made)
+    for title in ("Data", "Report", "Archive"):
+        wb.add_worksheet(title)
+    wb.get_worksheet_by_name("Report").insert_button("B3", {"macro": "StampHere", "caption": "Stamp"})
+    wb.get_worksheet_by_name("Archive").insert_textbox("B3", "Stamp")
+    wb.add_vba_project(os.path.join(HERE, "testdata", "vbaProject.bin"))
+    wb.close()
+    with zipfile.ZipFile(made) as src, zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as dst:
+        for item in src.infolist():
+            data = src.read(item)
+            if item.filename.startswith("xl/drawings/drawing"):
+                assert data.count(b'<xdr:sp macro=""') == 1, data
+                data = data.replace(b'<xdr:sp macro=""', b'<xdr:sp macro="[0]!Module1.StampHere"')
+            dst.writestr(item, data)
+    assert run_vba.buttons(path) == {"stamphere": [("", "Report"), ("module1", "Archive")]}, run_vba.buttons(path)
+    result = run_vba.run(path, "StampHere", [modules["Module1"]], changes=False)
+    report = "\n".join(run_vba.report(result, "yes"))
+    assert result["asked"] == ["MsgBox: Report"] and result["start"] == ("Report", "button", ["Archive"]), report
+    assert "Started on the sheet Report, where its button is (it has one on Archive too)." in report, report
+    print("sheets: started on the sheet open when the file opens, on the one --sheet names, and on the sheet "
+          "with the macro's button (a form button, or a shape it is assigned to); a sheet that is not there refused")
+
+
 def workbook_macro(root):
     """A macro inside an .xlsm made in Excel, as a client sends it."""
     try:
@@ -260,6 +325,7 @@ if __name__ == "__main__":
         reading(tmp)
         cli(book, modules, tmp)
         paths(book, modules)
+        sheets(tmp, modules)
         workbook_macro(tmp)
     assert not leftover(), f"LibreOffice still running: {leftover()}"
     print("no LibreOffice left running")

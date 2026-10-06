@@ -3,12 +3,17 @@ Fiverr gig "Google Sheets and Excel": a macro is tested on the client's own file
 
 Usage: python3 run_vba.py book.xlsm MacroName                     a macro that is in the workbook
        python3 run_vba.py book.xlsx MacroName --code Module1.bas  a module I wrote or fixed, put into a copy
-              [--answer yes|no] [--input TEXT] [--timeout 60] [-o after.xlsx] [--report report.txt]
+              [--sheet NAME] [--answer yes|no] [--input TEXT] [--timeout 60] [-o after.xlsx] [--report report.txt]
        (needs LibreOffice with its Python bridge, apt-get install python3-uno, and pip install openpyxl)
 
 MacroName can be Module1.MacroName when two modules have one with that name. The file itself is never
 touched: LibreOffice opens a copy with macros off to keep the state before, then opens it again with
 macros on (so Workbook_Open runs, as in Excel), runs the macro and keeps the state after.
+
+A macro starts on the sheet the client is on, which matters for a recorded one (Range("A1") with no sheet
+acts on that sheet). The run starts on the sheet --sheet names; without it, on the sheet with the macro's
+button (a form button, or a shape or picture the macro is assigned to), as when the client clicks it;
+else on the sheet open when the file opens. The report says which.
 
 LibreOffice runs most VBA written for Excel. Tried on the usual kinds of macro: ranges and cells, adding
 sheets, copying sheets into one, sorting, AutoFilter, Find, formatting, arrays, Collection, string and date
@@ -23,8 +28,10 @@ removed, formulas, typed values and each result that moved, recalculated (audit_
 Colors, fonts and widths are not compared; -o keeps the workbook as the macro left it, to look at them.
 """
 import argparse
+import html
 import os
 import pathlib
+import posixpath
 import re
 import shutil
 import signal
@@ -33,6 +40,8 @@ import sys
 import tempfile
 import threading
 import time
+import xml.etree.ElementTree as ET
+import zipfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import audit_sheet  # noqa: E402
@@ -62,6 +71,11 @@ OUTSIDE = [(r"(?i)\bCreateObject\s*\(\s*\"Outlook", "Outlook"),
 # Excel 365 records .Formula2 and .Formula2R1C1, which LibreOffice lacks; .Formula and .FormulaR1C1 give the
 # same result unless the formula spills over more cells, so the run uses those.
 FORMULA2 = re.compile(r"(?i)\.Formula2(R1C1Local|R1C1|Local)?\b")
+# Code that acts on whatever sheet is open: ActiveSheet, Selection, or Range and Cells with no sheet before them.
+OPEN_SHEET = re.compile(r"(?i)\b(?:ActiveSheet|ActiveCell|Selection)\b|(?<![.\w])(?:Range|Cells|Rows|Columns)\s*\(")
+# The macro a button runs: macro="[0]!Module1.Name" on a form button in the sheet or on a shape in the drawing,
+# <x:FmlaMacro>[0]!Name</x:FmlaMacro> in the VML drawing of a form button.
+BUTTON_MACRO = re.compile(r'\bmacro="([^"]+)"|<(?:\w+:)?FmlaMacro>([^<]+)<')
 FORMATTING = re.compile(r"(?i)\.(?:Interior|Font|NumberFormat|ColumnWidth|RowHeight|AutoFit|Borders|"
                         r"HorizontalAlignment|WrapText|Style)\b")
 # LibreOffice reports some errors with its own names; these are the errors Excel gives for the same lines.
@@ -303,9 +317,10 @@ def basic_text(value):
     return value.replace('"', '""').replace("\r", " ").replace("\n", " ")
 
 
-def run(book, macro, code=(), answer="yes", typed="", timeout=60, keep=None, changes=True):
+def run(book, macro, code=(), answer="yes", typed="", timeout=60, keep=None, changes=True, sheet=None):
     """Run the macro on a copy and return what happened, as a dict the report is written from. Without
-    changes, the comparison of before and after (the slow part) is left out."""
+    changes, the comparison of before and after (the slow part) is left out. sheet is where it starts
+    (see the top of this file)."""
     work = tempfile.mkdtemp(prefix="run-vba-work-")
     try:
         copy = os.path.join(work, "book" + os.path.splitext(book)[1].lower())
@@ -318,6 +333,7 @@ def run(book, macro, code=(), answer="yes", typed="", timeout=60, keep=None, cha
             doc.close(True)
 
             doc = office.open(copy, macros=True)
+            sheets, opened = list(doc.Sheets.getElementNames()), doc.CurrentController.ActiveSheet.Name
             libs = doc.BasicLibraries
             libs.VBACompatibilityMode = True
             # The workbook's own modules, then the .bas files, which replace a module of the same name.
@@ -349,6 +365,21 @@ def run(book, macro, code=(), answer="yes", typed="", timeout=60, keep=None, cha
             name_, params, _ = procedures(modules[home])[wanted.lower()]
             if params and not all(p.strip().lower().startswith("optional") for p in params.split(",")):
                 raise Unrunnable(f"{home}.{name_} needs arguments ({params}); run the macro that calls it")
+            on = [title for module, title in buttons(book).get(name_.lower(), ())
+                  if module in ("", home.lower()) and title in sheets]
+            if sheet:
+                start = next((title for title in sheets if title.lower() == sheet.lower()), None)
+                if start is None:
+                    raise Unrunnable(f"There is no sheet {sheet} in the workbook. Sheets: {', '.join(sheets)}")
+                how, on = "chosen", []
+            elif on:
+                start, how, on = on[0], "button", on[1:]
+            else:
+                start, how = opened, "open"
+            if len(sheets) > 1:
+                result["start"] = (start, how, on)
+                result["open_sheet"] = any(OPEN_SHEET.search(line.split("'", 1)[0])
+                                           for line in body(modules[home], name_))
 
             main = MAIN.format(says=answer, typed=basic_text(typed), macro=name_)
             ordinary = [name for name in modules if kinds[name] == NORMAL]
@@ -386,6 +417,7 @@ def run(book, macro, code=(), answer="yes", typed="", timeout=60, keep=None, cha
                         if not put(False, broken):
                             result.update(status="compile", module=home, procedures=[])
             if result["status"] is None:
+                doc.CurrentController.setActiveSheet(doc.Sheets.getByName(start))
                 result.update(call(doc, result["library"], home, timeout))
                 if result["status"] == "timeout":
                     office.close()
@@ -401,6 +433,58 @@ def run(book, macro, code=(), answer="yes", typed="", timeout=60, keep=None, cha
         return result
     finally:
         shutil.rmtree(work, ignore_errors=True)
+
+
+def body(source, name):
+    """The lines of one procedure of a module, from its Sub or Function line to its End line."""
+    lines, inside = [], False
+    for line in source.splitlines():
+        m = PROC_START.match(line.strip())
+        if m and not inside:
+            inside = m.group(1).lower() == name.lower()
+        if inside:
+            lines.append(line)
+            if PROC_END.match(line.strip()):
+                break
+    return lines
+
+
+def buttons(path):
+    """The sheets with a button that runs each macro, read from an .xlsm or .xlsx: {macro name in lower case:
+    [(its module in lower case, or "" when the button does not say, sheet)]}, in the order of the sheets. A
+    button is a form button, or a shape or picture the macro is assigned to. {} for other files."""
+    found = {}
+    try:
+        with zipfile.ZipFile(path) as z:
+            names = set(z.namelist())
+
+            def related(part):
+                folder, base = posixpath.split(part)
+                rels = posixpath.join(folder, "_rels", base + ".rels")
+                if rels not in names:
+                    return {}
+                return {r.get("Id"): posixpath.normpath(posixpath.join(folder, r.get("Target", ""))).lstrip("/")
+                        for r in ET.fromstring(z.read(rels)) if r.get("TargetMode") != "External"}
+
+            if "xl/workbook.xml" not in names:
+                return found
+            parts = related("xl/workbook.xml")
+            for sheet in ET.fromstring(z.read("xl/workbook.xml")).iter():
+                if sheet.tag.rsplit("}", 1)[-1] != "sheet":
+                    continue
+                part = parts.get(next((v for k, v in sheet.attrib.items() if k.endswith("}id")), None))
+                if part not in names:
+                    continue
+                drawn = [p for p in related(part).values() if p in names and p.startswith("xl/drawings/")]
+                for p in [part] + drawn:
+                    for pair in BUTTON_MACRO.findall(z.read(p).decode("utf-8", "replace")):
+                        module, _, name = html.unescape("".join(pair)).rpartition("!")[2].strip().rpartition(".")
+                        entry = (module.lower(), sheet.get("name"))
+                        if name and entry not in found.setdefault(name.lower(), []):
+                            found[name.lower()].append(entry)
+    except (zipfile.BadZipFile, OSError, ET.ParseError):      # not a file Excel saves as zip (.xls), or damaged
+        return {}
+    return found
 
 
 def as_libreoffice(source):
@@ -546,6 +630,18 @@ def report(result, answer):
         names = ", ".join(result["procedures"]) or "a line outside the procedures"
         lines.append(f"LibreOffice cannot compile {result['module']} ({names}), so {macro} was not run. Some VBA only "
                      "Excel knows; check those procedures in Excel.")
+    start = result.get("start")
+    if start and status != "compile":
+        sheet, how, more = start
+        if how == "chosen":
+            lines.append(f"Started on the sheet {sheet}, as asked with --sheet.")
+        elif how == "button":
+            lines.append(f"Started on the sheet {sheet}, where its button is"
+                         + (f" (it has one on {', '.join(more)} too)." if more else "."))
+        else:
+            lines.append(f"Started on the sheet {sheet}, the one open when the file opens"
+                         + ("; the macro works on the open sheet (ActiveSheet, Selection or a Range with no "
+                            "sheet), so --sheet NAME starts it on another." if result.get("open_sheet") else "."))
     if result.get("left_out"):
         lines.append("Left out of the run, LibreOffice cannot compile them (Excel compiles a module only when it is "
                      "used, so the macro can still work there): " + ", ".join(
@@ -577,6 +673,7 @@ def main(argv=None):
     ap.add_argument("book", help=".xlsm, .xlsx, .xls or .ods")
     ap.add_argument("macro", help="the Sub to run, or Module1.Sub")
     ap.add_argument("--code", nargs="+", default=[], help=".bas modules to add to the copy (or to replace there)")
+    ap.add_argument("--sheet", help="the sheet the macro starts on (else the one with its button, or the one open)")
     ap.add_argument("--answer", choices=["yes", "no"], default="yes", help="how MsgBox questions are answered")
     ap.add_argument("--input", default="", help="what InputBox gets")
     ap.add_argument("--timeout", type=float, default=60, help="seconds before the macro is stopped")
@@ -584,7 +681,7 @@ def main(argv=None):
     ap.add_argument("--report", help="write the report to this file too")
     a = ap.parse_args(argv)
     try:
-        result = run(a.book, a.macro, a.code, a.answer, a.input, a.timeout, a.out)
+        result = run(a.book, a.macro, a.code, a.answer, a.input, a.timeout, a.out, sheet=a.sheet)
     except Unrunnable as e:
         print(e)
         return 2

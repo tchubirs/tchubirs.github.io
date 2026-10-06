@@ -148,7 +148,12 @@ até alguma vender. O que eu faço agora:
    Na mesma planilha, as 4 macros reais: o executor de VBA parava na linha 10 de uma delas, porque toda macro
    gravada no Excel 365 usa `Formula2R1C1` e o LibreOffice não tem; agora roda como `FormulaR1C1` (mesmo
    resultado). E macro que só esconde ou mostra linhas e colunas saía como "nenhuma mudança"; agora o
-   relatório diz quais linhas e colunas. Falta: escolher a aba onde a macro começa (`--sheet`).
+   relatório diz quais linhas e colunas.
+   Às 5h40, a aba onde a macro começa: macro gravada age na aba aberta, e na mesma planilha real o executor
+   começava na aba salva como aberta (Instructions), escondia colunas e zerava 12 células nela, e o relatório
+   dava isso como certo. No Excel o cliente clica no botão da aba Category Budget. Agora o executor lê no
+   arquivo onde fica o botão de cada macro (botão de formulário ou forma com macro) e começa nessa aba; sem
+   botão, na aba aberta ao abrir o arquivo, ou na que `--sheet` disser. O relatório diz em qual começou.
 
 Pausado até algo vender ou ele pedir: inventário da casa (rascunho em `etsy/home-inventory`), manutenção da casa,
 galinhas no quintal, férias da equipe, Herculano.

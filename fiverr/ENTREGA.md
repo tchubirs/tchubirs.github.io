@@ -72,8 +72,9 @@ so ("not checked") with the reason:
   I wrote: add `--code Module1.bas`). MsgBox gets `--answer yes` or `no`, InputBox gets `--input`. The report lists
   every change (rows and columns hidden or shown too), or the module, line and error where the macro stopped;
   `-o after.xlsx` keeps the result. Formula2R1C1, which the macro recorder of Excel 365 writes, runs as
-  FormulaR1C1. A recorded macro acts on the sheet that is active: the one active when the file was saved,
-  so check that it is the sheet the client starts from. Lines it
+  FormulaR1C1. A recorded macro acts on the open sheet, so the run starts where the client would: on the sheet
+  with the macro's button (a form button or a shape), else on the one open when the file opens. The report says
+  which; when the macro has no button, ask the client which sheet they run it from and add `--sheet NAME`. Lines it
   names as needing Windows or Excel (Scripting.Dictionary, RemoveDuplicates, Outlook) are tested by the client:
   say so in the delivery message, and avoid Scripting.Dictionary for a Mac. Deliver the module as a .bas file with
   the steps to import it (Alt+F11, then File > Import File).
