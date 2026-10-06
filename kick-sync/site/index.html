@@ -481,7 +481,7 @@
        ele — os saltos escorriam por cima do botão. -->
   <div class="linha sincronizar">
       <button id="alinhar" data-t="alinhar.botao" data-t-titulo="alinhar.ajuda" title="Analisa o áudio de cada ângulo e corrige o desvio">Sincronizar por áudio<svg class="ic ic-p" aria-hidden="true"><use href="#i-onda"/></svg><span data-t="alinhar.botao">Sincronizar por áudio</span></button>
-      <span id="estadoAlinhar" class="nota"></span>
+      <span id="estadoAlinhar" class="nota" role="status" aria-live="polite"></span>
     </div>
   <section id="automatico">
     <h2><span data-t="auto.titulo">Detecção automática</span> <b class="etiqueta" data-t="auto.teste">teste</b></h2>
@@ -598,11 +598,11 @@
       <details id="margens" class="margens">
         <summary><svg class="ic ic-p" aria-hidden="true"><use href="#i-deslizadores"/></svg><span data-t="montagem.margens">Margens</span> <output id="resumoMargens" class="nota"></output></summary>
         <div class="linha">
-          <label class="pequeno"><span data-t="montagem.minhaPov">minha POV</span> <input id="protAntes" type="number" value="5" min="0" max="120" step="1">s antes</label>
-          <label class="pequeno"><input id="protDepois" type="number" value="2" min="0" max="120" step="1">s depois</label>
+          <label class="pequeno"><span data-t="montagem.minhaPov">minha POV</span> <input id="protAntes" type="number" value="5" min="0" max="120" step="1"><span data-t="montagem.antes">s antes</span></label>
+          <label class="pequeno"><input id="protDepois" type="number" value="2" min="0" max="120" step="1"><span data-t="montagem.depois">s depois</span></label>
           <span id="margensVitima" class="linha" hidden>
-            <label class="pequeno"><span data-t="montagem.quemMorreu">Quem morreu?</span> <input id="vitAntes" type="number" value="1" min="0" max="60" step="1">s antes</label>
-            <label class="pequeno"><input id="vitDepois" type="number" value="2" min="0" max="60" step="1">s depois</label>
+            <label class="pequeno"><span data-t="montagem.margemVitima">quem morreu</span> <input id="vitAntes" type="number" value="1" min="0" max="60" step="1"><span data-t="montagem.antes">s antes</span></label>
+            <label class="pequeno"><input id="vitDepois" type="number" value="2" min="0" max="60" step="1"><span data-t="montagem.depois">s depois</span></label>
           </span>
         </div>
       </details>
@@ -627,7 +627,7 @@
     <ul id="listaMomentos" class="momentos"></ul>
     <div class="linha">
       <button id="baixarMontagem" disabled><svg class="ic" aria-hidden="true"><use href="#i-descarregar"/></svg><span data-t="montagem.baixar">Exportar montagem</span></button>
-      <span id="estadoMontagem" class="nota"></span>
+      <span id="estadoMontagem" class="nota" role="status" aria-live="polite"></span>
     </div>
   </section>
 </section>

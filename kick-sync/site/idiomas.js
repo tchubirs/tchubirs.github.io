@@ -199,7 +199,6 @@ const TEXTOS = {
     'montagem.marcar': 'Marcar kill',
     'montagem.margens': 'Margens',
     'montagem.minhaPov': 'minha POV',
-    'montagem.quemMorreu': 'quem morreu',
     'montagem.antes': 's antes',
     'montagem.depois': 's depois',
     'montagem.baixar': 'Exportar montagem',
@@ -346,6 +345,13 @@ const TEXTOS = {
     'lance.semDescodificador': 'Este navegador não decodifica o áudio da Kick, então a busca pelo som não roda. Abra no Chrome ou no Edge.',
     'lance.referenciaSemSom': '{canal} não tem som nesse instante. Escolha um ponto um pouco antes ou depois, ou outro streamer do lance.',
     'evento.achadosParcial': 'A Kick parou de responder no meio da lista: achei {n} lives até ali. Confira, tente de novo para completar, ou clique em Abrir evento.',
+    // deteccao
+    'montagem.margemVitima': 'quem morreu',
+    'auto.depoisDoFim': '{canal} saiu do ar às {hora}, antes deste ponto da noite. Volte a linha do tempo para antes disso, ou escolha a noite toda.',
+    'auto.falhados': ' · {n} trechos não vieram da Kick: rode de novo para ouvir esses também.',
+    'auto.erro': 'A detecção parou: não consegui ler o áudio de {canal}. Confira a internet e tente de novo, ou marque a kill à mão.',
+    'auto.semEstouroPerto': 'Não ouvi nenhum estouro a menos de 4 s desta kill. Escolha uma kill com o tiro bem audível, ou marque as outras à mão.',
+    'link.erro': 'Não consegui abrir esse clipe. Confira a internet e o endereço, e tente de novo.',
   },
 
   en: {
@@ -536,7 +542,6 @@ const TEXTOS = {
     'montagem.marcar': 'Mark kill',
     'montagem.margens': 'Margins',
     'montagem.minhaPov': 'my POV',
-    'montagem.quemMorreu': 'who died',
     'montagem.antes': 's before',
     'montagem.depois': 's after',
     'montagem.baixar': 'Export montage',
@@ -683,6 +688,13 @@ const TEXTOS = {
     'lance.semDescodificador': 'This browser cannot decode Kick audio, so the sound search does not run. Open it in Chrome or Edge.',
     'lance.referenciaSemSom': '{canal} has no sound at that moment. Pick a point a little earlier or later, or another streamer in the play.',
     'evento.achadosParcial': 'Kick stopped answering partway through the list: I found {n} streams up to there. Check them, try again to complete it, or click Open event.',
+    // deteccao
+    'montagem.margemVitima': 'who died',
+    'auto.depoisDoFim': '{canal} went off air at {hora}, before this point of the night. Move the timeline back before that, or pick the whole night.',
+    'auto.falhados': ' · {n} stretches did not come from Kick: run it again to hear those too.',
+    'auto.erro': 'Detection stopped: I could not read the audio of {canal}. Check your connection and try again, or mark the kill by hand.',
+    'auto.semEstouroPerto': 'I heard no loud bang within 4 s of this kill. Pick a kill where the shot is clearly heard, or mark the others by hand.',
+    'link.erro': 'Could not open that clip. Check your connection and the address, and try again.',
   },
 
   es: {
@@ -873,7 +885,6 @@ const TEXTOS = {
     'montagem.marcar': 'Marcar kill',
     'montagem.margens': 'Márgenes',
     'montagem.minhaPov': 'mi POV',
-    'montagem.quemMorreu': 'quién murió',
     'montagem.antes': 's antes',
     'montagem.depois': 's después',
     'montagem.baixar': 'Exportar montaje',
@@ -1020,6 +1031,13 @@ const TEXTOS = {
     'lance.semDescodificador': 'Este navegador no decodifica el audio de Kick, así que la búsqueda por sonido no funciona. Ábrelo en Chrome o Edge.',
     'lance.referenciaSemSom': '{canal} no tiene sonido en ese instante. Elige un punto un poco antes o después, u otro streamer de la jugada.',
     'evento.achadosParcial': 'Kick dejó de responder a mitad de la lista: encontré {n} directos hasta ahí. Revísalos, inténtalo de nuevo para completarla o haz clic en Abrir evento.',
+    // deteccao
+    'montagem.margemVitima': 'quién murió',
+    'auto.depoisDoFim': '{canal} salió del aire a las {hora}, antes de este punto de la noche. Lleva la línea de tiempo a antes de eso, o elige toda la noche.',
+    'auto.falhados': ' · {n} tramos no llegaron de Kick: vuelve a correrla para escuchar esos también.',
+    'auto.erro': 'La detección se detuvo: no pude leer el audio de {canal}. Revisa la conexión e inténtalo de nuevo, o marca la kill a mano.',
+    'auto.semEstouroPerto': 'No oí ningún estallido a menos de 4 s de esta kill. Elige una kill con el disparo bien audible, o marca las demás a mano.',
+    'link.erro': 'No pude abrir ese clip. Revisa la conexión y la dirección, e inténtalo de nuevo.',
   },
 };
 
