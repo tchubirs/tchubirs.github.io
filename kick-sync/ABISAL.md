@@ -1,0 +1,63 @@
+# Abisal: o piloto do Povix (plano, 06/10/2026)
+
+Evento de Rust, todo transmitido na Kick, com premiação, e com live obrigatória para todos os participantes. É o
+piloto ideal: todos os ângulos existem, e há um motivo para todos quererem clipes.
+
+## O princípio
+
+Não vender nada ao organizador. Oferecer de graça e mostrar, com o evento dele, uma coisa que ele não tem. Um
+projeto em texto não convence; o mapa do evento dele aberto, com os times dele e um lance dele em vários
+ângulos, convence em 30 segundos.
+
+## O que precisamos dos participantes
+
+O nome do canal na Kick, que é o que vem depois de `kick.com/`. O nome que aparece na tela às vezes é outro
+(espaços, letras maiúsculas, apelido). O Povix aceita a lista solta, uma linha por time ou a página de times do
+evento colada inteira, e marca em vermelho "não achado" quem estiver escrito errado. O ideal é a lista de links
+`kick.com/canal`; só os nomes servem, com uma conferência rápida no mapa.
+
+## A oferta, pensada para cada um
+
+**Para o organizador: o evento chega a quem não estava assistindo.**
+- Uma página do evento (exemplo: `povix.app/abisal`) com todos os streamers num mapa por time. Quem perdeu um
+  lance volta e vê de todos os lados. Ninguém mais tem isso.
+- Um resumo diário: os maiores picos do chat do dia, com o link de cada lance. Pronto para as redes do evento.
+- No fim, um relatório: quantos clipes saíram, quantas visualizações fora da Kick, quais lances rodaram mais.
+  É o número que ele mostra a patrocinadores no próximo evento.
+
+**Para os streamers: mais conteúdo com menos trabalho.**
+- Cada um abre o próprio lance com os ângulos dos colegas e dos inimigos, e corta em 16:9 ou 9:16 em minutos.
+- O clipe leva o nome de cada canal que aparece: quem é clipado também ganha alcance.
+
+**Para os clipadores e o público: um concurso.**
+- "Clipe do dia" (ou da semana) com os clipes feitos no Povix, premiado pelo evento ou só com destaque nas redes
+  oficiais. Concurso gera clipes em volume, e cada clipe é divulgação gratuita do evento.
+
+**Para nós: os números do piloto.** Ângulos sincronizados, erro de sincronia, clipes feitos, visualizações,
+minutos poupados. É o que entra na conversa com a Kick (`PITCH-KICK.md`).
+
+## Como abordar (ordem)
+
+1. Antes de falar com eles: abrir o Povix com o elenco real (assim que houver lista) e gravar um vídeo de 30
+   segundos: o mapa do evento deles, um clique, o lance em 4 ângulos, o clipe 9:16 saindo.
+2. Mandar ao organizador só isso: o vídeo, uma frase ("isto é o vosso evento; é de graça, querem para todos?")
+   e o link.
+3. Se aceitarem: uma mensagem pronta para os streamers, com o link e 3 passos, e o regulamento do concurso de
+   clipes.
+4. Durante o evento: acompanhar, corrigir na hora, contar os números.
+
+## O que tem de estar pronto antes (por ordem de valor)
+
+1. O site no ar com domínio próprio (o dono escolhe a hospedagem; recomendação em `LANCAR.md`).
+2. O clipe de vários ângulos ligado na tela (o código está pronto, falta o botão).
+3. Os bugs que ficaram parados (sessão, teclado, sincronia, Twitch, CI, mapa).
+4. Uma página do evento com nome e link fixos, que abre direto no mapa.
+5. A contagem dos números do piloto (clipes e visualizações), sem guardar vídeo nenhum.
+
+## Riscos
+
+- A Kick ainda não deu permissão escrita. Num piloto gratuito e com o organizador de acordo, o risco é baixo, mas
+  existe (`ESTUDO.md`, seção 5).
+- A busca pelo som só foi medida num par de streamers. O evento é o teste de verdade.
+- Durante o jogo a busca só olha lances com mais de 15 minutos, para ninguém usar para achar rivais. Isto deve
+  ser dito ao organizador como regra a favor do evento.
