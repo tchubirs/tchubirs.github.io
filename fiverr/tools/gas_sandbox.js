@@ -18,7 +18,7 @@ const crypto = require("crypto");
 const [jobPath, resultPath, ...files] = process.argv.slice(2);
 const job = JSON.parse(fs.readFileSync(jobPath, "utf8"));
 const result = {status: "ok", log: [], emails: [], ui: [], menus: [], triggers: [], fetched: [], missing: [],
-                notApplied: []};
+                notApplied: [], uses: {}};
 
 // The script runs in a context of its own, with its own Date, Array and Error: what it is given is made with
 // those, so that "value instanceof Date" and "catch (e) { e instanceof Error }" work as in Google.
@@ -72,13 +72,16 @@ function colLetters(n) {
 }
 
 class Grid {
-  constructor(name, origin, values = [], formulas = []) {
+  constructor(name, origin, values = [], formulas = [], view = {}) {
     this.name = name;
     this.origin = origin;
     this.values = values.map(row => row.map(read));
     this.formulas = formulas.map(row => row.map(f => f || ""));
     this.formats = {};
     this.hidden = false;
+    this.hiddenRows = new Set(view.hiddenRows || []);
+    this.hiddenCols = new Set(view.hiddenCols || []);
+    this.frozen = (view.frozen || [0, 0]).slice();
     this.id = Grid.next = (Grid.next || 0) + 1;
     this.start = this.snapshot();
   }
@@ -106,6 +109,20 @@ class Grid {
       for (let c = n; c > last; c--) if (!empty(this.get(r, c)) || this.formula(r, c)) { last = c; break; }
     }
     return last;
+  }
+  // Rows (axis 0) or columns (axis 1) inserted at position at (n > 0) or deleted from there (n < 0): the hidden
+  // ones and the formats the script set move with their cells.
+  shift(axis, at, n) {
+    const move = k => (k < at ? k : n < 0 && k < at - n ? null : k + n);
+    const set = axis === 0 ? "hiddenRows" : "hiddenCols";
+    this[set] = new Set([...this[set]].map(move).filter(k => k !== null));
+    const formats = {};
+    for (const [key, format] of Object.entries(this.formats)) {
+      const place = key.split(",").map(Number);
+      place[axis] = move(place[axis]);
+      if (place[axis] !== null) formats[place.join(",")] = format;
+    }
+    this.formats = formats;
   }
   maxRows() { return Math.max(1000, this.lastRow()); }        // a new Google sheet has 1000 rows
   maxColumns() { return Math.max(26, this.lastColumn()); }    // and 26 columns
@@ -179,6 +196,7 @@ class Range {
   clearDataValidations() { return this; }
   clearNote() { return this; }
   getRow() { return this.row; }
+  getRowIndex() { return this.row; }
   getColumn() { return this.col; }
   getLastRow() { return this.row + this.rows - 1; }
   getLastColumn() { return this.col + this.cols - 1; }
@@ -194,7 +212,44 @@ class Range {
   }
   getCell(r, c) { return new Range(this.sheet, this.row + r - 1, this.col + c - 1); }
   offset(r, c, rows, cols) { return new Range(this.sheet, this.row + r, this.col + c, rows || this.rows, cols || this.cols); }
-  activate() { this.sheet.spreadsheet.active = this.sheet; this.sheet.spreadsheet.activeRange = this; return this; }
+  activate() { return this.sheet.spreadsheet.setActiveRange(this); }
+  // As Ctrl and an arrow key: from the first cell to the edge of its block of cells with data, or past empty
+  // cells to the next one with data, or to the edge of the sheet.
+  getNextDataCell(direction) {
+    const step = {UP: [-1, 0], DOWN: [1, 0], PREVIOUS: [0, -1], NEXT: [0, 1]}[String(direction)];
+    if (!step) throw fail("Invalid argument: direction");
+    const [dr, dc] = step, bottom = this.grid.maxRows(), right = this.grid.maxColumns();
+    const filled = (r, c) => !empty(this.grid.get(r, c)) || !!this.grid.formula(r, c);
+    const inside = (r, c) => r >= 1 && c >= 1 && r <= bottom && c <= right;
+    let r = this.row, c = this.col;
+    if (filled(r, c) && inside(r + dr, c + dc) && filled(r + dr, c + dc)) {
+      while (inside(r + dr, c + dc) && filled(r + dr, c + dc)) { r += dr; c += dc; }
+    } else {
+      while (inside(r + dr, c + dc)) { r += dr; c += dc; if (filled(r, c)) break; }
+    }
+    return new Range(this.sheet, r, c);
+  }
+  // Google keeps the first of the rows with the same values (letter case aside) in the columns given, by their
+  // number in the sheet, or in all of them; the rows kept move up inside the range, and the range it gives
+  // back is shorter by the rows removed.
+  removeDuplicates(columns) {
+    const compared = columns === undefined ? null : Array.from(typeof columns === "number" ? [columns] : columns, Number);
+    for (const c of compared || []) {
+      if (c < this.col || c > this.getLastColumn()) throw fail(`Column ${c} is outside the range ${this.getA1Notation()}`);
+    }
+    const values = this.getValues(), formulas = this.getFormulas(), seen = new Set(), kept = [];
+    values.forEach((row, i) => {
+      const key = JSON.stringify((compared || row.map((_, j) => this.col + j)).map(c => {
+        const v = row[c - this.col];
+        return isDate(v) ? ["date", v.getTime()] : typeof v === "string" ? ["text", v.toLowerCase()] : [typeof v, v];
+      }));
+      if (!seen.has(key)) { seen.add(key); kept.push(i); }
+    });
+    this.cells((r, c, i, j) => (i < kept.length ? this.grid.put(r, c, values[kept[i]][j], formulas[kept[i]][j])
+                                                : this.grid.put(r, c, "")));
+    return new Range(this.sheet, this.row, this.col, Math.max(1, kept.length), this.cols);
+  }
+  createTextFinder(text) { return finder([this], text); }
   check() { return this.setValue(true); }
   uncheck() { return this.setValue(false); }
   insertCheckboxes() { this.cells((r, c) => empty(this.grid.get(r, c)) && this.grid.put(r, c, false)); return this; }
@@ -249,6 +304,64 @@ class Range {
   createFilter() { this.notApplied("filters"); return strict({remove() {}, setColumnFilterCriteria() { return this; }}, "Filter"); }
 }
 
+// Google's TextFinder: letter case, accents and partial matches allowed unless asked otherwise, in what the
+// cells show (or in their formulas), row by row and sheet by sheet.
+function finder(ranges, text) {
+  const how = {matchCase: false, entire: false, formulas: false, regex: false, accents: false};
+  let found = null, at = -1;
+  const plain = s => (how.accents ? s.normalize("NFD").replace(/[\u0300-\u036f]/g, "") : s);
+  const pattern = (global = true) => {
+    const source = how.regex ? plain(text) : plain(text).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return new RegExp(how.entire ? `^(?:${source})$` : source, (global ? "g" : "") + (how.matchCase ? "" : "i"));
+  };
+  const shown = cell => (how.formulas && cell.getFormula() ? cell.getFormula() : display(cell.getValue()));
+  const matches = () => {
+    if (!found) {
+      found = [];
+      for (const range of ranges) {
+        range.cells((r, c) => {
+          const cell = new Range(range.sheet, r, c);
+          if (pattern(false).test(plain(shown(cell)))) found.push(cell);
+        });
+      }
+    }
+    return found;
+  };
+  const option = key => on => { how[key] = on !== false; found = null; at = -1; return tf; };
+  const replace = (cell, replacement) => {
+    let count = 0;
+    const swap = t => plain(t).replace(pattern(), () => { count++; return replacement; });
+    if (how.formulas && cell.getFormula()) cell.setFormula(swap(cell.getFormula()));
+    else {
+      const t = swap(display(cell.getValue()));
+      cell.setValue(typeof cell.getValue() === "number" && t.trim() !== "" && !isNaN(Number(t)) ? Number(t) : t);
+    }
+    return count;
+  };
+  const tf = strict({
+    matchCase: option("matchCase"), matchEntireCell: option("entire"), matchFormulaText: option("formulas"),
+    useRegularExpression: option("regex"), ignoreDiacritics: option("accents"),
+    startFrom(range) {
+      const order = cell => [ranges.findIndex(r => r.sheet === cell.sheet), cell.row, cell.col];
+      const [s, r, c] = order(range);
+      const before = ([ms, mr, mc]) => ms < s || (ms === s && (mr < r || (mr === r && mc <= c)));
+      at = matches().filter(m => before(order(m))).length - 1;
+      return tf;
+    },
+    findAll: () => list(matches()),
+    findNext: () => (at + 1 < matches().length ? matches()[++at] : null),
+    findPrevious: () => (at > 0 ? matches()[--at] : null),
+    getCurrentMatch: () => (at >= 0 && at < matches().length ? matches()[at] : null),
+    replaceWith(replacement) { const cell = tf.getCurrentMatch(); return cell ? replace(cell, String(replacement)) : 0; },
+    replaceAllWith(replacement) {
+      const count = matches().reduce((n, cell) => n + replace(cell, String(replacement)), 0);
+      found = null; at = -1;
+      return count;
+    },
+  }, "TextFinder");
+  return tf;
+}
+
 function display(v) {
   if (isDate(v)) return `${v.getUTCMonth() + 1}/${v.getUTCDate()}/${v.getUTCFullYear()}`;
   return typeof v === "boolean" ? String(v).toUpperCase() : String(v);
@@ -292,18 +405,18 @@ class Sheet {
     values.forEach((v, i) => (typeof v === "string" && v.startsWith("=") ? this.grid.put(r, i + 1, "", v) : this.grid.put(r, i + 1, v)));
     return this;
   }
-  insertRowsBefore(row, n) { this.grid.values.splice(row - 1, 0, ...Array.from({length: n}, () => [])); this.grid.formulas.splice(row - 1, 0, ...Array.from({length: n}, () => [])); return this; }
+  insertRowsBefore(row, n) { this.grid.values.splice(row - 1, 0, ...Array.from({length: n}, () => [])); this.grid.formulas.splice(row - 1, 0, ...Array.from({length: n}, () => [])); this.grid.shift(0, row, n); return this; }
   insertRowBefore(row) { return this.insertRowsBefore(row, 1); }
   insertRowsAfter(row, n) { return this.insertRowsBefore(row + 1, n); }
   insertRowAfter(row) { return this.insertRowsBefore(row + 1, 1); }
   insertRows(row, n = 1) { return this.insertRowsBefore(row, n); }
-  deleteRows(row, n) { this.grid.values.splice(row - 1, n); this.grid.formulas.splice(row - 1, n); return this; }
+  deleteRows(row, n) { this.grid.values.splice(row - 1, n); this.grid.formulas.splice(row - 1, n); this.grid.shift(0, row, -n); return this; }
   deleteRow(row) { return this.deleteRows(row, 1); }
-  insertColumnsBefore(col, n) { for (const t of [this.grid.values, this.grid.formulas]) t.forEach(row => row.length >= col - 1 && row.splice(col - 1, 0, ...Array(n).fill(""))); return this; }
+  insertColumnsBefore(col, n) { for (const t of [this.grid.values, this.grid.formulas]) t.forEach(row => row.length >= col - 1 && row.splice(col - 1, 0, ...Array(n).fill(""))); this.grid.shift(1, col, n); return this; }
   insertColumnBefore(col) { return this.insertColumnsBefore(col, 1); }
   insertColumnAfter(col) { return this.insertColumnsBefore(col + 1, 1); }
   insertColumnsAfter(col, n) { return this.insertColumnsBefore(col + 1, n); }
-  deleteColumns(col, n) { for (const t of [this.grid.values, this.grid.formulas]) t.forEach(row => row.splice(col - 1, n)); return this; }
+  deleteColumns(col, n) { for (const t of [this.grid.values, this.grid.formulas]) t.forEach(row => row.splice(col - 1, n)); this.grid.shift(1, col, -n); return this; }
   deleteColumn(col) { return this.deleteColumns(col, 1); }
   clear() { this.grid.values = []; this.grid.formulas = []; return this; }
   clearContents() { return this.clear(); }
@@ -315,9 +428,27 @@ class Sheet {
   hideSheet() { this.grid.hidden = true; return this; }
   showSheet() { this.grid.hidden = false; return this; }
   isSheetHidden() { return this.grid.hidden; }
-  setFrozenRows() { return this; }
-  setFrozenColumns() { return this; }
-  getFrozenRows() { return 0; }
+  hideRows(row, n = 1) { for (let r = row; r < row + n; r++) this.grid.hiddenRows.add(r); }
+  showRows(row, n = 1) { for (let r = row; r < row + n; r++) this.grid.hiddenRows.delete(r); }
+  hideColumns(col, n = 1) { for (let c = col; c < col + n; c++) this.grid.hiddenCols.add(c); }
+  showColumns(col, n = 1) { for (let c = col; c < col + n; c++) this.grid.hiddenCols.delete(c); }
+  hideRow(range) { this.hideRows(range.getRow(), range.getNumRows()); }
+  unhideRow(range) { this.showRows(range.getRow(), range.getNumRows()); }
+  hideColumn(range) { this.hideColumns(range.getColumn(), range.getNumColumns()); }
+  unhideColumn(range) { this.showColumns(range.getColumn(), range.getNumColumns()); }
+  isRowHiddenByUser(row) { return this.grid.hiddenRows.has(row); }
+  isColumnHiddenByUser(col) { return this.grid.hiddenCols.has(col); }
+  setFrozenRows(n) { this.grid.frozen[0] = n; }
+  setFrozenColumns(n) { this.grid.frozen[1] = n; }
+  getFrozenRows() { return this.grid.frozen[0]; }
+  getFrozenColumns() { return this.grid.frozen[1]; }
+  getActiveRange() { return this.spreadsheet.getActiveRange(); }
+  getActiveCell() { return this.spreadsheet.getActiveCell(); }
+  getCurrentCell() { return this.spreadsheet.getCurrentCell(); }
+  getSelection() { return this.spreadsheet.getSelection(); }
+  setActiveRange(range) { return this.spreadsheet.setActiveRange(range); }
+  setActiveSelection(range) { return this.spreadsheet.setActiveRange(typeof range === "string" ? this.getRange(range) : range); }
+  createTextFinder(text) { return finder([this.getDataRange()], text); }
   autoResizeColumn() { return this; }
   autoResizeColumns() { return this; }
   setColumnWidth() { return this; }
@@ -336,8 +467,9 @@ class Sheet {
 class Spreadsheet {
   constructor(sheets, active) {
     this.sheets = [];
-    for (const s of sheets) this.sheets.push(new Sheet(this, new Grid(s.name, s.name, s.values, s.formulas)));
+    for (const s of sheets) this.sheets.push(new Sheet(this, new Grid(s.name, s.name, s.values, s.formulas, s)));
     this.removed = [];
+    this.selections = new Map();      // each sheet keeps its own selection, A1 until one is made
     this.active = this.sheets.find(s => s.getName() === active) || this.sheets[0];
     return strict(this, "Spreadsheet");
   }
@@ -355,11 +487,19 @@ class Spreadsheet {
   getNumSheets() { return this.sheets.length; }
   getSheetByName(name) { return this.sheets.find(s => s.getName() === name) || null; }
   getSheetById(id) { return this.sheets.find(s => s.getSheetId() === id) || null; }
-  getActiveSheet() { return this.active; }
+  getActiveSheet() { result.uses.sheet = true; return this.active; }
   setActiveSheet(sheet) { this.active = sheet; return sheet; }
-  getActiveRange() { return this.activeRange || this.active.getRange("A1"); }
+  getActiveRange() { result.uses.selection = true; return this.selections.get(this.active) || this.active.getRange("A1"); }
   getActiveCell() { return this.getActiveRange().getCell(1, 1); }
   getCurrentCell() { return this.getActiveCell(); }
+  setActiveRange(range) { this.active = range.getSheet(); this.selections.set(this.active, range); return range; }
+  setActiveSelection(range) { return this.setActiveRange(typeof range === "string" ? this.getRange(range) : range); }
+  getSelection() {
+    const book = this;
+    return strict({getActiveRange: () => book.getActiveRange(), getActiveSheet: () => book.getActiveSheet(),
+                   getCurrentCell: () => book.getCurrentCell()}, "Selection");
+  }
+  createTextFinder(text) { return finder(this.sheets.map(s => s.getDataRange()), text); }
   getRange(text) {
     const m = /^(?:'([^']+)'|([^!]+))!(.+)$/.exec(text);
     if (!m) return this.active.getRange(text);
@@ -534,10 +674,13 @@ const globals = {
     openById() { result.log.push("(openById: the test opens the same spreadsheet)"); return spreadsheet; },
     openByUrl() { result.log.push("(openByUrl: the test opens the same spreadsheet)"); return spreadsheet; },
     getActiveSheet: () => spreadsheet.getActiveSheet(), getActiveRange: () => spreadsheet.getActiveRange(),
-    setActiveSheet: sheet => spreadsheet.setActiveSheet(sheet), getUi: () => ui, flush() {},
+    getCurrentCell: () => spreadsheet.getCurrentCell(), getSelection: () => spreadsheet.getSelection(),
+    setActiveSheet: sheet => spreadsheet.setActiveSheet(sheet), setActiveRange: range => spreadsheet.setActiveRange(range),
+    getUi: () => ui, flush() {},
     newDataValidation() { const b = new Proxy({}, {get: (_, p) => (p === "build" ? () => ({}) : () => b)}); return b; },
     newConditionalFormatRule() { const b = new Proxy({}, {get: (_, p) => (p === "build" ? () => ({}) : () => b)}); return b; },
     BorderStyle: {}, Dimension: {COLUMNS: "COLUMNS", ROWS: "ROWS"}, WrapStrategy: {}, ProtectionType: {},
+    Direction: {UP: "UP", DOWN: "DOWN", PREVIOUS: "PREVIOUS", NEXT: "NEXT"},
   }, "SpreadsheetApp"),
   Browser: strict({
     msgBox(title, prompt, buttons) { result.ui.push(`msgBox: ${prompt === undefined ? title : `${title}: ${prompt}`}`); return answer(buttons).toLowerCase(); },
@@ -604,6 +747,13 @@ function place(error) {
 }
 
 Object.assign(context, globals);
+if (job.select) {
+  const sheet = job.select.sheet ? spreadsheet.getSheetByName(job.select.sheet) : spreadsheet.active;
+  spreadsheet.setActiveRange(sheet.getRange(job.select.cells));
+}
+const startedOn = spreadsheet.active, startedWith = spreadsheet.selections.get(startedOn);
+result.start = {sheet: startedOn.getName(), cells: startedWith ? startedWith.getA1Notation() : "A1",
+                sheets: spreadsheet.sheets.length};
 const started = Date.now();
 try {
   for (const file of files) {
@@ -614,6 +764,7 @@ try {
     if (!sheet) throw fail(`No sheet named ${job.edit.sheet} for the edit`);
     const range = sheet.getRange(job.edit.cell), oldValue = range.getValue();
     range.setValue(job.edit.value);
+    spreadsheet.setActiveRange(range);
     // As Google sends them: e.value as text ("TRUE" for a ticked checkbox), no e.oldValue for a cell that was empty.
     const text = v => (typeof v === "boolean" ? String(v).toUpperCase() : isDate(v) ? display(v) : String(v));
     context.$edit = {range, value: text(job.edit.value), oldValue: empty(oldValue) ? undefined : text(oldValue),
@@ -635,7 +786,9 @@ try {
   result.error = {name: error && error.name, message: String(error && error.message || error), at: place(error)};
 }
 result.seconds = result.status === "timeout" ? job.timeout : (Date.now() - started) / 1000;
-result.active = spreadsheet.getActiveSheet().getName();
+result.active = spreadsheet.active.getName();
 result.sheets = spreadsheet.sheets.map(s => ({name: s.grid.name, origin: s.grid.origin, hidden: s.grid.hidden,
-                                               changes: s.grid.changes(), formats: s.grid.formats}));
+                                               changes: s.grid.changes(), formats: s.grid.formats,
+                                               hiddenRows: [...s.grid.hiddenRows], hiddenCols: [...s.grid.hiddenCols],
+                                               frozen: s.grid.frozen}));
 fs.writeFileSync(resultPath, JSON.stringify(result));

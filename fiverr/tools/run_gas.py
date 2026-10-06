@@ -4,7 +4,8 @@
 Usage: python3 run_gas.py book.xlsx Code.gs [more.gs] --run sendReport     a function of the script
        python3 run_gas.py book.xlsx Code.gs --edit "Tasks!C2=Done"         a cell typed in, then onEdit(e)
        python3 run_gas.py book.xlsx Code.gs --open                         onOpen, and the menus it adds
-              [--answer yes|no] [--input TEXT] [--fetch URL=saved-answer.json] [--property KEY=VALUE]
+              [--select "Tasks!A2:D9"] [--answer yes|no] [--input TEXT] [--fetch URL=saved-answer.json]
+              [--property KEY=VALUE]
               [--timezone Europe/Paris] [--timeout 60] [-o after.xlsx] [--report report.txt]
        (needs Node.js, LibreOffice and pip install openpyxl)
 
@@ -16,8 +17,14 @@ not sent, alerts and prompts get --answer and --input, triggers are listed, UrlF
 answers given with --fetch, and properties start from --property. A service this test does not have
 (DriveApp, CalendarApp and so on) stops the script with its name, and the report lists it. When the
 script stops on an error, the report gives the file, the line and the error. Last comes every change in
-the workbook, recalculated (audit_sheet.py --compare); background color, bold, font color and number
-format are kept in the file saved with -o, other formatting is listed as not kept.
+the workbook, recalculated (audit_sheet.py --compare), with the rows and columns hidden or shown;
+background color, bold, font color and number format are kept in the file saved with -o, other
+formatting is listed as not kept.
+
+A script run from a menu works on what the client has open: getActiveSheet and getActiveRange give the
+sheet and the cells selected. The run starts on the sheet open in the file, with A1 selected, or with
+the cells --select gives; an edit selects the edited cell, as in Google. The report says when the result
+depends on it. Hidden rows and columns and frozen rows come from the file.
 """
 import argparse
 import datetime as dt
@@ -30,8 +37,11 @@ import subprocess
 import sys
 import tempfile
 
+import copy
+
 from openpyxl import load_workbook
 from openpyxl.styles import Font, PatternFill
+from openpyxl.utils.cell import column_index_from_string, coordinate_from_string, get_column_letter
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import audit_sheet  # noqa: E402
@@ -79,8 +89,39 @@ def sheets_of(base):
                 line_v.append(to_json(vs[cell.coordinate].value))
             grid_v.append(line_v)
             grid_f.append(line_f)
-        out.append({"name": ws.title, "values": grid_v, "formulas": grid_f})
+        rows, cols = audit_sheet.hidden_of(ws)
+        out.append({"name": ws.title, "values": grid_v, "formulas": grid_f, "hiddenRows": sorted(rows),
+                    "hiddenCols": sorted(cols), "frozen": frozen_of(ws)})
     return out, formulas.active.title
+
+
+def frozen_of(ws):
+    """The rows and columns frozen at the top and left of a sheet, as [rows, columns]."""
+    if not ws.freeze_panes:
+        return [0, 0]
+    col, row = coordinate_from_string(ws.freeze_panes)
+    return [row - 1, column_index_from_string(col) - 1]
+
+
+def show_hide(ws, rows, cols):
+    """Hides these rows and columns of a sheet (numbers) and shows the others that were hidden."""
+    old_rows, old_cols = audit_sheet.hidden_of(ws)
+    for r in rows ^ old_rows:
+        ws.row_dimensions[r].hidden = r in rows
+    for c in cols ^ old_cols:
+        # A run of columns alike is one entry in the file (C to E, or every column after the last used one):
+        # cut it around the column, so that the column is hidden or shown alone.
+        for key, d in list(ws.column_dimensions.items()):
+            first, last = d.min or column_index_from_string(key), d.max or column_index_from_string(key)
+            if first <= c <= last and first != last:
+                del ws.column_dimensions[key]
+                for a, b in ((first, c - 1), (c, c), (c + 1, last)):
+                    if a <= b:
+                        part = copy.copy(d)
+                        part.index, part.min, part.max = get_column_letter(a), a, b
+                        ws.column_dimensions[part.index] = part
+                break
+        ws.column_dimensions[get_column_letter(c)].hidden = c in cols
 
 
 def color(text):
@@ -115,6 +156,10 @@ def apply(base, result, out):
                 cell.font = font.copy(color=color(fmt["color"])) if color(fmt.get("color")) else font
             if fmt.get("numberFormat"):
                 cell.number_format = fmt["numberFormat"]
+        show_hide(ws, set(s["hiddenRows"]), set(s["hiddenCols"]))
+        if s["frozen"] != frozen_of(ws):
+            rows, cols = s["frozen"]
+            ws.freeze_panes = f"{get_column_letter(cols + 1)}{rows + 1}" if rows or cols else None
         ws.sheet_state = "hidden" if s["hidden"] else "visible"
         ordered.append(ws)
     wb._sheets = ordered
@@ -132,8 +177,9 @@ def typed(text):
 
 
 def run(book, scripts, call=None, edit=None, opened=False, answer="yes", typed_in="", fetch=None,
-        properties=None, timezone="Etc/GMT", timeout=60, keep=None, changes=True):
-    """Run the script on a copy and return what happened, as a dict the report is written from."""
+        properties=None, timezone="Etc/GMT", timeout=60, keep=None, changes=True, select=None):
+    """Run the script on a copy and return what happened, as a dict the report is written from. select is
+    {"sheet": name or None for the open one, "cells": "A2:D9"}, the cells selected when it starts."""
     if not shutil.which("node"):
         raise Unrunnable("Node.js is not installed (the node command)")
     if call and not re.fullmatch(r"[A-Za-z_$][\w$]*", call):
@@ -144,9 +190,15 @@ def run(book, scripts, call=None, edit=None, opened=False, answer="yes", typed_i
         if not base:
             raise Unrunnable(f"LibreOffice could not open {os.path.basename(book)}")
         sheets, active = sheets_of(base)
+        if select and select.get("sheet"):
+            names = [s["name"] for s in sheets]
+            title = next((n for n in names if n.lower() == select["sheet"].lower()), None)
+            if title is None:
+                raise Unrunnable(f"There is no sheet {select['sheet']} in the workbook. Sheets: {', '.join(names)}")
+            select = dict(select, sheet=title)
         job = {"sheets": sheets, "active": active, "timezone": timezone, "user": "client@example.com",
                "answer": answer, "input": typed_in, "fetch": fetch or {}, "properties": properties or {},
-               "timeout": timeout, "run": call, "edit": edit, "open": opened,
+               "timeout": timeout, "run": call, "edit": edit, "open": opened, "select": select,
                "title": pathlib.Path(book).stem}
         job_path, result_path = os.path.join(work, "job.json"), os.path.join(work, "result.json")
         pathlib.Path(job_path).write_text(json.dumps(job), encoding="utf-8")
@@ -159,6 +211,7 @@ def run(book, scripts, call=None, edit=None, opened=False, answer="yes", typed_i
             raise Unrunnable("the test itself failed: " + (done.stderr.strip().splitlines() or ["no message"])[-1])
         result = json.loads(pathlib.Path(result_path).read_text(encoding="utf-8"))
         result["what"] = what(call, edit, opened)
+        result["selected"] = bool(select)
         result["sources"] = {os.path.basename(s): pathlib.Path(s).read_text(encoding="utf-8") for s in scripts}
         if result["status"] == "absent":
             raise Unrunnable(f"{result['what']} is not in the script. Its functions: "
@@ -168,6 +221,7 @@ def run(book, scripts, call=None, edit=None, opened=False, answer="yes", typed_i
             load_workbook(base).save(before)    # written the same way as after, so only the script's changes show
             apply(base, result, after)
             result["changes"] = audit_sheet.compare(before, after)
+            result["layout"] = audit_sheet.layout(before, after)
             if keep:
                 shutil.copyfile(after, keep)
         return result
@@ -196,6 +250,16 @@ def report(result, answer):
             code = result["sources"].get(place["file"], "").splitlines()
             if 0 < place["line"] <= len(code):
                 lines.append(f"  {place['line']}: {code[place['line'] - 1].strip()}")
+    start, uses = result.get("start") or {}, result.get("uses") or {}
+    picked, edited = f"{start.get('sheet')}!{start.get('cells')}", name.startswith("onEdit")
+    if result.get("selected"):
+        lines.append(f"Started with {picked} selected, as asked with --select.")
+    elif uses.get("selection") and not edited:
+        lines.append(f"It works on the selected cells: the run had {picked} selected, so give the cells the client "
+                     "selects with --select Sheet!A2:D9.")
+    elif uses.get("sheet") and start.get("sheets", 1) > 1 and not edited:
+        lines.append(f"It works on the open sheet: the run started on {start['sheet']}, the one open in the file; "
+                     "--select Sheet!A1 starts it on another.")
     if result.get("emails"):
         lines.append("Emails it would send (none was sent):")
         lines += [f"  to {m['to']}: {m['subject']!r}, {len(m['body'])} characters"
@@ -217,6 +281,7 @@ def report(result, answer):
     if "changes" in result:
         lines.append("What changed in the workbook:" if status == "ok" else "What changed before it stopped:")
         lines += audit_sheet.describe_changes(result["changes"])[1:]
+        lines += [f"  {line}" for line in result.get("layout", ())]
         if result.get("notApplied"):
             lines.append(f"  Not kept in the saved file: {', '.join(result['notApplied'])}.")
     return lines
@@ -230,6 +295,8 @@ def main(argv=None):
     how.add_argument("--run", help="the function to run")
     how.add_argument("--edit", help='a cell typed in, then onEdit(e) runs: "Sheet1!C2=Done"')
     how.add_argument("--open", action="store_true", help="run onOpen, as when the spreadsheet opens")
+    ap.add_argument("--select", metavar="SHEET!A2:D9",
+                    help="the cells selected when the script starts, as the client selects them before using a menu")
     ap.add_argument("--answer", choices=["yes", "no"], default="yes", help="how alerts and questions are answered")
     ap.add_argument("--input", default="", help="what a prompt gets")
     ap.add_argument("--fetch", action="append", default=[], metavar="URL=FILE", help="the saved answer for an address")
@@ -245,6 +312,12 @@ def main(argv=None):
         if not m:
             ap.error('--edit is written as Sheet1!C2=value')
         edit = {"sheet": m.group(1) or m.group(2), "cell": m.group(3).upper(), "value": typed(m.group(4))}
+    select = None
+    if a.select:
+        m = re.fullmatch(r"(?:(?:'([^']+)'|([^!]+))!)?([A-Za-z]+\d+(?::[A-Za-z]+\d+)?)", a.select.strip())
+        if not m:
+            ap.error("--select is written as Sheet1!A2:D9 or A2:D9")
+        select = {"sheet": m.group(1) or m.group(2), "cells": m.group(3).upper()}
     fetch = {}
     for item in a.fetch:
         url, _, path = item.rpartition("=")           # the address can have = in it, the file name not
@@ -252,7 +325,7 @@ def main(argv=None):
     properties = dict(item.partition("=")[::2] for item in a.property)
     try:
         result = run(a.book, a.scripts, a.run, edit, a.open, a.answer, a.input, fetch, properties, a.timezone,
-                     a.timeout, a.out)
+                     a.timeout, a.out, select=select)
     except Unrunnable as e:
         print(e)
         return 2

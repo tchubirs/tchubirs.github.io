@@ -261,6 +261,196 @@ def services(path, code):
           "and a script property, a trigger, cell dates as Date, an unknown function refused")
 
 
+TOOLS = """function deleteBlankRows() {
+  const sheet = SpreadsheetApp.getActiveSheet();
+  const range = sheet.getActiveRange();
+  const values = sheet.getRange(range.getRowIndex(), 1, range.getNumRows(), sheet.getLastColumn()).getValues();
+  for (let i = values.length - 1; i >= 0; i--) {
+    if (values[i].every(v => v === "")) sheet.deleteRow(range.getRowIndex() + i);
+  }
+}
+
+function hideDone() {
+  const sheet = SpreadsheetApp.getActive().getSheetByName("Orders");
+  const first = sheet.getFrozenRows() + 1;
+  const status = sheet.getRange(first, 4, sheet.getLastRow() - first + 1, 1).getValues();
+  status.forEach((row, i) => { if (row[0] === "Done") sheet.hideRows(first + i); });
+  if (sheet.isColumnHiddenByUser(3)) sheet.showColumns(3);
+  sheet.hideColumns(6, 2);
+  Logger.log("frozen %s, row 2 hidden %s", sheet.getFrozenRows(), sheet.isRowHiddenByUser(2));
+}
+
+function dedupe() {
+  const left = SpreadsheetApp.getActive().getSheetByName("Orders").getRange("B2:D9").removeDuplicates([2]);
+  Logger.log("left %s", left.getA1Notation());
+}
+
+function findAndFix() {
+  const book = SpreadsheetApp.getActive();
+  const orders = book.getSheetByName("Orders");
+  const all = book.createTextFinder("lisbon").findAll().map(r => r.getSheet().getName() + "!" + r.getA1Notation());
+  const exact = orders.createTextFinder("Porto").matchEntireCell(true).matchCase(true).findAll().length;
+  const replaced = orders.createTextFinder("Lisbon").replaceAllWith("Lisboa");
+  const finder = orders.createTextFinder("done");
+  const rows = [];
+  let cell;
+  while ((cell = finder.findNext())) rows.push(cell.getRow());
+  const after = orders.createTextFinder("done").startFrom(orders.getRange("D5")).findNext().getRow();
+  Logger.log("%s | %s | %s | %s | %s", all.join(" "), exact, replaced, rows.join(" "), after);
+}
+
+function finderOptions() {
+  const orders = SpreadsheetApp.getActive().getSheetByName("Orders");
+  orders.getRange("H4").setValue("Porto Alegre");
+  const whole = orders.createTextFinder("Porto").matchEntireCell(true).findAll().length;
+  const pattern = orders.createTextFinder("^B[a-z]+o$").useRegularExpression(true).findAll().length;
+  const finder = orders.createTextFinder("Porto");
+  finder.findNext();
+  finder.findNext();
+  const back = finder.findPrevious().getA1Notation();
+  const one = finder.replaceWith("Oporto");
+  orders.getRange("H2").setFormula("=E2*2");
+  const formulas = orders.createTextFinder("E2").matchFormulaText(true).findAll().length;
+  orders.getRange("H3").setValue("\u00c9vora");
+  const accents = orders.createTextFinder("evora").ignoreDiacritics(true).findAll().length;
+  const strict = orders.createTextFinder("evora").findAll().length;
+  Logger.log("%s %s %s %s %s %s %s", whole, pattern, back, one, formulas, accents, strict);
+}
+
+function lastRows() {
+  const sheet = SpreadsheetApp.getActive().getSheetByName("Orders");
+  const up = sheet.getRange(sheet.getMaxRows(), 1).getNextDataCell(SpreadsheetApp.Direction.UP).getRow();
+  const down = sheet.getRange("A1").getNextDataCell(SpreadsheetApp.Direction.DOWN).getRow();
+  const next = sheet.getRange("A1").getNextDataCell(SpreadsheetApp.Direction.NEXT).getColumn();
+  const empty = sheet.getRange("H1").getNextDataCell(SpreadsheetApp.Direction.NEXT).getColumn();
+  Logger.log("%s %s %s %s", up, down, next, empty);
+}
+
+function shiftCells() {
+  const sheet = SpreadsheetApp.getActive().getSheetByName("Orders");
+  sheet.getRange("A9").setBackground("#ff0000");
+  sheet.getRange("E1").setBackground("#00ff00");
+  sheet.deleteRow(4);
+  sheet.insertColumnBefore(2);
+}
+
+function countRows() {
+  const sheet = SpreadsheetApp.getActiveSheet();
+  Logger.log("%s has %s rows", sheet.getName(), sheet.getLastRow());
+}
+
+function onEdit() {
+  const cell = SpreadsheetApp.getActiveSheet().getActiveCell();
+  if (cell.getColumn() === 4) cell.offset(0, 4).setValue("seen " + cell.getA1Notation());
+}
+"""
+
+
+def tools_book(root):
+    """Orders with a frozen heading, column C and row 8 hidden, two empty rows and repeated customers; a second
+    sheet."""
+    path = os.path.join(root, "orders.xlsx")
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Orders"
+    rows = [["Order", "Customer", "City", "Status", "Amount", "Note", "Ref"],
+            [101, "Ana", "Lisbon", "Done", 10], [102, "Bruno", "Porto", "Open", 20], [],
+            [103, "ana", "Faro", "Done", 30], [104, "Carla", "Lisbon", "Open", 40], [],
+            [105, "Duarte", "porto", "Open", 50], [106, "Bruno", "Braga", "Done", 60]]
+    for r, row in enumerate(rows, start=1):
+        for c, value in enumerate(row, start=1):
+            ws.cell(r, c, value)
+    ws.freeze_panes = "A2"
+    ws.column_dimensions["C"].hidden = True
+    ws.row_dimensions[8].hidden = True
+    for col in "EFG":
+        ws.column_dimensions[col].width = 15         # saved by LibreOffice as one entry, E to G
+    wb.create_sheet("Notes")["A1"] = "Lisbon office"
+    wb.save(path)
+    script = os.path.join(root, "Tools.gs")
+    with open(script, "w", encoding="utf-8") as f:
+        f.write(TOOLS)
+    return path, script
+
+
+def sheet_tools(root):
+    """The Sheets methods client scripts use that the test lacked: the selection (--select), hidden rows and
+    columns, frozen rows from the file, removeDuplicates, createTextFinder and getNextDataCell."""
+    path, script = tools_book(root)
+    out = os.path.join(root, "selected.xlsx")
+    with contextlib.redirect_stdout(io.StringIO()) as said:
+        assert run_gas.main([path, script, "--run", "deleteBlankRows", "--select", "Orders!A2:A9", "-o", out]) == 0
+    report = said.getvalue()
+    assert "Started with Orders!A2:A9 selected, as asked with --select." in report, report
+    ws = load_workbook(out)["Orders"]
+    left = [r[0] for r in ws.iter_rows(values_only=True)]
+    assert left == ["Order", 101, 102, 103, 104, 105, 106, None, None], left     # the two rows left empty at the end
+    assert ws.row_dimensions[6].hidden and not ws.row_dimensions[8].hidden, "the hidden row did not move up"
+    result = run_gas.run(path, [script], "deleteBlankRows", changes=False)
+    report = "\n".join(run_gas.report(result, "yes"))
+    assert result["sheets"][0]["changes"] == [], result["sheets"][0]["changes"]   # only A1 was selected
+    assert "It works on the selected cells: the run had Orders!A1 selected" in report, report
+    try:
+        run_gas.run(path, [script], "deleteBlankRows", changes=False, select={"sheet": "Sales", "cells": "A1"})
+        raise AssertionError("ran with a sheet that is not there")
+    except run_gas.Unrunnable as e:
+        assert "There is no sheet Sales in the workbook. Sheets: Orders, Notes" in str(e), e
+
+    result = run_gas.run(path, [script], "countRows", changes=False)
+    report = "\n".join(run_gas.report(result, "yes"))
+    assert result["log"] == ["Orders has 9 rows"], result["log"]
+    assert "It works on the open sheet: the run started on Orders, the one open in the file" in report, report
+    result = run_gas.run(path, [script], "countRows", changes=False, select={"sheet": "notes", "cells": "A1"})
+    report = "\n".join(run_gas.report(result, "yes"))
+    assert result["log"] == ["Notes has 1 rows"] and "Started with Notes!A1 selected" in report, report
+
+    out = os.path.join(root, "hidden.xlsx")
+    result = run_gas.run(path, [script], "hideDone", keep=out)
+    report = "\n".join(run_gas.report(result, "yes"))
+    assert result["log"] == ["frozen 1, row 2 hidden true"], result["log"]
+    for line in ["No change in formulas, typed values or results.", "Orders: rows 2, 5, 9 hidden",
+                 "Orders: columns F to G hidden", "Orders: column C shown again"]:
+        assert line in report, (line, report)
+    ws = load_workbook(out)["Orders"]
+    assert ws.row_dimensions[5].hidden and not ws.row_dimensions[3].hidden and ws.freeze_panes == "A2", "rows"
+    assert ws.column_dimensions["F"].hidden and not ws.column_dimensions["C"].hidden, "columns"
+    spans = sorted((d.min, d.max) for d in ws.column_dimensions.values())
+    assert all(a[1] < b[0] for a, b in zip(spans, spans[1:])), spans          # no column in two entries
+    assert ws.column_dimensions["E"].width == ws.column_dimensions["F"].width == 15, "a width was lost"
+
+    out = os.path.join(root, "deduped.xlsx")
+    result = run_gas.run(path, [script], "dedupe", keep=out)
+    assert result["log"] == ["left B2:D6"], result["log"]
+    got = [r[:4] for r in load_workbook(out)["Orders"].iter_rows(min_row=2, max_row=9, values_only=True)]
+    assert got == [(101, "Ana", "Lisbon", "Done"), (102, "Bruno", "Porto", "Open"), (None, None, None, None),
+                   (103, "Carla", "Lisbon", "Open"), (104, "Duarte", "porto", "Open"), (None, None, None, None),
+                   (105, None, None, None), (106, None, None, None)], got
+
+    result = run_gas.run(path, [script], "findAndFix", changes=False)
+    assert result["log"] == ["Orders!C2 Orders!C6 Notes!A1 | 1 | 2 | 2 5 9 | 9"], result["log"]
+    assert sorted(result["sheets"][0]["changes"]) == [[2, 3, "Lisboa", ""], [6, 3, "Lisboa", ""]], result["sheets"][0]
+
+    out = os.path.join(root, "shifted.xlsx")
+    run_gas.run(path, [script], "shiftCells", keep=out)
+    ws = load_workbook(out)["Orders"]
+    assert ws["A8"].fill.start_color.rgb == "FFFF0000" and ws["F1"].fill.start_color.rgb == "FF00FF00", "colors"
+    assert ws["A9"].fill.fill_type is None and ws["E1"].fill.fill_type is None, "colors left behind"
+    assert ws.row_dimensions[7].hidden and ws.column_dimensions["D"].hidden, "hidden row and column"
+    assert not ws.row_dimensions[8].hidden and not ws.column_dimensions["C"].hidden, "hidden left behind"
+    result = run_gas.run(path, [script], "finderOptions", changes=False)
+    assert result["log"] == ["2 2 C3 1 1 1 0"], result["log"]
+    assert [3, 3, "Oporto", ""] in result["sheets"][0]["changes"], result["sheets"][0]["changes"]
+    result = run_gas.run(path, [script], "lastRows", changes=False)
+    assert result["log"] == ["9 3 7 26"], result["log"]
+
+    result = run_gas.run(path, [script], edit={"sheet": "Orders", "cell": "D3", "value": "Done"}, changes=False)
+    assert [3, 8, "seen D3", ""] in result["sheets"][0]["changes"], result["sheets"][0]["changes"]
+    print("sheet tools: the cells selected with --select, rows and columns hidden and shown (in the report and the "
+          "file, and moving when rows and columns are deleted or added), the frozen heading read from the file, "
+          "duplicates removed in a range, find and replace across "
+          "sheets, the last row with getNextDataCell, and the edited cell as the active cell in onEdit")
+
+
 if __name__ == "__main__":
     if not shutil.which("node"):
         print("Apps Script: not checked, Node.js is not installed")
@@ -272,4 +462,5 @@ if __name__ == "__main__":
         services(path, code)
         fetch_cli(path, code, tmp)
         big(tmp)
+        sheet_tools(tmp)
     print("all good")

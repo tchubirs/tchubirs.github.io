@@ -712,6 +712,45 @@ def describe_changes(c):
     return lines
 
 
+def hidden_of(ws):
+    """The hidden rows and column numbers of a sheet, as (rows, columns)."""
+    rows = {r for r, d in ws.row_dimensions.items() if d.hidden}
+    cols = {c for key, d in ws.column_dimensions.items() if d.hidden
+            for c in range(d.min or column_index_from_string(key), (d.max or column_index_from_string(key)) + 1)}
+    return rows, cols
+
+
+def hidden(path):
+    """The hidden rows and columns of each sheet of a saved workbook, as {sheet: (rows, column numbers)}."""
+    return {ws.title: hidden_of(ws) for ws in load_workbook(path).worksheets}
+
+
+def spans(numbers, name=str):
+    """3, 4, 5 and 9 as "3 to 5, 9"; name turns a number into what is shown (a column letter)."""
+    out, numbers = [], sorted(numbers)
+    while numbers:
+        first = last = numbers.pop(0)
+        while numbers and numbers[0] == last + 1:
+            last = numbers.pop(0)
+        out.append(name(first) if first == last else f"{name(first)} to {name(last)}")
+    return ", ".join(out)
+
+
+def layout(before, after):
+    """The rows and columns a macro or script hid or showed, as lines like "Travel: column C hidden"."""
+    old, new = hidden(before), hidden(after)
+    lines = []
+    for sheet, (rows, cols) in new.items():
+        was_rows, was_cols = old.get(sheet, (set(), set()))
+        for what, items, name in (("row", rows - was_rows, str), ("column", cols - was_cols, get_column_letter)):
+            if items:
+                lines.append(f"{sheet}: {what}{'s' if len(items) > 1 else ''} {spans(items, name)} hidden")
+        for what, items, name in (("row", was_rows - rows, str), ("column", was_cols - cols, get_column_letter)):
+            if items:
+                lines.append(f"{sheet}: {what}{'s' if len(items) > 1 else ''} {spans(items, name)} shown again")
+    return lines
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description="Recalculate spreadsheets in LibreOffice and list what is wrong.")
     ap.add_argument("files", nargs="+", help=".xlsx, .xlsm, .xls or .ods files")

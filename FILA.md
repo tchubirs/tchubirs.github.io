@@ -154,6 +154,14 @@ até alguma vender. O que eu faço agora:
    dava isso como certo. No Excel o cliente clica no botão da aba Category Budget. Agora o executor lê no
    arquivo onde fica o botão de cada macro (botão de formulário ou forma com macro) e começa nessa aba; sem
    botão, na aba aberta ao abrir o arquivo, ou na que `--sheet` disser. O relatório diz em qual começou.
+   Às 6h40, o executor de Apps Script: li os exemplos oficiais do Google para planilhas e listei os métodos que
+   eles usam e que o teste não tinha (rodar o código baixado foi bloqueado; os testes são scripts meus). Um
+   script de cliente que usasse qualquer um parava com "não está neste teste". Agora o teste tem: as células
+   selecionadas (`--select`, como o cliente seleciona antes de usar o menu), esconder e mostrar linhas e
+   colunas (no relatório e no arquivo), linhas congeladas lidas do arquivo, `removeDuplicates`, localizar e
+   substituir (`createTextFinder`, com as opções) e `getNextDataCell` (a última linha com dado). Corrigidos
+   dois defeitos: no onEdit, `getActiveCell` dava A1 em vez da célula editada (padrão de muito script antigo
+   de data automática), e ao apagar ou inserir linhas as cores postas pelo script ficavam na linha errada.
 
 Pausado até algo vender ou ele pedir: inventário da casa (rascunho em `etsy/home-inventory`), manutenção da casa,
 galinhas no quintal, férias da equipe, Herculano.

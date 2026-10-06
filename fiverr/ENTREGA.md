@@ -81,7 +81,9 @@ so ("not checked") with the reason:
 - An Apps Script: download the Google Sheet as Excel, then `python3 fiverr/tools/run_gas.py client.xlsx Code.gs
   --run functionName` (`--edit "Sheet1!C2=Done"` for onEdit, `--open` for the menus). Emails are listed and not
   sent, alerts and prompts get `--answer` and `--input`, an address the script fetches needs a saved answer
-  (`--fetch URL=answer.json`). The report gives every change, or the file, line and error where it stopped. What it
+  (`--fetch URL=answer.json`). The report gives every change (rows and columns hidden or shown too), or the file,
+  line and error where it stopped. A script for a menu often works on the cells the client selects: when the
+  report says "It works on the selected cells", ask which cells and add `--select "Sheet1!A2:D40"`. What it
   lists under "Not in this test" (DriveApp, CalendarApp and so on) is checked in Google: say so in the delivery
   message and ask the client to run the script once on a copy of the sheet.
 - After the work, `audit_sheet.py fixed.xlsx` must say "Nothing to fix", and
