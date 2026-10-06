@@ -29,6 +29,20 @@ Quando estão juntos, o atraso é o mesmo em todas as janelas (0,41 a 0,43 s): �
 envios para a Kick, a mesma coisa que o alinhamento já corrige. Isso é o que separa som em comum de
 coincidência: coincidências caem em atrasos espalhados.
 
+## O mesmo teste com o código do site
+
+O mesmo áudio (15 min de cada noite, 8 kHz mono) passou pelas funções que o site já usa para alinhar
+(`envolvente` e `desvio` de `site/sinal.js`), em janelas de 20 s com atraso procurado em ±8 s. A medida é a
+`forca` delas: o pico da correlação a dividir pelo desvio-padrão do resto da curva.
+
+| noite | janelas | força mediana | força máxima | janelas com força 6 ou mais | atraso nessas janelas |
+|---|---|---|---|---|---|
+| 28/09, juntos | 87 | 6,8 | 13,8 | 55 | −0,42 s em todas |
+| 03/10, separados | 87 | 3,6 | 5,6 | 0 | |
+
+O limite de 6 separa os dois casos sem erro nestes dados: é o que o site usa para dizer "estava lá". Entre 5
+e 6, o site olha uma segunda janela antes de decidir. `probes/calibrar-cena.mjs` repete a conta.
+
 ## O que isto prova e o que não prova
 
 - **Prova:** o site distingue, a partir do som e sem dado nenhum do jogo, dois canais que estavam juntos
