@@ -571,6 +571,81 @@ def recorded(root):
           "formulas the script wrote are named for checking in Google")
 
 
+TOTALS = """function pruneOrders() {
+  const orders = SpreadsheetApp.getActive().getSheetByName("Orders");
+  orders.deleteRow(3);
+  orders.insertRowBefore(2);
+  orders.getRange("A2:C2").setValues([["z", 9, 90]]);
+  orders.getRange("D2").setFormula("=C2*2");
+}
+
+function openRanges() {
+  const orders = SpreadsheetApp.getActive().getSheetByName("Orders");
+  orders.getRange("F1").setFormula("=COUNTA(A3:A)+SUM(C:C)+SUM(4:5)");
+  orders.deleteRow(2);
+  orders.insertColumnBefore(1);
+  Logger.log(orders.getRange("G1").getFormula());
+}
+
+function shrink() {
+  const orders = SpreadsheetApp.getActive().getSheetByName("Orders");
+  orders.getRange("F1").setFormula("=SUM(C2:C4)+SUM(C3:C)");
+  orders.deleteRows(3, 3);
+  Logger.log(orders.getRange("F1").getFormula());
+}
+
+function renameAndDrop() {
+  const book = SpreadsheetApp.getActive();
+  book.getSheetByName("Orders").setName("Sales 2026");
+  book.deleteSheet(book.getSheetByName("Notes"));
+}
+"""
+
+
+def totals(root):
+    """Rows deleted and added, a sheet renamed and one deleted, with formulas pointing at them: the references
+    move as in Google. Before, the formula texts stayed as they were, so the total under the table summed the
+    wrong rows (220 for 130) and a reference to the deleted row read the row that took its place."""
+    path = os.path.join(root, "totals.xlsx")
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Orders"
+    ws.append(["Item", "Qty", "Amount", "Double"])
+    for r, (item, qty) in enumerate(zip("abcde", range(1, 6)), start=2):
+        ws.append([item, qty, qty * 10, f"=C{r}*2"])
+    ws["A8"], ws["C8"], ws["D8"] = "Total", "=SUM(C2:C6)", "=SUM(D2:D6)"
+    summary = wb.create_sheet("Summary")
+    for row in [["=Orders!C8"], ["=COUNTA(Orders!A2:A9)"], ["=SUM(Orders!$C$2:$C$6)"], ["=Orders!C3"],
+                ["=SUM(Orders!C:C)"], ["=Notes!A1"]]:
+        summary.append(row)
+    wb.create_sheet("Notes")["A1"] = 7
+    wb.save(path)
+    script = os.path.join(root, "Totals.gs")
+    with open(script, "w", encoding="utf-8") as f:
+        f.write(TOTALS)
+
+    result = run_gas.run(path, [script], "pruneOrders")
+    report = "\n".join(run_gas.report(result, "yes"))
+    for line in ["Orders!C8  =SUM(C2:C6)  ->  =SUM(C3:C6)", "Summary!A2  =COUNTA(Orders!A2:A9)  ->  =COUNTA(Orders!A3:A9)",
+                 "Summary!A3  =SUM(Orders!$C$2:$C$6)  ->  =SUM(Orders!$C$3:$C$6)", "Summary!A4  =Orders!C3  ->  =#REF!",  # ia-ok
+                 "Orders!C8  150  ->  130", "Summary!A1  150  ->  130", "Summary!A4  20  ->  #REF!"]:  # ia-ok
+        assert line in report, (line, report)
+    assert "Summary!A5" not in report.split("Results that changed")[0], report        # =SUM(Orders!C:C) stays
+
+    result = run_gas.run(path, [script], "openRanges", changes=False)
+    assert result["log"] == ["=COUNTA(B2:B)+SUM(D:D)+SUM(3:4)"], result["log"]   # LibreOffice lacks A2:A, so here
+    result = run_gas.run(path, [script], "shrink", changes=False)
+    assert result["log"] == ["=SUM(C2:C2)+SUM(C3:C)"], result["log"]      # rows 3 to 5 deleted
+    result = run_gas.run(path, [script], "renameAndDrop", changes=False)
+    formulas = {(r, c): f for r, c, _, f in next(s for s in result["sheets"] if s["name"] == "Summary")["changes"]}
+    assert formulas == {(1, 1): "='Sales 2026'!C8", (2, 1): "=COUNTA('Sales 2026'!A2:A9)",
+                        (3, 1): "=SUM('Sales 2026'!$C$2:$C$6)", (4, 1): "='Sales 2026'!C3",
+                        (5, 1): "=SUM('Sales 2026'!C:C)", (6, 1): "=#REF!"}, formulas  # ia-ok
+    print("totals: a row deleted and one added move every reference to them (the total, another sheet, a range "
+          "from a row down, a reference to the deleted row as #REF!), and a renamed or deleted sheet changes the "
+          "formulas that name it, as in Google")
+
+
 if __name__ == "__main__":
     if not shutil.which("node"):
         print("Apps Script: not checked, Node.js is not installed")
@@ -584,4 +659,5 @@ if __name__ == "__main__":
         big(tmp)
         sheet_tools(tmp)
         recorded(tmp)
+        totals(tmp)
     print("all good")

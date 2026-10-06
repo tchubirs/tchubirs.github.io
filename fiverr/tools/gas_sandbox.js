@@ -6,7 +6,8 @@
 //
 // SpreadsheetApp follows Google's own behaviour where scripts depend on it: getValues gives "" for empty
 // cells and Date objects for dates, setValues with the wrong size fails with Google's message, a new sheet
-// has 1000 rows and 26 columns, setValue("=...") writes a formula. Formulas are not calculated here
+// has 1000 rows and 26 columns, setValue("=...") writes a formula, rows and columns added or deleted move
+// the references of every formula (a sheet renamed or deleted too). Formulas are not calculated here
 // (getValue on one gives the value the file had, or "" for a new one); run_gas.py has LibreOffice
 // recalculate the result. Dates are wall-clock times, read and formatted as UTC.
 "use strict";
@@ -105,6 +106,80 @@ function toR1C1(formula, row, col) {
     const part = (fix, n, here) => (fix ? String(n) : n === here ? "" : `[${n - here}]`);
     return `R${part(fixRow, +r, row)}C${part(fixCol, colNumber(letters), col)}`;
   });
+}
+
+// A reference with the sheet it names, if any: a cell, a range, a column from a row down (A2:A), whole columns
+// (A:C) or whole rows (2:5). Text in quotes is matched first and left alone.
+const REF = new RegExp(
+  "(?<text>\"(?:[^\"]|\"\")*\")|(?<![\\w.$'])(?:(?<sheet>'(?:[^']|'')+'|[A-Za-z_][\\w.]*)!)?(?:"
+  + "(?<f1>\\$?)(?<c1>[A-Z]{1,3})(?<g1>\\$?)(?<r1>\\d+)(?::(?<f2>\\$?)(?<c2>[A-Z]{1,3})(?:(?<g2>\\$?)(?<r2>\\d+))?)?"
+  + "|(?<cf1>\\$?)(?<cc1>[A-Z]{1,3}):(?<cf2>\\$?)(?<cc2>[A-Z]{1,3})"
+  + "|(?<rf1>\\$?)(?<rr1>\\d+):(?<rf2>\\$?)(?<rr2>\\d+))(?![\\w(!])", "g");
+
+// The positions a to b (b can be Infinity) after n rows or columns are added at position at (n > 0), or -n of
+// them deleted from there (n < 0); null when all of them were deleted.
+function span(a, b, at, n) {
+  if (n > 0) return [a >= at ? a + n : a, b >= at ? b + n : b];
+  const end = at - n;
+  const na = a < at ? a : a >= end ? a + n : at, nb = b < at ? b : b >= end ? b + n : at - 1;
+  return nb < na ? null : [na, nb];
+}
+
+// Every formula of the spreadsheet after rows (axis 0) or columns (axis 1) of sheet target are added or
+// deleted, as Sheets keeps them: references move with their cells, $ or not, a range grows or shrinks, and a
+// reference to a deleted cell becomes #REF!.
+function restructure(book, target, axis, at, n) {
+  for (const s of book.sheets) {
+    for (const row of s.grid.formulas) {
+      row.forEach((f, j) => {
+        if (!f) return;
+        row[j] = f.replace(REF, (all, ...args) => {
+          const m = args[args.length - 1];
+          if (m.text !== undefined) return all;
+          const name = m.sheet === undefined ? s.grid.name : m.sheet[0] === "'" ? m.sheet.slice(1, -1).replace(/''/g, "'") : m.sheet;
+          if (name !== target) return all;
+          const prefix = m.sheet === undefined ? "" : `${m.sheet}!`;
+          if (m.c1 !== undefined) {
+            let rows = [+m.r1, m.r2 !== undefined ? +m.r2 : m.c2 !== undefined ? Infinity : +m.r1];
+            let cols = [colNumber(m.c1), colNumber(m.c2 !== undefined ? m.c2 : m.c1)];
+            if (axis === 0) rows = span(rows[0], rows[1], at, n); else cols = span(cols[0], cols[1], at, n);
+            if (!rows || !cols) return "#REF!";
+            const start = `${m.f1}${colLetters(cols[0])}${m.g1}${rows[0]}`;
+            if (m.c2 === undefined) return prefix + start;
+            return `${prefix}${start}:${m.f2}${colLetters(cols[1])}${m.r2 !== undefined ? `${m.g2}${rows[1]}` : ""}`;
+          }
+          if (m.cc1 !== undefined) {
+            if (axis === 0) return all;
+            const cols = span(colNumber(m.cc1), colNumber(m.cc2), at, n);
+            return cols ? `${prefix}${m.cf1}${colLetters(cols[0])}:${m.cf2}${colLetters(cols[1])}` : "#REF!";
+          }
+          if (axis === 1) return all;
+          const rows = span(+m.rr1, +m.rr2, at, n);
+          return rows ? `${prefix}${m.rf1}${rows[0]}:${m.rf2}${rows[1]}` : "#REF!";
+        });
+      });
+    }
+  }
+}
+
+// Every reference to sheet target after it is renamed (name: the new name) or deleted (name: null, #REF!).
+function resheet(book, target, name) {
+  const prefix = name === null ? null : /^[A-Za-z_][\w.]*$/.test(name) && !/^[A-Z]{1,3}\d+$/i.test(name) ? name
+    : `'${name.replace(/'/g, "''")}'`;
+  for (const s of book.sheets) {
+    for (const row of s.grid.formulas) {
+      row.forEach((f, j) => {
+        if (!f) return;
+        row[j] = f.replace(REF, (all, ...args) => {
+          const m = args[args.length - 1];
+          if (m.text !== undefined || m.sheet === undefined) return all;
+          const named = m.sheet[0] === "'" ? m.sheet.slice(1, -1).replace(/''/g, "'") : m.sheet;
+          if (named !== target) return all;
+          return prefix === null ? "#REF!" : prefix + all.slice(m.sheet.length);
+        });
+      });
+    }
+  }
 }
 
 // Several ranges as one (getActiveRangeList, getRangeList): each call goes to every range.
@@ -517,7 +592,7 @@ class Sheet {
     return strict(this, "Sheet");
   }
   getName() { return this.grid.name; }
-  setName(name) { this.grid.name = name; return this; }
+  setName(name) { const old = this.grid.name; this.grid.name = name; resheet(this.spreadsheet, old, name); return this; }
   getSheetId() { return this.grid.id; }
   getIndex() { return this.spreadsheet.sheets.indexOf(this) + 1; }
   getParent() { return this.spreadsheet; }
@@ -549,18 +624,18 @@ class Sheet {
     values.forEach((v, i) => (typeof v === "string" && v.startsWith("=") ? this.grid.put(r, i + 1, "", v) : this.grid.put(r, i + 1, v)));
     return this;
   }
-  insertRowsBefore(row, n) { this.grid.values.splice(row - 1, 0, ...Array.from({length: n}, () => [])); this.grid.formulas.splice(row - 1, 0, ...Array.from({length: n}, () => [])); this.grid.shift(0, row, n); return this; }
+  insertRowsBefore(row, n) { this.grid.values.splice(row - 1, 0, ...Array.from({length: n}, () => [])); this.grid.formulas.splice(row - 1, 0, ...Array.from({length: n}, () => [])); this.grid.shift(0, row, n); restructure(this.spreadsheet, this.grid.name, 0, row, n); return this; }
   insertRowBefore(row) { return this.insertRowsBefore(row, 1); }
   insertRowsAfter(row, n) { return this.insertRowsBefore(row + 1, n); }
   insertRowAfter(row) { return this.insertRowsBefore(row + 1, 1); }
   insertRows(row, n = 1) { return this.insertRowsBefore(row, n); }
-  deleteRows(row, n) { this.grid.values.splice(row - 1, n); this.grid.formulas.splice(row - 1, n); this.grid.shift(0, row, -n); return this; }
+  deleteRows(row, n) { this.grid.values.splice(row - 1, n); this.grid.formulas.splice(row - 1, n); this.grid.shift(0, row, -n); restructure(this.spreadsheet, this.grid.name, 0, row, -n); return this; }
   deleteRow(row) { return this.deleteRows(row, 1); }
-  insertColumnsBefore(col, n) { for (const t of [this.grid.values, this.grid.formulas]) t.forEach(row => row.length >= col - 1 && row.splice(col - 1, 0, ...Array(n).fill(""))); this.grid.shift(1, col, n); return this; }
+  insertColumnsBefore(col, n) { for (const t of [this.grid.values, this.grid.formulas]) t.forEach(row => row.length >= col - 1 && row.splice(col - 1, 0, ...Array(n).fill(""))); this.grid.shift(1, col, n); restructure(this.spreadsheet, this.grid.name, 1, col, n); return this; }
   insertColumnBefore(col) { return this.insertColumnsBefore(col, 1); }
   insertColumnAfter(col) { return this.insertColumnsBefore(col + 1, 1); }
   insertColumnsAfter(col, n) { return this.insertColumnsBefore(col + 1, n); }
-  deleteColumns(col, n) { for (const t of [this.grid.values, this.grid.formulas]) t.forEach(row => row.splice(col - 1, n)); this.grid.shift(1, col, -n); return this; }
+  deleteColumns(col, n) { for (const t of [this.grid.values, this.grid.formulas]) t.forEach(row => row.splice(col - 1, n)); this.grid.shift(1, col, -n); restructure(this.spreadsheet, this.grid.name, 1, col, -n); return this; }
   deleteColumn(col) { return this.deleteColumns(col, 1); }
   clear() { this.grid.values = []; this.grid.formulas = []; return this; }
   clearContents() { return this.clear(); }
@@ -685,6 +760,7 @@ class Spreadsheet {
   deleteSheet(sheet) {
     if (this.sheets.length === 1) throw fail("You can't remove all the sheets in a document.");
     this.sheets = this.sheets.filter(s => s !== sheet);
+    resheet(this, sheet.getName(), null);
     if (this.active === sheet) this.active = this.sheets[0];
   }
   duplicateActiveSheet() { return this.active.copyTo(this); }

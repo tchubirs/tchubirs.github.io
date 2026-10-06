@@ -639,7 +639,10 @@ def contents(path, recalculated):
                 if text:
                     formulas[(ws.title, r, c)] = text if text.startswith("=") else "=" + text
                     v = out._cells.get((r, c)) if out else None
-                    results[(ws.title, r, c)] = v.value if v is not None else None
+                    value = v.value if v is not None else None
+                    # A reference to deleted cells is #REF! in the formula: LibreOffice gives #NAME? for it,
+                    # Excel and Google #REF!.
+                    results[(ws.title, r, c)] = "#REF!" if value == "#NAME?" and "#REF!" in text else value  # ia-ok
             elif cell.value is not None:
                 typed[(ws.title, r, c)] = cell.value
     return book.sheetnames, formulas, typed, results

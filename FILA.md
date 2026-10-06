@@ -170,6 +170,13 @@ até alguma vender. O que eu faço agora:
    ia para a linha 5 e continuava somando a linha 3); a ordenação punha "Bruno" antes de "ana" (o Google
    ignora maiúscula); e `clear()` não apagava a formatação. O que só o Google calcula (ordenar por fórmula
    que o script acabou de escrever, colar o valor dela) aparece no relatório para conferir lá.
+   Às 8h40, defeito grave no mesmo executor: script que apaga ou insere linhas (o pedido mais comum, "apagar
+   as linhas concluídas") não ajustava as fórmulas. O total embaixo da tabela continuava `=SUM(C2:C6)` depois
+   de a tabela subir uma linha, e o teste dava 220 onde o Google dá 130; referência a linha apagada lia a linha
+   que entrou no lugar. Agora toda fórmula da planilha, em qualquer aba, se ajusta como no Google: intervalo
+   cresce e encolhe, referência apagada vira `#REF!`, aba renomeada ou apagada muda as fórmulas que a citam.
+   Testado com o LibreOffice recalculando. Próximo: ler do arquivo os intervalos com nome, as cores, o
+   negrito, o formato de número e as notas (hoje o script recebe vazio e branco).
 
 Pausado até algo vender ou ele pedir: inventário da casa (rascunho em `etsy/home-inventory`), manutenção da casa,
 galinhas no quintal, férias da equipe, Herculano.
