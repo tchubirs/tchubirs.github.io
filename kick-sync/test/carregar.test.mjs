@@ -253,17 +253,22 @@ test('depois de um 429 não sai nenhum pedido enquanto o canal espera: a pausa �
   // menos.
   const k = kickFalsa({ roteiro: { c03: [429, 200] }, demora: () => 1 });
   const durante = [];
+  let inicioDaPausa;
   const esperar = async () => {
     const antes = k.chamadas.length;
+    inicioDaPausa = antes;
     await dormir(30);
     durante.push(k.chamadas.length - antes);
   };
   const r = await carregarCanais(nomes(20), { buscar: k.buscar, paralelos: 4, esperar });
   assert.ok(r.every((x) => x.estado === 'ok'));
   assert.deepEqual(durante, [0], 'nos 30 ms de espera não saiu nenhum');
-  // E quem volta é o castigado, à frente dos que ainda não foram.
+  // E quem volta é o castigado, à frente dos que ainda não foram. Conta-se a
+  // partir do começo da pausa e não do momento em que a Kick falsa deu o 429:
+  // entre os dois, a resposta 200 de outro canal ainda pode estar a ser lida
+  // e libertar o lugar dela, e isso não é a pausa a falhar.
   const depois = k.chamadas.findIndex((c) => c.slug === 'c03' && c.n === 2);
-  assert.equal(depois, k.cortes[0]);
+  assert.equal(depois, inicioDaPausa);
 });
 
 test('com a Kick a recusar tudo, desiste depressa em vez de gastar as tentativas de todos', async () => {
@@ -344,6 +349,20 @@ test('aoProgredir: uma vez por canal, quando o canal fica decidido', async () =>
   const porSlug = Object.fromEntries(progresso.map((p) => [p.slug, p.estado]));
   // O b aparece UMA vez, já com o estado final e não com os 429 do caminho.
   assert.deepEqual(porSlug, { a: 'ok', b: 'ok', c: 'ok', d: 'canal-nao-existe', e: 'ok' });
+});
+
+test('depois de a carga rejeitar, o aoProgredir não é chamado outra vez', async () => {
+  // A sonda do revisor: 4 em paralelo e o aoProgredir rebenta na primeira.
+  // Os outros três acabavam depois e chamavam-no na mesma: a página mostrava
+  // progresso depois de mostrar o erro.
+  const k = kickFalsa({ demora: (slug) => 1 + Number(slug.slice(1)) * 3 });
+  let chamadas = 0;
+  await assert.rejects(carregarCanais(nomes(4), {
+    buscar: k.buscar, paralelos: 4, esperar: semEspera(), aoProgredir: () => { chamadas++; throw new Error('x'); },
+  }));
+  await dormir(40);
+  assert.equal(k.chamadas.length, 4);
+  assert.equal(chamadas, 1);
 });
 
 test('um erro no aoProgredir da página pára a carga: não sai mais nenhum pedido', async () => {
@@ -533,9 +552,20 @@ test('pára em maxPaginas, para um paginador que nunca acaba', async () => {
   const g = aoVivoFalso(paginas, { proximaSempre: true });
   await procurarAoVivo({ buscar: g.buscar });
   assert.equal(g.pedidos.length, 30, 'por defeito, 30');
-  const h = aoVivoFalso(paginas, { proximaSempre: true });
-  await procurarAoVivo({ buscar: h.buscar, maxPaginas: 0 });
-  assert.equal(h.pedidos.length, 1, 'pelo menos uma página');
+  // Cortado em maxPaginas com a Kick a dizer que há mais: a lista diz que
+  // está incompleta, em vez de passar pela lista inteira.
+  assert.equal(r.incompleto, true);
+  const acabou = await procurarAoVivo({ buscar: aoVivoFalso([[item({ canal: 'a' })]]).buscar, maxPaginas: 1 });
+  assert.equal(acabou.incompleto, false, 'acabou na última página: está completa');
+});
+
+test('maxPaginas que não é um inteiro >= 1 é um erro de quem chama, e não sai pedido nenhum', async () => {
+  // Antes um 0 virava 1 e pedia-se uma página que ninguém pediu.
+  for (const maxPaginas of [0, -3, 1.5, NaN, 'x']) {
+    const h = aoVivoFalso([[item({ canal: 'a' })]], { proximaSempre: true });
+    await assert.rejects(procurarAoVivo({ buscar: h.buscar, maxPaginas }), RangeError, String(maxPaginas));
+    assert.equal(h.pedidos.length, 0);
+  }
 });
 
 test('usa o slug do CANAL, não o da emissão, e lê os campos', async () => {
@@ -628,6 +658,42 @@ test('"kickoff" encontra "Kick-Off" e "kick off" encontra "#RustKickOff"', async
   assert.deepEqual(await q('kick-off'), ['hifen', 'hashtag', 'emoji']);
 });
 
+test('uma palavra dentro de outra palavra não conta, nem colada entre título e etiquetas', async () => {
+  // As sondas do revisor: com o texto todo colado, "rust" achava "Trust",
+  // "off" achava "Office", "dia" achava "India" e "2" achava "2026".
+  const f = aoVivoFalso([[
+    item({ canal: 'trust', titulo: 'Trust me bro' }),
+    item({ canal: 'office', titulo: 'Office hours' }),
+    item({ canal: 'india', titulo: 'India server' }),
+    item({ canal: 'ano', titulo: 'Rust 2026 wipe' }),
+    item({ canal: 'campos', titulo: 'Rust', tags: ['Kick'] }),
+    item({ canal: 'big', titulo: 'big kick', tags: ['offline'] }),
+  ]]);
+  const q = async (palavras) => (await procurarAoVivo({ buscar: f.buscar, palavras })).map((x) => x.slug);
+  assert.deepEqual(await q('trust'), ['trust']);
+  assert.deepEqual(await q('rust'), ['ano', 'campos']);
+  assert.deepEqual(await q('off'), []);
+  assert.deepEqual(await q('dia'), []);
+  assert.deepEqual(await q('2'), []);
+  assert.deepEqual(await q('2026'), ['ano']);
+  assert.deepEqual(await q('stk'), [], 'não cola o fim do título ao começo da etiqueta');
+  assert.deepEqual(await q('kickoff'), [], 'nem "kick" do título com "off" da etiqueta');
+  assert.deepEqual(await q('rust kick'), ['campos'], 'mas cada palavra pode estar num campo');
+});
+
+test('as partes de uma palavra colada contam: maiúsculas a meio e letras com números', async () => {
+  const f = aoVivoFalso([[
+    item({ canal: 'camelo', titulo: '#RustKickOff2' }),
+    item({ canal: 'caps', titulo: 'KICKOFF' }),
+    item({ canal: 'dia2', titulo: 'kick off dia2' }),
+  ]]);
+  const q = async (palavras) => (await procurarAoVivo({ buscar: f.buscar, palavras })).map((x) => x.slug);
+  assert.deepEqual(await q('kick'), ['camelo', 'dia2']);
+  assert.deepEqual(await q('kick off'), ['camelo', 'caps', 'dia2']);
+  assert.deepEqual(await q('dia 2'), ['dia2']);
+  assert.deepEqual(await q('rustkickoff2'), ['camelo']);
+});
+
 test('sem palavras vêm todos', async () => {
   const f = aoVivoFalso([[item({ canal: 'a', titulo: 'x' }), item({ canal: 'b', titulo: '' })]]);
   for (const palavras of [undefined, null, '', '   ', [], ['  '], '!!! ---']) {
@@ -672,7 +738,7 @@ test('uma página que falha diz qual, porquê, e o que já se tinha achado', asy
   ];
   for (const [paginas, estado, pagina, quantos] of casos) {
     const f = aoVivoFalso(paginas);
-    await assert.rejects(procurarAoVivo({ buscar: f.buscar }), (e) => {
+    await assert.rejects(procurarAoVivo({ buscar: f.buscar, esperar: semEspera() }), (e) => {
       assert.equal(e.name, 'SEM-LISTA-AO-VIVO');
       assert.equal(e.estado, estado);
       assert.equal(e.pagina, pagina);
@@ -680,6 +746,44 @@ test('uma página que falha diz qual, porquê, e o que já se tinha achado', asy
       return true;
     }, estado);
   }
+});
+
+test('uma falha passageira numa página volta a ser pedida, à espera de 1 s, 2 s, 4 s', async () => {
+  // Antes, um 429 na página 12 de 16 deitava a busca toda fora.
+  const paginaBoa = [item({ canal: 'a' }), item({ canal: 'b' })];
+  for (const falha of [() => resposta(429, {}), () => resposta(503, {}), () => { throw new TypeError('Failed to fetch'); }]) {
+    let n = 0;
+    const segunda = () => (++n <= 2 ? falha() : resposta(200, { data: [item({ canal: 'c' })], next_page_url: null }));
+    const f = aoVivoFalso([paginaBoa, segunda]);
+    const esperar = semEspera();
+    const r = await procurarAoVivo({ buscar: f.buscar, esperar });
+    assert.deepEqual(r.map((x) => x.slug), ['a', 'b', 'c']);
+    assert.deepEqual(esperar.esperas, [1000, 2000]);
+    assert.equal(f.pedidos.length, 4);
+  }
+  // O que não é passageiro não se repete.
+  const g = aoVivoFalso([() => resposta(404, {})]);
+  const esperar = semEspera();
+  await assert.rejects(procurarAoVivo({ buscar: g.buscar, esperar }), (e) => e.estado === 'http-404');
+  assert.equal(g.pedidos.length, 1);
+  assert.deepEqual(esperar.esperas, []);
+});
+
+test('procurarAoVivo: cancelar rejeita logo, mesmo que a `buscar` nunca largue o pedido', async () => {
+  const c = new AbortController();
+  const buscar = () => new Promise(() => {});
+  const p = procurarAoVivo({ buscar, sinal: c.signal });
+  await dormir(2);
+  c.abort();
+  const depressa = await Promise.race([p.then(() => 'ok', (e) => e), dormir(50).then(() => 'pendurado')]);
+  assert.ok(ehCancelado(depressa), String(depressa));
+  // E a meio de uma espera de 4 s também não espera os 4 s.
+  const d = new AbortController();
+  const lenta = procurarAoVivo({ buscar: async () => resposta(503, {}), sinal: d.signal, esperar: () => new Promise(() => {}) });
+  await dormir(2);
+  d.abort();
+  const r = await Promise.race([lenta.then(() => 'ok', (e) => e), dormir(50).then(() => 'pendurado')]);
+  assert.ok(ehCancelado(r), String(r));
 });
 
 test('procurarAoVivo: cancelar antes de começar e a meio', async () => {

@@ -235,7 +235,9 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
     // Vão para a caixa do elenco, e não direto para o mapa: quem procurou por palavra quase sempre
     // apanha um ou outro que não é do evento, e tem de poder tirá-los antes.
     $('elenco').value = achados.map((a) => a.slug).join('\n');
-    $('estadoEvento').textContent = t('evento.achadosAoVivo', { n: achados.length });
+    // Parou no limite de páginas com a Kick a dizer que havia mais: quem tem poucos espectadores
+    // pode não estar aqui, e isso tem de se dizer.
+    $('estadoEvento').textContent = t(achados.incompleto ? 'evento.achadosCortados' : 'evento.achadosAoVivo', { n: achados.length });
   }
 
   // Um evento de exemplo feito na hora: os canais de Rust mais vistos que estão no ar agora, sem time.

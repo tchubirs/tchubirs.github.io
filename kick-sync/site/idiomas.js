@@ -353,6 +353,7 @@ const TEXTOS = {
     'lance.talvez': 'talvez: ouça antes de juntar',
     'lance.semDescodificador': 'Este navegador não decodifica o áudio da Kick, então a busca pelo som não roda. Abra no Chrome ou no Edge.',
     'lance.referenciaSemSom': '{canal} não tem som nesse instante. Escolha um ponto um pouco antes ou depois, ou outro streamer do lance.',
+    'evento.achadosCortados': 'Achei {n} lives, mas só li as mais vistas: ao vivo havia mais do que eu consigo ler. Quem tem poucos espectadores pode ter ficado de fora. Use palavras mais específicas para achar o resto.',
     'evento.achadosParcial': 'A Kick parou de responder no meio da lista: achei {n} lives até ali. Confira, tente de novo para completar, ou clique em Abrir evento.',
   },
 
@@ -698,6 +699,7 @@ const TEXTOS = {
     'lance.talvez': 'maybe: listen before adding',
     'lance.semDescodificador': 'This browser cannot decode Kick audio, so the sound search does not run. Open it in Chrome or Edge.',
     'lance.referenciaSemSom': '{canal} has no sound at that moment. Pick a point a little earlier or later, or another streamer in the play.',
+    'evento.achadosCortados': 'Found {n} streams, but I only read the most watched ones: more were live than I can read. People with few viewers may be missing. Use more specific words to find the rest.',
     'evento.achadosParcial': 'Kick stopped answering partway through the list: I found {n} streams up to there. Check them, try again to complete it, or click Open event.',
   },
 
@@ -1043,6 +1045,7 @@ const TEXTOS = {
     'lance.talvez': 'quizás: escucha antes de sumarlo',
     'lance.semDescodificador': 'Este navegador no decodifica el audio de Kick, así que la búsqueda por sonido no funciona. Ábrelo en Chrome o Edge.',
     'lance.referenciaSemSom': '{canal} no tiene sonido en ese instante. Elige un punto un poco antes o después, u otro streamer de la jugada.',
+    'evento.achadosCortados': 'Encontré {n} directos, pero solo leí los más vistos: había más en vivo de los que puedo leer. Puede faltar gente con pocos espectadores. Usa palabras más específicas para encontrar al resto.',
     'evento.achadosParcial': 'Kick dejó de responder a mitad de la lista: encontré {n} directos hasta ahí. Revísalos, inténtalo de nuevo para completarla o haz clic en Abrir evento.',
   },
 };
