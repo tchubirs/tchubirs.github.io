@@ -19,7 +19,7 @@ durante o evento ou depois.
 | streamers | o próprio clipe, só o próprio ângulo | o lance visto pelo rival, que dá conteúdo novo |
 | espectadores | perdem o lance e não sabem quem mais estava lá | um link que abre o lance com todos os ângulos |
 
-Fontes no `ESTUDO.md` (a escrever com o resultado do estudo).
+Fontes no `ESTUDO.md` (136 afirmações conferidas na fonte, 44 descartadas).
 
 ## O que já foi medido aqui (06/10)
 

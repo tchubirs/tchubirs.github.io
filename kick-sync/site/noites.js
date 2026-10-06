@@ -13,12 +13,16 @@
 // que é exactamente o que é verdade.
 
 const SEIS_HORAS = 6 * 3600_000;
+// Uma noite não passa disto, contado do primeiro a entrar. Sem teto, vinte canais que transmitem todos
+// os dias a horas diferentes nunca deixavam um buraco de seis horas, e a semana inteira virava uma
+// "noite" só: a barra do tempo com sete dias e o lance perdido num pixel.
+const DOZE_HORAS = 12 * 3600_000;
 
 /**
  * @param {Array<{slug:string, vods:Array<{inicioApi:number, duracaoMs:number}>}>} canais
  * @returns noites, da mais recente para a mais antiga
  */
-export function agruparPorNoite(canais, { intervaloMs = SEIS_HORAS } = {}) {
+export function agruparPorNoite(canais, { intervaloMs = SEIS_HORAS, maximoMs = DOZE_HORAS, agoraMs = Date.now() } = {}) {
   const pontos = [];
   for (const c of canais || []) {
     for (const v of c.vods || []) {
@@ -29,7 +33,9 @@ export function agruparPorNoite(canais, { intervaloMs = SEIS_HORAS } = {}) {
         de: v.inicioApi,
         // Sem duração conhecida não se inventa um fim: o VOD conta como um
         // instante, e a playlist dirá a verdade quando for lida.
-        ate: v.inicioApi + (Number.isFinite(v.duracaoMs) ? v.duracaoMs : 0),
+        // Quem está no ar vai até agora, e não até ao instante em que entrou.
+        ate: v.aoVivo ? Math.max(v.inicioApi, agoraMs)
+          : v.inicioApi + (Number.isFinite(v.duracaoMs) ? v.duracaoMs : 0),
       });
     }
   }
@@ -41,7 +47,7 @@ export function agruparPorNoite(canais, { intervaloMs = SEIS_HORAS } = {}) {
   const grupos = [];
   for (const p of pontos) {
     const ultimo = grupos.at(-1);
-    if (ultimo && p.de - ultimo.ultimoInicio < intervaloMs) {
+    if (ultimo && p.de - ultimo.ultimoInicio < intervaloMs && p.de - ultimo.inicio < maximoMs) {
       ultimo.ultimoInicio = p.de;
       ultimo.inicios.push(p);
     } else {

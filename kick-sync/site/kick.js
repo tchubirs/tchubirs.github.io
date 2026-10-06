@@ -55,6 +55,9 @@ export async function vodsDoCanal(slug, { buscar = fetch } = {}) {
     // zone would have made a whole hour.
     inicioApi: v.start_time ? Date.parse(`${v.start_time.replace(' ', 'T')}Z`) : DESCONHECIDO,
     duracaoMs: Number.isFinite(v.duration) ? v.duration : DESCONHECIDO,
+    // A transmissão que está no ar aparece na lista com duração 0 e vai crescendo (medido em 06/10).
+    // Sem esta marca, a noite de um evento ao vivo acabava no instante em que o último entrou no ar.
+    aoVivo: v.is_live === true,
     master: v.source ?? DESCONHECIDO,
     privado: v.video?.is_private === true,
     apagado: v.video?.is_pruned === true || Boolean(v.video?.deleted_at),

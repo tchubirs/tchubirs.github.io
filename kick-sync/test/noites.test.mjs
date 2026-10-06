@@ -113,3 +113,32 @@ test('dentro do mesmo dia o rotulo nao repete a data', () => {
   const [n] = agruparPorNoite([canal('a', [['2026-08-30T18:00:00Z', 3]])]);
   assert.equal(rotuloDaNoite(n), '2026-08-30 · 18:00–21:00 — 1 canal');
 });
+
+// O evento ao vivo: a transmissão em curso vem com duração 0 e `aoVivo`. A noite tem de ir até agora,
+// e não acabar no instante em que o último entrou no ar (era o que prendia a linha do tempo de um evento
+// ao vivo nos primeiros minutos).
+test('quem está ao vivo estica a noite até agora', () => {
+  const agoraMs = T('2026-10-06T12:00:00Z');
+  const [n] = agruparPorNoite([
+    { slug: 'a', vods: [{ inicioApi: T('2026-10-06T09:00:00Z'), duracaoMs: 0, aoVivo: true }] },
+    { slug: 'b', vods: [{ inicioApi: T('2026-10-06T09:05:00Z'), duracaoMs: 0, aoVivo: true }] },
+  ], { agoraMs });
+  assert.equal(n.fim, agoraMs);
+  assert.equal(n.canais, 2);
+});
+
+// Vinte canais que transmitem todos os dias, a horas diferentes, nunca deixam um buraco de seis horas
+// entre inícios. Sem teto a semana inteira virava uma noite só.
+test('uma semana de canais a horas diferentes não vira uma noite só', () => {
+  const canais = [];
+  for (let c = 0; c < 20; c++) {
+    const vods = [];
+    for (let d = 0; d < 7; d++) {
+      vods.push({ inicioApi: T('2026-09-28T00:00:00Z') + d * 86400_000 + c * 72 * 60_000, duracaoMs: 4 * 3600_000 });
+    }
+    canais.push({ slug: `c${c}`, vods });
+  }
+  const noites = agruparPorNoite(canais);
+  assert.ok(noites.length >= 7, `deu ${noites.length} noites`);
+  for (const n of noites) assert.ok(n.fim - n.inicio <= 17 * 3600_000, `uma noite de ${(n.fim - n.inicio) / 3600_000} h`);
+});

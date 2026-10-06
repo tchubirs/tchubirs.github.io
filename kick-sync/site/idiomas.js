@@ -340,6 +340,10 @@ const TEXTOS = {
     'lance.aOuvir': 'Ouvindo os canais: {feitos} de {total}',
     'lance.fim': '{n} ângulos com o mesmo som, entre {total} canais no ar.',
     'lance.erroSom': 'Não consegui ouvir esse trecho. Tente um instante um pouco antes ou depois.',
+    'lance.talvez': 'talvez: ouça antes de juntar',
+    'lance.semDescodificador': 'Este navegador não decodifica o áudio da Kick, então a busca pelo som não roda. Abra no Chrome ou no Edge.',
+    'lance.referenciaSemSom': '{canal} não tem som nesse instante. Escolha um ponto um pouco antes ou depois, ou outro streamer do lance.',
+    'evento.achadosParcial': 'A Kick parou de responder no meio da lista: achei {n} lives até ali. Confira, tente de novo para completar, ou clique em Abrir evento.',
   },
 
   en: {
@@ -671,6 +675,10 @@ const TEXTOS = {
     'lance.aOuvir': 'Listening to the channels: {feitos} of {total}',
     'lance.fim': '{n} angles with the same sound, out of {total} channels live.',
     'lance.erroSom': 'Could not hear that stretch. Try an instant slightly before or after.',
+    'lance.talvez': 'maybe: listen before adding',
+    'lance.semDescodificador': 'This browser cannot decode Kick audio, so the sound search does not run. Open it in Chrome or Edge.',
+    'lance.referenciaSemSom': '{canal} has no sound at that moment. Pick a point a little earlier or later, or another streamer in the play.',
+    'evento.achadosParcial': 'Kick stopped answering partway through the list: I found {n} streams up to there. Check them, try again to complete it, or click Open event.',
   },
 
   es: {
@@ -1002,6 +1010,10 @@ const TEXTOS = {
     'lance.aOuvir': 'Escuchando los canales: {feitos} de {total}',
     'lance.fim': '{n} ángulos con el mismo sonido, de {total} canales en directo.',
     'lance.erroSom': 'No pude escuchar ese tramo. Prueba un instante un poco antes o después.',
+    'lance.talvez': 'quizás: escucha antes de sumarlo',
+    'lance.semDescodificador': 'Este navegador no decodifica el audio de Kick, así que la búsqueda por sonido no funciona. Ábrelo en Chrome o Edge.',
+    'lance.referenciaSemSom': '{canal} no tiene sonido en ese instante. Elige un punto un poco antes o después, u otro streamer de la jugada.',
+    'evento.achadosParcial': 'Kick dejó de responder a mitad de la lista: encontré {n} directos hasta ahí. Revísalos, inténtalo de nuevo para completarla o haz clic en Abrir evento.',
   },
 };
 
