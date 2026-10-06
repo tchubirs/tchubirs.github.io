@@ -36,6 +36,8 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import audit_sheet  # noqa: E402
+from openpyxl import load_workbook  # noqa: E402
+from openpyxl.utils import column_index_from_string, get_column_letter  # noqa: E402
 
 NORMAL, CLASS = 1, 2                     # com.sun.star.script.ModuleType
 HEADER = re.compile(r"(?i)^(?:rem attribute vba_moduletype=|option vbasupport 1|option classmodule)")
@@ -57,6 +59,9 @@ OUTSIDE = [(r"(?i)\bCreateObject\s*\(\s*\"Outlook", "Outlook"),
            (r"(?i)\bApplication\.OnTime\b", "Application.OnTime"),
            (r"(?i)\bWorkbooks\.(?:Open|Add)\b|\.SaveAs\b|\bSaveCopyAs\b", "other files (open or save)"),
            (r"(?i)^\s*(?:Kill|MkDir|RmDir|ChDir)\s", "files and folders on the computer")]
+# Excel 365 records .Formula2 and .Formula2R1C1, which LibreOffice lacks; .Formula and .FormulaR1C1 give the
+# same result unless the formula spills over more cells, so the run uses those.
+FORMULA2 = re.compile(r"(?i)\.Formula2(R1C1Local|R1C1|Local)?\b")
 FORMATTING = re.compile(r"(?i)\.(?:Interior|Font|NumberFormat|ColumnWidth|RowHeight|AutoFit|Borders|"
                         r"HorizontalAlignment|WrapText|Style)\b")
 # LibreOffice reports some errors with its own names; these are the errors Excel gives for the same lines.
@@ -329,6 +334,8 @@ def run(book, macro, code=(), answer="yes", typed="", timeout=60, keep=None, cha
                 name, text = read_bas(path)
                 modules[name], kinds[name] = "Option VBASupport 1\n" + text, NORMAL
             result["outside"] = outside(modules)
+            result["formula2"] = sum(len(FORMULA2.findall(modules[name])) for name in modules
+                                     if kinds[name] in (NORMAL, CLASS))
 
             where, _, wanted = macro.rpartition(".")
             homes = [name for name, source in modules.items() if kinds[name] == NORMAL and wanted.lower()
@@ -357,10 +364,10 @@ def run(book, macro, code=(), answer="yes", typed="", timeout=60, keep=None, cha
                 lib = libs.getByName(name)
                 lib.insertByName("FiverrRun", SUPPORT)
                 for module in classes:
-                    lib.insertByName(module, modules[module])
+                    lib.insertByName(module, as_libreoffice(modules[module]))
                 for module in ordinary:
                     if module not in skip:
-                        source, extra = modules[module], standins(modules[module]) + READY
+                        source, extra = as_libreoffice(modules[module]), standins(modules[module]) + READY
                         extra += main if module == home else ""
                         lib.insertByName(module, (traced(module, source) if trace else source) + "\n" + extra)
                 result["library"] = name
@@ -387,12 +394,55 @@ def run(book, macro, code=(), answer="yes", typed="", timeout=60, keep=None, cha
                 doc.close(True)
         if os.path.exists(after) and changes:
             result["changes"] = audit_sheet.compare(before, after)
+            result["layout"] = layout(before, after)
             if keep:
                 shutil.copyfile(after, keep)
         result["sources"] = modules
         return result
     finally:
         shutil.rmtree(work, ignore_errors=True)
+
+
+def as_libreoffice(source):
+    """The module with .Formula2 and .Formula2R1C1, of Excel 365, as .Formula and .FormulaR1C1, on the same lines."""
+    return FORMULA2.sub(lambda m: ".Formula" + (m.group(1) or ""), source)
+
+
+def hidden(path):
+    """The hidden rows and columns of each sheet of a saved workbook, as {sheet: (rows, column numbers)}."""
+    out = {}
+    for ws in load_workbook(path).worksheets:
+        rows = {r for r, d in ws.row_dimensions.items() if d.hidden}
+        cols = {c for key, d in ws.column_dimensions.items() if d.hidden
+                for c in range(d.min or column_index_from_string(key), (d.max or column_index_from_string(key)) + 1)}
+        out[ws.title] = (rows, cols)
+    return out
+
+
+def spans(numbers, name=str):
+    """3, 4, 5 and 9 as "3 to 5, 9"; name turns a number into what is shown (a column letter)."""
+    out, numbers = [], sorted(numbers)
+    while numbers:
+        first = last = numbers.pop(0)
+        while numbers and numbers[0] == last + 1:
+            last = numbers.pop(0)
+        out.append(name(first) if first == last else f"{name(first)} to {name(last)}")
+    return ", ".join(out)
+
+
+def layout(before, after):
+    """The rows and columns the macro hid or showed, as lines like "Travel: column C hidden"."""
+    old, new = hidden(before), hidden(after)
+    lines = []
+    for sheet, (rows, cols) in new.items():
+        was_rows, was_cols = old.get(sheet, (set(), set()))
+        for what, items, name in (("row", rows - was_rows, str), ("column", cols - was_cols, get_column_letter)):
+            if items:
+                lines.append(f"{sheet}: {what}{'s' if len(items) > 1 else ''} {spans(items, name)} hidden")
+        for what, items, name in (("row", was_rows - rows, str), ("column", was_cols - cols, get_column_letter)):
+            if items:
+                lines.append(f"{sheet}: {what}{'s' if len(items) > 1 else ''} {spans(items, name)} shown again")
+    return lines
 
 
 def ask(doc, library, module, function):
@@ -508,10 +558,14 @@ def report(result, answer):
     if result.get("outside"):
         lines.append("Lines that need Windows or Excel itself and may not run here:")
         lines += [f"  {module} line {n}: {what}" for module, n, what in result["outside"]]
+    if result.get("formula2"):
+        lines.append("Formula2 and Formula2R1C1 (Excel 365) in the code ran as Formula and FormulaR1C1: the same "
+                     "result unless a formula spills over more cells.")
     if "changes" in result:
         changes = audit_sheet.describe_changes(result["changes"])
         lines.append("What changed in the workbook:" if status == "ok" else "What changed before it stopped:")
         lines += changes[1:]
+        lines += [f"  {line}" for line in result.get("layout", ())]
         if any(FORMATTING.search(source) for source in result["sources"].values()):
             lines.append("  Colors, fonts, number formats and widths are not compared: look at them in the file "
                          "saved with -o.")

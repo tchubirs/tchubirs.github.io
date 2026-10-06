@@ -145,6 +145,10 @@ até alguma vender. O que eu faço agora:
    2.817 fórmulas, todas certas, mas o auditor dizia "corrigir: 16 referências a células apagadas". Eram nomes
    que nenhuma fórmula usa, sobra antiga. Agora nome assim vai para "vale olhar" (pode apagar), e só o nome
    quebrado que uma fórmula usa fica em "corrigir", com `#REF!` na fórmula como o Excel mostra.
+   Na mesma planilha, as 4 macros reais: o executor de VBA parava na linha 10 de uma delas, porque toda macro
+   gravada no Excel 365 usa `Formula2R1C1` e o LibreOffice não tem; agora roda como `FormulaR1C1` (mesmo
+   resultado). E macro que só esconde ou mostra linhas e colunas saía como "nenhuma mudança"; agora o
+   relatório diz quais linhas e colunas. Falta: escolher a aba onde a macro começa (`--sheet`).
 
 Pausado até algo vender ou ele pedir: inventário da casa (rascunho em `etsy/home-inventory`), manutenção da casa,
 galinhas no quintal, férias da equipe, Herculano.

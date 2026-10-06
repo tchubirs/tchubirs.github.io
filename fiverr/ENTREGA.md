@@ -70,7 +70,10 @@ so ("not checked") with the reason:
   functions of Google Sheets. Their results come from Excel or Google only: say so in the delivery message.
 - A VBA macro: `python3 fiverr/tools/run_vba.py client.xlsm MacroName` runs it on a copy in LibreOffice (a module
   I wrote: add `--code Module1.bas`). MsgBox gets `--answer yes` or `no`, InputBox gets `--input`. The report lists
-  every change, or the module, line and error where the macro stopped; `-o after.xlsx` keeps the result. Lines it
+  every change (rows and columns hidden or shown too), or the module, line and error where the macro stopped;
+  `-o after.xlsx` keeps the result. Formula2R1C1, which the macro recorder of Excel 365 writes, runs as
+  FormulaR1C1. A recorded macro acts on the sheet that is active: the one active when the file was saved,
+  so check that it is the sheet the client starts from. Lines it
   names as needing Windows or Excel (Scripting.Dictionary, RemoveDuplicates, Outlook) are tested by the client:
   say so in the delivery message, and avoid Scripting.Dictionary for a Mac. Deliver the module as a .bas file with
   the steps to import it (Alt+F11, then File > Import File).

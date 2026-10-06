@@ -77,6 +77,12 @@ Sub CountItems()
     Dim seen As Object
     Set seen = CreateObject("Scripting.Dictionary")
 End Sub
+
+Sub Recorded365()
+    Worksheets("Data").Range("E2:E4").Formula2R1C1 = "=RC[-3]*2"
+    Worksheets("Data").Columns("C:C").Hidden = True
+    Worksheets("Data").Rows("3:4").EntireRow.Hidden = True
+End Sub
 '''
 HELPER = '''Attribute VB_Name = "Helper"
 Sub Mark(text As String)
@@ -165,6 +171,16 @@ def cli(book, modules, root):
     assert load_workbook(book).sheetnames == ["Data"], "the client's file was changed"
     print("macro: ran in LibreOffice; the new sheet, 6 values, the formula and its result reported; MsgBox "
           "answered yes, then no; the client's file untouched")
+
+    # Recorded in Excel 365, which writes Formula2R1C1; it also hides a column and two rows.
+    with contextlib.redirect_stdout(io.StringIO()) as said:
+        assert run_vba.main([book, "Recorded365", "--code", modules["Module1"]]) == 0
+    report = said.getvalue()
+    for line in ["Recorded365 ran to the end", "ran as Formula and FormulaR1C1", "Data!E2  (empty)  ->  =B2*2",
+                 "Data!E4  (empty)  ->  =B4*2", "Data: column C hidden", "Data: rows 3 to 4 hidden"]:
+        assert line in report, (line, report)
+    print("recorded in Excel 365: Formula2R1C1 run as FormulaR1C1, the formulas and the hidden column and rows "
+          "reported")
 
 
 def paths(book, modules):
