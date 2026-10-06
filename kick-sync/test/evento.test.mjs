@@ -179,3 +179,36 @@ test('o mapa abre no trecho em que a maioria esteve no ar, e não no mês inteir
   assert.ok(r.ateMs >= t + 4 * H && r.ateMs <= t + 4 * H + 30 * 60_000, `acaba ${new Date(r.ateMs).toISOString()}`);
   assert.equal(trechoDoEvento(new Map()), null);
 });
+
+test('escolher um lance lê o chat do time e marca no mapa onde ele explodiu',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'outro'] });
+    await abrirEvento(p);
+    await clicarNoMapa(p, 'outro', T + 2 * 60_000);
+    await p.waitForFunction(() => /picos de chat/.test(document.getElementById('estadoChat').textContent), null, { timeout: 15000 });
+    const marcas = await p.evaluate(() => Object.fromEntries([...window.__evento.marcas].map(([c, l]) => [c, l.map((m) => m.ms)])));
+    // O pico é o minuto 5 do tchubi (o balde do minuto, marcado a meio); o outro só teve conversa normal.
+    assert.deepEqual(marcas.tchubi, [T + 5 * 60_000 + 30_000]);
+    assert.deepEqual(marcas.outro, []);
+    // Um clique perto da marca vai à marca.
+    await clicarNoMapa(p, 'tchubi', T + 5 * 60_000 + 29_000);
+    const e = await p.evaluate(() => window.__evento.escolha);
+    assert.equal(e.ms, T + 5 * 60_000 + 30_000);
+    assert.deepEqual(erros, []);
+  });
+
+test('no mapa, quem está ao vivo vai até agora, e uma duração desconhecida não conta como ao vivo', async () => {
+  const { coberturasDe } = await import('../site/evento-ui.js');
+  const agora = Date.parse('2026-10-06T12:00:00Z');
+  const c = coberturasDe([
+    { slug: 'vivo', estado: 'ok', vods: [{ inicioApi: agora - 3600e3, duracaoMs: 0, aoVivo: true }] },
+    { slug: 'acabou', estado: 'ok', vods: [{ inicioApi: agora - 7200e3, duracaoMs: 1800e3 }] },
+    { slug: 'semDuracao', estado: 'ok', vods: [{ inicioApi: agora - 7200e3, duracaoMs: null }] },
+    { slug: 'naoExiste', estado: 'canal-nao-existe', vods: [] },
+  ], agora);
+  assert.deepEqual(c.get('vivo'), [[agora - 3600e3, agora]]);
+  assert.deepEqual(c.get('acabou'), [[agora - 7200e3, agora - 5400e3]]);
+  assert.equal(c.has('semDuracao'), false);
+  assert.equal(c.has('naoExiste'), false);
+});

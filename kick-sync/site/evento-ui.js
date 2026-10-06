@@ -20,6 +20,8 @@ import { linhaDoCanal } from './relogio.js';
 import { somDoCanal } from './alinhar.js';
 import { t } from './idiomas.js';
 import { escapar } from './escapar.js';
+import { idDoCanal, mensagensEntre, calor, picos } from './chat.js';
+import { agendar } from './aovivo.js';
 
 // Um canal ao vivo tem na lista um VOD de duração zero que vai crescendo. Até se pedir a lista outra
 // vez, o que ele já tem acaba "agora".
@@ -37,6 +39,9 @@ export function cedoDemais(ms, atrasoMin, agoraMs = Date.now()) {
 
 const horaLocal = (ms) => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
+/** Um VOD que ainda está a ser gravado: a Kick marca-o com `is_live` e duração 0 (medido em 06/10). */
+const aoVivoVod = (v) => v.aoVivo === true || v.duracaoMs === 0;
+
 /** Os intervalos em que cada canal tem vídeo, a partir das listas de VOD já lidas. */
 export function coberturasDe(resultados, agoraMs = AGORA()) {
   const coberturas = new Map();
@@ -47,8 +52,9 @@ export function coberturasDe(resultados, agoraMs = AGORA()) {
       if (!Number.isFinite(v.inicioApi)) continue;
       // Duração zero é a transmissão que está no ar. Sem isto, os canais ao vivo (os mais interessantes
       // durante o evento) apareciam sem nada no mapa.
-      const fim = v.duracaoMs > 0 ? v.inicioApi + v.duracaoMs : agoraMs;
-      if (fim > v.inicioApi) lista.push([v.inicioApi, fim]);
+      // Uma duração desconhecida não é "ao vivo": só a marca da Kick (ou a duração 0) o diz.
+      const fim = aoVivoVod(v) ? agoraMs : v.duracaoMs > 0 ? v.inicioApi + v.duracaoMs : NaN;
+      if (Number.isFinite(fim) && fim > v.inicioApi) lista.push([v.inicioApi, fim]);
     }
     if (lista.length) coberturas.set(r.slug, lista.sort((a, b) => a[0] - b[0]));
   }
@@ -158,7 +164,7 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
     pintarAvisos();
     ev.coberturas = coberturasDe(ev.resultados);
     const comVideo = ev.coberturas.size;
-    const aoVivo = ev.resultados.filter((r) => r.estado === 'ok' && r.vods.some((v) => !(v.duracaoMs > 0))).length;
+    const aoVivo = ev.resultados.filter((r) => r.estado === 'ok' && r.vods.some(aoVivoVod)).length;
     $('resumoEvento').textContent = t('evento.resumo', { times, canais, comVideo, aoVivo });
     $('seloAoVivo').hidden = aoVivo === 0;
     ev.times = [...elenco.times];
@@ -175,6 +181,7 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
     if (Number.isFinite(quandoMs)) ev.vista = zoom(ev.vista, quandoMs, 0.1, ev.limites);
     ev.link = await codificar(elenco);
     pintar();
+    seguirAoVivo(aoVivo > 0);
     $('mapaRolo').focus({ preventScroll: true });
   }
 
@@ -304,6 +311,7 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
     return {
       fundo: v('--sup-0'), faixa: v('--sup-1'), time: v('--sup-2'), linha: v('--linha'),
       texto: v('--tinta'), texto2: v('--tinta-2'), cobertura: v('--acento'), marca: v('--marca'),
+      marcas: { chat: v('--marca') },
     };
   }
 
@@ -344,6 +352,9 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
       topo: ev.topo,
       vista: ev.vista,
       largura: rolo.clientWidth,
+      // Um clique perto de um pico do chat vai ao pico: acertar numa risca de 2 px a seco é pedir
+      // pontaria a quem só quer ver o momento.
+      marcas: ev.marcas,
     });
   }
 
@@ -359,8 +370,48 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
     ev.escolha = { canal: alvo.canal, ms: alvo.ms, time: alvo.time };
     ev.procura?.abort();
     ev.achados = [];
+    $('estadoLance').textContent = '';
     pintarLance();
     pintar();
+    lerChatDoTime(ev.escolha);
+  }
+
+  // ── o chat ─────────────────────────────────────────────────────────────
+  //
+  // Onde o chat do time explodiu, à volta do lance escolhido. É texto e não vídeo (uma hora de um
+  // canal pequeno custou 12 pedidos, medido em 06/10), por isso lê-se sozinho a cada escolha, e só do
+  // time: os 500 de uma vez eram dezenas de milhares de pedidos.
+  const CHAT_JANELA_MS = 2 * 3600e3;
+  const chatLido = new Set();
+  let chatControlo = null;
+  async function lerChatDoTime(e) {
+    chatControlo?.abort();
+    const controlo = new AbortController();
+    chatControlo = controlo;
+    const deMs = Math.floor((e.ms - CHAT_JANELA_MS / 2) / 60_000) * 60_000;
+    const ateMs = Math.min(Date.now(), deMs + CHAT_JANELA_MS);
+    const canais = colegas(e.canal).filter((c) => noArEm(ev.coberturas, c, e.ms) && !chatLido.has(`${c}|${deMs}`));
+    if (!canais.length) return;
+    let feitos = 0;
+    $('estadoChat').textContent = t('lance.aLerChat', { feitos, total: canais.length });
+    for (const c of canais) {
+      if (controlo.signal.aborted) return;
+      try {
+        const id = await idDoCanal(c, { buscar, sinal: controlo.signal });
+        const msgs = await mensagensEntre(id, deMs, ateMs, { buscar, sinal: controlo.signal, maxPedidos: 120 });
+        const marcas = picos(calor(msgs, deMs, ateMs)).map((i) => ({ ms: deMs + i * 60_000 + 30_000, tipo: 'chat' }));
+        const antigas = (ev.marcas.get(c) || []).filter((m) => m.ms < deMs || m.ms > ateMs);
+        ev.marcas.set(c, [...antigas, ...marcas].sort((a, b) => a.ms - b.ms));
+        chatLido.add(`${c}|${deMs}`);
+      } catch (erro) {
+        if (erro?.name === 'AbortError') return;
+      }
+      feitos++;
+      $('estadoChat').textContent = t('lance.aLerChat', { feitos, total: canais.length });
+      pintar();
+    }
+    const n = canais.reduce((s, c) => s + (ev.marcas.get(c) || []).filter((m) => m.ms >= deMs && m.ms <= ateMs).length, 0);
+    $('estadoChat').textContent = t('lance.picosChat', { n });
   }
 
   // ── o lance ────────────────────────────────────────────────────────────
@@ -407,10 +458,10 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
   async function somDe(slug, deMs, duracaoS) {
     const r = ev.resultados.find((x) => x.slug === slug);
     const vod = r?.vods.find((v) => deMs >= v.inicioApi - 60_000
-      && deMs <= (v.duracaoMs > 0 ? v.inicioApi + v.duracaoMs : AGORA()));
+      && deMs <= (aoVivoVod(v) ? AGORA() : v.inicioApi + (v.duracaoMs > 0 ? v.duracaoMs : 0)));
     if (!vod) return null;
     // Um VOD ao vivo cresce: a playlist lida há minutos não tem o lance de agora.
-    const chave = vod.duracaoMs > 0 ? vod.id : `${vod.id}@${Math.floor(deMs / 30_000)}`;
+    const chave = aoVivoVod(vod) ? `${vod.id}@${Math.floor(deMs / 30_000)}` : vod.id;
     let peca = pecas.get(chave);
     if (!peca) {
       const master = lerMaster(await (await buscar(vod.master)).text(), vod.master);
@@ -470,6 +521,51 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
     }
   }
 
+  // ── ao vivo ────────────────────────────────────────────────────────────
+  //
+  // Enquanto houver alguém no ar, o fim das faixas de quem está ao vivo anda com o relógio, sem pedir
+  // nada à Kick (a gravação em curso fica 2 a 12 s atrás do ar, medido em 06/10). Quem estava a olhar
+  // para o fim do mapa continua a olhar para o fim. O ritmo e as pausas com o separador escondido são
+  // os do aovivo.js.
+  const ATRAS_DO_AR_MS = 20_000;
+  let aoVivoControlo = null;
+  function seguirAoVivo(sim) {
+    aoVivoControlo?.abort();
+    aoVivoControlo = null;
+    $('irAoVivo').hidden = !sim;
+    if (!sim) return;
+    const controlo = new AbortController();
+    aoVivoControlo = controlo;
+    agendar({
+      intervaloMs: 30_000,
+      sinal: controlo.signal,
+      atualizar: async () => {
+        if (!ev.mapa) return;
+        const noFim = ev.vista && ev.limites && ev.limites.ateMs - ev.vista.ateMs < 60_000;
+        ev.coberturas = coberturasDe(ev.resultados);
+        remontar();
+        const fim = ev.mapa.fimMs;
+        if (Number.isFinite(fim) && ev.limites) {
+          const passou = fim - ev.limites.ateMs;
+          ev.limites = { ...ev.limites, ateMs: fim };
+          if (noFim && passou > 0) ev.vista = { deMs: ev.vista.deMs + passou, ateMs: ev.vista.ateMs + passou };
+        }
+        pintar();
+      },
+    });
+  }
+
+  // O lance escolhido (ou o primeiro streamer no ar) quase no ar: 20 s atrás, onde todos já gravaram.
+  async function irAoVivo() {
+    const agora = Date.now() - ATRAS_DO_AR_MS;
+    const canal = ev.escolha && noArEm(ev.coberturas, ev.escolha.canal, agora) ? ev.escolha.canal
+      : [...ev.coberturas.keys()].find((c) => noArEm(ev.coberturas, c, agora));
+    if (!canal) return;
+    ev.escolha = { canal, ms: agora, time: indiceDeTimes(ev.elenco).get(canal) ?? null };
+    pintarLance();
+    await verLance();
+  }
+
   // ── com um lance aberto ────────────────────────────────────────────────
 
   // Com a grelha do lance no ecrã o mapa encolhe numa barra (ver estilo.css); este botão volta a
@@ -487,6 +583,7 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
     ev.elenco = null;
     ev.escolha = null;
     ev.achados = [];
+    seguirAoVivo(false);
     $('evento').hidden = true;
     $('lance').hidden = true;
     $('avisosEvento').hidden = true;
@@ -531,6 +628,7 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
     $('verLance').onclick = verLance;
     $('mostrarMapa').onclick = () => mostrarMapa(!$('evento').classList.contains('comMapa'));
     $('fecharEvento').onclick = fecharEvento;
+    $('irAoVivo').onclick = irAoVivo;
     $('procurarOutros').onclick = procurarOutros;
     $('partilharEvento').onclick = async () => {
       const url = `${location.origin}${location.pathname}#evento=${ev.link}`

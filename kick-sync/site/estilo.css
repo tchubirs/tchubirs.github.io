@@ -1452,6 +1452,7 @@ body:has(#evento:not([hidden])):has(#palco[hidden]) .topoTrabalho { display: non
   font-size: var(--t-menor); font-weight: 600; letter-spacing: var(--letra-larga);
 }
 .mostrarMapa { display: none; }
+.irAoVivo:not([hidden]) { color: var(--perigo); border-color: var(--perigo); }
 /* Com um lance aberto o mapa encolhe numa barra: a grelha dos ângulos precisa do ecrã. O botão
    "Mapa do evento" volta a abri-lo por cima dela, mais baixo. */
 body:has(#palco:not([hidden])) .mostrarMapa { display: inline-flex; }

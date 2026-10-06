@@ -139,5 +139,35 @@ export async function kickFalsa(pagina, {
   await pagina.route('https://fonts.googleapis.com/**', (rota) => rota.abort());
   await pagina.route('https://fonts.gstatic.com/**', (rota) => rota.abort());
 
+  // O canal e o chat. Sem isto, escolher um lance no mapa do evento ia ler o chat à Kick verdadeira,
+  // e os testes passavam a depender da rede e do que um desconhecido escreveu ontem.
+  // Cada canal tem 3 mensagens por minuto na noite falsa; o primeiro tem mais 40 no minuto 5 (um lance).
+  await pagina.route('**/api/v2/channels/*', async (rota) => {
+    const slug = rota.request().url().match(/channels\/([^/?]+)$/)?.[1];
+    const i = canais.indexOf(slug);
+    if (i < 0) return rota.fulfill({ status: 404, body: '' });
+    await rota.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: 1000 + i, slug }) });
+  });
+  const chatDe = (i) => {
+    const lista = [];
+    for (let k = 0; k < quantos * 10 / 60 * 3; k++) lista.push(T + k * 20_000);
+    if (i === 0) for (let k = 0; k < 40; k++) lista.push(T + 5 * 60_000 + k * 1000);
+    return lista.sort((a, b) => a - b).map((ms, n) => ({
+      id: `m${i}-${n}`, created_at: new Date(ms).toISOString().replace(/\.\d+Z$/, 'Z'), content: 'kkk', sender: { slug: `fa${n % 7}` },
+    }));
+  };
+  await pagina.route('**/api/v2/channels/*/messages**', async (rota) => {
+    const u = new URL(rota.request().url());
+    const i = Number(u.pathname.match(/channels\/(\d+)\/messages/)?.[1]) - 1000;
+    const cursorMs = Number(u.searchParams.get('cursor')) / 1000;
+    const antes = (i >= 0 && i < canais.length ? chatDe(i) : []).filter((m) => Date.parse(m.created_at) < cursorMs);
+    const pagina25 = antes.slice(-25).reverse();
+    await rota.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ data: { messages: pagina25, cursor: pagina25.length ? String(Date.parse(pagina25.at(-1).created_at) * 1000) : null } }),
+    });
+  });
+
   return pedidos;
 }
