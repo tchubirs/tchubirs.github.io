@@ -401,6 +401,47 @@ test('texto antes e depois de um pedaço de HTML também é lido', () => {
   assert.deepEqual(so(cortado), { times: [{ nome: 'Team B', canais: ['impheetus'] }], soltos: [] });
 });
 
+test('num pedaço de HTML, o texto de um link é da página, e uma linha de texto no meio não corta o time', () => {
+  // Uma linha solta entre o título e os links, copiada do código da página, não é do organizador...
+  const meio = lerElenco('<h3>Team A</h3>\nCaptain\n<a href="https://kick.com/a1">a1</a>');
+  assert.deepEqual(so(meio), { times: [{ nome: 'Team A', canais: ['a1'] }], soltos: [] });
+  assert.deepEqual(meio.avisos, []);
+  // ...e o texto de um link, mesmo sozinho numa linha, nunca é um canal.
+  const link = lerElenco('<h3>Team A</h3>\n<a href="https://kick.com/impheetus">\nPheetus\n</a>\nSem time: org');
+  assert.deepEqual(so(link), { times: [{ nome: 'Team A', canais: ['impheetus'] }], soltos: ['org'] });
+  assert.deepEqual(link.avisos, []);
+});
+
+test('um <script> por fechar vai até ao fim, como no navegador: o HTML dentro dele não é um time', () => {
+  const e = lerElenco(`<h3>T</h3><a href="https://kick.com/a1">1</a><script>var x = '<h3>Falso</h3><a href="https://kick.com/falso">'`);
+  assert.deepEqual(so(e), { times: [{ nome: 'T', canais: ['a1'] }], soltos: [] });
+  const comentario = lerElenco('<h3>T</h3><a href="https://kick.com/a1">1</a><!-- <h3>Velho</h3><a href="https://kick.com/velho">');
+  assert.deepEqual(so(comentario), { times: [{ nome: 'T', canais: ['a1'] }], soltos: [] });
+});
+
+test('um rodapé no corpo da página é do site, mesmo numa página de um time só', () => {
+  const corpo = '<h3>Team A</h3><a href="https://kick.com/a1">a1</a><footer><a href="https://kick.com/sponsor">s</a></footer>';
+  for (const pagina of [corpo, html(corpo), html(`<main>${corpo}</main>`)]) {
+    assert.deepEqual(so(lerElenco(pagina)), { times: [{ nome: 'Team A', canais: ['a1'] }], soltos: ['sponsor'] }, pagina);
+  }
+});
+
+test('uma secção de papel sem time por cima diz porquê os canais ficaram sem time', () => {
+  const e = lerElenco(html(`<h2>Streamers</h2><a href="https://kick.com/convidado">c</a>
+    <h3>Free Agents</h3><a href="https://kick.com/livre">l</a>`));
+  assert.deepEqual(so(e), { times: [], soltos: ['convidado', 'livre'] });
+  assert.equal(e.avisos.length, 1, '"Free Agents" já diz que não tem time');
+  assert.match(e.avisos[0], /"Streamers" parece um papel/);
+});
+
+test('dois times em duas fases, sem "Team" no nome, continuam a ser times', () => {
+  // Dois nomes debaixo de dois pais é empate: na dúvida vale o título mais próximo.
+  const a = (c) => `<a href="https://kick.com/${c}">${c}</a>`;
+  const e = lerElenco(html(`<h2>Fase 1</h2><h3>Águias</h3>${a('a1')}<h3>Lobos</h3>${a('b1')}
+    <h2>Final</h2><h3>Águias</h3>${a('a2')}<h3>Lobos</h3>${a('b2')}`));
+  assert.deepEqual(e.times, [{ nome: 'Águias', canais: ['a1', 'a2'] }, { nome: 'Lobos', canais: ['b1', 'b2'] }]);
+});
+
 test('400 mil títulos por fechar (2,4 MB) acabam depressa', () => {
   const lixo = `<h3>${'<h3>x '.repeat(400_000)}`;
   const t0 = performance.now();
@@ -532,6 +573,25 @@ test('um canal logo depois de uma linha "Time: a, b" fica sem time, e com aviso'
   assert.deepEqual(claro.avisos, []);
 });
 
+test('um nome logo depois de uma linha "Time: a, b" abre outro time, como no começo de um bloco', () => {
+  const e = lerElenco('Team A: a1, a2\nÁguias\nb1\nb2\nOs Lobos\nc1');
+  assert.deepEqual(so(e), {
+    times: [{ nome: 'Team A', canais: ['a1', 'a2'] }, { nome: 'Águias', canais: ['b1', 'b2', 'c1'] }],
+    soltos: [],
+  });
+  // Debaixo de "Águias" já é um membro por linha, até à linha em branco: "Os Lobos" não é canal e
+  // fica de fora com aviso, e o c1 continua a ser do Águias.
+  assert.equal(e.avisos.length, 1);
+  assert.match(e.avisos[0], /"Os Lobos" ficou de fora de "Águias"/);
+  // Logo depois da linha "Time: a, b", com um canal por linha por baixo, um nome de duas palavras é time.
+  const dois = lerElenco('Team A: a1\nOs Lobos\nc1\nc2');
+  assert.deepEqual(so(dois), {
+    times: [{ nome: 'Team A', canais: ['a1'] }, { nome: 'Os Lobos', canais: ['c1', 'c2'] }],
+    soltos: [],
+  });
+  assert.deepEqual(dois.avisos, []);
+});
+
 test('um grupo com nome de papel fica sem time, mas diz porquê', () => {
   const e = lerElenco('Staff: a1, a2\nThe Streamers: b1\nBench: c1\nOthers: d1');
   assert.deepEqual(so(e), { times: [], soltos: ['a1', 'a2', 'b1', 'c1', 'd1'] });
@@ -541,6 +601,56 @@ test('um grupo com nome de papel fica sem time, mas diz porquê', () => {
   const dentro = lerElenco('Team Ricoy: ricoy\nBench: c1');
   assert.deepEqual(so(dentro), { times: [{ nome: 'Team Ricoy', canais: ['ricoy', 'c1'] }], soltos: [] });
   assert.deepEqual(dentro.avisos, []);
+});
+
+test('um enfeite à frente de um @ ou de um link não é o nome de um time', () => {
+  const COROA = String.fromCodePoint(0x1f451);
+  const ESTRELA = String.fromCodePoint(0x2b50);
+  const e = lerElenco(`Team Ricoy\n${COROA} @ricoy\n1 - @tchubi\nkodd`);
+  assert.deepEqual(so(e), { times: [{ nome: 'Team Ricoy', canais: ['ricoy', 'tchubi', 'kodd'] }], soltos: [] });
+  assert.deepEqual(e.avisos, []);
+  const lista = lerElenco(`${ESTRELA} kick.com/ricoy\n${ESTRELA} kick.com/tchubi`);
+  assert.deepEqual(lista, { times: [], soltos: ['ricoy', 'tchubi'], avisos: [] });
+});
+
+test('dentro de um bloco, os papéis e as notas ficam no time', () => {
+  // "Capitão: ricoy" é um papel do time de cima: não fecha o bloco como "Team B: b1" fecharia.
+  const e = lerElenco('Team Ricoy\nCapitão: ricoy\nJogadores: tchubi, kodd\nciscoo');
+  assert.deepEqual(so(e), { times: [{ nome: 'Team Ricoy', canais: ['ricoy', 'tchubi', 'kodd', 'ciscoo'] }], soltos: [] });
+  assert.deepEqual(e.avisos, []);
+  // Numa linha "Time: a, b", "(C)" e "[CPT]" são notas, e não um canal chamado "c".
+  const notas = lerElenco('Team Ricoy: ricoy (C), tchubi, [CPT] kodd');
+  assert.deepEqual(so(notas), { times: [{ nome: 'Team Ricoy', canais: ['ricoy', 'tchubi', 'kodd'] }], soltos: [] });
+  assert.deepEqual(notas.avisos, []);
+});
+
+test('debaixo de uma secção, o nome na linha seguinte é o do primeiro time', () => {
+  const e = lerElenco('Times confirmados:\nÁguias\na1\na2\n\nGrupo B\nOs Lobos\nb1');
+  assert.deepEqual(so(e), {
+    times: [{ nome: 'Águias', canais: ['a1', 'a2'] }, { nome: 'Os Lobos', canais: ['b1'] }],
+    soltos: [],
+  });
+  assert.deepEqual(e.avisos, []);
+});
+
+test('numa lista sem título, uma linha que não é canal fica de fora e não abre um time', () => {
+  const e = lerElenco('ricoy\ntchübi\nkodd');
+  assert.deepEqual(so(e), { times: [], soltos: ['ricoy', 'kodd'] });
+  assert.equal(e.avisos.length, 1);
+  assert.match(e.avisos[0], /"tchübi" ficou de fora: não é um nome de canal da Kick/);
+});
+
+test('um nome com maiúsculas por cima de uma lista fica canal, e o aviso diz como fazer dele um time', () => {
+  const lista = lerElenco('Oilrats\noilrats\ntrausi\nposty');
+  assert.deepEqual(so(lista), { times: [], soltos: ['oilrats', 'trausi', 'posty'] });
+  assert.equal(lista.avisos.length, 1);
+  assert.match(lista.avisos[0], /"Oilrats" ficou como canal; se for o nome de um time, escreva "Oilrats:"/);
+  // Com os dois-pontos é time, e sem aviso.
+  assert.deepEqual(lerElenco('Oilrats:\noilrats\ntrausi\nposty'), {
+    times: [{ nome: 'Oilrats', canais: ['oilrats', 'trausi', 'posty'] }], soltos: [], avisos: [],
+  });
+  // Numa lista onde todos têm maiúsculas nenhum se distingue, e não há aviso.
+  assert.deepEqual(lerElenco('Ricoy\nTchubi\nKodd').avisos, []);
 });
 
 test('uma menção do Discord copiada crua não é um canal', () => {
@@ -651,6 +761,13 @@ test('o cabeçalho conhece os nomes mais comuns da coluna do canal, e uma linha 
     { nome: 'Time 1', canais: ['player1', 'ricoy'] },
     { nome: 'Time 2', canais: ['tchubi', 'kodd'] },
   ]);
+});
+
+test('o cabeçalho não toma o utilizador do Discord pelo canal da Kick', () => {
+  const e = lerElenco('Time,Discord Username,Kick\nAlpha,ana#1,a1\nAlpha,bia#2,a2\nBeta,caio#3,b1');
+  assert.deepEqual(e, {
+    times: [{ nome: 'Alpha', canais: ['a1', 'a2'] }, { nome: 'Beta', canais: ['b1'] }], soltos: [], avisos: [],
+  });
 });
 
 test('uma tabela com cabeçalho acaba na linha em branco; uma linha vazia da folha não a acaba', () => {
@@ -956,6 +1073,16 @@ test('um elenco que não se poderia abrir de um link dá null em codificar, em v
   assert.equal(await codificar({ times: [], soltos: soltos(2001) }), null);
   assert.deepEqual(await descodificar(await codificar({ times: [], soltos: soltos(2000) })),
     { times: [], soltos: soltos(2000), avisos: [] });
+});
+
+test('um elenco cujo link passaria do tamanho que se abre também dá null', async () => {
+  // 2000 times com nomes de 80 letras ao acaso: canais dentro do limite, mas o link teria centenas de
+  // milhares de caracteres, e `descodificar` recusa tudo o que passa dos 200 mil.
+  let semente = 1;
+  const rnd = () => ((semente = (Math.imul(semente, 1103515245) + 12345) >>> 0) / 0x100000000);
+  const nome = () => Array.from({ length: 80 }, () => String.fromCodePoint(0x4e00 + Math.floor(rnd() * 20000))).join('');
+  const e = { times: Array.from({ length: 2000 }, (_, i) => ({ nome: nome(), canais: [`c${i}`] })), soltos: [] };
+  assert.equal(await codificar(e), null);
 });
 
 test('codificar e descodificar vão e voltam em todos os feitios de elenco', async () => {

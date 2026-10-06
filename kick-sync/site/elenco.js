@@ -17,6 +17,19 @@
 //   { times: [{ nome, canais: [slug] }], soltos: [slug], avisos: [texto] }
 // `soltos` são canais sem time (o canal do próprio evento, uma lista solta);
 // `avisos` é o que a página deve mostrar antes de alguém carregar 500 canais.
+//
+// Leituras que o pedido não fixa e que aqui são de propósito:
+//  - Um canal com letras fora de [a-z0-9_.-] é recusado com aviso, e não
+//    filtrado: "tchübi" sem o ü é o nome de outra pessoa.
+//  - Um bloco "nome + um canal por linha" cujo nome também podia ser canal
+//    ("Oilrats" por cima de oilrats) só é time quando há dois blocos assim.
+//    Sozinho fica canal; se o nome tem maiúsculas e os canais não, um aviso
+//    diz como o escrever para ser time ("Oilrats:").
+//  - Títulos de papel ("Players", "Capitão") e de "Sem time" não são times.
+//  - HTML e texto podem vir no mesmo texto colado: as linhas com marcação são
+//    lidas como página, as outras como texto, pela ordem em que aparecem.
+//  - `contar` conta os soltos nos canais, e `paraTexto` escreve-os numa linha
+//    "Sem time: a, b" no fim.
 
 /**
  * Caminhos da Kick que não são canais.
@@ -190,8 +203,20 @@ const avisoDePapel = (n) => `"${n}" parece um papel e não o nome de um time; os
 
 // Notas de papel ao lado de um membro: "ricoy (C)", "[CPT] kodd", "ricoy - capitão".
 // "CPT" e "CO-CPT" são os da página medida; os outros são os títulos de papel.
-const NOTA = /^(?:c|vc|cc|cpt|capt|co-?\s?(?:c|cpt|capt))\.?$/i;
-const ehNota = (n) => NOTA.test(n) || ehRotulo(n);
+const NOTA = /^(?:c|vc|cc|cpt|capt|vice|co-?\s?(?:c|cpt|capt))\.?$/i;
+const ehNota = (n) => NOTA.test(String(n).trim()) || ehRotulo(String(n).trim());
+
+/** "(C)" ou "[CPT]" no meio de uma lista: é uma nota, e não um canal chamado "c". */
+function ehNotaEntreParenteses(token) {
+  const m = /^[(\[]\s*([^()[\]]+?)\s*[)\]][.,;:]?$/.exec(String(token));
+  return Boolean(m) && ehNota(m[1]);
+}
+
+// Um título que fala de vários times ("Times confirmados:", "# Teams", "Grupo A")
+// é uma secção: o nome na linha a seguir é o do primeiro time, e não um membro.
+const PALAVRAS_DE_SECAO = new Set(['teams', 'times', 'equipas', 'equipes', 'equipos', 'squads', 'clans', 'clãs',
+  'grupo', 'grupos', 'group', 'groups', 'fase', 'fases', 'phase', 'stage', 'divisão', 'division']);
+const ehSecao = (n) => String(n).toLowerCase().split(/[^\p{L}\p{N}]+/u).some((p) => PALAVRAS_DE_SECAO.has(p));
 
 // ── acumulador ──────────────────────────────────────────────────────────────
 
@@ -235,7 +260,8 @@ function novoAcumulador() {
     },
     /** Só os times com gente: um título de decoração não é o time número N. */
     quantosTimes: () => times.filter((t) => t.canais.length).length,
-    existe: (nome) => porChave.has(limparNome(nome).toLowerCase()),
+    temGente: (nome) => (porChave.get(limparNome(nome).toLowerCase())?.canais.length ?? 0) > 0,
+    /** Junta o canal ao time (ou aos soltos) e diz se ele ficou solto. */
     juntar(slug, time) {
       const atual = dono.get(slug);
       if (time) {
@@ -249,16 +275,17 @@ function novoAcumulador() {
         dono.set(slug, null);
         soltos.push(slug);
       }
+      return dono.get(slug) === null;
     },
-    /** Um token lido de texto: entra, ou vira aviso a dizer porquê. */
+    /** Um token lido de texto: entra (e diz o canal e se ficou solto), ou vira aviso a dizer porquê. */
     token(cru, time) {
       const r = lerCanal(cru);
-      if (r.slug) { ac.juntar(r.slug, time); return true; }
+      if (r.slug) return { slug: r.slug, solto: ac.juntar(r.slug, time) };
       if (r.motivo === 'outro-site') ac.aviso(`"${r.texto}" não é da Kick; ficou de fora`);
       else if (r.motivo === 'nao-e-canal') ac.aviso(`"${r.texto}" é uma página da Kick, não um canal; ficou de fora`);
       else if (r.motivo === 'invalido') ac.aviso(`"${r.texto}" não é um nome de canal da Kick; ficou de fora`);
       else if (r.motivo === 'mencao') ac.aviso(`"${r.texto}" é uma menção do Discord, não um canal da Kick; ficou de fora`);
-      return false;
+      return null;
     },
     totalDeCanais: () => dono.size,
     resultado() {
@@ -339,106 +366,317 @@ function textoDoTitulo(html, fimAbertura, nivel, attrs, fechos) {
   return (img && atributo(img[0], 'alt')) || atributo(attrs, 'aria-label') || '';
 }
 
+// Elementos sem fecho: nunca ficam abertos à espera de um.
+const VAZIOS = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param',
+  'source', 'track', 'wbr']);
+
+// Os elementos que envolvem a página inteira: um rodapé lá dentro é do site.
+const RAIZ = new Set(['html', 'body', 'main']);
+
+// Uma etiqueta (de abrir ou de fechar) ou um <!doctype>. Pode atravessar linhas.
+const ETIQUETA = /<(\/?)([a-z][a-z0-9-]*)(?=[\s>\/])([^>]*)>?|<![^>]*>?/gi;
+
+/**
+ * Os elementos abertos, como o navegador os veria nos casos que aqui contam.
+ *
+ * Um fecho fecha o elemento com esse nome mais próximo e tudo o que ficou
+ * aberto dentro dele; um fecho sem abertura não faz nada. A conta por nome
+ * evita procurar a pilha inteira por cada fecho: cem mil </div> sem <div>
+ * eram cem mil voltas à pilha.
+ */
+function novaPilha() {
+  const pilha = [];
+  const quantos = new Map();
+  const tirar = () => {
+    const e = pilha.pop();
+    quantos.set(e.nome, quantos.get(e.nome) - 1);
+    return e;
+  };
+  const fechar = (nome) => {
+    if (!quantos.get(nome)) return;
+    while (tirar().nome !== nome);
+  };
+  return {
+    pilha,
+    fechar,
+    abrir(nome, dados = {}) {
+      // Um título nunca fica dentro de outro, nem um link dentro de outro link.
+      if (/^h[1-6]$/.test(nome) && /^h[1-6]$/.test(pilha.at(-1)?.nome ?? '')) tirar();
+      if (nome === 'a') fechar('a');
+      if (VAZIOS.has(nome)) return;
+      pilha.push({ nome, ...dados });
+      quantos.set(nome, (quantos.get(nome) || 0) + 1);
+    },
+  };
+}
+
+/**
+ * O HTML sem comentários, <script> e <style>, numa passagem só.
+ *
+ * Um <!-- ou um <script> por fechar vai até ao fim, como no navegador, e o que
+ * veio antes fica. Com uma regex por abertura, cada abertura sem fecho varria
+ * o resto da página: cem mil eram minutos. As quebras de linha ficam, para
+ * cada linha continuar a ser a mesma linha.
+ */
+function semComentariosNemScripts(html) {
+  const abertura = /<!--|<(script|style)(?=[\s>\/])/gi;
+  let saida = '';
+  let desde = 0;
+  for (let m = abertura.exec(html); m; m = abertura.exec(html)) {
+    let fim;
+    if (m[1]) {
+      const fecho = new RegExp(`</${m[1]}\\s*>`, 'gi');
+      fecho.lastIndex = m.index + m[0].length;
+      const f = fecho.exec(html);
+      fim = f ? f.index + f[0].length : html.length;
+    } else {
+      const f = html.indexOf('-->', m.index + 2);
+      fim = f >= 0 ? f + 3 : html.length;
+    }
+    saida += html.slice(desde, m.index) + html.slice(m.index, fim).replace(/[^\n]+/g, ' ');
+    desde = fim;
+    abertura.lastIndex = fim;
+  }
+  return saida + html.slice(desde);
+}
+
+/**
+ * Que linhas são da página: têm marcação, ou ficam dentro de um elemento.
+ *
+ * As outras são do organizador ("Team A: a1, a2" por cima de um pedaço de
+ * HTML) e lêem-se como texto. O texto de um link ou de um título, mesmo numa
+ * linha sozinha, é da página: "Pheetus" dentro do <a> de impheetus não é um
+ * canal.
+ */
+function linhasDaPagina(limpo) {
+  const inicios = [0];
+  for (let i = limpo.indexOf('\n'); i >= 0; i = limpo.indexOf('\n', i + 1)) inicios.push(i + 1);
+  const daPagina = new Uint8Array(inicios.length);
+  let l = 0;
+  const marcar = (de, ate) => {
+    if (ate <= de) return;
+    while (l + 1 < inicios.length && inicios[l + 1] <= de) l++;
+    for (let k = l; k < inicios.length && inicios[k] < ate; k++) daPagina[k] = 1;
+  };
+  const elementos = novaPilha();
+  let fim = 0;
+  for (const m of limpo.matchAll(ETIQUETA)) {
+    if (elementos.pilha.length) marcar(fim, m.index);
+    fim = m.index + m[0].length;
+    marcar(m.index, fim);
+    if (!m[2]) continue;
+    const nome = m[2].toLowerCase();
+    if (m[1]) elementos.fechar(nome); else if (!/\/\s*$/.test(m[3])) elementos.abrir(nome);
+  }
+  if (elementos.pilha.length) marcar(fim, limpo.length);
+  return { inicios, daPagina };
+}
+
+/**
+ * Os títulos que se repetem em secções diferentes e são papéis, não times.
+ *
+ * "Main" em cada cartão e "Team A" em cada fase do torneio têm a mesma forma:
+ * o mesmo nome debaixo de vários pais. Separa-os a conta. Um papel repete-se
+ * em muitos cartões e cada cartão tem poucos; um time repete-se em poucas
+ * fases e cada fase tem muitos. Na dúvida é time, que é a regra do título mais
+ * próximo; e um nome que diz "Team" ou "Time" é sempre um time.
+ */
+function rotulosRepetidos(estatisticas) {
+  const repetidos = [...estatisticas].filter(([, e]) => e.pais.size >= 2 && !e.orfao
+    && !ehRotulo(e.nome) && !ehSoltos(e.nome));
+  const porPai = new Map();
+  for (const [, e] of repetidos) for (const p of e.pais) porPai.set(p, (porPai.get(p) || 0) + 1);
+  const rotulos = new Set();
+  for (const [chave, e] of repetidos) {
+    if (dizTime(e.nome)) continue;
+    let irmaos = 0;
+    for (const p of e.pais) irmaos = Math.max(irmaos, porPai.get(p));
+    if (e.pais.size > irmaos) rotulos.add(chave);
+  }
+  return rotulos;
+}
+
 /**
  * Página de times: cada link da Kick vai para o título mais próximo acima dele.
  *
- * Três cuidados que a regra simples não tem:
+ * Quatro cuidados que a regra simples não tem:
  *  - Um subtítulo de papel ("Players", "Capitão") por baixo do título do time
  *    não abre time novo. O mesmo para um subtítulo que se repete debaixo de
- *    títulos DIFERENTES ("Main" em cada cartão) — o nome de um time não se
- *    repete em times diferentes. Um título repetido debaixo do MESMO pai é a
- *    versão de telemóvel do mesmo cartão, e junta-se ao primeiro.
+ *    muitos títulos diferentes ("Main" em cada cartão; ver `rotulosRepetidos`).
+ *    Um título repetido debaixo do MESMO pai é a versão de telemóvel do mesmo
+ *    cartão, e junta-se ao primeiro.
  *  - O link pertence ao título onde FECHA: `<a href><h3>Team X</h3></a>` é o
  *    capitão do Team X, não do time de cima.
- *  - <nav> e <footer> fora de um <article> cortam o time: os links do rodapé
- *    são do site, não do último time da página.
+ *  - <nav> e <footer> cortam o time, porque os links do rodapé são do site e
+ *    não do último time da página. Menos dentro do cartão do time: o elemento
+ *    que envolve o título e o rodapé, e nenhum outro time.
+ *  - Um título sem nome nenhum recebe "Time N", com N o lugar dele entre os
+ *    times com gente, saltando os números que já são nome de outro título.
+ *
+ * `textos` são as linhas de texto do organizador no meio da página, já em
+ * branco em `html`: lêem-se no sítio onde estão, para a ordem dos times ser a
+ * do que se colou. `cru` é a página antes de tirar os <script>, onde uma
+ * página montada por JavaScript guarda os links.
  */
-function lerHtml(html, ac) {
-  const limpo = String(html)
-    .replace(/<!--[\s\S]*?-->/g, ' ')
-    .replace(/<(script|style)\b[\s\S]*?<\/\1\s*>/gi, ' ');
-
+function lerHtml(html, ac, textos = [], cru = html) {
   const fechos = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
-  for (const m of limpo.matchAll(/<\/h([1-6])\s*>/gi)) fechos[m[1]].push(m.index);
+  for (const m of html.matchAll(/<\/h([1-6])\s*>/gi)) fechos[m[1]].push(m.index);
 
   const titulos = new Map();
-  const pilha = [];
+  const pilhaDeTitulos = [];
   const estatisticas = new Map();
-  for (const m of limpo.matchAll(/<h([1-6])(?=[\s>\/])([^>]*)>/gi)) {
+  for (const m of html.matchAll(/<h([1-6])(?=[\s>\/])([^>]*)>/gi)) {
     const nivel = Number(m[1]);
-    const nome = limparNome(textoDoTitulo(limpo, m.index + m[0].length, nivel, m[2], fechos));
+    const nome = limparNome(textoDoTitulo(html, m.index + m[0].length, nivel, m[2], fechos));
     const chave = nome.toLowerCase();
-    while (pilha.length && pilha.at(-1).nivel >= nivel) pilha.pop();
-    const pai = pilha.at(-1)?.chave;
-    pilha.push({ nivel, chave });
+    while (pilhaDeTitulos.length && pilhaDeTitulos.at(-1).nivel >= nivel) pilhaDeTitulos.pop();
+    const pai = pilhaDeTitulos.at(-1)?.chave;
+    pilhaDeTitulos.push({ nivel, chave });
     titulos.set(m.index, { nivel, nome, chave });
     if (!chave) continue;
-    const e = estatisticas.get(chave) || { n: 0, pais: new Set(), orfao: false };
+    const e = estatisticas.get(chave) || { nome, n: 0, pais: new Set(), orfao: false };
     e.n++;
     if (pai === undefined) e.orfao = true; else e.pais.add(pai);
     estatisticas.set(chave, e);
   }
-  const repetidoComoRotulo = (chave) => {
-    const e = estatisticas.get(chave);
-    return Boolean(e && e.n >= 2 && !e.orfao && e.pais.size >= 2);
-  };
+  const rotulos = rotulosRepetidos(estatisticas);
 
   let atual = null;
   let nivelAtual = 0;
   let pendente = null;
-  let artigos = 0;
-  const largar = () => { if (pendente) ac.juntar(pendente, atual); pendente = null; };
+  let papel = null;        // o título de papel sem time por cima, para o aviso
+  let tituloDoTime = -1;   // onde está o título do time atual
+  let abertos = 0;         // títulos que abriram um time até aqui
+  let achados = 0;
+  const semNome = new Set();
+  const elementos = novaPilha();
+  const largar = () => {
+    if (!pendente) return;
+    achados++;
+    if (ac.juntar(pendente, atual) && !atual && papel) ac.aviso(avisoDePapel(papel));
+    pendente = null;
+  };
+  // O elemento aberto mais fundo que já envolvia o título do time. Se lá dentro
+  // só há este time, é o cartão dele, e um rodapé ali é do cartão.
+  const noCartao = () => {
+    if (!atual || tituloDoTime < 0) return false;
+    const { pilha } = elementos;
+    let baixo = 0;
+    let alto = pilha.length;
+    while (baixo < alto) {
+      const meio = (baixo + alto) >> 1;
+      if (pilha[meio].pos < tituloDoTime) baixo = meio + 1; else alto = meio;
+    }
+    const cartao = pilha[baixo - 1];
+    return Boolean(cartao) && !RAIZ.has(cartao.nome) && abertos - cartao.abertos === 1;
+  };
+  let proximoTexto = 0;
+  const lerTextosAte = (pos) => {
+    while (proximoTexto < textos.length && textos[proximoTexto].inicio < pos) lerTexto(textos[proximoTexto++].texto, ac);
+  };
 
-  for (const m of limpo.matchAll(/<(\/?)(a|h[1-6]|nav|footer|article)(?=[\s>\/])([^>]*)>/gi)) {
+  for (const m of html.matchAll(ETIQUETA)) {
+    if (!m[2]) continue;
+    lerTextosAte(m.index);
     const fecha = m[1] === '/';
     const tag = m[2].toLowerCase();
+    if (fecha) elementos.fechar(tag);
+    else if (!/\/\s*$/.test(m[3])) elementos.abrir(tag, { pos: m.index, abertos });
     if (tag === 'a') {
       largar();
-      if (!fecha) pendente = canalDeLink(atributo(m[3], 'href'));
-    } else if (tag === 'article') {
-      artigos = fecha ? Math.max(0, artigos - 1) : artigos + 1;
+      if (!fecha) pendente = canalDeLink(atributo(m[3], 'href'), true);
     } else if (tag === 'nav' || tag === 'footer') {
-      if (!fecha && !artigos) { largar(); atual = null; nivelAtual = 0; }
-    } else if (!fecha) {
+      if (!fecha && !noCartao()) { largar(); atual = null; nivelAtual = 0; papel = null; }
+    } else if (!fecha && /^h[1-6]$/.test(tag)) {
       const t = titulos.get(m.index);
       if (!t) continue;
-      if (t.nome && ehSoltos(t.nome)) { atual = null; nivelAtual = t.nivel; continue; }
-      if (t.nome && (ehRotulo(t.nome) || repetidoComoRotulo(t.chave))) {
+      if (t.nome && ehSoltos(t.nome)) { atual = null; nivelAtual = t.nivel; papel = null; continue; }
+      if (t.nome && (ehRotulo(t.nome) || rotulos.has(t.chave))) {
         // Fica no time de cima se houver um por cima dele; um "Streamers"
         // mais alto do que os times é uma secção nova, sem time.
-        if (!(atual && nivelAtual <= t.nivel)) { atual = null; nivelAtual = t.nivel; }
+        if (!(atual && nivelAtual <= t.nivel)) { atual = null; nivelAtual = t.nivel; papel = t.nome; }
         continue;
       }
-      // Sem nome nenhum, nem no alt: um nome de recurso é mais honesto do que
-      // somar estes canais ao time de cima.
-      atual = ac.time(t.nome || `Time ${ac.quantosTimes() + 1}`);
+      let nome = t.nome;
+      if (!nome) {
+        // Sem nome nenhum, nem no alt: um nome de recurso é mais honesto do que
+        // somar estes canais ao time de cima.
+        let n = ac.quantosTimes() + 1;
+        while (estatisticas.has(`time ${n}`) || ac.temGente(`Time ${n}`)) n++;
+        nome = `Time ${n}`;
+      }
+      atual = ac.time(nome);
+      if (!t.nome && atual) semNome.add(atual);
       nivelAtual = t.nivel;
+      papel = null;
+      tituloDoTime = m.index;
+      abertos++;
     }
   }
   largar();
+  lerTextosAte(Infinity);
+  for (const t of semNome) if (t.canais.length) ac.aviso(`um título sem nome ficou com o nome "${t.nome}"`);
 
-  if (!ac.totalDeCanais()) {
+  if (!achados) {
     // Páginas montadas por JavaScript não têm os links no HTML, mas costumam
     // trazer os dados num <script> (com as barras escapadas: https:\/\/...).
     // Sem títulos não há times, mas os canais ainda servem.
-    const crus = String(html).replace(/\\\//g, '/')
+    const crus = String(cru).replace(/\\\//g, '/')
       .match(/(?:https?:)?\/\/(?:[a-z0-9-]+\.)*kick\.com\/[^\s"'<>\\)]+/gi) || [];
+    const soltos = new Set();
     for (const u of crus) {
       const slug = canalDeLink(u);
-      if (slug) ac.juntar(slug, null);
+      if (slug && ac.juntar(slug, null)) soltos.add(slug);
     }
-    if (ac.totalDeCanais()) {
-      ac.aviso(`esta página não tem títulos com links da Kick por baixo; os ${ac.totalDeCanais()} canais encontrados ficaram sem time`);
+    if (soltos.size) {
+      ac.aviso(`esta página não tem títulos com links da Kick por baixo; os ${soltos.size} canais encontrados ficaram sem time`);
     }
   }
 }
 
+/**
+ * Um texto colado que tem HTML: a página, e o texto do organizador à volta dela.
+ *
+ * Uma página inteira (com <html>) é toda página. Um pedaço de HTML no meio de
+ * uma mensagem não apaga a mensagem: as linhas sem marcação, fora de qualquer
+ * elemento, lêem-se como texto, cada uma no seu sítio.
+ */
+function lerPagina(cru, ac) {
+  const limpo = semComentariosNemScripts(cru);
+  const { inicios, daPagina } = linhasDaPagina(limpo);
+  const linhas = limpo.split('\n');
+  const textos = [];
+  let aberto = null;
+  for (let k = 0; k < linhas.length; k++) {
+    if (daPagina[k]) { aberto = null; continue; }
+    // Uma linha em branco só entra num texto já começado, onde separa blocos.
+    if (!aberto && !linhas[k].trim()) continue;
+    if (!aberto) { aberto = { inicio: inicios[k], linhas: [], numeros: [] }; textos.push(aberto); }
+    aberto.linhas.push(linhas[k]);
+    aberto.numeros.push(k);
+  }
+  if (!textos.length) { lerHtml(limpo, ac, [], cru); return; }
+  const crus = cru.split('\n');
+  for (const t of textos) {
+    for (const k of t.numeros) {
+      linhas[k] = ' '.repeat(linhas[k].length);
+      crus[k] = '';
+    }
+  }
+  lerHtml(linhas.join('\n'), ac, textos.map((t) => ({ inicio: t.inicio, texto: t.linhas.join('\n') })), crus.join('\n'));
+}
+
 // ── texto ───────────────────────────────────────────────────────────────────
 
-/** Limpa o que o Discord e o Markdown põem à volta de uma linha. */
+/**
+ * Limpa o que o Discord e o Markdown põem à volta de uma linha.
+ *
+ * `branca` é a linha que separa blocos. Uma linha só com tabs não é: numa
+ * folha colada é uma linha vazia da tabela, e a tabela continua por baixo.
+ */
 function prepararLinha(cru) {
   let s = String(cru)
-    .replace(/[\u00a0\u2000-\u200b\u202f\u205f\u3000\ufeff]/g, ' ')
+    .replace(/[  -​  　﻿]/g, ' ')
     .replace(/\[([^\]]*)\]\(\s*([^)\s]*)\s*\)/g, ' $2 ')
     .replace(/<((?:https?:)?\/\/[^>\s]+)>/gi, ' $1 ')
     .trim();
@@ -446,9 +684,15 @@ function prepararLinha(cru) {
   const titulo = s.match(/^#{1,6}\s+(.*)$/);
   if (titulo) { marcado = true; s = titulo[1]; }
   if (/^(?:\*\*.+\*\*|__.+__):?$/.test(s)) { marcado = true; s = s.replace(/^(?:\*\*|__)|(?:\*\*|__)(?=:?$)/g, ''); }
-  for (let i = 0; i < 4; i++) s = s.replace(/^(?:[-*•·+>]|\d{1,3}[.)])\s+/, '');
-  return { s: s.replace(/[*`]/g, '').trim(), marcado };
+  // Marcadores de lista e numeração: "- ", "1. ", "2) ", "3 - ".
+  for (let i = 0; i < 4; i++) s = s.replace(/^(?:[-*•·+>]|\d{1,3}[.)]|\d{1,3}\s*[-–—])\s+/, '');
+  s = s.replace(/[*`]/g, '').trim();
+  return { s, marcado, branca: !s && !/\t/.test(cru) };
 }
+
+// Uma linha de enfeite ("---", "===") separa blocos como uma linha em branco.
+// Com "|" é a linha |---|---| de uma tabela Markdown, que é da tabela.
+const ehSeparador = (l) => l.branca || /^[-=_~\s:+]+$/.test(l.s);
 
 /**
  * "Nome: a, b" — o nome é tudo até ao ÚLTIMO dois-pontos.
@@ -514,8 +758,48 @@ function partirCelulas(s, sep) {
   return celulas;
 }
 
-const COLUNA_TIME = /^(?:nome\s+d[oa]\s+)?(?:time|team|equipa|equipe|squad|grupo|clan)(?:\s+name|\s+\d+)?$/i;
-const COLUNA_CANAL = /^(?:canal|canais|channel|channels|kick|slug|link|links|url|user(?:name)?|nick(?:name)?|usu[aá]rio|handle|@)(?:\s+(?:d[aoe]|na|no|on|in)\s+kick|\s+kick|\s+\d+|\s+url|\s+link)?$/i;
+const COLUNA_TIME = /^(?:nome\s+d[oa]\s+|nombre\s+del\s+)?(?:time|team|equipa|equipe|equipo|squad|grupo|clan)(?:\s+name|\s+nome|\s+\d+)?$/i;
+
+// Palavras que, num cabeçalho, dizem "aqui vai o canal": "Canal da Kick",
+// "Kick Username", "Channel Name", "Nome na Kick", "Kick URL"...
+const PALAVRAS_DE_CANAL = new Set(['canal', 'canais', 'channel', 'channels', 'kick', 'slug', 'link', 'links', 'url',
+  'urls', 'user', 'username', 'usuario', 'usuarios', 'nick', 'nickname', 'handle', 'perfil', 'profile', '@']);
+
+// "Discord Username" e "E-mail" também têm cara de canal, mas são de outro sítio.
+const OUTRO_SITIO = /\b(?:discord|twitch|youtube|twitter|instagram|tiktok|steam|e-?mail|kick\s*-?\s*off)\b/;
+
+function ehColunaDeCanal(celula) {
+  const c = String(celula).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  if (!c || OUTRO_SITIO.test(c)) return false;
+  return c.split(/[^a-z0-9@]+/).some((p) => PALAVRAS_DE_CANAL.has(p)) || ehRotulo(celula);
+}
+
+const semAspas = (c) => c.replace(/^["']|["']$/g, '').trim();
+const chaveDeColuna = (sep, i, valor) => `${sep}\u0000${i}\u0000${valor.toLowerCase()}`;
+
+/**
+ * Onde aparece, em cada coluna, um valor com cara de nome de coluna de time.
+ *
+ * Serve para não tomar por cabeçalho uma linha de dados: "Time 1,player1" tem
+ * cara de cabeçalho, mas se "Time 1" volta a aparecer na mesma coluna noutra
+ * linha, é um time, e aquela é a primeira linha dele.
+ */
+function colunasDoBloco(bloco) {
+  const colunas = new Map();
+  for (const { s } of bloco) {
+    const sep = s && separadorDe(s);
+    if (!sep) continue;
+    partirCelulas(s, sep).forEach((celula, i) => {
+      const valor = semAspas(celula);
+      if (!COLUNA_TIME.test(valor)) return;
+      const chave = chaveDeColuna(sep, i, valor);
+      const linhas = colunas.get(chave) || new Set();
+      if (linhas.size < 2) linhas.add(s.toLowerCase());
+      colunas.set(chave, linhas);
+    });
+  }
+  return colunas;
+}
 
 /**
  * Um cabeçalho de folha de cálculo: diz qual coluna é o time e quais são canais.
@@ -525,25 +809,80 @@ const COLUNA_CANAL = /^(?:canal|canais|channel|channels|kick|slug|link|links|url
  * "Jogador 1" a "Jogador 4". Ler pelo cabeçalho serve as duas e deixa o
  * e-mail de fora sem ter de o reconhecer.
  */
-function cabecalho(s, sep) {
-  const celulas = partirCelulas(s, sep).map((c) => c.replace(/^["']|["']$/g, '').trim());
+function cabecalho(s, sep, colunas) {
+  const celulas = partirCelulas(s, sep).map(semAspas);
   let iTime = -1;
   const iCanais = [];
   celulas.forEach((c, i) => {
     if (iTime < 0 && COLUNA_TIME.test(c)) iTime = i;
-    else if (COLUNA_CANAL.test(c) || ROTULO.test(c)) iCanais.push(i);
+    else if (ehColunaDeCanal(c)) iCanais.push(i);
   });
-  return iTime >= 0 && iCanais.length ? { sep, iTime, iCanais } : null;
+  if (iTime < 0 || !iCanais.length) return null;
+  if ((colunas.get(chaveDeColuna(sep, iTime, celulas[iTime]))?.size ?? 0) >= 2) return null;
+  return { sep, iTime, iCanais };
 }
 
 const umToken = (c) => !/\s/.test(c.trim());
 const tokens = (s) => String(s).split(/[\s,;|]+/).filter(Boolean);
+const canalEscrito = (c) => /^@/.test(c) || pareceLink(c);
 
 /** Uma frase, não uma lista: "Boa sorte a todos!" não são três canais. */
 const ehFrase = (s) => /[.!?]$/.test(s) && s.split(/\s+/).length >= 3 && !/@|kick\.com\//i.test(s);
 
+/**
+ * Se as linhas "a,b" de um bloco são um CSV time,canal sem cabeçalho.
+ *
+ * "alpha,a1" tanto é o time alpha como dois canais. Diz que é CSV um time que
+ * se repete (num CSV vem uma linha por canal), ou o canal escrito como link ou
+ * @ em todas as linhas, com o time escrito como nome. Aí todas as linhas do
+ * bloco são time,canal, também a de um time com um canal só.
+ */
+function ehCsvDeTimes(bloco) {
+  const pares = [];
+  for (const { s } of bloco) {
+    if (!s || dividirNome(s)) continue;
+    const sep = separadorDe(s);
+    if (!sep) continue;
+    const celulas = partirCelulas(s, sep).filter(Boolean);
+    if (celulas.length === 2) pares.push(celulas);
+  }
+  const vezes = new Map();
+  for (const [a] of pares) vezes.set(a.toLowerCase(), (vezes.get(a.toLowerCase()) || 0) + 1);
+  return [...vezes.values()].some((n) => n >= 2)
+    || (pares.length >= 2 && pares.every(([a, b]) => canalEscrito(b) && !canalEscrito(a)));
+}
+
+/**
+ * O canal de uma linha de membro, sem o que está à volta dele.
+ *
+ * Uma coroa à frente, "#1 ricoy", "ricoy (C)", "[CPT] ricoy" e "ricoy - capitão"
+ * são todos o ricoy: o enfeite e a nota de papel nunca fazem parte do nome. Se
+ * sobra mais de uma palavra ("Mills RP", "Gabi (gabi_br)"), não se escolhe
+ * uma, porque escolher era pôr o ângulo de outra pessoa.
+ */
+function lerMembro(linha) {
+  const t = String(linha)
+    .replace(/[(\[]\s*([^()[\]]{1,40}?)\s*[)\]]/g, (m, dentro) => (ehNota(dentro) ? ' ' : m))
+    .replace(/^#\d{1,3}\s+/, '')
+    .replace(/\s+[-–—|:]+\s+(.+)$/, (m, nota) => (ehNota(nota) ? '' : m))
+    .trim();
+  const palavras = t.split(/\s+/)
+    .map((p) => p.replace(/^[^\p{L}\p{N}@]+|[^\p{L}\p{N}_.-]+$/gu, ''))
+    .filter((p) => /[\p{L}\p{N}]/u.test(p));
+  const semNotas = palavras.filter((p) => !ehNota(p));
+  const finais = semNotas.length ? semNotas : palavras;
+  return finais.length === 1 ? lerCanal(finais[0]) : { motivo: 'espacos' };
+}
+
+/**
+ * Um título. `explicito` é o que diz que é título por si: marcado em Markdown,
+ * acabado em dois-pontos, com a palavra "time", ou um papel. Os outros, a meio
+ * de um bloco, são lidos como membro (ver `lerBloco`).
+ */
+const tituloDe = (nome, explicito) => ({ tipo: 'titulo', nome, explicito, membro: explicito ? null : lerMembro(nome) });
+
 function classificar({ s, marcado }, ctx) {
-  if (!s || /^[-=_~\s|:+]+$/.test(s)) return { tipo: 'vazia' };
+  if (!s || /^[-=_~\s|:+]+$/.test(s)) return { tipo: 'ignorar' };
 
   if (ctx.tabela && s.includes(ctx.tabela.sep)) {
     const celulas = partirCelulas(s, ctx.tabela.sep);
@@ -556,7 +895,7 @@ function classificar({ s, marcado }, ctx) {
 
   const dividido = dividirNome(s);
   if (dividido) {
-    if (!dividido.resto) return { tipo: 'titulo', nome: dividido.nome };
+    if (!dividido.resto) return tituloDe(dividido.nome, true);
     const canais = tokens(dividido.resto);
     // "Nota: o evento começa às 18h." é uma frase. Só conta como tal se tiver
     // algo que nunca seria canal ("às"): "Team A: a, b, c." é uma lista com
@@ -567,7 +906,7 @@ function classificar({ s, marcado }, ctx) {
 
   const sep = separadorDe(s);
   if (sep) {
-    const cab = cabecalho(s, sep);
+    const cab = cabecalho(s, sep, ctx.colunas);
     if (cab) { ctx.tabela = cab; return { tipo: 'ignorar' }; }
     const celulas = partirCelulas(s, sep).filter(Boolean);
     if (celulas.length >= 2) {
@@ -575,109 +914,211 @@ function classificar({ s, marcado }, ctx) {
       if (!celulas.slice(1).every(umToken)) return { tipo: 'ignorar' };
       const primeira = celulas[0];
       // Um link ou um @ à cabeça é um canal, mesmo que inválido: nunca o nome de um time.
-      if (/^@/.test(primeira) || pareceLink(primeira)) return { tipo: 'canais', canais: celulas };
+      if (canalEscrito(primeira)) return { tipo: 'canais', canais: celulas };
       if (!umToken(primeira) || !lerCanal(primeira).slug) {
         // "Team Ricoy, ricoy" (CSV sem cabeçalho) e "Team Ricoy\tricoy\ttchubi" (folha colada).
         return { tipo: 'time', nome: primeira, canais: celulas.slice(1) };
       }
-      // "ricoy,tchubi" tanto é um CSV time,canal como dois canais. Num CSV o
-      // time repete-se em cada linha (quatro por time); dois canais soltos não.
-      if (celulas.length === 2 && (ctx.repetidos.get(primeira.toLowerCase()) || 0) >= 2) {
-        return { tipo: 'linha', nome: primeira, canais: [celulas[1]] };
-      }
-      return { tipo: 'canais', canais: celulas };
+      if (celulas.length === 2 && ctx.csv) return { tipo: 'linha', nome: primeira, canais: [celulas[1]] };
+      // "ricoy,tchubi" sem nada que diga que é time,canal: dois canais, e se o
+      // bloco tem mais linhas assim, um aviso (ver `lerTexto`).
+      return { tipo: 'canais', canais: celulas, par: celulas.length === 2 ? sep : null };
     }
   }
 
   const palavras = s.split(/\s+/);
   // Um link de outro site também é tratado como canal, para virar aviso: lido
   // como nome de time, desaparecia calado num time vazio.
-  const k = palavras.findIndex((p) => {
-    const nu = p.replace(/^[(\[{<"'“‘«]+/, '');
-    return /^@/.test(nu) || pareceLink(nu);
-  });
+  const k = palavras.findIndex((p) => canalEscrito(p.replace(/^[(\[{<"'“‘«]+/, '')));
   if (k >= 0) {
     // "Team Ricoy @ricoy @tchubi": o que vem antes do primeiro @ só é nome
-    // quando não pode ser canal, ou diz "time"; senão é mais uma lista.
+    // quando não pode ser canal, ou diz "time"; senão é mais uma lista. Um
+    // enfeite à frente (um emoji, "1 - @ricoy") não é nome nenhum.
     const antes = palavras.slice(0, k);
-    const ehNome = antes.length && (antes.some((p) => PALAVRAS_DE_TIME.has(p.toLowerCase()))
-      || !antes.every((p) => lerCanal(p).slug));
-    return ehNome ? { tipo: 'time', nome: antes.join(' '), canais: palavras.slice(k) }
-      : { tipo: 'canais', canais: palavras };
+    const nome = limparNome(antes.join(' '));
+    const ehNome = /[\p{L}\p{N}]/u.test(nome) && (dizTime(nome) || !antes.every((p) => lerCanal(p).slug));
+    return ehNome ? { tipo: 'time', nome, canais: palavras.slice(k) }
+      : { tipo: 'canais', canais: palavras.filter((p) => /[\p{L}\p{N}]/u.test(p)) };
   }
   const nome = limparNome(s);
-  if (marcado || ehRotulo(nome) || ehSoltos(nome)) return { tipo: 'titulo', nome: s };
+  if (marcado || ehRotulo(nome) || ehSoltos(nome)) return tituloDe(s, true);
   if (ehFrase(s)) return { tipo: 'ignorar' };
   // Algo que não pode ser canal é um nome: "Team #1", "Águias", "Los Pibes!".
-  if (!palavras.every((p) => lerCanal(p).slug)) return { tipo: 'titulo', nome: s };
+  if (!palavras.every((p) => lerCanal(p).slug)) return tituloDe(s, dizTime(nome));
   if (palavras.length === 1) return { tipo: 'palavra', nome: s, canais: palavras };
-  if (palavras.some((p) => PALAVRAS_DE_TIME.has(p.toLowerCase()))) return { tipo: 'titulo', nome: s };
-  return { tipo: 'palavras', nome: s, canais: palavras };
+  if (palavras.some((p) => PALAVRAS_DE_TIME.has(p.toLowerCase()))) return tituloDe(s, true);
+  // Duas palavras numa linha de membro são um nome com espaço ("Mills RP"), ou
+  // um nome com nota ("ricoy (C)"); três ou mais são uma lista.
+  return { tipo: 'palavras', nome: s, canais: palavras, membro: palavras.length === 2 ? lerMembro(s) : null };
 }
+
+/** Uma linha com um canal só, como as de debaixo do nome de um time. */
+const umPorLinha = (c) => Boolean(c) && (((c.tipo === 'palavra' || c.tipo === 'canais') && c.canais.length === 1)
+  || ((c.tipo === 'titulo' || c.tipo === 'palavras') && !c.explicito && Boolean(c.membro?.slug)));
 
 /**
  * Texto livre: linhas "Nome: a, b", blocos "nome + um por linha", CSV, soltos.
  *
+ * O texto parte-se em blocos nas linhas em branco, e cada bloco é lido à
+ * parte: uma tabela acaba no fim do bloco, e um CSV num bloco não muda a
+ * leitura de uma lista noutro.
+ *
  * O caso difícil é o bloco cujo nome também podia ser um canal ("Oilrats" por
  * cima de oilrats, trausi, posty...). Uma linha destas, sozinha, é um canal.
- * Só é nome quando o texto se mostra organizado em blocos — pelo menos dois
+ * Só é nome quando o texto se mostra organizado em blocos: pelo menos dois
  * blocos separados por linha em branco, cada um com um nome e um canal por
- * linha. Assim uma lista simples de canais nunca perde o primeiro.
+ * linha. Assim uma lista simples nunca perde o primeiro.
  */
 function lerTexto(texto, ac) {
-  const linhas = String(texto).split(/\r\n?|\n/).map(prepararLinha);
-
-  const repetidos = new Map();
-  for (const { s } of linhas) {
-    if (!s || dividirNome(s)) continue;
-    const sep = separadorDe(s);
-    if (!sep) continue;
-    const celulas = partirCelulas(s, sep).filter(Boolean);
-    if (celulas.length !== 2) continue;
-    const chave = celulas[0].toLowerCase();
-    repetidos.set(chave, (repetidos.get(chave) || 0) + 1);
-  }
-
-  const ctx = { repetidos, tabela: null };
   const blocos = [[]];
-  for (const l of linhas) {
-    const c = classificar(l, ctx);
-    if (c.tipo === 'vazia') { if (blocos.at(-1).length) blocos.push([]); continue; }
-    if (c.tipo !== 'ignorar') blocos.at(-1).push(c);
+  for (const l of String(texto).split(/\r\n?|\n/).map(prepararLinha)) {
+    if (!ehSeparador(l)) blocos.at(-1).push(l);
+    else if (blocos.at(-1).length) blocos.push([]);
   }
 
-  const umCanalPorLinha = (c) => (c.tipo === 'palavra' || c.tipo === 'canais') && c.canais.length === 1;
-  const classico = (b) => b.length >= 2 && b.slice(1).every(umCanalPorLinha);
-  const emBlocos = blocos.filter((b) => classico(b) && ['palavra', 'palavras', 'titulo'].includes(b[0].tipo)).length >= 2;
+  const lidos = blocos.map((bloco) => {
+    const ctx = { tabela: null, colunas: colunasDoBloco(bloco), csv: ehCsvDeTimes(bloco) };
+    const lido = [];
+    for (const l of bloco) {
+      const c = classificar(l, ctx);
+      if (c.tipo !== 'ignorar') lido.push({ ...c, s: l.s });
+    }
+    return lido;
+  }).filter((b) => b.length);
 
-  for (const bloco of blocos) {
-    let atual = null;
-    // Um rótulo ("Reservas:") fica no time de cima; "Sem time:" manda para os soltos.
-    const definir = (nome) => {
-      const n = limparNome(nome);
-      if (ehSoltos(n)) return null;
-      if (!n || ehRotulo(n)) return atual;
-      return ac.time(n);
-    };
-    const juntar = (canais, time) => { for (const c of canais) ac.token(c, time); };
-    const eClassico = classico(bloco);
+  const classico = (b) => b.length >= 2 && b.slice(1).every(umPorLinha);
+  const emBlocos = lidos.filter((b) => classico(b) && ['palavra', 'palavras', 'titulo'].includes(b[0].tipo)).length >= 2;
 
-    bloco.forEach((c, i) => {
-      const nomeDoBloco = i === 0 && eClassico;
-      switch (c.tipo) {
-        case 'titulo': atual = definir(c.nome); break;
-        case 'time': atual = definir(c.nome); juntar(c.canais, atual); break;
-        case 'linha': atual = ac.time(c.nome); juntar(c.canais, atual); break;
-        case 'palavras':
-          if (nomeDoBloco) atual = definir(c.nome); else juntar(c.canais, atual);
-          break;
-        case 'palavra':
-          if (nomeDoBloco && emBlocos) atual = definir(c.nome); else juntar(c.canais, atual);
-          break;
-        default: juntar(c.canais, atual);
+  for (const bloco of lidos) lerBloco(bloco, ac, { eClassico: classico(bloco), emBlocos });
+}
+
+/**
+ * Um bloco de linhas, com o time de cada canal.
+ *
+ * Depois de um título vem um membro por linha até ao fim do bloco. Uma linha
+ * que não dá um canal fica de fora com aviso, e não abre um time novo: abrir
+ * levava os membros seguintes para um time que não existe. Só abre um time a
+ * linha que diz que é título (ver `tituloDe`), ou o primeiro nome debaixo de
+ * uma secção ("Times:", e o nome do primeiro time logo a seguir).
+ *
+ * Uma linha "Time: a, b" fecha-se em si: um canal solto logo a seguir não é
+ * desse time, vai para os soltos, e um aviso diz que faltou a linha em branco.
+ * Um nome logo a seguir abre outro time, como no começo de um bloco. Uma
+ * linha de papel ("Reservas: a3") continua a ser do time de cima.
+ */
+function lerBloco(bloco, ac, { eClassico, emBlocos }) {
+  let atual = null;      // o time que recebe os canais deste bloco
+  let titulo = null;     // o último título do bloco: depois dele, um membro por linha
+  let membros = 0;       // canais desde esse título
+  let deLinha = null;    // o time da última linha "Time: a, b", que não recebe mais nada
+  let fechado = false;   // a última linha foi uma "Time: a, b" (ou de tabela), que se fecha em si
+  let papel = null;      // o papel sem time que está a mandar canais para os soltos
+
+  const pares = bloco.filter((c) => c.par);
+  if (pares.length >= 2) {
+    const sep = pares[0].par;
+    const cab = sep === '\t' ? 'uma linha de cabeçalho com "time" e "canal"' : `a linha "time${sep}canal"`;
+    ac.aviso(`as linhas como "${pares[0].s}" ficaram como dois canais cada; se a primeira coluna for o time, ponha por cima ${cab}`);
+  }
+  // Uma lista que abre com um nome com maiúsculas ("Oilrats" por cima de
+  // oilrats, trausi...) pode ser um time. Sozinha não se sabe, e fica canal.
+  const primeiro = bloco[0];
+  if (eClassico && !emBlocos && primeiro.tipo === 'palavra' && /\p{Lu}/u.test(primeiro.nome)
+    && !bloco.slice(1).some((c) => /\p{Lu}/u.test(c.s))) {
+    ac.aviso(`"${primeiro.nome}" ficou como canal; se for o nome de um time, escreva "${primeiro.nome}:"`);
+  }
+
+  const ePapel = (nome) => {
+    const n = limparNome(nome);
+    return Boolean(n) && ehRotulo(n);
+  };
+  // Um rótulo ("Reservas:") fica no time de cima; "Sem time:" manda para os soltos.
+  const definir = (nome) => {
+    const n = limparNome(nome);
+    if (ehSoltos(n)) { papel = null; return null; }
+    if (!n) return atual;
+    if (ehRotulo(n)) {
+      if (atual) return atual;
+      papel = n;
+      return null;
+    }
+    papel = null;
+    return ac.time(n);
+  };
+  const juntar = (lista, time) => {
+    for (const cru of lista) {
+      if (ehNotaEntreParenteses(cru)) continue;
+      const r = ac.token(cru, time);
+      if (!r) continue;
+      membros++;
+      if (r.solto && !time && papel) ac.aviso(avisoDePapel(papel));
+    }
+  };
+  const abrirTitulo = (nome) => {
+    atual = definir(nome);
+    titulo = { secao: ehSecao(nome) };
+    membros = 0;
+    deLinha = null;
+    fechado = false;
+  };
+  // Canais sem nome de time na mesma linha.
+  const soltar = (lista) => {
+    if (!deLinha) { juntar(lista, atual); return; }
+    for (const cru of lista) {
+      if (ehNotaEntreParenteses(cru)) continue;
+      const r = ac.token(cru, null);
+      if (r?.solto) ac.aviso(`"${r.slug}" veio logo depois de "${deLinha.nome}" sem linha em branco; ficou sem time`);
+    }
+  };
+  const ficouDeFora = (c) => {
+    const time = deLinha ? null : atual;
+    const motivo = c.membro?.motivo === 'espacos' ? 'um canal da Kick não tem espaços' : 'não é um nome de canal da Kick';
+    ac.aviso(`"${c.s}" ficou de fora${time ? ` de "${time.nome}"` : ''}: ${motivo}`);
+  };
+
+  bloco.forEach((c, i) => {
+    switch (c.tipo) {
+      case 'titulo':
+        if (i === 0 || c.explicito) abrirTitulo(c.nome);
+        else if (c.membro?.slug) soltar([c.membro.slug]);
+        else if (fechado || (titulo?.secao && !membros)) abrirTitulo(c.nome);
+        else ficouDeFora(c);
+        break;
+      case 'time':
+        // Um papel com um time por cima é desse time, e não fecha nada.
+        if (atual && ePapel(c.nome)) { juntar(c.canais, atual); break; }
+        atual = definir(c.nome);
+        titulo = null;
+        juntar(c.canais, atual);
+        deLinha = atual;
+        fechado = true;
+        break;
+      case 'linha': {
+        const n = limparNome(c.nome);
+        atual = ac.time(n);
+        papel = !atual && n && ehRotulo(n) ? n : null;
+        titulo = null;
+        juntar(c.canais, atual);
+        deLinha = atual;
+        fechado = true;
+        break;
       }
-    });
-  }
+      case 'palavras':
+        if (i === 0 && eClassico) abrirTitulo(c.nome);
+        // "Os Lobos" logo depois de "Time: a, b", com um canal por linha por baixo, é outro time.
+        else if (fechado && c.membro && !c.membro.slug && umPorLinha(bloco[i + 1])) abrirTitulo(c.nome);
+        else if (titulo && c.membro) {
+          if (c.membro.slug) soltar([c.membro.slug]);
+          else if (titulo.secao && !membros) abrirTitulo(c.nome);
+          else ficouDeFora(c);
+        } else soltar(c.canais);
+        break;
+      case 'palavra':
+        if (i === 0 && eClassico && emBlocos) abrirTitulo(c.nome); else soltar(c.canais);
+        break;
+      default: soltar(c.canais);
+    }
+  });
 }
 
 // ── API ─────────────────────────────────────────────────────────────────────
@@ -686,13 +1127,14 @@ function lerTexto(texto, ac) {
  * O elenco escrito em `texto`, seja ele o que for.
  *
  * HTML (o código-fonte da página de times) é lido pelos títulos e pelos links;
- * tudo o resto é lido linha a linha. Nunca atira: texto que não se percebe dá
- * um elenco vazio e um aviso a dizer isso mesmo.
+ * tudo o resto é lido linha a linha, também as linhas de texto que vierem
+ * junto com um pedaço de HTML. Nunca atira: texto que não se percebe dá um
+ * elenco vazio e um aviso a dizer isso mesmo.
  */
 export function lerElenco(texto) {
   const ac = novoAcumulador();
   const cru = typeof texto === 'string' ? texto : texto == null ? '' : String(texto);
-  if (pareceHtml(cru)) lerHtml(cru, ac); else lerTexto(cru, ac);
+  if (pareceHtml(cru)) lerPagina(cru, ac); else lerTexto(cru, ac);
   const r = ac.resultado();
   // À cabeça: é o único aviso que explica todos os outros, e não pode ficar
   // escondido no "e mais N".
@@ -710,8 +1152,13 @@ export function lerElenco(texto) {
 function normalizar(elenco) {
   const ac = novoAcumulador();
   for (const t of Array.isArray(elenco?.times) ? elenco.times : []) {
-    const time = ac.time(typeof t?.nome === 'string' ? t.nome : '');
-    for (const c of Array.isArray(t?.canais) ? t.canais : []) ac.token(c, time);
+    const nome = limparNome(typeof t?.nome === 'string' ? t.nome : '');
+    const time = ac.time(nome);
+    let soltou = false;
+    for (const c of Array.isArray(t?.canais) ? t.canais : []) if (ac.token(c, time)?.solto) soltou = true;
+    // Um time chamado "Staff" ou "Players" não existe: os canais dele ficam sem
+    // time, mas não calados.
+    if (soltou && !time && ehRotulo(nome)) ac.aviso(avisoDePapel(nome));
   }
   for (const c of Array.isArray(elenco?.soltos) ? elenco.soltos : []) ac.token(c, null);
   return ac.resultado();
@@ -735,7 +1182,7 @@ export function paraTexto(elenco) {
   return linhas.join('\n');
 }
 
-/** Quantos times e quantos canais, contando cada canal uma vez. */
+/** Quantos times e quantos canais, contando cada canal uma vez, com os soltos. */
 export function contar(elenco) {
   const e = normalizar(elenco);
   return { times: e.times.length, canais: e.times.reduce((s, t) => s + t.canais.length, 0) + e.soltos.length };
@@ -754,6 +1201,10 @@ const capitalizar = (s) => s.charAt(0).toUpperCase() + s.slice(1);
  * times, a diferença entre caber e não caber nos 4000. `*` quer dizer "o
  * primeiro canal com maiúscula" e `` ` `` "o primeiro canal tal e qual"; os dois
  * são seguros porque `limparNome` os tira de qualquer nome.
+ *
+ * Os 4000 só ficam garantidos com nomes assim. Com nomes que não têm nada a
+ * ver com os canais ("Night Raiders") o mesmo evento dá uns 4100 a 4350: o
+ * link abre na mesma, mas pode não caber numa mensagem de 4000 caracteres.
  */
 function marcarNome(nome, primeiro) {
   if (!primeiro) return nome;
@@ -808,21 +1259,29 @@ async function inflar(bytes, limite) {
 }
 
 /**
- * O elenco num texto curto que cabe num endereço (JSON, deflate, base64url).
+ * O elenco num texto curto que cabe num endereço (JSON, deflate, base64url),
+ * ou `null` se o elenco não se poderia abrir de um link.
  *
  * Para mandar o evento inteiro num link: quem abre não precisa de colar nada.
  * Os canais de um time vão juntos numa só string com espaços (um canal não
  * tem espaços), que é metade das aspas e vírgulas de uma lista.
+ *
+ * Os limites são os de `descodificar`: um link que ele recusaria era um link
+ * estragado na mão de quem o recebe. Quem chama tem de tratar o `null`.
  */
 export async function codificar(elenco) {
   const e = normalizar(elenco);
-  const dados = {
+  if (e.times.reduce((n, t) => n + t.canais.length, e.soltos.length) > MAXIMO_CANAIS) return null;
+  const json = JSON.stringify({
     v: 1,
     t: e.times.map((t) => [marcarNome(t.nome, t.canais[0]), t.canais.join(' ')]),
     s: e.soltos.join(' '),
-  };
-  const fluxo = new Blob([JSON.stringify(dados)]).stream().pipeThrough(new CompressionStream('deflate-raw'));
-  return paraBase64Url(new Uint8Array(await new Response(fluxo).arrayBuffer()));
+  });
+  const bytes = new TextEncoder().encode(json);
+  if (bytes.length > MAXIMO_DESCOMPRIMIDO) return null;
+  const fluxo = new Blob([bytes]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+  const s = paraBase64Url(new Uint8Array(await new Response(fluxo).arrayBuffer()));
+  return s.length > MAXIMO_LINK ? null : s;
 }
 
 /**
