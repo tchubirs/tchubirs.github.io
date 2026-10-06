@@ -134,11 +134,15 @@ async function emLotes(itens, tarefa, { limite = AO_MESMO_TEMPO } = {}) {
  * borrowed index would put the cut in the wrong second.
  */
 export async function planearCorte({
-  linha, deMs, ateMs, buscar = fetch, cache = new Map(), sinal, prazoMs,
+  linha, deMs, ateMs, buscar = fetch, cache = new Map(), sinal, prazoMs, saltar = [],
 }) {
   if (!(ateMs > deMs)) return { estado: 'janela-invalida' };
 
-  const peca = linha.pecas.find((p) => deMs < p.playlist.fim && ateMs > p.playlist.inicio);
+  // `saltar` são os VODs (pelo master) de que já se tirou uma parte deste
+  // corte: o resto de uma reconexão pede-se ao VOD seguinte, e não outra vez
+  // ao que acabou (ver `oQueFalta`).
+  const peca = linha.pecas.find((p) => !saltar.includes(p.vod.master)
+    && deMs < p.playlist.fim && ateMs > p.playlist.inicio);
   if (!peca) {
     // Off air, or outside this channel's night. Both are real answers and the
     // UI must show them; neither is an error and neither is an empty file.
@@ -176,6 +180,7 @@ export async function planearCorte({
   return {
     estado: 'ok',
     canal: linha.slug,
+    master: chave,
     qualidade: { largura: melhor.largura, altura: melhor.altura, fps: melhor.fps, bitrate: melhor.bitrate },
     segmentos: segs,
     // The two numbers the user actually needs, and the reason this is not an
@@ -282,6 +287,32 @@ export async function cortarTodosOsAngulos({
     }
   }
   return resultados;
+}
+
+/**
+ * O resto de um corte que a live partiu ao meio, quando há resto a buscar.
+ *
+ * Numa reconexão a Kick fecha um VOD e abre outro, e o `planearCorte` lê um
+ * só: o que vinha depois da queda ficava de fora, e o ficheiro dizia-se
+ * pronto. Num evento de quinhentos streamers um OBS que religa a meio de um
+ * raid não é raro, e a kill pode estar justamente do lado de lá. Isto diz se
+ * outro VOD do mesmo canal cobre o que falta, e de onde o pedir, para o resto
+ * sair num ficheiro a seguir (dois ficheiros e não um: juntar pedaços de dois
+ * VODs num .ts só dá um relógio que salta, e os editores tropeçam nisso).
+ *
+ * @param {{pecas: Array}} linha
+ * @param {object} plano o que o `planearCorte` devolveu para a primeira parte
+ * @param {number} ateMs o fim pedido, no relógio da playlist
+ * @param {string[]} [saltar] os VODs de partes anteriores
+ * @returns {{deMs: number, ateMs: number, saltar: string[]} | null}
+ */
+export function oQueFalta(linha, plano, ateMs, saltar = []) {
+  if (plano?.estado !== 'ok' || !(plano.sobraFimS < -0.05)) return null;
+  const fora = [...saltar, plano.master];
+  const deMs = plano.fimReal;
+  const ha = linha.pecas.some((p) => !fora.includes(p.vod.master)
+    && deMs < p.playlist.fim && ateMs > p.playlist.inicio);
+  return ha ? { deMs, ateMs, saltar: fora } : null;
 }
 
 /**

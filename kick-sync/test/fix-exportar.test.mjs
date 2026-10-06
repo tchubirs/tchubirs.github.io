@@ -157,8 +157,10 @@ test('trocar de ângulo no editor: o pedaço nunca fica ao contrário, os recort
   });
 
 /** Uma prévia que decodifica de verdade, como em pagina2 ("o exportar do retrato nunca fica calado"). */
-async function previaDeVerdade(p) {
-  await p.evaluate(async () => {
+// `ms` é quanto vídeo há. Tem de passar do tempo que o teste leva a olhar para o editor
+// trancado: quando o vídeo acaba, a gravação acaba com ele e o editor destranca-se.
+async function previaDeVerdade(p, ms = 1200) {
+  await p.evaluate(async (duracao) => {
     const cv = document.createElement('canvas');
     cv.width = 1280; cv.height = 720;
     const cx = cv.getContext('2d');
@@ -171,13 +173,13 @@ async function previaDeVerdade(p) {
     const ps = [];
     g.ondataavailable = (e) => ps.push(e.data);
     g.start();
-    await new Promise((k) => setTimeout(k, 1200));
+    await new Promise((k) => setTimeout(k, duracao));
     await new Promise((k) => { g.onstop = k; g.stop(); });
     clearInterval(t);
     const v = document.getElementById('previaClipe');
     v.src = URL.createObjectURL(new Blob(ps, { type: 'video/webm' }));
     await new Promise((k) => { v.onloadedmetadata = k; });
-  });
+  }, ms);
   await p.waitForFunction(() => !document.getElementById('guardarRetrato').disabled, null, { timeout: 10000 });
 }
 
@@ -190,7 +192,7 @@ test('o 9:16 a gravar tranca o editor; fechar pára-o, e um 16:9 cancelado não 
     await carregar(p, ['tchubi']);
     await p.click('#clipar');
     await p.waitForSelector('#modalClipe:not([hidden])', { timeout: 10000 });
-    await previaDeVerdade(p);
+    await previaDeVerdade(p, 5000);
 
     await p.click('#guardarRetrato');
     await p.waitForFunction(() => window.__estado.clipe?.aGravar === true, null, { timeout: 20000 });
@@ -507,3 +509,121 @@ test('refazer a grelha fecha a janela à parte, em vez de a deixar com um leitor
     assert.deepEqual(erros, []);
     await p.close();
   });
+
+// "Internal state codes shown to users": o 9:16 da montagem escrevia o `e.message`, uma frase
+// interna em português ("sem gravador", "o vídeo não andou"), no meio do inglês e do espanhol.
+test('o 9:16 da montagem que não sai diz o porquê na língua de quem usa', semNavegador, async () => {
+  const { p, erros } = await abrir();
+  await carregar(p, ['tchubi']);
+  await marcarKills(p, 1);
+  await p.evaluate(() => {
+    const e = window.__estado;
+    e.momentos = e.momentos.map((m) => ({
+      ...m,
+      ajuste: {
+        deMs: m.ms - 5000, ateMs: m.ms + 2000, formato: 'um', rects: [{ x: 0, y: 0, largura: 608, altura: 1080 }],
+      },
+    }));
+    // Um browser que não sabe gravar vídeo.
+    window.MediaRecorder = undefined;
+  });
+  await p.selectOption('#idioma', 'en');
+  await p.waitForFunction(() => document.documentElement.lang === 'en', null, { timeout: 5000 });
+  await p.click('#baixarMontagem');
+  await p.waitForFunction(() => /exported/.test(document.getElementById('estadoMontagem').textContent),
+    null, { timeout: 30000 });
+  const linha = await p.locator('#fila li', { hasText: '9:16' }).innerText();
+  assert.match(linha, /this browser cannot record video/);
+  assert.doesNotMatch(linha, /sem gravador/);
+  assert.match(await p.locator('#estadoMontagem').innerText(), /^1\/1 exported · 1 did not come out/);
+  assert.deepEqual(erros, []);
+  await p.close();
+});
+
+// "Downloads, montage and auto-scan can never be cancelled": a detecção automática ouve a noite
+// inteira, minutos a fio, e a única saída era recarregar a página. O mesmo botão pára-a.
+test('a detecção automática pára no mesmo botão que a lançou', semNavegador, async () => {
+  const { p, erros } = await abrir();
+  // Uma varredura que só acaba quando a mandam parar, como uma noite inteira a ouvir.
+  await p.route('**/procurar-momentos.js', (r) => r.fulfill({
+    status: 200,
+    contentType: 'text/javascript',
+    body: `
+      export function custoVarrerMB() { return 1; }
+      export async function varrerNoite(o) {
+        window.__aOuvir = true;
+        await new Promise((ok, mal) => {
+          const fim = setTimeout(ok, 60000);
+          o.sinal.addEventListener('abort', () => {
+            clearTimeout(fim);
+            mal(new DOMException('cancelado', 'AbortError'));
+          }, { once: true });
+        });
+        return { candidatos: [], estouros: [] };
+      }`,
+  }));
+  await carregar(p, ['tchubi']);
+  p.on('dialog', (d) => d.accept());
+  await p.click('#procurarKills');
+  await p.waitForFunction(() => window.__aOuvir === true, null, { timeout: 5000 });
+  assert.equal(await p.locator('#procurarKills span').innerText(), 'Parar');
+  assert.equal(await p.locator('#procurarKills').isDisabled(), false, 'o Parar tem de se poder carregar');
+
+  await p.click('#procurarKills');
+  await p.waitForFunction(() => window.__estado.varredura === null, null, { timeout: 5000 });
+  assert.equal(await p.locator('#procurarKills span').innerText(), 'Detecção automática');
+  assert.match(await p.locator('#estadoMontagem').innerText(), /cancelado/);
+  assert.deepEqual(erros, []);
+  await p.close();
+});
+
+// "Clip that crosses a stream reconnect is silently truncated": na montagem, que é o que se usa
+// numa noite de evento, o resto vem do VOD seguinte num arquivo logo a seguir, com o mesmo número.
+test('na montagem, um clipe que atravessa uma reconexão sai em duas partes seguidas', semNavegador, async () => {
+  const { p, erros } = await abrir();
+  await kickFalsa(p, { canais: ['tchubi'], segmentos: 30 });
+  const quando = (ms) => new Date(ms).toISOString().replace('T', ' ').slice(0, 19);
+  await p.route('**/api/v2/channels/tchubi/videos', (rota) => rota.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify([
+      { id: 1, session_title: 'antes', start_time: quando(T), duration: 300000,
+        source: 'https://stream.kick.com/falsa/tchubi/n0/master.m3u8', video: {} },
+      { id: 2, session_title: 'depois', start_time: quando(T + 300000), duration: 300000,
+        source: 'https://stream.kick.com/religou/tchubi/master.m3u8', video: {} },
+    ]),
+  }));
+  const pedidosDoSegundo = [];
+  await p.route('https://stream.kick.com/religou/**', (rota) => {
+    const u = rota.request().url();
+    if (u.endsWith('master.m3u8')) return rota.fulfill({ status: 200, body: MASTER });
+    if (u.endsWith('playlist.m3u8')) return rota.fulfill({ status: 200, body: listaDePedacos(T + 300000, 30) });
+    pedidosDoSegundo.push(u);
+    return rota.fulfill({ status: 200, contentType: 'video/mp2t', body: Buffer.alloc(4096, 7) });
+  });
+  await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+  await p.fill('#canais', 'tchubi');
+  await p.click('#carregar');
+  await p.waitForSelector('.tile', { timeout: 20000 });
+
+  // A kill 2 s depois da queda: o clipe (5 s antes, 2 s depois) fica com 3 s de um lado e 4 do outro.
+  await p.evaluate(({ T: t0 }) => { window.__estado.agoraMs = t0 + 302_000; }, { T });
+  await p.click('#marcarKill');
+  await p.waitForFunction(() => document.querySelectorAll('#listaMomentos li[data-ms]').length === 1,
+    null, { timeout: 10000 });
+  await p.click('#baixarMontagem');
+  await p.waitForFunction(() => /exportados/.test(document.getElementById('estadoMontagem').textContent),
+    null, { timeout: 30000 });
+
+  assert.match(await p.locator('#estadoMontagem').innerText(), /^2\/2 exportados/);
+  const linhas = await p.locator('#fila li').allInnerTexts();
+  assert.equal(linhas.length, 2, `uma parte só: ${linhas.join(' | ')}`);
+  assert.match(linhas[0], /^01a_tchubi/);
+  assert.match(linhas[0], /o resto vem no arquivo seguinte/);
+  assert.match(linhas[1], /^01a_tchubi/);
+  assert.match(linhas[1], /continuação do arquivo anterior/);
+  assert.ok(pedidosDoSegundo.length > 0, 'o resto tem de vir do VOD de depois da queda');
+  assert.equal(await p.locator('#fila .nota.mau').count(), 0, 'nada falta: as duas partes cobrem o clipe');
+  assert.deepEqual(erros, []);
+  await p.close();
+});

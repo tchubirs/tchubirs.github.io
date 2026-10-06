@@ -401,6 +401,8 @@ export function noSitio(video, { esperaMs = 2000 } = {}) {
  * @param {(p: {feito: number, total: number, emPausa?: boolean}) => void} [opcoes.aoProgresso]
  * @param {AbortSignal} [opcoes.sinal]
  * @param {Document} [opcoes.pagina] - quem diz se o separador está à vista
+ * @returns {Promise<{blob: Blob, tipo: string, extensao: string, gravadoS?: number}>}
+ *   `gravadoS` só quando o vídeo do canal acabou antes do fim do clipe
  */
 export async function gravar(video, {
   rects, modo = 'um', divisao = DIVISAO_OMISSAO, duracaoS, aoProgresso = () => {}, sinal, formato,
@@ -477,6 +479,8 @@ export async function gravar(video, {
   // hls.js desistiu) deixava a gravação pendurada para sempre.
   let voltas = 0;
   let ultimoS = inicio;
+  // Quanto ficou gravado, quando o vídeo do canal acaba antes do clipe.
+  let gravadoS = null;
   const PARADO_MAX = 90;                    // 3 s a 30 pinceladas por segundo
   // Um relógio próprio, e não o ritmo a que o vídeo entrega frames.
   //
@@ -493,6 +497,18 @@ export async function gravar(video, {
     desenhar(ctx, video, rects, modo, divisao);
     const agora = video.currentTime;
     const feito = Math.max(0, agora - inicio);
+    // O vídeo do canal acabou antes do fim do clipe: a live caiu e voltou
+    // noutro VOD, ou acabou mesmo. O que ficou gravado até aqui é bom, e
+    // fica; quem chamou é que diz que saiu mais curto. Sem isto, o vídeo
+    // parado no fim contava como congelado, e três segundos depois o 9:16
+    // inteiro ia fora com um "o vídeo não andou" que não era verdade.
+    if (video.ended && feito > 0) {
+      parar = true;
+      clearInterval(pincel);
+      gravadoS = feito;
+      if (gravador.state !== 'inactive') gravador.stop();
+      return;
+    }
     voltas = agora > ultimoS ? 0 : voltas + 1;
     ultimoS = Math.max(ultimoS, agora);
     if (voltas > PARADO_MAX) {
@@ -581,7 +597,11 @@ export async function gravar(video, {
   // Zero bytes é falha, não é ficheiro. Deixar passar dava um .mp4 vazio na
   // pasta de transferências e nenhuma explicação.
   if (!blob.size) throw Object.assign(new Error('não saiu nada'), { name: 'GRAVACAO-VAZIA' });
-  return { blob, tipo, extensao: extensaoDe(tipo) };
+  // `gravadoS` só vem quando saiu MAIS CURTO do que se pediu: é o número que
+  // quem chamou tem de dizer, e não esconder atrás de um "pronto".
+  return {
+    blob, tipo, extensao: extensaoDe(tipo), ...(gravadoS != null ? { gravadoS } : {}),
+  };
 }
 
 /**

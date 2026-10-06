@@ -707,6 +707,32 @@ test('um vídeo que congela a meio do clipe rebenta, em vez de prender a gravaç
     assert.ok(v.currentTime > 10.4, 'o vídeo chegou a andar antes de congelar');
   });
 
+// A live caiu a meio do clipe e voltou noutro VOD: o vídeo deste ACABA, e isso
+// não é congelar. Com o travão a funcionar, o fim do vídeo contava como parado,
+// e três segundos depois o 9:16 inteiro ia fora com "o vídeo não andou".
+test('um vídeo que acaba antes do fim do clipe entrega o que gravou, e diz quanto',
+  { timeout: 10_000 }, async () => {
+    const { v, tela } = videoQueCongela(0.5);
+    const ctx = tela.getContext();
+    const pintar = ctx.drawImage;
+    // Como no fim de um VOD: o vídeo pára no último frame e diz que acabou.
+    ctx.drawImage = function fim(...a) { pintar.apply(this, a); if (v.currentTime >= 10.45) v.ended = true; };
+    const r = await gravar(v, {
+      rects: [{ x: 0, y: 0, largura: 1080, altura: 1080 }],
+      duracaoS: 10, formato: 'video/webm', criarTela: () => tela, MR: MRQueGrava, pagina: null,
+    });
+    assert.ok(r.blob.size > 0, 'o que ficou gravado é bom e fica');
+    assert.ok(r.gravadoS > 0.4 && r.gravadoS < 0.6, `diz quanto saiu: ${r.gravadoS}`);
+
+    // E um clipe que acaba onde devia não traz aviso nenhum.
+    const normal = videoQueCongela();
+    const inteiro = await gravar(normal.v, {
+      rects: [{ x: 0, y: 0, largura: 1080, altura: 1080 }],
+      duracaoS: 0.3, formato: 'video/webm', criarTela: () => normal.tela, MR: MRQueGrava, pagina: null,
+    });
+    assert.equal(inteiro.gravadoS, undefined);
+  });
+
 // Escondido, o Chrome pinta uma vez por segundo e o 9:16 saía em slides.
 test('com o separador escondido a gravação espera, e retoma quando ele volta', async () => {
   const { v, tela } = videoQueCongela();

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  nomeDoFicheiro, planearCorte, executarCorte, cortarTodosOsAngulos, largarOQueNaoServe,
+  nomeDoFicheiro, planearCorte, executarCorte, cortarTodosOsAngulos, largarOQueNaoServe, oQueFalta,
 } from '../site/baixar.js';
 import { linhaDoCanal } from '../site/relogio.js';
 
@@ -288,4 +288,53 @@ test('the montage cache keeps only what a later clip of the same channel will as
 
   largarOQueNaoServe(jaTemos, sitios, []);
   assert.equal(jaTemos.size, 0, 'at the end of the montage nothing stays held');
+});
+
+// Uma reconexão: a Kick fecha um VOD e abre outro, que se tocam quase ao milissegundo. O corte
+// de um VOD só saía cortado na queda e dizia-se pronto; o resto tem de se pedir ao seguinte.
+test('o resto de um corte partido por uma reconexão pede-se ao VOD seguinte, e só a ele', async () => {
+  const peca = (master, inicio) => ({
+    vod: { id: master, master },
+    playlist: {
+      segmentos: Array.from({ length: 30 }, (_, i) => ({
+        url: `${i}.ts`, inicio: inicio + i * 10000, duracaoS: 10, mediaT: i * 10,
+      })),
+      fonteDoRelogio: 'program-date-time',
+      inicio,
+      fim: inicio + 300_000,
+      duracaoS: 300,
+    },
+  });
+  const linha = linhaDoCanal('tchubi', [
+    peca('https://cdn/a/master.m3u8', T),
+    peca('https://cdn/b/master.m3u8', T + 300_000),
+  ]);
+  const buscar = async (url) => {
+    if (url.endsWith('master.m3u8')) return { ok: true, status: 200, text: async () => MASTER };
+    const inicio = url.includes('/b/') ? T + 300_000 : T;
+    return { ok: true, status: 200, text: async () => playlistTexto(inicio, 30) };
+  };
+  const de = T + 290_000;
+  const ate = T + 320_000;
+
+  const primeira = await planearCorte({ linha, deMs: de, ateMs: ate, buscar });
+  assert.equal(primeira.master, 'https://cdn/a/master.m3u8');
+  assert.ok(primeira.sobraFimS < -19, 'a primeira parte acaba na queda');
+
+  const resto = oQueFalta(linha, primeira, ate);
+  assert.deepEqual(resto, { deMs: T + 300_000, ateMs: ate, saltar: ['https://cdn/a/master.m3u8'] });
+  const segunda = await planearCorte({ linha, deMs: resto.deMs, ateMs: resto.ateMs, buscar, saltar: resto.saltar });
+  assert.equal(segunda.estado, 'ok');
+  assert.equal(segunda.master, 'https://cdn/b/master.m3u8');
+  assert.equal(segunda.segmentos[0].inicio, T + 300_000);
+  assert.ok(segunda.sobraFimS >= 0, 'a segunda parte cobre o resto');
+  assert.equal(oQueFalta(linha, segunda, ate, resto.saltar), null, 'e não há terceira');
+
+  // A live que acabou de vez: não há VOD a seguir, e o corte fica como está (e diz que falta).
+  const soUm = linhaDoCanal('tchubi', [peca('https://cdn/a/master.m3u8', T)]);
+  const ultima = await planearCorte({ linha: soUm, deMs: de, ateMs: ate, buscar });
+  assert.equal(oQueFalta(soUm, ultima, ate), null);
+  // E um corte inteiro dentro de um VOD não tem resto nenhum.
+  const inteiro = await planearCorte({ linha, deMs: T + 10_000, ateMs: T + 30_000, buscar });
+  assert.equal(oQueFalta(linha, inteiro, T + 30_000), null);
 });

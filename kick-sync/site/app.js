@@ -25,7 +25,9 @@ import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
   alternarVitima, filtrar, temMorte, clipesDoMomento, comAjuste,
 } from './momentos.js';
-import { planearCorte, executarCorte, nomeDoFicheiro, largarOQueNaoServe } from './baixar.js';
+import {
+  planearCorte, executarCorte, nomeDoFicheiro, largarOQueNaoServe, oQueFalta,
+} from './baixar.js';
 import { criarZip, crc32 } from './zip.js';
 import { queFazerComOLeitor } from './leitor.js';
 import { criarApanhador } from './frames.js';
@@ -2128,13 +2130,14 @@ async function baixarMontagem(soEsta = null) {
     if (controlo.signal.aborted) break;
     const linha = estado.linhas.find((l) => l.slug === clipe.canal);
     const nudge = estado.nudges[clipe.canal] || 0;
-    $('estadoMontagem').textContent = `${i + 1}/${plano.length} — ${clipe.prefixo} ${clipe.canal}`;
+    $('estadoMontagem').textContent = `${i + 1}/${plano.length}: ${clipe.prefixo} ${clipe.canal}`;
 
     const item = document.createElement('li');
     $('fila').append(item);
     try {
       const p = await planearCorte({
         linha, deMs: clipe.deMs + nudge, ateMs: clipe.ateMs + nudge, cache, sinal: controlo.signal,
+        saltar: clipe.saltar,
       });
       if (p.estado !== 'ok') {
         mau(item, clipe, porqueNaoSaiu(p));
@@ -2157,16 +2160,26 @@ async function baixarMontagem(soEsta = null) {
       const blob = new Blob([r.bytes], { type: r.tipo });
       paraZip.push({ nome, blob, crc: crc32(r.bytes), tamanho: r.bytes.length });
       prontos++;
-      const sobra = notaDaSobra(p);
+      // A live caiu e voltou a meio deste clipe: o resto está noutro VOD do
+      // mesmo canal, e entra na fila logo a seguir, como um ficheiro com o
+      // mesmo número e a hora de onde continua (ver `oQueFalta`). Sem isto o
+      // clipe saía cortado na queda, e a kill podia estar do lado de lá.
+      const resto = oQueFalta(linha, p, clipe.ateMs + nudge, clipe.saltar);
+      if (resto) {
+        plano.splice(i + 1, 0, {
+          ...clipe, deMs: resto.deMs - nudge, saltar: resto.saltar, parte: (clipe.parte || 1) + 1, retrato: null,
+        });
+      }
+      const sobra = notaDaSobra(p, { continua: Boolean(resto), parte: clipe.parte });
       linhaDeFicheiro(item, {
         nome,
         url: guardarFicheiro(blob),
         nota: `${(r.bytes.length / 1048576).toFixed(1)} MB · `
           + `${clipe.papel === 'protagonista' ? t('fila.tuaPov') : t('fila.quemMorreu')}`
-          // Só quando falta pedaço: na montagem a folga de cada lado é a de
-          // sempre, mas um clipe cortado por uma reconexão tem de se ver aqui
-          // e não na linha do tempo do editor.
-          + (sobra.falta ? ` · ${sobra.texto}` : ''),
+          // Só quando falta pedaço ou o clipe se parte em dois: na montagem a
+          // folga de cada lado é a de sempre, mas um clipe cortado por uma
+          // reconexão tem de se ver aqui e não na linha do tempo do editor.
+          + (sobra.falta || sobra.partido ? ` · ${sobra.texto}` : ''),
         momentoMs: clipe.ms,
       });
       if (sobra.falta) item.querySelector('.nota')?.classList.add('mau');
@@ -2176,10 +2189,10 @@ async function baixarMontagem(soEsta = null) {
       if (clipe.retrato) {
         const item2 = document.createElement('li');
         $('fila').append(item2);
-        const rotulo = `${i + 1}/${plano.length} — ${clipe.prefixo} ${clipe.canal} · 9:16`;
+        const rotulo = `${i + 1}/${plano.length}: ${clipe.prefixo} ${clipe.canal} · 9:16`;
         $('estadoMontagem').textContent = rotulo;
         try {
-          const { blob: b2, tipo: t2 } = await renderizarRetrato(linha, clipe, {
+          const { blob: b2, tipo: t2, gravadoS } = await renderizarRetrato(linha, clipe, {
             sinal: controlo.signal,
             aoProgresso: ({ emPausa }) => {
               $('estadoMontagem').textContent = emPausa ? t('retrato.emPausa') : rotulo;
@@ -2188,17 +2201,20 @@ async function baixarMontagem(soEsta = null) {
           const nome2 = `${nome.replace(/\.[a-z0-9]+$/i, '')}-retrato.${extensaoDe(t2)}`;
           const bytes2 = new Uint8Array(await b2.arrayBuffer());
           paraZip.push({ nome: nome2, blob: b2, crc: crc32(bytes2), tamanho: bytes2.length });
+          const curto = notaDoRetratoCurto(gravadoS, (clipe.ateMs - clipe.deMs) / 1000);
           linhaDeFicheiro(item2, {
             nome: nome2,
             url: guardarFicheiro(b2),
-            nota: `${(b2.size / 1048576).toFixed(1)} MB · ${t('fila.retratoDe')} ${clipe.prefixo}`,
+            nota: `${(b2.size / 1048576).toFixed(1)} MB · ${t('fila.retratoDe')} ${clipe.prefixo}`
+              + (curto ? ` · ${curto}` : ''),
             momentoMs: clipe.ms,
           });
+          if (curto) item2.querySelector('.nota')?.classList.add('mau');
         } catch (e) {
           if (e.name === 'AbortError') { item2.remove(); break; }
           falhas++;
           item2.innerHTML = `<b>${clipe.prefixo} ${escapar(clipe.canal)} · 9:16</b> `
-            + `<span class="nota mau">${t('fila.retratoFalhou', { erro: escapar(e.message) })}</span>`;
+            + `<span class="nota mau">${t('fila.retratoFalhou', { erro: escapar(motivoDoRetrato(e)) })}</span>`;
         }
       }
     } catch (e) {
@@ -2251,15 +2267,58 @@ function porqueNaoSaiu(r) {
  * acaba a meio do pedido (a live caiu e voltou noutro VOD) o ficheiro sai
  * mais curto. As duas coisas tinham de ser ditas, e só uma era, e só num sítio.
  */
-function notaDaSobra(plano) {
+function notaDaSobra(plano, { continua = false, parte = 1 } = {}) {
   const partes = [];
-  const falta = plano.sobraInicioS < -0.05 || plano.sobraFimS < -0.05;
-  partes.push(plano.sobraInicioS < -0.05
-    ? t('corte.faltaInicio', { s: (-plano.sobraInicioS).toFixed(1) })
-    : t('corte.comeca', { s: Math.max(0, plano.sobraInicioS).toFixed(1) }));
-  if (plano.sobraFimS < -0.05) partes.push(t('corte.faltaFim', { s: (-plano.sobraFimS).toFixed(1) }));
-  else if (plano.sobraFimS > 0.05) partes.push(t('corte.acaba', { s: plano.sobraFimS.toFixed(1) }));
-  return { texto: partes.join(' · '), falta };
+  // Numa parte que continua outra, o buraco do início é o da própria queda,
+  // e não um "o canal ainda não estava no ar".
+  const seguinte = parte > 1;
+  const faltaInicio = plano.sobraInicioS < -0.05 && !seguinte;
+  const corteNoFim = plano.sobraFimS < -0.05;
+  if (seguinte) partes.push(t('corte.continuacao'));
+  else {
+    partes.push(faltaInicio
+      ? t('corte.faltaInicio', { s: (-plano.sobraInicioS).toFixed(1) })
+      : t('corte.comeca', { s: Math.max(0, plano.sobraInicioS).toFixed(1) }));
+  }
+  if (corteNoFim) {
+    partes.push(continua ? t('corte.continua') : t('corte.faltaFim', { s: (-plano.sobraFimS).toFixed(1) }));
+  } else if (plano.sobraFimS > 0.05) partes.push(t('corte.acaba', { s: plano.sobraFimS.toFixed(1) }));
+  return {
+    texto: partes.join(' · '),
+    falta: faltaInicio || (corteNoFim && !continua),
+    partido: seguinte || (corteNoFim && continua),
+  };
+}
+
+/**
+ * O porquê de um 9:16 não ter saído, curto, para caber entre parênteses.
+ *
+ * Saía o `e.message`, que é uma frase interna em português ("sem gravador",
+ * "o vídeo não andou") e aparecia assim mesmo no meio do inglês e do espanhol.
+ * Um erro sem nome conhecido é do browser (o `MediaRecorder` a falhar) e
+ * já vem na língua dele.
+ */
+function motivoDoRetrato(e) {
+  const chave = {
+    'SEM-GRAVADOR': 'retrato.motivoSemGravador',
+    'GRAVACAO-PARADA': 'retrato.motivoParou',
+    'GRAVACAO-VAZIA': 'retrato.motivoVazio',
+    'SEM-IMAGEM': 'retrato.motivoSemImagem',
+  }[e?.name];
+  return chave ? t(chave) : (e?.message || String(e));
+}
+
+/**
+ * O aviso de um 9:16 que saiu mais curto do que o clipe, ou nada.
+ *
+ * O vídeo do canal pode acabar a meio do clipe (a live caiu e voltou noutro
+ * VOD). O gravador entrega o que gravou até ali, e isso tem de ser dito na
+ * linha do ficheiro: um vertical de 4 s com cara de pronto era a mesma
+ * mentira do 16:9 cortado pela reconexão.
+ */
+function notaDoRetratoCurto(gravadoS, totalS) {
+  if (!(gravadoS >= 0) || gravadoS >= totalS - 0.5) return '';
+  return t('retrato.curto', { feito: gravadoS.toFixed(1), total: totalS.toFixed(1) });
 }
 
 /**
@@ -2314,9 +2373,12 @@ async function renderizarRetrato(linha, clipe, { sinal, aoProgresso } = {}) {
       v.currentTime = r.tempoS;
     }
     await new Promise((ok, mal) => {
-      const fim = setTimeout(() => mal(new Error('sem imagem em 20 s')), 20000);
+      // Com nome, e não só com a frase: a frase é portuguesa e interna, e a
+      // linha da montagem traduz pelo nome (ver `motivoDoRetrato`).
+      const semImagem = (porque) => Object.assign(new Error(porque), { name: 'SEM-IMAGEM' });
+      const fim = setTimeout(() => mal(semImagem('sem imagem em 20 s')), 20000);
       v.addEventListener('loadeddata', () => { clearTimeout(fim); ok(); }, { once: true });
-      v.addEventListener('error', () => { clearTimeout(fim); mal(new Error('o vídeo não carregou')); }, { once: true });
+      v.addEventListener('error', () => { clearTimeout(fim); mal(semImagem('o vídeo não carregou')); }, { once: true });
       sinal?.addEventListener('abort', () => { clearTimeout(fim); mal(new DOMException('cancelado', 'AbortError')); }, { once: true });
     });
     if (Math.abs(v.currentTime - r.tempoS) > 0.5) v.currentTime = r.tempoS;
@@ -3173,7 +3235,7 @@ async function guardarRetrato() {
     // gravação na sala, mas a faixa passa a ter sinal.
     v.muted = false;
     v.volume = 0;
-    const { blob, tipo } = await gravar(v, {
+    const { blob, tipo, gravadoS } = await gravar(v, {
       // Uma cópia: o gravador lê os recortes a cada frame, e um arrasto que
       // escapasse à tranca mexia no ficheiro a meio.
       rects: c.rects.map((r) => ({ ...r })),
@@ -3194,21 +3256,25 @@ async function guardarRetrato() {
     const url = guardarFicheiro(blob);
     const item = document.createElement('li');
     $('fila').prepend(item);
+    const curto = notaDoRetratoCurto(gravadoS, duracaoS);
     linhaDeFicheiro(item, {
       nome, url,
-      nota: `${(blob.size / 1048576).toFixed(1)} MB · ${RETRATO.largura}x${RETRATO.altura}`,
+      nota: `${(blob.size / 1048576).toFixed(1)} MB · ${RETRATO.largura}x${RETRATO.altura}`
+        + (curto ? ` · ${curto}` : ''),
     });
+    if (curto) item.querySelector('.nota')?.classList.add('mau');
     const a = document.createElement('a');
     a.href = url;
     a.download = nome;
     a.click();
-    if (aindaEste()) $('estadoClipe').textContent = t('retrato.pronto');
+    if (aindaEste()) $('estadoClipe').textContent = curto || t('retrato.pronto');
   } catch (e) {
     // Parada por quem fechou o editor: não há a quem dizer nada.
     if (e.name === 'AbortError' || !aindaEste()) return;
     $('estadoClipe').textContent = e.name === 'SEM-GRAVADOR' ? t('retrato.semGravador')
       : e.name === 'GRAVACAO-PARADA' ? t('retrato.parou')
-        : t('clipe.naoDeu', { erro: e.message });
+        : e.name === 'GRAVACAO-VAZIA' ? t('retrato.vazio')
+          : t('clipe.naoDeu', { erro: motivoDoRetrato(e) });
   } finally {
     // A marca sai mesmo que a gravação rebente: senão o `acordarPrevia` fica
     // calado para sempre e a prévia nunca mais carrega uma imagem. E é a
