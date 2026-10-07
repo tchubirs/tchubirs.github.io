@@ -936,11 +936,17 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
       if (nome) ev.juntados.add(nome);
       pintarLance();
     };
-    $('picosChat').onclick = (evento) => {
+    // Um pico é para ver, e não só para escolher: o botão abre logo o vídeo (o dono esperava isso a
+    // 07/10). Abre no começo do minuto do pico, 30 s antes da marca, porque o chat reage depois do
+    // lance (o atraso da live mais o tempo de ler e escrever) e o que interessa é o lance.
+    $('picosChat').onclick = async (evento) => {
       const b = evento.target.closest('button[data-ms]');
       if (!b) return;
       const canal = b.dataset.canal;
-      escolher({ tipo: 'canal', canal, ms: Number(b.dataset.ms), time: indiceDeTimes(ev.elenco).get(canal) ?? null });
+      const pico = Number(b.dataset.ms);
+      const ms = noArEm(ev.coberturas, canal, pico - 30_000) ? pico - 30_000 : pico;
+      escolher({ tipo: 'canal', canal, ms, time: indiceDeTimes(ev.elenco).get(canal) ?? null });
+      if (noArEm(ev.coberturas, canal, ms)) await verLance();
     };
     window.addEventListener('popstate', () => {
       if (/[#&]evento=/.test(location.hash) && !ev.elenco) abrirDoLink();

@@ -24,6 +24,20 @@ em menos de 2 minutos.
   no mercado; o multi-POV de evento não.
 - **Limite:** o multi-POV só brilha quando há evento. Fora dele, o produto é um cortador com fila de postagem.
 
+## Chat dentro do clipe (ideia do dono, 07/10; a fazer)
+
+Ao criar o clipe, uma opção para pôr o chat por cima do vídeo: só as mensagens, sem a caixa de fundo, como um
+PNG transparente.
+
+- **O que já temos:** o Povix já lê o chat de cada canal, com nome, texto e emotes, para achar os picos. Dá para
+  pegar as mensagens exatas do trecho do clipe sem pedir nada novo à Kick.
+- **Onde dá para desenhar:** o 9:16 e o clipe de vários ângulos já desenham cada quadro numa tela; aí o chat entra
+  por cima (letra branca com contorno escuro, sem caixa), cada mensagem na hora em que apareceu. O 16:9 é cópia
+  dos pedaços da Kick, sem reconverter, e não aceita nada por cima: para ele, o chat sai como arquivo à parte
+  (PNG transparente das mensagens, ou um vídeo transparente) para o editor do clipador.
+- **Cuidados:** a hora de cada mensagem é a do servidor do chat, e o vídeo está de 2 a 12 s atrás do ar: alinhar
+  pelo atraso medido. Emotes da Kick como imagem. Uma opção para esconder os nomes de quem escreveu.
+
 ## Regra do dono: os outros dependem de nós, e não o contrário
 
 A ideia dele é o ponto de partida, não a planta. Antes de construir, estudar o mercado todo e montar a melhor

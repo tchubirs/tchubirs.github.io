@@ -263,9 +263,14 @@ test('escolher um lance lê o chat do time e marca no mapa onde ele explodiu',
     assert.equal(await botoes.count(), 1);
     assert.equal(await botoes.first().getAttribute('data-canal'), 'tchubi');
     assert.match(await botoes.first().innerText(), /^\d{2}:\d{2}$/);
+    // O botão do pico abre logo o vídeo, no começo do minuto do pico (o chat reage depois do lance).
     await botoes.first().click();
+    await p.waitForSelector('.tile', { timeout: 15000 });
     const pelaHora = await p.evaluate(() => window.__evento.escolha);
-    assert.deepEqual([pelaHora.canal, pelaHora.ms], ['tchubi', T + 5 * 60_000 + 30_000]);
+    assert.deepEqual([pelaHora.canal, pelaHora.ms], ['tchubi', T + 5 * 60_000]);
+    const noite = await p.evaluate(() => ({ agora: window.__estado.agoraMs, focos: window.__estado.focos }));
+    assert.ok(Math.abs(noite.agora - (T + 5 * 60_000)) < 2000, 'o vídeo abre no pico');
+    assert.deepEqual(noite.focos, ['tchubi']);
     assert.deepEqual(erros, []);
   });
 
