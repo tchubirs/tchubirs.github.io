@@ -4,11 +4,12 @@
 <h2>O que a extensão usa</h2>
 <ul>
 <li><b>A tua sessão da Twitch neste navegador</b> (o cookie de login de twitch.tv), só para pedir à Twitch o teu progresso nos drops, ver que canais dão a campanha e resgatar os drops a 100%.</li>
+<li><b>Os cabeçalhos dos pedidos que a própria página da Twitch faz</b> a gql.twitch.tv: a verificação "Client-Integrity" que a Twitch exige para ler as campanhas de drops, identificadores de sessão e de versão, e o token de sessão da própria Twitch (cabeçalho Authorization). Ficam só na memória da página aberta, nunca são gravados em disco e só são reutilizados em pedidos à Twitch.</li>
 <li><b>O estado da extensão</b> (ligada ou desligada, o progresso dos drops, os canais a evitar), guardado só no teu navegador (<code>chrome.storage.local</code>).</li>
 </ul>
 <h2>O que a extensão não faz</h2>
 <ul>
-<li>Não vê nem guarda a tua password.</li>
+<li>Não vê nem guarda a tua password. Não envia o token de sessão nem os cabeçalhos para ninguém além da Twitch.</li>
 <li>Não envia dados teus para ninguém além da própria Twitch (twitch.tv e gql.twitch.tv).</li>
 <li>Não tem anúncios, não rastreia, não vende nem partilha dados.</li>
 </ul>
@@ -20,5 +21,5 @@
 <p><a href="https://github.com/tchubirs/Drops-extension/issues">github.com/tchubirs/Drops-extension/issues</a></p>
 <hr>
 <h2 lang="en">Privacy policy (English)</h2>
-<p lang="en">Drops Auto-Claim uses your existing Twitch session cookie in this browser only to ask Twitch for your drop progress, find channels with the campaign, and claim finished drops. Its own state (on/off, progress, channels to avoid) stays in your browser (chrome.storage.local). It never sees or stores your password, sends no personal data anywhere except Twitch itself, and has no ads, tracking or data sharing or selling. Every 6 hours it downloads a public configuration file (config.json on GitHub) with Twitch query codes; that request carries no personal data and the file contains data only, not code. Removing the extension deletes everything it stored. Contact: github.com/tchubirs/Drops-extension/issues.</p>
+<p lang="en">Drops Auto-Claim uses your existing Twitch session cookie in this browser, and reads the headers of the requests the Twitch page itself makes to gql.twitch.tv (the Client-Integrity check, session and version ids, and Twitch's own session token), only to ask Twitch for your drop progress, find channels with the campaign, and claim finished drops. Its own state (on/off, progress, channels to avoid) stays in your browser (chrome.storage.local). These headers stay in the open page's memory, are never written to disk and are only reused in requests to Twitch. It never sees or stores your password, sends no personal data anywhere except Twitch itself, and has no ads, tracking or data sharing or selling. Every 6 hours it downloads a public configuration file (config.json on GitHub) with Twitch query codes; that request carries no personal data and the file contains data only, not code. Removing the extension deletes everything it stored. Contact: github.com/tchubirs/Drops-extension/issues.</p>
 <footer><a href="index.html">Drops Auto-Claim</a> · <a href="privacidade.html">Privacidade / Privacy</a></footer></body></html>
