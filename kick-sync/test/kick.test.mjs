@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
-  vodsDoCanal, lerMaster, lerPlaylist, segmentosNaJanela, tempoDeMidia, lerLinkKick, slugDoNome,
+  vodsDoCanal, lerMaster, lerPlaylist, segmentosNaJanela, tempoDeMidia, lerLinkKick, slugDoNome, vodDaKick,
 } from '../site/kick.js';
 
 // The fixtures are real responses recorded from Kick on 31/08/2026. That is the
@@ -156,4 +156,18 @@ test('e diz que nao sabe, em vez de adivinhar', () => {
     'não é um link', 'https://twitch.tv/tchubi']) {
     assert.equal(lerLinkKick(mau), null, `devia recusar: ${mau}`);
   }
+});
+
+// app-3#5, sync-engine#5: a /api/v2/video/<uuid> nao existe (404, medido em
+// 06/10); a v1 responde com o canal e o inicio dentro de `livestream`.
+test('um VOD colado le-se pela v1, com o canal e o inicio', async () => {
+  const pedidos = [];
+  const buscar = async (u) => {
+    pedidos.push(u);
+    if (!u.includes('/api/v1/video/')) return { ok: false, status: 404, json: async () => ({ message: '' }) };
+    return { ok: true, status: 200, json: async () => ({ livestream: { start_time: '2026-08-30 21:00:00', channel: { slug: 'xqc' } } }) };
+  };
+  const v = await vodDaKick('67f962ed-3448', { buscar });
+  assert.deepEqual(v, { slug: 'xqc', inicioMs: Date.parse('2026-08-30T21:00:00Z') });
+  await assert.rejects(vodDaKick('x', { buscar: async () => ({ ok: false, status: 404 }) }), { name: 'SEM-VOD' });
 });

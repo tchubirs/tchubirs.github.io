@@ -378,3 +378,18 @@ test('a slow but live link finishes: the deadline counts silence, not the whole 
   assert.equal(r.estado, 'pronto', r.falhas?.[0]?.erro);
   assert.equal(r.bytes.length, 8 * PEDACO);
 });
+
+// app-3#4: um clipe colado não tem master, só a playlist de um degrau. O plano
+// pedia `vod.master`, que é undefined, e o Exportar dava sempre 'master-falhou'.
+test('o corte de um clipe colado usa a playlist do clipe, sem pedir master nenhum', async () => {
+  const { buscar, pedidos } = cdnFalso();
+  const base = linhaFalsa('tchubi·clipe', T, 60);
+  const degrau = { url: 'https://clips/x/playlist.m3u8', largura: null, altura: null };
+  const linha = linhaDoCanal('tchubi·clipe', [{
+    vod: { id: 'clip_01' }, playlist: base.pecas[0].playlist, escada: [degrau], barato: degrau,
+  }]);
+  const p = await planearCorte({ linha, deMs: T + 10_000, ateMs: T + 30_000, buscar });
+  assert.equal(p.estado, 'ok');
+  assert.ok(!pedidos.some((u) => /undefined|master/.test(u)), pedidos.join(' '));
+  assert.ok(Number.isFinite(p.bytesEstimados));
+});

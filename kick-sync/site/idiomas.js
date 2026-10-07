@@ -42,6 +42,7 @@ const TEXTOS = {
     'link.aLer': 'lendo o link…',
     'link.naoPercebi': 'Não entendi esse link. Cole o endereço de um clipe, de um VOD ou de um canal da Kick.',
     'link.semClipe': 'Esse clipe não existe ou foi apagado. Confira o endereço na Kick.',
+    'link.semVod': 'Esse vídeo não existe ou foi apagado. Confira o endereço na Kick.',
     'link.clipeAberto': 'Clipe de {canal} aberto, {dur}s. Ajuste as pontas e exporte.',
     'app.rodape': 'A sessão fica salva neste aparelho.',
 
@@ -79,7 +80,7 @@ const TEXTOS = {
 
     'tile.relogioIncerto': 'relógio incerto',
     'partilha.botao': 'Compartilhar projeto',
-    'partilha.ajuda': 'Copia um link com o projeto de agora: as transmissões, a noite, o instante em que você está, as kills marcadas e os acertos de relógio.',
+    'partilha.ajuda': 'Copia um link com o projeto de agora: as transmissões, a noite, o instante em que você está e os acertos de relógio. As kills marcadas não vão: ficam só neste navegador.',
     'partilha.leva': '{n} transmissões · {data} · {hora}',
     'partilha.copiado': 'Link copiado. Mande para quem quiser ver esta noite.',
     'partilha.falhou': 'O link está na barra de endereço: copie de lá.',
@@ -436,6 +437,7 @@ const TEXTOS = {
     'auto.erro': 'A detecção parou: não consegui ler o áudio de {canal}. Confira a internet e tente de novo, ou marque a kill à mão.',
     'auto.semEstouroPerto': 'Não ouvi nenhum estouro a menos de 4 s desta kill. Escolha uma kill com o tiro bem audível, ou marque as outras à mão.',
     'link.erro': 'Não consegui abrir esse clipe. Confira a internet e o endereço, e tente de novo.',
+    'link.erroVod': 'Não consegui abrir esse vídeo. Confira a internet e o endereço, e tente de novo.',
   },
 
   en: {
@@ -469,6 +471,7 @@ const TEXTOS = {
     'link.aLer': 'reading the link…',
     'link.naoPercebi': 'I did not understand that link. Paste the address of a Kick clip, VOD or channel.',
     'link.semClipe': 'That clip does not exist or was deleted. Check the address on Kick.',
+    'link.semVod': 'That video does not exist or was deleted. Check the address on Kick.',
     'link.clipeAberto': 'Clip from {canal} open, {dur}s. Trim the ends and export.',
     'app.rodape': 'The session is saved on this device.',
 
@@ -506,7 +509,7 @@ const TEXTOS = {
 
     'tile.relogioIncerto': 'clock is uncertain',
     'partilha.botao': 'Share project',
-    'partilha.ajuda': 'Copies a link with the project as it is now: the broadcasts, the night, the moment you are on, the marked kills and the clock offsets.',
+    'partilha.ajuda': 'Copies a link with the project as it is now: the broadcasts, the night, the moment you are on and the clock offsets. Marked kills are not included: they stay in this browser only.',
     'partilha.leva': '{n} broadcasts · {data} · {hora}',
     'partilha.copiado': 'Link copied — send it to whoever should see this night.',
     'partilha.falhou': 'The link is now in the address bar: copy it from there.',
@@ -863,6 +866,7 @@ const TEXTOS = {
     'auto.erro': 'Detection stopped: I could not read the audio of {canal}. Check your connection and try again, or mark the kill by hand.',
     'auto.semEstouroPerto': 'I heard no loud bang within 4 s of this kill. Pick a kill where the shot is clearly heard, or mark the others by hand.',
     'link.erro': 'Could not open that clip. Check your connection and the address, and try again.',
+    'link.erroVod': 'Could not open that video. Check your connection and the address, and try again.',
   },
 
   es: {
@@ -896,6 +900,7 @@ const TEXTOS = {
     'link.aLer': 'leyendo el enlace…',
     'link.naoPercebi': 'No entendi ese enlace. Pega la direccion de un clip, un VOD o un canal de Kick.',
     'link.semClipe': 'Ese clip no existe o fue borrado. Comprueba la direccion en Kick.',
+    'link.semVod': 'Ese video no existe o fue borrado. Comprueba la dirección en Kick.',
     'link.clipeAberto': 'Clip de {canal} abierto, {dur}s. Ajusta las puntas y exporta.',
     'app.rodape': 'La sesión queda guardada en este dispositivo.',
 
@@ -933,7 +938,7 @@ const TEXTOS = {
 
     'tile.relogioIncerto': 'reloj incierto',
     'partilha.botao': 'Compartir proyecto',
-    'partilha.ajuda': 'Copia un enlace con el proyecto de ahora: las transmisiones, la noche, el instante en el que estás, las kills marcadas y los ajustes de reloj.',
+    'partilha.ajuda': 'Copia un enlace con el proyecto de ahora: las transmisiones, la noche, el instante en el que estás y los ajustes de reloj. Las kills marcadas no van: se quedan solo en este navegador.',
     'partilha.leva': '{n} transmisiones · {data} · {hora}',
     'partilha.copiado': 'Enlace copiado — pásalo a quien quiera ver esta noche.',
     'partilha.falhou': 'El enlace está ahora en la barra de direcciones: cópialo de ahí.',
@@ -1290,6 +1295,7 @@ const TEXTOS = {
     'auto.erro': 'La detección se detuvo: no pude leer el audio de {canal}. Revisa la conexión e inténtalo de nuevo, o marca la kill a mano.',
     'auto.semEstouroPerto': 'No oí ningún estallido a menos de 4 s de esta kill. Elige una kill con el disparo bien audible, o marca las demás a mano.',
     'link.erro': 'No pude abrir ese clip. Revisa la conexión y la dirección, e inténtalo de nuevo.',
+    'link.erroVod': 'No pude abrir ese video. Revisa la conexión y la dirección, e inténtalo de nuevo.',
   },
 };
 

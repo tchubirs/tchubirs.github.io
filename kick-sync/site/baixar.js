@@ -165,6 +165,9 @@ async function emLotes(itens, tarefa, { limite = AO_MESMO_TEMPO } = {}) {
  * their segment boundaries match, and an export is the one place where a
  * borrowed index would put the cut in the wrong second.
  */
+/** O que identifica uma peca: o master do VOD, ou a playlist de um clipe. */
+const chaveDaPeca = (p) => p.vod.master || p.barato?.url;
+
 export async function planearCorte({
   linha, deMs, ateMs, buscar = fetch, cache = new Map(), sinal, prazoMs, saltar = [],
 }) {
@@ -173,7 +176,7 @@ export async function planearCorte({
   // `saltar` são os VODs (pelo master) de que já se tirou uma parte deste
   // corte: o resto de uma reconexão pede-se ao VOD seguinte, e não outra vez
   // ao que acabou (ver `oQueFalta`).
-  const peca = linha.pecas.find((p) => !saltar.includes(p.vod.master)
+  const peca = linha.pecas.find((p) => !saltar.includes(chaveDaPeca(p))
     && deMs < p.playlist.fim && ateMs > p.playlist.inicio);
   if (!peca) {
     // Off air, or outside this channel's night. Both are real answers and the
@@ -182,7 +185,12 @@ export async function planearCorte({
     return { estado: buraco ? 'buraco' : 'fora-da-noite', buraco };
   }
 
-  const chave = peca.vod.master;
+  const chave = chaveDaPeca(peca);
+  // Um clipe colado nao tem master: a Kick da logo a playlist de um degrau so,
+  // que ja esta lida na peca. Pedir `vod.master` era pedir 'undefined'.
+  if (!peca.vod.master && peca.playlist?.segmentos) {
+    cache.set(chave, { melhor: { bitrate: 0, ...peca.barato }, playlist: peca.playlist });
+  }
   if (!cache.has(chave)) {
     // Com o mesmo prazo e o mesmo sinal dos pedaços: sem eles, um Parar a
     // meio do plano só se notava depois de a Kick responder, e uma lista que
@@ -342,7 +350,7 @@ export function oQueFalta(linha, plano, ateMs, saltar = []) {
   if (plano?.estado !== 'ok' || !(plano.sobraFimS < -0.05)) return null;
   const fora = [...saltar, plano.master];
   const deMs = plano.fimReal;
-  const ha = linha.pecas.some((p) => !fora.includes(p.vod.master)
+  const ha = linha.pecas.some((p) => !fora.includes(chaveDaPeca(p))
     && deMs < p.playlist.fim && ateMs > p.playlist.inicio);
   return ha ? { deMs, ateMs, saltar: fora } : null;
 }
