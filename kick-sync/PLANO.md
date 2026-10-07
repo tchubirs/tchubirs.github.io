@@ -81,3 +81,19 @@ Off 2 publicou 20.702 abates com estatísticas por jogador).
   sozinhos e o clipe.
 - **Grade não é produto:** o Squad Stream da Twitch (grade de 4) não passou de 1% dos streams e foi
   retirado; quem assistia achava a grade confusa. O produto vende o lance e a história, não a grade.
+
+## Detecção automática: um teste do dono que falhou (07/10)
+
+Uma hora do canal deowasd, de madrugada (07/10, por volta das 04:08 a 04:20 UTC): a detecção deu 15 candidatos, e
+segundo o dono todos eram ele a saquear e a conversar, nenhum tiro. Guardar este trecho como caso de teste.
+
+Porquê: `tiros.js` procura sons agudos, de subida brusca e altos contra o chão da noite (tiro, acerto, headshot).
+O saque no Rust (cliques de itens, caixas a abrir) e os picos da voz no microfone também são agudos e bruscos, e
+numa noite calma o chão é baixo, por isso passam.
+
+O que fazer, por ordem de valor (não feito; o dono pediu para não gastar agora):
+1. Num evento, só contar uma luta quando outro streamer ouviu o mesmo tiro no mesmo segundo (a busca pelo som já
+   faz esta conta). O saque só se ouve num canal; um tiroteio ouve-se em vários.
+2. Pedir também um pico do chat perto, ou uma sequência de vários estouros em poucos segundos, em vez de um só.
+3. Tirar a voz: medir a energia na banda da fala (300 Hz a 3 kHz) e descontar os estouros que vêm com ela.
+4. Hoje já existe "Usar como referência": marcar um tiro de verdade e procurar o mesmo som. Não medido neste canal.
