@@ -254,6 +254,10 @@ header { margin-bottom: var(--e6); }
   display: flex; align-items: center; gap: var(--e3);
   margin-right: auto; font-size: var(--t-grande);
 }
+.inicio { display: none; }
+/* Logo, Início e só depois o espaço: o botão fica colado ao nome, onde se procura o caminho de volta. */
+body:has(#noites:not([hidden])) .inicio, body:has(#palco:not([hidden])) .inicio { display: inline-flex; margin-right: auto; }
+body:has(#noites:not([hidden])) .topo h1, body:has(#palco:not([hidden])) .topo h1 { margin-right: 0; }
 /* A marca desta casa: três gravações de comprimentos diferentes e a agulha a
    atravessá-las no mesmo instante. É o que o sítio faz, desenhado. */
 .topo h1 .ic { width: 22px; height: 22px; color: var(--acento); }

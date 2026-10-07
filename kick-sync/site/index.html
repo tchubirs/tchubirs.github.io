@@ -136,6 +136,7 @@
   <symbol id="i-fechar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round">
     <path d="m5.8 5.8 12.4 12.4M18.2 5.8 5.8 18.2"/>
   </symbol>
+  <symbol id="i-inicio" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></symbol>
   <symbol id="i-certo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
     <path d="m4.4 12.6 5.1 5.1L19.6 6.6"/>
   </symbol>
@@ -248,6 +249,9 @@
 <header>
   <div class="topo">
     <h1><svg class="ic" aria-hidden="true"><use href="#i-povix"/></svg><span data-t="app.nome">Povix</span></h1>
+    <!-- Com vídeos abertos a tela de entrada some, e só o Recomeçar, lá embaixo, voltava a ela: o dono
+         abriu um canal e não achou o caminho (07/10). Este botão só aparece nesse caso. -->
+    <button id="inicio" class="inicio" data-t-titulo="topo.inicioTitulo" title="Voltar à tela inicial"><svg class="ic ic-p" aria-hidden="true"><use href="#i-inicio"/></svg><span data-t="topo.inicio">Início</span></button>
     <a class="paraTwitch" href="twitch.html"><svg class="ic" aria-hidden="true"><use href="#i-twitch"/></svg><span data-t="app.twitch">Versão Twitch</span></a>
     <button id="ajuda" class="discreto" data-t-aria="ajuda.abrir" aria-haspopup="dialog"><svg class="ic" aria-hidden="true"><use href="#i-ajuda"/></svg></button>
     <select id="idioma" aria-label="idioma"></select>

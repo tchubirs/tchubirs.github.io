@@ -356,3 +356,31 @@ test('recarregar a página com um lance aberto traz o evento de volta, em barra,
     assert.equal(await p.locator('#evento').isVisible(), false);
     assert.deepEqual(erros, []);
   });
+
+test('o botão Início fecha os vídeos: com evento volta ao mapa, sem evento volta às duas portas',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'outro'] });
+    await abrirEvento(p);
+    assert.equal(await p.locator('#inicio').isVisible(), false, 'na entrada não há para onde voltar');
+    await clicarNoMapa(p, 'tchubi', T + 3 * 60_000);
+    await p.waitForSelector('#lance:not([hidden])');
+    await p.click('#verLance');
+    await p.waitForSelector('.tile', { timeout: 15000 });
+    assert.equal(await p.locator('#inicio').isVisible(), true);
+    await Promise.all([p.waitForNavigation(), p.click('#inicio')]);
+    await p.waitForFunction(() => window.__evento?.mapa, null, { timeout: 15000 });
+    assert.equal(await p.locator('#palco').isVisible(), false, 'os vídeos fecharam');
+    assert.equal(await p.locator('#mapaRolo').isVisible(), true, 'e o mapa do evento está aberto');
+    // Sem evento, o Início leva às duas portas.
+    await clicarNoMapa(p, 'outro', T + 3 * 60_000);
+    await p.waitForSelector('#lance:not([hidden])');
+    await p.click('#verLance');
+    await p.waitForSelector('.tile', { timeout: 15000 });
+    await p.click('#fecharEvento');
+    await Promise.all([p.waitForNavigation(), p.click('#inicio')]);
+    await p.waitForSelector('#portaEvento', { state: 'visible', timeout: 15000 });
+    assert.equal(await p.locator('#entrada').isVisible(), true);
+    assert.equal(await p.locator('#palco').isVisible(), false);
+    assert.deepEqual(erros, []);
+  });

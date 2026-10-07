@@ -4056,6 +4056,20 @@ function recomecar() {
   location.href = location.pathname;
 }
 
+/**
+ * Voltar à tela de entrada (as duas portas). Fecha a noite aberta e mais nada: o evento, se havia um,
+ * volta aberto com o mapa, que é a tela de onde quase sempre se veio. Só pergunta quando há kills
+ * marcadas, porque são elas que se perdem.
+ */
+function voltarAoInicio() {
+  const quantas = estado.momentos.length;
+  if (quantas && !confirm(t('inicio.comKills', { n: quantas }))) return;
+  limparFila();
+  try { localStorage.removeItem('replay'); } catch { /* janela privada */ }
+  // Sem o ?s= nem o #evento= do endereço, senão a noite voltava logo a seguir.
+  location.href = location.pathname;
+}
+
 // Uma janela para os testes olharem para dentro. Sem isto, verificar que a
 // previa arranca no sitio certo obrigava a adivinhar pelo texto do ecra.
 window.__estado = estado;
@@ -4406,6 +4420,7 @@ for (const [id, qual, delta] of [
 $('verClipe').onclick = () => (estado.clipe?.aVer ? pararVer() : verClipe());
 $('modalClipe').onclick = (e) => { if (e.target === $('modalClipe')) fecharClipe(); };
 $('recomecar').onclick = recomecar;
+$('inicio').onclick = voltarAoInicio;
 
 const alternarAjuda = (abrir) => { $('modalAjuda').hidden = !abrir; };
 $('ajuda').onclick = () => alternarAjuda(true);
