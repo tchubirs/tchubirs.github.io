@@ -74,6 +74,8 @@ marca cada luta no mapa sem precisar do som.
    estranhar o volume.
 8. Um teste com 500 canais reais. Medido até agora na Kick real: 120 canais em 8 s; os 500 em menos de um minuto
    são uma conta a partir disso, não uma medição.
+9. Um botão "Início" à vista na tela dos vídeos. O dono abriu um canal e não achou como voltar à tela de entrada
+   (07/10): hoje só o "Recomeçar", lá embaixo, volta, e ele apaga a noite aberta.
 
 ## A teia do lance (ideia do dono, 06/10; a desenhar)
 
