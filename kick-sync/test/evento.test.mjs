@@ -329,3 +329,30 @@ test('o mapa anda-se pelo teclado: setas, Enter para escolher e o que está sob 
     assert.match(await p.locator('#mapaVoz').textContent(), /^Time Alfa · 2 canais · fechado$/);
     assert.deepEqual(erros, []);
   });
+
+test('recarregar a página com um lance aberto traz o evento de volta, em barra, e fechar o evento esquece-o',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'outro'] });
+    await abrirEvento(p);
+    const ms = T + 3 * 60_000;
+    await clicarNoMapa(p, 'tchubi', ms);
+    await p.waitForSelector('#lance:not([hidden])');
+    await p.click('#verLance');
+    await p.waitForSelector('.tile', { timeout: 15000 });
+    await p.reload({ waitUntil: 'networkidle' });
+    // A noite volta pela sessão de sempre, e o evento volta por baixo dela, com o mesmo lance escolhido.
+    await p.waitForFunction(() => window.__evento?.mapa && window.__evento.escolha, null, { timeout: 15000 });
+    await p.waitForSelector('.tile', { timeout: 15000 });
+    assert.equal(await p.locator('#evento').isVisible(), true);
+    assert.equal(await p.locator('#mostrarMapa').isVisible(), true, 'o botão que volta ao mapa');
+    const e = await p.evaluate(() => window.__evento.escolha);
+    assert.equal(e.canal, 'tchubi');
+    assert.ok(Math.abs(e.ms - ms) < 5000);
+    // Fechado o evento, recarregar já não o reabre.
+    await p.click('#fecharEvento');
+    await p.reload({ waitUntil: 'networkidle' });
+    await p.waitForTimeout(1500);
+    assert.equal(await p.locator('#evento').isVisible(), false);
+    assert.deepEqual(erros, []);
+  });

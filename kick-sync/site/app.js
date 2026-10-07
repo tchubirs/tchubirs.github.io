@@ -4051,6 +4051,8 @@ function recomecar() {
   if (!confirm(aviso)) return;
   limparFila();
   try { localStorage.removeItem('replay'); } catch { /* janela privada */ }
+  // Recomeçar é voltar à entrada: o evento guardado não pode reabrir sozinho a seguir.
+  evento.esquecerEvento();
   location.href = location.pathname;
 }
 
@@ -4615,6 +4617,8 @@ const evento = montarEvento({
 // Para os testes de página, como o `__estado` da noite.
 window.__evento = evento.estado;
 if (vemDeEvento) evento.abrirDoLink();
+// Sem link, o evento que estava aberto volta por baixo da noite restaurada, em barra.
+else evento.abrirGuardado();
 
 // O `beforeunload` fica como ultima rede: num telemovel muitas vezes nunca
 // corre, e por isso e que a gravacao a serio acontece a cada mudanca.

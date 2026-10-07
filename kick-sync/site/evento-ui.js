@@ -208,6 +208,7 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
     ev.trecho = { ...ev.vista };
     if (Number.isFinite(quandoMs)) ev.vista = zoom(ev.vista, quandoMs, 0.1, ev.limites);
     ev.link = await codificar(elenco);
+    lembrarEvento();
     $('partilharEventoTexto').textContent = t('evento.partilharEvento');
     pintar();
     seguirAoVivo(aoVivo > 0);
@@ -450,6 +451,7 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
       return;
     }
     ev.escolha = { canal: alvo.canal, ms: alvo.ms, time: alvo.time };
+    lembrarEvento();
     ev.procura?.abort();
     ev.achados = [];
     ev.extrasDoLink = [];
@@ -841,6 +843,7 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
   }
 
   function fecharEvento() {
+    esquecerEvento();
     ev.cancelar?.abort();
     ev.procura?.abort();
     ev.elenco = null;
@@ -946,7 +949,42 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
   }
 
   /** Abrir um evento que veio num link (#evento=...&t=...&c=...&mais=...). Devolve true se havia um. */
-  async function abrirDoLink(hash = location.hash) {
+  // ── o evento guardado ──────────────────────────────────────────────────
+  //
+  // A noite aberta já era guardada e voltava ao recarregar a página; o evento não, e quem abria um
+  // lance e recarregava ficava com os vídeos e sem caminho de volta ao mapa (visto pelo dono a 07/10).
+  // Guarda-se o mesmo que vai num link (o elenco e o lance escolhido), e só por uma semana: os VODs
+  // de um canal sem verificação duram 7 dias.
+  const GUARDADO = 'povix.evento';
+  const GUARDADO_MAX_MS = 7 * 86400e3;
+  function lembrarEvento() {
+    if (!ev.link) return;
+    const e = ev.escolha;
+    try {
+      localStorage.setItem(GUARDADO, JSON.stringify({
+        link: ev.link, t: e?.ms ?? null, c: e?.canal ?? null, atraso: ev.atrasoMin, quando: Date.now(),
+      }));
+    } catch { /* janela privada: fica sem memória, como antes */ }
+  }
+  function esquecerEvento() {
+    try { localStorage.removeItem(GUARDADO); } catch { /* nada */ }
+  }
+
+  /** Reabrir o evento guardado, por baixo da noite que a página já restaurou. Devolve true se havia um. */
+  async function abrirGuardado() {
+    let g = null;
+    try { g = JSON.parse(localStorage.getItem(GUARDADO) || 'null'); } catch { g = null; }
+    if (!g?.link || !(Date.now() - g.quando < GUARDADO_MAX_MS)) { esquecerEvento(); return false; }
+    const hash = `#evento=${g.link}`
+      + (Number.isFinite(g.t) ? `&t=${Math.round(g.t)}` : '')
+      + (g.c ? `&c=${encodeURIComponent(g.c)}` : '')
+      + (Number.isFinite(g.atraso) && g.atraso !== ATRASO_MIN ? `&atraso=${g.atraso}` : '');
+    // Os vídeos já voltam pela sessão guardada da página: abrir o lance outra vez trocava a noite e
+    // apagava as kills marcadas nela.
+    return abrirDoLink(hash, { abrirLance: false });
+  }
+
+  async function abrirDoLink(hash = location.hash, { abrirLance = true } = {}) {
     const m = /[#&]evento=([^&]+)/.exec(hash);
     if (!m) return false;
     const elenco = await descodificar(m[1]);
@@ -971,6 +1009,7 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
     pintarLance();
     // Quem recebeu o link de um lance quer ver o lance, não um mapa: abre-se direto. Sem streamer no
     // link (um link antigo), escolhe-se o primeiro no ar e diz-se o que fazer.
+    if (!abrirLance) return true;
     if (pedido && canal === pedido) await verLance();
     else $('estadoLance').textContent = t('evento.lanceDoLink', { canal, hora: horaLocal(ms) });
     return true;
@@ -982,5 +1021,5 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
     const dica = document.querySelector('#evento .dica');
     if (dica) { dica.dataset.t = 'evento.dicaToque'; dica.textContent = t('evento.dicaToque'); }
   }
-  return { abrirElenco, abrirDoTexto, abrirDoLink, estado: ev };
+  return { abrirElenco, abrirDoTexto, abrirDoLink, abrirGuardado, esquecerEvento, estado: ev };
 }
