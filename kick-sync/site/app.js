@@ -295,18 +295,25 @@ function acrescentarCanal(slug) {
 function fecharSugestoes() {
   $('sugestoes').hidden = true;
   $('sugestoes').innerHTML = '';
+  // A lista em memória vai com a do ecrã. Ficar com ela fazia o Enter seguinte
+  // (no intervalo da busca, ou com a caixa já vazia) acrescentar o primeiro de
+  // uma busca antiga, que ele já não estava a ver.
+  estado.sugestoes = [];
   estado.escolhido = -1;
+  $('procurar').setAttribute('aria-expanded', 'false');
+  $('procurar').removeAttribute('aria-activedescendant');
 }
 
 function pintarSugestoes(canais) {
   $('sugestoes').innerHTML = canais.map((c, i) => {
     const ja = jaNaLista(c.slug);
-    return `<li data-slug="${escapar(c.slug)}" data-i="${i}" class="${ja ? 'ja' : ''}" role="option">`
+    return `<li id="sugestao${i}" data-slug="${escapar(c.slug)}" data-i="${i}" class="${ja ? 'ja' : ''}" role="option" aria-selected="false">`
       + `<span>${escapar(c.slug)}${c.aoVivo ? ` <b class="vivo">${t('procurar.aoVivo')}</b>` : ''}</span>`
       + `<span class="quantos">${ja ? t('procurar.jaEsta')
         : t('procurar.seguidores', { n: c.seguidores.toLocaleString(idiomaActual()) })}</span></li>`;
   }).join('');
   $('sugestoes').hidden = !canais.length;
+  $('procurar').setAttribute('aria-expanded', String(canais.length > 0));
   estado.sugestoes = canais;
   estado.escolhido = -1;
   for (const li of $('sugestoes').querySelectorAll('li:not(.ja)')) {
@@ -320,6 +327,7 @@ function realcar(n) {
   estado.escolhido = (n + itens.length) % itens.length;
   itens.forEach((li, i) => li.setAttribute('aria-selected', String(i === estado.escolhido)));
   itens[estado.escolhido].scrollIntoView({ block: 'nearest' });
+  $('procurar').setAttribute('aria-activedescendant', itens[estado.escolhido].id);
 }
 
 $('procurar').oninput = () => {
@@ -350,7 +358,12 @@ $('procurar').onkeydown = (e) => {
   else if (e.key === 'Escape') fecharSugestoes();
   else if (e.key === 'Enter') {
     e.preventDefault();
-    const escolha = estado.sugestoes?.[estado.escolhido] ?? estado.sugestoes?.[0];
+    // A ordem: o que ele escolheu com as setas; senão o nome igual ao que
+    // escreveu, mesmo que não seja o mais seguido; só depois o primeiro.
+    const escrito = $('procurar').value.trim().toLowerCase();
+    const lista = estado.sugestoes || [];
+    const escolha = lista[estado.escolhido]
+      ?? lista.find((c) => c.slug.toLowerCase() === escrito) ?? lista[0];
     // Enter sem sugestões escreve o que lá está: quem já sabe o slug não tem
     // de esperar por uma lista para o confirmar.
     if (escolha) acrescentarCanal(escolha.slug);
@@ -1334,7 +1347,12 @@ function aplicarFoco() {
     som.hidden = !foco;
     const botao = som.querySelector('.somBtn');
     botao.innerHTML = ICONE(cala || nivel === 0 ? 'mudo' : 'som');
-    botao.title = cala ? t('tile.ligarSom') : t('tile.calar');
+    // O nome que o leitor de ecrã lê vai com a dica: antes dizia "pausar" e
+    // havia dois botões de pausa por quadrado.
+    const nomeSom = cala ? 'tile.ligarSom' : 'tile.calar';
+    botao.title = t(nomeSom);
+    botao.dataset.tAria = nomeSom;
+    botao.setAttribute('aria-label', t(nomeSom));
     som.querySelector('.vol').value = String(Math.round(nivel * 100));
     som.querySelector('.pausa').innerHTML = ICONE(estado.parado ? 'tocar' : 'pausa');
   }
@@ -1444,8 +1462,8 @@ function montarGrade() {
       // usar não se põe noutro sítio só porque dá jeito.
       + '<span class="som" hidden>'
       + `<button class="pausa" data-t-titulo="tile.pausa" title="${t('tile.pausa')}">${ICONE('pausa')}</button>`
-      + `<button class="somBtn" data-t-aria="tile.pausa" aria-label="${t('tile.pausa')}">${ICONE('mudo')}</button>`
-      + '<input class="vol" type="range" min="0" max="100" value="100" aria-label="volume">'
+      + `<button class="somBtn" data-t-aria="tile.calar" aria-label="${t('tile.calar')}">${ICONE('mudo')}</button>`
+      + `<input class="vol" type="range" min="0" max="100" value="100" data-t-aria="tile.volume" aria-label="${t('tile.volume')}">`
       + '</span>'
       // O relógio da Kick põe cada ângulo dentro de um segmento da verdade, o
       // que já está dentro do que o dono pediu. Isto é para o resto: um stream
@@ -1497,12 +1515,19 @@ function montarGrade() {
       } catch {
         // A explicação tem de aparecer DENTRO da janela onde ele carregou —
         // uma mensagem na página principal, atrás desta, não se vê.
-        const r = tile.querySelector('.rotulo');
-        if (!r) return;
-        const antes = r.innerHTML;
-        r.textContent = t('tile.semEcraCheioAparte');
-        r.classList.add('recado');
-        setTimeout(() => { r.innerHTML = antes; r.classList.remove('recado'); }, 6000);
+        //
+        // Num recado à parte, e não por cima do rótulo: apagar o rótulo levava o
+        // `.posicao` com ele, e durante seis segundos o `irPara` rebentava a
+        // cada salto e o vídeo deixava de andar com o relógio.
+        tile.querySelector('.recado')?.remove();
+        const r = doc.createElement('span');
+        r.className = 'recado';
+        r.setAttribute('role', 'status');
+        // A janela à parte tem o recado dela; na página normal a culpa não é
+        // de janela nenhuma.
+        r.textContent = t(doc === document ? 'tile.semEcraCheio' : 'tile.semEcraCheioAparte');
+        tile.append(r);
+        setTimeout(() => r.remove(), 6000);
       }
     };
     const aparte = tile.querySelector('.aparte');
@@ -1590,7 +1615,11 @@ function pintarRelogio(quandoMs) {
   // alguem. Nao falta: e o que ele pediu.
   $('angulos').textContent = soUmCanal() ? '' : t('tempo.angulos', { n: vivos, total: estado.linhas.length });
   $('angulos').classList.toggle('mau', !soUmCanal() && vivos < 2);
-  const { inicio, fim } = vistaAgora();
+  // Sem noite não há barra a pintar. Acontecia com uma tecla carregada antes
+  // de abrir a noite, ou depois de uma que falhou: rebentava a cada toque.
+  const vista = vistaAgora();
+  if (!vista) return;
+  const { inicio, fim } = vista;
   const fraccao = Math.min(1, Math.max(0, (quandoMs - inicio) / (fim - inicio)));
   $('barra').value = String(Math.round(fraccao * 1000));
   // O cursor vive por cima das faixas e não dentro de uma delas: é um instante
@@ -1673,7 +1702,8 @@ function irPara(quandoMs) {
     tile.classList.remove('vazio');
     // Onde cada um está DENTRO do vídeo dele. É o número que mostra o avanço e
     // o atraso, e aparece já — antes de qualquer imagem carregar.
-    tile.querySelector('.posicao').textContent = mmss(r.tempoS);
+    const posicao = tile.querySelector('.posicao');
+    if (posicao) posicao.textContent = mmss(r.tempoS);
 
     if (ehPrincipal(linha.slug)) principal.push([linha, r, video]);
     else if (ehFoco(linha.slug)) segundo.push([linha, r, video]);
@@ -3289,7 +3319,7 @@ function abrirClipe(momento = null) {
   $('estadoClipe').textContent = '';
   trancarEditor(false);
   $('guardarClipe').disabled = false;
-  $('modalClipe').hidden = false;
+  mostrarDialogo($('modalClipe'));
   // Fechado até o editor do retrato existir. Estava aberto desde o princípio,
   // e como o `guardarRetrato` desistia em silêncio quando não havia
   // enquadramentos, carregar nele não fazia RIGOROSAMENTE NADA — nem uma
@@ -3866,7 +3896,7 @@ function fecharClipe() {
   v.pause?.();
   v.removeAttribute('src');
   estado.clipe = null;
-  $('modalClipe').hidden = true;
+  esconderDialogo($('modalClipe'));
   if (retomarGrelha && estado.parado) alternarPausa();
 }
 
@@ -4661,44 +4691,146 @@ $('modalClipe').onclick = (e) => { if (e.target === $('modalClipe')) fecharClipe
 $('recomecar').onclick = recomecar;
 $('inicio').onclick = voltarAoInicio;
 
-const alternarAjuda = (abrir) => { $('modalAjuda').hidden = !abrir; };
+const alternarAjuda = (abrir) => {
+  if (abrir) mostrarDialogo($('modalAjuda'));
+  else esconderDialogo($('modalAjuda'));
+};
+
+// ── o foco do teclado dentro das janelas ────────────────────────────────────
+//
+// As duas janelas dizem `aria-modal` mas o foco ficava na página de trás: o
+// leitor de ecrã lia o que estava por baixo, e o Tab saía da janela para os
+// links da página. Ao abrir, o foco entra; enquanto está aberta, o Tab dá a
+// volta lá dentro; ao fechar, volta para onde estava.
+const FOCAVEIS = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), '
+  + 'textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])';
+function focaveisDe(modal) {
+  return [...modal.querySelectorAll(FOCAVEIS)].filter((el) => !el.closest('[hidden]') && el.getClientRects().length);
+}
+function mostrarDialogo(modal) {
+  if (!modal.hidden) return;
+  const ativo = document.activeElement;
+  modal.voltarA = ativo && ativo !== document.body ? ativo : null;
+  modal.hidden = false;
+  const caixa = modal.querySelector('[role="dialog"]') || modal;
+  if (!caixa.hasAttribute('tabindex')) caixa.setAttribute('tabindex', '-1');
+  caixa.focus({ preventScroll: true });
+}
+function esconderDialogo(modal) {
+  if (modal.hidden) return;
+  modal.hidden = true;
+  const volta = modal.voltarA;
+  modal.voltarA = null;
+  if (volta?.isConnected && !volta.closest('[hidden]')) volta.focus({ preventScroll: true });
+}
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Tab') return;
+  const modal = [...document.querySelectorAll('.modal')].find((m) => !m.hidden);
+  if (!modal) return;
+  const lista = focaveisDe(modal);
+  if (!lista.length) { e.preventDefault(); return; }
+  const primeiro = lista[0];
+  const ultimo = lista[lista.length - 1];
+  const dentro = modal.contains(document.activeElement);
+  if (e.shiftKey && (!dentro || document.activeElement === primeiro
+    || document.activeElement === modal.querySelector('[role="dialog"]'))) {
+    e.preventDefault(); ultimo.focus();
+  } else if (!e.shiftKey && (!dentro || document.activeElement === ultimo)) {
+    e.preventDefault(); primeiro.focus();
+  }
+});
 $('ajuda').onclick = () => alternarAjuda(true);
 $('fecharAjuda').onclick = () => alternarAjuda(false);
 $('modalAjuda').onclick = (e) => { if (e.target.id === 'modalAjuda') alternarAjuda(false); };
 
+// Onde se escreve, a tecla é do texto. Um `input` de escrever, e não todos: o
+// cursor da barra, o volume e as caixas das kills também são INPUT, e com eles
+// em foco os atalhos morriam até se clicar noutro sítio. O `select` também não
+// é sítio de escrever: o zoom, o filtro das kills e a noite ficam com o foco
+// depois de escolhidos com o rato, e com eles os atalhos morriam do mesmo modo.
+const ESCREVER = /^(text|search|email|url|tel|password|number|date|time|datetime-local|month|week)$/;
+function ondeSeEscreve(el) {
+  if (!el?.tagName) return false;
+  if (el.isContentEditable || el.tagName === 'TEXTAREA') return true;
+  return el.tagName === 'INPUT' && ESCREVER.test(el.type || 'text');
+}
+
+// Quem chegou a um botão pelo Tab, e quem lá ficou de um clique. O
+// `:focus-visible` não serve: o Chromium passa a dá-lo a QUALQUER foco assim
+// que se carrega numa tecla, e o espaço deixava de pausar depois de um clique.
+const focadosPeloTeclado = new WeakSet();
+let ultimoFoiTeclado = false;
+document.addEventListener('keydown', (e) => { if (e.key === 'Tab') ultimoFoiTeclado = true; }, true);
+document.addEventListener('pointerdown', () => { ultimoFoiTeclado = false; }, true);
+document.addEventListener('focusin', (e) => {
+  if (ultimoFoiTeclado) focadosPeloTeclado.add(e.target);
+  else focadosPeloTeclado.delete(e.target);
+});
+
 document.addEventListener('keydown', (e) => {
-  if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+  const alvo = e.target;
+  // Ctrl, Cmd e Alt são do sistema: Ctrl+C copia, Ctrl+A escolhe tudo, Ctrl+D
+  // guarda a página. Com eles carregados, nenhum atalho daqui pode disparar.
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  // O Esc fecha a janela aberta mesmo com o cursor numa caixa de texto dela:
+  // quem está a escrever o título do clipe também tem de poder sair.
+  if (e.key === 'Escape' && !$('modalAjuda').hidden) { alternarAjuda(false); return; }
+  if (e.key === 'Escape' && !$('modalClipe').hidden) { fecharClipe(); return; }
+  if (ondeSeEscreve(alvo)) return;
   // O ponto de interrogação abre a lista dos atalhos, e o Esc fecha-a. Não
   // acrescenta comportamento nenhum: torna descobrível o que já existia.
   if (!$('modalAjuda').hidden) {
-    if (e.key === 'Escape' || e.key === '?') alternarAjuda(false);
+    if (e.key === '?') alternarAjuda(false);
     return;
   }
   if (e.key === '?') { alternarAjuda(true); return; }
+  // Com a janela do clipe aberta, o teclado é dela: o resto não pode andar com
+  // o tempo por baixo do que se está a cortar.
+  if (!$('modalClipe').hidden) return;
   const passo = e.shiftKey ? 10_000 : 1000;
-  // Com a janela do clipe aberta, o teclado é dela: Esc fecha, e o resto não
-  // pode andar com o tempo por baixo do que se está a cortar.
-  if (!$('modalClipe').hidden) {
-    if (e.key === 'Escape') fecharClipe();
-    return;
+  // Pela letra e não pelo carácter: com Shift (ou o Caps Lock) o J chega como
+  // 'J' e a vírgula como '<', e o "com Shift, 10 s" da ajuda não fazia nada.
+  const tecla = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  const virgula = e.code === 'Comma' || e.key === ',';
+  const ponto = e.code === 'Period' || e.key === '.';
+  // Um botão ou um sumário a que se chegou pelo Tab: o espaço carrega-o, como
+  // em qualquer página. Só o foco que ficou de um clique de rato (sem anel)
+  // deixa o espaço pausar, senão o Pausar deixava de funcionar depois de
+  // carregar num botão qualquer.
+  const tabulado = focadosPeloTeclado.has(alvo)
+    && alvo.matches('button, summary, a[href], [role="button"], input, select');
+  // As setas num cursor ou num seletor são dele: mudam o valor ou a escolha.
+  const cursor = (alvo?.tagName === 'INPUT' && alvo.type === 'range') || alvo?.tagName === 'SELECT';
+  // Antes de haver noite não há nada para parar nem para andar: a pausa ficava
+  // guardada e a primeira noite abria parada, e as setas rebentavam.
+  const haNoite = Boolean(estado.janela) && estado.linhas.length > 0;
+  if (e.key === ' ') {
+    if (tabulado || !haNoite || alvo?.type === 'checkbox') return;
+    e.preventDefault(); alternarPausa(); return;
   }
-  if (e.key === 'c' || e.key === 'C') $('clipar').click();
-  if (e.key === ' ') { e.preventDefault(); alternarPausa(); }
-  if (e.key === 'm' || e.key === 'M') $('marcarKill').click();
-  if (e.key === 'i' || e.key === 'I') $('marcarIn').click();
-  if (e.key === 'o' || e.key === 'O') $('marcarOut').click();
-  // Andar à mão desliga a prévia, como os botões de saltar.
-  if (e.key === 'j' || e.key === 'J' || e.key === 'ArrowLeft') { largarPrevia(); irPara(estado.agoraMs - passo); }
-  if (e.key === 'l' || e.key === 'L' || e.key === 'ArrowRight') { largarPrevia(); irPara(estado.agoraMs + passo); }
+  if (!haNoite) return;
+  // Num seletor a letra também escolhe a opção que começa por ela: o A saltava
+  // para "a noite toda" ao mesmo tempo que recuava. A letra que é atalho fica
+  // só para o atalho.
+  if (alvo?.tagName === 'SELECT' && /^[cmiojlad]$/.test(tecla)) e.preventDefault();
+  if (tecla === 'c') $('clipar').click();
+  if (tecla === 'm') $('marcarKill').click();
+  if (tecla === 'i') $('marcarIn').click();
+  if (tecla === 'o') $('marcarOut').click();
+  // Andar à mão desliga a prévia, como os botões de saltar. As setas num
+  // cursor são do cursor: andavam as duas coisas ao mesmo tempo.
+  const setas = !cursor && (e.key === 'ArrowLeft' || e.key === 'ArrowRight');
+  if (tecla === 'j' || (setas && e.key === 'ArrowLeft')) { largarPrevia(); irPara(estado.agoraMs - passo); }
+  if (tecla === 'l' || (setas && e.key === 'ArrowRight')) { largarPrevia(); irPara(estado.agoraMs + passo); }
   // O ângulo em foco anda sozinho: alinhar à vista, sem tirar a mão do teclado.
-  if (e.key === ',' && estado.focos[0]) empurrar(estado.focos[0], -passo);
-  if (e.key === '.' && estado.focos[0]) empurrar(estado.focos[0], passo);
+  if (virgula && estado.focos[0]) empurrar(estado.focos[0], -passo);
+  if (ponto && estado.focos[0]) empurrar(estado.focos[0], passo);
   // O A e o D são a mão esquerda: três segundos por toque, e uma corrida se
   // ficarem carregados. É a mesma mão que fica no teclado enquanto a outra
   // está no rato — e três segundos é o passo de apurar sem passar por cima
   // da kill, que é o mesmo dos botões ‹3s / 3s›.
-  if (e.key === 'a' || e.key === 'A') { e.preventDefault(); comecarArrasto(-1); }
-  if (e.key === 'd' || e.key === 'D') { e.preventDefault(); comecarArrasto(1); }
+  if (tecla === 'a') { e.preventDefault(); comecarArrasto(-1); }
+  if (tecla === 'd') { e.preventDefault(); comecarArrasto(1); }
 });
 
 // ── segurar o A ou o D ──────────────────────────────────────────────────────
