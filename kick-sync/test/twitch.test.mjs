@@ -8,7 +8,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  procurarCanais, vodsDoCanal, pecaDoVod, enderecoDoPlayer, CLIENTE,
+  procurarCanais, vodsDoCanal, pecaDoVod, enderecoDoPlayer, CLIENTE, loginDoCanal, tempoDoPlayer,
 } from '../site/twitch.js';
 import { linhaDoCanal, onde, janelaComum } from '../site/relogio.js';
 import { agruparPorNoite } from '../site/noites.js';
@@ -159,4 +159,21 @@ test('o endereco do player leva o instante no formato que ele le', () => {
 test('um instante negativo ou invalido nao vai parar ao endereco', () => {
   assert.equal(new URL(enderecoDoPlayer('1', -50, { pai: 'x' })).searchParams.get('time'), '0h0m0s');
   assert.equal(new URL(enderecoDoPlayer('1', NaN, { pai: 'x' })).searchParams.get('time'), '0h0m0s');
+});
+
+// O que ele cola na caixa nem sempre e um login: um endereco copiado da barra,
+// um @, ou um nome com uma aspa a mais. O slug da pagina tem de ser o login.
+test('o login sai de um endereço, de um @ ou de um nome com lixo', () => {
+  assert.equal(loginDoCanal('https://www.twitch.tv/Tchubi'), 'tchubi');
+  assert.equal(loginDoCanal('twitch.tv/amigo?sr=a'), 'amigo');
+  assert.equal(loginDoCanal('@Amigo '), 'amigo');
+  assert.equal(loginDoCanal('tchubi"'), 'tchubi');
+  assert.equal(loginDoCanal('   '), '');
+});
+
+// O formato que a pagina passa ao Twitch.Player e o mesmo do endereco.
+test('o instante para o player vai no formato XhYmZs', () => {
+  assert.equal(tempoDoPlayer(1200), '0h20m0s');
+  assert.equal(tempoDoPlayer(3725.9), '1h2m5s');
+  assert.equal(tempoDoPlayer(-3), '0h0m0s');
 });

@@ -56,7 +56,7 @@ const VODS = {
   amigo: [{ id: '222', title: 'noite', publishedAt: new Date(T + 1_200_000).toISOString(), lengthSeconds: 3600 }],
 };
 
-async function twitchFalsa(pagina, { vods = VODS } = {}) {
+async function twitchFalsa(pagina, { vods = VODS, semEmbed = false } = {}) {
   const pedidos = { gql: 0, embed: 0 };
 
   await pagina.route('https://gql.twitch.tv/**', async (rota) => {
@@ -80,16 +80,21 @@ async function twitchFalsa(pagina, { vods = VODS } = {}) {
   // Um Twitch.Player falso que apenas ANOTA o que lhe mandaram fazer.
   await pagina.route('https://player.twitch.tv/js/embed/v1.js', async (rota) => {
     pedidos.embed++;
+    // Um bloqueador de anuncios ou uma rede de empresa: o script nunca chega.
+    if (semEmbed) return rota.abort();
     return rota.fulfill({
       contentType: 'text/javascript',
       body: `
         window.__players = [];
         window.Twitch = { Player: function (id, opcoes) {
-          const eu = { id, opcoes, saltos: [], tocou: 0, parou: 0, mudo: [] };
+          const eu = { id, opcoes, saltos: [], videos: [], tocou: 0, parou: 0, mudo: [] };
           window.__players.push(eu);
+          // Como o player a serio: o iframe leva a largura e a altura pedidas.
           document.getElementById(id).innerHTML =
-            '<iframe title="' + opcoes.video + '" src="about:blank"></iframe>';
+            '<iframe title="' + opcoes.video + '" src="about:blank" width="' + opcoes.width
+            + '" height="' + opcoes.height + '" style="border:0;display:block"></iframe>';
           this.seek = (s) => eu.saltos.push(s);
+          this.setVideo = (v, s) => eu.videos.push([v, s]);
           this.play = () => { eu.tocou++; };
           this.pause = () => { eu.parou++; };
           this.setMuted = (m) => eu.mudo.push(m);
@@ -139,9 +144,10 @@ test('cada canal salta para o SEU segundo, e não para o mesmo número',
     await p.waitForSelector('.tile', { timeout: 15000 });
 
     // A janela comum comeca quando o segundo entrou: T+20min. Nesse instante o
-    // primeiro VOD ja vai em 1200 s e o segundo em 0.
+    // primeiro VOD ja vai em 1200 s e o segundo em 0. No formato que a Twitch
+    // documenta para o `time` do embed (XhYmZs), o mesmo do enderecoDoPlayer.
     const inicio = await p.evaluate(() => window.__players.map((x) => x.opcoes.time));
-    assert.deepEqual(inicio, ['1200s', '0s']);
+    assert.deepEqual(inicio, ['0h20m0s', '0h0m0s']);
 
     await p.click('#mais1m');
     const saltos = await p.evaluate(() => window.__players.map((x) => x.saltos.at(-1)));
@@ -304,4 +310,200 @@ test('os botões de tempo dizem para que lado andam, em todas as línguas',
       assert.equal(await p.evaluate(() => document.documentElement.lang), idioma === 'pt' ? 'pt-BR' : idioma);
       await p.close();
     }
+  });
+
+// ── o relogio partilhado e os casos que a primeira versao nao via ───────────
+
+const esperar = (ms) => new Promise((ok) => setTimeout(ok, ms));
+const segundosDoRelogio = async (p) => {
+  const [h, m, s] = (await p.locator('#relogio').innerText()).replace('Z', '').split(':').map(Number);
+  return h * 3600 + m * 60 + s;
+};
+
+// Sem relogio a andar, o "+10 s" depois de cinco minutos a ver mandava toda a
+// gente para o inicio mais dez segundos: um recuo de quatro minutos e meio.
+test('a tocar, o relógio anda, e os saltos contam a partir de onde o grupo está',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await twitchFalsa(p);
+    await carregar(p);
+    await p.waitForSelector('.tile', { timeout: 15000 });
+    const antes = await segundosDoRelogio(p);
+
+    await p.click('#tocar');
+    await esperar(2600);
+    const depois = await segundosDoRelogio(p);
+    assert.ok(depois - antes >= 2, `o relógio ficou parado: ${antes} -> ${depois}`);
+
+    await p.click('#mais10s');
+    const salto = await p.evaluate(() => window.__players[0].saltos.at(-1));
+    assert.ok(salto >= 1212, `saltou para ${salto}, como se nunca tivesse tocado`);
+
+    await p.click('#tocar');
+    const parado = await segundosDoRelogio(p);
+    await esperar(1500);
+    assert.equal(await segundosDoRelogio(p), parado, 'em pausa o relógio não anda');
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+// Um streamer que caiu e voltou tem dois VODs na mesma noite. O player tem de
+// trocar de video, e nao saltar para o segundo do VOD seguinte dentro do primeiro.
+test('um canal com dois VODs na noite troca de vídeo ao passar para o segundo',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await twitchFalsa(p, { vods: {
+      a: [
+        { id: '200', title: 'antes de cair', publishedAt: new Date(T).toISOString(), lengthSeconds: 3700 },
+        { id: '201', title: 'voltei', publishedAt: new Date(T + 3_700_000).toISOString(), lengthSeconds: 3600 },
+      ],
+      b: [{ id: '300', title: 'noite', publishedAt: new Date(T).toISOString(), lengthSeconds: 7200 }],
+    } });
+    await carregar(p, 'a\nb');
+    await p.waitForSelector('.tile', { timeout: 15000 });
+    for (let i = 0; i < 70; i++) await p.click('#mais1m');
+
+    const a = await p.evaluate(() => window.__players[0]);
+    // Trocou uma vez, ao passar o fim do 200 (minuto 62 = 20 s do 201), e
+    // dai em diante salta dentro do 201: 70 min da noite sao 500 s dele.
+    assert.deepEqual(a.videos, [['v201', 20]], 'o player do canal a ficou no primeiro VOD');
+    assert.equal(a.saltos.at(-1), 500);
+    assert.ok(!a.saltos.includes(4200));
+    assert.equal(await p.evaluate(() => window.__players[1].saltos.at(-1)), 4200);
+    assert.equal(await p.locator('.tile.fora').count(), 0);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+test('depois de "nenhum VOD", o botão Carregar volta a funcionar',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await twitchFalsa(p, { vods: {} });
+    await carregar(p, 'nomeerrado');
+    await p.waitForFunction(() => document.getElementById('estado').textContent.length > 3,
+      null, { timeout: 15000 });
+    assert.equal(await p.locator('#carregar').isDisabled(), false);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+test('escolher uma sugestão não apaga os canais já escritos',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await twitchFalsa(p, { vods: { novo: VODS.tchubi } });
+    await p.goto(`http://127.0.0.1:${PORTA}/twitch.html`, { waitUntil: 'networkidle' });
+    const doze = Array.from({ length: 12 }, (_, i) => `time${i}`);
+    await p.fill('#canais', doze.join('\n'));
+    await p.fill('#procurar', 'novo');
+    await p.click('#botaoProcurar');
+    await p.click('.sug[data-slug="novo"]');
+    const linhas = (await p.inputValue('#canais')).split('\n');
+    assert.deepEqual(linhas, [...doze, 'novo']);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+// Uma equipa de quatro com um nome mal escrito mostrava tres POVs sem dizer porque.
+test('diz quem ficou de fora: o nome que não existe e o que passou do limite',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await twitchFalsa(p);
+    await carregar(p, 'tchubi\nnaoexiste\namigo');
+    await p.waitForSelector('.tile', { timeout: 15000 });
+    assert.match(await p.locator('#estado').innerText(), /naoexiste/);
+
+    const muitos = ['tchubi', ...Array.from({ length: 7 }, (_, i) => `vazio${i}`), 'amigo'];
+    await p.fill('#canais', muitos.join('\n'));
+    await p.click('#carregar');
+    await p.waitForFunction(() => /amigo/.test(document.getElementById('estado').textContent),
+      null, { timeout: 15000 });
+    assert.match(await p.locator('#estado').innerText(), /8/);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+test('um nome com aspas ou colado como endereço não parte a grelha',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await twitchFalsa(p);
+    await carregar(p, 'tchubi"\nhttps://www.twitch.tv/amigo');
+    await p.waitForSelector('.tile', { timeout: 15000 });
+    assert.equal(await p.locator('.tile').count(), 2);
+    assert.deepEqual(await p.locator('.tile').evaluateAll((ts) => ts.map((x) => x.dataset.slug)),
+      ['tchubi', 'amigo']);
+    assert.equal(await p.locator('#estado.mau').count(), 0);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+// A Twitch pede pelo menos 400x300 para o embed, e a barra de controlo do
+// player fica em baixo: um quadro cortado esconde o play e o volume.
+test('cada player tem tamanho de gente e não fica cortado pelo cabeçalho',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await p.setViewportSize({ width: 1440, height: 900 });
+    const vods = Object.fromEntries(Array.from({ length: 8 }, (_, i) => [`canal${i}`,
+      [{ id: String(500 + i), title: 'n', publishedAt: new Date(T).toISOString(), lengthSeconds: 3600 }]]));
+    await twitchFalsa(p, { vods });
+    await carregar(p, Object.keys(vods).join('\n'));
+    await p.waitForFunction(() => document.querySelectorAll('.tile iframe').length === 8, null, { timeout: 15000 });
+    const medidas = await p.locator('.tile').evaluateAll((ts) => ts.map((tile) => {
+      const a = tile.getBoundingClientRect();
+      const f = tile.querySelector('iframe').getBoundingClientRect();
+      return { w: f.width, h: f.height, sobra: a.bottom - f.bottom };
+    }));
+    for (const m of medidas) {
+      assert.ok(m.w >= 400 && m.h >= 225, `player de ${m.w}x${m.h}`);
+      assert.ok(m.sobra >= 0, `o fundo do player ficou ${-m.sobra}px cortado`);
+    }
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+test('se o player da Twitch não carregou, diz isso e não culpa os nomes',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await twitchFalsa(p, { semEmbed: true });
+    await carregar(p);
+    await p.waitForFunction(() => document.getElementById('estado').textContent.length > 3,
+      null, { timeout: 15000 });
+    const estado = await p.locator('#estado').innerText();
+    assert.match(estado, /player\.twitch\.tv/);
+    assert.doesNotMatch(estado, /Confira os nomes/);
+    assert.equal(await p.locator('#palco').isVisible(), false);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+test('mudar de língua a tocar não recria os players e traduz o botão e as noites',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await twitchFalsa(p);
+    await carregar(p);
+    await p.waitForSelector('.tile', { timeout: 15000 });
+    await p.click('#tocar');
+    await p.selectOption('#idioma', 'en');
+    assert.equal(await p.evaluate(() => window.__players.length), 2, 'os iframes foram todos recarregados');
+    assert.equal((await p.locator('#tocar').innerText()).trim(), 'Pause');
+    assert.match(await p.locator('.tile .ligarSom + span').first().innerText(), /sound/);
+    assert.match(await p.locator('#noites option').first().innerText(), /2 channels/);
+    await p.click('#tocar');
+    assert.equal((await p.locator('#tocar').innerText()).trim(), 'Play');
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+test('um canal que volta ao ar a meio da reprodução também toca',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await twitchFalsa(p);
+    await carregar(p);
+    await p.waitForSelector('.tile', { timeout: 15000 });
+    for (let i = 0; i < 12; i++) await p.click('#menos1m');
+    await p.click('#tocar');
+    assert.deepEqual(await p.evaluate(() => window.__players.map((x) => x.tocou)), [1, 0]);
+    for (let i = 0; i < 12; i++) await p.click('#mais1m');
+    assert.ok(await p.evaluate(() => window.__players[1].tocou) >= 1, 'o b ficou parado enquanto o a tocava');
+    assert.deepEqual(erros, []);
+    await p.close();
   });

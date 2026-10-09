@@ -13,12 +13,20 @@
  * segmento so.
  */
 import { t, aplicarIdioma, definirIdioma, idiomaActual, idiomaDoBrowser, IDIOMAS } from './idiomas.js';
-import { procurarCanais, vodsDoCanal, pecaDoVod, enderecoDoPlayer } from './twitch.js';
+import { procurarCanais, vodsDoCanal, pecaDoVod, loginDoCanal, tempoDoPlayer } from './twitch.js';
 import { linhaDoCanal, onde, janelaComum, quantosNoAr } from './relogio.js';
 import { agruparPorNoite, rotuloDaNoite } from './noites.js';
 import { escapar } from './escapar.js';
 
 const $ = (id) => document.getElementById(id);
+// Quantos players cabem de uma vez. Cada um e um iframe com video a correr, e
+// a partir daqui o browser de um portatil comum ja nao aguenta.
+const MAX_CANAIS = 8;
+// De quanto em quanto tempo o relogio partilhado anda, e a partir de quantos
+// segundos de diferenca um player e puxado de volta para o grupo.
+const TIQUE_MS = 500;
+const DERIVA_S = 3;
+
 const estado = {
   canais: [],        // {slug, vods:[...]}
   noites: [],
@@ -27,7 +35,12 @@ const estado = {
   janela: null,
   agoraMs: 0,
   players: new Map(),
+  // O que cada player mostra agora: {estado, video}. E o que deixa o relogio
+  // agir so quando um canal muda (entra no ar, sai, troca de VOD).
+  vistos: new Map(),
   aTocar: false,
+  tique: null,
+  ultimoTique: 0,
 };
 
 const doisDigitos = (n) => String(n).padStart(2, '0');
@@ -36,8 +49,12 @@ const relogioCurto = (ms) => {
   return `${doisDigitos(d.getHours())}:${doisDigitos(d.getMinutes())}:${doisDigitos(d.getSeconds())}`;
 };
 
-const listaDeCanais = () => $('canais').value.split('\n').map((s) => s.trim().toLowerCase())
-  .filter(Boolean).filter((s, i, a) => a.indexOf(s) === i).slice(0, 8);
+// Todos os canais escritos, ja como logins, sem repetidos e sem limite: a
+// caixa de texto e dele, e nada aqui a pode reescrever a partir de uma copia
+// cortada.
+const todosOsCanais = () => $('canais').value.split('\n').map(loginDoCanal)
+  .filter(Boolean).filter((s, i, a) => a.indexOf(s) === i);
+const tileDe = (slug) => $('grade').querySelector(`.tile[data-slug="${CSS.escape(slug)}"]`);
 
 // ── procurar ────────────────────────────────────────────────────────────────
 
@@ -54,8 +71,13 @@ async function procurar() {
       : `<span class="nota">${t('procurar.nada')}</span>`;
     for (const b of $('sugestoes').querySelectorAll('.sug')) {
       b.onclick = () => {
-        const ja = listaDeCanais();
-        if (!ja.includes(b.dataset.slug)) $('canais').value = [...ja, b.dataset.slug].join('\n');
+        // Acrescentar uma linha, e nao reescrever a caixa: reescrita a partir
+        // da lista cortada aos oito, apagava os canais que ele ja tinha posto.
+        const slug = b.dataset.slug;
+        if (!todosOsCanais().includes(slug)) {
+          const ja = $('canais').value.replace(/\s+$/, '');
+          $('canais').value = ja ? `${ja}\n${slug}` : slug;
+        }
         $('sugestoes').innerHTML = '';
         $('procurar').value = '';
       };
@@ -68,8 +90,10 @@ async function procurar() {
 // ── carregar os VODs ────────────────────────────────────────────────────────
 
 async function carregar() {
-  const slugs = listaDeCanais();
-  if (!slugs.length) { $('estado').textContent = t('tw.nada'); return; }
+  const todos = todosOsCanais();
+  if (!todos.length) { $('estado').textContent = t('tw.nada'); return; }
+  const slugs = todos.slice(0, MAX_CANAIS);
+  const deFora = todos.slice(MAX_CANAIS);
   $('carregar').disabled = true;
   $('estado').classList.remove('mau');
   $('estado').textContent = t('tw.aCarregar');
@@ -87,30 +111,48 @@ async function carregar() {
     }));
     estado.canais = canais;
 
+    // Quem ficou de fora diz-se sempre: uma equipa de quatro com um nome mal
+    // escrito via tres POVs e nunca sabia porque.
+    const maus = canais.filter((c) => c.erro);
+    const vazios = canais.filter((c) => !c.erro && !c.vods.length);
+    const avisos = [];
+    if (maus.length) avisos.push(t('tw.erro', { erro: maus.map((c) => `${c.slug}: ${c.erro}`).join(' · ') }));
+    if (vazios.length) avisos.push(t('tw.semVodsDe', { lista: vazios.map((c) => c.slug).join(', ') }));
+    if (deFora.length) avisos.push(t('tw.deFora', { n: MAX_CANAIS, lista: deFora.join(', ') }));
+
     const paraNoites = canais.map((c) => ({
       slug: c.slug,
       vods: c.vods.map((v) => ({ ...v, inicioApi: v.inicio, duracaoMs: v.duracaoS * 1000 })),
     }));
     estado.noites = agruparPorNoite(paraNoites);
     if (!estado.noites.length) {
-      const maus = canais.filter((c) => c.erro);
       $('estado').classList.add('mau');
-      $('estado').textContent = maus.length
-        ? t('tw.erro', { erro: maus.map((c) => `${c.slug}: ${c.erro}`).join(' · ') })
-        : t('tw.semVods');
+      const porque = maus.length ? avisos[0] : t('tw.semVods');
+      $('estado').textContent = deFora.length ? `${porque} · ${avisos.at(-1)}` : porque;
       return;
     }
 
     $('painelNoite').hidden = false;
-    $('noites').innerHTML = estado.noites.map((n, i) => `<option value="${i}">`
-      + `${rotuloDaNoite(n)}</option>`).join('');
-    $('estado').textContent = '';
+    desenharNoites();
+    $('estado').textContent = avisos.join(' · ');
     abrirNoite(0);
   } catch (e) {
     $('estado').classList.add('mau');
     $('estado').textContent = t('tw.erro', { erro: e.message });
+  } finally {
+    // Em todos os caminhos, tambem no "nenhum VOD": senao ele nao podia
+    // corrigir o nome e tentar outra vez sem recarregar a pagina.
+    $('carregar').disabled = false;
   }
-  $('carregar').disabled = false;
+}
+
+// O rotulo de cada noite na lingua escolhida; volta a ser desenhado quando
+// ela muda de lingua.
+function desenharNoites() {
+  const escolhida = $('noites').value;
+  $('noites').innerHTML = estado.noites.map((n, i) => `<option value="${i}">`
+    + `${escapar(rotuloDaNoite(n, { t }))}</option>`).join('');
+  if (escolhida) $('noites').value = escolhida;
 }
 
 // ── a noite escolhida ───────────────────────────────────────────────────────
@@ -135,6 +177,15 @@ function abrirNoite(i) {
   $('quemNaNoite').textContent = estado.linhas.map((l) => l.slug).join(' · ');
   if (!estado.janela) { $('palco').hidden = true; return; }
 
+  // Sem o script do player (um bloqueador de anuncios, uma rede de empresa)
+  // nao ha nada para mostrar, e a culpa nao e dos nomes dos canais.
+  if (!window.Twitch?.Player) {
+    $('palco').hidden = true;
+    $('estado').classList.add('mau');
+    $('estado').textContent = t('tw.semPlayer');
+    return;
+  }
+
   $('palco').hidden = false;
   estado.agoraMs = estado.janela.sobreposicaoInicio ?? estado.janela.inicio;
   montarGrade();
@@ -142,10 +193,12 @@ function abrirNoite(i) {
 }
 
 function fecharPlayers() {
+  pararRelogio();
   for (const p of estado.players.values()) {
     try { p.pause(); } catch { /* o iframe ja pode ter ido */ }
   }
   estado.players.clear();
+  estado.vistos.clear();
   $('grade').innerHTML = '';
 }
 
@@ -159,26 +212,27 @@ function fecharPlayers() {
 function montarGrade() {
   $('grade').innerHTML = estado.linhas.map((l) => `<div class="tile tw" data-slug="${escapar(l.slug)}">`
     + `<div class="cabeca"><b>${escapar(l.slug)}</b>`
-    + `<label class="pequeno"><input type="checkbox" class="ligarSom"> ${t('tw.mudo')}</label>`
+    + `<label class="pequeno"><input type="checkbox" class="ligarSom"> <span data-t="tw.mudo">${t('tw.mudo')}</span></label>`
     + '</div>'
     + `<div class="quadro" id="pl-${escapar(l.slug)}"></div>`
     + '<span class="nota estadoTile"></span></div>').join('');
 
   for (const l of estado.linhas) {
     const r = onde(l, estado.agoraMs);
+    const video = r.peca?.vod?.id ?? l.pecas[0].vod.id;
     const player = new window.Twitch.Player(`pl-${l.slug}`, {
-      video: `v${r.peca?.vod?.id ?? l.pecas[0].vod.id}`,
+      video: `v${video}`,
       parent: [location.hostname],
       width: '100%',
       height: '100%',
       autoplay: false,
       muted: true,
-      time: r.estado === 'toca' ? `${Math.floor(r.tempoS)}s` : '0s',
+      time: tempoDoPlayer(r.estado === 'toca' ? r.tempoS : 0),
     });
     estado.players.set(l.slug, player);
+    estado.vistos.set(l.slug, { estado: r.estado, video });
 
-    const tile = $('grade').querySelector(`.tile[data-slug="${l.slug}"]`);
-    tile.querySelector('.ligarSom').onchange = (e) => {
+    tileDe(l.slug).querySelector('.ligarSom').onchange = (e) => {
       try { player.setMuted(!e.target.checked); } catch { /* ainda nao esta pronto */ }
     };
   }
@@ -187,34 +241,49 @@ function montarGrade() {
 // ── o relogio partilhado ────────────────────────────────────────────────────
 
 /**
- * Levar toda a gente ao mesmo instante.
+ * Pôr cada player de acordo com `estado.agoraMs`.
  *
- * Cada canal salta para o SEU segundo, que nao e o mesmo numero para todos: um
- * comecou a transmitir vinte minutos depois do outro. E quem nao estava no ar
+ * Cada canal vai para o SEU segundo, que nao e o mesmo numero para todos: um
+ * comecou a transmitir vinte minutos depois do outro. Quem nao estava no ar
  * naquele instante diz isso, em vez de mostrar o primeiro frame do VOD como se
- * fosse o momento certo.
+ * fosse o momento certo. E um canal com dois VODs na noite (caiu e voltou)
+ * troca de video: saltar para o segundo do VOD seguinte dentro do primeiro
+ * mostrava outro momento da noite com ar de sincronizado.
+ *
+ * Com `saltar`, todos vao ao instante (foi ele que mexeu no tempo). Sem ele,
+ * so age em quem mudou: e o que o relogio faz a cada tique enquanto toca.
  */
-function irPara(ms) {
-  if (!estado.janela) return;
-  estado.agoraMs = Math.min(Math.max(ms, estado.janela.inicio), estado.janela.fim);
-
+function aplicarInstante(saltar) {
   for (const l of estado.linhas) {
     const r = onde(l, estado.agoraMs);
-    const tile = $('grade').querySelector(`.tile[data-slug="${l.slug}"]`);
+    const tile = tileDe(l.slug);
     if (!tile) continue;
     const nota = tile.querySelector('.estadoTile');
     const player = estado.players.get(l.slug);
-    if (r.estado === 'toca') {
+    const antes = estado.vistos.get(l.slug) || {};
+    const toca = r.estado === 'toca';
+    const video = toca ? r.peca.vod.id : antes.video;
+    if (toca) {
       nota.textContent = '';
       tile.classList.remove('fora');
-      try { player?.seek(r.tempoS); } catch { /* o iframe ainda nao respondeu */ }
+      const trocou = video !== antes.video;
+      try {
+        if (trocou) player?.setVideo(`v${video}`, Math.floor(r.tempoS));
+        else if (saltar) player?.seek(r.tempoS);
+        if (estado.aTocar && (saltar || trocou || antes.estado !== 'toca')) player?.play();
+      } catch { /* o iframe ainda nao respondeu */ }
     } else {
       tile.classList.add('fora');
       nota.textContent = t('tw.foraDoAr');
-      try { player?.pause(); } catch { /* idem */ }
+      if (saltar || antes.estado === 'toca') {
+        try { player?.pause(); } catch { /* idem */ }
+      }
     }
+    estado.vistos.set(l.slug, { estado: r.estado, video });
   }
+}
 
+function desenharRelogio() {
   $('relogio').textContent = `${relogioCurto(estado.agoraMs)}`;
   const total = estado.linhas.length;
   $('noAr').textContent = t('tempo.angulos', { n: quantosNoAr(estado.linhas, estado.agoraMs), total });
@@ -222,9 +291,71 @@ function irPara(ms) {
   $('barra').value = largura ? Math.round(((estado.agoraMs - estado.janela.inicio) / largura) * 1000) : 0;
 }
 
+/** Levar toda a gente ao mesmo instante. */
+function irPara(ms) {
+  if (!estado.janela) return;
+  estado.agoraMs = Math.min(Math.max(ms, estado.janela.inicio), estado.janela.fim);
+  aplicarInstante(true);
+  desenharRelogio();
+}
+
+/**
+ * Quem ficou para tras (a carregar, ou parado a mao dentro do iframe) volta
+ * ao grupo. So quando o player sabe dizer onde esta.
+ */
+function corrigirDeriva() {
+  for (const l of estado.linhas) {
+    const r = onde(l, estado.agoraMs);
+    const player = estado.players.get(l.slug);
+    if (r.estado !== 'toca' || typeof player?.getCurrentTime !== 'function') continue;
+    try {
+      const vai = player.getCurrentTime();
+      if (Number.isFinite(vai) && vai > 0 && Math.abs(vai - r.tempoS) > DERIVA_S) player.seek(r.tempoS);
+      if (player.isPaused?.() === true) player.play();
+    } catch { /* idem */ }
+  }
+}
+
+// O relogio do grupo anda pelo tempo real enquanto toca. Antes so mudava nos
+// botoes, e o "+10 s" depois de cinco minutos a ver era um recuo de quase cinco.
+function tique() {
+  const agora = performance.now();
+  estado.agoraMs += agora - estado.ultimoTique;
+  estado.ultimoTique = agora;
+  if (estado.agoraMs >= estado.janela.fim) {
+    estado.agoraMs = estado.janela.fim;
+    alternarTocar();
+  } else {
+    aplicarInstante(false);
+    corrigirDeriva();
+  }
+  desenharRelogio();
+}
+
+function pararRelogio() {
+  clearInterval(estado.tique);
+  estado.tique = null;
+  if (estado.aTocar) { estado.aTocar = false; rotularTocar(); }
+}
+
+// O texto vai para o <span data-t> do botao, e nao para o botao: assim o
+// simbolo fica, e a mudanca de lingua traduz o rotulo certo.
+function rotularTocar() {
+  const s = $('tocar').querySelector('[data-t]');
+  s.dataset.t = estado.aTocar ? 'tw.parar' : 'tw.tocar';
+  s.textContent = t(s.dataset.t);
+}
+
 function alternarTocar() {
+  if (!estado.janela) return;
   estado.aTocar = !estado.aTocar;
-  $('tocar').textContent = t(estado.aTocar ? 'tw.parar' : 'tw.tocar');
+  rotularTocar();
+  clearInterval(estado.tique);
+  estado.tique = null;
+  if (estado.aTocar) {
+    estado.ultimoTique = performance.now();
+    estado.tique = setInterval(tique, TIQUE_MS);
+  }
   for (const l of estado.linhas) {
     const player = estado.players.get(l.slug);
     // So quem esta mesmo no ar: mandar tocar um VOD que nao cobre este
@@ -239,7 +370,14 @@ function alternarTocar() {
 $('botaoProcurar').onclick = procurar;
 $('procurar').onkeydown = (e) => { if (e.key === 'Enter') procurar(); };
 $('carregar').onclick = carregar;
-$('noites').onchange = () => abrirNoite(Number($('noites').value));
+$('noites').onchange = () => {
+  try {
+    abrirNoite(Number($('noites').value));
+  } catch (e) {
+    $('estado').classList.add('mau');
+    $('estado').textContent = t('tw.erro', { erro: e.message });
+  }
+};
 $('tocar').onclick = alternarTocar;
 for (const [id, d] of [['menos1m', -60_000], ['menos10s', -10_000], ['mais10s', 10_000], ['mais1m', 60_000]]) {
   $(id).onclick = () => irPara(estado.agoraMs + d);
@@ -256,7 +394,10 @@ $('idioma').onchange = () => {
   definirIdioma($('idioma').value);
   try { localStorage.setItem('replay.idioma', idiomaActual()); } catch { /* janela privada */ }
   aplicarIdioma();
-  if (estado.linhas.length) { montarGrade(); irPara(estado.agoraMs); }
+  // Sem recriar os players: isso recarregava todos os iframes e parava o que
+  // estava a tocar. So os textos mudam.
+  if (estado.noites.length) desenharNoites();
+  if (estado.janela && estado.linhas.length) { aplicarInstante(false); desenharRelogio(); }
 };
 
 let guardadoIdioma = null;
