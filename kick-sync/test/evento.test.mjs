@@ -187,7 +187,19 @@ test('quem chega sem elenco abre um exemplo com o Rust que está ao vivo',
     await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
     await p.click('#exemploAoVivo');
     await p.waitForFunction(() => window.__evento?.mapa, null, { timeout: 15000 });
-    assert.match(await p.locator('#nomeEvento').innerText(), /Rust ao vivo agora/);
+    assert.match(await p.locator('#nomeEvento').innerText(), /^2 canais de Rust ao vivo agora, sem times$/);
+    // Sem times, o grupo de toda a gente não fecha: clicar no cabeçalho deixava o evento numa linha só.
+    const cab = await p.evaluate(() => {
+      const ev = window.__evento;
+      const rolo = document.getElementById('mapaRolo');
+      const l = ev.mapa.linhas.find((x) => x.tipo === 'time');
+      const caixa = rolo.getBoundingClientRect();
+      return l ? { x: caixa.left + 40, y: caixa.top + l.y - ev.topo + l.altura / 2 } : null;
+    });
+    assert.ok(cab, 'sem cabeçalho do grupo');
+    await p.mouse.click(cab.x, cab.y);
+    const n = await p.evaluate(() => window.__evento.mapa.linhas.filter((l) => l.tipo === 'canal').length);
+    assert.equal(n, 2, 'o grupo sem time fechou');
     const canais = await p.evaluate(() => window.__evento.mapa.linhas.filter((l) => l.tipo === 'canal').map((l) => l.canal));
     assert.deepEqual(canais, ['tchubi', 'outro']);
     assert.deepEqual(erros, []);

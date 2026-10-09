@@ -52,9 +52,9 @@ Ordem: primeiro o que trava o uso no evento. Feito: 1 a 9 (09/10).
     baixar, com o tamanho final. **Feito** (09/10): antes de baixar, a linha do corte diz com quanto o arquivo sai,
     quanto sobra de cada lado e o tamanho, e manda usar o Clipar para o corte exato.
 15. **"Sem time (24)":** clicar no nome fecha tudo numa linha só e assusta. Sem times, não deixar fechar; e dizer
-    que o exemplo é "24 canais de Rust ao vivo agora, sem times".
+    que o exemplo é "24 canais de Rust ao vivo agora, sem times". **Feito** (09/10).
 16. **Evento com canais que já não estão ao vivo:** já funciona (lê os VODs), mas a tela não diz. Dizer na porta
-    do evento que vale qualquer canal, ao vivo ou não.
+    do evento que vale qualquer canal, ao vivo ou não. **Feito** (09/10).
 17. **Carregar mais picos quando a página está parada**, para a frente e para trás do momento.
 
 ## Ideias

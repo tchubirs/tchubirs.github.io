@@ -325,7 +325,7 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
     if (!achados.length) { $('estadoEvento').textContent = t('evento.semExemplo'); return; }
     $('estadoEvento').textContent = '';
     const soltos = achados.slice(0, EXEMPLO_CANAIS).map((a) => a.slug);
-    await abrirElenco({ nome: t('evento.exemploNome'), times: [], soltos, avisos: [] });
+    await abrirElenco({ nome: t('evento.exemploNome', { n: soltos.length }), times: [], soltos, avisos: [] });
   }
 
   // ── o mapa ─────────────────────────────────────────────────────────────
@@ -459,6 +459,9 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
   function escolher(alvo) {
     if (!alvo) return;
     if (alvo.tipo === 'time' || alvo.tipo === 'resumo') {
+      // Sem times, o grupo "Sem time" é toda a gente: fechá-lo punha o evento inteiro numa linha só, e
+      // isso assustava (o dono, 07/10). Só fecha quando há times à volta.
+      if (alvo.time == null && !ev.elenco?.times.length) return;
       if (ev.abertos.has(alvo.time)) ev.abertos.delete(alvo.time);
       else ev.abertos.add(alvo.time);
       remontar();
