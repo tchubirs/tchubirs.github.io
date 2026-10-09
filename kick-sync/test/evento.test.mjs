@@ -273,6 +273,10 @@ test('escolher um lance lê o chat do time e marca no mapa onde ele explodiu',
     const noite = await p.evaluate(() => ({ agora: window.__estado.agoraMs, focos: window.__estado.focos }));
     assert.ok(Math.abs(noite.agora - (pico - 10_000)) < 2000, 'o vídeo abre 10 s antes do pico');
     assert.deepEqual(noite.focos, ['tchubi']);
+    // Com o vídeo aberto e o mapa recolhido, o zoom do mapa não muda nada na tela: some.
+    assert.equal(await p.locator('#verTudo').isVisible(), false);
+    await p.click('#mostrarMapa');
+    assert.equal(await p.locator('#verTudo').isVisible(), true);
     assert.deepEqual(erros, []);
   });
 

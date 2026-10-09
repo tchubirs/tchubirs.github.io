@@ -2271,6 +2271,7 @@ async function afinarInstante(apanhador, slug, ms, { janelaS = 6, precisaoMs = 2
 const soUmCanal = () => estado.linhas.length < 2;
 
 function pintarMomentos() {
+  $('montagem').classList.toggle('semKills', !estado.momentos.length);
   // Uma prévia de uma kill que já não existe pára aqui. O Remover e o apagar
   // aos molhos tiravam a kill e deixavam o ciclo a tocar, e o botão Parar
   // estava na linha que acabara de sair: a única maneira de o desligar era

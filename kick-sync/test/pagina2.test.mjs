@@ -1824,3 +1824,23 @@ test('escolher quanto tempo a linha mostra encolhe a régua e as faixas',
     assert.deepEqual(erros, []);
     await p.close();
   });
+
+test('só aparece o que serve agora: margens e montagem com kill, limpar com exportação',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 20000 });
+    const visivel = (id) => p.locator(id).isVisible();
+    assert.equal(await visivel('#margens'), false, 'margens sem kill');
+    assert.equal(await visivel('#baixarMontagem'), false, 'exportar montagem sem kill');
+    assert.equal(await visivel('#limparFila'), false, 'limpar sem exportações');
+    await p.click('#marcarKill');
+    await p.waitForSelector('#listaMomentos li[data-ms]');
+    assert.equal(await visivel('#margens'), true);
+    assert.equal(await visivel('#baixarMontagem'), true);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });

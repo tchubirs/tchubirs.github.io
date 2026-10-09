@@ -1550,3 +1550,11 @@ body.mesa:has(#palco:not([hidden])) > #evento { flex: 0 0 auto; margin-bottom: v
   #fecharEvento { min-width: 44px; min-height: 44px; }
   .picosChat .pico { min-height: 44px; min-width: 56px; }
 }
+
+/* ── só o que serve agora ──────────────────────────────────────────────────
+   O dono (07/10): com o mapa fechado (o vídeo aberto e o mapa recolhido) o zoom e o "Evento inteiro" não mudam
+   nada na tela, e isso confunde; as margens e o exportar montagem não servem
+   sem uma kill; o limpar exportações não serve sem exportações. */
+body:has(#palco:not([hidden])) #evento:not(.comMapa) .soComMapa { display: none; }
+#montagem.semKills :is(#margens, .barraSelecao, #baixarMontagem) { display: none; }
+body:not(:has(#fila > li)) #limparFila { display: none; }

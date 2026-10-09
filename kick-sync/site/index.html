@@ -286,10 +286,10 @@
     <span class="espaco"></span>
     <input id="procurarEvento" type="search" autocomplete="off" spellcheck="false" data-t-aria="evento.procurar"
       data-t-ph="evento.procurarPh" placeholder="procurar streamer ou time">
-    <span class="nota" data-t="evento.zoom">Zoom</span>
-    <button id="afastar" class="so-icone" data-t-aria="evento.afastar" data-t-titulo="evento.afastar" title="Ver mais tempo">−</button>
-    <button id="aproximar" class="so-icone" data-t-aria="evento.aproximar" data-t-titulo="evento.aproximar" title="Ver menos tempo, com mais detalhe">+</button>
-    <button id="verTudo" data-t="evento.verTudo">Evento inteiro</button>
+    <span class="nota soComMapa" data-t="evento.zoom">Zoom</span>
+    <button id="afastar" class="soComMapa so-icone" data-t-aria="evento.afastar" data-t-titulo="evento.afastar" title="Ver mais tempo">−</button>
+    <button id="aproximar" class="soComMapa so-icone" data-t-aria="evento.aproximar" data-t-titulo="evento.aproximar" title="Ver menos tempo, com mais detalhe">+</button>
+    <button id="verTudo" class="soComMapa" data-t="evento.verTudo">Evento inteiro</button>
     <button id="mostrarMapa" class="mostrarMapa" aria-expanded="false" data-t="evento.mostrarMapa">Mapa do evento</button>
     <button id="irAoVivo" class="irAoVivo" hidden><svg class="ic ic-p" aria-hidden="true"><use href="#i-tocar"/></svg><span data-t="evento.irAoVivo">Ver ao vivo agora</span></button>
     <button id="partilharEvento"><svg class="ic ic-p" aria-hidden="true"><use href="#i-copiar"/></svg><span id="partilharEventoTexto" data-t="evento.partilharEvento">Copiar link do evento</span></button>
@@ -611,7 +611,7 @@
        de PC: la ela vive na coluna da direita, por baixo dos botoes de salto,
        com a lista a rolar por dentro e o Exportar sempre a vista. No telemovel
        e num ecra baixo fica por baixo de tudo, como sempre esteve. -->
-  <section id="montagem">
+  <section id="montagem" class="semKills">
     <h2 data-t="montagem.titulo">Montagem</h2>
     <!-- As margens vivem fechadas. São quatro caixas de número que se acertam
          uma vez e nunca mais se tocam, e estavam permanentemente ao lado do
