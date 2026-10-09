@@ -445,7 +445,7 @@ test('cada canal baixa sozinho, no seu tamanho, em qualidade maxima',
     await p.waitForSelector('.tile', { timeout: 15000 });
 
     await p.click('#marcarIn');
-    await p.click('#mais3s');                    // o botao de salto, nao 10 toques
+    await p.keyboard.press('Shift+L');            // 10 s de uma vez, nao 10 toques
     await p.click('#marcarOut');
     await p.waitForSelector('#corte:not([hidden])', { timeout: 10000 });
 

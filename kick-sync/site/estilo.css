@@ -680,12 +680,14 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 .saltos { display: grid; grid-template-columns: auto auto 1fr 1fr auto auto; gap: var(--e2); margin-top: var(--e4); }
 .saltos button { min-width: 0; overflow: hidden; }
 #menos5m, #mais5m { font-size: 11px; }
-#menos3s, #mais3s { color: var(--tinta); font-size: var(--t-base, 14px); }
+#menos3s, #mais3s { color: var(--tinta); font-weight: 600; }
 /* Os seis só cabem numa linha (no telemóvel e no painel ao lado do vídeo) sem
    as setas nos de minutos: a ordem na linha, recuar à esquerda e avançar à
    direita, já diz o sentido, e o 3 s, o mais usado, fica com a dele. */
 .saltos button { padding: 0 4px; gap: 3px; }
 #menos5m .ic, #mais5m .ic, #menos1m .ic, #mais1m .ic { display: none; }
+#menos1m, #mais1m { padding: 0 4px; }
+#menos5m, #mais5m { padding: 0 2px; }
 @media (max-width: 520px) { .saltos { gap: 4px; } }
 /* Com cara de botão, e não de texto.
    "Aqui nos botões queria que parecesse botões." Estavam transparentes e sem
