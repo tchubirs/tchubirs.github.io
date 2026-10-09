@@ -30,7 +30,10 @@ em `kick-sync/DEMO.md`.
 Feito em 09/10 (o retorno dele de 07/10, `kick-sync/RETORNO-07-10.md`): os 9 itens do "Primeiro" (pico só anda
 no tempo, picos na linha do tempo da live, hora local, abrir 10 s antes do pico, saltos numa linha, só o que serve,
 uma live só ocupa a tela, arrastar o mapa, o chat espera o vídeo). 850 testes passam.
-Próximo: o "Depois" do mesmo ficheiro, a começar pelo chat ao lado do vídeo (item 10).
+Também feito em 09/10: o "Depois" (chat ao lado do vídeo, chat de todos e sensibilidade, detecção por trecho
+marcado ou por horas, Clipar no trecho marcado e montagem também em 9:16, aviso do tamanho real do corte, grupo sem
+time que não fecha, porta do evento, picos das horas vizinhas com a página parada). 858 testes passam.
+Falta do retorno: escolher o que a detecção procura e a confirmação por mais de uma live (precisa de gravações reais).
 Parados: os ramos de teclado, sincronia e Twitch em `.claude/worktrees/povix-*`.
 Falta: ligar o clipe de vários ângulos na tela; travessões nos
 textos da página; publicar o Povix.
