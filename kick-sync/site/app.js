@@ -162,7 +162,17 @@ const hhmmss = (ms) => {
   const p = (n) => String(n).padStart(2, '0');
   return `${p(Math.floor(s / 3600))}:${p(Math.floor(s / 60) % 60)}:${p(s % 60)}`;
 };
-const relogioCurto = (ms) => new Date(ms).toISOString().slice(11, 19);
+// A hora local, como no mapa do evento: com o mapa a dizer 07:20 e a régua 05:20Z, o dono não sabia
+// qual era a certa (07/10). Os nomes de ficheiro continuam em UTC, que é o que ordena bem.
+const doisDigitos = (n) => String(n).padStart(2, '0');
+const relogioCurto = (ms) => {
+  const d = new Date(ms);
+  return `${doisDigitos(d.getHours())}:${doisDigitos(d.getMinutes())}:${doisDigitos(d.getSeconds())}`;
+};
+const diaLocal = (ms) => {
+  const d = new Date(ms);
+  return `${d.getFullYear()}-${doisDigitos(d.getMonth() + 1)}-${doisDigitos(d.getDate())}`;
+};
 
 // ── guardar a sessao ────────────────────────────────────────────────────────
 
@@ -970,10 +980,10 @@ function pintarRegua() {
   // às quatro da manhã seguinte, e a régua escrevia só HH:MM: passava-se a
   // meia-noite e nada dizia que o dia era outro. Duas horas com o mesmo
   // número, uma em cada dia, ficavam indistinguíveis.
-  let diaAnterior = new Date(inicio).toISOString().slice(0, 10);
+  let diaAnterior = diaLocal(inicio);
   for (let t = primeiro; t <= fim; t += passo) {
     const x = pct(t);
-    const dia = new Date(t).toISOString().slice(0, 10);
+    const dia = diaLocal(t);
     const virou = dia !== diaAnterior;
     diaAnterior = dia;
     partes.push(`<i class="risco${virou ? ' vira' : ''}" style="left:${x}%"></i>`);
@@ -996,7 +1006,7 @@ function pintarRegua() {
     const cabe = x - ultimoNumero >= folgaPct;
     if (cabe) ultimoNumero = x;
     partes.push(`<button class="kill" data-ms="${m.ms}" style="left:${x}%" `
-      + `title="kill ${i + 1} — ${relogioCurto(m.ms)}Z">${cabe ? `<span>${i + 1}</span>` : ''}</button>`);
+      + `title="kill ${i + 1} — ${relogioCurto(m.ms)}">${cabe ? `<span>${i + 1}</span>` : ''}</button>`);
   }
   alvo.innerHTML = partes.join('');
   for (const b of alvo.querySelectorAll('.kill')) {
@@ -1548,7 +1558,7 @@ function empurrar(slug, ms) {
  * mandava o leitor saltar para onde ele já está, sessenta vezes por segundo.
  */
 function pintarRelogio(quandoMs) {
-  $('agora').textContent = `${relogioCurto(quandoMs)}Z`;
+  $('agora').textContent = `${relogioCurto(quandoMs)}`;
   const vivos = quantosNoAr(estado.linhas, quandoMs, { nudges: estado.nudges });
   for (const li of $('listaMomentos').querySelectorAll('li[data-ms]')) {
     li.classList.toggle('aqui', Math.abs(Number(li.dataset.ms) - quandoMs) < 1500);
@@ -1924,7 +1934,7 @@ async function procurarKills() {
   if (!(ateMs > deMs)) {
     // O cursor depois do fim do canal. O clique não fazia nada e não dizia
     // nada, que é o pior dos dois mundos: parece avariado.
-    nota.textContent = t('auto.depoisDoFim', { canal, hora: `${relogioCurto(fim)}Z` });
+    nota.textContent = t('auto.depoisDoFim', { canal, hora: `${relogioCurto(fim)}` });
     return;
   }
 
@@ -2207,7 +2217,7 @@ function cartoesDoOlhar(m, o) {
 
   const semNada = !Object.values(o.notas).some(Boolean);
   const dito = o.acertei != null
-    ? t('montagem.acerteiInstante', { hora: `${relogioCurto(o.acertei)}Z` })
+    ? t('montagem.acerteiInstante', { hora: `${relogioCurto(o.acertei)}` })
     : '';
   return (semNada
     ? `<span class="nota mau">${t('montagem.naoVi')}</span>`
@@ -2309,7 +2319,7 @@ function pintarMomentos() {
       + `<input type="checkbox" class="pega" ${estado.selecao.has(m.ms) ? 'checked' : ''}`
       + ` aria-label="${relogioCurto(m.ms)}">`
       + `<b class="n">${numeroNaMontagem(i, lista.length)}</b>`
-      + `<span>${relogioCurto(m.ms)}Z</span>`
+      + `<span>${relogioCurto(m.ms)}</span>`
       + `<span class="quem">${escapar(m.protagonista || '—')}</span>`
       + `<button class="ver ${estado.previa?.ms === m.ms ? 'aVer' : ''}">`
       + `${t(estado.previa?.ms === m.ms ? 'montagem.parar' : 'montagem.ver')}</button>`
@@ -2872,8 +2882,8 @@ const MARGEM_MAX_S = 120;
 function pintarMarca() {
   const { de, ate } = estado.marca;
   $('marca').textContent = de == null ? ''
-    : ate == null ? t('marca.faltaFim', { de: `${relogioCurto(de)}Z` })
-      : t('marca.feita', { de: `${relogioCurto(de)}Z`, ate: `${relogioCurto(ate)}Z`, dur: hhmmss(ate - de) });
+    : ate == null ? t('marca.faltaFim', { de: `${relogioCurto(de)}` })
+      : t('marca.feita', { de: `${relogioCurto(de)}`, ate: `${relogioCurto(ate)}`, dur: hhmmss(ate - de) });
   pintarCorte();
 }
 
@@ -4162,8 +4172,8 @@ function pintarPartilha() {
   nota.classList.remove('mau');
   nota.textContent = t('partilha.leva', {
     n: estado.linhas.length,
-    data: new Date(estado.janela.inicio).toISOString().slice(0, 10),
-    hora: `${relogioCurto(estado.agoraMs)}Z`,
+    data: diaLocal(estado.janela.inicio),
+    hora: `${relogioCurto(estado.agoraMs)}`,
   });
 }
 
@@ -4717,6 +4727,22 @@ if (guardado) {
 // O mapa do evento entrega à página de sempre os canais de um lance e o instante dele. Daqui para a
 // frente é uma noite como outra qualquer: a grelha, o alinhamento, a montagem e o clipe.
 async function abrirLanceDoEvento(canais, ms, foco) {
+  // Com esses canais já na grelha e o instante dentro da noite aberta, é só andar no tempo. Recarregar
+  // tudo para ir de um pico ao outro era o que mais travava o uso (o dono, a 07/10).
+  const abertos = new Set(estado.linhas.map((l) => l.slug));
+  const j = estado.janela;
+  if (j && ms >= j.inicio && ms <= j.fim && canais.length
+    && canais.every((c) => abertos.has(slugDoNome(c)))) {
+    const f = foco && slugDoNome(foco);
+    if (f && abertos.has(f) && !ehPrincipal(f)) {
+      estado.focos = [f, ...estado.focos.filter((s) => s !== f)];
+      aplicarFoco();
+    }
+    if (estado.parado) alternarPausa();
+    irPara(ms);
+    window.scrollTo({ top: 0 });
+    return;
+  }
   $('canais').value = canais.join('\n');
   // O lance manda: o instante e o foco são os dele, e as kills e a marca de uma noite anterior não
   // vêm atrás. Atrás no ecrã, mas não fora do disco: as kills da noite aberta passam para

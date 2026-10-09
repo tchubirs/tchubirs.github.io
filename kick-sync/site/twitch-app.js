@@ -33,7 +33,7 @@ const estado = {
 const doisDigitos = (n) => String(n).padStart(2, '0');
 const relogioCurto = (ms) => {
   const d = new Date(ms);
-  return `${doisDigitos(d.getUTCHours())}:${doisDigitos(d.getUTCMinutes())}:${doisDigitos(d.getUTCSeconds())}`;
+  return `${doisDigitos(d.getHours())}:${doisDigitos(d.getMinutes())}:${doisDigitos(d.getSeconds())}`;
 };
 
 const listaDeCanais = () => $('canais').value.split('\n').map((s) => s.trim().toLowerCase())
@@ -215,7 +215,7 @@ function irPara(ms) {
     }
   }
 
-  $('relogio').textContent = `${relogioCurto(estado.agoraMs)}Z`;
+  $('relogio').textContent = `${relogioCurto(estado.agoraMs)}`;
   const total = estado.linhas.length;
   $('noAr').textContent = t('tempo.angulos', { n: quantosNoAr(estado.linhas, estado.agoraMs), total });
   const largura = estado.janela.fim - estado.janela.inicio;

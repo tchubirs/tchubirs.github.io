@@ -90,8 +90,10 @@ export function agruparPorNoite(canais, { intervaloMs = SEIS_HORAS, maximoMs = D
  * de quem chama e não uma dependência escondida.
  */
 export function rotuloDaNoite(n, { t } = {}) {
-  const hora = (ms) => new Date(ms).toISOString().slice(11, 16);
-  const dia = (ms) => new Date(ms).toISOString().slice(0, 10);
+  // Hora local, como o resto da página.
+  const p2 = (n) => String(n).padStart(2, '0');
+  const hora = (ms) => { const d = new Date(ms); return `${p2(d.getHours())}:${p2(d.getMinutes())}`; };
+  const dia = (ms) => { const d = new Date(ms); return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`; };
   // Uma noite que atravessa a meia-noite tem de dizer os dois dias, senão
   // quem procura o dia 30 não o encontra numa linha que diz 29.
   const ate = dia(n.fim) === dia(n.inicio) ? hora(n.fim) : `${dia(n.fim)} ${hora(n.fim)}`;

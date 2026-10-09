@@ -339,6 +339,28 @@ export function picos(calor, { fator = 3, minimo = 8 } = {}) {
   return saida;
 }
 
+/**
+ * O segundo em que o chat de um minuto explodiu: o começo dos `janelaMs` com mais mensagens, dentro de
+ * [deMs, ateMs). O pico é um minuto, e abrir no começo dele obrigava a esperar até 30 s pelo lance (o
+ * dono, a 07/10). Num empate fica o mais cedo, pela razão de `picos`. Sem mensagens, devolve `deMs`.
+ */
+export function segundoDoPico(mensagens, deMs, ateMs, janelaMs = 10_000) {
+  const ms = (mensagens || []).map((m) => m?.ms).filter(Number.isFinite).sort((a, b) => a - b);
+  let melhor = deMs;
+  let maximo = 0;
+  let fim = 0;
+  let comeco = 0;
+  for (let s = deMs; s < ateMs; s += 1000) {
+    while (comeco < ms.length && ms[comeco] < s) comeco++;
+    if (fim < comeco) fim = comeco;
+    while (fim < ms.length && ms[fim] < s + janelaMs) fim++;
+    if (fim - comeco > maximo) { maximo = fim - comeco; melhor = s; }
+  }
+  // Começar no segundo da primeira mensagem do surto, e não num segundo vazio antes dela.
+  const primeira = ms.find((x) => x >= melhor);
+  return maximo && primeira != null ? Math.floor(primeira / 1000) * 1000 : melhor;
+}
+
 const EMOTE = /\[emote:\d+:([^\]]+)\]/g;
 
 /**

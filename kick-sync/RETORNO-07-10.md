@@ -1,17 +1,17 @@
 # O que o dono viu usando o Povix (07/10) e o que fazer
 
-Tudo para depois de sexta (10/10), quando os tokens voltam. Ordem: primeiro o que trava o uso no evento.
+Ordem: primeiro o que trava o uso no evento. Feito: 1, 3 e 4 (09/10).
 
 ## Primeiro (antes do evento)
 
 1. **O pico do chat recarrega a live inteira.** Clicar num pico abre a live do zero; para ver outro pico, volta ao
-   mapa e carrega tudo de novo. Se a live já está aberta, o clique tem de só pular no tempo.
+   mapa e carrega tudo de novo. Se a live já está aberta, o clique tem de só pular no tempo. **Feito.**
 2. **Os picos também na linha do tempo da live** (o painel da direita, acima dos botões), e não só no mapa do
    evento. Assim não precisa voltar ao mapa para ir de um pico ao outro.
 3. **A hora não bate.** O mapa mostra a hora local (07:20) e a linha do tempo da live mostra UTC (05:20Z). Usar a
-   hora local em todo lado.
+   hora local em todo lado. **Feito** (os nomes de ficheiro ficam em UTC).
 4. **Abrir o pico uns 10 s antes do momento.** Hoje abre no começo do minuto do pico, e às vezes é preciso esperar
-   30 s até acontecer algo. Achar o segundo do pico dentro do minuto e começar 10 s antes dele.
+   30 s até acontecer algo. Achar o segundo do pico dentro do minuto e começar 10 s antes dele. **Feito.**
 5. **Botões de andar no tempo numa linha só:** 5 min (pequeno), 1 min (médio) e 3 s (grande, o mais usado, com
    A e D). Tirar o de 10 s. Quem aprende os atalhos quase não usa os botões, então eles não podem ocupar espaço.
 6. **Mostrar só o que serve agora.** "Margens" e "Exportar montagem" só depois de marcar uma kill; "Limpar

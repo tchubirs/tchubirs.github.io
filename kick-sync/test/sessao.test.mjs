@@ -167,6 +167,23 @@ test('abrir um lance do evento noutra noite não apaga as kills da noite aberta'
   await p.close();
 });
 
+test('um lance com os mesmos canais na mesma noite só anda no tempo, sem recarregar', comNavegador, async () => {
+  const { p, erros } = await abrir();
+  await kickFalsa(p, { canais: ['tchubi', 'outro'] });
+  await abrirNoite(p, ['tchubi', 'outro']);
+  await marcarKill(p);
+  const j = await p.evaluate(() => window.__estado.janela);
+  const alvo = Math.round((j.inicio + j.fim) / 2);
+  await p.evaluate(() => { document.querySelector('.tile').dataset.velho = '1'; });
+  await p.evaluate((ms) => window.__abrirLanceDoEvento(['tchubi', 'outro'], ms, 'outro'), alvo);
+  assert.equal(await p.evaluate(() => window.__estado.agoraMs), alvo);
+  assert.equal(await p.locator('.tile[data-velho]').count(), 1, 'a grelha foi refeita');
+  assert.equal(await p.evaluate(() => window.__estado.focos[0]), 'outro');
+  assert.equal(await p.locator('#listaMomentos li[data-ms]').count(), 1, 'a kill sumiu');
+  assert.deepEqual(erros, []);
+  await p.close();
+});
+
 test('o F5 devolve a caixa inteira, e não só os canais que entraram na noite', comNavegador, async () => {
   const { p, erros } = await abrir();
   // `fantasma` não existe na Kick (404) e por isso não entra na noite.

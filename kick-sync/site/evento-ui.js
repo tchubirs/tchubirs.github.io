@@ -20,7 +20,7 @@ import { linhaDoCanal } from './relogio.js';
 import { somDoCanal } from './alinhar.js';
 import { t, tn } from './idiomas.js';
 import { escapar } from './escapar.js';
-import { idDoCanal, mensagensEntre, calor, picos } from './chat.js';
+import { idDoCanal, mensagensEntre, calor, picos, segundoDoPico } from './chat.js';
 import { agendar } from './aovivo.js';
 
 // Um canal ao vivo tem na lista um VOD de duração zero que vai crescendo. Até se pedir a lista outra
@@ -551,6 +551,8 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
   // nova e uns 12 pedidos por hora e por canal. A escolha fica sempre com 1 h antes e 30 min depois.
   const CHAT_GRELHA_MS = 30 * 60e3;
   const PICOS_BOTOES = 8;
+  // Quanto antes do segundo do pico o vídeo abre: o lance vem antes da reacção do chat.
+  const ANTES_DO_PICO_MS = 10_000;
   const chatLido = new Set();
   let chatControlo = null;
   async function lerChatDoTime(e) {
@@ -568,7 +570,10 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
       try {
         const id = await idDoCanal(c, { buscar, sinal: controlo.signal });
         const msgs = await mensagensEntre(id, deMs, ateMs, { buscar, sinal: controlo.signal, maxPedidos: 120 });
-        const marcas = picos(calor(msgs, deMs, ateMs)).map((i) => ({ ms: deMs + i * 60_000 + 30_000, tipo: 'chat' }));
+        const marcas = picos(calor(msgs, deMs, ateMs)).map((i) => {
+          const de = deMs + i * 60_000;
+          return { ms: segundoDoPico(msgs, de, Math.min(ateMs, de + 60_000)), tipo: 'chat' };
+        });
         const antigas = (ev.marcas.get(c) || []).filter((m) => m.ms < deMs || m.ms > ateMs);
         ev.marcas.set(c, [...antigas, ...marcas].sort((a, b) => a.ms - b.ms));
         chatLido.add(`${c}|${deMs}`);
@@ -937,14 +942,14 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
       pintarLance();
     };
     // Um pico é para ver, e não só para escolher: o botão abre logo o vídeo (o dono esperava isso a
-    // 07/10). Abre no começo do minuto do pico, 30 s antes da marca, porque o chat reage depois do
-    // lance (o atraso da live mais o tempo de ler e escrever) e o que interessa é o lance.
+    // 07/10). A marca é o segundo em que o chat explodiu, e o vídeo abre 10 s antes dele, porque o
+    // chat reage depois do lance (o atraso da live mais o tempo de ler e escrever).
     $('picosChat').onclick = async (evento) => {
       const b = evento.target.closest('button[data-ms]');
       if (!b) return;
       const canal = b.dataset.canal;
       const pico = Number(b.dataset.ms);
-      const ms = noArEm(ev.coberturas, canal, pico - 30_000) ? pico - 30_000 : pico;
+      const ms = noArEm(ev.coberturas, canal, pico - ANTES_DO_PICO_MS) ? pico - ANTES_DO_PICO_MS : pico;
       escolher({ tipo: 'canal', canal, ms, time: indiceDeTimes(ev.elenco).get(canal) ?? null });
       if (noArEm(ev.coberturas, canal, ms)) await verLance();
     };

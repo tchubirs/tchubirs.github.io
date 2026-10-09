@@ -13,7 +13,7 @@ process.env.TZ = 'America/Sao_Paulo';
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { idDoCanal, mensagensEntre, calor, picos, reacoes } from '../site/chat.js';
+import { idDoCanal, mensagensEntre, calor, picos, reacoes, segundoDoPico } from '../site/chat.js';
 
 const ID = 541014;
 const MIN = 60_000;
@@ -721,4 +721,26 @@ test('do chat ao lance: mensagens -> calor -> picos -> o que se disse', async ()
     const noMinuto = lista.filter((m) => m.ms >= de + i * MIN && m.ms < de + (i + 1) * MIN);
     assert.equal(reacoes(noMinuto, { quantas: 1 })[0].nome, 'KEKW', `minuto ${i}`);
   }
+});
+
+// ── segundoDoPico ───────────────────────────────────────────────────────────
+
+test('segundoDoPico: acha o segundo em que o chat explodiu dentro do minuto', () => {
+  const de = 1_000_000_000_000;
+  const msgs = [
+    { ms: de + 2_000 }, { ms: de + 9_000 },
+    ...Array.from({ length: 12 }, (_, i) => ({ ms: de + 37_400 + i * 300 })),
+    { ms: de + 55_000 },
+  ];
+  assert.equal(segundoDoPico(msgs, de, de + 60_000), de + 37_000);
+});
+
+test('segundoDoPico: sem mensagens fica no começo do minuto', () => {
+  assert.equal(segundoDoPico([], 5_000, 65_000), 5_000);
+  assert.equal(segundoDoPico(null, 5_000, 65_000), 5_000);
+});
+
+test('segundoDoPico: num empate fica o mais cedo', () => {
+  const msgs = [{ ms: 3_000 }, { ms: 3_500 }, { ms: 40_000 }, { ms: 40_500 }];
+  assert.equal(segundoDoPico(msgs, 0, 60_000), 3_000);
 });
