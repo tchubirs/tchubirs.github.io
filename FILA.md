@@ -36,7 +36,7 @@ time que não fecha, porta do evento, picos das horas vizinhas com a página par
 Falta do retorno: escolher o que a detecção procura e a confirmação por mais de uma live (precisa de gravações reais).
 Juntados em 09/10: os ramos de teclado, sincronia e Twitch. Também: quem entra no ar depois aparece sozinho, e o
 clipe de vários ângulos está ligado no editor. 898 testes passam.
-Próximo (ABISAL.md): teste com 500 canais reais; lista do evento num arquivo atualizado sozinho.
+Próximo (a lista do Abisal): teste com 500 canais reais; lista do evento num arquivo atualizado sozinho.
 Falta: ligar o clipe de vários ângulos na tela; travessões nos
 textos da página; publicar o Povix.
 
