@@ -183,6 +183,8 @@ const diaLocal = (ms) => {
  * vezes nunca chega a correr, e nunca corre quando a pagina trava. Um F5 depois
  * de meia hora a procurar o momento devolvia uma caixa de texto vazia.
  */
+// Os picos de chat que o evento já leu, por canal. Vazio até o evento montar.
+let picosDoEvento = () => new Map();
 let timerGuardar = null;
 // Depois do "Recomecar" confirmado nao se guarda mais nada: o `beforeunload`
 // escrevia a sessao inteira outra vez no sitio de onde ela acabava de sair.
@@ -1008,7 +1010,26 @@ function pintarRegua() {
     partes.push(`<button class="kill" data-ms="${m.ms}" style="left:${x}%" `
       + `title="kill ${i + 1} — ${relogioCurto(m.ms)}">${cabe ? `<span>${i + 1}</span>` : ''}</button>`);
   }
+  // Os picos de chat também aqui, e não só no mapa do evento: assim vai-se de um pico ao outro sem
+  // voltar ao mapa (o dono, 07/10). Dois canais no mesmo minuto são o mesmo lance.
+  const abertos = new Set(estado.linhas.map((l) => l.slug));
+  const minutos = new Set();
+  for (const [canal, lista] of picosDoEvento()) {
+    if (!abertos.has(canal)) continue;
+    for (const m of lista) {
+      if (m.tipo !== 'chat' || m.ms < inicio || m.ms > fim) continue;
+      const minuto = Math.floor(m.ms / 60_000);
+      if (minutos.has(minuto)) continue;
+      minutos.add(minuto);
+      partes.push(`<button class="picoChat" data-ms="${m.ms}" data-canal="${escapar(canal)}" style="left:${pct(m.ms)}%" `
+        + `title="${escapar(t('regua.picoChat', { hora: relogioCurto(m.ms), canal }))}"></button>`);
+    }
+  }
   alvo.innerHTML = partes.join('');
+  for (const b of alvo.querySelectorAll('.picoChat')) {
+    // Abre 10 s antes, como o botão do pico no evento: o chat reage depois do lance.
+    b.onclick = () => { largarPrevia(); irPara(Number(b.dataset.ms) - 10_000); };
+  }
   for (const b of alvo.querySelectorAll('.kill')) {
     // A marca de outra kill desliga a prévia desta, senão volta para trás logo.
     b.onclick = () => { largarPrevia(); irPara(Number(b.dataset.ms)); };
@@ -4772,6 +4793,7 @@ async function abrirLanceDoEvento(canais, ms, foco) {
 }
 const evento = montarEvento({
   abrirLance: abrirLanceDoEvento,
+  aoMudarPicos: () => pintarRegua(),
   memorizarVods: (resultados) => {
     estado.vodsDoEvento.clear();
     for (const r of resultados) if (r?.estado === 'ok') estado.vodsDoEvento.set(r.slug, r);
@@ -4779,6 +4801,7 @@ const evento = montarEvento({
 });
 // Para os testes de página, como o `__estado` da noite.
 window.__evento = evento.estado;
+picosDoEvento = () => evento.estado.marcas;
 // Para os testes de página: o lance sem ter de montar o mapa inteiro.
 window.__abrirLanceDoEvento = abrirLanceDoEvento;
 if (vemDeEvento) evento.abrirDoLink();

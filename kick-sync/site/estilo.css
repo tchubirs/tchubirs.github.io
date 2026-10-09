@@ -656,6 +656,18 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 .regua .kill span { position: absolute; top: 11px; left: 50%; transform: translateX(-50%); }
 .regua .kill:hover { background: none; }
 .regua .kill:hover::before { background: var(--marca-alto); }
+/* O pico de chat é o mesmo quadrado da legenda do mapa, no fundo da régua: a kill fica em cima, o
+   pico em baixo, e não se confundem. */
+.regua .picoChat {
+  position: absolute; bottom: 0; width: 14px; height: 14px; transform: translateX(-50%);
+  background: none; border: 0; padding: 0; min-height: 0; cursor: pointer;
+}
+.regua .picoChat::before {
+  content: ''; position: absolute; left: 50%; bottom: 2px; width: 7px; height: 7px; margin-left: -3.5px;
+  background: var(--marca); box-shadow: 0 0 0 1px var(--sup-0); transform: rotate(45deg);
+}
+.regua .picoChat:hover { background: none; }
+.regua .picoChat:hover::before { background: var(--marca-alto); }
 
 /* ── o instante, em números ──────────────────────────────────────────────── */
 .relogio .linha { justify-content: space-between; margin-top: var(--e4); }

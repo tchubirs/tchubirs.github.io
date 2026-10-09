@@ -118,9 +118,10 @@ export function noArEm(coberturas, slug, ms) {
  *
  * `abrirLance(canais, ms, foco)` é da página de sempre: carrega aqueles canais, abre a noite onde está
  * `ms` e põe o vídeo nesse instante. `memorizarVods(resultados)` passa-lhe as listas de VOD já lidas,
- * para não as pedir à Kick outra vez quando o lance abre.
+ * para não as pedir à Kick outra vez quando o lance abre. `aoMudarPicos()` avisa que chegaram picos de
+ * chat, para a linha do tempo da live os mostrar.
  */
-export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fetch } = {}) {
+export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPicos = () => {}, buscar = fetch } = {}) {
   const $ = (id) => document.getElementById(id);
   const ev = {
     elenco: null,
@@ -576,6 +577,7 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, buscar = fe
         });
         const antigas = (ev.marcas.get(c) || []).filter((m) => m.ms < deMs || m.ms > ateMs);
         ev.marcas.set(c, [...antigas, ...marcas].sort((a, b) => a.ms - b.ms));
+        aoMudarPicos();
         chatLido.add(`${c}|${deMs}`);
       } catch (erro) {
         if (erro?.name === 'AbortError') return;
