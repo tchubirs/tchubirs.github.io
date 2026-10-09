@@ -246,8 +246,8 @@ test('um ecrã cheio recusado não parte os saltos no tempo', semNavegador, asyn
   assert.equal(await p.locator('.tile.foco .recado').innerText(), _TEXTOS.pt['tile.semEcraCheio'],
     'na janela principal o recado culpava a janela à parte');
   const antes = await segundos(p);
-  await p.click('#mais10s');
-  assert.equal(await segundos(p) - antes, 10);
+  await p.click('#mais3s');
+  assert.equal(await segundos(p) - antes, 3);
   assert.equal(await p.locator('.tile.foco .posicao').count(), 1, 'o rótulo perdeu a posição');
   assert.deepEqual(erros, [], 'o salto rebentou com o recado no ecrã');
   await p.close();
