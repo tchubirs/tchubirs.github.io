@@ -1224,6 +1224,17 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
     flex: 0 0 auto; max-height: 22vh; overflow-y: auto; margin-top: 0; padding-right: var(--e2);
     grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--e4);
   }
+  /* Com uma live só (o dono, 07/10: "parece jogada"): a grelha está vazia e o vídeo fica com o
+     espaço dela, em vez de um vídeo pequeno no meio e um buraco por baixo. A caixa do Sincronizar
+     não serve com um canal e sai, e as que ficam dividem a linha entre elas. */
+  body.mesa:has(#palco:not([hidden])) #palco.semGrelha #grade { display: none; }
+  body.mesa:has(#palco:not([hidden])) #palco.semGrelha .palcoFoco {
+    flex: 1 1 0; height: auto; max-height: none;
+  }
+  body.mesa:has(#palco:not([hidden])) .palcoFundo > #fila:not(:has(li)) { display: none; }
+  body.mesa:has(#palco:not([hidden])) .palcoFundo {
+    grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr);
+  }
   body.mesa:has(#palco:not([hidden])) .palcoFundo > section,
   body.mesa:has(#palco:not([hidden])) .palcoFundo > .linha { padding: var(--e3) var(--e4); margin-bottom: 0; }
   body.mesa:has(#palco:not([hidden])) #automatico > p { display: none; }
@@ -1570,3 +1581,6 @@ body.mesa:has(#palco:not([hidden])) > #evento { flex: 0 0 auto; margin-bottom: v
 body:has(#palco:not([hidden])) #evento:not(.comMapa) .soComMapa { display: none; }
 #montagem.semKills :is(#margens, .barraSelecao, #baixarMontagem) { display: none; }
 body:not(:has(#fila > li)) #limparFila { display: none; }
+
+/* A caixa do Sincronizar sem botão (um canal só) e sem recado é uma caixa vazia. */
+.sincronizar:has(> #alinhar[hidden]):has(> #estadoAlinhar:empty) { display: none; }

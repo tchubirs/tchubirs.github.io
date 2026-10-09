@@ -1847,3 +1847,24 @@ test('só aparece o que serve agora: margens e montagem com kill, limpar com exp
     assert.deepEqual(erros, []);
     await p.close();
   });
+
+test('com uma live só o vídeo ocupa o espaço, sem grelha vazia nem caixa vazia por baixo',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir({ ecra: { width: 1280, height: 800 } });
+    await kickFalsa(p, { canais: ['tchubi'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 20000 });
+    const m = await p.evaluate(() => ({
+      video: document.querySelector('#palcoFoco .tile').getBoundingClientRect().width,
+      coluna: document.querySelector('.palcoVideo').getBoundingClientRect().width,
+      grade: getComputedStyle(document.getElementById('grade')).display,
+      sincronizar: getComputedStyle(document.querySelector('.sincronizar')).display,
+    }));
+    assert.ok(m.video > m.coluna * 0.85, `vídeo de ${m.video} px numa coluna de ${m.coluna}`);
+    assert.equal(m.grade, 'none');
+    assert.equal(m.sincronizar, 'none');
+    assert.deepEqual(erros, []);
+    await p.close();
+  });

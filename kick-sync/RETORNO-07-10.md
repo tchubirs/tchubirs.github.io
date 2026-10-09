@@ -1,6 +1,6 @@
 # O que o dono viu usando o Povix (07/10) e o que fazer
 
-Ordem: primeiro o que trava o uso no evento. Feito: 1 a 6 (09/10).
+Ordem: primeiro o que trava o uso no evento. Feito: 1 a 7 (09/10).
 
 ## Primeiro (antes do evento)
 
@@ -19,7 +19,7 @@ Ordem: primeiro o que trava o uso no evento. Feito: 1 a 6 (09/10).
    exportações" só quando há exportações; zoom e "Evento inteiro" só com o mapa aberto (com o mapa fechado, clicar
    neles não muda nada na tela, e isso confunde). **Feito.**
 7. **A tela com uma live só parece jogada.** Vídeo pequeno no meio, caixas espalhadas, uma barra vazia embaixo. Com
-   uma live, o vídeo ocupa o espaço e as caixas ficam em ordem, sem espaço sobrando.
+   uma live, o vídeo ocupa o espaço e as caixas ficam em ordem, sem espaço sobrando. **Feito.**
 8. **O mapa do evento não anda no tempo.** Arrastar para os lados para andar; dizer na tela o trecho que está à
    vista; deixar claro o que "Evento inteiro" faz (volta a mostrar o trecho em que a maioria estava ao vivo).
 9. **Lento.** Carrega coisa demais ao mesmo tempo. Medir o que cada clique pede à Kick e cortar o que não é

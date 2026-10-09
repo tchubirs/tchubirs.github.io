@@ -4802,6 +4802,11 @@ const evento = montarEvento({
 // Para os testes de página, como o `__estado` da noite.
 window.__evento = evento.estado;
 picosDoEvento = () => evento.estado.marcas;
+// Com uma live só a grelha fica vazia, e o vídeo fica com o lugar dela (ver o CSS de .semGrelha).
+// O CSS não o pode saber sozinho: um :has dentro de outro :has não vale.
+new MutationObserver(() => {
+  $('palco').classList.toggle('semGrelha', !$('grade').querySelector('.tile'));
+}).observe($('grade'), { childList: true });
 // Para os testes de página: o lance sem ter de montar o mapa inteiro.
 window.__abrirLanceDoEvento = abrirLanceDoEvento;
 if (vemDeEvento) evento.abrirDoLink();
