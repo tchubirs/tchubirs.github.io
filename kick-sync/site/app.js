@@ -1840,7 +1840,9 @@ function tocar(linha, r, video, { alta = false, correr = false, comSom = false }
     // porquê. Esquecido aqui, o próximo salto ou clique cria um novo.
     hls.on?.(window.Hls.Events?.ERROR || 'hlsError', (_, dados) => {
       if (!dados?.fatal || estado.players.get(linha.slug) !== leitor) return;
-      hls.destroy();
+      // Fora deste aviso: destruído aqui dentro, o hls.js ainda acabava o que estava a fazer com as
+      // peças já soltas e rebentava ("reading 'trigger'"), visto contra a Kick real a 09/10.
+      setTimeout(() => hls.destroy(), 0);
       estado.players.delete(linha.slug);
       const tile = tileDe(linha.slug);
       tile?.classList.add('vazio');

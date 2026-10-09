@@ -22,7 +22,7 @@ const args = process.env.HTTPS_PROXY ? [`--proxy-server=https=${new URL(process.
 const b = await chromium.launch({ executablePath: process.env.DETETIVE_CHROME || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args });
 const p = await b.newPage({ viewport: { width: 1440, height: 900 }, locale: 'pt-BR' });
 const erros = [];
-p.on('pageerror', (e) => erros.push(`pageerror: ${e.message}`));
+p.on('pageerror', (e) => erros.push(`pageerror: ${e.message} ${e.stack}`));
 p.on('console', (m) => { if (m.type() === 'error') erros.push(`console: ${m.text()}`); });
 const t0 = Date.now();
 const passo = (s) => console.log(`${((Date.now() - t0) / 1000).toFixed(1)}s ${s}`);

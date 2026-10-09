@@ -1870,3 +1870,24 @@ test('com uma live só o vídeo ocupa o espaço, sem grelha vazia nem caixa vazi
     assert.deepEqual(erros, []);
     await p.close();
   });
+
+// Contra a Kick real (09/10): um vídeo que o hls.js não consegue tocar dava um erro fatal, o leitor era
+// destruído dentro do próprio aviso de erro, e o hls.js rebentava a seguir ("reading 'trigger'").
+test('um vídeo que não toca diz o porquê no quadro, sem rebentar a página',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi'] });
+    // O hls.js a sério, e os pedaços com a Kick a recusar: um erro fatal certo.
+    await p.unroute('**/hls-*.js');
+    await p.route('https://stream.kick.com/falsa/**', (r) => (r.request().url().includes('.m3u8')
+      ? r.fallback() : r.fulfill({ status: 403, body: '' })));
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 20000 });
+    await p.waitForFunction(() => /não carregou/.test(document.querySelector('.tile .estadoTile')?.textContent || ''), null, { timeout: 20000 });
+    await p.waitForTimeout(500);
+    // Os 403 são os que o teste mandou; o que não pode haver é um erro da página.
+    assert.deepEqual(erros.filter((e) => !/Failed to load resource/.test(e)), []);
+    await p.close();
+  });
