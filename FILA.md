@@ -27,7 +27,11 @@ Também feito: correções da leitura do elenco e da exportação juntadas (803 
 correção de segurança publicada no site no ar (autorizada por ele em 06/10).
 Também juntadas: desempenho com muitos canais e carregamento dos 500 (826 testes passam). Roteiro da demonstração
 em `kick-sync/DEMO.md`.
-Em curso: sessão, teclado, sincronia, Twitch, CI e mapa (dois agentes por vez).
+Feito em 09/10 (o retorno dele de 07/10, `kick-sync/RETORNO-07-10.md`): os 9 itens do "Primeiro" (pico só anda
+no tempo, picos na linha do tempo da live, hora local, abrir 10 s antes do pico, saltos numa linha, só o que serve,
+uma live só ocupa a tela, arrastar o mapa, o chat espera o vídeo). 850 testes passam.
+Próximo: o "Depois" do mesmo ficheiro, a começar pelo chat ao lado do vídeo (item 10).
+Parados: os ramos de teclado, sincronia e Twitch em `.claude/worktrees/povix-*`.
 Falta: ligar o clipe de vários ângulos na tela; travessões nos
 textos da página; publicar o Povix.
 
