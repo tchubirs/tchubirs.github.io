@@ -36,7 +36,8 @@ Ordem: primeiro o que trava o uso no evento. Feito: 1 a 9 (09/10).
     o chat de quem está em foco, até ao segundo do vídeo. Só nos lances abertos pelo evento.
 11. **Picos de chat de todos com um botão** ("ler o chat de todos"), e não só do time clicado. E sensibilidade
     ajustável: hoje um pico é um minuto com 3 vezes mais mensagens que o normal e pelo menos 8. Num canal pequeno
-    quase nunca chega a 8. Explicar isso na tela.
+    quase nunca chega a 8. Explicar isso na tela. **Feito** (09/10): botão "Ler o chat de todos" (carregar outra
+    vez pára), sensibilidade normal, alta ou máxima (guardada), e a regra escrita por baixo.
 12. **Detecção automática:** escolher de que hora a que hora (não só noite, uma hora, meia hora); escolher o que
     procurar (tiro, morte, grito do streamer, uma combinação); e, num evento, só contar briga ouvida por mais de uma
     live (ver `PLANO.md`, teste do deowasd).

@@ -491,3 +491,35 @@ test('o chat de quem está em foco anda ao lado do vídeo, no tempo dele',
     assert.deepEqual(erros, []);
     await p.close();
   });
+
+test('o chat de todos lê quem não é do time, e a sensibilidade muda os picos sem pedir nada outra vez',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'outro'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#elenco', 'Time Alfa: tchubi\nTime Beta: outro');
+    await p.click('#abrirElenco');
+    await p.waitForFunction(() => window.__evento?.mapa && window.__evento.vista, null, { timeout: 15000 });
+    await clicarNoMapa(p, 'tchubi', T + 2 * 60_000);
+    await p.waitForFunction(() => /picos? de chat do time/.test(document.getElementById('estadoChat').textContent), null, { timeout: 15000 });
+    assert.equal(await p.evaluate(() => window.__evento.marcas.has('outro')), false, 'o outro time foi lido sem pedir');
+    assert.match(await p.locator('#comoPico').innerText(), /3 vezes .* pelo menos 8/);
+
+    await p.click('#chatTodos');
+    await p.waitForFunction(() => /de todos/.test(document.getElementById('estadoChat').textContent)
+      && !/Lendo/.test(document.getElementById('estadoChat').textContent), null, { timeout: 15000 });
+    assert.equal(await p.evaluate(() => window.__evento.marcas.has('outro')), true, 'o chat de todos não leu o outro');
+    assert.equal(await p.locator('#chatTodos').innerText(), 'Ler o chat de todos');
+
+    const contar = () => p.evaluate(() => [...window.__evento.marcas.values()].reduce((n, l) => n + l.length, 0));
+    const normal = await contar();
+    let pedidos = 0;
+    p.on('request', (q) => { if (q.url().includes('/messages')) pedidos++; });
+    await p.selectOption('#sensibilidade', 'maxima');
+    assert.match(await p.locator('#comoPico').innerText(), /1,5 vezes .* pelo menos 3/);
+    assert.ok(await contar() >= normal, 'mais sensível não pode dar menos picos');
+    assert.equal(pedidos, 0, 'mudar a sensibilidade pediu o chat outra vez');
+    assert.equal(await p.evaluate(() => localStorage.getItem('povix.sensibilidade')), 'maxima');
+    assert.deepEqual(erros, []);
+    await p.close();
+  });

@@ -323,6 +323,17 @@
       <output id="estadoLance" class="nota"></output>
       <output id="estadoChat" class="nota"></output>
       <div id="picosChat" class="linha picosChat"></div>
+      <div class="linha chatOpcoes">
+        <button id="chatTodos" data-t="lance.chatTodos">Ler o chat de todos</button>
+        <label class="pequeno"><span data-t="lance.sensibilidade">Sensibilidade</span>
+          <select id="sensibilidade">
+            <option value="normal" data-t="lance.sensNormal">normal</option>
+            <option value="alta" data-t="lance.sensAlta">alta</option>
+            <option value="maxima" data-t="lance.sensMaxima">máxima</option>
+          </select>
+        </label>
+      </div>
+      <p id="comoPico" class="nota"></p>
       <ul id="lanceAchados" class="lanceAchados"></ul>
       <p class="nota comoFunciona" data-t="lance.comoFunciona">O Povix escuta o som do jogo e acha quem estava no mesmo lugar nesse segundo. Quem ele achar entra junto quando você abrir o lance.</p>
     </aside>

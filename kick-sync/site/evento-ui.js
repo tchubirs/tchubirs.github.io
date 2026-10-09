@@ -18,7 +18,7 @@ import { procurarAngulos, ordenarCandidatos, resumo } from './cena.js';
 import { lerMaster, lerPlaylist } from './kick.js';
 import { linhaDoCanal } from './relogio.js';
 import { somDoCanal } from './alinhar.js';
-import { t, tn } from './idiomas.js';
+import { t, tn, idiomaActual } from './idiomas.js';
 import { escapar } from './escapar.js';
 import { idDoCanal, mensagensEntre, calor, picos, segundoDoPico } from './chat.js';
 import { agendar } from './aovivo.js';
@@ -577,46 +577,78 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
   const ANTES_DO_PICO_MS = 10_000;
   const chatLido = new Set();
   let chatControlo = null;
-  async function lerChatDoTime(e) {
+  // A sensibilidade dos picos (o dono, 07/10: num canal pequeno quase nunca se chega a 8 mensagens num
+  // minuto). Normal é a medida de `picos` em chat.js; as outras baixam o fator e o mínimo.
+  const SENSIBILIDADES = { normal: { fator: 3, minimo: 8 }, alta: { fator: 2, minimo: 5 }, maxima: { fator: 1.5, minimo: 3 } };
+  const GUARDADA_SENS = 'povix.sensibilidade';
+  let sensibilidade = 'normal';
+  try { sensibilidade = SENSIBILIDADES[localStorage.getItem(GUARDADA_SENS)] ? localStorage.getItem(GUARDADA_SENS) : 'normal'; } catch { /* janela privada */ }
+  // As janelas de chat já lidas por canal: com elas os picos refazem-se sem pedir nada à Kick.
+  const janelasLidas = new Map();
+  function marcasDoChat(c) {
+    const msgs = ev.mensagens.get(c) || [];
+    const saida = [];
+    for (const [deMs, ateMs] of janelasLidas.get(c) || []) {
+      const dentro = msgs.filter((m) => m.ms >= deMs && m.ms < ateMs);
+      for (const i of picos(calor(dentro, deMs, ateMs), SENSIBILIDADES[sensibilidade])) {
+        const de = deMs + i * 60_000;
+        saida.push({ ms: segundoDoPico(dentro, de, Math.min(ateMs, de + 60_000)), tipo: 'chat' });
+      }
+    }
+    return saida.sort((a, b) => a.ms - b.ms);
+  }
+  function pintarComoPico() {
+    const { fator, minimo } = SENSIBILIDADES[sensibilidade];
+    $('sensibilidade').value = sensibilidade;
+    $('comoPico').textContent = t('lance.comoPico', { fator: fator.toLocaleString(idiomaActual()), minimo });
+  }
+  let chatDeTodos = false;
+  async function lerChatDoTime(e, { todos = false } = {}) {
     chatControlo?.abort();
     const controlo = new AbortController();
     chatControlo = controlo;
+    chatDeTodos = todos;
+    $('chatTodos').textContent = t(todos ? 'lance.chatTodosParar' : 'lance.chatTodos');
     const deMs = Math.floor((e.ms - CHAT_JANELA_MS / 2) / CHAT_GRELHA_MS) * CHAT_GRELHA_MS;
     const ateMs = Math.min(Date.now(), deMs + CHAT_JANELA_MS);
-    const doTime = colegas(e.canal).filter((c) => noArEm(ev.coberturas, c, e.ms));
+    const base = todos
+      ? [e.canal, ...ev.resultados.filter((r) => r.estado === 'ok' && r.slug !== e.canal).map((r) => r.slug)]
+      : colegas(e.canal);
+    const doTime = base.filter((c) => noArEm(ev.coberturas, c, e.ms));
     const canais = doTime.filter((c) => !chatLido.has(`${c}|${deMs}`));
     let feitos = 0;
-    if (canais.length) $('estadoChat').textContent = t('lance.aLerChat', { feitos, total: canais.length });
+    const aLer = todos ? 'lance.aLerChatTodos' : 'lance.aLerChat';
+    if (canais.length) $('estadoChat').textContent = t(aLer, { feitos, total: canais.length });
     for (const c of canais) {
       if (controlo.signal.aborted) return;
       try {
         const id = await idDoCanal(c, { buscar: buscarChat, sinal: controlo.signal });
         const msgs = await mensagensEntre(id, deMs, ateMs, { buscar: buscarChat, sinal: controlo.signal, maxPedidos: 120 });
-        const marcas = picos(calor(msgs, deMs, ateMs)).map((i) => {
-          const de = deMs + i * 60_000;
-          return { ms: segundoDoPico(msgs, de, Math.min(ateMs, de + 60_000)), tipo: 'chat' };
-        });
-        const antigas = (ev.marcas.get(c) || []).filter((m) => m.ms < deMs || m.ms > ateMs);
-        ev.marcas.set(c, [...antigas, ...marcas].sort((a, b) => a.ms - b.ms));
         const porId = new Map((ev.mensagens.get(c) || []).map((m) => [m.id ?? `${m.ms}|${m.autor}|${m.texto}`, m]));
         for (const m of msgs) porId.set(m.id ?? `${m.ms}|${m.autor}|${m.texto}`, m);
         ev.mensagens.set(c, [...porId.values()].sort((a, b) => a.ms - b.ms));
+        janelasLidas.set(c, [...(janelasLidas.get(c) || []), [deMs, ateMs]]);
+        ev.marcas.set(c, marcasDoChat(c));
         aoMudarPicos();
         chatLido.add(`${c}|${deMs}`);
       } catch (erro) {
         if (erro?.name === 'AbortError') return;
       }
       feitos++;
-      $('estadoChat').textContent = t('lance.aLerChat', { feitos, total: canais.length });
+      $('estadoChat').textContent = t(aLer, { feitos, total: canais.length });
       pintar();
     }
     if (controlo.signal.aborted) return;
-    pintarPicos(e, doTime, deMs, ateMs);
+    chatDeTodos = false;
+    $('chatTodos').textContent = t('lance.chatTodos');
+    ultimaLeitura = { e, doTime, deMs, ateMs, todos };
+    pintarPicos(e, doTime, deMs, ateMs, todos);
   }
+  let ultimaLeitura = null;
 
   // Os picos do time também como botões com a hora: no telemóvel uma marca de 3 px no mapa é difícil
   // de acertar, e o botão diz logo a que horas foi. Ficam os mais perto do momento escolhido.
-  function pintarPicos(e, doTime, deMs, ateMs) {
+  function pintarPicos(e, doTime, deMs, ateMs, todos = false) {
     const porMinuto = new Map();
     for (const c of doTime) {
       for (const m of ev.marcas.get(c) || []) {
@@ -626,10 +658,11 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
         if (!porMinuto.has(minuto) || c === e.canal) porMinuto.set(minuto, { canal: c, ms: m.ms });
       }
     }
-    const todos = [...porMinuto.values()];
+    const lista = [...porMinuto.values()];
+    const quem = t(todos ? 'lance.deTodos' : 'lance.doTime');
     $('estadoChat').textContent = !doTime.length ? ''
-      : todos.length ? tn(todos.length, 'lance.umPicoChat', 'lance.picosChat') : t('lance.semPicoChat');
-    const perto = todos.sort((a, b) => Math.abs(a.ms - e.ms) - Math.abs(b.ms - e.ms))
+      : lista.length ? tn(lista.length, 'lance.umPicoChat', 'lance.picosChat', { quem }) : t('lance.semPicoChat', { quem });
+    const perto = lista.sort((a, b) => Math.abs(a.ms - e.ms) - Math.abs(b.ms - e.ms))
       .slice(0, PICOS_BOTOES).sort((a, b) => a.ms - b.ms);
     $('picosChat').innerHTML = perto.length
       ? `<span class="nota">${escapar(t('lance.picosBotoes'))}</span>${perto.map((p) => (
@@ -667,6 +700,7 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
   }
 
   function pintarLance() {
+    pintarComoPico();
     const e = ev.escolha;
     $('lance').hidden = !e;
     $('partilharEventoTexto').textContent = t(e ? 'evento.partilharLance' : 'evento.partilharEvento');
@@ -986,6 +1020,29 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
     // "Evento inteiro" é o trecho onde a maioria esteve, e não os 7 a 30 dias de VODs de cada canal.
     $('verTudo').onclick = () => { ev.vista = { ...(ev.trecho || ev.limites) }; pintar(); };
     $('verLance').onclick = verLance;
+    // Os picos de todos, e não só do time: um botão, porque são até 120 pedidos por canal. Carregar outra
+    // vez pára a leitura; o que já se leu fica.
+    $('chatTodos').onclick = () => {
+      if (chatDeTodos) {
+        chatControlo?.abort();
+        chatDeTodos = false;
+        $('chatTodos').textContent = t('lance.chatTodos');
+        $('estadoChat').textContent = '';
+        return;
+      }
+      if (ev.escolha) lerChatDoTime(ev.escolha, { todos: true });
+    };
+    $('sensibilidade').onchange = () => {
+      sensibilidade = SENSIBILIDADES[$('sensibilidade').value] ? $('sensibilidade').value : 'normal';
+      try { localStorage.setItem(GUARDADA_SENS, sensibilidade); } catch { /* janela privada */ }
+      for (const c of janelasLidas.keys()) ev.marcas.set(c, marcasDoChat(c));
+      pintarComoPico();
+      aoMudarPicos();
+      pintar();
+      const u = ultimaLeitura;
+      if (u && u.e === ev.escolha) pintarPicos(u.e, u.doTime, u.deMs, u.ateMs, u.todos);
+    };
+    pintarComoPico();
     $('mostrarMapa').onclick = () => mostrarMapa(!$('evento').classList.contains('comMapa'));
     $('fecharEvento').onclick = fecharEvento;
     $('irAoVivo').onclick = irAoVivo;
