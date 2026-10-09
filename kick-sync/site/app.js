@@ -1968,6 +1968,17 @@ async function alinhar() {
  * alguém que não está entre os canais abertos, e apagar isso por ele seria
  * decidir uma coisa que não sei.
  */
+/** O primeiro instante a seguir a `baseMs` com aquela hora local ("HH:MM"). NaN se a hora não se lê. */
+function horaDepoisDe(hhmm, baseMs) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm || '');
+  if (!m || !Number.isFinite(baseMs)) return NaN;
+  const d = new Date(baseMs);
+  d.setHours(Number(m[1]), Number(m[2]), 0, 0);
+  // Uma noite de Rust passa a meia-noite: 02:00 depois das 23:00 é no dia seguinte.
+  while (d.getTime() <= baseMs - 60_000) d.setDate(d.getDate() + 1);
+  return d.getTime();
+}
+
 async function procurarKills() {
   // A correr, o mesmo botão pára. Ouvir uma noite inteira leva minutos, e sem
   // isto a única saída era recarregar a página.
@@ -1984,12 +1995,32 @@ async function procurarKills() {
   const nudge = estado.nudges[canal] || 0;
   const inicio = linha.inicio - nudge;
   const fim = linha.fim - nudge;
-  const pedido = Number($('janelaAuto').value) * 1000;
-  // "A noite toda" é a noite toda. Começava no cursor, e com o cursor a meio
-  // metade da noite ficava por ouvir com o rótulo a prometer tudo.
-  const deMs = pedido ? Math.max(inicio, estado.agoraMs) : inicio;
-  const ateMs = pedido ? Math.min(fim, deMs + pedido) : fim;
+  const escolha = $('janelaAuto').value;
   nota.classList.remove('mau');
+  let deMs;
+  let ateMs;
+  // O dono (07/10) quer escolher de que hora a que hora, e não só meia hora, uma hora ou a noite.
+  if (escolha === 'marca') {
+    const { de, ate } = estado.marca;
+    if (de == null || ate == null) { nota.textContent = t('auto.semMarca'); return; }
+    deMs = Math.max(inicio, de);
+    ateMs = Math.min(fim, ate);
+  } else if (escolha === 'horas') {
+    deMs = horaDepoisDe($('autoDe').value, inicio);
+    ateMs = horaDepoisDe($('autoAte').value, deMs);
+    if (!Number.isFinite(deMs) || !Number.isFinite(ateMs) || deMs >= fim || ateMs <= inicio) {
+      nota.textContent = t('auto.horasFora', { canal, de: relogioCurto(inicio).slice(0, 5), ate: relogioCurto(fim).slice(0, 5) });
+      return;
+    }
+    deMs = Math.max(inicio, deMs);
+    ateMs = Math.min(fim, ateMs);
+  } else {
+    const pedido = Number(escolha) * 1000;
+    // "A noite toda" é a noite toda. Começava no cursor, e com o cursor a meio
+    // metade da noite ficava por ouvir com o rótulo a prometer tudo.
+    deMs = pedido ? Math.max(inicio, estado.agoraMs) : inicio;
+    ateMs = pedido ? Math.min(fim, deMs + pedido) : fim;
+  }
   if (!(ateMs > deMs)) {
     // O cursor depois do fim do canal. O clique não fazia nada e não dizia
     // nada, que é o pior dos dois mundos: parece avariado.
@@ -4348,6 +4379,15 @@ $('filtroMomentos').onchange = (e) => {
   pintarMomentos();
 };
 $('procurarKills').onclick = procurarKills;
+$('janelaAuto').onchange = () => {
+  const horas = $('janelaAuto').value === 'horas';
+  $('horasAuto').hidden = !horas;
+  // Começa no instante do vídeo e uma hora depois: é quase sempre de onde se quer partir.
+  if (horas && !$('autoDe').value && estado.linhas.length) {
+    $('autoDe').value = relogioCurto(estado.agoraMs).slice(0, 5);
+    $('autoAte').value = relogioCurto(estado.agoraMs + 3600e3).slice(0, 5);
+  }
+};
 // Seta, e nao a funcao directamente: o `onclick` passa o evento como primeiro
 // argumento, e ele ia parar ao `soEsta` como se fosse uma lista de kills.
 $('baixarMontagem').onclick = () => (estado.montagem ? estado.montagem.abort() : baixarMontagem());

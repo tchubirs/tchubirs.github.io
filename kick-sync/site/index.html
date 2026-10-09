@@ -529,7 +529,13 @@
         <option value="1800" data-t="auto.meiaHora">meia hora</option>
         <option value="3600" selected data-t="auto.umaHora">uma hora</option>
         <option value="0" data-t="auto.noiteToda">a noite toda</option>
+        <option value="marca" data-t="auto.trechoMarcado">o trecho marcado</option>
+        <option value="horas" data-t="auto.deAte">escolher as horas</option>
       </select>
+      <span id="horasAuto" class="linha" hidden>
+        <label class="pequeno"><span data-t="auto.de">de</span> <input id="autoDe" type="time"></label>
+        <label class="pequeno"><span data-t="auto.ate">até</span> <input id="autoAte" type="time"></label>
+      </span>
     </div>
   </section>
 

@@ -100,7 +100,7 @@ const IGUAIS_DE_PROPOSITO = {
   // O espanhol e o portugues escrevem estas exactamente da mesma maneira.
   es: new Set([
     // A sensibilidade ("normal", "alta", "máxima") e "de todos" escrevem-se igual em espanhol.
-    'lance.sensNormal', 'lance.sensAlta', 'lance.sensMaxima', 'lance.deTodos',
+    'lance.sensNormal', 'lance.sensAlta', 'lance.sensMaxima', 'lance.deTodos', 'auto.de',
     // "pico de chat" diz-se igual em português e em espanhol.
     'evento.legendaPico',
     // "1 canal" também.

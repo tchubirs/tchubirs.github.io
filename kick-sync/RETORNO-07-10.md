@@ -40,7 +40,9 @@ Ordem: primeiro o que trava o uso no evento. Feito: 1 a 9 (09/10).
     vez pára), sensibilidade normal, alta ou máxima (guardada), e a regra escrita por baixo.
 12. **Detecção automática:** escolher de que hora a que hora (não só noite, uma hora, meia hora); escolher o que
     procurar (tiro, morte, grito do streamer, uma combinação); e, num evento, só contar briga ouvida por mais de uma
-    live (ver `PLANO.md`, teste do deowasd).
+    live (ver `PLANO.md`, teste do deowasd). **Feito em parte** (09/10): de que hora a que hora (o trecho marcado com
+    I e O, ou duas horas escritas). Falta: escolher o que procurar (hoje só tiro, e a morte pela tela; grito ainda não
+    existe) e a confirmação por mais de uma live, que precisam de estudo com gravações reais.
 13. **Entrada e saída:** depois de marcar, ajustar arrastando e vendo o quadro exato; na hora de exportar, escolher
     o formato para todos de uma vez (por exemplo TikTok).
 14. **Exportação rápida maior do que o marcado:** 4 s marcados viraram 24 s (8 s antes e 12 s depois). A cópia sem

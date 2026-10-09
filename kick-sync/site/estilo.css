@@ -1610,3 +1610,5 @@ body:not(:has(#fila > li)) #limparFila { display: none; }
    empurrava o mapa por baixo do painel do lance. Tamanho fixo, numa linha. */
 #trechoVisto { display: inline-block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 26ch; min-height: 1.4em; line-height: 1.4; }
 @media (max-width: 759px) { #trechoVisto { flex: 1 0 100%; min-width: 0; } }
+#horasAuto[hidden] { display: none; }
+#janelaAuto { max-width: 13em; }

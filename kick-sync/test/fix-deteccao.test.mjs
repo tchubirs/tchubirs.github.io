@@ -468,3 +468,44 @@ test('nenhuma chave das traduções está escrita duas vezes na mesma língua', 
     assert.deepEqual(repetidas, [], `${bloco.slice(0, 2)}: ${repetidas.join(', ')}`);
   }
 });
+
+// O dono (07/10): escolher de que hora a que hora a detecção ouve, e não só meia hora, uma hora ou a noite.
+test('a detecção ouve o trecho marcado, ou de uma hora a outra', comNavegador, async () => {
+  const { p, erros } = await abrir();
+  await kickFalsa(p, { canais: ['tchubi'] });
+  await varreduraFalsa(p, []);
+  await abrirNoite(p, ['tchubi']);
+  p.on('dialog', (d) => d.accept());
+
+  // Sem marca, diz o que fazer.
+  await p.selectOption('#janelaAuto', 'marca');
+  await p.click('#procurarKills');
+  assert.match(await textoMontagem(p), /Marque a entrada e a saída/);
+
+  // Com marca, ouve exatamente ela.
+  await p.click('#mais1m');
+  await p.click('#marcarIn');
+  await p.click('#mais1m');
+  await p.click('#marcarOut');
+  const marca = await p.evaluate(() => ({ ...window.__estado.marca }));
+  await detectar(p, { janela: 'marca' });
+  let v = await p.evaluate(() => window.__varrer);
+  assert.deepEqual([v.deMs, v.ateMs], [marca.de, marca.ate]);
+
+  // De uma hora a outra: as caixas abrem com o instante do vídeo.
+  await p.evaluate(() => { window.__varrer = null; });
+  await p.selectOption('#janelaAuto', 'horas');
+  assert.equal(await p.locator('#horasAuto').isVisible(), true);
+  const [de, ate] = await p.evaluate((t0) => {
+    const hm = (ms) => { const d = new Date(ms); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+    return [hm(t0 + 3 * 60_000), hm(t0 + 5 * 60_000)];
+  }, T);
+  await p.fill('#autoDe', de);
+  await p.fill('#autoAte', ate);
+  await detectar(p, { janela: 'horas' });
+  v = await p.evaluate(() => window.__varrer);
+  assert.equal(v.ateMs - v.deMs, 2 * 60_000);
+  assert.equal(new Date(v.deMs).getMinutes(), new Date(T + 3 * 60_000).getMinutes());
+  assert.deepEqual(erros, []);
+  await p.close();
+});
