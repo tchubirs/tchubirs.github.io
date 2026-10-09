@@ -49,7 +49,8 @@ Ordem: primeiro o que trava o uso no evento. Feito: 1 a 9 (09/10).
     de cada kill também em vertical, enquadrada ao meio quando não houver enquadramento guardado.
 14. **Exportação rápida maior do que o marcado:** 4 s marcados viraram 24 s (8 s antes e 12 s depois). A cópia sem
     reconverter só corta onde a Kick corta os pedaços dela. Dar a opção de corte exato, ou dizer isso antes de
-    baixar, com o tamanho final.
+    baixar, com o tamanho final. **Feito** (09/10): antes de baixar, a linha do corte diz com quanto o arquivo sai,
+    quanto sobra de cada lado e o tamanho, e manda usar o Clipar para o corte exato.
 15. **"Sem time (24)":** clicar no nome fecha tudo numa linha só e assusta. Sem times, não deixar fechar; e dizer
     que o exemplo é "24 canais de Rust ao vivo agora, sem times".
 16. **Evento com canais que já não estão ao vivo:** já funciona (lê os VODs), mas a tela não diz. Dizer na porta

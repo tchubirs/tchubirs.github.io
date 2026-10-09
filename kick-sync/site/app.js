@@ -7,6 +7,7 @@
 
 import {
   vodsDoCanal, lerMaster, lerPlaylist, procurarCanais, lerLinkKick, clipeDaKick, vodDaKick, DESCONHECIDO, slugDoNome,
+  segmentosNaJanela,
 } from './kick.js';
 import {
   linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo,
@@ -3048,6 +3049,15 @@ function pintarCorte() {
       const durS = (ate - de) / 1000 + antesS + depoisS;
       const dur = li.querySelector('.dur');
       dur.textContent = duracaoCurta(durS);
+      // O que o ficheiro vai ter de verdade, dito antes de baixar (o dono, 07/10: 4 s marcados saíram 24 s).
+      // Sem reconverter, o corte começa e acaba onde a Kick corta os pedaços dela.
+      const previsto = previsaoDoCorte(estado.linhas.find((l) => l.slug === slug),
+        de - antesS * 1000, ate + depoisS * 1000);
+      if (previsto && (previsto.antesS > 0.5 || previsto.depoisS > 0.5)) {
+        dur.textContent += ` · ${t('corte.saiCom', {
+          dur: duracaoCurta(previsto.durS), antes: Math.round(previsto.antesS), depois: Math.round(previsto.depoisS),
+        })}${previsto.mb ? ` · ~${previsto.mb} MB` : ''}`;
+      }
       // O mesmo tecto do editor. Sem ele, uma marca de três horas (o I às
       // 20:00 esquecido e o O às 23:00) eram mil pedaços de 11 MB pedidos
       // para a memória do separador, e o separador morria.
@@ -3070,6 +3080,32 @@ function pintarCorte() {
     li.querySelector('.baixarUm').onclick = () => baixarUm(slug);
     ler();
   }
+}
+
+/**
+ * O que um corte sem reconverter vai ter mesmo, antes de baixar: a duração, quanto sobra de cada lado e o
+ * tamanho. Lê-se das playlists já carregadas (os pedaços têm as mesmas pontas em todas as qualidades).
+ */
+function previsaoDoCorte(linha, deMs, ateMs) {
+  if (!linha) return null;
+  const nudge = estado.nudges[linha.slug] || 0;
+  const de = deMs + nudge;
+  const ate = ateMs + nudge;
+  const peca = (linha.pecasCompletas || linha.pecas || []).find((p) => p.playlist?.segmentos
+    && de < p.playlist.fim && ate > p.playlist.inicio);
+  if (!peca) return null;
+  const segs = segmentosNaJanela(peca.playlist, de, ate);
+  if (!segs.length) return null;
+  const inicio = segs[0].inicio;
+  const fim = segs.at(-1).inicio + segs.at(-1).duracaoS * 1000;
+  const durS = (fim - inicio) / 1000;
+  const bitrate = peca.escada?.[0]?.bitrate || 0;
+  return {
+    durS,
+    antesS: Math.max(0, (de - inicio) / 1000),
+    depoisS: Math.max(0, (fim - ate) / 1000),
+    mb: bitrate ? Math.max(1, Math.round((bitrate / 8) * durS / 1048576)) : 0,
+  };
 }
 
 async function baixarUm(slug) {

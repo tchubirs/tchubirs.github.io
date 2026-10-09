@@ -1377,3 +1377,23 @@ test('dá para ver a kill antes de a baixar, e a prévia é o mesmo pedaço do f
 // Aqui o som é posto à mão porque este Chromium não descodifica AAC. O que se
 // testa é a costura: o botão só aparece quando há som guardado, aprende com o
 // estouro certo, e a lista passa a ser o que ele confirmou.
+
+// O dono (07/10): 4 s marcados saíram um arquivo de 24 s, e só se soube depois de baixar.
+test('antes de baixar, a linha do corte diz quanto o arquivo sai de verdade',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p);
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 15000 });
+    await p.click('#mais3s');
+    await p.click('#marcarIn');
+    await p.click('#mais3s');
+    await p.click('#marcarOut');
+    await p.waitForSelector('#corte:not([hidden])', { timeout: 10000 });
+    const dur = await p.locator('#listaCorte li[data-slug] .dur').first().innerText();
+    assert.match(dur, /^0:03 · o arquivo sai com 0:\d\d \(\d+ s antes e \d+ s depois do marcado/);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
