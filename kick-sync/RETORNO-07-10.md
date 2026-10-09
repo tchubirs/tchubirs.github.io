@@ -32,7 +32,8 @@ Ordem: primeiro o que trava o uso no evento. Feito: 1 a 9 (09/10).
 ## Depois
 
 10. **Ver o chat rolando ao lado do vídeo**, sobretudo num pico, para entender o que aconteceu. As mensagens já são
-    lidas para achar os picos; falta mostrar, no tempo certo do vídeo.
+    lidas para achar os picos; falta mostrar, no tempo certo do vídeo. **Feito** (09/10): na coluna da direita,
+    o chat de quem está em foco, até ao segundo do vídeo. Só nos lances abertos pelo evento.
 11. **Picos de chat de todos com um botão** ("ler o chat de todos"), e não só do time clicado. E sensibilidade
     ajustável: hoje um pico é um minuto com 3 vezes mais mensagens que o normal e pelo menos 8. Num canal pequeno
     quase nunca chega a 8. Explicar isso na tela.

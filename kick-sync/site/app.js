@@ -185,6 +185,7 @@ const diaLocal = (ms) => {
  */
 // Os picos de chat que o evento já leu, por canal. Vazio até o evento montar.
 let picosDoEvento = () => new Map();
+let mensagensDoEvento = () => new Map();
 let timerGuardar = null;
 // Depois do "Recomecar" confirmado nao se guarda mais nada: o `beforeunload`
 // escrevia a sessao inteira outra vez no sitio de onde ela acabava de sair.
@@ -1597,9 +1598,46 @@ function pintarRelogio(quandoMs) {
   // A frase do link diz o instante, e o instante anda. Reescrevê-la a cada
   // frame era trabalho para nada: só quando o segundo muda.
   const segundo = Math.floor(quandoMs / 1000);
-  if (segundo !== ultimoSegundo) { ultimoSegundo = segundo; pintarPartilha(); }
+  if (segundo !== ultimoSegundo) { ultimoSegundo = segundo; pintarPartilha(); pintarChatVideo(quandoMs); }
 }
 let ultimoSegundo = -1;
+
+// ── o chat ao lado do vídeo ─────────────────────────────────────────────────
+//
+// As últimas mensagens do canal em foco até ao instante do vídeo, a andar com ele. Mostram o que o
+// chat dizia naquele segundo, e por isso, num pico, o que aconteceu (o dono, 07/10).
+const CHAT_LINHAS = 40;
+const EMOTE_CHAT = /\[emote:\d+:([^\]]+)\]/g;
+let chatPintado = '';
+function pintarChatVideo(quandoMs, forcar = false) {
+  const canal = estado.focos[0] || estado.linhas[0]?.slug;
+  const lista = (canal && mensagensDoEvento().get(canal)) || [];
+  const caixa = $('chatVideo');
+  if (!lista.length || !estado.linhas.length) {
+    caixa.hidden = true;
+    chatPintado = '';
+    return;
+  }
+  // A última mensagem até agora, por busca binária: uma noite de chat são milhares.
+  let lo = 0;
+  let hi = lista.length;
+  while (lo < hi) {
+    const meio = (lo + hi) >> 1;
+    if (lista[meio].ms <= quandoMs) lo = meio + 1; else hi = meio;
+  }
+  const chave = `${canal}|${lo}|${lista.length}`;
+  if (!forcar && chave === chatPintado) return;
+  chatPintado = chave;
+  caixa.hidden = false;
+  $('chatVideoTitulo').textContent = t('chat.de', { canal });
+  const vistas = lista.slice(Math.max(0, lo - CHAT_LINHAS), lo);
+  $('chatLinhas').innerHTML = vistas.length
+    ? vistas.map((m) => `<li><span class="hora">${relogioCurto(m.ms)}</span> <b>${escapar(m.autor || '')}</b> `
+      + `${escapar(String(m.texto || '').replace(EMOTE_CHAT, '$1'))}</li>`).join('')
+    : `<li class="nota">${escapar(t('chat.nada'))}</li>`;
+  const ol = $('chatLinhas');
+  ol.scrollTop = ol.scrollHeight;
+}
 
 function irPara(quandoMs) {
   estado.agoraMs = quandoMs;
@@ -4793,7 +4831,7 @@ async function abrirLanceDoEvento(canais, ms, foco) {
 }
 const evento = montarEvento({
   abrirLance: abrirLanceDoEvento,
-  aoMudarPicos: () => pintarRegua(),
+  aoMudarPicos: () => { pintarRegua(); pintarChatVideo(estado.agoraMs, true); },
   memorizarVods: (resultados) => {
     estado.vodsDoEvento.clear();
     for (const r of resultados) if (r?.estado === 'ok') estado.vodsDoEvento.set(r.slug, r);
@@ -4802,6 +4840,7 @@ const evento = montarEvento({
 // Para os testes de página, como o `__estado` da noite.
 window.__evento = evento.estado;
 picosDoEvento = () => evento.estado.marcas;
+mensagensDoEvento = () => evento.estado.mensagens;
 // Com uma live só a grelha fica vazia, e o vídeo fica com o lugar dela (ver o CSS de .semGrelha).
 // O CSS não o pode saber sozinho: um :has dentro de outro :has não vale.
 new MutationObserver(() => {

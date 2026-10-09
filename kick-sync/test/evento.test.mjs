@@ -461,3 +461,33 @@ test('enquanto o lance abre, a leitura do chat espera: o vídeo vem primeiro',
     assert.deepEqual(erros, []);
     await p.close();
   });
+
+test('o chat de quem está em foco anda ao lado do vídeo, no tempo dele',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'outro'] });
+    await abrirEvento(p);
+    await clicarNoMapa(p, 'outro', T + 2 * 60_000);
+    const botoes = p.locator('#picosChat button.pico');
+    await botoes.first().waitFor();
+    await botoes.first().click();
+    await p.waitForSelector('.tile', { timeout: 15000 });
+    await p.waitForSelector('#chatVideo:not([hidden])', { timeout: 15000 });
+    assert.equal(await p.locator('#chatVideoTitulo').innerText(), 'Chat de tchubi');
+    const ultima = async () => p.evaluate(() => {
+      const hs = [...document.querySelectorAll('#chatLinhas .hora')].map((h) => h.textContent);
+      return hs.at(-1);
+    });
+    const agora = await p.locator('#agora').innerText();
+    const h1 = await ultima();
+    assert.ok(h1 && h1 <= agora, `mensagem do futuro: ${h1} com o vídeo em ${agora}`);
+    // Andar um minuto traz mensagens mais novas.
+    await p.click('#mais1m');
+    await p.waitForFunction((antes) => {
+      const hs = [...document.querySelectorAll('#chatLinhas .hora')].map((h) => h.textContent);
+      return hs.at(-1) > antes;
+    }, h1, { timeout: 5000 });
+    assert.ok(await p.locator('#chatVideo').isVisible());
+    assert.deepEqual(erros, []);
+    await p.close();
+  });

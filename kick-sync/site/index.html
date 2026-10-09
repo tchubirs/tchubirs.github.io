@@ -650,6 +650,12 @@
       <span id="estadoSelecao" class="nota"></span>
     </div>
     <ul id="listaMomentos" class="momentos"></ul>
+    <!-- O chat de quem está em foco, no tempo do vídeo (o dono, 07/10: ver o chat num pico para entender
+         o que aconteceu). Só com mensagens lidas, que hoje vêm do mapa do evento. -->
+    <section id="chatVideo" class="chatVideo" hidden>
+      <h3 id="chatVideoTitulo" class="chatTitulo"></h3>
+      <ol id="chatLinhas" class="chatLinhas" aria-live="off"></ol>
+    </section>
     <div class="linha">
       <button id="baixarMontagem" disabled><svg class="ic" aria-hidden="true"><use href="#i-descarregar"/></svg><span data-t="montagem.baixar">Exportar montagem</span></button>
       <span id="estadoMontagem" class="nota" role="status" aria-live="polite"></span>

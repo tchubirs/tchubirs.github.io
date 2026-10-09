@@ -1589,3 +1589,24 @@ body:not(:has(#fila > li)) #limparFila { display: none; }
    para baixo continua a rolar a página e as faixas). */
 .mapaRolo { cursor: grab; touch-action: pan-y; }
 .mapaRolo.aArrastar { cursor: grabbing; }
+
+/* ── o chat ao lado do vídeo ────────────────────────────────────────────── */
+.chatVideo { display: flex; flex-direction: column; gap: var(--e2); min-height: 0; }
+.chatVideo[hidden] { display: none; }
+.chatLinhas {
+  list-style: none; margin: 0; padding: var(--e2) var(--e3); overflow-y: auto; max-height: 220px;
+  background: var(--sup-1); border: 1px solid var(--linha); border-radius: var(--r-2);
+  font-size: var(--t-menor); line-height: 1.35; display: grid; gap: 2px; align-content: start;
+}
+.chatLinhas li { overflow-wrap: anywhere; color: var(--tinta-2); }
+.chatLinhas b { color: var(--tinta); font-weight: 600; }
+.chatLinhas .hora { color: var(--tinta-3); font-family: var(--letra-mono); font-size: var(--t-micro); }
+@media (min-width: 1080px) and (min-height: 640px) {
+  body.mesa:has(#palco:not([hidden])) #montagem > .chatVideo { order: 6; flex: 1 1 0; min-height: 120px; }
+  body.mesa:has(#palco:not([hidden])) #montagem > .chatVideo .chatLinhas { flex: 1 1 auto; max-height: none; }
+}
+.chatTitulo { margin: 0; font-size: var(--t-menor); font-weight: 600; color: var(--tinta-2); }
+/* O trecho à vista muda de tamanho a cada zoom; numa barra que quebra linhas, isso mexia a altura dela e
+   empurrava o mapa por baixo do painel do lance. Tamanho fixo, numa linha. */
+#trechoVisto { display: inline-block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 26ch; min-height: 1.4em; line-height: 1.4; }
+@media (max-width: 759px) { #trechoVisto { flex: 1 0 100%; min-width: 0; } }

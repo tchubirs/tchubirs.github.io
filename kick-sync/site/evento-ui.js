@@ -137,6 +137,8 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
     achados: [],
     mapa: null,
     marcas: new Map(),
+    // As mensagens lidas para achar os picos, por canal: o chat ao lado do vídeo mostra-as no tempo certo.
+    mensagens: new Map(),
     cancelar: null,
     link: '',
     atrasoMin: ATRASO_MIN,
@@ -482,8 +484,15 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
   // a 726, e a faixa que se acabou de tocar sumia. Rola-se a página até o mapa ficar por cima dele.
   function destaparMapa() {
     if (!estreito() || $('lance').hidden) return;
-    const falta = $('mapaRolo').getBoundingClientRect().bottom - $('lance').getBoundingClientRect().top + 8;
-    if (falta > 0) window.scrollBy({ top: falta, behavior: semMovimento() ? 'auto' : 'smooth' });
+    const falta = () => $('mapaRolo').getBoundingClientRect().bottom - $('lance').getBoundingClientRect().top + 8;
+    if (falta() > 0) window.scrollBy({ top: falta(), behavior: semMovimento() ? 'auto' : 'smooth' });
+    // O que está por cima do mapa ainda pode mudar de altura a meio do rolar (o chat, a legenda, o trecho
+    // à vista). Confere-se outra vez quando o rolar acaba, e acerta-se o que faltar.
+    clearTimeout(ev.destapar);
+    ev.destapar = setTimeout(() => {
+      if (!estreito() || $('lance').hidden) return;
+      if (falta() > 0) window.scrollBy({ top: falta(), behavior: 'auto' });
+    }, 700);
   }
 
   // ── o teclado no mapa ──────────────────────────────────────────────────
@@ -589,6 +598,9 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
         });
         const antigas = (ev.marcas.get(c) || []).filter((m) => m.ms < deMs || m.ms > ateMs);
         ev.marcas.set(c, [...antigas, ...marcas].sort((a, b) => a.ms - b.ms));
+        const porId = new Map((ev.mensagens.get(c) || []).map((m) => [m.id ?? `${m.ms}|${m.autor}|${m.texto}`, m]));
+        for (const m of msgs) porId.set(m.id ?? `${m.ms}|${m.autor}|${m.texto}`, m);
+        ev.mensagens.set(c, [...porId.values()].sort((a, b) => a.ms - b.ms));
         aoMudarPicos();
         chatLido.add(`${c}|${deMs}`);
       } catch (erro) {
