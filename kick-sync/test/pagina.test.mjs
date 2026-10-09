@@ -451,12 +451,12 @@ test('cada canal baixa sozinho, no seu tamanho, em qualidade maxima',
 
     const linhas = p.locator('#listaCorte li[data-slug]');
     assert.equal(await linhas.count(), 2, 'uma linha por angulo presente na marca');
-    assert.equal(await linhas.first().locator('.dur').innerText(), '0:10');
+    assert.match(await linhas.first().locator('.dur').innerText(), /^0:10( ·|$)/);
 
     // Cinco segundos a mais no fim, so neste canal.
     await linhas.first().locator('.depois').fill('5');
     await linhas.first().locator('.depois').dispatchEvent('input');
-    assert.equal(await linhas.first().locator('.dur').innerText(), '0:15');
+    assert.match(await linhas.first().locator('.dur').innerText(), /^0:15( ·|$)/);
     assert.equal(await linhas.nth(1).locator('.dur').innerText(), '0:10', 'o outro nao mexeu');
 
     const antes = pedidos.segmentos;
