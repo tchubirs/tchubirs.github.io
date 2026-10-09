@@ -171,7 +171,7 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
     if (!todos.length) { $('estadoEvento').textContent = t('evento.vazio'); return; }
     $('evento').hidden = false;
     $('nomeEvento').textContent = elenco.nome || t('evento.semNome');
-    const { times, canais } = contar(elenco);
+    const { canais } = contar(elenco);
     $('resumoEvento').textContent = t('evento.aCarregar', { feitos: 0, total: canais });
     try {
       ev.resultados = await carregarCanais(todos, {
@@ -189,14 +189,7 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
     memorizarVods(ev.resultados);
     pintarAvisos();
     ev.coberturas = coberturasDe(ev.resultados);
-    const comVideo = ev.coberturas.size;
-    const aoVivo = ev.resultados.filter((r) => r.estado === 'ok' && r.vods.some(aoVivoVod)).length;
-    $('resumoEvento').textContent = [
-      times ? tn(times, 'evento.resumoTimeUm', 'evento.resumoTimes', { times }) : '',
-      tn(canais, 'evento.resumoCanalUm', 'evento.resumoCanais', { canais, comVideo }),
-      aoVivo ? t('evento.resumoAoVivo', { aoVivo }) : '',
-    ].filter(Boolean).join(' · ');
-    $('seloAoVivo').hidden = aoVivo === 0;
+    const aoVivo = pintarResumo();
     ev.times = [...elenco.times];
     if (elenco.soltos.length) ev.times.push({ nome: null, canais: elenco.soltos });
     // Os times começam fechados quando são muitos: 125 times abertos são 500 faixas e ninguém acha
@@ -215,6 +208,7 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
     $('partilharEventoTexto').textContent = t('evento.partilharEvento');
     pintar();
     seguirAoVivo(aoVivo > 0);
+    procurarNovatos();
     $('mapaRolo').focus({ preventScroll: true });
   }
 
@@ -932,6 +926,59 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
     });
   }
 
+  // O resumo por cima do mapa: times, canais, com vídeo e ao vivo. Devolve quantos estão ao vivo.
+  function pintarResumo(extra = '') {
+    const { times, canais } = contar(ev.elenco);
+    const comVideo = ev.coberturas.size;
+    const aoVivo = ev.resultados.filter((r) => r.estado === 'ok' && r.vods.some(aoVivoVod)).length;
+    $('resumoEvento').textContent = [
+      times ? tn(times, 'evento.resumoTimeUm', 'evento.resumoTimes', { times }) : '',
+      tn(canais, 'evento.resumoCanalUm', 'evento.resumoCanais', { canais, comVideo }),
+      aoVivo ? t('evento.resumoAoVivo', { aoVivo }) : '',
+      extra,
+    ].filter(Boolean).join(' · ');
+    $('seloAoVivo').hidden = aoVivo === 0;
+    return aoVivo;
+  }
+
+  // Quem entra no ar depois de o evento abrir. Antes só aparecia ao recarregar a página: o ao vivo
+  // estendia quem já estava no ar, mas não voltava a pedir a lista de VODs de mais ninguém (ABISAL.md).
+  // De 2 em 2 minutos, com a página à vista, pede de novo os que não estão no ar, 25 de cada vez e à
+  // vez, para 500 canais não serem 500 pedidos de uma vez. Só num evento de hoje.
+  const NOVATOS_LOTE = 25;
+  let novatosControlo = null;
+  function procurarNovatos() {
+    novatosControlo?.abort();
+    novatosControlo = null;
+    if (!ev.limites || ev.limites.ateMs < Date.now() - 6 * 3600e3) return;
+    const controlo = new AbortController();
+    novatosControlo = controlo;
+    let vez = 0;
+    agendar({
+      intervaloMs: window.__povixNovatosMs || 120_000,
+      sinal: controlo.signal,
+      atualizar: async () => {
+        if (!ev.elenco) return;
+        const fora = ev.resultados.filter((r) => !(r.estado === 'ok' && r.vods.some(aoVivoVod))).map((r) => r.slug);
+        if (!fora.length) return;
+        const lote = Array.from({ length: Math.min(NOVATOS_LOTE, fora.length) }, (_, i) => fora[(vez + i) % fora.length]);
+        vez = (vez + lote.length) % fora.length;
+        const novos = await carregarCanais(lote, { buscar, sinal: controlo.signal, paralelos: 4 });
+        const entraram = novos.filter((r) => r.estado === 'ok' && r.vods.some(aoVivoVod));
+        if (!entraram.length) return;
+        const porSlug = new Map(novos.map((r) => [r.slug, r]));
+        ev.resultados = ev.resultados.map((r) => porSlug.get(r.slug) || r);
+        memorizarVods(ev.resultados);
+        ev.coberturas = coberturasDe(ev.resultados);
+        pintarResumo(t('evento.entraram', { lista: entraram.map((r) => r.slug).join(', ') }));
+        remontar();
+        if (Number.isFinite(ev.mapa.fimMs) && ev.limites) ev.limites = { ...ev.limites, ateMs: Math.max(ev.limites.ateMs, ev.mapa.fimMs) };
+        if (!aoVivoControlo) seguirAoVivo(true);
+        pintar();
+      },
+    });
+  }
+
   // O lance escolhido (ou o primeiro streamer no ar) quase no ar: 20 s atrás, onde todos já gravaram.
   async function irAoVivo() {
     const agora = Date.now() - ATRAS_DO_AR_MS;
@@ -962,6 +1009,8 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
     ev.escolha = null;
     ev.achados = [];
     seguirAoVivo(false);
+    novatosControlo?.abort();
+    novatosControlo = null;
     $('evento').hidden = true;
     $('lance').hidden = true;
     $('avisosEvento').hidden = true;

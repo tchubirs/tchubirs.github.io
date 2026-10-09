@@ -64,11 +64,12 @@ marca cada luta no mapa sem precisar do som.
 
 1. O site no ar com domínio próprio (o dono escolhe a hospedagem; recomendação em `LANCAR.md`).
 2. O clipe de vários ângulos ligado na tela (o código está pronto, falta o botão).
-3. Os bugs que ficaram parados (sessão, teclado, sincronia, Twitch, CI, mapa).
+3. Os bugs que ficaram parados (sessão, teclado, sincronia, Twitch, CI, mapa). **Feito** (09/10): juntados.
 4. Uma página do evento com nome e link fixos, que abre direto no mapa.
 5. A contagem dos números do piloto (clipes e visualizações), sem guardar vídeo nenhum.
 6. Quem começa a live depois de o evento estar aberto aparecer sozinho. Hoje só aparece ao recarregar a página:
-   o ao vivo estende quem já estava no ar, mas não volta a pedir a lista de VODs.
+   o ao vivo estende quem já estava no ar, mas não volta a pedir a lista de VODs. **Feito** (09/10): de 2 em 2
+   minutos pede de novo 25 dos que não estão no ar, à vez, e diz quem entrou.
 7. A lista do evento pronta num arquivo, atualizada de tempos em tempos (por exemplo no GitHub Actions): cada
    pessoa que abre o evento faz 1 pedido em vez de 500 à Kick. Com muita gente a abrir, é o que evita a Kick
    estranhar o volume.

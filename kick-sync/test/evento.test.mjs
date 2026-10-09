@@ -552,3 +552,35 @@ test('com a página parada, os picos das horas vizinhas chegam sozinhos',
     assert.deepEqual(erros, []);
     await p.close();
   });
+
+test('quem entra no ar depois de o evento abrir aparece sozinho, sem recarregar',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'outro'] });
+    await p.addInitScript(() => { window.__povixNovatosMs = 400; });
+    // tchubi está ao vivo desde há 30 min; outro só entra no ar depois de o evento abrir.
+    let outroNoAr = false;
+    await p.route('**/api/v2/channels/*/videos', async (rota) => {
+      const slug = rota.request().url().match(/channels\/([^/]+)\/videos/)[1];
+      if (slug === 'terceiro') return rota.fulfill({ status: 404, body: '' });
+      const vivo = slug === 'tchubi' || outroNoAr;
+      const inicio = new Date(Date.now() - (slug === 'tchubi' ? 30 : 2) * 60_000);
+      await rota.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(vivo ? [{
+          id: slug === 'tchubi' ? 1 : 2, session_title: 'rust', is_live: true, duration: 0,
+          start_time: inicio.toISOString().replace('T', ' ').slice(0, 19),
+          source: `https://stream.kick.com/falsa/${slug}/n0/master.m3u8`, video: {},
+        }] : []),
+      });
+    });
+    await abrirEvento(p);
+    assert.match(await p.locator('#resumoEvento').innerText(), /1 ao vivo/);
+    outroNoAr = true;
+    await p.waitForFunction(() => /entrou no ar agora: outro/.test(document.getElementById('resumoEvento').textContent), null, { timeout: 10000 });
+    assert.match(await p.locator('#resumoEvento').innerText(), /2 ao vivo/);
+    assert.equal(await p.evaluate(() => window.__evento.coberturas.has('outro')), true);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
