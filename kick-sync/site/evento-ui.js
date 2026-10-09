@@ -347,7 +347,19 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
   }
 
   let pedido = 0;
+  // O trecho que está à vista, em palavras: com o zoom e o arrasto, sem isto não se sabia onde se estava.
+  function pintarTrecho() {
+    const v = ev.vista;
+    if (!v) { $('trechoVisto').textContent = ''; return; }
+    const outroDia = dataCurta(v.deMs) !== dataCurta(v.ateMs);
+    const ponta = (ms) => (outroDia ? `${dataCurta(ms)} ${horaCurta(ms)}` : horaCurta(ms));
+    const min = Math.round((v.ateMs - v.deMs) / 60_000);
+    const dur = min < 60 ? `${min} min` : `${Math.floor(min / 60)} h${min % 60 ? ` ${String(min % 60).padStart(2, '0')}` : ''}`;
+    $('trechoVisto').textContent = t('evento.trecho', { de: ponta(v.deMs), ate: ponta(v.ateMs), dur });
+  }
+
   function pintar() {
+    pintarTrecho();
     cancelAnimationFrame(pedido);
     pedido = requestAnimationFrame(() => {
       if (!ev.mapa || !ev.vista) return;
@@ -875,7 +887,10 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
     $('exemploAoVivo').onclick = abrirExemplo;
     $('procurarEvento').oninput = () => { remontar(); pintar(); };
     $('mapaRolo').onscroll = () => { ev.topo = $('mapaRolo').scrollTop; pintar(); };
-    $('mapaRolo').onclick = (e) => escolher(aquiDe(e));
+    $('mapaRolo').onclick = (e) => {
+      if (acabouDeArrastar) { acabouDeArrastar = false; return; }
+      escolher(aquiDe(e));
+    };
     $('mapaRolo').onkeydown = teclaNoMapa;
     // O cursor só aparece com o foco do teclado: um clique de rato não o deve deixar pintado.
     $('mapaRolo').onfocus = () => pintar();
@@ -892,6 +907,46 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
       const caixa = $('mapaRolo').getBoundingClientRect();
       const centro = tempoDoX(e.clientX - caixa.left, ev.vista, $('mapaRolo').clientWidth);
       ev.vista = zoom(ev.vista, centro, e.deltaY > 0 ? 1.25 : 0.8, ev.limites);
+      pintar();
+    }, { passive: false });
+    // Arrastar para os lados anda no tempo (o dono, 07/10: "o mapa não anda"). Para cima e para baixo
+    // continua a rolar as faixas. Um arrasto não é um clique: não escolhe nada ao largar.
+    let arrasto = null;
+    let acabouDeArrastar = false;
+    $('mapaRolo').addEventListener('pointerdown', (e) => {
+      if (e.button !== 0 || !ev.vista) return;
+      arrasto = { x: e.clientX, vista: { ...ev.vista }, andou: false, id: e.pointerId };
+    });
+    $('mapaRolo').addEventListener('pointermove', (e) => {
+      if (!arrasto || e.pointerId !== arrasto.id) return;
+      const dx = e.clientX - arrasto.x;
+      if (!arrasto.andou && Math.abs(dx) < 6) return;
+      if (!arrasto.andou) {
+        arrasto.andou = true;
+        try { $('mapaRolo').setPointerCapture(e.pointerId); } catch { /* já saiu */ }
+        $('mapaRolo').classList.add('aArrastar');
+      }
+      const msPorPx = (arrasto.vista.ateMs - arrasto.vista.deMs) / $('mapaRolo').clientWidth;
+      const vista = { deMs: arrasto.vista.deMs - dx * msPorPx, ateMs: arrasto.vista.ateMs - dx * msPorPx };
+      ev.vista = zoom(vista, null, 1, ev.limites);
+      pintar();
+    });
+    const largar = (e) => {
+      if (!arrasto || e.pointerId !== arrasto.id) return;
+      acabouDeArrastar = arrasto.andou;
+      arrasto = null;
+      $('mapaRolo').classList.remove('aArrastar');
+    };
+    $('mapaRolo').addEventListener('pointerup', largar);
+    $('mapaRolo').addEventListener('pointercancel', largar);
+    // Uma roda de lado (touchpad, ou Shift + roda) também anda no tempo.
+    $('mapaRolo').addEventListener('wheel', (e) => {
+      if (e.ctrlKey || e.altKey || !ev.vista) return;
+      const lado = e.shiftKey && !e.deltaX ? e.deltaY : e.deltaX;
+      if (!lado || Math.abs(lado) < Math.abs(e.shiftKey ? 0 : e.deltaY)) return;
+      e.preventDefault();
+      const msPorPx = (ev.vista.ateMs - ev.vista.deMs) / $('mapaRolo').clientWidth;
+      ev.vista = zoom({ deMs: ev.vista.deMs + lado * msPorPx, ateMs: ev.vista.ateMs + lado * msPorPx }, null, 1, ev.limites);
       pintar();
     }, { passive: false });
     $('aproximar').onclick = () => {

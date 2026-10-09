@@ -402,3 +402,30 @@ test('o botão Início fecha os vídeos: com evento volta ao mapa, sem evento vo
     assert.equal(await p.locator('#palco').isVisible(), false);
     assert.deepEqual(erros, []);
   });
+
+test('arrastar o mapa para o lado anda no tempo, diz o trecho à vista, e não escolhe nada',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'outro'] });
+    await abrirEvento(p);
+    // Aproximar primeiro: com o evento inteiro à vista não há para onde andar.
+    await p.click('#aproximar');
+    await p.click('#aproximar');
+    const antes = await p.evaluate(() => ({ ...window.__evento.vista }));
+    assert.match(await p.locator('#trechoVisto').innerText(), /^à vista: \d{2}:\d{2} a \d{2}:\d{2} \(\d+ (min|h)/);
+    const caixa = await p.locator('#mapaRolo').boundingBox();
+    const y = caixa.y + caixa.height / 2;
+    await p.mouse.move(caixa.x + caixa.width / 2, y);
+    await p.mouse.down();
+    await p.mouse.move(caixa.x + caixa.width / 2 + 120, y, { steps: 6 });
+    await p.mouse.up();
+    const depois = await p.evaluate(() => ({ ...window.__evento.vista }));
+    assert.ok(depois.deMs < antes.deMs, 'arrastar para a direita volta no tempo');
+    assert.equal(Math.round(depois.ateMs - depois.deMs), Math.round(antes.ateMs - antes.deMs), 'o zoom não mudou');
+    assert.equal(await p.evaluate(() => window.__evento.escolha), null, 'o arrasto escolheu um lance');
+    // Um clique parado continua a escolher.
+    await p.mouse.click(caixa.x + caixa.width / 2, y);
+    assert.equal(await p.locator('#verTudo').getAttribute('title'), 'Volta a mostrar o trecho em que a maioria estava ao vivo');
+    assert.deepEqual(erros, []);
+    await p.close();
+  });

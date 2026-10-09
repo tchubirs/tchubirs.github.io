@@ -1584,3 +1584,8 @@ body:not(:has(#fila > li)) #limparFila { display: none; }
 
 /* A caixa do Sincronizar sem botão (um canal só) e sem recado é uma caixa vazia. */
 .sincronizar:has(> #alinhar[hidden]):has(> #estadoAlinhar:empty) { display: none; }
+
+/* O mapa anda no tempo a arrastar: a mão diz que se pode, e o toque de lado é do mapa (o de cima
+   para baixo continua a rolar a página e as faixas). */
+.mapaRolo { cursor: grab; touch-action: pan-y; }
+.mapaRolo.aArrastar { cursor: grabbing; }
