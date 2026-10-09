@@ -4253,8 +4253,24 @@ $('marcarOut').onclick = () => { estado.marca.ate = estado.agoraMs; pintarMarca(
 $('alinhar').onclick = alinhar;
 $('marcarKill').onclick = marcarKill;
 // O resumo tem de acompanhar as caixas, senão fechá-las mente sobre o que lá está.
+// As margens só aparecem depois da primeira kill (o dono, 07/10), e cada kill guarda as suas ao ser
+// marcada. Mudar as margens passa então para as kills que ainda têm as de antes; as que foram
+// acertadas uma a uma ficam como estão.
+let margensDeAntes = tamanhos();
+function mudarMargens() {
+  const novas = tamanhos();
+  let mudou = false;
+  for (const m of estado.momentos) {
+    for (const [k, v] of Object.entries(novas)) {
+      if (m[k] === margensDeAntes[k] && v !== m[k]) { m[k] = v; mudou = true; }
+    }
+  }
+  margensDeAntes = novas;
+  pintarResumoMargens();
+  if (mudou) { guardar(); pintarMomentos(); }
+}
 for (const id of ['protAntes', 'protDepois', 'vitAntes', 'vitDepois']) {
-  $(id).addEventListener('input', pintarResumoMargens);
+  $(id).addEventListener('input', mudarMargens);
 }
 pintarResumoMargens();
 $('apagarSelecionados').onclick = apagarSelecionados;

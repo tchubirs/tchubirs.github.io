@@ -247,7 +247,13 @@ test('a detecção vê quem morreu mesmo com o filtro a esconder as novas, e o r
     p.on('dialog', (d) => d.accept());
     // O filtro guarda-se de uma noite para a outra, e as kills novas ainda não
     // têm vítima: ficam escondidas por ele.
-    await p.selectOption('#filtroMomentos', 'comMorte');
+    // Sem kills a barra do filtro fica escondida (só aparece o que serve): o filtro guardado
+    // muda-se como o arranque o mudaria.
+    await p.evaluate(() => {
+      const f = document.getElementById('filtroMomentos');
+      f.value = 'comMorte';
+      f.dispatchEvent(new Event('change'));
+    });
     // O tchubi foi alinhado pelo som: o VOD dele vai 5,7 s à frente da noite.
     const NUDGE = 5700;
     await p.evaluate((n) => { window.__estado.nudges.tchubi = n; }, NUDGE);

@@ -140,12 +140,15 @@ test('a prévia de um tiroteio leva o combate inteiro e as margens por fora',
     await p.fill('#canais', 'tchubi');
     await p.click('#carregar');
     await p.waitForSelector('.tile', { timeout: 15000 });
-    await p.click('#margens summary');
-    await p.fill('#protAntes', '5');
-    await p.fill('#protDepois', '2');
     await p.click('#mais1m');
     await p.click('#marcarKill');
     await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
+    // As margens só aparecem depois da primeira kill.
+    await p.click('#margens summary');
+    await p.fill('#protAntes', '5');
+    await p.dispatchEvent('#protAntes', 'input');
+    await p.fill('#protDepois', '2');
+    await p.dispatchEvent('#protDepois', 'input');
     const ms = Number(await p.locator('#listaMomentos li[data-ms]').getAttribute('data-ms'));
 
     // Um tiroteio de vinte segundos, como a deteccao automatica o daria.

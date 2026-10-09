@@ -1334,12 +1334,15 @@ test('dá para ver a kill antes de a baixar, e a prévia é o mesmo pedaço do f
 
     // Margens diferentes das de origem, para o teste não passar por acaso.
     // As margens vivem numa gaveta fechada: abre-se como uma pessoa abriria.
-    await p.click('#margens summary');
-    await p.fill('#protAntes', '7');
-    await p.fill('#protDepois', '3');
     await p.click('#mais1m');
     await p.click('#marcarKill');
     await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
+    // As margens só aparecem depois da primeira kill.
+    await p.click('#margens summary');
+    await p.fill('#protAntes', '7');
+    await p.dispatchEvent('#protAntes', 'input');
+    await p.fill('#protDepois', '3');
+    await p.dispatchEvent('#protDepois', 'input');
     const ms = Number(await p.locator('#listaMomentos li[data-ms]').getAttribute('data-ms'));
 
     await p.locator('#listaMomentos .ver').click();
