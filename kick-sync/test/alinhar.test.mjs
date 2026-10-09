@@ -248,3 +248,42 @@ test('uma noite diferente não reaproveita medições da anterior', async () => 
     }
   }
 });
+
+// "30 ângulos já alinhados, acrescento um que entrou mais tarde": a
+// sobreposição de todos muda, e com ela mudavam os três instantes. Ouvia-se
+// tudo outra vez (reaproveitados 0).
+test('um canal que entrou mais tarde não manda ouvir os outros todos outra vez', async () => {
+  const memoria = new Map();
+  const um = montar({ a: 0, b: 0, lento: 6.4 });
+  await alinharPeloSom({ ...um, duracaoS: 120, janelas: 3, memoria });
+
+  const dois = montar({ a: 0, b: 0, lento: 6.4, novo: 2.1 });
+  const tarde = linhaDoCanal('novo', [peca(T + 600_000, NOITE_S - 600)]);
+  const linhas = dois.linhas.map((l) => (l.slug === 'novo' ? { ...tarde, pecasCompletas: tarde.pecas } : l));
+  let ouvidas = 0;
+  const r = await alinharPeloSom({
+    linhas, janela: janelaComum(linhas), duracaoS: 120, janelas: 3, memoria,
+    lerSom: async (...a) => { ouvidas++; return dois.lerSom(...a); },
+  });
+  assert.ok(r.reaproveitados >= 6, `reaproveitou ${r.reaproveitados} de 9`);
+  assert.ok(ouvidas <= 6, `ouviu ${ouvidas} vezes`);
+  const diferenca = (r.ajustesMs.novo - r.ajustesMs.a) / 1000;
+  assert.ok(Math.abs(diferenca - 2.1) < 0.3, `esperava +2,1 s no novo, deu ${diferenca.toFixed(2)}`);
+});
+
+// Sem um instante em que todos estejam no ar, os quartos da noite caíam onde
+// só um estava, e nenhum par chegava às duas janelas que `consolidar` pede.
+test('as janelas caem onde há mais ângulos no ar, não nos quartos da noite', () => {
+  const H = 3_600_000;
+  const pecaDe = (de, ate) => peca(de, (ate - de) / 1000);
+  const evento = Array.from({ length: 10 }, (_, i) => linhaDoCanal(`e${i}`, [pecaDe(T, T + 3 * H)]));
+  const tardeAntes = linhaDoCanal('tarde', [pecaDe(T - 3 * H, T + H / 2)]);
+  const depois = linhaDoCanal('depois', [pecaDe(T + 3.5 * H, T + 5 * H)]);
+  const linhas = [...evento, tardeAntes, depois];
+  const instantes = instantesParaOuvir(linhas, janelaComum(linhas), { quantos: 3, duracaoS: 120 });
+  assert.equal(instantes.length, 3);
+  for (const t of instantes) {
+    assert.ok(t >= T && t + 120_000 <= T + 3 * H, `${new Date(t).toISOString()} fica fora do evento`);
+  }
+  assert.ok(instantes[2] - instantes[0] > H, 'e continuam espalhadas pelo evento');
+});

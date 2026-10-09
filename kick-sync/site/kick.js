@@ -191,6 +191,45 @@ export function segmentosNaJanela({ segmentos }, deMs, ateMs) {
  * and displaying the wrong moment.
  */
 export function tempoDeMidia({ segmentos }, quandoMs) {
+  // Procura binária, e não o ciclo por todos. Isto corre por canal a cada
+  // fotograma (o "N ângulos no ar" do relógio): com 500 canais de 9 h, 3 240
+  // segmentos cada, o ciclo eram 17 ms por fotograma só para esse número.
+  const ind = indiceDe(segmentos);
+  if (!ind) return tempoDeMidiaLento(segmentos, quandoMs);
+  let lo = 0;
+  let hi = ind.length - 1;
+  let achado = -1;
+  while (lo <= hi) {
+    const meio = (lo + hi) >> 1;
+    if (ind[meio].inicio <= quandoMs) { achado = meio; lo = meio + 1; } else hi = meio - 1;
+  }
+  // Um segmento de duração zero pode partilhar o início com o seguinte; o
+  // ciclo devolvia o primeiro que cobrisse o instante, e isto também.
+  while (achado > 0 && ind[achado - 1].inicio === ind[achado].inicio) achado--;
+  for (let i = achado; i >= 0 && i < ind.length && ind[i].inicio <= quandoMs; i++) {
+    const s = ind[i];
+    if (quandoMs < s.inicio + s.duracaoS * 1000) return s.mediaT + (quandoMs - s.inicio) / 1000;
+  }
+  return DESCONHECIDO;
+}
+
+const INDICES = new WeakMap();
+
+/** Os segmentos com relógio, por ordem, ou null se a ordem não for crescente. */
+function indiceDe(segmentos) {
+  const guardado = INDICES.get(segmentos);
+  if (guardado && guardado.tamanho === segmentos.length) return guardado.ind;
+  let ind = segmentos.filter((s) => Number.isFinite(s.inicio));
+  for (let i = 1; i < ind.length; i++) {
+    // Segmentos que se sobrepõem ou recuam: a procura binária não sabe qual
+    // vem primeiro, e o ciclo antigo sabe. Fica o ciclo.
+    if (ind[i].inicio < ind[i - 1].inicio + ind[i - 1].duracaoS * 1000 - 1) { ind = null; break; }
+  }
+  INDICES.set(segmentos, { tamanho: segmentos.length, ind });
+  return ind;
+}
+
+function tempoDeMidiaLento(segmentos, quandoMs) {
   for (const s of segmentos) {
     if (!Number.isFinite(s.inicio)) continue;
     const fim = s.inicio + s.duracaoS * 1000;

@@ -34,7 +34,10 @@ export function linhaDoCanal(slug, pecas) {
     pecas: boas,
     buracos,
     inicio: boas[0]?.playlist.inicio ?? null,
-    fim: boas.at(-1)?.playlist.fim ?? null,
+    // O fim que vai mais longe, e não o do último a começar: um VOD de uma
+    // reconexão pode começar depois e acabar antes do comprido, e com o fim
+    // dele o canal dizia "já tinha acabado" com o VOD comprido ainda a tocar.
+    fim: boas.length ? Math.max(...boas.map((p) => p.playlist.fim).filter(Number.isFinite)) : null,
     // Said out loud: with no PDT anywhere, this channel cannot be trusted on
     // the shared clock and the UI has to say so instead of drawing it as equal.
     //
@@ -210,6 +213,24 @@ export function instanteSeguindo(ancora, video, { limiteMs = 3_600_000 } = {}) {
   // ainda a caminho; longe demais é um pedaço novo com o tempo recomeçado.
   if (!Number.isFinite(ms) || ms < ancora.ms || ms - ancora.ms > limiteMs) return null;
   return ms;
+}
+
+/**
+ * Um passo do relógio que segue o vídeo, já com a âncora puxada para a frente.
+ *
+ * O limite de uma hora de `instanteSeguindo` é para apanhar um salto (um
+ * pedaço novo com o tempo recomeçado), não para medir o tempo de reprodução.
+ * Mas a âncora só se punha no `irPara`, e quem via a reprodução seguida
+ * durante mais de uma hora ficava com o relógio parado: o risco congelava e
+ * "Marcar kill" gravava dez minutos antes do que estava no ecrã. Puxando a
+ * âncora a cada passo, o limite volta a medir só o salto entre dois passos.
+ *
+ * @returns {{ms:number|null, ancora:object}}
+ */
+export function seguirAncora(ancora, video, opcoes) {
+  const ms = instanteSeguindo(ancora, video, opcoes);
+  if (ms == null) return { ms: null, ancora };
+  return { ms, ancora: { ...ancora, ms, tempoS: video.currentTime } };
 }
 
 /**

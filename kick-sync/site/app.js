@@ -10,7 +10,7 @@ import {
   segmentosNaJanela,
 } from './kick.js';
 import {
-  linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo,
+  linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, seguirAncora,
   passoDoArrasto, ARRASTO_INTERVALO_MS, ARRASTO_ESPERA_MS, vistaDaLinha, saiuDaVista,
 } from './relogio.js';
 import { cortarTodosOsAngulos } from './baixar.js';
@@ -1189,8 +1189,10 @@ function seguirVideo() {
     estado.tique = requestAnimationFrame(passo);
     if (!estado.ancora || estado.parado || !estado.janela) return;
     const v = tileDe(estado.ancora.slug)?.querySelector('video');
-    const ms = instanteSeguindo(estado.ancora, v);
-    if (ms == null) return;
+    const passo1 = seguirAncora(estado.ancora, v);
+    if (passo1.ms == null) return;
+    const { ms } = passo1;
+    estado.ancora = passo1.ancora;
     estado.agoraMs = ms;
     pintarRelogio(ms);
 
@@ -1916,7 +1918,7 @@ async function alinhar() {
   // O que falta OUVIR, e não quantos canais há: perguntar "vais gastar 434 MB?"
   // para acrescentar um canal a uma noite já medida seria mentira, e ele dizia
   // que não a uma coisa que custava catorze.
-  const instantes = instantesParaOuvir(estado.linhas, estado.janela);
+  const instantes = instantesParaOuvir(estado.linhas, estado.janela, { memoria: estado.memoriaAlinhar });
   const faltam = estado.linhas.filter(
     (l) => instantes.some((i) => !estado.memoriaAlinhar.has(`${i}|${l.slug}`)),
   ).length;
