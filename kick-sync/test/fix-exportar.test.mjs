@@ -680,3 +680,34 @@ test('com 16:9 e 9:16, a montagem tira a POV de cada kill também em vertical, s
   assert.deepEqual(erros, []);
   await p.close();
 });
+
+// ABISAL.md: o clipe de vários ângulos tinha o código pronto e faltava o botão.
+test('o editor tira o clipe de vários ângulos, e só aparece com mais de um canal', semNavegador, async () => {
+  const { p, erros } = await abrir();
+  await carregar(p, ['tchubi', 'outro']);
+  await p.click('#mais1m');
+  await p.click('#clipar');
+  await p.waitForSelector('#modalClipe:not([hidden])');
+  assert.equal(await p.locator('#angulosSeguido').isVisible(), true);
+  assert.equal(await p.locator('#angulosEmpilhado').isVisible(), true);
+  // Sem gravador, diz o porquê; e o plano já leva os dois ângulos, o do editor primeiro.
+  await p.evaluate(() => { window.MediaRecorder = undefined; });
+  await p.click('#angulosSeguido');
+  await p.waitForFunction(() => /não sabe gravar/.test(document.getElementById('estadoClipe').textContent), null, { timeout: 5000 });
+  const plano = await p.evaluate(() => window.__ultimoPlanoAngulos);
+  assert.equal(plano.modo, 'seguido');
+  assert.equal(plano.canais.length, 2);
+  assert.deepEqual([...plano.canais].sort(), ['outro', 'tchubi']);
+  assert.deepEqual(erros, []);
+  await p.close();
+});
+
+test('com um canal só, o editor não mostra os botões de vários ângulos', semNavegador, async () => {
+  const { p, erros } = await abrir();
+  await carregar(p, ['tchubi']);
+  await p.click('#clipar');
+  await p.waitForSelector('#modalClipe:not([hidden])');
+  assert.equal(await p.locator('#angulosSeguido').isVisible(), false);
+  assert.deepEqual(erros, []);
+  await p.close();
+});

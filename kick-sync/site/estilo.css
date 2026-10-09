@@ -1642,3 +1642,4 @@ body:not(:has(#fila > li)) #limparFila { display: none; }
 #horasAuto[hidden] { display: none; }
 #janelaAuto { max-width: 13em; }
 body.mesa #formatoMontagem { width: auto; min-width: 0; max-width: 8em; min-height: 30px; padding: 0 var(--e5) 0 var(--e3); font-size: var(--t-menor); }
+.soVarios[hidden] { display: none; }

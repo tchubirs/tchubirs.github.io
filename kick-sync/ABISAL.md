@@ -63,7 +63,9 @@ marca cada luta no mapa sem precisar do som.
 ## O que tem de estar pronto antes (por ordem de valor)
 
 1. O site no ar com domínio próprio (o dono escolhe a hospedagem; recomendação em `LANCAR.md`).
-2. O clipe de vários ângulos ligado na tela (o código está pronto, falta o botão).
+2. O clipe de vários ângulos ligado na tela (o código está pronto, falta o botão). **Feito** (09/10): no editor do
+   Clipar, "Ângulos 16:9" (até 4, um depois do outro) e "Ângulos 9:16" (dois, um em cima do outro). Falta ver a
+   gravação com vídeo de verdade: os testes só têm vídeo falso.
 3. Os bugs que ficaram parados (sessão, teclado, sincronia, Twitch, CI, mapa). **Feito** (09/10): juntados.
 4. Uma página do evento com nome e link fixos, que abre direto no mapa.
 5. A contagem dos números do piloto (clipes e visualizações), sem guardar vídeo nenhum.

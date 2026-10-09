@@ -21,6 +21,7 @@ import {
   RETRATO, enquadramentoInicial, limitar, desenhar, gravar, formatoQueFunciona, extensaoDe,
   reformar, limparDivisao, DIVISAO_OMISSAO, divisaoDoQuadro, proporcaoDoQuadro, encaixar,
 } from './retrato.js';
+import { planoDeAngulos, gravarAngulos } from './angulos.js';
 import { agruparPorNoite, rotuloDaNoite } from './noites.js';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
@@ -2855,9 +2856,13 @@ function trocarRotulo(botao, chave) {
  * Os enquadramentos foram guardados em pixels do degrau de cima; é esse o
  * degrau que se usa aqui, e é por isso que os números batem.
  */
-async function renderizarRetrato(linha, clipe, { sinal, aoProgresso } = {}) {
-  const nudge = estado.nudges[clipe.canal] || 0;
-  const r = onde(linha, clipe.deMs, { nudgeMs: nudge });
+/**
+ * Um vídeo escondido de um canal, já parado no instante pedido, para gravar a partir dele (o 9:16 da
+ * montagem e o clipe de vários ângulos). `fechar` larga o hls e o elemento.
+ */
+async function abrirVideoEscondido(linha, quandoMs, { sinal } = {}) {
+  const nudge = estado.nudges[linha.slug] || 0;
+  const r = onde(linha, quandoMs, { nudgeMs: nudge });
   if (r.estado !== 'toca') throw new Error(porqueNaoSaiu({ estado: r.estado === 'buraco' ? 'buraco' : 'fora-da-noite' }));
   const peca = linha.pecasCompletas?.find((p) => p.vod.id === r.peca.vod.id) || r.peca;
   const alvo = peca.escada[0] || peca.barato;
@@ -2873,6 +2878,12 @@ async function renderizarRetrato(linha, clipe, { sinal, aoProgresso } = {}) {
   v.style.cssText = 'position:fixed;left:-9999px;top:0;width:320px;height:180px;';
   document.body.appendChild(v);
   let hls = null;
+  const fechar = () => {
+    hls?.destroy();
+    v.pause();
+    v.removeAttribute('src');
+    v.remove();
+  };
   try {
     if (window.Hls?.isSupported()) {
       hls = new window.Hls({ startPosition: r.tempoS, maxBufferLength: 30, backBufferLength: 10 });
@@ -2892,6 +2903,16 @@ async function renderizarRetrato(linha, clipe, { sinal, aoProgresso } = {}) {
       sinal?.addEventListener('abort', () => { clearTimeout(fim); mal(new DOMException('cancelado', 'AbortError')); }, { once: true });
     });
     if (Math.abs(v.currentTime - r.tempoS) > 0.5) v.currentTime = r.tempoS;
+  } catch (e) {
+    fechar();
+    throw e;
+  }
+  return { v, fechar };
+}
+
+async function renderizarRetrato(linha, clipe, { sinal, aoProgresso } = {}) {
+  const { v, fechar } = await abrirVideoEscondido(linha, clipe.deMs, { sinal });
+  try {
     // Som: de mudo sai uma faixa silenciosa. Volume a zero para não se ouvir
     // a gravação na sala — a mesma conta do `guardarRetrato`.
     v.muted = false;
@@ -2912,10 +2933,7 @@ async function renderizarRetrato(linha, clipe, { sinal, aoProgresso } = {}) {
       aoProgresso,
     });
   } finally {
-    hls?.destroy();
-    v.pause();
-    v.removeAttribute('src');
-    v.remove();
+    fechar();
   }
 }
 
@@ -3237,6 +3255,8 @@ const CONTEXTO_S = 150;   // o que a barra mostra de cada lado do instante
  */
 function abrirClipe(momento = null) {
   if (!estado.linhas.length) return;
+  // Com um canal só não há vários ângulos para juntar.
+  for (const id of ['angulosSeguido', 'angulosEmpilhado']) $(id).hidden = estado.linhas.length < 2;
   const daLista = momento != null && estado.momentos.some((x) => x.ms === momento.ms);
   // Um editor que fecha a meio de uma gravação ou de uma exportação pára-a
   // (ver `fecharClipe`); abrir outro por cima faz o mesmo.
@@ -3874,9 +3894,86 @@ async function guardarRetrato() {
  * Os botões ficam apagados para se ver que estão parados; as pegas e os
  * recortes, que se arrastam, verificam `aGravar` por si.
  */
+/**
+ * O clipe de vários ângulos (angulos.js): o mesmo pedaço visto por mais de um streamer, com o nome de
+ * cada um no vídeo. 'seguido' é 16:9, um ângulo depois do outro (até 4); 'empilhado' é 9:16, dois, um
+ * em cima do outro. Os ângulos são o do editor, os em foco e depois os outros, só os que estavam no ar
+ * no começo do clipe. Reconverte, por isso leva o tempo do clipe.
+ */
+function angulosDoClipe(c, modo) {
+  const ordem = [c.canal, ...estado.focos, ...estado.linhas.map((l) => l.slug)];
+  const noAr = [...new Set(ordem)].filter((slug) => {
+    const l = estado.linhas.find((x) => x.slug === slug);
+    return l && onde(l, c.deMs, { nudgeMs: estado.nudges[slug] || 0 }).estado === 'toca';
+  });
+  return noAr.slice(0, modo === 'empilhado' ? 2 : 4);
+}
+
+async function guardarAngulos(modo) {
+  const c = estado.clipe;
+  if (!c || c.aGravar) return;
+  const aindaEste = () => estado.clipe === c;
+  const canais = angulosDoClipe(c, modo);
+  if (canais.length < 2) {
+    $('estadoClipe').textContent = t('angulos.poucos', { canal: c.canal });
+    return;
+  }
+  const duracaoS = (c.ateMs - c.deMs) / 1000;
+  const plano = planoDeAngulos({ modo, canais, duracaoS });
+  window.__ultimoPlanoAngulos = plano;
+  const formato = await formatoQueFunciona();
+  if (!aindaEste()) return;
+  if (!formato) { $('estadoClipe').textContent = t('retrato.semGravador'); return; }
+  const controlo = new AbortController();
+  c.aGravar = true;
+  c.pararGravacao = () => controlo.abort();
+  trancarEditor(true);
+  const abertos = [];
+  try {
+    $('estadoClipe').textContent = t('angulos.aAbrir', { n: canais.length });
+    for (const slug of canais) {
+      const linha = estado.linhas.find((l) => l.slug === slug);
+      abertos.push(await abrirVideoEscondido(linha, c.deMs, { sinal: controlo.signal }));
+    }
+    // O som é o do primeiro ângulo; os outros ficam mudos, como na grelha.
+    abertos[0].v.muted = false;
+    abertos[0].v.volume = 0;
+    const { blob, extensao } = await gravarAngulos(abertos.map((a) => a.v), {
+      plano,
+      formato,
+      sinal: controlo.signal,
+      aoProgresso: ({ feito, total }) => {
+        if (aindaEste()) $('estadoClipe').textContent = t('angulos.aGravar', { n: canais.length, feito: feito.toFixed(1), total: total.toFixed(1) });
+      },
+    });
+    const base = nomeDoClipe({ titulo: $('tituloClipe').value, canal: c.canal, quandoMs: c.deMs });
+    const nome = `${base.replace(/\.[a-z0-9]+$/i, '')}-angulos.${extensao}`;
+    const url = guardarFicheiro(blob);
+    const item = document.createElement('li');
+    $('fila').prepend(item);
+    linhaDeFicheiro(item, { nome, url, nota: `${(blob.size / 1048576).toFixed(1)} MB · ${canais.join(', ')}` });
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nome;
+    a.click();
+    if (aindaEste()) $('estadoClipe').textContent = t('angulos.pronto');
+  } catch (e) {
+    if (e.name === 'AbortError' || !aindaEste()) return;
+    $('estadoClipe').textContent = e.name === 'SEM-GRAVADOR' ? t('retrato.semGravador')
+      : e.name === 'GRAVACAO-PARADA' ? t('retrato.parou')
+        : e.name === 'GRAVACAO-VAZIA' ? t('retrato.vazio')
+          : t('clipe.naoDeu', { erro: motivoDoRetrato(e) });
+  } finally {
+    for (const a of abertos) a.fechar();
+    c.aGravar = false;
+    c.pararGravacao = null;
+    if (aindaEste()) trancarEditor(false);
+  }
+}
+
 function trancarEditor(sim) {
   for (const id of ['inicioMenos', 'inicioMais', 'fimMenos', 'fimMais', 'verClipe', 'canalClipe',
-    'guardarClipe', 'guardarAjustes', 'modoUm', 'modoDois', 'divisor']) {
+    'guardarClipe', 'guardarAjustes', 'modoUm', 'modoDois', 'divisor', 'angulosSeguido', 'angulosEmpilhado']) {
     const el = $(id);
     if (el) el.disabled = sim;
   }
@@ -4585,6 +4682,8 @@ async function abrirLinkKick() {
 $('abrirLink').onclick = abrirLinkKick;
 $('linkKick').onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); abrirLinkKick(); } };
 $('clipar').onclick = () => abrirClipe();
+$('angulosSeguido').onclick = () => guardarAngulos('seguido');
+$('angulosEmpilhado').onclick = () => guardarAngulos('empilhado');
 $('fecharClipe').onclick = fecharClipe;
 /**
  * Guardar na kill o que ele apurou, sem exportar nada.
