@@ -18,3 +18,4 @@ __pycache__/
 
 # Cópias de trabalho dos agentes (git worktree), nunca do repositório
 .claude/worktrees/
+.arena/
