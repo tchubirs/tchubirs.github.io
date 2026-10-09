@@ -1,6 +1,6 @@
 # O que o dono viu usando o Povix (07/10) e o que fazer
 
-Ordem: primeiro o que trava o uso no evento. Feito: 1 a 8 (09/10).
+Ordem: primeiro o que trava o uso no evento. Feito: 1 a 9 (09/10).
 
 ## Primeiro (antes do evento)
 
@@ -25,6 +25,9 @@ Ordem: primeiro o que trava o uso no evento. Feito: 1 a 8 (09/10).
    **Feito.**
 9. **Lento.** Carrega coisa demais ao mesmo tempo. Medir o que cada clique pede à Kick e cortar o que não é
    preciso naquela hora (por exemplo: ler o chat só quando pedido; não recarregar a grade para mudar de momento).
+   **Feito em parte:** mudar de momento já não recarrega (item 1), e o chat espera enquanto a live abre. Medido
+   com a Kick falsa: abrir o evento 3 pedidos, escolher um lance 2 + o chat, outro instante 0, outro pico 0.
+   Falta medir na Kick de verdade, com um evento grande.
 
 ## Depois
 

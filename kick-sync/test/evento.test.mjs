@@ -429,3 +429,35 @@ test('arrastar o mapa para o lado anda no tempo, diz o trecho à vista, e não e
     assert.deepEqual(erros, []);
     await p.close();
   });
+
+test('enquanto o lance abre, a leitura do chat espera: o vídeo vem primeiro',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'outro'] });
+    // Chat e playlists lentos, para as duas coisas se cruzarem no tempo.
+    await p.route('**/api/v2/channels/*/messages**', async (r) => { await new Promise((ok) => setTimeout(ok, 250)); await r.fallback(); });
+    await p.route('**/*.m3u8', async (r) => { await new Promise((ok) => setTimeout(ok, 600)); await r.fallback(); });
+    const linha = [];
+    p.on('request', (q) => {
+      const u = q.url();
+      if (u.includes('/messages')) linha.push('chat');
+      else if (u.includes('.m3u8')) linha.push('m3u8');
+    });
+    p.on('requestfinished', (q) => { if (q.url().includes('.m3u8')) linha.push('m3u8 fim'); });
+    await abrirEvento(p);
+    await clicarNoMapa(p, 'outro', T + 2 * 60_000);
+    await p.waitForFunction(() => /chat/i.test(document.getElementById('estadoChat').textContent));
+    linha.length = 0;
+    await p.click('#verLance');
+    await p.waitForSelector('.tile', { timeout: 20000 });
+    // Depois o chat continua sozinho até ao fim.
+    await p.waitForFunction(() => /picos? de chat|nenhum pico/i.test(document.getElementById('estadoChat').textContent), null, { timeout: 20000 });
+    // Entre a primeira playlist do lance e a última a chegar, nenhum pedido novo ao chat.
+    const de = linha.indexOf('m3u8');
+    const ate = linha.lastIndexOf('m3u8 fim');
+    assert.ok(de >= 0 && ate > de, `as playlists não vieram: ${linha}`);
+    assert.deepEqual(linha.slice(de, ate).filter((x) => x === 'chat'), [], `o chat pediu com o vídeo a abrir: ${linha}`);
+    assert.ok(linha.slice(ate).includes('chat'), 'o chat não continuou depois');
+    assert.deepEqual(erros, []);
+    await p.close();
+  });

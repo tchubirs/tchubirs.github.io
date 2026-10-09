@@ -581,8 +581,8 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
     for (const c of canais) {
       if (controlo.signal.aborted) return;
       try {
-        const id = await idDoCanal(c, { buscar, sinal: controlo.signal });
-        const msgs = await mensagensEntre(id, deMs, ateMs, { buscar, sinal: controlo.signal, maxPedidos: 120 });
+        const id = await idDoCanal(c, { buscar: buscarChat, sinal: controlo.signal });
+        const msgs = await mensagensEntre(id, deMs, ateMs, { buscar: buscarChat, sinal: controlo.signal, maxPedidos: 120 });
         const marcas = picos(calor(msgs, deMs, ateMs)).map((i) => {
           const de = deMs + i * 60_000;
           return { ms: segundoDoPico(msgs, de, Math.min(ateMs, de + 60_000)), tipo: 'chat' };
@@ -719,12 +719,24 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
     }
   }
 
+  // O vídeo primeiro, o chat depois. Ler o chat de um time são até 120 pedidos por canal, e a correr
+  // ao mesmo tempo que as playlists do lance faziam a live demorar a abrir (o dono, 07/10: "lento").
+  // Enquanto um lance abre, cada pedido do chat espera; a seguir continua de onde estava.
+  let livre = Promise.resolve();
+  const buscarChat = async (...args) => { await livre; return buscar(...args); };
+
   async function verLance() {
     const e = ev.escolha;
     if (!e) return;
     const canais = canaisDoLance(e);
     mostrarMapa(false);
-    await abrirLance(canais, e.ms, e.canal);
+    let soltar;
+    livre = new Promise((r) => { soltar = r; });
+    try {
+      await abrirLance(canais, e.ms, e.canal);
+    } finally {
+      soltar();
+    }
   }
 
   // O som de um canal num instante, lendo só o VOD que cobre esse instante. As playlists ficam
