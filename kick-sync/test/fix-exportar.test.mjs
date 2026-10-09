@@ -645,3 +645,38 @@ test('na montagem, um clipe que atravessa uma reconexão sai em duas partes segu
   assert.deepEqual(erros, []);
   await p.close();
 });
+
+// O dono (07/10): depois de marcar, acertar a arrastar e a ver o quadro; e o formato para todos de uma vez.
+test('o Clipar abre na entrada e na saída marcadas, para acertar a arrastar', semNavegador, async () => {
+  const { p, erros } = await abrir();
+  await carregar(p, ['tchubi']);
+  await p.click('#mais1m');
+  await p.click('#marcarIn');
+  await p.click('#mais3s');
+  await p.click('#mais3s');
+  await p.click('#marcarOut');
+  const marca = await p.evaluate(() => ({ ...window.__estado.marca }));
+  await p.click('#clipar');
+  await p.waitForSelector('#modalClipe:not([hidden])');
+  const c = await p.evaluate(() => ({ de: window.__estado.clipe.deMs, ate: window.__estado.clipe.ateMs }));
+  assert.deepEqual(c, { de: marca.de, ate: marca.ate });
+  assert.deepEqual(erros, []);
+  await p.close();
+});
+
+test('com 16:9 e 9:16, a montagem tira a POV de cada kill também em vertical, sem enquadrar à mão', semNavegador, async () => {
+  const { p, erros } = await abrir();
+  await carregar(p, ['tchubi']);
+  await marcarKills(p, 1);
+  // Sem gravador, a linha do 9:16 aparece com o porquê: basta para ver que entrou no plano.
+  await p.evaluate(() => { window.MediaRecorder = undefined; });
+  assert.equal(await p.locator('#formatoMontagem').isVisible(), true);
+  await p.selectOption('#formatoMontagem', 'ambos');
+  await p.click('#baixarMontagem');
+  await p.waitForFunction(() => /exportad/.test(document.getElementById('estadoMontagem').textContent),
+    null, { timeout: 30000 });
+  assert.equal(await p.locator('#fila li', { hasText: '9:16' }).count(), 1);
+  assert.equal(await p.evaluate(() => localStorage.getItem('povix.formato')), 'ambos');
+  assert.deepEqual(erros, []);
+  await p.close();
+});

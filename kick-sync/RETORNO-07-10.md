@@ -44,7 +44,9 @@ Ordem: primeiro o que trava o uso no evento. Feito: 1 a 9 (09/10).
     I e O, ou duas horas escritas). Falta: escolher o que procurar (hoje só tiro, e a morte pela tela; grito ainda não
     existe) e a confirmação por mais de uma live, que precisam de estudo com gravações reais.
 13. **Entrada e saída:** depois de marcar, ajustar arrastando e vendo o quadro exato; na hora de exportar, escolher
-    o formato para todos de uma vez (por exemplo TikTok).
+    o formato para todos de uma vez (por exemplo TikTok). **Feito** (09/10): com entrada e saída marcadas, o Clipar
+    (C) abre nelas, com as pegas de arrastar e o quadro à vista; ao lado do Exportar montagem, "+ 9:16" tira a POV
+    de cada kill também em vertical, enquadrada ao meio quando não houver enquadramento guardado.
 14. **Exportação rápida maior do que o marcado:** 4 s marcados viraram 24 s (8 s antes e 12 s depois). A cópia sem
     reconverter só corta onde a Kick corta os pedaços dela. Dar a opção de corte exato, ou dizer isso antes de
     baixar, com o tamanho final.

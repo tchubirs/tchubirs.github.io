@@ -1579,7 +1579,7 @@ body.mesa:has(#palco:not([hidden])) > #evento { flex: 0 0 auto; margin-bottom: v
    nada na tela, e isso confunde; as margens e o exportar montagem não servem
    sem uma kill; o limpar exportações não serve sem exportações. */
 body:has(#palco:not([hidden])) #evento:not(.comMapa) .soComMapa { display: none; }
-#montagem.semKills :is(#margens, .barraSelecao, #baixarMontagem) { display: none; }
+#montagem.semKills :is(#margens, .barraSelecao, #baixarMontagem, #formatoMontagem) { display: none; }
 body:not(:has(#fila > li)) #limparFila { display: none; }
 
 /* A caixa do Sincronizar sem botão (um canal só) e sem recado é uma caixa vazia. */
@@ -1612,3 +1612,4 @@ body:not(:has(#fila > li)) #limparFila { display: none; }
 @media (max-width: 759px) { #trechoVisto { flex: 1 0 100%; min-width: 0; } }
 #horasAuto[hidden] { display: none; }
 #janelaAuto { max-width: 13em; }
+body.mesa #formatoMontagem { width: auto; min-width: 0; max-width: 8em; min-height: 30px; padding: 0 var(--e5) 0 var(--e3); font-size: var(--t-menor); }

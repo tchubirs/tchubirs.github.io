@@ -88,7 +88,7 @@ const IGUAIS_DE_PROPOSITO = {
   // Nome do produto, simbolos de navegacao, e frases que sao so numeros e datas.
   en: new Set([
     // "normal" escreve-se igual nas tres linguas.
-    'lance.sensNormal',
+    'lance.sensNormal', 'montagem.formato169', 'montagem.formatoAmbos',
     'app.nome', 'canais.vods', 'marca.feita', 'evento.zoom',
     'tempo.menos1m', 'tempo.menos10s', 'tempo.mais10s', 'tempo.mais1m',
     'tempo.menos5m', 'tempo.menos3s', 'tempo.mais3s', 'tempo.mais5m',
@@ -100,7 +100,7 @@ const IGUAIS_DE_PROPOSITO = {
   // O espanhol e o portugues escrevem estas exactamente da mesma maneira.
   es: new Set([
     // A sensibilidade ("normal", "alta", "máxima") e "de todos" escrevem-se igual em espanhol.
-    'lance.sensNormal', 'lance.sensAlta', 'lance.sensMaxima', 'lance.deTodos', 'auto.de',
+    'lance.sensNormal', 'lance.sensAlta', 'lance.sensMaxima', 'lance.deTodos', 'auto.de', 'montagem.formato169', 'montagem.formatoAmbos',
     // "pico de chat" diz-se igual em português e em espanhol.
     'evento.legendaPico',
     // "1 canal" também.

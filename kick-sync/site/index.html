@@ -674,6 +674,10 @@
       <ol id="chatLinhas" class="chatLinhas" aria-live="off"></ol>
     </section>
     <div class="linha">
+      <select id="formatoMontagem" data-t-aria="montagem.formato" data-t-titulo="montagem.formato" aria-label="formato da montagem" title="formato da montagem: só 16:9, ou também 9:16 para TikTok, Reels e Shorts">
+        <option value="16x9" data-t="montagem.formato169">16:9</option>
+        <option value="ambos" data-t="montagem.formatoAmbos">+ 9:16</option>
+      </select>
       <button id="baixarMontagem" disabled><svg class="ic" aria-hidden="true"><use href="#i-descarregar"/></svg><span data-t="montagem.baixar">Exportar montagem</span></button>
       <span id="estadoMontagem" class="nota" role="status" aria-live="polite"></span>
     </div>

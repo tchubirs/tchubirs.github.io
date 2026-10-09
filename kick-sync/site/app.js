@@ -2568,6 +2568,13 @@ async function baixarMontagem(soEsta = null) {
   // número que vai no nome do ficheiro, e tem de ser o mesmo nos dois caminhos.
   const plano = planoDaMontagem(todas, canais, { filmava })
     .filter((c) => !soEsta || soEsta.some((m) => m.ms === c.ms));
+  // O formato para todos de uma vez (o dono, 07/10: "escolher TikTok para todos"). Com 9:16, a POV de
+  // cada kill sai também em vertical; sem enquadramento guardado, o do meio (ver `renderizarRetrato`).
+  if ($('formatoMontagem').value === 'ambos') {
+    for (const c of plano) {
+      if (c.papel === 'protagonista' && !c.retrato) c.retrato = { modo: 'um', rects: [], divisao: DIVISAO_OMISSAO };
+    }
+  }
   const controlo = new AbortController();
   estado.montagem = controlo;
   if (!soEsta) limparFila();
@@ -2858,8 +2865,12 @@ async function renderizarRetrato(linha, clipe, { sinal, aoProgresso } = {}) {
     v.volume = 0;
     const formato = await formatoQueFunciona();
     if (!formato) throw Object.assign(new Error('sem gravador'), { name: 'SEM-GRAVADOR' });
+    // Sem enquadramento guardado (o 9:16 para todos), a fita mais alta que cabe, ao meio: a mesma com
+    // que o editor abre.
+    const rects = clipe.retrato.rects?.length ? clipe.retrato.rects
+      : enquadramentoInicial(v.videoWidth || 1920, v.videoHeight || 1080, clipe.retrato.modo, clipe.retrato.divisao);
     return await gravar(v, {
-      rects: clipe.retrato.rects,
+      rects,
       modo: clipe.retrato.modo,
       divisao: Number.isFinite(clipe.retrato.divisao) ? clipe.retrato.divisao : DIVISAO_OMISSAO,
       duracaoS: (clipe.ateMs - clipe.deMs) / 1000,
@@ -3173,7 +3184,12 @@ function abrirClipe(momento = null) {
   // Não deixar escolher um pedaço que este ângulo não filmou: os limites são
   // os do vídeo dele, e não os da noite.
   const limites = { inicio: linha.inicio, fim: linha.fim };
-  const centro = Math.min(Math.max(momento?.ms ?? estado.agoraMs, limites.inicio), limites.fim);
+  // Sem kill e com entrada e saída marcadas (I e O), o editor abre nelas: é aí que se acerta o corte a
+  // arrastar e a ver o quadro (o dono, 07/10).
+  const m0 = estado.marca;
+  const marcada = !momento && m0?.de != null && m0?.ate != null && m0.ate > m0.de ? { deMs: m0.de, ateMs: m0.ate } : null;
+  const centro = Math.min(Math.max(momento?.ms ?? (marcada ? (marcada.deMs + marcada.ateMs) / 2 : estado.agoraMs),
+    limites.inicio), limites.fim);
   // O ajuste que ele guardou manda; sem ajuste, o MESMO pedaço que a
   // montagem exporta (o combate e as margens por fora); sem kill nenhuma,
   // quinze segundos para cada lado.
@@ -3188,7 +3204,7 @@ function abrirClipe(momento = null) {
     ? dentroDosLimites({ deMs: aj.deMs, ateMs: aj.ateMs }, limites)
     : daMontagem
       ? dentroDosLimites({ deMs: daMontagem.deMs, ateMs: daMontagem.ateMs }, limites)
-      : null;
+      : marcada ? dentroDosLimites(marcada, limites) : null;
 
   estado.clipe = {
     canal: linha.slug,
@@ -4390,6 +4406,10 @@ $('janelaAuto').onchange = () => {
 };
 // Seta, e nao a funcao directamente: o `onclick` passa o evento como primeiro
 // argumento, e ele ia parar ao `soEsta` como se fosse uma lista de kills.
+try { const f = localStorage.getItem('povix.formato'); if (f === 'ambos') $('formatoMontagem').value = f; } catch { /* janela privada */ }
+$('formatoMontagem').onchange = () => {
+  try { localStorage.setItem('povix.formato', $('formatoMontagem').value); } catch { /* janela privada */ }
+};
 $('baixarMontagem').onclick = () => (estado.montagem ? estado.montagem.abort() : baixarMontagem());
 $('limparFila').onclick = limparFila;
 // Sem argumento nenhum, e não `= abrirClipe`: assim o objecto do clique ia
