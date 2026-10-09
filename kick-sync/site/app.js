@@ -4239,8 +4239,6 @@ $('zoomTempo').onchange = () => {
 try { estado.zoomS = Number(localStorage.getItem('replay.zoom')) || 0; } catch { /* nada */ }
 $('zoomTempo').value = String(estado.zoomS);
 $('menos1m').onclick = saltar(-60_000);
-$('menos10s').onclick = saltar(-10_000);
-$('mais10s').onclick = saltar(10_000);
 $('mais1m').onclick = saltar(60_000);
 // "Adiciona botão de 3 segundos pra trás e 3 pra frente, e 5 minutos pra trás
 // e 5 minutos pra frente." Cinco minutos para achar o sítio; três segundos
@@ -4518,8 +4516,8 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'i' || e.key === 'I') $('marcarIn').click();
   if (e.key === 'o' || e.key === 'O') $('marcarOut').click();
   // Andar à mão desliga a prévia, como os botões de saltar.
-  if (e.key === 'j' || e.key === 'ArrowLeft') { largarPrevia(); irPara(estado.agoraMs - passo); }
-  if (e.key === 'l' || e.key === 'ArrowRight') { largarPrevia(); irPara(estado.agoraMs + passo); }
+  if (e.key === 'j' || e.key === 'J' || e.key === 'ArrowLeft') { largarPrevia(); irPara(estado.agoraMs - passo); }
+  if (e.key === 'l' || e.key === 'L' || e.key === 'ArrowRight') { largarPrevia(); irPara(estado.agoraMs + passo); }
   // O ângulo em foco anda sozinho: alinhar à vista, sem tirar a mão do teclado.
   if (e.key === ',' && estado.focos[0]) empurrar(estado.focos[0], -passo);
   if (e.key === '.' && estado.focos[0]) empurrar(estado.focos[0], passo);

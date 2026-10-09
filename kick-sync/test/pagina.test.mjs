@@ -183,35 +183,37 @@ test('no ecra de um telemovel o foco continua a ocupar espaco',
 
 // Os quatro na mesma linha, sempre. Numa linha flex o quarto cai para baixo
 // assim que o ecra aperta, e ai deixam de se ver como um conjunto.
-// Eram quatro numa linha; agora sao oito — "3 segundos pra tras e pra frente,
-// 5 minutos pra tras e pra frente". Oito nao cabem em 390 px, e a regra que
-// interessa nao e "uma linha": e que NAO PARTAM ONDE LHES APETECE. Num
-// telemovel sao duas filas certas — a de recuar e a de avancar — alinhadas
-// coluna a coluna, e nada passa do ecra.
-test('os oito botoes de salto formam duas filas certas no telemovel, e nao passam do ecra',
+// Eram oito em duas filas; o dono (07/10) pediu uma linha so, sem o de 10 s:
+// 5 min pequeno, 1 min medio, 3 s grande. Seis numa linha, mesmo num telemovel
+// de 390 px, com o texto inteiro a caber em cada um e nada a passar do ecra.
+test('os seis botoes de salto ficam numa linha so, do tamanho do uso, e cabem no telemovel',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
-    const { p, erros } = await abrir({ ecra: { width: 390, height: 844 } });
-    await kickFalsa(p);
-    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
-    await p.fill('#canais', 'tchubi');
-    await p.click('#carregar');
-    await p.waitForSelector('.tile', { timeout: 15000 });
+    for (const ecra of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
+      const { p, erros } = await abrir({ ecra });
+      await kickFalsa(p);
+      await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+      await p.fill('#canais', 'tchubi');
+      await p.click('#carregar');
+      await p.waitForSelector('.tile', { timeout: 15000 });
 
-    const caixa = async (id) => p.locator(id).boundingBox();
-    const recuar = await Promise.all(['#menos5m', '#menos1m', '#menos10s', '#menos3s'].map(caixa));
-    const avancar = await Promise.all(['#mais3s', '#mais10s', '#mais1m', '#mais5m'].map(caixa));
-    const linha = (bs) => Math.max(...bs.map((b) => b.y)) - Math.min(...bs.map((b) => b.y)) < 2;
-    assert.ok(linha(recuar), `os de recuar partiram: ${recuar.map((b) => b.y)}`);
-    assert.ok(linha(avancar), `os de avancar partiram: ${avancar.map((b) => b.y)}`);
-    assert.ok(avancar[0].y > recuar[0].y, 'a fila de avancar vem por baixo da de recuar');
-    // Alinhados coluna a coluna: e uma grelha, nao um embrulho.
-    for (let i = 0; i < 4; i++) {
-      assert.ok(Math.abs(recuar[i].x - avancar[i].x) < 2, `coluna ${i} desalinhada`);
+      const ids = ['#menos5m', '#menos1m', '#menos3s', '#mais3s', '#mais1m', '#mais5m'];
+      assert.equal(await p.locator('#menos10s, #mais10s').count(), 0, 'o de 10 s continua la');
+      const bs = await Promise.all(ids.map((id) => p.locator(id).boundingBox()));
+      const ys = bs.map((b) => b.y);
+      assert.ok(Math.max(...ys) - Math.min(...ys) < 2, `partiram em filas (${ecra.width}): ${ys}`);
+      for (let i = 1; i < bs.length; i++) assert.ok(bs[i].x > bs[i - 1].x, `fora de ordem (${ecra.width})`);
+      assert.ok(bs[2].width > bs[1].width && bs[1].width > bs[0].width, `tamanhos (${ecra.width}): ${bs.map((b) => b.width)}`);
+      // Nenhum texto cortado dentro do botao.
+      const cortados = await p.evaluate((lista) => lista.filter((id) => {
+        const b = document.querySelector(id);
+        return b.scrollWidth > b.clientWidth + 1;
+      }), ids);
+      assert.deepEqual(cortados, [], `texto cortado (${ecra.width}): ${bs.map((b) => Math.round(b.width))}`);
+      const larguraDaPagina = await p.evaluate(() => document.documentElement.scrollWidth);
+      assert.ok(larguraDaPagina <= ecra.width, `a pagina passa do ecra: ${larguraDaPagina}`);
+      assert.deepEqual(erros, []);
+      await p.close();
     }
-    const larguraDaPagina = await p.evaluate(() => document.documentElement.scrollWidth);
-    assert.ok(larguraDaPagina <= 390, `a pagina passa do ecra: ${larguraDaPagina}`);
-    assert.deepEqual(erros, []);
-    await p.close();
   });
 
 // "Pra versao de celular isso tem que ficar perto do player principal, porque

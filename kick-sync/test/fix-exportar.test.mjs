@@ -279,7 +279,7 @@ test('o corte de um canal tem tecto, e uma falha de rede não deixa o botão pre
   const { p, erros } = await abrir();
   await carregar(p, ['tchubi']);
   await p.click('#marcarIn');
-  await p.click('#mais10s');
+  await p.keyboard.press('Shift+L');
   await p.click('#marcarOut');
   await p.waitForSelector('#corte:not([hidden])', { timeout: 10000 });
   const li = p.locator('#listaCorte li[data-slug]').first();
@@ -371,10 +371,10 @@ test('um corte que atravessa uma reconexão diz quanto falta, e o 16:9 do editor
     // De 290 s a 310 s: dez segundos antes da reconexão e dez depois.
     await p.evaluate(({ T: t0 }) => { window.__estado.agoraMs = t0; }, { T });
     for (let i = 0; i < 4; i++) await p.click('#mais1m');
-    for (let i = 0; i < 5; i++) await p.click('#mais10s');
+    for (let i = 0; i < 5; i++) await p.keyboard.press('Shift+L');
     await p.click('#marcarIn');
-    await p.click('#mais10s');
-    await p.click('#mais10s');
+    await p.keyboard.press('Shift+L');
+    await p.keyboard.press('Shift+L');
     await p.click('#marcarOut');
     await p.waitForSelector('#corte:not([hidden])', { timeout: 10000 });
     await p.locator('#listaCorte .baixarUm').first().click();

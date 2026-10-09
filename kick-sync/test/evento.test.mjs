@@ -247,13 +247,15 @@ test('escolher um lance lê o chat do time e marca no mapa onde ele explodiu',
     await clicarNoMapa(p, 'outro', T + 2 * 60_000);
     await p.waitForFunction(() => /picos? de chat/.test(document.getElementById('estadoChat').textContent), null, { timeout: 15000 });
     const marcas = await p.evaluate(() => Object.fromEntries([...window.__evento.marcas].map(([c, l]) => [c, l.map((m) => m.ms)])));
-    // O pico é o minuto 5 do tchubi (o balde do minuto, marcado a meio); o outro só teve conversa normal.
-    assert.deepEqual(marcas.tchubi, [T + 5 * 60_000 + 30_000]);
+    // O pico é o minuto 5 do tchubi, marcado no segundo em que o chat explodiu; o outro só teve conversa normal.
+    assert.equal(marcas.tchubi.length, 1);
+    const pico = marcas.tchubi[0];
+    assert.ok(pico >= T + 5 * 60_000 && pico < T + 6 * 60_000 && pico % 1000 === 0, 'a marca é um segundo do minuto do pico');
     assert.deepEqual(marcas.outro, []);
     // Um clique perto da marca vai à marca.
-    await clicarNoMapa(p, 'tchubi', T + 5 * 60_000 + 29_000);
+    await clicarNoMapa(p, 'tchubi', pico + 1_000);
     const e = await p.evaluate(() => window.__evento.escolha);
-    assert.equal(e.ms, T + 5 * 60_000 + 30_000);
+    assert.equal(e.ms, pico);
     // A legenda diz o que são as marcas, e cada pico também é um botão com a hora.
     assert.equal(await p.locator('#legendaPico').isVisible(), true);
     await clicarNoMapa(p, 'outro', T + 2 * 60_000);
@@ -263,13 +265,13 @@ test('escolher um lance lê o chat do time e marca no mapa onde ele explodiu',
     assert.equal(await botoes.count(), 1);
     assert.equal(await botoes.first().getAttribute('data-canal'), 'tchubi');
     assert.match(await botoes.first().innerText(), /^\d{2}:\d{2}$/);
-    // O botão do pico abre logo o vídeo, no começo do minuto do pico (o chat reage depois do lance).
+    // O botão do pico abre logo o vídeo, 10 s antes do segundo do pico (o chat reage depois do lance).
     await botoes.first().click();
     await p.waitForSelector('.tile', { timeout: 15000 });
     const pelaHora = await p.evaluate(() => window.__evento.escolha);
-    assert.deepEqual([pelaHora.canal, pelaHora.ms], ['tchubi', T + 5 * 60_000]);
+    assert.deepEqual([pelaHora.canal, pelaHora.ms], ['tchubi', pico - 10_000]);
     const noite = await p.evaluate(() => ({ agora: window.__estado.agoraMs, focos: window.__estado.focos }));
-    assert.ok(Math.abs(noite.agora - (T + 5 * 60_000)) < 2000, 'o vídeo abre no pico');
+    assert.ok(Math.abs(noite.agora - (pico - 10_000)) < 2000, 'o vídeo abre 10 s antes do pico');
     assert.deepEqual(noite.focos, ['tchubi']);
     assert.deepEqual(erros, []);
   });
