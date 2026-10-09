@@ -119,7 +119,7 @@ test('depois de o browser recusar o primeiro play, Rever volta a mandar tocar',
     // E saltar no tempo também: cada gesto dele tem de tentar outra vez, senão
     // um vídeo parado por engano fica parado a noite toda.
     const meio = await p.evaluate(() => window.__plays.length);
-    await p.click('#mais10s');
+    await p.click('#mais3s');
     await p.waitForFunction((n) => window.__plays.length > n, meio, { timeout: 5000 });
     assert.deepEqual(erros, []);
     await p.close();
@@ -1583,7 +1583,7 @@ test('fechar e voltar traz o mesmo instante, sem ir a Kick outra vez, e no mesmo
     await p.click('#carregar');
     await p.waitForSelector('.tile', { timeout: 20000 });
     await p.click('#mais5m');
-    await p.click('#mais10s');
+    await p.click('#mais3s');
     const agora = await p.locator('#agora').innerText();
     await p.evaluate(() => window.scrollTo({ top: 350 }));
     await p.waitForTimeout(600);                  // o guardar tem 400 ms de calma

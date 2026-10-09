@@ -341,14 +341,14 @@ test('carregar duas vezes depressa num botao nao da zoom',
     await p.click('#carregar');
     await p.waitForSelector('.tile', { timeout: 15000 });
 
-    for (const sel of ['#mais10s', '#menos1m', '#marcarIn', '.tile', '#alinhar']) {
+    for (const sel of ['#mais3s', '#menos1m', '#marcarIn', '.tile', '#alinhar']) {
       const t = await p.locator(sel).first().evaluate((e) => getComputedStyle(e).touchAction);
       assert.equal(t, 'manipulation', `${sel} ainda espera pelo segundo toque`);
     }
 
     // E os cliques rapidos contam todos, em vez de o segundo virar um gesto.
     const antes = await p.locator('#agora').innerText();
-    for (let i = 0; i < 4; i++) await p.click('#mais10s', { delay: 0 });
+    for (let i = 0; i < 4; i++) await p.click('#mais3s', { delay: 0 });
     const depois = await p.locator('#agora').innerText();
     assert.notEqual(depois, antes, 'quatro toques tem de andar no tempo');
     assert.deepEqual(erros, []);
@@ -404,7 +404,7 @@ test('a secção de cortar só existe quando há um pedaço marcado',
       'sem marca, a secção de cortar não devia estar lá');
 
     await p.click('#marcarIn');
-    await p.click('#mais10s');
+    await p.click('#mais3s');
     await p.click('#marcarOut');
     await p.waitForSelector('#listaCorte li[data-slug]', { timeout: 10000 });
     assert.equal(await p.locator('#corte').isVisible(), true, 'com marca, a secção aparece');
@@ -445,7 +445,7 @@ test('cada canal baixa sozinho, no seu tamanho, em qualidade maxima',
     await p.waitForSelector('.tile', { timeout: 15000 });
 
     await p.click('#marcarIn');
-    await p.click('#mais10s');                    // o botao de salto, nao 10 toques
+    await p.click('#mais3s');                    // o botao de salto, nao 10 toques
     await p.click('#marcarOut');
     await p.waitForSelector('#corte:not([hidden])', { timeout: 10000 });
 
@@ -554,9 +554,9 @@ test('um F5 devolve os canais, a noite, o instante e a marca',
     await p.waitForSelector('.tile', { timeout: 15000 });
 
     await p.click('#mais1m');
-    await p.click('#mais10s');
+    await p.click('#mais3s');
     await p.click('#marcarIn');
-    await p.click('#mais10s');
+    await p.click('#mais3s');
     await p.click('#marcarOut');
     await p.locator('#grade .tile').first().locator('.ajuste button[data-passo="1"]').click();
     await p.waitForSelector('#listaCorte li[data-slug]', { timeout: 10000 });
@@ -907,7 +907,7 @@ test('o pause para tudo, e a barra de espaco faz o mesmo',
 
     // E andar no tempo durante a pausa nao pode fazer o video voltar a andar:
     // o botao dizia parado e o quadrado andava.
-    await p.click('#mais10s');
+    await p.click('#mais3s');
     assert.equal(await glifo(), '#i-tocar');
 
     await p.keyboard.press(' ');
@@ -1358,7 +1358,7 @@ test('dá para ver a kill antes de a baixar, e a prévia é o mesmo pedaço do f
     // a ser puxado de volta para o clipe em ciclo.
     await p.locator('#listaMomentos .ver').click();
     assert.equal(await p.locator('#listaMomentos .ver.aVer').count(), 1);
-    await p.click('#mais10s');
+    await p.click('#mais3s');
     assert.equal(await p.locator('#listaMomentos .ver.aVer').count(), 0, 'saltar desliga a prévia');
     assert.deepEqual(erros, []);
     await p.close();

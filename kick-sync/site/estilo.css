@@ -677,7 +677,7 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
    Seis numa linha só, simétricos, e do tamanho do uso: 5 min pequeno, 1 min
    médio, 3 s o maior (é o mais usado). Em grelha e não em flex: numa linha
    flex um botão cai para baixo assim que o ecrã aperta. */
-.saltos { display: grid; grid-template-columns: .8fr 1fr 1.5fr 1.5fr 1fr .8fr; gap: var(--e2); margin-top: var(--e4); }
+.saltos { display: grid; grid-template-columns: auto auto 1fr 1fr auto auto; gap: var(--e2); margin-top: var(--e4); }
 .saltos button { min-width: 0; overflow: hidden; }
 #menos5m, #mais5m { font-size: 11px; }
 #menos3s, #mais3s { color: var(--tinta); font-size: var(--t-base, 14px); }
