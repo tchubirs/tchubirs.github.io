@@ -535,3 +535,20 @@ test('o chat de todos lê quem não é do time, e a sensibilidade muda os picos 
     assert.deepEqual(erros, []);
     await p.close();
   });
+
+test('com a página parada, os picos das horas vizinhas chegam sozinhos',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir();
+    await kickFalsa(p, { canais: ['tchubi', 'outro'] });
+    await abrirEvento(p);
+    // Um canal no ar a noite toda, para haver janelas vizinhas a ler.
+    await p.evaluate((t0) => { window.__evento.coberturas.set('tchubi', [[t0 - 6 * 3600e3, t0 + 6 * 3600e3]]); }, T);
+    await clicarNoMapa(p, 'outro', T + 2 * 60_000);
+    await p.waitForFunction(() => /picos? de chat|Nenhum pico/.test(document.getElementById('estadoChat').textContent), null, { timeout: 15000 });
+    const janelas = () => p.evaluate(() => window.__evento.janelasDoChat?.('tchubi')?.length ?? 0);
+    const antes = await janelas();
+    await p.waitForFunction((n) => (window.__evento.janelasDoChat?.('tchubi')?.length ?? 0) > n, antes, { timeout: 15000 });
+    assert.ok(await janelas() > antes);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });

@@ -588,6 +588,8 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
   try { sensibilidade = SENSIBILIDADES[localStorage.getItem(GUARDADA_SENS)] ? localStorage.getItem(GUARDADA_SENS) : 'normal'; } catch { /* janela privada */ }
   // As janelas de chat já lidas por canal: com elas os picos refazem-se sem pedir nada à Kick.
   const janelasLidas = new Map();
+  // Para os testes: que janelas de chat de um canal já foram lidas.
+  ev.janelasDoChat = (c) => janelasLidas.get(c) || [];
   function marcasDoChat(c) {
     const msgs = ev.mensagens.get(c) || [];
     const saida = [];
@@ -625,15 +627,7 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
     for (const c of canais) {
       if (controlo.signal.aborted) return;
       try {
-        const id = await idDoCanal(c, { buscar: buscarChat, sinal: controlo.signal });
-        const msgs = await mensagensEntre(id, deMs, ateMs, { buscar: buscarChat, sinal: controlo.signal, maxPedidos: 120 });
-        const porId = new Map((ev.mensagens.get(c) || []).map((m) => [m.id ?? `${m.ms}|${m.autor}|${m.texto}`, m]));
-        for (const m of msgs) porId.set(m.id ?? `${m.ms}|${m.autor}|${m.texto}`, m);
-        ev.mensagens.set(c, [...porId.values()].sort((a, b) => a.ms - b.ms));
-        janelasLidas.set(c, [...(janelasLidas.get(c) || []), [deMs, ateMs]]);
-        ev.marcas.set(c, marcasDoChat(c));
-        aoMudarPicos();
-        chatLido.add(`${c}|${deMs}`);
+        await lerJanela(c, deMs, ateMs, controlo.signal);
       } catch (erro) {
         if (erro?.name === 'AbortError') return;
       }
@@ -646,8 +640,46 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
     $('chatTodos').textContent = t('lance.chatTodos');
     ultimaLeitura = { e, doTime, deMs, ateMs, todos };
     pintarPicos(e, doTime, deMs, ateMs, todos);
+    if (!todos) await adiantarPicos(doTime, deMs, controlo.signal).catch(() => {});
   }
   let ultimaLeitura = null;
+
+  // Uma janela de chat de um canal: as mensagens ficam (para o chat ao lado do vídeo) e os picos refazem-se.
+  async function lerJanela(c, deMs, ateMs, sinal) {
+    const id = await idDoCanal(c, { buscar: buscarChat, sinal });
+    const msgs = await mensagensEntre(id, deMs, ateMs, { buscar: buscarChat, sinal, maxPedidos: 120 });
+    const porId = new Map((ev.mensagens.get(c) || []).map((m) => [m.id ?? `${m.ms}|${m.autor}|${m.texto}`, m]));
+    for (const m of msgs) porId.set(m.id ?? `${m.ms}|${m.autor}|${m.texto}`, m);
+    ev.mensagens.set(c, [...porId.values()].sort((a, b) => a.ms - b.ms));
+    janelasLidas.set(c, [...(janelasLidas.get(c) || []), [deMs, ateMs]]);
+    ev.marcas.set(c, marcasDoChat(c));
+    aoMudarPicos();
+    chatLido.add(`${c}|${deMs}`);
+  }
+
+  // Com a página parada, os picos das janelas vizinhas, para trás e para a frente (o dono, 07/10). Só
+  // começa depois de uns segundos sem escolha nova, e pára assim que se escolhe outra coisa (o sinal é o
+  // da leitura do time). Cada pedido continua a esperar o vídeo (`buscarChat`).
+  const ADIANTAR_ESPERA_MS = 4000;
+  async function adiantarPicos(doTime, deMs, sinal) {
+    await new Promise((ok, mal) => {
+      const r = setTimeout(ok, ADIANTAR_ESPERA_MS);
+      sinal.addEventListener('abort', () => { clearTimeout(r); mal(new DOMException('parado', 'AbortError')); }, { once: true });
+    });
+    for (const passo of [-1, 1, -2, 2]) {
+      const de = deMs + passo * CHAT_JANELA_MS;
+      const ate = Math.min(Date.now(), de + CHAT_JANELA_MS);
+      if (!(ate > de)) continue;
+      for (const c of doTime) {
+        if (sinal.aborted) return;
+        if (chatLido.has(`${c}|${de}`)) continue;
+        const noAr = (ev.coberturas.get(c) || []).some(([a, b]) => a < ate && b > de);
+        if (!noAr) continue;
+        try { await lerJanela(c, de, ate, sinal); } catch (erro) { if (erro?.name === 'AbortError') return; }
+        pintar();
+      }
+    }
+  }
 
   // Os picos do time também como botões com a hora: no telemóvel uma marca de 3 px no mapa é difícil
   // de acertar, e o botão diz logo a que horas foi. Ficam os mais perto do momento escolhido.

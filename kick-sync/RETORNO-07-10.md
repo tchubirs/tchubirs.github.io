@@ -1,6 +1,6 @@
 # O que o dono viu usando o Povix (07/10) e o que fazer
 
-Ordem: primeiro o que trava o uso no evento. Feito: 1 a 9 (09/10).
+Ordem: primeiro o que trava o uso no evento. Feito: 1 a 11, 13 a 17 e parte do 12 (09/10).
 
 ## Primeiro (antes do evento)
 
@@ -55,7 +55,9 @@ Ordem: primeiro o que trava o uso no evento. Feito: 1 a 9 (09/10).
     que o exemplo é "24 canais de Rust ao vivo agora, sem times". **Feito** (09/10).
 16. **Evento com canais que já não estão ao vivo:** já funciona (lê os VODs), mas a tela não diz. Dizer na porta
     do evento que vale qualquer canal, ao vivo ou não. **Feito** (09/10).
-17. **Carregar mais picos quando a página está parada**, para a frente e para trás do momento.
+17. **Carregar mais picos quando a página está parada**, para a frente e para trás do momento. **Feito** (09/10):
+    4 s depois de escolher, lê as 2 h antes e depois, e depois mais 2 h de cada lado; pára quando se escolhe outra
+    coisa, e espera sempre o vídeo.
 
 ## Ideias
 
