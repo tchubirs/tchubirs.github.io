@@ -1271,7 +1271,9 @@ test('todas as mensagens de erro dizem o próximo passo', async () => {
     'tw.rodape', 'montagem.semVitima',
     // Rótulos do evento, não erros: o canal escolhido não está em time nenhum do elenco, e o grupo
     // do mapa onde ficam os canais sem time.
-    'lance.semTime', 'evento.semTime']);
+    'lance.semTime', 'evento.semTime',
+    // O nome do exemplo ("24 canais de Rust ao vivo agora, sem times"), não um erro.
+    'evento.exemploNome']);
   const curtas = [];
   for (const [chave, frase] of Object.entries(_TEXTOS.pt)) {
     if (!/erro|falh|não deu|nenhum|sem |não consegui|inválido|passa dos/i.test(frase)) continue;
