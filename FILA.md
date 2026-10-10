@@ -223,3 +223,9 @@ em francês). Tudo revisado pela regra 14 em 28/09.
 ## Pedido do dono (10/10): atalhos personalizáveis
 - Painel de atalhos igual editor de vídeo: trocar qualquer atalho e dar atalho a botões que não têm. Cada pessoa usa do seu jeito; guardar no aparelho dela.
 - Feito depois de ele escolher a tela (vencedora da arena IA 12 ou só consertos).
+
+## Pedido do dono (10/10): detecção automática com filtros avançados
+- Mesmas escolhas da leitura do chat (pessoa ou todos, trecho ou tudo), funcionando do jeito dela.
+- Filtros: palavras no chat; tiros (já existe, tiros.js); explosões de foguete (força do som + grave longo); gritos do streamer (força na faixa da voz).
+- Palavras ditas pelo streamer: precisa transcrever a voz; no navegador é pesado (modelo de dezenas de MB). Estudar antes de prometer.
+- Fazer depois da tarefa do zoom e do chat na faixa.
