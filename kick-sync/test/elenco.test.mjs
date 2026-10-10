@@ -845,6 +845,29 @@ test('uma planilha com coluna de time e notas com vírgulas lê o time e o canal
   assert.deepEqual(streamer.times, [{ nome: 'Alfa', canais: ['lontrafeliz', 'gatomia'] }, { nome: 'Beta', canais: ['zebra99'] }]);
 });
 
+test('de qualquer lista só saem os canais da Kick: pelo link, ou pela coluna do canal', () => {
+  const soltos = { times: [], soltos: ['lontrafeliz', 'gatomia'], avisos: [] };
+  for (const texto of [
+    // CSV sem cabeçalho: o link e colunas de seguidores e notas.
+    'https://kick.com/lontrafeliz,38000,nick igual + Rust\nhttps://kick.com/gatomia,,"seguido, por voce [Discord: Mia]"',
+    // O link noutra coluna, com e sem cabeçalho, e com o nome do Discord ao lado.
+    'nome,seguidores,endereco\nFulano,10,https://kick.com/lontrafeliz\nBeltrano,,https://kick.com/gatomia',
+    'Fulano,10,https://kick.com/lontrafeliz\nBeltrano,,https://kick.com/gatomia',
+    'Fulano\tDiscord: Lontra\tkick.com/lontrafeliz\nBeltrano\tDiscord: Mia\tkick.com/gatomia',
+    // Texto: o link e uma nota à frente.
+    'https://kick.com/lontrafeliz 38000 nick igual [Discord: Lontra]\nhttps://kick.com/gatomia',
+    'kick.com/lontrafeliz - Discord: Lontra\nkick.com/gatomia (Discord: Zé Mia)',
+    // Sem link: o nome do canal na coluna do canal, e a do Discord de fora.
+    'Discord,Kick\nLontra#1,lontrafeliz\nMia#2,gatomia',
+    'nome\tseguidores\tperfil\nFulano\t10\tlontrafeliz\nBeltrano\t\tgatomia',
+  ]) assert.deepEqual(lerElenco(texto), soltos, texto);
+  // Uma folha de um time por linha, com links em várias colunas, continua a dar times.
+  assert.deepEqual(lerElenco('Os Bichos,kick.com/lontrafeliz,kick.com/gatomia\nAs Aves,kick.com/zebra99,kick.com/pato').times, [
+    { nome: 'Os Bichos', canais: ['lontrafeliz', 'gatomia'] },
+    { nome: 'As Aves', canais: ['zebra99', 'pato'] },
+  ]);
+});
+
 test('uma lista sem cabeçalho cuja primeira linha tem cara de cabeçalho continua a ser dados', () => {
   // "Nick" é palavra de cabeçalho, mas a linha traz um link: é dado.
   assert.deepEqual(lerElenco('Nick,https://kick.com/nick\nRicoy,https://kick.com/ricoy\nTchubi,https://kick.com/tchubi'),

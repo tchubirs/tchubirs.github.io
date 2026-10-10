@@ -733,7 +733,12 @@ function dividirNome(s) {
     // qualquer coisa, até um endereço.
     if (depois !== undefined && !/\s/.test(depois)
       && /:\/\/|^www\.|kick\.com\//i.test(s.slice(s.lastIndexOf(' ', i) + 1, i))) continue;
-    const nome = s.slice(0, i).trim();
+    // Dentro de uma nota entre parênteses ou colchetes ("[Discord: Fulano]") não separa.
+    const antes = s.slice(0, i);
+    if ((antes.match(/[[(]/g) || []).length > (antes.match(/[\])]/g) || []).length) continue;
+    const nome = antes.trim();
+    // "kick.com/x - Discord: Fulano": um link seguido de nota não é o nome de um time.
+    if (/\s/.test(nome) && /kick\.com\//i.test(nome.split(/\s+/)[0]) && lerCanal(nome.split(/\s+/)[0]).slug) continue;
     return nome ? { nome, resto: s.slice(i + 1).trim() } : null;
   }
   const m = s.match(/^(.+?)\s+[-–—=]+>?\s+(.+)$/);
@@ -853,6 +858,37 @@ function cabecalho(s, sep, colunas) {
  * Assim "Nick, kick.com/nick" continua a ser uma linha de dados.
  */
 function tabelaSemTime(bloco) {
+  return cabecalhoSemTime(bloco) || colunaDeLinks(bloco);
+}
+
+/**
+ * Uma tabela de três ou mais colunas em que os links estão sempre na mesma
+ * coluna e só nela ("Fulano,10,https://kick.com/x"), com ou sem cabeçalho:
+ * o canal vem só dessa coluna. Uma folha de "um time por linha" tem links em
+ * várias colunas e não entra aqui.
+ */
+function colunaDeLinks(bloco) {
+  const linhas = bloco.map((l, i) => ({ s: l.s, i })).filter((l) => l.s);
+  if (linhas.length < 2) return null;
+  const sep = separadorDe(linhas.at(-1).s);
+  if (!sep || linhas.some((l) => !l.s.includes(sep))) return null;
+  const filas = linhas.map((l) => ({ ...l, cel: partirCelulas(l.s, sep).map(semAspas) }));
+  if (Math.max(...filas.map((f) => f.cel.length)) < 3) return null;
+  const link = (c) => umToken(c) && pareceLink(c);
+  const colunas = new Set();
+  for (const f of filas) f.cel.forEach((c, j) => { if (pareceLink(c)) colunas.add(j); });
+  if (colunas.size !== 1) return null;
+  const [j] = colunas;
+  const semLink = filas.filter((f) => !link(f.cel[j] ?? ''));
+  if (filas.length - semLink.length < 2) return null;
+  // Só a primeira linha pode ficar sem link: é o cabeçalho, sem coluna de time.
+  if (semLink.length > 1 || (semLink.length && (semLink[0] !== filas[0] || semLink[0].cel.some((c) => COLUNA_TIME.test(c))))) {
+    return null;
+  }
+  return { linha: semLink.length ? filas[0].i : -1, tabela: { sep, iTime: -1, iCanais: [j] } };
+}
+
+function cabecalhoSemTime(bloco) {
   const i0 = bloco.findIndex((l) => l.s);
   if (i0 < 0) return null;
   const s = bloco[i0].s;
@@ -881,6 +917,10 @@ function tabelaSemTime(bloco) {
 const umToken = (c) => !/\s/.test(c.trim());
 const tokens = (s) => String(s).split(/[\s,;|]+/).filter(Boolean);
 const canalEscrito = (c) => /^@/.test(c) || pareceLink(c);
+
+const numero = (c) => /^[\d.,\s]+$/.test(c);
+/** Ao lado de um link, o que não é canal: um número, uma nota com espaços, "[Discord:". */
+const lixo = (c) => !canalEscrito(c) && (numero(c) || /\s/.test(c.trim()) || !lerCanal(c).slug);
 
 /** Uma frase, não uma lista: "Boa sorte a todos!" não são três canais. */
 const ehFrase = (s) => /[.!?]$/.test(s) && s.split(/\s+/).length >= 3 && !/@|kick\.com\//i.test(s);
@@ -981,6 +1021,13 @@ function classificar({ s, marcado }, ctx) {
     const cab = cabecalho(s, sep, ctx.colunas);
     if (cab) { ctx.tabela = cab; return { tipo: 'ignorar' }; }
     const celulas = partirCelulas(s, sep).filter(Boolean);
+    // Uma linha com links e mais colunas de outra coisa (seguidores, notas):
+    // "https://kick.com/x,123,nota livre" e "Fulano,10,kick.com/x" dão só os links.
+    const links = celulas.filter(canalEscrito);
+    if (links.length && celulas.length >= 2
+      && (canalEscrito(celulas[0]) ? celulas.slice(1).some(lixo) : celulas.length >= 3 && celulas.some(numero))) {
+      return { tipo: 'canais', canais: links };
+    }
     if (celulas.length >= 2) {
       // Uma célula com espaços no meio de uma lista com vírgulas é uma frase.
       if (!celulas.slice(1).every(umToken)) return { tipo: 'ignorar' };
@@ -1010,6 +1057,9 @@ function classificar({ s, marcado }, ctx) {
     // "Team Ricoy @ricoy @tchubi": o que vem antes do primeiro @ só é nome
     // quando não pode ser canal, ou diz "time"; senão é mais uma lista. Um
     // enfeite à frente (um emoji, "1 - @ricoy") não é nome nenhum.
+    // "kick.com/x 38000 nick igual [Discord: Fulano]": um link à cabeça seguido
+    // de uma nota dá só os links da linha.
+    if (k === 0 && palavras.slice(1).some(lixo)) return { tipo: 'canais', canais: palavras.filter(canalEscrito) };
     const antes = palavras.slice(0, k);
     const nome = limparNome(antes.join(' '));
     const ehNome = /[\p{L}\p{N}]/u.test(nome) && (dizTime(nome) || !antes.every((p) => lerCanal(p).slug));
