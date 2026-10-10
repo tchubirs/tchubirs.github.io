@@ -230,6 +230,12 @@
     <rect x="6.6" y="2.8" width="10.8" height="8.2" rx="1.8"/>
     <rect x="6.6" y="13" width="10.8" height="8.2" rx="1.8"/>
   </symbol>
+  <!-- A tela do streamer com a webcam no canto de baixo à esquerda. Os outros três cantos são este
+       virado pelo CSS, para os quatro botões serem o mesmo desenho. -->
+  <symbol id="i-webcam-canto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round">
+    <rect x="2.5" y="5" width="19" height="14" rx="2"/>
+    <rect x="4.6" y="12.2" width="6.4" height="4.8" rx="1" fill="currentColor" stroke="none"/>
+  </symbol>
 
   <!-- Dois painéis lado a lado. É o que o botão FAZ: põe este ângulo ao lado
        do que já está aberto. Estava um "+", que num quadrado com um "+" e um
@@ -956,6 +962,19 @@
           <video id="previaClipe" playsinline muted></video>
           <div id="recortes" class="recortes" hidden></div>
         </div>
+        <!-- Onde fica a webcam na tela do streamer: cada modelo põe o recorte 1 (a cara) nesse canto, num
+             tamanho típico, e o 2 (o jogo) ao meio. Depois são só pequenos ajustes, e o encaixe fica guardado
+             para o próximo clipe do mesmo streamer. -->
+        <div id="modelosWebcam" class="modelosWebcam" hidden>
+          <span class="rotuloCampo" id="rotuloWebcam" data-t="retrato.webcam">Câmera</span>
+          <div class="linha" role="group" aria-labelledby="rotuloWebcam">
+            <button class="modeloWebcam" data-modelo="baixoEsq" data-t-titulo="retrato.camBaixoEsq" data-t-aria="retrato.camBaixoEsq" title="Webcam embaixo à esquerda" aria-label="Webcam embaixo à esquerda" aria-pressed="false"><svg class="ic" aria-hidden="true"><use href="#i-webcam-canto"/></svg></button>
+            <button class="modeloWebcam" data-modelo="cimaEsq" data-t-titulo="retrato.camCimaEsq" data-t-aria="retrato.camCimaEsq" title="Webcam em cima à esquerda" aria-label="Webcam em cima à esquerda" aria-pressed="false"><svg class="ic" aria-hidden="true"><use href="#i-webcam-canto"/></svg></button>
+            <button class="modeloWebcam" data-modelo="cimaDir" data-t-titulo="retrato.camCimaDir" data-t-aria="retrato.camCimaDir" title="Webcam em cima à direita" aria-label="Webcam em cima à direita" aria-pressed="false"><svg class="ic" aria-hidden="true"><use href="#i-webcam-canto"/></svg></button>
+            <button class="modeloWebcam" data-modelo="baixoDir" data-t-titulo="retrato.camBaixoDir" data-t-aria="retrato.camBaixoDir" title="Webcam embaixo à direita" aria-label="Webcam embaixo à direita" aria-pressed="false"><svg class="ic" aria-hidden="true"><use href="#i-webcam-canto"/></svg></button>
+          </div>
+          <button id="voltarModelo" class="discreto voltarModelo" data-t-titulo="retrato.voltarModeloAjuda" title="Desfaz os ajustes deste streamer e volta ao modelo"><span data-t="retrato.voltarModelo">Voltar ao modelo</span></button>
+        </div>
       </div>
       <!-- Um aviso que não se pode carregar é um beco. Este é um botão: no
            iPhone a imagem pode não vir sozinha, e um toque resolve-o. -->
@@ -982,7 +1001,10 @@
       <div class="seleccao"></div>
       <button class="pega de" data-t-aria="clipe.inicio" aria-label="início do clipe"></button>
       <button class="pega ate" data-t-aria="clipe.fim" aria-label="fim do clipe"></button>
-      <div class="cabeca"></div>
+      <!-- A agulha: onde o vídeo do clipe está, como a da linha do tempo (a cabeça e a linha). Arrasta-se
+           com o mouse e o dedo, e clicar na barra fora das pegas leva-a. Com foco, as setas andam 1 s. -->
+      <div id="agulhaClipe" class="cabeca" role="slider" tabindex="0" data-t-aria="clipe.agulha"
+        aria-label="Onde o vídeo está no clipe" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0"><span class="cabecaClipe"></span></div>
     </div>
     <!-- O tempo numa linha e os botões noutra. Juntos, num telemóvel em pé, o
          `+1s` partia-se para a linha de baixo sozinho.

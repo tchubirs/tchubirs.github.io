@@ -66,43 +66,82 @@ export function proporcaoDoQuadro(modo, i = 0, divisao = DIVISAO_OMISSAO) {
 }
 
 /**
+ * Onde fica a webcam na tela do streamer: os quatro modelos do "2 enquadramentos".
+ *
+ * O dono (10/10): o encaixe mais usado em TikTok e Shorts é a cara em cima e o jogo ao meio em baixo, e
+ * o que muda de streamer para streamer é o canto da webcam. Embaixo à esquerda vem primeiro porque é o
+ * mais comum no Rust (medido nos frames dos três canais que vi: o dele, o do kodd e o do Lauta).
+ */
+export const MODELOS_WEBCAM = ['baixoEsq', 'cimaEsq', 'cimaDir', 'baixoDir'];
+export const MODELO_OMISSAO = 'baixoEsq';
+export const limparModelo = (m) => (MODELOS_WEBCAM.includes(m) ? m : MODELO_OMISSAO);
+
+// Quanto da largura da fonte uma webcam costuma ocupar num 16:9: entre um quinto e um terço. Um quarto e
+// pouco apanha a cara inteira nos tamanhos típicos e deixa só pequenos ajustes por fazer.
+const LARGURA_WEBCAM = 0.27;
+
+/**
  * O enquadramento com que isto abre, para uma fonte deitada.
  *
  * 'um': a fita 9:16 mais alta que cabe, ao meio.
- * 'dois': duas fitas, cada uma com metade da altura do alvo — logo cada uma
- *         é 1080x960, ou seja 9:8. A de cima ao meio em cima, a de baixo ao
- *         meio em baixo, que é onde a cara e o jogo costumam estar.
+ * 'dois': o recorte 1 é a webcam, no canto do `modelo` e com a proporção da faixa de cima; o recorte 2
+ *         é o jogo, ao meio e com a altura toda da fonte, para a faixa de baixo.
  */
-export function enquadramentoInicial(largura, altura, modo = 'um', divisao = DIVISAO_OMISSAO) {
+export function enquadramentoInicial(largura, altura, modo = 'um', divisao = DIVISAO_OMISSAO, modelo = MODELO_OMISSAO) {
   if (!(largura > 0 && altura > 0)) return [];
   if (modo === 'dois') {
     const d = limparDivisao(divisao);
-    return [0, 1].map((i) => {
-      const proporcao = proporcaoDoQuadro('dois', i, d);
-      // Metade da altura da fonte para cada um: assim nascem separados, um em
-      // cima e outro em baixo. A primeira versão dava a altura INTEIRA a cada,
-      // e numa fonte 16:9 os dois nasciam no mesmo sítio — dois rectângulos
-      // sobrepostos ao pixel são indistinguíveis de um, e foi o teste que o
-      // apanhou. Sobrepô-los DEPOIS é livre: numa imagem 16:9 a webcam e o
-      // centro da acção partilham espaço.
-      let h = altura / 2;
-      let w = h * proporcao;
-      if (w > largura) { w = largura; h = w / proporcao; }
-      // "Quando clico em dois enquadramentos devia ficar praticamente pronto."
-      //
-      // Ficava a meio, os dois, e ele tinha de arrastar os dois antes de ver
-      // seja o que for. O de cima passa a nascer no CANTO INFERIOR ESQUERDO da
-      // fonte, que é onde a webcam está — medido nos frames dos três canais que
-      // vi (o dele, o do kodd e o do Lauta): nos três, no canto de baixo à
-      // esquerda. O de baixo nasce ao meio, que é onde a acção está.
-      if (i === 0) return { x: 0, y: altura - h, largura: w, altura: h };
-      return { x: (largura - w) / 2, y: (altura - h) / 2, largura: w, altura: h };
-    });
+    const canto = limparModelo(modelo);
+    // A webcam: um tamanho típico, encostada ao canto. Nunca mais alta do que meia fonte, para os dois
+    // recortes nascerem visivelmente separados (dois rectângulos sobrepostos ao pixel lêem-se como um).
+    const pc = proporcaoDoQuadro('dois', 0, d);
+    let wc = largura * LARGURA_WEBCAM;
+    let hc = wc / pc;
+    if (hc > altura / 2) { hc = altura / 2; wc = hc * pc; }
+    const direita = canto === 'cimaDir' || canto === 'baixoDir';
+    const baixo = canto === 'baixoEsq' || canto === 'baixoDir';
+    const cam = { x: direita ? largura - wc : 0, y: baixo ? altura - hc : 0, largura: wc, altura: hc };
+    // O jogo: a fita mais alta que cabe, ao meio, que é onde a acção está.
+    const pj = proporcaoDoQuadro('dois', 1, d);
+    let hj = altura;
+    let wj = hj * pj;
+    if (wj > largura) { wj = largura; hj = wj / pj; }
+    const jogo = { x: (largura - wj) / 2, y: (altura - hj) / 2, largura: wj, altura: hj };
+    return [cam, jogo];
   }
   const proporcao = RETRATO.largura / RETRATO.altura;            // 9:16
   const h = altura;
   const w = Math.min(largura, h * proporcao);
   return [{ x: (largura - w) / 2, y: 0, largura: w, altura: h }];
+}
+
+/**
+ * O encaixe de um streamer, para guardar no aparelho: em fracções da fonte, e não em pixels, para servir
+ * ao próximo clipe dele seja qual for a qualidade que o vídeo trouxer.
+ */
+export function paraFraccoes(rects, fonte) {
+  if (!(fonte?.largura > 0 && fonte?.altura > 0) || !rects?.length) return null;
+  return rects.map((r) => ({
+    x: r.x / fonte.largura, y: r.y / fonte.altura, largura: r.largura / fonte.largura, altura: r.altura / fonte.altura,
+  }));
+}
+
+/**
+ * De volta a pixels de uma fonte. A largura manda e a altura vem da proporção da faixa, para o recorte
+ * encher o seu destino sem esticar mesmo que a fonte nova tenha outra forma. Algo estragado dá `null`, e
+ * aí quem chama usa o modelo.
+ */
+export function deFraccoes(fraccoes, fonte, modo = 'um', divisao = DIVISAO_OMISSAO) {
+  if (!(fonte?.largura > 0 && fonte?.altura > 0) || !Array.isArray(fraccoes)) return null;
+  const precisa = modo === 'dois' ? 2 : 1;
+  if (fraccoes.length !== precisa) return null;
+  const ok = (n) => Number.isFinite(n) && n >= -0.01 && n <= 1.01;
+  if (!fraccoes.every((f) => f && ok(f.x) && ok(f.y) && ok(f.largura) && f.largura > 0.01)) return null;
+  return fraccoes.map((f, i) => {
+    const largura = f.largura * fonte.largura;
+    const altura = largura / proporcaoDoQuadro(modo, i, divisao);
+    return limitar({ x: f.x * fonte.largura, y: f.y * fonte.altura, largura, altura }, fonte);
+  });
 }
 
 /**

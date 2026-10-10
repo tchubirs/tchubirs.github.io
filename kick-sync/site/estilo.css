@@ -1024,6 +1024,18 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 .modosRetrato { justify-content: center; }
 .modoRetrato { width: 40px; min-width: 40px; padding: 0; }
 .modoRetrato .ic { width: 19px; height: 19px; }
+/* Os modelos de onde fica a webcam, por baixo da tela do streamer: quatro botões com o mesmo desenho,
+   virado para o canto de cada um. O "Voltar ao modelo" fica pequeno, ao fundo da mesma linha. */
+.modelosWebcam { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2) var(--e3); }
+.modelosWebcam[hidden] { display: none; }
+.modelosWebcam > .linha { gap: var(--e2); flex-wrap: nowrap; }
+.modeloWebcam { width: 40px; min-width: 40px; padding: 0; }
+.modeloWebcam .ic { width: 20px; height: 20px; }
+.modeloWebcam[data-modelo="cimaEsq"] .ic { transform: scaleY(-1); }
+.modeloWebcam[data-modelo="cimaDir"] .ic { transform: scale(-1, -1); }
+.modeloWebcam[data-modelo="baixoDir"] .ic { transform: scaleX(-1); }
+.modeloWebcam[aria-pressed="true"] { color: var(--acento); border-color: var(--acento); }
+.voltarModelo { margin-left: auto; font-size: var(--t-menor); padding: 0 var(--e3); }
 .semPrevia {
   width: 100%; min-height: 44px; background: var(--aviso-eco); color: var(--aviso);
   border-color: color-mix(in srgb, var(--aviso) 40%, transparent);
@@ -1032,9 +1044,11 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 /* ── a barra de corte ──────────────────────────────────────────────────────
    O poço é a gravação, o âmbar é o pedaço escolhido, e a agulha branca é
    onde a imagem está. As mesmas três cores da linha do tempo grande. */
+/* Sem `overflow: hidden`: a cabeça da agulha fica meio por cima da barra, como a da linha do tempo, e
+   o espaço de cima é o que a deixa à vista. */
 .barraClipe {
-  position: relative; height: 44px; border-radius: var(--r-2);
-  background: var(--sup-1); border: 1px solid var(--linha); overflow: hidden; touch-action: none;
+  position: relative; height: 44px; border-radius: var(--r-2); margin-top: var(--e3);
+  background: var(--sup-1); border: 1px solid var(--linha); touch-action: none; cursor: pointer;
 }
 .barraClipe .seleccao { position: absolute; top: 0; bottom: 0; background: var(--marca-eco); border-inline: 1px solid var(--marca-fio); }
 .barraClipe .pega {
@@ -1049,7 +1063,23 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 }
 .barraClipe .pega.de { border-radius: var(--r-fio) 0 0 var(--r-fio); }
 .barraClipe .pega.ate { border-radius: 0 var(--r-fio) var(--r-fio) 0; }
-.barraClipe .cabeca { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--tinta); z-index: 4; pointer-events: none; }
+/* A agulha do clipe: a mesma peça da linha do tempo, uma linha com a cabeça em cima, centrada nela.
+   Só a cabeça apanha o rato e o dedo; a linha deixa passar, para as pegas por baixo continuarem a ser
+   agarradas. Fora da cabeça, o clique na barra é que a leva. */
+.barraClipe .cabeca {
+  position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; z-index: 4; pointer-events: none;
+  background: var(--tinta); box-shadow: 0 0 0 1px #0009;
+}
+.barraClipe .cabeca:focus { outline: none; }
+.cabecaClipe {
+  position: absolute; left: 50%; top: 0; width: 16px; height: 16px; transform: translate(-50%, -50%);
+  border-radius: var(--r-redondo); background: var(--tinta); border: 2px solid var(--sup-0);
+  pointer-events: auto; cursor: grab; touch-action: none;
+}
+.cabecaClipe:hover, .barraClipe.aArrastar .cabecaClipe { background: var(--acento); }
+.barraClipe.aArrastar .cabecaClipe { cursor: grabbing; }
+.barraClipe .cabeca:focus-visible .cabecaClipe { box-shadow: var(--foco); }
+@media (pointer: coarse) { .cabecaClipe { width: 24px; height: 24px; } }
 
 /* Uma linha por ponta, e o ▶ ao lado das duas: toca o pedaço inteiro e não
    uma das pontas. Numa linha só, num telemóvel em pé, o último botão caía

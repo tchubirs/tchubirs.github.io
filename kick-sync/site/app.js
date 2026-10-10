@@ -21,6 +21,7 @@ import { ordemDosAngulos, aplicarOrdem } from './grelha.js';
 import {
   RETRATO, enquadramentoInicial, limitar, desenhar, gravar, formatoQueFunciona, extensaoDe,
   reformar, limparDivisao, DIVISAO_OMISSAO, divisaoDoQuadro, proporcaoDoQuadro, encaixar,
+  MODELO_OMISSAO, limparModelo, paraFraccoes, deFraccoes,
 } from './retrato.js';
 import { planoDeAngulos, gravarAngulos } from './angulos.js';
 import { agruparPorNoite, rotuloDaNoite } from './noites.js';
@@ -3639,7 +3640,7 @@ async function baixarMontagem(soEsta = null) {
   // cada kill sai também em vertical; sem enquadramento guardado, o do meio (ver `renderizarRetrato`).
   if ($('formatoMontagem').value === 'ambos') {
     for (const c of plano) {
-      if (c.papel === 'protagonista' && !c.retrato) c.retrato = { modo: 'um', rects: [], divisao: DIVISAO_OMISSAO };
+      if (c.papel === 'protagonista' && !c.retrato) c.retrato = retratoLembrado(c.canal);
     }
   }
   const controlo = new AbortController();
@@ -3954,8 +3955,11 @@ async function renderizarRetrato(linha, clipe, { sinal, aoProgresso } = {}) {
     if (!formato) throw Object.assign(new Error('sem gravador'), { name: 'SEM-GRAVADOR' });
     // Sem enquadramento guardado (o 9:16 para todos), a fita mais alta que cabe, ao meio: a mesma com
     // que o editor abre.
+    // Com o encaixe que o streamer tem guardado no aparelho, se tiver (ver `retratoLembrado`).
+    const fonteV = { largura: v.videoWidth || 1920, altura: v.videoHeight || 1080 };
     const rects = clipe.retrato.rects?.length ? clipe.retrato.rects
-      : enquadramentoInicial(v.videoWidth || 1920, v.videoHeight || 1080, clipe.retrato.modo, clipe.retrato.divisao);
+      : deFraccoes(clipe.retrato.fraccoes, fonteV, clipe.retrato.modo, clipe.retrato.divisao)
+        || enquadramentoInicial(fonteV.largura, fonteV.altura, clipe.retrato.modo, clipe.retrato.divisao, clipe.retrato.modelo);
     return await gravar(v, {
       rects,
       modo: clipe.retrato.modo,
@@ -4326,6 +4330,8 @@ function abrirClipe(momento = null) {
   const linha = estado.linhas.find((l) => l.slug === canal) || estado.linhas[0];
   // Cada ângulo tem o seu ajuste (ver `comAjuste`): o deste, e só o deste.
   const aj = momento ? ajusteDe(momento, linha.slug) : null;
+  // O encaixe que este streamer tem guardado no aparelho: o modo e o modelo da webcam abrem como ficaram.
+  const lembrado = encaixeDe(linha.slug);
   // Não deixar escolher um pedaço que este ângulo não filmou: os limites são
   // os do vídeo dele, e não os da noite.
   const limites = { inicio: linha.inicio, fim: linha.fim };
@@ -4363,7 +4369,9 @@ function abrirClipe(momento = null) {
     // O retrato: o modo e os enquadramentos, em pixels do vídeo de origem.
     // Nascem vazios porque só se sabe o tamanho da fonte depois de ela ter
     // metadados — antes disso, qualquer enquadramento seria um palpite.
-    modo: aj?.formato || 'um',
+    modo: aj?.formato || lembrado?.modo || 'um',
+    // Onde fica a webcam na tela deste streamer (os quatro modelos do "2 enquadramentos").
+    modelo: limparModelo(lembrado?.modelo),
     // Os enquadramentos guardados voltam tal e qual; sem ajuste nascem vazios
     // e o `prepararRetrato` enche-os quando souber o tamanho da fonte.
     rects: (aj?.rects || []).map((r) => ({ ...r })),
@@ -4387,9 +4395,7 @@ function abrirClipe(momento = null) {
   };
   // O botão de guardar só existe quando há uma kill onde guardar.
   $('guardarAjustes').hidden = !daLista;
-  for (const b of document.querySelectorAll('.modoRetrato')) {
-    b.setAttribute('aria-pressed', String(b.dataset.modo === estado.clipe.modo));
-  }
+  pintarModos();
 
   $('canalClipe').innerHTML = estado.linhas
     .map((l) => `<option value="${escapar(l.slug)}"${l.slug === linha.slug ? ' selected' : ''}>${escapar(l.slug)}</option>`)
@@ -4463,12 +4469,16 @@ function prepararRetrato() {
     // Só a primeira vez: um `loadedmetadata` a chegar depois do manifesto não
     // pode atirar fora os enquadramentos que ele já arrastou.
     if (!c.rects.length) {
-      c.rects = enquadramentoInicial(fonte.largura, fonte.altura, c.modo, c.divisao);
+      const partida = encaixeDePartida(c.canal, c.modo, fonte, c.modelo);
+      c.rects = partida.rects;
+      c.divisao = partida.divisao;
       c.rectsFonte = { ...fonte };
     }
     acertarRecortes();
     $('ladoRetrato').hidden = false;
     $('recortes').hidden = false;
+    $('modelosWebcam').hidden = false;
+    pintarModos();
     pintarRecortes();
     pintarDivisor();
     seguirRetrato();
@@ -4630,6 +4640,7 @@ function ligarArrasto(caixa) {
       window.removeEventListener('pointermove', mover);
       window.removeEventListener('pointerup', largar);
       pintarRecortes();
+      if (estado.clipe?.retratoMexido) lembrarEncaixe();
     };
     window.addEventListener('pointermove', mover);
     window.addEventListener('pointerup', largar);
@@ -4666,6 +4677,7 @@ function ligarArrasto(caixa) {
     }
     c.rects[i] = limitar(novo, fonte);
     c.retratoMexido = true;
+    lembrarEncaixe();
     pintarRecortes();
     // O redesenho troca as caixas por novas: o foco tem de voltar a esta.
     $('recortes').querySelector(`.recorte[data-i="${i}"]`)?.focus();
@@ -4757,6 +4769,7 @@ function ligarDivisor() {
     const largar = () => {
       window.removeEventListener('pointermove', mover);
       window.removeEventListener('pointerup', largar);
+      lembrarEncaixe();
     };
     window.addEventListener('pointermove', mover);
     window.addEventListener('pointerup', largar);
@@ -4765,8 +4778,8 @@ function ligarDivisor() {
   // quem não usa rato, e isto é um botão, não um enfeite.
   botao.addEventListener('keydown', (e) => {
     const passo = e.shiftKey ? 0.1 : 0.02;
-    if (e.key === 'ArrowUp') { e.preventDefault(); aplicar(estado.clipe.divisao - passo); }
-    if (e.key === 'ArrowDown') { e.preventDefault(); aplicar(estado.clipe.divisao + passo); }
+    if (e.key === 'ArrowUp') { e.preventDefault(); aplicar(estado.clipe.divisao - passo); lembrarEncaixe(); }
+    if (e.key === 'ArrowDown') { e.preventDefault(); aplicar(estado.clipe.divisao + passo); lembrarEncaixe(); }
   });
 }
 
@@ -4813,19 +4826,128 @@ function acertarRecortes() {
 
 function trocarModo(modo) {
   const c = estado.clipe;
-  const v = $('previaClipe');
   const fonte = fonteDoClipe();
   if (!c || !fonte || c.aGravar) return;
   c.retratoMexido = true;
   c.modo = modo;
-  c.divisao = DIVISAO_OMISSAO;
-  c.rects = enquadramentoInicial(fonte.largura, fonte.altura, modo, c.divisao);
+  // O encaixe deste streamer nesse modo, se ele já o acertou; senão o modelo.
+  const partida = encaixeDePartida(c.canal, modo, fonte, c.modelo);
+  c.rects = partida.rects;
+  c.divisao = partida.divisao;
   c.rectsFonte = { ...fonte };
-  for (const b of document.querySelectorAll('.modoRetrato')) {
-    b.setAttribute('aria-pressed', String(b.dataset.modo === modo));
-  }
+  lembrarEncaixe();
+  pintarModos();
   pintarRecortes();
   pintarDivisor();
+}
+
+/**
+ * Um dos quatro modelos de onde fica a webcam. Põe o recorte 1 nesse canto e o 2 ao meio, já em dois
+ * enquadramentos, e o modelo fica guardado com o streamer. Escolher um modelo é recomeçar dele: o que se
+ * tinha ajustado à mão para o canto antigo não serve no novo.
+ */
+function escolherModelo(modelo) {
+  const c = estado.clipe;
+  const fonte = fonteDoClipe();
+  if (!c || !fonte || c.aGravar) return;
+  c.modelo = limparModelo(modelo);
+  c.modo = 'dois';
+  voltarAoModelo();
+}
+
+/** "Voltar ao modelo": desfaz os ajustes do modo em que se está e volta ao enquadramento de partida. */
+function voltarAoModelo() {
+  const c = estado.clipe;
+  const fonte = fonteDoClipe();
+  if (!c || !fonte || c.aGravar) return;
+  c.retratoMexido = true;
+  c.divisao = DIVISAO_OMISSAO;
+  c.rects = enquadramentoInicial(fonte.largura, fonte.altura, c.modo, c.divisao, c.modelo);
+  c.rectsFonte = { ...fonte };
+  lembrarEncaixe();
+  pintarModos();
+  pintarRecortes();
+  pintarDivisor();
+}
+
+/** Os botões do modo e dos modelos, com o que está escolhido carregado. */
+function pintarModos() {
+  const c = estado.clipe;
+  if (!c) return;
+  for (const b of document.querySelectorAll('.modoRetrato')) {
+    b.setAttribute('aria-pressed', String(b.dataset.modo === c.modo));
+  }
+  // O modelo só está "carregado" em dois enquadramentos: num só, a webcam não tem faixa.
+  for (const b of document.querySelectorAll('.modeloWebcam')) {
+    b.setAttribute('aria-pressed', String(c.modo === 'dois' && b.dataset.modelo === c.modelo));
+  }
+}
+
+// ── o encaixe de cada streamer, guardado no aparelho ────────────────────────
+//
+// O dono (10/10): a webcam de cada streamer está sempre no mesmo sítio, e acertar o 9:16 a cada clipe
+// era fazer o mesmo trabalho outra vez. Fica no aparelho, por streamer, em fracções da fonte (servem a
+// qualquer qualidade do vídeo): o modo, o modelo da webcam e, para cada modo, os recortes e a divisão.
+const CHAVE_ENCAIXES = 'replay.encaixes';
+
+function lerEncaixes() {
+  try {
+    const o = JSON.parse(localStorage.getItem(CHAVE_ENCAIXES) || '{}');
+    return o && typeof o === 'object' && !Array.isArray(o) ? o : {};
+  } catch { return {}; }
+}
+
+/** O encaixe guardado de um streamer, ou `null`. */
+function encaixeDe(slug) {
+  const e = lerEncaixes()[slug];
+  if (!e || typeof e !== 'object') return null;
+  return { ...e, modo: e.modo === 'dois' || e.modo === 'um' ? e.modo : null };
+}
+
+/** Guardar o encaixe do editor aberto como o deste streamer. */
+function lembrarEncaixe() {
+  const c = estado.clipe;
+  const fonte = c?.rectsFonte || fonteDoClipe();
+  const fraccoes = c ? paraFraccoes(c.rects, fonte) : null;
+  if (!fraccoes) return;
+  const todos = lerEncaixes();
+  const antes = todos[c.canal] && typeof todos[c.canal] === 'object' ? todos[c.canal] : {};
+  todos[c.canal] = {
+    ...antes,
+    modo: c.modo,
+    modelo: c.modelo,
+    [c.modo]: { rects: fraccoes, divisao: c.modo === 'dois' ? c.divisao : DIVISAO_OMISSAO },
+  };
+  try { localStorage.setItem(CHAVE_ENCAIXES, JSON.stringify(todos)); } catch { /* janela privada */ }
+}
+
+/**
+ * Com que recortes um streamer começa num modo: os que ele guardou, ou o modelo do canto da webcam.
+ * @returns {{rects: object[], divisao: number}}
+ */
+function encaixeDePartida(slug, modo, fonte, modelo = MODELO_OMISSAO) {
+  const guardado = encaixeDe(slug)?.[modo];
+  const divisao = modo === 'dois' ? limparDivisao(guardado?.divisao) : DIVISAO_OMISSAO;
+  const rects = guardado ? deFraccoes(guardado.rects, fonte, modo, divisao) : null;
+  if (rects) return { rects, divisao };
+  return {
+    rects: enquadramentoInicial(fonte.largura, fonte.altura, modo, DIVISAO_OMISSAO, modelo),
+    divisao: DIVISAO_OMISSAO,
+  };
+}
+
+/** O 9:16 de um streamer para a montagem "9:16 para todos": o que ele guardou, ou o do meio. */
+function retratoLembrado(slug) {
+  const e = encaixeDe(slug);
+  const modo = e?.modo || 'um';
+  const guardado = e?.[modo];
+  return {
+    modo,
+    rects: [],
+    divisao: modo === 'dois' ? limparDivisao(guardado?.divisao) : DIVISAO_OMISSAO,
+    modelo: limparModelo(e?.modelo),
+    fraccoes: Array.isArray(guardado?.rects) ? guardado.rects : null,
+  };
 }
 
 /**
@@ -5030,11 +5152,16 @@ async function guardarAngulos(modo) {
 
 function trancarEditor(sim) {
   for (const id of ['inicioMenos', 'inicioMais', 'fimMenos', 'fimMais', 'verClipe', 'canalClipe',
-    'guardarClipe', 'guardarAjustes', 'modoUm', 'modoDois', 'divisor', 'angulosSeguido', 'angulosEmpilhado']) {
+    'guardarClipe', 'guardarAjustes', 'modoUm', 'modoDois', 'divisor', 'angulosSeguido', 'angulosEmpilhado',
+    'voltarModelo']) {
     const el = $(id);
     if (el) el.disabled = sim;
   }
   for (const p of $('barraClipe').querySelectorAll('.pega')) p.disabled = sim;
+  for (const b of document.querySelectorAll('.modeloWebcam')) b.disabled = sim;
+  // A agulha não é um botão: sai da ordem do Tab e diz que está apagada.
+  $('agulhaClipe').tabIndex = sim ? -1 : 0;
+  $('agulhaClipe').setAttribute('aria-disabled', String(sim));
 }
 
 function fecharClipe() {
@@ -5061,11 +5188,21 @@ const posClipe = (ms) => {
   return ((ms - inicio) / Math.max(1, fim - inicio)) * 100;
 };
 
-/** A cabeça vai sempre pelo mesmo sítio, e sai de lá presa ao pedaço. */
+/**
+ * A cabeça vai sempre pelo mesmo sítio, e sai de lá presa ao pedaço. É também a agulha que se arrasta:
+ * guarda onde ficou (para as setas andarem a partir dali) e diz-o a quem usa leitor de tela.
+ */
 const porCabeca = (ms) => {
-  if (!estado.clipe) return;
-  $('barraClipe').querySelector('.cabeca').style.left =
-    `${posicaoDaCabeca(estado.clipe, ms)}%`;
+  const c = estado.clipe;
+  if (!c) return;
+  const agulha = $('agulhaClipe');
+  agulha.style.left = `${posicaoDaCabeca(c, ms)}%`;
+  c.cabecaMs = Math.min(Math.max(ms, c.deMs), c.ateMs);
+  const dur = (c.ateMs - c.deMs) / 1000;
+  const aqui = (c.cabecaMs - c.deMs) / 1000;
+  agulha.setAttribute('aria-valuemax', dur.toFixed(1));
+  agulha.setAttribute('aria-valuenow', aqui.toFixed(1));
+  agulha.setAttribute('aria-valuetext', t('clipe.agulhaValor', { s: aqui.toFixed(1), dur: dur.toFixed(1) }));
 };
 
 function pintarClipe() {
@@ -5095,8 +5232,11 @@ function pintarClipe() {
   $('tempoClipe').classList.toggle('mau', dur >= MAXIMO_S);
 }
 
-/** A prévia: o mesmo ângulo, no ponto onde o clipe começa. */
-function preverClipe(quandoMs) {
+/**
+ * A prévia: o mesmo ângulo, no ponto onde o clipe começa. Com `fino`, salta mesmo para perto (a agulha
+ * anda 0,1 s com Shift, e o salto de 0,3 s das pegas não a deixava mexer a imagem).
+ */
+function preverClipe(quandoMs, { fino = false } = {}) {
   const c = estado.clipe;
   if (!c) return;
   const linha = estado.linhas.find((l) => l.slug === c.canal);
@@ -5128,7 +5268,7 @@ function preverClipe(quandoMs) {
   // O instante pedido, guardado: é por ele que o ▶ sabe se o salto já
   // assentou antes de começar a contar (ver `verClipe`).
   c.alvoS = r.tempoS;
-  if (Math.abs(v.currentTime - r.tempoS) > 0.3) v.currentTime = r.tempoS;
+  if (Math.abs(v.currentTime - r.tempoS) > (fino ? 0.04 : 0.3)) v.currentTime = r.tempoS;
   acordarPrevia();
 }
 
@@ -5173,12 +5313,16 @@ function acordarPrevia() {
  *    se a fonte mudou, o HLS ainda está a carregar e o relógio está a zero.
  *    Por isso o início só é lido quando o vídeo tem mesmo imagem.
  */
-function verClipe() {
+function verClipe(desdeMs) {
   const c = estado.clipe;
   if (!c || c.aGravar) return;
   const v = $('previaClipe');
-  c.retomar = !estado.parado;
-  if (c.retomar) alternarPausa();
+  // Já a tocar (a agulha saltou a meio): recomeça dali, sem mexer outra vez na grelha.
+  if (c.vigia) cancelAnimationFrame(c.vigia);
+  if (!c.aVer) {
+    c.retomar = !estado.parado;
+    if (c.retomar) alternarPausa();
+  }
   c.aVer = true;
   v.muted = false;
   const botao = $('verClipe');
@@ -5186,8 +5330,11 @@ function verClipe() {
   botao.setAttribute('aria-pressed', 'true');
   botao.title = t('clipe.parar');
 
-  preverClipe(c.deMs);
-  const duracaoS = (c.ateMs - c.deMs) / 1000;
+  // Do sítio da agulha, se ela estiver dentro do pedaço e longe do fim; senão do início.
+  const pedido = desdeMs ?? c.cabecaMs;
+  const deMs = Number.isFinite(pedido) && pedido > c.deMs && pedido < c.ateMs - 500 ? pedido : c.deMs;
+  preverClipe(deMs, { fino: true });
+  const duracaoS = (c.ateMs - deMs) / 1000;
   let inicioS = null;
   let esperas = 0;
   // Onde o vídeo estava da última vez que andou, e desde quando.
@@ -5219,15 +5366,18 @@ function verClipe() {
     const agora = performance.now();
     if (v.currentTime !== ultimoS) { ultimoS = v.currentTime; paradoDesde = agora; }
     else if (agora - paradoDesde > 5000) { pararVer(); return; }
-    porCabeca(c.deMs + (v.currentTime - inicioS) * 1000);
+    porCabeca(deMs + (v.currentTime - inicioS) * 1000);
     c.vigia = requestAnimationFrame(vigiar);
   };
   v.play?.()?.catch?.(() => {});
   c.vigia = requestAnimationFrame(vigiar);
 }
 
-/** Parar de ver, e deixar tudo como estava antes. */
-function pararVer() {
+/**
+ * Parar de ver, e deixar tudo como estava antes. Sem `voltar`, a imagem fica onde está: é o que a agulha
+ * pede quando se agarra nela a meio do vídeo.
+ */
+function pararVer({ voltar = true } = {}) {
   const c = estado.clipe;
   const v = $('previaClipe');
   if (c?.vigia) cancelAnimationFrame(c.vigia);
@@ -5243,7 +5393,7 @@ function pararVer() {
   c.aVer = false;
   c.retomar = false;
   if (retomar) alternarPausa();
-  preverClipe(c.deMs);
+  if (voltar) preverClipe(c.deMs);
 }
 
 function arrastar(qual) {
@@ -5773,6 +5923,10 @@ $('guardarRetrato').onclick = guardarRetrato;
 for (const b of document.querySelectorAll('.modoRetrato')) {
   b.onclick = () => trocarModo(b.dataset.modo);
 }
+for (const b of document.querySelectorAll('.modeloWebcam')) {
+  b.onclick = () => escolherModelo(b.dataset.modelo);
+}
+$('voltarModelo').onclick = voltarAoModelo;
 // A ordem, e a preferência guardada no dispositivo.
 for (const b of document.querySelectorAll('.ordemGrelha')) {
   b.onclick = () => {
@@ -5796,11 +5950,18 @@ $('canalClipe').onchange = () => {
   // acertar um estragava o outro (o dono, 10/10). Guarda-se o deste e volta o do outro, ou nenhum,
   // e aí o `prepararRetrato` faz o de partida quando o vídeo novo disser o tamanho.
   c.porCanal = c.porCanal || {};
-  c.porCanal[c.canal] = { rects: c.rects.map((r) => ({ ...r })), rectsFonte: c.rectsFonte, divisao: c.divisao };
+  c.porCanal[c.canal] = {
+    rects: c.rects.map((r) => ({ ...r })), rectsFonte: c.rectsFonte, divisao: c.divisao, modo: c.modo, modelo: c.modelo,
+  };
   const guardado = c.porCanal[l.slug];
-  c.rects = guardado ? guardado.rects.map((r) => ({ ...r })) : [];
-  c.rectsFonte = guardado ? guardado.rectsFonte : null;
-  if (guardado) c.divisao = guardado.divisao;
+  // Sem nada nesta sessão do editor, o que o streamer tem guardado no aparelho (o modelo aqui; os
+  // recortes vêm no `prepararRetrato`, quando se souber o tamanho do vídeo dele).
+  const doAparelho = guardado ? null : encaixeDe(l.slug);
+  const mesmoModo = guardado && guardado.modo === c.modo;
+  c.rects = mesmoModo ? guardado.rects.map((r) => ({ ...r })) : [];
+  c.rectsFonte = mesmoModo ? guardado.rectsFonte : null;
+  if (mesmoModo) c.divisao = guardado.divisao;
+  c.modelo = limparModelo(guardado ? guardado.modelo : doAparelho?.modelo);
   Object.assign(c, { canal: l.slug, hls: null, url: null, limites: { inicio: l.inicio, fim: l.fim } });
   // O pedaço inteiro para dentro do vídeo do outro, e não só o início: com o
   // `mover` de uma pega só, um ângulo que entrou no ar depois do fim dava um
@@ -5810,11 +5971,76 @@ $('canalClipe').onchange = () => {
   preverClipe(c.deMs);
   // Sem `acertarRecortes` aqui: o vídeo ainda é o do canal anterior, e escalar pelo tamanho dele
   // estragava o enquadramento guardado. O ouvinte de metadados do `prepararRetrato` acerta-o.
+  pintarModos();
   pintarRecortes();
   pintarDivisor();
 };
 $('barraClipe').querySelector('.pega.de').onpointerdown = arrastar('de');
 $('barraClipe').querySelector('.pega.ate').onpointerdown = arrastar('ate');
+
+// ── a agulha do clipe: assistir pulando ─────────────────────────────────────
+//
+// O dono (10/10): ver o clipe a saltar para o ponto que quiser. A agulha é a da linha do tempo (a cabeça e
+// a linha), na mesma conta de posição das pegas; arrasta-se com o mouse e o dedo, e clicar na barra fora
+// das pegas leva-a ali. Fica sempre dentro do pedaço escolhido, que é o que o vídeo do clipe mostra.
+
+/** Levar a agulha (e a imagem) a um instante. A tocar, o vídeo continua dali. */
+function levarAgulha(ms) {
+  const c = estado.clipe;
+  if (!c || c.aGravar) return;
+  const alvo = Math.min(Math.max(ms, c.deMs), c.ateMs);
+  if (c.aVer) { verClipe(alvo); return; }
+  preverClipe(alvo, { fino: true });
+}
+
+/** O instante debaixo do ponteiro: a mesma conta das pegas (ver `arrastar`). */
+function instanteNaBarra(e) {
+  const r = $('barraClipe').getBoundingClientRect();
+  const x = Math.min(Math.max(e.clientX - r.left, 0), r.width);
+  const { inicio, fim } = estado.clipe.vista;
+  return inicio + ((fim - inicio) * x) / Math.max(1, r.width);
+}
+
+$('barraClipe').addEventListener('pointerdown', (ev) => {
+  const c = estado.clipe;
+  // As pegas têm o seu arrasto, e um toque nelas nunca pode levar a agulha (nem o contrário).
+  if (!c || c.aGravar || ev.target.closest('.pega') || ev.button > 0) return;
+  ev.preventDefault();
+  const barra = $('barraClipe');
+  // Agarrada a tocar: pára enquanto se arrasta, e continua de onde se largar.
+  const voltarAVer = c.aVer;
+  if (voltarAVer) pararVer({ voltar: false });
+  barra.classList.add('aArrastar');
+  $('agulhaClipe').focus({ preventScroll: true });
+  const mexer = (e) => { if (estado.clipe === c) levarAgulha(instanteNaBarra(e)); };
+  const largar = () => {
+    window.removeEventListener('pointermove', mexer);
+    window.removeEventListener('pointerup', largar);
+    window.removeEventListener('pointercancel', largar);
+    barra.classList.remove('aArrastar');
+    if (voltarAVer && estado.clipe === c) verClipe(c.cabecaMs);
+  };
+  window.addEventListener('pointermove', mexer);
+  window.addEventListener('pointerup', largar);
+  window.addEventListener('pointercancel', largar);
+  mexer(ev);
+});
+
+// Com foco, as setas andam 1 s (com Shift, 0,1 s); Home e End vão ao início e ao fim do pedaço.
+$('agulhaClipe').addEventListener('keydown', (e) => {
+  const c = estado.clipe;
+  if (!c || c.aGravar) return;
+  const passo = e.shiftKey ? 100 : 1000;
+  const aqui = c.cabecaMs ?? c.deMs;
+  const alvo = {
+    ArrowLeft: aqui - passo, ArrowDown: aqui - passo, ArrowRight: aqui + passo, ArrowUp: aqui + passo,
+    Home: c.deMs, End: c.ateMs,
+  }[e.key];
+  if (alvo == null) return;
+  e.preventDefault();
+  e.stopPropagation();
+  levarAgulha(alvo);
+});
 // "Os botões que estão lá dentro −1 segundo e +1 segundo só mexem no final do
 // vídeo." Mexiam: estavam presos ao `ate`. E depois de mexerem, a imagem
 // ficava onde estava — "não aparece na tela onde acaba, e é bom de ver".
