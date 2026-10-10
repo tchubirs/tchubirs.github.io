@@ -6725,8 +6725,13 @@ ligarFiltros();
 ligarAgulha();
 // Com uma live só a grelha fica vazia, e o vídeo fica com o lugar dela (ver o CSS de .semGrelha).
 // O CSS não o pode saber sozinho: um :has dentro de outro :has não vale.
+// Com muitos ângulos (o dono, 10/10: "no máximo 2 vídeos grandes, os outros só nomes para clicar") a
+// grelha vira uma lista de nomes: dezassete miniaturas de 130 px não se leem e apertavam a coluna.
+const MUITOS_ANGULOS = 6;
 new MutationObserver(() => {
-  $('palco').classList.toggle('semGrelha', !$('grade').querySelector('.tile'));
+  const n = $('grade').querySelectorAll('.tile').length;
+  $('palco').classList.toggle('semGrelha', !n);
+  $('palco').classList.toggle('muitosAngulos', n > MUITOS_ANGULOS);
 }).observe($('grade'), { childList: true });
 // Para os testes de página: o lance sem ter de montar o mapa inteiro.
 window.__abrirLanceDoEvento = abrirLanceDoEvento;

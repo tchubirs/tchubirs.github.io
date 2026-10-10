@@ -231,7 +231,10 @@ test('uma lista sem times não oferece a ordem por time: começa com quem está 
   assert.equal(await p.locator('#ordemVoltar').isVisible(), false);
 
   // Com times, a opção existe e diz de onde eles vêm.
-  await abrirEvento(p, 'Time Alfa: tchubi, lobo\nTime Beta: outro');
+  await p.click('#fecharEvento');
+  await p.fill('#elenco', 'Time Alfa: tchubi, lobo\nTime Beta: outro');
+  await p.click('#abrirElenco');
+  await p.waitForFunction(() => window.__evento?.elenco?.times.length && window.__evento.mapa, null, { timeout: 15000 });
   assert.equal(await p.locator('#ordemFaixas').inputValue(), 'time');
   assert.equal(await p.locator('#ordemFaixas option[value="time"]').innerText(), 'por time da lista');
   assert.equal(await p.locator('#ordemFaixas option[value="time"]').evaluate((o) => o.disabled), false);

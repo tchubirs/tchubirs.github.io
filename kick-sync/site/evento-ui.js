@@ -1172,7 +1172,7 @@ export function montarEvento({
     if (window.innerWidth >= 1080 && window.innerHeight >= 640) { window.scrollTo({ top: 0 }); return; }
     // Dois quadros: no primeiro a barra do evento ainda está a encolher, e o visor ficava cortado no topo.
     requestAnimationFrame(() => requestAnimationFrame(() => {
-      window.scrollTo({ top: Math.max(0, palco.getBoundingClientRect().top + window.scrollY - 16) });
+      window.scrollTo({ top: Math.max(0, palco.getBoundingClientRect().top + window.scrollY - 6) });
     }));
   }
 

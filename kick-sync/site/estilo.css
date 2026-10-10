@@ -549,6 +549,24 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 /* Escondido pelo filtro, e não tirado: o leitor continua vivo por trás. */
 #grade .tile.foraDoFiltro { display: none; }
 .barraGrelha #quantosNaGrelha { margin-left: auto; }
+/* Muitos ângulos: no máximo dois vídeos grandes, e os outros só nomes para clicar (o dono, 10/10). O
+   leitor continua vivo por trás, e um clique no nome põe aquele ângulo no visor. O botão de pôr lado a
+   lado fica, para o segundo vídeo grande. */
+#palco.muitosAngulos #grade { grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: var(--e2); }
+#palco.muitosAngulos #grade .tile {
+  aspect-ratio: auto; height: 36px; display: flex; align-items: center;
+  background: var(--sup-1); border-color: var(--linha-2); border-radius: var(--r-2);
+}
+#palco.muitosAngulos #grade .tile:hover { background: var(--sup-2); border-color: var(--acento); }
+#palco.muitosAngulos #grade .tile :is(video, .estadoTile, .controlos, .recado) { display: none; }
+#palco.muitosAngulos #grade .tile .rotulo {
+  position: static; flex: 1 1 auto; min-width: 0; padding: 0 var(--e2) 0 var(--e3);
+  background: none; text-shadow: none; color: var(--tinta); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* Só o nome: a posição no vídeo de cada um está no visor quando ele abre. */
+#palco.muitosAngulos #grade .tile .rotulo .posicao { display: none; }
+#palco.muitosAngulos #grade .tile .fora { position: static; opacity: 1; padding: 0 2px 0 0; background: none; }
+#palco.muitosAngulos #grade .tile .fora button { min-width: 30px; min-height: 30px; background: transparent; color: var(--tinta-2); }
 
 /* ── o transporte ──────────────────────────────────────────────────────────
    Uma barra só, colada ao vídeo, como o visor de um editor (Premiere, DaVinci
@@ -1401,6 +1419,8 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
       radial-gradient(farthest-side at 50% 100%, #000000a6, transparent) bottom / 100% 10px scroll no-repeat;
   }
   body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #grade .tile { align-self: start; }
+  /* Só nomes: cabem mais por linha e por altura, e a montagem por baixo continua com o seu espaço. */
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #palco.muitosAngulos #grade { max-height: 50%; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
   /* Com uma live só (o dono, 07/10: "parece jogada") a grelha some e o vídeo fica com o espaço dela. */
   body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #palco.semGrelha #grade { display: none; }
   body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .palcoFundo > #fila:not(:has(li)) { display: none; }
