@@ -260,3 +260,8 @@ em francês). Tudo revisado pela regra 14 em 28/09.
   - Sobreposição do Discord à direita ou à esquerda, às vezes só aparece quem está falando.
   - Nomes em cima dos jogadores no jogo, só quando estão perto.
 - Plano: ler vários quadros ao longo de um trecho (não um só), filtrar o texto verde do canto inferior esquerdo, olhar as laterais para o Discord, e juntar os nomes que aparecem ao longo do tempo.
+
+## Pedido do dono (10/10): detecção lenta ("1/121")
+- 121 são pedaços de 5 min (10 h de live), uns 8 MB cada mesmo a 160p; baixa um por vez.
+- Fazer: baixar 4 pedaços ao mesmo tempo; modo esperto (ouvir primeiro uns minutos em volta dos picos do chat, "tudo" continua como opção); mostrar tempo que falta; avisar antes de começar quando for muito (horas e MB, melhor no Wi-Fi).
+- Depois do Criar clipe.
