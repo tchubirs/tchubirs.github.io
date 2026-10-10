@@ -1279,7 +1279,10 @@ test('todas as mensagens de erro dizem o próximo passo', async () => {
     // O nome do exemplo ("24 canais de Rust ao vivo agora, sem times"), não um erro.
     'evento.exemploNome',
     // O texto de dentro da caixa do time ao adicionar um streamer ("sem time"), não um erro.
-    'adicionar.timePh']);
+    'adicionar.timePh',
+    // Na janela dos atalhos: o que aparece numa linha sem tecla ("sem atalho"), e o que acontece se
+    // se trocar, dito antes de se escolher. Não são erros.
+    'atalhos.semTecla', 'atalhos.trocarSem']);
   const curtas = [];
   for (const [chave, frase] of Object.entries(_TEXTOS.pt)) {
     if (!/erro|falh|não deu|nenhum|sem |não consegui|inválido|passa dos/i.test(frase)) continue;

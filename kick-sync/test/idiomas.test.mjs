@@ -27,7 +27,7 @@ test('nenhuma chave usada na página fica por escrever', () => {
       usadas.add(m[1]);
     }
   }
-  for (const f of ['../site/app.js', '../site/twitch-app.js', '../site/evento-ui.js']) {
+  for (const f of ['../site/app.js', '../site/twitch-app.js', '../site/evento-ui.js', '../site/atalhos-painel.js']) {
     const codigo = ler(f);
     for (const m of codigo.matchAll(/\bt\(\s*'([a-zA-Z0-9_.]+)'/g)) usadas.add(m[1]);
     for (const m of codigo.matchAll(/\btn\([^,]+,\s*'([a-zA-Z0-9_.]+)',\s*'([a-zA-Z0-9_.]+)'/g)) {
@@ -96,6 +96,8 @@ const IGUAIS_DE_PROPOSITO = {
     // "A–Z" escreve-se assim em toda a parte, e o "Esc" e a legenda que esta
     // impressa na propria tecla.
     'grelha.az', 'ajuda.teclaEsc',
+    // "{acao}: {teclas}." e so as variaveis e a pontuacao.
+    'atalhos.feito',
   ]),
   // O espanhol e o portugues escrevem estas exactamente da mesma maneira.
   es: new Set([
@@ -127,7 +129,9 @@ const IGUAIS_DE_PROPOSITO = {
     'tile.atrasar', 'alinhar.cancelado', 'montagem.antes', 'montagem.ir',
     'corte.titulo', 'corte.antes', 'clipe.cancelar',
     'sel.todos',
-    'montagem.parar', 'ajuda.kill',
+    'montagem.parar',
+    // Os atalhos: "Cancelar", "Exportar", "Importar", "Marcar entrada" e "Marcar kill" escrevem-se igual.
+    'atalhos.cancelar', 'atalhos.exportar', 'atalhos.importar', 'atalhos.marcarIn', 'atalhos.marcarKill',
     // Palavras que o portugues e o espanhol escrevem exactamente igual.
     'marca.inicio', 'tw.parar', 'montagem.baixarUma', 'montagem.pronto', 'corte.baixar',
     'clipe.parar',

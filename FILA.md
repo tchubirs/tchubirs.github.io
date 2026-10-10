@@ -233,7 +233,7 @@ em francês). Tudo revisado pela regra 14 em 28/09.
 ## Pedidos do dono (10/10): mapa do evento e compartilhar
 - Ao escolher um momento: "Abrir todos com vídeo nesse horário" e "Abrir só quem está ao vivo".
 - Ordenar faixas: clicar num horário põe primeiro quem tem vídeo nele, depois quem esteve no ar perto; outras ordens (ao vivo agora, mais tempo no ar, time, A a Z).
-- "Compartilhar evento" no lugar do link enorme: nome obrigatório, data e duração opcionais; link curto. ABISAL salvo no repositório (só os canais, sem notas) e aberto por ?e=abisal.
+- "Compartilhar evento" no lugar do link enorme: nome obrigatório, data e duração opcionais; link curto. Abisal salvo no repositório (só os canais, sem notas) e aberto por ?e=abisal.
 - Régua: linha grossa e data a cada mudança de dia; linhas finas quase transparentes nas horas. O horário já é o de cada pessoa (fuso do aparelho); deixar isso escrito na tela.
 - Adicionar gente com o evento aberto: botão "Adicionar streamer" na tela do evento (busca da Kick, time opcional) e "Adicionar lista" (arquivo ou colar); só os novos são lidos, o resto fica.
 - Fazer depois da tarefa dos filtros.

@@ -931,25 +931,47 @@
 <!-- Os atalhos que já existem, num sítio onde se possam descobrir.
      Não acrescenta tecla nenhuma: lista as que o teclado já responde. Um
      atalho que ninguém sabe que existe é código morto. -->
+<!-- Os atalhos: a lista de todos, e cada um à escolha de quem usa (atalhos.js e atalhos-painel.js).
+     Carregar numa linha e depois nas teclas novas grava; Esc cancela, Backspace apaga. -->
 <div id="modalAjuda" class="modal" hidden>
-  <div class="modalCaixa estreita" role="dialog" aria-modal="true" data-t-aria="ajuda.titulo" aria-label="Atalhos">
+  <div class="modalCaixa atalhosCaixa" role="dialog" aria-modal="true" data-t-aria="ajuda.titulo" aria-label="Atalhos" aria-describedby="atalhosComo">
     <div class="modalTopo">
       <b data-t="ajuda.titulo">Atalhos</b>
       <button id="fecharAjuda" class="discreto" data-t-aria="ajuda.fechar" aria-label="fechar"><svg class="ic" aria-hidden="true"><use href="#i-fechar"/></svg></button>
     </div>
-    <dl class="atalhos">
-      <dt><kbd data-t="ajuda.teclaEspaco">Espaço</kbd> <kbd>K</kbd></dt><dd data-t="ajuda.pausa">Pausa e continua</dd>
-      <dt><kbd>J</kbd> <kbd>L</kbd></dt><dd data-t="ajuda.andar">Volta e avança 1 s (com Shift, 10 s)</dd>
-      <dt><kbd>A</kbd> <kbd>D</kbd></dt><dd data-t="ajuda.arrasto">Volta e avança 3 s. Segure para correr a noite</dd>
-      <dt><kbd>I</kbd> <kbd>O</kbd></dt><dd data-t="ajuda.marca">Marca entrada e saída</dd>
-      <dt><kbd>M</kbd></dt><dd data-t="ajuda.kill">Marca kill</dd>
-      <dt><kbd>C</kbd></dt><dd data-t="ajuda.clipe">Abre o clipe</dd>
-      <dt><kbd>F</kbd></dt><dd data-t="ajuda.ecraCheio">Tela cheia do vídeo em foco</dd>
-      <dt><kbd>,</kbd> <kbd>.</kbd></dt><dd data-t="ajuda.ajuste">Ajusta o ângulo em foco</dd>
-      <dt><kbd data-t="ajuda.teclaEsc">Esc</kbd></dt><dd data-t="ajuda.fecha">Fecha esta janela ou o painel Canais</dd>
-      <dt><kbd>+</kbd> <kbd>−</kbd></dt><dd data-t="ajuda.zoom">Zoom da linha do tempo. Também Ctrl + roda do mouse, ou dois dedos</dd>
-      <dt><kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd></dt><dd data-t="ajuda.mapa">No mapa: ↑ ↓ trocam de faixa, ← → andam no tempo (Shift: mais rápido), Enter escolhe, + e − dão zoom</dd>
-    </dl>
+    <p id="atalhosComo" class="nota atalhosComo" data-t="atalhos.como">Clique numa linha e aperte as teclas novas. Esc cancela, Backspace deixa sem atalho. Fica salvo neste aparelho.</p>
+    <div class="atalhosBusca">
+      <svg class="ic ic-p" aria-hidden="true"><use href="#i-procurar"/></svg>
+      <input id="procurarAtalho" type="search" autocomplete="off" spellcheck="false" data-t-ph="atalhos.procurar" data-t-aria="atalhos.procurar" placeholder="Procurar ação ou tecla" aria-label="Procurar ação ou tecla">
+    </div>
+    <div id="conflitoAtalho" class="conflitoAtalho" role="group" aria-labelledby="conflitoTexto" hidden>
+      <svg class="ic" aria-hidden="true"><use href="#i-aviso"/></svg>
+      <div class="conflitoCorpo">
+        <p id="conflitoTexto"></p>
+        <p id="conflitoDepois" class="nota"></p>
+        <div class="linha">
+          <button id="trocarAtalho" type="button" class="principal" aria-describedby="conflitoTexto conflitoDepois"><span data-t="atalhos.trocar">Trocar</span></button>
+          <button id="cancelarAtalho" type="button"><span data-t="atalhos.cancelar">Cancelar</span></button>
+        </div>
+      </div>
+    </div>
+    <div id="listaAtalhos" class="listaAtalhos"></div>
+    <p id="semAtalho" class="nota" hidden data-t="atalhos.nada">Nenhuma ação com esse nome ou tecla. Apague a busca para ver todas.</p>
+    <section class="grupoAtalhos fixos" aria-labelledby="grupo-fixos">
+      <h3 id="grupo-fixos" data-t="atalhos.grupo.fixos">Fixos</h3>
+      <dl class="atalhos">
+        <dt><kbd data-t="ajuda.teclaEsc">Esc</kbd></dt><dd data-t="ajuda.fecha">Fecha esta janela ou o painel Canais</dd>
+        <dt><kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd></dt><dd data-t="ajuda.mapa">No mapa: ↑ ↓ trocam de faixa, ← → andam no tempo (Shift: mais rápido), Enter escolhe, + e − dão zoom</dd>
+      </dl>
+    </section>
+    <p id="estadoAtalhos" class="nota estadoAtalhos" role="status" aria-live="polite"></p>
+    <div class="linha fim atalhosFim">
+      <button id="padraoTodos" type="button" class="discreto"><svg class="ic ic-p" aria-hidden="true"><use href="#i-anular"/></svg><span data-t="atalhos.padraoTodos">Voltar tudo ao padrão</span></button>
+      <span class="empurra"></span>
+      <button id="exportarAtalhos" type="button" data-t-titulo="atalhos.exportarAjuda" title="Baixa um arquivo com os seus atalhos, para usar em outro computador"><svg class="ic ic-p" aria-hidden="true"><use href="#i-descarregar"/></svg><span data-t="atalhos.exportar">Exportar</span></button>
+      <button id="importarAtalhos" type="button" data-t-titulo="atalhos.importarAjuda" title="Abre um arquivo de atalhos exportado antes"><svg class="ic ic-p" aria-hidden="true"><use href="#i-arquivo"/></svg><span data-t="atalhos.importar">Importar</span></button>
+      <input id="ficheiroAtalhos" type="file" accept="application/json,.json" hidden data-t-aria="atalhos.importar" aria-label="Importar">
+    </div>
   </div>
 </div>
 

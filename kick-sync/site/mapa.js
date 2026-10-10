@@ -715,6 +715,9 @@ export function oQueEstaAqui(mapa, { x, y, topo = 0, vista, largura, marcas, rai
     noAr: ms != null && cobre(linha.coberturas || [], ms),
   };
   if (marca) saida.marca = marca;
+  // O ícone de ordenar que `pintarCabecalho` desenhou ao lado do nome do grupo.
+  const ic = linha.iconeOrdem;
+  if (linha.tipo === 'time' && ic && x >= ic.de && x <= ic.ate) saida.ordenar = true;
   return saida;
 }
 
@@ -781,6 +784,26 @@ function rotulo(ctx, texto, x, meio, {
   ctx.font = `${peso} ${tam}px ${letra}`;
   ctx.fillStyle = cor;
   ctx.fillText(s, x, meio, w - 4);
+  return w;
+}
+
+/** O lado do ícone de ordenar no cabeçalho, em px. */
+export const ICONE_ORDEM = 14;
+
+/** Duas setas, uma para cima e outra para baixo: o sinal de que as faixas se podem ordenar. */
+function iconeOrdenar(ctx, x, meio, cor) {
+  const y = Math.round(meio - ICONE_ORDEM / 2);
+  x = Math.round(x);
+  // Só retângulos: a ponta de cada seta é uma escada de três degraus, nítida em qualquer ecrã.
+  ctx.fillStyle = cor;
+  // para cima, à esquerda
+  ctx.fillRect(x + 3, y + 1, 2, ICONE_ORDEM - 2);
+  ctx.fillRect(x + 2, y + 2, 4, 1);
+  ctx.fillRect(x + 1, y + 3, 6, 1);
+  // para baixo, à direita
+  ctx.fillRect(x + 9, y + 1, 2, ICONE_ORDEM - 2);
+  ctx.fillRect(x + 8, y + ICONE_ORDEM - 3, 4, 1);
+  ctx.fillRect(x + 7, y + ICONE_ORDEM - 4, 6, 1);
 }
 
 /** O cabeçalho de um time, em `ry` px do topo do ecrã. */
@@ -799,10 +822,20 @@ function pintarCabecalho(ctx, l, ry, o) {
   const nome = l.time == null ? o.semTime : String(l.time);
   // A seta diz que se carrega ali, e o número diz quantos há lá dentro antes
   // de se abrir. Sem palavras, para não ter de passar pelos idiomas.
-  rotulo(ctx, `${l.aberto ? '▾' : '▸'} ${nome}`, 8, ry + l.altura / 2, {
+  const w = rotulo(ctx, `${l.aberto ? '▾' : '▸'} ${nome}`, 8, ry + l.altura / 2, {
     // O cabeçalho não tem barras por baixo: o nome pode usar a linha toda.
     ...o, tam: 12, peso: 600, cor: c.texto, sufixo: ` (${l.canais?.length ?? 0})`, ate: Infinity,
   });
+  // Logo a seguir ao nome, o ícone de ordenar: um clique nele abre a ordem das faixas. Fica guardado
+  // onde ficou, para a página saber se o clique foi no ícone ou no nome.
+  l.iconeOrdem = null;
+  if (!w) return;
+  const x = 8 + w + 2;
+  if (x + ICONE_ORDEM + 4 > largura) return;
+  const meio = ry + l.altura / 2;
+  if (meio - ICONE_ORDEM / 2 < 0 || meio + ICONE_ORDEM / 2 > altura) return;
+  iconeOrdenar(ctx, x, meio, c.texto2);
+  l.iconeOrdem = { de: x - 4, ate: x + ICONE_ORDEM + 4 };
 }
 
 /** As barras de um conjunto de intervalos, presas à vista e ao ecrã. */

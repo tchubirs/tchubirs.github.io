@@ -52,6 +52,8 @@ import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarId
 import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js';
 import { escapar } from './escapar.js';
 import { montarEvento } from './evento-ui.js';
+import { atalhos, ACAO, comboDoEvento, partes } from './atalhos.js';
+import { montarPainelAtalhos, pintarDicas } from './atalhos-painel.js';
 
 /* Os glifos dos controlos do vídeo são DESENHO e não emoji.
    Um ⏸ ou um 🔇 sai diferente em cada sistema — no iPhone sai a cores, no
@@ -6271,8 +6273,13 @@ new MutationObserver(marcarVideoAberto).observe($('palco'), { attributes: true, 
 marcarVideoAberto();
 
 const alternarAjuda = (abrir) => {
-  if (abrir) mostrarDialogo($('modalAjuda'));
-  else esconderDialogo($('modalAjuda'));
+  if (abrir) {
+    painelAtalhos.pintar();
+    mostrarDialogo($('modalAjuda'));
+  } else {
+    painelAtalhos.largar();
+    esconderDialogo($('modalAjuda'));
+  }
 };
 
 // ── o foco do teclado dentro das janelas ────────────────────────────────────
@@ -6346,11 +6353,65 @@ document.addEventListener('focusin', (e) => {
   else focadosPeloTeclado.delete(e.target);
 });
 
+// ── os atalhos ──────────────────────────────────────────────────────────────
+//
+// As teclas vêm do mapa de atalhos.js, que cada pessoa muda na janela do "?". Aqui fica só o que
+// cada acção FAZ. Uma acção com `botao` carrega nesse botão, se ele estiver à vista e ligado: é o
+// mesmo gesto do rato, com as mesmas regras.
+const botaoVivo = (id) => {
+  const el = $(id);
+  return el && !el.disabled && !el.closest('[hidden]') && el.getClientRects().length ? el : null;
+};
+function irAoLance(sentido) {
+  const lista = ordenar(estado.momentos).map((m) => m.ms);
+  const alvo = sentido > 0 ? lista.find((ms) => ms > estado.agoraMs + 1000)
+    : lista.filter((ms) => ms < estado.agoraMs - 1000).pop();
+  if (alvo == null) return;
+  largarPrevia();
+  irPara(alvo);
+}
+function abrirAssistente(acao) {
+  const quem = faixaEscolhida ?? estado.focos[0] ?? TODOS;
+  abrirAcoes(quem);
+  escolherAcao(acao);
+}
+const FAZER = {
+  pausa: () => alternarPausa(),
+  voltar: (largo) => { largarPrevia(); irPara(estado.agoraMs - (largo ? 10_000 : 1000)); },
+  avancar: (largo) => { largarPrevia(); irPara(estado.agoraMs + (largo ? 10_000 : 1000)); },
+  correrTras: () => comecarArrasto(-1),
+  correrFrente: () => comecarArrasto(1),
+  lanceAnterior: () => irAoLance(-1),
+  lanceSeguinte: () => irAoLance(1),
+  // O F de full screen, como no YouTube e na Twitch: o vídeo em foco, pelo mesmo botão do canto (que
+  // também sai, se já está em tela cheia).
+  ecraCheio: () => document.querySelector('#palcoFoco .tile .ecraCheio')?.click(),
+  // O + e o - dão zoom na linha do tempo; na tela do evento, sem vídeo aberto, no mapa.
+  zoomMais: () => (estado.janela && estado.linhas.length ? zoomPor(1 / ZOOM_PASSO) : botaoVivo('aproximar')?.click()),
+  zoomMenos: () => (estado.janela && estado.linhas.length ? zoomPor(ZOOM_PASSO) : botaoVivo('afastar')?.click()),
+  // O ângulo em foco anda sozinho: alinhar à vista, sem tirar a mão do teclado.
+  ajusteMenos: (largo) => { if (estado.focos[0]) empurrar(estado.focos[0], -(largo ? 10_000 : 1000)); },
+  ajusteMais: (largo) => { if (estado.focos[0]) empurrar(estado.focos[0], largo ? 10_000 : 1000); },
+  canais: () => {
+    alternarCanais();
+    if (!document.body.classList.contains('canaisAbertos')) $('editarCanais').focus({ preventScroll: true });
+  },
+  lerChat: () => abrirAssistente('chat'),
+  detetar: () => abrirAssistente('detetar'),
+};
+const painelAtalhos = montarPainelAtalhos({ atalhos, t, raiz: $('modalAjuda') });
+// A lista existe desde o arranque, e não só depois de abrir: quem lê a página (e o leitor de ecrã) acha-a lá.
+painelAtalhos.pintar();
+atalhos.aoMudar(() => pintarDicas(atalhos, t));
+// Outro separador mudou os atalhos: este fica com os mesmos.
+window.addEventListener('storage', (e) => { if (e.key === 'replay.atalhos') atalhos.recarregar(); });
+
 document.addEventListener('keydown', (e) => {
   const alvo = e.target;
-  // Ctrl, Cmd e Alt são do sistema: Ctrl+C copia, Ctrl+A escolhe tudo, Ctrl+D
-  // guarda a página. Com eles carregados, nenhum atalho daqui pode disparar.
-  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const achada = atalhos.acaoDe(e);
+  // Ctrl, Cmd e Alt são do sistema: Ctrl+C copia, Ctrl+A escolhe tudo, Ctrl+D guarda a página. Com
+  // eles carregados só dispara o que a pessoa gravou de propósito com eles.
+  if ((e.ctrlKey || e.metaKey || e.altKey) && !achada) return;
   // O Esc fecha a janela aberta mesmo com o cursor numa caixa de texto dela:
   // quem está a escrever o título do clipe também tem de poder sair.
   if (e.key === 'Escape' && !$('modalAjuda').hidden) { alternarAjuda(false); return; }
@@ -6366,69 +6427,45 @@ document.addEventListener('keydown', (e) => {
   if (ondeSeEscreve(alvo)) return;
   // As janelas do evento (Compartilhar, Adicionar) têm o teclado só para elas, como a do clipe.
   if (document.querySelector('.modal.doEvento:not([hidden])')) return;
-  // O ponto de interrogação abre a lista dos atalhos, e o Esc fecha-a. Não
-  // acrescenta comportamento nenhum: torna descobrível o que já existia.
+  if (!achada) return;
+  const { id, combo, largo } = achada;
+  const acao = ACAO[id];
+  // Com a janela dos atalhos aberta, o teclado é dela; a tecla que a abre também a fecha.
   if (!$('modalAjuda').hidden) {
-    if (e.key === '?') alternarAjuda(false);
+    if (id === 'atalhos') alternarAjuda(false);
     return;
   }
-  if (e.key === '?') { alternarAjuda(true); return; }
+  if (id === 'atalhos') { alternarAjuda(true); return; }
   // Com a janela do clipe aberta, o teclado é dela: o resto não pode andar com
-  // o tempo por baixo do que se está a cortar.
-  if (!$('modalClipe').hidden) return;
-  const passo = e.shiftKey ? 10_000 : 1000;
-  // Pela letra e não pelo carácter: com Shift (ou o Caps Lock) o J chega como
-  // 'J' e a vírgula como '<', e o "com Shift, 10 s" da ajuda não fazia nada.
-  const tecla = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-  const virgula = e.code === 'Comma' || e.key === ',';
-  const ponto = e.code === 'Period' || e.key === '.';
-  // Um botão ou um sumário a que se chegou pelo Tab: o espaço carrega-o, como
+  // o tempo por baixo do que se está a cortar. E as acções dela só valem com ela aberta.
+  if (!$('modalClipe').hidden !== Boolean(acao.clipe)) return;
+  const { tecla } = partes(combo);
+  // Um botão ou um sumário a que se chegou pelo Tab: o espaço e o Enter carregam-no, como
   // em qualquer página. Só o foco que ficou de um clique de rato (sem anel)
   // deixa o espaço pausar, senão o Pausar deixava de funcionar depois de
   // carregar num botão qualquer.
   const tabulado = focadosPeloTeclado.has(alvo)
     && alvo.matches('button, summary, a[href], [role="button"], input, select');
+  if ((tecla === 'Space' || tecla === 'Enter') && (tabulado || alvo?.type === 'checkbox')) return;
   // As setas num cursor ou num seletor são dele: mudam o valor ou a escolha.
-  const cursor = (alvo?.tagName === 'INPUT' && alvo.type === 'range') || alvo?.tagName === 'SELECT';
+  const cursor = (alvo?.tagName === 'INPUT' && alvo.type === 'range') || alvo?.tagName === 'SELECT'
+    || alvo?.getAttribute?.('role') === 'slider';
+  if (cursor && /^(Arrow|Home$|End$|Page)/.test(tecla)) return;
   // Antes de haver noite não há nada para parar nem para andar: a pausa ficava
   // guardada e a primeira noite abria parada, e as setas rebentavam.
   const haNoite = Boolean(estado.janela) && estado.linhas.length > 0;
-  if (e.key === ' ') {
-    if (tabulado || !haNoite || alvo?.type === 'checkbox') return;
-    e.preventDefault(); alternarPausa(); return;
-  }
-  if (!haNoite) return;
+  if (acao.noite && !haNoite) return;
   // Num seletor a letra também escolhe a opção que começa por ela: o A saltava
   // para "a noite toda" ao mesmo tempo que recuava. A letra que é atalho fica
   // só para o atalho.
-  if (alvo?.tagName === 'SELECT' && /^[cmiojladkf]$/.test(tecla)) e.preventDefault();
-  // K pausa e continua, como no YouTube e no Resolve (J K L). O espaço continua a fazer o mesmo.
-  if (tecla === 'k' && !e.repeat) alternarPausa();
-  if (tecla === 'c') $('clipar').click();
-  if (tecla === 'm') $('marcarKill').click();
-  // F de full screen, como no YouTube e na Twitch: o vídeo em foco, pelo mesmo botão do canto (que também
-  // sai, se já está em tela cheia). Sem repetição: segurar a tecla entrava e saía sem parar.
-  if (tecla === 'f' && !e.repeat) document.querySelector('#palcoFoco .tile .ecraCheio')?.click();
-  if (tecla === 'i') $('marcarIn').click();
-  if (tecla === 'o') $('marcarOut').click();
-  // O + e o - dão zoom na linha do tempo, como no mapa do evento e na maioria dos editores. O = é o +
-  // sem Shift no teclado americano, e o _ o - com Shift.
-  if (e.key === '+' || e.key === '=') { e.preventDefault(); zoomPor(1 / ZOOM_PASSO); }
-  if (e.key === '-' || e.key === '_') { e.preventDefault(); zoomPor(ZOOM_PASSO); }
-  // Andar à mão desliga a prévia, como os botões de saltar. As setas num
-  // cursor são do cursor: andavam as duas coisas ao mesmo tempo.
-  const setas = !cursor && (e.key === 'ArrowLeft' || e.key === 'ArrowRight');
-  if (tecla === 'j' || (setas && e.key === 'ArrowLeft')) { largarPrevia(); irPara(estado.agoraMs - passo); }
-  if (tecla === 'l' || (setas && e.key === 'ArrowRight')) { largarPrevia(); irPara(estado.agoraMs + passo); }
-  // O ângulo em foco anda sozinho: alinhar à vista, sem tirar a mão do teclado.
-  if (virgula && estado.focos[0]) empurrar(estado.focos[0], -passo);
-  if (ponto && estado.focos[0]) empurrar(estado.focos[0], passo);
-  // O A e o D são a mão esquerda: três segundos por toque, e uma corrida se
-  // ficarem carregados. É a mesma mão que fica no teclado enquanto a outra
-  // está no rato — e três segundos é o passo de apurar sem passar por cima
-  // da kill, que é o mesmo dos botões ‹3s / 3s›.
-  if (tecla === 'a') { e.preventDefault(); comecarArrasto(-1); }
-  if (tecla === 'd') { e.preventDefault(); comecarArrasto(1); }
+  e.preventDefault();
+  // Segurar uma tecla repete o `keydown`: só o que anda no tempo ou no zoom se repete. Segurar o F
+  // entrava e saía da tela cheia sem parar, e segurar o espaço pausava e continuava.
+  if (e.repeat && !acao.repete) return;
+  if (FAZER[id]) FAZER[id](largo);
+  else if (acao.botao) botaoVivo(acao.botao)?.click();
+  // A corrida do A e do D pára quando se larga a tecla que a começou (o keyup, mais abaixo).
+  if (acao.segurar && arrasto) arrasto.tecla = tecla;
 });
 
 // ── segurar o A ou o D ──────────────────────────────────────────────────────
@@ -6458,8 +6495,11 @@ function pararArrasto() {
   clearInterval(arrasto.tempo);
   arrasto = null;
 }
+// Larga-se a tecla que começou a corrida, seja ela qual for no mapa de atalhos.
 document.addEventListener('keyup', (e) => {
-  if (e.key === 'a' || e.key === 'A' || e.key === 'd' || e.key === 'D') pararArrasto();
+  if (!arrasto) return;
+  const solta = partes(comboDoEvento(e) || '').tecla;
+  if (!arrasto.tecla || solta === arrasto.tecla || (e.key || '').toUpperCase() === arrasto.tecla) pararArrasto();
 });
 // A janela que perde o foco nunca entrega o `keyup`, e a corrida ficava a
 // andar sozinha por trás de outra janela até alguém voltar.
@@ -6522,6 +6562,8 @@ function trocarIdioma(codigo) {
   try { localStorage.setItem('replay.idioma', idiomaActual()); } catch { /* janela privada */ }
   $('idioma').value = idiomaActual();
   aplicarIdioma();
+  pintarDicas(atalhos, t);
+  painelAtalhos.pintar();
   // A lista de canais é repintada a partir do que já foi lido, e não de uma
   // nova ida à Kick: trocar de idioma não pode custar pedidos a ninguém.
   if (ultimosCanais.length) pintarCanais(ultimosCanais);
@@ -6561,6 +6603,8 @@ $('filtroMomentos').value = estado.filtro;
 definirIdioma(guardadoIdioma || idiomaDoBrowser());
 $('idioma').value = idiomaActual();
 aplicarIdioma();
+pintarDicas(atalhos, t);
+painelAtalhos.pintar();
 
 // ── arranque ────────────────────────────────────────────────────────────────
 //

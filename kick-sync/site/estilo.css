@@ -953,6 +953,78 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 .atalhos dt { display: flex; gap: 5px; }
 .atalhos dd { margin: 0; font-size: var(--t-menor); color: var(--tinta-2); }
 
+/* ── a janela dos atalhos ──────────────────────────────────────────────────
+   Uma tabela de duas colunas, como a dos editores: o que faz à esquerda, as
+   teclas à direita numa caixa que se carrega para gravar outra. A busca e o
+   aviso de conflito ficam por cima da lista, onde o olho já está. */
+.modalCaixa.atalhosCaixa { width: min(680px, 100%); gap: var(--e4); }
+.atalhosComo { margin: 0; line-height: var(--lh); }
+.atalhosBusca { position: relative; }
+.atalhosBusca .ic { position: absolute; left: var(--e4); top: 50%; transform: translateY(-50%); color: var(--tinta-3); pointer-events: none; }
+.atalhosBusca input { padding-left: 34px; }
+.listaAtalhos { display: flex; flex-direction: column; gap: var(--e5); }
+.grupoAtalhos h3 {
+  margin: 0 0 var(--e2); padding: 0 var(--e3);
+  font-size: var(--t-menor); font-weight: 600; color: var(--tinta-2); letter-spacing: .01em;
+}
+.grupoAtalhos ul { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--linha); }
+.grupoAtalhos .grupoNota { margin: var(--e2) 0 0; padding: 0 var(--e3); font-size: var(--t-micro); color: var(--tinta-3); }
+.atalho {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; align-items: center; gap: var(--e2);
+  padding: var(--e2) var(--e2) var(--e2) var(--e3); min-height: 44px;
+  border-bottom: 1px solid var(--linha); cursor: pointer;
+  transition: background var(--mov-rapido);
+}
+.atalho:hover { background: var(--sup-1); }
+.atalho.aGravar { background: var(--acento-eco); }
+.atalhoNome { font-size: var(--t-base); color: var(--tinta); line-height: var(--lh-apertado); padding: var(--e2) 0; }
+.atalhoTeclas {
+  min-width: 128px; min-height: 32px; justify-content: flex-end; gap: 6px; padding: 0 var(--e3);
+  background: var(--sup-1); border-color: var(--linha);
+  font-size: var(--t-menor); color: var(--tinta-2);
+}
+.atalhoTeclas:hover:not(:disabled) { background: var(--sup-2); }
+.atalho.mudado .atalhoTeclas { border-color: var(--acento-fio); }
+.atalho.aGravar .atalhoTeclas, .atalho.aGravar .atalhoTeclas:hover {
+  border-color: var(--acento); background: var(--sup-1); color: var(--acento);
+}
+.atalhoTeclas .combo { display: inline-flex; align-items: center; gap: 3px; }
+.atalhoTeclas kbd { font-size: var(--t-micro); padding: 4px 6px; min-width: 22px; text-align: center; color: var(--tinta); background: var(--sup-3); }
+.atalhoTeclas .mais, .atalhoTeclas .ou { color: var(--tinta-3); font-size: var(--t-micro); }
+.atalhoTeclas .semTecla { color: var(--tinta-3); }
+.atalhoTeclas .aEspera { animation: piscaEspera 1.2s ease-in-out infinite; }
+@keyframes piscaEspera { 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { .atalhoTeclas .aEspera { animation: none; } }
+.atalhoBotao { width: 32px; min-width: 32px; min-height: 32px; color: var(--tinta-3); }
+.atalhoBotao:disabled { opacity: .25; }
+.conflitoAtalho {
+  display: flex; gap: var(--e4); align-items: flex-start;
+  padding: var(--e4); border-radius: var(--r-2);
+  background: var(--aviso-eco); border: 1px solid color-mix(in srgb, var(--aviso) 45%, transparent);
+}
+.conflitoAtalho[hidden] { display: none; }
+/* O aviso abre logo por baixo da linha que se está a mudar, e a linha dona da tecla fica marcada. */
+.listaAtalhos .conflitoLinha { padding: var(--e3) 0; border-bottom: 1px solid var(--linha); cursor: default; }
+.atalho.emConflito { background: var(--aviso-eco); }
+.atalho.emConflito .atalhoTeclas { border-color: var(--aviso); }
+.atalho.donoConflito { box-shadow: inset 2px 0 0 var(--aviso); }
+.atalho.donoConflito .atalhoTeclas { border-color: color-mix(in srgb, var(--aviso) 60%, transparent); }
+.conflitoAtalho > .ic { color: var(--aviso); margin-top: 2px; }
+.conflitoCorpo { display: flex; flex-direction: column; gap: var(--e3); min-width: 0; }
+.conflitoCorpo p { margin: 0; line-height: var(--lh); }
+.conflitoCorpo b { color: var(--tinta); font-weight: 600; }
+.grupoAtalhos.fixos .atalhos { padding: var(--e3) var(--e3) 0; border-top: 1px solid var(--linha); }
+.estadoAtalhos { margin: 0; min-height: 1.5em; color: var(--tinta-2); }
+.atalhosFim .empurra { flex: 1; }
+@media (max-width: 620px) {
+  .atalho { gap: var(--e1); padding: var(--e1) 0 var(--e1) var(--e2); min-height: 48px; }
+  .atalhoNome { font-size: var(--t-menor); padding-right: var(--e2); }
+  .atalhoTeclas { min-width: 96px; min-height: 40px; padding: 0 var(--e2); gap: 4px; }
+  .atalhoBotao { width: 40px; min-width: 40px; min-height: 40px; }
+  .atalhosFim .empurra { display: none; }
+  .modal .atalhosFim #padraoTodos { flex-basis: 100%; }
+}
+
 /* ── o editor do clipe ─────────────────────────────────────────────────────
    À esquerda o vídeo deitado com os enquadramentos por cima; à direita o
    9:16 pintado em tempo real. Os dois lado a lado e não um por baixo do
@@ -1624,6 +1696,15 @@ body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) > #evento { flex: 0 0 aut
 /* O instante que ordena as faixas: só a ponta de baixo, para não riscar a hora escrita por cima. */
 .reguaEvento i.ordem { top: 14px; background: var(--acento); }
 .reguaEvento:hover { background: var(--sup-1); }
+/* As divisões da régua, como num editor de vídeo: pequenas entre as horas, maiores em cada hora escrita. */
+.reguaEvento .tique { position: absolute; bottom: 0; width: 1px; height: 4px; background: var(--linha-3, var(--tinta-3)); opacity: .7; pointer-events: none; }
+.reguaEvento .tique.grande { height: 8px; background: var(--tinta-3); opacity: 1; }
+/* O nome dos riscos que atravessam o mapa: o branco é o momento escolhido, o azul o horário da ordem. */
+.reguaEvento .marcaRegua { position: absolute; top: 1px; transform: translateX(-50%); padding: 1px 5px; border-radius: 3px; font-weight: 600; white-space: nowrap; pointer-events: none; line-height: 14px; }
+.reguaEvento .marcaRegua.aEsquerda { transform: none; }
+.reguaEvento .marcaRegua.aDireita { transform: translateX(-100%); }
+.reguaEvento .marcaRegua.lance { background: var(--tinta); color: var(--sup-0); }
+.reguaEvento .marcaRegua.ordem { background: var(--acento); color: var(--sup-0); }
 .fusoEvento { margin: 0; text-align: right; font-size: var(--t-micro); color: var(--tinta-3); }
 .infoEvento { margin: 0; }
 .ferramentasMapa { gap: var(--e2); }
@@ -1654,6 +1735,7 @@ body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) > #evento { flex: 0 0 aut
 @media (pointer: coarse) {
   .reguaEvento { height: 28px; }
   .reguaEvento span { top: 7px; }
+  .reguaEvento .marcaRegua { top: 6px; }
 }
 .mapaCaixa { display: grid; gap: var(--e3); grid-template-columns: minmax(0, 1fr); }
 @media (min-width: 1000px) { .mapaCaixa:has(#lance:not([hidden])) { grid-template-columns: minmax(0, 1fr) 320px; } }

@@ -21,6 +21,7 @@ import { lerMaster, lerPlaylist, procurarCanais, slugDoNome } from './kick.js';
 import { linhaDoCanal } from './relogio.js';
 import { somDoCanal } from './alinhar.js';
 import { t, tn, idiomaActual } from './idiomas.js';
+import { atalhos } from './atalhos.js';
 import { escapar } from './escapar.js';
 import { idDoCanal, mensagensEntre, calor, picos, segundoDoPico } from './chat.js';
 import { agendar } from './aovivo.js';
@@ -542,7 +543,47 @@ export function montarEvento({
       html += `<span class="dia${noFim ? ' fimDaRegua' : ''}" style="left:${x.toFixed(1)}px">${escapar(rotuloDoDia(ms))}</span>`;
       ocupados.push(noFim ? [x - 76, x + 4] : [x - 4, x + 76]);
     }
+    // Os dois riscos que atravessam o mapa levam o nome escrito na régua (o dono, 10/10: "porque tem o
+    // risco branco e outro azul"). O branco é o momento escolhido; o azul, o horário que ordena as faixas.
+    const marcasRegua = [];
+    if (ev.ordem.modo === 'instante' && Number.isFinite(ev.ordem.ms)) {
+      marcasRegua.push({ ms: ev.ordem.ms, classe: 'ordem', texto: t('regua.ordem', { hora: horaCurta(ev.ordem.ms) }) });
+    }
+    if (Number.isFinite(ev.escolha?.ms)) {
+      marcasRegua.push({ ms: ev.escolha.ms, classe: 'lance', texto: t('regua.lance', { hora: horaCurta(ev.escolha.ms) }) });
+    }
+    let chips = '';
+    for (const m of marcasRegua) {
+      const x = xDoTempo(m.ms, ev.vista, largura);
+      if (!Number.isFinite(x) || x < 0 || x > largura) continue;
+      const w = m.texto.length * 6.2 + 12;
+      // Perto das pontas a etiqueta encosta para dentro, para não sair cortada.
+      const lado = x < w / 2 ? ' aEsquerda' : x > largura - w / 2 ? ' aDireita' : '';
+      const [a, b] = lado === ' aEsquerda' ? [x, x + w] : lado === ' aDireita' ? [x - w, x] : [x - w / 2, x + w / 2];
+      // Duas etiquetas uma em cima da outra: fica a do momento escolhido, que é a que se mexe.
+      if (m.classe === 'lance') for (let k = ocupados.length - 1; k >= 0; k--) {
+        if (ocupados[k].ordem && b > ocupados[k][0] && a < ocupados[k][1]) { chips = chips.replace(ocupados[k].html, ''); ocupados.splice(k, 1); }
+      }
+      const html1 = `<b class="marcaRegua ${m.classe}${lado}" style="left:${x.toFixed(1)}px">${escapar(m.texto)}</b>`;
+      chips += html1;
+      const faixa = [a - 4, b + 4];
+      if (m.classe === 'ordem') { faixa.ordem = true; faixa.html = html1; }
+      ocupados.push(faixa);
+    }
     if (passo) {
+      // As divisões como num editor de vídeo: um traço maior em cada hora escrita e traços pequenos entre
+      // elas, a cada fração redonda do passo (o dono, 10/10).
+      const sub = { 60e3: 10e3, [5 * 60e3]: 60e3, [15 * 60e3]: 5 * 60e3, [30 * 60e3]: 5 * 60e3, 3600e3: 15 * 60e3,
+        [2 * 3600e3]: 30 * 60e3, [6 * 3600e3]: 3600e3, [12 * 3600e3]: 3600e3 }[passo];
+      const fusoR = new Date(ev.vista.deMs).getTimezoneOffset() * 60_000;
+      if (sub && span / sub <= largura / 6) {
+        for (let ms = Math.ceil((ev.vista.deMs - fusoR) / sub) * sub + fusoR; ms <= ev.vista.ateMs; ms += sub) {
+          const x = xDoTempo(ms, ev.vista, largura);
+          if (!Number.isFinite(x)) continue;
+          const grande = Math.abs(((ms - fusoR) % passo + passo) % passo) < 1;
+          html += `<em class="${grande ? 'tique grande' : 'tique'}" style="left:${x.toFixed(1)}px"></em>`;
+        }
+      }
       // Os passos de uma hora ou mais começam numa hora cheia do fuso do aparelho, e não do UTC: num fuso
       // de meia hora as horas da régua caíam a meio das riscas do mapa.
       const fuso = new Date(ev.vista.deMs).getTimezoneOffset() * 60_000;
@@ -559,7 +600,7 @@ export function montarEvento({
       const x = xDoTempo(ev.ordem.ms, ev.vista, largura);
       if (x >= 0 && x <= largura) html += `<i class="ordem" style="left:${x.toFixed(1)}px"></i>`;
     }
-    regua.innerHTML = html;
+    regua.innerHTML = html + chips;
     regua.dataset.passo = String(passo ?? DIA);
   }
 
@@ -636,6 +677,14 @@ export function montarEvento({
 
   function escolher(alvo) {
     if (!alvo) return;
+    if (alvo.ordenar) {
+      // O ícone de ordenar no cabeçalho: abre a ordem das faixas, sem fechar o grupo.
+      const seletor = $('ordemFaixas');
+      seletor.scrollIntoView?.({ block: 'nearest' });
+      seletor.focus();
+      try { seletor.showPicker?.(); } catch { /* sem showPicker, o foco já mostra onde é */ }
+      return;
+    }
     if ((alvo.tipo === 'time' || alvo.tipo === 'resumo') && ev.ordem.modo !== 'time') {
       if (ev.fechadasOrdem.has(alvo.time)) ev.fechadasOrdem.delete(alvo.time);
       else ev.fechadasOrdem.add(alvo.time);
@@ -700,15 +749,17 @@ export function montarEvento({
       ev.cursor = { i: Math.max(0, i), ms: ev.escolha?.ms ?? (ev.vista.deMs + ev.vista.ateMs) / 2 };
     }
     let { i, ms } = ev.cursor;
-    switch (e.key) {
+    // O zoom do mapa usa as mesmas teclas do zoom da linha do tempo, as que a pessoa escolheu.
+    const zoomId = atalhos.acaoDe(e)?.id;
+    if (zoomId === 'zoomMais') $('aproximar').click();
+    else if (zoomId === 'zoomMenos') $('afastar').click();
+    else switch (e.key) {
       case 'ArrowUp': i = Math.max(0, i - 1); break;
       case 'ArrowDown': i = Math.min(linhas.length - 1, i + 1); break;
       case 'ArrowLeft': ms -= span / (e.shiftKey ? 5 : 20); break;
       case 'ArrowRight': ms += span / (e.shiftKey ? 5 : 20); break;
       case 'Home': ms = ev.vista.deMs; break;
       case 'End': ms = ev.vista.ateMs; break;
-      case '+': case '=': $('aproximar').click(); break;
-      case '-': case '_': $('afastar').click(); break;
       case 'Enter': case ' ': break;
       default: return;
     }
