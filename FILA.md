@@ -236,3 +236,10 @@ em francês). Tudo revisado pela regra 14 em 28/09.
 - "Compartilhar evento" no lugar do link enorme: nome obrigatório, data e duração opcionais; link curto. ABISAL salvo no repositório (só os canais, sem notas) e aberto por ?e=abisal.
 - Régua: linha grossa e data a cada mudança de dia; linhas finas quase transparentes nas horas. O horário já é o de cada pessoa (fuso do aparelho); deixar isso escrito na tela.
 - Fazer depois da tarefa dos filtros.
+
+## Pedidos do dono (10/10): editor Criar clipe
+- "2 enquadramentos" já começa no encaixe mais usado em TikTok e Shorts (cara em cima, jogo embaixo), com modelos de onde fica a webcam (canto inferior esquerdo, superior esquerdo, superior direito, inferior direito); só pequenos ajustes depois.
+- Lembrar o encaixe de cada streamer no aparelho, para o próximo clipe dele já abrir certo.
+- Assistir o clipe pulando para o ponto que quiser: agulha (bolinha e linha) na barra do clipe, arrastar com mouse ou dedo.
+- Espaço livre à direita dos botões Início e Fim: usar só se entrar botão novo.
+- Fazer depois da tarefa dos filtros (mesmo arquivo).
