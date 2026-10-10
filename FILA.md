@@ -243,3 +243,8 @@ em francês). Tudo revisado pela regra 14 em 28/09.
 - Assistir o clipe pulando para o ponto que quiser: agulha (bolinha e linha) na barra do clipe, arrastar com mouse ou dedo.
 - Espaço livre à direita dos botões Início e Fim: usar só se entrar botão novo.
 - Fazer depois da tarefa dos filtros (mesmo arquivo).
+
+## Refinamento para o fim (pedido do dono, 10/10): legendas no clipe, igual CapCut
+- Ao lado dos botões Início e Fim do Criar clipe: "Legenda" do que o streamer fala.
+- Opções: cor, tamanho, posição na tela, idioma (e tradução), estilo.
+- Depende de transformar voz em texto no aparelho (mesma questão das "palavras faladas" da detecção). Estudar o modelo mais leve que rode no navegador antes de prometer.
