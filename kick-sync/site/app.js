@@ -12,6 +12,7 @@ import {
 import {
   linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, seguirAncora,
   passoDoArrasto, ARRASTO_INTERVALO_MS, ARRASTO_ESPERA_MS, vistaDaLinha, saiuDaVista,
+  ZOOM_MIN_MS, larguraDoZoom, valorDoZoom, zoomEmVolta, andarVista,
 } from './relogio.js';
 import { cortarTodosOsAngulos } from './baixar.js';
 import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js';
@@ -931,6 +932,14 @@ const vistaAgora = () => estado.vista || estado.janela;
  */
 function acertarVista({ forcar = false } = {}) {
   if (!estado.janela) return false;
+  // Uma vista posta à mão (zoom num ponto, ou arrastada para o lado) fica onde ele a pôs enquanto o
+  // instante não sair dela. Quando sai (o vídeo andou para lá da ponta, ou ele foi para outro sítio),
+  // a vista volta a seguir o instante.
+  if (!forcar && estado.vista && vistaPresa) {
+    if (estado.agoraMs >= estado.vista.inicio && estado.agoraMs <= estado.vista.fim) return false;
+    vistaPresa = false;
+  }
+  if (forcar) vistaPresa = false;
   if (!forcar && estado.vista && !saiuDaVista(estado.vista, estado.agoraMs)) return false;
   const nova = vistaDaLinha(estado.janela, estado.agoraMs, estado.zoomS);
   if (!forcar && estado.vista
@@ -938,7 +947,188 @@ function acertarVista({ forcar = false } = {}) {
   estado.vista = nova;
   pintarFaixas();
   pintarRegua();
+  pintarZoom();
   return true;
+}
+
+// ── o zoom da linha do tempo ────────────────────────────────────────────────
+//
+// O dono, 10/10: "igual nos editores de vídeo: o quanto de linha do tempo aparece, dando zoom e
+// diminuindo a linha, ou tirando zoom e aumentando, até ter o máximo". Era um seletor de cinco degraus;
+// passa a ser contínuo, entre a noite toda e uns 30 segundos: o deslizante com menos e mais, Ctrl + roda
+// do mouse sobre as faixas (o instante debaixo do mouse fica no lugar), a pinça com dois dedos e as
+// teclas + e -. Com zoom, arrastar as faixas ou a régua para o lado, ou rolar na horizontal, anda pela
+// noite sem mexer no vídeo.
+let vistaPresa = false;
+// Um arrasto que andou com a vista não é um clique: o trilho não leva o vídeo para onde se largou.
+let vistaArrastada = false;
+const ZOOM_PASSO = 2;
+
+/** Pôr a vista com `larguraMs` de tempo à vista, com o instante `pontoMs` no mesmo sítio do ecrã. */
+function aplicarZoom(larguraMs, pontoMs) {
+  if (!estado.janela) return;
+  const total = estado.janela.fim - estado.janela.inicio;
+  const vista = vistaAgora();
+  let ponto = pontoMs;
+  // Sem ponto (o deslizante, os botões e as teclas), o zoom é em volta do instante do vídeo se ele está
+  // à vista, como num editor, e do meio da vista se não está.
+  if (!Number.isFinite(ponto)) {
+    ponto = estado.agoraMs >= vista.inicio && estado.agoraMs <= vista.fim ? estado.agoraMs : (vista.inicio + vista.fim) / 2;
+  }
+  const nova = zoomEmVolta(estado.janela, vista, larguraMs, ponto);
+  const largura = nova.fim - nova.inicio;
+  estado.zoomS = largura >= total ? 0 : largura / 1000;
+  try { localStorage.setItem('replay.zoom', String(estado.zoomS)); } catch { /* janela privada */ }
+  vistaPresa = largura < total;
+  if (estado.vista && nova.inicio === estado.vista.inicio && nova.fim === estado.vista.fim) { pintarZoom(); return; }
+  estado.vista = nova;
+  pintarFaixas();
+  pintarRelogio(estado.agoraMs);
+  pintarZoom();
+}
+
+/** Multiplicar o tempo à vista: menos de 1 aproxima, mais de 1 afasta. */
+function zoomPor(fator, pontoMs) {
+  const v = vistaAgora();
+  if (!v || !(v.fim > v.inicio)) return;
+  aplicarZoom((v.fim - v.inicio) * fator, pontoMs);
+}
+
+/** Andar com a vista para o lado, do mesmo tamanho. Só com zoom: a noite toda não tem para onde ir. */
+function andarComVista(deltaMs) {
+  const v = vistaAgora();
+  if (!estado.janela || !v) return;
+  const nova = andarVista(estado.janela, v, deltaMs);
+  if (nova.inicio === v.inicio && nova.fim === v.fim) return;
+  estado.vista = nova;
+  vistaPresa = true;
+  pintarFaixas();
+  pintarRelogio(estado.agoraMs);
+}
+
+/** O deslizante e o texto "10 min à vista" a dizer o zoom que está. */
+function pintarZoom() {
+  const el = $('zoomTempo');
+  if (!el) return;
+  const j = estado.janela;
+  const v = vistaAgora();
+  const total = j ? j.fim - j.inicio : 0;
+  const largura = v ? v.fim - v.inicio : 0;
+  const tudo = !j || largura >= total;
+  el.value = String(tudo ? 0 : valorDoZoom(total, largura));
+  const texto = tudo ? t('tempo.zoomTudo') : t('tempo.zoomVe', { dur: duracaoTrecho(largura) });
+  el.setAttribute('aria-valuetext', texto);
+  $('zoomQuanto').textContent = texto;
+  el.disabled = !j;
+  $('zoomMenos').disabled = !j || tudo;
+  $('zoomMais').disabled = !j || largura <= Math.min(ZOOM_MIN_MS, total) + 1;
+}
+
+/** O instante debaixo do ponteiro, nas colunas do tempo (a régua e os trilhos medem o mesmo). */
+function msNaLinha(clientX) {
+  const v = vistaAgora();
+  const r = $('regua').getBoundingClientRect();
+  if (!v || !(r.width > 0)) return NaN;
+  return v.inicio + ((clientX - r.left) / r.width) * (v.fim - v.inicio);
+}
+
+function ligarZoom() {
+  const deslizante = $('zoomTempo');
+  deslizante.addEventListener('input', () => {
+    if (!estado.janela) return;
+    aplicarZoom(larguraDoZoom(estado.janela.fim - estado.janela.inicio, Number(deslizante.value)));
+  });
+  $('zoomMais').onclick = () => zoomPor(1 / ZOOM_PASSO);
+  $('zoomMenos').onclick = () => zoomPor(ZOOM_PASSO);
+  // A roda do mouse sobre as faixas e a régua. Com Ctrl (e a pinça de um trackpad, que chega como
+  // Ctrl + roda), zoom no ponto do mouse; na horizontal, ou com Shift, anda pela noite. A roda sozinha
+  // continua a rolar as faixas para cima e para baixo.
+  const roda = (e) => {
+    if (!estado.janela) return;
+    const v = vistaAgora();
+    const largura = v.fim - v.inicio;
+    const px = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1;
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      zoomPor(Math.exp(Math.max(-1, Math.min(1, e.deltaY * px * 0.0025))), msNaLinha(e.clientX));
+      return;
+    }
+    const lado = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.shiftKey ? e.deltaY : 0;
+    if (!lado || largura >= estado.janela.fim - estado.janela.inicio) return;
+    e.preventDefault();
+    const r = $('regua').getBoundingClientRect();
+    andarComVista((lado * px / Math.max(1, r.width)) * largura);
+  };
+  for (const el of [$('faixas'), document.querySelector('.reguaLinha')]) el.addEventListener('wheel', roda, { passive: false });
+
+  // Arrastar para o lado e a pinça, com o rato ou com os dedos. Os toques ficam guardados por ponteiro:
+  // um dedo arrasta, dois fazem a pinça (o instante entre os dedos fica no lugar).
+  const toques = new Map();
+  let pinca = null;
+  let arrasto = null;
+  const caixas = [$('faixas'), document.querySelector('.reguaLinha')];
+  const deixa = (e) => !e.target.closest('button, .alca, .chatTrechoFaixa, .acoesFaixa, input, select');
+  const fim = (e) => {
+    toques.delete(e.pointerId);
+    if (toques.size < 2) pinca = null;
+    if (!toques.size) {
+      arrasto = null;
+      // O clique chega depois do pointerup: a marca de arrasto só cai a seguir a ele.
+      setTimeout(() => { vistaArrastada = false; }, 0);
+    }
+  };
+  for (const caixa of caixas) {
+    caixa.addEventListener('pointerdown', (e) => {
+      if (!estado.janela || e.button > 0 || !deixa(e)) return;
+      toques.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (toques.size === 2) {
+        const [a, b] = [...toques.values()];
+        const v = vistaAgora();
+        pinca = { distancia: Math.max(10, Math.abs(a.x - b.x)), largura: v.fim - v.inicio, ponto: msNaLinha((a.x + b.x) / 2) };
+        arrasto = null;
+      } else if (toques.size === 1) {
+        arrasto = { x: e.clientX, y: e.clientY, vista: vistaAgora(), andou: false };
+      }
+    });
+    caixa.addEventListener('pointermove', (e) => {
+      if (!toques.has(e.pointerId)) return;
+      toques.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pinca && toques.size >= 2) {
+        const [a, b] = [...toques.values()];
+        vistaArrastada = true;
+        aplicarZoom(pinca.largura * (pinca.distancia / Math.max(10, Math.abs(a.x - b.x))), pinca.ponto);
+        return;
+      }
+      if (!arrasto) return;
+      const dx = e.clientX - arrasto.x;
+      const total = estado.janela.fim - estado.janela.inicio;
+      const largura = arrasto.vista.fim - arrasto.vista.inicio;
+      if (largura >= total) return;
+      // Só depois de 6 px para o lado (e mais para o lado do que para baixo): um clique com a mão a tremer
+      // continua a ser um clique, e um dedo a rolar as faixas para baixo continua a rolar.
+      if (!arrasto.andou && (Math.abs(dx) < 6 || Math.abs(dx) < Math.abs(e.clientY - arrasto.y))) return;
+      if (!arrasto.andou) {
+        arrasto.andou = true;
+        try { caixa.setPointerCapture(e.pointerId); } catch { /* um ponteiro sintético não se prende */ }
+      }
+      vistaArrastada = true;
+      const r = $('regua').getBoundingClientRect();
+      const nova = andarVista(estado.janela, arrasto.vista, (-dx / Math.max(1, r.width)) * largura);
+      if (nova.inicio === vistaAgora().inicio) return;
+      estado.vista = nova;
+      vistaPresa = true;
+      pintarFaixas();
+      pintarRelogio(estado.agoraMs);
+    });
+    caixa.addEventListener('pointerup', fim);
+    caixa.addEventListener('pointercancel', fim);
+    // Um clique que acabou um arrasto não é um clique: nem o trilho nem uma kill da régua levam o vídeo.
+    caixa.addEventListener('click', (e) => {
+      if (!vistaArrastada) return;
+      e.stopPropagation();
+      e.preventDefault();
+    }, true);
+  }
 }
 
 function pintarFaixas() {
@@ -1861,7 +2051,7 @@ function fecharAcoes() {
   faixaEscolhida = null;
   modoTrecho = null;
   colocarAcoes();
-  const nome = [...$('faixas').querySelectorAll('[data-quem]')].find((b) => b.dataset.quem === quem);
+  const nome = [...$('faixas').querySelectorAll('button[data-quem]')].find((b) => b.dataset.quem === quem);
   nome?.focus({ preventScroll: true });
 }
 
@@ -2461,111 +2651,110 @@ async function alinhar() {
  * alguém que não está entre os canais abertos, e apagar isso por ele seria
  * decidir uma coisa que não sei.
  */
-/** O primeiro instante a seguir a `baseMs` com aquela hora local ("HH:MM"). NaN se a hora não se lê. */
-function horaDepoisDe(hhmm, baseMs) {
-  const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm || '');
-  if (!m || !Number.isFinite(baseMs)) return NaN;
-  const d = new Date(baseMs);
-  d.setHours(Number(m[1]), Number(m[2]), 0, 0);
-  // Uma noite de Rust passa a meia-noite: 02:00 depois das 23:00 é no dia seguinte.
-  while (d.getTime() <= baseMs - 60_000) d.setDate(d.getDate() + 1);
-  return d.getTime();
-}
-
-async function procurarKills() {
+/**
+ * O botão Detecção automática. De quem e quanto escolhe-se na linha do tempo, com as mesmas escolhas do
+ * chat (o dono, 10/10: "a detecção automática também deveria ter as mesmas opções de ler o chat"): o
+ * botão abre a barra na faixa de quem está no vídeo, e a correr é o Parar dela.
+ */
+function procurarKills() {
   // A correr, o mesmo botão pára. Ouvir uma noite inteira leva minutos, e sem
   // isto a única saída era recarregar a página.
   if (estado.varredura) { estado.varredura.abort(); return; }
   if (!estado.linhas.length || !estado.janela) return;
-  const canal = estado.focos[0] || estado.linhas[0].slug;
-  const linha = estado.linhas.find((l) => l.slug === canal);
+  const nota = $('estadoMontagem');
+  nota.classList.remove('mau');
+  nota.textContent = t('auto.escolha');
+  abrirAcoes(faixaEscolhida || estado.focos[0] || estado.linhas[0].slug, { focar: true });
+}
+
+/**
+ * Ouvir a POV de uma pessoa (ou de cada uma) à procura de tiroteios, num trecho ou no tempo todo ao vivo.
+ * Tudo no relógio da noite, que é o dos momentos e o do cursor: o início e o fim do canal estão no
+ * relógio do VOD dele, e o ajuste leva de um ao outro.
+ */
+async function detetar(quem, quanto) {
+  if (!quem || estado.varredura || chatTrechoControlo || !estado.linhas.length || !acertarChatTrecho()) return;
   const botao = $('procurarKills');
   const nota = $('estadoMontagem');
-
-  // Tudo no relógio da noite, que é o dos momentos e o do cursor. O início e o
-  // fim do canal estão no relógio do VOD dele, e o ajuste leva de um ao outro:
-  // misturar os dois punha cada kill fora do sítio pelo ajuste inteiro.
-  const nudge = estado.nudges[canal] || 0;
-  const inicio = linha.inicio - nudge;
-  const fim = linha.fim - nudge;
-  const escolha = $('janelaAuto').value;
-  nota.classList.remove('mau');
-  let deMs;
-  let ateMs;
-  // O dono (07/10) quer escolher de que hora a que hora, e não só meia hora, uma hora ou a noite.
-  if (escolha === 'marca') {
-    const { de, ate } = estado.marca;
-    if (de == null || ate == null) { nota.textContent = t('auto.semMarca'); return; }
-    deMs = Math.max(inicio, de);
-    ateMs = Math.min(fim, ate);
-  } else if (escolha === 'horas') {
-    deMs = horaDepoisDe($('autoDe').value, inicio);
-    ateMs = horaDepoisDe($('autoAte').value, deMs);
-    if (!Number.isFinite(deMs) || !Number.isFinite(ateMs) || deMs >= fim || ateMs <= inicio) {
-      nota.textContent = t('auto.horasFora', { canal, de: relogioCurto(inicio).slice(0, 5), ate: relogioCurto(fim).slice(0, 5) });
-      return;
-    }
-    deMs = Math.max(inicio, deMs);
-    ateMs = Math.min(fim, ateMs);
-  } else {
-    const pedido = Number(escolha) * 1000;
-    // "A noite toda" é a noite toda. Começava no cursor, e com o cursor a meio
-    // metade da noite ficava por ouvir com o rótulo a prometer tudo.
-    deMs = pedido ? Math.max(inicio, estado.agoraMs) : inicio;
-    ateMs = pedido ? Math.min(fim, deMs + pedido) : fim;
-  }
-  if (!(ateMs > deMs)) {
-    // O cursor depois do fim do canal. O clique não fazia nada e não dizia
-    // nada, que é o pior dos dois mundos: parece avariado.
-    nota.textContent = t('auto.depoisDoFim', { canal, hora: `${relogioCurto(fim)}` });
+  const naFaixa = $('estadoChatTrecho');
+  const dizer = (texto, mau = false) => {
+    nota.classList.toggle('mau', mau);
+    nota.textContent = texto;
+    naFaixa.textContent = texto;
+  };
+  // O trecho de cada um é o pedaço das alças em que ele esteve ao vivo.
+  const pedidos = pedidosDe(quem, quanto).map((p) => ({
+    ...p, deMs: Math.max(p.deMs, p.vivo.deMs), ateMs: Math.min(p.ateMs, p.vivo.ateMs),
+  })).filter((p) => p.ateMs > p.deMs);
+  if (!pedidos.length) {
+    const vivo = quem === TODOS ? null : aoVivoDe(quem);
+    dizer(quem === TODOS ? t('auto.ninguemNoTrecho')
+      : vivo ? t('auto.horasFora', { canal: quem, de: relogioCurto(vivo.deMs).slice(0, 5), ate: relogioCurto(vivo.ateMs).slice(0, 5) })
+        : t('chatTrecho.semAoVivo', { canal: quem }));
     return;
   }
-
-  const mb = custoVarrerMB(ateMs - deMs);
-  if (!confirm(t('auto.custo', { min: Math.round((ateMs - deMs) / 60000), mb, canal }))) return;
+  const totalMs = pedidos.reduce((s, p) => s + (p.ateMs - p.deMs), 0);
+  const min = Math.round(totalMs / 60000);
+  const mb = custoVarrerMB(totalMs);
+  const todos = quem === TODOS;
+  if (!confirm(todos ? t('auto.custoTodos', { min, n: pedidos.length, mb })
+    : t('auto.custo', { min, mb, canal: pedidos[0].canal }))) return;
 
   const controlo = new AbortController();
   estado.varredura = controlo;
   trocarRotulo(botao, 'montagem.parar');
-
+  pintarChatTrecho();
+  let canal = pedidos[0].canal;
   try {
-    const r = await varrerNoite({
-      linha,
-      deMs,
-      ateMs,
-      nudgeMs: nudge,
-      sinal: controlo.signal,
-      // 24 kHz, e nao os 8 do alinhamento: o tiro vive no agudo.
-      lerSom: (l, quandoMs, duracaoS, opcoes) => somDoCanal(l, quandoMs, duracaoS, { ...opcoes, taxa: TAXA_TIROS }),
-      aoProgresso: (p) => {
-        nota.textContent = t('auto.aOuvir', {
-          feito: p.feito, total: p.total, mb: (p.bytes / 1048576).toFixed(0), canal,
-        });
-      },
-    });
-
-    estado.estouros = r.estouros || [];
+    const achados = [];
+    const porCanal = [];
+    const estouros = [];
+    let falhados = 0;
+    let ouvido = null;
+    for (const p of pedidos) {
+      if (controlo.signal.aborted) throw new DOMException('parado', 'AbortError');
+      canal = p.canal;
+      const linha = estado.linhas.find((l) => l.slug === canal);
+      // eslint-disable-next-line no-await-in-loop
+      const r = await varrerNoite({
+        linha,
+        deMs: p.deMs,
+        ateMs: p.ateMs,
+        nudgeMs: estado.nudges[canal] || 0,
+        sinal: controlo.signal,
+        // 24 kHz, e nao os 8 do alinhamento: o tiro vive no agudo.
+        lerSom: (l, quandoMs, duracaoS, opcoes) => somDoCanal(l, quandoMs, duracaoS, { ...opcoes, taxa: TAXA_TIROS }),
+        aoProgresso: (x) => {
+          dizer(t('auto.aOuvir', { feito: x.feito, total: x.total, mb: (x.bytes / 1048576).toFixed(0), canal }));
+        },
+      });
+      for (const e of r.estouros || []) estouros.push(e.canal ? e : { ...e, canal });
+      falhados += r.falhados || 0;
+      ouvido = r.ouvido || ouvido;
+      for (const c of r.candidatos) achados.push({ ...c, canal });
+      if (r.candidatos.length) porCanal.push(`${canal} ${r.candidatos.length}`);
+    }
+    estado.estouros = estouros;
     // Os bocados que a Kick nao mandou, ditos. Sem isto um buraco de rede a
     // meio da noite passava por uma hora sem tiroteios.
-    const falhas = r.falhados ? t('auto.falhados', { n: r.falhados }) : '';
-    if (!r.candidatos.length) {
+    const falhas = falhados ? t('auto.falhados', { n: falhados }) : '';
+    if (!achados.length) {
       // Dizer o que se ouviu, e nao so que nao se achou. "Da isso, porem eu sei
       // que ta tendo tiroteio" — e sem estes tres numeros nao ha como saber se
       // o detector ouviu o pedaco errado, se apertou demais, ou se faltou um
       // tiro para fazer grupo.
-      const o = r.ouvido;
-      nota.textContent = t('auto.nenhum', { canal })
-        + (!o ? ''
-          : !o.altos ? t('auto.ouviNada')
-            : t('auto.ouvi', o))
-        + falhas;
+      if (todos) { dizer(t('auto.nenhumTodos') + falhas); return; }
+      const o = ouvido;
+      dizer(t('auto.nenhum', { canal })
+        + (!o ? '' : !o.altos ? t('auto.ouviNada') : t('auto.ouvi', o))
+        + falhas);
       return;
     }
 
-    for (const c of r.candidatos) {
+    for (const c of achados) {
       estado.momentos = acrescentar(
         estado.momentos,
-        novoMomento(c.ms, canal, {
+        novoMomento(c.ms, c.canal, {
           ...tamanhos(), auto: true, tiros: c.tiros,
           combateDeMs: c.combateDeMs, combateAteMs: c.combateAteMs,
         }),
@@ -2580,12 +2769,12 @@ async function procurarKills() {
     // desenhado. A busca chamava-a na mesma, rebentava num null, e a mensagem
     // falava de uma sincronia que ele nunca pediu.
     let comMorte = 0;
-    for (const [i, c] of (soUmCanal() ? [] : r.candidatos).entries()) {
+    for (const [i, c] of (soUmCanal() ? [] : achados).entries()) {
       if (controlo.signal.aborted) break;
-      nota.textContent = t('auto.aVer', { feito: i + 1, total: r.candidatos.length });
+      dizer(t('auto.aVer', { feito: i + 1, total: achados.length }));
       // A kill DESTE canal. Uma marca de outro streamer a menos de dois
       // segundos é outra kill, e não pode ser re-cronometrada por esta.
-      const antes = estado.momentos.find((m) => m.protagonista === canal && Math.abs(m.ms - c.ms) < 2000);
+      const antes = estado.momentos.find((m) => m.protagonista === c.canal && Math.abs(m.ms - c.ms) < 2000);
       if (!antes) continue;
       // eslint-disable-next-line no-await-in-loop
       const houve = await verQuemMorreu(antes.ms, { silencioso: true });
@@ -2597,22 +2786,23 @@ async function procurarKills() {
     // de uma busca de minutos sumia no instante em que aparecia.
     pintarMomentos();
     guardar();
-    nota.textContent = t('auto.achei', { n: r.candidatos.length, canal })
+    dizer((todos ? t('auto.acheiTodos', { n: achados.length, lista: porCanal.join(', ') })
+      : t('auto.achei', { n: achados.length, canal }))
       + (comMorte ? t('auto.comMorte', { n: comMorte }) : '')
-      + falhas;
+      + falhas);
   } catch (e) {
-    nota.classList.add('mau');
     // O erro desta busca é desta busca: o `alinhar.erro` falava de sincronia e
     // mandava alinhar à mão, que não é o que falhou nem o que resolve.
-    nota.textContent = e.name === 'AbortError' ? t('alinhar.cancelado')
+    dizer(e.name === 'AbortError' ? t('alinhar.cancelado')
       : e.name === 'SEM-DESCODIFICADOR' ? t('auto.semCodec')
-        : t('auto.erro', { canal });
+        : t('auto.erro', { canal }), true);
   } finally {
     // No `finally`, e não no fim do caminho feliz: a busca que não acha nada
     // sai mais cedo, e o botão ficava com o Parar até recarregar a página, com
     // a mensagem a mandar escolher outro trecho.
     estado.varredura = null;
     trocarRotulo(botao, 'auto.botao');
+    pintarChatTrecho();
   }
 }
 
@@ -4985,14 +5175,9 @@ $('barra').oninput = () => {
 // caçar o momento, que é uma coisa diferente e a barra faz mal.
 const saltar = (ms) => () => { largarPrevia(); irPara(estado.agoraMs + ms); };
 $('filtrarGrelha').oninput = pintarFiltroDaGrelha;
-$('zoomTempo').onchange = () => {
-  estado.zoomS = Number($('zoomTempo').value) || 0;
-  try { localStorage.setItem('replay.zoom', String(estado.zoomS)); } catch { /* janela privada */ }
-  acertarVista({ forcar: true });
-  pintarRelogio(estado.agoraMs);
-};
-try { estado.zoomS = Number(localStorage.getItem('replay.zoom')) || 0; } catch { /* nada */ }
-$('zoomTempo').value = String(estado.zoomS);
+try { estado.zoomS = Math.max(0, Number(localStorage.getItem('replay.zoom')) || 0); } catch { /* nada */ }
+ligarZoom();
+pintarZoom();
 $('menos1m').onclick = saltar(-60_000);
 $('mais1m').onclick = saltar(60_000);
 // "Adiciona botão de 3 segundos pra trás e 3 pra frente, e 5 minutos pra trás
@@ -5045,15 +5230,6 @@ $('filtroMomentos').onchange = (e) => {
   pintarMomentos();
 };
 $('procurarKills').onclick = procurarKills;
-$('janelaAuto').onchange = () => {
-  const horas = $('janelaAuto').value === 'horas';
-  $('horasAuto').hidden = !horas;
-  // Começa no instante do vídeo e uma hora depois: é quase sempre de onde se quer partir.
-  if (horas && !$('autoDe').value && estado.linhas.length) {
-    $('autoDe').value = relogioCurto(estado.agoraMs).slice(0, 5);
-    $('autoAte').value = relogioCurto(estado.agoraMs + 3600e3).slice(0, 5);
-  }
-};
 // Seta, e nao a funcao directamente: o `onclick` passa o evento como primeiro
 // argumento, e ele ia parar ao `soEsta` como se fosse uma lista de kills.
 try { const f = localStorage.getItem('povix.formato'); if (f === 'ambos') $('formatoMontagem').value = f; } catch { /* janela privada */ }
@@ -5232,6 +5408,15 @@ $('canalClipe').onchange = () => {
   if (!l || !c) return;
   if (c.aGravar) { $('canalClipe').value = c.canal; return; }
   c.hls?.destroy();
+  // Cada streamer tem o seu enquadramento: a webcam de um não está no mesmo sítio que a do outro, e
+  // acertar um estragava o outro (o dono, 10/10). Guarda-se o deste e volta o do outro, ou nenhum,
+  // e aí o `prepararRetrato` faz o de partida quando o vídeo novo disser o tamanho.
+  c.porCanal = c.porCanal || {};
+  c.porCanal[c.canal] = { rects: c.rects.map((r) => ({ ...r })), rectsFonte: c.rectsFonte, divisao: c.divisao };
+  const guardado = c.porCanal[l.slug];
+  c.rects = guardado ? guardado.rects.map((r) => ({ ...r })) : [];
+  c.rectsFonte = guardado ? guardado.rectsFonte : null;
+  if (guardado) c.divisao = guardado.divisao;
   Object.assign(c, { canal: l.slug, hls: null, url: null, limites: { inicio: l.inicio, fim: l.fim } });
   // O pedaço inteiro para dentro do vídeo do outro, e não só o início: com o
   // `mover` de uma pega só, um ângulo que entrou no ar depois do fim dava um
@@ -5239,8 +5424,8 @@ $('canalClipe').onchange = () => {
   Object.assign(c, dentroDosLimites(c, c.limites));
   pintarClipe();
   preverClipe(c.deMs);
-  // A fonte nova pode ter outro tamanho: os recortes vão com ela.
-  acertarRecortes();
+  // Sem `acertarRecortes` aqui: o vídeo ainda é o do canal anterior, e escalar pelo tamanho dele
+  // estragava o enquadramento guardado. O ouvinte de metadados do `prepararRetrato` acerta-o.
   pintarRecortes();
   pintarDivisor();
 };
@@ -5441,6 +5626,10 @@ document.addEventListener('keydown', (e) => {
   if (tecla === 'f' && !e.repeat) document.querySelector('#palcoFoco .tile .ecraCheio')?.click();
   if (tecla === 'i') $('marcarIn').click();
   if (tecla === 'o') $('marcarOut').click();
+  // O + e o - dão zoom na linha do tempo, como no mapa do evento e na maioria dos editores. O = é o +
+  // sem Shift no teclado americano, e o _ o - com Shift.
+  if (e.key === '+' || e.key === '=') { e.preventDefault(); zoomPor(1 / ZOOM_PASSO); }
+  if (e.key === '-' || e.key === '_') { e.preventDefault(); zoomPor(ZOOM_PASSO); }
   // Andar à mão desliga a prévia, como os botões de saltar. As setas num
   // cursor são do cursor: andavam as duas coisas ao mesmo tempo.
   const setas = !cursor && (e.key === 'ArrowLeft' || e.key === 'ArrowRight');
@@ -5564,6 +5753,7 @@ function trocarIdioma(codigo) {
     pintarMarca();
     pintarMomentos();
   }
+  pintarZoom();
 }
 
 $('idioma').innerHTML = Object.entries(IDIOMAS)

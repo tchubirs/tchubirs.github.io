@@ -267,6 +267,40 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
       + (elenco.avisos.length ? ` ${elenco.avisos.slice(0, 3).join('; ')}` : '');
   }
 
+  /**
+   * Um .csv, .tsv ou .txt para o campo do elenco. Lido aqui, no navegador, e nunca enviado. Uma planilha
+   * salva pelo Excel pode vir em UTF-16 (com a marca no início) ou em Windows-1252, e não só em UTF-8:
+   * lido como UTF-8, um "ç" de Windows virava um losango e o nome do time ficava estragado.
+   */
+  const ARQUIVO_MAX = 5 * 1024 * 1024;
+  async function lerArquivoElenco(arquivo) {
+    const nome = arquivo.name || '';
+    if (arquivo.size > ARQUIVO_MAX) { $('estadoEvento').textContent = t('evento.arquivoGrande', { nome }); return; }
+    let texto;
+    try {
+      const bytes = new Uint8Array(await arquivo.arrayBuffer());
+      if (bytes[0] === 0xff && bytes[1] === 0xfe) texto = new TextDecoder('utf-16le').decode(bytes);
+      else if (bytes[0] === 0xfe && bytes[1] === 0xff) texto = new TextDecoder('utf-16be').decode(bytes);
+      else {
+        try { texto = new TextDecoder('utf-8', { fatal: true }).decode(bytes); } catch { texto = new TextDecoder('windows-1252').decode(bytes); }
+      }
+    } catch {
+      $('estadoEvento').textContent = t('evento.arquivoErro', { nome });
+      return;
+    }
+    $('elenco').value = texto.replace(/^﻿/, '');
+    $('abrirElencoTexto').textContent = t('evento.abrir');
+    const elenco = lerElenco($('elenco').value);
+    if (!elenco.times.length && !elenco.soltos.length) {
+      $('estadoEvento').textContent = t('evento.arquivoSemCanais', { nome });
+      $('elenco').focus();
+      return;
+    }
+    const { times, canais } = contar(elenco);
+    $('estadoEvento').textContent = t('evento.arquivoLido', { nome, times, canais });
+    $('abrirElenco').focus();
+  }
+
   async function abrirDoTexto() {
     const elenco = lerElenco($('elenco').value);
     if (elenco.avisos.length) $('estadoEvento').textContent = elenco.avisos.slice(0, 3).join('; ');
@@ -1245,6 +1279,14 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
     $('corrigirElenco').onclick = corrigirElenco;
     $('elenco').addEventListener('paste', colarPagina);
     $('elenco').addEventListener('input', () => { $('abrirElencoTexto').textContent = t('evento.abrir'); });
+    // Abrir a lista de um arquivo (o dono, 10/10). O botão abre o seletor de arquivos do sistema (no
+    // celular, o dos arquivos do telefone), e o texto vai para o campo como se tivesse sido colado.
+    $('abrirArquivoElenco').onclick = () => $('arquivoElenco').click();
+    $('arquivoElenco').addEventListener('change', async () => {
+      const arquivo = $('arquivoElenco').files?.[0];
+      $('arquivoElenco').value = '';
+      if (arquivo) await lerArquivoElenco(arquivo);
+    });
     $('juntarTime').onchange = () => {
       const nome = $('juntarTime').value;
       if (nome) ev.juntados.add(nome);

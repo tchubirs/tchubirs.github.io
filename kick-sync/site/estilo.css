@@ -1777,27 +1777,46 @@ body:is(.videoAberto, :has(#palco:not([hidden]))) .mostrarMapa { background: var
 #corte > h2 { margin-bottom: var(--e2); }
 @media (max-width: 1079.98px) { #corte { order: 8; } }
 
-/* ── o trecho de chat a ler: duas alças na linha do tempo ──────────────────
-   Como a seleção de trecho de um editor (Premiere, Resolve, CapCut): uma faixa com uma alça em cada
-   ponta. Ciano, a cor de ação deste sistema, para não se confundir com o âmbar da entrada e da saída.
-   Dentro da faixa, mais escuro, o que já foi lido do chat desse streamer. */
-.chatTrechoLinha { display: grid; grid-template-columns: var(--coluna) 1fr; gap: var(--e3); align-items: center; margin-top: var(--e2); }
-.chatTrechoRotulo { font-size: var(--t-menor); color: var(--tinta-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.chatTrecho { position: relative; height: 22px; border-radius: var(--r-fio); background: var(--sup-1); }
-.chatTrechoLido { position: absolute; inset: 0; pointer-events: none; }
-.chatTrechoLido i {
-  position: absolute; top: 9px; height: 4px; display: block; border-radius: 1px;
-  background: color-mix(in srgb, var(--tinta-3) 55%, transparent);
+/* ── ler chat e detectar na faixa de cada pessoa ────────────────────────────
+   O nome de cada faixa é um botão: abre por baixo dela uma barra com ler chat e detectar, de um trecho ou
+   de tudo. Em cima, a faixa Todos faz o mesmo para toda a gente. No modo trecho, as duas alças ficam em
+   cima do trilho da faixa escolhida, como a seleção de trecho de um editor (Premiere, Resolve, CapCut).
+   Ciano, a cor de ação deste sistema, para não se confundir com o âmbar da entrada e da saída. Dentro do
+   trilho, mais escuro, o que já foi lido do chat. */
+.faixaGeral { display: grid; grid-template-columns: var(--coluna) 1fr; gap: var(--e3); align-items: center; }
+.faixa > .nome, .faixaGeral > .nome { grid-row: 1; grid-column: 1; }
+.faixa > .trilho, .faixaGeral > .trilho, .faixa > .chatTrecho, .faixaGeral > .chatTrecho { grid-row: 1; grid-column: 2; }
+.faixa button.nome, .faixaGeral button.nome {
+  min-height: 18px; min-width: 0; padding: 0 var(--e1, 2px); margin: 0; border: 0; border-radius: var(--r-fio);
+  background: none; color: var(--tinta-3); font-size: var(--t-menor); font-weight: 400;
+  justify-content: flex-start; text-align: left; display: block; width: 100%;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 18px;
 }
+.faixa.principal button.nome { color: var(--tinta); font-weight: 500; }
+.faixa button.nome:hover:not(:disabled), .faixaGeral button.nome:hover:not(:disabled) { background: var(--sup-3); color: var(--tinta); border-color: transparent; }
+.faixaGeral button.nome { font-family: var(--letra); color: var(--tinta-2); font-weight: 600; }
+.faixa.escolhida button.nome, .faixaGeral.escolhida button.nome {
+  color: var(--tinta); background: var(--acento-eco); box-shadow: inset 2px 0 0 var(--acento);
+}
+.trilhoGeral { background: var(--sup-3); }
+.trilho .lido {
+  position: absolute; bottom: 0; height: 4px; display: block; border-radius: 1px; pointer-events: none;
+  background: color-mix(in srgb, var(--sup-0) 70%, transparent);
+}
+/* As alças por cima do trilho. A calha não apanha cliques (o trilho por baixo continua a levar o vídeo
+   ao sítio clicado); só a faixa do meio e as alças os apanham. */
+.chatTrecho { position: relative; height: 22px; pointer-events: none; z-index: 1; }
+.chatTrecho[hidden] { display: none; }
 .chatTrechoFaixa {
-  position: absolute; top: 3px; bottom: 3px; border-radius: 2px; cursor: grab; touch-action: none;
-  background: var(--acento-eco); border-top: 1px solid var(--acento-fio); border-bottom: 1px solid var(--acento-fio);
+  position: absolute; top: 2px; bottom: 2px; border-radius: 2px; cursor: grab; touch-action: none; pointer-events: auto;
+  background: color-mix(in srgb, var(--acento) 22%, transparent);
+  border-top: 1px solid var(--acento-fio); border-bottom: 1px solid var(--acento-fio);
 }
 .chatTrechoFaixa.aArrastar { cursor: grabbing; }
 /* A alça desenhada tem 6 px; a área de toque, 24 (WCAG 2.5.8), e 44 num ecrã de toque. */
 .alca {
   position: absolute; top: -3px; bottom: -3px; width: 24px; transform: translateX(-50%); z-index: 2;
-  cursor: ew-resize; touch-action: none; border-radius: var(--r-2);
+  cursor: ew-resize; touch-action: none; border-radius: var(--r-2); pointer-events: auto;
 }
 .alca::before {
   content: ''; position: absolute; left: 50%; top: 2px; bottom: 2px; width: 6px; margin-left: -3px;
@@ -1806,30 +1825,56 @@ body:is(.videoAberto, :has(#palco:not([hidden]))) .mostrarMapa { background: var
 .alca:hover::before, .alca.aArrastar::before { background: var(--acento-alto); }
 .alca.fora::before { opacity: .45; }
 .alca:focus-visible { outline: none; box-shadow: var(--foco); }
-.chatTrechoCtl {
-  display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2) var(--e3);
-  margin-top: var(--e2); padding-left: calc(var(--coluna) + var(--e3));
+/* A barra, numa linha logo abaixo da faixa escolhida, na coluna do tempo. */
+.acoesFaixa { display: grid; grid-template-columns: var(--coluna) 1fr; gap: var(--e3); margin: 2px 0 var(--e2); }
+.acoesFaixa[hidden] { display: none; }
+.acoesCorpo {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2) var(--e3); min-width: 0;
+  padding: var(--e2); border: 1px solid var(--acento-fio); border-radius: var(--r-2); background: var(--sup-1);
 }
-.chatTrechoCtl button { min-height: 30px; font-size: var(--t-menor); padding: 0 var(--e3); }
-.chatTrechoCtl button[hidden] { display: none; }
-.chatDeQuem { display: inline-flex; align-items: center; gap: var(--e2); white-space: nowrap; }
-.chatDeQuem select {
-  width: auto; min-width: 0; max-width: 14em; min-height: 30px; font-size: var(--t-menor);
-  padding: 0 var(--e6) 0 var(--e2); background-position: calc(100% - 15px) 50%, calc(100% - 10px) 50%;
-}
+.acoesMenu, .acoesTrecho { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2); min-width: 0; }
+.acoesMenu[hidden], .acoesTrecho[hidden], .acoesCorpo button[hidden] { display: none; }
+.acoesCorpo button { min-height: 30px; font-size: var(--t-menor); padding: 0 var(--e3); }
+.acoesCorpo #fecharAcoes { margin-left: auto; width: 30px; min-width: 30px; padding: 0; }
 .chatTrechoHoras { font: 400 var(--t-menor)/1.2 var(--letra-mono); font-variant-numeric: tabular-nums; color: var(--tinta-2); white-space: nowrap; }
-.estadoChatTrecho { flex: 1 1 16em; min-width: 0; font-size: var(--t-menor); }
-.relogio > .chatTrechoLinha, .relogio > .chatTrechoCtl { order: 3; }
-@media (max-width: 1079.98px) {
-  .relogio > .chatTrechoLinha, .relogio > .chatTrechoCtl { order: 3; }
+.estadoChatTrecho { flex: 1 1 14em; min-width: 0; font-size: var(--t-menor); }
+
+/* O zoom, como o de um editor: menos, o deslizante, mais, e quanto tempo está à vista. */
+.zoomTempo { display: inline-flex; align-items: center; gap: var(--e2); flex: 0 1 auto; min-width: 0; }
+.zoomTempo button.so-icone { width: 30px; min-width: 30px; min-height: 30px; font: 600 var(--t-base)/1 var(--letra-mono); }
+#zoomTempo {
+  appearance: none; width: 140px; min-width: 60px; flex: 0 1 140px; height: 18px; padding: 0; margin: 0;
+  background: transparent; border: 0; cursor: pointer; touch-action: manipulation;
 }
+#zoomTempo::-webkit-slider-runnable-track { height: 4px; border-radius: var(--r-fio); background: var(--sup-4); }
+#zoomTempo::-moz-range-track { height: 4px; border-radius: var(--r-fio); background: var(--sup-4); }
+#zoomTempo::-webkit-slider-thumb {
+  appearance: none; box-sizing: border-box; width: 14px; height: 14px; margin-top: -5px;
+  border-radius: var(--r-redondo); background: var(--acento); border: 2px solid var(--sup-0);
+}
+#zoomTempo::-moz-range-thumb { box-sizing: border-box; width: 14px; height: 14px; border-radius: var(--r-redondo); background: var(--acento); border: 2px solid var(--sup-0); }
+#zoomTempo:focus-visible { outline: none; box-shadow: var(--foco); border-radius: var(--r-2); }
+.zoomQuanto { font: 400 var(--t-menor)/1.2 var(--letra-mono); color: var(--tinta-2); white-space: nowrap; min-width: 6.5em; }
+/* Com zoom, as faixas andam para o lado com o rato ou o dedo; para cima e para baixo continuam a rolar. */
+.relogio > .faixas, .relogio .reguaLinha { touch-action: pan-y; }
+
+/* O arquivo da lista, ao lado do campo onde se cola. */
+.arquivoElencoLinha { gap: var(--e3); align-items: center; margin-top: calc(-1 * var(--e2)); }
+
 @media (pointer: coarse) {
   .chatTrecho { height: 30px; }
   .alca { width: 44px; top: -7px; bottom: -7px; }
-  .chatTrechoLido i { top: 13px; }
+  .faixa button.nome, .faixaGeral button.nome { min-height: 44px; line-height: 44px; }
+  .acoesCorpo button, .acoesCorpo #fecharAcoes { min-height: 44px; }
+  .acoesCorpo #fecharAcoes { width: 44px; min-width: 44px; }
+  .zoomTempo button.so-icone { width: 44px; min-width: 44px; min-height: 44px; }
+  #zoomTempo { height: 44px; }
+  #zoomTempo::-webkit-slider-thumb { width: 24px; height: 24px; margin-top: -10px; }
+  #zoomTempo::-moz-range-thumb { width: 24px; height: 24px; }
+  #abrirArquivoElenco { min-height: 44px; }
 }
 @media (max-width: 620px) {
-  .chatTrechoCtl { padding-left: 0; }
-  .chatTrechoCtl button { min-height: 40px; }
-  .chatDeQuem select { min-height: 40px; max-width: 13em; }
+  .acoesCorpo button { min-height: 44px; }
+  .zoomTempo { flex: 1 1 100%; order: -1; }
+  #zoomTempo { flex: 1 1 auto; width: auto; }
 }

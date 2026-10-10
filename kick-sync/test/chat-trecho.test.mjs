@@ -1,5 +1,7 @@
-// O trecho de chat escolhido à mão na linha do tempo da tela do vídeo: duas alças (início e fim) que se
-// arrastam com o rato, com o dedo e pelo teclado, e um botão que lê o chat de UM streamer só nesse trecho.
+// Ler o chat a partir da faixa de cada pessoa na linha do tempo da tela do vídeo: clicar no nome abre uma
+// barra na faixa dela com "Ler chat: trecho" e "Ler chat: tudo"; no trecho, duas alças (início e fim) em
+// cima da faixa, que se arrastam com o rato, com o dedo e pelo teclado. A faixa Todos, em cima, faz o
+// mesmo para toda a gente.
 //
 // A Kick é a de test/falsa.mjs: tchubi (canal 1000) e outro (1001), das 21:00 às 21:10 de 30/08, com
 // 3 mensagens por minuto cada um, e mais 40 no minuto 5 do tchubi (um pico).
@@ -20,6 +22,15 @@ async function abrirNoite(p, canais = ['tchubi', 'outro']) {
   await p.fill('#canais', canais.join('\n'));
   await p.click('#carregar');
   await p.waitForSelector('.tile', { timeout: 15000 });
+  await abrirTrechoDe(p, canais[0]);
+}
+
+/** Clicar no nome da faixa de alguém (ou Todos, com '*') e escolher "Ler chat: trecho". */
+async function abrirTrechoDe(p, quem) {
+  await p.click(`#faixas button.nome[data-quem="${quem}"]`);
+  await p.waitForSelector('#acoesFaixa:not([hidden])');
+  await p.click('#chatTrechoAbrir');
+  await p.waitForSelector('#chatTrecho:not([hidden])');
   await p.waitForFunction(() => document.getElementById('alcaInicio').hasAttribute('aria-valuenow'));
 }
 
@@ -138,10 +149,9 @@ test('o botão lê só o chat do streamer escolhido e só o trecho entre as alç
     await abrirNoite(p);
     const focoAntes = await p.evaluate(() => window.__estado.focos[0]);
     assert.equal(focoAntes, 'tchubi');
-    // A lista diz de quem é o chat, e começa no do vídeo.
-    assert.equal(await p.locator('#chatDeQuem').inputValue(), 'tchubi');
-    const opcoes = await p.locator('#chatDeQuem option').allInnerTexts();
-    assert.equal(opcoes.length, 2);
+    // A barra e as alças estão na faixa de quem se clicou, e o nome diz que está aberto.
+    assert.equal(await p.evaluate(() => document.getElementById('chatTrecho').closest('.faixa')?.dataset.slug), 'tchubi');
+    assert.equal(await p.locator('#faixas button.nome[data-quem="tchubi"]').getAttribute('aria-expanded'), 'true');
     // O trecho: das 21:02 às 21:04.
     await p.locator('#alcaInicio').focus();
     await p.keyboard.press('Home');
@@ -153,7 +163,12 @@ test('o botão lê só o chat do streamer escolhido e só o trecho entre as alç
     assert.equal(t0.de, T + 2 * MIN);
     assert.equal(t0.ate, T + 4 * MIN);
 
-    await p.selectOption('#chatDeQuem', 'outro');
+    // Escolher o outro pelo nome leva a barra para a faixa dele, e as alças ficam onde estavam.
+    await p.click('#faixas button.nome[data-quem="outro"]');
+    assert.equal(await p.evaluate(() => document.getElementById('acoesFaixa').previousElementSibling.dataset.slug), 'outro');
+    assert.equal(await p.evaluate(() => document.getElementById('chatTrecho').closest('.faixa')?.dataset.slug), 'outro');
+    assert.equal(await p.locator('#faixas button.nome[data-quem="tchubi"]').getAttribute('aria-expanded'), 'false');
+    assert.deepEqual([(await pontas(p)).de, (await pontas(p)).ate], [t0.de, t0.ate]);
     const pedidos = [];
     p.on('request', (q) => {
       const u = q.url();
@@ -210,7 +225,7 @@ test('com evento aberto o botão também lê, e o pico do trecho aparece na rég
     await p.waitForFunction(() => window.__evento?.mapa && window.__evento.vista, null, { timeout: 15000 });
     await p.evaluate((ms) => window.__abrirLanceDoEvento(['tchubi', 'outro'], ms, 'tchubi'), T + 3 * MIN);
     await p.waitForSelector('.tile', { timeout: 15000 });
-    await p.waitForFunction(() => document.getElementById('alcaInicio').hasAttribute('aria-valuenow'));
+    await abrirTrechoDe(p, 'tchubi');
     assert.equal(await p.locator('.regua .picoChat').count(), 0);
     await p.click('#lerChatTrecho');
     await p.waitForFunction(() => /^Chat de tchubi, .*1 pico\./.test(document.getElementById('estadoChatTrecho').textContent), null, { timeout: 15000 });
@@ -253,3 +268,128 @@ test('parar a leitura do trecho guarda o que veio, e ler outra vez acaba só o q
     assert.deepEqual(erros, []);
     await p.close();
   });
+
+// O dono, 10/10: "escolhe a pessoa ou clica nela, clica em ler chat e escolhe ler de que ponto a que ponto
+// ou ler todo". Clicar na faixa (e não só no nome) também escolhe a pessoa do chat ao lado do vídeo.
+test('clicar na faixa escolhe a pessoa, e "Ler chat: tudo" lê o tempo todo em que ela esteve ao vivo',
+  semNavegador, async () => {
+    const { p, erros } = await abrir({ ecra: { width: 1440, height: 900 } });
+    await kickFalsa(p, { canais: ['tchubi', 'outro'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi\noutro');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 15000 });
+    // Sem nada escolhido, não há barra nem alças, e nada lido.
+    assert.ok(await p.locator('#acoesFaixa').isHidden());
+    assert.ok(await p.locator('#chatTrecho').isHidden());
+    assert.equal(await p.locator('#faixas .trilho .lido').count(), 0);
+    // A faixa Todos vem em cima das outras, e não conta como canal.
+    assert.equal(await p.evaluate(() => document.querySelector('#faixas > .faixaGeral, #faixas > .faixa').className), 'faixaGeral');
+    assert.equal(await p.locator('#faixas .faixa').count(), 2);
+    // O nome é um botão com nome acessível que diz o que faz.
+    assert.match(await p.locator('#faixas button.nome[data-quem="outro"]').getAttribute('aria-label'), /^outro: ler chat ou detectar$/);
+
+    // Clicar no trilho do outro leva o vídeo e escolhe o outro para o chat, sem abrir a barra.
+    const trilho = p.locator('#faixas .faixa[data-slug="outro"] .trilho');
+    const caixa = await trilho.boundingBox();
+    await trilho.click({ position: { x: caixa.width * 0.3, y: caixa.height / 2 } });
+    assert.ok(await p.locator('#acoesFaixa').isHidden());
+
+    // O nome abre a barra, com as quatro escolhas.
+    await p.click('#faixas button.nome[data-quem="outro"]');
+    for (const id of ['chatTrechoAbrir', 'chatTudo', 'detetarTrechoAbrir', 'detetarTudo']) {
+      assert.ok(await p.locator(`#${id}`).isVisible(), id);
+    }
+    assert.equal(await p.locator('#chatTudo').innerText(), 'Ler chat: tudo');
+    assert.ok(await p.locator('#chatTrecho').isHidden(), 'sem trecho, não há alças');
+    const cursores = [];
+    p.on('request', (q) => { if (q.url().includes('/messages')) cursores.push([q.url().match(/channels\/([^/]+)/)[1], Number(new URL(q.url()).searchParams.get('cursor')) / 1000]); });
+    await p.click('#chatTudo');
+    await p.waitForFunction(() => /^Chat de outro, de 21:00:00 até 21:10:00: 30 mensagens/.test(document.getElementById('estadoChatTrecho').textContent), null, { timeout: 20000 });
+    assert.ok(cursores.length && cursores.every(([c]) => c === 'outro' || c === '1001'), JSON.stringify(cursores));
+    assert.equal(await p.evaluate(() => window.__evento.mensagens.get('tchubi')), undefined);
+    // O que foi lido fica mais escuro na faixa do outro, e só na dele.
+    assert.ok(await p.locator('#faixas .faixa[data-slug="outro"] .trilho .lido').count() > 0);
+    assert.equal(await p.locator('#faixas .faixa[data-slug="tchubi"] .trilho .lido').count(), 0);
+    // O chat ao lado do vídeo é o do outro.
+    await p.waitForSelector('#chatVideo:not([hidden])');
+    assert.equal(await p.locator('#chatVideoTitulo').innerText(), 'Chat de outro');
+    // Tudo outra vez não pede nada.
+    cursores.length = 0;
+    await p.click('#chatTudo');
+    await p.waitForFunction(() => /já estava lido/.test(document.getElementById('estadoChatTrecho').textContent), null, { timeout: 5000 });
+    assert.equal(cursores.length, 0);
+    // Esc fecha a barra e devolve o foco ao nome.
+    await p.locator('#chatTudo').focus();
+    await p.keyboard.press('Escape');
+    assert.ok(await p.locator('#acoesFaixa').isHidden());
+    assert.equal(await p.evaluate(() => document.activeElement.dataset.quem), 'outro');
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+test('Todos: o trecho tem as alças na faixa geral e lê cada um nesse trecho; tudo lê todos sem reler',
+  semNavegador, async () => {
+    const { p, erros } = await abrir({ ecra: { width: 1440, height: 900 } });
+    await abrirNoite(p, ['tchubi', 'outro']);
+    // O tchubi já tem o pedaço das 21:00 às 21:02 lido.
+    await p.locator('#alcaInicio').focus();
+    await p.keyboard.press('Home');
+    await p.locator('#alcaFim').focus();
+    await p.keyboard.press('End');
+    for (let k = 0; k < 8; k++) await p.keyboard.press('Shift+ArrowLeft');
+    await p.click('#lerChatTrecho');
+    await p.waitForFunction(() => /^Chat de tchubi, de 21:00:00 até 21:02:00/.test(document.getElementById('estadoChatTrecho').textContent), null, { timeout: 15000 });
+
+    // Todos, trecho: as alças sobem para a faixa geral, e o trecho das 21:00 às 21:04 é lido de cada um.
+    // Com as alças abertas, escolher Todos leva-as para a faixa geral, no mesmo trecho.
+    await p.click('#faixas button.nome[data-quem="*"]');
+    assert.equal(await p.evaluate(() => document.getElementById('chatTrecho').parentElement.className), 'faixaGeral escolhida');
+    await p.locator('#alcaFim').focus();
+    for (let k = 0; k < 2; k++) await p.keyboard.press('Shift+ArrowRight');
+    const cursores = [];
+    p.on('request', (q) => { if (q.url().includes('/messages')) cursores.push([q.url().match(/channels\/([^/]+)/)[1], (Number(new URL(q.url()).searchParams.get('cursor')) - T) / MIN]); });
+    await p.click('#lerChatTrecho');
+    await p.waitForFunction(() => /^Chat de 2 pessoas lido/.test(document.getElementById('estadoChatTrecho').textContent), null, { timeout: 20000 });
+    const msgs = await p.evaluate(() => ['tchubi', 'outro'].map((c) => (window.__evento.mensagens.get(c) || []).length));
+    assert.deepEqual(msgs, [12, 12], 'quatro minutos de cada um, três por minuto');
+    // O pedaço que o tchubi já tinha não se pediu outra vez.
+    assert.ok(!cursores.some(([c, m]) => (c === 'tchubi' || c === '1000') && m <= 2), JSON.stringify(cursores));
+    // O lido de todos aparece na faixa geral.
+    assert.ok(await p.locator('#faixas .faixaGeral .trilho .lido').count() > 0);
+
+    // Todos, tudo: a noite toda de cada um, só o que falta.
+    await p.click('#voltarAcoes');
+    cursores.length = 0;
+    await p.click('#chatTudo');
+    await p.waitForFunction(() => /^Chat de 2 pessoas lido: 100 mensagens/.test(document.getElementById('estadoChatTrecho').textContent), null, { timeout: 25000 });
+    assert.ok(cursores.every(([, m]) => m > 4), `voltou ao que já tinha: ${JSON.stringify(cursores)}`);
+    assert.deepEqual(await p.evaluate(() => ['tchubi', 'outro'].map((c) => window.__evento.mensagens.get(c).length)), [70, 30]);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+test('com o toque, as alças e os botões da barra têm 44 px', semNavegador, async () => {
+  const { p: base } = await abrir();
+  const p = await base.context().browser().newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, locale: 'pt-PT' });
+  await base.close();
+  const erros = [];
+  p.on('pageerror', (e) => erros.push(String(e.message)));
+  await p.addInitScript(() => { try { localStorage.setItem('replay.idioma', 'pt'); } catch { /* nada */ } });
+  await abrirNoite(p, ['tchubi', 'outro']);
+  const medidas = await p.evaluate(() => {
+    if (!matchMedia('(pointer: coarse)').matches) return null;
+    const ids = ['alcaInicio', 'alcaFim', 'lerChatTrecho', 'voltarAcoes', 'fecharAcoes', 'zoomMais', 'zoomMenos'];
+    const r = Object.fromEntries(ids.map((id) => [id, Math.round(document.getElementById(id).getBoundingClientRect()[id.startsWith('alca') ? 'width' : 'height'])]));
+    r.nome = Math.round(document.querySelector('#faixas button.nome[data-quem="outro"]').getBoundingClientRect().height);
+    r.larguraPagina = document.documentElement.scrollWidth;
+    return r;
+  });
+  assert.ok(medidas, 'o ecrã de toque não deu pointer: coarse');
+  if (medidas) {
+    for (const [k, v] of Object.entries(medidas)) if (k !== 'larguraPagina') assert.ok(v >= 44, `${k}: ${v} px`);
+    assert.ok(medidas.larguraPagina <= 390, `a página anda de lado: ${medidas.larguraPagina}`);
+  }
+  assert.deepEqual(erros, []);
+  await p.close();
+});
