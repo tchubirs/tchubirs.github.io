@@ -2925,8 +2925,9 @@ function ligarFiltros() {
 
 /**
  * Com o vídeo aberto num ecrã largo, as faixas são uma caixa baixa que rola, e o assistente lá dentro
- * ficava espremido em duas linhas à vista. Aí ele abre por cima das faixas, encostado a elas, e a faixa
- * escolhida (com as alças) continua à vista por baixo.
+ * ficava espremido em duas linhas à vista. Aí ele abre por cima do vídeo, encostado ao transporte: as
+ * faixas (com as alças) ficam à vista por baixo, e o transporte e a Detecção automática (que é o Parar
+ * enquanto ouve) continuam a poder carregar-se.
  */
 function acertarFlutua() {
   const barra = $('acoesFaixa');
@@ -2935,12 +2936,14 @@ function acertarFlutua() {
   barra.classList.toggle('flutua', apertado);
   if (!apertado) return;
   const f = faixas.getBoundingClientRect();
+  const transporte = document.querySelector('.transporte')?.getBoundingClientRect();
+  const topo = transporte && transporte.height && transporte.top < f.top ? transporte.top : f.top;
   const corpo = $('acoesGrupo');
   const largura = Math.min(820, window.innerWidth - 32);
   corpo.style.setProperty('--flutua-x', `${Math.max(16, Math.min(f.left, window.innerWidth - largura - 16))}px`);
   corpo.style.setProperty('--flutua-largura', `${largura}px`);
-  corpo.style.setProperty('--flutua-baixo', `${Math.max(8, window.innerHeight - f.top + 6)}px`);
-  corpo.style.setProperty('--flutua-alto', `${Math.max(160, f.top - 16)}px`);
+  corpo.style.setProperty('--flutua-baixo', `${Math.max(8, window.innerHeight - topo + 6)}px`);
+  corpo.style.setProperty('--flutua-alto', `${Math.max(160, topo - 16)}px`);
 }
 
 /** Quantos de cada tipo, numa frase: "2 tiroteios, 1 explosão". */

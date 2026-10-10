@@ -1652,7 +1652,10 @@ for (const ecra of [{ width: 1920, height: 1080 }, { width: 1366, height: 720 }]
           const x = r.left + r.width / 2;
           const y = r.top + r.height / 2;
           const emCima = document.elementFromPoint(x, y);
-          if (!emCima || !(el === emCima || el.contains(emCima) || emCima.contains(el))) return false;
+          // A cabeça da agulha está em cima da barra de propósito (é ela que se arrasta, e um clique nela
+          // também leva o vídeo): conta como a barra.
+          const daBarra = el.id === 'barra' && emCima?.closest?.('#cursor');
+          if (!emCima || !(el === emCima || el.contains(emCima) || emCima.contains(el) || daBarra)) return false;
           // E INTEIRO dentro de quem o corta. O `elementFromPoint` no meio
           // continua a responder com o botão quando só lhe faltam dois pixels
           // — foi assim que o Marcar entrada esteve cortado com o teste verde.
