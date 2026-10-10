@@ -319,3 +319,110 @@ test('o recado sem gravador aponta para um botão que existe', () => {
   assert.match(_TEXTOS.es['link.naoPercebi'], /entendí/);
   assert.match(_TEXTOS.es['link.naoPercebi'], /dirección/);
 });
+
+test('o Esc fecha o painel Canais e devolve o foco ao botão que o abriu', semNavegador, async () => {
+  for (const ecra of [{ width: 1280, height: 720 }, { width: 390, height: 844 }]) {
+    const { p, erros } = await abrirNoite(['tchubi', 'outro'], { ecra });
+    await carregar(p);
+    await p.click('#editarCanais');
+    assert.equal(await p.locator('#canais').isVisible(), true, `${ecra.width}: o painel não abriu`);
+    // O foco está numa caixa de escrever do painel: o Esc tem de fechar mesmo assim.
+    assert.equal(await p.evaluate(() => document.activeElement?.closest('#entrada') != null), true);
+    await p.keyboard.press('Escape');
+    assert.equal(await p.locator('#canais').isVisible(), false, `${ecra.width}: o Esc não fechou o painel`);
+    assert.equal(await p.locator('#editarCanais').getAttribute('aria-expanded'), 'false');
+    assert.equal(await p.evaluate(() => document.activeElement?.id), 'editarCanais', 'o foco não voltou ao botão');
+
+    // Com as sugestões da busca abertas, o primeiro Esc fecha só as sugestões.
+    await p.click('#editarCanais');
+    await p.click('#procurar');
+    await p.keyboard.type('tchu');
+    await p.waitForSelector('#sugestoes li', { timeout: 5000 });
+    await p.keyboard.press('Escape');
+    assert.equal(await p.locator('#sugestoes').isVisible(), false);
+    assert.equal(await p.locator('#canais').isVisible(), true, 'o Esc das sugestões fechou o painel junto');
+    await p.keyboard.press('Escape');
+    assert.equal(await p.locator('#canais').isVisible(), false);
+
+    // Com a janela de atalhos aberta por cima, o Esc é dela.
+    await p.click('#editarCanais');
+    await p.click('#ajuda');
+    await p.keyboard.press('Escape');
+    assert.equal(await p.locator('#modalAjuda').isVisible(), false);
+    assert.equal(await p.locator('#canais').isVisible(), true, 'o Esc da janela fechou também o painel');
+    assert.deepEqual(erros, []);
+    await p.close();
+  }
+});
+
+test('o F põe o vídeo em foco em tela cheia, e só com a tecla sozinha', semNavegador, async () => {
+  const { p, erros } = await abrir();
+  await p.addInitScript(() => {
+    window.__telaCheia = [];
+    Element.prototype.requestFullscreen = function () {
+      window.__telaCheia.push(this.dataset.slug || this.id || this.tagName);
+      return Promise.resolve();
+    };
+  });
+  await kickFalsa(p, { canais: ['tchubi', 'outro'] });
+  await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+  // Antes de haver noite o F não faz nada nem rebenta.
+  await p.locator('body').press('f');
+  await carregar(p);
+  await pausar(p);
+  const foco = await p.locator('#palcoFoco .tile').first().getAttribute('data-slug');
+  await p.locator('body').press('f');
+  assert.deepEqual(await p.evaluate(() => window.__telaCheia), [foco], 'o F não pediu tela cheia do vídeo em foco');
+  // Com o Shift (ou o Caps Lock) chega um F maiúsculo: é a mesma tecla.
+  await p.locator('body').press('Shift+F');
+  assert.equal(await p.evaluate(() => window.__telaCheia.length), 2);
+  // Ctrl+F é procurar na página, e numa caixa de escrever o F é letra.
+  await p.locator('body').press('Control+f');
+  await p.click('#editarCanais');
+  await p.click('#procurar');
+  await p.keyboard.type('f');
+  assert.equal(await p.evaluate(() => window.__telaCheia.length), 2, 'o F disparou com Ctrl ou numa caixa de texto');
+  // Os outros atalhos continuam onde estavam: o M ainda marca a kill.
+  await p.keyboard.press('Escape');
+  const antes = await p.evaluate(() => window.__estado.momentos.length);
+  await p.locator('body').press('m');
+  assert.equal(await p.evaluate(() => window.__estado.momentos.length), antes + 1);
+  // E está na lista de atalhos, nas três línguas.
+  assert.equal(await p.locator('#modalAjuda [data-t="ajuda.ecraCheio"]').count(), 1);
+  for (const l of ['pt', 'en', 'es']) assert.ok(_TEXTOS[l]['ajuda.ecraCheio'], `${l} sem ajuda.ecraCheio`);
+  assert.deepEqual(erros, []);
+  await p.close();
+});
+
+test('o vídeo grande diz que o ajuste é a sincronia, e mostra-o sem o rato em cima', semNavegador, async () => {
+  const { p, erros } = await abrirNoite(['tchubi', 'outro'], { ecra: { width: 1440, height: 900 } });
+  await carregar(p);
+  await p.mouse.move(0, 0);
+  const rotulo = p.locator('#palcoFoco .tile .rotuloAjuste').first();
+  assert.equal(await rotulo.isVisible(), true);
+  assert.equal(await rotulo.innerText(), _TEXTOS.pt['tile.sincronia']);
+  const opacidade = await p.locator('#palcoFoco .tile .ajuste').first().evaluate((el) => getComputedStyle(el).opacity);
+  assert.equal(opacidade, '1', 'o ajuste do vídeo grande só aparecia com o rato em cima');
+  // O Marcar kill deixou de ser um segundo botão cheio ao lado do Clipar.
+  assert.equal(await p.locator('#marcarKill.principal').count(), 0);
+  assert.equal(await p.locator('#clipar.principal').count(), 1);
+  assert.deepEqual(erros, []);
+  await p.close();
+});
+
+test('o aviso de leitor quebrado aparece com o painel Canais fechado', () => {
+  const html = fs.readFileSync(new URL('../site/index.html', import.meta.url), 'utf8');
+  const entrada = html.slice(html.indexOf('<section id="entrada"'), html.indexOf('</section>', html.indexOf('<section id="entrada"')));
+  assert.equal(entrada.includes('id="avisoPlayer"'), false, 'o aviso ainda vive dentro da porta de entrada');
+});
+
+test('no celular, com o vídeo aberto, a trilha 1 2 3 sai da frente', semNavegador, async () => {
+  const { p, erros } = await abrirNoite(['tchubi', 'outro'], { ecra: { width: 390, height: 844 } });
+  assert.equal(await p.locator('#passos').isVisible(), true, 'antes do vídeo os passos guiam');
+  await carregar(p);
+  assert.equal(await p.locator('#passos').isVisible(), false);
+  assert.equal(await p.evaluate(() => document.body.classList.contains('videoAberto')), true,
+    'sem a classe, um navegador sem :has() perde a arrumação da tela do vídeo');
+  assert.deepEqual(erros, []);
+  await p.close();
+});

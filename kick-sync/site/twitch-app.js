@@ -405,3 +405,8 @@ try { guardadoIdioma = localStorage.getItem('replay.idioma'); } catch { /* janel
 definirIdioma(guardadoIdioma || idiomaDoBrowser());
 $('idioma').value = idiomaActual();
 aplicarIdioma();
+
+// O vídeo aberto também como classe do `body`, ao lado do `:has()` do estilo.css (ver app.js).
+const marcarVideoAberto = () => document.body.classList.toggle('videoAberto', !$('palco').hidden);
+new MutationObserver(marcarVideoAberto).observe($('palco'), { attributes: true, attributeFilter: ['hidden'] });
+marcarVideoAberto();

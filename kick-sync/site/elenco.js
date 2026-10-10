@@ -782,7 +782,8 @@ const COLUNA_TIME = /^(?:nome\s+d[oa]\s+|nombre\s+del\s+)?(?:time|team|equipa|eq
 // Palavras que, num cabeçalho, dizem "aqui vai o canal": "Canal da Kick",
 // "Kick Username", "Channel Name", "Nome na Kick", "Kick URL"...
 const PALAVRAS_DE_CANAL = new Set(['canal', 'canais', 'channel', 'channels', 'kick', 'slug', 'link', 'links', 'url',
-  'urls', 'user', 'username', 'usuario', 'usuarios', 'nick', 'nickname', 'handle', 'perfil', 'profile', '@']);
+  'urls', 'user', 'username', 'usuario', 'usuarios', 'nick', 'nickname', 'handle', 'perfil', 'profile', '@',
+  'streamer', 'streamers']);
 
 // "Discord Username" e "E-mail" também têm cara de canal, mas são de outro sítio.
 const OUTRO_SITIO = /\b(?:discord|twitch|youtube|twitter|instagram|tiktok|steam|e-?mail|kick\s*-?\s*off)\b/;
@@ -839,6 +840,42 @@ function cabecalho(s, sep, colunas) {
   if (iTime < 0 || !iCanais.length) return null;
   if ((colunas.get(chaveDeColuna(sep, iTime, celulas[iTime]))?.size ?? 0) >= 2) return null;
   return { sep, iTime, iCanais };
+}
+
+/**
+ * Uma tabela com cabeçalho e sem coluna de time ("kick_url,seguidores,origem"):
+ * o canal vem só da coluna do canal, e o resto (números, notas com vírgulas
+ * entre aspas, "[Discord: Fulano]") fica de fora. Todos os canais ficam soltos.
+ *
+ * O cabeçalho tem de ser a primeira linha do bloco, ter uma coluna que diz
+ * "canal" por palavra (um rótulo como "Reservas" não basta) e nenhuma célula
+ * escrita como canal; e as linhas de baixo têm de trazer canais nessa coluna.
+ * Assim "Nick, kick.com/nick" continua a ser uma linha de dados.
+ */
+function tabelaSemTime(bloco) {
+  const i0 = bloco.findIndex((l) => l.s);
+  if (i0 < 0) return null;
+  const s = bloco[i0].s;
+  const sep = separadorDe(s);
+  if (!sep) return null;
+  const celulas = partirCelulas(s, sep).map(semAspas);
+  if (celulas.length < 2 || celulas.some((c) => !c || canalEscrito(c) || COLUNA_TIME.test(c))) return null;
+  const iCanais = [];
+  celulas.forEach((c, i) => {
+    const n = c.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    if (!OUTRO_SITIO.test(n) && n.split(/[^a-z0-9@]+/).some((p) => PALAVRAS_DE_CANAL.has(p))) iCanais.push(i);
+  });
+  if (!iCanais.length) return null;
+  let dados = 0;
+  let comCanal = 0;
+  for (const { s: linha } of bloco.slice(i0 + 1)) {
+    if (!linha || !linha.includes(sep)) continue;
+    dados++;
+    const cel = partirCelulas(linha, sep);
+    if (iCanais.some((i) => tokens(cel[i] ?? '').some((t) => lerCanal(t).slug))) comCanal++;
+  }
+  if (!comCanal || comCanal * 2 < dados) return null;
+  return { linha: i0, tabela: { sep, iTime: -1, iCanais } };
 }
 
 const umToken = (c) => !/\s/.test(c.trim());
@@ -923,7 +960,7 @@ function classificar({ s, marcado }, ctx) {
     const celulas = partirCelulas(s, ctx.tabela.sep);
     return {
       tipo: 'linha',
-      nome: celulas[ctx.tabela.iTime] ?? '',
+      nome: ctx.tabela.iTime < 0 ? '' : celulas[ctx.tabela.iTime] ?? '',
       canais: ctx.tabela.iCanais.flatMap((i) => tokens(celulas[i] ?? '')),
     };
   }
@@ -1016,13 +1053,16 @@ function lerTexto(texto, ac) {
   }
 
   const lidos = blocos.map((bloco) => {
-    const ctx = { tabela: null, colunas: colunasDoBloco(bloco), csv: ehCsvDeTimes(bloco) };
+    const semTime = tabelaSemTime(bloco);
+    const ctx = semTime ? { tabela: semTime.tabela, colunas: new Map(), csv: false }
+      : { tabela: null, colunas: colunasDoBloco(bloco), csv: ehCsvDeTimes(bloco) };
     if (ctx.csv === 'links') {
       const primeira = bloco.find((l) => l.s)?.s;
       ac.aviso(`as linhas como "${primeira}" foram lidas como time,canal, um time por linha; se a primeira coluna for o nome do streamer, apague-a`);
     }
     const lido = [];
-    for (const l of bloco) {
+    for (const [i, l] of bloco.entries()) {
+      if (semTime && i === semTime.linha) continue;
       const c = classificar(l, ctx);
       if (c.tipo !== 'ignorar') lido.push({ ...c, s: l.s });
     }

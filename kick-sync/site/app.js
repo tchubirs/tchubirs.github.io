@@ -356,7 +356,11 @@ $('procurar').oninput = () => {
 $('procurar').onkeydown = (e) => {
   if (e.key === 'ArrowDown') { e.preventDefault(); realcar(estado.escolhido + 1); }
   else if (e.key === 'ArrowUp') { e.preventDefault(); realcar(estado.escolhido - 1); }
-  else if (e.key === 'Escape') fecharSugestoes();
+  else if (e.key === 'Escape') {
+    // Com a lista aberta, o Esc fecha só a lista; o seguinte é que fecha o painel Canais.
+    if (!$('sugestoes').hidden) e.stopPropagation();
+    fecharSugestoes();
+  }
   else if (e.key === 'Enter') {
     e.preventDefault();
     // A ordem: o que ele escolheu com as setas; senão o nome igual ao que
@@ -1492,6 +1496,8 @@ function montarGrade() {
       // que já está dentro do que o dono pediu. Isto é para o resto: um stream
       // com mais buffer, ou um olho que diz "este está meio segundo à frente".
       + '<span class="ajuste">'
+      // O nome do que isto é: "0.0s" com um mais e um menos, solto no vídeo, não dizia que era a sincronia.
+      + `<span class="rotuloAjuste" data-t="tile.sincronia">${t('tile.sincronia')}</span>`
       + `<button data-passo="-1" data-t-titulo="tile.atrasar" title="${t('tile.atrasar')}">−</button>`
       + '<b class="nudge">0.0s</b>'
       + `<button data-passo="1" data-t-titulo="tile.adiantar" title="${t('tile.adiantar')}">+</button>`
@@ -5093,6 +5099,11 @@ function alternarCanais(abrir) {
   }
 }
 $('editarCanais').onclick = () => alternarCanais();
+// O vídeo aberto também como classe do `body`, ao lado do `:has(#palco:not([hidden]))` do estilo.css: num
+// navegador sem `:has()` (Safari antes do 15.4, Firefox antes do 121) a tela do vídeo continua arrumada.
+const marcarVideoAberto = () => document.body.classList.toggle('videoAberto', !$('palco').hidden);
+new MutationObserver(marcarVideoAberto).observe($('palco'), { attributes: true, attributeFilter: ['hidden'] });
+marcarVideoAberto();
 
 const alternarAjuda = (abrir) => {
   if (abrir) mostrarDialogo($('modalAjuda'));
@@ -5179,6 +5190,14 @@ document.addEventListener('keydown', (e) => {
   // quem está a escrever o título do clipe também tem de poder sair.
   if (e.key === 'Escape' && !$('modalAjuda').hidden) { alternarAjuda(false); return; }
   if (e.key === 'Escape' && !$('modalClipe').hidden) { fecharClipe(); return; }
+  // O Esc fecha o painel Canais, como fecha um painel de editor, mesmo com o cursor na caixa de procurar,
+  // e o foco volta ao botão que o abriu: sem isso o teclado ficava num campo que deixou de se ver.
+  if (e.key === 'Escape' && document.body.classList.contains('canaisAbertos') && !$('palco').hidden) {
+    e.preventDefault();
+    alternarCanais(false);
+    $('editarCanais').focus({ preventScroll: true });
+    return;
+  }
   if (ondeSeEscreve(alvo)) return;
   // O ponto de interrogação abre a lista dos atalhos, e o Esc fecha-a. Não
   // acrescenta comportamento nenhum: torna descobrível o que já existia.
@@ -5215,11 +5234,14 @@ document.addEventListener('keydown', (e) => {
   // Num seletor a letra também escolhe a opção que começa por ela: o A saltava
   // para "a noite toda" ao mesmo tempo que recuava. A letra que é atalho fica
   // só para o atalho.
-  if (alvo?.tagName === 'SELECT' && /^[cmiojladk]$/.test(tecla)) e.preventDefault();
+  if (alvo?.tagName === 'SELECT' && /^[cmiojladkf]$/.test(tecla)) e.preventDefault();
   // K pausa e continua, como no YouTube e no Resolve (J K L). O espaço continua a fazer o mesmo.
   if (tecla === 'k' && !e.repeat) alternarPausa();
   if (tecla === 'c') $('clipar').click();
   if (tecla === 'm') $('marcarKill').click();
+  // F de full screen, como no YouTube e na Twitch: o vídeo em foco, pelo mesmo botão do canto (que também
+  // sai, se já está em tela cheia). Sem repetição: segurar a tecla entrava e saía sem parar.
+  if (tecla === 'f' && !e.repeat) document.querySelector('#palcoFoco .tile .ecraCheio')?.click();
   if (tecla === 'i') $('marcarIn').click();
   if (tecla === 'o') $('marcarOut').click();
   // Andar à mão desliga a prévia, como os botões de saltar. As setas num

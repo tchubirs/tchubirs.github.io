@@ -811,6 +811,46 @@ test('o cabeçalho não toma o utilizador do Discord pelo canal da Kick', () => 
   });
 });
 
+test('uma planilha com cabeçalho e sem time: o canal vem só da coluna do link, o resto é ignorado', () => {
+  const csv = [
+    'kick_url,seguidores,origem',
+    'https://kick.com/lontrafeliz,38000,nick igual + Rust nas categorias',
+    'https://kick.com/Pato_Bravo,,seguido por voce + nome parecido [Discord: Patinho]',
+    'https://kick.com/gatomia,1200,"lista do Discord, canal #geral [Discord: Mia, a Gata]"',
+    'https://kick.com/zebra99,7,"nota com ""aspas"", e vírgulas"',
+    '',
+  ].join('\r\n');
+  const soltos = ['lontrafeliz', 'pato_bravo', 'gatomia', 'zebra99'];
+  assert.deepEqual(lerElenco(csv), { times: [], soltos, avisos: [] });
+  // A mesma coisa colada de uma folha (tabs), e com o link noutra coluna.
+  const tsv = 'seguidores\tCanal\tnota\n10\tlontrafeliz\tDiscord: Lontra\n\tpato_bravo\t\n5\t@gatomia\tx, y\n3\tkick.com/zebra99\tok';
+  assert.deepEqual(lerElenco(tsv), { times: [], soltos, avisos: [] });
+  for (const cab of ['url,notas', 'link,notas', 'Streamer,notas', 'channel,notas']) {
+    assert.deepEqual(lerElenco(`${cab}\nkick.com/lontrafeliz,"a, b [Discord: X]"\nkick.com/gatomia,c`),
+      { times: [], soltos: ['lontrafeliz', 'gatomia'], avisos: [] }, cab);
+  }
+  // Uma coluna de Twitch não é a do canal.
+  assert.deepEqual(lerElenco('twitch,kick\nlontra_tw,lontrafeliz\ngato_tw,gatomia').soltos, ['lontrafeliz', 'gatomia']);
+});
+
+test('uma planilha com coluna de time e notas com vírgulas lê o time e o canal, e mais nada', () => {
+  const e = lerElenco([
+    'kick_url,seguidores,time,origem',
+    'https://kick.com/lontrafeliz,38000,Os Bichos,"nota, com vírgula [Discord: Lontra]"',
+    'https://kick.com/gatomia,,Os Bichos,[Discord: Mia]',
+    'https://kick.com/zebra99,7,,sem time',
+  ].join('\n'));
+  assert.deepEqual(e, { times: [{ nome: 'Os Bichos', canais: ['lontrafeliz', 'gatomia'] }], soltos: ['zebra99'], avisos: [] });
+  const streamer = lerElenco('Streamer;Equipo\nlontrafeliz;Alfa\ngatomia;Alfa\nzebra99;Beta');
+  assert.deepEqual(streamer.times, [{ nome: 'Alfa', canais: ['lontrafeliz', 'gatomia'] }, { nome: 'Beta', canais: ['zebra99'] }]);
+});
+
+test('uma lista sem cabeçalho cuja primeira linha tem cara de cabeçalho continua a ser dados', () => {
+  // "Nick" é palavra de cabeçalho, mas a linha traz um link: é dado.
+  assert.deepEqual(lerElenco('Nick,https://kick.com/nick\nRicoy,https://kick.com/ricoy\nTchubi,https://kick.com/tchubi'),
+    { times: [], soltos: ['nick', 'ricoy', 'tchubi'], avisos: [] });
+});
+
 test('uma tabela com cabeçalho acaba na linha em branco; uma linha vazia da folha não a acaba', () => {
   const e = lerElenco('time,canal\nAlpha,a1\nAlpha,a2\n\nTeam B: b1, b2, b3');
   assert.deepEqual(so(e), {

@@ -256,8 +256,8 @@ header { margin-bottom: var(--e6); }
 }
 .inicio { display: none; }
 /* Logo, Início e só depois o espaço: o botão fica colado ao nome, onde se procura o caminho de volta. */
-body:has(#noites:not([hidden])) .inicio, body:has(#palco:not([hidden])) .inicio { display: inline-flex; margin-right: auto; }
-body:has(#noites:not([hidden])) .topo h1, body:has(#palco:not([hidden])) .topo h1 { margin-right: 0; }
+body:has(#noites:not([hidden])) .inicio, body:is(.videoAberto, :has(#palco:not([hidden]))) .inicio { display: inline-flex; margin-right: auto; }
+body:has(#noites:not([hidden])) .topo h1, body:is(.videoAberto, :has(#palco:not([hidden]))) .topo h1 { margin-right: 0; }
 /* A marca desta casa: três gravações de comprimentos diferentes e a agulha a
    atravessá-las no mesmo instante. É o que o sítio faz, desenhado. */
 .topo h1 .ic { width: 22px; height: 22px; color: var(--acento); }
@@ -1091,37 +1091,37 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
    kills a rolar. Medido com dezassete ângulos e uma kill, em 1920×1080 e em
    1366×720: tudo o que se carrega está dentro do ecrã. */
 @media (min-width: 1080px) and (min-height: 640px) {
-  body.mesa:has(#palco:not([hidden])) {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) {
     height: 100vh; box-sizing: border-box; overflow: hidden;
     display: flex; flex-direction: column;
   }
-  body.mesa:has(#palco:not([hidden])) > header { flex: 0 0 auto; margin-bottom: var(--e2); }
-  body.mesa:has(#palco:not([hidden])) > header .topo { padding-bottom: var(--e3); }
-  body.mesa:has(#palco:not([hidden])) > header .passos { display: none; }
-  body.mesa:has(#palco:not([hidden])) > header .topo h1 { font-size: var(--t-medio); }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) > header { flex: 0 0 auto; margin-bottom: var(--e2); }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) > header .topo { padding-bottom: var(--e3); }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) > header .passos { display: none; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) > header .topo h1 { font-size: var(--t-medio); }
   /* A preparação vira uma BARRA e não um par de painéis com tecto.
      Com `max-height: 10vh` e rolagem por dentro, o que se via era um painel
      cortado a meio de uma palavra — a página parecia partida. Aqui os dois
      painéis deitam-se numa faixa: os rótulos calam-se (o `placeholder` de
      cada caixa já diz o que ela é), a caixa dos canais fica com uma linha de
      altura e cresce por dentro, e tudo cabe em 46 px. */
-  body.mesa:has(#palco:not([hidden])) > .topoTrabalho {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) > .topoTrabalho {
     flex: 0 0 auto; display: flex; align-items: center; gap: var(--e3);
     max-height: none; overflow: visible; margin-bottom: var(--e3);
   }
-  body.mesa:has(#palco:not([hidden])) > .topoTrabalho > * { min-width: 0; }
-  body.mesa:has(#palco:not([hidden])) #entrada,
-  body.mesa:has(#palco:not([hidden])) #noites {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) > .topoTrabalho > * { min-width: 0; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #entrada,
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #noites {
     display: flex; align-items: center; gap: var(--e3); flex: 1 1 0;
     padding: var(--e3); margin: 0; max-width: none; border-radius: var(--r-2);
   }
-  body.mesa:has(#palco:not([hidden])) .topoTrabalho .rotuloCampo,
-  body.mesa:has(#palco:not([hidden])) .topoTrabalho label[for],
-  body.mesa:has(#palco:not([hidden])) #resumoNoite,
-  body.mesa:has(#palco:not([hidden])) #entrada > .campo:first-of-type { display: none; }
-  body.mesa:has(#palco:not([hidden])) #entrada .entradaGrelha { display: flex; gap: var(--e3); flex: 1 1 auto; min-width: 0; }
-  body.mesa:has(#palco:not([hidden])) #entrada .campo,
-  body.mesa:has(#palco:not([hidden])) #noites .campo { flex: 1 1 0; min-width: 0; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .topoTrabalho .rotuloCampo,
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .topoTrabalho label[for],
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #resumoNoite,
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #entrada > .campo:first-of-type { display: none; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #entrada .entradaGrelha { display: flex; gap: var(--e3); flex: 1 1 auto; min-width: 0; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #entrada .campo,
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #noites .campo { flex: 1 1 0; min-width: 0; }
   /* Duas linhas e sem calha de rolagem.
      "Isso eu não quero, uma barra lateral pra rolar nessa parte de cima acho
       muito feio: podia utilizar uma linha a mais, pouca coisa de tamanho, com
@@ -1131,7 +1131,7 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
      desenhada. Duas linhas de letra pequena mostram quatro nomes, e quem
      precisar de mais rola com a roda — a caixa continua a rolar, o que
      desaparece é o risco cinzento. */
-  body.mesa:has(#palco:not([hidden])) #entrada textarea {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #entrada textarea {
     /* 66 = 2 de fio + 10 de folga + 3 linhas de 18. A conta é exacta de
        propósito: com uma altura qualquer sobra uma tira da linha seguinte
        encostada ao fundo, e uma letra cortada ao meio lê-se como avaria.
@@ -1141,38 +1141,38 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
     font-size: var(--t-micro); line-height: 18px; white-space: pre;
     overflow: auto; scrollbar-width: none;
   }
-  body.mesa:has(#palco:not([hidden])) #entrada textarea::-webkit-scrollbar { width: 0; height: 0; }
-  body.mesa:has(#palco:not([hidden])) .topoTrabalho input,
-  body.mesa:has(#palco:not([hidden])) .topoTrabalho select { min-height: 34px; padding: 6px var(--e3); }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #entrada textarea::-webkit-scrollbar { width: 0; height: 0; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .topoTrabalho input,
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .topoTrabalho select { min-height: 34px; padding: 6px var(--e3); }
   /* A lupa vive dentro da caixa: com a caixa apertada, a folga da esquerda
      tem de encolher com ela ou o desenho fica por cima da primeira letra. */
-  body.mesa:has(#palco:not([hidden])) .procura input { padding-left: var(--e6); }
-  body.mesa:has(#palco:not([hidden])) .procura .lupa { left: var(--e3); width: 14px; height: 14px; }
-  body.mesa:has(#palco:not([hidden])) .topoTrabalho select { padding-right: var(--e6); }
-  body.mesa:has(#palco:not([hidden])) .topoTrabalho button { min-height: 34px; padding: 0 var(--e4); }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .procura input { padding-left: var(--e6); }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .procura .lupa { left: var(--e3); width: 14px; height: 14px; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .topoTrabalho select { padding-right: var(--e6); }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .topoTrabalho button { min-height: 34px; padding: 0 var(--e4); }
   /* Cada peça da barra com o seu lugar, por ordem de quem não pode faltar.
      Sem isto o selector da noite — que é a coisa que mais se carrega desta
      metade — era espremido até desaparecer pela frase do link, e as duas
      notas embrulhavam em duas linhas cada uma. */
-  body.mesa:has(#palco:not([hidden])) .barraSessao {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .barraSessao {
     flex: 1 1 auto; align-items: center; flex-wrap: nowrap; gap: var(--e3); min-width: 0;
   }
   /* Com `#noites` no selector, e não sem ele: a regra genérica desta barra
      traz um `#` e ganha a qualquer contagem de classes, por mais específica
      que pareça. Foi assim que o selector da noite ficou com sete pixels. */
-  body.mesa:has(#palco:not([hidden])) #noites .barraSessao > .campo { flex: 1 1 210px; min-width: 150px; }
-  body.mesa:has(#palco:not([hidden])) .barraSessao > #partilhar { flex: 0 0 auto; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #noites .barraSessao > .campo { flex: 1 1 210px; min-width: 150px; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .barraSessao > #partilhar { flex: 0 0 auto; }
   /* As notas cedem primeiro, e cortam com reticências em vez de embrulhar:
      duas linhas aqui empurram a barra e roubam altura ao vídeo. */
-  body.mesa:has(#palco:not([hidden])) .barraSessao > .nota,
-  body.mesa:has(#palco:not([hidden])) .barraSessao > .confianca {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .barraSessao > .nota,
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .barraSessao > .confianca {
     flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   /* Entre as duas notas, quem cede primeiro é a confiança: ela diz uma coisa
      que não muda, e a do link diz o instante — que é o que muda a cada
      segundo e a única razão para a frase estar ali. */
-  body.mesa:has(#palco:not([hidden])) .barraSessao > .confianca { flex: 0 4 auto; }
-  body.mesa:has(#palco:not([hidden])) .barraSessao > #estadoPartilha { flex: 0 1 auto; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .barraSessao > .confianca { flex: 0 4 auto; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .barraSessao > #estadoPartilha { flex: 0 1 auto; }
   /* TODOS os nomes, numa linha própria por baixo da barra.
      "Você fez as mudanças na parte de cima do front end no PC que eu falei,
       uma linha a mais com todos os nomes adicionados?"
@@ -1186,38 +1186,38 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
      patológico — a 11 px cabem umas trinta pastilhas em duas linhas, e ele
      usa dezassete no máximo. Se alguma vez passar disso rola com a roda, e
      sem risco cinzento à vista. */
-  body.mesa:has(#palco:not([hidden])) > .topoTrabalho { flex-wrap: wrap; }
-  body.mesa:has(#palco:not([hidden])) #canaisEstado { display: none; }
-  body.mesa:has(#palco:not([hidden])) #canaisEstado:has(li) {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) > .topoTrabalho { flex-wrap: wrap; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #canaisEstado { display: none; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #canaisEstado:has(li) {
     display: block; flex: 1 0 100%; max-width: none; margin: 0;
     /* 54 = 2 pastilhas de 24 (18 de linha + 2+2 de folga + 2 de fio) e 6 de
        intervalo. A conta é exacta de propósito: com 52 sobrava uma tira de
        2 px da segunda linha, e uma letra cortada ao meio lê-se como avaria. */
     max-height: 54px; overflow-y: auto; scrollbar-width: none;
   }
-  body.mesa:has(#palco:not([hidden])) #canaisEstado::-webkit-scrollbar { width: 0; height: 0; }
-  body.mesa:has(#palco:not([hidden])) #canaisEstado .canais {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #canaisEstado::-webkit-scrollbar { width: 0; height: 0; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #canaisEstado .canais {
     display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
   }
-  body.mesa:has(#palco:not([hidden])) #canaisEstado .canais li {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #canaisEstado .canais li {
     flex: 0 0 auto; flex-wrap: nowrap; gap: 6px; white-space: nowrap;
     padding: 2px 4px 2px var(--e3); font-size: var(--t-micro); line-height: 18px;
   }
   /* "1 VOD(s)" vezes dezassete é ruído, e ruído é o que faz uma linha precisar
      de duas. O que ele quer ler aqui é QUEM está carregado. Quem falhou
      continua a dizer porquê: essa nota é a única razão de a linha existir. */
-  body.mesa:has(#palco:not([hidden])) #canaisEstado .canais li:not(.mau) .nota { display: none; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #canaisEstado .canais li:not(.mau) .nota { display: none; }
   /* Sem isto o ✕ herda os 34 px de altura dos botões da barra e cada pastilha
      fica com a altura de um campo de texto. */
-  body.mesa:has(#palco:not([hidden])) #canaisEstado .canais li .tirar {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #canaisEstado .canais li .tirar {
     min-height: 18px; height: 18px; width: 18px; padding: 0;
     font-size: var(--t-micro); line-height: 1;
   }
-  body.mesa:has(#palco:not([hidden])) #canaisEstado .canais li .parecidos button {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #canaisEstado .canais li .parecidos button {
     min-height: 20px; padding: 0 6px; font-size: var(--t-micro);
   }
-  body.mesa:has(#palco:not([hidden])) > footer { display: none; }
-  body.mesa:has(#palco:not([hidden])) #palco:not([hidden]) {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) > footer { display: none; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #palco:not([hidden]) {
     flex: 1 1 auto; min-height: 0; gap: var(--e4);
     grid-template-rows: auto minmax(0, 1fr);
     grid-template-areas: "video tempo" "video monta";
@@ -1230,7 +1230,7 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
      Antes a linha do tempo era uma coluna estreita ao lado do vídeo e o vídeo ficava com 550 px num
      monitor de 1440. A altura da linha do tempo é a do que tem dentro (até 36% da tela): com dois
      canais sobra quase tudo para o vídeo; com trinta, as faixas rolam por dentro. */
-  body.mesa:has(#palco:not([hidden])) #palco:not([hidden]) {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #palco:not([hidden]) {
     flex: 1 1 auto; min-height: 0; gap: var(--e3) var(--e4);
     grid-template-columns: minmax(0, 1fr) clamp(300px, 27vw, 420px);
     grid-template-rows: minmax(0, 1fr) auto;
@@ -1240,35 +1240,35 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 
   /* ESQUERDA: o visor. `overflow: hidden` de propósito: o que não couber fica cortado e o teste
      apanha-o, em vez de escorrer e pôr a página a rolar. */
-  body.mesa:has(#palco:not([hidden])) .palcoVideo {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .palcoVideo {
     grid-area: video; display: flex; flex-direction: column; min-height: 0; overflow: hidden;
   }
   /* O vídeo em foco leva toda a altura que sobra, e fica com a proporção dele. */
-  body.mesa:has(#palco:not([hidden])) .palcoFoco {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .palcoFoco {
     display: flex; justify-content: center; align-items: stretch; gap: var(--e2);
     flex: 1 1 0; height: auto; min-height: 120px; max-height: none; margin: 0 0 var(--e3);
   }
-  body.mesa:has(#palco:not([hidden])) .palcoFoco:empty { display: none; }
-  body.mesa:has(#palco:not([hidden])) .palcoFoco .tile {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .palcoFoco:empty { display: none; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .palcoFoco .tile {
     height: 100%; width: auto; aspect-ratio: 16/9; min-height: 0; max-width: 100%; flex: 0 1 auto;
   }
-  body.mesa:has(#palco:not([hidden])) .palcoFoco.dois .tile { max-width: calc(50% - 4px); }
-  body.mesa:has(#palco:not([hidden])) .transporte { flex: 0 0 auto; margin: 0 0 var(--e3); }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .palcoFoco.dois .tile { max-width: calc(50% - 4px); }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .transporte { flex: 0 0 auto; margin: 0 0 var(--e3); }
   /* As ferramentas de vez em quando (sincronizar, detecção, recomeçar, exportações) numa linha só,
      por baixo do transporte, sem caixa: deixam de disputar a vista com o vídeo. */
-  body.mesa:has(#palco:not([hidden])) .palcoFundo { flex: 0 0 auto; max-height: 18vh; overflow-y: auto; margin: 0; padding-right: var(--e2); }
-  body.mesa:has(#palco:not([hidden])) .palcoFundo button, body.mesa:has(#palco:not([hidden])) .palcoFundo select { min-height: 32px; }
-  body.mesa:has(#palco:not([hidden])) #corte { flex: 0 1 auto; max-height: 24%; min-height: 0; overflow-y: auto; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .palcoFundo { flex: 0 0 auto; max-height: 18vh; overflow-y: auto; margin: 0; padding-right: var(--e2); }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .palcoFundo button, body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .palcoFundo select { min-height: 32px; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #corte { flex: 0 1 auto; max-height: 24%; min-height: 0; overflow-y: auto; }
 
   /* DIREITA: os ângulos em cima, a montagem por baixo. Com um ângulo só não há grelha e a montagem
      toma a coluna toda. */
-  body.mesa:has(#palco:not([hidden])) .palcoDireita {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .palcoDireita {
     grid-area: lado; display: flex; flex-direction: column; gap: var(--e3); min-height: 0; min-width: 0;
   }
-  body.mesa:has(#palco:not([hidden])) .barraGrelha { flex: 0 0 auto; margin: 0; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .barraGrelha { flex: 0 0 auto; margin: 0; }
   /* Duas colunas de miniaturas com o nome legível. Uma grelha com altura definida esmaga as linhas
      para caber e o `aspect-ratio` perde: as linhas ficam com o tamanho do conteúdo e o resto rola. */
-  body.mesa:has(#palco:not([hidden])) #grade {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #grade {
     flex: 0 0 auto; max-height: 34%; min-height: 60px; overflow-y: auto; margin: 0; padding-right: var(--e2);
     grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); align-content: start; grid-auto-rows: max-content;
     /* Sombra de rolagem: uma fita escura no topo e no fundo que só aparece quando há mais
@@ -1279,74 +1279,74 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
       radial-gradient(farthest-side at 50% 0, #000000a6, transparent) top / 100% 10px scroll no-repeat,
       radial-gradient(farthest-side at 50% 100%, #000000a6, transparent) bottom / 100% 10px scroll no-repeat;
   }
-  body.mesa:has(#palco:not([hidden])) #grade .tile { align-self: start; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #grade .tile { align-self: start; }
   /* Com uma live só (o dono, 07/10: "parece jogada") a grelha some e o vídeo fica com o espaço dela. */
-  body.mesa:has(#palco:not([hidden])) #palco.semGrelha #grade { display: none; }
-  body.mesa:has(#palco:not([hidden])) .palcoFundo > #fila:not(:has(li)) { display: none; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #palco.semGrelha #grade { display: none; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .palcoFundo > #fila:not(:has(li)) { display: none; }
 
   /* As duas barras de cima (evento e noite) mais baixas: cada pixel que elas devolvem vai para o vídeo. */
-  body.mesa:has(#palco:not([hidden])) > #evento { padding: var(--e2) var(--e4); }
-  body.mesa:has(#palco:not([hidden])) > #evento button { min-height: 30px; }
-  body.mesa:has(#palco:not([hidden])) #noites { padding: var(--e2) var(--e3); }
-  body.mesa:has(#palco:not([hidden])) .topoTrabalho select,
-  body.mesa:has(#palco:not([hidden])) .topoTrabalho button { min-height: 30px; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) > #evento { padding: var(--e2) var(--e4); }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) > #evento button { min-height: 30px; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #noites { padding: var(--e2) var(--e3); }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .topoTrabalho select,
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .topoTrabalho button { min-height: 30px; }
 
   /* EM BAIXO: a linha do tempo, em toda a largura. */
-  body.mesa:has(#palco:not([hidden])) .palcoLadoCaixa { grid-area: tempo; min-height: 0; display: flex; overflow: hidden; }
-  body.mesa:has(#palco:not([hidden])) .palcoLado {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .palcoLadoCaixa { grid-area: tempo; min-height: 0; display: flex; overflow: hidden; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .palcoLado {
     position: static; max-height: clamp(150px, 26vh, 400px); flex: 1 1 auto; min-height: 0; min-width: 0; width: 100%;
     display: flex; flex-direction: column; overflow: hidden; padding-right: 0;
   }
-  body.mesa:has(#palco:not([hidden])) .palcoLado > * { flex: 0 0 auto; }
-  body.mesa:has(#palco:not([hidden])) .palcoLado .relogio, body.mesa:has(#palco:not([hidden])) .palcoLado .linha { min-width: 0; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .palcoLado > * { flex: 0 0 auto; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .palcoLado .relogio, body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .palcoLado .linha { min-width: 0; }
   /* O relógio encolhe (min-height 0) mas não ESCORRE (overflow hidden): as faixas cedem primeiro, e
      rolam por dentro. */
-  body.mesa:has(#palco:not([hidden])) .palcoLado > .relogio {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .palcoLado > .relogio {
     flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden;
     padding: var(--e3) calc(var(--e4) + 18px) var(--e3) var(--e4);
   }
-  body.mesa:has(#palco:not([hidden])) .relogio > * { flex: 0 0 auto; }
-  body.mesa:has(#palco:not([hidden])) .relogio > .faixas { flex: 1 1 auto; min-height: 40px; overflow-y: auto; overflow-x: hidden; }
-  body.mesa:has(#palco:not([hidden])) .relogio .saltos button { min-height: 30px; }
-  body.mesa:has(#palco:not([hidden])) .relogio > .linha { margin: 0 0 var(--e2); }
-  body.mesa:has(#palco:not([hidden])) .regua { height: 24px; }
-  body.mesa:has(#palco:not([hidden])) .relogio > .reguaLinha { margin-top: var(--e2); }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .relogio > * { flex: 0 0 auto; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .relogio > .faixas { flex: 1 1 auto; min-height: 40px; overflow-y: auto; overflow-x: hidden; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .relogio .saltos button { min-height: 30px; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .relogio > .linha { margin: 0 0 var(--e2); }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .regua { height: 24px; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .relogio > .reguaLinha { margin-top: var(--e2); }
 
   /* DIREITA, em baixo: a montagem. */
-  body.mesa:has(#palco:not([hidden])) #montagem {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem {
     flex: 1 1 0; min-height: 140px; display: flex; flex-direction: column;
     margin-bottom: 0; overflow: hidden; padding: var(--e3) var(--e4); gap: var(--e2);
   }
-  body.mesa:has(#palco:not([hidden])) #montagem > * { flex: 0 0 auto; }
-  body.mesa:has(#palco:not([hidden])) #montagem > h2 { display: none; }
-  body.mesa:has(#palco:not([hidden])) #montagem > .linha,
-  body.mesa:has(#palco:not([hidden])) #montagem > .barraSelecao { gap: var(--e2) 6px; margin: 0; }
-  body.mesa:has(#palco:not([hidden])) #montagem > .linha button,
-  body.mesa:has(#palco:not([hidden])) #montagem > .barraSelecao button,
-  body.mesa:has(#palco:not([hidden])) #montagem > .barraSelecao select {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > * { flex: 0 0 auto; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > h2 { display: none; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .linha,
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .barraSelecao { gap: var(--e2) 6px; margin: 0; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .linha button,
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .barraSelecao button,
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .barraSelecao select {
     min-height: 30px; padding: 0 var(--e3); font-size: var(--t-menor);
   }
-  body.mesa:has(#palco:not([hidden])) #marcarKill { min-height: 32px; }
-  body.mesa:has(#palco:not([hidden])) #montagem > .barraSelecao select { min-width: 88px; max-width: 112px; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #marcarKill { min-height: 32px; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .barraSelecao select { min-width: 88px; max-width: 112px; }
   /* Um botão apagado não precisa de sítio: numa faixa de 380 px é a
      diferença entre os filtros numa linha ou em duas. */
-  body.mesa:has(#palco:not([hidden])) #montagem > .barraSelecao button:disabled { display: none; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .barraSelecao button:disabled { display: none; }
   /* A ordem: Marcar kill, Exportar, a LISTA, e os filtros presos ao fundo.
      Com os filtros por cima da lista, num portátil de 720 a primeira kill
      ficava por baixo do ecrã. No fim continuam sempre à vista: a lista é que
      encolhe, nunca eles. */
-  body.mesa:has(#palco:not([hidden])) #montagem > .linha:has(#marcarKill) { order: 0; }
-  body.mesa:has(#palco:not([hidden])) #montagem > .linha:has(#baixarMontagem) { order: 1; }
-  body.mesa:has(#palco:not([hidden])) #montagem > .barraSelecao { order: 5; }
-  body.mesa:has(#palco:not([hidden])) #montagem > .momentos {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .linha:has(#marcarKill) { order: 0; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .linha:has(#baixarMontagem) { order: 1; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .barraSelecao { order: 5; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .momentos {
     order: 4; flex: 1 1 auto; min-height: 60px; overflow-y: auto; padding-right: var(--e2);
     /* Uma coluna: numa faixa de 500 px, duas colunas de kills com dezassete
        nomes cada não se leem. */
     grid-template-columns: 1fr; gap: var(--e2);
   }
-  body.mesa:has(#palco:not([hidden])) .momentos li { padding: 6px var(--e3); gap: 6px; }
-  body.mesa:has(#palco:not([hidden])) .momentos .vit { min-height: 22px; padding: 0 6px; font-size: var(--t-micro); }
-  body.mesa:has(#palco:not([hidden])) .vitimas { padding-top: var(--e2); }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .momentos li { padding: 6px var(--e3); gap: 6px; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .momentos .vit { min-height: 22px; padding: 0 6px; font-size: var(--t-micro); }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .vitimas { padding-top: var(--e2); }
 }
 
 /* ═══ 12 · o telemóvel ══════════════════════════════════════════════════════ */
@@ -1544,8 +1544,8 @@ body:not(.mesa) #sugestoes button { width: auto; min-height: 30px; font-size: va
 }
 /* Com uma noite aberta a porta do evento sai do caminho: a noite é a de alguns canais. */
 .topoTrabalho:has(#noites:not([hidden])) #portaEvento,
-body:has(#palco:not([hidden])) #portaEvento { display: none; }
-body:has(#palco:not([hidden])) .cabecaPorta { display: none; }
+body:is(.videoAberto, :has(#palco:not([hidden]))) #portaEvento { display: none; }
+body:is(.videoAberto, :has(#palco:not([hidden]))) .cabecaPorta { display: none; }
 /* Com um evento aberto e ainda nenhum lance, as portas saem: o que se faz a seguir é no mapa. */
 body:has(#evento:not([hidden])):has(#palco[hidden]) .topoTrabalho { display: none; }
 
@@ -1561,10 +1561,10 @@ body:has(#evento:not([hidden])):has(#palco[hidden]) .topoTrabalho { display: non
 .irAoVivo:not([hidden]) { color: var(--perigo); border-color: var(--perigo); }
 /* Com um lance aberto o mapa encolhe numa barra: a grelha dos ângulos precisa do ecrã. O botão
    "Mapa do evento" volta a abri-lo por cima dela, mais baixo. */
-body:has(#palco:not([hidden])) .mostrarMapa { display: inline-flex; }
-body:has(#palco:not([hidden])) #evento:not(.comMapa) > :not(.barraEvento) { display: none; }
-body:has(#palco:not([hidden])) #evento.comMapa .mapaRolo { height: 34vh; }
-body.mesa:has(#palco:not([hidden])) > #evento { flex: 0 0 auto; margin-bottom: var(--e2); padding: var(--e3) var(--e4); }
+body:is(.videoAberto, :has(#palco:not([hidden]))) .mostrarMapa { display: inline-flex; }
+body:is(.videoAberto, :has(#palco:not([hidden]))) #evento:not(.comMapa) > :not(.barraEvento) { display: none; }
+body:is(.videoAberto, :has(#palco:not([hidden]))) #evento.comMapa .mapaRolo { height: 34vh; }
+body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) > #evento { flex: 0 0 auto; margin-bottom: var(--e2); padding: var(--e3) var(--e4); }
 .dica { margin: 0; }
 .reguaEvento { position: relative; height: 18px; margin: 0 1px; overflow: hidden; color: var(--tinta-3); font-family: var(--letra-mono); font-size: var(--t-micro); }
 .reguaEvento span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
@@ -1633,7 +1633,7 @@ body.mesa:has(#palco:not([hidden])) > #evento { flex: 0 0 auto; margin-bottom: v
    O dono (07/10): com o mapa fechado (o vídeo aberto e o mapa recolhido) o zoom e o "Evento inteiro" não mudam
    nada na tela, e isso confunde; as margens e o exportar montagem não servem
    sem uma kill; o limpar exportações não serve sem exportações. */
-body:has(#palco:not([hidden])) #evento:not(.comMapa) .soComMapa { display: none; }
+body:is(.videoAberto, :has(#palco:not([hidden]))) #evento:not(.comMapa) .soComMapa { display: none; }
 #montagem.semKills :is(#margens, .barraSelecao, #baixarMontagem, #formatoMontagem) { display: none; }
 body:not(:has(#fila > li)) #limparFila { display: none; }
 
@@ -1657,8 +1657,8 @@ body:not(:has(#fila > li)) #limparFila { display: none; }
 .chatLinhas b { color: var(--tinta); font-weight: 600; }
 .chatLinhas .hora { color: var(--tinta-3); font-family: var(--letra-mono); font-size: var(--t-micro); }
 @media (min-width: 1080px) and (min-height: 640px) {
-  body.mesa:has(#palco:not([hidden])) #montagem > .chatVideo { order: 6; flex: 1 1 0; min-height: 120px; }
-  body.mesa:has(#palco:not([hidden])) #montagem > .chatVideo .chatLinhas { flex: 1 1 auto; max-height: none; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .chatVideo { order: 6; flex: 1 1 0; min-height: 120px; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .chatVideo .chatLinhas { flex: 1 1 auto; max-height: none; }
 }
 .chatTitulo { margin: 0; font-size: var(--t-menor); font-weight: 600; color: var(--tinta-2); }
 /* O trecho à vista muda de tamanho a cada zoom; numa barra que quebra linhas, isso mexia a altura dela e
@@ -1688,31 +1688,31 @@ body.mesa #formatoMontagem { width: auto; min-width: 0; max-width: 8em; min-heig
    minimalista). Ficam à vista a noite, o veredito do relógio e o Compartilhar, que são estado e ação do
    projeto, e o que falhou ao carregar, que é aviso. */
 .editarCanais { display: none; }
-body:has(#palco:not([hidden])) .editarCanais { display: inline-flex; }
+body:is(.videoAberto, :has(#palco:not([hidden]))) .editarCanais { display: inline-flex; }
 .editarCanais[aria-expanded="true"] { background: var(--acento-eco); border-color: var(--acento-fio); color: var(--tinta); }
-body.mesa:not(.canaisAbertos):has(#palco:not([hidden])) #entrada,
-body.mesa:not(.canaisAbertos):has(#palco:not([hidden])) #canaisEstado:not(:has(.mau)) { display: none; }
-body.mesa:not(.canaisAbertos):has(#palco:not([hidden])) > .topoTrabalho { margin: 0; gap: 0; }
-body.mesa:not(.canaisAbertos):has(#palco:not([hidden])) #canaisEstado:has(.mau) { display: block; flex: 1 0 100%; max-height: none; margin: 0 0 var(--e3); }
+body.mesa:not(.canaisAbertos):is(.videoAberto, :has(#palco:not([hidden]))) #entrada,
+body.mesa:not(.canaisAbertos):is(.videoAberto, :has(#palco:not([hidden]))) #canaisEstado:not(:has(.mau)) { display: none; }
+body.mesa:not(.canaisAbertos):is(.videoAberto, :has(#palco:not([hidden]))) > .topoTrabalho { margin: 0; gap: 0; }
+body.mesa:not(.canaisAbertos):is(.videoAberto, :has(#palco:not([hidden]))) #canaisEstado:has(.mau) { display: block; flex: 1 0 100%; max-height: none; margin: 0 0 var(--e3); }
 @media (max-width: 620px) {
   .topo { flex-wrap: wrap; row-gap: var(--e3); }
   .topo .editarCanais { order: 9; flex: 1 0 100%; justify-content: center; min-height: 40px; }
   /* O resumo do evento (times, canais, quantos com vídeo) é do mapa; na tela do vídeo só empurrava o vídeo para baixo. */
-  body:has(#palco:not([hidden])) #resumoEvento { display: none; }
+  body:is(.videoAberto, :has(#palco:not([hidden]))) #resumoEvento { display: none; }
 }
 /* A noite, na tela do vídeo: sem rótulo, sem a lista de nomes (já estão nas faixas) e sem o seletor
    quando só existe uma noite. Sobram o veredito do relógio e o Compartilhar. */
-body:has(#palco:not([hidden])) #noites .rotuloCampo,
-body:has(#palco:not([hidden])) #resumoNoite,
-body:has(#palco:not([hidden])) #noites .campo:has(#noite):not(:has(option + option)) { display: none; }
+body:is(.videoAberto, :has(#palco:not([hidden]))) #noites .rotuloCampo,
+body:is(.videoAberto, :has(#palco:not([hidden]))) #resumoNoite,
+body:is(.videoAberto, :has(#palco:not([hidden]))) #noites .campo:has(#noite):not(:has(option + option)) { display: none; }
 @media (max-width: 620px) {
-  body:has(#palco:not([hidden])) #noites { padding: var(--e3); display: grid; gap: var(--e2); }
-  body:has(#palco:not([hidden])) #noites .barraSessao { gap: var(--e2) var(--e3); flex-wrap: wrap; align-items: center; }
+  body:is(.videoAberto, :has(#palco:not([hidden]))) #noites { padding: var(--e3); display: grid; gap: var(--e2); }
+  body:is(.videoAberto, :has(#palco:not([hidden]))) #noites .barraSessao { gap: var(--e2) var(--e3); flex-wrap: wrap; align-items: center; }
   /* O veredito e o Compartilhar na mesma linha: o veredito quebra em duas linhas se precisar (nunca é cortado,
      porque "sem relógio confiável" é o que mais importa ler), e a nota do link desce para a linha de baixo. */
-  body:has(#palco:not([hidden])) #noites .confianca { flex: 1 1 0; min-width: 0; white-space: normal; display: block; }
-  body:has(#palco:not([hidden])) #noites .barraSessao > #partilhar { flex: 0 0 auto; }
-  body:has(#palco:not([hidden])) #noites .barraSessao > #estadoPartilha { flex: 1 0 100%; white-space: normal; }
+  body:is(.videoAberto, :has(#palco:not([hidden]))) #noites .confianca { flex: 1 1 0; min-width: 0; white-space: normal; display: block; }
+  body:is(.videoAberto, :has(#palco:not([hidden]))) #noites .barraSessao > #partilhar { flex: 0 0 auto; }
+  body:is(.videoAberto, :has(#palco:not([hidden]))) #noites .barraSessao > #estadoPartilha { flex: 1 0 100%; white-space: normal; }
   .topo .editarCanais { min-height: 36px; }
 }
 
@@ -1735,19 +1735,39 @@ body:has(#palco:not([hidden])) #noites .campo:has(#noite):not(:has(option + opti
 #automatico > .linha { order: 1; }
 #recomecar { color: var(--perigo); }
 
-/* O que se pode acertar num ângulo (os 0,0 s com mais e menos) só aparece com o ponteiro em cima ou o
-   foco do teclado nele: é ajuste fino de quem já sincronizou, e os números soltos no canto do vídeo
-   eram o que mais confundia quem chegava. No toque (sem hover) continua à vista. */
-@media (hover: hover) {
-  .tile .ajuste { opacity: 0; transition: opacity var(--mov); }
-  .tile:hover .ajuste, .tile .ajuste:focus-within { opacity: 1; }
+/* A sincronia de cada ângulo (os 0,0 s com mais e menos). No vídeo grande fica sempre à vista e com nome,
+   "Sincronia": escondida até se passar o rato, ninguém a achava, e quem chegava pelo Tab dava com botões
+   invisíveis (Nielsen 6, reconhecer em vez de lembrar). Nas miniaturas não há largura para o nome, e o
+   ajuste só aparece com o ponteiro ou o foco do teclado em cima; no toque (sem hover) fica à vista. */
+.tile .rotuloAjuste {
+  display: none; font-size: var(--t-micro); color: #fff; background: var(--sobre-video);
+  padding: 5px 6px; border-radius: var(--r-fio); white-space: nowrap;
 }
+.palcoFoco .tile .rotuloAjuste { display: inline-block; }
+@media (hover: hover) {
+  #grade .tile .ajuste { opacity: 0; transition: opacity var(--mov); }
+  #grade .tile:hover .ajuste, #grade .tile .ajuste:focus-within { opacity: 1; }
+}
+@media (max-width: 420px) { .palcoFoco.dois .tile .rotuloAjuste { display: none; } }
+
+/* Marcar kill é ação de apoio: o botão cheio da tela é o Clipar, e dois botões cheios lado a lado
+   disputavam o olho. Fica com o desenho de botão comum e o marcador na cor do tempo marcado. */
+#marcarKill .ic { color: var(--marca); }
+
+/* No celular, com o vídeo aberto, a trilha 1 2 3 só empurrava o vídeo para baixo: quem já está no vídeo
+   passou do passo 1, e o que falta (marcar e exportar) está nos botões à vista. */
+@media (max-width: 759.98px) {
+  body:is(.videoAberto, :has(#palco:not([hidden]))) .passos { display: none; }
+}
+
+/* O aviso de leitor quebrado vive fora da porta de entrada, para não ficar atrás do botão Canais fechado. */
+.topoTrabalho > #avisoPlayer { grid-column: 1 / -1; flex: 1 0 100%; margin: 0; }
 
 /* A tela do vídeo no evento: só o que serve agora. O campo de procurar é do mapa; com o mapa fechado não
    procura nada, e o nome do evento deixa de ser título de página. */
-body:has(#palco:not([hidden])) #evento:not(.comMapa) #procurarEvento { display: none; }
-body:has(#palco:not([hidden])) .nomeEvento { font-size: var(--t-medio); }
-body:has(#palco:not([hidden])) .mostrarMapa { background: var(--sup-3); border-color: var(--linha-3); }
+body:is(.videoAberto, :has(#palco:not([hidden]))) #evento:not(.comMapa) #procurarEvento { display: none; }
+body:is(.videoAberto, :has(#palco:not([hidden]))) .nomeEvento { font-size: var(--t-medio); }
+body:is(.videoAberto, :has(#palco:not([hidden]))) .mostrarMapa { background: var(--sup-3); border-color: var(--linha-3); }
 
 /* O Cortar (um arquivo por canal, com as margens de cada um) é um painel como a montagem. Vive na coluna
    da direita, e não debaixo do vídeo: com dezessete canais a lista é alta e tirava a altura do vídeo. */
