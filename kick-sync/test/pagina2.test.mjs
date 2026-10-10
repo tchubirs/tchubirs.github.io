@@ -1696,6 +1696,12 @@ for (const ecra of [{ width: 1920, height: 1080 }, { width: 1366, height: 720 }]
           paginaRola: document.documentElement.scrollHeight > window.innerHeight + 1,
           bodyRola: getComputedStyle(document.body).overflowY,
           gradeRola: getComputedStyle(grade).overflowY === 'auto' && grade.scrollHeight > grade.clientHeight,
+          // Com muitos ângulos a grelha é uma lista de nomes (o dono, 10/10), e dezasseis cabem sem rolar.
+          gradeCabe: [...grade.querySelectorAll('.tile')].every((q) => {
+            const r = q.getBoundingClientRect();
+            const g = grade.getBoundingClientRect();
+            return r.top >= g.top - 0.5 && r.bottom <= g.bottom + 0.5;
+          }),
           quadrados: document.querySelectorAll('#grade .tile').length,
           nomes: linhas.map((li) => li.querySelector('b')?.textContent),
           nomesRolam: ce.scrollHeight > ce.clientHeight + 1,
@@ -1708,7 +1714,7 @@ for (const ecra of [{ width: 1920, height: 1080 }, { width: 1366, height: 720 }]
       });
       assert.equal(medida.paginaRola, false, `a pagina rola (${ecra.width}x${ecra.height})`);
       assert.deepEqual(medida.fora, [], `fora do ecra: ${medida.fora.join(', ')}`);
-      assert.ok(medida.gradeRola, 'com 16 angulos na grelha, e a GRELHA que rola, por dentro');
+      assert.ok(medida.gradeRola || medida.gradeCabe, 'com 16 angulos na grelha, ou cabem todos ou e a GRELHA que rola, por dentro');
       // "Uma linha a mais com TODOS os nomes adicionados."
       //
       // Medido antes disto, com nove canais a 1600x900: a caixa tinha 197 px
