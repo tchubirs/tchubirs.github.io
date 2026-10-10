@@ -52,6 +52,7 @@ import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarId
 import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js';
 import { escapar } from './escapar.js';
 import { montarEvento } from './evento-ui.js';
+import { montarPortas } from './portas.js';
 import { atalhos, ACAO, comboDoEvento, partes } from './atalhos.js';
 import { montarPainelAtalhos, pintarDicas } from './atalhos-painel.js';
 
@@ -6271,6 +6272,8 @@ $('editarCanais').onclick = () => alternarCanais();
 const marcarVideoAberto = () => document.body.classList.toggle('videoAberto', !$('palco').hidden);
 new MutationObserver(marcarVideoAberto).observe($('palco'), { attributes: true, attributeFilter: ['hidden'] });
 marcarVideoAberto();
+// Os dois caminhos da tela inicial: Evento inteiro e VOD ou poucos canais (portas.js).
+montarPortas();
 
 const alternarAjuda = (abrir) => {
   if (abrir) {

@@ -53,7 +53,9 @@ for (const [nome, ecra, toque] of [['1440', { width: 1440, height: 900 }, false]
     await base.close();
     const erros = [];
     p.on('pageerror', (e) => erros.push(String(e.message)));
-    await p.addInitScript(() => { try { localStorage.setItem('replay.idioma', 'pt'); } catch { /* nada */ } });
+    await p.addInitScript(() => {
+      try { localStorage.setItem('replay.idioma', 'pt'); localStorage.setItem('replay.caminho', 'vod'); } catch { /* nada */ }
+    });
     await abrirNoite(p);
     for (const s of [0, 137, 333, 599]) {
       await p.evaluate((ms) => { window.__estado.agoraMs = ms; }, T + s * 1000);

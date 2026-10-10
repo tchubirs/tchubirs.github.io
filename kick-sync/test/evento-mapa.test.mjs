@@ -75,7 +75,7 @@ const abertosNaGrelha = (p) => p.evaluate(() => window.__estado.linhas.map((l) =
 // ── 1. abrir todos com vídeo nesse horário, ou só quem está ao vivo ──────────
 
 test('num momento escolhido: abrir todos com vídeo nesse horário (também quem já saiu) ou só quem está ao vivo', semNavegador, async () => {
-  const { p, erros } = await abrir();
+  const { p, erros } = await abrir({ caminho: 'evento' });
   await kickFalsa(p, { canais: ['tchubi', 'outro', 'lobo'] });
   await aoVivo(p, 'lobo');
   await abrirEvento(p, 'Time Alfa: tchubi\nTime Beta: outro\nlobo');
@@ -102,7 +102,7 @@ test('num momento escolhido: abrir todos com vídeo nesse horário (também quem
 });
 
 test('ninguém ao vivo: o botão fica desligado e diz porquê', semNavegador, async () => {
-  const { p, erros } = await abrir();
+  const { p, erros } = await abrir({ caminho: 'evento' });
   await kickFalsa(p, { canais: ['tchubi', 'outro'] });
   await abrirEvento(p, 'tchubi\noutro');
   await verDe(p, T - 5 * 60_000, T + 15 * 60_000);
@@ -115,7 +115,7 @@ test('ninguém ao vivo: o botão fica desligado e diz porquê', semNavegador, as
 });
 
 test('muitas telas: sem limite, mas o primeiro clique avisa quantas são e o segundo abre todas', semNavegador, async () => {
-  const { p, erros } = await abrir();
+  const { p, erros } = await abrir({ caminho: 'evento' });
   const canais = Array.from({ length: 14 }, (_, i) => `canal${i}`);
   await kickFalsa(p, { canais });
   await abrirEvento(p, canais.join('\n'));
@@ -135,7 +135,7 @@ test('muitas telas: sem limite, mas o primeiro clique avisa quantas são e o seg
 // ── 2. ordenar as faixas ─────────────────────────────────────────────────────
 
 test('um clique na régua ordena: quem tem vídeo nesse instante, depois quem esteve perto, depois o resto; e volta-se à ordem por time', semNavegador, async () => {
-  const { p, erros } = await abrir();
+  const { p, erros } = await abrir({ caminho: 'evento' });
   // tchubi das 21:00 às 21:10, outro das 21:15 às 21:25, lobo das 00:00 às 00:10.
   await kickFalsa(p, { canais: ['tchubi', 'outro', 'lobo'], comecosS: { outro: 15 * 60, lobo: 3 * 3600 } });
   await abrirEvento(p, 'Time Alfa: lobo, outro\nTime Beta: tchubi');
@@ -174,7 +174,7 @@ test('um clique na régua ordena: quem tem vídeo nesse instante, depois quem es
 });
 
 test('o seletor de ordem: A a Z, mais tempo no ar, ao vivo agora, e o instante pelo teclado', semNavegador, async () => {
-  const { p, erros } = await abrir();
+  const { p, erros } = await abrir({ caminho: 'evento' });
   await kickFalsa(p, { canais: ['tchubi', 'outro', 'lobo'], segmentos: 60, comecosS: { outro: 5 * 60 } });
   await aoVivo(p, 'outro');
   await abrirEvento(p, 'Time Alfa: tchubi, lobo\nTime Beta: outro');
@@ -210,7 +210,7 @@ test('o seletor de ordem: A a Z, mais tempo no ar, ao vivo agora, e o instante p
 // O dono, 10/10: "nao faço ideia como voce vai saber quem sao os times". Os times só vêm da lista; sem
 // eles a ordem por time não aparece, e a de partida é quem está ao vivo primeiro.
 test('uma lista sem times não oferece a ordem por time: começa com quem está ao vivo, e o voltar diz isso', semNavegador, async () => {
-  const { p, erros } = await abrir();
+  const { p, erros } = await abrir({ caminho: 'evento' });
   await kickFalsa(p, { canais: ['tchubi', 'outro', 'lobo'] });
   await aoVivo(p, 'lobo');
   await abrirEvento(p, 'tchubi\noutro\nlobo');
@@ -246,7 +246,7 @@ test('uma lista sem times não oferece a ordem por time: começa com quem está 
 // ── 3. a régua com os dias e o fuso ─────────────────────────────────────────
 
 test('a régua escreve a data em cada mudança de dia, com um traço, e diz que as horas são do fuso do aparelho', semNavegador, async () => {
-  const { p, erros } = await abrir();
+  const { p, erros } = await abrir({ caminho: 'evento' });
   await kickFalsa(p, { canais: ['tchubi', 'outro'], noites: 2 });
   await abrirEvento(p, 'tchubi\noutro');
   await verDe(p, T - 2 * 3600e3, T + 26 * 3600e3);
@@ -281,7 +281,7 @@ test('a régua escreve a data em cada mudança de dia, com um traço, e diz que 
 // ── 4. compartilhar o evento ────────────────────────────────────────────────
 
 test('compartilhar pede um nome, e um evento que não está no site sai no link longo com o nome, o porquê e o arquivo', semNavegador, async () => {
-  const { p, erros } = await abrir();
+  const { p, erros } = await abrir({ caminho: 'evento' });
   await kickFalsa(p, { canais: ['tchubi', 'outro'] });
   await abrirEvento(p, 'Time Alfa: tchubi, outro');
   assert.equal(await p.locator('#partilharEvento').innerText(), 'Compartilhar evento');
@@ -317,7 +317,7 @@ test('compartilhar pede um nome, e um evento que não está no site sai no link 
   });
 
   // Quem recebe o link longo vê o nome e os dados do evento.
-  const { p: q, erros: erros2 } = await abrir();
+  const { p: q, erros: erros2 } = await abrir({ caminho: 'evento' });
   await kickFalsa(q, { canais: ['tchubi', 'outro'] });
   await q.goto(url, { waitUntil: 'networkidle' });
   await q.waitForFunction(() => window.__evento?.mapa, null, { timeout: 15000 });
@@ -331,7 +331,7 @@ test('compartilhar pede um nome, e um evento que não está no site sai no link 
 });
 
 test('o ABISAL abre pelo link curto ?e=abisal, e compartilhar devolve o link curto', semNavegador, async () => {
-  const { p, erros } = await abrir();
+  const { p, erros } = await abrir({ caminho: 'evento' });
   await kickFalsa(p, { canais: ['tanizen', 'dilanzito'] });
   await p.goto(`http://127.0.0.1:${PORTA}/index.html?e=abisal`, { waitUntil: 'networkidle' });
   await p.waitForFunction(() => window.__evento?.mapa, null, { timeout: 30000 });
@@ -352,7 +352,7 @@ test('o ABISAL abre pelo link curto ?e=abisal, e compartilhar devolve o link cur
 });
 
 test('um evento salvo que não existe diz isso, e não abre um mapa vazio', semNavegador, async () => {
-  const { p, erros } = await abrir();
+  const { p, erros } = await abrir({ caminho: 'evento' });
   await kickFalsa(p, { canais: ['tchubi'] });
   await p.goto(`http://127.0.0.1:${PORTA}/?e=nao-existe`, { waitUntil: 'networkidle' });
   await p.waitForFunction(() => document.getElementById('estadoEvento').textContent.length > 0, null, { timeout: 15000 });
@@ -364,7 +364,7 @@ test('um evento salvo que não existe diz isso, e não abre um mapa vazio', semN
 // ── 5. acrescentar gente com o evento aberto ────────────────────────────────
 
 test('adicionar streamer pela busca da Kick, com time: só ele é lido, e o resto do mapa fica como estava', semNavegador, async () => {
-  const { p, erros } = await abrir();
+  const { p, erros } = await abrir({ caminho: 'evento' });
   const pedidos = await kickFalsa(p, { canais: ['tchubi', 'outro'] });
   await abrirEvento(p, 'Time Alfa: tchubi\nTime Beta: terceiro');
   await verDe(p, T - 5 * 60_000, T + 15 * 60_000);
@@ -403,7 +403,7 @@ test('adicionar streamer pela busca da Kick, com time: só ele é lido, e o rest
 });
 
 test('adicionar lista de um arquivo: o leitor de arquivo do elenco, e só os canais novos entram', semNavegador, async () => {
-  const { p, erros } = await abrir();
+  const { p, erros } = await abrir({ caminho: 'evento' });
   const pedidos = await kickFalsa(p, { canais: ['tchubi', 'outro', 'lobo'] });
   await abrirEvento(p, 'Time Alfa: tchubi');
   const api = pedidos.api;
@@ -431,7 +431,7 @@ test('adicionar lista de um arquivo: o leitor de arquivo do elenco, e só os can
 // ── no celular ──────────────────────────────────────────────────────────────
 
 test('num celular de 390 px nada rola para o lado, com as janelas e a régua', semNavegador, async () => {
-  const { p, erros } = await abrir({ ecra: { width: 390, height: 844 } });
+  const { p, erros } = await abrir({ ecra: { width: 390, height: 844 }, caminho: 'evento' });
   await kickFalsa(p, { canais: ['tchubi', 'outro'], noites: 2 });
   await abrirEvento(p, 'Time Alfa: tchubi\nTime Beta: outro');
   await verDe(p, T - 3600e3, T + 26 * 3600e3);

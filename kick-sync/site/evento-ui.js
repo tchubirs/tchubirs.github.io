@@ -13,6 +13,7 @@ import {
   lerElenco, codificar, descodificar, contar, paraTexto, juntarElencos, paraArquivo, deArquivo, nomeDoArquivo,
 } from './elenco.js';
 import { carregarCanais, procurarAoVivo } from './carregar.js';
+import { escolherCaminho } from './portas.js';
 import {
   montarMapa, linhasVisiveis, tempoDoX, xDoTempo, zoom, oQueEstaAqui, filtrar, pintarMapa, ordenarFaixas, linhasDoTempo,
 } from './mapa.js';
@@ -283,6 +284,8 @@ export function montarEvento({
     const ruins = ev.resultados.filter((r) => r && RUINS.includes(r.estado)).map((r) => r.slug);
     const texto = paraTexto(ev.elenco);
     fecharEvento();
+    // De volta à tela inicial, com a porta do evento aberta: é lá que o elenco se corrige.
+    escolherCaminho('evento');
     $('elenco').value = texto;
     $('elenco').focus();
     const i = ruins.length ? texto.indexOf(ruins[0]) : -1;

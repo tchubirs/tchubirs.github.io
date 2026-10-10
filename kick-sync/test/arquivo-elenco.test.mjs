@@ -10,7 +10,7 @@ const { abrir } = montarPalco((p) => { PORTA = p; });
 const semNavegador = { skip: !podeCorrer && 'sem navegador' };
 
 async function pagina(ecra = { width: 1440, height: 900 }) {
-  const { p, erros } = await abrir({ ecra });
+  const { p, erros } = await abrir({ ecra, caminho: 'evento' });
   const fora = [];
   p.on('request', (q) => {
     const u = new URL(q.url());
@@ -84,7 +84,9 @@ test('no celular, Abrir arquivo cabe ao lado do campo e tem 44 px de toque', sem
   await base.close();
   const erros = [];
   p.on('pageerror', (e) => erros.push(String(e.message)));
-  await p.addInitScript(() => { try { localStorage.setItem('replay.idioma', 'pt'); } catch { /* nada */ } });
+  await p.addInitScript(() => {
+    try { localStorage.setItem('replay.idioma', 'pt'); localStorage.setItem('replay.caminho', 'evento'); } catch { /* nada */ }
+  });
   await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
   const b = await p.locator('#abrirArquivoElenco').boundingBox();
   const campo = await p.locator('#elenco').boundingBox();

@@ -36,7 +36,7 @@ async function abrirEvento(p) {
 
 test('colar o elenco abre o mapa, com os times e quem não existe dito pelo nome',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
-    const { p, erros } = await abrir();
+    const { p, erros } = await abrir({ caminho: 'evento' });
     await kickFalsa(p, { canais: ['tchubi', 'outro'] });
     await abrirEvento(p);
     assert.match(await p.locator('#resumoEvento').innerText(), /2 times, 3 canais, 2 com vídeo/);
@@ -54,7 +54,7 @@ test('colar o elenco abre o mapa, com os times e quem não existe dito pelo nome
 
 test('um clique no mapa escolhe o lance, e "ver" abre o time naquele instante',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
-    const { p, erros } = await abrir();
+    const { p, erros } = await abrir({ caminho: 'evento' });
     await kickFalsa(p, { canais: ['tchubi', 'outro'] });
     await abrirEvento(p);
     const ms = T + 5 * 60_000;
@@ -84,7 +84,7 @@ test('um clique no mapa escolhe o lance, e "ver" abre o time naquele instante',
 
 test('o link do lance abre o evento noutra janela, no mesmo instante',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
-    const { p, erros } = await abrir();
+    const { p, erros } = await abrir({ caminho: 'evento' });
     await kickFalsa(p, { canais: ['tchubi', 'outro'] });
     await abrirEvento(p);
     const ms = T + 3 * 60_000;
@@ -101,7 +101,7 @@ test('o link do lance abre o evento noutra janela, no mesmo instante',
     assert.match(url, /#evento=[A-Za-z0-9_-]+&nome=Noite%20de%20teste&t=\d+&c=tchubi$/);
     assert.match(await p.locator('#estadoPartilhar').innerText(), /campo acima/);
 
-    const { p: q, erros: erros2 } = await abrir();
+    const { p: q, erros: erros2 } = await abrir({ caminho: 'evento' });
     await kickFalsa(q, { canais: ['tchubi', 'outro'] });
     await q.goto(url, { waitUntil: 'networkidle' });
     await q.waitForFunction(() => window.__evento?.escolha, null, { timeout: 15000 });
@@ -117,7 +117,7 @@ test('o link do lance abre o evento noutra janela, no mesmo instante',
 
 test('um elenco grande demais para um link diz isso, em vez de copiar um link estragado',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
-    const { p, erros } = await abrir();
+    const { p, erros } = await abrir({ caminho: 'evento' });
     await kickFalsa(p, { canais: ['tchubi', 'outro'] });
     await abrirEvento(p);
     // O `codificar` da própria página, com 2001 canais: dá null, porque nenhum link com tantos abre.
@@ -145,7 +145,7 @@ test('um elenco grande demais para um link diz isso, em vez de copiar um link es
 
 test('fechar o evento devolve as duas portas',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
-    const { p, erros } = await abrir();
+    const { p, erros } = await abrir({ caminho: 'evento' });
     await kickFalsa(p, { canais: ['tchubi', 'outro'] });
     await abrirEvento(p);
     await p.click('#fecharEvento');
@@ -164,7 +164,7 @@ test('durante o jogo a busca pelo som não serve para achar rivais',
     assert.equal(cedoDemais(agora - 1000, 0, agora), false, 'o organizador pode tirar o atraso');
 
     // Num link com um atraso enorme, o lance de agosto ainda é "recente": a busca recusa e diz porquê.
-    const { p, erros } = await abrir();
+    const { p, erros } = await abrir({ caminho: 'evento' });
     await kickFalsa(p, { canais: ['tchubi', 'outro'] });
     await abrirEvento(p);
     await clicarNoMapa(p, 'tchubi', T + 4 * 60_000);
@@ -177,7 +177,7 @@ test('durante o jogo a busca pelo som não serve para achar rivais',
 
 test('quem chega sem elenco abre um exemplo com o Rust que está ao vivo',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
-    const { p, erros } = await abrir();
+    const { p, erros } = await abrir({ caminho: 'evento' });
     await kickFalsa(p, { canais: ['tchubi', 'outro'] });
     await p.route('https://kick.com/stream/livestreams/**', (rota) => rota.fulfill({
       status: 200,
@@ -217,7 +217,7 @@ test('quem chega sem elenco abre um exemplo com o Rust que está ao vivo',
 
 test('procurar por palavras que passa do limite de páginas diz que a lista ficou cortada',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
-    const { p, erros } = await abrir();
+    const { p, erros } = await abrir({ caminho: 'evento' });
     let pedidos = 0;
     await p.route('https://kick.com/stream/livestreams/**', (rota) => {
       const n = Number(new URL(rota.request().url()).searchParams.get('page'));
@@ -263,7 +263,7 @@ test('o mapa abre no trecho em que a maioria esteve no ar, e não no mês inteir
 
 test('escolher um lance lê o chat do time e marca no mapa onde ele explodiu',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
-    const { p, erros } = await abrir();
+    const { p, erros } = await abrir({ caminho: 'evento' });
     await kickFalsa(p, { canais: ['tchubi', 'outro'] });
     await abrirEvento(p);
     await clicarNoMapa(p, 'outro', T + 2 * 60_000);
@@ -326,7 +326,7 @@ test('no mapa, quem está ao vivo vai até agora, e uma duração desconhecida n
 
 test('no telemóvel o painel do lance fica preso ao fundo sem tapar o mapa',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
-    const { p, erros } = await abrir({ ecra: { width: 390, height: 844 } });
+    const { p, erros } = await abrir({ ecra: { width: 390, height: 844 }, caminho: 'evento' });
     await kickFalsa(p, { canais: ['tchubi', 'outro'] });
     await abrirEvento(p);
     await clicarNoMapa(p, 'tchubi', T + 2 * 60_000);
@@ -344,7 +344,7 @@ test('no telemóvel o painel do lance fica preso ao fundo sem tapar o mapa',
 
 test('o mapa anda-se pelo teclado: setas, Enter para escolher e o que está sob o cursor é dito',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
-    const { p, erros } = await abrir();
+    const { p, erros } = await abrir({ caminho: 'evento' });
     await kickFalsa(p, { canais: ['tchubi', 'outro'] });
     await abrirEvento(p);
     await p.focus('#mapaRolo');
@@ -372,7 +372,7 @@ test('o mapa anda-se pelo teclado: setas, Enter para escolher e o que está sob 
 
 test('recarregar a página com um lance aberto traz o evento de volta, em barra, e fechar o evento esquece-o',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
-    const { p, erros } = await abrir();
+    const { p, erros } = await abrir({ caminho: 'evento' });
     await kickFalsa(p, { canais: ['tchubi', 'outro'] });
     await abrirEvento(p);
     const ms = T + 3 * 60_000;
@@ -399,7 +399,7 @@ test('recarregar a página com um lance aberto traz o evento de volta, em barra,
 
 test('o botão Início fecha os vídeos: com evento volta ao mapa, sem evento volta às duas portas',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
-    const { p, erros } = await abrir();
+    const { p, erros } = await abrir({ caminho: 'evento' });
     await kickFalsa(p, { canais: ['tchubi', 'outro'] });
     await abrirEvento(p);
     assert.equal(await p.locator('#inicio').isVisible(), false, 'na entrada não há para onde voltar');
@@ -427,7 +427,7 @@ test('o botão Início fecha os vídeos: com evento volta ao mapa, sem evento vo
 
 test('arrastar o mapa para o lado anda no tempo, diz o trecho à vista, e não escolhe nada',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
-    const { p, erros } = await abrir();
+    const { p, erros } = await abrir({ caminho: 'evento' });
     await kickFalsa(p, { canais: ['tchubi', 'outro'] });
     await abrirEvento(p);
     // Aproximar primeiro: com o evento inteiro à vista não há para onde andar.
@@ -454,7 +454,7 @@ test('arrastar o mapa para o lado anda no tempo, diz o trecho à vista, e não e
 
 test('enquanto o lance abre, a leitura do chat espera: o vídeo vem primeiro',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
-    const { p, erros } = await abrir();
+    const { p, erros } = await abrir({ caminho: 'evento' });
     await kickFalsa(p, { canais: ['tchubi', 'outro'] });
     // Chat e playlists lentos, para as duas coisas se cruzarem no tempo.
     await p.route('**/api/v2/channels/*/messages**', async (r) => { await new Promise((ok) => setTimeout(ok, 250)); await r.fallback(); });
@@ -486,7 +486,7 @@ test('enquanto o lance abre, a leitura do chat espera: o vídeo vem primeiro',
 
 test('o chat de quem está em foco anda ao lado do vídeo, no tempo dele',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
-    const { p, erros } = await abrir();
+    const { p, erros } = await abrir({ caminho: 'evento' });
     await kickFalsa(p, { canais: ['tchubi', 'outro'] });
     await abrirEvento(p);
     await clicarNoMapa(p, 'outro', T + 2 * 60_000);
@@ -519,7 +519,7 @@ test('o chat de quem está em foco anda ao lado do vídeo, no tempo dele',
 // e a sensibilidade do assistente da faixa refaz os picos do mapa sem pedir o chat outra vez.
 test('o chat de todos lê quem não é do time, e a sensibilidade muda os picos sem pedir nada outra vez',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
-    const { p, erros } = await abrir();
+    const { p, erros } = await abrir({ caminho: 'evento' });
     await kickFalsa(p, { canais: ['tchubi', 'outro'] });
     await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
     await p.fill('#elenco', 'Time Alfa: tchubi\nTime Beta: outro');
@@ -558,7 +558,7 @@ test('o chat de todos lê quem não é do time, e a sensibilidade muda os picos 
 
 test('com a página parada, os picos das horas vizinhas chegam sozinhos',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
-    const { p, erros } = await abrir();
+    const { p, erros } = await abrir({ caminho: 'evento' });
     await kickFalsa(p, { canais: ['tchubi', 'outro'] });
     await abrirEvento(p);
     // Um canal no ar a noite toda, para haver janelas vizinhas a ler.
@@ -575,7 +575,7 @@ test('com a página parada, os picos das horas vizinhas chegam sozinhos',
 
 test('quem entra no ar depois de o evento abrir aparece sozinho, sem recarregar',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
-    const { p, erros } = await abrir();
+    const { p, erros } = await abrir({ caminho: 'evento' });
     await kickFalsa(p, { canais: ['tchubi', 'outro'] });
     await p.addInitScript(() => { window.__povixNovatosMs = 400; });
     // tchubi está ao vivo desde há 30 min; outro só entra no ar depois de o evento abrir.

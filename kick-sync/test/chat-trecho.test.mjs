@@ -224,7 +224,7 @@ test('o botão lê só o chat do streamer escolhido e só o trecho entre as alç
 
 test('com evento aberto o botão também lê, e o pico do trecho aparece na régua',
   semNavegador, async () => {
-    const { p, erros } = await abrir({ ecra: { width: 1440, height: 900 } });
+    const { p, erros } = await abrir({ ecra: { width: 1440, height: 900 }, caminho: 'evento' });
     await kickFalsa(p, { canais: ['tchubi', 'outro'] });
     await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
     await p.fill('#elenco', 'Time Alfa: tchubi, outro');
@@ -398,7 +398,9 @@ test('com o toque, as alças e os botões da barra têm 44 px', semNavegador, as
   await base.close();
   const erros = [];
   p.on('pageerror', (e) => erros.push(String(e.message)));
-  await p.addInitScript(() => { try { localStorage.setItem('replay.idioma', 'pt'); } catch { /* nada */ } });
+  await p.addInitScript(() => {
+    try { localStorage.setItem('replay.idioma', 'pt'); localStorage.setItem('replay.caminho', 'vod'); } catch { /* nada */ }
+  });
   await abrirNoite(p, ['tchubi', 'outro']);
   await p.click('#usarTrecho');
   const medidas = await p.evaluate(() => {

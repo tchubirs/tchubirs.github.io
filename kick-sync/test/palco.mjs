@@ -60,7 +60,10 @@ export function montarPalco(aoAbrir = () => {}) {
     servidor?.close();
   });
 
-  async function abrir({ ecra, idioma = 'pt' } = {}) {
+  // `caminho`: a porta que a tela inicial abre (portas.js). A primeira visita de verdade não abre
+  // nenhuma; os testes que não são da tela inicial escrevem nos campos de uma delas, e por isso
+  // começam com a dos canais aberta (ou a do evento, com caminho: 'evento'). Com `null`, nenhuma.
+  async function abrir({ ecra, idioma = 'pt', caminho = 'vod' } = {}) {
     // Idioma fixo, e nao o do sistema: os testes leem frases, e uma maquina de
     // CI noutra lingua fazia-os falhar por uma razao que nao e a deles.
     const p = await navegador.newPage({
@@ -73,6 +76,12 @@ export function montarPalco(aoAbrir = () => {}) {
       // escolher — e o F5 parecia estar a perde-la.
       try { if (!localStorage.getItem('replay.idioma')) localStorage.setItem('replay.idioma', l); } catch { /* nada */ }
     }, idioma);
+    // Só quando ainda não há escolha, como a língua: um F5 no meio do teste guarda a que o teste fez.
+    if (caminho) {
+      await p.addInitScript((c) => {
+        try { if (!localStorage.getItem('replay.caminho')) localStorage.setItem('replay.caminho', c); } catch { /* nada */ }
+      }, caminho);
+    }
     const erros = [];
     p.on('pageerror', (e) => erros.push(String(e.message)));
     p.on('console', (m) => { if (m.type() === 'error' && !/ERR_|404/.test(m.text())) erros.push(m.text()); });

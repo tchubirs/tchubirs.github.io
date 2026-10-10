@@ -255,7 +255,9 @@ for (const [nome, ecra, toque] of [['1440', { width: 1440, height: 900 }, false]
     await base.close();
     const erros = [];
     p.on('pageerror', (e) => erros.push(String(e.message)));
-    await p.addInitScript(() => { try { localStorage.setItem('replay.idioma', 'pt'); } catch { /* nada */ } });
+    await p.addInitScript(() => {
+      try { localStorage.setItem('replay.idioma', 'pt'); localStorage.setItem('replay.caminho', 'vod'); } catch { /* nada */ }
+    });
     await carregar(p, ['tchubi']);
     await p.click('#mais1m');
     await abrirClipe(p);

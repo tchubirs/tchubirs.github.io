@@ -1257,7 +1257,7 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
   body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .topoTrabalho .rotuloCampo,
   body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .topoTrabalho label[for],
   body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #resumoNoite,
-  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #entrada > .campo:first-of-type { display: none; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #corpoVod > .campoLink { display: none; }
   body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #entrada .entradaGrelha { display: flex; gap: var(--e3); flex: 1 1 auto; min-width: 0; }
   body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #entrada .campo,
   body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #noites .campo { flex: 1 1 0; min-width: 0; }
@@ -1663,7 +1663,6 @@ body:not(.mesa) #sugestoes button { width: auto; min-height: 30px; font-size: va
 .cabecaPorta .nota { margin: 0; }
 .portaEvento textarea { width: 100%; }
 .aoVivoLinha { flex-wrap: nowrap; gap: var(--e3); }
-.portaEvento .exemplo { justify-self: stretch; width: 100%; color: var(--acento); border-color: var(--acento-fio); }
 .explicaCurta { display: none; }
 .fecharEvento { order: -1; }
 .juntados { gap: var(--e1); flex-wrap: wrap; }
@@ -1680,9 +1679,6 @@ body:not(.mesa) #sugestoes button { width: auto; min-height: 30px; font-size: va
 .picosChat .pico { min-height: 30px; padding: 0 var(--e2); font-family: var(--letra-mono); font-size: var(--t-menor); }
 .aoVivoLinha input { flex: 1 1 auto; min-width: 0; }
 #entrada { max-width: none; }
-@media (min-width: 1000px) {
-  .topoTrabalho:not(:has(#noites:not([hidden]))) { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); align-items: start; }
-}
 /* Com uma noite aberta a porta do evento sai do caminho: a noite é a de alguns canais. */
 .topoTrabalho:has(#noites:not([hidden])) #portaEvento,
 body:is(.videoAberto, :has(#palco:not([hidden]))) #portaEvento { display: none; }
@@ -1791,11 +1787,11 @@ body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) > #evento { flex: 0 0 aut
 /* No telemóvel as duas portas têm de caber com o botão de cada uma no primeiro ecrã. A explicação do
    elenco sai (o exemplo dentro da caixa já mostra o formato) e a caixa fica com duas linhas. */
 @media (max-width: 699px) {
-  .portaEvento > p.explicaLonga { display: none; }
+  .portaEvento p.explicaLonga { display: none; }
   /* Montar a lista pelos títulos é trabalho de organizador, num computador; no telemóvel fica o
      exemplo, que é um toque só, e as duas portas cabem no primeiro ecrã. */
   .portaEvento .aoVivoRotulo, .portaEvento .aoVivoLinha { display: none; }
-  .portaEvento > p.explicaCurta { display: block; }
+  .portaEvento p.explicaCurta { display: block; }
   #resumoEvento { flex-basis: 100%; }
   #procurarEvento { flex: 1 1 100%; }
   #elenco { height: 4.2em; min-height: 0; }
@@ -2184,3 +2180,100 @@ body:is(.videoAberto, :has(#palco:not([hidden]))) .mostrarMapa { background: var
 .opcao .margens { display: flex; flex-wrap: wrap; gap: var(--e3); }
 .opcao .margens input { width: 4.5em; min-height: 30px; padding: 4px var(--e2); }
 .opcao .margens label { display: inline-flex; align-items: center; gap: var(--e2); }
+
+/* ═══ A tela inicial: dois caminhos ════════════════════════════════════════
+ * O dono, 10/10: "tela inicial com dois caminhos claros". As duas portas de sempre, com o título de
+ * cada uma feito cartão: Evento inteiro e VOD ou poucos canais, lado a lado e sempre à vista. Os campos
+ * só aparecem para o caminho escolhido, num painel por baixo dos dois cartões.
+ *
+ * Tudo preso a `body.mesa.naEntrada` (posta pelo portas.js: sem vídeo, sem evento e sem noite). Fora
+ * dela as portas são o que eram: o corpo de cada uma não tem caixa própria (display: contents) e o
+ * #entrada continua a ser a barra do botão Canais com o vídeo aberto. A página da Twitch não tem
+ * nenhuma destas peças. */
+.corpoPorta, .colunaPorta { display: contents; }
+.lema, .exemploLinha { display: none; }
+body.mesa:not(.naEntrada) .cabecaPorta { display: none; }
+
+body.mesa.naEntrada .lema {
+  display: block; margin: var(--e4) 0 0; max-width: 64ch;
+  font-size: var(--t-medio); line-height: var(--lh); color: var(--tinta-2); text-wrap: pretty;
+}
+
+body.mesa.naEntrada > .topoTrabalho {
+  grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: var(--e4);
+}
+body.mesa.naEntrada > .topoTrabalho > * { grid-column: 1 / -1; }
+body.mesa.naEntrada .porta { display: contents; }
+body.mesa.naEntrada .cabecaPorta { display: flex; grid-row: 1; margin: 0; font: inherit; }
+body.mesa.naEntrada #portaEvento > .cabecaPorta { grid-column: 1; }
+body.mesa.naEntrada #entrada > .cabecaPorta { grid-column: 2; }
+
+/* O cartão. Um botão, e por isso todo ele se carrega; o escolhido ganha o fio do acento e o ícone aceso. */
+.escolhaPorta {
+  flex: 1 1 auto; width: 100%; min-height: 0; margin: 0; padding: var(--e5);
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; justify-content: stretch;
+  gap: var(--e4); text-align: left;
+  font: 400 var(--t-base)/var(--lh) var(--letra); color: var(--tinta);
+  background: var(--sup-2); border: 1px solid var(--linha); border-radius: var(--r-3);
+}
+.escolhaPorta:hover:not(:disabled) { background: var(--sup-3); border-color: var(--linha-3); }
+.escolhaPorta:active:not(:disabled) { background: var(--sup-3); }
+.escolhaPorta:focus-visible { border-radius: var(--r-3); }
+.escolhaPorta[aria-expanded="true"],
+.escolhaPorta[aria-expanded="true"]:hover:not(:disabled) { border-color: var(--acento); background: var(--sup-2); }
+.iconePorta {
+  width: 20px; height: 20px; padding: 9px; box-sizing: content-box; border-radius: var(--r-2);
+  color: var(--tinta-2); background: var(--sup-3); border: 1px solid var(--linha-2);
+}
+.escolhaPorta[aria-expanded="true"] .iconePorta { color: var(--acento); background: var(--acento-eco); border-color: var(--acento-fio); }
+.textoPorta { display: grid; gap: var(--e2); min-width: 0; }
+.escolhaPorta .tituloPorta { font-size: var(--t-grande); line-height: var(--lh-apertado); }
+.paraPorta { color: var(--tinta-2); text-wrap: pretty; }
+.temPorta { color: var(--tinta-3); font-size: var(--t-menor); }
+.setaPorta { width: 18px; height: 18px; margin-top: 2px; color: var(--tinta-3); transform: rotate(90deg); transition: transform var(--mov), color var(--mov); }
+.escolhaPorta:hover .setaPorta { color: var(--tinta-2); }
+.escolhaPorta[aria-expanded="true"] .setaPorta { color: var(--acento); transform: rotate(-90deg); }
+
+/* O painel do caminho escolhido, por baixo dos dois cartões. */
+body.mesa.naEntrada .corpoPorta { display: none; }
+:root[data-caminho="evento"] body.mesa.naEntrada #corpoEvento,
+:root[data-caminho="vod"] body.mesa.naEntrada #corpoVod {
+  display: grid; gap: var(--e4); grid-row: 2; grid-column: 1 / -1; align-content: start;
+  background: var(--sup-2); border: 1px solid var(--linha); border-radius: var(--r-3); padding: var(--e5);
+}
+body.mesa.naEntrada .colunaPorta { display: grid; gap: var(--e4); align-content: start; min-width: 0; }
+body.mesa.naEntrada #corpoEvento > #estadoEvento { grid-column: 1 / -1; }
+body.mesa.naEntrada #corpoEvento > #estadoEvento:empty { display: none; }
+.salvoNota { margin: 0; }
+@media (min-width: 1000px) {
+  /* O elenco à esquerda, que é o caminho de quase todos; montar pela busca ao vivo à direita, à parte. */
+  :root[data-caminho="evento"] body.mesa.naEntrada #corpoEvento { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); column-gap: var(--e6); }
+  body.mesa.naEntrada .colunaAoVivo { border-left: 1px solid var(--linha); padding-left: var(--e6); }
+}
+@media (max-width: 999px) {
+  body.mesa.naEntrada .colunaAoVivo { border-top: 1px solid var(--linha); padding-top: var(--e4); }
+}
+
+/* O exemplo: uma terceira opção, mais calma, por baixo dos caminhos. */
+body.mesa.naEntrada .exemploLinha {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--e1) var(--e2); margin: 0;
+}
+.exemploLinha .exemplo { color: var(--tinta-2); padding: 0 var(--e3); }
+.exemploLinha .exemplo .ic { color: var(--acento); }
+.exemploLinha .exemplo:hover:not(:disabled) { color: var(--tinta); }
+
+/* No telemóvel os dois cartões continuam lado a lado, só com o título e a frase: os dois caminhos e o
+   começo do painel escolhido cabem no primeiro ecrã. */
+@media (max-width: 699px) {
+  .escolhaPorta { grid-template-columns: minmax(0, 1fr) auto; gap: var(--e3); padding: var(--e4); }
+  .iconePorta, .temPorta { display: none; }
+  .escolhaPorta .tituloPorta { font-size: var(--t-medio); }
+  .paraPorta { font-size: var(--t-menor); line-height: 1.4; }
+  body.mesa.naEntrada > .topoTrabalho { gap: var(--e3); }
+  :root[data-caminho="evento"] body.mesa.naEntrada #corpoEvento,
+  :root[data-caminho="vod"] body.mesa.naEntrada #corpoVod { padding: var(--e4); gap: var(--e3); }
+  body.mesa.naEntrada .lema { font-size: var(--t-base); margin-top: var(--e3); }
+  /* A pergunta por cima e o botão por baixo, os dois encostados à mesma margem. */
+  body.mesa.naEntrada .exemploLinha { flex-direction: column; align-items: flex-start; }
+  .exemploLinha .exemplo { margin-left: calc(var(--e3) * -1); min-height: 44px; }
+}
