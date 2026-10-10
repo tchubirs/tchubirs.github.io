@@ -37,6 +37,9 @@ import { criarZip, crc32 } from './zip.js';
 import { queFazerComOLeitor } from './leitor.js';
 import { criarApanhador } from './frames.js';
 import { varrerNoite, custoVarrerMB } from './procurar-momentos.js';
+import {
+  ESPERTO_A_PARTIR_MS, janelasDosPicos, msPorOuvir, somaMs, juntar, eMuito, estimarFalta, tempoFalta,
+} from './ouvir.js';
 import { TAXA_TIROS } from './tiros.js';
 import { termosDoFiltro, momentosDePalavras } from './chat.js';
 import { SENSIBILIDADES_DETECAO, opcoesDaSensibilidade, juntarProximos } from './lances.js';
@@ -148,6 +151,12 @@ const estado = {
   // parava o que não era, e nunca ninguém o chamava.
   montagem: null,
   varredura: null,
+  // O que a detecção já ouviu nesta sessão: as medidas do som por canal (a memória da varredura, para
+  // não baixar outra vez) e, por canal, os intervalos ouvidos no relógio da noite (mais escuros na faixa).
+  somOuvido: new Map(),
+  ouvidoNaFaixa: new Map(),
+  // O resto por ouvir do último modo esperto: { quem, quanto }. Dá o Continuar ouvindo o resto.
+  restoPorOuvir: null,
   aBaixar: new Map(),
   geracao: 0,
   sugestoes: [],
@@ -1168,7 +1177,7 @@ function pintarFaixas() {
     g.dataset.quem = TODOS;
     g.innerHTML = `<button type="button" class="nome" data-quem="${TODOS}" aria-expanded="false" `
       + `aria-label="${escapar(t('faixa.escolherTodos'))}" title="${escapar(t('faixa.escolherTodos'))}">${escapar(t('faixa.todos'))}</button>`
-      + `<div class="trilho trilhoGeral">${marcasLidas(TODOS, inicio, fim)}</div>`;
+      + `<div class="trilho trilhoGeral">${marcasLidas(TODOS, inicio, fim)}${marcasOuvidas(TODOS, inicio, fim)}</div>`;
     g.querySelector('.trilho').onclick = (e) => irAoClique(e, null);
     alvo.append(g);
   }
@@ -1189,7 +1198,7 @@ function pintarFaixas() {
         const de = Math.max(0, pct(p.playlist.inicio - nudge));
         const ate = Math.min(100, pct(p.playlist.fim - nudge));
         return `<i style="left:${de}%;width:${Math.max(0.4, ate - de)}%"></i>`;
-      }).join('')}${marcasLidas(linha.slug, inicio, fim)}</div>`;
+      }).join('')}${marcasLidas(linha.slug, inicio, fim)}${marcasOuvidas(linha.slug, inicio, fim)}</div>`;
     f.querySelector('.trilho').onclick = (e) => irAoClique(e, linha.slug);
     alvo.append(f);
   }
@@ -2015,6 +2024,8 @@ const TODOS = '*';
 let chatTrecho = null;
 let chatEscolhido = null;
 let chatTrechoControlo = null;
+// O aviso antes de ouvir muito, quando está aberto (ver `perguntarAntes`).
+let avisoAberto = null;
 // O módulo do evento, que lê o chat. Só existe depois de montado, no fim deste ficheiro.
 let chatDoEvento = null;
 // De quem é a barra aberta (um canal, ou TODOS), e onde vai o assistente dela: a acção ('chat' ou
@@ -2100,10 +2111,8 @@ function duracaoTrecho(ms) {
   return `${Math.floor(min / 60)} h${min % 60 ? ` ${doisDigitos(min % 60)}` : ''}`;
 }
 
-/** As janelas lidas de um canal; para Todos, só o que foi lido de todos ao mesmo tempo. */
-function lidasDe(quem) {
-  const de = (c) => chatDoEvento?.estado.janelasDoChat?.(c) || [];
-  if (quem !== TODOS) return de(quem);
+/** Para Todos, só o que é comum a toda a gente: o que foi feito de todos ao mesmo tempo. */
+function comumATodos(de) {
   let comum = null;
   for (const l of estado.linhas) {
     const suas = de(l.slug);
@@ -2116,11 +2125,34 @@ function lidasDe(quem) {
   return comum || [];
 }
 
+/** As janelas lidas de um canal; para Todos, só o que foi lido de todos ao mesmo tempo. */
+function lidasDe(quem) {
+  const de = (c) => chatDoEvento?.estado.janelasDoChat?.(c) || [];
+  return quem === TODOS ? comumATodos(de) : de(quem);
+}
+
+/** O que a detecção já ouviu de um canal (ou de todos ao mesmo tempo), no relógio da noite. */
+function ouvidasDe(quem) {
+  const de = (c) => estado.ouvidoNaFaixa.get(c) || [];
+  return quem === TODOS ? comumATodos(de) : de(quem);
+}
+
+/** Riscos mais escuros dentro do trilho de uma faixa, de `classe`, nos intervalos dados. */
+function riscos(lista, classe, inicio, fim, titulo = '') {
+  const pct = (ms) => Math.min(100, Math.max(0, ((ms - inicio) / (fim - inicio)) * 100));
+  const tt = titulo ? ` title="${escapar(titulo)}"` : '';
+  return lista.filter(([a, b]) => b > inicio && a < fim)
+    .map(([a, b]) => `<b class="${classe}"${tt} style="left:${pct(a)}%;width:${Math.max(0.3, pct(b) - pct(a))}%"></b>`).join('');
+}
+
 /** O que já foi lido, mais escuro dentro do trilho de uma faixa. */
 function marcasLidas(quem, inicio, fim) {
-  const pct = (ms) => Math.min(100, Math.max(0, ((ms - inicio) / (fim - inicio)) * 100));
-  return lidasDe(quem).filter(([a, b]) => b > inicio && a < fim)
-    .map(([a, b]) => `<b class="lido" style="left:${pct(a)}%;width:${Math.max(0.3, pct(b) - pct(a))}%"></b>`).join('');
+  return riscos(lidasDe(quem), 'lido', inicio, fim);
+}
+
+/** O que a detecção já ouviu, mais escuro em cima do trilho, como o chat lido em baixo. */
+function marcasOuvidas(quem, inicio, fim) {
+  return riscos(ouvidasDe(quem), 'ouvido', inicio, fim);
 }
 
 /**
@@ -2298,8 +2330,16 @@ function pintarChatTrecho() {
   for (const id of ['escolherChat', 'escolherDetetar', 'escolherTrecho', 'escolherTudo', 'usarTrecho', 'lerChatTrecho', 'detetarTrecho']) {
     $(id).disabled = semNoite || ocupado;
   }
-  // A correr, o progresso e o Parar ficam no mesmo sítio, e nada muda de passo por baixo deles.
-  $('pararChatTrecho').hidden = !ocupado;
+  // A correr, o progresso e o Parar ficam no mesmo sítio, e nada muda de passo por baixo deles. Com o
+  // aviso aberto, quem responde é o Continuar e o Cancelar dele.
+  $('pararChatTrecho').hidden = !ocupado || Boolean(avisoAberto);
+  $('barraOuvir').hidden = !estado.varredura || Boolean(avisoAberto);
+  $('continuarOuvindo').hidden = ocupado || !estado.restoPorOuvir || estado.restoPorOuvir.quem !== faixaEscolhida
+    || acaoFaixa !== 'detetar' || passoFaixa !== 4;
+  // Sem nada ouvido ainda (o chat sem picos), o mesmo botão ouve tudo.
+  const rotuloResto = faixaEscolhida && ouvidasDe(faixaEscolhida).length ? 'rapido.continuar' : 'rapido.ouvirTudo';
+  const spanResto = $('continuarOuvindo').querySelector('span');
+  if (spanResto.dataset.t !== rotuloResto) { spanResto.dataset.t = rotuloResto; spanResto.textContent = t(rotuloResto); }
   $('voltarAcoes').disabled = ocupado;
   $('filtrosLista').disabled = ocupado;
   $('maisOpcoes').classList.toggle('ocupado', ocupado);
@@ -2415,6 +2455,10 @@ function ligarChatTrecho() {
   };
   $('lerChatTrecho').onclick = () => lerChat(faixaEscolhida, quantoFaixa || 'tudo');
   $('detetarTrecho').onclick = () => detetar(faixaEscolhida, quantoFaixa || 'tudo');
+  $('continuarOuvindo').onclick = () => {
+    const r = estado.restoPorOuvir;
+    if (r) detetar(r.quem, r.quanto, { resto: true });
+  };
   $('voltarAcoes').onclick = voltarPasso;
   $('fecharAcoes').onclick = fecharAcoes;
   // Esc recua um passo (e no passo 1 fecha). Dentro de uma caixa de texto ou de uma lista, o Esc é dela.
@@ -2985,12 +3029,52 @@ function procurarKills() {
   abrirAcoes(estado.focos[0] || estado.linhas[0].slug, { focar: true, acao: 'detetar' });
 }
 
+// O aviso antes de ouvir muito (o dono, 10/10: "10 h de live"), dentro do assistente e não numa caixa
+// do navegador: as horas, os megas, e Continuar ou Cancelar. Só aparece quando é muito; um trecho de
+// minutos começa logo. Resolve com sim ou não, e o Parar da detecção fecha-o.
+function perguntarAntes(texto, sinal) {
+  return new Promise((sim, mal) => {
+    const caixa = $('avisoOuvir');
+    $('avisoOuvirTexto').textContent = texto;
+    const fechar = (resposta) => {
+      avisoAberto = null;
+      caixa.hidden = true;
+      $('avisoContinuar').onclick = null;
+      $('avisoCancelar').onclick = null;
+      pintarChatTrecho();
+      return resposta;
+    };
+    avisoAberto = { fechar };
+    caixa.hidden = false;
+    pintarChatTrecho();
+    $('avisoContinuar').onclick = () => sim(fechar(true));
+    $('avisoCancelar').onclick = () => sim(fechar(false));
+    sinal.addEventListener('abort', () => { fechar(); mal(new DOMException('parado', 'AbortError')); }, { once: true });
+    $('acoesFaixa').scrollIntoView({ block: 'nearest' });
+    $('avisoContinuar').focus({ preventScroll: true });
+  });
+}
+
+/** Juntar o que acabou de ser ouvido aos intervalos ouvidos do canal (os da faixa). */
+function marcarOuvido(canal, intervalos) {
+  if (!intervalos?.length) return;
+  estado.ouvidoNaFaixa.set(canal, juntar([...(estado.ouvidoNaFaixa.get(canal) || []), ...intervalos]));
+}
+
 /**
  * Ouvir a POV de uma pessoa (ou de cada uma) à procura de tiroteios, num trecho ou no tempo todo ao vivo.
  * Tudo no relógio da noite, que é o dos momentos e o do cursor: o início e o fim do canal estão no
  * relógio do VOD dele, e o ajuste leva de um ao outro.
+ *
+ * Mais rápido (o dono, 10/10: "Ouvindo kodd: 1/121, 0 MB", 10 h baixadas um segmento de cada vez):
+ * - quatro segmentos no ar ao mesmo tempo, e dois bocados a ser ouvidos ao mesmo tempo (`varrerNoite`);
+ * - o modo esperto, quando há mais de meia hora para ouvir: primeiro o chat (o que faltar ler), e só uns
+ *   minutos em volta dos picos dele; os achados aparecem logo, e o Continuar ouvindo o resto faz o resto;
+ * - o progresso em horas de live, os megas e quanto falta, pela velocidade medida;
+ * - o aviso antes de começar, quando é muito;
+ * - o que já se ouviu de uma pessoa não se baixa outra vez (a memória da sessão, `estado.somOuvido`).
  */
-async function detetar(quem, quanto) {
+async function detetar(quem, quanto, { resto = false } = {}) {
   if (!quem || estado.varredura || chatTrechoControlo || !estado.linhas.length || !acertarChatTrecho()) return;
   const botao = $('procurarKills');
   const nota = $('estadoMontagem');
@@ -3017,7 +3101,6 @@ async function detetar(quem, quanto) {
   const comChat = termos.length > 0 && Boolean(chatDoEvento);
   // Só os tiros é a detecção de sempre, e diz-se como sempre: "2 tiroteios em tchubi".
   const soTiros = marcados.length === 1 && filtros.tiros;
-  const doSom = marcados.filter((k) => k !== 'chat');
   // O trecho de cada um é o pedaço das alças em que ele esteve ao vivo.
   const pedidos = pedidosDe(quem, quanto).map((p) => ({
     ...p, deMs: Math.max(p.deMs, p.vivo.deMs), ateMs: Math.min(p.ateMs, p.vivo.ateMs),
@@ -3030,17 +3113,11 @@ async function detetar(quem, quanto) {
     return;
   }
   const totalMs = pedidos.reduce((s, p) => s + (p.ateMs - p.deMs), 0);
-  const min = Math.round(totalMs / 60000);
-  const mb = custoVarrerMB(totalMs);
   const todos = quem === TODOS;
-  // Ouvir custa megas e minutos, e pergunta-se antes. Ler o chat não pergunta, como no Ler chat.
-  if (comSom) {
-    const pergunta = soTiros
-      ? (todos ? t('auto.custoTodos', { min, n: pedidos.length, mb }) : t('auto.custo', { min, mb, canal: pedidos[0].canal }))
-      : (todos ? t('filtros.custoTodos', { min, n: pedidos.length, mb, lista: listaDeFiltros(doSom) })
-        : t('filtros.custo', { min, mb, canal: pedidos[0].canal, lista: listaDeFiltros(doSom) }));
-    if (!confirm(pergunta)) return;
-  }
+  // O modo esperto: só com som para ouvir, chat para ler e mais de meia hora. Um trecho curto ouve-se
+  // todo, direto; o Continuar ouvindo o resto ouve o que o modo esperto deixou.
+  const esperto = comSom && !resto && Boolean(chatDoEvento) && totalMs > ESPERTO_A_PARTIR_MS;
+  if (!resto || estado.restoPorOuvir?.quem !== quem) estado.restoPorOuvir = null;
 
   const controlo = new AbortController();
   estado.varredura = controlo;
@@ -3048,6 +3125,48 @@ async function detetar(quem, quanto) {
   pintarChatTrecho();
   let canal = pedidos[0].canal;
   try {
+    // Onde ouvir: em volta dos picos do chat de cada um (lido agora, se faltar), ou tudo.
+    let picosAchados = 0;
+    if (esperto) {
+      for (const p of pedidos) {
+        if (controlo.signal.aborted) throw new DOMException('parado', 'AbortError');
+        canal = p.canal;
+        if (p.deMs < Date.now()) {
+          // eslint-disable-next-line no-await-in-loop
+          await chatDoEvento.lerChatTrecho(canal, p.deMs, p.ateMs, {
+            sinal: controlo.signal,
+            aoProgredir: ({ fracao }) => dizer(t('rapido.aLerPicos', { canal, pct: Math.round(fracao * 100) })),
+          });
+        }
+        const marcas = (chatDoEvento.estado.marcas?.get(canal) || []).filter((m) => m.ms >= p.deMs && m.ms < p.ateMs);
+        picosAchados += marcas.length;
+        p.intervalos = janelasDosPicos(marcas, p.deMs, p.ateMs);
+      }
+      pintarFaixas();
+    }
+    for (const p of pedidos) if (!p.intervalos) p.intervalos = [[p.deMs, p.ateMs]];
+    const planoMs = pedidos.reduce((s, p) => s + somaMs(p.intervalos), 0);
+    if (esperto && !planoMs) {
+      // Sem picos não há por onde começar: diz-se, e o botão ouve tudo.
+      estado.restoPorOuvir = { quem, quanto };
+      dizer(todos ? t('rapido.semPicosTodos') : t('rapido.semPicos', { canal }));
+      return;
+    }
+    // O que ainda não foi ouvido é o que custa: o resto vem da memória da sessão.
+    const porOuvirMs = pedidos.reduce((s, p) => s + msPorOuvir(p.intervalos, estado.ouvidoNaFaixa.get(p.canal)), 0);
+    const mb = custoVarrerMB(porOuvirMs);
+    if (comSom && eMuito(porOuvirMs, mb)) {
+      naFaixa.textContent = '';
+      nota.classList.remove('mau');
+      nota.textContent = t('rapido.aviso', { horas: duracaoTrecho(porOuvirMs), mb });
+      const sim = await perguntarAntes(t('rapido.aviso', { horas: duracaoTrecho(porOuvirMs), mb }), controlo.signal);
+      if (!sim) {
+        if (esperto || resto) estado.restoPorOuvir = { quem, quanto };
+        dizer(t('rapido.cancelado'));
+        return;
+      }
+    }
+
     const achados = [];
     const porCanal = [];
     const estouros = [];
@@ -3055,27 +3174,65 @@ async function detetar(quem, quanto) {
     let falhados = 0;
     let ouvido = null;
     let avisosChat = '';
+    // O progresso de todos os pedidos juntos, em horas de live, e a velocidade medida desde aqui.
+    const comecou = Date.now();
+    let feitoAntes = 0;
+    let novoAntes = 0;
+    let bytesAntes = 0;
+    let ultimoDesenho = 0;
+    $('barraOuvir').value = 0;
     for (const p of pedidos) {
       if (controlo.signal.aborted) throw new DOMException('parado', 'AbortError');
       canal = p.canal;
       const linha = estado.linhas.find((l) => l.slug === canal);
       const doCanal = [];
       if (comSom) {
+        let reaproveitado = null;
+        let feitoAqui = 0;
+        let novoAqui = 0;
+        let bytesAqui = 0;
+        const desenhar = () => {
+          const feito = feitoAntes + feitoAqui;
+          const bytes = bytesAntes + bytesAqui;
+          const falta = estimarFalta({
+            feitoMs: novoAntes + novoAqui, restoMs: planoMs - feito, bytes, decorridoMs: Date.now() - comecou,
+          });
+          $('barraOuvir').value = planoMs ? Math.min(1, feito / planoMs) : 0;
+          dizer(t('rapido.aOuvir', {
+            canal, feito: duracaoTrecho(feito), total: duracaoTrecho(planoMs), mb: (bytes / 1048576).toFixed(0),
+          }) + (falta ? t('rapido.falta', { tempo: tempoFalta(falta) }) : ''));
+        };
         // eslint-disable-next-line no-await-in-loop
         const r = await varrerNoite({
           linha,
           deMs: p.deMs,
           ateMs: p.ateMs,
+          intervalos: p.intervalos,
           nudgeMs: estado.nudges[canal] || 0,
           sinal: controlo.signal,
+          memoria: estado.somOuvido,
           filtros: { tiros: filtros.tiros, explosoes: filtros.explosoes, gritos: filtros.gritos },
           opcoes: opcoesDaSensibilidade(filtros.sens),
           // 24 kHz, e nao os 8 do alinhamento: o tiro vive no agudo.
           lerSom: (l, quandoMs, duracaoS, opcoes) => somDoCanal(l, quandoMs, duracaoS, { ...opcoes, taxa: TAXA_TIROS }),
           aoProgresso: (x) => {
-            dizer(t('auto.aOuvir', { feito: x.feito, total: x.total, mb: (x.bytes / 1048576).toFixed(0), canal }));
+            // Cada bocado ouvido fica logo mais escuro na faixa (no máximo uma vez por segundo).
+            if (x.pronto) {
+              marcarOuvido(canal, [x.pronto]);
+              if (Date.now() - ultimoDesenho > 1000) { ultimoDesenho = Date.now(); pintarFaixas(); }
+            }
+            if (!('bytes' in x)) return;
+            if (reaproveitado === null) reaproveitado = x.ouvidoMs || 0;
+            feitoAqui = x.ouvidoMs ?? feitoAqui;
+            novoAqui = Math.max(0, feitoAqui - reaproveitado);
+            bytesAqui = x.bytes || 0;
+            desenhar();
           },
         });
+        feitoAntes += somaMs(p.intervalos);
+        novoAntes += novoAqui;
+        bytesAntes += bytesAqui;
+        marcarOuvido(canal, r.cobertura || p.intervalos);
         for (const e of r.estouros || []) estouros.push(e.canal ? e : { ...e, canal });
         falhados += r.falhados || 0;
         ouvido = r.ouvido || ouvido;
@@ -3104,9 +3261,18 @@ async function detetar(quem, quanto) {
       if (juntos.length) porCanal.push(`${canal} ${juntos.length}`);
     }
     if (comSom) estado.estouros = estouros;
+    // O que o modo esperto ouviu, dito, e o resto à distância de um botão.
+    let esperteza = '';
+    if (esperto) {
+      const faltaMs = pedidos.reduce((s, p) => s + msPorOuvir([[p.deMs, p.ateMs]], estado.ouvidoNaFaixa.get(p.canal)), 0);
+      if (faltaMs > 0) estado.restoPorOuvir = { quem, quanto };
+      esperteza = t('rapido.esperto', {
+        ouvido: duracaoTrecho(planoMs), total: duracaoTrecho(totalMs), picos: tn(picosAchados, 'rapido.umPico', 'rapido.picos'),
+      });
+    }
     // Os bocados que a Kick nao mandou, ditos. Sem isto um buraco de rede a
     // meio da noite passava por uma hora sem tiroteios.
-    const falhas = (falhados ? t('auto.falhados', { n: falhados }) : '') + avisosChat;
+    const falhas = (falhados ? t('auto.falhados', { n: falhados }) : '') + avisosChat + esperteza;
     if (!achados.length) {
       // Dizer o que se ouviu, e nao so que nao se achou. "Da isso, porem eu sei
       // que ta tendo tiroteio" — e sem estes tres numeros nao ha como saber se
@@ -3174,7 +3340,9 @@ async function detetar(quem, quanto) {
   } catch (e) {
     // O erro desta busca é desta busca: o `alinhar.erro` falava de sincronia e
     // mandava alinhar à mão, que não é o que falhou nem o que resolve.
-    dizer(e.name === 'AbortError' ? t('alinhar.cancelado')
+    // Parado a meio, o que já se ouviu fica guardado, e o Continuar ouvindo o resto retoma daí.
+    if (e.name === 'AbortError' && comSom) estado.restoPorOuvir = { quem, quanto };
+    dizer(e.name === 'AbortError' ? (comSom ? t('rapido.parado') : t('alinhar.cancelado'))
       : e.name === 'SEM-DESCODIFICADOR' ? t('auto.semCodec')
         : t('auto.erro', { canal }), true);
   } finally {
@@ -3184,8 +3352,8 @@ async function detetar(quem, quanto) {
     estado.varredura = null;
     trocarRotulo(botao, 'auto.botao');
     pintarChatTrecho();
-    // As partes do chat que a detecção leu ficam marcadas na faixa, como as do Ler chat.
-    if (comChat) pintarFaixas();
+    // As partes do chat que a detecção leu e as do som que ouviu ficam marcadas na faixa.
+    if (comChat || comSom) pintarFaixas();
   }
 }
 

@@ -2,6 +2,7 @@ import {
   medir, chao, impulsos, regioes, FPS, TAXA_TIROS, BLOCO_MS, REFRACTARIO_MS,
 } from './tiros.js';
 import { recortar } from './aprender.js';
+import { juntar as juntarIntervalos } from './ouvir.js';
 import { medirGraves, explosoes as acharExplosoes, FPS as FPS_EXPLOSOES } from './explosoes.js';
 import { medirVoz, gritos as acharGritos, normalDaVoz, FPS as FPS_GRITOS } from './gritos.js';
 
@@ -24,19 +25,135 @@ export function custoVarrerMB(duracaoMs) {
   return Math.round(((duracaoMs / 1000) * 280_000) / 8 / 1048576);
 }
 
+// Quantos pedidos de segmento podem ir ao mesmo tempo, somando todos os bocados que estão a ser
+// ouvidos. O dono, 10/10: "baixa um por vez". Um segmento de 2 s a 160p são uns 70 KB, e o que demora
+// é a ida e volta de cada pedido, não os bytes: quatro ao mesmo tempo enchem a ligação sem a
+// entupir, e é o mesmo número que um navegador abre por servidor quando ninguém lhe pede nada.
+export const PEDIDOS_AO_MESMO_TEMPO = 4;
+// Dois bocados a ser ouvidos ao mesmo tempo: enquanto um se descodifica e mede, o outro está a
+// chegar. Mais do que dois não acelera (o limite é o dos pedidos) e prende mais som em memória.
+const BOCADOS_AO_MESMO_TEMPO = 2;
+// O que fica guardado do que já se ouviu, na sessão: as medidas de cada bocado, não o som. Uma hora
+// de tiros são uns 14 MB de curva; o tecto deixa umas vinte horas de live guardadas, e passado ele
+// sai o que foi ouvido há mais tempo.
+const MEMORIA_MAX_BYTES = 320 * 1048576;
+// Os recortes guardados por bocado (60 ms cada um): os mais fortes, e um tecto para a memória.
+const RECORTES_POR_BOCADO = 1000;
+// Menos do que isto não se pede: o `somDoCanal` não devolve som de um pedaço tão curto.
+const MIN_PEDACO_MS = 5000;
+
 /**
- * Ouvir um canal do princípio ao fim de uma janela e devolver os candidatos.
+ * Um `buscar` que deixa no máximo `n` pedidos no ar ao mesmo tempo. O resto espera na fila, e sai
+ * dela sem pedir nada quando o sinal do Parar chega.
+ */
+export function limitarPedidos(buscar, n = PEDIDOS_AO_MESMO_TEMPO) {
+  let noAr = 0;
+  const fila = [];
+  const soltar = () => {
+    noAr--;
+    while (fila.length && noAr < n) {
+      const proximo = fila.shift();
+      if (!proximo.desistiu) { noAr++; proximo.vai(); }
+    }
+  };
+  return async (url, init = {}) => {
+    const sinal = init.signal;
+    if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
+    if (noAr >= n) {
+      await new Promise((vai, mal) => {
+        const lugar = { vai, desistiu: false };
+        fila.push(lugar);
+        sinal?.addEventListener('abort', () => {
+          lugar.desistiu = true;
+          mal(new DOMException('cancelado', 'AbortError'));
+        }, { once: true });
+      });
+    } else noAr++;
+    try {
+      return await buscar(url, init);
+    } finally {
+      soltar();
+    }
+  };
+}
+
+/** O que de `[a, b]` não está coberto por `cobertos` (juntos e por ordem). */
+function oQueFalta(a, b, cobertos) {
+  const falta = [];
+  let de = a;
+  for (const [x, y] of cobertos) {
+    if (y <= de) continue;
+    if (x >= b) break;
+    if (x > de) falta.push([de, x]);
+    de = Math.max(de, y);
+    if (de >= b) break;
+  }
+  if (de < b) falta.push([de, b]);
+  return falta;
+}
+
+/** Uma medida (os arrays dela) cortada do bloco `i0` ao `i1`, sem copiar. */
+function cortarMedida(m, i0, i1) {
+  if (!m) return m;
+  const saida = {};
+  for (const [k, v] of Object.entries(m)) saida[k] = ArrayBuffer.isView(v) ? v.subarray(i0, Math.min(v.length, i1)) : v;
+  return saida;
+}
+
+/** Quantos bytes ocupa uma entrada da memória: as curvas e os recortes. */
+function tamanhoDe(entrada) {
+  let n = 0;
+  const somar = (m) => { for (const v of Object.values(m || {})) if (ArrayBuffer.isView(v)) n += v.byteLength; };
+  somar({ env: entrada.env, brilho: entrada.brilho });
+  somar(entrada.graves);
+  somar(entrada.voz);
+  for (const c of entrada.recortes || []) n += c.recorte.byteLength + 24;
+  return n;
+}
+
+/** Guardar uma entrada, e tirar as mais antigas (de qualquer canal) quando passa do tecto. */
+function guardarNaMemoria(memoria, slug, entrada) {
+  entrada.tamanho = tamanhoDe(entrada);
+  if (!memoria.has(slug)) memoria.set(slug, []);
+  memoria.get(slug).push(entrada);
+  let total = 0;
+  for (const lista of memoria.values()) for (const e of lista) total += e.tamanho;
+  while (total > MEMORIA_MAX_BYTES) {
+    let maisVelha = null;
+    for (const lista of memoria.values()) for (const e of lista) if (!maisVelha || e.quando < maisVelha.quando) maisVelha = e;
+    if (!maisVelha || maisVelha === entrada) break;
+    for (const [k, lista] of memoria) {
+      const i = lista.indexOf(maisVelha);
+      if (i >= 0) { lista.splice(i, 1); if (!lista.length) memoria.delete(k); }
+    }
+    total -= maisVelha.tamanho;
+  }
+}
+
+let relogioDaMemoria = 0;
+
+/**
+ * Ouvir um canal nos intervalos pedidos (por omissão, de `deMs` a `ateMs`) e devolver os candidatos.
  *
  * Aos bocados, e não de uma vez: uma hora de áudio a 8 kHz são 115 MB de
- * memória em números soltos, e o que interessa — a envolvente de ataques a
- * 100 Hz — são 1,4 MB. Guarda-se a envolvente e deita-se fora o som.
+ * memória em números soltos, e o que interessa (a envolvente de ataques)
+ * é muito menos. Guarda-se a envolvente e deita-se fora o som.
  *
  * `lerSom` é a mesma costura de `alinhar.js`: assim isto testa-se sem rede,
- * sem browser e sem codec.
+ * sem browser e sem codec. Recebe um `buscar` que deixa no máximo quatro pedidos no ar, somados os
+ * bocados todos, e dois bocados são ouvidos ao mesmo tempo.
+ *
+ * `intervalos` (no relógio da noite) é o modo esperto: só uns minutos em volta dos picos do chat. O
+ * chão continua a ser o de tudo o que se ouviu, e o que fica fora fica a zero na curva.
+ *
+ * `memoria` (um Map por canal, da sessão) guarda as medidas de cada bocado ouvido: o que já foi
+ * ouvido de uma pessoa não se baixa outra vez, nem num trecho que o cruze, nem com o Parar a meio.
  */
 export async function varrerNoite({
-  linha, deMs, ateMs, bocadoS = 300, lerSom, sinal, aoProgresso = () => {},
+  linha, deMs, ateMs, intervalos = null, bocadoS = 300, lerSom, sinal, aoProgresso = () => {},
   opcoes = {}, taxaSom = TAXA_TIROS, nudgeMs = 0, filtros = { tiros: true },
+  memoria = null, buscar = globalThis.fetch, pedidosAoMesmoTempo = PEDIDOS_AO_MESMO_TEMPO,
+  bocadosAoMesmoTempo = BOCADOS_AO_MESMO_TEMPO,
 }) {
   // O que se procura no som: os tiros (o de sempre), as explosões e os gritos. Cada medida custa uma
   // passagem pelo som, e só corre a que foi pedida.
@@ -53,77 +170,160 @@ export async function varrerNoite({
   //
   // `deMs`/`ateMs` e tudo o que sai daqui estao no relogio da noite, o mesmo
   // dos momentos. O ajuste do canal (`nudgeMs`) so entra no pedido de som,
-  // que e no relogio do proprio VOD, como o `onde` da grelha faz.
-  const trechos = [];
+  // que e no relogio do proprio VOD, como o `onde` da grelha faz. A memoria
+  // guarda no relogio do VOD, que nao muda quando o ajuste muda.
+  const pedidos = juntarIntervalos((intervalos || [[deMs, ateMs]])
+    .map(([a, b]) => [Math.max(deMs, a), Math.min(ateMs, b)]));
   const pecas = linha?.pecas?.length
     ? linha.pecas.map((p) => [p.playlist.inicio - nudgeMs, p.playlist.fim - nudgeMs])
     : [[deMs, ateMs]];
+  const alvo = [];
   for (const [inicio, fim] of pecas) {
-    const de = Math.max(deMs, inicio);
-    const ate = Math.min(ateMs, fim);
-    for (let t = de; t < ate; t += bocadoS * 1000) trechos.push([t, Math.min(ate, t + bocadoS * 1000)]);
+    for (const [a, b] of pedidos) {
+      const de = Math.max(a, inicio);
+      const ate = Math.min(b, fim);
+      if (ate > de) alvo.push([de, ate]);
+    }
   }
-  const total = Math.max(1, trechos.length);
-  let feitos = 0;
-  let ouvidoMs = 0;
-  let bytes = 0;
-  let falhados = 0;
-  let ultimoErro = null;
+  const alvos = juntarIntervalos(alvo);
+  const totalMs = alvos.reduce((s, [a, b]) => s + (b - a), 0);
+
+  // O que a memoria ja tem deste canal, com as medidas que agora se pedem.
+  const slug = linha?.slug ?? '';
+  const serve = (e) => (!querTiros || e.env) && (!querExplosoes || e.graves) && (!querGritos || e.voz);
+  const guardadas = (memoria?.get(slug) || []).filter(serve);
+  const cobertos = juntarIntervalos(guardadas.map((e) => [e.de - nudgeMs, e.ate - nudgeMs]));
+
   // Os estouros candidatos, ja recortados. O som de cada bocado nao pode ficar
   // ate ao fim: uma hora a 24 kHz sao 345 MB, e a noite toda deitava o
   // separador abaixo. Por isso os recortes tiram-se JA, com o som na mao, e o
   // som vai-se embora com o bocado.
   const poco = [];
+  const meterNoPoco = (parte, recortes) => {
+    for (const c of recortes) poco.push({ parte, bloco: c.bloco, energia: c.energia, recorte: c.recorte });
+    if (poco.length > TECTO_ESTOUROS * 3) {
+      poco.sort((a, b) => b.energia - a.energia);
+      poco.length = TECTO_ESTOUROS * 2;
+    }
+  };
 
-  for (const [t, fimT] of trechos) {
-    if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
-    const duracaoS = (fimT - t) / 1000;
-    aoProgresso({ feito: ++feitos, total, bytes, ouvidoS: ouvidoMs / 1000 });
-    let som = null;
-    try {
-      som = await lerSom(linha, t + nudgeMs, duracaoS, {
-        contador: (n) => { bytes += n; },
-        sinal,
-      });
-    } catch (e) {
-      // Um 503 na hora cinco nao pode deitar fora as cinco anteriores: o
-      // bocado fica por ouvir, como um que caiu num buraco, e conta-se.
-      // Cancelar e um navegador sem descodificador nao sao falhas de um
-      // bocado: sao a resposta para a noite inteira.
-      if (e.name === 'AbortError' || e.name === 'SEM-DESCODIFICADOR') throw e;
-      falhados++;
-      ultimoErro = e;
+  // Uma entrada (nova ou da memoria) vista so entre `a` e `b` do relogio da noite.
+  const usar = (e, a, b) => {
+    const t0 = e.de - nudgeMs;
+    const de = Math.max(a, t0);
+    const parte = { t: de };
+    const iT = Math.max(0, Math.round(((de - t0) / 1000) * FPS));
+    const fT = Math.round(((Math.min(b, e.ate - nudgeMs) - t0) / 1000) * FPS);
+    if (querTiros && e.env) {
+      parte.env = e.env.subarray(iT, Math.min(e.env.length, fT));
+      parte.brilho = e.brilho.subarray(iT, Math.min(e.brilho.length, fT));
     }
-    // Um bocado que não se consegue ouvir não pode deslocar o resto no tempo:
-    // cada bocado vai para o seu sítio do relógio, e o que fica no meio fica a
-    // zero na curva, mas fora da conta do chão (ver abaixo).
-    // A energia em blocos de 2 ms, e nao a envolvente normalizada.
-    //
-    // A `envolvente` divide o som pelo seu proprio RMS a cada pedaco. Isso e
-    // certo para ALINHAR dois canais — tira o volume da conta e compara so a
-    // forma — e e o contrario do que aqui e preciso: "quando acontece um som
-    // de disparo, e o pico praticamente mais alto do grafico". A forca ERA o
-    // sinal, e eu dividia-a fora antes de olhar.
-    if (som) {
-      const parte = { t };
-      if (querTiros) {
-        const m = medir(som, taxaSom);
-        parte.env = m.energia;
-        parte.brilho = m.brilho;
-        recolherEstouros(poco, parte, som, taxaSom, opcoes);
+    const i10 = Math.max(0, Math.round(((de - t0) / 1000) * FPS_EXPLOSOES));
+    const f10 = Math.round(((Math.min(b, e.ate - nudgeMs) - t0) / 1000) * FPS_EXPLOSOES);
+    if (querExplosoes) parte.graves = cortarMedida(e.graves, i10, f10);
+    if (querGritos) parte.voz = cortarMedida(e.voz, Math.round(i10 * FPS_GRITOS / FPS_EXPLOSOES), Math.round(f10 * FPS_GRITOS / FPS_EXPLOSOES));
+    partes.push(parte);
+    if (querTiros && e.env) {
+      meterNoPoco(parte, (e.recortes || [])
+        .filter((c) => c.bloco >= iT && c.bloco < fT)
+        .map((c) => ({ ...c, bloco: c.bloco - iT })));
+    }
+  };
+
+  // O que ja estava ouvido entra logo; o que falta vira bocados.
+  let ouvidoMs = 0;
+  const trechos = [];
+  // O que ficou ouvido de facto (da memoria ou agora), para a faixa o mostrar mais escuro.
+  const prontos = [];
+  for (const [a, b] of alvos) {
+    for (const e of guardadas) {
+      const de = Math.max(a, e.de - nudgeMs);
+      const ate = Math.min(b, e.ate - nudgeMs);
+      if (ate > de) {
+        usar(e, de, ate);
+        ouvidoMs += ate - de;
+        prontos.push([de, ate]);
+        aoProgresso({ pronto: [de, ate], ouvidoMs, totalMs });
       }
-      if (querExplosoes) parte.graves = medirGraves(som, taxaSom);
-      if (querGritos) parte.voz = medirVoz(som, taxaSom);
-      partes.push(parte);
     }
-    ouvidoMs += duracaoS * 1000;
+    for (const [x, y] of oQueFalta(a, b, cobertos)) {
+      if (y - x < MIN_PEDACO_MS && cobertos.length) { ouvidoMs += y - x; continue; }
+      for (let t = x; t < y; t += bocadoS * 1000) trechos.push([t, Math.min(y, t + bocadoS * 1000)]);
+    }
   }
+
+  const reaproveitadoMs = ouvidoMs;
+  const total = Math.max(1, trechos.length);
+  let feitos = 0;
+  let bytes = 0;
+  let falhados = 0;
+  let ultimoErro = null;
+  const buscarLimitado = buscar ? limitarPedidos(buscar, pedidosAoMesmoTempo) : undefined;
+  const contar = () => aoProgresso({ feito: Math.min(feitos, total), total, bytes, ouvidoS: ouvidoMs / 1000, ouvidoMs, totalMs });
+  contar();
+
+  let proximo = 0;
+  let parou = null;
+  const umOuvinte = async () => {
+    while (proximo < trechos.length && !parou) {
+      if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
+      const [t, fimT] = trechos[proximo++];
+      const duracaoS = (fimT - t) / 1000;
+      feitos++;
+      let som = null;
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        som = await lerSom(linha, t + nudgeMs, duracaoS, {
+          contador: (n) => { bytes += n; contar(); },
+          sinal,
+          buscar: buscarLimitado,
+          paralelo: pedidosAoMesmoTempo,
+        });
+      } catch (e) {
+        // Um 503 na hora cinco nao pode deitar fora as cinco anteriores: o
+        // bocado fica por ouvir, como um que caiu num buraco, e conta-se.
+        // Cancelar e um navegador sem descodificador nao sao falhas de um
+        // bocado: sao a resposta para a noite inteira.
+        if (e.name === 'AbortError' || e.name === 'SEM-DESCODIFICADOR') { parou = e; throw e; }
+        falhados++;
+        ultimoErro = e;
+      }
+      if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
+      // Um bocado que não se consegue ouvir não pode deslocar o resto no tempo:
+      // cada bocado vai para o seu sítio do relógio, e o que fica no meio fica a
+      // zero na curva, mas fora da conta do chão (ver abaixo).
+      // A energia em blocos de 2 ms, e nao a envolvente normalizada: a forca
+      // ERA o sinal ("quando acontece um som de disparo, e o pico praticamente
+      // mais alto do grafico"), e a envolvente dividia-a fora.
+      if (som) {
+        const e = { de: t + nudgeMs, ate: fimT + nudgeMs, quando: ++relogioDaMemoria };
+        if (querTiros) {
+          const m = medir(som, taxaSom);
+          e.env = m.energia;
+          e.brilho = m.brilho;
+          e.recortes = recortesDe(e.env, som, taxaSom, opcoes);
+        }
+        if (querExplosoes) e.graves = medirGraves(som, taxaSom);
+        if (querGritos) e.voz = medirVoz(som, taxaSom);
+        som = null;
+        usar(e, t, fimT);
+        if (memoria) guardarNaMemoria(memoria, slug, e);
+        prontos.push([t, fimT]);
+        aoProgresso({ pronto: [t, fimT], ouvidoMs: ouvidoMs + (fimT - t), totalMs });
+      }
+      ouvidoMs += fimT - t;
+      contar();
+    }
+  };
+  await Promise.all(Array.from({ length: Math.max(1, Math.min(bocadosAoMesmoTempo, trechos.length)) }, umOuvinte));
+  // Os bocados chegam fora de ordem quando dois andam ao mesmo tempo; a curva cola-se pelo relogio.
+  partes.sort((a, b) => a.t - b.t);
   // Nada se ouviu e houve erros: o erro e a unica resposta que ha. Dizer
   // "nao ouvi som nenhum" escondia um problema de rede atras de um de canal.
   if (falhados && !partes.length) throw ultimoErro;
 
   const { porHora = 15 } = opcoes;
-  const limite = Math.max(1, Math.round((porHora * (ateMs - deMs)) / 3_600_000));
+  const limite = Math.max(1, Math.round((porHora * (totalMs || (ateMs - deMs))) / 3_600_000));
   // As explosões e os gritos, cada um contra o normal da noite inteira desta pessoa, como os tiros.
   const explosoes = !querExplosoes ? [] : paraOMomento(acharExplosoes(
     colar(partes, 'graves', ['forca', 'grave'], deMs, ateMs, FPS_EXPLOSOES),
@@ -138,6 +338,7 @@ export async function varrerNoite({
   if (!querTiros) {
     return {
       ouvido: null, candidatos: [], estouros: [], explosoes, gritos, bytes, falhados, curva: new Float32Array(0),
+      cobertura: juntarIntervalos(prontos), reaproveitadoMs,
     };
   }
 
@@ -150,8 +351,9 @@ export async function varrerNoite({
   // para o mesmo sitio do relogio, bloco a bloco.
   const brilhos = new Float32Array(Math.max(0, comprimento));
   for (const { t, env, brilho } of partes) {
+    if (!env) continue;
     const o = Math.round(((t - deMs) / 1000) * fps);
-    for (let i = 0; i < env.length && o + i < tudo.length; i++) {
+    for (let i = Math.max(0, -o); i < env.length && o + i < tudo.length; i++) {
       tudo[o + i] = env[i];
       brilhos[o + i] = brilho[i];
     }
@@ -165,9 +367,10 @@ export async function varrerNoite({
   // com mais de metade da janela fora do ar a mediana dava zero, e com o
   // chao a zero nao ha nada "acima do chao": o tiroteio verdadeiro sumia e a
   // mensagem dizia que nao se tinha ouvido som nenhum.
-  const ouvidos = new Float32Array(partes.reduce((s, p) => s + p.env.length, 0));
+  const comEnv = partes.filter((p) => p.env);
+  const ouvidos = new Float32Array(comEnv.reduce((s, p) => s + p.env.length, 0));
   let k = 0;
-  for (const p of partes) { ouvidos.set(p.env, k); k += p.env.length; }
+  for (const p of comEnv) { ouvidos.set(p.env, k); k += p.env.length; }
   const piso = chao(ouvidos);
   // Guardar a FORMA de cada estouro, para depois se poder aprender com uma
   // kill que ele confirme. Sao 60 ms cada um: uma noite inteira cabe em
@@ -216,6 +419,8 @@ export async function varrerNoite({
     bytes,
     falhados,
     curva: tudo,
+    cobertura: juntarIntervalos(prontos),
+    reaproveitadoMs,
   };
 }
 
@@ -281,8 +486,7 @@ const TECTO_ESTOUROS = 4000;
  * deixavam de fora os tiros que ele aponta como referencia. Quem separa um
  * tiro de uma silaba aqui e a forma de onda, em `parecidos`.
  */
-function recolherEstouros(poco, parte, som, taxa, { saltoMin = 6 } = {}) {
-  const { env } = parte;
+function recortesDe(env, som, taxa, { saltoMin = 6 } = {}) {
   const novos = [];
   for (let b = 1; b < env.length; b++) {
     if (!(env[b] > 0) || env[b] / (env[b - 1] + 1e-9) < saltoMin) continue;
@@ -291,16 +495,13 @@ function recolherEstouros(poco, parte, som, taxa, { saltoMin = 6 } = {}) {
   // Os mais fortes primeiro: se o bocado der mais do que o tecto, os que
   // sobram sao os que nunca iam passar a frente dos outros.
   novos.sort((a, b) => env[b] - env[a]);
-  for (const b of novos.slice(0, TECTO_ESTOUROS * 2)) {
+  const saida = [];
+  for (const b of novos) {
+    if (saida.length >= RECORTES_POR_BOCADO) break;
     const recorte = recortar(som, taxa, b / FPS);
-    if (recorte) poco.push({ parte, bloco: b, energia: env[b], recorte });
+    if (recorte) saida.push({ bloco: b, energia: env[b], recorte });
   }
-  // O poco tambem tem tecto, com folga para a regra dos 70 ms poder tirar
-  // alguns sem a lista final ficar curta.
-  if (poco.length > TECTO_ESTOUROS * 3) {
-    poco.sort((a, b) => b.energia - a.energia);
-    poco.length = TECTO_ESTOUROS * 2;
-  }
+  return saida;
 }
 
 /**

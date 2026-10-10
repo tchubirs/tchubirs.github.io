@@ -805,9 +805,19 @@
                 <button id="detetarTrecho" type="button" class="principal"><svg class="ic ic-p" aria-hidden="true"><use href="#i-mira"/></svg><span data-t="faixa.detetar">Detectar</span></button>
               </div>
             </div>
+            <!-- Antes de ouvir muito (horas de live, centenas de MB): o aviso, com Continuar e Cancelar. -->
+            <div id="avisoOuvir" class="avisoOuvir" role="alertdialog" aria-labelledby="avisoOuvirTexto" hidden>
+              <p id="avisoOuvirTexto" class="avisoOuvirTexto"></p>
+              <div class="avisoOuvirBotoes">
+                <button id="avisoContinuar" type="button" class="principal"><span data-t="rapido.avisoContinuar">Continuar</span></button>
+                <button id="avisoCancelar" type="button"><span data-t="rapido.avisoCancelar">Cancelar</span></button>
+              </div>
+            </div>
             <div class="acoesTrabalho">
               <button id="pararChatTrecho" type="button" hidden><svg class="ic ic-p" aria-hidden="true"><use href="#i-parar"/></svg><span data-t="chatTrecho.parar">Parar</span></button>
+              <progress id="barraOuvir" class="barraOuvir" max="1" value="0" data-t-aria="rapido.barra" aria-label="Quanto já foi ouvido" hidden></progress>
               <span id="estadoChatTrecho" class="nota estadoChatTrecho" role="status" aria-live="polite"></span>
+              <button id="continuarOuvindo" type="button" hidden><span data-t="rapido.continuar">Continuar ouvindo o resto</span></button>
             </div>
           </div>
         </div>

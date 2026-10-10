@@ -1889,6 +1889,11 @@ body:is(.videoAberto, :has(#palco:not([hidden]))) .mostrarMapa { background: var
   position: absolute; bottom: 0; height: 4px; display: block; border-radius: 1px; pointer-events: none;
   background: color-mix(in srgb, var(--sup-0) 70%, transparent);
 }
+/* E em cima, o que a detecção já ouviu do som: mais escuro, do mesmo jeito. */
+.trilho .ouvido {
+  position: absolute; top: 0; height: 4px; display: block; border-radius: 1px; pointer-events: none;
+  background: color-mix(in srgb, var(--sup-0) 70%, transparent);
+}
 /* As alças por cima do trilho. A calha não apanha cliques (o trilho por baixo continua a levar o vídeo
    ao sítio clicado); só a faixa do meio e as alças os apanham. */
 .chatTrecho { position: relative; height: 22px; pointer-events: none; z-index: 1; }
@@ -1952,7 +1957,21 @@ body:is(.videoAberto, :has(#palco:not([hidden]))) .mostrarMapa { background: var
 .passo4Detetar > #detetarTrecho, .passo4Chat > #lerChatTrecho { justify-self: start; min-height: 36px; padding: 0 var(--e5); font-size: var(--t-base); }
 @media (pointer: coarse), (max-width: 620px) { .passo4Detetar > #detetarTrecho, .passo4Chat > #lerChatTrecho { min-height: 44px; } }
 .acoesTrabalho { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e3); min-width: 0; }
-.acoesTrabalho:not(:has(#pararChatTrecho:not([hidden]))):not(:has(.estadoChatTrecho:not(:empty))) { display: none; }
+.acoesTrabalho:not(:has(#pararChatTrecho:not([hidden]))):not(:has(.estadoChatTrecho:not(:empty))):not(:has(#continuarOuvindo:not([hidden]))) { display: none; }
+/* Quanto já foi ouvido, em horas de live, ao lado do Parar. */
+.barraOuvir { flex: 0 1 140px; width: 140px; min-width: 80px; height: 6px; appearance: none; border: 0; border-radius: var(--r-fio); background: var(--sup-4); overflow: hidden; }
+.barraOuvir::-webkit-progress-bar { background: var(--sup-4); border-radius: var(--r-fio); }
+.barraOuvir::-webkit-progress-value { background: var(--acento); border-radius: var(--r-fio); }
+.barraOuvir::-moz-progress-bar { background: var(--acento); border-radius: var(--r-fio); }
+/* O aviso antes de ouvir muito: a frase e os dois botões, no sítio do progresso. */
+.avisoOuvir {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2) var(--e3); min-width: 0;
+  padding: var(--e3); border: 1px solid var(--aviso-fio, var(--acento-fio)); border-radius: var(--r-2); background: var(--sup-2);
+}
+.avisoOuvirTexto { flex: 1 1 18em; min-width: 0; margin: 0; font-size: var(--t-base); font-weight: 500; color: var(--tinta); }
+.avisoOuvirBotoes { display: flex; flex-wrap: wrap; gap: var(--e2); }
+.acoesCorpo .avisoOuvirBotoes button { min-height: 36px; padding: 0 var(--e4); font-size: var(--t-base); }
+@media (pointer: coarse), (max-width: 620px) { .acoesCorpo .avisoOuvirBotoes button { min-height: 44px; } }
 .chatTrechoHoras { font: 400 var(--t-menor)/1.2 var(--letra-mono); font-variant-numeric: tabular-nums; color: var(--tinta-2); white-space: nowrap; }
 .estadoChatTrecho { flex: 1 1 14em; min-width: 0; font-size: var(--t-menor); }
 

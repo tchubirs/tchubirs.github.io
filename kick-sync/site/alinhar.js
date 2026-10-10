@@ -194,24 +194,43 @@ function reamostrar(pedacos, de, para) {
  * e a unica parte que pertence ao browser e nao a este codigo.
  */
 export async function somDoCanal(linha, quandoMs, duracaoS, {
-  buscar = fetch, sinal, descodificar = descodificarAac, contador, taxa = TAXA,
+  buscar = fetch, sinal, descodificar = descodificarAac, contador, taxa = TAXA, paralelo = 4,
 } = {}) {
   const r = onde(linha, quandoMs);
   if (r.estado !== 'toca') return null;
+  // A playlist da peca e sempre a do degrau mais barato (160p): `peca.playlist` e lida de
+  // `peca.barato` quando a noite abre. O audio nao se pode pedir sozinho na Kick, e o degrau de baixo
+  // e o que traz menos video junto.
   const peca = linha.pecasCompletas?.find((p) => p.vod.id === r.peca.vod.id) || r.peca;
   const segs = segmentosNaJanela(peca.playlist, quandoMs, quandoMs + duracaoS * 1000);
   if (!segs.length) return null;
 
-  const partes = [];
+  // Ate `paralelo` segmentos no ar ao mesmo tempo, e cada um no seu lugar. Antes ia um de cada vez, e
+  // um bocado de cinco minutos sao dezenas de idas e voltas: o tempo ia na espera, nao nos bytes.
+  const partes = new Array(segs.length);
   let total = 0;
-  for (const s of segs) {
-    const resp = await buscar(s.url, { signal: sinal });
-    if (!resp.ok) throw new Error(`segmento ${resp.status}`);
-    const b = new Uint8Array(await resp.arrayBuffer());
-    partes.push(b);
-    total += b.length;
-  }
-  contador?.(total);
+  let proximo = 0;
+  let falhou = null;
+  const umPedido = async () => {
+    while (proximo < segs.length && !falhou) {
+      if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
+      const i = proximo++;
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        const resp = await buscar(segs[i].url, { signal: sinal });
+        if (!resp.ok) throw new Error(`segmento ${resp.status}`);
+        // eslint-disable-next-line no-await-in-loop
+        const b = new Uint8Array(await resp.arrayBuffer());
+        partes[i] = b;
+        total += b.length;
+        contador?.(b.length);
+      } catch (e) {
+        falhou = falhou || e;
+        throw e;
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.max(1, Math.min(paralelo, segs.length)) }, umPedido));
   const ts = new Uint8Array(total);
   let o = 0;
   for (const p of partes) { ts.set(p, o); o += p.length; }
