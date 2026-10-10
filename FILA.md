@@ -219,3 +219,7 @@ falta só a chave dele), Fiverr (5 anúncios prontos, com imagens de trabalho re
 conversor de extrato testado), Etsy (orçamento TDAH, assinaturas, kit, quitar
 dívidas, autônomos, casamento, estoque, reforma da casa, aluguel por temporada, calculadora de taxas, orçamento por salário, aluguel mensal, cardápio da semana, metas de poupança, agenda de clientes, treinos, encomendas, hábitos e humor, estudos, despesas em grupo, viagem, leitura, contas da casa dividida, festa, plantas, mudança, pets, carro, bebê, horas e faturas, Natal, ferramentas de empresa, glicose e remédios, candidaturas a emprego, tarefas e mesada, lotes e etiquetas de comida caseira, aulas e notas para professor, empréstimos entre amigos, patrimônio e dividendos, calendário de conteúdo, doações e voluntários, envelopes de dinheiro, horta, personal trainer, pacote das 5 que mais vendem para publicar à mão; guias de todas as planilhas explicam como apagar os exemplos sem quebrar fórmulas; as 3 primeiras também
 em francês). Tudo revisado pela regra 14 em 28/09.
+
+## Pedido do dono (10/10): atalhos personalizáveis
+- Painel de atalhos igual editor de vídeo: trocar qualquer atalho e dar atalho a botões que não têm. Cada pessoa usa do seu jeito; guardar no aparelho dela.
+- Feito depois de ele escolher a tela (vencedora da arena IA 12 ou só consertos).
