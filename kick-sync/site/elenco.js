@@ -1569,3 +1569,43 @@ export async function descodificar(s) {
   }
   return normalizar({ times, soltos });
 }
+
+// ── apelidos do Discord ─────────────────────────────────────────────────────
+
+/**
+ * Os apelidos do Discord que vêm junto do link de cada canal, como na planilha do dono:
+ * `https://kick.com/newtrc,,seguido por voce [Discord: Newt]`. Também "(Discord: X)" e uma célula
+ * "Discord: X". Só vale numa linha com um canal só: com dois, não se sabe de quem é o apelido.
+ *
+ * O `lerElenco` continua a ignorar estas notas, de propósito: o elenco vai para links e para o arquivo
+ * público do evento, e o nome de alguém no Discord não. Isto devolve um Map slug -> [apelido] que a
+ * página guarda só no aparelho de quem colou a lista.
+ */
+export function apelidosDoTexto(texto) {
+  const saida = new Map();
+  for (const linha of String(texto ?? '').split(/\r?\n/)) {
+    if (!/discord/i.test(linha)) continue;
+    const canais = new Set();
+    for (const m of linha.matchAll(/(?:https?:\/\/)?(?:www\.)?kick\.com\/[^\s,;"'<>()[\]]+/gi)) {
+      const slug = canalDe(m[0]);
+      if (slug) canais.add(slug);
+    }
+    if (canais.size !== 1) continue;
+    const apelidos = [];
+    const entre = [...linha.matchAll(/[[(]\s*discord\s*:\s*([^\])]+?)\s*[\])]/gi)].map((m) => m[1]);
+    if (entre.length) apelidos.push(...entre);
+    else {
+      const solto = /discord\s*:\s*([^,\t;"\])\n]+)/i.exec(linha);
+      if (solto) apelidos.push(solto[1]);
+    }
+    const limpos = apelidos
+      .map((a) => a.replace(/[<>"`]/g, '').replace(/#\d{1,4}\s*$/, '').replace(/\s+/g, ' ').trim().slice(0, 40))
+      .filter(Boolean);
+    if (!limpos.length) continue;
+    const slug = [...canais][0];
+    const atual = saida.get(slug) || [];
+    for (const a of limpos) if (!atual.includes(a)) atual.push(a);
+    saida.set(slug, atual);
+  }
+  return saida;
+}

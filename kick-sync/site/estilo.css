@@ -1784,6 +1784,60 @@ body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) > #evento { flex: 0 0 aut
 .lanceAchados { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e1); }
 .lanceAchados:empty { display: none; }
 .lanceAchados li { display: flex; justify-content: space-between; gap: var(--e2); padding: var(--e1) var(--e2); background: var(--acento-eco); border-radius: var(--r-1); }
+/* Os nomes na tela: um bloco que abre dentro do painel do lance, com o que se leu e o que se propõe. */
+.nomesTela { border-top: 1px solid var(--linha); padding-top: var(--e2); display: flex; flex-direction: column; gap: var(--e2); }
+.nomesTela[open] { gap: var(--e2); }
+.nomesTela > summary {
+  display: flex; align-items: center; flex-wrap: wrap; gap: var(--e2); min-height: 36px; cursor: pointer; list-style: none;
+  font-weight: 600; border-radius: var(--r-2); padding: 0 var(--e1);
+}
+.nomesTela > summary::-webkit-details-marker { display: none; }
+.nomesTela > summary::before {
+  content: ''; width: 0; height: 0; border-style: solid; border-width: 4px 0 4px 6px;
+  border-color: transparent transparent transparent currentColor; transition: transform var(--mov-rapido);
+}
+.nomesTela[open] > summary::before { transform: rotate(90deg); }
+.nomesTela > summary:hover { background: var(--sup-4); }
+.nomesTela > .nota, .nomesTela output { margin: 0; }
+.nomesTela output { display: block; }
+.nomesTela > button { align-self: flex-start; }
+.nomesOpcoes { gap: var(--e2); flex-wrap: wrap; }
+.nomesOpcoes .campo { flex: 1 1 8em; }
+.nomesLista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e1); }
+.nomesLista:empty { display: none; }
+.nomesLista li { display: flex; flex-direction: column; gap: 4px; padding: var(--e2); background: var(--sup-2); border: 1px solid var(--linha); border-radius: var(--r-1); min-width: 0; }
+.nomesLista .nomeCabeca { display: flex; justify-content: space-between; align-items: baseline; gap: var(--e2); flex-wrap: wrap; }
+.nomesLista .nomeCabeca b { font-family: var(--letra-mono); overflow-wrap: anywhere; }
+.nomesLista .nivel { font-size: var(--t-micro); font-weight: 600; padding: 1px 6px; border-radius: var(--r-fio); white-space: nowrap; }
+.nomeProposta.nivel-alta .nivel { background: var(--ok-eco); color: var(--ok); }
+.nomeProposta.nivel-media .nivel { background: var(--aviso-eco); color: var(--aviso); }
+.nomeProposta.nivel-baixa .nivel { background: var(--sup-3); color: var(--tinta-2); }
+.nomeProposta.sim { border-color: var(--acento-fio); background: var(--acento-eco); }
+.nomeProposta.nao { opacity: .7; }
+.nomeProposta.nao b { text-decoration: line-through; }
+.nomeAcoes { gap: var(--e1); flex-wrap: wrap; align-items: center; }
+.nomeAcoes button { min-height: 30px; padding: 0 var(--e2); }
+.nomeAcoes input { flex: 1 1 8em; min-width: 0; min-height: 30px; }
+.nomesSub { margin: var(--e1) 0 0; font-size: var(--t-menor); }
+.nomesRecortes { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 132px), 1fr)); gap: var(--e2); padding: var(--e2) 0; }
+.nomesRecortes figure { margin: 0; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.nomesRecortes img { width: 100%; height: auto; border-radius: var(--r-1); border: 1px solid var(--linha); background: var(--video-fundo); }
+.nomesRecortes figcaption { display: flex; flex-direction: column; gap: 2px; font-size: var(--t-menor); min-width: 0; }
+.nomesRecortes .lido { font-family: var(--letra-mono); white-space: pre-line; overflow-wrap: anywhere; color: var(--tinta); }
+.nomesApelidos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: var(--t-menor); }
+.nomesApelidos:empty { display: none; }
+.nomesApelidos li { display: flex; justify-content: space-between; align-items: center; gap: var(--e2); }
+.nomesApelidos .chip { min-height: 28px; padding: 0 var(--e2); font-size: var(--t-menor); background: var(--sup-3); }
+.nomesNovo { gap: var(--e2); flex-wrap: wrap; align-items: end; }
+.nomesNovo .campo { flex: 1 1 8em; }
+/* No PC, com os nomes abertos o painel fica comprido: rola por dentro, ao lado do mapa, em vez de
+   esticar a página e deixar o mapa para trás. */
+@media (min-width: 1000px) {
+  .lance:has(#nomesTela[open]) { position: sticky; top: var(--e3); max-height: calc(100dvh - 2 * var(--e3)); overflow-y: auto; }
+}
+@media (pointer: coarse) {
+  .nomeAcoes button, .nomeAcoes input, .nomesApelidos .chip { min-height: 44px; }
+}
 /* No telemóvel as duas portas têm de caber com o botão de cada uma no primeiro ecrã. A explicação do
    elenco sai (o exemplo dentro da caixa já mostra o formato) e a caixa fica com duas linhas. */
 @media (max-width: 699px) {

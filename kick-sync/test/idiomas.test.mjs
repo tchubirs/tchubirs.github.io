@@ -27,7 +27,7 @@ test('nenhuma chave usada na página fica por escrever', () => {
       usadas.add(m[1]);
     }
   }
-  for (const f of ['../site/app.js', '../site/twitch-app.js', '../site/evento-ui.js', '../site/atalhos-painel.js']) {
+  for (const f of ['../site/app.js', '../site/twitch-app.js', '../site/evento-ui.js', '../site/atalhos-painel.js', '../site/nomes-ui.js']) {
     const codigo = ler(f);
     for (const m of codigo.matchAll(/\bt\(\s*'([a-zA-Z0-9_.]+)'/g)) usadas.add(m[1]);
     for (const m of codigo.matchAll(/\btn\([^,]+,\s*'([a-zA-Z0-9_.]+)',\s*'([a-zA-Z0-9_.]+)'/g)) {
@@ -87,6 +87,8 @@ test('as variaveis de cada frase sao as mesmas em todas as linguas', () => {
 const IGUAIS_DE_PROPOSITO = {
   // Nome do produto, simbolos de navegacao, e frases que sao so numeros e datas.
   en: new Set([
+    // Os nomes na tela: "experimental" escreve-se igual, e as qualidades são só o número.
+    'nomes.experimental', 'nomes.q1080', 'nomes.q720',
     // "normal" escreve-se igual nas tres linguas.
     'lance.sensNormal', 'filtros.sensNormal', 'montagem.formato169', 'montagem.formatoAmbos',
     'app.nome', 'canais.vods', 'marca.feita', 'evento.zoom',
@@ -101,6 +103,9 @@ const IGUAIS_DE_PROPOSITO = {
   ]),
   // O espanhol e o portugues escrevem estas exactamente da mesma maneira.
   es: new Set([
+    // Os nomes na tela: "experimental" escreve-se igual, e as qualidades são só o número.
+    'nomes.experimental', 'nomes.q1080', 'nomes.q720',
+    'nomes.trecho1', 'nomes.trecho2', 'nomes.nivel.media', 'nomes.deQuemAria', 'nomes.canal',
     // "pico", "picos", "Continuar" e "Cancelar" escrevem-se igual em espanhol.
     'rapido.umPico', 'rapido.picos', 'rapido.avisoContinuar', 'rapido.avisoCancelar',
     // A sensibilidade ("normal", "alta", "máxima") e "de todos" escrevem-se igual em espanhol.

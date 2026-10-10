@@ -38,7 +38,7 @@ export function montarPalco(aoAbrir = () => {}) {
   before(async () => {
     if (!podeCorrer) return;
     const tipos = {
-      '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2',
+      '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2', '.wasm': 'application/wasm',
     };
     servidor = http.createServer((req, res) => {
       const caminho = req.url.split('?')[0];

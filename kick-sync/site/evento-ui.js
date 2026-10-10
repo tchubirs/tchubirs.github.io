@@ -11,7 +11,9 @@
 
 import {
   lerElenco, codificar, descodificar, contar, paraTexto, juntarElencos, paraArquivo, deArquivo, nomeDoArquivo,
+  apelidosDoTexto,
 } from './elenco.js';
+import { montarNomesNaTela } from './nomes-ui.js';
 import { carregarCanais, procurarAoVivo } from './carregar.js';
 import { escolherCaminho } from './portas.js';
 import {
@@ -348,6 +350,8 @@ export function montarEvento({
 
   async function abrirDoTexto() {
     const elenco = lerElenco($('elenco').value);
+    // Os apelidos do Discord ao lado dos links ficam só neste aparelho: o elenco não os leva.
+    nomes.guardarDoElenco(apelidosDoTexto($('elenco').value));
     if (elenco.avisos.length) $('estadoEvento').textContent = elenco.avisos.slice(0, 3).join('; ');
     if (!elenco.times.length && !elenco.soltos.length) {
       $('estadoEvento').textContent = t('evento.semCanais');
@@ -732,7 +736,9 @@ export function montarEvento({
     const proprio = indiceDeTimes(ev.elenco).get(alvo.canal);
     if (proprio != null) ev.juntados.delete(proprio);
     $('estadoLance').textContent = '';
+    nomes.limpar();
     pintarLance();
+    nomes.pintar();
     pintar();
     destaparMapa();
     lerChatDoTime(ev.escolha);
@@ -1072,7 +1078,7 @@ export function montarEvento({
     const doTime = (nome) => ev.elenco.times.find((x) => x.nome === nome)?.canais || [];
     const juntados = [...ev.juntados].flatMap(doTime);
     const achados = resumo(ev.achados).estava.map((a) => a.canal);
-    return [...new Set([...colegas(e.canal), ...achados, ...juntados, ...ev.extrasDoLink])]
+    return [...new Set([...colegas(e.canal), ...achados, ...juntados, ...ev.extrasDoLink, ...nomes.confirmados()])]
       .filter((c) => noArEm(ev.coberturas, c, e.ms));
   }
 
@@ -1227,10 +1233,13 @@ export function montarEvento({
   // O som de um canal num instante, lendo só o VOD que cobre esse instante. As playlists ficam
   // guardadas: procurar o lance seguinte não as volta a pedir.
   const pecas = new Map();
-  async function somDe(slug, deMs, duracaoS) {
+  function vodEm(slug, ms) {
     const r = ev.resultados.find((x) => x.slug === slug);
-    const vod = r?.vods.find((v) => deMs >= v.inicioApi - 60_000
-      && deMs <= (aoVivoVod(v) ? AGORA() : v.inicioApi + (v.duracaoMs > 0 ? v.duracaoMs : 0)));
+    return r?.vods.find((v) => ms >= v.inicioApi - 60_000
+      && ms <= (aoVivoVod(v) ? AGORA() : v.inicioApi + (v.duracaoMs > 0 ? v.duracaoMs : 0))) || null;
+  }
+  async function somDe(slug, deMs, duracaoS) {
+    const vod = vodEm(slug, deMs);
     if (!vod) return null;
     // Um VOD ao vivo cresce: a playlist lida há minutos não tem o lance de agora.
     const chave = aoVivoVod(vod) ? `${vod.id}@${Math.floor(deMs / 30_000)}` : vod.id;
@@ -1301,6 +1310,22 @@ export function montarEvento({
       if (ev.escolha) pintarLance();
     }
   }
+
+  // ── os nomes na tela ───────────────────────────────────────────────────
+  //
+  // O segundo jeito de achar o time (o dono, 10/10): ler os nomes que o vídeo mostra. Os canais
+  // candidatos são os que estavam no ar no instante; quem o lance já abre não é proposto outra vez.
+  const nomes = montarNomesNaTela({
+    escolha: () => ev.escolha,
+    vodEm,
+    buscar,
+    candidatos: (e) => ev.resultados.filter((r) => r?.estado === 'ok' && noArEm(ev.coberturas, r.slug, e.ms)).map((r) => r.slug),
+    jaNoLance: (e) => {
+      const doTime = (nome) => ev.elenco.times.find((x) => x.nome === nome)?.canais || [];
+      return [...colegas(e.canal), ...[...ev.juntados].flatMap(doTime)];
+    },
+    aoMudar: () => pintarLance(),
+  });
 
   // ── ao vivo ────────────────────────────────────────────────────────────
   //
@@ -1418,6 +1443,7 @@ export function montarEvento({
     ev.elenco = null;
     ev.escolha = null;
     ev.achados = [];
+    nomes.limpar();
     seguirAoVivo(false);
     novatosControlo?.abort();
     novatosControlo = null;
@@ -1636,6 +1662,7 @@ export function montarEvento({
 
   async function adicionarLista() {
     const extra = lerElenco($('adicionarTexto').value);
+    nomes.guardarDoElenco(apelidosDoTexto($('adicionarTexto').value));
     if (!extra.times.length && !extra.soltos.length) {
       $('estadoAdicionarJanela').textContent = t('evento.semCanais');
       $('adicionarTexto').focus();
@@ -1802,6 +1829,7 @@ export function montarEvento({
     $('fecharEvento').onclick = fecharEvento;
     $('irAoVivo').onclick = irAoVivo;
     $('procurarOutros').onclick = procurarOutros;
+    nomes.ligar();
     $('partilharEvento').onclick = abrirPartilhar;
     $('formPartilhar').addEventListener('submit', gerarLink);
     $('fecharPartilhar').onclick = () => dialogo.esconder($('modalPartilhar'));

@@ -34,6 +34,11 @@ cp site/letra/* "$DESTINO/letra/"
 # do evento, nada de notas: o arquivo fica público.
 mkdir -p "$DESTINO/eventos"
 cp site/eventos/*.json "$DESTINO/eventos/"
+# O leitor de texto dos "nomes na tela" (tesseract.js 7.0.0, núcleo 7.0.0 e o inglês best_int), com as
+# licenças. Fica connosco pelo mesmo motivo do hls.js, e com a versão no caminho de origem: não leva carimbo.
+# São uns 6 MB que só são pedidos quando alguém carrega em Ler os nomes na tela.
+mkdir -p "$DESTINO/vendor/tesseract"
+cp site/vendor/tesseract/* "$DESTINO/vendor/tesseract/"
 
 for f in "$DESTINO"/*.js "$DESTINO"/*.html; do
   # `from './x.js'` e `src="app.js"` -> mesmos ficheiros, endereço novo.
@@ -70,6 +75,9 @@ for f in "$DESTINO"/index.html "$DESTINO"/twitch.html "$DESTINO"/app.js "$DESTIN
 done
 # E que a letra foi mesmo junto: cinco caras, e todas com corpo.
 [ -s "$DESTINO/versao.txt" ] || { echo "SEM versao.txt" >&2; exit 1; }
+for f in site/vendor/tesseract/*; do
+  [ -s "$DESTINO/vendor/tesseract/$(basename "$f")" ] || { echo "FALTA O LEITOR: $f" >&2; exit 1; }
+done
 for f in site/letra/*.woff2; do
   n=$(basename "$f")
   [ -s "$DESTINO/letra/$n" ] || { echo "FALTA A LETRA: $n" >&2; exit 1; }

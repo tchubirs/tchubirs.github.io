@@ -375,6 +375,43 @@
            na outra tela do editor a mais avançada"): vivem no assistente da faixa, na linha do tempo. -->
       <ul id="lanceAchados" class="lanceAchados"></ul>
       <p class="nota comoFunciona" data-t="lance.comoFunciona">O Povix escuta o som do jogo e acha quem estava no mesmo lugar nesse segundo. Quem ele achar entra junto quando você abrir o lance.</p>
+      <!-- Achar o time pelos nomes na tela (o dono, 10/10): lê a lista do time, o Discord e os nomes em
+           cima dos jogadores em vários quadros do vídeo, e propõe canais. Ninguém entra sem um sim. O
+           leitor de texto (vendor/tesseract, uns 6 MB) só é carregado quando se carrega em Ler. -->
+      <details id="nomesTela" class="nomesTela">
+        <summary><span data-t="nomes.titulo">Achar o time pelos nomes na tela</span> <b class="etiqueta" data-t="nomes.experimental">experimental</b></summary>
+        <p id="nomesComo" class="nota"></p>
+        <div class="linha nomesOpcoes">
+          <label class="campo"><span class="rotuloCampo" data-t="nomes.trecho">Trecho</span>
+            <select id="nomesTrecho"><option value="60" data-t="nomes.trecho1">1 minuto</option><option value="120" data-t="nomes.trecho2">2 minutos</option></select></label>
+          <label class="campo"><span class="rotuloCampo" data-t="nomes.qualidade">Qualidade</span>
+            <select id="nomesQualidade"><option value="1080" data-t="nomes.q1080">1080p</option><option value="720" data-t="nomes.q720">720p</option></select></label>
+        </div>
+        <p id="nomesGasto" class="nota"></p>
+        <button id="nomesLer" type="button"><svg class="ic ic-p" aria-hidden="true"><use href="#i-procurar"/></svg><span id="nomesLerTexto" data-t="nomes.ler">Ler os nomes na tela</span></button>
+        <output id="nomesEstado" class="nota" aria-live="polite"></output>
+        <ul id="nomesPropostas" class="nomesLista" aria-live="polite"></ul>
+        <div id="nomesSoltosCaixa" hidden>
+          <h4 class="nomesSub" data-t="nomes.soltos">Nomes lidos sem canal</h4>
+          <p class="nota" data-t="nomes.soltosAjuda">Se souber de quem é, escreva o canal: o nome fica guardado como apelido dele neste aparelho.</p>
+          <ul id="nomesSoltos" class="nomesLista"></ul>
+        </div>
+        <datalist id="nomesCanais"></datalist>
+        <details id="nomesRecortesCaixa" class="maisOpcoes" hidden>
+          <summary id="nomesRecortesResumo"></summary>
+          <div id="nomesRecortes" class="nomesRecortes"></div>
+        </details>
+        <details class="maisOpcoes">
+          <summary id="nomesApelidosResumo"></summary>
+          <p class="nota" data-t="nomes.apelidosAjuda">Apelidos do Discord ou do jogo para cada canal. Vêm da lista colada com [Discord: nome] ou do que você escreve aqui. Ficam só neste aparelho, nunca no link nem no arquivo do evento.</p>
+          <ul id="nomesApelidos" class="nomesApelidos"></ul>
+          <div class="linha nomesNovo">
+            <label class="campo"><span class="rotuloCampo" data-t="nomes.canal">Canal</span><input id="nomesNovoCanal" list="nomesCanais" autocomplete="off" spellcheck="false"></label>
+            <label class="campo"><span class="rotuloCampo" data-t="nomes.apelido">Apelido</span><input id="nomesNovoApelido" autocomplete="off" spellcheck="false" maxlength="40"></label>
+            <button id="nomesNovoGuardar" type="button" data-t="nomes.guardarApelido">Guardar apelido</button>
+          </div>
+        </details>
+      </details>
     </aside>
   </div>
 </section>

@@ -14,7 +14,7 @@ import { execFile } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const RAIZ = path.join(path.dirname(fileURLToPath(import.meta.url)), 'site');
-const TIPOS = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
+const TIPOS = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.wasm': 'application/wasm', '.woff2': 'font/woff2' };
 
 const servidor = http.createServer((req, res) => {
   const pedido = decodeURIComponent(req.url.split('?')[0]);

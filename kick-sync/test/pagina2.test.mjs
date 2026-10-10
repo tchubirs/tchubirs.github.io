@@ -1282,7 +1282,9 @@ test('todas as mensagens de erro dizem o próximo passo', async () => {
     'adicionar.timePh',
     // Na janela dos atalhos: o que aparece numa linha sem tecla ("sem atalho"), e o que acontece se
     // se trocar, dito antes de se escolher. Não são erros.
-    'atalhos.semTecla', 'atalhos.trocarSem']);
+    'atalhos.semTecla', 'atalhos.trocarSem',
+    // O título da lista dos nomes lidos na tela que não casaram com canal nenhum, não um erro.
+    'nomes.soltos']);
   const curtas = [];
   for (const [chave, frase] of Object.entries(_TEXTOS.pt)) {
     if (!/erro|falh|não deu|nenhum|sem |não consegui|inválido|passa dos/i.test(frase)) continue;
