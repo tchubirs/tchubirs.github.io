@@ -834,7 +834,8 @@ test('da para limpar a lista e recomecar, e a memoria e mesmo devolvida',
     // Recomecar apaga tudo e volta ao principio.
     p.on('dialog', (d) => d.accept());
     await p.click('#recomecar');
-    await p.waitForFunction(() => document.getElementById('canais').value === '',
+    // Com `?.`: a página está a recarregar, e enquanto o <head> corre o #canais ainda não existe.
+    await p.waitForFunction(() => document.getElementById('canais')?.value === '',
       null, { timeout: 20000 });
     assert.equal(await p.locator('#listaMomentos li[data-ms]').count(), 0);
     assert.deepEqual(erros, []);
