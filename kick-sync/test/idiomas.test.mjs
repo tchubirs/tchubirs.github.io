@@ -99,6 +99,8 @@ const IGUAIS_DE_PROPOSITO = {
   ]),
   // O espanhol e o portugues escrevem estas exactamente da mesma maneira.
   es: new Set([
+    // "pico", "picos", "Continuar" e "Cancelar" escrevem-se igual em espanhol.
+    'rapido.umPico', 'rapido.picos', 'rapido.avisoContinuar', 'rapido.avisoCancelar',
     // A sensibilidade ("normal", "alta", "máxima") e "de todos" escrevem-se igual em espanhol.
     'lance.sensNormal', 'lance.sensAlta', 'lance.sensMaxima', 'lance.deTodos', 'montagem.formato169', 'montagem.formatoAmbos',
     // "Todos", o nome da faixa geral da linha do tempo, escreve-se igual.

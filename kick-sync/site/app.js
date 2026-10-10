@@ -3117,7 +3117,8 @@ async function detetar(quem, quanto, { resto = false } = {}) {
   // O modo esperto: só com som para ouvir, chat para ler e mais de meia hora. Um trecho curto ouve-se
   // todo, direto; o Continuar ouvindo o resto ouve o que o modo esperto deixou.
   const esperto = comSom && !resto && Boolean(chatDoEvento) && totalMs > ESPERTO_A_PARTIR_MS;
-  if (!resto || estado.restoPorOuvir?.quem !== quem) estado.restoPorOuvir = null;
+  // O resto por ouvir volta a ser dito no fim (ou ao parar), se ainda houver.
+  estado.restoPorOuvir = null;
 
   const controlo = new AbortController();
   estado.varredura = controlo;
@@ -3180,6 +3181,7 @@ async function detetar(quem, quanto, { resto = false } = {}) {
     let novoAntes = 0;
     let bytesAntes = 0;
     let ultimoDesenho = 0;
+    let desenhoAdiado = null;
     $('barraOuvir').value = 0;
     for (const p of pedidos) {
       if (controlo.signal.aborted) throw new DOMException('parado', 'AbortError');
@@ -3220,6 +3222,9 @@ async function detetar(quem, quanto, { resto = false } = {}) {
             if (x.pronto) {
               marcarOuvido(canal, [x.pronto]);
               if (Date.now() - ultimoDesenho > 1000) { ultimoDesenho = Date.now(); pintarFaixas(); }
+              else if (!desenhoAdiado) {
+                desenhoAdiado = setTimeout(() => { desenhoAdiado = null; ultimoDesenho = Date.now(); pintarFaixas(); }, 1000);
+              }
             }
             if (!('bytes' in x)) return;
             if (reaproveitado === null) reaproveitado = x.ouvidoMs || 0;

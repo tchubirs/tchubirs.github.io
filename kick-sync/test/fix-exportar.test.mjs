@@ -600,7 +600,8 @@ test('a detecção automática pára no mesmo botão que a lançou', semNavegado
   await p.click('#procurarKills');
   await p.waitForFunction(() => window.__estado.varredura === null, null, { timeout: 5000 });
   assert.equal(await p.locator('#procurarKills span').innerText(), 'Detecção automática');
-  assert.match(await p.locator('#estadoMontagem').innerText(), /cancelado/);
+  // Parado, e com o que já se ouviu guardado para não ser baixado de novo.
+  assert.match(await p.locator('#estadoMontagem').innerText(), /^Parado\. O que já foi ouvido fica guardado/);
   assert.deepEqual(erros, []);
   await p.close();
 });

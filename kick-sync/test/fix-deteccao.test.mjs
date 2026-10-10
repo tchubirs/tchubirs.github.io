@@ -513,7 +513,9 @@ test('a detecção ouve o trecho das alças (que pega a marca), de uma pessoa ou
   assert.equal(await p.evaluate(() => document.getElementById('chatTrecho').closest('.faixa').dataset.slug), 'tchubi');
   let v = await p.evaluate(() => window.__varrer);
   assert.deepEqual([v.canal, v.deMs, v.ateMs], ['tchubi', marca.de, marca.ate]);
-  assert.match(perguntas.at(-1), /de tchubi/);
+  // Um trecho de minutos começa logo: o aviso é só para quando é muito (horas, centenas de MB).
+  assert.deepEqual(perguntas, []);
+  assert.ok(await p.locator('#avisoOuvir').isHidden());
 
   // As alças mexem o trecho: o fim um minuto depois.
   await p.locator('#alcaFim').focus();
@@ -531,7 +533,7 @@ test('a detecção ouve o trecho das alças (que pega a marca), de uma pessoa ou
   assert.ok(vivo.outro[0] > vivo.tchubi[0], JSON.stringify(vivo));
   let todas = await p.evaluate(() => window.__varreres.map((x) => [x.canal, x.deMs, x.ateMs]));
   assert.deepEqual(todas, [['tchubi', marca.de, marca.ate + 60_000], ['outro', Math.max(marca.de, vivo.outro[0]), marca.ate + 60_000]]);
-  assert.match(perguntas.at(-1), /de 2 pessoas/);
+  assert.deepEqual(perguntas, []);
   assert.match(await textoMontagem(p), /^2 tiroteios: tchubi 1, outro 1/);
 
   // Todos, tudo: o tempo todo de cada um.

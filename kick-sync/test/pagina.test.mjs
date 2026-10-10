@@ -1024,21 +1024,13 @@ test('a busca automatica nunca inventa kills que nao ouviu',
     await p.click('#carregar');
     await p.waitForSelector('.tile', { timeout: 15000 });
 
-    // O custo e dito ANTES, e da para dizer que nao.
+    // Dez minutos de live começam logo, sem caixa do navegador: o aviso (com as horas e os MB) é só
+    // para quando é muito, e tem o seu teste em rapido.test.mjs.
     const perguntas = [];
-    p.on('dialog', (d) => { perguntas.push(d.message()); d.dismiss(); });
+    p.on('dialog', (d) => { perguntas.push(d.message()); d.accept(); });
     // O botão abre o assistente da faixa direto em Detectar lances: tudo, e o botão Detectar.
     await p.click('#procurarKills');
     await p.click('#escolherTudo');
-    await p.click('#detetarTrecho');
-    await p.waitForTimeout(500);
-    assert.equal(perguntas.length, 1, 'tem de perguntar antes de baixar');
-    assert.match(perguntas[0], /MB/, 'e dizer quantos MB sao');
-    assert.equal(await p.locator('#listaMomentos li[data-ms]').count(), 0, 'e nao fazer nada se disser que nao');
-
-    // E agora a dizer que sim.
-    p.removeAllListeners('dialog');
-    p.on('dialog', (d) => d.accept());
     await p.click('#detetarTrecho');
     await p.waitForFunction(
       // Todos os fins possiveis: achou, nao achou, ou o navegador nao
@@ -1049,6 +1041,7 @@ test('a busca automatica nunca inventa kills que nao ouviu',
       null, { timeout: 90000 },
     );
     const texto = await p.locator('#estadoMontagem').innerText();
+    assert.deepEqual(perguntas, [], 'dez minutos nao precisam de aviso');
     // Sem codec nao ha audio: o que nao pode e aparecerem kills na lista.
     if (!/achei \d/.test(texto)) {
       assert.equal(await p.locator('#listaMomentos li[data-ms]').count(), 0,
