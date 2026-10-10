@@ -249,3 +249,9 @@ em francês). Tudo revisado pela regra 14 em 28/09.
 - Ao lado dos botões Início e Fim do Criar clipe: "Legenda" do que o streamer fala.
 - Opções: cor, tamanho, posição na tela, idioma (e tradução), estilo.
 - Depende de transformar voz em texto no aparelho (mesma questão das "palavras faladas" da detecção). Estudar o modelo mais leve que rode no navegador antes de prometer.
+
+## Pedido do dono (10/10): achar o time pelos nomes na tela
+- "Achar quem mais estava no lance" pelo som não funcionou bem para times.
+- Novo jeito: ler os nomes que aparecem na tela (sobreposição do Discord com quem está falando, nomes do time no jogo) num quadro do vídeo, e casar com os canais do evento. Usar os apelidos do Discord que vierem na planilha (ex.: "[Discord: Newt]" junto do link) como apelido do canal, guardado só no aparelho.
+- Ler texto de imagem no navegador (OCR) com arquivo local; texto pequeno e vídeo comprimido erram; mostrar o que leu e deixar confirmar.
+- Sem limite de telas: o dono desistiu do "no máximo 2 vídeos". Trocar câmera pelo nome continua.
