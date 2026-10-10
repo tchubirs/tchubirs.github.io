@@ -26,10 +26,25 @@ const passo = async (n, f) => { try { await f(); console.log('ok', n); } catch (
 await passo('nome', () => p.click('#faixas button.nome[data-quem="tchubi"]'));
 await passo('chat', () => p.click('#escolherChat'));
 await passo('trecho', () => p.click('#escolherTrecho'));
-await passo('alca', async () => { await p.locator('#alcaInicio').focus(); await p.keyboard.press('Home'); });
+await passo('alcas', async () => {
+  await p.locator('#alcaInicio').focus();
+  await p.keyboard.press('Home');
+  for (let k = 0; k < 2; k++) await p.keyboard.press('Shift+ArrowRight');
+  await p.locator('#alcaFim').focus();
+  await p.keyboard.press('End');
+  for (let k = 0; k < 6; k++) await p.keyboard.press('Shift+ArrowLeft');
+});
 await passo('outro', () => p.click('#faixas button.nome[data-quem="outro"]'));
+await passo('eval', () => p.evaluate(() => document.getElementById('acoesFaixa').previousElementSibling.dataset.slug).then(console.log));
 await passo('usar', () => p.click('#usarTrecho'));
 await passo('ler', () => p.click('#lerChatTrecho'));
+await passo('espera', () => p.waitForFunction(() => /^Chat de outro, de 21:02:00 até 21:04:00: \d+ mensagens/.test(document.getElementById('estadoChatTrecho').textContent), null, { timeout: 15000 }));
+await passo('chatVideo', () => p.waitForSelector('#chatVideo:not([hidden])', { timeout: 5000 }));
+await passo('mais1m', () => p.click('#mais1m'));
+await passo('ler2', () => p.click('#lerChatTrecho'));
+await passo('ja', () => p.waitForFunction(() => /já estava lido/.test(document.getElementById('estadoChatTrecho').textContent), null, { timeout: 5000 }));
+await passo('alca2', async () => { await p.locator('#alcaInicio').focus(); await p.keyboard.press('Shift+ArrowLeft'); });
+await passo('ler3', () => p.click('#lerChatTrecho'));
 await p.waitForTimeout(3000);
 console.log(await p.locator('#estadoChatTrecho').innerText(), '|', await p.locator('#acoesResumo').innerText());
 await nav.close(); srv.close();
