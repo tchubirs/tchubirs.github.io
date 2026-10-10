@@ -265,3 +265,12 @@ em francês). Tudo revisado pela regra 14 em 28/09.
 - 121 são pedaços de 5 min (10 h de live), uns 8 MB cada mesmo a 160p; baixa um por vez.
 - Fazer: baixar 4 pedaços ao mesmo tempo; modo esperto (ouvir primeiro uns minutos em volta dos picos do chat, "tudo" continua como opção); mostrar tempo que falta; avisar antes de começar quando for muito (horas e MB, melhor no Wi-Fi).
 - Depois do Criar clipe.
+
+## Pedido do dono (10/10): reorganização completa da interface (avaliação de outra IA)
+- Hierarquia: abrir, ver e sincronizar ângulos, achar lance, marcar e ajustar, exportar. Em cada momento saber onde está e qual o próximo passo.
+- Tela inicial com dois caminhos claros: Evento inteiro (lista, arquivo) e VOD ou poucos canais (links, busca, lista curta). Exemplo ao vivo como opção secundária. Uma frase sob a marca explicando o produto.
+- Área de trabalho como um só ambiente de editor: vídeo grande no centro, controles junto do vídeo, lista de ângulos pesquisável, linha do tempo bem delimitada, montagem, ferramentas avançadas sem roubar espaço.
+- Separar as tarefas com nomes claros: Rever, Encontrar lances, Montagem, Ajustar clipe, Exportar. Rever "Clipar" e "Cortar". Detecção automática marcada como experimental e secundária, opções avançadas recolhidas.
+- Manter a identidade (escuro quente, turquesa, âmbar), sem cara de painel administrativo. Uma ação principal destacada por área.
+- Não quebrar nada: IDs, data-t, atalhos, sincronia, exportação; mudanças de layout presas a body.mesa (o estilo.css serve à versão Twitch também).
+- Fazer por partes, com testes e prints. Começar depois das tarefas de atalhos e da tela do evento com vídeos.
