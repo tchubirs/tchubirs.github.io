@@ -164,7 +164,7 @@ test('a prévia de um tiroteio leva o combate inteiro e as margens por fora',
     assert.equal(previa.ate - ms, 22_000, 'dois segundos depois do último');
     // E a lista diz quanto dura, para ele não descobrir o tamanho só depois
     // de exportar.
-    assert.match(await p.locator('#listaMomentos .quantos').innerText(), /^27s · /);
+    assert.match(await p.locator('#listaMomentos .quantos').innerText(), /^27s, /);
     assert.deepEqual(erros, []);
     await p.close();
   });
@@ -565,20 +565,21 @@ test('num ecrã de PC a página usa a largura e nada se sobrepõe',
     await p.click('#marcarKill');
     await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
 
-    // Duas colunas: a montagem fica AO LADO do vídeo, e não a um ecrã de
-    // distância dele. Medido no topo da página: a coluna do lado acompanha o
-    // scroll de propósito, e a meio da página não estaria alinhada com nada.
+    // O editor: a coluna da montagem fica AO LADO do vídeo, e a linha do tempo fica POR BAIXO dos dois,
+    // em toda a largura. Medido no topo da página.
     await p.evaluate(() => window.scrollTo(0, 0));
-    const [video, lado] = await p.evaluate(() => ['.palcoVideo', '.palcoLado']
+    const [video, lado, tempo] = await p.evaluate(() => ['.palcoVideo', '.palcoDireita', '.palcoLado']
       .map((s) => document.querySelector(s).getBoundingClientRect())
-      .map((r) => ({ x: Math.round(r.x), largura: Math.round(r.width), y: Math.round(r.y) })));
+      .map((r) => ({ x: Math.round(r.x), largura: Math.round(r.width), y: Math.round(r.y), fundo: Math.round(r.bottom) })));
     assert.ok(lado.x > video.x + video.largura - 40,
       `a coluna do lado começa em ${lado.x} e o vídeo acaba em ${video.x + video.largura}`);
     assert.ok(Math.abs(lado.y - video.y) < 80, 'as duas colunas começam à mesma altura');
+    assert.ok(tempo.y >= video.fundo - 4, `a linha do tempo (y=${tempo.y}) tem de ficar por baixo do vídeo (acaba em ${video.fundo})`);
+    assert.ok(tempo.largura > 0.9 * (video.largura + lado.largura), 'a linha do tempo atravessa a largura toda');
 
     // E o conteúdo usa mesmo o monitor: antes disto ocupava 1400 px de 1920.
     const usada = video.largura + lado.largura;
-    assert.ok(usada > 1500, `só ${usada} px de 1920 — a página continua uma tira`);
+    assert.ok(usada > 1500, `só ${usada} px de 1920, a página continua uma tira`);
 
     // Nada por cima de nada. Cada par de controlos visíveis tem de ter
     // rectângulos disjuntos: foi assim que o botão do som ficou impossível de
@@ -830,6 +831,9 @@ test('os saltos no tempo têm a mesma cara dos outros botões',
       const e = getComputedStyle(document.getElementById(i));
       return { fundo: e.backgroundColor, fio: e.borderTopColor, largura: e.borderTopWidth };
     }, id);
+    // O rato fica onde o Carregar estava, e agora há um botão ali: tira-se dali para não medir o estado :hover.
+    await p.mouse.move(0, 0);
+    await p.waitForTimeout(300);
     const [salto, referencia] = await Promise.all([cara('menos5m'), cara('marcarIn')]);
     // A referência é um botão que ele já reconhece como botão.
     assert.deepEqual(salto, referencia,
@@ -1560,6 +1564,7 @@ test('juntar um streamer so vai buscar esse, e nao mexe onde ele estava',
     };
     assert.equal(antes.api, 1, 'um canal, um pedido');
 
+    await p.click('#editarCanais');
     await p.fill('#canais', 'tchubi\nvitima1');
     await p.click('#carregar');
     await p.waitForFunction(() => document.querySelectorAll('.tile').length === 2, null, { timeout: 20000 });
@@ -1859,12 +1864,14 @@ test('com uma live só o vídeo ocupa o espaço, sem grelha vazia nem caixa vazi
     await p.click('#carregar');
     await p.waitForSelector('.tile', { timeout: 20000 });
     const m = await p.evaluate(() => ({
-      video: document.querySelector('#palcoFoco .tile').getBoundingClientRect().width,
-      coluna: document.querySelector('.palcoVideo').getBoundingClientRect().width,
+      video: document.querySelector('#palcoFoco .tile').getBoundingClientRect().height,
+      coluna: document.querySelector('#palcoFoco').getBoundingClientRect().height,
       grade: getComputedStyle(document.getElementById('grade')).display,
       sincronizar: getComputedStyle(document.querySelector('.sincronizar')).display,
     }));
-    assert.ok(m.video > m.coluna * 0.85, `vídeo de ${m.video} px numa coluna de ${m.coluna}`);
+    // O vídeo é 16:9 numa coluna mais larga do que alta: o que se mede é a ALTURA, que tem de encher
+    // o visor (nenhum vazio por baixo do vídeo).
+    assert.ok(m.video > m.coluna * 0.95, `vídeo de ${m.video} px de altura num visor de ${m.coluna}`);
     assert.equal(m.grade, 'none');
     assert.equal(m.sincronizar, 'none');
     assert.deepEqual(erros, []);

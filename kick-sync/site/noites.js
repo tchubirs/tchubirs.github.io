@@ -100,5 +100,6 @@ export function rotuloDaNoite(n, { t } = {}) {
   const quantos = t
     ? t(n.canais === 1 ? 'noite.umCanal' : 'noite.canais', { n: n.canais })
     : `${n.canais} ${n.canais === 1 ? 'canal' : 'canais'}`;
-  return `${dia(n.inicio)} · ${hora(n.inicio)}–${ate} — ${quantos}`;
+  const ateRotulo = t ? t('noite.ate') : 'até';
+  return `${dia(n.inicio)}, ${hora(n.inicio)} ${ateRotulo} ${ate}, ${quantos}`;
 }

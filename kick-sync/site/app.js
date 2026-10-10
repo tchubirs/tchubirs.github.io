@@ -492,7 +492,7 @@ async function carregarAgora() {
     // Um canal que já deu certo não se pede outra vez; um que deu erro
     // (rate-limit, rede) pede-se, porque da próxima pode dar.
     if (memo && memo.estado === 'ok') { canais.push(memo); continue; }
-    $('estadoCarga').textContent = `${i + 1}/${nomes.length} — ${nome}`;
+    $('estadoCarga').textContent = `${i + 1}/${nomes.length}: ${nome}`;
     const r = await vodsDoCanal(nome);
     if (r.estado === 'ok') estado.vodsPorCanal.set(r.slug, r);
     canais.push(r);
@@ -803,7 +803,7 @@ async function lerNoite(noite) {
   // corta-se na mesma com os que la estavam. O que faz falta e saber QUEM.
   $('resumoNoite').textContent = estado.linhas.map((l) => l.slug).join(', ')
     + (estado.janela.haSobreposicao && !soUmCanal()
-      ? ` · ${t('noite.todosJuntos', {
+      ? `, ${t('noite.todosJuntos', {
         de: relogioCurto(estado.janela.sobreposicaoInicio),
         ate: relogioCurto(estado.janela.sobreposicaoFim),
       })}`
@@ -859,6 +859,8 @@ let palcoJaAberto = false;
 function mostrarPalco() {
   const palco = $('palco');
   const primeira = palco.hidden && !palcoJaAberto;
+  // O vídeo acabou de abrir: a porta de entrada sai da frente (ver `editarCanais`).
+  if (palco.hidden) alternarCanais(false);
   palco.hidden = false;
   if (!primeira) return;
   palcoJaAberto = true;
@@ -965,6 +967,7 @@ function pintarFaixas() {
   }
   marcarFaixas();
   pintarRegua();
+  pintarTrecho();
 }
 
 /**
@@ -1024,7 +1027,7 @@ function pintarRegua() {
     const cabe = x - ultimoNumero >= folgaPct;
     if (cabe) ultimoNumero = x;
     partes.push(`<button class="kill" data-ms="${m.ms}" style="left:${x}%" `
-      + `title="kill ${i + 1} — ${relogioCurto(m.ms)}">${cabe ? `<span>${i + 1}</span>` : ''}</button>`);
+      + `title="kill ${i + 1}: ${relogioCurto(m.ms)}">${cabe ? `<span>${i + 1}</span>` : ''}</button>`);
   }
   // Os picos de chat também aqui, e não só no mapa do evento: assim vai-se de um pico ao outro sem
   // voltar ao mapa (o dono, 07/10). Dois canais no mesmo minuto são o mesmo lance.
@@ -1138,6 +1141,18 @@ function acertarSecundario(slug) {
  * É global de propósito: o valor desta página é os ângulos andarem juntos, e
  * um pause que parasse só um quadrado desfazia isso sem dizer nada.
  */
+/**
+ * O botão de tocar e pausar do transporte, sob o vídeo. O desenho diz o que
+ * ACONTECE se carregar (parado mostra o triângulo), como em qualquer leitor.
+ */
+function pintarTocarPausar() {
+  const b = $('tocarPausar');
+  if (!b) return;
+  b.innerHTML = ICONE(estado.parado ? 'tocar' : 'pausa', 'ic');
+  b.setAttribute('aria-pressed', String(estado.parado));
+  b.classList.toggle('parado', estado.parado);
+}
+
 function alternarPausa() {
   estado.parado = !estado.parado;
   // Não chega mandar parar uma vez.
@@ -1170,6 +1185,7 @@ function alternarPausa() {
     const b = tile.querySelector('.pausa');
     if (b) b.innerHTML = ICONE(estado.parado ? 'tocar' : 'pausa');
   }
+  pintarTocarPausar();
   $('agora').classList.toggle('parado', estado.parado);
 }
 
@@ -1892,7 +1908,7 @@ function pintarResumoMargens() {
   const meu = `${n('protAntes')}/${n('protDepois')}s`;
   $('resumoMargens').textContent = soUmCanal()
     ? meu
-    : `${meu} · ${n('vitAntes')}/${n('vitDepois')}s`;
+    : `${meu}, ${n('vitAntes')}/${n('vitDepois')}s`;
 }
 
 // ── alinhar pelo som ────────────────────────────────────────────────────────
@@ -2447,7 +2463,7 @@ function pintarMomentos() {
       + ` aria-label="${relogioCurto(m.ms)}">`
       + `<b class="n">${numeroNaMontagem(i, lista.length)}</b>`
       + `<span>${relogioCurto(m.ms)}</span>`
-      + `<span class="quem">${escapar(m.protagonista || '—')}</span>`
+      + `<span class="quem">${escapar(m.protagonista || '')}</span>`
       + `<button class="ver ${estado.previa?.ms === m.ms ? 'aVer' : ''}">`
       + `${t(estado.previa?.ms === m.ms ? 'montagem.parar' : 'montagem.ver')}</button>`
       + `<button class="cliparUma">${t('montagem.clipar')}</button>`
@@ -2455,7 +2471,7 @@ function pintarMomentos() {
       + (estado.estouros.length ? `<button class="foiKill">${t('auto.foiKill')}</button>` : '')
       + `<button class="fora">${t('montagem.apagar')}</button>`
       + (sozinho ? '' : `<button class="verMortes">${t('montagem.verMortes')}</button>`)
-      + `<span class="quantos">${dur ? `${dur}s · ` : ''}`
+      + `<span class="quantos">${dur ? `${dur}s, ` : ''}`
       + `${tn(n, 'montagem.umClipe', 'montagem.clipes')}</span>`
       // A kill que já tem ajustes guardados diz-o — é assim que ele sabe por
       // onde vai, numa lista de trinta.
@@ -2687,12 +2703,12 @@ async function baixarMontagem(soEsta = null) {
       linhaDeFicheiro(item, {
         nome,
         url: guardarFicheiro(blob),
-        nota: `${(r.bytes.length / 1048576).toFixed(1)} MB · `
+        nota: `${(r.bytes.length / 1048576).toFixed(1)} MB, `
           + `${clipe.papel === 'protagonista' ? t('fila.tuaPov') : t('fila.quemMorreu')}`
           // Só quando falta pedaço ou o clipe se parte em dois: na montagem a
           // folga de cada lado é a de sempre, mas um clipe cortado por uma
           // reconexão tem de se ver aqui e não na linha do tempo do editor.
-          + (sobra.falta || sobra.partido ? ` · ${sobra.texto}` : ''),
+          + (sobra.falta || sobra.partido ? `, ${sobra.texto}` : ''),
         momentoMs: clipe.ms,
       });
       if (sobra.falta) item.querySelector('.nota')?.classList.add('mau');
@@ -2702,7 +2718,7 @@ async function baixarMontagem(soEsta = null) {
       if (clipe.retrato) {
         const item2 = document.createElement('li');
         $('fila').append(item2);
-        const rotulo = `${i + 1}/${plano.length}: ${clipe.prefixo} ${clipe.canal} · 9:16`;
+        const rotulo = `${i + 1}/${plano.length}: ${clipe.prefixo} ${clipe.canal}, 9:16`;
         $('estadoMontagem').textContent = rotulo;
         try {
           const { blob: b2, tipo: t2, gravadoS } = await renderizarRetrato(linha, clipe, {
@@ -2718,15 +2734,15 @@ async function baixarMontagem(soEsta = null) {
           linhaDeFicheiro(item2, {
             nome: nome2,
             url: guardarFicheiro(b2),
-            nota: `${(b2.size / 1048576).toFixed(1)} MB · ${t('fila.retratoDe')} ${clipe.prefixo}`
-              + (curto ? ` · ${curto}` : ''),
+            nota: `${(b2.size / 1048576).toFixed(1)} MB, ${t('fila.retratoDe')} ${clipe.prefixo}`
+              + (curto ? `, ${curto}` : ''),
             momentoMs: clipe.ms,
           });
           if (curto) item2.querySelector('.nota')?.classList.add('mau');
         } catch (e) {
           if (e.name === 'AbortError') { item2.remove(); break; }
           falhas++;
-          item2.innerHTML = `<b>${clipe.prefixo} ${escapar(clipe.canal)} · 9:16</b> `
+          item2.innerHTML = `<b>${clipe.prefixo} ${escapar(clipe.canal)}, 9:16</b> `
             + `<span class="nota mau">${t('fila.retratoFalhou', { erro: escapar(motivoDoRetrato(e)) })}</span>`;
         }
       }
@@ -2797,7 +2813,7 @@ function notaDaSobra(plano, { continua = false, parte = 1 } = {}) {
     partes.push(continua ? t('corte.continua') : t('corte.faltaFim', { s: (-plano.sobraFimS).toFixed(1) }));
   } else if (plano.sobraFimS > 0.05) partes.push(t('corte.acaba', { s: plano.sobraFimS.toFixed(1) }));
   return {
-    texto: partes.join(' · '),
+    texto: partes.join(', '),
     falta: faltaInicio || (corteNoFim && !continua),
     partido: seguinte || (corteNoFim && continua),
   };
@@ -3039,7 +3055,31 @@ function pintarMarca() {
   $('marca').textContent = de == null ? ''
     : ate == null ? t('marca.faltaFim', { de: `${relogioCurto(de)}` })
       : t('marca.feita', { de: `${relogioCurto(de)}`, ate: `${relogioCurto(ate)}`, dur: hhmmss(ate - de) });
+  pintarTrecho();
   pintarCorte();
+}
+
+/**
+ * O trecho entre entrada e saída, desenhado em cima das faixas.
+ *
+ * Em todo editor de vídeo (Premiere, Resolve, CapCut) e de clipe (Medal,
+ * Outplayed) o trecho escolhido aparece sobre a linha do tempo: a pessoa vê o
+ * que vai sair sem ler horas. Só com a entrada marcada fica um risco.
+ */
+function pintarTrecho() {
+  const el = $('trechoMarcado');
+  if (!el) return;
+  const { de, ate } = estado.marca;
+  const vista = vistaAgora();
+  if (de == null || !vista || !(vista.fim > vista.inicio)) { el.hidden = true; return; }
+  const { inicio, fim } = vista;
+  const fim2 = ate == null ? de : Math.max(de, ate);
+  if (fim2 < inicio || de > fim) { el.hidden = true; return; }
+  const f = (ms) => Math.min(1, Math.max(0, (ms - inicio) / (fim - inicio)));
+  el.hidden = false;
+  el.classList.toggle('semSaida', ate == null);
+  el.style.left = `calc(var(--coluna) + (100% - var(--coluna)) * ${f(de)})`;
+  el.style.width = `calc((100% - var(--coluna)) * ${f(fim2) - f(de)})`;
 }
 
 /**
@@ -3106,9 +3146,9 @@ function pintarCorte() {
       const previsto = previsaoDoCorte(estado.linhas.find((l) => l.slug === slug),
         de - antesS * 1000, ate + depoisS * 1000);
       if (previsto && (previsto.antesS > 0.5 || previsto.depoisS > 0.5)) {
-        dur.textContent += ` · ${t('corte.saiCom', {
+        dur.textContent += `, ${t('corte.saiCom', {
           dur: duracaoCurta(previsto.durS), antes: Math.round(previsto.antesS), depois: Math.round(previsto.depoisS),
-        })}${previsto.mb ? ` · ~${previsto.mb} MB` : ''}`;
+        })}${previsto.mb ? `, ~${previsto.mb} MB` : ''}`;
       }
       // O mesmo tecto do editor. Sem ele, uma marca de três horas (o I às
       // 20:00 esquecido e o O às 23:00) eram mil pedaços de 11 MB pedidos
@@ -3221,8 +3261,8 @@ async function baixarUm(slug) {
     linhaDeFicheiro(item, {
       nome: r.nome,
       url: guardarFicheiro(new Blob([r.bytes], { type: r.tipo })),
-      nota: `${(r.bytes.length / 1048576).toFixed(1)} MB · `
-        + `${r.plano.qualidade.altura}p${r.plano.qualidade.fps} · ${sobra.texto}`,
+      nota: `${(r.bytes.length / 1048576).toFixed(1)} MB, `
+        + `${r.plano.qualidade.altura}p${r.plano.qualidade.fps}, ${sobra.texto}`,
     });
     if (sobra.falta) item.querySelector('.nota')?.classList.add('mau');
   } else if (r?.estado === 'incompleto') {
@@ -3860,8 +3900,8 @@ async function guardarRetrato() {
     const curto = notaDoRetratoCurto(gravadoS, duracaoS);
     linhaDeFicheiro(item, {
       nome, url,
-      nota: `${(blob.size / 1048576).toFixed(1)} MB · ${RETRATO.largura}x${RETRATO.altura}`
-        + (curto ? ` · ${curto}` : ''),
+      nota: `${(blob.size / 1048576).toFixed(1)} MB, ${RETRATO.largura}x${RETRATO.altura}`
+        + (curto ? `, ${curto}` : ''),
     });
     if (curto) item.querySelector('.nota')?.classList.add('mau');
     const a = document.createElement('a');
@@ -3953,7 +3993,7 @@ async function guardarAngulos(modo) {
     const url = guardarFicheiro(blob);
     const item = document.createElement('li');
     $('fila').prepend(item);
-    linhaDeFicheiro(item, { nome, url, nota: `${(blob.size / 1048576).toFixed(1)} MB · ${canais.join(', ')}` });
+    linhaDeFicheiro(item, { nome, url, nota: `${(blob.size / 1048576).toFixed(1)} MB, ${canais.join(', ')}` });
     const a = document.createElement('a');
     a.href = url;
     a.download = nome;
@@ -4263,8 +4303,8 @@ async function guardarClipe() {
     linhaDeFicheiro(item, {
       nome,
       url,
-      nota: `${(r.bytes.length / 1048576).toFixed(1)} MB · ${plano.qualidade.altura}p${plano.qualidade.fps}`
-        + ` · ${sobra.texto}`,
+      nota: `${(r.bytes.length / 1048576).toFixed(1)} MB, ${plano.qualidade.altura}p${plano.qualidade.fps}`
+        + `, ${sobra.texto}`,
     });
     if (sobra.falta) item.querySelector('.nota')?.classList.add('mau');
     // Guardar já, sem obrigar a caçar o link na lista: quem carregou em
@@ -4521,6 +4561,8 @@ $('menos5m').onclick = saltar(-300_000);
 $('mais5m').onclick = saltar(300_000);
 $('menos3s').onclick = saltar(-3_000);
 $('mais3s').onclick = saltar(3_000);
+$('tocarPausar').onclick = () => alternarPausa();
+pintarTocarPausar();
 $('marcarIn').onclick = () => { estado.marca = { de: estado.agoraMs, ate: null }; pintarMarca(); guardar(); };
 $('marcarOut').onclick = () => { estado.marca.ate = estado.agoraMs; pintarMarca(); guardar(); };
 $('alinhar').onclick = alinhar;
@@ -4794,6 +4836,26 @@ $('modalClipe').onclick = (e) => { if (e.target === $('modalClipe')) fecharClipe
 $('recomecar').onclick = recomecar;
 $('inicio').onclick = voltarAoInicio;
 
+/**
+ * Os formulários de canais, atrás de um botão, enquanto há vídeo na tela.
+ *
+ * A porta de entrada (colar link, procurar canal, lista) ocupava
+ * metade da primeira tela em 390 px e uma faixa inteira em 1440. Com um vídeo
+ * aberto quem trabalha precisa dele e da linha do tempo; para mudar os canais
+ * abre-se isto, como o painel de projeto de um editor. A classe é
+ * do `body` e só tem efeito com o palco aberto (estilo.css).
+ */
+function alternarCanais(abrir) {
+  const aberto = abrir ?? !document.body.classList.contains('canaisAbertos');
+  document.body.classList.toggle('canaisAbertos', aberto);
+  $('editarCanais').setAttribute('aria-expanded', String(aberto));
+  if (aberto && !$('palco').hidden) {
+    // Com o painel aberto o foco vai para o primeiro campo, e não fica num botão que acabou de sumir de lugar.
+    ($('procurar') || $('canais')).focus({ preventScroll: false });
+  }
+}
+$('editarCanais').onclick = () => alternarCanais();
+
 const alternarAjuda = (abrir) => {
   if (abrir) mostrarDialogo($('modalAjuda'));
   else esconderDialogo($('modalAjuda'));
@@ -4915,7 +4977,9 @@ document.addEventListener('keydown', (e) => {
   // Num seletor a letra também escolhe a opção que começa por ela: o A saltava
   // para "a noite toda" ao mesmo tempo que recuava. A letra que é atalho fica
   // só para o atalho.
-  if (alvo?.tagName === 'SELECT' && /^[cmiojlad]$/.test(tecla)) e.preventDefault();
+  if (alvo?.tagName === 'SELECT' && /^[cmiojladk]$/.test(tecla)) e.preventDefault();
+  // K pausa e continua, como no YouTube e no Resolve (J K L). O espaço continua a fazer o mesmo.
+  if (tecla === 'k' && !e.repeat) alternarPausa();
   if (tecla === 'c') $('clipar').click();
   if (tecla === 'm') $('marcarKill').click();
   if (tecla === 'i') $('marcarIn').click();

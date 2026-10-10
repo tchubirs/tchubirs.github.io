@@ -73,6 +73,8 @@ test('um canal cuja playlist a Kick recusa é dito pelo nome, e os outros abrem'
 
     // A Kick volta a responder e um Carregar traz o canal: nada de mau ficou guardado.
     await p.unroute('https://stream.kick.com/falsa/kodd/**');
+    // Com o vídeo aberto a porta de entrada fica atrás do botão Canais.
+    await p.click('#editarCanais');
     await p.click('#carregar');
     await p.waitForFunction(() => document.querySelectorAll('.tile').length === 2, null, { timeout: 15000 });
     assert.deepEqual(erros.filter((e) => !/503/.test(e)), []);
@@ -82,7 +84,8 @@ test('um canal cuja playlist a Kick recusa é dito pelo nome, e os outros abrem'
 test('o ✕ tira um canal escrito com maiúsculas e @',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
     const { p, erros } = await abrirNoite({ canais: ['Tchubi', '@Kodd'] });
-    await p.waitForSelector('#listaCanais li[data-slug="kodd"] .tirar, li[data-slug="kodd"] .tirar', { timeout: 15000 });
+    await p.waitForSelector('#listaCanais li[data-slug="kodd"] .tirar, li[data-slug="kodd"] .tirar', { state: 'attached', timeout: 15000 });
+    await p.click('#editarCanais');
     await p.locator('li[data-slug="kodd"] .tirar').first().click();
     assert.equal(await p.inputValue('#canais'), 'Tchubi');
     assert.deepEqual(erros, []);
@@ -145,7 +148,7 @@ test('um salto só move os quadros que se vêem, e os outros acertam quando apar
     await p.waitForTimeout(800);
     const visiveis = () => p.evaluate(() => [...document.querySelectorAll('#grade .tile')].filter((t) => {
       const r = t.getBoundingClientRect();
-      return r.bottom > 0 && r.top < innerHeight && r.width > 0;
+      return r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth && r.width > 0;
     }).map((t) => t.dataset.slug));
     const vistos = await visiveis();
     const naGrelha = await p.evaluate(() => [...document.querySelectorAll('#grade .tile')].map((t) => t.dataset.slug));
@@ -179,7 +182,7 @@ test('o principal que sai do foco para um lugar fora da vista larga o leitor de 
       .filter(([, l]) => /1080p/.test(l.url)).map(([s]) => s).sort());
     const visivel = (s) => p.evaluate((slug) => {
       const r = document.querySelector(`.tile[data-slug="${slug}"]`).getBoundingClientRect();
-      return r.bottom > 0 && r.top < innerHeight && r.width > 0;
+      return r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth && r.width > 0;
     }, s);
 
     for (const s of ['canal55', 'canal57', 'canal05', 'canal58']) {

@@ -519,6 +519,7 @@ test('refazer a grelha fecha a janela à parte, em vez de a deixar com um leitor
     assert.ok(await p.evaluate(() => window.__estado.aparte?.tile?.isConnected));
 
     // Tirar o canal dela refaz a grelha sem ele: a janela fecha.
+    await p.click('#editarCanais');
     await p.locator('#listaCanais li[data-slug="outro"] .tirar').click();
     await p.waitForFunction(() => !document.querySelector('#grade .tile[data-slug="outro"], #palcoFoco .tile[data-slug="outro"]')
       && document.querySelectorAll('.tile').length === 1, null, { timeout: 15000 });
@@ -553,7 +554,7 @@ test('o 9:16 da montagem que não sai diz o porquê na língua de quem usa', sem
   const linha = await p.locator('#fila li', { hasText: '9:16' }).innerText();
   assert.match(linha, /this browser cannot record video/);
   assert.doesNotMatch(linha, /sem gravador/);
-  assert.match(await p.locator('#estadoMontagem').innerText(), /^1\/1 exported · 1 did not come out/);
+  assert.match(await p.locator('#estadoMontagem').innerText(), /^1\/1 exported \(1 did not come out/);
   assert.deepEqual(erros, []);
   await p.close();
 });

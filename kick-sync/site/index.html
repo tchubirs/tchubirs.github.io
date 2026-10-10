@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title data-t="app.titulo">Povix — todos os ângulos de cada lance</title>
+<title data-t="app.titulo">Povix: todos os ângulos de cada lance</title>
 <meta name="description" content="Abra um evento da Kick inteiro numa linha do tempo, veja cada lance de todos os ângulos e corte o clipe em poucos cliques.">
-<meta property="og:title" content="Povix — todos os ângulos de cada lance">
+<meta property="og:title" content="Povix: todos os ângulos de cada lance">
 <meta property="og:description" content="Cada lance do evento, de todos os ângulos.">
 <!-- Endereço inteiro: o Discord, o WhatsApp e o X não resolvem um caminho
      relativo, e a pré-visualização do link saía sem imagem. É o endereço
@@ -257,6 +257,9 @@
     <!-- Com vídeos abertos a tela de entrada some, e só o Recomeçar, lá embaixo, voltava a ela: o dono
          abriu um canal e não achou o caminho (07/10). Este botão só aparece nesse caso. -->
     <button id="inicio" class="inicio" data-t-titulo="topo.inicioTitulo" title="Voltar à tela inicial"><svg class="ic ic-p" aria-hidden="true"><use href="#i-inicio"/></svg><span data-t="topo.inicio">Início</span></button>
+    <!-- Com um vídeo aberto, a porta de entrada (colar link, procurar canal, lista) sai da frente e fica atrás deste botão.
+         Quem está caçando um lance precisa do vídeo e da linha do tempo, e não de quatro formulários. -->
+    <button id="editarCanais" class="editarCanais" aria-expanded="false" aria-controls="entrada canaisEstado" data-t-titulo="topo.canaisTitulo" title="Adicionar ou tirar canais"><span data-t="topo.canais">Canais</span></button>
     <a class="paraTwitch" href="twitch.html"><svg class="ic" aria-hidden="true"><use href="#i-twitch"/></svg><span data-t="app.twitch">Versão Twitch</span></a>
     <button id="ajuda" class="discreto" data-t-aria="ajuda.abrir" aria-haspopup="dialog"><svg class="ic" aria-hidden="true"><use href="#i-ajuda"/></svg></button>
     <select id="idioma" data-t-aria="idioma.rotulo" aria-label="idioma da página"></select>
@@ -478,31 +481,28 @@
        a seguir a quatro botões de saltar e a dois de marcar, e num ecrã de
        portátil ficava abaixo da dobra. É o botão que ele carrega mais vezes;
        tem de estar onde os olhos já estão, que é no vídeo. -->
-  <div class="barraClipar">
-    <button id="clipar" class="principal"><svg class="ic" aria-hidden="true"><use href="#i-tesoura"/></svg><span data-t="clipe.botao">Clipar</span> <kbd>C</kbd></button>
-    <output id="marca" class="nota"></output>
+  <!-- O transporte, colado ao vídeo, como no visor de um editor (Premiere, DaVinci, CapCut): à esquerda o instante, os
+       passos e o tocar (o lugar do play em todo player), no meio o Clipar, exatamente sob o vídeo (pedido do dono), e à
+       direita marcar entrada e saída. Os ids são os de sempre; só mudaram de lugar. -->
+  <div class="transporte" role="group" data-t-aria="transporte.rotulo" aria-label="Controles do vídeo">
+    <div class="trEsq">
+      <div class="trTempo">
+        <output id="agora" class="tempo">00:00:00</output>
+      </div>
+      <div class="trPassos">
+        <button id="menos3s" data-t-titulo="tempo.voltar3s" title="voltar 3 segundos"><svg class="ic" aria-hidden="true"><use href="#i-seta"/></svg><span data-t="tempo.menos3s">3s</span> <kbd>A</kbd></button>
+        <button id="tocarPausar" class="tocarPausar" data-t-titulo="transporte.pausa" data-t-aria="transporte.pausa" title="pausar ou continuar" aria-label="pausar ou continuar"><svg class="ic" aria-hidden="true"><use href="#i-pausa"/></svg></button>
+        <button id="mais3s" data-t-titulo="tempo.avancar3s" title="avançar 3 segundos"><kbd>D</kbd> <span data-t="tempo.mais3s">3s</span><svg class="ic" aria-hidden="true"><use href="#i-seta"/></svg></button>
+      </div>
+    </div>
+    <div class="trClipe">
+      <button id="clipar" class="principal"><svg class="ic" aria-hidden="true"><use href="#i-tesoura"/></svg><span data-t="clipe.botao">Clipar</span> <kbd>C</kbd></button>
+    </div>
+    <div class="trMarcas">
+      <button id="marcarIn"><svg class="ic ic-p" aria-hidden="true"><use href="#i-entrada"/></svg><span data-t="marca.inicio">Marcar entrada</span> <kbd>I</kbd></button>
+      <button id="marcarOut"><svg class="ic ic-p" aria-hidden="true"><use href="#i-saida"/></svg><span data-t="marca.fim">Marcar saída</span> <kbd>O</kbd></button>
+    </div>
   </div>
-  <div id="barraGrelha" class="barraGrelha" hidden>
-    <!-- Sem o rótulo "ORDEM" à frente: os dois botões passaram a dizer o que
-         ordenam ("Por ordem de adição", "A–Z"), e "ORDEM  Por ordem de
-         adição" era a mesma palavra duas vezes na mesma linha. -->
-    <button id="ordemAdicionado" class="ordemGrelha" data-ordem="adicionado"
-      aria-pressed="true" data-t="grelha.adicionado">Por ordem de adição</button>
-    <button id="ordemAz" class="ordemGrelha" data-ordem="az"
-      aria-pressed="false" data-t="grelha.az">A–Z</button>
-    <!-- Procurar um ângulo pelo nome, entre os que já estão carregados.
-         "Adiciona um lugar de pesquisa pra pesquisar as miniaturas de vídeo em
-          baixo." Com dezassete quadrados de 150 px, achar um pelo nome é
-         passar os olhos por todos; com trinta é desistir. A caixa de cima
-         procura na Kick e ACRESCENTA — esta só esconde o que não interessa. -->
-    <span class="procura procuraGrelha">
-      <input id="filtrarGrelha" type="search" autocomplete="off" spellcheck="false"
-        data-t-aria="grelha.filtrar" data-t-ph="grelha.filtrar" placeholder="filtrar ângulos">
-      <svg class="ic lupa" aria-hidden="true"><use href="#i-procurar"/></svg>
-    </span>
-    <output id="quantosNaGrelha" class="nota"></output>
-  </div>
-  <div id="grade" class="grade"></div>
 
   <!-- E por baixo dos quadrados, tudo o que se carrega: a montagem, a
        deteccao, o cortar e as exportacoes. "Adiciona todos esses botoes e
@@ -545,11 +545,6 @@
     </div>
   </section>
 
-  <section id="corte">
-    <h2 data-t="corte.titulo">Cortar</h2>
-    <ul id="listaCorte" class="corte"></ul>
-    <p id="comoCortar" class="nota"></p>
-  </section>
 
   <div class="linha">
     <button id="limparFila"><svg class="ic ic-p" aria-hidden="true"><use href="#i-lixo"/></svg><span data-t="fila.limpar">Limpar exportações</span></button>
@@ -563,73 +558,31 @@
   </div><!-- .palcoFundo -->
   </div><!-- .palcoVideo -->
 
-  <!-- A DIREITA: a linha do tempo, inteira.
-       Trocada com a montagem a pedido dele: "quero isso completo com todas as
-       lives, coloca no lugar onde está a segunda print à direita, e o da direita
-       coloca em baixo". Faz sentido pela forma — trinta canais são trinta linhas
-       empilhadas, alto e estreito, que é exactamente a forma de uma coluna; a
-       montagem são filas de botões, que é a forma de uma faixa em baixo. -->
-  <div class="palcoLadoCaixa">
-  <div class="palcoLado">
-    <div class="relogio">
-      <!-- A barra vive na MESMA grelha das faixas, com a mesma coluna vazia à
-           esquerda. Sem isso, a barra media a largura toda e as faixas mediam a
-           largura menos os nomes: o cursor e o puxador ficavam em sítios
-           diferentes para o mesmo instante. -->
-      <div class="barraLinha">
-        <span></span>
-        <input id="barra" type="range" min="0" max="1000" value="0" step="1" data-t-aria="tempo.linha" aria-label="linha do tempo">
-      </div>
-      <!-- Quem esteve no ar, e quando. Sem isto procura-se o momento a arrastar a
-           barra as cegas: os buracos e as sobreposicoes so se descobriam batendo
-           com o nariz neles. -->
-      <div id="faixas" class="faixas"><div id="cursor" class="cursor"></div></div>
-      <!-- A regua, como num editor: as horas por baixo das barras, e as kills
-           marcadas nela. Sem isto sabe-se que se esta "algures no meio". -->
-      <div class="reguaLinha"><span></span><div id="regua" class="regua"></div></div>
-      <div class="linha">
-        <output id="agora" class="tempo">—</output>
-        <!-- Quanto tempo é que a linha do tempo mostra.
-             "Com tanto tempo aparecendo, as barras ficaram muito pequenas" —
-             a noite dele são 34 horas em 450 px, ou seja 4,5 minutos por
-             pixel: um tiroteio de noventa segundos ocupa um terço de pixel. -->
-        <select id="zoomTempo" data-t-aria="tempo.zoom">
-          <option value="0" data-t="tempo.zoomTudo">a noite toda</option>
-          <option value="21600" data-t="tempo.zoom6h">6 horas</option>
-          <option value="3600" data-t="tempo.zoom1h">1 hora</option>
-          <option value="600" data-t="tempo.zoom10m">10 minutos</option>
-          <option value="120" data-t="tempo.zoom2m">2 minutos</option>
-        </select>
-        <output id="angulos" class="nota">—</output>
-      </div>
-      <!-- Os quatro na mesma linha, sempre: em grelha de quatro colunas iguais,
-           que não parte num ecrã estreito como uma linha flex parte. -->
-      <!-- Seis saltos numa linha, simétricos: 5 min (pequeno) e 1 min para achar
-           o sítio, 3 s (o maior, com A e D) para apurar. O de 10 s saiu (o dono,
-           07/10): quem aprende os atalhos quase não usa os botões, e Shift+J/L
-           continua a andar 10 s. -->
-      <div class="saltos">
-        <button id="menos5m" data-t-titulo="tempo.voltar5m" title="voltar 5 minutos"><svg class="ic" aria-hidden="true"><use href="#i-seta2"/></svg>−<span data-t="tempo.menos5m">5 min</span></button>
-        <button id="menos1m" data-t-titulo="tempo.voltar1m" title="voltar 1 minuto"><svg class="ic" aria-hidden="true"><use href="#i-seta2"/></svg>−<span data-t="tempo.menos1m">1 min</span></button>
-        <button id="menos3s" data-t-titulo="tempo.voltar3s" title="voltar 3 segundos"><svg class="ic" aria-hidden="true"><use href="#i-seta"/></svg><span data-t="tempo.menos3s">3s</span> <kbd>A</kbd></button>
-        <button id="mais3s" data-t-titulo="tempo.avancar3s" title="avançar 3 segundos"><kbd>D</kbd> <span data-t="tempo.mais3s">3s</span><svg class="ic" aria-hidden="true"><use href="#i-seta"/></svg></button>
-        <button id="mais1m" data-t-titulo="tempo.avancar1m" title="avançar 1 minuto">+<span data-t="tempo.mais1m">1 min</span><svg class="ic" aria-hidden="true"><use href="#i-seta2"/></svg></button>
-        <button id="mais5m" data-t-titulo="tempo.avancar5m" title="avançar 5 minutos">+<span data-t="tempo.mais5m">5 min</span><svg class="ic" aria-hidden="true"><use href="#i-seta2"/></svg></button>
-      </div>
-      <div class="marcas">
-        <button id="marcarIn"><svg class="ic ic-p" aria-hidden="true"><use href="#i-entrada"/></svg><span data-t="marca.inicio">Marcar entrada</span> <kbd>I</kbd></button>
-        <button id="marcarOut"><svg class="ic ic-p" aria-hidden="true"><use href="#i-saida"/></svg><span data-t="marca.fim">Marcar saída</span> <kbd>O</kbd></button>
-      </div>
-    </div>
-
-    
+  <!-- A DIREITA: os ângulos (miniaturas) e a montagem. Como a coluna de projeto de um editor: o que se escolhe
+       fica ao lado do visor, e não debaixo dele. No telemóvel este invólucro some (display: contents) e cada peça
+       se ordena sozinha. A montagem continua a ser a que guarda a lista de kills e o Exportar. -->
+  <div class="palcoDireita">
+  <div id="barraGrelha" class="barraGrelha" hidden>
+    <!-- Sem o rótulo "ORDEM" à frente: os dois botões passaram a dizer o que
+         ordenam ("Por ordem de adição", "A-Z"), e "ordem  Por ordem de
+         adição" era a mesma palavra duas vezes na mesma linha. -->
+    <button id="ordemAdicionado" class="ordemGrelha" data-ordem="adicionado"
+      aria-pressed="true" data-t="grelha.adicionado">Por ordem de adição</button>
+    <button id="ordemAz" class="ordemGrelha" data-ordem="az"
+      aria-pressed="false" data-t="grelha.az">A-Z</button>
+    <!-- Procurar um ângulo pelo nome, entre os que já estão carregados.
+         "Adiciona um lugar de pesquisa pra pesquisar as miniaturas de vídeo em
+          baixo." Com dezassete quadrados de 150 px, achar um pelo nome é
+         passar os olhos por todos; com trinta é desistir. A caixa de cima
+         procura na Kick e ACRESCENTA. Esta só esconde o que não interessa. -->
+    <span class="procura procuraGrelha">
+      <input id="filtrarGrelha" type="search" autocomplete="off" spellcheck="false"
+        data-t-aria="grelha.filtrar" data-t-ph="grelha.filtrar" placeholder="filtrar ângulos">
+      <svg class="ic lupa" aria-hidden="true"><use href="#i-procurar"/></svg>
+    </span>
+    <output id="quantosNaGrelha" class="nota"></output>
   </div>
-  </div><!-- .palcoLadoCaixa -->
-
-  <!-- EM BAIXO, a toda a largura: montagem, deteção e cortes, lado a lado.
-       "Não precisa um widget tão grande" — em três colunas cada um fica com o
-       tamanho do que tem dentro, em vez de uma coluna estreita a empilhar tudo. -->
-
+  <div id="grade" class="grade"></div>
 
   <!-- A montagem e filha directa do palco, e nao do fundo, por causa do ecra
        de PC: la ela vive na coluna da direita, por baixo dos botoes de salto,
@@ -688,6 +641,67 @@
       <span id="estadoMontagem" class="nota" role="status" aria-live="polite"></span>
     </div>
   </section>
+  <section id="corte">
+    <h2 data-t="corte.titulo">Cortar</h2>
+    <ul id="listaCorte" class="corte"></ul>
+    <p id="comoCortar" class="nota"></p>
+  </section>
+  </div><!-- .palcoDireita -->
+
+  <!-- EM BAIXO: a linha do tempo, inteira e em toda a largura, como em qualquer editor de vídeo.
+       Trinta canais são trinta faixas empilhadas, e quando não cabem rolam por dentro. -->
+  <div class="palcoLadoCaixa">
+  <div class="palcoLado">
+    <div class="relogio" role="region" data-t-aria="tempo.painel" aria-label="Linha do tempo">
+      <!-- A barra vive na MESMA grelha das faixas, com a mesma coluna vazia à
+           esquerda. Sem isso, a barra media a largura toda e as faixas mediam a
+           largura menos os nomes: o cursor e o puxador ficavam em sítios
+           diferentes para o mesmo instante. -->
+      <div class="barraLinha">
+        <span></span>
+        <input id="barra" type="range" min="0" max="1000" value="0" step="1" data-t-aria="tempo.linha" aria-label="linha do tempo">
+      </div>
+      <!-- Quem esteve no ar, e quando. Sem isto procura-se o momento a arrastar a
+           barra as cegas: os buracos e as sobreposicoes so se descobriam batendo
+           com o nariz neles. -->
+      <div id="faixas" class="faixas"><div id="trechoMarcado" class="trechoMarcado" hidden></div><div id="cursor" class="cursor"></div></div>
+      <!-- A regua, como num editor: as horas por baixo das barras, e as kills
+           marcadas nela. Sem isto sabe-se que se esta "algures no meio". -->
+      <div class="reguaLinha"><span></span><div id="regua" class="regua"></div></div>
+      <!-- Cabeça da linha do tempo, como a de um editor: o zoom e os saltos grandes de quem anda pela noite.
+           O instante, os passos de 3 s, entrada, saída e Clipar estão no transporte, colado ao vídeo. -->
+      <div class="linha cabecaTempo">
+        <!-- Quanto tempo é que a linha do tempo mostra.
+             "Com tanto tempo aparecendo, as barras ficaram muito pequenas".
+             a noite dele são 34 horas em 450 px, ou seja 4,5 minutos por
+             pixel: um tiroteio de noventa segundos ocupa um terço de pixel. -->
+        <select id="zoomTempo" data-t-aria="tempo.zoom">
+          <option value="0" data-t="tempo.zoomTudo">a noite toda</option>
+          <option value="21600" data-t="tempo.zoom6h">6 horas</option>
+          <option value="3600" data-t="tempo.zoom1h">1 hora</option>
+          <option value="600" data-t="tempo.zoom10m">10 minutos</option>
+          <option value="120" data-t="tempo.zoom2m">2 minutos</option>
+        </select>
+        <output id="angulos" class="nota"></output>
+        <output id="marca" class="nota" aria-live="polite"></output>
+        <div class="saltos">
+          <button id="menos5m" data-t-titulo="tempo.voltar5m" title="voltar 5 minutos"><svg class="ic" aria-hidden="true"><use href="#i-seta2"/></svg>−<span data-t="tempo.menos5m">5 min</span></button>
+          <button id="menos1m" data-t-titulo="tempo.voltar1m" title="voltar 1 minuto"><svg class="ic" aria-hidden="true"><use href="#i-seta2"/></svg>−<span data-t="tempo.menos1m">1 min</span></button>
+          <button id="mais1m" data-t-titulo="tempo.avancar1m" title="avançar 1 minuto">+<span data-t="tempo.mais1m">1 min</span><svg class="ic" aria-hidden="true"><use href="#i-seta2"/></svg></button>
+          <button id="mais5m" data-t-titulo="tempo.avancar5m" title="avançar 5 minutos">+<span data-t="tempo.mais5m">5 min</span><svg class="ic" aria-hidden="true"><use href="#i-seta2"/></svg></button>
+        </div>
+      </div>
+    </div>
+
+    
+  </div>
+  </div><!-- .palcoLadoCaixa -->
+
+  <!-- EM BAIXO, a toda a largura: montagem, deteção e cortes, lado a lado.
+       "Não precisa um widget tão grande": em três colunas cada um fica com o
+       tamanho do que tem dentro, em vez de uma coluna estreita a empilhar tudo. -->
+
+
 </section>
 
 <!-- Os atalhos que já existem, num sítio onde se possam descobrir.
@@ -700,7 +714,7 @@
       <button id="fecharAjuda" class="discreto" data-t-aria="ajuda.fechar" aria-label="fechar"><svg class="ic" aria-hidden="true"><use href="#i-fechar"/></svg></button>
     </div>
     <dl class="atalhos">
-      <dt><kbd data-t="ajuda.teclaEspaco">Espaço</kbd></dt><dd data-t="ajuda.pausa">Pausa e continua</dd>
+      <dt><kbd data-t="ajuda.teclaEspaco">Espaço</kbd> <kbd>K</kbd></dt><dd data-t="ajuda.pausa">Pausa e continua</dd>
       <dt><kbd>J</kbd> <kbd>L</kbd></dt><dd data-t="ajuda.andar">Volta e avança 1 s (com Shift, 10 s)</dd>
       <dt><kbd>A</kbd> <kbd>D</kbd></dt><dd data-t="ajuda.arrasto">Volta e avança 3 s. Segure para correr a noite</dd>
       <dt><kbd>I</kbd> <kbd>O</kbd></dt><dd data-t="ajuda.marca">Marca entrada e saída</dd>
@@ -727,7 +741,7 @@
          cima; à direita o 9:16 a sério, pintado em tempo real. -->
     <div class="clipeEditor">
       <div class="clipeFonte">
-        <span class="rotuloCampo" data-t="retrato.horizontal">Versão horizontal · 16:9</span>
+        <span class="rotuloCampo" data-t="retrato.horizontal">Versão horizontal, 16:9</span>
         <div id="fonteClipe" class="fonteClipe">
           <video id="previaClipe" playsinline muted></video>
           <div id="recortes" class="recortes" hidden></div>
@@ -737,7 +751,7 @@
            iPhone a imagem pode não vir sozinha, e um toque resolve-o. -->
       <button id="semRetrato" class="semPrevia" hidden></button>
       <div class="clipeRetrato" hidden id="ladoRetrato">
-        <span class="rotuloCampo" data-t="retrato.retrato">Versão vertical · 9:16</span>
+        <span class="rotuloCampo" data-t="retrato.retrato">Versão vertical, 9:16</span>
         <div id="molduraRetrato" class="molduraRetrato">
           <canvas id="telaRetrato" class="telaRetrato" width="1080" height="1920"></canvas>
           <!-- O divisor. Arrasta-se para dar mais altura ao quadro de cima ou
@@ -806,7 +820,7 @@
   <!-- A versao, a serio e visivel. O GitHub Pages serve com max-age=600 e um
        telemovel guarda o app.js antigo; sem isto, "ja corrigi" e "continua
        igual" sao as duas verdadeiras ao mesmo tempo e ninguem sai dali. -->
-  <p class="nota"><span data-t="app.rodape">A sessão fica salva neste aparelho.</span> · <span id="versao">dev</span></p>
+  <p class="nota"><span data-t="app.rodape">A sessão fica salva neste aparelho.</span> <span id="versao">dev</span></p>
 </footer>
 
 <!-- O hls.js é nosso, e não do cdnjs.

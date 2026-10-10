@@ -111,7 +111,7 @@ test('o rotulo diz o segundo dia quando a noite atravessa a meia-noite', () => {
 
 test('dentro do mesmo dia o rotulo nao repete a data', () => {
   const [n] = agruparPorNoite([canal('a', [['2026-08-30T18:00:00Z', 3]])]);
-  assert.equal(rotuloDaNoite(n), '2026-08-30 · 18:00–21:00 — 1 canal');
+  assert.equal(rotuloDaNoite(n), '2026-08-30, 18:00 até 21:00, 1 canal');
 });
 
 // O evento ao vivo: a transmissão em curso vem com duração 0 e `aoVivo`. A noite tem de ir até agora,

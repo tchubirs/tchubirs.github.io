@@ -95,11 +95,11 @@ h1 { font-size: var(--t-titulo); }
 h2 { font-size: var(--t-medio); }
 p { margin: 0; }
 
-/* O rótulo pequeno em maiúsculas. É o único sítio onde há entrelinha larga,
-   e é isso que o faz ler-se como rótulo e não como texto. */
+/* O rótulo pequeno. Sem maiúsculas: palavra inteira em maiúsculas é gritar, e
+   o que o faz ler-se como rótulo é o tamanho e o peso (regra de texto do
+   projeto). Cor mais firme que antes: 4,9:1 era o mínimo. */
 .rotuloCampo, .barraGrelha .rotuloCampo, #montagem > h2, .palcoFundo > section > h2 {
-  font-size: var(--t-micro); font-weight: 600; letter-spacing: var(--letra-larga);
-  text-transform: uppercase; color: var(--tinta-3);
+  font-size: var(--t-menor); font-weight: 600; color: var(--tinta-2);
 }
 
 .nota { color: var(--tinta-2); font-size: var(--t-menor); }
@@ -235,10 +235,10 @@ input[type="checkbox"]:checked::after {
 
 .campo { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 
-/* Uma etiqueta de estado: pequena, em maiúsculas, com a cor do que diz. */
+/* Uma etiqueta de estado: pequena, com a cor do que diz. */
 .etiqueta {
-  font-size: var(--t-micro); font-weight: 600; letter-spacing: var(--letra-larga);
-  text-transform: uppercase; padding: 2px 7px; border-radius: var(--r-fio);
+  font-size: var(--t-micro); font-weight: 600;
+  padding: 2px 7px; border-radius: var(--r-fio);
   background: var(--aviso-eco); color: var(--aviso); border: 1px solid transparent;
 }
 
@@ -395,8 +395,8 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
   font-size: var(--t-menor);
 }
 .canais li b { font-family: var(--letra-mono); font-weight: 500; }
-.canais li.vivo { border-left: 2px solid var(--ok); }
-.canais li.mau { border-left: 2px solid var(--perigo); }
+.canais li.vivo { border-color: color-mix(in srgb, var(--ok) 45%, var(--linha)); }
+.canais li.mau { border-color: color-mix(in srgb, var(--perigo) 55%, var(--linha)); }
 .parecidos { display: flex; gap: 6px; flex-wrap: wrap; }
 .parecidos button { min-height: 26px; padding: 0 var(--e3); font-size: var(--t-menor); }
 
@@ -549,25 +549,47 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 #grade .tile.foraDoFiltro { display: none; }
 .barraGrelha #quantosNaGrelha { margin-left: auto; }
 
-/* ── o Clipar ──────────────────────────────────────────────────────────────
-   Vive colado aos ângulos em foco e não no fundo da coluna: é o botão que
-   ele carrega mais vezes, e tem de estar onde os olhos já estão.
-   Do tamanho do que diz, e não da largura do ecrã: uma barra de mil e
-   duzentos pixels de cor a atravessar a página é um berro, e o berro não
-   fica mais visível por ser maior — fica mais difícil de olhar. */
-/* O Clipar EXACTAMENTE por baixo do vídeo, e ao meio dos dois quando são dois.
-   "O botão de clipar coloca exatamente em baixo do player principal, e quando
-    tem dois players rodando ele fica no meio dos 2, em baixo."
-   Três colunas e não uma linha flex: com `justify-content: center` numa linha,
-   o botão escorregava para o lado sempre que a nota ao lado dele mudava de
-   tamanho — e ela muda a cada marca. Assim o botão está no meio da coluna do
-   meio, e a nota cresce na terceira sem lhe tocar. */
-.barraClipar {
-  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
-  gap: var(--e4); margin: 0 0 var(--e4);
+/* ── o transporte ──────────────────────────────────────────────────────────
+   Uma barra só, colada ao vídeo, como o visor de um editor (Premiere, DaVinci
+   Resolve, CapCut) e como o leitor de qualquer plataforma: o instante à
+   esquerda, tocar e passos no meio, entrada e saída, e no fim o que SAI daqui,
+   o Clipar, que é o único botão cheio de cor desta tela. Antes estas peças
+   viviam em três sítios (o Clipar sob o vídeo, o relógio e os saltos na coluna
+   do lado, entrada e saída no fundo dela) e quem chegava não sabia por onde
+   começar (heurística de Nielsen 6: reconhecer em vez de lembrar). */
+.transporte {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--e3) var(--e5);
+  padding: var(--e3) var(--e4); margin: 0 0 var(--e4);
+  background: var(--sup-2); border: 1px solid var(--linha); border-radius: var(--r-3);
 }
-.barraClipar #clipar { grid-column: 2; min-width: 190px; min-height: 46px; font-size: var(--t-medio); }
-.barraClipar #marca { grid-column: 3; justify-self: start; }
+.trEsq, .trTempo, .trPassos, .trMarcas, .trClipe { display: flex; align-items: center; gap: var(--e2); min-width: 0; }
+.trEsq { gap: var(--e4); flex-wrap: wrap; }
+.trTempo { gap: var(--e3); }
+/* Quando falta largura, a ordem de leitura é: tocar, marcar entrada e saída, Clipar no fim. */
+.trMarcas { order: 2; }
+.trClipe { order: 3; margin-left: auto; }
+/* Com largura (1280 ou mais) o Clipar fica no MEIO do transporte, e portanto exatamente sob o vídeo, e sob o
+   meio dos dois quando há dois (pedido do dono). Três colunas e não uma linha flex: numa linha o botão
+   escorregava quando a nota ao lado mudava de tamanho. Os lados cedem, o meio não. */
+@media (min-width: 1280px) {
+  .transporte { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: var(--e3) var(--e4); }
+  .trEsq { grid-column: 1; justify-self: start; }
+  .trClipe { grid-column: 2; order: 0; margin: 0; justify-self: center; }
+  .trMarcas { grid-column: 3; order: 0; justify-self: end; }
+}
+.transporte button { min-height: 40px; white-space: nowrap; }
+.trPassos button, .trMarcas button { font-size: var(--t-menor); padding: 0 var(--e3); gap: 6px; }
+.trPassos .ic { width: 13px; height: 13px; opacity: .8; }
+.trPassos #menos3s .ic { transform: rotate(180deg); }
+.trPassos #menos3s, .trPassos #mais3s { font-family: var(--letra-mono); color: var(--tinta); font-weight: 600; }
+/* O tocar e pausar é o maior dos botões neutros, no meio dos dois passos (YouTube, Twitch, Kick). */
+.tocarPausar { width: 48px; min-width: 48px; min-height: 44px; padding: 0; justify-content: center; }
+.transporte .tocarPausar .ic { width: 20px; height: 20px; opacity: 1; }
+.transporte .tocarPausar.parado { border-color: var(--acento-fio); color: var(--acento); }
+.transporte #clipar { min-width: 156px; min-height: 48px; font-size: var(--t-medio); }
+/* O trecho marcado, escrito no cabeçalho da linha do tempo (onde ele também está desenhado). */
+#marca { color: var(--marca); font-family: var(--letra-mono); white-space: nowrap; }
+.transporte #agora { font-size: var(--t-grande); }
 
 /* ═══ 7 · o relógio e a linha do tempo ══════════════════════════════════════ */
 
@@ -585,7 +607,8 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
   display: flex; flex-direction: column;
   --coluna: 96px;
   background: var(--sup-2); border: 1px solid var(--linha); border-radius: var(--r-3);
-  padding: var(--e4);
+  /* 18 px a mais à direita: a última hora da régua é centrada no fim da linha e saía cortada pela borda. */
+  padding: var(--e4) calc(var(--e4) + 18px) var(--e4) var(--e4);
 }
 .barraLinha, .reguaLinha, .faixa { display: grid; grid-template-columns: var(--coluna) 1fr; gap: var(--e3); }
 .barraLinha { align-items: center; }
@@ -650,12 +673,10 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 }
 
 /* ── a régua: as horas e as kills marcadas ──────────────────────────────── */
-.relogio > .barraLinha { order: 1; }
-.relogio > .reguaLinha { order: 2; margin-top: var(--e3); }
-.relogio > .faixas { order: 3; }
-.relogio > .linha { order: 4; }
-.relogio > .saltos { order: 5; }
-.relogio > .marcas { order: 6; }
+.relogio > .linha { order: 1; }          /* o cabeçalho: zoom, ângulos, saltos grandes */
+.relogio > .barraLinha { order: 2; }
+.relogio > .reguaLinha { order: 3; margin-top: var(--e3); }
+.relogio > .faixas { order: 4; }
 /* Os riscos e as marcas apontam para BAIXO, para as faixas que estão logo a
    seguir, e o fio fecha a régua por baixo em vez de por cima. */
 .regua { position: relative; height: 30px; border-bottom: 1px solid var(--linha); }
@@ -712,11 +733,10 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 }
 #agora.parado { color: var(--tinta-3); }
 
-/* ── os saltos ─────────────────────────────────────────────────────────────
-   Seis numa linha só, simétricos, e do tamanho do uso: 5 min pequeno, 1 min
-   médio, 3 s o maior (é o mais usado). Em grelha e não em flex: numa linha
-   flex um botão cai para baixo assim que o ecrã aperta. */
-.saltos { display: grid; grid-template-columns: auto auto 1fr 1fr auto auto; gap: var(--e2); margin-top: var(--e4); }
+/* ── os saltos grandes ────────────────────────────────────────────────────
+   Quatro, no cabeçalho da linha do tempo: 5 min e 1 min para cada lado, para achar o sítio. Os de 3 s,
+   para apurar, estão no transporte, ao lado do tocar. */
+.saltos { display: flex; align-items: center; gap: var(--e2); margin-left: auto; }
 .saltos button { min-width: 0; overflow: hidden; }
 #menos5m, #mais5m { font-size: 11px; }
 #menos3s, #mais3s { color: var(--tinta); font-weight: 600; }
@@ -740,11 +760,6 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 }
 .saltos button:hover { color: var(--tinta); }
 .saltos .ic { width: 13px; height: 13px; opacity: .75; }
-
-/* ── marcar entrada e saída ─────────────────────────────────────────────── */
-.marcas { display: grid; grid-template-columns: 1fr 1fr; gap: var(--e3); margin-top: var(--e3); }
-.marcas button { min-height: 38px; padding: 0 var(--e3); white-space: nowrap; font-size: var(--t-menor); }
-.marcas kbd { margin-left: 2px; }
 
 /* ── sincronizar por áudio ──────────────────────────────────────────────── */
 .sincronizar { gap: var(--e4); }
@@ -796,18 +811,17 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
   display: flex; align-items: center; align-content: center; gap: var(--e3); flex-wrap: wrap;
   padding: var(--e4); border-radius: var(--r-2);
   background: var(--sup-1); border: 1px solid var(--linha);
-  border-left: 3px solid var(--linha-2);
 }
-.momentos li.nota { display: block; border-left-color: var(--linha); color: var(--tinta-3); }
+.momentos li.nota { display: block; color: var(--tinta-3); }
 /* Onde ele está agora, na lista. Sem isto, com trinta kills, o cursor da
    régua e a lista eram dois sítios sem relação nenhuma. */
 .momentos li.aqui {
-  border-color: color-mix(in srgb, var(--acento) 26%, var(--linha));
-  border-left-color: var(--acento);
-  background: color-mix(in srgb, var(--acento) 7%, var(--sup-1));
+  border-color: var(--acento-fio);
+  background: color-mix(in srgb, var(--acento) 10%, var(--sup-1));
 }
-/* Com vítima identificada — a kill está pronta a exportar. */
-.momentos li.confirmada { border-left-color: var(--ok); }
+/* Com vítima identificada: a kill está pronta a exportar. O estado também está escrito na ficha
+   (as vítimas), e a borda só reforça. Sem barra colorida de um lado, que é cara de modelo pronto. */
+.momentos li.confirmada { border-color: color-mix(in srgb, var(--ok) 45%, var(--linha)); }
 .momentos li .n {
   font-size: var(--t-menor); font-weight: 500; color: var(--tinta-3);
   min-width: 20px;
@@ -819,8 +833,8 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 .momentos li .fora:hover { color: var(--perigo); background: var(--perigo-eco); border-color: transparent; }
 .momentos li .quantos { margin-left: auto; color: var(--tinta-3); font-size: var(--t-menor); }
 .momentos .ajustado {
-  font-size: var(--t-micro); font-weight: 600; letter-spacing: var(--letra-larga);
-  text-transform: uppercase; padding: 2px 7px; border-radius: var(--r-fio);
+  font-size: var(--t-micro); font-weight: 600;
+  padding: 2px 7px; border-radius: var(--r-fio);
   background: var(--marca-eco); color: var(--marca);
 }
 .momentos .pega { margin: 0; }
@@ -856,6 +870,11 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 }
 .corte li b { font-family: var(--letra-mono); font-weight: 500; }
 .corte .dur { margin-left: auto; color: var(--tinta-3); }
+/* Os dois campos de segundos do corte ficam do tamanho de um número de dois algarismos. Com a largura cheia
+   que todo `input` tem, cada um ocupava uma linha da coluna da direita e o "s" caía por baixo. */
+.corte li { gap: var(--e2) var(--e3); }
+.corte label { display: inline-flex; align-items: center; gap: var(--e2); white-space: nowrap; color: var(--tinta-2); }
+.corte input { width: 4.2em; min-width: 0; padding: 4px 6px; text-align: right; }
 
 /* A fila de ficheiros prontos. */
 .fila { list-style: none; margin: var(--e4) 0 0; padding: 0; display: grid; gap: 6px; }
@@ -1041,7 +1060,7 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
   }
   .palcoVideo { grid-area: video; min-width: 0; }
   .palcoLadoCaixa { grid-area: lado; min-width: 0; align-self: stretch; }
-  #montagem { grid-area: monta; min-width: 0; }
+  .palcoDireita { grid-area: monta; min-width: 0; }
   .palcoFundo { min-width: 0; margin-top: var(--e6); }
 
   /* A linha do tempo acompanha a página: ver o vídeo e saber onde se está no
@@ -1205,43 +1224,55 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
     align-items: stretch;
   }
 
-  /* ESQUERDA. `overflow: hidden` de propósito: o que não couber fica cortado
-     e o teste apanha-o, em vez de escorrer e pôr a página a rolar. */
+  /* A tela do vídeo como um editor (Premiere, DaVinci Resolve, CapCut, e o editor de clipes da Kick):
+     o visor com o transporte à esquerda, os ângulos e a montagem numa coluna à direita, e a linha do
+     tempo por baixo, em toda a largura. É onde qualquer editor a põe, e quem já usou um sabe onde olhar.
+     Antes a linha do tempo era uma coluna estreita ao lado do vídeo e o vídeo ficava com 550 px num
+     monitor de 1440. A altura da linha do tempo é a do que tem dentro (até 36% da tela): com dois
+     canais sobra quase tudo para o vídeo; com trinta, as faixas rolam por dentro. */
+  body.mesa:has(#palco:not([hidden])) #palco:not([hidden]) {
+    flex: 1 1 auto; min-height: 0; gap: var(--e3) var(--e4);
+    grid-template-columns: minmax(0, 1fr) clamp(300px, 27vw, 420px);
+    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-areas: "video lado" "tempo tempo";
+    align-items: stretch;
+  }
+
+  /* ESQUERDA: o visor. `overflow: hidden` de propósito: o que não couber fica cortado e o teste
+     apanha-o, em vez de escorrer e pôr a página a rolar. */
   body.mesa:has(#palco:not([hidden])) .palcoVideo {
     grid-area: video; display: flex; flex-direction: column; min-height: 0; overflow: hidden;
   }
-  /* O foco cresce até onde a coluna deixa, e a grelha fica com o resto.
-     Estava preso em 32vh: num monitor de 1920 isso dava 615 px de vídeo numa
-     coluna de 1250, com 600 px de preto vazio dos dois lados — o vídeo é a
-     única coisa desta página que quer espaço, e era a única que não o
-     usava. Vai a 42vh com tecto na largura, e a grelha continua a rolar. */
+  /* O vídeo em foco leva toda a altura que sobra, e fica com a proporção dele. */
   body.mesa:has(#palco:not([hidden])) .palcoFoco {
-    display: flex; justify-content: center; align-items: stretch;
-    height: 48vh; min-height: 140px; max-height: calc(100% - 300px); flex: 0 1 auto; margin: 0 0 var(--e2);
+    display: flex; justify-content: center; align-items: stretch; gap: var(--e2);
+    flex: 1 1 0; height: auto; min-height: 120px; max-height: none; margin: 0 0 var(--e3);
   }
   body.mesa:has(#palco:not([hidden])) .palcoFoco:empty { display: none; }
   body.mesa:has(#palco:not([hidden])) .palcoFoco .tile {
     height: 100%; width: auto; aspect-ratio: 16/9; min-height: 0; max-width: 100%; flex: 0 1 auto;
   }
   body.mesa:has(#palco:not([hidden])) .palcoFoco.dois .tile { max-width: calc(50% - 4px); }
-  /* Uma folga entre as quatro coisas empilhadas à esquerda. "Afasta um pouco,
-     parece que tá muito junto: dá uma pequena folga pros botões." Estava tudo
-     a 4 px: os controlos do vídeo, o Clipar, a ordem e a grelha liam-se como
-     um bloco só. */
-  body.mesa:has(#palco:not([hidden])) .barraClipar { flex: 0 0 auto; margin: var(--e4) 0 var(--e3); }
-  body.mesa:has(#palco:not([hidden])) .barraGrelha { flex: 0 0 auto; margin: 0 0 var(--e3); }
-  /* A grelha é a única coisa da esquerda que cede: tudo o resto tem tamanho.
-     Uma grelha com altura definida esmaga as linhas para caber e o
-     `aspect-ratio` perde — ficavam tiras de 25 px umas por cima das outras.
-     As linhas ficam com o tamanho do conteúdo e o resto rola. */
+  body.mesa:has(#palco:not([hidden])) .transporte { flex: 0 0 auto; margin: 0 0 var(--e3); }
+  /* As ferramentas de vez em quando (sincronizar, detecção, recomeçar, exportações) numa linha só,
+     por baixo do transporte, sem caixa: deixam de disputar a vista com o vídeo. */
+  body.mesa:has(#palco:not([hidden])) .palcoFundo { flex: 0 0 auto; max-height: 18vh; overflow-y: auto; margin: 0; padding-right: var(--e2); }
+  body.mesa:has(#palco:not([hidden])) .palcoFundo button, body.mesa:has(#palco:not([hidden])) .palcoFundo select { min-height: 32px; }
+  body.mesa:has(#palco:not([hidden])) #corte { flex: 0 1 auto; max-height: 24%; min-height: 0; overflow-y: auto; }
+
+  /* DIREITA: os ângulos em cima, a montagem por baixo. Com um ângulo só não há grelha e a montagem
+     toma a coluna toda. */
+  body.mesa:has(#palco:not([hidden])) .palcoDireita {
+    grid-area: lado; display: flex; flex-direction: column; gap: var(--e3); min-height: 0; min-width: 0;
+  }
+  body.mesa:has(#palco:not([hidden])) .barraGrelha { flex: 0 0 auto; margin: 0; }
+  /* Duas colunas de miniaturas com o nome legível. Uma grelha com altura definida esmaga as linhas
+     para caber e o `aspect-ratio` perde: as linhas ficam com o tamanho do conteúdo e o resto rola. */
   body.mesa:has(#palco:not([hidden])) #grade {
-    flex: 1 1 0; min-height: 60px; overflow-y: auto; margin: 0; padding-right: var(--e2);
-    align-content: start; grid-auto-rows: max-content;
-    /* Sombra de rolagem: uma fita escura no topo e no fundo que só aparece
-       quando há mesmo mais quadrados para lá da borda. Sem ela, uma fila
-       cortada ao meio lê-se como um erro de desenho e não como "continua".
-       O truque é o `local` das duas primeiras camadas — elas rolam com o
-       conteúdo e tapam as `scroll` que estão presas à caixa. */
+    flex: 0 0 auto; max-height: 34%; min-height: 60px; overflow-y: auto; margin: 0; padding-right: var(--e2);
+    grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); align-content: start; grid-auto-rows: max-content;
+    /* Sombra de rolagem: uma fita escura no topo e no fundo que só aparece quando há mais
+       quadrados para lá da borda. O `local` das duas primeiras camadas rola com o conteúdo. */
     background:
       linear-gradient(var(--sup-0) 30%, transparent) top / 100% 18px local no-repeat,
       linear-gradient(transparent, var(--sup-0) 70%) bottom / 100% 18px local no-repeat,
@@ -1249,61 +1280,41 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
       radial-gradient(farthest-side at 50% 100%, #000000a6, transparent) bottom / 100% 10px scroll no-repeat;
   }
   body.mesa:has(#palco:not([hidden])) #grade .tile { align-self: start; }
-  body.mesa:has(#palco:not([hidden])) .palcoFundo {
-    flex: 0 0 auto; max-height: 22vh; overflow-y: auto; margin-top: 0; padding-right: var(--e2);
-    grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--e4);
-  }
-  /* Com uma live só (o dono, 07/10: "parece jogada"): a grelha está vazia e o vídeo fica com o
-     espaço dela, em vez de um vídeo pequeno no meio e um buraco por baixo. A caixa do Sincronizar
-     não serve com um canal e sai, e as que ficam dividem a linha entre elas. */
+  /* Com uma live só (o dono, 07/10: "parece jogada") a grelha some e o vídeo fica com o espaço dela. */
   body.mesa:has(#palco:not([hidden])) #palco.semGrelha #grade { display: none; }
-  body.mesa:has(#palco:not([hidden])) #palco.semGrelha .palcoFoco {
-    flex: 1 1 0; height: auto; max-height: none;
-  }
   body.mesa:has(#palco:not([hidden])) .palcoFundo > #fila:not(:has(li)) { display: none; }
-  body.mesa:has(#palco:not([hidden])) .palcoFundo {
-    grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr);
-  }
-  body.mesa:has(#palco:not([hidden])) .palcoFundo > section,
-  body.mesa:has(#palco:not([hidden])) .palcoFundo > .linha { padding: var(--e3) var(--e4); margin-bottom: 0; }
-  body.mesa:has(#palco:not([hidden])) #automatico > p { display: none; }
 
-  /* DIREITA, em cima: a linha do tempo. */
+  /* As duas barras de cima (evento e noite) mais baixas: cada pixel que elas devolvem vai para o vídeo. */
+  body.mesa:has(#palco:not([hidden])) > #evento { padding: var(--e2) var(--e4); }
+  body.mesa:has(#palco:not([hidden])) > #evento button { min-height: 30px; }
+  body.mesa:has(#palco:not([hidden])) #noites { padding: var(--e2) var(--e3); }
+  body.mesa:has(#palco:not([hidden])) .topoTrabalho select,
+  body.mesa:has(#palco:not([hidden])) .topoTrabalho button { min-height: 30px; }
+
+  /* EM BAIXO: a linha do tempo, em toda a largura. */
   body.mesa:has(#palco:not([hidden])) .palcoLadoCaixa { grid-area: tempo; min-height: 0; display: flex; overflow: hidden; }
   body.mesa:has(#palco:not([hidden])) .palcoLado {
-    position: static; max-height: 40vh; flex: 1 1 auto; min-height: 0; min-width: 0; width: 100%;
+    position: static; max-height: clamp(150px, 26vh, 400px); flex: 1 1 auto; min-height: 0; min-width: 0; width: 100%;
     display: flex; flex-direction: column; overflow: hidden; padding-right: 0;
   }
   body.mesa:has(#palco:not([hidden])) .palcoLado > * { flex: 0 0 auto; }
-  body.mesa:has(#palco:not([hidden])) .palcoLado .relogio,
-  body.mesa:has(#palco:not([hidden])) .palcoLado .marcas,
-  body.mesa:has(#palco:not([hidden])) .palcoLado .linha { min-width: 0; }
-  /* O relógio encolhe (min-height 0) mas não ESCORRE (overflow hidden): as
-     faixas cedem primeiro, até três canais; se ainda assim não couber, é o
-     fim dele que fica cortado — e o teste apanha-o — em vez de os saltos
-     irem parar por cima do que vem a seguir. Medido: com `min-height: auto`
-     o mínimo passava a ser as faixas INTEIRAS (380 px) e o painel rolava. */
+  body.mesa:has(#palco:not([hidden])) .palcoLado .relogio, body.mesa:has(#palco:not([hidden])) .palcoLado .linha { min-width: 0; }
+  /* O relógio encolhe (min-height 0) mas não ESCORRE (overflow hidden): as faixas cedem primeiro, e
+     rolam por dentro. */
   body.mesa:has(#palco:not([hidden])) .palcoLado > .relogio {
     flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden;
+    padding: var(--e3) calc(var(--e4) + 18px) var(--e3) var(--e4);
   }
   body.mesa:has(#palco:not([hidden])) .relogio > * { flex: 0 0 auto; }
-  body.mesa:has(#palco:not([hidden])) .relogio > .faixas { flex: 1 1 auto; min-height: 56px; overflow-y: auto; overflow-x: hidden; }
-  body.mesa:has(#palco:not([hidden])) .relogio .saltos { gap: 3px; }
-  body.mesa:has(#palco:not([hidden])) .relogio .saltos button { min-height: 32px; padding: 0 var(--e2); }
-  body.mesa:has(#palco:not([hidden])) .relogio .marcas button { min-height: 32px; padding: 0 var(--e3); }
-  body.mesa:has(#palco:not([hidden])) .relogio .linha { margin-top: var(--e2); }
-  /* Catorze pixels devolvidos ao painel do tempo, num portátil de 720.
-     Medido: a fila do Marcar entrada / Marcar saída ficava 2 px por baixo da
-     borda — cortada — e as faixas cabiam em três canais. Com a régua mais
-     baixa e as folgas apertadas, a fila fica dentro com folga e as faixas
-     passam a quatro. */
+  body.mesa:has(#palco:not([hidden])) .relogio > .faixas { flex: 1 1 auto; min-height: 40px; overflow-y: auto; overflow-x: hidden; }
+  body.mesa:has(#palco:not([hidden])) .relogio .saltos button { min-height: 30px; }
+  body.mesa:has(#palco:not([hidden])) .relogio > .linha { margin: 0 0 var(--e2); }
   body.mesa:has(#palco:not([hidden])) .regua { height: 24px; }
   body.mesa:has(#palco:not([hidden])) .relogio > .reguaLinha { margin-top: var(--e2); }
-  body.mesa:has(#palco:not([hidden])) #agora { font-size: var(--t-medio); }
 
   /* DIREITA, em baixo: a montagem. */
   body.mesa:has(#palco:not([hidden])) #montagem {
-    grid-area: monta; min-height: 0; display: flex; flex-direction: column;
+    flex: 1 1 0; min-height: 140px; display: flex; flex-direction: column;
     margin-bottom: 0; overflow: hidden; padding: var(--e3) var(--e4); gap: var(--e2);
   }
   body.mesa:has(#palco:not([hidden])) #montagem > * { flex: 0 0 auto; }
@@ -1367,28 +1378,35 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
    Medido depois, no mesmo 390×844: vídeo, Clipar, relógio, oito saltos e as
    duas marcas, tudo dentro do primeiro ecrã. */
 @media (max-width: 1079.98px) {
-  .palcoVideo, .palcoLadoCaixa, .palcoLado { display: contents; }
+  .palcoVideo, .palcoLadoCaixa, .palcoLado, .palcoDireita { display: contents; }
 
   /* Com os invólucros fora, o palco passa a ter sete filhos em vez de três:
-     as margens de cada um deixam de somar com a folga da grelha. */
+     as margens de cada um deixam de somar com a folga da grelha.
+     A ordem de quem caça um lance: o vídeo, o transporte colado a ele, a linha do tempo, os outros
+     ângulos, a montagem, e por fim as ferramentas de vez em quando. Tudo isto cabe no primeiro ecrã de
+     um telemóvel de 390 x 844, menos a montagem. */
   #palco:not([hidden]) { gap: var(--e4); }
   #palcoFoco { order: 1; margin: 0; }
-  .barraClipar { order: 2; margin: 0; }
+  .transporte { order: 2; margin: 0; }
   .relogio { order: 3; }
-  #montagem { order: 4; }
-  .barraGrelha { order: 5; margin: 0; }
-  #grade { order: 6; margin: 0; }
+  .barraGrelha { order: 4; margin: 0; }
+  #grade { order: 5; margin: 0; }
+  #montagem { order: 6; }
   .palcoFundo { order: 7; }
 
-  /* O relógio por dentro. A coluna flex já vem de cima; aqui só muda a ordem. */
-  .relogio > .linha { order: 1; margin-top: 0; }   /* 21:05:00Z · 17 de 17 ângulos */
-  .relogio > .saltos { order: 2; margin-top: var(--e4); }
-  .relogio > .marcas { order: 3; }
-  .relogio > .barraLinha { order: 4; margin-top: var(--e5); }
-  /* A régua por cima das faixas também aqui: num ecrã estreito as horas e as
-     marcas de kill ainda se pisam mais do que num monitor. */
-  .relogio > .reguaLinha { order: 5; margin-top: var(--e3); }
-  .relogio > .faixas { order: 6; }
+  /* A linha dos ângulos é uma tira que rola de lado, e não quinze fileiras de miniaturas: com a grelha
+     por baixo, a linha do tempo e a montagem ficavam a dois ecrãs do vídeo. */
+  #grade {
+    display: flex; gap: var(--e3); overflow-x: auto; overflow-y: hidden; padding-bottom: var(--e2);
+    scroll-snap-type: x proximity; overscroll-behavior-x: contain;
+  }
+  #grade .tile { flex: 0 0 148px; scroll-snap-align: start; }
+
+  /* O relógio por dentro: o cabeçalho (zoom e saltos grandes), a barra, a régua e as faixas. */
+  .relogio > .linha { order: 1; margin: 0 0 var(--e3); }
+  .relogio > .barraLinha { order: 2; }
+  .relogio > .reguaLinha { order: 3; margin-top: var(--e3); }
+  .relogio > .faixas { order: 4; }
 }
 
 /* Num ecrã estreito a coluna dos nomes aperta, e oito botões de salto não
@@ -1403,18 +1421,26 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
   .palcoFoco { grid-auto-flow: row; }
   .palcoFoco .tile, .palcoFoco.dois .tile { min-height: 150px; }
   .aparar { grid-template-columns: auto minmax(44px, 1fr) minmax(44px, 1fr) 52px; gap: var(--e3) 6px; }
-  .relogio { --coluna: 76px; padding: var(--e4) var(--e3); }
+  .relogio { --coluna: 76px; padding: var(--e4) calc(var(--e3) + 14px) var(--e4) var(--e3); }
   .bloco { padding: var(--e4); }
   .palcoFundo > section, .palcoFundo > .linha, .palcoFundo > #zip, #montagem { padding: var(--e4); }
-  .saltos { gap: 5px; }
-  .saltos button { padding: 0; font-size: var(--t-micro); }
-  .saltos .ic { width: 11px; height: 11px; }
   /* Num ecrã estreito não há sítio para a tecla escrita: lá o teclado não
      existe, e o que fica é o número. */
-  .saltos kbd { display: none; }
-  .barraClipar { grid-template-columns: 1fr; }
-  .barraClipar #clipar { grid-column: 1; min-width: 0; }
-  .barraClipar #marca { grid-column: 1; justify-self: center; }
+  .transporte kbd, .saltos kbd { display: none; }
+  /* O transporte em três filas: o instante com os passos, a entrada e a saída lado a lado, e o Clipar
+     na largura toda, onde o polegar chega. Alvos de toque de 44 px (WCAG 2.5.8 pede 24, e a Apple e o
+     Material pedem 44 e 48). */
+  .transporte { display: grid; grid-template-columns: 1fr; gap: var(--e3); padding: var(--e3); }
+  .trEsq { justify-content: space-between; flex-wrap: nowrap; gap: var(--e3); }
+  .trPassos { justify-content: flex-end; }
+  .trMarcas { display: grid; grid-template-columns: 1fr 1fr; justify-self: stretch; }
+  .trClipe { margin: 0; flex-wrap: wrap; gap: var(--e2); justify-self: stretch; }
+  .trClipe #clipar { flex: 1 1 auto; min-width: 0; min-height: 48px; }
+  .transporte button { min-height: 44px; }
+  .saltos { margin-left: auto; gap: 4px; }
+  .saltos button { padding: 0 4px; min-height: 40px; }
+  .relogio .linha select { min-width: 92px; padding-right: var(--e5); padding-left: var(--e2); }
+  .relogio > .linha { flex-wrap: wrap; gap: var(--e2) 4px; }
   /* Uma linha só, e nunca duas. O cabeçalho embrulhava assim que o texto
      mudava de tamanho — e ele MUDA: a página nasce em português com "Twitch"
      escrito no HTML e o guião troca-o por "Versão Twitch" aos 89 ms. O
@@ -1643,3 +1669,89 @@ body:not(:has(#fila > li)) #limparFila { display: none; }
 #janelaAuto { max-width: 13em; }
 body.mesa #formatoMontagem { width: auto; min-width: 0; max-width: 8em; min-height: 30px; padding: 0 var(--e5) 0 var(--e3); font-size: var(--t-menor); }
 .soVarios[hidden] { display: none; }
+
+
+/* ═══ 14, a tela do vídeo como editor ═══════════════════════════════════════
+   Regras novas desta tela. Cada uma diz de que referência vem e que problema resolve. */
+
+/* O trecho entre a entrada e a saída, sobre as faixas. Âmbar, porque o âmbar deste sistema é o tempo
+   marcado (tokens.css). Como em Premiere, Resolve, CapCut, Medal e Outplayed: o que vai sair é uma
+   faixa colorida na linha do tempo, e não só duas horas escritas. Sem a saída ainda, fica um risco. */
+.trechoMarcado {
+  position: absolute; top: 0; bottom: 0; z-index: 1; min-width: 3px; pointer-events: none;
+  background: var(--marca-eco); border-left: 2px solid var(--marca); border-right: 2px solid var(--marca);
+}
+.trechoMarcado.semSaida { background: none; border-right: 0; }
+
+/* Os formulários de entrada (colar link, procurar canal, lista) atrás de um botão enquanto há vídeo. Quem caça
+   um lance precisa do vídeo e da linha do tempo, e não de três formulários (heurística de Nielsen 8: desenho
+   minimalista). Ficam à vista a noite, o veredito do relógio e o Compartilhar, que são estado e ação do
+   projeto, e o que falhou ao carregar, que é aviso. */
+.editarCanais { display: none; }
+body:has(#palco:not([hidden])) .editarCanais { display: inline-flex; }
+.editarCanais[aria-expanded="true"] { background: var(--acento-eco); border-color: var(--acento-fio); color: var(--tinta); }
+body.mesa:not(.canaisAbertos):has(#palco:not([hidden])) #entrada,
+body.mesa:not(.canaisAbertos):has(#palco:not([hidden])) #canaisEstado:not(:has(.mau)) { display: none; }
+body.mesa:not(.canaisAbertos):has(#palco:not([hidden])) > .topoTrabalho { margin: 0; gap: 0; }
+body.mesa:not(.canaisAbertos):has(#palco:not([hidden])) #canaisEstado:has(.mau) { display: block; flex: 1 0 100%; max-height: none; margin: 0 0 var(--e3); }
+@media (max-width: 620px) {
+  .topo { flex-wrap: wrap; row-gap: var(--e3); }
+  .topo .editarCanais { order: 9; flex: 1 0 100%; justify-content: center; min-height: 40px; }
+  /* O resumo do evento (times, canais, quantos com vídeo) é do mapa; na tela do vídeo só empurrava o vídeo para baixo. */
+  body:has(#palco:not([hidden])) #resumoEvento { display: none; }
+}
+/* A noite, na tela do vídeo: sem rótulo, sem a lista de nomes (já estão nas faixas) e sem o seletor
+   quando só existe uma noite. Sobram o veredito do relógio e o Compartilhar. */
+body:has(#palco:not([hidden])) #noites .rotuloCampo,
+body:has(#palco:not([hidden])) #resumoNoite,
+body:has(#palco:not([hidden])) #noites .campo:has(#noite):not(:has(option + option)) { display: none; }
+@media (max-width: 620px) {
+  body:has(#palco:not([hidden])) #noites { padding: var(--e3); display: grid; gap: var(--e2); }
+  body:has(#palco:not([hidden])) #noites .barraSessao { gap: var(--e2) var(--e3); flex-wrap: wrap; align-items: center; }
+  /* O veredito e o Compartilhar na mesma linha: o veredito quebra em duas linhas se precisar (nunca é cortado,
+     porque "sem relógio confiável" é o que mais importa ler), e a nota do link desce para a linha de baixo. */
+  body:has(#palco:not([hidden])) #noites .confianca { flex: 1 1 0; min-width: 0; white-space: normal; display: block; }
+  body:has(#palco:not([hidden])) #noites .barraSessao > #partilhar { flex: 0 0 auto; }
+  body:has(#palco:not([hidden])) #noites .barraSessao > #estadoPartilha { flex: 1 0 100%; white-space: normal; }
+  .topo .editarCanais { min-height: 36px; }
+}
+
+/* As ferramentas de vez em quando, numa linha só e sem caixa. Eram três caixas de tamanhos diferentes
+   (uma âmbar) que ocupavam o espaço do vídeo; o botão de detecção ficou com a etiqueta "teste" ao lado,
+   que é o aviso de que erra, e o Recomeçar, que apaga, fica no fim e à parte. */
+.palcoFundo { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e3) var(--e5); }
+.palcoFundo > section, .palcoFundo > .linha, .palcoFundo > #zip {
+  background: none; border: 0; border-radius: 0; padding: 0; margin: 0;
+}
+.palcoFundo > #corte, .palcoFundo > #fila, .palcoFundo > #zip { flex: 1 0 100%; }
+.palcoFundo > .linha:has(#recomecar) { margin-left: auto; }
+#automatico { display: flex; align-items: center; gap: var(--e3); flex-wrap: wrap; border: 0 !important; background: none !important; }
+#automatico h2 { display: contents; }
+#automatico h2 > span { display: none; }
+#automatico h2 > .etiqueta { order: 2; white-space: nowrap; }
+#automatico select { min-width: 0; max-width: 9em; }
+@media (max-width: 620px) { #automatico select { max-width: 7.5em; } }
+#automatico > p { display: none; }
+#automatico > .linha { order: 1; }
+#recomecar { color: var(--perigo); }
+
+/* O que se pode acertar num ângulo (os 0,0 s com mais e menos) só aparece com o ponteiro em cima ou o
+   foco do teclado nele: é ajuste fino de quem já sincronizou, e os números soltos no canto do vídeo
+   eram o que mais confundia quem chegava. No toque (sem hover) continua à vista. */
+@media (hover: hover) {
+  .tile .ajuste { opacity: 0; transition: opacity var(--mov); }
+  .tile:hover .ajuste, .tile .ajuste:focus-within { opacity: 1; }
+}
+
+/* A tela do vídeo no evento: só o que serve agora. O campo de procurar é do mapa; com o mapa fechado não
+   procura nada, e o nome do evento deixa de ser título de página. */
+body:has(#palco:not([hidden])) #evento:not(.comMapa) #procurarEvento { display: none; }
+body:has(#palco:not([hidden])) .nomeEvento { font-size: var(--t-medio); }
+body:has(#palco:not([hidden])) .mostrarMapa { background: var(--sup-3); border-color: var(--linha-3); }
+
+/* O Cortar (um arquivo por canal, com as margens de cada um) é um painel como a montagem. Vive na coluna
+   da direita, e não debaixo do vídeo: com dezessete canais a lista é alta e tirava a altura do vídeo. */
+#corte { background: var(--sup-2); border: 1px solid var(--linha); border-radius: var(--r-3); padding: var(--e3) var(--e4); margin: 0; min-width: 0; }
+#corte[hidden] { display: none; }
+#corte > h2 { margin-bottom: var(--e2); }
+@media (max-width: 1079.98px) { #corte { order: 8; } }

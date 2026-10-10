@@ -181,12 +181,10 @@ test('no ecra de um telemovel o foco continua a ocupar espaco',
     await p.close();
   });
 
-// Os quatro na mesma linha, sempre. Numa linha flex o quarto cai para baixo
-// assim que o ecra aperta, e ai deixam de se ver como um conjunto.
-// Eram oito em duas filas; o dono (07/10) pediu uma linha so, sem o de 10 s:
-// 5 min pequeno, 1 min medio, 3 s grande. Seis numa linha, mesmo num telemovel
-// de 390 px, com o texto inteiro a caber em cada um e nada a passar do ecra.
-test('os seis botoes de salto ficam numa linha so, do tamanho do uso, e cabem no telemovel',
+// Os saltos, como num editor: os de 3 s ao lado do tocar e pausar (transporte, sob o video) e os de 1 e 5 min
+// no cabecalho da linha do tempo. Cada grupo numa linha so, na ordem de recuar a avancar, mesmo num telemovel
+// de 390 px, com o texto inteiro a caber em cada botao e nada a passar do ecra.
+test('os saltos ficam em dois grupos de uma linha so, e cabem no telemovel',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
     for (const ecra of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
       const { p, erros } = await abrir({ ecra });
@@ -196,19 +194,19 @@ test('os seis botoes de salto ficam numa linha so, do tamanho do uso, e cabem no
       await p.click('#carregar');
       await p.waitForSelector('.tile', { timeout: 15000 });
 
-      const ids = ['#menos5m', '#menos1m', '#menos3s', '#mais3s', '#mais1m', '#mais5m'];
       assert.equal(await p.locator('#menos10s, #mais10s').count(), 0, 'o de 10 s continua la');
-      const bs = await Promise.all(ids.map((id) => p.locator(id).boundingBox()));
-      const ys = bs.map((b) => b.y);
-      assert.ok(Math.max(...ys) - Math.min(...ys) < 2, `partiram em filas (${ecra.width}): ${ys}`);
-      for (let i = 1; i < bs.length; i++) assert.ok(bs[i].x > bs[i - 1].x, `fora de ordem (${ecra.width})`);
-      assert.ok(bs[2].width > bs[1].width && bs[1].width > bs[0].width, `tamanhos (${ecra.width}): ${bs.map((b) => b.width)}`);
-      // Nenhum texto cortado dentro do botao.
-      const cortados = await p.evaluate((lista) => lista.filter((id) => {
-        const b = document.querySelector(id);
-        return b.scrollWidth > b.clientWidth + 1;
-      }), ids);
-      assert.deepEqual(cortados, [], `texto cortado (${ecra.width}): ${bs.map((b) => Math.round(b.width))}`);
+      for (const ids of [['#menos3s', '#tocarPausar', '#mais3s'], ['#menos5m', '#menos1m', '#mais1m', '#mais5m']]) {
+        const bs = await Promise.all(ids.map((id) => p.locator(id).boundingBox()));
+        const ys = bs.map((b) => b.y);
+        assert.ok(Math.max(...ys) - Math.min(...ys) < 2, `partiram em filas (${ecra.width}): ${ids} ${ys}`);
+        for (let i = 1; i < bs.length; i++) assert.ok(bs[i].x > bs[i - 1].x, `fora de ordem (${ecra.width})`);
+        // Nenhum texto cortado dentro do botao.
+        const cortados = await p.evaluate((lista) => lista.filter((id) => {
+          const b = document.querySelector(id);
+          return b.scrollWidth > b.clientWidth + 1;
+        }), ids);
+        assert.deepEqual(cortados, [], `texto cortado (${ecra.width}): ${bs.map((b) => Math.round(b.width))}`);
+      }
       const larguraDaPagina = await p.evaluate(() => document.documentElement.scrollWidth);
       assert.ok(larguraDaPagina <= ecra.width, `a pagina passa do ecra: ${larguraDaPagina}`);
       assert.deepEqual(erros, []);
@@ -451,12 +449,12 @@ test('cada canal baixa sozinho, no seu tamanho, em qualidade maxima',
 
     const linhas = p.locator('#listaCorte li[data-slug]');
     assert.equal(await linhas.count(), 2, 'uma linha por angulo presente na marca');
-    assert.match(await linhas.first().locator('.dur').innerText(), /^0:10( ·|$)/);
+    assert.match(await linhas.first().locator('.dur').innerText(), /^0:10(,|$)/);
 
     // Cinco segundos a mais no fim, so neste canal.
     await linhas.first().locator('.depois').fill('5');
     await linhas.first().locator('.depois').dispatchEvent('input');
-    assert.match(await linhas.first().locator('.dur').innerText(), /^0:15( ·|$)/);
+    assert.match(await linhas.first().locator('.dur').innerText(), /^0:15(,|$)/);
     assert.equal(await linhas.nth(1).locator('.dur').innerText(), '0:10', 'o outro nao mexeu');
 
     const antes = pedidos.segmentos;
@@ -699,7 +697,7 @@ test('marcar kills gera a montagem, em ordem e com os ficheiros numerados',
     // Sem ninguem marcado como morto sai SO a POV do dono. Cortar todos os
     // angulos em cada kill dava quatro clipes de lixo por cada um bom — foi
     // exactamente isso que ele apanhou no uso real: 6 kills, 36 ficheiros.
-    assert.match(await p.locator('#estadoMontagem').innerText(), /2 kills · 2 arquivos/);
+    assert.match(await p.locator('#estadoMontagem').innerText(), /2 kills\. Arquivos: 2/);
     assert.match(await p.locator('#estadoMontagem').innerText(), /2 sem ninguém marcado/);
 
     // Marcar quem morreu em cada uma. A lista e reconstruida a cada clique,
@@ -710,7 +708,7 @@ test('marcar kills gera a montagem, em ordem e com os ficheiros numerados',
       await p.locator('#listaMomentos li[data-ms]').nth(i)
         .locator('.vit[data-canal="vitima1"]').click();
     }
-    assert.match(await p.locator('#estadoMontagem').innerText(), /2 kills · 4 arquivos/);
+    assert.match(await p.locator('#estadoMontagem').innerText(), /2 kills\. Arquivos: 4/);
 
     const antes = pedidos.segmentos;
     await p.click('#baixarMontagem');
@@ -930,6 +928,7 @@ test('da para tirar um canal da lista com um clique',
     await p.waitForSelector('.tile', { timeout: 15000 });
     assert.equal(await p.locator('#listaCanais li[data-slug]').count(), 2);
 
+    await p.click('#editarCanais');
     await p.locator('#listaCanais li[data-slug="outro"] .tirar').click();
     await p.waitForFunction(() => document.getElementById('canais').value === 'tchubi',
       null, { timeout: 10000 });
@@ -958,6 +957,7 @@ test('acrescentar um canal a meio nao muda a noite em que se esta',
     const noite = await p.locator('#noite').inputValue();
 
     // Acrescentar outro canal e recarregar.
+    await p.click('#editarCanais');
     await p.fill('#canais', 'tchubi\nnovato');
     await p.click('#carregar');
     await p.waitForFunction(() => document.querySelectorAll('.tile').length === 2,
@@ -1393,7 +1393,7 @@ test('antes de baixar, a linha do corte diz quanto o arquivo sai de verdade',
     await p.click('#marcarOut');
     await p.waitForSelector('#corte:not([hidden])', { timeout: 10000 });
     const dur = await p.locator('#listaCorte li[data-slug] .dur').first().innerText();
-    assert.match(dur, /^0:03 · o arquivo sai com 0:\d\d \(\d+ s antes e \d+ s depois do marcado/);
+    assert.match(dur, /^0:03, o arquivo sai com 0:\d\d \(\d+ s antes e \d+ s depois do marcado/);
     assert.deepEqual(erros, []);
     await p.close();
   });

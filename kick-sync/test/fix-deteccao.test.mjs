@@ -268,7 +268,7 @@ test('a detecção vê quem morreu mesmo com o filtro a esconder as novas, e o r
     const [m] = await momentos(p);
     assert.deepEqual(m.vitimas, ['v1'], 'o filtro escondia a kill e a vítima ficava por ver');
     const texto = await textoMontagem(p);
-    assert.match(texto, /^1 tiroteios em tchubi · 1 com vítima identificada/,
+    assert.match(texto, /^1 tiroteios em tchubi, 1 com vítima identificada/,
       `o resultado foi tapado: "${texto}"`);
 
     // Os cartões da busca ficaram guardados, fechados. Abrem sem voltar a olhar.

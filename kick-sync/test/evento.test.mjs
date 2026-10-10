@@ -39,7 +39,7 @@ test('colar o elenco abre o mapa, com os times e quem não existe dito pelo nome
     const { p, erros } = await abrir();
     await kickFalsa(p, { canais: ['tchubi', 'outro'] });
     await abrirEvento(p);
-    assert.match(await p.locator('#resumoEvento').innerText(), /2 times · 3 canais · 2 com vídeo/);
+    assert.match(await p.locator('#resumoEvento').innerText(), /2 times, 3 canais, 2 com vídeo/);
     assert.match(await p.locator('#avisosEvento').innerText(), /1 canal não existe na Kick: terceiro\./);
     assert.equal(await p.locator('#corrigirElenco').isVisible(), true, 'e um botão para voltar ao elenco');
     // E no mapa a faixa dele diz que o nome não foi achado, em vez de parecer alguém que não transmitiu.
@@ -60,8 +60,8 @@ test('um clique no mapa escolhe o lance, e "ver" abre o time naquele instante',
     const ms = T + 5 * 60_000;
     await clicarNoMapa(p, 'outro', ms);
     await p.waitForSelector('#lance:not([hidden])');
-    assert.match(await p.locator('#lanceTitulo').innerText(), /^outro · /);
-    assert.match(await p.locator('#lanceTime').innerText(), /Time Alfa · 2 do time no ar/);
+    assert.match(await p.locator('#lanceTitulo').innerText(), /^outro, /);
+    assert.match(await p.locator('#lanceTime').innerText(), /Time Alfa, 2 do time no ar/);
     const escolhido = await p.evaluate(() => window.__evento.escolha.ms);
     assert.ok(Math.abs(escolhido - ms) < 5000, `escolheu ${new Date(escolhido).toISOString()}`);
 
@@ -341,7 +341,7 @@ test('o mapa anda-se pelo teclado: setas, Enter para escolher e o que está sob 
     // Linhas: Time Alfa, tchubi, outro, Time Beta, terceiro. O cursor começa na primeira.
     await p.keyboard.press('ArrowDown');
     await p.keyboard.press('ArrowDown');
-    assert.match(await p.locator('#mapaVoz').textContent(), /^outro · Time Alfa · .* · no ar$/);
+    assert.match(await p.locator('#mapaVoz').textContent(), /^outro, Time Alfa, .*, no ar$/);
     const antes = await p.evaluate(() => window.__evento.cursor.ms);
     await p.keyboard.press('ArrowRight');
     const depois = await p.evaluate(() => window.__evento.cursor.ms);
@@ -356,7 +356,7 @@ test('o mapa anda-se pelo teclado: setas, Enter para escolher e o que está sob 
     await p.keyboard.press('ArrowUp');
     await p.keyboard.press('ArrowUp');
     await p.keyboard.press('Enter');
-    assert.match(await p.locator('#mapaVoz').textContent(), /^Time Alfa · 2 canais · fechado$/);
+    assert.match(await p.locator('#mapaVoz').textContent(), /^Time Alfa, 2 canais, fechado$/);
     assert.deepEqual(erros, []);
   });
 

@@ -238,7 +238,7 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
     }
     for (const [m, slugs] of porMotivo) partes.push(`${nomes(slugs)}: ${m}`);
     $('avisosEvento').hidden = !partes.length;
-    $('avisosTexto').textContent = partes.join(' · ');
+    $('avisosTexto').textContent = partes.join('; ');
     ev.falhados = new Set(ev.resultados.filter((r) => r && RUINS.includes(r.estado)).map((r) => r.slug));
     $('corrigirElenco').hidden = !ev.falhados.size;
   }
@@ -264,12 +264,12 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
     $('elenco').value = paraTexto(elenco);
     const { times, canais } = contar(elenco);
     $('estadoEvento').textContent = t('evento.paginaColada', { times, canais })
-      + (elenco.avisos.length ? ` ${elenco.avisos.slice(0, 3).join(' · ')}` : '');
+      + (elenco.avisos.length ? ` ${elenco.avisos.slice(0, 3).join('; ')}` : '');
   }
 
   async function abrirDoTexto() {
     const elenco = lerElenco($('elenco').value);
-    if (elenco.avisos.length) $('estadoEvento').textContent = elenco.avisos.slice(0, 3).join(' · ');
+    if (elenco.avisos.length) $('estadoEvento').textContent = elenco.avisos.slice(0, 3).join('; ');
     if (!elenco.times.length && !elenco.soltos.length) {
       $('estadoEvento').textContent = t('evento.semCanais');
       return;
@@ -555,8 +555,8 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
     const time = l.time ?? t('evento.semTime');
     $('mapaVoz').textContent = l.tipo === 'canal'
       ? [l.canal, time, horaLocal(ev.cursor.ms),
-        t(ev.falhados.has(l.canal) ? 'evento.naoAchado' : noArEm(ev.coberturas, l.canal, ev.cursor.ms) ? 'evento.noAr' : 'evento.foraDoArCurto')].join(' · ')
-      : [time, tn(l.canais?.length ?? 0, 'evento.canalUm', 'evento.canaisN'), t(l.aberto ? 'evento.aberto' : 'evento.fechado')].join(' · ');
+        t(ev.falhados.has(l.canal) ? 'evento.naoAchado' : noArEm(ev.coberturas, l.canal, ev.cursor.ms) ? 'evento.noAr' : 'evento.foraDoArCurto')].join(', ')
+      : [time, tn(l.canais?.length ?? 0, 'evento.canalUm', 'evento.canaisN'), t(l.aberto ? 'evento.aberto' : 'evento.fechado')].join(', ');
   }
 
   // ── o chat ─────────────────────────────────────────────────────────────
@@ -736,7 +736,7 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
     if (!e) return;
     const time = indiceDeTimes(ev.elenco).get(e.canal);
     const noAr = colegas(e.canal).filter((c) => noArEm(ev.coberturas, c, e.ms));
-    $('lanceTitulo').textContent = `${e.canal} · ${horaLocal(e.ms)}`;
+    $('lanceTitulo').textContent = `${e.canal}, ${horaLocal(e.ms)}`;
     $('lanceTime').textContent = time != null
       ? t('lance.time', { time, n: noAr.length })
       : t('lance.semTime');
@@ -936,7 +936,7 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
       tn(canais, 'evento.resumoCanalUm', 'evento.resumoCanais', { canais, comVideo }),
       aoVivo ? t('evento.resumoAoVivo', { aoVivo }) : '',
       extra,
-    ].filter(Boolean).join(' · ');
+    ].filter(Boolean).join(', ');
     $('seloAoVivo').hidden = aoVivo === 0;
     return aoVivo;
   }
@@ -1039,7 +1039,7 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
     $('mapaRolo').onblur = () => pintar();
     $('mapaRolo').onmousemove = (e) => {
       const alvo = aquiDe(e);
-      $('mapaRolo').title = alvo?.canal ? `${alvo.canal} · ${horaLocal(alvo.ms)}` : (alvo?.time ?? '');
+      $('mapaRolo').title = alvo?.canal ? `${alvo.canal}, ${horaLocal(alvo.ms)}` : (alvo?.time ?? '');
     };
     // Roda do rato com Ctrl (ou o gesto de pinça do touchpad, que chega como Ctrl+roda) aproxima o
     // tempo à volta do ponteiro; sem Ctrl a roda rola as faixas, que é o que toda a gente espera dela.
