@@ -1,0 +1,3 @@
+# Delegate a task to Codex
+
+Take the task from $ARGUMENTS (ask for specifics if it is vague). Delegate only well-scoped work: bulk changes, boilerplate, tests for existing code, migration scripts, format conversions, single-file edits. Keep architecture, cross-module refactors, deep-context and trivial tasks for yourself. Build a precise self-contained prompt (exact paths, the change, constraints, done condition). Call `codex_exec` with mode "full-auto" and requireGit true. Then run `git status --short` first (to catch new untracked files), then `git diff`, read new files directly, and check for bugs, regressions, style and out-of-scope edits. Present what is right and what needs adjusting, and keep only what passes review.

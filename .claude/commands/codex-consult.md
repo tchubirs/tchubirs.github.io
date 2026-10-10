@@ -1,0 +1,3 @@
+# Consult Codex for a second opinion
+
+Read-only. Take the question from $ARGUMENTS and prepare a focused prompt (question, context, kind of feedback wanted). Call `codex_exec` with mode "exec" and the prompt: "Provide your analysis and recommendation on the following question. Consider tradeoffs, alternatives, and potential risks. Be specific and cite concrete examples where possible." followed by the question and context. Then present Codex's analysis, your own independent analysis, where you agree and disagree (with evidence), and a recommended path. If you strongly disagree, present both fairly and let the owner decide. If Codex is unavailable, say so and give your own analysis.
