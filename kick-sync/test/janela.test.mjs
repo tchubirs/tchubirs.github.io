@@ -8,7 +8,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  comoAbrirJanela, comoIrAEcraCheio, capacidades, copiarEstilos, abrirJanela,
+  comoAbrirJanela, comoIrAEcraCheio, capacidades, copiarEstilos, copiarIcones, abrirJanela,
 } from '../site/janela.js';
 
 test('escolhe a janela de documento quando existe', () => {
@@ -87,6 +87,26 @@ test('uma folha ilegível e sem href é saltada, não copiada vazia', () => {
   const para = documentoFalso();
   assert.equal(copiarEstilos(de, para), 0);
   assert.equal(para.head.filhos.length, 0);
+});
+
+test('os ícones vão para a janela à parte, senão os botões ficam quadrados vazios (o dono, 10/10)', () => {
+  const comSimbolos = { querySelector: (q) => (q === 'symbol' ? {} : null), nome: 'sprite' };
+  const semSimbolos = { querySelector: () => null, nome: 'icone' };
+  const de = {
+    querySelectorAll: () => [comSimbolos, semSimbolos],
+    documentElement: { attributes: [{ name: 'lang', value: 'pt' }, { name: 'data-tema', value: 'escuro' }, { name: 'style', value: 'x' }] },
+  };
+  const postos = [];
+  const atributos = {};
+  const para = {
+    body: { appendChild: (n) => postos.push(n) },
+    importNode: (n) => ({ ...n, copia: true }),
+    documentElement: { setAttribute: (k, v) => { atributos[k] = v; } },
+  };
+  assert.equal(copiarIcones(de, para), 1);
+  assert.deepEqual(postos.map((n) => [n.nome, n.copia]), [['sprite', true]]);
+  assert.deepEqual(atributos, { lang: 'pt', 'data-tema': 'escuro' });
+  assert.equal(copiarIcones({}, para), 0);
 });
 
 // ── voltar ao lugar ─────────────────────────────────────────────────────────

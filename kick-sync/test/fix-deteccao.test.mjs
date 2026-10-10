@@ -28,6 +28,7 @@ async function varreduraFalsa(p, candidatosS = []) {
       export function custoVarrerMB() { return 1; }
       export async function varrerNoite(o) {
         window.__varrer = { deMs: o.deMs, ateMs: o.ateMs, nudgeMs: o.nudgeMs, canal: o.linha.slug };
+        (window.__varreres = window.__varreres || []).push(window.__varrer);
         return {
           ouvido: { altos: 0, chumbados: 0, passaram: 0, maiorGrupo: 0 },
           estouros: [], falhados: 0, bytes: 0,
@@ -83,10 +84,21 @@ async function abrirNoite(p, canais) {
 const textoMontagem = (p) => p.locator('#estadoMontagem').innerText();
 const momentos = (p) => p.evaluate(() => window.__estado.momentos);
 
-/** Correr a detecção (a noite toda) e esperar que o botão volte. */
-async function detectar(p, { janela = '0' } = {}) {
-  await p.selectOption('#janelaAuto', janela);
-  await p.click('#procurarKills');
+/**
+ * Correr a detecção e esperar que o botão volte. O botão abre a barra na faixa de quem está no vídeo (ou
+ * de `quem`, pelo nome da faixa; '*' é Todos), e lá escolhe-se trecho (o das alças) ou tudo.
+ */
+async function detectar(p, { quem = null, quanto = 'tudo' } = {}) {
+  if (quem) await p.click(`#faixas button.nome[data-quem="${quem}"]`);
+  else await p.click('#procurarKills');
+  await p.waitForSelector('#acoesFaixa:not([hidden])');
+  if (quanto === 'tudo') {
+    if (await p.locator('#voltarAcoes').isVisible()) await p.click('#voltarAcoes');
+    await p.click('#detetarTudo');
+  } else {
+    if (await p.locator('#detetarTrechoAbrir').isVisible()) await p.click('#detetarTrechoAbrir');
+    await p.click('#detetarTrecho');
+  }
   // A correr, o botão não se apaga (é o Parar dela): o fim é a `varredura` voltar a nada.
   await p.waitForFunction(() => window.__varrer && window.__estado.varredura === null
     && !/Ouvindo|Identificando/.test(document.getElementById('estadoMontagem').textContent),
@@ -130,9 +142,9 @@ test('uma detecção que não acha nada deixa o botão pronto para outro trecho'
   await p.close();
 });
 
-// app-2#15, detection#19: "a noite toda" começava no cursor, e com o cursor
-// depois do fim do canal o clique não fazia nada nem dizia nada.
-test('a noite toda é a noite toda, e com o cursor depois do fim diz porquê', comNavegador, async () => {
+// app-2#15, detection#19: "a noite toda" começava no cursor. Agora é "Detectar: tudo", o tempo todo em
+// que a pessoa esteve ao vivo; e um trecho fora disso diz porquê, sem ouvir nada.
+test('detectar tudo é o tempo todo ao vivo, e um trecho fora dele diz porquê', comNavegador, async () => {
   const { p, erros } = await abrir();
   // O relógio do outro (o PROGRAM-DATE-TIME) começa 300 s depois: vai dos 300 aos 900.
   await kickFalsa(p, { canais: ['tchubi', 'outro'], desviosS: { outro: 300 } });
@@ -142,9 +154,14 @@ test('a noite toda é a noite toda, e com o cursor depois do fim diz porquê', c
   assert.equal(await p.evaluate(() => window.__estado.focos[0]), 'tchubi');
 
   await p.evaluate((t) => { window.__estado.agoraMs = t + 400_000; }, T);
-  await detectar(p, { janela: '0' });
+  // O botão da secção abre a barra na faixa de quem está no vídeo, e diz o que escolher.
+  await p.click('#procurarKills');
+  assert.equal(await p.evaluate(() => document.getElementById('acoesFaixa').previousElementSibling.dataset.slug), 'tchubi');
+  assert.match(await textoMontagem(p), /escolha na linha do tempo/);
+  assert.equal(await p.evaluate(() => document.activeElement.id), 'chatTrechoAbrir');
+  await detectar(p);
   const v = await p.evaluate(() => window.__varrer);
-  assert.equal(v.deMs, T, 'a noite toda começa no princípio do canal, e não no cursor');
+  assert.equal(v.deMs, T, 'tudo começa no princípio do canal, e não no cursor');
   assert.equal(v.ateMs, T + 600_000);
 
   // Uma kill aos 100 s, quando o outro ainda não estava no ar: a ficha dele
@@ -157,15 +174,20 @@ test('a noite toda é a noite toda, e com o cursor depois do fim diz porquê', c
   assert.equal(await ficha.isDisabled(), true);
   assert.match(await ficha.getAttribute('aria-label'), /^outro: não estava gravando$/);
 
-  // O tchubi acaba aos 600 s; o outro continua até aos 900.
+  // O tchubi acaba aos 600 s; o outro continua até aos 900. Um trecho dos 700 aos 800 (a entrada e a
+  // saída marcadas passam para as alças) não tem tchubi.
   await p.evaluate((t) => { window.__varrer = null; window.__estado.agoraMs = t + 700_000; }, T);
-  await p.selectOption('#janelaAuto', '1800');
-  await p.click('#procurarKills');
-  await p.waitForFunction(() => /saiu do ar/.test(document.getElementById('estadoMontagem').textContent),
+  await p.click('#marcarIn');
+  await p.evaluate((t) => { window.__estado.agoraMs = t + 800_000; }, T);
+  await p.click('#marcarOut');
+  await p.click('#detetarTrechoAbrir');
+  await p.click('#detetarTrecho');
+  await p.waitForFunction(() => /fora deste trecho/.test(document.getElementById('estadoMontagem').textContent),
     null, { timeout: 5000 });
   const texto = await textoMontagem(p);
-  assert.match(texto, /saiu do ar/);
-  assert.match(texto, /noite toda/, 'e diz o que fazer a seguir');
+  assert.match(texto, /^tchubi esteve ao vivo de \d\d:\d\d a \d\d:\d\d, fora deste trecho/);
+  assert.match(texto, /ou escolha tudo/, 'e diz o que fazer a seguir');
+  assert.equal(await p.locator('#estadoChatTrecho').innerText(), texto, 'e diz o mesmo na faixa');
   assert.equal(await p.evaluate(() => window.__varrer), null, 'sem ouvir nada');
   assert.deepEqual(erros, []);
   await p.close();
@@ -469,43 +491,52 @@ test('nenhuma chave das traduções está escrita duas vezes na mesma língua', 
   }
 });
 
-// O dono (07/10): escolher de que hora a que hora a detecção ouve, e não só meia hora, uma hora ou a noite.
-test('a detecção ouve o trecho marcado, ou de uma hora a outra', comNavegador, async () => {
+// O dono (07/10) quis escolher de que hora a que hora a detecção ouve; e (10/10) com as mesmas escolhas
+// do chat: de uma pessoa ou de todos, o trecho das alças ou tudo.
+test('a detecção ouve o trecho das alças (que pega a marca), de uma pessoa ou de todos', comNavegador, async () => {
   const { p, erros } = await abrir();
-  await kickFalsa(p, { canais: ['tchubi'] });
-  await varreduraFalsa(p, []);
-  await abrirNoite(p, ['tchubi']);
-  p.on('dialog', (d) => d.accept());
+  // O outro começa 120 s depois do tchubi.
+  await kickFalsa(p, { canais: ['tchubi', 'outro'], desviosS: { outro: 120 } });
+  await varreduraFalsa(p, [10]);
+  await ecrasFalsos(p);
+  await abrirNoite(p, ['tchubi', 'outro']);
+  const perguntas = [];
+  p.on('dialog', (d) => { perguntas.push(d.message()); d.accept(); });
 
-  // Sem marca, diz o que fazer.
-  await p.selectOption('#janelaAuto', 'marca');
-  await p.click('#procurarKills');
-  assert.match(await textoMontagem(p), /Marque a entrada e a saída/);
-
-  // Com marca, ouve exatamente ela.
+  // A entrada e a saída viram o trecho das alças.
   await p.click('#mais1m');
   await p.click('#marcarIn');
   await p.click('#mais1m');
   await p.click('#marcarOut');
   const marca = await p.evaluate(() => ({ ...window.__estado.marca }));
-  await detectar(p, { janela: 'marca' });
+  await detectar(p, { quem: 'tchubi', quanto: 'trecho' });
+  assert.ok(await p.locator('#chatTrecho').isVisible(), 'as alças estão na faixa');
+  assert.equal(await p.evaluate(() => document.getElementById('chatTrecho').closest('.faixa').dataset.slug), 'tchubi');
   let v = await p.evaluate(() => window.__varrer);
-  assert.deepEqual([v.deMs, v.ateMs], [marca.de, marca.ate]);
+  assert.deepEqual([v.canal, v.deMs, v.ateMs], ['tchubi', marca.de, marca.ate]);
+  assert.match(perguntas.at(-1), /de tchubi/);
 
-  // De uma hora a outra: as caixas abrem com o instante do vídeo.
-  await p.evaluate(() => { window.__varrer = null; });
-  await p.selectOption('#janelaAuto', 'horas');
-  assert.equal(await p.locator('#horasAuto').isVisible(), true);
-  const [de, ate] = await p.evaluate((t0) => {
-    const hm = (ms) => { const d = new Date(ms); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
-    return [hm(t0 + 3 * 60_000), hm(t0 + 5 * 60_000)];
-  }, T);
-  await p.fill('#autoDe', de);
-  await p.fill('#autoAte', ate);
-  await detectar(p, { janela: 'horas' });
+  // As alças mexem o trecho: o fim um minuto depois.
+  await p.locator('#alcaFim').focus();
+  await p.keyboard.press('Shift+ArrowRight');
+  await p.evaluate(() => { window.__varreres = []; });
+  await detectar(p, { quem: 'tchubi', quanto: 'trecho' });
   v = await p.evaluate(() => window.__varrer);
-  assert.equal(v.ateMs - v.deMs, 2 * 60_000);
-  assert.equal(new Date(v.deMs).getMinutes(), new Date(T + 3 * 60_000).getMinutes());
+  assert.deepEqual([v.deMs, v.ateMs], [marca.de, marca.ate + 60_000]);
+
+  // Todos, no mesmo trecho: cada um no pedaço em que esteve ao vivo (o outro só a partir dos 120 s).
+  await p.evaluate(() => { window.__varreres = []; });
+  await detectar(p, { quem: '*', quanto: 'trecho' });
+  let todas = await p.evaluate(() => window.__varreres.map((x) => [x.canal, x.deMs, x.ateMs]));
+  assert.deepEqual(todas, [['tchubi', marca.de, marca.ate + 60_000], ['outro', T + 120_000, marca.ate + 60_000]]);
+  assert.match(perguntas.at(-1), /de 2 pessoas/);
+  assert.match(await textoMontagem(p), /^2 tiroteios: tchubi 1, outro 1/);
+
+  // Todos, tudo: o tempo todo de cada um.
+  await p.evaluate(() => { window.__varreres = []; });
+  await detectar(p, { quem: '*', quanto: 'tudo' });
+  todas = await p.evaluate(() => window.__varreres.map((x) => [x.canal, x.deMs, x.ateMs]));
+  assert.deepEqual(todas, [['tchubi', T, T + 600_000], ['outro', T + 120_000, T + 720_000]]);
   assert.deepEqual(erros, []);
   await p.close();
 });

@@ -86,6 +86,29 @@ export function capacidades(janela = globalThis) {
  * domínio atira ao ler `cssRules`, e por isso o `try` — sem ele, uma folha do
  * Google Fonts rebentava a abertura da janela inteira.
  */
+/**
+ * Os ícones dos botões são `<use href="#i-...">` para os `<symbol>` escondidos no topo da página. Na
+ * janela à parte esse topo não existe, e cada botão aparecia como um quadrado preto vazio (o dono,
+ * 10/10). Vai uma cópia dos símbolos, e também o idioma e o tema da raiz.
+ * @returns {number} quantos blocos de símbolos foram copiados
+ */
+export function copiarIcones(documentoDe, documentoPara) {
+  let quantos = 0;
+  if (typeof documentoDe?.querySelectorAll !== 'function' || !documentoPara?.body) return 0;
+  for (const svg of documentoDe.querySelectorAll('svg')) {
+    if (!svg.querySelector('symbol')) continue;
+    documentoPara.body.appendChild(documentoPara.importNode(svg, true));
+    quantos++;
+  }
+  const raiz = documentoDe.documentElement;
+  for (const a of raiz?.attributes || []) {
+    if (a.name === 'lang' || a.name === 'class' || a.name.startsWith('data-')) {
+      documentoPara.documentElement.setAttribute(a.name, a.value);
+    }
+  }
+  return quantos;
+}
+
 export function copiarEstilos(documentoDe, documentoPara) {
   let quantas = 0;
   for (const folha of documentoDe.styleSheets) {
@@ -134,6 +157,7 @@ export async function abrirJanela(tile, {
 
   const nova = await janela.documentPictureInPicture.requestWindow({ width: largura, height: altura });
   copiarEstilos(janela.document, nova.document);
+  copiarIcones(janela.document, nova.document);
   nova.document.body.style.margin = '0';
   nova.document.body.style.background = 'var(--video-fundo, #000)';
   nova.document.body.classList.add('janelaAparte');
