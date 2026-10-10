@@ -229,3 +229,10 @@ em francês). Tudo revisado pela regra 14 em 28/09.
 - Filtros: palavras no chat; tiros (já existe, tiros.js); explosões de foguete (força do som + grave longo); gritos do streamer (força na faixa da voz).
 - Palavras ditas pelo streamer: precisa transcrever a voz; no navegador é pesado (modelo de dezenas de MB). Estudar antes de prometer.
 - Fazer depois da tarefa do zoom e do chat na faixa.
+
+## Pedidos do dono (10/10): mapa do evento e compartilhar
+- Ao escolher um momento: "Abrir todos com vídeo nesse horário" e "Abrir só quem está ao vivo".
+- Ordenar faixas: clicar num horário põe primeiro quem tem vídeo nele, depois quem esteve no ar perto; outras ordens (ao vivo agora, mais tempo no ar, time, A a Z).
+- "Compartilhar evento" no lugar do link enorme: nome obrigatório, data e duração opcionais; link curto. ABISAL salvo no repositório (só os canais, sem notas) e aberto por ?e=abisal.
+- Régua: linha grossa e data a cada mudança de dia; linhas finas quase transparentes nas horas. O horário já é o de cada pessoa (fuso do aparelho); deixar isso escrito na tela.
+- Fazer depois da tarefa dos filtros.
