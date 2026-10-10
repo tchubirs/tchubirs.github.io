@@ -1585,8 +1585,45 @@ body:is(.videoAberto, :has(#palco:not([hidden]))) #evento:not(.comMapa) > :not(.
 body:is(.videoAberto, :has(#palco:not([hidden]))) #evento.comMapa .mapaRolo { height: 34vh; }
 body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) > #evento { flex: 0 0 auto; margin-bottom: var(--e2); padding: var(--e3) var(--e4); }
 .dica { margin: 0; }
-.reguaEvento { position: relative; height: 18px; margin: 0 1px; overflow: hidden; color: var(--tinta-3); font-family: var(--letra-mono); font-size: var(--t-micro); }
-.reguaEvento span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.reguaEvento { position: relative; height: 20px; margin: 0 1px; overflow: hidden; color: var(--tinta-3); font-family: var(--letra-mono); font-size: var(--t-micro); cursor: pointer; }
+.reguaEvento span { position: absolute; top: 2px; transform: translateX(-50%); white-space: nowrap; pointer-events: none; }
+/* A mudança de dia: um traço grosso e a data escrita à direita dele, mais clara que as horas. */
+.reguaEvento .dia { transform: none; padding-left: 5px; color: var(--tinta); font-weight: 600; }
+.reguaEvento .dia.fimDaRegua { transform: translateX(-100%); padding: 0 5px 0 0; }
+.reguaEvento i { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--tinta-2); pointer-events: none; }
+.reguaEvento i.ordem { background: var(--acento); }
+.reguaEvento:hover { background: var(--sup-1); }
+.fusoEvento { margin: 0; text-align: right; font-size: var(--t-micro); color: var(--tinta-3); }
+.infoEvento { margin: 0; }
+.ferramentasMapa { gap: var(--e2); }
+.ferramentasMapa .espaco { flex: 1 1 auto; }
+.ordemCampo { display: inline-flex; align-items: center; gap: var(--e2); }
+.ordemCampo select { width: auto; }
+.abrirVarios { gap: var(--e2); }
+.abrirVarios button { flex: 1 1 auto; }
+.formJanela { display: flex; flex-direction: column; gap: var(--e3); }
+.formJanela[hidden] { display: none; }
+.doisCampos { align-items: flex-start; }
+.doisCampos > .campo { flex: 1 1 140px; }
+.opcaoLinha { display: flex; align-items: center; gap: var(--e2); font-size: var(--t-menor); }
+.resultadoPartilhar { display: flex; flex-direction: column; gap: var(--e3); }
+.resultadoPartilhar[hidden] { display: none; }
+.resultadoPartilhar input { font-family: var(--letra-mono); font-size: var(--t-menor); }
+.adicionarSugestoes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e1); max-height: 30vh; overflow-y: auto; }
+.adicionarSugestoes:empty { display: none; }
+.adicionarSugestoes button { width: 100%; justify-content: space-between; text-align: left; gap: var(--e2); }
+.adicionarSugestoes button .nota { white-space: nowrap; }
+@media (max-width: 699px) {
+  .ferramentasMapa .espaco { display: none; }
+  .ferramentasMapa > button { flex: 1 1 40%; padding-left: var(--e2); padding-right: var(--e2); }
+  .ferramentasMapa > #ordemVoltar { flex-basis: 100%; }
+  .ordemCampo { flex: 1 1 100%; }
+  .ordemCampo select { flex: 1 1 auto; min-width: 0; }
+}
+@media (pointer: coarse) {
+  .reguaEvento { height: 28px; }
+  .reguaEvento span { top: 7px; }
+}
 .mapaCaixa { display: grid; gap: var(--e3); grid-template-columns: minmax(0, 1fr); }
 @media (min-width: 1000px) { .mapaCaixa:has(#lance:not([hidden])) { grid-template-columns: minmax(0, 1fr) 320px; } }
 /* align-content: start, porque com o lance ao lado mais alto do que o mapa a grelha esticava a linha

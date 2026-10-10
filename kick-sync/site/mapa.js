@@ -190,13 +190,16 @@ function cobre(lista, ms) {
  * `alturas` muda a altura de cada tipo de linha (as de omissão são
  * `ALTURAS`); um valor que não é um número positivo fica na de omissão.
  */
-export function montarMapa({ times, coberturas, abertos, alturas } = {}) {
+export function montarMapa({ times, coberturas, abertos, alturas, timeDe } = {}) {
   const A = { ...ALTURAS };
   // `Number.isFinite` e não `> 0` sozinho: '30' > 0 é verdade, e a seguir
   // `y += '30'` cola texto em vez de somar, e o mapa inteiro fica em NaN.
   for (const k of Object.keys(A)) if (Number.isFinite(alturas?.[k]) && alturas[k] > 0) A[k] = alturas[k];
 
   const lerCobertura = leitor(coberturas);
+  // Com as faixas noutra ordem (ver `ordenarFaixas`), os grupos já não são os times: cada faixa leva o
+  // time verdadeiro do canal, e o nome dele ao lado do canal, para não se perder de que lado está.
+  const lerTime = timeDe ? leitor(timeDe) : null;
   const limpas = new Map();
   const coberturaDe = (slug) => {
     if (!limpas.has(slug)) limpas.set(slug, intervalos(lerCobertura(slug)));
@@ -239,7 +242,13 @@ export function montarMapa({ times, coberturas, abertos, alturas } = {}) {
     y += A.time;
     if (aberto) {
       canais.forEach((canal, i) => {
-        linhas.push({ tipo: 'canal', time: g.nome, canal, y, altura: A.canal, coberturas: listas[i] });
+        const linha = { tipo: 'canal', time: g.nome, canal, y, altura: A.canal, coberturas: listas[i] };
+        if (lerTime) {
+          linha.time = lerTime(canal) ?? null;
+          linha.grupo = g.nome;
+          if (linha.time != null) linha.rotulo = `${canal} (${linha.time})`;
+        }
+        linhas.push(linha);
         y += A.canal;
       });
     } else {
@@ -435,6 +444,51 @@ export function zoom(vista, centroMs, fator, limites) {
   return { deMs: de, ateMs: de + span };
 }
 
+// ── as horas e os dias ──────────────────────────────────────────────────────
+
+const HORA = 3600e3;
+
+/**
+ * Onde ficam as meias-noites e as horas cheias na vista, no fuso do aparelho.
+ *
+ * Devolve { dias: [ms], horas: [ms], passoHoras }. `dias` são as meias-noites (a linha grossa e a data
+ * na régua). `horas` são as horas cheias que não são meia-noite, de `passoHoras` em `passoHoras`: de
+ * hora a hora enquanto ficam a pelo menos `minPx` px umas das outras, e de 2, 3, 6 ou 12 h quando o
+ * zoom as junta demais (uma risca por pixel era um borrão cinzento, e não uma grelha). Com mais de 12 h
+ * entre riscas a `minPx`, só os dias.
+ *
+ * O fuso é o do aparelho, como as horas escritas no resto da página: as contas andam com `Date` local,
+ * e não com múltiplos de 3600 s, porque um fuso de meia hora (a Índia, +5:30) e a mudança de hora de
+ * verão punham as riscas fora da hora cheia.
+ */
+export function linhasDoTempo(vista, largura, { minPx = 6 } = {}) {
+  const e = escala(vista, largura);
+  const vazio = { dias: [], horas: [], passoHoras: null };
+  if (!e) return vazio;
+  const pxPorHora = (HORA / e.span) * e.largura;
+  const passoHoras = [1, 2, 3, 6, 12].find((p) => p * pxPorHora >= minPx) ?? null;
+  const dias = [];
+  const d = new Date(e.de);
+  d.setHours(0, 0, 0, 0);
+  // Um passo de cada vez com setDate, e não +24 h: há dias de 23 e de 25 h.
+  for (let n = 0; d.getTime() <= e.ate && n < 4000; n++) {
+    if (d.getTime() >= e.de) dias.push(d.getTime());
+    d.setDate(d.getDate() + 1);
+  }
+  const horas = [];
+  if (passoHoras) {
+    const h = new Date(e.de);
+    h.setMinutes(0, 0, 0);
+    if (h.getTime() < e.de) h.setTime(h.getTime() + HORA);
+    for (let n = 0; h.getTime() <= e.ate && n < 20000; n++) {
+      const hh = h.getHours();
+      if (h.getMinutes() === 0 && hh % passoHoras === 0 && hh !== 0) horas.push(h.getTime());
+      h.setTime(h.getTime() + HORA);
+    }
+  }
+  return { dias, horas, passoHoras };
+}
+
 // ── procurar ────────────────────────────────────────────────────────────────
 
 const DOBRAS = { 'ı': 'i', 'ł': 'l', 'ø': 'o', 'đ': 'd', 'ß': 'ss' };
@@ -500,6 +554,90 @@ export function filtrar(times, texto) {
     if (achados.length) saida.push(copia(t, achados));
   }
   return saida;
+}
+
+// ── ordenar ─────────────────────────────────────────────────────────────────
+
+/** Quanto falta de `ms` até ao intervalo mais perto da lista (0 se está dentro). */
+function distancia(lista, ms) {
+  let melhor = Infinity;
+  for (const [de, ate] of lista) {
+    const d = ms < de ? de - ms : ms > ate ? ms - ate : 0;
+    if (d < melhor) melhor = d;
+    if (!d) break;
+  }
+  return melhor;
+}
+
+/** Quanto tempo a lista cobre, só dentro de `janela` ({deMs, ateMs}) quando há uma. */
+function tempoNoAr(lista, janela) {
+  const j = pontas(janela);
+  let total = 0;
+  for (const [de, ate] of lista) {
+    const a = j ? Math.max(de, j.de) : de;
+    const b = j ? Math.min(ate, j.ate) : ate;
+    if (b > a) total += b - a;
+  }
+  return total;
+}
+
+const porNome = (a, b) => a.localeCompare(b, 'en', { sensitivity: 'base', numeric: true });
+
+/**
+ * As faixas noutra ordem que não a dos times, em grupos com uma `chave` cada.
+ *
+ * `modo`:
+ * - 'instante': primeiro quem tem vídeo em `ms` ('comVideo'), depois quem esteve no ar até `pertoMs`
+ *   antes ou depois ('perto', do mais perto ao mais longe), depois o resto ('resto').
+ * - 'aoVivo': quem está ao vivo agora (`aoVivo`, um Set de slugs) e depois os outros, do que saiu do
+ *   ar há menos tempo ao que saiu há mais ('foraDoAr').
+ * - 'tempo': mais tempo no ar primeiro, contado dentro de `janela` (o trecho do evento) quando há uma,
+ *   porque os VODs de um canal cobrem semanas e o que interessa é o evento.
+ * - 'az': por nome.
+ *
+ * Dentro de 'comVideo', 'aoVivo' e 'resto' fica a ordem que veio (a dos times). Um grupo vazio não sai.
+ * Nunca mexe no que recebe.
+ */
+export function ordenarFaixas(canais, {
+  modo, coberturas, ms, pertoMs = 30 * 60_000, aoVivo, janela,
+} = {}) {
+  const lista = [...new Set((Array.isArray(canais) ? canais : []).filter((c) => typeof c === 'string' && c))];
+  const ler = leitor(coberturas);
+  const cache = new Map();
+  const cob = (c) => {
+    if (!cache.has(c)) cache.set(c, intervalos(ler(c)));
+    return cache.get(c);
+  };
+  const grupos = [];
+  const juntar = (chave, canaisDoGrupo) => { if (canaisDoGrupo.length) grupos.push({ chave, canais: canaisDoGrupo }); };
+  if (modo === 'instante' && Number.isFinite(ms)) {
+    const com = [];
+    const perto = [];
+    const resto = [];
+    for (const c of lista) {
+      const d = distancia(cob(c), ms);
+      if (d === 0) com.push(c);
+      else if (d <= pertoMs) perto.push([c, d]);
+      else resto.push(c);
+    }
+    perto.sort((a, b) => a[1] - b[1]);
+    juntar('comVideo', com);
+    juntar('perto', perto.map(([c]) => c));
+    juntar('resto', resto);
+  } else if (modo === 'aoVivo') {
+    const vivos = aoVivo instanceof Set ? aoVivo : new Set(Array.isArray(aoVivo) ? aoVivo : []);
+    const fim = (c) => cob(c).at(-1)?.[1] ?? -Infinity;
+    juntar('aoVivo', lista.filter((c) => vivos.has(c)));
+    juntar('foraDoAr', lista.filter((c) => !vivos.has(c)).sort((a, b) => fim(b) - fim(a) || porNome(a, b)));
+  } else if (modo === 'tempo') {
+    const quanto = new Map(lista.map((c) => [c, tempoNoAr(cob(c), janela)]));
+    juntar('tempo', [...lista].sort((a, b) => quanto.get(b) - quanto.get(a) || porNome(a, b)));
+  } else if (modo === 'az') {
+    juntar('az', [...lista].sort(porNome));
+  } else {
+    juntar('todos', lista);
+  }
+  return grupos;
 }
 
 // ── apontar ─────────────────────────────────────────────────────────────────
@@ -628,7 +766,7 @@ function rotulo(ctx, texto, x, meio, {
   const maximo = Math.min(largura - x - 4, ate);
   const porLetra = tam * 0.6;
   const cabem = Math.floor((maximo - 8) / porLetra);
-  // O `sufixo` nunca se corta: num telemóvel, "Lobos do Nor… · 4" ainda diz
+  // O `sufixo` nunca se corta: num telemóvel, "Lobos do Nor… (4)" ainda diz
   // quantos são; "Lobos do Norte…" já não diz.
   const espaco = cabem - Array.from(sufixo).length;
   const s = espaco >= 2 ? cortar(texto, espaco) + sufixo : cortar(texto + sufixo, cabem);
@@ -663,7 +801,7 @@ function pintarCabecalho(ctx, l, ry, o) {
   // de se abrir. Sem palavras, para não ter de passar pelos idiomas.
   rotulo(ctx, `${l.aberto ? '▾' : '▸'} ${nome}`, 8, ry + l.altura / 2, {
     // O cabeçalho não tem barras por baixo: o nome pode usar a linha toda.
-    ...o, tam: 12, peso: 600, cor: c.texto, sufixo: ` · ${l.canais?.length ?? 0}`, ate: Infinity,
+    ...o, tam: 12, peso: 600, cor: c.texto, sufixo: ` (${l.canais?.length ?? 0})`, ate: Infinity,
   });
 }
 
@@ -775,7 +913,7 @@ function pintarFaixa(ctx, l, ry, o) {
     }
   }
 
-  const texto = l.tipo === 'canal' ? l.canal : (l.canais || []).join(' · ');
+  const texto = l.tipo === 'canal' ? (l.rotulo ?? l.canal) : (l.canais || []).join(', ');
   // Um nome que a Kick não conhece fica a vermelho e diz porquê: a faixa
   // vazia dele era igual à de quem só não transmitiu.
   rotulo(ctx, texto, 16, ry + l.altura / 2, {
@@ -783,7 +921,7 @@ function pintarFaixa(ctx, l, ry, o) {
     tam: 12,
     peso: escolhida ? 600 : 400,
     cor: falhou ? c.perigo : l.tipo === 'canal' ? c.texto : c.texto2,
-    sufixo: falhou && o.naoAchado ? ` · ${o.naoAchado}` : '',
+    sufixo: falhou && o.naoAchado ? ` (${o.naoAchado})` : '',
     // Um canal que não existe não tem barras por baixo: o nome pode usar a linha toda, e num telemóvel
     // o "não achado" já não comia o nome até "t…".
     ate: falhou ? Infinity : undefined,
@@ -832,6 +970,30 @@ function pintarCursor(ctx, l, ry, ms, { largura, altura, c, e }) {
 }
 
 /**
+ * As riscas do tempo por cima das faixas: as horas quase transparentes, as meias-noites grossas, e o
+ * instante pelo qual as faixas estão ordenadas na cor do acento. Por cima das barras e não por baixo,
+ * porque cada faixa pinta o seu fundo de ponta a ponta e taparia a grelha; quase transparentes, não
+ * escondem nada.
+ */
+function pintarGrade(ctx, { horas = [], dias = [], ordemMs = null }, { largura, altura, c, e }) {
+  const x = (ms) => ((ms - e.de) / e.span) * e.largura;
+  const dentro = (ms) => Number.isFinite(ms) && ms >= e.de && ms <= e.ate;
+  ctx.save();
+  ctx.globalAlpha = 0.09;
+  ctx.fillStyle = c.texto;
+  for (const ms of horas) if (dentro(ms)) ctx.fillRect(Math.min(Math.round(x(ms)), largura - 1), 0, 1, altura);
+  ctx.globalAlpha = 0.55;
+  ctx.fillStyle = c.texto2;
+  for (const ms of dias) if (dentro(ms)) ctx.fillRect(Math.min(Math.max(Math.round(x(ms)) - 1, 0), largura - 2), 0, 2, altura);
+  if (dentro(ordemMs)) {
+    ctx.globalAlpha = 0.85;
+    ctx.fillStyle = c.cobertura;
+    ctx.fillRect(Math.min(Math.max(Math.round(x(ordemMs)) - 1, 0), largura - 2), 0, 2, altura);
+  }
+  ctx.restore();
+}
+
+/**
  * Pintar o pedaço do mapa que está no ecrã.
  *
  * `topo` é quanto já se rolou, `altura` e `largura` são as do canvas em px
@@ -846,6 +1008,8 @@ function pintarCursor(ctx, l, ry, ms, { largura, altura, c, e }) {
  * `cursor` ({ i, ms }) é onde está o teclado: a linha `i` de `mapa.linhas`
  * com um contorno de 2 px e um traço no instante `ms`. Só se passa com o
  * mapa focado pelo teclado.
+ * `grade` ({ horas, dias, ordemMs }, ver `linhasDoTempo`) são as riscas do tempo: finas nas horas,
+ * grossas nas meias-noites, e uma na cor do acento no instante que ordena as faixas.
  * `realcados` (Set de slugs) são os colegas de quem se escolheu, com uma
  * risca à esquerda; `falhados` (Set de slugs) são os canais que não existem
  * na Kick, com o nome a vermelho seguido de `naoAchado`.
@@ -857,6 +1021,7 @@ function pintarCursor(ctx, l, ry, ms, { largura, altura, c, e }) {
 export function pintarMapa(ctx, mapa, {
   topo = 0, altura, largura, vista, agoraMs = null, marcas, cores, escolhido = null,
   semTime = 'Sem time', letra = LETRA, realcados = null, falhados = null, naoAchado = '', cursor = null,
+  grade = null,
 } = {}) {
   if (!ctx || !(largura > 0) || !(altura > 0)) return;
   const t0 = Number.isFinite(topo) ? topo : 0;
@@ -881,6 +1046,8 @@ export function pintarMapa(ctx, mapa, {
     if (l.tipo === 'time') pintarCabecalho(ctx, l, ry, o);
     else pintarFaixa(ctx, l, ry, o);
   }
+
+  if (e && grade) pintarGrade(ctx, grade, o);
 
   const preso = cabecalhoPreso(mapa, t0);
   if (preso && preso.altura <= altura) pintarCabecalho(ctx, preso, 0, o);

@@ -5965,6 +5965,8 @@ document.addEventListener('keydown', (e) => {
     return;
   }
   if (ondeSeEscreve(alvo)) return;
+  // As janelas do evento (Compartilhar, Adicionar) têm o teclado só para elas, como a do clipe.
+  if (document.querySelector('.modal.doEvento:not([hidden])')) return;
   // O ponto de interrogação abre a lista dos atalhos, e o Esc fecha-a. Não
   // acrescenta comportamento nenhum: torna descobrível o que já existia.
   if (!$('modalAjuda').hidden) {
@@ -6168,7 +6170,8 @@ aplicarIdioma();
 // obrigava a repetir a espera toda.
 // Um link de evento abre o evento, e não a última noite guardada: as duas ao mesmo tempo punham a
 // grelha da noite antiga por cima do mapa que o link pediu.
-const vemDeEvento = /[#&]evento=/.test(location.hash);
+// O link curto de um evento salvo no site (?e=<nome>) também é um link de evento.
+const vemDeEvento = /[#&]evento=/.test(location.hash) || new URLSearchParams(location.search).has('e');
 // O link partilhado vem no # (ver `linkDaNoite`); os de antes vinham no ?s=.
 const sDoHash = new URLSearchParams(location.hash.slice(1)).get('s');
 const doEndereco = doLink(new URLSearchParams(location.search).get('s') || sDoHash || '');
@@ -6228,13 +6231,16 @@ if (guardado) {
 //
 // O mapa do evento entrega à página de sempre os canais de um lance e o instante dele. Daqui para a
 // frente é uma noite como outra qualquer: a grelha, o alinhamento, a montagem e o clipe.
-async function abrirLanceDoEvento(canais, ms, foco) {
+async function abrirLanceDoEvento(canais, ms, foco, { exato = false } = {}) {
   // Com esses canais já na grelha e o instante dentro da noite aberta, é só andar no tempo. Recarregar
   // tudo para ir de um pico ao outro era o que mais travava o uso (o dono, a 07/10).
+  // Com `exato` (o "Abrir só quem está ao vivo" e o "Abrir todos com vídeo"), a grelha tem de ficar
+  // com esses e só esses: quem pediu só os ao vivo não quer os outros que já lá estavam.
   const abertos = new Set(estado.linhas.map((l) => l.slug));
   const j = estado.janela;
   if (j && ms >= j.inicio && ms <= j.fim && canais.length
-    && canais.every((c) => abertos.has(slugDoNome(c)))) {
+    && canais.every((c) => abertos.has(slugDoNome(c)))
+    && (!exato || abertos.size === new Set(canais.map(slugDoNome)).size)) {
     const f = foco && slugDoNome(foco);
     if (f && abertos.has(f) && !ehPrincipal(f)) {
       estado.focos = [f, ...estado.focos.filter((s) => s !== f)];
@@ -6259,6 +6265,7 @@ async function abrirLanceDoEvento(canais, ms, foco) {
 }
 const evento = montarEvento({
   abrirLance: abrirLanceDoEvento,
+  dialogo: { mostrar: mostrarDialogo, esconder: esconderDialogo },
   aoMudarPicos: () => { pintarRegua(); pintarChatVideo(estado.agoraMs, true); },
   memorizarVods: (resultados) => {
     estado.vodsDoEvento.clear();

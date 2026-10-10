@@ -301,8 +301,27 @@
     <output id="trechoVisto" class="nota soComMapa" aria-live="polite"></output>
     <button id="mostrarMapa" class="mostrarMapa" aria-expanded="false" data-t="evento.mostrarMapa">Mapa do evento</button>
     <button id="irAoVivo" class="irAoVivo" hidden><svg class="ic ic-p" aria-hidden="true"><use href="#i-tocar"/></svg><span data-t="evento.irAoVivo">Ver ao vivo agora</span></button>
-    <button id="partilharEvento"><svg class="ic ic-p" aria-hidden="true"><use href="#i-copiar"/></svg><span id="partilharEventoTexto" data-t="evento.partilharEvento">Copiar link do evento</span></button>
-    <output id="estadoPartilhaEvento" class="nota"></output>
+    <button id="partilharEvento" aria-haspopup="dialog"><svg class="ic ic-p" aria-hidden="true"><use href="#i-ligacao"/></svg><span id="partilharEventoTexto" data-t="evento.partilharEvento">Compartilhar evento</span></button>
+  </div>
+  <p id="infoEvento" class="nota infoEvento" hidden></p>
+  <!-- A ordem das faixas e o acrescentar gente, numa linha só abaixo da barra (o dono, 10/10). A ordem
+       activa fica sempre escrita no seletor, e quando não é a dos times aparece o botão de voltar. -->
+  <div class="linha ferramentasMapa">
+    <label class="pequeno ordemCampo"><span data-t="ordem.rotulo">Ordem das faixas</span>
+      <select id="ordemFaixas">
+        <option value="time" data-t="ordem.time">por time</option>
+        <option value="instante" data-t="ordem.instante">vídeo no instante escolhido</option>
+        <option value="aoVivo" data-t="ordem.aoVivo">ao vivo agora</option>
+        <option value="tempo" data-t="ordem.tempo">mais tempo no ar</option>
+        <option value="az" data-t="ordem.az">A a Z</option>
+      </select>
+    </label>
+    <output id="ordemAtiva" class="nota" aria-live="polite"></output>
+    <button id="ordemVoltar" class="discreto" hidden data-t="ordem.voltar">Voltar à ordem por time</button>
+    <span class="espaco"></span>
+    <button id="adicionarStreamer" aria-haspopup="dialog"><svg class="ic ic-p" aria-hidden="true"><use href="#i-mais"/></svg><span data-t="adicionar.streamer">Adicionar streamer</span></button>
+    <button id="adicionarLista" aria-haspopup="dialog"><svg class="ic ic-p" aria-hidden="true"><use href="#i-arquivo"/></svg><span data-t="adicionar.lista">Adicionar lista</span></button>
+    <output id="estadoAdicionar" class="nota" aria-live="polite"></output>
   </div>
   <p id="dicaEvento" class="nota dica" data-t="evento.dica">Clique numa faixa para escolher o streamer e o instante. Clique no nome de um time para abrir ou fechar. Arraste para os lados para andar no tempo; Ctrl + roda do mouse: zoom.</p>
   <div id="avisosEvento" class="nota mau avisosEvento" hidden><span id="avisosTexto"></span> <button id="corrigirElenco" hidden data-t="evento.corrigir">Corrigir elenco</button></div>
@@ -310,13 +329,16 @@
     <!-- A régua mora na mesma coluna do mapa: com ela por cima da caixa toda, as horas ficavam
          desalinhadas das faixas pela largura da borda e do painel do lance. -->
     <div class="mapaColuna">
-      <div id="reguaEvento" class="reguaEvento" aria-hidden="true"></div>
+      <!-- Um clique num horário da régua ordena as faixas por quem tem vídeo nele. Para o teclado o mesmo
+           está no seletor Ordem das faixas, por isso a régua fica fora da árvore de acessibilidade. -->
+      <div id="reguaEvento" class="reguaEvento" aria-hidden="true" data-t-titulo="ordem.reguaAjuda" title="Clique num horário para pôr primeiro quem tem vídeo nele"></div>
       <div id="mapaRolo" class="mapaRolo" tabindex="0" role="application" aria-describedby="dicaEvento mapaTeclas" data-t-aria="evento.mapa">
         <canvas id="mapa"></canvas>
         <div id="mapaAltura" class="mapaAltura"></div>
       </div>
       <p id="mapaTeclas" class="soLeitor" data-t="ajuda.mapa">No mapa: ↑ ↓ trocam de faixa, ← → andam no tempo (Shift: mais rápido), Enter escolhe, + e − dão zoom</p>
       <output id="mapaVoz" class="soLeitor" aria-live="polite"></output>
+      <p id="fusoEvento" class="nota fusoEvento"></p>
     </div>
     <aside id="lance" class="lance" hidden>
       <h3 id="lanceTitulo" class="lanceTitulo"></h3>
@@ -324,6 +346,13 @@
       <!-- O texto do botão diz quantos ângulos abre ("Ver este lance · 4 ângulos" ou "Ver só fulano"):
            posto pelo evento-ui.js a cada escolha, e por isso sem data-t. -->
       <button id="verLance" class="principal"><svg class="ic ic-p" aria-hidden="true"><use href="#i-seta"/></svg><span id="verLanceTexto"></span></button>
+      <!-- Abrir mais do que o time: todos os que têm vídeo nesse horário (gravação, mesmo quem já saiu do
+           ar) ou só quem continua ao vivo. Sem limite de telas, mas com aviso quando são muitas. -->
+      <div class="linha abrirVarios">
+        <button id="abrirTodosVod"><svg class="ic ic-p" aria-hidden="true"><use href="#i-grelha"/></svg><span id="abrirTodosVodTexto"></span></button>
+        <button id="abrirSoAoVivo"><svg class="ic ic-p" aria-hidden="true"><use href="#i-tocar"/></svg><span id="abrirSoAoVivoTexto"></span></button>
+      </div>
+      <output id="avisoMuitos" class="nota mau" aria-live="polite"></output>
       <label class="campo" id="juntarCampo" hidden><span class="rotuloCampo" data-t="lance.juntar">Juntar outro time a este lance</span><select id="juntarTime"></select></label>
       <div id="juntados" class="linha juntados"></div>
       <button id="procurarOutros"><svg class="ic ic-p" aria-hidden="true"><use href="#i-procurar"/></svg><span id="procurarOutrosTexto" data-t="lance.outros">Achar quem mais estava no lance</span></button>
@@ -814,6 +843,74 @@
 
 
 </section>
+
+<!-- Compartilhar o evento: um nome (obrigatório) e, se quiser, data, duração e descrição. Se o evento já
+     está salvo no site (eventos/<nome>.json) sai o link curto; se não, o link com a lista inteira. -->
+<div id="modalPartilhar" class="modal doEvento" hidden>
+  <div class="modalCaixa estreita" role="dialog" aria-modal="true" aria-labelledby="partilharTitulo">
+    <div class="modalTopo">
+      <b id="partilharTitulo" data-t="partilhar.titulo">Compartilhar evento</b>
+      <button id="fecharPartilhar" class="discreto" data-t-aria="partilhar.fechar" aria-label="fechar"><svg class="ic" aria-hidden="true"><use href="#i-fechar"/></svg></button>
+    </div>
+    <form id="formPartilhar" class="formJanela" novalidate>
+      <label class="campo"><span class="rotuloCampo" data-t="partilhar.nome">Nome do evento (obrigatório)</span>
+        <input id="partilharNome" type="text" required maxlength="80" autocomplete="off" aria-describedby="partilharNomeErro"></label>
+      <p id="partilharNomeErro" class="nota mau" hidden data-t="partilhar.nomeFalta">Escreva o nome do evento.</p>
+      <div class="linha doisCampos">
+        <label class="campo"><span class="rotuloCampo" data-t="partilhar.data">Data (opcional)</span>
+          <input id="partilharData" type="date"></label>
+        <label class="campo"><span class="rotuloCampo" data-t="partilhar.duracao">Duração (opcional)</span>
+          <input id="partilharDuracao" type="text" maxlength="40" autocomplete="off" data-t-ph="partilhar.duracaoPh" placeholder="ex.: 3 dias"></label>
+      </div>
+      <label class="campo"><span class="rotuloCampo" data-t="partilhar.descricao">Descrição (opcional)</span>
+        <textarea id="partilharDescricao" rows="2" maxlength="500"></textarea></label>
+      <label class="opcaoLinha" id="partilharLanceCampo" hidden><input id="partilharComLance" type="checkbox" checked> <span id="partilharLanceTexto"></span></label>
+      <button id="gerarLink" class="principal" type="submit"><svg class="ic ic-p" aria-hidden="true"><use href="#i-ligacao"/></svg><span data-t="partilhar.gerar">Gerar link</span></button>
+    </form>
+    <div id="resultadoPartilhar" class="resultadoPartilhar" hidden>
+      <label class="campo"><span class="rotuloCampo" data-t="partilhar.link">Link</span>
+        <input id="linkPartilhar" type="text" readonly></label>
+      <div class="linha">
+        <button id="copiarLinkPartilhar"><svg class="ic ic-p" aria-hidden="true"><use href="#i-copiar"/></svg><span data-t="partilhar.copiar">Copiar link</span></button>
+        <button id="baixarArquivoEvento" hidden><svg class="ic ic-p" aria-hidden="true"><use href="#i-descarregar"/></svg><span data-t="partilhar.baixar">Baixar o arquivo do evento</span></button>
+      </div>
+      <output id="estadoPartilhar" class="nota" aria-live="polite"></output>
+    </div>
+  </div>
+</div>
+
+<!-- Adicionar gente ao evento aberto: um streamer pela busca da Kick (time opcional), ou uma lista
+     colada ou aberta de um arquivo. Só os novos são lidos na Kick; o resto do mapa fica como está. -->
+<div id="modalAdicionar" class="modal doEvento" hidden>
+  <div class="modalCaixa estreita" role="dialog" aria-modal="true" aria-labelledby="adicionarTitulo">
+    <div class="modalTopo">
+      <b id="adicionarTitulo"></b>
+      <button id="fecharAdicionar" class="discreto" data-t-aria="adicionar.fechar" aria-label="fechar"><svg class="ic" aria-hidden="true"><use href="#i-fechar"/></svg></button>
+    </div>
+    <div id="adicionarUm" class="formJanela">
+      <label class="campo"><span class="rotuloCampo" data-t="adicionar.procurar">Canal na Kick</span>
+        <input id="adicionarProcura" type="search" autocomplete="off" spellcheck="false" aria-describedby="adicionarProcuraAjuda" data-t-ph="adicionar.procurarPh" placeholder="nome do canal"></label>
+      <p id="adicionarProcuraAjuda" class="nota" data-t="adicionar.procurarAjuda">Escreva pelo menos 2 letras e escolha na lista, ou escreva o nome exato e clique em Adicionar.</p>
+      <ul id="adicionarSugestoes" class="adicionarSugestoes" data-t-aria="adicionar.sugestoes" aria-label="Canais achados"></ul>
+      <label class="campo"><span class="rotuloCampo" data-t="adicionar.time">Time (opcional)</span>
+        <input id="adicionarTime" type="text" list="adicionarTimes" autocomplete="off" maxlength="80" data-t-ph="adicionar.timePh" placeholder="sem time"></label>
+      <datalist id="adicionarTimes"></datalist>
+      <button id="adicionarUmBotao" class="principal"><svg class="ic ic-p" aria-hidden="true"><use href="#i-mais"/></svg><span data-t="adicionar.botao">Adicionar</span></button>
+    </div>
+    <div id="adicionarVarios" class="formJanela">
+      <label class="campo"><span class="rotuloCampo" data-t="adicionar.listaRotulo">Lista de canais (cole aqui)</span>
+        <textarea id="adicionarTexto" rows="4" spellcheck="false" data-t-ph="evento.elencoPh" placeholder="Time Alfa: canal1, canal2, canal3, canal4"></textarea></label>
+      <div class="linha">
+        <button id="adicionarArquivo" type="button" aria-describedby="adicionarTipos"><svg class="ic ic-p" aria-hidden="true"><use href="#i-arquivo"/></svg><span data-t="evento.abrirArquivo">Abrir arquivo</span></button>
+        <span id="adicionarTipos" class="nota" data-t="evento.abrirArquivoTipos">.csv, .tsv ou .txt</span>
+        <input id="adicionarArquivoCampo" type="file" class="soLeitor" tabindex="-1" aria-hidden="true"
+          accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain">
+      </div>
+      <button id="adicionarVariosBotao" class="principal"><svg class="ic ic-p" aria-hidden="true"><use href="#i-mais"/></svg><span data-t="adicionar.listaBotao">Adicionar ao evento</span></button>
+    </div>
+    <output id="estadoAdicionarJanela" class="nota" aria-live="polite"></output>
+  </div>
+</div>
 
 <!-- Os atalhos que já existem, num sítio onde se possam descobrir.
      Não acrescenta tecla nenhuma: lista as que o teclado já responde. Um

@@ -1341,6 +1341,104 @@ export function contar(elenco) {
   return { times: e.times.length, canais: e.times.reduce((s, t) => s + t.canais.length, 0) + e.soltos.length };
 }
 
+/**
+ * O elenco `base` com os canais de `extra` a mais, e quais deles são novos.
+ *
+ * Para acrescentar gente a um evento já aberto sem mexer no que lá está: um canal que já está no
+ * evento fica onde estava (no time dele, ou sem time), mesmo que `extra` o ponha noutro time. Os
+ * novos vão para o time com o mesmo nome (sem diferença de maiúsculas), ou para um time novo no fim,
+ * ou para os sem time. `novos` vem pela ordem em que aparecem, e é o que falta pedir à Kick.
+ */
+export function juntarElencos(base, extra) {
+  const b = normalizar(base);
+  const x = normalizar(extra);
+  const ja = new Set([...b.times.flatMap((t) => t.canais), ...b.soltos]);
+  const times = b.times.map((t) => ({ nome: t.nome, canais: [...t.canais] }));
+  const soltos = [...b.soltos];
+  const novos = [];
+  const chave = (nome) => nome.toLowerCase();
+  for (const t of x.times) {
+    const deles = t.canais.filter((c) => !ja.has(c));
+    if (!deles.length) continue;
+    let alvo = times.find((y) => chave(y.nome) === chave(t.nome));
+    if (!alvo) { alvo = { nome: t.nome, canais: [] }; times.push(alvo); }
+    for (const c of deles) { alvo.canais.push(c); ja.add(c); novos.push(c); }
+  }
+  for (const c of x.soltos) {
+    if (ja.has(c)) continue;
+    soltos.push(c);
+    ja.add(c);
+    novos.push(c);
+  }
+  return { elenco: normalizar({ times, soltos }), novos };
+}
+
+// ── o evento salvo no site ──────────────────────────────────────────────────
+//
+// Um site estático não guarda nada de quem o usa. O link curto (index.html?e=abisal) é um arquivo
+// eventos/abisal.json posto no site por quem o publica, com o nome, a data, a duração, a descrição e
+// os canais. O arquivo é público: leva só o que já está na página de times do evento, e nunca as
+// notas, os seguidores ou os nomes de Discord que vieram na planilha.
+
+const TEXTO_MAX = 500;
+
+/**
+ * O nome do arquivo de um evento: minúsculas, sem acentos, e um traço no lugar de tudo o que não é
+ * letra ou número ("Rust Kick Off 2" dá "rust-kick-off-2"). Vazio quando não sobra nada.
+ */
+export function nomeDoArquivo(nome) {
+  return String(nome ?? '')
+    .normalize('NFKD').replace(/\p{M}+/gu, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60)
+    .replace(/-+$/, '');
+}
+
+const textoOuNulo = (v) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, TEXTO_MAX) : null);
+
+/** O que vai para eventos/<nome>.json: o nome, a data, a duração, a descrição, os times e os canais sem time. */
+export function paraArquivo(elenco, { nome, data, duracao, descricao } = {}) {
+  const e = normalizar(elenco);
+  return {
+    nome: textoOuNulo(nome),
+    data: /^\d{4}-\d{2}-\d{2}$/.test(data ?? '') ? data : null,
+    duracao: textoOuNulo(duracao),
+    descricao: textoOuNulo(descricao),
+    times: e.times.map((t) => ({ nome: t.nome, canais: [...t.canais] })),
+    canais: [...e.soltos],
+  };
+}
+
+/**
+ * O evento de um eventos/<nome>.json, ou `null`.
+ *
+ * O arquivo é do site, mas passa pelas mesmas regras que um link: um canal com um nome que a Kick não
+ * aceita não entra, e um arquivo sem nome ou sem canal nenhum não é um evento.
+ */
+export function deArquivo(j) {
+  if (!j || typeof j !== 'object' || Array.isArray(j)) return null;
+  const nome = textoOuNulo(j.nome);
+  if (!nome) return null;
+  const times = (Array.isArray(j.times) ? j.times : [])
+    .filter((t) => t && typeof t.nome === 'string' && Array.isArray(t.canais))
+    .map((t) => ({ nome: t.nome, canais: t.canais.filter((c) => typeof c === 'string') }));
+  const soltos = (Array.isArray(j.canais) ? j.canais : []).filter((c) => typeof c === 'string');
+  if (times.reduce((n, t) => n + t.canais.length, soltos.length) > MAXIMO_CANAIS) return null;
+  const e = normalizar({ times, soltos });
+  if (!e.times.length && !e.soltos.length) return null;
+  return {
+    ...e,
+    nome,
+    info: {
+      data: /^\d{4}-\d{2}-\d{2}$/.test(j.data ?? '') ? j.data : null,
+      duracao: textoOuNulo(j.duracao),
+      descricao: textoOuNulo(j.descricao),
+    },
+  };
+}
+
 // ── link ────────────────────────────────────────────────────────────────────
 
 const capitalizar = (s) => s.charAt(0).toUpperCase() + s.slice(1);

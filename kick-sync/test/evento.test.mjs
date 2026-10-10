@@ -90,13 +90,16 @@ test('o link do lance abre o evento noutra janela, no mesmo instante',
     const ms = T + 3 * 60_000;
     await clicarNoMapa(p, 'tchubi', ms);
     await p.waitForSelector('#lance:not([hidden])');
-    // Sem permissão de área de transferência o link aparece escrito, que é o que se lê aqui.
+    // Sem permissão de área de transferência o link fica escrito no campo da janela, que é o que se lê aqui.
     await p.evaluate(() => { Object.defineProperty(navigator, 'clipboard', { value: { writeText: () => Promise.reject(new Error('não')) } }); });
     await p.click('#partilharEvento');
-    // Sem área de transferência o link vai para a barra de endereço, e o ecrã diz para o copiar de lá.
-    const url = await p.evaluate(() => location.href);
-    assert.match(url, /#evento=[A-Za-z0-9_-]+&t=\d+&c=tchubi$/);
-    assert.match(await p.locator('#estadoPartilhaEvento').innerText(), /barra de endereço/);
+    await p.waitForSelector('#modalPartilhar:not([hidden])');
+    await p.fill('#partilharNome', 'Noite de teste');
+    await p.click('#gerarLink');
+    await p.waitForSelector('#resultadoPartilhar:not([hidden])');
+    const url = await p.inputValue('#linkPartilhar');
+    assert.match(url, /#evento=[A-Za-z0-9_-]+&nome=Noite%20de%20teste&t=\d+&c=tchubi$/);
+    assert.match(await p.locator('#estadoPartilhar').innerText(), /campo acima/);
 
     const { p: q, erros: erros2 } = await abrir();
     await kickFalsa(q, { canais: ['tchubi', 'outro'] });
@@ -130,7 +133,11 @@ test('um elenco grande demais para um link diz isso, em vez de copiar um link es
     });
     const antes = await p.evaluate(() => location.href);
     await p.click('#partilharEvento');
-    assert.match(await p.locator('#estadoPartilhaEvento').innerText(), /grande demais para caber num link/);
+    await p.fill('#partilharNome', 'Grande');
+    await p.click('#gerarLink');
+    await p.waitForSelector('#resultadoPartilhar:not([hidden])');
+    assert.match(await p.locator('#estadoPartilhar').innerText(), /grande demais para caber num link/);
+    assert.equal(await p.inputValue('#linkPartilhar'), '', 'nenhum link no campo');
     assert.equal(await p.evaluate(() => window.__copiado), null, 'nada foi copiado');
     assert.equal(await p.evaluate(() => location.href), antes, 'e nenhum "#evento=null" foi para a barra de endereço');
     assert.deepEqual(erros, []);

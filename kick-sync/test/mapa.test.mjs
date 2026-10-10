@@ -808,8 +808,8 @@ test('num time fechado, o resumo mostra as marcas de todos e é mais forte onde 
   assert.ok(caminhos(chamadas).some((p) => p.cor === CORES.marca && p.segmentos[0][0] === 375));
   // O resumo diz quem está lá dentro, e o cabeçalho quantos são.
   const textos = chamadas.filter((c) => c.nome === 'fillText').map((c) => c.args[0]);
-  assert.ok(textos.includes('▸ A · 2'), textos.join(' | '));
-  assert.ok(textos.includes('a · b'), textos.join(' | '));
+  assert.ok(textos.includes('▸ A (2)'), textos.join(' | '));
+  assert.ok(textos.includes('a, b'), textos.join(' | '));
 });
 
 test('a meio de um time, o cabeçalho dele fica preso no topo', () => {
@@ -818,7 +818,7 @@ test('a meio de um time, o cabeçalho dele fica preso no topo', () => {
   const topo = 224 + 24 + 3 * 20 + 7;
   const chamadas = pintar(m, { topo });
   const textos = chamadas.filter((c) => c.nome === 'fillText');
-  const preso = textos.find((c) => c.args[0] === '▾ Time 1 · 10');
+  const preso = textos.find((c) => c.args[0] === '▾ Time 1 (10)');
   assert.ok(preso, textos.map((c) => c.args[0]).join(' | '));
   assert.equal(preso.args[2], 12, 'no meio dos 24 px do topo');
   // E é pintado depois das faixas que tapa.
@@ -830,8 +830,8 @@ test('a meio de um time, o cabeçalho dele fica preso no topo', () => {
 test('o grupo sem time chama-se "Sem time", ou o que a página mandar', () => {
   const m = montarMapa({ times: [{ nome: null, canais: ['s'] }], coberturas: new Map() });
   const textos = (o) => pintar(m, o).filter((c) => c.nome === 'fillText').map((c) => c.args[0]);
-  assert.ok(textos().includes('▸ Sem time · 1'));
-  assert.ok(textos({ semTime: 'No team' }).includes('▸ No team · 1'));
+  assert.ok(textos().includes('▸ Sem time (1)'));
+  assert.ok(textos({ semTime: 'No team' }).includes('▸ No team (1)'));
 });
 
 test('um nome comprido é cortado com reticências, sem partir um emoji a meio', () => {
@@ -840,7 +840,7 @@ test('um nome comprido é cortado com reticências, sem partir um emoji a meio',
   const nome = `A${'🔥'.repeat(80)}`;
   const m = montarMapa({ times: [{ nome, canais: ['s'] }] });
   const texto = pintar(m, { largura: 300 }).find((c) => c.nome === 'fillText').args[0];
-  assert.ok(texto.endsWith('… · 1'), texto);
+  assert.ok(texto.endsWith('… (1)'), texto);
   assert.ok(texto.length < nome.length);
   assert.ok(!/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/.test(texto), 'meio emoji');
 });
@@ -848,11 +848,11 @@ test('um nome comprido é cortado com reticências, sem partir um emoji a meio',
 test('num ecrã estreito, corta-se o nome do time e não quantos são', () => {
   const m = montarMapa({ times: [{ nome: 'Lobos do Norte do Servidor Oficial', canais: ['a', 'b', 'c', 'd'] }] });
   const texto = pintar(m, { largura: 160 }).find((c) => c.nome === 'fillText').args[0];
-  assert.match(texto, /^▸ Lobos.*… · 4$/);
+  assert.match(texto, /^▸ Lobos.*… \(4\)$/);
   // O cabeçalho não tem barras: num telemóvel o nome usa a linha toda, e não
   // só o terço que as faixas deixam aos nomes dos canais.
   const largo = pintar(m, { largura: 380 }).find((c) => c.nome === 'fillText').args[0];
-  assert.equal(largo, '▸ Lobos do Norte do Servidor Oficial · 4');
+  assert.equal(largo, '▸ Lobos do Norte do Servidor Oficial (4)');
   // E se nem o número cabe, corta-se tudo, mas não se pinta fora.
   const apertado = pintar(m, { largura: 40 }).filter((c) => c.nome === 'fillText');
   for (const c of apertado) assert.ok(c.args[1] + c.args[3] <= 40);
@@ -935,7 +935,7 @@ test('um canal que não existe na Kick tem o nome a vermelho e diz porquê', () 
   const chamadas = pintar(m, { falhados: new Set(['gralha']), naoAchado: 'não achado' });
   const textos = chamadas.filter((c) => c.nome === 'fillText');
   const gralha = textos.find((c) => c.args[0].startsWith('gralha'));
-  assert.equal(gralha.args[0], 'gralha · não achado');
+  assert.equal(gralha.args[0], 'gralha (não achado)');
   assert.equal(gralha.fillStyle, CORES.perigo);
   assert.equal(textos.find((c) => c.args[0] === 'bom').fillStyle, CORES.texto);
   // Sem o texto traduzido, fica só a cor.
@@ -972,7 +972,7 @@ test('num ecrã estreito, o nome de um canal que não existe não é comido pelo
   const m = montarMapa({ times: [{ nome: 'A', canais: ['terceiro'] }], coberturas: new Map(), abertos: new Set(['A']) });
   const textos = pintar(m, { largura: 365, falhados: new Set(['terceiro']), naoAchado: 'não achado' })
     .filter((c) => c.nome === 'fillText').map((c) => c.args[0]);
-  assert.ok(textos.includes('terceiro · não achado'), textos.join(' | '));
+  assert.ok(textos.includes('terceiro (não achado)'), textos.join(' | '));
 });
 
 test('o cursor do teclado contorna a linha e marca o instante, sem sair do ecrã', () => {

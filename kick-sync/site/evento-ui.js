@@ -9,13 +9,15 @@
 // diz que estavam lá. A grelha, o alinhamento fino e o clipe continuam a ser os da página de sempre:
 // este ficheiro só lhes entrega os canais certos e o instante certo.
 
-import { lerElenco, codificar, descodificar, contar, paraTexto } from './elenco.js';
+import {
+  lerElenco, codificar, descodificar, contar, paraTexto, juntarElencos, paraArquivo, deArquivo, nomeDoArquivo,
+} from './elenco.js';
 import { carregarCanais, procurarAoVivo } from './carregar.js';
 import {
-  montarMapa, linhasVisiveis, tempoDoX, xDoTempo, zoom, oQueEstaAqui, filtrar, pintarMapa,
+  montarMapa, linhasVisiveis, tempoDoX, xDoTempo, zoom, oQueEstaAqui, filtrar, pintarMapa, ordenarFaixas, linhasDoTempo,
 } from './mapa.js';
 import { procurarAngulos, ordenarCandidatos, resumo } from './cena.js';
-import { lerMaster, lerPlaylist } from './kick.js';
+import { lerMaster, lerPlaylist, procurarCanais, slugDoNome } from './kick.js';
 import { linhaDoCanal } from './relogio.js';
 import { somDoCanal } from './alinhar.js';
 import { t, tn, idiomaActual } from './idiomas.js';
@@ -38,6 +40,19 @@ export function cedoDemais(ms, atrasoMin, agoraMs = Date.now()) {
 }
 
 const dataCurta = (ms) => new Date(ms).toLocaleDateString([], { day: '2-digit', month: '2-digit' });
+// "sáb 11/10": o dia da semana sem o ponto da abreviatura, e a data. É o que a régua escreve em cada
+// mudança de dia.
+// No idioma da página e com a abreviatura do Brasil: o português de Portugal escreve "sábado" inteiro.
+const LOCAL_DO_DIA = { pt: 'pt-BR', en: 'en-US', es: 'es-ES' };
+const diaDaSemana = (ms) => new Date(ms).toLocaleDateString(LOCAL_DO_DIA[idiomaActual()] || [], { weekday: 'short' }).replace(/\.$/, '');
+export const rotuloDoDia = (ms) => `${diaDaSemana(ms)} ${dataCurta(ms)}`;
+
+// Quantas telas de uma vez antes de avisar. Não é um limite (o dono não quer limite de telas): passado
+// isto, o primeiro clique diz quantas são e o segundo abre.
+export const MUITAS_TELAS = 12;
+
+// "Perto" de um instante, para ordenar as faixas: no ar até meia hora antes ou depois.
+const PERTO_MS = 30 * 60_000;
 // Ecrã de toque e ecrã estreito: decidem a altura das faixas, a folga de um toque e onde fica o lance.
 const tocar = () => window.matchMedia?.('(pointer: coarse)').matches === true;
 const estreito = () => window.matchMedia?.('(max-width: 999px)').matches === true;
@@ -121,7 +136,11 @@ export function noArEm(coberturas, slug, ms) {
  * para não as pedir à Kick outra vez quando o lance abre. `aoMudarPicos()` avisa que chegaram picos de
  * chat, para a linha do tempo da live os mostrar.
  */
-export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPicos = () => {}, buscar = fetch } = {}) {
+export function montarEvento({
+  abrirLance, memorizarVods = () => {}, aoMudarPicos = () => {}, buscar = fetch,
+  // As janelas (com o foco preso dentro e devolvido ao fechar) são da página: ela passa as suas.
+  dialogo = { mostrar: (m) => { m.hidden = false; }, esconder: (m) => { m.hidden = true; } },
+} = {}) {
   const $ = (id) => document.getElementById(id);
   const ev = {
     elenco: null,
@@ -151,11 +170,19 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
     falhados: new Set(),
     // Onde está o teclado no mapa: a linha `i` de ev.mapa.linhas e o instante `ms`.
     cursor: null,
+    // A ordem das faixas: 'time' (a de omissão), 'instante' (quem tem vídeo em `ms` primeiro), 'aoVivo',
+    // 'tempo' ou 'az'. Fora da ordem por time, os grupos são os da ordem, e os fechados guardam-se aqui.
+    ordem: { modo: 'time', ms: null },
+    fechadasOrdem: new Set(),
+    // A data, a duração e a descrição do evento, quando vieram de um evento salvo ou de um link.
+    info: null,
+    // O "abrir N vídeos" à espera do segundo clique, quando são muitos.
+    confirmar: null,
   };
 
   // ── abrir ──────────────────────────────────────────────────────────────
 
-  async function abrirElenco(elenco, { quandoMs = null } = {}) {
+  async function abrirElenco(elenco, { quandoMs = null, info = null } = {}) {
     ev.cancelar?.abort();
     const controlo = new AbortController();
     ev.cancelar = controlo;
@@ -165,12 +192,20 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
     ev.escolha = null;
     ev.cursor = null;
     ev.falhados = new Set();
+    ev.ordem = { modo: 'time', ms: null };
+    ev.fechadasOrdem = new Set();
+    ev.info = info;
+    ev.confirmar = null;
     $('lance').hidden = true;
     $('picosChat').innerHTML = '';
+    $('estadoAdicionar').textContent = '';
     const todos = [...new Set([...elenco.times.flatMap((x) => x.canais), ...elenco.soltos])];
     if (!todos.length) { $('estadoEvento').textContent = t('evento.vazio'); return; }
     $('evento').hidden = false;
     $('nomeEvento').textContent = elenco.nome || t('evento.semNome');
+    pintarInfo();
+    pintarFuso();
+    pintarOrdem();
     const { canais } = contar(elenco);
     $('resumoEvento').textContent = t('evento.aCarregar', { feitos: 0, total: canais });
     try {
@@ -273,9 +308,10 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
    * lido como UTF-8, um "ç" de Windows virava um losango e o nome do time ficava estragado.
    */
   const ARQUIVO_MAX = 5 * 1024 * 1024;
-  async function lerArquivoElenco(arquivo) {
+  /** O texto de um arquivo de elenco, ou { erro } com a frase a mostrar. Serve ao #elenco e ao Adicionar lista. */
+  async function textoDoArquivo(arquivo) {
     const nome = arquivo.name || '';
-    if (arquivo.size > ARQUIVO_MAX) { $('estadoEvento').textContent = t('evento.arquivoGrande', { nome }); return; }
+    if (arquivo.size > ARQUIVO_MAX) return { erro: t('evento.arquivoGrande', { nome }) };
     let texto;
     try {
       const bytes = new Uint8Array(await arquivo.arrayBuffer());
@@ -285,10 +321,15 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
         try { texto = new TextDecoder('utf-8', { fatal: true }).decode(bytes); } catch { texto = new TextDecoder('windows-1252').decode(bytes); }
       }
     } catch {
-      $('estadoEvento').textContent = t('evento.arquivoErro', { nome });
-      return;
+      return { erro: t('evento.arquivoErro', { nome }) };
     }
-    $('elenco').value = texto.replace(/^﻿/, '');
+    return { texto: texto.replace(/^\uFEFF/, '') };
+  }
+  async function lerArquivoElenco(arquivo) {
+    const nome = arquivo.name || '';
+    const lido = await textoDoArquivo(arquivo);
+    if (lido.erro) { $('estadoEvento').textContent = lido.erro; return; }
+    $('elenco').value = lido.texto;
     $('abrirElencoTexto').textContent = t('evento.abrir');
     const elenco = lerElenco($('elenco').value);
     if (!elenco.times.length && !elenco.soltos.length) {
@@ -358,14 +399,46 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
 
   // ── o mapa ─────────────────────────────────────────────────────────────
 
+  // O nome de cada grupo numa ordem que não é a dos times. É ele que fica no cabeçalho, e por isso diz
+  // qual é a ordem sem ser preciso olhar para o seletor.
+  function nomeDoGrupo(chave) {
+    switch (chave) {
+      case 'comVideo': return t('ordem.grupoComVideo', { hora: quandoCurto(ev.ordem.ms) });
+      case 'perto': return t('ordem.grupoPerto', { min: PERTO_MS / 60_000 });
+      case 'resto': return t('ordem.grupoResto');
+      case 'aoVivo': return t('ordem.grupoAoVivo');
+      case 'foraDoAr': return t('ordem.grupoForaDoAr');
+      case 'tempo': return t('ordem.grupoTempo');
+      case 'az': return t('ordem.grupoAz');
+      default: return t('ordem.grupoTodos');
+    }
+  }
+  // A hora de um instante, com a data quando a vista passa de um dia: "21:05" ou "sáb 11/10 21:05".
+  function quandoCurto(ms) {
+    const v = ev.vista;
+    const variosDias = v && dataCurta(v.deMs) !== dataCurta(v.ateMs);
+    return variosDias ? `${rotuloDoDia(ms)} ${horaCurta(ms)}` : horaCurta(ms);
+  }
+  const vivosAgora = () => new Set(ev.resultados.filter((r) => r?.estado === 'ok' && r.vods.some(aoVivoVod)).map((r) => r.slug));
+
   function remontar() {
     const texto = $('procurarEvento').value.trim();
-    const times = texto ? filtrar(ev.times, texto) : ev.times;
+    let times = texto ? filtrar(ev.times, texto) : ev.times;
     // A procurar, tudo aberto: quem escreveu um nome quer ver a faixa dele, e não um time fechado.
-    const abertos = texto ? new Set(times.map((x) => x.nome)) : ev.abertos;
+    let abertos = texto ? new Set(times.map((x) => x.nome)) : ev.abertos;
+    let timeDe;
+    if (ev.ordem.modo !== 'time') {
+      // Noutra ordem os grupos são os da ordem, e cada faixa leva o nome do time ao lado do canal.
+      const grupos = ordenarFaixas(times.flatMap((x) => x.canais), {
+        modo: ev.ordem.modo, ms: ev.ordem.ms, coberturas: ev.coberturas, aoVivo: vivosAgora(), janela: ev.trecho, pertoMs: PERTO_MS,
+      });
+      times = grupos.map((g) => ({ nome: nomeDoGrupo(g.chave), canais: g.canais }));
+      abertos = new Set(times.map((x) => x.nome).filter((n) => texto || !ev.fechadasOrdem.has(n)));
+      timeDe = indiceDeTimes(ev.elenco);
+    }
     // Num ecrã de toque as faixas crescem para um dedo (36 px em vez de 20).
     const alturas = tocar() ? { canal: 36, time: 40, resumo: 36 } : undefined;
-    ev.mapa = montarMapa({ times, coberturas: ev.coberturas, abertos, alturas });
+    ev.mapa = montarMapa({ times, coberturas: ev.coberturas, abertos, alturas, timeDe });
     // A caixa tem a altura do conteúdo, até 62% do ecrã (45% num ecrã estreito, para o lance caber por
     // baixo); daí para cima rola.
     const rolo = $('mapaRolo');
@@ -422,6 +495,7 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
         cursor: ev.cursor && rolo.matches(':focus-visible') ? ev.cursor : null,
         cores: coresDoTema(),
         semTime: t('evento.semTime'),
+        grade: { ...linhasDoTempo(ev.vista, largura), ordemMs: ev.ordem.modo === 'instante' ? ev.ordem.ms : null },
       });
       pintarRegua();
     });
@@ -438,6 +512,8 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
     };
   }
 
+  // A régua: as horas em cima das faixas e, em cada mudança de dia, um traço grosso com a data escrita
+  // ("sáb 11/10"). As horas são do fuso do aparelho, e isso fica escrito por baixo do mapa (#fusoEvento).
   function pintarRegua() {
     const regua = $('reguaEvento');
     if (!regua || !ev.vista) return;
@@ -447,25 +523,99 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
     const margem = 24;
     // Um traço a cada passo "redondo" que dê uns 6 a 10 rótulos na largura do ecrã.
     const DIA = 86400e3;
-    const passos = [60e3, 5 * 60e3, 15 * 60e3, 30 * 60e3, 3600e3, 2 * 3600e3, 6 * 3600e3, 12 * 3600e3, DIA, 2 * DIA, 7 * DIA];
+    const passos = [60e3, 5 * 60e3, 15 * 60e3, 30 * 60e3, 3600e3, 2 * 3600e3, 6 * 3600e3, 12 * 3600e3];
     // Quantos rótulos cabem: um a cada 70 px. Dez fixos embaralhavam a régua num telemóvel.
     const cabem = Math.max(2, Math.floor(largura / 70));
-    const passo = passos.find((p) => span / p <= cabem) || passos.at(-1);
-    // Em passos de dia o rótulo é a data; nos outros é a hora, e a data aparece à meia-noite.
-    const rotulo = (ms) => {
-      const d = new Date(ms);
-      const data = d.toLocaleDateString([], { day: '2-digit', month: '2-digit' });
-      if (passo >= DIA) return data;
-      const hora = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      return d.getHours() === 0 && d.getMinutes() === 0 && span > DIA / 2 ? `${data} ${hora}` : hora;
-    };
+    const passo = passos.find((p) => span / p <= cabem) || null;
+    const { dias } = linhasDoTempo(ev.vista, largura);
     let html = '';
-    for (let ms = Math.ceil(ev.vista.deMs / passo) * passo; ms <= ev.vista.ateMs; ms += passo) {
+    // Onde já há texto escrito, para as horas não se escreverem por cima das datas.
+    const ocupados = [];
+    let ultimoDia = -Infinity;
+    for (const ms of dias) {
       const x = xDoTempo(ms, ev.vista, largura);
-      if (x < margem || x > largura - margem) continue;
-      html += `<span style="left:${x}px">${rotulo(ms)}</span>`;
+      html += `<i style="left:${x.toFixed(1)}px"></i>`;
+      // Com muitos dias no ecrã as datas não cabem todas: o traço fica, a data só onde há espaço.
+      if (x - ultimoDia < 76) continue;
+      ultimoDia = x;
+      const noFim = x > largura - 76;
+      html += `<span class="dia${noFim ? ' fimDaRegua' : ''}" style="left:${x.toFixed(1)}px">${escapar(rotuloDoDia(ms))}</span>`;
+      ocupados.push(noFim ? [x - 76, x + 4] : [x - 4, x + 76]);
+    }
+    if (passo) {
+      // Os passos de uma hora ou mais começam numa hora cheia do fuso do aparelho, e não do UTC: num fuso
+      // de meia hora as horas da régua caíam a meio das riscas do mapa.
+      const fuso = new Date(ev.vista.deMs).getTimezoneOffset() * 60_000;
+      for (let ms = Math.ceil((ev.vista.deMs - fuso) / passo) * passo + fuso; ms <= ev.vista.ateMs; ms += passo) {
+        const x = xDoTempo(ms, ev.vista, largura);
+        if (x < margem || x > largura - margem) continue;
+        if (ocupados.some(([a, b]) => x + 22 > a && x - 22 < b)) continue;
+        const d = new Date(ms);
+        if (d.getHours() === 0 && d.getMinutes() === 0) continue;
+        html += `<span style="left:${x.toFixed(1)}px">${horaCurta(ms)}</span>`;
+      }
+    }
+    if (ev.ordem.modo === 'instante' && Number.isFinite(ev.ordem.ms)) {
+      const x = xDoTempo(ev.ordem.ms, ev.vista, largura);
+      if (x >= 0 && x <= largura) html += `<i class="ordem" style="left:${x.toFixed(1)}px"></i>`;
     }
     regua.innerHTML = html;
+    regua.dataset.passo = String(passo ?? DIA);
+  }
+
+  // O fuso do aparelho, escrito por baixo do mapa: todas as horas da página são as dele.
+  function pintarFuso() {
+    let zona = '';
+    let curto = '';
+    try { zona = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch { /* sem Intl */ }
+    try {
+      curto = new Intl.DateTimeFormat([], { timeZoneName: 'short' }).formatToParts(new Date())
+        .find((p) => p.type === 'timeZoneName')?.value || '';
+    } catch { /* sem Intl */ }
+    const fuso = [...new Set([zona.replace(/_/g, ' '), curto].filter(Boolean))].join(', ');
+    $('fusoEvento').textContent = fuso ? t('evento.fuso', { fuso }) : t('evento.fusoSem');
+  }
+
+  // A data, a duração e a descrição, quando o evento as tem.
+  function pintarInfo() {
+    const i = ev.info || {};
+    const data = i.data ? new Date(`${i.data}T12:00:00`).toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
+    const cabeca = [data, i.duracao].filter(Boolean).join(', ');
+    const texto = [cabeca, i.descricao].filter(Boolean).join('. ');
+    $('infoEvento').textContent = texto;
+    $('infoEvento').hidden = !texto;
+  }
+
+  // ── a ordem das faixas ─────────────────────────────────────────────────
+
+  function ordenar(modo, ms = null) {
+    const modos = ['time', 'instante', 'aoVivo', 'tempo', 'az'];
+    const m = modos.includes(modo) ? modo : 'time';
+    let quando = ms;
+    if (m === 'instante' && !Number.isFinite(quando)) {
+      quando = ev.cursor?.ms ?? ev.escolha?.ms ?? ev.ordem.ms ?? (ev.vista ? (ev.vista.deMs + ev.vista.ateMs) / 2 : null);
+    }
+    if (m === 'instante' && !Number.isFinite(quando)) return;
+    ev.ordem = { modo: m, ms: m === 'instante' ? Math.round(quando) : null };
+    ev.fechadasOrdem = new Set();
+    ev.cursor = null;
+    if (!ev.mapa) { pintarOrdem(); return; }
+    remontar();
+    // Os primeiros da ordem nova são o que se pediu: o mapa volta ao topo para eles se verem.
+    $('mapaRolo').scrollTop = 0;
+    ev.topo = 0;
+    pintarOrdem();
+    pintar();
+  }
+
+  function pintarOrdem() {
+    const o = ev.ordem;
+    $('ordemFaixas').value = o.modo;
+    const opcao = $('ordemFaixas').querySelector('option[value="instante"]');
+    if (opcao) opcao.textContent = o.modo === 'instante' ? t('ordem.instanteHora', { hora: quandoCurto(o.ms) }) : t('ordem.instante');
+    $('ordemVoltar').hidden = o.modo === 'time';
+    $('ordemAtiva').textContent = o.modo === 'instante' ? t('ordem.ativaInstante', { hora: quandoCurto(o.ms) })
+      : o.modo === 'time' ? '' : t('ordem.ativa', { ordem: t(`ordem.${o.modo}`) });
   }
 
   function aquiDe(evento) {
@@ -486,6 +636,13 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
 
   function escolher(alvo) {
     if (!alvo) return;
+    if ((alvo.tipo === 'time' || alvo.tipo === 'resumo') && ev.ordem.modo !== 'time') {
+      if (ev.fechadasOrdem.has(alvo.time)) ev.fechadasOrdem.delete(alvo.time);
+      else ev.fechadasOrdem.add(alvo.time);
+      remontar();
+      pintar();
+      return;
+    }
     if (alvo.tipo === 'time' || alvo.tipo === 'resumo') {
       // Sem times, o grupo "Sem time" é toda a gente: fechá-lo punha o evento inteiro numa linha só, e
       // isso assustava (o dono, 07/10). Só fecha quando há times à volta.
@@ -497,6 +654,8 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
       return;
     }
     ev.escolha = { canal: alvo.canal, ms: alvo.ms, time: alvo.time };
+    ev.confirmar = null;
+    $('avisoMuitos').textContent = '';
     lembrarEvento();
     ev.procura?.abort();
     ev.achados = [];
@@ -859,7 +1018,6 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
     pintarComoPico();
     const e = ev.escolha;
     $('lance').hidden = !e;
-    $('partilharEventoTexto').textContent = t(e ? 'evento.partilharLance' : 'evento.partilharEvento');
     if (!e) return;
     const time = indiceDeTimes(ev.elenco).get(e.canal);
     const noAr = colegas(e.canal).filter((c) => noArEm(ev.coberturas, c, e.ms));
@@ -895,6 +1053,7 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
     if (cedo) {
       $('notaOutros').textContent = t('lance.liberadoAs', { hora: horaLocal(e.ms + ev.atrasoMin * 60_000), min: ev.atrasoMin });
     }
+    pintarAbrirVarios(e);
     pintarJuntar(e);
     // As riscas do mapa dizem quem o lance abre, e isso muda ao juntar um time ou achar alguém pelo som.
     pintar();
@@ -927,18 +1086,65 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
   let livre = Promise.resolve();
   const buscarChat = async (...args) => { await livre; return buscar(...args); };
 
-  async function verLance() {
+  async function verLance(lista = null, opcoes = {}) {
     const e = ev.escolha;
     if (!e) return;
-    const canais = canaisDoLance(e);
+    const canais = Array.isArray(lista) ? lista : canaisDoLance(e);
+    if (!canais.length) return;
+    const foco = canais.includes(e.canal) ? e.canal : canais[0];
     mostrarMapa(false);
     let soltar;
     livre = new Promise((r) => { soltar = r; });
     try {
-      await abrirLance(canais, e.ms, e.canal);
+      await abrirLance(canais, e.ms, foco, opcoes);
     } finally {
       soltar();
     }
+  }
+
+  // ── abrir mais do que o time ───────────────────────────────────────────
+  //
+  // O dono, 10/10: escolher um momento e abrir TODOS os que têm vídeo nesse horário (as gravações, também
+  // de quem já saiu do ar), ou só quem continua ao vivo. Quem se escolheu vai à frente.
+  function comVideoEm(e) {
+    const ok = ev.resultados.filter((r) => r?.estado === 'ok').map((r) => r.slug);
+    const lista = ok.filter((c) => noArEm(ev.coberturas, c, e.ms));
+    return lista.includes(e.canal) ? [e.canal, ...lista.filter((c) => c !== e.canal)] : lista;
+  }
+  function aoVivoEm(e) {
+    const vivos = vivosAgora();
+    return comVideoEm(e).filter((c) => vivos.has(c));
+  }
+  function pintarAbrirVarios(e) {
+    const todos = comVideoEm(e);
+    const vivos = aoVivoEm(e);
+    const espera = ev.confirmar;
+    $('abrirTodosVodTexto').textContent = espera?.tipo === 'todos' ? t('lance.abrirMesmo', { n: todos.length })
+      : t('lance.abrirTodosVod', { n: todos.length });
+    $('abrirTodosVod').disabled = !todos.length;
+    $('abrirTodosVod').title = t('lance.abrirTodosVodAjuda');
+    $('abrirSoAoVivoTexto').textContent = espera?.tipo === 'vivos' ? t('lance.abrirMesmo', { n: vivos.length })
+      : t('lance.abrirSoAoVivo', { n: vivos.length });
+    $('abrirSoAoVivo').disabled = !vivos.length;
+    $('abrirSoAoVivo').title = vivos.length ? t('lance.abrirSoAoVivoAjuda') : t('lance.ninguemAoVivo');
+  }
+  async function abrirVarios(tipo) {
+    const e = ev.escolha;
+    if (!e) return;
+    const canais = tipo === 'todos' ? comVideoEm(e) : aoVivoEm(e);
+    if (!canais.length) return;
+    // Muitos de uma vez: o primeiro clique avisa, o segundo abre. Nada é cortado.
+    const chave = `${tipo}|${e.ms}|${canais.length}`;
+    if (canais.length > MUITAS_TELAS && ev.confirmar?.chave !== chave) {
+      ev.confirmar = { tipo, chave };
+      $('avisoMuitos').textContent = t('lance.muitos', { n: canais.length });
+      pintarAbrirVarios(e);
+      return;
+    }
+    ev.confirmar = null;
+    $('avisoMuitos').textContent = '';
+    pintarAbrirVarios(e);
+    await verLance(canais, { exato: true });
   }
 
   // O som de um canal num instante, lendo só o VOD que cobre esse instante. As playlists ficam
@@ -1143,9 +1349,281 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
     $('avisosEvento').hidden = true;
     ev.juntados = new Set();
     ev.extrasDoLink = [];
+    ev.info = null;
+    dialogo.esconder($('modalPartilhar'));
+    dialogo.esconder($('modalAdicionar'));
     mostrarMapa(false);
     // pushState e não replaceState: o Voltar do browser traz o evento de volta (ver o popstate).
-    if (/[#&]evento=/.test(location.hash)) history.pushState(null, '', location.pathname + location.search);
+    if (salvoDoEndereco()) history.pushState(null, '', location.pathname);
+    else if (/[#&]evento=/.test(location.hash)) history.pushState(null, '', location.pathname + location.search);
+  }
+
+  // ── compartilhar ───────────────────────────────────────────────────────
+  //
+  // O dono, 10/10: o link com a lista inteira tem milhares de letras. O evento ganha um nome (e, se quiser,
+  // data, duração e descrição), e quando ele está salvo no site (eventos/<nome>.json) o link é curto:
+  // index.html?e=<nome>. Um site estático não guarda nada sozinho; para um evento que ainda não está lá,
+  // sai o link longo de sempre, com o nome dentro, e o arquivo pronto para quem publica o site.
+
+  /** O nome do evento salvo pedido no endereço (?e=<nome>), já no formato do arquivo, ou ''. */
+  function salvoDoEndereco(busca = location.search) {
+    let pedido = '';
+    try { pedido = new URLSearchParams(busca).get('e') || ''; } catch { pedido = ''; }
+    return nomeDoArquivo(pedido);
+  }
+
+  /** O evento salvo em eventos/<nome>.json (mesma origem), ou null. */
+  async function lerSalvo(nome) {
+    if (!/^[a-z0-9-]{1,60}$/.test(nome)) return null;
+    try {
+      const r = await fetch(`eventos/${nome}.json`, { cache: 'no-cache' });
+      if (!r.ok) return null;
+      return deArquivo(JSON.parse(await r.text()));
+    } catch { return null; }
+  }
+
+  /** O nome e os dados do evento como parâmetros do link longo. */
+  function paramsDoNome(nome, info) {
+    const enc = encodeURIComponent;
+    return (nome ? `&nome=${enc(nome)}` : '')
+      + (info?.data ? `&data=${enc(info.data)}` : '')
+      + (info?.duracao ? `&dur=${enc(info.duracao)}` : '')
+      + (info?.descricao ? `&desc=${enc(info.descricao)}` : '');
+  }
+
+  /** O lance escolhido como parâmetros: o instante, o streamer, os ângulos a mais e o atraso. */
+  function paramsDoLance(e) {
+    // O link do lance leva o streamer escolhido e os ângulos a mais: sem isso quem o abria ficava com
+    // o primeiro streamer do primeiro time, que é quase sempre outro.
+    const extras = e ? canaisDoLance(e).filter((c) => !colegas(e.canal).includes(c)) : [];
+    return (e ? `&t=${Math.round(e.ms)}&c=${encodeURIComponent(e.canal)}` : '')
+      + (extras.length ? `&mais=${extras.map(encodeURIComponent).join(',')}` : '')
+      + (ev.atrasoMin !== ATRASO_MIN ? `&atraso=${ev.atrasoMin}` : '');
+  }
+
+  function abrirPartilhar() {
+    if (!ev.elenco) return;
+    const nome = ev.elenco.nome && ev.elenco.nome !== t('evento.semNome') ? ev.elenco.nome : '';
+    $('partilharNome').value = nome;
+    $('partilharNome').removeAttribute('aria-invalid');
+    $('partilharNomeErro').hidden = true;
+    $('partilharData').value = ev.info?.data || '';
+    $('partilharDuracao').value = ev.info?.duracao || '';
+    $('partilharDescricao').value = ev.info?.descricao || '';
+    const e = ev.escolha;
+    $('partilharLanceCampo').hidden = !e;
+    $('partilharComLance').checked = !!e;
+    if (e) $('partilharLanceTexto').textContent = t('partilhar.comLance', { canal: e.canal, hora: horaLocal(e.ms) });
+    $('resultadoPartilhar').hidden = true;
+    $('estadoPartilhar').textContent = '';
+    dialogo.mostrar($('modalPartilhar'));
+    $('partilharNome').focus();
+  }
+
+  let paraBaixar = null;
+  async function gerarLink(evento) {
+    evento?.preventDefault();
+    const nome = $('partilharNome').value.trim().slice(0, 80);
+    if (!nome) {
+      $('partilharNomeErro').hidden = false;
+      $('partilharNome').setAttribute('aria-invalid', 'true');
+      $('partilharNome').focus();
+      return;
+    }
+    const info = {
+      data: $('partilharData').value || null,
+      duracao: $('partilharDuracao').value.trim() || null,
+      descricao: $('partilharDescricao').value.trim() || null,
+    };
+    // O nome e os dados ficam no evento aberto: o título muda, e o próximo link já os leva.
+    ev.elenco.nome = nome;
+    ev.info = info;
+    $('nomeEvento').textContent = nome;
+    pintarInfo();
+    lembrarEvento();
+    const e = ev.escolha && !$('partilharLanceCampo').hidden && $('partilharComLance').checked ? ev.escolha : null;
+    const arquivo = nomeDoArquivo(nome);
+    const salvo = arquivo ? await lerSalvo(arquivo) : null;
+    const base = `${location.origin}${location.pathname}`;
+    const lance = paramsDoLance(e);
+    let url;
+    let nota;
+    if (salvo) {
+      url = `${base}?e=${arquivo}${lance ? `#${lance.slice(1)}` : ''}`;
+      const doSite = new Set([...salvo.times.flatMap((x) => x.canais), ...salvo.soltos]);
+      const aqui = [...ev.elenco.times.flatMap((x) => x.canais), ...ev.elenco.soltos];
+      const iguais = aqui.length === doSite.size && aqui.every((c) => doSite.has(c));
+      nota = iguais ? t('partilhar.curto') : t('partilhar.curtoDiferente', { n: doSite.size, m: aqui.length });
+      paraBaixar = null;
+    } else {
+      // `codificar` dá null a um elenco que não se poderia abrir de um link (mais de 2000 canais).
+      if (ev.link === null) {
+        $('resultadoPartilhar').hidden = false;
+        $('linkPartilhar').value = '';
+        $('estadoPartilhar').textContent = t('evento.linkGrande');
+        return;
+      }
+      url = `${base}#evento=${ev.link}${paramsDoNome(nome, info)}${lance}`;
+      nota = t('partilhar.longo');
+      paraBaixar = { arquivo: arquivo || 'evento', dados: paraArquivo(ev.elenco, { nome, ...info }) };
+    }
+    $('baixarArquivoEvento').hidden = !paraBaixar;
+    $('linkPartilhar').value = url;
+    $('resultadoPartilhar').hidden = false;
+    $('estadoPartilhar').textContent = nota;
+    await copiarLink(nota);
+  }
+
+  async function copiarLink(nota = '') {
+    const url = $('linkPartilhar').value;
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      $('estadoPartilhar').textContent = [nota, t('partilhar.copiado')].filter(Boolean).join(' ');
+    } catch {
+      // Sem área de transferência o link fica no campo, escolhido, pronto a copiar à mão.
+      $('estadoPartilhar').textContent = [nota, t('partilhar.copieAMao')].filter(Boolean).join(' ');
+      $('linkPartilhar').focus();
+      $('linkPartilhar').select();
+    }
+  }
+
+  function baixarArquivo() {
+    if (!paraBaixar) return;
+    const blob = new Blob([`${JSON.stringify(paraBaixar.dados, null, 2)}\n`], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${paraBaixar.arquivo}.json`;
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  }
+
+  // ── adicionar gente ao evento aberto ───────────────────────────────────
+  //
+  // O dono, 10/10: um streamer pela busca da Kick (com time ou sem), ou uma lista colada ou aberta de um
+  // arquivo. Só os novos são pedidos à Kick; o mapa, a vista, o lance e os times abertos ficam como estão.
+
+  function abrirAdicionar(modo) {
+    if (!ev.elenco) return;
+    const um = modo === 'um';
+    $('adicionarTitulo').textContent = t(um ? 'adicionar.streamerTitulo' : 'adicionar.listaTitulo');
+    $('adicionarUm').hidden = !um;
+    $('adicionarVarios').hidden = um;
+    $('estadoAdicionarJanela').textContent = '';
+    if (um) {
+      $('adicionarProcura').value = '';
+      $('adicionarSugestoes').innerHTML = '';
+      $('adicionarTime').value = '';
+      $('adicionarTimes').innerHTML = ev.elenco.times.map((x) => `<option value="${escapar(x.nome)}"></option>`).join('');
+    }
+    dialogo.mostrar($('modalAdicionar'));
+    $(um ? 'adicionarProcura' : 'adicionarTexto').focus();
+  }
+
+  const noEvento = (slug) => ev.elenco.times.some((x) => x.canais.includes(slug)) || ev.elenco.soltos.includes(slug);
+  const seguidoresCurto = (n) => {
+    try { return new Intl.NumberFormat(idiomaActual(), { notation: 'compact', maximumFractionDigits: 1 }).format(n); } catch { return String(n); }
+  };
+  let procuraAdicionar = { timer: null, controlo: null };
+  function procurarParaAdicionar() {
+    const termo = $('adicionarProcura').value.trim();
+    clearTimeout(procuraAdicionar.timer);
+    procuraAdicionar.controlo?.abort();
+    $('adicionarSugestoes').innerHTML = '';
+    if (termo.length < 2) return;
+    procuraAdicionar.timer = setTimeout(async () => {
+      const controlo = new AbortController();
+      procuraAdicionar.controlo = controlo;
+      let achados = [];
+      try { achados = await procurarCanais(termo, { buscar, sinal: controlo.signal }); } catch { return; }
+      if (controlo.signal.aborted) return;
+      $('adicionarSugestoes').innerHTML = achados.map((c) => {
+        const ja = noEvento(c.slug);
+        const nota = ja ? t('adicionar.jaNoEvento')
+          : [t('procurar.seguidores', { n: seguidoresCurto(c.seguidores) }), c.aoVivo ? t('procurar.aoVivo') : ''].filter(Boolean).join(', ');
+        return `<li><button type="button" data-slug="${escapar(c.slug)}"${ja ? ' disabled' : ''}>`
+          + `<span>${escapar(c.slug)}</span><span class="nota">${escapar(nota)}</span></button></li>`;
+      }).join('');
+    }, 250);
+  }
+
+  async function adicionarUm(slug = null) {
+    const nome = slugDoNome(slug ?? $('adicionarProcura').value);
+    if (!nome) { $('estadoAdicionarJanela').textContent = t('adicionar.escreva'); $('adicionarProcura').focus(); return; }
+    const time = $('adicionarTime').value.trim();
+    const extra = time ? { times: [{ nome: time, canais: [nome] }], soltos: [] } : { times: [], soltos: [nome] };
+    await acrescentar(extra);
+  }
+
+  async function adicionarLista() {
+    const extra = lerElenco($('adicionarTexto').value);
+    if (!extra.times.length && !extra.soltos.length) {
+      $('estadoAdicionarJanela').textContent = t('evento.semCanais');
+      $('adicionarTexto').focus();
+      return;
+    }
+    const feito = await acrescentar(extra);
+    if (feito) $('adicionarTexto').value = '';
+  }
+
+  /** Juntar `extra` ao evento aberto e ler na Kick só os canais novos. Devolve quantos entraram. */
+  async function acrescentar(extra) {
+    if (!ev.elenco) return 0;
+    const { elenco, novos } = juntarElencos(ev.elenco, extra);
+    if (!novos.length) { $('estadoAdicionarJanela').textContent = t('adicionar.nadaNovo'); return 0; }
+    $('estadoAdicionarJanela').textContent = t('adicionar.aCarregar', { feitos: 0, total: novos.length });
+    let lidos;
+    try {
+      lidos = await carregarCanais(novos, {
+        buscar,
+        aoProgredir: ({ feitos, total }) => { $('estadoAdicionarJanela').textContent = t('adicionar.aCarregar', { feitos, total }); },
+      });
+    } catch {
+      $('estadoAdicionarJanela').textContent = t('evento.erro');
+      return 0;
+    }
+    if (!ev.elenco) return 0;
+    elenco.nome = ev.elenco.nome;
+    ev.elenco = elenco;
+    ev.resultados = [...ev.resultados.filter((r) => !novos.includes(r?.slug)), ...lidos];
+    memorizarVods(ev.resultados);
+    pintarAvisos();
+    ev.coberturas = coberturasDe(ev.resultados);
+    const aoVivo = pintarResumo();
+    ev.times = [...elenco.times];
+    if (elenco.soltos.length) ev.times.push({ nome: null, canais: elenco.soltos });
+    // O time que recebeu gente abre, para os novos se verem; os outros ficam como estavam.
+    for (const x of elenco.times) if (x.canais.some((c) => novos.includes(c))) ev.abertos.add(x.nome);
+    if (elenco.soltos.some((c) => novos.includes(c))) ev.abertos.add(null);
+    remontar();
+    const { inicioMs, fimMs } = ev.mapa;
+    if (Number.isFinite(inicioMs) && Number.isFinite(fimMs)) {
+      const tinha = ev.limites && Number.isFinite(ev.limites.deMs) && Number.isFinite(ev.limites.ateMs);
+      ev.limites = tinha
+        ? { deMs: Math.min(ev.limites.deMs, inicioMs), ateMs: Math.max(ev.limites.ateMs, fimMs) }
+        : { deMs: inicioMs, ateMs: fimMs };
+      // Um evento que abriu sem vídeo nenhum ganha agora a vista que não tinha.
+      if (!tinha || !ev.vista || !Number.isFinite(ev.vista.deMs)) {
+        const trecho = trechoDoEvento(ev.coberturas);
+        ev.vista = trecho
+          ? { deMs: Math.max(ev.limites.deMs, trecho.deMs), ateMs: Math.min(ev.limites.ateMs, trecho.ateMs) }
+          : { ...ev.limites };
+        ev.trecho = { ...ev.vista };
+      }
+    }
+    ev.link = await codificar(ev.elenco);
+    lembrarEvento();
+    if (aoVivo > 0 && !aoVivoControlo) seguirAoVivo(true);
+    if (ev.escolha) pintarLance(); else pintar();
+    const lista = novos.length > 6 ? `${novos.slice(0, 6).join(', ')} +${novos.length - 6}` : novos.join(', ');
+    const semVideo = lidos.filter((r) => r?.estado !== 'ok').length;
+    const frase = tn(novos.length, 'adicionar.feitoUm', 'adicionar.feitos', { n: novos.length, lista })
+      + (semVideo ? ` ${t('adicionar.semVideo', { n: semVideo })}` : '');
+    $('estadoAdicionar').textContent = frase;
+    dialogo.esconder($('modalAdicionar'));
+    return novos.length;
   }
 
   // ── ligações ───────────────────────────────────────────────────────────
@@ -1260,30 +1738,62 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
     $('fecharEvento').onclick = fecharEvento;
     $('irAoVivo').onclick = irAoVivo;
     $('procurarOutros').onclick = procurarOutros;
-    $('partilharEvento').onclick = async () => {
-      // `codificar` dá null a um elenco que não se poderia abrir de um link (mais de 2000 canais):
-      // um "#evento=null" chegava a quem o recebe como um link estragado, sem dizer porquê.
-      if (ev.link === null) { $('estadoPartilhaEvento').textContent = t('evento.linkGrande'); return; }
-      const e = ev.escolha;
-      // O link do lance leva o streamer escolhido e os ângulos a mais: sem isso quem o abria ficava com
-      // o primeiro streamer do primeiro time, que é quase sempre outro.
-      const extras = e ? canaisDoLance(e).filter((c) => !colegas(e.canal).includes(c)) : [];
-      const url = `${location.origin}${location.pathname}#evento=${ev.link}`
-        + (e ? `&t=${Math.round(e.ms)}&c=${encodeURIComponent(e.canal)}` : '')
-        + (extras.length ? `&mais=${extras.map(encodeURIComponent).join(',')}` : '')
-        + (ev.atrasoMin !== ATRASO_MIN ? `&atraso=${ev.atrasoMin}` : '');
-      try {
-        await navigator.clipboard.writeText(url);
-        $('estadoPartilhaEvento').textContent = e
-          ? t('evento.lanceCopiado', { canal: e.canal, n: canaisDoLance(e).length, data: dataCurta(e.ms), hora: horaLocal(e.ms) })
-          : t('evento.linkCopiado');
-      } catch {
-        // Sem área de transferência, o link vai para a barra de endereço (de onde se copia), e não
-        // para o ecrã: com 500 canais são milhares de caracteres.
-        history.replaceState(null, '', url);
-        $('estadoPartilhaEvento').textContent = t('partilha.falhou');
-      }
+    $('partilharEvento').onclick = abrirPartilhar;
+    $('formPartilhar').addEventListener('submit', gerarLink);
+    $('fecharPartilhar').onclick = () => dialogo.esconder($('modalPartilhar'));
+    $('copiarLinkPartilhar').onclick = () => copiarLink();
+    $('baixarArquivoEvento').onclick = baixarArquivo;
+    $('partilharNome').addEventListener('input', () => {
+      $('partilharNomeErro').hidden = true;
+      $('partilharNome').removeAttribute('aria-invalid');
+    });
+    // A ordem das faixas: o seletor, o voltar, e um clique na régua.
+    $('ordemFaixas').onchange = () => ordenar($('ordemFaixas').value);
+    $('ordemVoltar').onclick = () => { ordenar('time'); $('ordemFaixas').focus(); };
+    $('reguaEvento').addEventListener('click', (e) => {
+      if (!ev.vista) return;
+      const caixa = $('mapaRolo').getBoundingClientRect();
+      const ms = tempoDoX(e.clientX - caixa.left, ev.vista, $('mapaRolo').clientWidth);
+      if (ms != null) ordenar('instante', ms);
+    });
+    $('abrirTodosVod').onclick = () => abrirVarios('todos');
+    $('abrirSoAoVivo').onclick = () => abrirVarios('vivos');
+    // Adicionar gente com o evento aberto.
+    $('adicionarStreamer').onclick = () => abrirAdicionar('um');
+    $('adicionarLista').onclick = () => abrirAdicionar('lista');
+    $('fecharAdicionar').onclick = () => dialogo.esconder($('modalAdicionar'));
+    $('adicionarProcura').oninput = procurarParaAdicionar;
+    $('adicionarProcura').onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); adicionarUm(); } };
+    $('adicionarUmBotao').onclick = () => adicionarUm();
+    $('adicionarSugestoes').onclick = (e) => {
+      const b = e.target.closest('button[data-slug]');
+      if (b && !b.disabled) adicionarUm(b.dataset.slug);
     };
+    $('adicionarVariosBotao').onclick = adicionarLista;
+    $('adicionarArquivo').onclick = () => $('adicionarArquivoCampo').click();
+    $('adicionarArquivoCampo').addEventListener('change', async () => {
+      const arquivo = $('adicionarArquivoCampo').files?.[0];
+      $('adicionarArquivoCampo').value = '';
+      if (!arquivo) return;
+      const lido = await textoDoArquivo(arquivo);
+      if (lido.erro) { $('estadoAdicionarJanela').textContent = lido.erro; return; }
+      $('adicionarTexto').value = lido.texto;
+      const extra = lerElenco(lido.texto);
+      const { times, canais } = contar(extra);
+      $('estadoAdicionarJanela').textContent = canais
+        ? t('evento.arquivoLido', { nome: arquivo.name || '', times, canais })
+        : t('evento.arquivoSemCanais', { nome: arquivo.name || '' });
+      $(canais ? 'adicionarVariosBotao' : 'adicionarTexto').focus();
+    });
+    // As duas janelas do evento: o Esc e um clique fora fecham, como as da página.
+    for (const id of ['modalPartilhar', 'modalAdicionar']) {
+      $(id).addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        e.stopPropagation();
+        dialogo.esconder($(id));
+      });
+      $(id).addEventListener('click', (e) => { if (e.target === $(id)) dialogo.esconder($(id)); });
+    }
     $('corrigirElenco').onclick = corrigirElenco;
     $('elenco').addEventListener('paste', colarPagina);
     $('elenco').addEventListener('input', () => { $('abrirElencoTexto').textContent = t('evento.abrir'); });
@@ -1313,7 +1823,7 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
       if (noArEm(ev.coberturas, canal, ms)) await verLance();
     };
     window.addEventListener('popstate', () => {
-      if (/[#&]evento=/.test(location.hash) && !ev.elenco) abrirDoLink();
+      if ((/[#&]evento=/.test(location.hash) || salvoDoEndereco()) && !ev.elenco) abrirDoLink();
     });
     window.addEventListener('resize', () => { if (ev.mapa) remontar(); pintar(); });
   }
@@ -1333,6 +1843,7 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
     try {
       localStorage.setItem(GUARDADO, JSON.stringify({
         link: ev.link, t: e?.ms ?? null, c: e?.canal ?? null, atraso: ev.atrasoMin, quando: Date.now(),
+        nome: ev.elenco?.nome || null, info: ev.info || null,
       }));
     } catch { /* janela privada: fica sem memória, como antes */ }
   }
@@ -1346,6 +1857,7 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
     try { g = JSON.parse(localStorage.getItem(GUARDADO) || 'null'); } catch { g = null; }
     if (!g?.link || !(Date.now() - g.quando < GUARDADO_MAX_MS)) { esquecerEvento(); return false; }
     const hash = `#evento=${g.link}`
+      + paramsDoNome(g.nome, g.info)
       + (Number.isFinite(g.t) ? `&t=${Math.round(g.t)}` : '')
       + (g.c ? `&c=${encodeURIComponent(g.c)}` : '')
       + (Number.isFinite(g.atraso) && g.atraso !== ATRASO_MIN ? `&atraso=${g.atraso}` : '');
@@ -1354,21 +1866,36 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
     return abrirDoLink(hash, { abrirLance: false });
   }
 
-  async function abrirDoLink(hash = location.hash, { abrirLance = true } = {}) {
+  async function abrirDoLink(hash = location.hash, { abrirLance = true, busca = location.search } = {}) {
     const m = /[#&]evento=([^&]+)/.exec(hash);
-    if (!m) return false;
-    const elenco = await descodificar(m[1]);
-    if (!elenco) { $('estadoEvento').textContent = t('evento.linkEstragado'); return false; }
+    const ler = (x) => { try { return decodeURIComponent(x); } catch { return ''; } };
+    const param = (nome) => { const r = new RegExp(`[&#]${nome}=([^&]*)`).exec(hash); return r ? ler(r[1]) : ''; };
+    let elenco;
+    let info = null;
+    if (m) {
+      elenco = await descodificar(m[1]);
+      if (!elenco) { $('estadoEvento').textContent = t('evento.linkEstragado'); return false; }
+      // O nome e os dados do evento vão no link longo, ao lado da lista.
+      elenco.nome = param('nome').slice(0, 80) || elenco.nome;
+      info = { data: /^\d{4}-\d{2}-\d{2}$/.test(param('data')) ? param('data') : null, duracao: param('dur').slice(0, 40) || null, descricao: param('desc').slice(0, 500) || null };
+    } else {
+      // O link curto: index.html?e=<nome> lê eventos/<nome>.json, salvo no site.
+      const pedido = salvoDoEndereco(busca);
+      if (!pedido) return false;
+      const lido = await lerSalvo(pedido);
+      if (!lido) { $('estadoEvento').textContent = t('evento.salvoNaoExiste', { nome: pedido }); return false; }
+      elenco = { times: lido.times, soltos: lido.soltos, avisos: [], nome: lido.nome };
+      info = lido.info;
+    }
     const tq = /[&#]t=(\d+)/.exec(hash);
     const aq = /[&#]atraso=(\d+)/.exec(hash);
     const cq = /[&#]c=([^&]+)/.exec(hash);
     const mq = /[&#]mais=([^&]+)/.exec(hash);
     ev.atrasoMin = aq ? Number(aq[1]) : ATRASO_MIN;
     $('elenco').value = '';
-    await abrirElenco(elenco, { quandoMs: tq ? Number(tq[1]) : null });
+    await abrirElenco(elenco, { quandoMs: tq ? Number(tq[1]) : null, info });
     if (!tq) return true;
     const ms = Number(tq[1]);
-    const ler = (x) => { try { return decodeURIComponent(x); } catch { return ''; } };
     const pedido = cq ? ler(cq[1]) : '';
     const todos = [...ev.elenco.times.flatMap((x) => x.canais), ...ev.elenco.soltos];
     const canal = (pedido && noArEm(ev.coberturas, pedido, ms) ? pedido : null)
@@ -1391,5 +1918,7 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
     const dica = document.querySelector('#evento .dica');
     if (dica) { dica.dataset.t = 'evento.dicaToque'; dica.textContent = t('evento.dicaToque'); }
   }
-  return { abrirElenco, abrirDoTexto, abrirDoLink, abrirGuardado, esquecerEvento, lerChatTrecho, faltaLer, pintarComoPico, estado: ev };
+  return {
+    abrirElenco, abrirDoTexto, abrirDoLink, abrirGuardado, esquecerEvento, lerChatTrecho, faltaLer, pintarComoPico, ordenar, estado: ev,
+  };
 }

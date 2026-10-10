@@ -30,6 +30,10 @@ cp site/_headers "$DESTINO/"
 # esta montagem existe para evitar.
 mkdir -p "$DESTINO/letra"
 cp site/letra/* "$DESTINO/letra/"
+# Os eventos salvos (o link curto index.html?e=<nome> lê eventos/<nome>.json). Só os canais e os dados
+# do evento, nada de notas: o arquivo fica público.
+mkdir -p "$DESTINO/eventos"
+cp site/eventos/*.json "$DESTINO/eventos/"
 
 for f in "$DESTINO"/*.js "$DESTINO"/*.html; do
   # `from './x.js'` e `src="app.js"` -> mesmos ficheiros, endereço novo.
