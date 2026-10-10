@@ -353,7 +353,8 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
   background: var(--sup-2); border: 1px solid var(--linha-2); border-radius: var(--r-2);
   box-shadow: var(--sombra-flutua);
 }
-.sugestoes li { display: block; }
+.sugestoes li { display: flex; justify-content: space-between; align-items: baseline; gap: var(--e3); }
+.sugestoes .quantos { color: var(--tinta-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .sugestoes button {
   width: 100%; justify-content: flex-start; background: transparent; border-color: transparent;
   font-weight: 400; padding: 0 var(--e3);

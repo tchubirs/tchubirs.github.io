@@ -305,13 +305,18 @@ function fecharSugestoes() {
   $('procurar').removeAttribute('aria-activedescendant');
 }
 
+// "8,9 mil" como a própria Kick mostra, e não "8.948" colado ao nome (o dono, 10/10).
+function seguidoresCurto(n) {
+  try { return new Intl.NumberFormat(idiomaActual(), { notation: 'compact', maximumFractionDigits: 1 }).format(n); } catch { return String(n); }
+}
+
 function pintarSugestoes(canais) {
   $('sugestoes').innerHTML = canais.map((c, i) => {
     const ja = jaNaLista(c.slug);
     return `<li id="sugestao${i}" data-slug="${escapar(c.slug)}" data-i="${i}" class="${ja ? 'ja' : ''}" role="option" aria-selected="false">`
       + `<span>${escapar(c.slug)}${c.aoVivo ? ` <b class="vivo">${t('procurar.aoVivo')}</b>` : ''}</span>`
       + `<span class="quantos">${ja ? t('procurar.jaEsta')
-        : t('procurar.seguidores', { n: c.seguidores.toLocaleString(idiomaActual()) })}</span></li>`;
+        : t('procurar.seguidores', { n: seguidoresCurto(c.seguidores) })}</span></li>`;
   }).join('');
   $('sugestoes').hidden = !canais.length;
   $('procurar').setAttribute('aria-expanded', String(canais.length > 0));
@@ -939,16 +944,46 @@ function acertarVista({ forcar = false } = {}) {
 function pintarFaixas() {
   const { inicio, fim } = vistaAgora() || {};
   const alvo = $('faixas');
-  [...alvo.querySelectorAll('.faixa')].forEach((f) => f.remove());
-  if (inicio == null || !(fim > inicio)) return;
+  // A barra de ler chat e detectar e as alças são peças fixas que moram dentro das faixas: saem antes
+  // de as faixas irem, e o `colocarAcoes` põe-nas outra vez no sítio no fim.
+  alvo.append($('chatTrecho'), $('acoesFaixa'));
+  [...alvo.querySelectorAll('.faixa, .faixaGeral')].forEach((f) => f.remove());
+  if (inicio == null || !(fim > inicio)) { colocarAcoes(); return; }
   const pct = (ms) => ((ms - inicio) / (fim - inicio)) * 100;
+  // Clicar no trilho vai directo ao instante. E desliga a prévia, como qualquer navegação à mão: sem
+  // isso, o ciclo da kill que estava a tocar puxava-o de volta no quadro seguinte e o clique parecia não
+  // ter feito nada. Clicar na faixa de alguém também escolhe essa pessoa para o chat ao lado do vídeo.
+  const irAoClique = (e, slug) => {
+    if (vistaArrastada) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    largarPrevia();
+    if (slug) {
+      if (faixaEscolhida && faixaEscolhida !== slug) abrirAcoes(slug);
+      else if (slug !== chatEscolhido) { chatEscolhido = slug; pintarChatVideo(estado.agoraMs, true); }
+    }
+    irPara(Math.round(inicio + ((fim - inicio) * (e.clientX - r.left)) / r.width));
+  };
 
+  // A faixa geral, Todos, em cima das outras: é a que lê o chat ou detecta de toda a gente. Com um
+  // canal só, Todos seria ele mesmo, e a faixa dele chega.
+  if (estado.linhas.length > 1) {
+    const g = document.createElement('div');
+    g.className = 'faixaGeral';
+    g.dataset.quem = TODOS;
+    g.innerHTML = `<button type="button" class="nome" data-quem="${TODOS}" aria-expanded="false" `
+      + `aria-label="${escapar(t('faixa.escolherTodos'))}" title="${escapar(t('faixa.escolherTodos'))}">${escapar(t('faixa.todos'))}</button>`
+      + `<div class="trilho trilhoGeral">${marcasLidas(TODOS, inicio, fim)}</div>`;
+    g.querySelector('.trilho').onclick = (e) => irAoClique(e, null);
+    alvo.append(g);
+  }
   for (const linha of estado.linhas) {
     const nudge = estado.nudges[linha.slug] || 0;
     const f = document.createElement('div');
     f.className = 'faixa';
     f.dataset.slug = linha.slug;
-    f.innerHTML = `<span class="nome" title="${escapar(linha.slug)}">${escapar(linha.slug)}</span>`
+    f.dataset.quem = linha.slug;
+    f.innerHTML = `<button type="button" class="nome" data-quem="${escapar(linha.slug)}" aria-expanded="false" `
+      + `aria-label="${escapar(t('faixa.escolher', { canal: linha.slug }))}" title="${escapar(linha.slug)}">${escapar(linha.slug)}</button>`
       + `<div class="trilho">${linha.pecas.map((p) => {
         // Só o que cai dentro da vista. Com a linha do tempo aproximada, um VOD
         // que acabou antes dela dava um `left` de 0 e a largura mínima, e cada
@@ -958,18 +993,12 @@ function pintarFaixas() {
         const de = Math.max(0, pct(p.playlist.inicio - nudge));
         const ate = Math.min(100, pct(p.playlist.fim - nudge));
         return `<i style="left:${de}%;width:${Math.max(0.4, ate - de)}%"></i>`;
-      }).join('')}</div>`;
-    // Clicar na faixa vai directo ao instante. E desliga a prévia, como
-    // qualquer navegação à mão: sem isso, o ciclo da kill que estava a tocar
-    // puxava-o de volta no quadro seguinte e o clique parecia não ter feito nada.
-    f.querySelector('.trilho').onclick = (e) => {
-      const r = e.currentTarget.getBoundingClientRect();
-      largarPrevia();
-      irPara(Math.round(inicio + ((fim - inicio) * (e.clientX - r.left)) / r.width));
-    };
+      }).join('')}${marcasLidas(linha.slug, inicio, fim)}</div>`;
+    f.querySelector('.trilho').onclick = (e) => irAoClique(e, linha.slug);
     alvo.append(f);
   }
   marcarFaixas();
+  colocarAcoes();
   pintarRegua();
   pintarTrecho();
 }
@@ -1698,25 +1727,43 @@ function pintarChatVideo(quandoMs, forcar = false) {
   ol.scrollTop = ol.scrollHeight;
 }
 
-// ── o trecho de chat a ler ──────────────────────────────────────────────────
+// ── ler chat e detectar, a partir da faixa de uma pessoa (ou de todos) ──────
 //
-// O dono, 10/10: "tem que me pedir quanto chat é pra ler, de que hora até que hora". Duas alças na
-// linha do tempo, como a seleção de um editor de vídeo, e um botão que lê o chat de UM streamer entre
-// elas. O streamer é o do vídeo em foco, ou outro escolhido na lista sem trocar o vídeo. A leitura é a
-// do evento (evento-ui.js, lerChatTrecho), que já sabe o que foi lido e não o pede outra vez; com ou
-// sem evento aberto, porque o chat vem do canal e não do elenco.
+// O dono, 10/10: "em cima da linha do tempo da pessoa: escolhe a pessoa ou clica nela, clica em ler chat e
+// escolhe ler de que ponto a que ponto ou ler todo, e ter opção de ler chat de todos". E a seguir: "a
+// detecção automática também deveria ter as mesmas opções". Clicar no nome de uma faixa (ou em Todos, a
+// faixa geral de cima) abre por baixo dela uma barra com quatro escolhas: ler chat ou detectar, de um
+// trecho ou de tudo. Trecho põe duas alças em cima dessa faixa, como a seleção de um editor; tudo é o
+// tempo todo que a pessoa esteve ao vivo na noite aberta. A leitura do chat é a do evento (evento-ui.js,
+// lerChatTrecho), que já sabe o que foi lido e não o pede outra vez; com ou sem evento aberto, porque o
+// chat vem do canal e não do elenco. O chat ao lado do vídeo é sempre o da pessoa escolhida.
 const TRECHO_PADRAO_MS = 10 * 60_000;
 const TRECHO_MIN_MS = 5000;
+const TODOS = '*';
 let chatTrecho = null;
 let chatEscolhido = null;
 let chatTrechoControlo = null;
 // O módulo do evento, que lê o chat. Só existe depois de montado, no fim deste ficheiro.
 let chatDoEvento = null;
+// De quem é a barra aberta (um canal, ou TODOS), e se as alças estão à vista para ler chat ou detectar.
+let faixaEscolhida = null;
+let modoTrecho = null;
+// A entrada e a saída que já viraram trecho uma vez: a marca nova passa para as alças, a mesma não volta
+// a desfazer o que se arrastou depois.
+let marcaUsada = '';
 
-/** De quem é o chat: o escolhido na lista, se ainda está aberto, ou o do vídeo em foco. */
+/** De quem é o chat: o escolhido, se ainda está aberto, ou o do vídeo em foco. */
 function canalDoChat() {
   if (chatEscolhido && estado.linhas.some((l) => l.slug === chatEscolhido)) return chatEscolhido;
   return estado.focos[0] || estado.linhas[0]?.slug || null;
+}
+
+/** Quando é que o canal esteve ao vivo nesta noite, no relógio da noite (com o ajuste dele). */
+function aoVivoDe(slug) {
+  const l = estado.linhas.find((x) => x.slug === slug);
+  if (!l || !Number.isFinite(l.inicio) || !Number.isFinite(l.fim)) return null;
+  const nudge = estado.nudges[slug] || 0;
+  return l.fim > l.inicio ? { deMs: l.inicio - nudge, ateMs: l.fim - nudge } : null;
 }
 
 /** Dez minutos à volta de `ms`, dentro da noite; encostado à ponta quando não cabe. */
@@ -1769,29 +1816,127 @@ function duracaoTrecho(ms) {
   return `${Math.floor(min / 60)} h${min % 60 ? ` ${doisDigitos(min % 60)}` : ''}`;
 }
 
-let chatDeQuemChave = '';
+/** As janelas lidas de um canal; para Todos, só o que foi lido de todos ao mesmo tempo. */
+function lidasDe(quem) {
+  const de = (c) => chatDoEvento?.estado.janelasDoChat?.(c) || [];
+  if (quem !== TODOS) return de(quem);
+  let comum = null;
+  for (const l of estado.linhas) {
+    const suas = de(l.slug);
+    if (comum === null) { comum = suas.map(([a, b]) => [a, b]); continue; }
+    const novo = [];
+    for (const [a, b] of comum) for (const [c, d] of suas) if (Math.min(b, d) > Math.max(a, c)) novo.push([Math.max(a, c), Math.min(b, d)]);
+    comum = novo;
+    if (!comum.length) break;
+  }
+  return comum || [];
+}
+
+/** O que já foi lido, mais escuro dentro do trilho de uma faixa. */
+function marcasLidas(quem, inicio, fim) {
+  const pct = (ms) => Math.min(100, Math.max(0, ((ms - inicio) / (fim - inicio)) * 100));
+  return lidasDe(quem).filter(([a, b]) => b > inicio && a < fim)
+    .map(([a, b]) => `<b class="lido" style="left:${pct(a)}%;width:${Math.max(0.3, pct(b) - pct(a))}%"></b>`).join('');
+}
+
+/** Abrir a barra na faixa de alguém (ou de Todos). Escolher uma pessoa muda também o chat ao lado do vídeo. */
+function abrirAcoes(quem, { focar = false } = {}) {
+  if (quem !== TODOS && !estado.linhas.some((l) => l.slug === quem)) return;
+  if (quem !== faixaEscolhida) $('estadoChatTrecho').textContent = '';
+  faixaEscolhida = quem;
+  if (quem !== TODOS && quem !== chatEscolhido) {
+    chatEscolhido = quem;
+    pintarChatVideo(estado.agoraMs, true);
+  }
+  colocarAcoes();
+  if (focar) {
+    const primeiro = modoTrecho ? $('alcaInicio') : $('chatTrechoAbrir');
+    $('acoesFaixa').scrollIntoView({ block: 'nearest' });
+    primeiro.focus({ preventScroll: true });
+  }
+}
+
+function fecharAcoes() {
+  const quem = faixaEscolhida;
+  faixaEscolhida = null;
+  modoTrecho = null;
+  colocarAcoes();
+  const nome = [...$('faixas').querySelectorAll('[data-quem]')].find((b) => b.dataset.quem === quem);
+  nome?.focus({ preventScroll: true });
+}
+
+/** Pôr as alças em cima da faixa de quem, a partir da entrada e da saída se houver uma marca nova. */
+function abrirTrecho(modo) {
+  if (!faixaEscolhida || !estado.janela) return;
+  const { de, ate } = estado.marca || {};
+  const chave = de != null && ate != null && ate > de ? `${de}|${ate}` : '';
+  if (chave && chave !== marcaUsada) {
+    marcaUsada = chave;
+    chatTrecho = { deMs: de, ateMs: ate };
+  }
+  modoTrecho = modo;
+  colocarAcoes();
+  $('alcaInicio').focus({ preventScroll: true });
+}
+
+/**
+ * A barra e as alças no sítio: a barra numa linha logo abaixo da faixa escolhida, as alças por cima do
+ * trilho dela. São as mesmas peças para todos e mudam de faixa; as faixas refazem-se a cada mudança de
+ * vista, e isto corre no fim de cada vez.
+ */
+function colocarAcoes() {
+  const barra = $('acoesFaixa');
+  const calha = $('chatTrecho');
+  const alvo = $('faixas');
+  const linha = faixaEscolhida == null ? null
+    : [...alvo.querySelectorAll('.faixa, .faixaGeral')].find((f) => f.dataset.quem === faixaEscolhida);
+  for (const b of alvo.querySelectorAll('[data-quem]')) {
+    if (b.tagName === 'BUTTON') b.setAttribute('aria-expanded', String(b.dataset.quem === faixaEscolhida && Boolean(linha)));
+  }
+  for (const f of alvo.querySelectorAll('.faixa, .faixaGeral')) f.classList.toggle('escolhida', f === linha);
+  if (!linha) {
+    if (faixaEscolhida != null && faixaEscolhida !== TODOS && !estado.linhas.some((l) => l.slug === faixaEscolhida)) {
+      faixaEscolhida = null;
+      modoTrecho = null;
+    }
+    barra.hidden = true;
+    calha.hidden = true;
+    alvo.append(calha, barra);
+    return;
+  }
+  if (linha.nextElementSibling !== barra) linha.after(barra);
+  barra.hidden = false;
+  const quem = faixaEscolhida === TODOS ? t('faixa.todos') : faixaEscolhida;
+  $('acoesGrupo').setAttribute('aria-label', t('faixa.grupo', { quem }));
+  if (modoTrecho) {
+    if (calha.parentElement !== linha) linha.append(calha);
+    calha.hidden = false;
+  } else {
+    calha.hidden = true;
+    if (calha.parentElement !== alvo) alvo.append(calha);
+  }
+  $('acoesMenu').hidden = Boolean(modoTrecho);
+  $('acoesTrecho').hidden = !modoTrecho;
+  $('lerChatTrecho').hidden = modoTrecho !== 'chat';
+  $('detetarTrecho').hidden = modoTrecho !== 'detetar';
+  pintarChatTrecho();
+}
+
 function pintarChatTrecho() {
   const caixa = $('chatTrecho');
   if (!caixa) return;
   const vista = vistaAgora();
   const trecho = acertarChatTrecho();
-  const canal = canalDoChat();
-  // A lista curta dos streamers abertos. Refeita só quando muda: a cada pintura, uma lista aberta
-  // fechava-se debaixo do dedo.
-  const sel = $('chatDeQuem');
-  const chave = `${idiomaActual()}|${estado.linhas.map((l) => l.slug).join(',')}|${canal}|${estado.focos[0]}`;
-  if (chave !== chatDeQuemChave) {
-    chatDeQuemChave = chave;
-    sel.innerHTML = estado.linhas.map((l) => `<option value="${escapar(l.slug)}"${l.slug === canal ? ' selected' : ''}>`
-      + `${escapar(l.slug)}${l.slug === estado.focos[0] ? ` (${escapar(t('chatTrecho.noVideo'))})` : ''}</option>`).join('');
+  const ocupado = Boolean(chatTrechoControlo || estado.varredura);
+  const semNoite = !trecho || !estado.linhas.length;
+  for (const id of ['chatTrechoAbrir', 'chatTudo', 'detetarTrechoAbrir', 'detetarTudo', 'lerChatTrecho', 'detetarTrecho']) {
+    $(id).disabled = semNoite || ocupado;
   }
-  sel.value = canal || '';
-  $('lerChatTrecho').disabled = !trecho || !canal || Boolean(chatTrechoControlo);
+  $('pararChatTrecho').hidden = !ocupado;
   $('chatTrechoAqui').disabled = !trecho;
   if (!trecho || !vista) {
     $('chatTrechoHoras').textContent = '';
     $('chatTrechoFaixa').style.display = 'none';
-    $('chatTrechoLido').innerHTML = '';
     return;
   }
   const { inicio, fim } = vista;
@@ -1817,10 +1962,6 @@ function pintarChatTrecho() {
   $('chatTrechoHoras').textContent = t('chatTrecho.horas', {
     de: relogioCurto(trecho.deMs), ate: relogioCurto(trecho.ateMs), dur: duracaoTrecho(trecho.ateMs - trecho.deMs),
   });
-  // O que já foi lido do chat de quem está escolhido, mais escuro dentro da faixa.
-  const lidas = canal ? chatDoEvento?.estado.janelasDoChat?.(canal) : [];
-  $('chatTrechoLido').innerHTML = (lidas || []).filter(([a, b]) => b > inicio && a < fim)
-    .map(([a, b]) => `<i style="left:${prender(pct(a))}%;width:${Math.max(0.3, prender(pct(b)) - prender(pct(a)))}%"></i>`).join('');
 }
 
 /** O instante do ponteiro dentro da calha do trecho, na vista que está desenhada. */
@@ -1852,6 +1993,8 @@ function ligarChatTrecho() {
       el.addEventListener('pointerup', fim);
       el.addEventListener('pointercancel', fim);
     });
+    // O clique que acaba um arrasto não chega ao trilho por baixo (que levaria o vídeo para lá).
+    el.addEventListener('click', (e) => e.stopPropagation());
   };
   arrastar($('alcaInicio'), () => (m) => moverAlca('inicio', msDoPonteiro(m)));
   arrastar($('alcaFim'), () => (m) => moverAlca('fim', msDoPonteiro(m)));
@@ -1860,7 +2003,7 @@ function ligarChatTrecho() {
     const de0 = chatTrecho?.deMs ?? 0;
     return (m) => moverTrecho(de0 + msDoPonteiro(m) - desde);
   });
-  // Pelo teclado: setas 5 s, com Shift 1 min; Home e End às pontas da noite.
+  // Pelo teclado: setas 5 s, com Shift 1 min; Home e End às pontas da noite; Esc fecha as alças.
   for (const [id, qual] of [['alcaInicio', 'inicio'], ['alcaFim', 'fim']]) {
     $(id).addEventListener('keydown', (e) => {
       if (e.ctrlKey || e.metaKey || e.altKey || !acertarChatTrecho()) return;
@@ -1873,61 +2016,115 @@ function ligarChatTrecho() {
       else if (e.key === 'PageUp') ms = agora + 60_000;
       else if (e.key === 'Home') ms = estado.janela.inicio;
       else if (e.key === 'End') ms = estado.janela.fim;
+      else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); voltarAoMenu(); return; }
       else return;
       e.preventDefault();
       e.stopPropagation();
       moverAlca(qual, ms);
     });
   }
-  $('chatDeQuem').onchange = () => {
-    chatEscolhido = $('chatDeQuem').value || null;
-    $('estadoChatTrecho').textContent = '';
-    pintarChatTrecho();
-    pintarChatVideo(estado.agoraMs, true);
+  // O nome de cada faixa (e o Todos) abre e fecha a barra dela. Um só ouvinte para as faixas todas,
+  // porque elas refazem-se a cada mudança de vista.
+  $('faixas').addEventListener('click', (e) => {
+    const nome = e.target.closest('button[data-quem]');
+    if (!nome) return;
+    if (faixaEscolhida === nome.dataset.quem) fecharAcoes();
+    else abrirAcoes(nome.dataset.quem);
+  });
+  const voltarAoMenu = () => {
+    modoTrecho = null;
+    colocarAcoes();
+    $('chatTrechoAbrir').focus({ preventScroll: true });
   };
+  $('chatTrechoAbrir').onclick = () => abrirTrecho('chat');
+  $('detetarTrechoAbrir').onclick = () => abrirTrecho('detetar');
+  $('chatTudo').onclick = () => lerChat(faixaEscolhida, 'tudo');
+  $('detetarTudo').onclick = () => detetar(faixaEscolhida, 'tudo');
+  $('lerChatTrecho').onclick = () => lerChat(faixaEscolhida, 'trecho');
+  $('detetarTrecho').onclick = () => detetar(faixaEscolhida, 'trecho');
+  $('voltarAcoes').onclick = voltarAoMenu;
+  $('fecharAcoes').onclick = fecharAcoes;
+  $('acoesFaixa').addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || ondeSeEscreve(e.target)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (modoTrecho) voltarAoMenu(); else fecharAcoes();
+  });
   $('chatTrechoAqui').onclick = () => {
     if (!estado.janela) return;
     chatTrecho = trechoEmVolta(estado.agoraMs);
     pintarChatTrecho();
   };
-  $('lerChatTrecho').onclick = lerChatDoTrecho;
-  $('pararChatTrecho').onclick = () => chatTrechoControlo?.abort();
+  $('pararChatTrecho').onclick = () => {
+    chatTrechoControlo?.abort();
+    estado.varredura?.abort();
+  };
 }
 
-async function lerChatDoTrecho() {
-  const trecho = acertarChatTrecho();
-  const canal = canalDoChat();
-  if (!trecho || !canal || chatTrechoControlo || !chatDoEvento) return;
+/** De onde a onde ler para cada canal: o trecho das alças, ou o tempo todo ao vivo. */
+function pedidosDe(quem, quanto) {
+  const canais = quem === TODOS ? estado.linhas.map((l) => l.slug) : [quem];
+  const trecho = quanto === 'trecho' ? acertarChatTrecho() : null;
+  const pedidos = [];
+  for (const canal of canais) {
+    const vivo = aoVivoDe(canal);
+    if (!vivo) continue;
+    pedidos.push(trecho ? { canal, deMs: trecho.deMs, ateMs: trecho.ateMs, vivo } : { canal, ...vivo, vivo });
+  }
+  return pedidos;
+}
+
+/** Ler o chat de um canal ou de todos, do trecho ou de tudo. O que já foi lido não se pede outra vez. */
+async function lerChat(quem, quanto) {
+  if (!quem || chatTrechoControlo || estado.varredura || !chatDoEvento || !acertarChatTrecho()) return;
+  const estadoEl = $('estadoChatTrecho');
+  const pedidos = pedidosDe(quem, quanto);
+  if (!pedidos.length) { estadoEl.textContent = t('chatTrecho.semAoVivo', { canal: quem === TODOS ? t('faixa.todos') : quem }); return; }
+  if (pedidos.every((p) => p.deMs >= Date.now())) { estadoEl.textContent = t('chatTrecho.futuro'); return; }
   const controlo = new AbortController();
   chatTrechoControlo = controlo;
-  const { deMs, ateMs } = trecho;
-  const quando = { canal, de: relogioCurto(deMs), ate: relogioCurto(ateMs) };
-  const estadoEl = $('estadoChatTrecho');
-  $('pararChatTrecho').hidden = false;
-  $('lerChatTrecho').disabled = true;
-  estadoEl.textContent = t('chatTrecho.aLer', { ...quando, pct: 0 });
+  pintarChatTrecho();
+  const todos = quem === TODOS;
+  let msgs = 0;
+  let picos = 0;
   try {
-    if (deMs >= Date.now()) { estadoEl.textContent = t('chatTrecho.futuro'); return; }
-    const r = await chatDoEvento.lerChatTrecho(canal, deMs, ateMs, {
-      sinal: controlo.signal,
-      aoProgredir: ({ fracao }) => {
-        if (!controlo.signal.aborted) estadoEl.textContent = t('chatTrecho.aLer', { ...quando, pct: Math.round(fracao * 100) });
-      },
-    });
-    const msgs = tn(r.noTrecho, 'chatTrecho.umaMsg', 'chatTrecho.msgs');
-    const picos = tn(r.picos, 'chatTrecho.umPico', 'chatTrecho.picos');
-    if (r.semCanal) estadoEl.textContent = t('chatTrecho.semCanal', { canal });
-    else if (r.jaLido) estadoEl.textContent = t('chatTrecho.jaLido', { ...quando, msgs, picos });
-    else if (r.motivo) estadoEl.textContent = t('chatTrecho.parou', { ...quando, msgs });
-    else estadoEl.textContent = t('chatTrecho.lido', { ...quando, msgs, picos });
+    for (const [k, { canal, deMs, ateMs }] of pedidos.entries()) {
+      const quando = { canal, de: relogioCurto(deMs), ate: relogioCurto(ateMs) };
+      const dizer = (fracao) => {
+        if (controlo.signal.aborted) return;
+        const pct = Math.round(fracao * 100);
+        estadoEl.textContent = todos ? t('chatTrecho.aLerTodos', { canal, k: k + 1, n: pedidos.length, pct })
+          : t('chatTrecho.aLer', { ...quando, pct });
+      };
+      dizer(0);
+      if (deMs >= Date.now()) continue;
+      // eslint-disable-next-line no-await-in-loop
+      const r = await chatDoEvento.lerChatTrecho(canal, deMs, ateMs, {
+        sinal: controlo.signal,
+        aoProgredir: ({ fracao }) => dizer(fracao),
+      });
+      msgs += r.noTrecho;
+      picos += r.picos;
+      if (todos) continue;
+      const m = tn(r.noTrecho, 'chatTrecho.umaMsg', 'chatTrecho.msgs');
+      const p = tn(r.picos, 'chatTrecho.umPico', 'chatTrecho.picos');
+      if (r.semCanal) estadoEl.textContent = t('chatTrecho.semCanal', { canal });
+      else if (r.jaLido) estadoEl.textContent = t('chatTrecho.jaLido', { ...quando, msgs: m, picos: p });
+      else if (r.motivo) estadoEl.textContent = t('chatTrecho.parou', { ...quando, msgs: m });
+      else estadoEl.textContent = t('chatTrecho.lido', { ...quando, msgs: m, picos: p });
+    }
+    if (todos) {
+      estadoEl.textContent = t('chatTrecho.lidoTodos', {
+        n: pedidos.length, msgs: tn(msgs, 'chatTrecho.umaMsg', 'chatTrecho.msgs'), picos: tn(picos, 'chatTrecho.umPico', 'chatTrecho.picos'),
+      });
+    }
   } catch (e) {
     if (e?.name !== 'AbortError') throw e;
-    estadoEl.textContent = t('chatTrecho.parado', { canal });
+    estadoEl.textContent = todos ? t('chatTrecho.paradoTodos') : t('chatTrecho.parado', { canal: quem });
   } finally {
     chatTrechoControlo = null;
-    $('pararChatTrecho').hidden = true;
     pintarChatTrecho();
-    pintarRegua();
+    pintarFaixas();
     pintarChatVideo(estado.agoraMs, true);
   }
 }

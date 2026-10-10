@@ -363,6 +363,15 @@
       <textarea id="elenco" rows="4" spellcheck="false" data-t-aria="evento.elenco" data-t-ph="evento.elencoPh"
         placeholder="Time Alfa: canal1, canal2, canal3, canal4"></textarea>
     </label>
+    <!-- Abrir a lista de um arquivo (o dono, 10/10): uma planilha exportada em .csv ou .tsv, ou um .txt. O
+         arquivo é lido aqui no navegador e o texto vai para o campo acima; nada é enviado. O lerElenco
+         tira só os canais da Kick, como faz com o que se cola. -->
+    <div class="linha arquivoElencoLinha">
+      <button id="abrirArquivoElenco" type="button"><svg class="ic ic-p" aria-hidden="true"><use href="#i-arquivo"/></svg><span data-t="evento.abrirArquivo">Abrir arquivo</span></button>
+      <span class="nota" data-t="evento.abrirArquivoTipos">.csv, .tsv ou .txt</span>
+      <input id="arquivoElenco" type="file" class="soLeitor" tabindex="-1" aria-hidden="true"
+        accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain">
+    </div>
     <!-- Colar a página de times funciona de verdade: o evento-ui.js lê o HTML colado, onde estão os
          links da Kick (o texto visível só traz os nomes de exibição, que não são os canais). -->
     <p class="nota explicaLonga" data-t="evento.explica">Abra a página de times do evento, aperte Ctrl+A e Ctrl+C (no Mac, Cmd) e cole aqui. Também serve uma lista de canais ou uma linha por time (Time: canal1, canal2). Até 500 canais.</p>
@@ -533,15 +542,7 @@
     <p class="nota" data-t="auto.explica">Ouve a sua POV procurando tiroteios. Acerta a maioria, mas ainda marca menus e inventário: confira sempre com o Rever antes de exportar.</p>
     <div class="linha">
       <button id="procurarKills"><svg class="ic ic-p" aria-hidden="true"><use href="#i-mira"/></svg><span data-t="auto.botao">Detecção automática</span></button>
-      <select id="janelaAuto" data-t-aria="auto.quanto">
-        <option value="1800" data-t="auto.meiaHora">meia hora</option>
-        <option value="3600" selected data-t="auto.umaHora">uma hora</option>
-        <option value="0" data-t="auto.noiteToda">a noite toda</option>
-        <option value="marca" data-t="auto.trechoMarcado">o trecho marcado</option>
-        <option value="horas" data-t="auto.deAte">escolher as horas</option>
-      </select>
-      <span id="horasAuto" class="linha" hidden>
-        <label class="pequeno"><span data-t="auto.de">de</span> <input id="autoDe" type="time"></label>
+      <span id="dicaAuto" class="nota dicaAuto" data-t="auto.escolha">De quem, e quanto: escolha na linha do tempo (o nome de uma pessoa, ou Todos), e depois trecho ou tudo.</span> <input id="autoDe" type="time"></label>
         <label class="pequeno"><span data-t="auto.ate">até</span> <input id="autoAte" type="time"></label>
       </span>
     </div>
@@ -667,48 +668,57 @@
       <!-- Quem esteve no ar, e quando. Sem isto procura-se o momento a arrastar a
            barra as cegas: os buracos e as sobreposicoes so se descobriam batendo
            com o nariz neles. -->
-      <div id="faixas" class="faixas"><div id="trechoMarcado" class="trechoMarcado" hidden></div><div id="cursor" class="cursor"></div></div>
+      <!-- O que se faz com uma pessoa (ou com todos), na própria faixa (o dono, 10/10: "em cima da linha do
+           tempo da pessoa: escolhe a pessoa ou clica nela, clica em ler chat e escolhe ler de que ponto a que
+           ponto ou ler todo"). Clicar no nome abre esta barra logo abaixo da faixa; no modo trecho as duas
+           alças ficam em cima da faixa, como a seleção de um editor. A detecção automática usa as mesmas
+           escolhas. A barra e as alças são as mesmas peças para todos, e mudam de faixa com a escolha. -->
+      <div id="faixas" class="faixas"><div id="trechoMarcado" class="trechoMarcado" hidden></div><div id="cursor" class="cursor"></div>
+        <div id="chatTrecho" class="chatTrecho" hidden>
+          <div id="chatTrechoFaixa" class="chatTrechoFaixa" data-t-titulo="chatTrecho.moverFaixa" title="arraste para mover o trecho inteiro"></div>
+          <div id="alcaInicio" class="alca alcaInicio" role="slider" tabindex="0" aria-orientation="horizontal"
+            data-t-aria="chatTrecho.inicio" aria-label="Início do trecho"></div>
+          <div id="alcaFim" class="alca alcaFim" role="slider" tabindex="0" aria-orientation="horizontal"
+            data-t-aria="chatTrecho.fim" aria-label="Fim do trecho"></div>
+        </div>
+        <div id="acoesFaixa" class="acoesFaixa" hidden>
+          <span class="acoesVazio" aria-hidden="true"></span>
+          <div class="acoesCorpo" role="group" id="acoesGrupo" aria-label="Ler chat e detecção">
+            <div id="acoesMenu" class="acoesMenu">
+              <button id="chatTrechoAbrir" type="button"><span data-t="faixa.chatTrecho">Ler chat: trecho</span></button>
+              <button id="chatTudo" type="button"><span data-t="faixa.chatTudo">Ler chat: tudo</span></button>
+              <button id="detetarTrechoAbrir" type="button"><svg class="ic ic-p" aria-hidden="true"><use href="#i-mira"/></svg><span data-t="faixa.detetarTrecho">Detectar: trecho</span></button>
+              <button id="detetarTudo" type="button"><svg class="ic ic-p" aria-hidden="true"><use href="#i-mira"/></svg><span data-t="faixa.detetarTudo">Detectar: tudo</span></button>
+            </div>
+            <div id="acoesTrecho" class="acoesTrecho" hidden>
+              <output id="chatTrechoHoras" class="chatTrechoHoras"></output>
+              <button id="chatTrechoAqui" type="button" data-t-titulo="chatTrecho.aquiAjuda" title="pôr o trecho em volta do instante do vídeo"><span data-t="chatTrecho.aqui">Centrar aqui</span></button>
+              <button id="lerChatTrecho" type="button" class="principal"><span data-t="chatTrecho.ler">Ler chat deste trecho</span></button>
+              <button id="detetarTrecho" type="button" class="principal"><svg class="ic ic-p" aria-hidden="true"><use href="#i-mira"/></svg><span data-t="faixa.detetarEste">Detectar neste trecho</span></button>
+              <button id="voltarAcoes" type="button"><span data-t="faixa.voltar">Voltar</span></button>
+            </div>
+            <button id="pararChatTrecho" type="button" hidden><svg class="ic ic-p" aria-hidden="true"><use href="#i-parar"/></svg><span data-t="chatTrecho.parar">Parar</span></button>
+            <span id="estadoChatTrecho" class="nota estadoChatTrecho" role="status" aria-live="polite"></span>
+            <button id="fecharAcoes" type="button" class="discreto so-icone" data-t-aria="faixa.fechar" data-t-titulo="faixa.fechar" aria-label="Fechar" title="Fechar"><svg class="ic ic-p" aria-hidden="true"><use href="#i-fechar"/></svg></button>
+          </div>
+        </div>
+      </div>
       <!-- A regua, como num editor: as horas por baixo das barras, e as kills
            marcadas nela. Sem isto sabe-se que se esta "algures no meio". -->
       <div class="reguaLinha"><span></span><div id="regua" class="regua"></div></div>
-      <!-- O trecho de chat a ler, escolhido à mão (o dono, 10/10: "dois pontos pra interagir dentro da
-           timeline, aonde eu escolho de onde a onde eu quero que leia"). Como a seleção de um editor:
-           duas alças que se arrastam com o rato ou o dedo, e que andam pelas setas. O que já foi lido
-           desse canal aparece mais escuro dentro da faixa. -->
-      <div class="chatTrechoLinha">
-        <span class="chatTrechoRotulo" data-t="chatTrecho.rotulo">Ler chat</span>
-        <div id="chatTrecho" class="chatTrecho">
-          <div id="chatTrechoLido" class="chatTrechoLido" aria-hidden="true"></div>
-          <div id="chatTrechoFaixa" class="chatTrechoFaixa" data-t-titulo="chatTrecho.moverFaixa" title="arraste para mover o trecho inteiro"></div>
-          <div id="alcaInicio" class="alca alcaInicio" role="slider" tabindex="0" aria-orientation="horizontal"
-            data-t-aria="chatTrecho.inicio" aria-label="Início do trecho de chat"></div>
-          <div id="alcaFim" class="alca alcaFim" role="slider" tabindex="0" aria-orientation="horizontal"
-            data-t-aria="chatTrecho.fim" aria-label="Fim do trecho de chat"></div>
-        </div>
-      </div>
-      <div class="chatTrechoCtl" role="group" data-t-aria="chatTrecho.grupo" aria-label="Ler o chat de um trecho">
-        <label class="pequeno chatDeQuem"><span data-t="chatTrecho.de">Chat de</span>
-          <select id="chatDeQuem"></select></label>
-        <output id="chatTrechoHoras" class="chatTrechoHoras"></output>
-        <button id="chatTrechoAqui" type="button" data-t-titulo="chatTrecho.aquiAjuda" title="pôr o trecho em volta do instante do vídeo"><span data-t="chatTrecho.aqui">Centrar aqui</span></button>
-        <button id="lerChatTrecho" type="button"><span data-t="chatTrecho.ler">Ler chat deste trecho</span></button>
-        <button id="pararChatTrecho" type="button" hidden><svg class="ic ic-p" aria-hidden="true"><use href="#i-parar"/></svg><span data-t="chatTrecho.parar">Parar</span></button>
-        <span id="estadoChatTrecho" class="nota estadoChatTrecho" role="status" aria-live="polite"></span>
-      </div>
       <!-- Cabeça da linha do tempo, como a de um editor: o zoom e os saltos grandes de quem anda pela noite.
            O instante, os passos de 3 s, entrada, saída e Clipar estão no transporte, colado ao vídeo. -->
       <div class="linha cabecaTempo">
-        <!-- Quanto tempo é que a linha do tempo mostra.
-             "Com tanto tempo aparecendo, as barras ficaram muito pequenas".
-             a noite dele são 34 horas em 450 px, ou seja 4,5 minutos por
-             pixel: um tiroteio de noventa segundos ocupa um terço de pixel. -->
-        <select id="zoomTempo" data-t-aria="tempo.zoom">
-          <option value="0" data-t="tempo.zoomTudo">a noite toda</option>
-          <option value="21600" data-t="tempo.zoom6h">6 horas</option>
-          <option value="3600" data-t="tempo.zoom1h">1 hora</option>
-          <option value="600" data-t="tempo.zoom10m">10 minutos</option>
-          <option value="120" data-t="tempo.zoom2m">2 minutos</option>
-        </select>
+        <!-- Quanto tempo a linha do tempo mostra, como o zoom de um editor de vídeo: um deslizante entre
+             a noite toda e uns 30 segundos, com menos e mais dos lados. Também Ctrl + roda do mouse sobre
+             as faixas (o ponto debaixo do mouse fica no lugar), a pinça com dois dedos e as teclas + e -.
+             Com zoom, arrastar as faixas para o lado (ou rolar na horizontal) anda pela noite. -->
+        <div class="zoomTempo" role="group" data-t-aria="tempo.zoom" aria-label="Zoom da linha do tempo">
+          <button id="zoomMenos" type="button" class="so-icone" data-t-aria="tempo.zoomMenos" data-t-titulo="tempo.zoomMenos" aria-label="Menos zoom: mostra mais tempo" title="Menos zoom: mostra mais tempo">−</button>
+          <input id="zoomTempo" type="range" min="0" max="1000" step="1" value="0" data-t-aria="tempo.zoom" aria-label="Zoom da linha do tempo">
+          <button id="zoomMais" type="button" class="so-icone" data-t-aria="tempo.zoomMais" data-t-titulo="tempo.zoomMais" aria-label="Mais zoom: mostra menos tempo" title="Mais zoom: mostra menos tempo">+</button>
+          <output id="zoomQuanto" class="zoomQuanto" for="zoomTempo"></output>
+        </div>
         <output id="angulos" class="nota"></output>
         <output id="marca" class="nota" aria-live="polite"></output>
         <div class="saltos">
@@ -750,6 +760,7 @@
       <dt><kbd>F</kbd></dt><dd data-t="ajuda.ecraCheio">Tela cheia do vídeo em foco</dd>
       <dt><kbd>,</kbd> <kbd>.</kbd></dt><dd data-t="ajuda.ajuste">Ajusta o ângulo em foco</dd>
       <dt><kbd data-t="ajuda.teclaEsc">Esc</kbd></dt><dd data-t="ajuda.fecha">Fecha esta janela ou o painel Canais</dd>
+      <dt><kbd>+</kbd> <kbd>−</kbd></dt><dd data-t="ajuda.zoom">Zoom da linha do tempo. Também Ctrl + roda do mouse, ou dois dedos</dd>
       <dt><kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd></dt><dd data-t="ajuda.mapa">No mapa: ↑ ↓ trocam de faixa, ← → andam no tempo (Shift: mais rápido), Enter escolhe, + e − dão zoom</dd>
     </dl>
   </div>

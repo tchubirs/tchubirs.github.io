@@ -306,3 +306,64 @@ export function saiuDaVista(vista, agoraMs, margem = 0.2) {
   const l = vista.fim - vista.inicio;
   return agoraMs < vista.inicio + l * margem || agoraMs > vista.fim - l * margem;
 }
+
+// ── o zoom contínuo da linha do tempo ───────────────────────────────────────
+//
+// O dono, 10/10: "igual nos editores de vídeo: o quanto de linha do tempo aparece, dando zoom e
+// diminuindo a linha, ou tirando zoom e aumentando, até ter o máximo". Um deslizante em vez de cinco
+// degraus fixos. A escala é logarítmica, como a de qualquer editor: cada passo do deslizante multiplica
+// o tempo à vista pelo mesmo fator, e por isso ir de 30 s a 1 min custa o mesmo gesto que de 6 h a 12 h.
+
+/** O menos que a linha mostra: uns 30 segundos, o bastante para ver um tiroteio segundo a segundo. */
+export const ZOOM_MIN_MS = 30_000;
+/** As posições do deslizante. Mil dão um passo de menos de 1% numa noite de dez horas. */
+export const ZOOM_PASSOS = 1000;
+
+/** O mínimo que cabe nesta noite: 30 s, ou a noite inteira se ela for mais curta do que isso. */
+const minimoDe = (totalMs) => Math.min(ZOOM_MIN_MS, totalMs);
+
+/**
+ * Do deslizante (0 = a noite toda, ZOOM_PASSOS = 30 s) para o tempo à vista, em ms.
+ * Fora do intervalo fica na ponta: o máximo é a noite toda, e o mínimo uns 30 s.
+ */
+export function larguraDoZoom(totalMs, valor) {
+  if (!(totalMs > 0)) return 0;
+  const min = minimoDe(totalMs);
+  const v = Math.min(ZOOM_PASSOS, Math.max(0, Number.isFinite(valor) ? valor : 0));
+  return Math.round(totalMs * (min / totalMs) ** (v / ZOOM_PASSOS));
+}
+
+/** O contrário: a posição do deslizante para um tempo à vista. */
+export function valorDoZoom(totalMs, larguraMs) {
+  if (!(totalMs > 0)) return 0;
+  const min = minimoDe(totalMs);
+  if (min >= totalMs) return 0;
+  const l = Math.min(totalMs, Math.max(min, Number.isFinite(larguraMs) && larguraMs > 0 ? larguraMs : totalMs));
+  return Math.round((Math.log(l / totalMs) / Math.log(min / totalMs)) * ZOOM_PASSOS);
+}
+
+/**
+ * Aproximar ou afastar mantendo um instante no mesmo sítio do ecrã, como o Ctrl + roda de um editor:
+ * o que está debaixo do rato fica debaixo do rato. `pontoMs` é esse instante; sem ele, o meio da vista.
+ * A largura nova fica entre os 30 s e a noite, e a vista nunca sai da noite.
+ */
+export function zoomEmVolta(janela, vista, larguraMs, pontoMs) {
+  if (!janela || !(janela.fim > janela.inicio)) return janela;
+  const total = janela.fim - janela.inicio;
+  const largura = Math.min(total, Math.max(minimoDe(total), Number.isFinite(larguraMs) ? larguraMs : total));
+  if (largura >= total) return { inicio: janela.inicio, fim: janela.fim };
+  const v = vista && vista.fim > vista.inicio ? vista : janela;
+  const ponto = Number.isFinite(pontoMs) ? Math.min(v.fim, Math.max(v.inicio, pontoMs)) : (v.inicio + v.fim) / 2;
+  const fracao = (ponto - v.inicio) / (v.fim - v.inicio);
+  const de = Math.min(Math.max(janela.inicio, ponto - fracao * largura), janela.fim - largura);
+  return { inicio: Math.round(de), fim: Math.round(de) + largura };
+}
+
+/** Andar com a vista, do mesmo tamanho, sem sair da noite. */
+export function andarVista(janela, vista, deltaMs) {
+  if (!janela || !vista || !(vista.fim > vista.inicio)) return vista;
+  const largura = vista.fim - vista.inicio;
+  if (largura >= janela.fim - janela.inicio) return { inicio: janela.inicio, fim: janela.fim };
+  const de = Math.min(Math.max(janela.inicio, vista.inicio + (Number(deltaMs) || 0)), janela.fim - largura);
+  return { inicio: Math.round(de), fim: Math.round(de) + largura };
+}
