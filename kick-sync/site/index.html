@@ -425,9 +425,6 @@
       <button id="carregar" class="principal"><svg class="ic ic-p" aria-hidden="true"><use href="#i-seta"/></svg><span data-t="canais.carregar">Carregar</span></button>
       <span id="estadoCarga" class="nota" role="status" aria-live="polite"></span>
     </div>
-    <!-- Próprio sítio, e não a linha de progresso: o aviso do leitor tem de
-         sobreviver ao texto que muda a cada canal carregado. -->
-    <p id="avisoPlayer" class="nota mau" hidden></p>
   </section>
 
   <!-- A noite e o estado dos canais numa barra só. Eram duas secções com
@@ -461,6 +458,11 @@
   <section id="canaisEstado" hidden>
     <ul id="listaCanais" class="canais"></ul>
   </section>
+  <!-- Próprio sítio, e não a linha de progresso: o aviso do leitor tem de
+       sobreviver ao texto que muda a cada canal carregado. E fora da porta de
+       entrada: com o vídeo aberto ela fica atrás do botão Canais, e um aviso
+       de leitor quebrado escondido ali não chegava a ser lido. -->
+  <p id="avisoPlayer" class="nota mau" role="alert" hidden></p>
 </div><!-- .topoTrabalho -->
 
 <section id="palco" hidden>
@@ -595,7 +597,7 @@
          botão a ocupar duas filas inteiras num telemóvel. O resumo em cima diz
          os valores sem ser preciso abrir. -->
     <div class="linha">
-      <button id="marcarKill" class="principal"><svg class="ic" aria-hidden="true"><use href="#i-marcador"/></svg><span data-t="montagem.marcar">Marcar kill</span> <kbd>M</kbd></button>
+      <button id="marcarKill"><svg class="ic" aria-hidden="true"><use href="#i-marcador"/></svg><span data-t="montagem.marcar">Marcar kill</span> <kbd>M</kbd></button>
       <details id="margens" class="margens">
         <summary><svg class="ic ic-p" aria-hidden="true"><use href="#i-deslizadores"/></svg><span data-t="montagem.margens">Margens</span> <output id="resumoMargens" class="nota"></output></summary>
         <div class="linha">
@@ -745,6 +747,7 @@
       <dt><kbd>I</kbd> <kbd>O</kbd></dt><dd data-t="ajuda.marca">Marca entrada e saída</dd>
       <dt><kbd>M</kbd></dt><dd data-t="ajuda.kill">Marca kill</dd>
       <dt><kbd>C</kbd></dt><dd data-t="ajuda.clipe">Abre o clipe</dd>
+      <dt><kbd>F</kbd></dt><dd data-t="ajuda.ecraCheio">Tela cheia do vídeo em foco</dd>
       <dt><kbd>,</kbd> <kbd>.</kbd></dt><dd data-t="ajuda.ajuste">Ajusta o ângulo em foco</dd>
       <dt><kbd data-t="ajuda.teclaEsc">Esc</kbd></dt><dd data-t="ajuda.fecha">Fecha esta janela</dd>
       <dt><kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd></dt><dd data-t="ajuda.mapa">No mapa: ↑ ↓ trocam de faixa, ← → andam no tempo (Shift: mais rápido), Enter escolhe, + e − dão zoom</dd>
