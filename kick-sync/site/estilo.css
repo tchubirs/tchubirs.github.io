@@ -1956,6 +1956,7 @@ body:is(.videoAberto, :has(#palco:not([hidden]))) .mostrarMapa { background: var
   max-height: var(--flutua-alto); overflow: auto; padding: var(--e4);
   background: var(--sup-2); box-shadow: var(--sombra-flutua); border-radius: var(--r-3);
 }
+.acoesFaixa.flutua { min-height: 2px; margin: 0; }
 .acoesFaixa.flutua > .acoesVazio { display: none; }
 /* Mais opções: fechado por omissão, com cada opção e a frase do que ela faz. */
 .maisOpcoes > summary {
