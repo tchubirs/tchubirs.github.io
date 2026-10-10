@@ -1844,7 +1844,8 @@ body:is(.videoAberto, :has(#palco:not([hidden]))) .mostrarMapa { background: var
 .alca.fora::before { opacity: .45; }
 .alca:focus-visible { outline: none; box-shadow: var(--foco); }
 /* A barra, numa linha logo abaixo da faixa escolhida, na coluna do tempo. */
-.acoesFaixa { display: grid; grid-template-columns: var(--coluna) 1fr; gap: var(--e3); margin: 2px 0 var(--e2); position: relative; z-index: 3; }
+/* Por cima da agulha (z-index 4): o painel aberto tapa a linha, como num editor. */
+.acoesFaixa { display: grid; grid-template-columns: var(--coluna) 1fr; gap: var(--e3); margin: 2px 0 var(--e2); position: relative; z-index: 5; }
 .acoesFaixa[hidden] { display: none; }
 .acoesCorpo {
   display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2) var(--e3); min-width: 0;
@@ -1855,7 +1856,12 @@ body:is(.videoAberto, :has(#palco:not([hidden]))) .mostrarMapa { background: var
 .acoesCorpo #fecharAcoes { width: 30px; min-width: 30px; padding: 0; }
 /* O assistente: em cima o resumo do que vai acontecer, com Voltar e fechar; por baixo, o passo. */
 .acoesCorpo { flex-direction: column; align-items: stretch; flex-wrap: nowrap; }
-.acoesTopo { display: flex; align-items: center; gap: var(--e3); min-width: 0; }
+.acoesTopo { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2) var(--e3); min-width: 0; }
+.acoesTopo #fecharAcoes { margin-left: auto; }
+/* Estreito: o resumo numa linha só dele, por baixo do Voltar, do passo e do fechar. */
+@media (max-width: 620px) {
+  .acoesResumo { order: 5; flex-basis: 100%; }
+}
 .acoesResumo { flex: 1 1 auto; min-width: 0; margin: 0; font-size: var(--t-menor); font-weight: 500; color: var(--tinta); }
 .acoesPassoN { flex: none; font-size: var(--t-micro); color: var(--tinta-3); white-space: nowrap; }
 .ic-esq { transform: scaleX(-1); }
@@ -1863,7 +1869,7 @@ body:is(.videoAberto, :has(#palco:not([hidden]))) .mostrarMapa { background: var
 /* As escolhas grandes dos passos 1 e 2: um título e uma frase do que fazem. */
 .acoesEscolha { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14em), 1fr)); }
 .acoesCorpo button.grande {
-  display: grid; justify-items: start; align-content: center; gap: 2px; text-align: left;
+  display: grid; justify-items: start; justify-content: stretch; align-content: center; gap: 2px; text-align: left;
   min-height: 56px; padding: var(--e3) var(--e4); font-size: var(--t-base);
 }
 .grande .rotulo { display: inline-flex; align-items: center; gap: var(--e2); font-weight: 600; }
@@ -1957,7 +1963,7 @@ body:is(.videoAberto, :has(#palco:not([hidden]))) .mostrarMapa { background: var
   max-height: var(--flutua-alto); overflow: auto; padding: var(--e4);
   background: var(--sup-2); box-shadow: var(--sombra-flutua); border-radius: var(--r-3);
 }
-.acoesFaixa.flutua { min-height: 2px; margin: 0; }
+.acoesFaixa.flutua { min-height: 2px; margin: 0; z-index: 6; }
 .acoesFaixa.flutua > .acoesVazio { display: none; }
 /* Mais opções: fechado por omissão, com cada opção e a frase do que ela faz. */
 .maisOpcoes > summary {
