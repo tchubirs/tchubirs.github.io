@@ -255,3 +255,8 @@ em francês). Tudo revisado pela regra 14 em 28/09.
 - Novo jeito: ler os nomes que aparecem na tela (sobreposição do Discord com quem está falando, nomes do time no jogo) num quadro do vídeo, e casar com os canais do evento. Usar os apelidos do Discord que vierem na planilha (ex.: "[Discord: Newt]" junto do link) como apelido do canal, guardado só no aparelho.
 - Ler texto de imagem no navegador (OCR) com arquivo local; texto pequeno e vídeo comprimido erram; mostrar o que leu e deixar confirmar.
 - Sem limite de telas: o dono desistiu do "no máximo 2 vídeos". Trocar câmera pelo nome continua.
+- Detalhes do dono sobre onde estão os nomes:
+  - Lista do time do Rust no canto inferior esquerdo: nomes em verde, com uma bolinha antes. Muitas vezes a webcam tapa essa parte.
+  - Sobreposição do Discord à direita ou à esquerda, às vezes só aparece quem está falando.
+  - Nomes em cima dos jogadores no jogo, só quando estão perto.
+- Plano: ler vários quadros ao longo de um trecho (não um só), filtrar o texto verde do canto inferior esquerdo, olhar as laterais para o Discord, e juntar os nomes que aparecem ao longo do tempo.
