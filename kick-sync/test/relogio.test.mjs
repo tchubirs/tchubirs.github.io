@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo, MAXIMO_CANAIS,
   passoDoArrasto, ARRASTO_INTERVALO_MS, vistaDaLinha, saiuDaVista,
+  ZOOM_MIN_MS, ZOOM_PASSOS, larguraDoZoom, valorDoZoom, zoomEmVolta, andarVista,
 } from '../site/relogio.js';
 
 // Helper: a VOD covering [inicio, inicio+segundos) built from 10-second
@@ -333,4 +334,58 @@ test('a vista fica quieta até o cursor lhe chegar à beira', () => {
   assert.equal(saiuDaVista(v, 150), true, 'a quinze por cento, já saiu');
   assert.equal(saiuDaVista(v, 900), true, 'e do outro lado também');
   assert.equal(saiuDaVista(null, 500), false, 'sem vista não há beira nenhuma');
+});
+
+// O zoom contínuo (o dono, 10/10: "igual nos editores de vídeo ... até ter o máximo").
+test('o deslizante do zoom vai da noite toda aos 30 s, em escala logarítmica, e volta', () => {
+  const total = NOITE.fim - NOITE.inicio;
+  assert.equal(larguraDoZoom(total, 0), total, 'no começo, a noite toda');
+  assert.equal(larguraDoZoom(total, ZOOM_PASSOS), ZOOM_MIN_MS, 'no fim, 30 s');
+  // Fora do deslizante fica na ponta.
+  assert.equal(larguraDoZoom(total, -50), total);
+  assert.equal(larguraDoZoom(total, ZOOM_PASSOS * 3), ZOOM_MIN_MS);
+  assert.equal(larguraDoZoom(total, NaN), total);
+  // Logarítmica: o meio do deslizante é a média geométrica, e não a aritmética.
+  const meioL = larguraDoZoom(total, ZOOM_PASSOS / 2);
+  assert.ok(Math.abs(meioL - Math.sqrt(total * ZOOM_MIN_MS)) < 2, `${meioL}`);
+  // Ida e volta.
+  for (const v of [0, 1, 137, 500, 999, ZOOM_PASSOS]) assert.equal(valorDoZoom(total, larguraDoZoom(total, v)), v);
+  assert.equal(valorDoZoom(total, total * 5), 0, 'mais do que a noite é a noite');
+  assert.equal(valorDoZoom(total, 1000), ZOOM_PASSOS, 'menos do que 30 s é 30 s');
+  // Uma noite mais curta do que 30 s não tem zoom nenhum.
+  assert.equal(larguraDoZoom(20_000, ZOOM_PASSOS), 20_000);
+  assert.equal(valorDoZoom(20_000, 10_000), 0);
+});
+
+test('o zoom num ponto deixa esse instante no mesmo sítio, e nunca sai da noite', () => {
+  const v = { inicio: NOITE.inicio, fim: NOITE.fim };
+  // O ponto a um quarto da vista continua a um quarto depois de aproximar.
+  const ponto = v.inicio + (v.fim - v.inicio) / 4;
+  const z = zoomEmVolta(NOITE, v, 3_600_000, ponto);
+  assert.equal(z.fim - z.inicio, 3_600_000);
+  assert.ok(Math.abs((ponto - z.inicio) / (z.fim - z.inicio) - 0.25) < 1e-6);
+  // E outra vez, mais perto, a partir da vista que ficou.
+  const z2 = zoomEmVolta(NOITE, z, 60_000, ponto);
+  assert.ok(Math.abs((ponto - z2.inicio) / (z2.fim - z2.inicio) - 0.25) < 1e-3);
+  // Os limites: nunca menos de 30 s, nunca mais do que a noite.
+  const minimo = zoomEmVolta(NOITE, z2, 1000, ponto);
+  assert.equal(minimo.fim - minimo.inicio, ZOOM_MIN_MS);
+  assert.deepEqual(zoomEmVolta(NOITE, z2, 1e15, ponto), { inicio: NOITE.inicio, fim: NOITE.fim });
+  // Na ponta da noite, encosta em vez de sair.
+  const naPonta = zoomEmVolta(NOITE, { inicio: NOITE.inicio + 60_000, fim: NOITE.inicio + 1_260_000 }, 2_400_000, NOITE.inicio + 300_000);
+  assert.equal(naPonta.inicio, NOITE.inicio);
+  const noFim = zoomEmVolta(NOITE, { inicio: NOITE.fim - 600_000, fim: NOITE.fim }, 1_200_000, NOITE.fim);
+  assert.equal(noFim.fim, NOITE.fim);
+  // Sem ponto, o meio da vista.
+  const semPonto = zoomEmVolta(NOITE, v, 600_000);
+  assert.equal(semPonto.inicio + 300_000, Math.round(meio));
+});
+
+test('andar com a vista mantém o tamanho e pára nas pontas da noite', () => {
+  const v = { inicio: meio, fim: meio + 600_000 };
+  assert.deepEqual(andarVista(NOITE, v, 60_000), { inicio: meio + 60_000, fim: meio + 660_000 });
+  assert.deepEqual(andarVista(NOITE, v, -1e12), { inicio: NOITE.inicio, fim: NOITE.inicio + 600_000 });
+  assert.deepEqual(andarVista(NOITE, v, 1e12), { inicio: NOITE.fim - 600_000, fim: NOITE.fim });
+  // A noite toda não tem para onde andar.
+  assert.deepEqual(andarVista(NOITE, { ...NOITE }, 60_000), { inicio: NOITE.inicio, fim: NOITE.fim });
 });

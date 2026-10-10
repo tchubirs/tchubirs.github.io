@@ -1810,13 +1810,16 @@ test('escolher quanto tempo a linha mostra encolhe a régua e as faixas',
     // Ao meio da noite, para o zoom não bater nas pontas.
     await p.click('#mais5m');
     // Dois minutos: a noite de teste tem dez, e um zoom maior do que a noite
-    // é a noite — não testava nada.
-    await p.selectOption('#zoomTempo', '120');
+    // é a noite e não testava nada. Dois toques no mais (cada um divide por
+    // dois) e um bocado de deslizante: 10 min, 5, 2,5.
+    await p.click('#zoomMais');
+    await p.click('#zoomMais');
     await p.waitForTimeout(250);
+    assert.equal(await p.locator('#zoomQuanto').innerText(), '3 min à vista');
     const doisMinutos = await minutosNaRegua();
     assert.ok(doisMinutos < noiteToda,
       `a régua não encolheu: ${noiteToda} min antes, ${doisMinutos} depois`);
-    assert.ok(doisMinutos <= 3, `dois minutos de zoom mostram ${doisMinutos} min de régua`);
+    assert.ok(doisMinutos <= 3, `dois minutos e meio de zoom mostram ${doisMinutos} min de régua`);
 
     // As faixas seguem a mesma vista: uma gravação que ocupava um pedaço da
     // noite passa a ocupar a faixa toda quando a vista cabe dentro dela.
@@ -1827,8 +1830,8 @@ test('escolher quanto tempo a linha mostra encolhe a régua e as faixas',
     });
     assert.ok(await largura() > 0.9, `a faixa devia encher a vista: ${await largura()}`);
 
-    // E voltar a "a noite toda" devolve o que era.
-    await p.selectOption('#zoomTempo', '0');
+    // E voltar a "a noite toda" (o deslizante na ponta) devolve o que era.
+    await p.locator('#zoomTempo').fill('0');
     await p.waitForTimeout(250);
     assert.equal(await minutosNaRegua(), noiteToda, 'voltar atrás não devolveu a noite inteira');
     assert.deepEqual(erros, []);

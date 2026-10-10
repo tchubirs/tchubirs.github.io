@@ -100,7 +100,9 @@ const IGUAIS_DE_PROPOSITO = {
   // O espanhol e o portugues escrevem estas exactamente da mesma maneira.
   es: new Set([
     // A sensibilidade ("normal", "alta", "máxima") e "de todos" escrevem-se igual em espanhol.
-    'lance.sensNormal', 'lance.sensAlta', 'lance.sensMaxima', 'lance.deTodos', 'auto.de', 'montagem.formato169', 'montagem.formatoAmbos',
+    'lance.sensNormal', 'lance.sensAlta', 'lance.sensMaxima', 'lance.deTodos', 'montagem.formato169', 'montagem.formatoAmbos',
+    // "Todos", o nome da faixa geral da linha do tempo, escreve-se igual.
+    'faixa.todos',
     // "pico de chat" diz-se igual em português e em espanhol.
     'evento.legendaPico',
     // "1 canal" também.
@@ -117,9 +119,8 @@ const IGUAIS_DE_PROPOSITO = {
     'montagem.umaKill', 'montagem.kills', 'montagem.marcar',
     // "Exportar retrato" e "A–Z" escrevem-se exactamente assim nas duas.
     'retrato.exportar', 'grelha.az', 'ajuda.teclaEsc',
-    // "6 horas", "1 hora", "10 minutos", "2 minutos" e "{n} de {total}"
-    // escrevem-se exactamente assim nas duas linguas.
-    'tempo.zoom6h', 'tempo.zoom1h', 'tempo.zoom10m', 'tempo.zoom2m', 'grelha.deQuantos',
+    // "{n} de {total}" escreve-se exactamente assim nas duas linguas.
+    'grelha.deQuantos',
     'procurar.seguidores', 'noite.umCanal',
     'tile.atrasar', 'alinhar.cancelado', 'montagem.antes', 'montagem.ir',
     'corte.titulo', 'corte.antes', 'clipe.cancelar',
@@ -128,8 +129,8 @@ const IGUAIS_DE_PROPOSITO = {
     // Palavras que o portugues e o espanhol escrevem exactamente igual.
     'marca.inicio', 'tw.parar', 'montagem.baixarUma', 'montagem.pronto', 'corte.baixar',
     'clipe.parar',
-    // O trecho de chat: "Chat de", "Parar" e "pico" escrevem-se igual em espanhol.
-    'chatTrecho.de', 'chatTrecho.parar', 'chatTrecho.umPico', 'chatTrecho.picos',
+    // O trecho de chat: "Parar" e "pico" escrevem-se igual em espanhol.
+    'chatTrecho.parar', 'chatTrecho.umPico', 'chatTrecho.picos',
     // "Exportar 16:9" e "Exportar 9:16" sao o mesmo nas duas linguas — e o
     // numero e a metade que interessa. Ele abriu a janela e nao encontrou a
     // versao horizontal; agora os dois botoes dizem qual e qual.

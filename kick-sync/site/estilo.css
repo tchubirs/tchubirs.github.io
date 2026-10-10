@@ -1826,13 +1826,15 @@ body:is(.videoAberto, :has(#palco:not([hidden]))) .mostrarMapa { background: var
 .alca.fora::before { opacity: .45; }
 .alca:focus-visible { outline: none; box-shadow: var(--foco); }
 /* A barra, numa linha logo abaixo da faixa escolhida, na coluna do tempo. */
-.acoesFaixa { display: grid; grid-template-columns: var(--coluna) 1fr; gap: var(--e3); margin: 2px 0 var(--e2); }
+.acoesFaixa { display: grid; grid-template-columns: var(--coluna) 1fr; gap: var(--e3); margin: 2px 0 var(--e2); position: relative; z-index: 3; }
 .acoesFaixa[hidden] { display: none; }
 .acoesCorpo {
   display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2) var(--e3); min-width: 0;
   padding: var(--e2); border: 1px solid var(--acento-fio); border-radius: var(--r-2); background: var(--sup-1);
 }
-.acoesMenu, .acoesTrecho { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2); min-width: 0; }
+.acoesMenu, .acoesTrecho { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2); min-width: 0; flex: 0 1 auto; }
+/* O menu ocupa a linha, para o fechar ficar ao lado dele mesmo quando os botões quebram em duas filas. */
+.acoesMenu { flex: 1 1 0; }
 .acoesMenu[hidden], .acoesTrecho[hidden], .acoesCorpo button[hidden] { display: none; }
 .acoesCorpo button { min-height: 30px; font-size: var(--t-menor); padding: 0 var(--e3); }
 .acoesCorpo #fecharAcoes { margin-left: auto; width: 30px; min-width: 30px; padding: 0; }
@@ -1859,7 +1861,7 @@ body:is(.videoAberto, :has(#palco:not([hidden]))) .mostrarMapa { background: var
 .relogio > .faixas, .relogio .reguaLinha { touch-action: pan-y; }
 
 /* O arquivo da lista, ao lado do campo onde se cola. */
-.arquivoElencoLinha { gap: var(--e3); align-items: center; margin-top: calc(-1 * var(--e2)); }
+.arquivoElencoLinha { gap: var(--e3); align-items: center; }
 
 @media (pointer: coarse) {
   .chatTrecho { height: 30px; }
@@ -1874,7 +1876,16 @@ body:is(.videoAberto, :has(#palco:not([hidden]))) .mostrarMapa { background: var
   #abrirArquivoElenco { min-height: 44px; }
 }
 @media (max-width: 620px) {
+  /* A barra na largura toda: a coluna dos nomes, vazia ao lado dela, era um quinto do ecrã perdido. */
+  .acoesVazio { display: none; }
+  .acoesCorpo { grid-column: 1 / -1; }
   .acoesCorpo button { min-height: 44px; }
   .zoomTempo { flex: 1 1 100%; order: -1; }
   #zoomTempo { flex: 1 1 auto; width: auto; }
+}
+/* No telemóvel os tipos do arquivo ficam só para o leitor de ecrã (o botão aponta para eles), e o seletor
+   do sistema já só mostra .csv, .tsv e .txt: escritos, partiam a linha em duas e empurravam o Carregar
+   para baixo da dobra. */
+@media (max-width: 620px) {
+  #tiposArquivoElenco { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 }

@@ -363,21 +363,20 @@
       <textarea id="elenco" rows="4" spellcheck="false" data-t-aria="evento.elenco" data-t-ph="evento.elencoPh"
         placeholder="Time Alfa: canal1, canal2, canal3, canal4"></textarea>
     </label>
-    <!-- Abrir a lista de um arquivo (o dono, 10/10): uma planilha exportada em .csv ou .tsv, ou um .txt. O
-         arquivo é lido aqui no navegador e o texto vai para o campo acima; nada é enviado. O lerElenco
-         tira só os canais da Kick, como faz com o que se cola. -->
-    <div class="linha arquivoElencoLinha">
-      <button id="abrirArquivoElenco" type="button"><svg class="ic ic-p" aria-hidden="true"><use href="#i-arquivo"/></svg><span data-t="evento.abrirArquivo">Abrir arquivo</span></button>
-      <span class="nota" data-t="evento.abrirArquivoTipos">.csv, .tsv ou .txt</span>
-      <input id="arquivoElenco" type="file" class="soLeitor" tabindex="-1" aria-hidden="true"
-        accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain">
-    </div>
     <!-- Colar a página de times funciona de verdade: o evento-ui.js lê o HTML colado, onde estão os
          links da Kick (o texto visível só traz os nomes de exibição, que não são os canais). -->
     <p class="nota explicaLonga" data-t="evento.explica">Abra a página de times do evento, aperte Ctrl+A e Ctrl+C (no Mac, Cmd) e cole aqui. Também serve uma lista de canais ou uma linha por time (Time: canal1, canal2). Até 500 canais.</p>
     <p class="nota explicaCurta" data-t="evento.explicaCurta">Cole a lista de times do evento (do Discord ou do site do torneio) ou uma lista de canais.</p>
-    <div class="linha">
+    <!-- Abrir a lista de um arquivo (o dono, 10/10): uma planilha exportada em .csv ou .tsv, ou um .txt. O
+         arquivo é lido aqui no navegador e o texto vai para o campo acima; nada é enviado. O lerElenco
+         tira só os canais da Kick, como faz com o que se cola. Na mesma linha do Abrir evento, e não numa
+         linha só para ele: no telemóvel, uma linha a mais empurrava o Carregar para baixo da dobra. -->
+    <div class="linha arquivoElencoLinha">
       <button id="abrirElenco" class="principal"><svg class="ic ic-p" aria-hidden="true"><use href="#i-seta"/></svg><span id="abrirElencoTexto" data-t="evento.abrir">Abrir evento</span></button>
+      <button id="abrirArquivoElenco" type="button" aria-describedby="tiposArquivoElenco"><svg class="ic ic-p" aria-hidden="true"><use href="#i-arquivo"/></svg><span data-t="evento.abrirArquivo">Abrir arquivo</span></button>
+      <span id="tiposArquivoElenco" class="nota" data-t="evento.abrirArquivoTipos">.csv, .tsv ou .txt</span>
+      <input id="arquivoElenco" type="file" class="soLeitor" tabindex="-1" aria-hidden="true"
+        accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain">
     </div>
     <!-- Quem chega sem elenco nenhum vê o que isto faz com o Rust que está no ar agora: um exemplo que
          nunca envelhece, ao contrário de um evento gravado cujos VODs somem em 7 a 30 dias. -->
@@ -541,10 +540,8 @@
     <h2><span data-t="auto.titulo">Detecção automática</span> <b class="etiqueta" data-t="auto.teste">teste</b></h2>
     <p class="nota" data-t="auto.explica">Ouve a sua POV procurando tiroteios. Acerta a maioria, mas ainda marca menus e inventário: confira sempre com o Rever antes de exportar.</p>
     <div class="linha">
-      <button id="procurarKills"><svg class="ic ic-p" aria-hidden="true"><use href="#i-mira"/></svg><span data-t="auto.botao">Detecção automática</span></button>
-      <span id="dicaAuto" class="nota dicaAuto" data-t="auto.escolha">De quem, e quanto: escolha na linha do tempo (o nome de uma pessoa, ou Todos), e depois trecho ou tudo.</span> <input id="autoDe" type="time"></label>
-        <label class="pequeno"><span data-t="auto.ate">até</span> <input id="autoAte" type="time"></label>
-      </span>
+      <button id="procurarKills" aria-describedby="dicaAuto"><svg class="ic ic-p" aria-hidden="true"><use href="#i-mira"/></svg><span data-t="auto.botao">Detecção automática</span></button>
+      <span id="dicaAuto" class="soLeitor" data-t="auto.escolha">De quem e quanto: escolha na linha do tempo o nome de uma pessoa (ou Todos), e depois trecho ou tudo.</span>
     </div>
   </section>
 

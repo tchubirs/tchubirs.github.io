@@ -129,6 +129,10 @@ test('trocar de ângulo no editor: o pedaço nunca fica ao contrário, os recort
     const largura1080 = await p.evaluate(() => window.__estado.clipe.rects[0].largura);
 
     await p.selectOption('#canalClipe', 'tarde');
+    // Cada streamer tem o seu enquadramento (o dono, 10/10): o de 'tarde' é o de partida, feito para a
+    // fonte dele quando o vídeo novo diz o tamanho, e não o do tchubi encolhido.
+    await p.waitForFunction(() => window.__estado.clipe.canal === 'tarde' && window.__estado.clipe.rects.length > 0,
+      null, { timeout: 10000 });
     const c = await p.evaluate(() => {
       const k = window.__estado.clipe;
       return { de: k.deMs, ate: k.ateMs, limites: k.limites, r: { ...k.rects[0] } };
@@ -136,7 +140,8 @@ test('trocar de ângulo no editor: o pedaço nunca fica ao contrário, os recort
     assert.ok(c.ate > c.de, `o pedaço ficou ao contrário: ${c.de} -> ${c.ate}`);
     assert.ok(c.de >= c.limites.inicio && c.ate <= c.limites.fim, 'e dentro do vídeo de quem se escolheu');
     assert.ok(c.r.x + c.r.largura <= 1280 + 0.5, `o recorte ficou fora de uma fonte de 1280: ${JSON.stringify(c.r)}`);
-    assert.ok(Math.abs(c.r.largura - (largura1080 * 1280) / 1920) < 1, 'e encolheu com a fonte');
+    assert.ok(c.r.x + c.r.largura < 1280 - 1 || Math.abs(c.r.largura - (largura1080 * 1280) / 1920) >= 1,
+      'o recorte encostado à direita do tchubi não passou para o tarde');
 
     // 'tarde' não entra nesta kill: guardar ali era perder o trabalho em silêncio.
     await p.click('#guardarAjustes');
@@ -712,6 +717,51 @@ test('com um canal só, o editor não mostra os botões de vários ângulos', se
   await p.click('#clipar');
   await p.waitForSelector('#modalClipe:not([hidden])');
   assert.equal(await p.locator('#angulosSeguido').isVisible(), false);
+  assert.deepEqual(erros, []);
+  await p.close();
+});
+
+// O dono, 10/10: acertava a webcam de um streamer no 9:16 e estragava a do outro. Cada streamer guarda o
+// seu enquadramento no editor do clipe: trocar de canal e voltar devolve o que se tinha feito.
+test('no editor do clipe, cada streamer guarda o seu enquadramento do 9:16', semNavegador, async () => {
+  const { p, erros } = await abrir();
+  await carregar(p, ['tchubi', 'vitima1']);
+  await marcarKills(p, 1);
+  await abrirKill(p);
+  assert.equal(await p.locator('#canalClipe').inputValue(), 'tchubi');
+  const rects = () => p.evaluate(() => window.__estado.clipe.rects.map((r) => ({ ...r })));
+  const mexer = async (tecla, vezes) => {
+    await p.focus('#recortes .recorte');
+    for (let k = 0; k < vezes; k++) await p.keyboard.press(tecla);
+  };
+  // A: o recorte do tchubi para a esquerda.
+  const a0 = await rects();
+  await mexer('ArrowLeft', 3);
+  const a1 = await rects();
+  assert.ok(a1[0].x < a0[0].x, 'a seta não mexeu no recorte do tchubi');
+
+  // B: o vitima1 abre com o seu (o de partida), e não com o do tchubi.
+  await p.selectOption('#canalClipe', 'vitima1');
+  await p.waitForFunction(() => window.__estado.clipe.canal === 'vitima1' && window.__estado.clipe.rects.length > 0,
+    null, { timeout: 10000 });
+  const b0 = await rects();
+  assert.notDeepEqual(b0, a1, 'o vitima1 herdou o recorte mexido do tchubi');
+  await mexer('ArrowRight', 2);
+  await mexer('ArrowDown', 2);
+  const b1 = await rects();
+  assert.ok(b1[0].x > b0[0].x || b1[0].y > b0[0].y, 'a seta não mexeu no recorte do vitima1');
+
+  // De volta ao tchubi: o dele ficou como estava, e mexer no vitima1 não lhe tocou.
+  await p.selectOption('#canalClipe', 'tchubi');
+  await p.waitForFunction(() => window.__estado.clipe.canal === 'tchubi' && window.__estado.clipe.rects.length > 0,
+    null, { timeout: 10000 });
+  await p.waitForTimeout(300);
+  assert.deepEqual(await rects(), a1, 'o enquadramento do tchubi mudou');
+  // E outra vez ao vitima1: o dele também ficou.
+  await p.selectOption('#canalClipe', 'vitima1');
+  await p.waitForFunction(() => window.__estado.clipe.canal === 'vitima1', null, { timeout: 10000 });
+  await p.waitForTimeout(300);
+  assert.deepEqual(await rects(), b1, 'o enquadramento do vitima1 mudou');
   assert.deepEqual(erros, []);
   await p.close();
 });

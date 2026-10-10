@@ -89,7 +89,8 @@ const momentos = (p) => p.evaluate(() => window.__estado.momentos);
  * de `quem`, pelo nome da faixa; '*' é Todos), e lá escolhe-se trecho (o das alças) ou tudo.
  */
 async function detectar(p, { quem = null, quanto = 'tudo' } = {}) {
-  if (quem) await p.click(`#faixas button.nome[data-quem="${quem}"]`);
+  const nome = quem && p.locator(`#faixas button.nome[data-quem="${quem}"]`);
+  if (nome && await nome.getAttribute('aria-expanded') !== 'true') await nome.click();
   else await p.click('#procurarKills');
   await p.waitForSelector('#acoesFaixa:not([hidden])');
   if (quanto === 'tudo') {
@@ -174,18 +175,20 @@ test('detectar tudo é o tempo todo ao vivo, e um trecho fora dele diz porquê',
   assert.equal(await ficha.isDisabled(), true);
   assert.match(await ficha.getAttribute('aria-label'), /^outro: não estava gravando$/);
 
-  // O tchubi acaba aos 600 s; o outro continua até aos 900. Um trecho dos 700 aos 800 (a entrada e a
-  // saída marcadas passam para as alças) não tem tchubi.
-  await p.evaluate((t) => { window.__varrer = null; window.__estado.agoraMs = t + 700_000; }, T);
-  await p.click('#marcarIn');
-  await p.evaluate((t) => { window.__estado.agoraMs = t + 800_000; }, T);
-  await p.click('#marcarOut');
+  // O outro só entra aos 300 s. Um trecho nos primeiros segundos da noite (as duas alças levadas ao
+  // começo com o Home) não o tem.
+  await p.evaluate(() => { window.__varrer = null; });
+  await p.click('#faixas button.nome[data-quem="outro"]');
   await p.click('#detetarTrechoAbrir');
+  await p.locator('#alcaInicio').focus();
+  await p.keyboard.press('Home');
+  await p.locator('#alcaFim').focus();
+  await p.keyboard.press('Home');
   await p.click('#detetarTrecho');
   await p.waitForFunction(() => /fora deste trecho/.test(document.getElementById('estadoMontagem').textContent),
     null, { timeout: 5000 });
   const texto = await textoMontagem(p);
-  assert.match(texto, /^tchubi esteve ao vivo de \d\d:\d\d a \d\d:\d\d, fora deste trecho/);
+  assert.match(texto, /^outro esteve ao vivo de \d\d:\d\d a \d\d:\d\d, fora deste trecho/);
   assert.match(texto, /ou escolha tudo/, 'e diz o que fazer a seguir');
   assert.equal(await p.locator('#estadoChatTrecho').innerText(), texto, 'e diz o mesmo na faixa');
   assert.equal(await p.evaluate(() => window.__varrer), null, 'sem ouvir nada');
@@ -527,8 +530,11 @@ test('a detecção ouve o trecho das alças (que pega a marca), de uma pessoa ou
   // Todos, no mesmo trecho: cada um no pedaço em que esteve ao vivo (o outro só a partir dos 120 s).
   await p.evaluate(() => { window.__varreres = []; });
   await detectar(p, { quem: '*', quanto: 'trecho' });
+  // Quando cada um esteve ao vivo, no relógio da noite.
+  const vivo = Object.fromEntries(await p.evaluate(() => window.__estado.linhas.map((l) => [l.slug, [l.inicio, l.fim]])));
+  assert.ok(vivo.outro[0] > vivo.tchubi[0], JSON.stringify(vivo));
   let todas = await p.evaluate(() => window.__varreres.map((x) => [x.canal, x.deMs, x.ateMs]));
-  assert.deepEqual(todas, [['tchubi', marca.de, marca.ate + 60_000], ['outro', T + 120_000, marca.ate + 60_000]]);
+  assert.deepEqual(todas, [['tchubi', marca.de, marca.ate + 60_000], ['outro', Math.max(marca.de, vivo.outro[0]), marca.ate + 60_000]]);
   assert.match(perguntas.at(-1), /de 2 pessoas/);
   assert.match(await textoMontagem(p), /^2 tiroteios: tchubi 1, outro 1/);
 
@@ -536,7 +542,7 @@ test('a detecção ouve o trecho das alças (que pega a marca), de uma pessoa ou
   await p.evaluate(() => { window.__varreres = []; });
   await detectar(p, { quem: '*', quanto: 'tudo' });
   todas = await p.evaluate(() => window.__varreres.map((x) => [x.canal, x.deMs, x.ateMs]));
-  assert.deepEqual(todas, [['tchubi', T, T + 600_000], ['outro', T + 120_000, T + 720_000]]);
+  assert.deepEqual(todas, [['tchubi', ...vivo.tchubi], ['outro', ...vivo.outro]]);
   assert.deepEqual(erros, []);
   await p.close();
 });

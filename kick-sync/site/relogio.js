@@ -339,7 +339,7 @@ export function valorDoZoom(totalMs, larguraMs) {
   const min = minimoDe(totalMs);
   if (min >= totalMs) return 0;
   const l = Math.min(totalMs, Math.max(min, Number.isFinite(larguraMs) && larguraMs > 0 ? larguraMs : totalMs));
-  return Math.round((Math.log(l / totalMs) / Math.log(min / totalMs)) * ZOOM_PASSOS);
+  return Math.round((Math.log(l / totalMs) / Math.log(min / totalMs)) * ZOOM_PASSOS) + 0;
 }
 
 /**

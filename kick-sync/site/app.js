@@ -1082,6 +1082,9 @@ function ligarZoom() {
       if (!estado.janela || e.button > 0 || !deixa(e)) return;
       toques.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (toques.size === 2) {
+        // Os dois dedos ficam presos à caixa: o zoom refaz as faixas, e o trilho onde o dedo pousou deixa
+        // de existir a meio do gesto.
+        for (const id of toques.keys()) { try { caixa.setPointerCapture(id); } catch { /* um ponteiro sintético não se prende */ } }
         const [a, b] = [...toques.values()];
         const v = vistaAgora();
         pinca = { distancia: Math.max(10, Math.abs(a.x - b.x)), largura: v.fim - v.inicio, ponto: msNaLinha((a.x + b.x) / 2) };
