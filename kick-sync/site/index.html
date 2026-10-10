@@ -658,6 +658,10 @@
            esquerda. Sem isso, a barra media a largura toda e as faixas mediam a
            largura menos os nomes: o cursor e o puxador ficavam em sítios
            diferentes para o mesmo instante. -->
+      <!-- A agulha do instante, como a de um editor de vídeo: UMA peça, com a cabeça em cima da barra de
+           posição e a linha a descer dela até ao fim das faixas. A cabeça e a linha são o mesmo elemento,
+           por isso não há duas contas que possam discordar. A barra (o input) fica para o teclado. -->
+      <div id="cursor" class="cursor" aria-hidden="true"><span id="cabecaAgulha" class="cabecaAgulha"></span></div>
       <div class="barraLinha">
         <span></span>
         <input id="barra" type="range" min="0" max="1000" value="0" step="1" data-t-aria="tempo.linha" aria-label="linha do tempo">
@@ -670,7 +674,7 @@
            ponto ou ler todo"). Clicar no nome abre esta barra logo abaixo da faixa; no modo trecho as duas
            alças ficam em cima da faixa, como a seleção de um editor. A detecção automática usa as mesmas
            escolhas. A barra e as alças são as mesmas peças para todos, e mudam de faixa com a escolha. -->
-      <div id="faixas" class="faixas"><div id="trechoMarcado" class="trechoMarcado" hidden></div><div id="cursor" class="cursor"></div>
+      <div id="faixas" class="faixas"><div id="trechoMarcado" class="trechoMarcado" hidden></div>
         <div id="chatTrecho" class="chatTrecho" hidden>
           <div id="chatTrechoFaixa" class="chatTrechoFaixa" data-t-titulo="chatTrecho.moverFaixa" title="arraste para mover o trecho inteiro"></div>
           <div id="alcaInicio" class="alca alcaInicio" role="slider" tabindex="0" aria-orientation="horizontal"
@@ -678,34 +682,49 @@
           <div id="alcaFim" class="alca alcaFim" role="slider" tabindex="0" aria-orientation="horizontal"
             data-t-aria="chatTrecho.fim" aria-label="Fim do trecho"></div>
         </div>
+        <!-- O assistente da faixa, em passos (o dono, 10/10: "coloca 2 botões, um Ler chat, aí aparecem as
+             opções, ou outro Detectar disparos ou PvP; a partir desses 2 botões vêm as demais informações").
+             Passo 1: ler chat ou detectar. Passo 2: um trecho ou tudo. Passo 3, só no trecho: as alças na
+             faixa e "Pronto". Passo 4: o botão final (e, na detecção, os filtros). O resumo de cima diz
+             sempre o que vai acontecer; Voltar e Esc recuam um passo. -->
         <div id="acoesFaixa" class="acoesFaixa" hidden>
           <span class="acoesVazio" aria-hidden="true"></span>
           <div class="acoesCorpo" role="group" id="acoesGrupo" aria-label="Ler chat e detecção">
-            <div id="acoesMenu" class="acoesMenu">
-              <button id="chatTrechoAbrir" type="button"><span data-t="faixa.chatTrecho">Ler chat: trecho</span></button>
-              <button id="chatTudo" type="button"><span data-t="faixa.chatTudo">Ler chat: tudo</span></button>
-              <button id="detetarTrechoAbrir" type="button"><svg class="ic ic-p" aria-hidden="true"><use href="#i-mira"/></svg><span data-t="faixa.detetarTrecho">Detectar: trecho</span></button>
-              <button id="detetarTudo" type="button"><svg class="ic ic-p" aria-hidden="true"><use href="#i-mira"/></svg><span data-t="faixa.detetarTudo">Detectar: tudo</span></button>
+            <div class="acoesTopo">
+              <button id="voltarAcoes" type="button" class="discreto" hidden><svg class="ic ic-p ic-esq" aria-hidden="true"><use href="#i-seta"/></svg><span data-t="faixa.voltar">Voltar</span></button>
+              <p id="acoesResumo" class="acoesResumo"></p>
+              <span id="acoesPassoN" class="acoesPassoN"></span>
+              <button id="fecharAcoes" type="button" class="discreto so-icone" data-t-aria="faixa.fechar" data-t-titulo="faixa.fechar" aria-label="Fechar" title="Fechar"><svg class="ic ic-p" aria-hidden="true"><use href="#i-fechar"/></svg></button>
             </div>
-            <div id="acoesTrecho" class="acoesTrecho" hidden>
+            <div id="passo1" class="acoesPasso acoesEscolha">
+              <button id="escolherChat" type="button" class="grande" aria-describedby="escolherChatAjuda"><span class="rotulo" data-t="faixa.lerChat">Ler chat</span><span class="nota" id="escolherChatAjuda" data-t="faixa.lerChatAjuda">as mensagens e os picos do chat</span><span class="ultimaVez" data-t="faixa.ultimaVez" hidden>sua última escolha</span></button>
+              <button id="escolherDetetar" type="button" class="grande" aria-describedby="escolherDetetarAjuda"><span class="rotulo"><svg class="ic ic-p" aria-hidden="true"><use href="#i-mira"/></svg><span data-t="faixa.detetarLances">Detectar lances</span></span><span class="nota" id="escolherDetetarAjuda" data-t="faixa.detetarAjuda">tiros, PvP, explosões, gritos, palavras</span><span class="ultimaVez" data-t="faixa.ultimaVez" hidden>sua última escolha</span></button>
+            </div>
+            <div id="passo2" class="acoesPasso acoesEscolha" hidden>
+              <button id="escolherTrecho" type="button" class="grande" aria-describedby="escolherTrechoAjuda"><span class="rotulo" data-t="faixa.umTrecho">Um trecho</span><span class="nota" id="escolherTrechoAjuda" data-t="faixa.umTrechoAjuda">escolha o começo e o fim na faixa</span><span class="ultimaVez" data-t="faixa.ultimaVez" hidden>sua última escolha</span></button>
+              <button id="escolherTudo" type="button" class="grande" aria-describedby="escolherTudoAjuda"><span class="rotulo" data-t="faixa.tudo">Tudo</span><span class="nota" id="escolherTudoAjuda"></span><span class="ultimaVez" data-t="faixa.ultimaVez" hidden>sua última escolha</span></button>
+            </div>
+            <div id="passo3" class="acoesPasso" hidden>
               <output id="chatTrechoHoras" class="chatTrechoHoras"></output>
               <button id="chatTrechoAqui" type="button" data-t-titulo="chatTrecho.aquiAjuda" title="pôr o trecho em volta do instante do vídeo"><span data-t="chatTrecho.aqui">Centrar aqui</span></button>
-              <button id="lerChatTrecho" type="button" class="principal"><span data-t="chatTrecho.ler">Ler chat deste trecho</span></button>
-              <button id="detetarTrecho" type="button" class="principal"><svg class="ic ic-p" aria-hidden="true"><use href="#i-mira"/></svg><span data-t="faixa.detetarEste">Detectar neste trecho</span></button>
-              <button id="voltarAcoes" type="button"><span data-t="faixa.voltar">Voltar</span></button>
+              <button id="usarTrecho" type="button" class="principal"><svg class="ic ic-p" aria-hidden="true"><use href="#i-certo"/></svg><span data-t="faixa.usarTrecho">Pronto, usar este trecho</span></button>
             </div>
-            <button id="pararChatTrecho" type="button" hidden><svg class="ic ic-p" aria-hidden="true"><use href="#i-parar"/></svg><span data-t="chatTrecho.parar">Parar</span></button>
-            <span id="estadoChatTrecho" class="nota estadoChatTrecho" role="status" aria-live="polite"></span>
-            <button id="fecharAcoes" type="button" class="discreto so-icone" data-t-aria="faixa.fechar" data-t-titulo="faixa.fechar" aria-label="Fechar" title="Fechar"><svg class="ic ic-p" aria-hidden="true"><use href="#i-fechar"/></svg></button>
-            <!-- Os filtros da detecção (o dono, 10/10: "a pessoa coloca informações específicas, ex: palavras no
-                 chat, ou palavras do streamer, ou estouros de rocket, ou de disparo, ou gritos do streamer").
-                 Fechados por omissão, com os tiros já marcados: quem nunca abriu isto detecta como sempre. -->
-            <details id="filtrosDetecao" class="filtrosDetecao">
-              <summary><span data-t="filtros.titulo">Filtros</span><span id="filtrosResumo" class="filtrosResumo"></span></summary>
-              <div class="filtrosCorpo">
-                <p class="nota" id="filtrosExplica" data-t="filtros.explica">Marque o que a detecção deve procurar. Cada filtro marcado entra no resultado.</p>
+            <div id="passo4" class="acoesPasso acoesFinal" hidden>
+              <div id="passo4Chat" class="passo4Chat">
+                <label class="pequeno"><span data-t="lance.sensibilidade">Sensibilidade</span>
+                  <select id="sensibilidadeFaixa" aria-describedby="comoPicoFaixa">
+                    <option value="normal" data-t="lance.sensNormal">normal</option>
+                    <option value="alta" data-t="lance.sensAlta">alta</option>
+                    <option value="maxima" data-t="lance.sensMaxima">máxima</option>
+                  </select>
+                </label>
+                <p id="comoPicoFaixa" class="nota"></p>
+                <button id="lerChatTrecho" type="button" class="principal"><span data-t="faixa.ler">Ler</span></button>
+              </div>
+              <div id="passo4Detetar" class="passo4Detetar">
                 <fieldset id="filtrosLista" class="filtrosLista" aria-describedby="filtrosExplica">
                   <legend data-t="filtros.legenda">O que procurar</legend>
+                  <p class="nota" id="filtrosExplica" data-t="filtros.explica">Marque o que a detecção deve procurar. Cada filtro marcado entra no resultado.</p>
                   <label class="filtro"><input type="checkbox" id="filtroTiros" checked aria-describedby="filtroTirosAjuda"><span><b data-t="filtros.tiros">Tiros</b> <span class="nota" id="filtroTirosAjuda" data-t="filtros.tirosAjuda">trocas de tiros, pela força do som</span></span></label>
                   <label class="filtro"><input type="checkbox" id="filtroExplosoes" aria-describedby="filtroExplosoesAjuda"><span><b data-t="filtros.explosoes">Explosões</b> <span class="nota" id="filtroExplosoesAjuda" data-t="filtros.explosoesAjuda">foguete, C4: som forte e grave que dura mais que um tiro. Aproximado.</span></span></label>
                   <label class="filtro"><input type="checkbox" id="filtroGritos" aria-describedby="filtroGritosAjuda"><span><b data-t="filtros.gritos">Gritos do streamer</b> <span class="nota" id="filtroGritosAjuda" data-t="filtros.gritosAjuda">voz forte por mais de meio segundo, acima do normal da pessoa. Aproximado: uma risada alta também pode contar.</span></span></label>
@@ -715,8 +734,46 @@
                   </div>
                   <label class="filtro desligado"><input type="checkbox" id="filtroFala" disabled aria-describedby="filtroFalaAjuda"><span><b data-t="filtros.fala">Palavras faladas pelo streamer</b> <span class="nota" id="filtroFalaAjuda" data-t="filtros.falaAjuda">Ainda não existe: precisaria transformar a voz em texto no próprio aparelho, e isso é pesado demais para o navegador.</span></span></label>
                 </fieldset>
+                <!-- O que a detecção já tinha por dentro e faz sentido para quem não é técnico: quão exigente,
+                     quanto entra antes e depois, e juntar lances perto uns dos outros. Fechado por omissão. -->
+                <details id="maisOpcoes" class="maisOpcoes">
+                  <summary data-t="filtros.maisOpcoes">Mais opções</summary>
+                  <div class="maisOpcoesCorpo">
+                    <label class="opcao"><span data-t="filtros.sens">Sensibilidade</span>
+                      <select id="sensDetecao" aria-describedby="sensDetecaoAjuda">
+                        <option value="menos" data-t="filtros.sensMenos">menos lances, mais certos</option>
+                        <option value="normal" data-t="filtros.sensNormal">normal</option>
+                        <option value="mais" data-t="filtros.sensMais">mais lances, mais falsos</option>
+                      </select>
+                      <span class="nota" id="sensDetecaoAjuda" data-t="filtros.sensAjuda">Menos: só os sons bem fortes contam. Mais: sons mais baixos também contam, e vêm mais lances que não são nada.</span>
+                    </label>
+                    <div class="opcao" role="group" aria-labelledby="margensRotulo" aria-describedby="margensAjuda">
+                      <span id="margensRotulo" data-t="filtros.margens">Tempo no clipe</span>
+                      <span class="margens">
+                        <label class="pequeno"><input id="margemAntes" type="number" min="0" max="120" step="1" data-t-aria="filtros.margemAntesAria" aria-label="Segundos antes do lance"><span data-t="montagem.antes">s antes</span></label>
+                        <label class="pequeno"><input id="margemDepois" type="number" min="0" max="120" step="1" data-t-aria="filtros.margemDepoisAria" aria-label="Segundos depois do lance"><span data-t="montagem.depois">s depois</span></label>
+                      </span>
+                      <span class="nota" id="margensAjuda" data-t="filtros.margensAjuda">Quanto entra antes e depois de cada lance. São as mesmas margens da montagem.</span>
+                    </div>
+                    <label class="opcao"><span data-t="filtros.juntar">Juntar lances próximos</span>
+                      <select id="juntarLances" aria-describedby="juntarAjuda">
+                        <option value="0" data-t="filtros.juntarNao">não juntar</option>
+                        <option value="5" data-t="filtros.juntar5">a menos de 5 s</option>
+                        <option value="10" data-t="filtros.juntar10">a menos de 10 s</option>
+                        <option value="20" data-t="filtros.juntar20">a menos de 20 s</option>
+                        <option value="30" data-t="filtros.juntar30">a menos de 30 s</option>
+                      </select>
+                      <span class="nota" id="juntarAjuda" data-t="filtros.juntarAjuda">Lances da mesma pessoa tão perto uns dos outros viram um lance só, com um clipe só.</span>
+                    </label>
+                  </div>
+                </details>
+                <button id="detetarTrecho" type="button" class="principal"><svg class="ic ic-p" aria-hidden="true"><use href="#i-mira"/></svg><span data-t="faixa.detetar">Detectar</span></button>
               </div>
-            </details>
+            </div>
+            <div class="acoesTrabalho">
+              <button id="pararChatTrecho" type="button" hidden><svg class="ic ic-p" aria-hidden="true"><use href="#i-parar"/></svg><span data-t="chatTrecho.parar">Parar</span></button>
+              <span id="estadoChatTrecho" class="nota estadoChatTrecho" role="status" aria-live="polite"></span>
+            </div>
           </div>
         </div>
       </div>

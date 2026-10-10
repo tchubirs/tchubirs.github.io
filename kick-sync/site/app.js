@@ -38,6 +38,7 @@ import { criarApanhador } from './frames.js';
 import { varrerNoite, custoVarrerMB } from './procurar-momentos.js';
 import { TAXA_TIROS } from './tiros.js';
 import { termosDoFiltro, momentosDePalavras } from './chat.js';
+import { SENSIBILIDADES_DETECAO, opcoesDaSensibilidade, juntarProximos } from './lances.js';
 import { parecidos, juntarPerto } from './aprender.js';
 import { somDoCanal } from './alinhar.js';
 import {
@@ -1195,6 +1196,7 @@ function pintarFaixas() {
   colocarAcoes();
   pintarRegua();
   pintarTrecho();
+  pintarAgulha();
 }
 
 /**
@@ -1876,13 +1878,88 @@ function pintarRelogio(quandoMs) {
   $('barra').value = String(Math.round(fraccao * 1000));
   // O cursor vive por cima das faixas e não dentro de uma delas: é um instante
   // só, partilhado por todos os canais — que é a ideia toda desta página.
-  $('cursor').style.left = `calc(var(--coluna) + (100% - var(--coluna)) * ${fraccao})`;
+  fraccaoDaAgulha = fraccao;
+  pintarAgulha();
   // A frase do link diz o instante, e o instante anda. Reescrevê-la a cada
   // frame era trabalho para nada: só quando o segundo muda.
   const segundo = Math.floor(quandoMs / 1000);
   if (segundo !== ultimoSegundo) { ultimoSegundo = segundo; pintarPartilha(); pintarChatVideo(quandoMs); }
 }
 let ultimoSegundo = -1;
+
+// ── a agulha ────────────────────────────────────────────────────────────────
+//
+// O dono, 10/10: a bolinha da barra de posição não ficava em cima da linha branca das faixas. Eram duas
+// contas: o pino nativo do input anda entre meia largura do pino de cada lado, e a linha andava pela
+// coluna das faixas sem o espaço entre colunas. Agora é uma peça só, como a agulha de um editor: a
+// cabeça e a linha são o mesmo elemento, posto com um `left` em píxeis tirado do eixo do tempo das
+// faixas (o trilho), e o rato e o dedo na barra usam essa mesma conta ao contrário.
+let fraccaoDaAgulha = 0;
+
+/** O eixo do tempo no ecrã: o trilho da primeira faixa, ou a barra quando ainda não há faixas. */
+function eixoDoTempo() {
+  const trilho = $('faixas').querySelector('.trilho');
+  const r = trilho?.getBoundingClientRect();
+  return r && r.width > 0 ? r : $('barra').getBoundingClientRect();
+}
+
+function pintarAgulha() {
+  const agulha = $('cursor');
+  const relogio = agulha.parentElement;
+  if (!vistaAgora() || !relogio) { agulha.hidden = true; return; }
+  const eixo = eixoDoTempo();
+  const caixa = relogio.getBoundingClientRect();
+  const barra = $('barra').getBoundingClientRect();
+  const faixas = $('faixas').getBoundingClientRect();
+  if (!eixo.width || !caixa.width) { agulha.hidden = true; return; }
+  agulha.hidden = false;
+  const x = eixo.left + eixo.width * fraccaoDaAgulha;
+  const topo = barra.top + barra.height / 2;
+  agulha.style.left = `${x - caixa.left - relogio.clientLeft - 1}px`;
+  agulha.style.top = `${topo - caixa.top - relogio.clientTop}px`;
+  agulha.style.height = `${Math.max(0, faixas.bottom - topo)}px`;
+}
+
+/** Arrastar pela cabeça ou pela barra: o ponteiro vira um instante pela conta da agulha. */
+function ligarAgulha() {
+  const irAoPonteiro = (e) => {
+    const vista = vistaAgora();
+    if (!vista) return;
+    const eixo = eixoDoTempo();
+    const f = Math.min(1, Math.max(0, (e.clientX - eixo.left) / eixo.width));
+    largarPrevia();
+    irPara(Math.round(vista.inicio + (vista.fim - vista.inicio) * f));
+  };
+  const agarrar = (el) => {
+    el.addEventListener('pointerdown', (e) => {
+      if (e.button > 0 || !vistaAgora()) return;
+      e.preventDefault();
+      $('barra').focus({ preventScroll: true });
+      try { el.setPointerCapture(e.pointerId); } catch { /* um ponteiro sintético não se prende */ }
+      $('cursor').classList.add('aArrastar');
+      irAoPonteiro(e);
+      const mover = (m) => irAoPonteiro(m);
+      const largar = () => {
+        $('cursor').classList.remove('aArrastar');
+        el.removeEventListener('pointermove', mover);
+        el.removeEventListener('pointerup', largar);
+        el.removeEventListener('pointercancel', largar);
+      };
+      el.addEventListener('pointermove', mover);
+      el.addEventListener('pointerup', largar);
+      el.addEventListener('pointercancel', largar);
+    });
+  };
+  agarrar(document.querySelector('.barraLinha'));
+  agarrar($('cabecaAgulha'));
+  // As faixas mudam de tamanho (a barra da faixa abre, o vídeo abre ao lado, a janela muda) e rolam
+  // por dentro: a agulha volta ao sítio em cada uma dessas.
+  const ver = new ResizeObserver(() => pintarAgulha());
+  ver.observe($('cursor').parentElement);
+  ver.observe($('faixas'));
+  $('faixas').addEventListener('scroll', pintarAgulha, { passive: true });
+  window.addEventListener('resize', pintarAgulha);
+}
 
 // ── o chat ao lado do vídeo ─────────────────────────────────────────────────
 //
@@ -1939,9 +2016,21 @@ let chatEscolhido = null;
 let chatTrechoControlo = null;
 // O módulo do evento, que lê o chat. Só existe depois de montado, no fim deste ficheiro.
 let chatDoEvento = null;
-// De quem é a barra aberta (um canal, ou TODOS), e se as alças estão à vista para ler chat ou detectar.
+// De quem é a barra aberta (um canal, ou TODOS), e onde vai o assistente dela: a acção ('chat' ou
+// 'detetar'), quanto ('trecho' ou 'tudo') e o passo (1 a 4). As alças estão à vista no passo 3 e 4 do
+// trecho. A última escolha de cada passo fica guardada no aparelho, e o passo 1 e o 2 abrem com ela
+// destacada e com o foco nela, sem saltar passos sozinhos.
 let faixaEscolhida = null;
-let modoTrecho = null;
+let acaoFaixa = null;
+let quantoFaixa = null;
+let passoFaixa = 1;
+let ultimaEscolha = { acao: null, quanto: null };
+try {
+  const g = JSON.parse(localStorage.getItem('povix.assistente') || 'null');
+  if (g && ['chat', 'detetar'].includes(g.acao)) ultimaEscolha.acao = g.acao;
+  if (g && ['trecho', 'tudo'].includes(g.quanto)) ultimaEscolha.quanto = g.quanto;
+} catch { /* janela privada */ }
+const alcasAVista = () => quantoFaixa === 'trecho' && passoFaixa >= 3;
 // A entrada e a saída que já viraram trecho uma vez: a marca nova passa para as alças, a mesma não volta
 // a desfazer o que se arrastou depois.
 let marcaUsada = '';
@@ -2033,44 +2122,115 @@ function marcasLidas(quem, inicio, fim) {
     .map(([a, b]) => `<b class="lido" style="left:${pct(a)}%;width:${Math.max(0.3, pct(b) - pct(a))}%"></b>`).join('');
 }
 
-/** Abrir a barra na faixa de alguém (ou de Todos). Escolher uma pessoa muda também o chat ao lado do vídeo. */
-function abrirAcoes(quem, { focar = false } = {}) {
+/**
+ * Abrir o assistente na faixa de alguém (ou de Todos), no passo 1, ou com `acao` já escolhida no passo 2.
+ * Escolher uma pessoa muda também o chat ao lado do vídeo.
+ */
+function abrirAcoes(quem, { focar = false, acao = null } = {}) {
   if (quem !== TODOS && !estado.linhas.some((l) => l.slug === quem)) return;
-  if (quem !== faixaEscolhida) $('estadoChatTrecho').textContent = '';
+  const outra = quem !== faixaEscolhida;
+  if (outra) $('estadoChatTrecho').textContent = '';
   faixaEscolhida = quem;
   if (quem !== TODOS && quem !== chatEscolhido) {
     chatEscolhido = quem;
     pintarChatVideo(estado.agoraMs, true);
   }
-  colocarAcoes();
-  if (focar) {
-    const primeiro = modoTrecho ? $('alcaInicio') : $('chatTrechoAbrir');
-    $('acoesFaixa').scrollIntoView({ block: 'nearest' });
-    primeiro.focus({ preventScroll: true });
+  if (acao) {
+    acaoFaixa = acao;
+    passoFaixa = 2;
+  } else if (outra && !(estado.varredura || chatTrechoControlo)) {
+    // Outra pessoa, o mesmo passo e as mesmas escolhas: só o "de quem" muda. A primeira vez, o passo 1.
+    if (!acaoFaixa) passoFaixa = 1;
   }
+  colocarAcoes();
+  if (focar) focarPasso();
 }
 
 function fecharAcoes() {
   const quem = faixaEscolhida;
   faixaEscolhida = null;
-  modoTrecho = null;
+  passoFaixa = 1;
+  acaoFaixa = null;
+  quantoFaixa = null;
   colocarAcoes();
   const nome = [...$('faixas').querySelectorAll('button[data-quem]')].find((b) => b.dataset.quem === quem);
   nome?.focus({ preventScroll: true });
 }
 
-/** Pôr as alças em cima da faixa de quem, a partir da entrada e da saída se houver uma marca nova. */
-function abrirTrecho(modo) {
-  if (!faixaEscolhida || !estado.janela) return;
-  const { de, ate } = estado.marca || {};
-  const chave = de != null && ate != null && ate > de ? `${de}|${ate}` : '';
-  if (chave && chave !== marcaUsada) {
-    marcaUsada = chave;
-    chatTrecho = { deMs: de, ateMs: ate };
-  }
-  modoTrecho = modo;
+/** O foco no sítio de cada passo: a última escolha (ou a primeira), a alça do começo, o botão final. */
+function focarPasso() {
+  const alvo = passoFaixa === 1 ? $(ultimaEscolha.acao === 'detetar' ? 'escolherDetetar' : 'escolherChat')
+    : passoFaixa === 2 ? $(ultimaEscolha.quanto === 'tudo' ? 'escolherTudo' : 'escolherTrecho')
+      : passoFaixa === 3 ? $('alcaInicio')
+        : $(acaoFaixa === 'chat' ? 'lerChatTrecho' : 'detetarTrecho');
+  $('acoesFaixa').scrollIntoView({ block: 'nearest' });
+  alvo.focus({ preventScroll: true });
+}
+
+function guardarEscolha() {
+  try { localStorage.setItem('povix.assistente', JSON.stringify(ultimaEscolha)); } catch { /* janela privada */ }
+}
+
+/** Passo 1: ler chat ou detectar. */
+function escolherAcao(acao) {
+  acaoFaixa = acao;
+  ultimaEscolha.acao = acao;
+  guardarEscolha();
+  passoFaixa = 2;
   colocarAcoes();
-  $('alcaInicio').focus({ preventScroll: true });
+  focarPasso();
+}
+
+/** Passo 2: um trecho (as alças, a partir da entrada e da saída se houver uma marca nova) ou tudo. */
+function escolherQuanto(quanto) {
+  if (!faixaEscolhida || !estado.janela) return;
+  quantoFaixa = quanto;
+  ultimaEscolha.quanto = quanto;
+  guardarEscolha();
+  if (quanto === 'trecho') {
+    const { de, ate } = estado.marca || {};
+    const chave = de != null && ate != null && ate > de ? `${de}|${ate}` : '';
+    if (chave && chave !== marcaUsada) {
+      marcaUsada = chave;
+      chatTrecho = { deMs: de, ateMs: ate };
+    }
+  }
+  passoFaixa = quanto === 'trecho' ? 3 : 4;
+  colocarAcoes();
+  focarPasso();
+}
+
+/** Voltar um passo; do passo 1, fechar. */
+function voltarPasso() {
+  if (estado.varredura || chatTrechoControlo) return;
+  if (passoFaixa <= 1) { fecharAcoes(); return; }
+  passoFaixa = passoFaixa === 4 && quantoFaixa !== 'trecho' ? 2 : passoFaixa - 1;
+  colocarAcoes();
+  focarPasso();
+}
+
+/** De quem, dito na frase do resumo. */
+const quemDaFaixa = () => (faixaEscolhida === TODOS ? t('faixa.quemTodos') : faixaEscolhida);
+
+/** A linha de cima: o que vai acontecer, com o que já se escolheu. */
+function pintarResumoFaixa() {
+  if (!faixaEscolhida) return;
+  const quem = quemDaFaixa();
+  const trecho = acertarChatTrecho();
+  const quando = quantoFaixa === 'tudo' ? t('faixa.quandoTudo')
+    : trecho ? t('faixa.quandoTrecho', { de: relogioCurto(trecho.deMs).slice(0, 5), ate: relogioCurto(trecho.ateMs).slice(0, 5) }) : '';
+  let frase;
+  if (passoFaixa === 1) frase = t('faixa.resumo1', { quem });
+  else if (passoFaixa === 2) frase = t(acaoFaixa === 'chat' ? 'faixa.resumo2Chat' : 'faixa.resumo2Detetar', { quem });
+  else if (passoFaixa === 3) frase = t(acaoFaixa === 'chat' ? 'faixa.resumo3Chat' : 'faixa.resumo3Detetar', { quem, quando });
+  else if (acaoFaixa === 'chat') frase = t('faixa.resumo4Chat', { quem, quando });
+  else {
+    const marcados = filtrosMarcados();
+    frase = t('faixa.resumo4Detetar', { quem, quando, lista: marcados.length ? listaDeFiltros(marcados) : t('filtros.nenhumMarcado') });
+  }
+  $('acoesResumo').textContent = frase;
+  $('acoesPassoN').textContent = t('faixa.passo', { n: passoFaixa });
+  $('escolherTudoAjuda').textContent = faixaEscolhida === TODOS ? t('faixa.tudoAjudaTodos') : t('faixa.tudoAjuda', { quem });
 }
 
 /**
@@ -2091,32 +2251,40 @@ function colocarAcoes() {
   if (!linha) {
     if (faixaEscolhida != null && faixaEscolhida !== TODOS && !estado.linhas.some((l) => l.slug === faixaEscolhida)) {
       faixaEscolhida = null;
-      modoTrecho = null;
+      passoFaixa = 1;
+      acaoFaixa = null;
+      quantoFaixa = null;
     }
     barra.hidden = true;
     calha.hidden = true;
     alvo.append(calha, barra);
+    acertarFlutua();
     return;
   }
   if (linha.nextElementSibling !== barra) linha.after(barra);
   barra.hidden = false;
   const quem = faixaEscolhida === TODOS ? t('faixa.todos') : faixaEscolhida;
   $('acoesGrupo').setAttribute('aria-label', t('faixa.grupo', { quem }));
-  if (modoTrecho) {
+  if (alcasAVista()) {
     if (calha.parentElement !== linha) linha.append(calha);
     calha.hidden = false;
   } else {
     calha.hidden = true;
     if (calha.parentElement !== alvo) alvo.append(calha);
   }
-  $('acoesMenu').hidden = Boolean(modoTrecho);
-  $('acoesTrecho').hidden = !modoTrecho;
-  $('lerChatTrecho').hidden = modoTrecho !== 'chat';
-  $('detetarTrecho').hidden = modoTrecho !== 'detetar';
-  // Os filtros são da detecção: no trecho de ler chat não têm nada a fazer.
-  $('filtrosDetecao').hidden = modoTrecho === 'chat';
-  acertarPainelFiltros();
+  for (const n of [1, 2, 3, 4]) $(`passo${n}`).hidden = passoFaixa !== n;
+  $('passo4Chat').hidden = acaoFaixa !== 'chat';
+  $('passo4Detetar').hidden = acaoFaixa !== 'detetar';
+  $('voltarAcoes').hidden = passoFaixa <= 1;
+  // A última escolha de cada passo, destacada e dita.
+  for (const [id, sim] of [['escolherChat', ultimaEscolha.acao === 'chat'], ['escolherDetetar', ultimaEscolha.acao === 'detetar'],
+    ['escolherTrecho', ultimaEscolha.quanto === 'trecho'], ['escolherTudo', ultimaEscolha.quanto === 'tudo']]) {
+    $(id).classList.toggle('ultima', sim);
+    $(id).querySelector('.ultimaVez').hidden = !sim;
+  }
+  if (passoFaixa === 4 && acaoFaixa === 'detetar') pintarOpcoesDetecao();
   pintarChatTrecho();
+  acertarFlutua();
 }
 
 function pintarChatTrecho() {
@@ -2126,11 +2294,16 @@ function pintarChatTrecho() {
   const trecho = acertarChatTrecho();
   const ocupado = Boolean(chatTrechoControlo || estado.varredura);
   const semNoite = !trecho || !estado.linhas.length;
-  for (const id of ['chatTrechoAbrir', 'chatTudo', 'detetarTrechoAbrir', 'detetarTudo', 'lerChatTrecho', 'detetarTrecho']) {
+  for (const id of ['escolherChat', 'escolherDetetar', 'escolherTrecho', 'escolherTudo', 'usarTrecho', 'lerChatTrecho', 'detetarTrecho']) {
     $(id).disabled = semNoite || ocupado;
   }
+  // A correr, o progresso e o Parar ficam no mesmo sítio, e nada muda de passo por baixo deles.
   $('pararChatTrecho').hidden = !ocupado;
+  $('voltarAcoes').disabled = ocupado;
   $('filtrosLista').disabled = ocupado;
+  $('maisOpcoes').classList.toggle('ocupado', ocupado);
+  for (const id of ['sensDetecao', 'margemAntes', 'margemDepois', 'juntarLances', 'sensibilidadeFaixa']) $(id).disabled = ocupado;
+  pintarResumoFaixa();
   $('chatTrechoAqui').disabled = !trecho;
   if (!trecho || !vista) {
     $('chatTrechoHoras').textContent = '';
@@ -2214,7 +2387,7 @@ function ligarChatTrecho() {
       else if (e.key === 'PageUp') ms = agora + 60_000;
       else if (e.key === 'Home') ms = estado.janela.inicio;
       else if (e.key === 'End') ms = estado.janela.fim;
-      else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); voltarAoMenu(); return; }
+      else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); voltarPasso(); return; }
       else return;
       e.preventDefault();
       e.stopPropagation();
@@ -2229,24 +2402,33 @@ function ligarChatTrecho() {
     if (faixaEscolhida === nome.dataset.quem) fecharAcoes();
     else abrirAcoes(nome.dataset.quem);
   });
-  const voltarAoMenu = () => {
-    modoTrecho = null;
+  $('escolherChat').onclick = () => escolherAcao('chat');
+  $('escolherDetetar').onclick = () => escolherAcao('detetar');
+  $('escolherTrecho').onclick = () => escolherQuanto('trecho');
+  $('escolherTudo').onclick = () => escolherQuanto('tudo');
+  $('usarTrecho').onclick = () => {
+    if (!acertarChatTrecho()) return;
+    passoFaixa = 4;
     colocarAcoes();
-    $('chatTrechoAbrir').focus({ preventScroll: true });
+    focarPasso();
   };
-  $('chatTrechoAbrir').onclick = () => abrirTrecho('chat');
-  $('detetarTrechoAbrir').onclick = () => abrirTrecho('detetar');
-  $('chatTudo').onclick = () => lerChat(faixaEscolhida, 'tudo');
-  $('detetarTudo').onclick = () => detetar(faixaEscolhida, 'tudo');
-  $('lerChatTrecho').onclick = () => lerChat(faixaEscolhida, 'trecho');
-  $('detetarTrecho').onclick = () => detetar(faixaEscolhida, 'trecho');
-  $('voltarAcoes').onclick = voltarAoMenu;
+  $('lerChatTrecho').onclick = () => lerChat(faixaEscolhida, quantoFaixa || 'tudo');
+  $('detetarTrecho').onclick = () => detetar(faixaEscolhida, quantoFaixa || 'tudo');
+  $('voltarAcoes').onclick = voltarPasso;
   $('fecharAcoes').onclick = fecharAcoes;
+  // Esc recua um passo (e no passo 1 fecha). Dentro de uma caixa de texto ou de uma lista, o Esc é dela.
   $('acoesFaixa').addEventListener('keydown', (e) => {
     if (e.key !== 'Escape' || ondeSeEscreve(e.target)) return;
+    if (e.target.closest('#maisOpcoes') && $('maisOpcoes').open) {
+      e.preventDefault();
+      e.stopPropagation();
+      $('maisOpcoes').open = false;
+      $('maisOpcoes').querySelector('summary').focus({ preventScroll: true });
+      return;
+    }
     e.preventDefault();
     e.stopPropagation();
-    if (modoTrecho) voltarAoMenu(); else fecharAcoes();
+    voltarPasso();
   });
   $('chatTrechoAqui').onclick = () => {
     if (!estado.janela) return;
@@ -2662,85 +2844,103 @@ async function alinhar() {
 // ── os filtros da detecção ──────────────────────────────────────────────────
 //
 // O dono, 10/10: "a pessoa coloca informações específicas, ex: palavras no chat, ou palavras do streamer,
-// ou estouros de rocket, ou de disparo, ou gritos do streamer". Um painel Filtros na barra da faixa, fechado
-// por omissão e com os tiros marcados, para quem nunca o abriu detectar como sempre. As escolhas ficam
-// guardadas no aparelho. As palavras faladas pelo streamer aparecem desligadas: transformar voz em texto
-// no navegador ainda é pesado demais.
-const FILTROS_PADRAO = { tiros: true, explosoes: false, gritos: false, chat: false, palavras: '' };
+// ou estouros de rocket, ou de disparo, ou gritos do streamer". São o passo final do assistente quando se
+// escolhe Detectar lances, com os tiros marcados por omissão, para quem nunca mexeu detectar como sempre.
+// As palavras faladas pelo streamer aparecem desligadas: transformar voz em texto no navegador ainda é
+// pesado demais. Em Mais opções, fechado por omissão, o que a detecção já tinha por dentro e faz sentido
+// para quem não é técnico: quão exigente ela é, quanto entra antes e depois, e juntar lances próximos.
+// Tudo fica guardado no aparelho.
+const FILTROS_PADRAO = {
+  tiros: true, explosoes: false, gritos: false, chat: false, palavras: '', sens: 'normal', juntarS: 0,
+};
 const CAIXAS_FILTRO = { tiros: 'filtroTiros', explosoes: 'filtroExplosoes', gritos: 'filtroGritos', chat: 'filtroChat' };
 const NOMES_FILTRO = {
   tiros: 'filtros.nomeTiros', explosoes: 'filtros.nomeExplosoes', gritos: 'filtros.nomeGritos', chat: 'filtros.nomeChat',
 };
+const JUNTAR_S = [0, 5, 10, 20, 30];
 let filtros = { ...FILTROS_PADRAO };
 try {
   const g = JSON.parse(localStorage.getItem('povix.filtros') || 'null');
   if (g && typeof g === 'object') {
     for (const k of Object.keys(CAIXAS_FILTRO)) if (typeof g[k] === 'boolean') filtros[k] = g[k];
     if (typeof g.palavras === 'string') filtros.palavras = g.palavras.slice(0, 300);
+    if (SENSIBILIDADES_DETECAO.includes(g.sens)) filtros.sens = g.sens;
+    if (JUNTAR_S.includes(g.juntarS)) filtros.juntarS = g.juntarS;
   }
 } catch { /* janela privada, ou um valor estragado: ficam os de omissão */ }
 
 const filtrosMarcados = () => Object.keys(CAIXAS_FILTRO).filter((k) => filtros[k]);
 const listaDeFiltros = (ks) => ks.map((k) => t(NOMES_FILTRO[k])).join(', ');
+const guardarFiltros = () => {
+  try { localStorage.setItem('povix.filtros', JSON.stringify(filtros)); } catch { /* janela privada */ }
+};
 
 function pintarFiltros() {
   for (const [k, id] of Object.entries(CAIXAS_FILTRO)) $(id).checked = Boolean(filtros[k]);
   if ($('filtroPalavras').value !== filtros.palavras) $('filtroPalavras').value = filtros.palavras;
-  const marcados = filtrosMarcados();
-  $('filtrosResumo').textContent = marcados.length ? listaDeFiltros(marcados) : t('filtros.nenhumMarcado');
+  $('sensDetecao').value = filtros.sens;
+  $('juntarLances').value = String(filtros.juntarS);
+  pintarResumoFaixa();
+}
+
+/** As margens de Mais opções são as da montagem: mostram o que lá está. */
+function pintarOpcoesDetecao() {
+  if (document.activeElement !== $('margemAntes')) $('margemAntes').value = $('protAntes').value;
+  if (document.activeElement !== $('margemDepois')) $('margemDepois').value = $('protDepois').value;
 }
 
 function ligarFiltros() {
-  const guardarFiltros = () => {
-    try { localStorage.setItem('povix.filtros', JSON.stringify(filtros)); } catch { /* janela privada */ }
-    pintarFiltros();
-  };
   for (const [k, id] of Object.entries(CAIXAS_FILTRO)) {
-    $(id).addEventListener('change', () => { filtros[k] = $(id).checked; guardarFiltros(); });
+    $(id).addEventListener('change', () => { filtros[k] = $(id).checked; guardarFiltros(); pintarFiltros(); });
   }
   // Escrever palavras é querer procurá-las: a caixa marca-se sozinha, e desmarca-se quando o campo fica vazio.
   $('filtroPalavras').addEventListener('input', () => {
     filtros.palavras = $('filtroPalavras').value;
     filtros.chat = termosDoFiltro(filtros.palavras).length > 0;
     guardarFiltros();
+    pintarFiltros();
   });
-  // Com o vídeo aberto num ecrã largo, as faixas são uma caixa baixa que rola, e o painel aberto lá dentro
-  // ficava espremido em duas linhas à vista. Aí o painel abre por cima, preso ao título Filtros.
-  const painel = $('filtrosDetecao');
-  painel.addEventListener('toggle', () => {
-    acertarPainelFiltros();
-    if (painel.open && !painel.classList.contains('flutua')) painel.scrollIntoView({ block: 'nearest' });
+  $('sensDetecao').addEventListener('change', () => {
+    filtros.sens = SENSIBILIDADES_DETECAO.includes($('sensDetecao').value) ? $('sensDetecao').value : 'normal';
+    guardarFiltros();
   });
-  window.addEventListener('resize', acertarPainelFiltros);
-  window.addEventListener('scroll', acertarPainelFiltros, true);
-  // O Esc fecha primeiro o painel, e só depois a barra.
-  painel.addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape' || !painel.open) return;
-    e.preventDefault();
-    e.stopPropagation();
-    painel.open = false;
-    painel.querySelector('summary').focus({ preventScroll: true });
+  $('juntarLances').addEventListener('change', () => {
+    const v = Number($('juntarLances').value);
+    filtros.juntarS = JUNTAR_S.includes(v) ? v : 0;
+    guardarFiltros();
   });
+  // As margens escrevem nas da montagem, e a montagem trata do resto (guardar, repintar a lista).
+  for (const [meu, dela] of [['margemAntes', 'protAntes'], ['margemDepois', 'protDepois']]) {
+    $(meu).addEventListener('input', () => {
+      $(dela).value = $(meu).value;
+      $(dela).dispatchEvent(new Event('input'));
+    });
+    $(dela).addEventListener('input', pintarOpcoesDetecao);
+  }
+  window.addEventListener('resize', acertarFlutua);
+  window.addEventListener('scroll', acertarFlutua, true);
   pintarFiltros();
+  pintarOpcoesDetecao();
 }
 
-/** O painel Filtros aberto por cima das faixas, quando elas são uma caixa baixa que rola. */
-function acertarPainelFiltros() {
-  const painel = $('filtrosDetecao');
+/**
+ * Com o vídeo aberto num ecrã largo, as faixas são uma caixa baixa que rola, e o assistente lá dentro
+ * ficava espremido em duas linhas à vista. Aí ele abre por cima das faixas, encostado a elas, e a faixa
+ * escolhida (com as alças) continua à vista por baixo.
+ */
+function acertarFlutua() {
+  const barra = $('acoesFaixa');
   const faixas = $('faixas');
-  const apertado = painel.open && !painel.hidden && /auto|scroll/.test(getComputedStyle(faixas).overflowY)
-    && faixas.clientHeight < 320;
-  painel.classList.toggle('flutua', apertado);
+  const apertado = !barra.hidden && /auto|scroll/.test(getComputedStyle(faixas).overflowY) && faixas.clientHeight < 320;
+  barra.classList.toggle('flutua', apertado);
   if (!apertado) return;
-  // Por cima da barra inteira, e não só do título: os botões Detectar ficam à vista com o painel aberto.
-  const r = painel.querySelector('summary').getBoundingClientRect();
-  const topo = Math.max($('acoesGrupo').getBoundingClientRect().top, faixas.getBoundingClientRect().top);
-  const corpo = painel.querySelector('.filtrosCorpo');
-  const largura = Math.min(760, window.innerWidth - 32);
-  corpo.style.setProperty('--filtros-x', `${Math.max(16, Math.min(r.left, window.innerWidth - largura - 16))}px`);
-  corpo.style.setProperty('--filtros-largura', `${largura}px`);
-  corpo.style.setProperty('--filtros-baixo', `${Math.max(8, window.innerHeight - topo + 6)}px`);
-  corpo.style.setProperty('--filtros-alto', `${Math.max(160, topo - 22)}px`);
+  const f = faixas.getBoundingClientRect();
+  const corpo = $('acoesGrupo');
+  const largura = Math.min(820, window.innerWidth - 32);
+  corpo.style.setProperty('--flutua-x', `${Math.max(16, Math.min(f.left, window.innerWidth - largura - 16))}px`);
+  corpo.style.setProperty('--flutua-largura', `${largura}px`);
+  corpo.style.setProperty('--flutua-baixo', `${Math.max(8, window.innerHeight - f.top + 6)}px`);
+  corpo.style.setProperty('--flutua-alto', `${Math.max(160, f.top - 16)}px`);
 }
 
 /** Quantos de cada tipo, numa frase: "2 tiroteios, 1 explosão". */
@@ -2756,6 +2956,7 @@ function contagemPorTipo(conta) {
 
 /** O tipo de um momento achado pela detecção, como aparece na lista. */
 function rotuloDoTipo(m) {
+  if (m.tipos?.length > 1) return m.tipos.map((tipo) => rotuloDoTipo({ ...m, tipos: null, tipo })).join(', ');
   if (m.tipo === 'tiros') return t('filtros.tipoTiros');
   if (m.tipo === 'explosao') return t('filtros.tipoExplosao');
   if (m.tipo === 'grito') return t('filtros.tipoGrito');
@@ -2776,7 +2977,8 @@ function procurarKills() {
   const nota = $('estadoMontagem');
   nota.classList.remove('mau');
   nota.textContent = t('auto.escolha');
-  abrirAcoes(faixaEscolhida || estado.focos[0] || estado.linhas[0].slug, { focar: true });
+  // Direto no passo 2 de Detectar lances, na faixa de quem está no vídeo.
+  abrirAcoes(estado.focos[0] || estado.linhas[0].slug, { focar: true, acao: 'detetar' });
 }
 
 /**
@@ -2798,13 +3000,11 @@ async function detetar(quem, quanto) {
   const marcados = filtrosMarcados();
   const termos = filtros.chat ? termosDoFiltro(filtros.palavras) : [];
   if (!marcados.length) {
-    $('filtrosDetecao').open = true;
     dizer(t('filtros.marqueUm'));
     $('filtroTiros').focus({ preventScroll: true });
     return;
   }
   if (filtros.chat && !termos.length) {
-    $('filtrosDetecao').open = true;
     dizer(t('filtros.semPalavras'));
     $('filtroPalavras').focus({ preventScroll: true });
     return;
@@ -2865,6 +3065,7 @@ async function detetar(quem, quanto) {
           nudgeMs: estado.nudges[canal] || 0,
           sinal: controlo.signal,
           filtros: { tiros: filtros.tiros, explosoes: filtros.explosoes, gritos: filtros.gritos },
+          opcoes: opcoesDaSensibilidade(filtros.sens),
           // 24 kHz, e nao os 8 do alinhamento: o tiro vive no agudo.
           lerSom: (l, quandoMs, duracaoS, opcoes) => somDoCanal(l, quandoMs, duracaoS, { ...opcoes, taxa: TAXA_TIROS }),
           aoProgresso: (x) => {
@@ -2892,9 +3093,11 @@ async function detetar(quem, quanto) {
           doCanal.push({ ...c, canal, tipo: 'chat', palavras: c.termos });
         }
       }
-      for (const c of doCanal) conta[c.tipo] = (conta[c.tipo] || 0) + 1;
-      achados.push(...doCanal);
-      if (doCanal.length) porCanal.push(`${canal} ${doCanal.length}`);
+      // Lances perto uns dos outros viram um só, quando ele o pediu em Mais opções.
+      const juntos = juntarProximos(doCanal, filtros.juntarS * 1000);
+      for (const c of juntos) conta[c.tipo] = (conta[c.tipo] || 0) + 1;
+      achados.push(...juntos);
+      if (juntos.length) porCanal.push(`${canal} ${juntos.length}`);
     }
     if (comSom) estado.estouros = estouros;
     // Os bocados que a Kick nao mandou, ditos. Sem isto um buraco de rede a
@@ -2924,6 +3127,7 @@ async function detetar(quem, quanto) {
         estado.momentos,
         novoMomento(c.ms, c.canal, {
           ...tamanhos(), auto: true, tipo: c.tipo,
+          ...(c.tipos?.length > 1 ? { tipos: c.tipos } : {}),
           ...(c.tipo === 'tiros' ? { tiros: c.tiros } : {}),
           ...(c.tipo === 'chat' ? { palavras: c.palavras } : {}),
           combateDeMs: c.combateDeMs, combateAteMs: c.combateAteMs,
@@ -5932,6 +6136,7 @@ function trocarIdioma(codigo) {
   }
   pintarZoom();
   pintarFiltros();
+  chatDoEvento?.pintarComoPico?.();
 }
 
 $('idioma').innerHTML = Object.entries(IDIOMAS)
@@ -6064,6 +6269,7 @@ mensagensDoEvento = () => evento.estado.mensagens;
 chatDoEvento = evento;
 ligarChatTrecho();
 ligarFiltros();
+ligarAgulha();
 // Com uma live só a grelha fica vazia, e o vídeo fica com o lugar dela (ver o CSS de .semGrelha).
 // O CSS não o pode saber sozinho: um :has dentro de outro :has não vale.
 new MutationObserver(() => {

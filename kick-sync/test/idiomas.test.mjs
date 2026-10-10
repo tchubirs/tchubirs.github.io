@@ -88,7 +88,7 @@ const IGUAIS_DE_PROPOSITO = {
   // Nome do produto, simbolos de navegacao, e frases que sao so numeros e datas.
   en: new Set([
     // "normal" escreve-se igual nas tres linguas.
-    'lance.sensNormal', 'montagem.formato169', 'montagem.formatoAmbos',
+    'lance.sensNormal', 'filtros.sensNormal', 'montagem.formato169', 'montagem.formatoAmbos',
     'app.nome', 'canais.vods', 'marca.feita', 'evento.zoom',
     'tempo.menos1m', 'tempo.menos10s', 'tempo.mais10s', 'tempo.mais1m',
     'tempo.menos5m', 'tempo.menos3s', 'tempo.mais3s', 'tempo.mais5m',
@@ -132,8 +132,9 @@ const IGUAIS_DE_PROPOSITO = {
     // O trecho de chat: "Parar" e "pico" escrevem-se igual em espanhol.
     'chatTrecho.parar', 'chatTrecho.umPico', 'chatTrecho.picos',
     // Os filtros da detecção: "Filtros", "grito", "gritos" e "momento" escrevem-se igual em espanhol.
-    'filtros.titulo', 'filtros.umGrito', 'filtros.gritosN', 'filtros.tipoGrito',
-    'filtros.umMomentoTodos', 'filtros.momentosTodos',
+    'filtros.umGrito', 'filtros.gritosN', 'filtros.tipoGrito', 'filtros.sensNormal', 'faixa.detetar',
+    'filtros.umMomentoTodos', 'filtros.momentosTodos', 'faixa.quemTodos', 'faixa.quandoTrecho',
+    'filtros.juntar5', 'filtros.juntar10', 'filtros.juntar20', 'filtros.juntar30',
     // "Exportar 16:9" e "Exportar 9:16" sao o mesmo nas duas linguas — e o
     // numero e a metade que interessa. Ele abriu a janela e nao encontrou a
     // versao horizontal; agora os dois botoes dizem qual e qual.

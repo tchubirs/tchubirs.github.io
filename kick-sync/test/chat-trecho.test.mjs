@@ -1,7 +1,7 @@
-// Ler o chat a partir da faixa de cada pessoa na linha do tempo da tela do vídeo: clicar no nome abre uma
-// barra na faixa dela com "Ler chat: trecho" e "Ler chat: tudo"; no trecho, duas alças (início e fim) em
-// cima da faixa, que se arrastam com o rato, com o dedo e pelo teclado. A faixa Todos, em cima, faz o
-// mesmo para toda a gente.
+// Ler o chat a partir da faixa de cada pessoa na linha do tempo da tela do vídeo: clicar no nome abre um
+// assistente em passos na faixa dela (Ler chat ou Detectar lances; um trecho ou tudo; no trecho, duas
+// alças em cima da faixa que se arrastam com o rato, com o dedo e pelo teclado, e "Pronto"; no fim, o
+// botão Ler). A faixa Todos, em cima, faz o mesmo para toda a gente.
 //
 // A Kick é a de test/falsa.mjs: tchubi (canal 1000) e outro (1001), das 21:00 às 21:10 de 30/08, com
 // 3 mensagens por minuto cada um, e mais 40 no minuto 5 do tchubi (um pico).
@@ -25,13 +25,20 @@ async function abrirNoite(p, canais = ['tchubi', 'outro']) {
   await abrirTrechoDe(p, canais[0]);
 }
 
-/** Clicar no nome da faixa de alguém (ou Todos, com '*') e escolher "Ler chat: trecho". */
+/** Clicar no nome da faixa de alguém (ou Todos, com '*'), e Ler chat, Um trecho: as alças à vista (passo 3). */
 async function abrirTrechoDe(p, quem) {
   await p.click(`#faixas button.nome[data-quem="${quem}"]`);
   await p.waitForSelector('#acoesFaixa:not([hidden])');
-  await p.click('#chatTrechoAbrir');
+  await p.click('#escolherChat');
+  await p.click('#escolherTrecho');
   await p.waitForSelector('#chatTrecho:not([hidden])');
   await p.waitForFunction(() => document.getElementById('alcaInicio').hasAttribute('aria-valuenow'));
+}
+
+/** Ler: o "Pronto, usar este trecho" quando ainda se está no passo 3, e depois o botão Ler. */
+async function ler(p) {
+  if (await p.locator('#usarTrecho').isVisible()) await p.click('#usarTrecho');
+  await ler(p);
 }
 
 /** As duas pontas do trecho, em ms, lidas das alças (aria-valuenow vem em segundos). */
@@ -174,7 +181,7 @@ test('o botão lê só o chat do streamer escolhido e só o trecho entre as alç
       const u = q.url();
       if (/\/api\/v2\/channels\/[^/]+$/.test(u) || u.includes('/messages')) pedidos.push(u);
     });
-    await p.click('#lerChatTrecho');
+    await ler(p);
     await p.waitForFunction(() => /^Chat de outro, de 21:02:00 até 21:04:00: \d+ mensagens/.test(document.getElementById('estadoChatTrecho').textContent), null, { timeout: 15000 });
     // Só o canal outro (1001), e a primeira página pedida começa no fim do trecho.
     assert.ok(pedidos.length >= 2, pedidos.join('\n'));
@@ -199,13 +206,13 @@ test('o botão lê só o chat do streamer escolhido e só o trecho entre as alç
 
     // O mesmo trecho outra vez não pede nada à Kick.
     pedidos.length = 0;
-    await p.click('#lerChatTrecho');
+    await ler(p);
     await p.waitForFunction(() => /já estava lido/.test(document.getElementById('estadoChatTrecho').textContent), null, { timeout: 5000 });
     assert.equal(pedidos.filter((u) => u.includes('/messages')).length, 0);
     // Um trecho maior lê só o pedaço novo: das 21:01 às 21:02.
     await p.locator('#alcaInicio').focus();
     await p.keyboard.press('Shift+ArrowLeft');
-    await p.click('#lerChatTrecho');
+    await ler(p);
     await p.waitForFunction(() => /^Chat de outro, de 21:01:00/.test(document.getElementById('estadoChatTrecho').textContent), null, { timeout: 15000 });
     const novos = pedidos.filter((u) => u.includes('/messages')).map((u) => Number(new URL(u).searchParams.get('cursor')) / 1000);
     assert.ok(novos.length >= 1);
@@ -227,7 +234,7 @@ test('com evento aberto o botão também lê, e o pico do trecho aparece na rég
     await p.waitForSelector('.tile', { timeout: 15000 });
     await abrirTrechoDe(p, 'tchubi');
     assert.equal(await p.locator('.regua .picoChat').count(), 0);
-    await p.click('#lerChatTrecho');
+    await ler(p);
     await p.waitForFunction(() => /^Chat de tchubi, .*1 pico\./.test(document.getElementById('estadoChatTrecho').textContent), null, { timeout: 15000 });
     await p.waitForSelector('.regua .picoChat');
     await p.waitForSelector('#chatVideo:not([hidden])');
@@ -245,7 +252,7 @@ test('parar a leitura do trecho guarda o que veio, e ler outra vez acaba só o q
     await p.keyboard.press('Home');
     await p.locator('#alcaFim').focus();
     await p.keyboard.press('End');
-    await p.click('#lerChatTrecho');
+    await ler(p);
     await p.waitForSelector('#pararChatTrecho:not([hidden])');
     assert.ok(await p.locator('#lerChatTrecho').isDisabled());
     await p.waitForFunction(() => /Lendo o chat de tchubi/.test(document.getElementById('estadoChatTrecho').textContent));
@@ -259,7 +266,7 @@ test('parar a leitura do trecho guarda o que veio, e ler outra vez acaba só o q
     assert.ok(guardadas > 0 && guardadas < 70, `guardou ${guardadas}`);
     const cursores = [];
     p.on('request', (q) => { if (q.url().includes('/messages')) cursores.push(Number(new URL(q.url()).searchParams.get('cursor')) / 1000); });
-    await p.click('#lerChatTrecho');
+    await ler(p);
     await p.waitForFunction(() => /^Chat de tchubi, de 21:00:00 até 21:10:00: 70 mensagens/.test(document.getElementById('estadoChatTrecho').textContent), null, { timeout: 20000 });
     // O bocado que já tinha vindo não se pede outra vez.
     assert.ok(cursores.every((ms) => ms > T + 5 * 60_000 - 1000), `voltou ao princípio: ${cursores.map((ms) => (ms - T) / 1000)}`);
@@ -295,16 +302,23 @@ test('clicar na faixa escolhe a pessoa, e "Ler chat: tudo" lê o tempo todo em q
     await trilho.click({ position: { x: caixa.width * 0.3, y: caixa.height / 2 } });
     assert.ok(await p.locator('#acoesFaixa').isHidden());
 
-    // O nome abre a barra, com as quatro escolhas.
+    // O nome abre o assistente no passo 1, com as duas escolhas e o resumo do que vai acontecer.
     await p.click('#faixas button.nome[data-quem="outro"]');
-    for (const id of ['chatTrechoAbrir', 'chatTudo', 'detetarTrechoAbrir', 'detetarTudo']) {
-      assert.ok(await p.locator(`#${id}`).isVisible(), id);
-    }
-    assert.equal(await p.locator('#chatTudo').innerText(), 'Ler chat: tudo');
+    for (const id of ['escolherChat', 'escolherDetetar', 'fecharAcoes']) assert.ok(await p.locator(`#${id}`).isVisible(), id);
+    assert.ok(await p.locator('#voltarAcoes').isHidden(), 'no passo 1 não há para onde voltar');
+    assert.match(await p.locator('#acoesResumo').innerText(), /^O que fazer com outro\?/);
+    await p.click('#escolherChat');
+    // Passo 2: um trecho ou tudo, e o tudo diz o que é.
+    assert.match(await p.locator('#acoesResumo').innerText(), /^Ler o chat de outro: um trecho ou tudo\?/);
+    assert.match(await p.locator('#escolherTudo').innerText(), /todo o tempo ao vivo de outro/);
+    await p.click('#escolherTudo');
+    // Passo 4 (o tudo salta as alças): o resumo diz o que o botão Ler vai fazer.
     assert.ok(await p.locator('#chatTrecho').isHidden(), 'sem trecho, não há alças');
+    assert.match(await p.locator('#acoesResumo').innerText(), /^Ler o chat de outro, todo o tempo ao vivo\.$/);
+    assert.equal(await p.locator('#lerChatTrecho').innerText(), 'Ler');
     const cursores = [];
     p.on('request', (q) => { if (q.url().includes('/messages')) cursores.push([q.url().match(/channels\/([^/]+)/)[1], Number(new URL(q.url()).searchParams.get('cursor')) / 1000]); });
-    await p.click('#chatTudo');
+    await ler(p);
     await p.waitForFunction(() => /^Chat de outro, de 21:00:00 até 21:10:00: 30 mensagens/.test(document.getElementById('estadoChatTrecho').textContent), null, { timeout: 20000 });
     assert.ok(cursores.length && cursores.every(([c]) => c === 'outro' || c === '1001'), JSON.stringify(cursores));
     assert.equal(await p.evaluate(() => window.__evento.mensagens.get('tchubi')), undefined);
@@ -316,11 +330,16 @@ test('clicar na faixa escolhe a pessoa, e "Ler chat: tudo" lê o tempo todo em q
     assert.equal(await p.locator('#chatVideoTitulo').innerText(), 'Chat de outro');
     // Tudo outra vez não pede nada.
     cursores.length = 0;
-    await p.click('#chatTudo');
+    await ler(p);
     await p.waitForFunction(() => /já estava lido/.test(document.getElementById('estadoChatTrecho').textContent), null, { timeout: 5000 });
     assert.equal(cursores.length, 0);
-    // Esc fecha a barra e devolve o foco ao nome.
-    await p.locator('#chatTudo').focus();
+    // Esc recua um passo de cada vez (o tudo volta ao passo 2), e no passo 1 fecha e devolve o foco ao nome.
+    await p.locator('#lerChatTrecho').focus();
+    await p.keyboard.press('Escape');
+    assert.ok(await p.locator('#escolherTudo').isVisible());
+    assert.equal(await p.evaluate(() => document.activeElement.id), 'escolherTudo', 'o foco na última escolha');
+    await p.keyboard.press('Escape');
+    assert.ok(await p.locator('#escolherChat').isVisible());
     await p.keyboard.press('Escape');
     assert.ok(await p.locator('#acoesFaixa').isHidden());
     assert.equal(await p.evaluate(() => document.activeElement.dataset.quem), 'outro');
@@ -338,7 +357,7 @@ test('Todos: o trecho tem as alças na faixa geral e lê cada um nesse trecho; t
     await p.locator('#alcaFim').focus();
     await p.keyboard.press('End');
     for (let k = 0; k < 8; k++) await p.keyboard.press('Shift+ArrowLeft');
-    await p.click('#lerChatTrecho');
+    await ler(p);
     await p.waitForFunction(() => /^Chat de tchubi, de 21:00:00 até 21:02:00/.test(document.getElementById('estadoChatTrecho').textContent), null, { timeout: 15000 });
 
     // Todos, trecho: as alças sobem para a faixa geral, e o trecho das 21:00 às 21:04 é lido de cada um.
@@ -349,7 +368,7 @@ test('Todos: o trecho tem as alças na faixa geral e lê cada um nesse trecho; t
     for (let k = 0; k < 2; k++) await p.keyboard.press('Shift+ArrowRight');
     const cursores = [];
     p.on('request', (q) => { if (q.url().includes('/messages')) cursores.push([q.url().match(/channels\/([^/]+)/)[1], (Number(new URL(q.url()).searchParams.get('cursor')) - T) / MIN]); });
-    await p.click('#lerChatTrecho');
+    await ler(p);
     await p.waitForFunction(() => /^Chat de 2 pessoas lido/.test(document.getElementById('estadoChatTrecho').textContent), null, { timeout: 20000 });
     const msgs = await p.evaluate(() => ['tchubi', 'outro'].map((c) => (window.__evento.mensagens.get(c) || []).length));
     assert.deepEqual(msgs, [12, 12], 'quatro minutos de cada um, três por minuto');
@@ -358,10 +377,14 @@ test('Todos: o trecho tem as alças na faixa geral e lê cada um nesse trecho; t
     // O lido de todos aparece na faixa geral.
     assert.ok(await p.locator('#faixas .faixaGeral .trilho .lido').count() > 0);
 
-    // Todos, tudo: a noite toda de cada um, só o que falta.
+    // Todos, tudo: a noite toda de cada um, só o que falta. Voltar recua ao passo 3 e depois ao 2.
     await p.click('#voltarAcoes');
+    assert.ok(await p.locator('#usarTrecho').isVisible());
+    await p.click('#voltarAcoes');
+    await p.click('#escolherTudo');
+    assert.match(await p.locator('#acoesResumo').innerText(), /^Ler o chat de todos, todo o tempo ao vivo\.$/);
     cursores.length = 0;
-    await p.click('#chatTudo');
+    await ler(p);
     await p.waitForFunction(() => /^Chat de 2 pessoas lido: 100 mensagens/.test(document.getElementById('estadoChatTrecho').textContent), null, { timeout: 25000 });
     assert.ok(cursores.every(([, m]) => m > 4), `voltou ao que já tinha: ${JSON.stringify(cursores)}`);
     assert.deepEqual(await p.evaluate(() => ['tchubi', 'outro'].map((c) => window.__evento.mensagens.get(c).length)), [70, 30]);
@@ -377,6 +400,7 @@ test('com o toque, as alças e os botões da barra têm 44 px', semNavegador, as
   p.on('pageerror', (e) => erros.push(String(e.message)));
   await p.addInitScript(() => { try { localStorage.setItem('replay.idioma', 'pt'); } catch { /* nada */ } });
   await abrirNoite(p, ['tchubi', 'outro']);
+  await p.click('#usarTrecho');
   const medidas = await p.evaluate(() => {
     if (!matchMedia('(pointer: coarse)').matches) return null;
     const ids = ['alcaInicio', 'alcaFim', 'lerChatTrecho', 'voltarAcoes', 'fecharAcoes', 'zoomMais', 'zoomMenos'];

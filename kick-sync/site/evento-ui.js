@@ -650,10 +650,16 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
     // Menos de um segundo por ler é a fronteira entre duas janelas, e não chat.
     return falta.filter(([a, b]) => b - a >= 1000);
   }
+  // A mesma escolha em dois sítios: no painel do lance do mapa e no último passo do Ler chat da faixa
+  // (o dono, 10/10: "lembra que no chat tem a opção da precisão"). Mudar um muda o outro.
   function pintarComoPico() {
     const { fator, minimo } = SENSIBILIDADES[sensibilidade];
-    $('sensibilidade').value = sensibilidade;
-    $('comoPico').textContent = t('lance.comoPico', { fator: fator.toLocaleString(idiomaActual()), minimo });
+    const frase = t('lance.comoPico', { fator: fator.toLocaleString(idiomaActual()), minimo });
+    for (const [lista, nota] of [['sensibilidade', 'comoPico'], ['sensibilidadeFaixa', 'comoPicoFaixa']]) {
+      if (!$(lista)) continue;
+      $(lista).value = sensibilidade;
+      $(nota).textContent = frase;
+    }
   }
   let chatDeTodos = false;
   async function lerChatDoTime(e, { todos = false } = {}) {
@@ -1237,8 +1243,8 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
       }
       if (ev.escolha) lerChatDoTime(ev.escolha, { todos: true });
     };
-    $('sensibilidade').onchange = () => {
-      sensibilidade = SENSIBILIDADES[$('sensibilidade').value] ? $('sensibilidade').value : 'normal';
+    const mudarSensibilidade = (e) => {
+      sensibilidade = SENSIBILIDADES[e.target.value] ? e.target.value : 'normal';
       try { localStorage.setItem(GUARDADA_SENS, sensibilidade); } catch { /* janela privada */ }
       for (const c of janelasLidas.keys()) ev.marcas.set(c, marcasDoChat(c));
       pintarComoPico();
@@ -1247,6 +1253,8 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
       const u = ultimaLeitura;
       if (u && u.e === ev.escolha) pintarPicos(u.e, u.doTime, u.deMs, u.ateMs, u.todos);
     };
+    $('sensibilidade').onchange = mudarSensibilidade;
+    if ($('sensibilidadeFaixa')) $('sensibilidadeFaixa').onchange = mudarSensibilidade;
     pintarComoPico();
     $('mostrarMapa').onclick = () => mostrarMapa(!$('evento').classList.contains('comMapa'));
     $('fecharEvento').onclick = fecharEvento;
@@ -1383,5 +1391,5 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
     const dica = document.querySelector('#evento .dica');
     if (dica) { dica.dataset.t = 'evento.dicaToque'; dica.textContent = t('evento.dicaToque'); }
   }
-  return { abrirElenco, abrirDoTexto, abrirDoLink, abrirGuardado, esquecerEvento, lerChatTrecho, faltaLer, estado: ev };
+  return { abrirElenco, abrirDoTexto, abrirDoLink, abrirGuardado, esquecerEvento, lerChatTrecho, faltaLer, pintarComoPico, estado: ev };
 }

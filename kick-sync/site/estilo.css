@@ -618,8 +618,13 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
    que ignora este ficheiro, e num painel escuro sai azul-Windows. */
 #barra {
   appearance: none; width: 100%; height: 18px; padding: 0; margin: 0;
-  background: transparent; border: 0; cursor: pointer; touch-action: manipulation;
+  background: transparent; border: 0; cursor: pointer; touch-action: none;
 }
+/* O rato e o dedo na barra são tratados pela página (com a mesma conta da agulha); o pino nativo fica
+   invisível, porque a cabeça da agulha é que mostra onde se está. O teclado continua no input. */
+.barraLinha { touch-action: none; }
+#barra::-webkit-slider-thumb { opacity: 0; }
+#barra::-moz-range-thumb { opacity: 0; }
 #barra::-webkit-slider-runnable-track { height: 4px; border-radius: var(--r-fio); background: var(--sup-4); }
 #barra::-moz-range-track { height: 4px; border-radius: var(--r-fio); background: var(--sup-4); }
 /* O pino ao CENTRO da calha, e não meio pixel acima.
@@ -668,10 +673,22 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 
 /* A agulha do instante actual, por cima de todas as faixas. Branca de
    propósito: é a única coisa que tem de se ver sobre qualquer cor. */
+.relogio { position: relative; }
 .cursor {
-  position: absolute; top: 0; bottom: 0; width: 2px; z-index: 2;
+  position: absolute; top: 0; left: 0; width: 2px; height: 0; z-index: 4;
   background: var(--tinta); box-shadow: 0 0 0 1px #0009; pointer-events: none;
 }
+.cursor[hidden] { display: none; }
+/* A cabeça da agulha: a bolinha que se arrasta, no topo da linha e centrada nela. */
+.cabecaAgulha {
+  position: absolute; left: 50%; top: 0; width: 16px; height: 16px; transform: translate(-50%, -50%);
+  border-radius: var(--r-redondo); background: var(--tinta); border: 2px solid var(--sup-0);
+  pointer-events: auto; cursor: grab; touch-action: none;
+}
+.cabecaAgulha:hover, .cursor.aArrastar .cabecaAgulha { background: var(--acento); }
+.cursor.aArrastar .cabecaAgulha { cursor: grabbing; }
+.relogio:has(#barra:focus-visible) .cabecaAgulha { box-shadow: var(--foco); }
+@media (pointer: coarse) { .cabecaAgulha { width: 24px; height: 24px; } }
 
 /* ── a régua: as horas e as kills marcadas ──────────────────────────────── */
 .relogio > .linha { order: 1; }          /* o cabeçalho: zoom, ângulos, saltos grandes */
@@ -1833,12 +1850,34 @@ body:is(.videoAberto, :has(#palco:not([hidden]))) .mostrarMapa { background: var
   display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2) var(--e3); min-width: 0;
   padding: var(--e2); border: 1px solid var(--acento-fio); border-radius: var(--r-2); background: var(--sup-1);
 }
-.acoesMenu, .acoesTrecho { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2); min-width: 0; flex: 0 1 auto; }
-/* O menu ocupa a linha, para o fechar ficar ao lado dele mesmo quando os botões quebram em duas filas. */
-.acoesMenu { flex: 1 1 0; }
-.acoesMenu[hidden], .acoesTrecho[hidden], .acoesCorpo button[hidden] { display: none; }
+.acoesCorpo [hidden] { display: none !important; }
 .acoesCorpo button { min-height: 30px; font-size: var(--t-menor); padding: 0 var(--e3); }
-.acoesCorpo #fecharAcoes { margin-left: auto; width: 30px; min-width: 30px; padding: 0; }
+.acoesCorpo #fecharAcoes { width: 30px; min-width: 30px; padding: 0; }
+/* O assistente: em cima o resumo do que vai acontecer, com Voltar e fechar; por baixo, o passo. */
+.acoesCorpo { flex-direction: column; align-items: stretch; flex-wrap: nowrap; }
+.acoesTopo { display: flex; align-items: center; gap: var(--e3); min-width: 0; }
+.acoesResumo { flex: 1 1 auto; min-width: 0; margin: 0; font-size: var(--t-menor); font-weight: 500; color: var(--tinta); }
+.acoesPassoN { flex: none; font-size: var(--t-micro); color: var(--tinta-3); white-space: nowrap; }
+.ic-esq { transform: scaleX(-1); }
+.acoesPasso { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2) var(--e3); min-width: 0; }
+/* As escolhas grandes dos passos 1 e 2: um título e uma frase do que fazem. */
+.acoesEscolha { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14em), 1fr)); }
+.acoesCorpo button.grande {
+  display: grid; justify-items: start; align-content: center; gap: 2px; text-align: left;
+  min-height: 56px; padding: var(--e3) var(--e4); font-size: var(--t-base);
+}
+.grande .rotulo { display: inline-flex; align-items: center; gap: var(--e2); font-weight: 600; }
+.grande .nota { font-size: var(--t-menor); color: var(--tinta-2); font-weight: 400; }
+.grande.ultima { border-color: var(--acento-fio); background: var(--acento-eco); }
+.grande .ultimaVez { font-size: var(--t-micro); color: var(--acento-alto); font-weight: 500; }
+.acoesFinal { display: block; }
+.passo4Chat { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2) var(--e4); }
+.passo4Chat select { width: auto; min-height: 30px; padding-top: 4px; padding-bottom: 4px; }
+.passo4Chat .nota { flex: 1 1 16em; margin: 0; font-size: var(--t-menor); color: var(--tinta-2); }
+.passo4Detetar { display: grid; gap: var(--e3); }
+.passo4Detetar > #detetarTrecho, .passo4Chat > #lerChatTrecho { justify-self: start; min-height: 36px; padding: 0 var(--e5); font-size: var(--t-base); }
+.acoesTrabalho { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e3); min-width: 0; }
+.acoesTrabalho:not(:has(#pararChatTrecho:not([hidden]))):not(:has(.estadoChatTrecho:not(:empty))) { display: none; }
 .chatTrechoHoras { font: 400 var(--t-menor)/1.2 var(--letra-mono); font-variant-numeric: tabular-nums; color: var(--tinta-2); white-space: nowrap; }
 .estadoChatTrecho { flex: 1 1 14em; min-width: 0; font-size: var(--t-menor); }
 
@@ -1891,26 +1930,10 @@ body:is(.videoAberto, :has(#palco:not([hidden]))) .mostrarMapa { background: var
   #tiposArquivoElenco { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 }
 
-/* Os filtros da detecção, dentro da barra da faixa: uma linha inteira, fechada por omissão. */
-.filtrosDetecao { flex: 1 1 100%; min-width: 0; border-top: 1px solid var(--linha); padding-top: var(--e2); }
-.filtrosDetecao[hidden] { display: none; }
-.filtrosDetecao > summary {
-  display: flex; align-items: center; gap: var(--e3); min-height: 30px; cursor: pointer; list-style: none;
-  font-size: var(--t-menor); font-weight: 600; color: var(--tinta); border-radius: var(--r-2); padding: 0 var(--e2);
-}
-.filtrosDetecao > summary::-webkit-details-marker { display: none; }
-.filtrosDetecao > summary::before {
-  content: ''; width: 0; height: 0; border-style: solid; border-width: 4px 0 4px 6px;
-  border-color: transparent transparent transparent var(--tinta-2); transition: transform var(--mov-rapido);
-}
-.filtrosDetecao[open] > summary::before { transform: rotate(90deg); }
-.filtrosDetecao > summary:hover { background: var(--sup-3); }
-.filtrosDetecao > summary:focus-visible { outline: none; box-shadow: var(--foco); }
-.filtrosResumo { font-weight: 400; color: var(--tinta-2); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.filtrosCorpo { padding: var(--e2) var(--e2) var(--e3); display: grid; gap: var(--e3); }
-.filtrosCorpo > .nota { margin: 0; font-size: var(--t-menor); color: var(--tinta-2); }
+/* Os filtros da detecção, no último passo do assistente. */
 .filtrosLista { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: var(--e2); grid-template-columns: repeat(auto-fit, minmax(min(100%, 17em), 1fr)); }
 .filtrosLista > legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.filtrosLista > .nota { grid-column: 1 / -1; margin: 0; font-size: var(--t-menor); color: var(--tinta-2); }
 .filtro { display: block; min-width: 0; padding: var(--e2) var(--e3); border: 1px solid var(--linha); border-radius: var(--r-2); background: var(--sup-2); font-size: var(--t-menor); }
 .filtro label, label.filtro { display: flex; align-items: flex-start; gap: var(--e3); cursor: pointer; }
 .filtro input[type=checkbox] { flex: 0 0 auto; width: 17px; height: 17px; margin: 2px 0 0; accent-color: var(--acento); }
@@ -1922,14 +1945,35 @@ body:is(.videoAberto, :has(#palco:not([hidden]))) .mostrarMapa { background: var
 .filtro.desligado { opacity: .7; grid-column: 1 / -1; }
 .filtro.desligado label, label.filtro.desligado { cursor: default; }
 @media (pointer: coarse) {
-  .filtrosDetecao > summary { min-height: 44px; }
+  .maisOpcoes > summary, .opcao select, .opcao .margens input, .passo4Chat select { min-height: 44px; }
   .filtro input[type=checkbox] { width: 22px; height: 22px; min-width: 22px; margin-top: 0; }
   .filtro label, label.filtro { min-height: 44px; align-items: center; }
   .filtroChat input[type=text] { min-height: 44px; }
 }
 /* Por cima das faixas, quando elas são uma caixa baixa que rola (o vídeo aberto num ecrã largo). */
-.filtrosDetecao.flutua > .filtrosCorpo {
-  position: fixed; z-index: 40; left: var(--filtros-x); bottom: var(--filtros-baixo); width: var(--filtros-largura);
-  max-height: var(--filtros-alto); overflow: auto; padding: var(--e4);
-  background: var(--sup-2); border: 1px solid var(--acento-fio); border-radius: var(--r-3); box-shadow: var(--sombra-flutua);
+.acoesFaixa.flutua > .acoesCorpo {
+  position: fixed; z-index: 40; left: var(--flutua-x); bottom: var(--flutua-baixo); width: var(--flutua-largura);
+  max-height: var(--flutua-alto); overflow: auto; padding: var(--e4);
+  background: var(--sup-2); box-shadow: var(--sombra-flutua); border-radius: var(--r-3);
 }
+.acoesFaixa.flutua > .acoesVazio { display: none; }
+/* Mais opções: fechado por omissão, com cada opção e a frase do que ela faz. */
+.maisOpcoes > summary {
+  display: inline-flex; align-items: center; gap: var(--e2); min-height: 30px; cursor: pointer; list-style: none;
+  font-size: var(--t-menor); font-weight: 600; color: var(--tinta-2); border-radius: var(--r-2); padding: 0 var(--e2);
+}
+.maisOpcoes > summary::-webkit-details-marker { display: none; }
+.maisOpcoes > summary::before {
+  content: ''; width: 0; height: 0; border-style: solid; border-width: 4px 0 4px 6px;
+  border-color: transparent transparent transparent currentColor; transition: transform var(--mov-rapido);
+}
+.maisOpcoes[open] > summary::before { transform: rotate(90deg); }
+.maisOpcoes > summary:hover { color: var(--tinta); background: var(--sup-3); }
+.maisOpcoesCorpo { display: grid; gap: var(--e3); grid-template-columns: repeat(auto-fit, minmax(min(100%, 15em), 1fr)); padding: var(--e2) 0; }
+.opcao { display: grid; gap: var(--e2); align-content: start; font-size: var(--t-menor); padding: var(--e3); border: 1px solid var(--linha); border-radius: var(--r-2); }
+.opcao > span:first-child { font-weight: 600; color: var(--tinta); }
+.opcao .nota { color: var(--tinta-2); }
+.opcao select { min-height: 30px; padding-top: 4px; padding-bottom: 4px; }
+.opcao .margens { display: flex; flex-wrap: wrap; gap: var(--e3); }
+.opcao .margens input { width: 4.5em; min-height: 30px; padding: 4px var(--e2); }
+.opcao .margens label { display: inline-flex; align-items: center; gap: var(--e2); }
