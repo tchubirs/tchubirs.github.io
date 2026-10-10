@@ -4,6 +4,10 @@
 
 O projeto tem acesso ao OpenAI Codex através da skill-codex. O Claude Code é o programador principal e responsável pelas decisões finais. O Codex é um revisor e consultor independente, utilizado seletivamente para aumentar a qualidade do trabalho.
 
+### Escopo definido pelo dono
+
+Usa o Codex só para o front end: a tela que a pessoa vê, a organização da interface, o layout, a hierarquia visual, os textos na tela e a experiência de uso (`site/index.html`, `site/estilo.css`, `site/tokens.css`, `site/idiomas.js` e o código que monta ou mexe na interface). Não o uses para sincronização, áudio, detecção, exportação, segurança ou outras partes internas, a menos que o dono peça.
+
 ### Princípio fundamental
 
 Não invoques o Codex por rotina, por hábito ou apenas porque está disponível. A maioria das tarefas deve ser resolvida diretamente pelo Claude Code.
