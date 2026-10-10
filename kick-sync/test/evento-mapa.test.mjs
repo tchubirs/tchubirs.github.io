@@ -207,6 +207,39 @@ test('o seletor de ordem: A a Z, mais tempo no ar, ao vivo agora, e o instante p
   assert.deepEqual(erros, []);
 });
 
+// O dono, 10/10: "nao faço ideia como voce vai saber quem sao os times". Os times só vêm da lista; sem
+// eles a ordem por time não aparece, e a de partida é quem está ao vivo primeiro.
+test('uma lista sem times não oferece a ordem por time: começa com quem está ao vivo, e o voltar diz isso', semNavegador, async () => {
+  const { p, erros } = await abrir();
+  await kickFalsa(p, { canais: ['tchubi', 'outro', 'lobo'] });
+  await aoVivo(p, 'lobo');
+  await abrirEvento(p, 'tchubi\noutro\nlobo');
+  assert.equal(await p.evaluate(() => window.__evento.ordem.modo), 'aoVivo');
+  assert.equal(await p.locator('#ordemFaixas').inputValue(), 'aoVivo');
+  assert.equal(await p.locator('#ordemFaixas option[value="time"]').evaluate((o) => o.disabled), true);
+  assert.equal(await p.locator('#ordemFaixas option[value="time"]').evaluate((o) => o.hidden), true);
+  assert.deepEqual(await cabecalhos(p), ['Ao vivo agora', 'Fora do ar']);
+  assert.equal((await canaisDoMapa(p))[0], 'lobo');
+  assert.equal(await p.locator('#ordemVoltar').isVisible(), false, 'na ordem de partida não há de onde voltar');
+  assert.equal(await p.locator('#ordemAtiva').innerText(), '');
+
+  await p.selectOption('#ordemFaixas', 'az');
+  assert.equal(await p.locator('#ordemVoltar').innerText(), 'Voltar à ordem inicial: ao vivo primeiro');
+  await p.click('#ordemVoltar');
+  assert.equal(await p.locator('#ordemFaixas').inputValue(), 'aoVivo');
+  assert.equal((await canaisDoMapa(p))[0], 'lobo');
+  assert.equal(await p.locator('#ordemVoltar').isVisible(), false);
+
+  // Com times, a opção existe e diz de onde eles vêm.
+  await abrirEvento(p, 'Time Alfa: tchubi, lobo\nTime Beta: outro');
+  assert.equal(await p.locator('#ordemFaixas').inputValue(), 'time');
+  assert.equal(await p.locator('#ordemFaixas option[value="time"]').innerText(), 'por time da lista');
+  assert.equal(await p.locator('#ordemFaixas option[value="time"]').evaluate((o) => o.disabled), false);
+  await p.selectOption('#ordemFaixas', 'az');
+  assert.equal(await p.locator('#ordemVoltar').innerText(), 'Voltar à ordem por time da lista');
+  assert.deepEqual(erros, []);
+});
+
 // ── 3. a régua com os dias e o fuso ─────────────────────────────────────────
 
 test('a régua escreve a data em cada mudança de dia, com um traço, e diz que as horas são do fuso do aparelho', semNavegador, async () => {

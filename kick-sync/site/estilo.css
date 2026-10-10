@@ -1686,6 +1686,16 @@ body:is(.videoAberto, :has(#palco:not([hidden]))) .mostrarMapa { display: inline
 body:is(.videoAberto, :has(#palco:not([hidden]))) #evento:not(.comMapa) > :not(.barraEvento) { display: none; }
 body:is(.videoAberto, :has(#palco:not([hidden]))) #evento.comMapa .mapaRolo { height: 34vh; }
 body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) > #evento { flex: 0 0 auto; margin-bottom: var(--e2); padding: var(--e3) var(--e4); }
+/* O mapa aberto por cima dos vídeos (o dono, 10/10: "nao da pra ver nada direito"). No PC a página tem a
+   altura do ecrã e não rola; com os 600 px do mapa e do painel do lance lá dentro, o palco ficava com o
+   resto, e o visor encolhia para uma miniatura de 170 px com os ângulos por cima da linha do tempo. Com o
+   mapa aberto a página volta a rolar e o palco guarda a altura de um ecrã inteiro, por baixo do mapa. */
+@media (min-width: 1080px) and (min-height: 640px) {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))):has(#evento.comMapa:not([hidden])) { height: auto; overflow: visible; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))):has(#evento.comMapa:not([hidden])) #palco:not([hidden]) {
+    flex: 0 0 auto; height: calc(100vh - var(--e5)); min-height: 600px;
+  }
+}
 .dica { margin: 0; }
 .reguaEvento { position: relative; height: 20px; margin: 0 1px; overflow: hidden; color: var(--tinta-3); font-family: var(--letra-mono); font-size: var(--t-micro); cursor: pointer; }
 .reguaEvento span { position: absolute; top: 2px; transform: translateX(-50%); white-space: nowrap; pointer-events: none; }

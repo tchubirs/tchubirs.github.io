@@ -193,7 +193,7 @@ export function montarEvento({
     ev.escolha = null;
     ev.cursor = null;
     ev.falhados = new Set();
-    ev.ordem = { modo: 'time', ms: null };
+    ev.ordem = { modo: ordemInicial(), ms: null };
     ev.fechadasOrdem = new Set();
     ev.info = info;
     ev.confirmar = null;
@@ -629,9 +629,16 @@ export function montarEvento({
 
   // ── a ordem das faixas ─────────────────────────────────────────────────
 
+  // Os times só existem quando a lista os traz (uma coluna de time na planilha, ou "Time: canal1, canal2"
+  // no texto colado). Sem eles a ordem "por time" era uma pergunta sem resposta (o dono, 10/10: "nao faço
+  // ideia como voce vai saber quem sao os times"): a opção some, e a ordem de partida é quem está ao vivo
+  // primeiro e depois quem saiu do ar há menos tempo.
+  const temTimes = () => !!ev.elenco?.times?.length;
+  const ordemInicial = () => (temTimes() ? 'time' : 'aoVivo');
+
   function ordenar(modo, ms = null) {
     const modos = ['time', 'instante', 'aoVivo', 'tempo', 'az'];
-    const m = modos.includes(modo) ? modo : 'time';
+    const m = modos.includes(modo) && (modo !== 'time' || temTimes()) ? modo : ordemInicial();
     let quando = ms;
     if (m === 'instante' && !Number.isFinite(quando)) {
       quando = ev.cursor?.ms ?? ev.escolha?.ms ?? ev.ordem.ms ?? (ev.vista ? (ev.vista.deMs + ev.vista.ateMs) / 2 : null);
@@ -650,13 +657,20 @@ export function montarEvento({
   }
 
   function pintarOrdem() {
+    // A lista mudou de times (Adicionar lista, Corrigir elenco): sem times não se fica na ordem por time.
+    if (ev.ordem.modo === 'time' && !temTimes()) ev.ordem = { modo: ordemInicial(), ms: null };
     const o = ev.ordem;
+    const porTime = $('ordemFaixas').querySelector('option[value="time"]');
+    if (porTime) { porTime.hidden = !temTimes(); porTime.disabled = !temTimes(); }
     $('ordemFaixas').value = o.modo;
     const opcao = $('ordemFaixas').querySelector('option[value="instante"]');
     if (opcao) opcao.textContent = o.modo === 'instante' ? t('ordem.instanteHora', { hora: quandoCurto(o.ms) }) : t('ordem.instante');
-    $('ordemVoltar').hidden = o.modo === 'time';
+    const inicial = ordemInicial();
+    $('ordemVoltar').hidden = o.modo === inicial;
+    $('ordemVoltarTime').hidden = inicial !== 'time';
+    $('ordemVoltarAoVivo').hidden = inicial === 'time';
     $('ordemAtiva').textContent = o.modo === 'instante' ? t('ordem.ativaInstante', { hora: quandoCurto(o.ms) })
-      : o.modo === 'time' ? '' : t('ordem.ativa', { ordem: t(`ordem.${o.modo}`) });
+      : o.modo === inicial ? '' : t('ordem.ativa', { ordem: t(`ordem.${o.modo}`) });
   }
 
   function aquiDe(evento) {
@@ -686,6 +700,9 @@ export function montarEvento({
       return;
     }
     if ((alvo.tipo === 'time' || alvo.tipo === 'resumo') && ev.ordem.modo !== 'time') {
+      // Um grupo só é toda a gente: fechá-lo deixava o evento numa linha só (como o "Sem time", abaixo).
+      const grupos = new Set(ev.mapa.linhas.filter((x) => x.tipo === 'time' || x.tipo === 'resumo').map((x) => x.time));
+      if (grupos.size <= 1 && !ev.fechadasOrdem.has(alvo.time)) return;
       if (ev.fechadasOrdem.has(alvo.time)) ev.fechadasOrdem.delete(alvo.time);
       else ev.fechadasOrdem.add(alvo.time);
       remontar();
@@ -860,33 +877,26 @@ export function montarEvento({
     // Menos de um segundo por ler é a fronteira entre duas janelas, e não chat.
     return falta.filter(([a, b]) => b - a >= 1000);
   }
-  // A mesma escolha em dois sítios: no painel do lance do mapa e no último passo do Ler chat da faixa
-  // (o dono, 10/10: "lembra que no chat tem a opção da precisão"). Mudar um muda o outro.
+  // A escolha mora no último passo do Ler chat da faixa (o dono, 10/10: "lembra que no chat tem a opção
+  // da precisão"). Saiu do painel do lance do mapa ("isso deixa só quando tiver na outra tela do editor");
+  // continua guardada e vale para os picos do mapa também.
   function pintarComoPico() {
     const { fator, minimo } = SENSIBILIDADES[sensibilidade];
     const frase = t('lance.comoPico', { fator: fator.toLocaleString(idiomaActual()), minimo });
-    for (const [lista, nota] of [['sensibilidade', 'comoPico'], ['sensibilidadeFaixa', 'comoPicoFaixa']]) {
-      if (!$(lista)) continue;
-      $(lista).value = sensibilidade;
-      $(nota).textContent = frase;
-    }
+    if (!$('sensibilidadeFaixa')) return;
+    $('sensibilidadeFaixa').value = sensibilidade;
+    $('comoPicoFaixa').textContent = frase;
   }
-  let chatDeTodos = false;
-  async function lerChatDoTime(e, { todos = false } = {}) {
+  async function lerChatDoTime(e) {
     chatControlo?.abort();
     const controlo = new AbortController();
     chatControlo = controlo;
-    chatDeTodos = todos;
-    $('chatTodos').textContent = t(todos ? 'lance.chatTodosParar' : 'lance.chatTodos');
     const deMs = Math.floor((e.ms - CHAT_JANELA_MS / 2) / CHAT_GRELHA_MS) * CHAT_GRELHA_MS;
     const ateMs = Math.min(Date.now(), deMs + CHAT_JANELA_MS);
-    const base = todos
-      ? [e.canal, ...ev.resultados.filter((r) => r.estado === 'ok' && r.slug !== e.canal).map((r) => r.slug)]
-      : colegas(e.canal);
-    const doTime = base.filter((c) => noArEm(ev.coberturas, c, e.ms));
+    const doTime = colegas(e.canal).filter((c) => noArEm(ev.coberturas, c, e.ms));
     const canais = doTime.filter((c) => !chatLido.has(`${c}|${deMs}`) && faltaLer(c, deMs, ateMs).length);
     let feitos = 0;
-    const aLer = todos ? 'lance.aLerChatTodos' : 'lance.aLerChat';
+    const aLer = 'lance.aLerChat';
     if (canais.length) $('estadoChat').textContent = t(aLer, { feitos, total: canais.length });
     for (const c of canais) {
       if (controlo.signal.aborted) return;
@@ -900,11 +910,9 @@ export function montarEvento({
       pintar();
     }
     if (controlo.signal.aborted) return;
-    chatDeTodos = false;
-    $('chatTodos').textContent = t('lance.chatTodos');
-    ultimaLeitura = { e, doTime, deMs, ateMs, todos };
-    pintarPicos(e, doTime, deMs, ateMs, todos);
-    if (!todos) await adiantarPicos(doTime, deMs, controlo.signal).catch(() => {});
+    ultimaLeitura = { e, doTime, deMs, ateMs };
+    pintarPicos(e, doTime, deMs, ateMs);
+    await adiantarPicos(doTime, deMs, controlo.signal).catch(() => {});
   }
   let ultimaLeitura = null;
 
@@ -1014,7 +1022,7 @@ export function montarEvento({
 
   // Os picos do time também como botões com a hora: no telemóvel uma marca de 3 px no mapa é difícil
   // de acertar, e o botão diz logo a que horas foi. Ficam os mais perto do momento escolhido.
-  function pintarPicos(e, doTime, deMs, ateMs, todos = false) {
+  function pintarPicos(e, doTime, deMs, ateMs) {
     const porMinuto = new Map();
     for (const c of doTime) {
       for (const m of ev.marcas.get(c) || []) {
@@ -1025,7 +1033,7 @@ export function montarEvento({
       }
     }
     const lista = [...porMinuto.values()];
-    const quem = t(todos ? 'lance.deTodos' : 'lance.doTime');
+    const quem = t('lance.doTime');
     $('estadoChat').textContent = !doTime.length ? ''
       : lista.length ? tn(lista.length, 'lance.umPicoChat', 'lance.picosChat', { quem }) : t('lance.semPicoChat', { quem });
     const perto = lista.sort((a, b) => Math.abs(a.ms - e.ms) - Math.abs(b.ms - e.ms))
@@ -1148,9 +1156,24 @@ export function montarEvento({
     livre = new Promise((r) => { soltar = r; });
     try {
       await abrirLance(canais, e.ms, foco, opcoes);
+      // O dono, 10/10: com o lance aberto o que importa é o visor. Se o mapa voltou a abrir enquanto os
+      // vídeos carregavam, fecha-se outra vez na barra, e num ecrã estreito a página desce até ao visor.
+      mostrarMapa(false);
+      irAoVisor();
     } finally {
       soltar();
     }
+  }
+
+  /** Pôr o visor do lance à vista. No PC a página não rola (ver estilo.css), no telemóvel desce até ele. */
+  function irAoVisor() {
+    const palco = document.getElementById('palco');
+    if (!palco || palco.hidden) return;
+    if (window.innerWidth >= 1080 && window.innerHeight >= 640) { window.scrollTo({ top: 0 }); return; }
+    // Dois quadros: no primeiro a barra do evento ainda está a encolher, e o visor ficava cortado no topo.
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      window.scrollTo({ top: Math.max(0, palco.getBoundingClientRect().top + window.scrollY - 16) });
+    }));
   }
 
   // ── abrir mais do que o time ───────────────────────────────────────────
@@ -1760,18 +1783,6 @@ export function montarEvento({
     // "Evento inteiro" é o trecho onde a maioria esteve, e não os 7 a 30 dias de VODs de cada canal.
     $('verTudo').onclick = () => { ev.vista = { ...(ev.trecho || ev.limites) }; pintar(); };
     $('verLance').onclick = verLance;
-    // Os picos de todos, e não só do time: um botão, porque são até 120 pedidos por canal. Carregar outra
-    // vez pára a leitura; o que já se leu fica.
-    $('chatTodos').onclick = () => {
-      if (chatDeTodos) {
-        chatControlo?.abort();
-        chatDeTodos = false;
-        $('chatTodos').textContent = t('lance.chatTodos');
-        $('estadoChat').textContent = '';
-        return;
-      }
-      if (ev.escolha) lerChatDoTime(ev.escolha, { todos: true });
-    };
     const mudarSensibilidade = (e) => {
       sensibilidade = SENSIBILIDADES[e.target.value] ? e.target.value : 'normal';
       try { localStorage.setItem(GUARDADA_SENS, sensibilidade); } catch { /* janela privada */ }
@@ -1780,9 +1791,8 @@ export function montarEvento({
       aoMudarPicos();
       pintar();
       const u = ultimaLeitura;
-      if (u && u.e === ev.escolha) pintarPicos(u.e, u.doTime, u.deMs, u.ateMs, u.todos);
+      if (u && u.e === ev.escolha) pintarPicos(u.e, u.doTime, u.deMs, u.ateMs);
     };
-    $('sensibilidade').onchange = mudarSensibilidade;
     if ($('sensibilidadeFaixa')) $('sensibilidadeFaixa').onchange = mudarSensibilidade;
     pintarComoPico();
     $('mostrarMapa').onclick = () => mostrarMapa(!$('evento').classList.contains('comMapa'));
@@ -1800,7 +1810,7 @@ export function montarEvento({
     });
     // A ordem das faixas: o seletor, o voltar, e um clique na régua.
     $('ordemFaixas').onchange = () => ordenar($('ordemFaixas').value);
-    $('ordemVoltar').onclick = () => { ordenar('time'); $('ordemFaixas').focus(); };
+    $('ordemVoltar').onclick = () => { ordenar(ordemInicial()); $('ordemFaixas').focus(); };
     $('reguaEvento').addEventListener('click', (e) => {
       if (!ev.vista) return;
       const caixa = $('mapaRolo').getBoundingClientRect();

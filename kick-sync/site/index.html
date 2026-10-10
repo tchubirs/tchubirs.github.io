@@ -315,7 +315,7 @@
   <div class="linha ferramentasMapa">
     <label class="pequeno ordemCampo"><span data-t="ordem.rotulo">Ordem das faixas</span>
       <select id="ordemFaixas">
-        <option value="time" data-t="ordem.time">por time</option>
+        <option value="time" data-t="ordem.time">por time da lista</option>
         <option value="instante" data-t="ordem.instante">vídeo no instante escolhido</option>
         <option value="aoVivo" data-t="ordem.aoVivo">ao vivo agora</option>
         <option value="tempo" data-t="ordem.tempo">mais tempo no ar</option>
@@ -323,7 +323,8 @@
       </select>
     </label>
     <output id="ordemAtiva" class="nota" aria-live="polite"></output>
-    <button id="ordemVoltar" class="discreto" hidden data-t="ordem.voltar">Voltar à ordem por time</button>
+    <!-- A ordem de partida é por time quando a lista traz times, e ao vivo primeiro quando não traz. -->
+    <button id="ordemVoltar" class="discreto" hidden><span id="ordemVoltarTime" data-t="ordem.voltar">Voltar à ordem por time da lista</span><span id="ordemVoltarAoVivo" data-t="ordem.voltarAoVivo" hidden>Voltar à ordem inicial: ao vivo primeiro</span></button>
     <span class="espaco"></span>
     <button id="adicionarStreamer" aria-haspopup="dialog"><svg class="ic ic-p" aria-hidden="true"><use href="#i-mais"/></svg><span data-t="adicionar.streamer">Adicionar streamer</span></button>
     <button id="adicionarLista" aria-haspopup="dialog"><svg class="ic ic-p" aria-hidden="true"><use href="#i-arquivo"/></svg><span data-t="adicionar.lista">Adicionar lista</span></button>
@@ -366,17 +367,8 @@
       <output id="estadoLance" class="nota"></output>
       <output id="estadoChat" class="nota"></output>
       <div id="picosChat" class="linha picosChat"></div>
-      <div class="linha chatOpcoes">
-        <button id="chatTodos" data-t="lance.chatTodos">Ler o chat de todos</button>
-        <label class="pequeno"><span data-t="lance.sensibilidade">Sensibilidade</span>
-          <select id="sensibilidade">
-            <option value="normal" data-t="lance.sensNormal">normal</option>
-            <option value="alta" data-t="lance.sensAlta">alta</option>
-            <option value="maxima" data-t="lance.sensMaxima">máxima</option>
-          </select>
-        </label>
-      </div>
-      <p id="comoPico" class="nota"></p>
+      <!-- O Ler o chat de todos e a Sensibilidade saíram daqui (o dono, 10/10: "isso deixa só quando tiver
+           na outra tela do editor a mais avançada"): vivem no assistente da faixa, na linha do tempo. -->
       <ul id="lanceAchados" class="lanceAchados"></ul>
       <p class="nota comoFunciona" data-t="lance.comoFunciona">O Povix escuta o som do jogo e acha quem estava no mesmo lugar nesse segundo. Quem ele achar entra junto quando você abrir o lance.</p>
     </aside>

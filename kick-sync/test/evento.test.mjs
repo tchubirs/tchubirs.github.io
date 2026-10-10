@@ -208,7 +208,10 @@ test('quem chega sem elenco abre um exemplo com o Rust que está ao vivo',
     const n = await p.evaluate(() => window.__evento.mapa.linhas.filter((l) => l.tipo === 'canal').length);
     assert.equal(n, 2, 'o grupo sem time fechou');
     const canais = await p.evaluate(() => window.__evento.mapa.linhas.filter((l) => l.tipo === 'canal').map((l) => l.canal));
-    assert.deepEqual(canais, ['tchubi', 'outro']);
+    // Sem times a ordem de partida é quem está ao vivo primeiro; aqui os dois VODs da Kick falsa já
+    // acabaram, à mesma hora, e ficam por nome.
+    assert.equal(await p.evaluate(() => window.__evento.ordem.modo), 'aoVivo');
+    assert.deepEqual(canais, ['outro', 'tchubi']);
     assert.deepEqual(erros, []);
   });
 
@@ -511,6 +514,9 @@ test('o chat de quem está em foco anda ao lado do vídeo, no tempo dele',
     await p.close();
   });
 
+// O Ler o chat de todos e a Sensibilidade saíram do painel do lance (o dono, 10/10: "isso deixa só quando
+// tiver na outra tela do editor"). O mesmo faz-se na linha do tempo: a faixa Todos lê quem não é do time,
+// e a sensibilidade do assistente da faixa refaz os picos do mapa sem pedir o chat outra vez.
 test('o chat de todos lê quem não é do time, e a sensibilidade muda os picos sem pedir nada outra vez',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
     const { p, erros } = await abrir();
@@ -522,20 +528,27 @@ test('o chat de todos lê quem não é do time, e a sensibilidade muda os picos 
     await clicarNoMapa(p, 'tchubi', T + 2 * 60_000);
     await p.waitForFunction(() => /picos? de chat do time/.test(document.getElementById('estadoChat').textContent), null, { timeout: 15000 });
     assert.equal(await p.evaluate(() => window.__evento.marcas.has('outro')), false, 'o outro time foi lido sem pedir');
-    assert.match(await p.locator('#comoPico').innerText(), /3 vezes .* pelo menos 8/);
+    // O painel do lance já não tem estas opções.
+    for (const id of ['chatTodos', 'sensibilidade', 'comoPico']) assert.equal(await p.locator(`#${id}`).count(), 0, id);
 
-    await p.click('#chatTodos');
-    await p.waitForFunction(() => /de todos/.test(document.getElementById('estadoChat').textContent)
-      && !/Lendo/.test(document.getElementById('estadoChat').textContent), null, { timeout: 15000 });
+    // Os dois na grelha, e na linha do tempo a faixa Todos lê o chat de todos.
+    await p.click('#abrirTodosVod');
+    await p.waitForFunction(() => document.querySelectorAll('.tile').length === 2, null, { timeout: 15000 });
+    await p.click('#faixas button.nome[data-quem="*"]');
+    await p.waitForSelector('#acoesFaixa:not([hidden])');
+    await p.click('#escolherChat');
+    await p.click('#escolherTudo');
+    assert.match(await p.locator('#comoPicoFaixa').innerText(), /3 vezes .* pelo menos 8/);
+    await p.click('#lerChatTrecho');
+    await p.waitForFunction(() => /^Chat de 2 pessoas lido/.test(document.getElementById('estadoChatTrecho').textContent), null, { timeout: 25000 });
     assert.equal(await p.evaluate(() => window.__evento.marcas.has('outro')), true, 'o chat de todos não leu o outro');
-    assert.equal(await p.locator('#chatTodos').innerText(), 'Ler o chat de todos');
 
     const contar = () => p.evaluate(() => [...window.__evento.marcas.values()].reduce((n, l) => n + l.length, 0));
     const normal = await contar();
     let pedidos = 0;
     p.on('request', (q) => { if (q.url().includes('/messages')) pedidos++; });
-    await p.selectOption('#sensibilidade', 'maxima');
-    assert.match(await p.locator('#comoPico').innerText(), /1,5 vezes .* pelo menos 3/);
+    await p.selectOption('#sensibilidadeFaixa', 'maxima');
+    assert.match(await p.locator('#comoPicoFaixa').innerText(), /1,5 vezes .* pelo menos 3/);
     assert.ok(await contar() >= normal, 'mais sensível não pode dar menos picos');
     assert.equal(pedidos, 0, 'mudar a sensibilidade pediu o chat outra vez');
     assert.equal(await p.evaluate(() => localStorage.getItem('povix.sensibilidade')), 'maxima');

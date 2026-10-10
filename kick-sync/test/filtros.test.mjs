@@ -167,17 +167,19 @@ test('o último passo de Detectar tem os filtros, os tiros já marcados, e a fal
     await p.close();
   });
 
-test('a sensibilidade do chat é uma só: a da faixa e a do painel do lance mudam juntas', comNavegador, async () => {
+// A sensibilidade saiu do painel do lance do mapa (o dono, 10/10): mora só no assistente da faixa, e é
+// a mesma escolha guardada que o mapa do evento usa para os picos (ver evento.test.mjs).
+test('a sensibilidade do chat é uma só: a da faixa, guardada no aparelho, e não está no painel do lance', comNavegador, async () => {
   const { p, erros } = await abrir();
   await abrirNoite(p);
   await p.click('#faixas button.nome[data-quem="tchubi"]');
   await p.click('#escolherChat');
   await p.click('#escolherTudo');
-  assert.match(await p.locator('#comoPicoFaixa').innerText(), /8/);
+  assert.match(await p.locator('#comoPicoFaixa').innerText(), /3 vezes .* pelo menos 8/);
+  assert.equal(await p.locator('#sensibilidade').count(), 0, 'o painel do lance já não tem a sua');
   await p.selectOption('#sensibilidadeFaixa', 'maxima');
-  assert.equal(await p.inputValue('#sensibilidade'), 'maxima');
-  assert.equal(await p.locator('#comoPicoFaixa').innerText(), await p.locator('#comoPico').textContent());
-  assert.match(await p.locator('#comoPicoFaixa').innerText(), /3/);
+  assert.equal(await p.evaluate(() => localStorage.getItem('povix.sensibilidade')), 'maxima');
+  assert.match(await p.locator('#comoPicoFaixa').innerText(), /1,5 vezes .* pelo menos 3/);
   await p.reload({ waitUntil: 'networkidle' });
   await p.waitForSelector('.tile', { timeout: 15000 });
   assert.equal(await p.inputValue('#sensibilidadeFaixa'), 'maxima', 'guardada no aparelho');

@@ -132,6 +132,8 @@ const IGUAIS_DE_PROPOSITO = {
     'montagem.parar',
     // Os atalhos: "Cancelar", "Exportar", "Importar", "Marcar entrada" e "Marcar kill" escrevem-se igual.
     'atalhos.cancelar', 'atalhos.exportar', 'atalhos.importar', 'atalhos.marcarIn', 'atalhos.marcarKill',
+    // "momento {hora}", o nome do risco na régua do evento, escreve-se igual.
+    'regua.lance',
     // Palavras que o portugues e o espanhol escrevem exactamente igual.
     'marca.inicio', 'tw.parar', 'montagem.baixarUma', 'montagem.pronto', 'corte.baixar',
     'clipe.parar',
