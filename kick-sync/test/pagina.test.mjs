@@ -1027,8 +1027,10 @@ test('a busca automatica nunca inventa kills que nao ouviu',
     // O custo e dito ANTES, e da para dizer que nao.
     const perguntas = [];
     p.on('dialog', (d) => { perguntas.push(d.message()); d.dismiss(); });
+    // O botão abre o assistente da faixa direto em Detectar lances: tudo, e o botão Detectar.
     await p.click('#procurarKills');
-    await p.click('#detetarTudo');
+    await p.click('#escolherTudo');
+    await p.click('#detetarTrecho');
     await p.waitForTimeout(500);
     assert.equal(perguntas.length, 1, 'tem de perguntar antes de baixar');
     assert.match(perguntas[0], /MB/, 'e dizer quantos MB sao');
@@ -1037,7 +1039,7 @@ test('a busca automatica nunca inventa kills que nao ouviu',
     // E agora a dizer que sim.
     p.removeAllListeners('dialog');
     p.on('dialog', (d) => d.accept());
-    await p.click('#detetarTudo');
+    await p.click('#detetarTrecho');
     await p.waitForFunction(
       // Todos os fins possiveis: achou, nao achou, ou o navegador nao
       // descodifica. Um destes TEM de aparecer — ficar calada era o pior dos

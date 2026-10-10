@@ -1876,6 +1876,7 @@ body:is(.videoAberto, :has(#palco:not([hidden]))) .mostrarMapa { background: var
 .passo4Chat .nota { flex: 1 1 16em; margin: 0; font-size: var(--t-menor); color: var(--tinta-2); }
 .passo4Detetar { display: grid; gap: var(--e3); }
 .passo4Detetar > #detetarTrecho, .passo4Chat > #lerChatTrecho { justify-self: start; min-height: 36px; padding: 0 var(--e5); font-size: var(--t-base); }
+@media (pointer: coarse), (max-width: 620px) { .passo4Detetar > #detetarTrecho, .passo4Chat > #lerChatTrecho { min-height: 44px; } }
 .acoesTrabalho { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e3); min-width: 0; }
 .acoesTrabalho:not(:has(#pararChatTrecho:not([hidden]))):not(:has(.estadoChatTrecho:not(:empty))) { display: none; }
 .chatTrechoHoras { font: 400 var(--t-menor)/1.2 var(--letra-mono); font-variant-numeric: tabular-nums; color: var(--tinta-2); white-space: nowrap; }

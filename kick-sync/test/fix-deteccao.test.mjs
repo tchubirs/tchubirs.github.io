@@ -11,6 +11,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { kickFalsa, T } from './falsa.mjs';
 import { montarPalco, podeCorrer } from './palco.mjs';
+import { passo4Detetar } from './assistente.mjs';
 
 let PORTA = 0;
 const { abrir } = montarPalco((p) => { PORTA = p; });
@@ -89,17 +90,8 @@ const momentos = (p) => p.evaluate(() => window.__estado.momentos);
  * de `quem`, pelo nome da faixa; '*' é Todos), e lá escolhe-se trecho (o das alças) ou tudo.
  */
 async function detectar(p, { quem = null, quanto = 'tudo' } = {}) {
-  const nome = quem && p.locator(`#faixas button.nome[data-quem="${quem}"]`);
-  if (nome && await nome.getAttribute('aria-expanded') !== 'true') await nome.click();
-  else await p.click('#procurarKills');
-  await p.waitForSelector('#acoesFaixa:not([hidden])');
-  if (quanto === 'tudo') {
-    if (await p.locator('#voltarAcoes').isVisible()) await p.click('#voltarAcoes');
-    await p.click('#detetarTudo');
-  } else {
-    if (await p.locator('#detetarTrechoAbrir').isVisible()) await p.click('#detetarTrechoAbrir');
-    await p.click('#detetarTrecho');
-  }
+  await passo4Detetar(p, { quem, quanto });
+  await p.click('#detetarTrecho');
   // A correr, o botão não se apaga (é o Parar dela): o fim é a `varredura` voltar a nada.
   await p.waitForFunction(() => window.__varrer && window.__estado.varredura === null
     && !/Ouvindo|Identificando/.test(document.getElementById('estadoMontagem').textContent),
@@ -158,8 +150,10 @@ test('detectar tudo é o tempo todo ao vivo, e um trecho fora dele diz porquê',
   // O botão da secção abre a barra na faixa de quem está no vídeo, e diz o que escolher.
   await p.click('#procurarKills');
   assert.equal(await p.evaluate(() => document.getElementById('acoesFaixa').previousElementSibling.dataset.slug), 'tchubi');
-  assert.match(await textoMontagem(p), /escolha na linha do tempo/);
-  assert.equal(await p.evaluate(() => document.activeElement.id), 'chatTrechoAbrir');
+  assert.match(await textoMontagem(p), /escolha um trecho ou tudo/);
+  // Direto no passo 2 de Detectar lances, com o foco na primeira escolha.
+  assert.match(await p.locator('#acoesResumo').innerText(), /^Detectar lances de tchubi: um trecho ou tudo\?/);
+  assert.equal(await p.evaluate(() => document.activeElement.id), 'escolherTrecho');
   await detectar(p);
   const v = await p.evaluate(() => window.__varrer);
   assert.equal(v.deMs, T, 'tudo começa no princípio do canal, e não no cursor');
@@ -179,11 +173,13 @@ test('detectar tudo é o tempo todo ao vivo, e um trecho fora dele diz porquê',
   // começo com o Home) não o tem.
   await p.evaluate(() => { window.__varrer = null; });
   await p.click('#faixas button.nome[data-quem="outro"]');
-  await p.click('#detetarTrechoAbrir');
+  await p.click('#voltarAcoes');
+  await p.click('#escolherTrecho');
   await p.locator('#alcaInicio').focus();
   await p.keyboard.press('Home');
   await p.locator('#alcaFim').focus();
   await p.keyboard.press('Home');
+  await p.click('#usarTrecho');
   await p.click('#detetarTrecho');
   await p.waitForFunction(() => /fora deste trecho/.test(document.getElementById('estadoMontagem').textContent),
     null, { timeout: 5000 });

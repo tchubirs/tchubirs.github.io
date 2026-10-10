@@ -38,7 +38,7 @@ async function abrirTrechoDe(p, quem) {
 /** Ler: o "Pronto, usar este trecho" quando ainda se está no passo 3, e depois o botão Ler. */
 async function ler(p) {
   if (await p.locator('#usarTrecho').isVisible()) await p.click('#usarTrecho');
-  await ler(p);
+  await p.click('#lerChatTrecho');
 }
 
 /** As duas pontas do trecho, em ms, lidas das alças (aria-valuenow vem em segundos). */

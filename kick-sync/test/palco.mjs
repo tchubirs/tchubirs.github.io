@@ -73,7 +73,6 @@ export function montarPalco(aoAbrir = () => {}) {
       // escolher — e o F5 parecia estar a perde-la.
       try { if (!localStorage.getItem('replay.idioma')) localStorage.setItem('replay.idioma', l); } catch { /* nada */ }
     }, idioma);
-    p.setDefaultTimeout(15000);
     const erros = [];
     p.on('pageerror', (e) => erros.push(String(e.message)));
     p.on('console', (m) => { if (m.type() === 'error' && !/ERR_|404/.test(m.text())) erros.push(m.text()); });

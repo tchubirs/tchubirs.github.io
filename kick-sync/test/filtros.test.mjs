@@ -1,5 +1,6 @@
-// Os filtros da detecção automática, num browser a sério: o painel Filtros na barra da faixa, o que
-// cada filtro marcado faz entrar no resultado, e as escolhas guardadas no aparelho.
+// Os filtros da detecção automática e o assistente da faixa, num browser a sério: os passos (Ler chat
+// ou Detectar lances; um trecho ou tudo; as alças; o botão final), os filtros do último passo da
+// detecção e as Mais opções, o que cada filtro marcado faz entrar no resultado, e as escolhas guardadas.
 //
 // O dono, 10/10: "a pessoa coloca informações específicas, ex: palavras no chat, ou palavras do
 // streamer, ou estouros de rocket, ou de disparo, ou gritos do streamer".
@@ -11,6 +12,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { kickFalsa, T } from './falsa.mjs';
 import { montarPalco, podeCorrer } from './palco.mjs';
+import { passo4Detetar } from './assistente.mjs';
 
 let PORTA = 0;
 const { abrir } = montarPalco((p) => { PORTA = p; });
@@ -24,7 +26,7 @@ async function varreduraFalsa(p, { tiros = [], explosoes = [], gritos = [] } = {
     body: `
       export function custoVarrerMB() { return 1; }
       export async function varrerNoite(o) {
-        window.__varrer = { canal: o.linha.slug, filtros: o.filtros };
+        window.__varrer = { canal: o.linha.slug, filtros: o.filtros, opcoes: o.opcoes };
         const em = (s) => ({ ms: o.deMs + s * 1000, combateDeMs: o.deMs + s * 1000 - 1000, combateAteMs: o.deMs + s * 1000 + 2000 });
         const f = o.filtros || { tiros: true };
         return {
@@ -46,16 +48,8 @@ async function abrirNoite(p, canais = ['tchubi']) {
   await p.waitForSelector('.tile', { timeout: 15000 });
 }
 
-/** Abrir a barra da faixa de `quem` e o painel Filtros. */
-async function abrirFiltros(p, quem = 'tchubi') {
-  await p.click(`#faixas button.nome[data-quem="${quem}"]`);
-  await p.waitForSelector('#acoesFaixa:not([hidden])');
-  if (!await p.locator('#filtrosDetecao').evaluate((d) => d.open)) await p.click('#filtrosDetecao > summary');
-  await p.waitForSelector('#filtroTiros', { state: 'visible' });
-}
-
 async function detectarTudo(p) {
-  await p.click('#detetarTudo');
+  await p.click('#detetarTrecho');
   await p.waitForFunction(() => window.__estado.varredura === null
     && /momento|tiroteio|Nenhum|Marque|Escreva/.test(document.getElementById('estadoChatTrecho').textContent)
     && !/Ouvindo|Lendo|Identificando/.test(document.getElementById('estadoChatTrecho').textContent),
@@ -63,16 +57,81 @@ async function detectarTudo(p) {
   return p.locator('#estadoChatTrecho').innerText();
 }
 
-test('o painel Filtros abre e fecha, vem com os tiros marcados, e a fala aparece desligada com o porquê',
+const resumo = (p) => p.locator('#acoesResumo').innerText();
+
+test('o assistente anda passo a passo, diz sempre o que vai acontecer, e Voltar e Esc recuam um passo',
+  comNavegador, async () => {
+    const { p, erros } = await abrir();
+    await abrirNoite(p, ['tchubi', 'outro']);
+    await p.click('#faixas button.nome[data-quem="tchubi"]');
+    // Passo 1: duas escolhas grandes, cada uma com a frase do que faz.
+    assert.match(await resumo(p), /^O que fazer com tchubi\?/);
+    assert.equal(await p.locator('#acoesPassoN').innerText(), 'passo 1 de 4');
+    assert.match(await p.locator('#escolherDetetar').innerText(), /Detectar lances\s+tiros, PvP, explosões, gritos, palavras/);
+    assert.ok(await p.locator('#voltarAcoes').isHidden());
+    await p.click('#escolherDetetar');
+    // Passo 2.
+    assert.match(await resumo(p), /^Detectar lances de tchubi: um trecho ou tudo\?/);
+    assert.equal(await p.evaluate(() => document.activeElement.id), 'escolherTrecho');
+    await p.click('#escolherTrecho');
+    // Passo 3: as alças na faixa, as horas na barra, e o Pronto.
+    assert.ok(await p.locator('#chatTrecho').isVisible());
+    assert.match(await p.locator('#chatTrechoHoras').innerText(), /^de \d\d:\d\d:\d\d até \d\d:\d\d:\d\d/);
+    assert.match(await resumo(p), /^Detectar em tchubi, de \d\d:\d\d a \d\d:\d\d\. Arraste as alças/);
+    assert.ok(await p.locator('#detetarTrecho').isHidden(), 'o botão final só no último passo');
+    // Mexer na alça muda o resumo.
+    await p.locator('#alcaInicio').focus();
+    await p.keyboard.press('Home');
+    assert.match(await resumo(p), /^Detectar em tchubi, de 21:00 a /);
+    await p.click('#usarTrecho');
+    // Passo 4: os filtros e o Detectar, e o resumo com o que vai ser procurado.
+    assert.match(await resumo(p), /^Detectar em tchubi, de 21:00 a \d\d:\d\d: tiros\.$/);
+    assert.ok(await p.locator('#detetarTrecho').isVisible());
+    assert.ok(await p.locator('#chatTrecho').isVisible(), 'as alças continuam à vista');
+    await p.check('#filtroExplosoes');
+    assert.match(await resumo(p), /: tiros, explosões\.$/);
+    // Voltar: 4 para 3 (no trecho), 3 para 2; Esc: 2 para 1, e no 1 fecha.
+    await p.click('#voltarAcoes');
+    assert.ok(await p.locator('#usarTrecho').isVisible());
+    await p.click('#voltarAcoes');
+    assert.ok(await p.locator('#escolherTudo').isVisible());
+    await p.keyboard.press('Escape');
+    assert.ok(await p.locator('#escolherChat').isVisible());
+    assert.equal(await p.evaluate(() => document.activeElement.id), 'escolherDetetar', 'o foco na última escolha');
+    await p.keyboard.press('Escape');
+    assert.ok(await p.locator('#acoesFaixa').isHidden());
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+test('a última escolha de cada passo fica guardada e destacada, sem saltar passos', comNavegador, async () => {
+  const { p, erros } = await abrir();
+  await abrirNoite(p);
+  await p.click('#faixas button.nome[data-quem="tchubi"]');
+  assert.equal(await p.locator('#escolherDetetar.ultima').count(), 0, 'na primeira vez não há última escolha');
+  await p.click('#escolherDetetar');
+  await p.click('#escolherTudo');
+  await p.reload({ waitUntil: 'networkidle' });
+  await p.waitForSelector('.tile', { timeout: 15000 });
+  await p.click('#faixas button.nome[data-quem="tchubi"]');
+  // Abre no passo 1 na mesma, com a última escolha destacada, dita, e com o foco.
+  assert.ok(await p.locator('#passo1').isVisible());
+  assert.equal(await p.locator('#escolherDetetar.ultima').count(), 1);
+  assert.ok(await p.locator('#escolherDetetar .ultimaVez').isVisible());
+  assert.ok(await p.locator('#escolherChat .ultimaVez').isHidden());
+  await p.locator('#acoesFaixa').press('Tab').catch(() => {});
+  await p.click('#escolherDetetar');
+  assert.equal(await p.evaluate(() => document.activeElement.id), 'escolherTudo');
+  assert.ok(await p.locator('#escolherTudo .ultimaVez').isVisible());
+  assert.deepEqual(erros, []);
+  await p.close();
+});
+
+test('o último passo de Detectar tem os filtros, os tiros já marcados, e a fala desligada com o porquê',
   comNavegador, async () => {
     const { p, erros } = await abrir();
     await abrirNoite(p);
-    await p.click('#faixas button.nome[data-quem="tchubi"]');
-    await p.waitForSelector('#acoesFaixa:not([hidden])');
-    // Fechado por omissão: quem nunca o abriu detecta como sempre.
-    assert.equal(await p.locator('#filtrosDetecao').evaluate((d) => d.open), false);
-    assert.equal(await p.locator('#filtrosResumo').innerText(), 'tiros');
-    await p.click('#filtrosDetecao > summary');
+    await passo4Detetar(p, { quem: 'tchubi' });
     assert.equal(await p.locator('#filtroTiros').isChecked(), true);
     for (const id of ['filtroExplosoes', 'filtroGritos', 'filtroChat']) {
       assert.equal(await p.locator(`#${id}`).isChecked(), false, id);
@@ -86,34 +145,68 @@ test('o painel Filtros abre e fecha, vem com os tiros marcados, e a fala aparece
     // Os nomes acessíveis: cada caixa pelo rótulo, e o campo das palavras pelo seu.
     assert.equal(await p.getByRole('checkbox', { name: 'Explosões' }).count(), 1);
     assert.equal(await p.getByRole('textbox', { name: /Palavras ou expressões do chat/ }).count(), 1);
-    // No modo de ler o chat de um trecho, os filtros (que são da detecção) não aparecem.
-    await p.click('#chatTrechoAbrir');
-    assert.equal(await p.locator('#filtrosDetecao').isHidden(), true);
+    // Mais opções fechado, e cada opção com a frase do que faz.
+    assert.equal(await p.locator('#maisOpcoes').evaluate((d) => d.open), false);
+    await p.click('#maisOpcoes > summary');
+    for (const id of ['sensDetecaoAjuda', 'margensAjuda', 'juntarAjuda']) assert.ok((await p.locator(`#${id}`).innerText()).length > 20, id);
+    assert.equal(await p.getByRole('combobox', { name: /Sensibilidade/ }).count(), 1);
+    // O Esc dentro de Mais opções fecha-o primeiro, e o assistente fica no mesmo passo.
+    await p.locator('#maisOpcoes > summary').focus();
+    await p.keyboard.press('Escape');
+    assert.equal(await p.locator('#maisOpcoes').evaluate((d) => d.open), false);
+    assert.ok(await p.locator('#detetarTrecho').isVisible());
+    // No Ler chat não há filtros: há a sensibilidade dos picos e o Ler.
     await p.click('#voltarAcoes');
-    assert.equal(await p.locator('#filtrosDetecao').isVisible(), true);
-    await p.click('#filtrosDetecao > summary');
-    assert.equal(await p.locator('#filtrosDetecao').evaluate((d) => d.open), false);
+    await p.click('#voltarAcoes');
+    await p.click('#escolherChat');
+    await p.click('#escolherTudo');
+    assert.ok(await p.locator('#filtroTiros').isHidden());
+    assert.ok(await p.locator('#sensibilidadeFaixa').isVisible());
+    assert.ok(await p.locator('#lerChatTrecho').isVisible());
     assert.deepEqual(erros, []);
     await p.close();
   });
 
-test('as escolhas ficam guardadas no aparelho, e escrever palavras marca o chat', comNavegador, async () => {
+test('a sensibilidade do chat é uma só: a da faixa e a do painel do lance mudam juntas', comNavegador, async () => {
   const { p, erros } = await abrir();
   await abrirNoite(p);
-  await abrirFiltros(p);
+  await p.click('#faixas button.nome[data-quem="tchubi"]');
+  await p.click('#escolherChat');
+  await p.click('#escolherTudo');
+  assert.match(await p.locator('#comoPicoFaixa').innerText(), /8/);
+  await p.selectOption('#sensibilidadeFaixa', 'maxima');
+  assert.equal(await p.inputValue('#sensibilidade'), 'maxima');
+  assert.equal(await p.locator('#comoPicoFaixa').innerText(), await p.locator('#comoPico').textContent());
+  assert.match(await p.locator('#comoPicoFaixa').innerText(), /3/);
+  await p.reload({ waitUntil: 'networkidle' });
+  await p.waitForSelector('.tile', { timeout: 15000 });
+  assert.equal(await p.inputValue('#sensibilidadeFaixa'), 'maxima', 'guardada no aparelho');
+  assert.deepEqual(erros, []);
+  await p.close();
+});
+
+test('as escolhas dos filtros e das opções ficam guardadas, e escrever palavras marca o chat', comNavegador, async () => {
+  const { p, erros } = await abrir();
+  await abrirNoite(p);
+  await passo4Detetar(p, { quem: 'tchubi' });
   await p.check('#filtroExplosoes');
   await p.uncheck('#filtroTiros');
   await p.fill('#filtroPalavras', 'kkk, clip');
   assert.equal(await p.locator('#filtroChat').isChecked(), true, 'escrever as palavras marca a caixa');
-  assert.equal(await p.locator('#filtrosResumo').innerText(), 'explosões, palavras no chat');
+  assert.match(await resumo(p), /: explosões, palavras no chat\.$/);
+  await p.click('#maisOpcoes > summary');
+  await p.selectOption('#sensDetecao', 'mais');
+  await p.selectOption('#juntarLances', '10');
 
   await p.reload({ waitUntil: 'networkidle' });
   await p.waitForSelector('.tile', { timeout: 15000 });
-  await abrirFiltros(p);
+  await passo4Detetar(p, { quem: 'tchubi' });
   assert.equal(await p.locator('#filtroTiros').isChecked(), false);
   assert.equal(await p.locator('#filtroExplosoes').isChecked(), true);
   assert.equal(await p.locator('#filtroChat').isChecked(), true);
   assert.equal(await p.inputValue('#filtroPalavras'), 'kkk, clip');
+  assert.equal(await p.inputValue('#sensDetecao'), 'mais');
+  assert.equal(await p.inputValue('#juntarLances'), '10');
   // Apagar as palavras desmarca o chat.
   await p.fill('#filtroPalavras', '');
   assert.equal(await p.locator('#filtroChat').isChecked(), false);
@@ -127,7 +220,7 @@ test('cada filtro marcado entra no resultado, que diz qual achou o quê, e a lis
     await varreduraFalsa(p, { tiros: [60], explosoes: [200], gritos: [400] });
     await abrirNoite(p);
     p.on('dialog', (d) => d.accept());
-    await abrirFiltros(p);
+    await passo4Detetar(p, { quem: 'tchubi' });
     await p.check('#filtroExplosoes');
     await p.fill('#filtroPalavras', 'KKKK');
     const texto = await detectarTudo(p);
@@ -135,6 +228,8 @@ test('cada filtro marcado entra no resultado, que diz qual achou o quê, e a lis
     assert.equal(await p.locator('#estadoMontagem').innerText(), texto);
     // Só o que estava marcado foi pedido ao som: o grito não.
     assert.deepEqual(await p.evaluate(() => window.__varrer.filtros), { tiros: true, explosoes: true, gritos: false });
+    // O assistente fica no último passo, com o resultado no mesmo sítio do progresso.
+    assert.ok(await p.locator('#detetarTrecho').isVisible());
 
     const lista = await p.evaluate(() => window.__estado.momentos.map((m) => ({ tipo: m.tipo, palavras: m.palavras, s: Math.round((m.ms - window.__estado.janela.inicio) / 1000) })));
     assert.deepEqual(lista.map((m) => m.tipo), ['tiros', 'explosao', 'chat']);
@@ -147,13 +242,55 @@ test('cada filtro marcado entra no resultado, que diz qual achou o quê, e a lis
     await p.close();
   });
 
+test('Mais opções mudam o resultado: a sensibilidade chega à escuta, juntar une lances, e as margens são as da montagem',
+  comNavegador, async () => {
+    const { p, erros } = await abrir();
+    // Tiros aos 60 s e uma explosão aos 66 s, e outra luta aos 300 s.
+    await varreduraFalsa(p, { tiros: [60, 300], explosoes: [66] });
+    await abrirNoite(p);
+    p.on('dialog', (d) => d.accept());
+    await passo4Detetar(p, { quem: 'tchubi' });
+    await p.check('#filtroExplosoes');
+    await p.click('#maisOpcoes > summary');
+    await p.selectOption('#sensDetecao', 'menos');
+    await p.selectOption('#juntarLances', '10');
+    await p.fill('#margemAntes', '9');
+    await p.fill('#margemDepois', '4');
+    assert.equal(await p.inputValue('#protAntes'), '9', 'a margem é a da montagem');
+    assert.equal(await p.inputValue('#protDepois'), '4');
+    const texto = await detectarTudo(p);
+    // A luta dos 60 s e a explosão dos 66 s viram um lance só.
+    assert.match(texto, /^2 momentos em tchubi: 2 tiroteios/, texto);
+    const v = await p.evaluate(() => window.__varrer.opcoes);
+    assert.ok(v.alturaMin > 8 && v.minQuenteS > 0.6, `menos lances pede mais força: ${JSON.stringify(v)}`);
+    const ms = await p.evaluate(() => window.__estado.momentos.map((m) => ({
+      tipos: m.tipos, antes: m.protagonistaAntesS, depois: m.protagonistaDepoisS, dur: m.combateAteMs - m.combateDeMs,
+    })));
+    assert.equal(ms.length, 2);
+    assert.deepEqual(ms[0].tipos, ['tiros', 'explosao']);
+    assert.ok(ms[0].dur >= 9000, `o lance junto vai do começo do primeiro ao fim do último: ${ms[0].dur}`);
+    assert.deepEqual([ms[0].antes, ms[0].depois], [9, 4]);
+    assert.deepEqual(await p.locator('#listaMomentos li[data-ms] .tipo').allInnerTexts(), ['tiroteio, explosão', 'tiroteio']);
+
+    // Sem juntar e com mais sensibilidade, são três, e a escuta pede menos força.
+    await p.evaluate(() => { window.__estado.momentos = []; });
+    await p.selectOption('#sensDetecao', 'mais');
+    await p.selectOption('#juntarLances', '0');
+    const texto2 = await detectarTudo(p);
+    assert.match(texto2, /^3 momentos em tchubi: 2 tiroteios, 1 explosão/, texto2);
+    const v2 = await p.evaluate(() => window.__varrer.opcoes);
+    assert.ok(v2.alturaMin < 8, JSON.stringify(v2));
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
 test('só o chat: não pergunta pelos megas do som, não ouve nada, e lê o chat como o Ler chat', comNavegador, async () => {
   const { p, erros } = await abrir();
   await varreduraFalsa(p, { tiros: [60] });
   await abrirNoite(p);
   let perguntas = 0;
   p.on('dialog', (d) => { perguntas++; d.accept(); });
-  await abrirFiltros(p);
+  await passo4Detetar(p, { quem: 'tchubi' });
   await p.uncheck('#filtroTiros');
   await p.fill('#filtroPalavras', 'kkk');
   const texto = await detectarTudo(p);
@@ -171,16 +308,15 @@ test('sem filtro marcado, ou com o chat marcado sem palavras, diz o que falta e 
   await varreduraFalsa(p, { tiros: [60] });
   await abrirNoite(p);
   p.on('dialog', (d) => d.accept());
-  await abrirFiltros(p);
+  await passo4Detetar(p, { quem: 'tchubi' });
   await p.uncheck('#filtroTiros');
-  await p.click('#filtrosDetecao > summary');
-  await p.click('#detetarTudo');
+  assert.match(await resumo(p), /: marque pelo menos um\.$/);
+  await p.click('#detetarTrecho');
   assert.match(await p.locator('#estadoChatTrecho').innerText(), /^Marque pelo menos um filtro/);
-  assert.equal(await p.locator('#filtrosDetecao').evaluate((d) => d.open), true, 'o painel abre para mostrar');
   assert.equal(await p.evaluate(() => document.activeElement.id), 'filtroTiros');
 
   await p.check('#filtroChat');
-  await p.click('#detetarTudo');
+  await p.click('#detetarTrecho');
   assert.match(await p.locator('#estadoChatTrecho').innerText(), /^Escreva as palavras do chat/);
   assert.equal(await p.evaluate(() => document.activeElement.id), 'filtroPalavras');
   assert.equal(await p.evaluate(() => window.__varrer ?? null), null);
@@ -193,7 +329,7 @@ test('com outros filtros e nada achado, diz que filtros correram', comNavegador,
   await varreduraFalsa(p, {});
   await abrirNoite(p);
   p.on('dialog', (d) => d.accept());
-  await abrirFiltros(p);
+  await passo4Detetar(p, { quem: 'tchubi' });
   await p.check('#filtroGritos');
   const texto = await detectarTudo(p);
   assert.match(texto, /^Nenhum momento de tchubi com estes filtros \(tiros, gritos\)/);
@@ -201,26 +337,25 @@ test('com outros filtros e nada achado, diz que filtros correram', comNavegador,
   await p.close();
 });
 
-test('com o vídeo aberto num ecrã largo, o painel abre por cima sem tapar os botões, e o Esc fecha-o primeiro',
+test('com o vídeo aberto num ecrã largo, o assistente abre por cima das faixas sem tapar a faixa escolhida',
   comNavegador, async () => {
     const { p, erros } = await abrir({ ecra: { width: 1440, height: 900 } });
     await abrirNoite(p, ['tchubi', 'outro']);
-    await abrirFiltros(p);
-    const flutua = await p.locator('#filtrosDetecao').evaluate((d) => d.classList.contains('flutua'));
-    const apertado = await p.evaluate(() => /auto|scroll/.test(getComputedStyle(document.getElementById('faixas')).overflowY));
-    assert.equal(flutua, apertado, 'flutua quando as faixas são uma caixa que rola');
-    // O painel inteiro à vista, e o Detectar: tudo ainda se carrega (nada por cima dele).
-    const corpo = await p.locator('#filtrosDetecao .filtrosCorpo').boundingBox();
+    await passo4Detetar(p, { quem: 'tchubi', quanto: 'trecho' });
+    const flutua = await p.locator('#acoesFaixa').evaluate((d) => d.classList.contains('flutua'));
+    const apertado = await p.evaluate(() => /auto|scroll/.test(getComputedStyle(document.getElementById('faixas')).overflowY)
+      && document.getElementById('faixas').clientHeight < 320);
+    assert.equal(flutua, apertado, 'flutua quando as faixas são uma caixa baixa que rola');
+    // O assistente inteiro dentro do ecrã, e o trilho da faixa escolhida (com as alças) livre por baixo.
+    const corpo = await p.locator('#acoesGrupo').boundingBox();
     assert.ok(corpo.y >= 0 && corpo.y + corpo.height <= 900, JSON.stringify(corpo));
     const livre = await p.evaluate(() => {
-      const b = document.getElementById('detetarTudo').getBoundingClientRect();
-      return document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2)?.closest('#detetarTudo') != null;
+      const b = document.querySelector('#faixas .faixa[data-quem="tchubi"] .trilho').getBoundingClientRect();
+      const el = document.elementFromPoint(b.left + b.width / 3, b.top + b.height / 2);
+      return Boolean(el?.closest('.faixa[data-quem="tchubi"]'));
     });
-    assert.equal(livre, true, 'o painel tapa o Detectar: tudo');
-    await p.locator('#filtroGritos').focus();
-    await p.keyboard.press('Escape');
-    assert.equal(await p.locator('#filtrosDetecao').evaluate((d) => d.open), false);
-    assert.equal(await p.locator('#acoesFaixa').isVisible(), true, 'o Esc fecha o painel, e a barra fica');
+    assert.equal(livre, true, 'o assistente tapa a faixa escolhida');
+    assert.ok(await p.locator('#chatTrecho').isVisible());
     assert.deepEqual(erros, []);
     await p.close();
   });

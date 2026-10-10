@@ -589,7 +589,8 @@ test('a detecção automática pára no mesmo botão que a lançou', semNavegado
   await carregar(p, ['tchubi']);
   p.on('dialog', (d) => d.accept());
   await p.click('#procurarKills');
-  await p.click('#detetarTudo');
+  await p.click('#escolherTudo');
+  await p.click('#detetarTrecho');
   await p.waitForFunction(() => window.__aOuvir === true, null, { timeout: 5000 });
   // O Parar da barra na faixa também aparece; aqui pára-se pelo botão da secção.
   assert.ok(await p.locator('#pararChatTrecho').isVisible());
