@@ -844,7 +844,22 @@ function cabecalho(s, sep, colunas) {
   });
   if (iTime < 0 || !iCanais.length) return null;
   if ((colunas.get(chaveDeColuna(sep, iTime, celulas[iTime]))?.size ?? 0) >= 2) return null;
-  return { sep, iTime, iCanais };
+  // As colunas que só dizem quem é ("Jogador", "Player", "Nome") ao lado de uma que diz onde está o
+  // canal ("Link", "Canal", "Kick URL"). Em "Time, Jogador, Link" o nome do jogador não é um canal: lido
+  // como tal, cada jogador dava dois ângulos, um deles de um desconhecido com esse nome.
+  const iNomes = iCanais.filter((i) => ehColunaDeNome(celulas[i]));
+  return { sep, iTime, iCanais, iNomes: iNomes.length < iCanais.length ? iNomes : [] };
+}
+
+// Num cabeçalho, as palavras que dizem só o nome da pessoa, e não onde está o canal dela.
+const PALAVRAS_DE_NOME = new Set(['nome', 'name', 'nombre', 'jogador', 'jogadores', 'player', 'players',
+  'jugador', 'jugadores', 'membro', 'member', 'miembro', 'participante', 'participant']);
+
+function ehColunaDeNome(celula) {
+  const c = String(celula).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  const palavras = c.split(/[^a-z0-9@]+/).filter((p) => p && !/^\d+$/.test(p) && !['do', 'da', 'de', 'del'].includes(p));
+  if (palavras.some((p) => PALAVRAS_DE_CANAL.has(p) && p !== 'streamer' && p !== 'streamers')) return false;
+  return ehRotulo(celula) || (palavras.length > 0 && palavras.every((p) => PALAVRAS_DE_NOME.has(p)));
 }
 
 /**
@@ -998,10 +1013,15 @@ function classificar({ s, marcado }, ctx) {
 
   if (ctx.tabela && s.includes(ctx.tabela.sep)) {
     const celulas = partirCelulas(s, ctx.tabela.sep);
+    // Com uma coluna de canal (o link) preenchida nesta linha, o canal vem só dela; a do nome do jogador
+    // só conta quando a do canal está vazia.
+    const { iCanais, iNomes = [] } = ctx.tabela;
+    const doCanal = iCanais.filter((i) => !iNomes.includes(i));
+    const preenchida = iNomes.length && doCanal.some((i) => tokens(celulas[i] ?? '').length);
     return {
       tipo: 'linha',
       nome: ctx.tabela.iTime < 0 ? '' : celulas[ctx.tabela.iTime] ?? '',
-      canais: ctx.tabela.iCanais.flatMap((i) => tokens(celulas[i] ?? '')),
+      canais: (preenchida ? doCanal : iCanais).flatMap((i) => tokens(celulas[i] ?? '')),
     };
   }
 

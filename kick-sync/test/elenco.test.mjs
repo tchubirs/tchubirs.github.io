@@ -725,6 +725,39 @@ test('CSV com cabeçalho, em qualquer ordem de colunas e com colunas a mais', ()
   assert.deepEqual(porLinha.avisos, []);
 });
 
+// O dono, 10/10: uma folha "Time, Jogador, Link" contava o nome do jogador como mais um canal. O canal vem
+// só do link quando há coluna de link; o nome só conta numa linha em que o link ficou por preencher.
+test('uma folha com coluna de jogador e coluna de link tira o canal só do link', () => {
+  const comLink = lerElenco([
+    'Time,Jogador,Link',
+    'Alpha,Fulano,https://kick.com/fulano_br',
+    'Alpha,Beltrano,https://kick.com/beltr',
+    'Bravo,Ciclano,kick.com/cic',
+  ].join('\n'));
+  assert.deepEqual(comLink.times, [
+    { nome: 'Alpha', canais: ['fulano_br', 'beltr'] },
+    { nome: 'Bravo', canais: ['cic'] },
+  ]);
+  assert.deepEqual(comLink.avisos, []);
+  // Equipe, jogador e canal (o canal escrito como link), com ponto e vírgula e com tabulação.
+  assert.deepEqual(lerElenco('Equipe;Jogador;Canal\nAlpha;Fulano;kick.com/fulano_br\nBravo;Ciclano;kick.com/cic').times, [
+    { nome: 'Alpha', canais: ['fulano_br'] },
+    { nome: 'Bravo', canais: ['cic'] },
+  ]);
+  assert.deepEqual(lerElenco('Team\tPlayer\tKick Link\nAlpha\tFulano\thttps://kick.com/fulano_br').times, [
+    { nome: 'Alpha', canais: ['fulano_br'] },
+  ]);
+  // Uma linha sem link: o nome do jogador é o que há.
+  assert.deepEqual(lerElenco('Time,Jogador,Link\nAlpha,Fulano,kick.com/fulano_br\nAlpha,semlink,').times, [
+    { nome: 'Alpha', canais: ['fulano_br', 'semlink'] },
+  ]);
+  // Sem coluna de link, as colunas de jogador continuam a ser os canais.
+  assert.deepEqual(lerElenco('Time,Jogador 1,Jogador 2\nAlpha,a1,a2\nBravo,b1,b2').times, [
+    { nome: 'Alpha', canais: ['a1', 'a2'] },
+    { nome: 'Bravo', canais: ['b1', 'b2'] },
+  ]);
+});
+
 test('CSV sem cabeçalho: o time é a coluna que se repete', () => {
   const comEspacos = lerElenco('Team Ricoy,ricoy\nTeam Ricoy,tchubi\nTeam Willjum;willjum');
   assert.deepEqual(comEspacos.times, [
