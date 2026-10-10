@@ -432,3 +432,52 @@ test('os recortes para aprender nao passam pelo filtro de brilho', async () => {
   assert.ok(r.estouros.length > 0, 'os sons altos sem brilho tambem tem de ficar guardados');
   assert.ok(r.estouros.every((e) => e.canal === 'tchubi'), 'e cada recorte diz de que canal veio');
 });
+
+// ── os filtros de som: explosões e gritos ───────────────────────────────────
+
+test('com os filtros de explosão e de grito, a varredura acha cada um no seu sítio do relógio', async () => {
+  const S = await import('./sons-sinteticos.mjs');
+  const T = Date.parse('2026-08-30T22:00:00Z');
+  const NOITE = 600;
+  const som = S.fundo(NOITE);
+  S.por(som, S.conversa(NOITE), 0);
+  S.por(som, S.explosao(), 130);
+  S.por(som, S.grito(), 420);
+  S.por(som, S.tiro(), 250);
+  const r = await varrerNoite({
+    linha: { slug: 'tchubi' },
+    deMs: T,
+    ateMs: T + NOITE * 1000,
+    bocadoS: 300,
+    filtros: { tiros: false, explosoes: true, gritos: true },
+    lerSom: async (linha, quandoMs, duracaoS) => {
+      const de = Math.round(((quandoMs - T) / 1000) * S.TAXA);
+      return som.subarray(de, de + Math.round(duracaoS * S.TAXA));
+    },
+  });
+  assert.equal(r.explosoes.length, 1, JSON.stringify(r.explosoes));
+  assert.ok(Math.abs(r.explosoes[0].ms - (T + 130_000)) < 1000);
+  assert.ok(r.explosoes[0].combateAteMs - r.explosoes[0].combateDeMs >= 2000);
+  assert.equal(r.gritos.length, 1, JSON.stringify(r.gritos));
+  assert.ok(Math.abs(r.gritos[0].ms - (T + 420_000)) < 1500);
+  // Sem o filtro de tiros, a conta dos tiros nem corre.
+  assert.deepEqual(r.candidatos, []);
+  assert.deepEqual(r.estouros, []);
+});
+
+test('sem filtros novos a varredura é a de sempre, e não devolve explosões nem gritos', async () => {
+  const T = Date.parse('2026-08-30T22:00:00Z');
+  const som = somComRajadas(360, [100]);
+  const r = await varrerNoite({
+    linha: { slug: 'tchubi' },
+    deMs: T,
+    ateMs: T + 300_000,
+    lerSom: async (linha, quandoMs, duracaoS) => {
+      const de = Math.round(((quandoMs - T) / 1000) * TAXA);
+      return som.subarray(de, de + Math.round(duracaoS * TAXA));
+    },
+  });
+  assert.ok(r.candidatos.length >= 1);
+  assert.deepEqual(r.explosoes, []);
+  assert.deepEqual(r.gritos, []);
+});

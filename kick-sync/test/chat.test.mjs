@@ -13,7 +13,9 @@ process.env.TZ = 'America/Sao_Paulo';
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { idDoCanal, mensagensEntre, calor, picos, reacoes, segundoDoPico } from '../site/chat.js';
+import {
+  idDoCanal, mensagensEntre, calor, picos, reacoes, segundoDoPico, normalizarChat, termosDoFiltro, momentosDePalavras,
+} from '../site/chat.js';
 
 const ID = 541014;
 const MIN = 60_000;
@@ -743,4 +745,79 @@ test('segundoDoPico: sem mensagens fica no começo do minuto', () => {
 test('segundoDoPico: num empate fica o mais cedo', () => {
   const msgs = [{ ms: 3_000 }, { ms: 3_500 }, { ms: 40_000 }, { ms: 40_500 }];
   assert.equal(segundoDoPico(msgs, 0, 60_000), 3_000);
+});
+
+// ── o filtro de palavras no chat, da detecção automática ────────────────────
+//
+// O dono, 10/10: "a pessoa coloca informações específicas, ex: palavras no chat". Sem diferença entre
+// maiúsculas, acentos e letras repetidas: "kkkk" é "kkk".
+
+test('normalizar: sem maiúsculas, sem acentos, letras repetidas encolhidas e o emote pelo nome', () => {
+  assert.equal(normalizarChat('KKKKK'), 'k');
+  assert.equal(normalizarChat('kkk'), normalizarChat('kkkkkkkk'));
+  assert.equal(normalizarChat('Explosão'), normalizarChat('explosao'));
+  assert.equal(normalizarChat('ROCKETTTT'), 'rocket');
+  assert.match(normalizarChat('[emote:37226:KEKW] boa'), /\bkekw\b/);
+  assert.equal(normalizarChat(null), '');
+});
+
+test('os termos do filtro: separados por vírgula, sem vazios nem repetidos, e guardam como foram escritos', () => {
+  const t = termosDoFiltro(' kkk, Clip ,, kkkk, boa jogada, ');
+  assert.deepEqual(t.map((x) => x.escrito), ['kkk', 'Clip', 'boa jogada']);
+  assert.deepEqual(t.map((x) => x.palavras), [['k'], ['clip'], ['boa', 'jogada']]);
+  assert.deepEqual(termosDoFiltro(''), []);
+  assert.deepEqual(termosDoFiltro(' , ;'), []);
+});
+
+/** Um chat calmo com 2 mensagens por minuto, e um surto de `n` mensagens de `texto` a partir de `emMs`. */
+function chatCom(T, minutos, surtos = []) {
+  const lista = [];
+  for (let k = 0; k < minutos * 2; k++) lista.push({ ms: T + k * 30_000 + 5000, texto: 'boa noite chat' });
+  for (const { emMs, n, texto } of surtos) {
+    for (let k = 0; k < n; k++) lista.push({ ms: emMs + k * 1500, texto: typeof texto === 'function' ? texto(k) : texto });
+  }
+  return lista.sort((a, b) => a.ms - b.ms);
+}
+
+test('acha o momento em que as palavras aparecem muito, com qualquer grafia', () => {
+  const T = Date.parse('2026-08-30T22:00:00Z');
+  const variantes = ['KKKKKK', 'kkk', 'kkkkkkkk muito bom', 'Kkk'];
+  const msgs = chatCom(T, 20, [{ emMs: T + 7 * 60_000 + 2000, n: 12, texto: (k) => variantes[k % 4] }]);
+  const achados = momentosDePalavras(msgs, termosDoFiltro('kkkk'), T, T + 20 * 60_000);
+  assert.equal(achados.length, 1, JSON.stringify(achados));
+  const [m] = achados;
+  assert.equal(m.ms, T + 7 * 60_000 + 2000, 'o segundo em que o surto começa');
+  assert.ok(m.combateDeMs < m.ms && m.combateAteMs > m.ms, 'o clipe começa antes do chat reagir');
+  assert.deepEqual(m.termos, ['kkkk']);
+});
+
+test('poucas mensagens com a palavra não são momento, e palavras que não estão lá não acham nada', () => {
+  const T = Date.parse('2026-08-30T22:00:00Z');
+  const msgs = chatCom(T, 20, [{ emMs: T + 3 * 60_000, n: 2, texto: 'rocket' }]);
+  assert.deepEqual(momentosDePalavras(msgs, termosDoFiltro('rocket'), T, T + 20 * 60_000), []);
+  assert.deepEqual(momentosDePalavras(msgs, termosDoFiltro('clip'), T, T + 20 * 60_000), []);
+  assert.deepEqual(momentosDePalavras(msgs, [], T, T + 20 * 60_000), []);
+});
+
+test('palavra inteira, ou o começo de uma maior com três letras ou mais; expressões inteiras', () => {
+  const T = Date.parse('2026-08-30T22:00:00Z');
+  const ate = T + 20 * 60_000;
+  const surto = (texto) => chatCom(T, 20, [{ emMs: T + 5 * 60_000, n: 10, texto }]);
+  // "kkk" vira "k", e "k" não está dentro de "kick".
+  assert.deepEqual(momentosDePalavras(surto('kick kick'), termosDoFiltro('kkk'), T, ate), []);
+  assert.equal(momentosDePalavras(surto('CLIPA ISSO'), termosDoFiltro('clip'), T, ate).length, 1);
+  assert.equal(momentosDePalavras(surto('que explosão absurda'), termosDoFiltro('explosao'), T, ate).length, 1);
+  assert.equal(momentosDePalavras(surto('boa jogadaaa mano'), termosDoFiltro('boa jogada'), T, ate).length, 1);
+  assert.deepEqual(momentosDePalavras(surto('jogada boa'), termosDoFiltro('boa jogada'), T, ate), []);
+});
+
+test('com várias palavras, diz quais apareceram em cada momento, e cada mensagem conta uma vez', () => {
+  const T = Date.parse('2026-08-30T22:00:00Z');
+  const msgs = chatCom(T, 20, [
+    { emMs: T + 4 * 60_000, n: 10, texto: 'rocket rocket rocket' },
+    { emMs: T + 12 * 60_000, n: 10, texto: 'clip clip' },
+  ]);
+  const achados = momentosDePalavras(msgs, termosDoFiltro('rocket, clip, gg'), T, T + 20 * 60_000);
+  assert.deepEqual(achados.map((m) => m.termos), [['rocket'], ['clip']]);
+  assert.ok(achados.every((m) => m.vezes <= 10), 'uma mensagem com a palavra três vezes conta uma');
 });

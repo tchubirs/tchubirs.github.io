@@ -435,3 +435,97 @@ export function reacoes(mensagens, { quantas = 5, ignorar = PALAVRAS_VAZIAS } = 
     .sort((a, b) => (b.vezes - a.vezes) || (a.nome < b.nome ? -1 : a.nome > b.nome ? 1 : 0))
     .slice(0, limite);
 }
+
+/**
+ * Um texto de chat pronto a comparar: minúsculas, sem acentos, o emote pelo nome, e as letras repetidas
+ * seguidas encolhidas para uma ("kkkkk" e "kkk" dão os dois "k", "KKKK" também, "rocketttt" dá
+ * "rocket"). Aplica-se igual às palavras do filtro e às mensagens, por isso "carro" e "caro" passam a
+ * ser a mesma coisa, o que num filtro de chat não faz mal nenhum.
+ */
+export function normalizarChat(texto) {
+  return String(texto ?? '')
+    .replace(EMOTE, ' $1 ')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/(\p{L})\1+/gu, '$1');
+}
+
+const palavrasDe = (normalizado) => normalizado.match(/[\p{L}\p{N}]+/gu) || [];
+
+/**
+ * As palavras ou expressões de um filtro, separadas por vírgula ("kkk, clip, boa jogada"), já
+ * normalizadas e sem repetidas. Cada uma guarda como foi escrita, para o resultado dizer o que achou.
+ */
+export function termosDoFiltro(texto) {
+  const vistos = new Set();
+  const saida = [];
+  for (const cru of String(texto ?? '').split(/[,;\n]/)) {
+    const escrito = cru.trim();
+    const palavras = palavrasDe(normalizarChat(escrito));
+    const chave = palavras.join(' ');
+    if (!palavras.length || vistos.has(chave)) continue;
+    vistos.add(chave);
+    saida.push({ escrito, palavras });
+  }
+  return saida;
+}
+
+/**
+ * Se as palavras de uma mensagem (normalizadas) têm o termo. Palavra inteira, e a última palavra do
+ * termo pode ser o começo de uma maior quando tem três letras ou mais: "clip" acha "clipa" e "clipou",
+ * mas "k" (de "kkk") não acha "kick".
+ */
+function temTermo(palavras, termo) {
+  const t = termo.palavras;
+  const ultima = t.length - 1;
+  for (let i = 0; i + t.length <= palavras.length; i++) {
+    let igual = true;
+    for (let j = 0; j <= ultima && igual; j++) {
+      const p = palavras[i + j];
+      igual = p === t[j] || (j === ultima && t[j].length >= 3 && p.startsWith(t[j]));
+    }
+    if (igual) return true;
+  }
+  return false;
+}
+
+/**
+ * Os momentos em que as palavras do filtro apareceram muito no chat, de `deMs` a `ateMs`.
+ *
+ * Conta-se em quantas MENSAGENS aparece alguma (como em `reacoes`: "kkk kkk kkk" é uma pessoa), em
+ * baldes de `passoMs`, e um balde é momento quando tem `fator` vezes o normal dessas palavras nesse
+ * chat e pelo menos `minimo` mensagens (baldes seguidos acima disso são um momento só, como em `picos`). O instante é o segundo em que o surto começa
+ * (`segundoDoPico`); o chat reage depois do lance, por isso o clipe começa `antesMs` antes dele.
+ *
+ * Devolve `[{ ms, combateDeMs, combateAteMs, vezes, termos }]` pela ordem do relógio, com `termos` os
+ * que apareceram nesse momento, como foram escritos.
+ */
+export function momentosDePalavras(mensagens, termos, deMs, ateMs, {
+  passoMs = 30_000, fator = 3, minimo = 4, antesMs = 20_000, depoisMs = 3000,
+} = {}) {
+  if (!termos?.length || !(ateMs > deMs)) return [];
+  const achadas = [];
+  for (const m of mensagens || []) {
+    if (!Number.isFinite(m?.ms) || m.ms < deMs || m.ms >= ateMs) continue;
+    const palavras = palavrasDe(normalizarChat(m.texto));
+    const quais = termos.filter((t) => temTermo(palavras, t));
+    if (quais.length) achadas.push({ ms: m.ms, quais });
+  }
+  if (!achadas.length) return [];
+  const baldes = calor(achadas, deMs, ateMs, passoMs);
+  // O normal destas palavras conta também os baldes a zero, ao contrário de `picos`: uma palavra rara
+  // ("rocket") só aparece no próprio surto, e a mediana dos baldes com ela era o surto a medir-se a si
+  // mesmo. O trecho já vem cortado ao tempo em que a pessoa esteve ao vivo, por isso os zeros são chat
+  // a falar de outra coisa, e não o canal desligado.
+  const limite = Math.max(fator * mediana(baldes), minimo);
+  return picos(baldes, { fator: 0, minimo: limite }).map((i) => {
+    const de = deMs + i * passoMs;
+    const ate = Math.min(ateMs, de + passoMs);
+    const dentro = achadas.filter((a) => a.ms >= de && a.ms < ate);
+    const ms = segundoDoPico(dentro, de, ate);
+    const termosAqui = termos.filter((t) => dentro.some((a) => a.quais.includes(t))).map((t) => t.escrito);
+    return {
+      ms, combateDeMs: Math.max(deMs, ms - antesMs), combateAteMs: ms + depoisMs, vezes: baldes[i], termos: termosAqui,
+    };
+  });
+}

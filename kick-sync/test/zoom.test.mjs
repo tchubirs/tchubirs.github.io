@@ -53,8 +53,8 @@ test('o deslizante e os botões: da noite toda aos 30 s, e de volta', semNavegad
   await abrirNoite(p);
   // Começa na noite toda: o menos não tem para onde ir.
   assert.equal(await p.inputValue('#zoomTempo'), '0');
-  assert.equal(await p.locator('#zoomQuanto').innerText(), 'a noite toda');
-  assert.equal(await p.locator('#zoomTempo').getAttribute('aria-valuetext'), 'a noite toda');
+  assert.equal(await p.locator('#zoomQuanto').innerText(), 'tudo à vista');
+  assert.equal(await p.locator('#zoomTempo').getAttribute('aria-valuetext'), 'tudo à vista');
   assert.ok(await p.locator('#zoomMenos').isDisabled());
   assert.equal((await vista(p)).largura, NOITE);
   // Os três têm nome acessível.

@@ -2,6 +2,8 @@ import {
   medir, chao, impulsos, regioes, FPS, TAXA_TIROS, BLOCO_MS, REFRACTARIO_MS,
 } from './tiros.js';
 import { recortar } from './aprender.js';
+import { medirGraves, explosoes as acharExplosoes, FPS as FPS_EXPLOSOES } from './explosoes.js';
+import { medirVoz, gritos as acharGritos, normalDaVoz, FPS as FPS_GRITOS } from './gritos.js';
 
 // Achar as kills sozinho — pela forca do som.
 //
@@ -34,8 +36,13 @@ export function custoVarrerMB(duracaoMs) {
  */
 export async function varrerNoite({
   linha, deMs, ateMs, bocadoS = 300, lerSom, sinal, aoProgresso = () => {},
-  opcoes = {}, taxaSom = TAXA_TIROS, nudgeMs = 0,
+  opcoes = {}, taxaSom = TAXA_TIROS, nudgeMs = 0, filtros = { tiros: true },
 }) {
+  // O que se procura no som: os tiros (o de sempre), as explosões e os gritos. Cada medida custa uma
+  // passagem pelo som, e só corre a que foi pedida.
+  const querTiros = filtros?.tiros !== false;
+  const querExplosoes = Boolean(filtros?.explosoes);
+  const querGritos = Boolean(filtros?.gritos);
   const partes = [];
   // Os bocados cortados pelas pecas do canal, e nao so pelo relogio.
   //
@@ -98,16 +105,41 @@ export async function varrerNoite({
     // de disparo, e o pico praticamente mais alto do grafico". A forca ERA o
     // sinal, e eu dividia-a fora antes de olhar.
     if (som) {
-      const m = medir(som, taxaSom);
-      const parte = { t, env: m.energia, brilho: m.brilho };
+      const parte = { t };
+      if (querTiros) {
+        const m = medir(som, taxaSom);
+        parte.env = m.energia;
+        parte.brilho = m.brilho;
+        recolherEstouros(poco, parte, som, taxaSom, opcoes);
+      }
+      if (querExplosoes) parte.graves = medirGraves(som, taxaSom);
+      if (querGritos) parte.voz = medirVoz(som, taxaSom);
       partes.push(parte);
-      recolherEstouros(poco, parte, som, taxaSom, opcoes);
     }
     ouvidoMs += duracaoS * 1000;
   }
   // Nada se ouviu e houve erros: o erro e a unica resposta que ha. Dizer
   // "nao ouvi som nenhum" escondia um problema de rede atras de um de canal.
   if (falhados && !partes.length) throw ultimoErro;
+
+  const { porHora = 15 } = opcoes;
+  const limite = Math.max(1, Math.round((porHora * (ateMs - deMs)) / 3_600_000));
+  // As explosões e os gritos, cada um contra o normal da noite inteira desta pessoa, como os tiros.
+  const explosoes = !querExplosoes ? [] : paraOMomento(acharExplosoes(
+    colar(partes, 'graves', ['forca', 'grave'], deMs, ateMs, FPS_EXPLOSOES),
+    chao(ouvidosDe(partes, 'graves', 'forca')),
+    opcoes.explosoes,
+  ), deMs, limite);
+  const gritos = !querGritos ? [] : paraOMomento(acharGritos(
+    colar(partes, 'voz', ['forca', 'voz'], deMs, ateMs, FPS_GRITOS),
+    normalDaVoz(ouvidosDe(partes, 'voz', 'voz')),
+    opcoes.gritos,
+  ), deMs, limite);
+  if (!querTiros) {
+    return {
+      ouvido: null, candidatos: [], estouros: [], explosoes, gritos, bytes, falhados, curva: new Float32Array(0),
+    };
+  }
 
   // Colar tudo numa só, com cada bocado no seu sítio do relógio.
   const fps = FPS;
@@ -144,8 +176,6 @@ export async function varrerNoite({
   // Ordenadas pelo tiro mais alto, e cortadas por cima. Numa noite de seis
   // horas cortar as mais baixas e cortar as que ele nao quer ver: o headshot e
   // o som mais alto do jogo. Quinze por hora e o que ele consegue rever.
-  const { porHora = 15 } = opcoes;
-  const limite = Math.max(1, Math.round((porHora * (ateMs - deMs)) / 3_600_000));
   // Os bocados que estiveram altos e ASSIM FICARAM, ordenados pelo tempo
   // quente. Ver `regioes` em `tiros.js` para a medicao que matou a procura
   // por impulsos soltos: o tiroteio verdadeiro dele dava ZERO com ela.
@@ -181,10 +211,57 @@ export async function varrerNoite({
       duracaoS: g.fimS - g.inicioS,
     })),
     estouros,
+    explosoes,
+    gritos,
     bytes,
     falhados,
     curva: tudo,
   };
+}
+
+/**
+ * Uma medida de cada bocado, colada no seu sítio do relógio da noite (o que não se ouviu fica a zero).
+ * `campo` é a medida dentro da parte (`graves`, `voz`) e `chaves` as curvas dela.
+ */
+function colar(partes, campo, chaves, deMs, ateMs, fps) {
+  const n = Math.max(0, Math.round(((ateMs - deMs) / 1000) * fps));
+  const saida = Object.fromEntries(chaves.map((k) => [k, new Float32Array(n)]));
+  for (const p of partes) {
+    const m = p[campo];
+    if (!m) continue;
+    const o = Math.round(((p.t - deMs) / 1000) * fps);
+    for (const k of chaves) {
+      const de = m[k];
+      for (let i = 0; i < de.length && o + i < n; i++) if (o + i >= 0) saida[k][o + i] = de[i];
+    }
+  }
+  return saida;
+}
+
+/** Só o que se ouviu, junto, para o chão: os bocados que faltaram não podem puxar o normal para zero. */
+function ouvidosDe(partes, campo, chave) {
+  const listas = partes.map((p) => p[campo]?.[chave]).filter(Boolean);
+  const saida = new Float32Array(listas.reduce((s, l) => s + l.length, 0));
+  let k = 0;
+  for (const l of listas) { saida.set(l, k); k += l.length; }
+  return saida;
+}
+
+/**
+ * Do que uma medida achou (em segundos desde `deMs`) para o que a lista de momentos usa: o instante do
+ * pico, e o clipe do começo ao fim do som, com pelo menos dois segundos. Os mais fortes ficam quando
+ * passam do limite da hora, e saem pela ordem do relógio.
+ */
+function paraOMomento(achados, deMs, limite) {
+  return [...achados].sort((a, b) => b.pico - a.pico).slice(0, limite)
+    .sort((a, b) => a.inicioS - b.inicioS)
+    .map((g) => ({
+      ms: Math.round(deMs + g.picoS * 1000),
+      combateDeMs: Math.round(deMs + g.inicioS * 1000),
+      combateAteMs: Math.round(deMs + Math.max(g.fimS, g.inicioS + 2) * 1000),
+      pico: g.pico,
+      duracaoS: g.duracaoS,
+    }));
 }
 
 // Um tecto: numa noite muito barulhenta isto podia crescer sem fim, e o que

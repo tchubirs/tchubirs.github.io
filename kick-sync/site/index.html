@@ -697,6 +697,26 @@
             <button id="pararChatTrecho" type="button" hidden><svg class="ic ic-p" aria-hidden="true"><use href="#i-parar"/></svg><span data-t="chatTrecho.parar">Parar</span></button>
             <span id="estadoChatTrecho" class="nota estadoChatTrecho" role="status" aria-live="polite"></span>
             <button id="fecharAcoes" type="button" class="discreto so-icone" data-t-aria="faixa.fechar" data-t-titulo="faixa.fechar" aria-label="Fechar" title="Fechar"><svg class="ic ic-p" aria-hidden="true"><use href="#i-fechar"/></svg></button>
+            <!-- Os filtros da detecção (o dono, 10/10: "a pessoa coloca informações específicas, ex: palavras no
+                 chat, ou palavras do streamer, ou estouros de rocket, ou de disparo, ou gritos do streamer").
+                 Fechados por omissão, com os tiros já marcados: quem nunca abriu isto detecta como sempre. -->
+            <details id="filtrosDetecao" class="filtrosDetecao">
+              <summary><span data-t="filtros.titulo">Filtros</span><span id="filtrosResumo" class="filtrosResumo"></span></summary>
+              <div class="filtrosCorpo">
+                <p class="nota" id="filtrosExplica" data-t="filtros.explica">Marque o que a detecção deve procurar. Cada filtro marcado entra no resultado.</p>
+                <fieldset id="filtrosLista" class="filtrosLista" aria-describedby="filtrosExplica">
+                  <legend data-t="filtros.legenda">O que procurar</legend>
+                  <label class="filtro"><input type="checkbox" id="filtroTiros" checked aria-describedby="filtroTirosAjuda"><span><b data-t="filtros.tiros">Tiros</b> <span class="nota" id="filtroTirosAjuda" data-t="filtros.tirosAjuda">trocas de tiros, pela força do som</span></span></label>
+                  <label class="filtro"><input type="checkbox" id="filtroExplosoes" aria-describedby="filtroExplosoesAjuda"><span><b data-t="filtros.explosoes">Explosões</b> <span class="nota" id="filtroExplosoesAjuda" data-t="filtros.explosoesAjuda">foguete, C4: som forte e grave que dura mais que um tiro. Aproximado.</span></span></label>
+                  <label class="filtro"><input type="checkbox" id="filtroGritos" aria-describedby="filtroGritosAjuda"><span><b data-t="filtros.gritos">Gritos do streamer</b> <span class="nota" id="filtroGritosAjuda" data-t="filtros.gritosAjuda">voz forte por mais de meio segundo, acima do normal da pessoa. Aproximado: uma risada alta também pode contar.</span></span></label>
+                  <div class="filtro filtroChat">
+                    <label><input type="checkbox" id="filtroChat" aria-describedby="filtroChatAjuda"><span><b data-t="filtros.chat">Palavras no chat</b> <span class="nota" id="filtroChatAjuda" data-t="filtros.chatAjuda">separadas por vírgula. Maiúsculas, acentos e letras repetidas não importam (kkkk é o mesmo que kkk).</span></span></label>
+                    <input id="filtroPalavras" type="text" autocomplete="off" spellcheck="false" maxlength="300" data-t-ph="filtros.chatPh" placeholder="kkk, clip, rocket" data-t-aria="filtros.chatCampo" aria-label="Palavras ou expressões do chat, separadas por vírgula" aria-describedby="filtroChatAjuda">
+                  </div>
+                  <label class="filtro desligado"><input type="checkbox" id="filtroFala" disabled aria-describedby="filtroFalaAjuda"><span><b data-t="filtros.fala">Palavras faladas pelo streamer</b> <span class="nota" id="filtroFalaAjuda" data-t="filtros.falaAjuda">Ainda não existe: precisaria transformar a voz em texto no próprio aparelho, e isso é pesado demais para o navegador.</span></span></label>
+                </fieldset>
+              </div>
+            </details>
           </div>
         </div>
       </div>

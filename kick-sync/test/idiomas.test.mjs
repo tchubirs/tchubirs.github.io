@@ -131,6 +131,9 @@ const IGUAIS_DE_PROPOSITO = {
     'clipe.parar',
     // O trecho de chat: "Parar" e "pico" escrevem-se igual em espanhol.
     'chatTrecho.parar', 'chatTrecho.umPico', 'chatTrecho.picos',
+    // Os filtros da detecção: "Filtros", "grito", "gritos" e "momento" escrevem-se igual em espanhol.
+    'filtros.titulo', 'filtros.umGrito', 'filtros.gritosN', 'filtros.tipoGrito',
+    'filtros.umMomentoTodos', 'filtros.momentosTodos',
     // "Exportar 16:9" e "Exportar 9:16" sao o mesmo nas duas linguas — e o
     // numero e a metade que interessa. Ele abriu a janela e nao encontrou a
     // versao horizontal; agora os dois botoes dizem qual e qual.

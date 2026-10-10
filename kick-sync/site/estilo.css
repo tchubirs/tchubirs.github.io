@@ -1889,3 +1889,40 @@ body:is(.videoAberto, :has(#palco:not([hidden]))) .mostrarMapa { background: var
 @media (max-width: 620px) {
   #tiposArquivoElenco { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 }
+
+/* Os filtros da detecção, dentro da barra da faixa: uma linha inteira, fechada por omissão. */
+.filtrosDetecao { flex: 1 1 100%; min-width: 0; border-top: 1px solid var(--linha); padding-top: var(--e2); }
+.filtrosDetecao[hidden] { display: none; }
+.filtrosDetecao > summary {
+  display: flex; align-items: center; gap: var(--e3); min-height: 30px; cursor: pointer; list-style: none;
+  font-size: var(--t-menor); font-weight: 600; color: var(--tinta); border-radius: var(--r-2); padding: 0 var(--e2);
+}
+.filtrosDetecao > summary::-webkit-details-marker { display: none; }
+.filtrosDetecao > summary::before {
+  content: ''; width: 0; height: 0; border-style: solid; border-width: 4px 0 4px 6px;
+  border-color: transparent transparent transparent var(--tinta-2); transition: transform var(--mov-rapido);
+}
+.filtrosDetecao[open] > summary::before { transform: rotate(90deg); }
+.filtrosDetecao > summary:hover { background: var(--sup-3); }
+.filtrosDetecao > summary:focus-visible { outline: none; box-shadow: var(--foco); }
+.filtrosResumo { font-weight: 400; color: var(--tinta-2); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.filtrosCorpo { padding: var(--e2) var(--e2) var(--e3); display: grid; gap: var(--e3); }
+.filtrosCorpo > .nota { margin: 0; font-size: var(--t-menor); color: var(--tinta-2); }
+.filtrosLista { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: var(--e2); grid-template-columns: repeat(auto-fit, minmax(min(100%, 17em), 1fr)); }
+.filtrosLista > legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.filtro { display: block; min-width: 0; padding: var(--e2) var(--e3); border: 1px solid var(--linha); border-radius: var(--r-2); background: var(--sup-2); font-size: var(--t-menor); }
+.filtro label, label.filtro { display: flex; align-items: flex-start; gap: var(--e3); cursor: pointer; }
+.filtro input[type=checkbox] { flex: 0 0 auto; width: 16px; height: 16px; margin: 2px 0 0; accent-color: var(--acento); }
+.filtro b { font-weight: 600; color: var(--tinta); }
+.filtro .nota { color: var(--tinta-2); }
+.filtro:has(input[type=checkbox]:checked) { border-color: var(--acento-fio); background: var(--acento-eco); }
+.filtroChat { display: grid; gap: var(--e2); grid-column: 1 / -1; }
+.filtroChat input[type=text] { width: 100%; min-width: 0; min-height: 30px; font-size: var(--t-base); }
+.filtro.desligado { opacity: .7; }
+.filtro.desligado label, label.filtro.desligado { cursor: default; }
+@media (pointer: coarse) {
+  .filtrosDetecao > summary { min-height: 44px; }
+  .filtro input[type=checkbox] { width: 22px; height: 22px; margin-top: 0; }
+  .filtro label, label.filtro { min-height: 44px; align-items: center; }
+  .filtroChat input[type=text] { min-height: 44px; }
+}
