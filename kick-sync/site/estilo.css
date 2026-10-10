@@ -1755,3 +1755,60 @@ body:has(#palco:not([hidden])) .mostrarMapa { background: var(--sup-3); border-c
 #corte[hidden] { display: none; }
 #corte > h2 { margin-bottom: var(--e2); }
 @media (max-width: 1079.98px) { #corte { order: 8; } }
+
+/* ── o trecho de chat a ler: duas alças na linha do tempo ──────────────────
+   Como a seleção de trecho de um editor (Premiere, Resolve, CapCut): uma faixa com uma alça em cada
+   ponta. Ciano, a cor de ação deste sistema, para não se confundir com o âmbar da entrada e da saída.
+   Dentro da faixa, mais escuro, o que já foi lido do chat desse streamer. */
+.chatTrechoLinha { display: grid; grid-template-columns: var(--coluna) 1fr; gap: var(--e3); align-items: center; margin-top: var(--e2); }
+.chatTrechoRotulo { font-size: var(--t-menor); color: var(--tinta-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chatTrecho { position: relative; height: 22px; border-radius: var(--r-fio); background: var(--sup-1); }
+.chatTrechoLido { position: absolute; inset: 0; pointer-events: none; }
+.chatTrechoLido i {
+  position: absolute; top: 9px; height: 4px; display: block; border-radius: 1px;
+  background: color-mix(in srgb, var(--tinta-3) 55%, transparent);
+}
+.chatTrechoFaixa {
+  position: absolute; top: 3px; bottom: 3px; border-radius: 2px; cursor: grab; touch-action: none;
+  background: var(--acento-eco); border-top: 1px solid var(--acento-fio); border-bottom: 1px solid var(--acento-fio);
+}
+.chatTrechoFaixa.aArrastar { cursor: grabbing; }
+/* A alça desenhada tem 6 px; a área de toque, 24 (WCAG 2.5.8), e 44 num ecrã de toque. */
+.alca {
+  position: absolute; top: -3px; bottom: -3px; width: 24px; transform: translateX(-50%); z-index: 2;
+  cursor: ew-resize; touch-action: none; border-radius: var(--r-2);
+}
+.alca::before {
+  content: ''; position: absolute; left: 50%; top: 2px; bottom: 2px; width: 6px; margin-left: -3px;
+  background: var(--acento); border-radius: 2px; box-shadow: 0 0 0 1px var(--sup-0);
+}
+.alca:hover::before, .alca.aArrastar::before { background: var(--acento-alto); }
+.alca.fora::before { opacity: .45; }
+.alca:focus-visible { outline: none; box-shadow: var(--foco); }
+.chatTrechoCtl {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2) var(--e3);
+  margin-top: var(--e2); padding-left: calc(var(--coluna) + var(--e3));
+}
+.chatTrechoCtl button { min-height: 30px; font-size: var(--t-menor); padding: 0 var(--e3); }
+.chatTrechoCtl button[hidden] { display: none; }
+.chatDeQuem { display: inline-flex; align-items: center; gap: var(--e2); white-space: nowrap; }
+.chatDeQuem select {
+  width: auto; min-width: 0; max-width: 14em; min-height: 30px; font-size: var(--t-menor);
+  padding: 0 var(--e6) 0 var(--e2); background-position: calc(100% - 15px) 50%, calc(100% - 10px) 50%;
+}
+.chatTrechoHoras { font: 400 var(--t-menor)/1.2 var(--letra-mono); font-variant-numeric: tabular-nums; color: var(--tinta-2); white-space: nowrap; }
+.estadoChatTrecho { flex: 1 1 16em; min-width: 0; font-size: var(--t-menor); }
+.relogio > .chatTrechoLinha, .relogio > .chatTrechoCtl { order: 3; }
+@media (max-width: 1079.98px) {
+  .relogio > .chatTrechoLinha, .relogio > .chatTrechoCtl { order: 3; }
+}
+@media (pointer: coarse) {
+  .chatTrecho { height: 30px; }
+  .alca { width: 44px; top: -7px; bottom: -7px; }
+  .chatTrechoLido i { top: 13px; }
+}
+@media (max-width: 620px) {
+  .chatTrechoCtl { padding-left: 0; }
+  .chatTrechoCtl button { min-height: 40px; }
+  .chatDeQuem select { min-height: 40px; max-width: 13em; }
+}

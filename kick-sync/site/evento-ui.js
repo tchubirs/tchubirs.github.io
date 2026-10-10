@@ -586,15 +586,35 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
   ev.janelasDoChat = (c) => janelasLidas.get(c) || [];
   function marcasDoChat(c) {
     const msgs = ev.mensagens.get(c) || [];
-    const saida = [];
+    // Janelas que se sobrepõem (duas escolhas a meia hora uma da outra, ou um trecho escolhido à mão por
+    // cima de uma janela já lida) acham o mesmo pico duas vezes: fica um por minuto.
+    const porMinuto = new Map();
     for (const [deMs, ateMs] of janelasLidas.get(c) || []) {
       const dentro = msgs.filter((m) => m.ms >= deMs && m.ms < ateMs);
       for (const i of picos(calor(dentro, deMs, ateMs), SENSIBILIDADES[sensibilidade])) {
         const de = deMs + i * 60_000;
-        saida.push({ ms: segundoDoPico(dentro, de, Math.min(ateMs, de + 60_000)), tipo: 'chat' });
+        const ms = segundoDoPico(dentro, de, Math.min(ateMs, de + 60_000));
+        const minuto = Math.floor(ms / 60_000);
+        if (!porMinuto.has(minuto)) porMinuto.set(minuto, { ms, tipo: 'chat' });
       }
     }
-    return saida.sort((a, b) => a.ms - b.ms);
+    return [...porMinuto.values()].sort((a, b) => a.ms - b.ms);
+  }
+  /** O que falta ler do chat de `c` entre `deMs` e `ateMs`: os pedaços que nenhuma janela lida cobre. */
+  function faltaLer(c, deMs, ateMs) {
+    const lidas = [...(janelasLidas.get(c) || [])].sort((a, b) => a[0] - b[0]);
+    const falta = [];
+    let de = deMs;
+    for (const [a, b] of lidas) {
+      if (b <= de) continue;
+      if (a >= ateMs) break;
+      if (a > de) falta.push([de, a]);
+      de = Math.max(de, b);
+      if (de >= ateMs) break;
+    }
+    if (de < ateMs) falta.push([de, ateMs]);
+    // Menos de um segundo por ler é a fronteira entre duas janelas, e não chat.
+    return falta.filter(([a, b]) => b - a >= 1000);
   }
   function pintarComoPico() {
     const { fator, minimo } = SENSIBILIDADES[sensibilidade];
@@ -614,7 +634,7 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
       ? [e.canal, ...ev.resultados.filter((r) => r.estado === 'ok' && r.slug !== e.canal).map((r) => r.slug)]
       : colegas(e.canal);
     const doTime = base.filter((c) => noArEm(ev.coberturas, c, e.ms));
-    const canais = doTime.filter((c) => !chatLido.has(`${c}|${deMs}`));
+    const canais = doTime.filter((c) => !chatLido.has(`${c}|${deMs}`) && faltaLer(c, deMs, ateMs).length);
     let feitos = 0;
     const aLer = todos ? 'lance.aLerChatTodos' : 'lance.aLerChat';
     if (canais.length) $('estadoChat').textContent = t(aLer, { feitos, total: canais.length });
@@ -639,16 +659,83 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
   let ultimaLeitura = null;
 
   // Uma janela de chat de um canal: as mensagens ficam (para o chat ao lado do vídeo) e os picos refazem-se.
-  async function lerJanela(c, deMs, ateMs, sinal) {
-    const id = await idDoCanal(c, { buscar: buscarChat, sinal });
-    const msgs = await mensagensEntre(id, deMs, ateMs, { buscar: buscarChat, sinal, maxPedidos: 120 });
+  //
+  // Com `soOQueVeio`, a janela só conta como lida até onde a leitura chegou: um trecho escolhido à mão
+  // que parou a meio (o travão de pedidos, a Kick a recusar, o botão Parar) volta a ler só o que faltou.
+  async function lerJanela(c, deMs, ateMs, sinal, { soOQueVeio = false, maxPedidos = 120, aoProgredir = () => {} } = {}) {
+    // O número do canal não muda: um trecho lido aos bocados pergunta-o uma vez só.
+    const id = idsDoChat.get(c) ?? await idDoCanal(c, { buscar: buscarChat, sinal });
+    if (id != null) idsDoChat.set(c, id);
+    let chegouMs = ateMs;
+    const msgs = await mensagensEntre(id, deMs, ateMs, {
+      buscar: buscarChat, sinal, maxPedidos,
+      aoProgredir: (p) => { chegouMs = p.chegouMs; aoProgredir(p); },
+    });
+    juntarMensagens(c, msgs);
+    const lida = !soOQueVeio || !msgs.incompleto ? [deMs, ateMs]
+      : id != null && chegouMs < ateMs ? [Math.max(deMs, chegouMs), ateMs] : null;
+    if (lida) janelasLidas.set(c, [...(janelasLidas.get(c) || []), lida]);
+    ev.marcas.set(c, marcasDoChat(c));
+    aoMudarPicos();
+    if (!soOQueVeio) chatLido.add(`${c}|${deMs}`);
+    return { msgs, id };
+  }
+  const idsDoChat = new Map();
+  function juntarMensagens(c, msgs) {
     const porId = new Map((ev.mensagens.get(c) || []).map((m) => [m.id ?? `${m.ms}|${m.autor}|${m.texto}`, m]));
     for (const m of msgs) porId.set(m.id ?? `${m.ms}|${m.autor}|${m.texto}`, m);
     ev.mensagens.set(c, [...porId.values()].sort((a, b) => a.ms - b.ms));
-    janelasLidas.set(c, [...(janelasLidas.get(c) || []), [deMs, ateMs]]);
-    ev.marcas.set(c, marcasDoChat(c));
-    aoMudarPicos();
-    chatLido.add(`${c}|${deMs}`);
+  }
+
+  // ── o chat de um trecho escolhido à mão ────────────────────────────────
+  //
+  // O dono, 10/10: "tem que me pedir quanto chat é pra ler, de que hora até que hora". A tela do vídeo
+  // tem duas alças na linha do tempo e um botão; isto lê o chat de UM canal nesse trecho, e só o que
+  // ainda não se leu. Não depende do mapa do evento: na noite sem evento funciona igual, porque o chat
+  // vem do canal e não do elenco. As mensagens e os picos vão para o mesmo sítio dos do evento.
+  const TRECHO_MAX_PEDIDOS = 400;
+  const TRECHO_BOCADO_MS = 5 * 60_000;
+  async function lerChatTrecho(c, deMs, ateMs, { sinal, aoProgredir = () => {} } = {}) {
+    const ate = Math.min(ateMs, Date.now());
+    const falta = faltaLer(c, deMs, ate);
+    const total = falta.reduce((s, [a, b]) => s + (b - a), 0);
+    // Em bocados de 5 minutos, por ordem de relógio: parar a meio guarda os bocados que já vieram, e um
+    // clique a seguir lê só o resto. Custa um pedido a mais por bocado, que é o da fronteira.
+    const bocados = [];
+    for (const [a, b] of falta) for (let x = a; x < b; x += TRECHO_BOCADO_MS) bocados.push([x, Math.min(b, x + TRECHO_BOCADO_MS)]);
+    const antes = (ev.mensagens.get(c) || []).length;
+    let andado = 0;
+    let motivo = null;
+    let semCanal = false;
+    for (const [a, b] of bocados) {
+      if (sinal?.aborted) throw new DOMException('parado', 'AbortError');
+      const { msgs, id } = await lerJanela(c, a, b, sinal, {
+        soOQueVeio: true,
+        maxPedidos: TRECHO_MAX_PEDIDOS,
+        aoProgredir: ({ fracao }) => aoProgredir({ fracao: total ? (andado + fracao * (b - a)) / total : 1 }),
+      });
+      andado += b - a;
+      aoProgredir({ fracao: total ? andado / total : 1 });
+      if (id == null) { semCanal = true; break; }
+      if (msgs.incompleto) { motivo = msgs.motivo; break; }
+    }
+    if (falta.length && !semCanal && !motivo) {
+      // O trecho inteiro passa a ser uma janela só, para os picos se medirem contra o trecho que se pediu,
+      // e não contra os bocados que por acaso faltavam.
+      janelasLidas.set(c, [...(janelasLidas.get(c) || []), [deMs, ate]]);
+      ev.marcas.set(c, marcasDoChat(c));
+      aoMudarPicos();
+    }
+    if (ev.mapa) pintar();
+    const lista = ev.mensagens.get(c) || [];
+    return {
+      jaLido: !falta.length,
+      novas: lista.length - antes,
+      noTrecho: lista.filter((m) => m.ms >= deMs && m.ms < ate).length,
+      picos: (ev.marcas.get(c) || []).filter((m) => m.ms >= deMs && m.ms < ate).length,
+      semCanal,
+      motivo,
+    };
   }
 
   // Com a página parada, os picos das janelas vizinhas, para trás e para a frente (o dono, 07/10). Só
@@ -1254,5 +1341,5 @@ export function montarEvento({ abrirLance, memorizarVods = () => {}, aoMudarPico
     const dica = document.querySelector('#evento .dica');
     if (dica) { dica.dataset.t = 'evento.dicaToque'; dica.textContent = t('evento.dicaToque'); }
   }
-  return { abrirElenco, abrirDoTexto, abrirDoLink, abrirGuardado, esquecerEvento, estado: ev };
+  return { abrirElenco, abrirDoTexto, abrirDoLink, abrirGuardado, esquecerEvento, lerChatTrecho, faltaLer, estado: ev };
 }

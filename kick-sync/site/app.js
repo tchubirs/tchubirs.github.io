@@ -1052,7 +1052,8 @@ function pintarRegua() {
   for (const b of alvo.querySelectorAll('.kill')) {
     // A marca de outra kill desliga a prévia desta, senão volta para trás logo.
     b.onclick = () => { largarPrevia(); irPara(Number(b.dataset.ms)); };
-  }
+  }  // As alças do trecho de chat vivem na mesma vista da régua: mudam juntas.
+  pintarChatTrecho();
 }
 
 function marcarFaixas() {
@@ -1377,6 +1378,9 @@ function aplicarFoco() {
   }
   $('palcoFoco').classList.toggle('dois', estado.focos.length > 1);
   marcarFaixas();
+  // O chat ao lado e o "Chat de" do trecho seguem quem está em foco, até se escolher outro à mão.
+  pintarChatTrecho();
+  pintarChatVideo(estado.agoraMs, true);
   // A ordem é reposta aqui e não no `montarGrade`: um quadrado que desce do
   // foco para a grelha é ACRESCENTADO ao fim, e sem isto ficava lá.
   pintarOrdemDaGrelha();
@@ -1659,7 +1663,7 @@ const CHAT_LINHAS = 40;
 const EMOTE_CHAT = /\[emote:\d+:([^\]]+)\]/g;
 let chatPintado = '';
 function pintarChatVideo(quandoMs, forcar = false) {
-  const canal = estado.focos[0] || estado.linhas[0]?.slug;
+  const canal = canalDoChat();
   const lista = (canal && mensagensDoEvento().get(canal)) || [];
   const caixa = $('chatVideo');
   if (!lista.length || !estado.linhas.length) {
@@ -1686,6 +1690,240 @@ function pintarChatVideo(quandoMs, forcar = false) {
     : `<li class="nota">${escapar(t('chat.nada'))}</li>`;
   const ol = $('chatLinhas');
   ol.scrollTop = ol.scrollHeight;
+}
+
+// ── o trecho de chat a ler ──────────────────────────────────────────────────
+//
+// O dono, 10/10: "tem que me pedir quanto chat é pra ler, de que hora até que hora". Duas alças na
+// linha do tempo, como a seleção de um editor de vídeo, e um botão que lê o chat de UM streamer entre
+// elas. O streamer é o do vídeo em foco, ou outro escolhido na lista sem trocar o vídeo. A leitura é a
+// do evento (evento-ui.js, lerChatTrecho), que já sabe o que foi lido e não o pede outra vez; com ou
+// sem evento aberto, porque o chat vem do canal e não do elenco.
+const TRECHO_PADRAO_MS = 10 * 60_000;
+const TRECHO_MIN_MS = 5000;
+let chatTrecho = null;
+let chatEscolhido = null;
+let chatTrechoControlo = null;
+// O módulo do evento, que lê o chat. Só existe depois de montado, no fim deste ficheiro.
+let chatDoEvento = null;
+
+/** De quem é o chat: o escolhido na lista, se ainda está aberto, ou o do vídeo em foco. */
+function canalDoChat() {
+  if (chatEscolhido && estado.linhas.some((l) => l.slug === chatEscolhido)) return chatEscolhido;
+  return estado.focos[0] || estado.linhas[0]?.slug || null;
+}
+
+/** Dez minutos à volta de `ms`, dentro da noite; encostado à ponta quando não cabe. */
+function trechoEmVolta(ms) {
+  const { inicio, fim } = estado.janela;
+  const dur = Math.min(TRECHO_PADRAO_MS, fim - inicio);
+  let de = Math.round(ms - dur / 2);
+  de = Math.min(Math.max(de, inicio), fim - dur);
+  return { deMs: de, ateMs: de + dur };
+}
+
+/** O trecho sempre dentro da noite aberta e com o início antes do fim. Uma noite nova traz um novo. */
+function acertarChatTrecho() {
+  if (!estado.janela) { chatTrecho = null; return null; }
+  const { inicio, fim } = estado.janela;
+  if (!chatTrecho || chatTrecho.ateMs <= inicio || chatTrecho.deMs >= fim) {
+    chatTrecho = trechoEmVolta(Number.isFinite(estado.agoraMs) ? estado.agoraMs : inicio);
+  }
+  const de = Math.min(Math.max(chatTrecho.deMs, inicio), fim - TRECHO_MIN_MS);
+  const ate = Math.max(Math.min(chatTrecho.ateMs, fim), de + TRECHO_MIN_MS);
+  chatTrecho = { deMs: de, ateMs: ate };
+  return chatTrecho;
+}
+
+/** Mexer numa alça. A outra não se mexe: a que anda pára a 5 s dela, e nunca a passa. */
+function moverAlca(qual, ms) {
+  if (!acertarChatTrecho()) return;
+  const { inicio, fim } = estado.janela;
+  const alvo = Math.round(ms);
+  if (qual === 'inicio') chatTrecho.deMs = Math.min(Math.max(alvo, inicio), chatTrecho.ateMs - TRECHO_MIN_MS);
+  else chatTrecho.ateMs = Math.max(Math.min(alvo, fim), chatTrecho.deMs + TRECHO_MIN_MS);
+  pintarChatTrecho();
+}
+
+/** Mover o trecho inteiro, do mesmo tamanho. */
+function moverTrecho(deMs) {
+  if (!acertarChatTrecho()) return;
+  const { inicio, fim } = estado.janela;
+  const dur = chatTrecho.ateMs - chatTrecho.deMs;
+  const de = Math.min(Math.max(Math.round(deMs), inicio), fim - dur);
+  chatTrecho = { deMs: de, ateMs: de + dur };
+  pintarChatTrecho();
+}
+
+function duracaoTrecho(ms) {
+  const s = Math.round(ms / 1000);
+  if (s < 60) return `${s} s`;
+  const min = Math.round(s / 60);
+  if (min < 60) return `${min} min`;
+  return `${Math.floor(min / 60)} h${min % 60 ? ` ${doisDigitos(min % 60)}` : ''}`;
+}
+
+let chatDeQuemChave = '';
+function pintarChatTrecho() {
+  const caixa = $('chatTrecho');
+  if (!caixa) return;
+  const vista = vistaAgora();
+  const trecho = acertarChatTrecho();
+  const canal = canalDoChat();
+  // A lista curta dos streamers abertos. Refeita só quando muda: a cada pintura, uma lista aberta
+  // fechava-se debaixo do dedo.
+  const sel = $('chatDeQuem');
+  const chave = `${idiomaActual()}|${estado.linhas.map((l) => l.slug).join(',')}|${canal}|${estado.focos[0]}`;
+  if (chave !== chatDeQuemChave) {
+    chatDeQuemChave = chave;
+    sel.innerHTML = estado.linhas.map((l) => `<option value="${escapar(l.slug)}"${l.slug === canal ? ' selected' : ''}>`
+      + `${escapar(l.slug)}${l.slug === estado.focos[0] ? ` (${escapar(t('chatTrecho.noVideo'))})` : ''}</option>`).join('');
+  }
+  sel.value = canal || '';
+  $('lerChatTrecho').disabled = !trecho || !canal || Boolean(chatTrechoControlo);
+  $('chatTrechoAqui').disabled = !trecho;
+  if (!trecho || !vista) {
+    $('chatTrechoHoras').textContent = '';
+    $('chatTrechoFaixa').style.display = 'none';
+    $('chatTrechoLido').innerHTML = '';
+    return;
+  }
+  const { inicio, fim } = vista;
+  const pct = (ms) => ((ms - inicio) / (fim - inicio)) * 100;
+  const prender = (x) => Math.min(100, Math.max(0, x));
+  const de = pct(trecho.deMs);
+  const ate = pct(trecho.ateMs);
+  const faixa = $('chatTrechoFaixa');
+  faixa.style.display = ate <= 0 || de >= 100 ? 'none' : '';
+  faixa.style.left = `${prender(de)}%`;
+  faixa.style.width = `${Math.max(0, prender(ate) - prender(de))}%`;
+  // Uma alça fora da vista fica encostada à ponta, mais apagada, e continua a andar pelo teclado.
+  for (const [id, x, ms] of [['alcaInicio', de, trecho.deMs], ['alcaFim', ate, trecho.ateMs]]) {
+    const a = $(id);
+    a.style.left = `${prender(x)}%`;
+    a.classList.toggle('fora', x < 0 || x > 100);
+    a.setAttribute('aria-valuemin', String(Math.round((id === 'alcaInicio' ? estado.janela.inicio : trecho.deMs + TRECHO_MIN_MS) / 1000)));
+    a.setAttribute('aria-valuemax', String(Math.round((id === 'alcaInicio' ? trecho.ateMs - TRECHO_MIN_MS : estado.janela.fim) / 1000)));
+    a.setAttribute('aria-valuenow', String(Math.round(ms / 1000)));
+    a.setAttribute('aria-valuetext', relogioCurto(ms));
+    a.title = `${t(id === 'alcaInicio' ? 'chatTrecho.inicio' : 'chatTrecho.fim')}: ${relogioCurto(ms)}`;
+  }
+  $('chatTrechoHoras').textContent = t('chatTrecho.horas', {
+    de: relogioCurto(trecho.deMs), ate: relogioCurto(trecho.ateMs), dur: duracaoTrecho(trecho.ateMs - trecho.deMs),
+  });
+  // O que já foi lido do chat de quem está escolhido, mais escuro dentro da faixa.
+  const lidas = canal ? chatDoEvento?.estado.janelasDoChat?.(canal) : [];
+  $('chatTrechoLido').innerHTML = (lidas || []).filter(([a, b]) => b > inicio && a < fim)
+    .map(([a, b]) => `<i style="left:${prender(pct(a))}%;width:${Math.max(0.3, prender(pct(b)) - prender(pct(a)))}%"></i>`).join('');
+}
+
+/** O instante do ponteiro dentro da calha do trecho, na vista que está desenhada. */
+function msDoPonteiro(e) {
+  const vista = vistaAgora();
+  const r = $('chatTrecho').getBoundingClientRect();
+  return vista.inicio + ((e.clientX - r.left) / r.width) * (vista.fim - vista.inicio);
+}
+
+function ligarChatTrecho() {
+  // Arrastar com o rato ou o dedo. O ponteiro fica preso à alça enquanto se arrasta, mesmo que saia dela.
+  const arrastar = (el, aoMover) => {
+    el.addEventListener('pointerdown', (e) => {
+      if (!vistaAgora() || e.button > 0) return;
+      e.preventDefault();
+      e.stopPropagation();
+      el.focus({ preventScroll: true });
+      try { el.setPointerCapture(e.pointerId); } catch { /* um ponteiro sintético não se prende */ }
+      const largar = aoMover(e);
+      const mover = (m) => largar(m);
+      const fim = () => {
+        el.removeEventListener('pointermove', mover);
+        el.removeEventListener('pointerup', fim);
+        el.removeEventListener('pointercancel', fim);
+        el.classList.remove('aArrastar');
+      };
+      el.classList.add('aArrastar');
+      el.addEventListener('pointermove', mover);
+      el.addEventListener('pointerup', fim);
+      el.addEventListener('pointercancel', fim);
+    });
+  };
+  arrastar($('alcaInicio'), () => (m) => moverAlca('inicio', msDoPonteiro(m)));
+  arrastar($('alcaFim'), () => (m) => moverAlca('fim', msDoPonteiro(m)));
+  arrastar($('chatTrechoFaixa'), (e) => {
+    const desde = msDoPonteiro(e);
+    const de0 = chatTrecho?.deMs ?? 0;
+    return (m) => moverTrecho(de0 + msDoPonteiro(m) - desde);
+  });
+  // Pelo teclado: setas 5 s, com Shift 1 min; Home e End às pontas da noite.
+  for (const [id, qual] of [['alcaInicio', 'inicio'], ['alcaFim', 'fim']]) {
+    $(id).addEventListener('keydown', (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || !acertarChatTrecho()) return;
+      const passo = e.shiftKey ? 60_000 : 5000;
+      const agora = qual === 'inicio' ? chatTrecho.deMs : chatTrecho.ateMs;
+      let ms;
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') ms = agora - passo;
+      else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') ms = agora + passo;
+      else if (e.key === 'PageDown') ms = agora - 60_000;
+      else if (e.key === 'PageUp') ms = agora + 60_000;
+      else if (e.key === 'Home') ms = estado.janela.inicio;
+      else if (e.key === 'End') ms = estado.janela.fim;
+      else return;
+      e.preventDefault();
+      e.stopPropagation();
+      moverAlca(qual, ms);
+    });
+  }
+  $('chatDeQuem').onchange = () => {
+    chatEscolhido = $('chatDeQuem').value || null;
+    $('estadoChatTrecho').textContent = '';
+    pintarChatTrecho();
+    pintarChatVideo(estado.agoraMs, true);
+  };
+  $('chatTrechoAqui').onclick = () => {
+    if (!estado.janela) return;
+    chatTrecho = trechoEmVolta(estado.agoraMs);
+    pintarChatTrecho();
+  };
+  $('lerChatTrecho').onclick = lerChatDoTrecho;
+  $('pararChatTrecho').onclick = () => chatTrechoControlo?.abort();
+}
+
+async function lerChatDoTrecho() {
+  const trecho = acertarChatTrecho();
+  const canal = canalDoChat();
+  if (!trecho || !canal || chatTrechoControlo || !chatDoEvento) return;
+  const controlo = new AbortController();
+  chatTrechoControlo = controlo;
+  const { deMs, ateMs } = trecho;
+  const quando = { canal, de: relogioCurto(deMs), ate: relogioCurto(ateMs) };
+  const estadoEl = $('estadoChatTrecho');
+  $('pararChatTrecho').hidden = false;
+  $('lerChatTrecho').disabled = true;
+  estadoEl.textContent = t('chatTrecho.aLer', { ...quando, pct: 0 });
+  try {
+    if (deMs >= Date.now()) { estadoEl.textContent = t('chatTrecho.futuro'); return; }
+    const r = await chatDoEvento.lerChatTrecho(canal, deMs, ateMs, {
+      sinal: controlo.signal,
+      aoProgredir: ({ fracao }) => {
+        if (!controlo.signal.aborted) estadoEl.textContent = t('chatTrecho.aLer', { ...quando, pct: Math.round(fracao * 100) });
+      },
+    });
+    const msgs = tn(r.noTrecho, 'chatTrecho.umaMsg', 'chatTrecho.msgs');
+    const picos = tn(r.picos, 'chatTrecho.umPico', 'chatTrecho.picos');
+    if (r.semCanal) estadoEl.textContent = t('chatTrecho.semCanal', { canal });
+    else if (r.jaLido) estadoEl.textContent = t('chatTrecho.jaLido', { ...quando, msgs, picos });
+    else if (r.motivo) estadoEl.textContent = t('chatTrecho.parou', { ...quando, msgs });
+    else estadoEl.textContent = t('chatTrecho.lido', { ...quando, msgs, picos });
+  } catch (e) {
+    if (e?.name !== 'AbortError') throw e;
+    estadoEl.textContent = t('chatTrecho.parado', { canal });
+  } finally {
+    chatTrechoControlo = null;
+    $('pararChatTrecho').hidden = true;
+    pintarChatTrecho();
+    pintarRegua();
+    pintarChatVideo(estado.agoraMs, true);
+  }
 }
 
 function irPara(quandoMs) {
@@ -5236,6 +5474,8 @@ const evento = montarEvento({
 window.__evento = evento.estado;
 picosDoEvento = () => evento.estado.marcas;
 mensagensDoEvento = () => evento.estado.mensagens;
+chatDoEvento = evento;
+ligarChatTrecho();
 // Com uma live só a grelha fica vazia, e o vídeo fica com o lugar dela (ver o CSS de .semGrelha).
 // O CSS não o pode saber sozinho: um :has dentro de outro :has não vale.
 new MutationObserver(() => {

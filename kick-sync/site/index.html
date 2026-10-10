@@ -627,7 +627,8 @@
     </div>
     <ul id="listaMomentos" class="momentos"></ul>
     <!-- O chat de quem está em foco, no tempo do vídeo (o dono, 07/10: ver o chat num pico para entender
-         o que aconteceu). Só com mensagens lidas, que hoje vêm do mapa do evento. -->
+         o que aconteceu). Só com mensagens lidas: as do mapa do evento, e as do trecho escolhido
+         com as duas alças na linha do tempo, com ou sem evento. -->
     <section id="chatVideo" class="chatVideo" hidden>
       <h3 id="chatVideoTitulo" class="chatTitulo"></h3>
       <ol id="chatLinhas" class="chatLinhas" aria-live="off"></ol>
@@ -668,6 +669,30 @@
       <!-- A regua, como num editor: as horas por baixo das barras, e as kills
            marcadas nela. Sem isto sabe-se que se esta "algures no meio". -->
       <div class="reguaLinha"><span></span><div id="regua" class="regua"></div></div>
+      <!-- O trecho de chat a ler, escolhido à mão (o dono, 10/10: "dois pontos pra interagir dentro da
+           timeline, aonde eu escolho de onde a onde eu quero que leia"). Como a seleção de um editor:
+           duas alças que se arrastam com o rato ou o dedo, e que andam pelas setas. O que já foi lido
+           desse canal aparece mais escuro dentro da faixa. -->
+      <div class="chatTrechoLinha">
+        <span class="chatTrechoRotulo" data-t="chatTrecho.rotulo">Ler chat</span>
+        <div id="chatTrecho" class="chatTrecho">
+          <div id="chatTrechoLido" class="chatTrechoLido" aria-hidden="true"></div>
+          <div id="chatTrechoFaixa" class="chatTrechoFaixa" data-t-titulo="chatTrecho.moverFaixa" title="arraste para mover o trecho inteiro"></div>
+          <div id="alcaInicio" class="alca alcaInicio" role="slider" tabindex="0" aria-orientation="horizontal"
+            data-t-aria="chatTrecho.inicio" aria-label="Início do trecho de chat"></div>
+          <div id="alcaFim" class="alca alcaFim" role="slider" tabindex="0" aria-orientation="horizontal"
+            data-t-aria="chatTrecho.fim" aria-label="Fim do trecho de chat"></div>
+        </div>
+      </div>
+      <div class="chatTrechoCtl" role="group" data-t-aria="chatTrecho.grupo" aria-label="Ler o chat de um trecho">
+        <label class="pequeno chatDeQuem"><span data-t="chatTrecho.de">Chat de</span>
+          <select id="chatDeQuem"></select></label>
+        <output id="chatTrechoHoras" class="chatTrechoHoras"></output>
+        <button id="chatTrechoAqui" type="button" data-t-titulo="chatTrecho.aquiAjuda" title="pôr o trecho em volta do instante do vídeo"><span data-t="chatTrecho.aqui">Centrar aqui</span></button>
+        <button id="lerChatTrecho" type="button"><span data-t="chatTrecho.ler">Ler chat deste trecho</span></button>
+        <button id="pararChatTrecho" type="button" hidden><svg class="ic ic-p" aria-hidden="true"><use href="#i-parar"/></svg><span data-t="chatTrecho.parar">Parar</span></button>
+        <span id="estadoChatTrecho" class="nota estadoChatTrecho" role="status" aria-live="polite"></span>
+      </div>
       <!-- Cabeça da linha do tempo, como a de um editor: o zoom e os saltos grandes de quem anda pela noite.
            O instante, os passos de 3 s, entrada, saída e Clipar estão no transporte, colado ao vídeo. -->
       <div class="linha cabecaTempo">

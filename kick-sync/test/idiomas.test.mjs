@@ -128,6 +128,8 @@ const IGUAIS_DE_PROPOSITO = {
     // Palavras que o portugues e o espanhol escrevem exactamente igual.
     'marca.inicio', 'tw.parar', 'montagem.baixarUma', 'montagem.pronto', 'corte.baixar',
     'clipe.parar',
+    // O trecho de chat: "Chat de", "Parar" e "pico" escrevem-se igual em espanhol.
+    'chatTrecho.de', 'chatTrecho.parar', 'chatTrecho.umPico', 'chatTrecho.picos',
     // "Exportar 16:9" e "Exportar 9:16" sao o mesmo nas duas linguas — e o
     // numero e a metade que interessa. Ele abriu a janela e nao encontrou a
     // versao horizontal; agora os dois botoes dizem qual e qual.
