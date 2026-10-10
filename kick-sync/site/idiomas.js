@@ -667,7 +667,7 @@ const TEXTOS = {
     'adicionar.aCarregar': 'Lendo os novos na Kick: {feitos} de {total}',
     'adicionar.feitoUm': 'Entrou no mapa: {lista}.',
     'adicionar.feitos': '{n} entraram no mapa: {lista}.',
-    'adicionar.semVideo': 'Sem vídeo ou não achados: {n}.',
+    'adicionar.semVideo': 'Sem vídeo ou não achados: {n}. Confira os nomes em vermelho no mapa.',
   },
 
   en: {
@@ -1326,7 +1326,7 @@ const TEXTOS = {
     'adicionar.aCarregar': 'Reading the new ones on Kick: {feitos} of {total}',
     'adicionar.feitoUm': 'Added to the map: {lista}.',
     'adicionar.feitos': '{n} added to the map: {lista}.',
-    'adicionar.semVideo': 'Without video or not found: {n}.',
+    'adicionar.semVideo': 'Without video or not found: {n}. Check the names in red on the map.',
   },
 
   es: {
@@ -1985,7 +1985,7 @@ const TEXTOS = {
     'adicionar.aCarregar': 'Leyendo los nuevos en Kick: {feitos} de {total}',
     'adicionar.feitoUm': 'Entró en el mapa: {lista}.',
     'adicionar.feitos': '{n} entraron en el mapa: {lista}.',
-    'adicionar.semVideo': 'Sin video o no encontrados: {n}.',
+    'adicionar.semVideo': 'Sin video o no encontrados: {n}. Revisa los nombres en rojo en el mapa.',
   },
 };
 

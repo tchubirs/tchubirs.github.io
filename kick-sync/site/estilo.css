@@ -1591,7 +1591,8 @@ body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) > #evento { flex: 0 0 aut
 .reguaEvento .dia { transform: none; padding-left: 5px; color: var(--tinta); font-weight: 600; }
 .reguaEvento .dia.fimDaRegua { transform: translateX(-100%); padding: 0 5px 0 0; }
 .reguaEvento i { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--tinta-2); pointer-events: none; }
-.reguaEvento i.ordem { background: var(--acento); }
+/* O instante que ordena as faixas: só a ponta de baixo, para não riscar a hora escrita por cima. */
+.reguaEvento i.ordem { top: 14px; background: var(--acento); }
 .reguaEvento:hover { background: var(--sup-1); }
 .fusoEvento { margin: 0; text-align: right; font-size: var(--t-micro); color: var(--tinta-3); }
 .infoEvento { margin: 0; }

@@ -524,8 +524,8 @@ export function montarEvento({
     // Um traço a cada passo "redondo" que dê uns 6 a 10 rótulos na largura do ecrã.
     const DIA = 86400e3;
     const passos = [60e3, 5 * 60e3, 15 * 60e3, 30 * 60e3, 3600e3, 2 * 3600e3, 6 * 3600e3, 12 * 3600e3];
-    // Quantos rótulos cabem: um a cada 70 px. Dez fixos embaralhavam a régua num telemóvel.
-    const cabem = Math.max(2, Math.floor(largura / 70));
+    // Quantos rótulos cabem: um a cada 56 px. Dez fixos embaralhavam a régua num telemóvel.
+    const cabem = Math.max(2, Math.floor(largura / 56));
     const passo = passos.find((p) => span / p <= cabem) || null;
     const { dias } = linhasDoTempo(ev.vista, largura);
     let html = '';
