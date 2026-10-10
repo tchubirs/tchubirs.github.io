@@ -37,6 +37,7 @@ import { queFazerComOLeitor } from './leitor.js';
 import { criarApanhador } from './frames.js';
 import { varrerNoite, custoVarrerMB } from './procurar-momentos.js';
 import { TAXA_TIROS } from './tiros.js';
+import { termosDoFiltro, momentosDePalavras } from './chat.js';
 import { parecidos, juntarPerto } from './aprender.js';
 import { somDoCanal } from './alinhar.js';
 import {
@@ -2112,6 +2113,9 @@ function colocarAcoes() {
   $('acoesTrecho').hidden = !modoTrecho;
   $('lerChatTrecho').hidden = modoTrecho !== 'chat';
   $('detetarTrecho').hidden = modoTrecho !== 'detetar';
+  // Os filtros são da detecção: no trecho de ler chat não têm nada a fazer.
+  $('filtrosDetecao').hidden = modoTrecho === 'chat';
+  acertarPainelFiltros();
   pintarChatTrecho();
 }
 
@@ -2126,6 +2130,7 @@ function pintarChatTrecho() {
     $(id).disabled = semNoite || ocupado;
   }
   $('pararChatTrecho').hidden = !ocupado;
+  $('filtrosLista').disabled = ocupado;
   $('chatTrechoAqui').disabled = !trecho;
   if (!trecho || !vista) {
     $('chatTrechoHoras').textContent = '';
@@ -2654,6 +2659,110 @@ async function alinhar() {
  * alguém que não está entre os canais abertos, e apagar isso por ele seria
  * decidir uma coisa que não sei.
  */
+// ── os filtros da detecção ──────────────────────────────────────────────────
+//
+// O dono, 10/10: "a pessoa coloca informações específicas, ex: palavras no chat, ou palavras do streamer,
+// ou estouros de rocket, ou de disparo, ou gritos do streamer". Um painel Filtros na barra da faixa, fechado
+// por omissão e com os tiros marcados, para quem nunca o abriu detectar como sempre. As escolhas ficam
+// guardadas no aparelho. As palavras faladas pelo streamer aparecem desligadas: transformar voz em texto
+// no navegador ainda é pesado demais.
+const FILTROS_PADRAO = { tiros: true, explosoes: false, gritos: false, chat: false, palavras: '' };
+const CAIXAS_FILTRO = { tiros: 'filtroTiros', explosoes: 'filtroExplosoes', gritos: 'filtroGritos', chat: 'filtroChat' };
+const NOMES_FILTRO = {
+  tiros: 'filtros.nomeTiros', explosoes: 'filtros.nomeExplosoes', gritos: 'filtros.nomeGritos', chat: 'filtros.nomeChat',
+};
+let filtros = { ...FILTROS_PADRAO };
+try {
+  const g = JSON.parse(localStorage.getItem('povix.filtros') || 'null');
+  if (g && typeof g === 'object') {
+    for (const k of Object.keys(CAIXAS_FILTRO)) if (typeof g[k] === 'boolean') filtros[k] = g[k];
+    if (typeof g.palavras === 'string') filtros.palavras = g.palavras.slice(0, 300);
+  }
+} catch { /* janela privada, ou um valor estragado: ficam os de omissão */ }
+
+const filtrosMarcados = () => Object.keys(CAIXAS_FILTRO).filter((k) => filtros[k]);
+const listaDeFiltros = (ks) => ks.map((k) => t(NOMES_FILTRO[k])).join(', ');
+
+function pintarFiltros() {
+  for (const [k, id] of Object.entries(CAIXAS_FILTRO)) $(id).checked = Boolean(filtros[k]);
+  if ($('filtroPalavras').value !== filtros.palavras) $('filtroPalavras').value = filtros.palavras;
+  const marcados = filtrosMarcados();
+  $('filtrosResumo').textContent = marcados.length ? listaDeFiltros(marcados) : t('filtros.nenhumMarcado');
+}
+
+function ligarFiltros() {
+  const guardarFiltros = () => {
+    try { localStorage.setItem('povix.filtros', JSON.stringify(filtros)); } catch { /* janela privada */ }
+    pintarFiltros();
+  };
+  for (const [k, id] of Object.entries(CAIXAS_FILTRO)) {
+    $(id).addEventListener('change', () => { filtros[k] = $(id).checked; guardarFiltros(); });
+  }
+  // Escrever palavras é querer procurá-las: a caixa marca-se sozinha, e desmarca-se quando o campo fica vazio.
+  $('filtroPalavras').addEventListener('input', () => {
+    filtros.palavras = $('filtroPalavras').value;
+    filtros.chat = termosDoFiltro(filtros.palavras).length > 0;
+    guardarFiltros();
+  });
+  // Com o vídeo aberto num ecrã largo, as faixas são uma caixa baixa que rola, e o painel aberto lá dentro
+  // ficava espremido em duas linhas à vista. Aí o painel abre por cima, preso ao título Filtros.
+  const painel = $('filtrosDetecao');
+  painel.addEventListener('toggle', () => {
+    acertarPainelFiltros();
+    if (painel.open && !painel.classList.contains('flutua')) painel.scrollIntoView({ block: 'nearest' });
+  });
+  window.addEventListener('resize', acertarPainelFiltros);
+  window.addEventListener('scroll', acertarPainelFiltros, true);
+  // O Esc fecha primeiro o painel, e só depois a barra.
+  painel.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || !painel.open) return;
+    e.preventDefault();
+    e.stopPropagation();
+    painel.open = false;
+    painel.querySelector('summary').focus({ preventScroll: true });
+  });
+  pintarFiltros();
+}
+
+/** O painel Filtros aberto por cima das faixas, quando elas são uma caixa baixa que rola. */
+function acertarPainelFiltros() {
+  const painel = $('filtrosDetecao');
+  const faixas = $('faixas');
+  const apertado = painel.open && !painel.hidden && /auto|scroll/.test(getComputedStyle(faixas).overflowY)
+    && faixas.clientHeight < 320;
+  painel.classList.toggle('flutua', apertado);
+  if (!apertado) return;
+  // Por cima da barra inteira, e não só do título: os botões Detectar ficam à vista com o painel aberto.
+  const r = painel.querySelector('summary').getBoundingClientRect();
+  const topo = Math.max($('acoesGrupo').getBoundingClientRect().top, faixas.getBoundingClientRect().top);
+  const corpo = painel.querySelector('.filtrosCorpo');
+  const largura = Math.min(760, window.innerWidth - 32);
+  corpo.style.setProperty('--filtros-x', `${Math.max(16, Math.min(r.left, window.innerWidth - largura - 16))}px`);
+  corpo.style.setProperty('--filtros-largura', `${largura}px`);
+  corpo.style.setProperty('--filtros-baixo', `${Math.max(8, window.innerHeight - topo + 6)}px`);
+  corpo.style.setProperty('--filtros-alto', `${Math.max(160, topo - 22)}px`);
+}
+
+/** Quantos de cada tipo, numa frase: "2 tiroteios, 1 explosão". */
+function contagemPorTipo(conta) {
+  const chaves = {
+    tiros: ['filtros.umTiroteio', 'filtros.tiroteios'],
+    explosao: ['filtros.umaExplosao', 'filtros.explosoesN'],
+    grito: ['filtros.umGrito', 'filtros.gritosN'],
+    chat: ['filtros.umChat', 'filtros.chatN'],
+  };
+  return Object.entries(chaves).filter(([k]) => conta[k]).map(([k, [um, varios]]) => tn(conta[k], um, varios)).join(', ');
+}
+
+/** O tipo de um momento achado pela detecção, como aparece na lista. */
+function rotuloDoTipo(m) {
+  if (m.tipo === 'tiros') return t('filtros.tipoTiros');
+  if (m.tipo === 'explosao') return t('filtros.tipoExplosao');
+  if (m.tipo === 'grito') return t('filtros.tipoGrito');
+  if (m.tipo === 'chat') return t('filtros.tipoChat', { palavras: (m.palavras || []).join(', ') });
+  return '';
+}
+
 /**
  * O botão Detecção automática. De quem e quanto escolhe-se na linha do tempo, com as mesmas escolhas do
  * chat (o dono, 10/10: "a detecção automática também deveria ter as mesmas opções de ler o chat"): o
@@ -2685,6 +2794,26 @@ async function detetar(quem, quanto) {
     nota.textContent = texto;
     naFaixa.textContent = texto;
   };
+  // O que procurar, dos filtros. Sem nenhum marcado não há o que fazer, e o painel abre-se para o dizer.
+  const marcados = filtrosMarcados();
+  const termos = filtros.chat ? termosDoFiltro(filtros.palavras) : [];
+  if (!marcados.length) {
+    $('filtrosDetecao').open = true;
+    dizer(t('filtros.marqueUm'));
+    $('filtroTiros').focus({ preventScroll: true });
+    return;
+  }
+  if (filtros.chat && !termos.length) {
+    $('filtrosDetecao').open = true;
+    dizer(t('filtros.semPalavras'));
+    $('filtroPalavras').focus({ preventScroll: true });
+    return;
+  }
+  const comSom = filtros.tiros || filtros.explosoes || filtros.gritos;
+  const comChat = termos.length > 0 && Boolean(chatDoEvento);
+  // Só os tiros é a detecção de sempre, e diz-se como sempre: "2 tiroteios em tchubi".
+  const soTiros = marcados.length === 1 && filtros.tiros;
+  const doSom = marcados.filter((k) => k !== 'chat');
   // O trecho de cada um é o pedaço das alças em que ele esteve ao vivo.
   const pedidos = pedidosDe(quem, quanto).map((p) => ({
     ...p, deMs: Math.max(p.deMs, p.vivo.deMs), ateMs: Math.min(p.ateMs, p.vivo.ateMs),
@@ -2700,8 +2829,14 @@ async function detetar(quem, quanto) {
   const min = Math.round(totalMs / 60000);
   const mb = custoVarrerMB(totalMs);
   const todos = quem === TODOS;
-  if (!confirm(todos ? t('auto.custoTodos', { min, n: pedidos.length, mb })
-    : t('auto.custo', { min, mb, canal: pedidos[0].canal }))) return;
+  // Ouvir custa megas e minutos, e pergunta-se antes. Ler o chat não pergunta, como no Ler chat.
+  if (comSom) {
+    const pergunta = soTiros
+      ? (todos ? t('auto.custoTodos', { min, n: pedidos.length, mb }) : t('auto.custo', { min, mb, canal: pedidos[0].canal }))
+      : (todos ? t('filtros.custoTodos', { min, n: pedidos.length, mb, lista: listaDeFiltros(doSom) })
+        : t('filtros.custo', { min, mb, canal: pedidos[0].canal, lista: listaDeFiltros(doSom) }));
+    if (!confirm(pergunta)) return;
+  }
 
   const controlo = new AbortController();
   estado.varredura = controlo;
@@ -2712,40 +2847,69 @@ async function detetar(quem, quanto) {
     const achados = [];
     const porCanal = [];
     const estouros = [];
+    const conta = {};
     let falhados = 0;
     let ouvido = null;
+    let avisosChat = '';
     for (const p of pedidos) {
       if (controlo.signal.aborted) throw new DOMException('parado', 'AbortError');
       canal = p.canal;
       const linha = estado.linhas.find((l) => l.slug === canal);
-      // eslint-disable-next-line no-await-in-loop
-      const r = await varrerNoite({
-        linha,
-        deMs: p.deMs,
-        ateMs: p.ateMs,
-        nudgeMs: estado.nudges[canal] || 0,
-        sinal: controlo.signal,
-        // 24 kHz, e nao os 8 do alinhamento: o tiro vive no agudo.
-        lerSom: (l, quandoMs, duracaoS, opcoes) => somDoCanal(l, quandoMs, duracaoS, { ...opcoes, taxa: TAXA_TIROS }),
-        aoProgresso: (x) => {
-          dizer(t('auto.aOuvir', { feito: x.feito, total: x.total, mb: (x.bytes / 1048576).toFixed(0), canal }));
-        },
-      });
-      for (const e of r.estouros || []) estouros.push(e.canal ? e : { ...e, canal });
-      falhados += r.falhados || 0;
-      ouvido = r.ouvido || ouvido;
-      for (const c of r.candidatos) achados.push({ ...c, canal });
-      if (r.candidatos.length) porCanal.push(`${canal} ${r.candidatos.length}`);
+      const doCanal = [];
+      if (comSom) {
+        // eslint-disable-next-line no-await-in-loop
+        const r = await varrerNoite({
+          linha,
+          deMs: p.deMs,
+          ateMs: p.ateMs,
+          nudgeMs: estado.nudges[canal] || 0,
+          sinal: controlo.signal,
+          filtros: { tiros: filtros.tiros, explosoes: filtros.explosoes, gritos: filtros.gritos },
+          // 24 kHz, e nao os 8 do alinhamento: o tiro vive no agudo.
+          lerSom: (l, quandoMs, duracaoS, opcoes) => somDoCanal(l, quandoMs, duracaoS, { ...opcoes, taxa: TAXA_TIROS }),
+          aoProgresso: (x) => {
+            dizer(t('auto.aOuvir', { feito: x.feito, total: x.total, mb: (x.bytes / 1048576).toFixed(0), canal }));
+          },
+        });
+        for (const e of r.estouros || []) estouros.push(e.canal ? e : { ...e, canal });
+        falhados += r.falhados || 0;
+        ouvido = r.ouvido || ouvido;
+        for (const c of r.candidatos || []) doCanal.push({ ...c, canal, tipo: 'tiros' });
+        for (const c of r.explosoes || []) doCanal.push({ ...c, canal, tipo: 'explosao' });
+        for (const c of r.gritos || []) doCanal.push({ ...c, canal, tipo: 'grito' });
+      }
+      if (comChat && p.deMs < Date.now()) {
+        // O chat do trecho, lido como o Ler chat o lê: o que já se leu não se pede outra vez.
+        // eslint-disable-next-line no-await-in-loop
+        const lido = await chatDoEvento.lerChatTrecho(canal, p.deMs, p.ateMs, {
+          sinal: controlo.signal,
+          aoProgredir: ({ fracao }) => dizer(t('filtros.aLerChat', { canal, pct: Math.round(fracao * 100) })),
+        });
+        if (lido.semCanal) avisosChat += t('filtros.semChat', { canal });
+        else if (lido.motivo) avisosChat += t('filtros.chatIncompleto', { canal });
+        const mensagens = chatDoEvento.estado.mensagens?.get(canal) || [];
+        for (const c of momentosDePalavras(mensagens, termos, p.deMs, p.ateMs)) {
+          doCanal.push({ ...c, canal, tipo: 'chat', palavras: c.termos });
+        }
+      }
+      for (const c of doCanal) conta[c.tipo] = (conta[c.tipo] || 0) + 1;
+      achados.push(...doCanal);
+      if (doCanal.length) porCanal.push(`${canal} ${doCanal.length}`);
     }
-    estado.estouros = estouros;
+    if (comSom) estado.estouros = estouros;
     // Os bocados que a Kick nao mandou, ditos. Sem isto um buraco de rede a
     // meio da noite passava por uma hora sem tiroteios.
-    const falhas = falhados ? t('auto.falhados', { n: falhados }) : '';
+    const falhas = (falhados ? t('auto.falhados', { n: falhados }) : '') + avisosChat;
     if (!achados.length) {
       // Dizer o que se ouviu, e nao so que nao se achou. "Da isso, porem eu sei
       // que ta tendo tiroteio" — e sem estes tres numeros nao ha como saber se
       // o detector ouviu o pedaco errado, se apertou demais, ou se faltou um
       // tiro para fazer grupo.
+      if (!soTiros) {
+        const lista = listaDeFiltros(marcados);
+        dizer((todos ? t('filtros.nenhumTodos', { lista }) : t('filtros.nenhum', { canal, lista })) + falhas);
+        return;
+      }
       if (todos) { dizer(t('auto.nenhumTodos') + falhas); return; }
       const o = ouvido;
       dizer(t('auto.nenhum', { canal })
@@ -2754,11 +2918,14 @@ async function detetar(quem, quanto) {
       return;
     }
 
+    // Cada um com o seu tipo escrito, para a lista dizer o que o achou.
     for (const c of achados) {
       estado.momentos = acrescentar(
         estado.momentos,
         novoMomento(c.ms, c.canal, {
-          ...tamanhos(), auto: true, tiros: c.tiros,
+          ...tamanhos(), auto: true, tipo: c.tipo,
+          ...(c.tipo === 'tiros' ? { tiros: c.tiros } : {}),
+          ...(c.tipo === 'chat' ? { palavras: c.palavras } : {}),
           combateDeMs: c.combateDeMs, combateAteMs: c.combateAteMs,
         }),
       );
@@ -2789,10 +2956,13 @@ async function detetar(quem, quanto) {
     // de uma busca de minutos sumia no instante em que aparecia.
     pintarMomentos();
     guardar();
-    dizer((todos ? t('auto.acheiTodos', { n: achados.length, lista: porCanal.join(', ') })
-      : t('auto.achei', { n: achados.length, canal }))
-      + (comMorte ? t('auto.comMorte', { n: comMorte }) : '')
-      + falhas);
+    const n = achados.length;
+    const lista = contagemPorTipo(conta);
+    const resultado = soTiros
+      ? (todos ? t('auto.acheiTodos', { n, lista: porCanal.join(', ') }) : t('auto.achei', { n, canal }))
+      : (todos ? tn(n, 'filtros.umMomentoTodos', 'filtros.momentosTodos', { lista, canais: porCanal.join(', ') })
+        : tn(n, 'filtros.umMomento', 'filtros.momentos', { canal, lista }));
+    dizer(resultado + (comMorte ? t('auto.comMorte', { n: comMorte }) : '') + falhas);
   } catch (e) {
     // O erro desta busca é desta busca: o `alinhar.erro` falava de sincronia e
     // mandava alinhar à mão, que não é o que falhou nem o que resolve.
@@ -2806,6 +2976,8 @@ async function detetar(quem, quanto) {
     estado.varredura = null;
     trocarRotulo(botao, 'auto.botao');
     pintarChatTrecho();
+    // As partes do chat que a detecção leu ficam marcadas na faixa, como as do Ler chat.
+    if (comChat) pintarFaixas();
   }
 }
 
@@ -3098,6 +3270,8 @@ function pintarMomentos() {
       + `<b class="n">${numeroNaMontagem(i, lista.length)}</b>`
       + `<span>${relogioCurto(m.ms)}</span>`
       + `<span class="quem">${escapar(m.protagonista || '')}</span>`
+      // O que a detecção achou ali, quando foi ela: tiroteio, explosão, grito, ou as palavras do chat.
+      + (m.tipo ? `<span class="tipo">${escapar(rotuloDoTipo(m))}</span>` : '')
       + `<button class="ver ${estado.previa?.ms === m.ms ? 'aVer' : ''}">`
       + `${t(estado.previa?.ms === m.ms ? 'montagem.parar' : 'montagem.ver')}</button>`
       + `<button class="cliparUma">${t('montagem.clipar')}</button>`
@@ -5757,6 +5931,7 @@ function trocarIdioma(codigo) {
     pintarMomentos();
   }
   pintarZoom();
+  pintarFiltros();
 }
 
 $('idioma').innerHTML = Object.entries(IDIOMAS)
@@ -5888,6 +6063,7 @@ picosDoEvento = () => evento.estado.marcas;
 mensagensDoEvento = () => evento.estado.mensagens;
 chatDoEvento = evento;
 ligarChatTrecho();
+ligarFiltros();
 // Com uma live só a grelha fica vazia, e o vídeo fica com o lugar dela (ver o CSS de .semGrelha).
 // O CSS não o pode saber sozinho: um :has dentro de outro :has não vale.
 new MutationObserver(() => {

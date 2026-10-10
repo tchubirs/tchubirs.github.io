@@ -829,6 +829,7 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 }
 .momentos li > span:nth-of-type(1) { font-family: var(--letra-mono); font-size: var(--t-menor); }
 .momentos li .quem { font-weight: 500; font-size: var(--t-menor); color: var(--tinta); }
+.momentos li .tipo { font-size: var(--t-micro); color: var(--tinta-2); border: 1px solid var(--linha-2); border-radius: var(--r-1); padding: 0 var(--e2); line-height: 18px; white-space: nowrap; max-width: 16em; overflow: hidden; text-overflow: ellipsis; }
 .momentos li button { min-height: 30px; padding: 0 var(--e3); font-size: var(--t-menor); }
 .momentos li .fora { color: var(--tinta-3); background: transparent; border-color: transparent; }
 .momentos li .fora:hover { color: var(--perigo); background: var(--perigo-eco); border-color: transparent; }
@@ -1918,11 +1919,17 @@ body:is(.videoAberto, :has(#palco:not([hidden]))) .mostrarMapa { background: var
 .filtro:has(input[type=checkbox]:checked) { border-color: var(--acento-fio); background: var(--acento-eco); }
 .filtroChat { display: grid; gap: var(--e2); grid-column: 1 / -1; }
 .filtroChat input[type=text] { width: 100%; min-width: 0; min-height: 30px; padding: 4px var(--e3); font-size: var(--t-base); }
-.filtro.desligado { opacity: .7; }
+.filtro.desligado { opacity: .7; grid-column: 1 / -1; }
 .filtro.desligado label, label.filtro.desligado { cursor: default; }
 @media (pointer: coarse) {
   .filtrosDetecao > summary { min-height: 44px; }
   .filtro input[type=checkbox] { width: 22px; height: 22px; min-width: 22px; margin-top: 0; }
   .filtro label, label.filtro { min-height: 44px; align-items: center; }
   .filtroChat input[type=text] { min-height: 44px; }
+}
+/* Por cima das faixas, quando elas são uma caixa baixa que rola (o vídeo aberto num ecrã largo). */
+.filtrosDetecao.flutua > .filtrosCorpo {
+  position: fixed; z-index: 40; left: var(--filtros-x); bottom: var(--filtros-baixo); width: var(--filtros-largura);
+  max-height: var(--filtros-alto); overflow: auto; padding: var(--e4);
+  background: var(--sup-2); border: 1px solid var(--acento-fio); border-radius: var(--r-3); box-shadow: var(--sombra-flutua);
 }
