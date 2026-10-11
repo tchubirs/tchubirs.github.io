@@ -1231,7 +1231,7 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
    1366×720: tudo o que se carrega está dentro do ecrã. */
 @media (min-width: 1080px) and (min-height: 640px) {
   body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) {
-    height: 100vh; box-sizing: border-box; overflow: hidden;
+    height: 100vh; box-sizing: border-box;
     display: flex; flex-direction: column;
   }
   body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) > header { flex: 0 0 auto; margin-bottom: var(--e2); }
@@ -1369,23 +1369,30 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
      Antes a linha do tempo era uma coluna estreita ao lado do vídeo e o vídeo ficava com 550 px num
      monitor de 1440. A altura da linha do tempo é a do que tem dentro (até 36% da tela): com dois
      canais sobra quase tudo para o vídeo; com trinta, as faixas rolam por dentro. */
+  /* A página só não rola enquanto o visor couber. O palco não desce abaixo do que tem dentro
+     (`min-height: auto`, e a linha de cima com `auto` como mínimo): o vídeo com a altura mínima dele,
+     o transporte e as ferramentas. Quando as barras de cima comem mais do que isso, a página rola e
+     nada fica por cima de nada. Antes o mínimo era zero: o palco cedia tudo, o visor virava uma
+     miniatura e o resto escorria por cima da linha do tempo (o dono, 11/10). */
   body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #palco:not([hidden]) {
-    flex: 1 1 auto; min-height: 0; gap: var(--e3) var(--e4);
+    flex: 1 1 auto; min-height: auto; gap: var(--e3) var(--e4);
     grid-template-columns: minmax(0, 1fr) clamp(300px, 27vw, 420px);
-    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-rows: minmax(auto, 1fr) auto;
     grid-template-areas: "video lado" "tempo tempo";
     align-items: stretch;
   }
 
-  /* ESQUERDA: o visor. `overflow: hidden` de propósito: o que não couber fica cortado e o teste
-     apanha-o, em vez de escorrer e pôr a página a rolar. */
+  /* ESQUERDA: o visor. Sem `overflow: hidden` e sem `min-height: 0`: a altura mínima dele é a soma
+     do que tem dentro, e é essa soma que segura a linha de cima do palco. Com o corte, o transporte
+     e o Clipar ficavam escondidos por baixo da linha do tempo quando faltava altura. */
   body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .palcoVideo {
-    grid-area: video; display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+    grid-area: video; display: flex; flex-direction: column;
   }
-  /* O vídeo em foco leva toda a altura que sobra, e fica com a proporção dele. */
+  /* O vídeo em foco leva toda a altura que sobra, e fica com a proporção dele. 200 px de altura é o
+     menor visor em que ainda se vê o jogo (356 px de largura em 16:9); abaixo disso a página rola. */
   body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .palcoFoco {
     display: flex; justify-content: center; align-items: stretch; gap: var(--e2);
-    flex: 1 1 0; height: auto; min-height: 120px; max-height: none; margin: 0 0 var(--e3);
+    flex: 1 1 0; height: auto; min-height: 200px; max-height: none; margin: 0 0 var(--e3);
   }
   body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .palcoFoco:empty { display: none; }
   body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .palcoFoco .tile {
@@ -1401,14 +1408,20 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 
   /* DIREITA: os ângulos em cima, a montagem por baixo. Com um ângulo só não há grelha e a montagem
      toma a coluna toda. */
+  /* `contain: size`: a coluna não empurra a altura do palco com a lista inteira dos ângulos (essa rola
+     por dentro). O mínimo dela é o que cabe sem nada se tocar: a barra, uma fila e meia de ângulos e o
+     chão da montagem (36 + 60 + 140, mais as folgas). */
   body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .palcoDireita {
-    grid-area: lado; display: flex; flex-direction: column; gap: var(--e3); min-height: 0; min-width: 0;
+    grid-area: lado; display: flex; flex-direction: column; gap: var(--e3); min-height: 264px; min-width: 0;
+    contain: size;
   }
   body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .barraGrelha { flex: 0 0 auto; margin: 0; }
   /* Duas colunas de miniaturas com o nome legível. Uma grelha com altura definida esmaga as linhas
      para caber e o `aspect-ratio` perde: as linhas ficam com o tamanho do conteúdo e o resto rola. */
+  /* `flex: 0 1 auto`: quando a coluna aperta, é a lista dos ângulos que encolhe e rola, e não a
+     montagem que escorre por cima da linha do tempo. */
   body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #grade {
-    flex: 0 0 auto; max-height: 34%; min-height: 60px; overflow-y: auto; margin: 0; padding-right: var(--e2);
+    flex: 0 1 auto; max-height: 34%; min-height: 60px; overflow-y: auto; margin: 0; padding-right: var(--e2);
     grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); align-content: start; grid-auto-rows: max-content;
     /* Sombra de rolagem: uma fita escura no topo e no fundo que só aparece quando há mais
        quadrados para lá da borda. O `local` das duas primeiras camadas rola com o conteúdo. */
@@ -1453,10 +1466,11 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
   body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .regua { height: 24px; }
   body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .relogio > .reguaLinha { margin-top: var(--e2); }
 
-  /* DIREITA, em baixo: a montagem. */
+  /* DIREITA, em baixo: a montagem. Rola por dentro quando a coluna aperta: com o chat aberto, o que
+     tem dentro passa dos 140 px, e cortado o fim do chat sumia sem aviso. */
   body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem {
     flex: 1 1 0; min-height: 140px; display: flex; flex-direction: column;
-    margin-bottom: 0; overflow: hidden; padding: var(--e3) var(--e4); gap: var(--e2);
+    margin-bottom: 0; overflow-y: auto; padding: var(--e3) var(--e4); gap: var(--e2);
   }
   body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > * { flex: 0 0 auto; }
   body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > h2 { display: none; }
