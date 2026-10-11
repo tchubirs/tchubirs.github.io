@@ -51,7 +51,7 @@ import {
 import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js';
 import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js';
 import { escapar } from './escapar.js';
-import { montarEvento } from './evento-ui.js';
+import { montarEvento, rotuloDoDia } from './evento-ui.js';
 import { montarPortas } from './portas.js';
 import { atalhos, ACAO, comboDoEvento, partes } from './atalhos.js';
 import { montarPainelAtalhos, pintarDicas } from './atalhos-painel.js';
@@ -977,6 +977,8 @@ function acertarVista({ forcar = false } = {}) {
 let vistaPresa = false;
 // Um arrasto que andou com a vista não é um clique: o trilho não leva o vídeo para onde se largou.
 let vistaArrastada = false;
+// A largura com que a régua foi pintada da última vez.
+let reguaMedida = 0;
 const ZOOM_PASSO = 2;
 
 /** Pôr a vista com `larguraMs` de tempo à vista, com o instante `pontoMs` no mesmo sítio do ecrã. */
@@ -1213,84 +1215,146 @@ function pintarFaixas() {
 }
 
 /**
- * A régua: as horas por baixo das barras, e as kills marcadas nela.
+ * Os passos da régua, do mais fino ao mais largo, cada um com as divisões pequenas entre duas horas
+ * escritas. Abaixo de um minuto a hora leva os segundos.
+ */
+const PASSOS_REGUA = [
+  [5e3, 1e3], [10e3, 2e3], [15e3, 5e3], [30e3, 5e3], [60e3, 10e3], [2 * 60e3, 30e3], [5 * 60e3, 60e3],
+  [10 * 60e3, 2 * 60e3], [15 * 60e3, 5 * 60e3], [30 * 60e3, 5 * 60e3], [3600e3, 15 * 60e3], [2 * 3600e3, 30 * 60e3],
+  [3 * 3600e3, 3600e3], [6 * 3600e3, 3600e3], [12 * 3600e3, 3 * 3600e3], [24 * 3600e3, 6 * 3600e3],
+];
+
+/**
+ * Onde cai cada hora escrita e cada divisão na vista `inicio`..`fim`, numa régua de `largura` px.
  *
- * Sem isto sabe-se que se está "algures no meio" e mais nada. Com ela, olha-se
- * uma vez e sabe-se que horas são naquele ponto — e onde já se marcou.
+ * Como a régua do mapa do evento e a de um editor de vídeo: um passo redondo que dê uns 6 a 8 rótulos
+ * na largura que há (num telemóvel menos, para não se tocarem), um traço maior em cada hora escrita e
+ * traços pequenos entre elas. As horas são do fuso do aparelho: num fuso de meia hora, as horas cheias
+ * caíam a meio dos traços se o passo contasse do UTC.
+ */
+function marcasDaRegua(inicio, fim, largura) {
+  const total = fim - inicio;
+  const cabe = (passo) => {
+    const larguraRotulo = passo < 60e3 ? 84 : 64;
+    return total / passo <= Math.max(3, Math.min(8, Math.floor(largura / larguraRotulo)));
+  };
+  const [passo, sub] = PASSOS_REGUA.find(([p]) => cabe(p)) || PASSOS_REGUA.at(-1);
+  const fuso = new Date(inicio).getTimezoneOffset() * 60_000;
+  const alinhar = (de, p) => Math.ceil((de - fuso) / p) * p + fuso;
+  const horas = [];
+  for (let t = alinhar(inicio, passo); t <= fim; t += passo) horas.push(t);
+  const tiques = [];
+  // Os traços pequenos só quando ficam a mais de 5 px uns dos outros.
+  if ((sub / total) * largura >= 5) {
+    for (let t = alinhar(inicio, sub); t <= fim; t += sub) {
+      if (Math.abs((((t - fuso) % passo) + passo) % passo) >= 1) tiques.push(t);
+    }
+  }
+  return { passo, sub, horas, tiques, comSegundos: passo < 60e3 };
+}
+
+/**
+ * A régua: as horas em cima das faixas, as divisões e as kills marcadas nela.
+ *
+ * Sem isto sabe-se que se está "algures no meio" e mais nada. Com ela, olha-se uma vez e sabe-se que
+ * horas são naquele ponto, até onde já se andou, e onde já se marcou. As horas seguem o zoom: com 30 s
+ * à vista escrevem os segundos, com a noite toda escrevem de meia em meia hora.
  */
 function pintarRegua() {
   const { inicio, fim } = vistaAgora() || {};
   const alvo = $('regua');
   if (!alvo) return;
-  if (inicio == null || !(fim > inicio)) { alvo.innerHTML = ''; return; }
+  if (inicio == null || !(fim > inicio)) { alvo.innerHTML = ''; pintarSobreFaixas(null, null, []); return; }
   const total = fim - inicio;
   const pct = (ms) => ((ms - inicio) / total) * 100;
-
-  // Um passo redondo: cinco minutos numa noite curta, meia hora numa longa.
-  // Escolher pelo número de marcas em vez de um valor fixo é o que faz a régua
-  // continuar legível quer a noite tenha vinte minutos quer tenha dez horas.
-  const PASSOS = [1, 2, 5, 10, 15, 30, 60, 120, 180, 360].map((m) => m * 60_000);
-  // Oito intervalos e nao dez: num telemovel as etiquetas de dez ja se tocam
-  // umas nas outras, e uma regua ilegivel e pior do que regua nenhuma.
-  const passo = PASSOS.find((p) => total / p <= 8) || PASSOS.at(-1);
+  const larguraPx = alvo.clientWidth || 600;
+  reguaMedida = larguraPx;
+  const px = (ms) => ((ms - inicio) / total) * larguraPx;
+  const { horas, tiques, comSegundos } = marcasDaRegua(inicio, fim, larguraPx);
 
   const partes = [];
-  const primeiro = Math.ceil(inicio / passo) * passo;
-  // A marca que MUDA DE DIA diz o dia, e não outra hora igual às outras.
-  //
-  // "Mudou alguma coisa? Onde é que está o dia 30?" Não tinha mudado nada —
-  // é que nunca lá esteve. Uma noite de Rust começa às onze da manhã e acaba
-  // às quatro da manhã seguinte, e a régua escrevia só HH:MM: passava-se a
-  // meia-noite e nada dizia que o dia era outro. Duas horas com o mesmo
-  // número, uma em cada dia, ficavam indistinguíveis.
+  // Onde já há texto, em px: as datas primeiro, depois as horas, depois os números das kills. Nada se
+  // escreve por cima de nada; o que não cabe fica só com o traço.
+  const ocupados = [];
+  const livre = (a, b) => !ocupados.some(([x, y]) => a < y + 5 && b > x - 5);
+
+  for (const ms of tiques) partes.push(`<em class="tique" style="left:${pct(ms)}%"></em>`);
+  // A passagem de um dia para o outro escreve a data, como no mapa ("ter 06/10"). Numa noite que começa
+  // às onze da manhã e acaba às quatro da manhã seguinte, é a única coisa que diz em que dia se está.
+  const grade = [];
   let diaAnterior = diaLocal(inicio);
-  for (let t = primeiro; t <= fim; t += passo) {
-    const x = pct(t);
-    const dia = diaLocal(t);
-    const virou = dia !== diaAnterior;
+  const rotulos = [];
+  for (const ms of horas) {
+    const dia = diaLocal(ms);
+    const vira = dia !== diaAnterior;
     diaAnterior = dia;
-    partes.push(`<i class="risco${virou ? ' vira' : ''}" style="left:${x}%"></i>`);
-    partes.push(`<b class="hora${virou ? ' vira' : ''}" style="left:${x}%">`
-      + `${virou ? `${dia.slice(8, 10)}/${dia.slice(5, 7)}` : relogioCurto(t).slice(0, 5)}</b>`);
+    grade.push({ ms, vira });
+    partes.push(`<em class="tique grande${vira ? ' vira' : ''}" style="left:${pct(ms)}%"></em>`);
+    rotulos.push({ ms, vira, texto: vira ? rotuloDoDia(ms) : relogioCurto(ms).slice(0, comSegundos ? 8 : 5) });
   }
-  // O NÚMERO só quando há sítio para ele.
+  // As datas antes das horas, para uma hora nunca tapar a data.
+  for (const r of [...rotulos.filter((q) => q.vira), ...rotulos.filter((q) => !q.vira)]) {
+    const x = px(r.ms);
+    const w = r.texto.length * 6.7 + (r.vira ? 4 : 0);
+    // Nas pontas a etiqueta encosta para dentro, para não sair cortada.
+    const lado = r.vira ? (x > larguraPx - w - 2 ? 'aDireita' : 'aEsquerda')
+      : x < w / 2 + 2 ? 'aEsquerda' : x > larguraPx - w / 2 - 2 ? 'aDireita' : '';
+    const [a, b] = lado === 'aEsquerda' ? [x, x + w] : lado === 'aDireita' ? [x - w, x] : [x - w / 2, x + w / 2];
+    if (!livre(a, b)) continue;
+    ocupados.push([a, b]);
+    r.html = `<b class="hora${r.vira ? ' vira' : ''}${lado ? ` ${lado}` : ''}" style="left:${pct(r.ms)}%">${escapar(r.texto)}</b>`;
+  }
+  for (const r of rotulos) if (r.html) partes.push(r.html);
+  // O NÚMERO da kill só quando há sítio para ele.
   //
-  // "Coloca a linha do tempo, o timer, do lado de cima — aí tá tudo
-  //  amontoado." Estava: numa noite com quinze kills, metade delas em dois
-  //  tiroteios seguidos, os números caíam uns por cima dos outros e o que se
-  //  lia era uma mancha. O risco fica sempre — é ele que diz ONDE — e o
-  //  número só entra se o anterior estiver a mais de catorze pixels.
-  const larguraPx = alvo.clientWidth || 600;
-  const folgaPct = (14 / larguraPx) * 100;
+  // "Coloca a linha do tempo, o timer, do lado de cima; aí tá tudo amontoado." Estava: numa noite com
+  // quinze kills, metade delas em dois tiroteios seguidos, os números caíam uns por cima dos outros e o
+  // que se lia era uma mancha. O risco fica sempre (é ele que diz ONDE) e o número só entra se o
+  // anterior estiver a mais de catorze pixels e se não tapar uma hora escrita: as horas dizem até onde
+  // se andou, e a kill sem número continua com o risco âmbar e o número no título.
   let ultimoNumero = -Infinity;
   for (const [i, m] of ordenar(estado.momentos).entries()) {
     if (m.ms < inicio || m.ms > fim) continue;
-    const x = pct(m.ms);
-    const cabe = x - ultimoNumero >= folgaPct;
+    const x = px(m.ms);
+    const w = String(i + 1).length * 6.7 + 4;
+    const cabe = x - ultimoNumero >= 14 && livre(x - w / 2, x + w / 2);
     if (cabe) ultimoNumero = x;
-    partes.push(`<button class="kill" data-ms="${m.ms}" style="left:${x}%" `
+    partes.push(`<button type="button" class="kill" data-ms="${m.ms}" style="left:${pct(m.ms)}%" `
       + `title="kill ${i + 1}: ${relogioCurto(m.ms)}">${cabe ? `<span>${i + 1}</span>` : ''}</button>`);
   }
+
   alvo.innerHTML = partes.join('');
-  pintarPicosFaixas(inicio, fim);
+  pintarSobreFaixas(inicio, fim, grade);
   for (const b of alvo.querySelectorAll('.kill')) {
     // A marca de outra kill desliga a prévia desta, senão volta para trás logo.
     b.onclick = () => { largarPrevia(); irPara(Number(b.dataset.ms)); };
-  }  // As alças do trecho de chat vivem na mesma vista da régua: mudam juntas.
+  }
+  // As alças do trecho de chat vivem na mesma vista da régua: mudam juntas.
   pintarChatTrecho();
 }
+// Quando o painel muda de largura, o passo da régua muda com ela.
+new ResizeObserver(() => {
+  const r = $('regua');
+  if (r && r.clientWidth && Math.abs(r.clientWidth - reguaMedida) >= 1) pintarRegua();
+}).observe($('regua'));
 
 /**
  * Os picos de chat em cima da faixa de quem os teve, e não na régua: "esses pontos amarelos deveria ser
  * em cima da linha do tempo da dona delas" (o dono, 11/10). Assim vê-se de quem é cada pico sem passar o
  * rato. Um por minuto em cada canal. Na faixa Todos fica só um risco fraco por minuto, para dizer que ali
- * houve alguma coisa sem encher a faixa geral de losangos.
+ * houve alguma coisa sem encher a faixa geral de losangos. E as linhas da régua, por baixo de tudo isto.
  */
-function pintarPicosFaixas(inicio, fim) {
+function pintarSobreFaixas(inicio, fim, grade) {
   const caixa = $('faixas');
   if (!caixa) return;
-  for (const v of caixa.querySelectorAll('.picoChat, .picoGeral')) v.remove();
+  for (const v of caixa.querySelectorAll('.picoChat, .picoGeral, .linhaHora')) v.remove();
+  if (inicio == null) return;
   const total = fim - inicio;
+  // As linhas da régua descem pelas faixas, muito fracas, como as horas no mapa: vê-se até onde já
+  // se andou sem ter de subir os olhos até à régua.
+  const linhas = grade.map(({ ms, vira }) => `<span class="linhaHora${vira ? ' vira' : ''}" aria-hidden="true" `
+    + `style="left:${((ms - inicio) / total) * 100}%"></span>`).join('');
+  if (linhas) for (const tr of caixa.querySelectorAll('.faixa > .trilho, .faixaGeral > .trilho')) tr.insertAdjacentHTML('afterbegin', linhas);
   // Preso a meio losango das pontas: o trilho corta o que sai dele, e um pico no primeiro segundo
   // da vista ficava cortado ao meio.
   const lugar = (ms) => `left:clamp(6px,${((ms - inicio) / total) * 100}%,calc(100% - 6px))`;

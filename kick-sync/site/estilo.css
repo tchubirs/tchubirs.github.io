@@ -713,33 +713,45 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 .relogio > .barraLinha { order: 2; }
 .relogio > .reguaLinha { order: 3; margin-top: var(--e3); }
 .relogio > .faixas { order: 4; }
-/* Os riscos e as marcas apontam para BAIXO, para as faixas que estão logo a
-   seguir, e o fio fecha a régua por baixo em vez de por cima. */
+/* A régua como a de um editor e a do mapa: as horas na fila de cima, e por baixo as divisões a apontar
+   para as faixas, um traço maior em cada hora escrita e traços pequenos entre elas. O fio fecha a régua
+   por baixo. */
 .regua { position: relative; height: 30px; border-bottom: 1px solid var(--linha); }
-.regua .risco { position: absolute; top: 0; width: 1px; height: 5px; background: var(--linha-2); }
-/* A passagem de um dia para o outro: o risco atravessa a régua inteira e a
-   etiqueta escreve a data. Numa noite que começa às onze da manhã e acaba às
-   quatro da manhã seguinte, é a única coisa que diz em que dia se está. */
-.regua .risco.vira { height: 100%; background: var(--linha-3); }
-.regua .hora.vira { color: var(--tinta-2); font-weight: 500; }
-.regua .hora {
-  position: absolute; top: 8px; font-size: var(--t-micro); font-weight: 400;
-  color: var(--tinta-3); transform: translateX(-50%); white-space: nowrap;
+.regua .tique {
+  position: absolute; bottom: 0; width: 1px; height: 4px; margin-left: -.5px; pointer-events: none;
+  background: var(--linha-3); opacity: .8;
 }
-/* A kill na régua é ÂMBAR, como o marcador de qualquer mesa de montagem. É a
-   única coisa desta cor na linha do tempo, e é isso que a faz saltar. */
+.regua .tique.grande { height: 9px; background: var(--tinta-3); opacity: 1; }
+/* A passagem de um dia para o outro: o traço atravessa a régua inteira e a etiqueta escreve a data. */
+.regua .tique.vira { height: 100%; background: var(--tinta-2); }
+.regua .hora {
+  position: absolute; top: 2px; font: 400 var(--t-micro)/12px var(--letra-mono);
+  color: var(--tinta-3); transform: translateX(-50%); white-space: nowrap; pointer-events: none;
+}
+.regua .hora.vira { color: var(--tinta); font-weight: 600; padding-left: 4px; }
+.regua .hora.aEsquerda { transform: none; }
+.regua .hora.aDireita, .regua .hora.vira.aDireita { transform: translateX(-100%); padding: 0 4px 0 0; }
+/* A kill na régua é ÂMBAR, como o marcador de qualquer mesa de montagem: o número na fila das horas
+   (que se afastam dele) e o risco a descer para as faixas. */
 .regua .kill {
-  position: absolute; top: 0; height: 100%; width: 16px; transform: translateX(-50%);
-  background: none; border: 0; padding: 0; min-height: 0; cursor: pointer;
-  color: var(--marca); font-size: var(--t-micro); font-family: var(--letra-mono);
+  position: absolute; top: 0; height: 100%; width: 16px; transform: translateX(-50%); z-index: 1;
+  background: none; border: 0; padding: 0; margin: 0; min-height: 0; min-width: 0; cursor: pointer;
+  color: var(--marca); font: 600 var(--t-micro)/12px var(--letra-mono);
 }
 .regua .kill::before {
-  content: ''; position: absolute; left: 50%; top: 0; width: 2px; height: 10px;
-  margin-left: -1px; background: var(--marca); border-radius: 0 0 1px 1px;
+  content: ''; position: absolute; left: 50%; bottom: 0; width: 2px; height: 12px;
+  margin-left: -1px; background: var(--marca); border-radius: 1px 1px 0 0;
 }
-.regua .kill span { position: absolute; top: 11px; left: 50%; transform: translateX(-50%); }
-.regua .kill:hover { background: none; }
+.regua .kill span { position: absolute; top: 2px; left: 50%; transform: translateX(-50%); }
+.regua .kill:hover, .regua .kill:active { background: none; }
 .regua .kill:hover::before { background: var(--marca-alto); }
+.regua .kill:hover span { color: var(--marca-alto); }
+/* As horas da régua descem pelas faixas, muito fracas, como as linhas das horas no mapa. */
+.trilho .linhaHora {
+  position: absolute; top: 0; bottom: 0; width: 1px; margin-left: -.5px; z-index: 1; pointer-events: none;
+  background: color-mix(in srgb, var(--tinta) 9%, transparent);
+}
+.trilho .linhaHora.vira { background: color-mix(in srgb, var(--tinta) 22%, transparent); }
 /* O pico de chat é o mesmo losango da legenda do mapa, em cima da faixa do canal que o teve, a meio
    da altura do trilho. O contorno escuro é o que o separa do ciano da gravação e dos riscos do que já
    foi lido e ouvido. */
