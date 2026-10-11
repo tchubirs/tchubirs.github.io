@@ -725,7 +725,7 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 /* A passagem de um dia para o outro: o traço atravessa a régua inteira e a etiqueta escreve a data. */
 .regua .tique.vira { height: 100%; background: var(--tinta-2); }
 .regua .hora {
-  position: absolute; top: 2px; font: 400 var(--t-micro)/12px var(--letra-mono);
+  position: absolute; top: 2px; font: 400 var(--t-micro)/11px var(--letra-mono);
   color: var(--tinta-3); transform: translateX(-50%); white-space: nowrap; pointer-events: none;
 }
 .regua .hora.vira { color: var(--tinta); font-weight: 600; padding-left: 4px; }
@@ -736,13 +736,15 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 .regua .kill {
   position: absolute; top: 0; height: 100%; width: 16px; transform: translateX(-50%); z-index: 1;
   background: none; border: 0; padding: 0; margin: 0; min-height: 0; min-width: 0; cursor: pointer;
-  color: var(--marca); font: 600 var(--t-micro)/12px var(--letra-mono);
+  color: var(--marca); font: 600 var(--t-micro)/11px var(--letra-mono);
 }
 .regua .kill::before {
   content: ''; position: absolute; left: 50%; bottom: 0; width: 2px; height: 12px;
   margin-left: -1px; background: var(--marca); border-radius: 1px 1px 0 0;
 }
 .regua .kill span { position: absolute; top: 2px; left: 50%; transform: translateX(-50%); }
+/* Em cima de uma hora escrita, o número desce para o lado direito do risco. */
+.regua .kill span.baixo { top: 14px; left: calc(50% + 3px); transform: none; line-height: 11px; }
 .regua .kill:hover, .regua .kill:active { background: none; }
 .regua .kill:hover::before { background: var(--marca-alto); }
 .regua .kill:hover span { color: var(--marca-alto); }
@@ -1484,6 +1486,7 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
   body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .relogio .saltos button { min-height: 30px; }
   body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .relogio > .linha { margin: 0 0 var(--e2); }
   body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .regua { height: 24px; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .regua .kill span.baixo { top: 13px; }
   body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .relogio > .reguaLinha { margin-top: var(--e2); }
 
   /* DIREITA, em baixo: a montagem. Rola por dentro quando a coluna aperta: com o chat aberto, o que

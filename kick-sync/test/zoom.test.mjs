@@ -75,9 +75,10 @@ test('o deslizante e os botões: da noite toda aos 30 s, e de volta', semNavegad
   assert.equal(v.largura, 30_000);
   assert.equal(await p.locator('#zoomQuanto').innerText(), '30 s à vista');
   assert.ok(await p.locator('#zoomMais').isDisabled());
-  // A régua passa a mostrar segundos (passo de um minuto ou menos, com no máximo uma hora inteira).
-  const horas = await p.locator('#regua .hora').count();
-  assert.ok(horas <= 2, `${horas} horas em 30 s`);
+  // A régua passa a escrever os segundos, de 5 em 5: com 30 s à vista, umas seis horas escritas.
+  const horas = await p.locator('#regua .hora').allInnerTexts();
+  assert.ok(horas.length >= 3 && horas.length <= 11, `${horas.length} horas em 30 s`);
+  for (const h of horas) assert.match(h, /^\d{2}:\d{2}:\d{2}$/);
 
   // O menos dobra o tempo à vista, e o mais divide-o.
   await p.click('#zoomMenos');
@@ -232,6 +233,85 @@ test('a pinça com dois dedos aproxima e afasta no meio dos dedos', semNavegador
   // Fechar: volta a afastar, até à noite toda e não mais.
   await pinca(300, 20);
   assert.equal((await vista(p)).largura, NOITE);
+  assert.deepEqual(erros, []);
+  await p.close();
+});
+
+// "Cortado com o tempo", como num editor e como a régua do mapa (o dono, 11/10): horas que seguem o zoom,
+// um traço maior em cada hora escrita e traços pequenos entre elas, e linhas muito fracas a descer pelas
+// faixas em cada hora escrita, para ver até onde se andou.
+test('a régua tem divisões e linhas pelas faixas, e o passo segue o zoom', semNavegador, async () => {
+  const { p, erros } = await abrir({ ecra: { width: 1440, height: 900 } });
+  await abrirNoite(p);
+  await p.click('#mais5m');
+  const medir = () => p.evaluate(() => {
+    const regua = document.getElementById('regua');
+    const r = regua.getBoundingClientRect();
+    const xs = (sel, dentro = regua) => [...dentro.querySelectorAll(sel)].map((e) => {
+      const b = e.getBoundingClientRect();
+      return Math.round(b.left + b.width / 2 - r.left);
+    });
+    const caixas = [...regua.querySelectorAll('.hora, .kill span')].map((e) => {
+      const b = e.getBoundingClientRect();
+      return [b.left - r.left, b.right - r.left, b.top, b.bottom];
+    });
+    const trilhos = [...document.querySelectorAll('#faixas .faixa > .trilho, #faixas .faixaGeral > .trilho')];
+    return {
+      horas: [...regua.querySelectorAll('.hora')].map((h) => h.textContent),
+      grandes: xs('.tique.grande'),
+      pequenos: xs('.tique:not(.grande)'),
+      linhas: trilhos.map((t) => xs('.linhaHora', t)),
+      opacidade: getComputedStyle(document.querySelector('.trilho .linhaHora')).backgroundColor,
+      caixas,
+      largura: r.width,
+    };
+  });
+  const seg = (h) => { const [a, b, c = 0] = h.split(':').map(Number); return a * 3600 + b * 60 + c; };
+  const passoDe = (horas) => seg(horas[1]) - seg(horas[0]);
+
+  // A noite toda (10 min): de minuto a minuto, com traços pequenos a cada 10 s.
+  let m = await medir();
+  assert.ok(m.horas.length >= 6 && m.horas.length <= 11, m.horas.join(' '));
+  assert.equal(passoDe(m.horas), 60);
+  assert.ok(m.grandes.length >= m.horas.length);
+  assert.ok(m.pequenos.length >= 3 * (m.grandes.length - 1), `${m.pequenos.length} traços pequenos`);
+  // Cada faixa (e Todos) tem uma linha em cada traço grande, no mesmo x.
+  assert.equal(m.linhas.length, 3);
+  for (const l of m.linhas) {
+    assert.equal(l.length, m.grandes.length);
+    l.forEach((x, i) => assert.ok(Math.abs(x - m.grandes[i]) <= 1, `linha ${x} fora do traço ${m.grandes[i]}`));
+  }
+  assert.match(m.opacidade, /\/ 0\.\d+\)$/, 'a linha das faixas é fraca');
+
+  // Com uns 2 min à vista, o passo encolhe para segundos, e as horas escrevem-nos.
+  await p.locator('#zoomTempo').fill('500');
+  m = await medir();
+  assert.ok(m.horas.length >= 6 && m.horas.length <= 11, m.horas.join(' '));
+  assert.ok(passoDe(m.horas) <= 15, m.horas.join(' '));
+  for (const l of m.linhas) assert.equal(l.length, m.grandes.length);
+
+  // E com 30 s, de 5 em 5 s.
+  await p.locator('#zoomTempo').fill('1000');
+  m = await medir();
+  assert.equal(passoDe(m.horas), 5);
+
+  // Nada escrito na régua se toca, nem as horas umas nas outras nem com os números das kills.
+  await p.click('#marcarKill');
+  await p.click('#mais3s');
+  await p.click('#marcarKill');
+  for (const z of ['1000', '500', '0']) {
+    await p.locator('#zoomTempo').fill(z);
+    m = await medir();
+    const cs = m.caixas;
+    for (let i = 0; i < cs.length; i++) {
+      for (let j = i + 1; j < cs.length; j++) {
+        const [a, b] = [cs[i], cs[j]];
+        const tocam = a[0] < b[1] && b[0] < a[1] && a[2] < b[3] && b[2] < a[3];
+        assert.ok(!tocam, `zoom ${z}: textos por cima um do outro na régua ${JSON.stringify([a, b, m.horas])}`);
+      }
+    }
+    for (const c of cs) assert.ok(c[0] >= -1 && c[1] <= m.largura + 1, `zoom ${z}: texto fora da régua`);
+  }
   assert.deepEqual(erros, []);
   await p.close();
 });

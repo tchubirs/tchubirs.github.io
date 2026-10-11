@@ -1227,7 +1227,7 @@ const PASSOS_REGUA = [
 /**
  * Onde cai cada hora escrita e cada divisão na vista `inicio`..`fim`, numa régua de `largura` px.
  *
- * Como a régua do mapa do evento e a de um editor de vídeo: um passo redondo que dê uns 6 a 8 rótulos
+ * Como a régua do mapa do evento e a de um editor de vídeo: um passo redondo que dê uns 6 a 10 rótulos
  * na largura que há (num telemóvel menos, para não se tocarem), um traço maior em cada hora escrita e
  * traços pequenos entre elas. As horas são do fuso do aparelho: num fuso de meia hora, as horas cheias
  * caíam a meio dos traços se o passo contasse do UTC.
@@ -1236,7 +1236,7 @@ function marcasDaRegua(inicio, fim, largura) {
   const total = fim - inicio;
   const cabe = (passo) => {
     const larguraRotulo = passo < 60e3 ? 84 : 64;
-    return total / passo <= Math.max(3, Math.min(8, Math.floor(largura / larguraRotulo)));
+    return total / passo <= Math.max(3, Math.min(10, Math.floor(largura / larguraRotulo)));
   };
   const [passo, sub] = PASSOS_REGUA.find(([p]) => cabe(p)) || PASSOS_REGUA.at(-1);
   const fuso = new Date(inicio).getTimezoneOffset() * 60_000;
@@ -1310,17 +1310,19 @@ function pintarRegua() {
   // "Coloca a linha do tempo, o timer, do lado de cima; aí tá tudo amontoado." Estava: numa noite com
   // quinze kills, metade delas em dois tiroteios seguidos, os números caíam uns por cima dos outros e o
   // que se lia era uma mancha. O risco fica sempre (é ele que diz ONDE) e o número só entra se o
-  // anterior estiver a mais de catorze pixels e se não tapar uma hora escrita: as horas dizem até onde
-  // se andou, e a kill sem número continua com o risco âmbar e o número no título.
+  // anterior estiver a mais de catorze pixels. Em cima de uma hora escrita o número desce para o lado
+  // do risco, para nenhum dos dois tapar o outro: uma kill marcada num minuto certo caía mesmo em cima
+  // da hora.
   let ultimoNumero = -Infinity;
   for (const [i, m] of ordenar(estado.momentos).entries()) {
     if (m.ms < inicio || m.ms > fim) continue;
     const x = px(m.ms);
     const w = String(i + 1).length * 6.7 + 4;
-    const cabe = x - ultimoNumero >= 14 && livre(x - w / 2, x + w / 2);
+    const cabe = x - ultimoNumero >= 14;
+    const baixo = cabe && !livre(x - w / 2, x + w / 2);
     if (cabe) ultimoNumero = x;
     partes.push(`<button type="button" class="kill" data-ms="${m.ms}" style="left:${pct(m.ms)}%" `
-      + `title="kill ${i + 1}: ${relogioCurto(m.ms)}">${cabe ? `<span>${i + 1}</span>` : ''}</button>`);
+      + `title="kill ${i + 1}: ${relogioCurto(m.ms)}">${cabe ? `<span${baixo ? ' class="baixo"' : ''}>${i + 1}</span>` : ''}</button>`);
   }
 
   alvo.innerHTML = partes.join('');

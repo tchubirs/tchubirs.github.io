@@ -745,17 +745,17 @@ test('a régua mostra as horas por cima das barras, e as kills marcadas nela',
     await p.waitForSelector('#regua .hora', { timeout: 15000 });
 
     const horas = await p.locator('#regua .hora').allInnerTexts();
-    assert.ok(horas.length >= 2 && horas.length <= 9, `${horas.length} marcas e demais ou de menos`);
+    assert.ok(horas.length >= 2 && horas.length <= 11, `${horas.length} marcas e demais ou de menos`);
     // Ou uma hora, ou uma data — e a data só na marca em que o dia vira.
     // "Mudou alguma coisa? Onde é que está o dia 30?" Não tinha mudado nada:
     // é que nunca lá esteve. Uma noite que começa às onze da manhã e acaba às
     // quatro da manhã seguinte escrevia só HH:MM, e passava-se a meia-noite
     // sem nada dizer que o dia era outro.
     for (const h of horas) {
-      assert.match(h, /^(\d{2}:\d{2}|\d{2}\/\d{2})$/, `marca ilegivel: ${h}`);
+      assert.match(h, /^(\d{2}:\d{2}|\S+ \d{2}\/\d{2})$/, `marca ilegivel: ${h}`);
     }
     const datas = await p.locator('#regua .hora.vira').allInnerTexts();
-    for (const d of datas) assert.match(d, /^\d{2}\/\d{2}$/, `a marca do dia devia ser uma data: ${d}`);
+    for (const d of datas) assert.match(d, /^\S+ \d{2}\/\d{2}$/, `a marca do dia devia ser uma data: ${d}`);
     // Em ordem, e dentro da noite.
     assert.deepEqual(horas, [...horas].sort());
 
