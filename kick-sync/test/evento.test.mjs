@@ -295,12 +295,20 @@ test('escolher um lance lê o chat do time e marca no mapa onde ele explodiu',
     const noite = await p.evaluate(() => ({ agora: window.__estado.agoraMs, focos: window.__estado.focos }));
     assert.ok(Math.abs(noite.agora - (pico - 10_000)) < 2000, 'o vídeo abre 10 s antes do pico');
     assert.deepEqual(noite.focos, ['tchubi']);
-    // O pico também está na linha do tempo da live, e clicar nele vai 10 s antes, sem voltar ao mapa.
-    const naRegua = p.locator('#regua .picoChat');
-    await naRegua.first().waitFor();
-    assert.equal(Number(await naRegua.first().getAttribute('data-ms')), pico);
+    // O pico também está na linha do tempo da live, em cima da faixa de quem o teve (tchubi) e só nela,
+    // e clicar nele vai 10 s antes, sem voltar ao mapa. O trilho por baixo não apanha o mesmo clique.
+    const naFaixa = p.locator('.faixa[data-slug="tchubi"] .trilho .picoChat');
+    await naFaixa.first().waitFor();
+    assert.equal(Number(await naFaixa.first().getAttribute('data-ms')), pico);
+    assert.equal(await naFaixa.first().getAttribute('data-canal'), 'tchubi');
+    assert.match(await naFaixa.first().getAttribute('aria-label'), /^pico de chat às \d{2}:\d{2}/);
+    assert.equal(await p.locator('.faixa[data-slug="outro"]').count(), 1);
+    assert.equal(await p.locator('.faixa[data-slug="outro"] .picoChat').count(), 0);
+    assert.equal(await p.locator('#regua .picoChat').count(), 0);
+    assert.equal(await p.locator('.faixaGeral .picoGeral').count(), 1);
+    assert.equal(await p.locator('.faixaGeral .picoChat').count(), 0);
     await p.click('#mais5m');
-    await naRegua.first().click();
+    await naFaixa.first().click();
     assert.equal(await p.evaluate(() => window.__estado.agoraMs), pico - 10_000);
     // Com o vídeo aberto e o mapa recolhido, o zoom do mapa não muda nada na tela: some.
     assert.equal(await p.locator('#verTudo').isVisible(), false);

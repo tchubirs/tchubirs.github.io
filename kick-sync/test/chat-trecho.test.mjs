@@ -222,7 +222,7 @@ test('o botão lê só o chat do streamer escolhido e só o trecho entre as alç
     await p.close();
   });
 
-test('com evento aberto o botão também lê, e o pico do trecho aparece na régua',
+test('com evento aberto o botão também lê, e o pico do trecho aparece na faixa de quem o teve',
   semNavegador, async () => {
     const { p, erros } = await abrir({ ecra: { width: 1440, height: 900 }, caminho: 'evento' });
     await kickFalsa(p, { canais: ['tchubi', 'outro'] });
@@ -233,10 +233,12 @@ test('com evento aberto o botão também lê, e o pico do trecho aparece na rég
     await p.evaluate((ms) => window.__abrirLanceDoEvento(['tchubi', 'outro'], ms, 'tchubi'), T + 3 * MIN);
     await p.waitForSelector('.tile', { timeout: 15000 });
     await abrirTrechoDe(p, 'tchubi');
-    assert.equal(await p.locator('.regua .picoChat').count(), 0);
+    assert.equal(await p.locator('.picoChat').count(), 0);
     await ler(p);
     await p.waitForFunction(() => /^Chat de tchubi, .*1 pico\./.test(document.getElementById('estadoChatTrecho').textContent), null, { timeout: 15000 });
-    await p.waitForSelector('.regua .picoChat');
+    await p.waitForSelector('.faixa[data-slug="tchubi"] .trilho .picoChat');
+    assert.equal(await p.locator('.faixa[data-slug="outro"] .picoChat').count(), 0);
+    assert.equal(await p.locator('.regua .picoChat').count(), 0);
     await p.waitForSelector('#chatVideo:not([hidden])');
     assert.equal(await p.locator('#chatVideoTitulo').innerText(), 'Chat de tchubi');
     assert.deepEqual(erros, []);

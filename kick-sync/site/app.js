@@ -1271,31 +1271,69 @@ function pintarRegua() {
     partes.push(`<button class="kill" data-ms="${m.ms}" style="left:${x}%" `
       + `title="kill ${i + 1}: ${relogioCurto(m.ms)}">${cabe ? `<span>${i + 1}</span>` : ''}</button>`);
   }
-  // Os picos de chat também aqui, e não só no mapa do evento: assim vai-se de um pico ao outro sem
-  // voltar ao mapa (o dono, 07/10). Dois canais no mesmo minuto são o mesmo lance.
-  const abertos = new Set(estado.linhas.map((l) => l.slug));
-  const minutos = new Set();
-  for (const [canal, lista] of picosDoEvento()) {
-    if (!abertos.has(canal)) continue;
-    for (const m of lista) {
-      if (m.tipo !== 'chat' || m.ms < inicio || m.ms > fim) continue;
-      const minuto = Math.floor(m.ms / 60_000);
-      if (minutos.has(minuto)) continue;
-      minutos.add(minuto);
-      partes.push(`<button class="picoChat" data-ms="${m.ms}" data-canal="${escapar(canal)}" style="left:${pct(m.ms)}%" `
-        + `title="${escapar(t('regua.picoChat', { hora: relogioCurto(m.ms), canal }))}"></button>`);
-    }
-  }
   alvo.innerHTML = partes.join('');
-  for (const b of alvo.querySelectorAll('.picoChat')) {
-    // Abre 10 s antes, como o botão do pico no evento: o chat reage depois do lance.
-    b.onclick = () => { largarPrevia(); irPara(Number(b.dataset.ms) - 10_000); };
-  }
+  pintarPicosFaixas(inicio, fim);
   for (const b of alvo.querySelectorAll('.kill')) {
     // A marca de outra kill desliga a prévia desta, senão volta para trás logo.
     b.onclick = () => { largarPrevia(); irPara(Number(b.dataset.ms)); };
   }  // As alças do trecho de chat vivem na mesma vista da régua: mudam juntas.
   pintarChatTrecho();
+}
+
+/**
+ * Os picos de chat em cima da faixa de quem os teve, e não na régua: "esses pontos amarelos deveria ser
+ * em cima da linha do tempo da dona delas" (o dono, 11/10). Assim vê-se de quem é cada pico sem passar o
+ * rato. Um por minuto em cada canal. Na faixa Todos fica só um risco fraco por minuto, para dizer que ali
+ * houve alguma coisa sem encher a faixa geral de losangos.
+ */
+function pintarPicosFaixas(inicio, fim) {
+  const caixa = $('faixas');
+  if (!caixa) return;
+  for (const v of caixa.querySelectorAll('.picoChat, .picoGeral')) v.remove();
+  const total = fim - inicio;
+  // Preso a meio losango das pontas: o trilho corta o que sai dele, e um pico no primeiro segundo
+  // da vista ficava cortado ao meio.
+  const lugar = (ms) => `left:clamp(6px,${((ms - inicio) / total) * 100}%,calc(100% - 6px))`;
+  const trilhos = new Map();
+  for (const f of caixa.querySelectorAll('.faixa')) trilhos.set(f.dataset.slug, f.querySelector('.trilho'));
+  const geral = caixa.querySelector('.faixaGeral .trilho');
+  const minutosGerais = new Set();
+  for (const [canal, lista] of picosDoEvento()) {
+    const trilho = trilhos.get(canal);
+    if (!trilho) continue;
+    const minutos = new Set();
+    for (const m of lista) {
+      if (m.tipo !== 'chat' || m.ms < inicio || m.ms > fim) continue;
+      const minuto = Math.floor(m.ms / 60_000);
+      if (minutos.has(minuto)) continue;
+      minutos.add(minuto);
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'picoChat';
+      b.dataset.ms = String(m.ms);
+      b.dataset.canal = canal;
+      b.setAttribute('style', lugar(m.ms));
+      b.title = t('regua.picoChat', { hora: relogioCurto(m.ms), canal });
+      b.setAttribute('aria-label', b.title);
+      // Abre 10 s antes, como o botão do pico no evento: o chat reage depois do lance. E o clique
+      // fica no losango: o trilho por baixo levava o vídeo ao sítio exacto do clique logo a seguir.
+      b.onclick = (e) => {
+        e.stopPropagation();
+        if (vistaArrastada) return;
+        largarPrevia();
+        irPara(m.ms - 10_000);
+      };
+      trilho.append(b);
+      if (geral && !minutosGerais.has(minuto)) {
+        minutosGerais.add(minuto);
+        const r = document.createElement('i');
+        r.className = 'picoGeral';
+        r.setAttribute('aria-hidden', 'true');
+        r.setAttribute('style', lugar(m.ms));
+        geral.append(r);
+      }
+    }
+  }
 }
 
 function marcarFaixas() {
