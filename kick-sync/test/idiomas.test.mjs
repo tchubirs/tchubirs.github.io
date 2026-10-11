@@ -89,6 +89,8 @@ const IGUAIS_DE_PROPOSITO = {
   en: new Set([
     // Os nomes na tela: "experimental" escreve-se igual, e as qualidades são só o número.
     'nomes.experimental', 'nomes.q1080', 'nomes.q720',
+    // A etiqueta da detecção de lances também.
+    'auto.teste',
     // "normal" escreve-se igual nas tres linguas.
     'lance.sensNormal', 'filtros.sensNormal', 'montagem.formato169', 'montagem.formatoAmbos',
     'app.nome', 'canais.vods', 'marca.feita', 'evento.zoom',
@@ -105,6 +107,8 @@ const IGUAIS_DE_PROPOSITO = {
   es: new Set([
     // Os nomes na tela: "experimental" escreve-se igual, e as qualidades são só o número.
     'nomes.experimental', 'nomes.q1080', 'nomes.q720',
+    // A etiqueta da detecção e o separador Exportar escrevem-se igual.
+    'auto.teste', 'exportar.titulo',
     'nomes.trecho1', 'nomes.trecho2', 'nomes.nivel.media', 'nomes.deQuemAria', 'nomes.canal',
     // "pico", "picos", "Continuar" e "Cancelar" escrevem-se igual em espanhol.
     'rapido.umPico', 'rapido.picos', 'rapido.avisoContinuar', 'rapido.avisoCancelar',
@@ -132,7 +136,7 @@ const IGUAIS_DE_PROPOSITO = {
     'grelha.deQuantos',
     'procurar.seguidores', 'noite.umCanal',
     'tile.atrasar', 'alinhar.cancelado', 'montagem.antes', 'montagem.ir',
-    'corte.titulo', 'corte.antes', 'clipe.cancelar',
+    'corte.antes', 'clipe.cancelar',
     'sel.todos',
     'montagem.parar',
     // Os atalhos: "Cancelar", "Exportar", "Importar", "Marcar entrada" e "Marcar kill" escrevem-se igual.
