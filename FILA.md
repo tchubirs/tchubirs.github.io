@@ -274,3 +274,9 @@ em francês). Tudo revisado pela regra 14 em 28/09.
 - Manter a identidade (escuro quente, turquesa, âmbar), sem cara de painel administrativo. Uma ação principal destacada por área.
 - Não quebrar nada: IDs, data-t, atalhos, sincronia, exportação; mudanças de layout presas a body.mesa (o estilo.css serve à versão Twitch também).
 - Fazer por partes, com testes e prints. Começar depois das tarefas de atalhos e da tela do evento com vídeos.
+
+## Pedido do dono (12/10): legenda e chat no clipe final
+- No Criar clipe, opção de pôr no vídeo baixado:
+  - o chat do streamer naquele trecho, por cima do vídeo (estilo sobreposição de chat), com posição, tamanho e quantas linhas;
+  - legenda da fala do streamer (Whisper no navegador, ver ESTUDO-VOZ.md), revisável antes de exportar.
+- Vale para 16:9 e 9:16. Fazer depois da parte 2 da reorganização (mesmos arquivos).
