@@ -278,5 +278,5 @@ em francês). Tudo revisado pela regra 14 em 28/09.
 ## Pedido do dono (12/10): legenda e chat no clipe final
 - No Criar clipe, opção de pôr no vídeo baixado:
   - o chat do streamer naquele trecho, por cima do vídeo (estilo sobreposição de chat), com posição, tamanho e quantas linhas;
-  - legenda da fala do streamer (Whisper no navegador, ver ESTUDO-VOZ.md), revisável antes de exportar.
+  - legenda da fala do streamer (Whisper no navegador, ver o estudo de voz (kick-sync/ESTUDO-VOZ.md)), revisável antes de exportar.
 - Vale para 16:9 e 9:16. Fazer depois da parte 2 da reorganização (mesmos arquivos).
