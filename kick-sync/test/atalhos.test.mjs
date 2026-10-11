@@ -448,6 +448,28 @@ test('só com o teclado: Tab até à linha, Enter grava, e o foco nunca sai da j
   await p.close();
 });
 
+test('Tab a meio de uma gravação desiste dela e o foco fica na mesma linha (revisão do Codex, 11/10)', semNavegador, async () => {
+  const { p, erros } = await abrirNoite();
+  await p.click('#ajuda');
+  await linha(p, 'pausa').locator('.atalhoTeclas').click();
+  assert.equal(await linha(p, 'pausa').getAttribute('class'), 'atalho aGravar');
+  await p.keyboard.press('Tab');
+  assert.equal(await linha(p, 'pausa').getAttribute('class'), 'atalho');
+  assert.equal(await p.evaluate(() => {
+    const a = document.activeElement;
+    return a?.dataset.acao === 'juntar' && a.closest('li')?.dataset.id;
+  }), 'pausa');
+  await linha(p, 'pausa').locator('.atalhoTeclas').click();
+  await p.keyboard.press('Shift+Tab');
+  assert.equal(await p.evaluate(() => {
+    const a = document.activeElement;
+    return a?.dataset.acao === 'gravar' && a.closest('li')?.dataset.id;
+  }), 'pausa');
+  assert.equal(await teclasDe(p, 'pausa'), 'Espaço ou K');
+  assert.deepEqual(erros, []);
+  await p.close();
+});
+
 test('exportar e importar o perfil num ficheiro', semNavegador, async () => {
   const { p, erros } = await abrirNoite();
   await p.click('#ajuda');

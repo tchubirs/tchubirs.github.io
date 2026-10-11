@@ -199,7 +199,15 @@ export function montarPainelAtalhos({ atalhos, t, raiz = document.getElementById
       return;
     }
     if (!gravar) return;
-    if (e.key === 'Tab') { parar({ voltarFoco: false }); return; }
+    // Tab desiste da gravação, mas o foco não se perde com a lista repintada: vai para o botão seguinte
+    // da mesma linha (ou fica no das teclas, com Shift).
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const id = gravar.id;
+      parar({ voltarFoco: false });
+      focarLinha(id, e.shiftKey ? 'gravar' : 'juntar');
+      return;
+    }
     e.preventDefault();
     e.stopPropagation();
     if (e.key === 'Escape') { parar(); dizer(t('atalhos.cancelado')); return; }
