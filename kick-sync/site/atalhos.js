@@ -100,9 +100,10 @@ export function comboDoEvento(e) {
   else if (k === ' ' || k === 'Spacebar') tecla = 'Space';
   else if (k === 'Esc') tecla = 'Escape';
   else if (NOMEADAS.has(k)) tecla = k;
-  else if (/^Key[A-Z]$/.test(e.code || '') && (ctrl || alt || !/^[a-z]$/i.test(k))) {
+  else if (/^Key[A-Z]$/.test(e.code || '') && (ctrl || alt || (/^\p{L}$/u.test(k) && !/^[a-z]$/i.test(k)))) {
     // Com Alt no Mac a letra chega como outro carácter, e num teclado russo chega em cirílico: a
-    // posição da tecla diz qual é.
+    // posição da tecla diz qual é. Um sinal fica com o que a tecla escreve: no AZERTY a vírgula e
+    // o '?' moram na posição do M, e não podem virar M.
     tecla = e.code.slice(3);
   } else if (/^Digit[0-9]$/.test(e.code || '') && (ctrl || alt)) tecla = e.code.slice(5);
   else if ([...k].length === 1) {

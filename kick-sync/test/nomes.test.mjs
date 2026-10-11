@@ -114,6 +114,9 @@ test('apelidos da planilha do dono: [Discord: X], (Discord: X) e a célula Disco
     ['newtrc', ['Newt']], ['pato_bravo', ['Patinho']], ['gatomia', ['Mia, a Gata']],
     ['lontrafeliz', ['Lontra']], ['zebra99', ['Zé bZebra/b']],
   ]);
+  // A limpeza é a mesma de um apelido escrito à mão: um nome comprido corta-se no mesmo sítio.
+  const comprido = `Um   Nome ${'muito '.repeat(10)}#42`;
+  assert.deepEqual([...apelidosDoTexto(`kick.com/x1 [Discord: ${comprido}]`)], [['x1', [limparApelido(comprido)]]]);
   // O elenco continua sem os apelidos: o arquivo público do evento não os leva.
   const elenco = lerElenco(texto);
   assert.ok(!JSON.stringify(paraArquivo(elenco, { nome: 'x' })).includes('Newt'));

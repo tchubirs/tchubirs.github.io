@@ -173,6 +173,28 @@ test('um clique na régua ordena: quem tem vídeo nesse instante, depois quem es
   assert.deepEqual(erros, []);
 });
 
+test('na régua, a etiqueta da ordem sai quando o momento escolhido cai em cima dela, e volta quando se afasta', semNavegador, async () => {
+  const { p, erros } = await abrir({ caminho: 'evento' });
+  await kickFalsa(p, { canais: ['tchubi'] });
+  await abrirEvento(p, 'tchubi');
+  await verDe(p, T - 60_000, T + 11 * 60_000);
+  await clicarNaRegua(p, T + 5 * 60_000);
+  await p.waitForFunction(() => window.__evento.ordem.modo === 'instante');
+  const etiquetas = () => p.$$eval('#reguaEvento .marcaRegua', (l) => l.map((b) => b.classList[1]).sort());
+  assert.deepEqual(await etiquetas(), ['ordem']);
+  // O momento no mesmo sítio: fica só a dele.
+  await clicarNoMapa(p, 'tchubi', T + 5 * 60_000 + 10_000);
+  await p.waitForFunction(() => window.__evento.escolha?.canal === 'tchubi');
+  assert.deepEqual(await etiquetas(), ['lance']);
+  // Longe uma da outra, as duas.
+  await clicarNaRegua(p, T + 60_000);
+  await p.waitForFunction((ms) => Math.abs(window.__evento.ordem.ms - ms) < 30_000, T + 60_000);
+  await clicarNoMapa(p, 'tchubi', T + 9 * 60_000);
+  await p.waitForFunction((ms) => Math.abs(window.__evento.escolha.ms - ms) < 30_000, T + 9 * 60_000);
+  assert.deepEqual(await etiquetas(), ['lance', 'ordem']);
+  assert.deepEqual(erros, []);
+});
+
 test('o seletor de ordem: A a Z, mais tempo no ar, ao vivo agora, e o instante pelo teclado', semNavegador, async () => {
   const { p, erros } = await abrir({ caminho: 'evento' });
   await kickFalsa(p, { canais: ['tchubi', 'outro', 'lobo'], segmentos: 60, comecosS: { outro: 5 * 60 } });

@@ -31,6 +31,8 @@
 //  - `contar` conta os soltos nos canais, e `paraTexto` escreve-os numa linha
 //    "Sem time: a, b" no fim.
 
+import { limparApelido } from './nomes.js';
+
 /**
  * Caminhos da Kick que não são canais.
  *
@@ -1599,7 +1601,7 @@ export function apelidosDoTexto(texto) {
       if (solto) apelidos.push(solto[1]);
     }
     const limpos = apelidos
-      .map((a) => a.replace(/[<>"`]/g, '').replace(/#\d{1,4}\s*$/, '').replace(/\s+/g, ' ').trim().slice(0, 40))
+      .map(limparApelido)
       .filter(Boolean);
     if (!limpos.length) continue;
     const slug = [...canais][0];

@@ -101,14 +101,102 @@ test('no celular: um apelido escrito à mão para um canal fora do lance é recu
   await p.fill('#nomesNovoApelido', 'Fulano');
   await p.click('#nomesNovoGuardar');
   assert.match(await p.locator('#nomesEstado').innerText(), /Escreva um canal que estava no ar/);
+  // Recusado, o apelido fica na caixa para só corrigir o canal.
+  assert.equal(await p.inputValue('#nomesNovoApelido'), 'Fulano');
   await p.fill('#nomesNovoCanal', 'gatomia');
   await p.fill('#nomesNovoApelido', 'Mia');
   await p.click('#nomesNovoGuardar');
   assert.match(await p.locator('#nomesApelidos').innerText(), /gatomia: Mia/);
+  assert.equal(await p.inputValue('#nomesNovoApelido'), '', 'guardado, a caixa esvazia');
   await p.click('#nomesApelidos button[data-slug="gatomia"]');
   assert.equal(await p.locator('#nomesApelidos li').count(), 1, 'sobra o Newt da planilha');
   // Sem horizontal a mais no celular.
   const largura = await p.evaluate(() => document.documentElement.scrollWidth);
   assert.ok(largura <= 390, `a página tem ${largura} px de largura`);
+  assert.deepEqual(erros, []);
+});
+
+// ── com um leitor de mentira ─────────────────────────────────────────────────
+//
+// O Tesseract a sério leva meio minuto a carregar. Para o que não é a leitura em si (o que acontece à
+// volta dela) o módulo do vendor/ é trocado por um que lê sempre "Newt", o apelido de newtrc na planilha.
+
+async function leitorFalso(p) {
+  await p.route('**/vendor/tesseract/tesseract.esm.min.js', (rota) => rota.fulfill({
+    status: 200,
+    contentType: 'text/javascript',
+    body: `export default {
+      async createWorker() {
+        return {
+          async setParameters() {},
+          async recognize() {
+            if (window.__leituraLenta) await new Promise((r) => setTimeout(r, window.__leituraLenta));
+            return { data: { text: 'Newt', blocks: [{ paragraphs: [{ lines: [{ text: 'Newt', confidence: 90 }] }] }] } };
+          },
+          async terminate() {},
+        };
+      },
+    };`,
+  }));
+}
+
+test('a leitura não refaz o painel a cada quadro, e o ao vivo não leva quem se confirmou noutro momento', semNavegador, async () => {
+  const { p, erros } = await abrir({ caminho: 'evento', ecra: { width: 1440, height: 900 } });
+  await abrirEventoComLance(p, PORTA);
+  await leitorFalso(p);
+  await pintarQuadros(p);
+  await p.evaluate(() => {
+    // Quantas miniaturas se fazem, quantas vezes se lêem os apelidos e quantas miniaturas saem do painel.
+    window.__contas = { miniaturas: 0, apelidos: 0, tiradas: 0 };
+    const toDataURL = HTMLCanvasElement.prototype.toDataURL;
+    HTMLCanvasElement.prototype.toDataURL = function (...a) { window.__contas.miniaturas++; return toDataURL.apply(this, a); };
+    const getItem = Storage.prototype.getItem;
+    Storage.prototype.getItem = function (k) { if (k === 'povix.apelidos') window.__contas.apelidos++; return getItem.call(this, k); };
+    new MutationObserver((ms) => { for (const m of ms) window.__contas.tiradas += m.removedNodes.length; })
+      .observe(document.getElementById('nomesRecortes'), { childList: true });
+  });
+  await p.click('#nomesTela > summary');
+  await p.selectOption('#nomesTrecho', '60');
+  await p.evaluate(() => { window.__contas = { miniaturas: 0, apelidos: 0, tiradas: 0 }; });
+  await p.click('#nomesLer');
+  await p.waitForFunction(() => /13 quadros lidos/.test(document.getElementById('nomesEstado').textContent), null, { timeout: 30_000 });
+  const contas = await p.evaluate(() => window.__contas);
+  // 13 quadros com 4 regiões cada: só as 24 que ficam no painel ganham miniatura.
+  assert.equal(await p.locator('#nomesRecortes figure').count(), 24);
+  assert.ok(contas.miniaturas <= 24, `${contas.miniaturas} miniaturas`);
+  assert.ok(contas.apelidos <= 4, `os apelidos foram lidos ${contas.apelidos} vezes`);
+  assert.ok(contas.tiradas <= 24, `${contas.tiradas} miniaturas refeitas`);
+
+  await p.click('#nomesPropostas button[data-sim="newtrc"]');
+  assert.equal(await p.locator('#verLanceTexto').innerText(), 'Ver este lance com 2 ângulos');
+  // Ir ao vivo é outro momento (aqui, um minuto depois, com os dois no ar): newtrc ficou no de antes.
+  await p.evaluate((ms) => {
+    const real = Date.now;
+    Date.now = () => ms + 20_000;
+    try { document.getElementById('irAoVivo').click(); } finally { Date.now = real; }
+  }, T + 6 * 60_000);
+  await p.waitForSelector('.tile', { timeout: 15000 });
+  assert.equal(await p.evaluate(() => window.__evento.escolha.ms), T + 6 * 60_000);
+  assert.deepEqual(await p.evaluate(() => window.__estado.linhas.map((l) => l.slug)), ['tchubi']);
+  assert.equal(await p.locator('#nomesPropostas li').count(), 0);
+  assert.deepEqual(erros, []);
+});
+
+test('se o momento muda a meio da leitura, ela pára e não deixa nada do momento de antes', semNavegador, async () => {
+  const { p, erros } = await abrir({ caminho: 'evento', ecra: { width: 1440, height: 900 } });
+  await abrirEventoComLance(p, PORTA);
+  await leitorFalso(p);
+  await pintarQuadros(p);
+  await p.evaluate(() => { window.__leituraLenta = 150; });
+  await p.click('#nomesTela > summary');
+  await p.click('#nomesLer');
+  await p.waitForFunction(() => window.__quadrosPedidos.length >= 2, null, { timeout: 30_000 });
+  // Outro momento sem passar pelo clique no mapa (que já limpa tudo): a leitura tem de reparar sozinha.
+  await p.evaluate(() => { window.__evento.escolha = { ...window.__evento.escolha, ms: window.__evento.escolha.ms + 60_000 }; });
+  await p.waitForFunction(() => !document.getElementById('nomesLerTexto').textContent.includes('Parar'), null, { timeout: 30_000 });
+  await p.waitForTimeout(500);
+  assert.ok(await p.evaluate(() => window.__quadrosPedidos.length) < 13);
+  assert.equal(await p.locator('#nomesRecortes figure').count(), 0);
+  assert.equal(await p.locator('#nomesPropostas li').count(), 0);
   assert.deepEqual(erros, []);
 });

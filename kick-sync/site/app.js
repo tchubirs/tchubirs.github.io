@@ -2160,10 +2160,10 @@ function marcasOuvidas(quem, inicio, fim) {
 
 /**
  * Abrir o assistente na faixa de alguém (ou de Todos), no passo 1, ou com `acao` já escolhida no passo 2.
- * Escolher uma pessoa muda também o chat ao lado do vídeo.
+ * Escolher uma pessoa muda também o chat ao lado do vídeo. Devolve false quando essa faixa não existe.
  */
 function abrirAcoes(quem, { focar = false, acao = null } = {}) {
-  if (quem !== TODOS && !estado.linhas.some((l) => l.slug === quem)) return;
+  if (quem !== TODOS && !estado.linhas.some((l) => l.slug === quem)) return false;
   const outra = quem !== faixaEscolhida;
   if (outra) $('estadoChatTrecho').textContent = '';
   faixaEscolhida = quem;
@@ -2180,6 +2180,7 @@ function abrirAcoes(quem, { focar = false, acao = null } = {}) {
   }
   colocarAcoes();
   if (focar) focarPasso();
+  return true;
 }
 
 function fecharAcoes() {
@@ -6375,8 +6376,8 @@ function irAoLance(sentido) {
 }
 function abrirAssistente(acao) {
   const quem = faixaEscolhida ?? estado.focos[0] ?? TODOS;
-  abrirAcoes(quem);
-  escolherAcao(acao);
+  // Sem faixa aberta (um foco que já não tem linha) o passo 2 ficava escolhido para a próxima faixa.
+  if (abrirAcoes(quem)) escolherAcao(acao);
 }
 const FAZER = {
   pausa: () => alternarPausa(),

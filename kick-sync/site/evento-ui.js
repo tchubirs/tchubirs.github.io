@@ -194,6 +194,7 @@ export function montarEvento({
     ev.juntados = new Set();
     ev.extrasDoLink = [];
     ev.escolha = null;
+    nomes.limpar();
     ev.cursor = null;
     ev.falhados = new Set();
     ev.ordem = { modo: ordemInicial(), ms: null };
@@ -559,7 +560,9 @@ export function montarEvento({
     if (Number.isFinite(ev.escolha?.ms)) {
       marcasRegua.push({ ms: ev.escolha.ms, classe: 'lance', texto: t('regua.lance', { hora: horaCurta(ev.escolha.ms) }) });
     }
-    let chips = '';
+    // Primeiro onde cai cada etiqueta, depois o HTML: duas etiquetas uma em cima da outra deixam só a do
+    // momento escolhido, que é a que se mexe.
+    const etiquetas = [];
     for (const m of marcasRegua) {
       const x = xDoTempo(m.ms, ev.vista, largura);
       if (!Number.isFinite(x) || x < 0 || x > largura) continue;
@@ -567,15 +570,14 @@ export function montarEvento({
       // Perto das pontas a etiqueta encosta para dentro, para não sair cortada.
       const lado = x < w / 2 ? ' aEsquerda' : x > largura - w / 2 ? ' aDireita' : '';
       const [a, b] = lado === ' aEsquerda' ? [x, x + w] : lado === ' aDireita' ? [x - w, x] : [x - w / 2, x + w / 2];
-      // Duas etiquetas uma em cima da outra: fica a do momento escolhido, que é a que se mexe.
-      if (m.classe === 'lance') for (let k = ocupados.length - 1; k >= 0; k--) {
-        if (ocupados[k].ordem && b > ocupados[k][0] && a < ocupados[k][1]) { chips = chips.replace(ocupados[k].html, ''); ocupados.splice(k, 1); }
-      }
-      const html1 = `<b class="marcaRegua ${m.classe}${lado}" style="left:${x.toFixed(1)}px">${escapar(m.texto)}</b>`;
-      chips += html1;
-      const faixa = [a - 4, b + 4];
-      if (m.classe === 'ordem') { faixa.ordem = true; faixa.html = html1; }
-      ocupados.push(faixa);
+      etiquetas.push({ m, x, lado, a, b });
+    }
+    const lance = etiquetas.find((q) => q.m.classe === 'lance');
+    const ficam = etiquetas.filter((q) => q.m.classe !== 'ordem' || !lance || !(lance.b > q.a - 4 && lance.a < q.b + 4));
+    let chips = '';
+    for (const { m, x, lado, a, b } of ficam) {
+      chips += `<b class="marcaRegua ${m.classe}${lado}" style="left:${x.toFixed(1)}px">${escapar(m.texto)}</b>`;
+      ocupados.push([a - 4, b + 4]);
     }
     if (passo) {
       // As divisões como num editor de vídeo: um traço maior em cada hora escrita e traços pequenos entre
@@ -1074,11 +1076,14 @@ export function montarEvento({
 
   // Os canais que o lance abre: o time de quem se escolheu, os que o som achou, os times juntados à
   // mão e os que vieram num link. Só quem estava no ar naquele instante.
+  // Os canais dos times juntados à mão.
+  function canaisJuntados() {
+    return [...ev.juntados].flatMap((nome) => ev.elenco.times.find((x) => x.nome === nome)?.canais || []);
+  }
+
   function canaisDoLance(e) {
-    const doTime = (nome) => ev.elenco.times.find((x) => x.nome === nome)?.canais || [];
-    const juntados = [...ev.juntados].flatMap(doTime);
     const achados = resumo(ev.achados).estava.map((a) => a.canal);
-    return [...new Set([...colegas(e.canal), ...achados, ...juntados, ...ev.extrasDoLink, ...nomes.confirmados()])]
+    return [...new Set([...colegas(e.canal), ...achados, ...canaisJuntados(), ...ev.extrasDoLink, ...nomes.confirmados()])]
       .filter((c) => noArEm(ev.coberturas, c, e.ms));
   }
 
@@ -1320,10 +1325,7 @@ export function montarEvento({
     vodEm,
     buscar,
     candidatos: (e) => ev.resultados.filter((r) => r?.estado === 'ok' && noArEm(ev.coberturas, r.slug, e.ms)).map((r) => r.slug),
-    jaNoLance: (e) => {
-      const doTime = (nome) => ev.elenco.times.find((x) => x.nome === nome)?.canais || [];
-      return [...colegas(e.canal), ...[...ev.juntados].flatMap(doTime)];
-    },
+    jaNoLance: (e) => [...colegas(e.canal), ...canaisJuntados()],
     aoMudar: () => pintarLance(),
   });
 
@@ -1421,6 +1423,8 @@ export function montarEvento({
       : [...ev.coberturas.keys()].find((c) => noArEm(ev.coberturas, c, agora));
     if (!canal) return;
     ev.escolha = { canal, ms: agora, time: indiceDeTimes(ev.elenco).get(canal) ?? null };
+    // Outro momento: quem se confirmou pelos nomes na tela era do momento de antes.
+    nomes.limpar();
     pintarLance();
     await verLance();
   }

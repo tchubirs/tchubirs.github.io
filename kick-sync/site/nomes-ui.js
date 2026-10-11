@@ -8,7 +8,7 @@
 import { t, tn } from './idiomas.js';
 import { escapar } from './escapar.js';
 import { casar, lerApelidos, guardarApelidos, juntarApelidos, semApelido, limparApelido } from './nomes.js';
-import { REGIOES, recortar, abrirLeitor, abrirQuadros, podeLer, podeVerVideo, instantesEmVolta } from './ler-tela.js';
+import { REGIOES, recortar, miniatura, abrirLeitor, abrirQuadros, podeLer, podeVerVideo, instantesEmVolta } from './ler-tela.js';
 
 // Medido na escada da Kick em 10/10: 1080p60 a 9,1 Mb/s e 720p60 a 3,5 Mb/s, em pedaços de 10 s.
 const MBITS = { 1080: 9.1, 720: 3.5 };
@@ -42,8 +42,17 @@ export function montarNomesNaTela({ escolha, vodEm, candidatos, jaNoLance, aoMud
     decisao: new Map(),   // canal -> 'sim' | 'nao'
     resultado: { propostas: [], soltos: [] },
     controlo: null,
-    lance: null,
+    lance: null,          // o momento que a leitura em curso lê, "canal|ms"
+    apelidos: null,       // os apelidos lidos uma vez por leitura, e não a cada quadro
   };
+
+  // Durante uma leitura os apelidos não se relêem do localStorage a cada quadro: só quando este painel
+  // os muda.
+  const apelidos = () => (st.controlo ? (st.apelidos || (st.apelidos = lerApelidos())) : lerApelidos());
+  function mudarApelidos(mapa) {
+    guardarApelidos(mapa);
+    st.apelidos = null;
+  }
 
   /** Os canais que a pessoa confirmou: entram no lance. */
   const confirmados = () => [...st.decisao].filter(([, v]) => v === 'sim').map(([k]) => k);
@@ -56,6 +65,7 @@ export function montarNomesNaTela({ escolha, vodEm, candidatos, jaNoLance, aoMud
     st.decisao = new Map();
     st.resultado = { propostas: [], soltos: [] };
     st.lance = null;
+    st.apelidos = null;
     if (!$('nomesTela')) return;
     $('nomesEstado').textContent = '';
     pintar();
@@ -73,7 +83,7 @@ export function montarNomesNaTela({ escolha, vodEm, candidatos, jaNoLance, aoMud
     st.resultado = casar({
       lidos: st.lidos,
       canais: candidatos(e),
-      apelidos: lerApelidos(),
+      apelidos: apelidos(),
       excluir: jaNoLance(e),
     });
   }
@@ -140,12 +150,13 @@ export function montarNomesNaTela({ escolha, vodEm, candidatos, jaNoLance, aoMud
     if (!canal || !apelido || (validos.size && !validos.has(canal))) {
       $('nomesEstado').textContent = t('nomes.apelidoInvalido');
       if (campoId) $(campoId)?.focus();
-      return;
+      return false;
     }
-    guardarApelidos(juntarApelidos(lerApelidos(), new Map([[canal, [apelido]]])));
+    mudarApelidos(juntarApelidos(lerApelidos(), new Map([[canal, [apelido]]])));
     $('nomesEstado').textContent = t('nomes.apelidoGuardado', { apelido, canal });
     recasar();
     pintar();
+    return true;
   }
 
   function pintarApelidos() {
@@ -155,17 +166,23 @@ export function montarNomesNaTela({ escolha, vodEm, candidatos, jaNoLance, aoMud
     $('nomesApelidos').innerHTML = pares.slice(0, 200).map(([slug, a]) => `<li><span><b>${escapar(slug)}</b>: ${escapar(a)}</span>`
       + `<button type="button" class="chip" data-slug="${escapar(slug)}" data-apelido="${escapar(a)}" aria-label="${escapar(t('nomes.tirarApelido', { apelido: a, canal: slug }))}">${escapar(t('nomes.tirar'))}</button></li>`).join('');
     for (const b of $('nomesApelidos').querySelectorAll('button[data-slug]')) {
-      b.onclick = () => { guardarApelidos(semApelido(lerApelidos(), b.dataset.slug, b.dataset.apelido)); recasar(); pintar(); };
+      b.onclick = () => { mudarApelidos(semApelido(lerApelidos(), b.dataset.slug, b.dataset.apelido)); recasar(); pintar(); };
     }
   }
 
-  function pintarRecortes() {
+  const figuraDe = (r) => `<figure>`
+    + `<img src="${r.miniatura}" alt="${escapar(t('nomes.recorteAlt', { regiao: t(`nomes.regiao.${r.regiao}`), hora: horaLocal(r.ms) }))}" loading="lazy">`
+    + `<figcaption><span class="nota">${escapar(horaLocal(r.ms))}, ${escapar(t(`nomes.regiao.${r.regiao}`))}</span>`
+    + `<span class="lido">${r.texto ? escapar(r.texto) : `<i>${escapar(t('nomes.semTexto'))}</i>`}</span></figcaption></figure>`;
+
+  /** Com `soNovos`, durante a leitura, só se acrescentam as miniaturas que chegaram desde a última vez. */
+  function pintarRecortes(soNovos = false) {
     $('nomesRecortesCaixa').hidden = !st.recortes.length;
     $('nomesRecortesResumo').textContent = t('nomes.recortes', { n: st.recortes.length });
-    $('nomesRecortes').innerHTML = st.recortes.map((r) => `<figure>`
-      + `<img src="${r.miniatura}" alt="${escapar(t('nomes.recorteAlt', { regiao: t(`nomes.regiao.${r.regiao}`), hora: horaLocal(r.ms) }))}" loading="lazy">`
-      + `<figcaption><span class="nota">${escapar(horaLocal(r.ms))}, ${escapar(t(`nomes.regiao.${r.regiao}`))}</span>`
-      + `<span class="lido">${r.texto ? escapar(r.texto) : `<i>${escapar(t('nomes.semTexto'))}</i>`}</span></figcaption></figure>`).join('');
+    const lista = $('nomesRecortes');
+    const ja = lista.children.length;
+    if (soNovos && ja <= st.recortes.length) lista.insertAdjacentHTML('beforeend', st.recortes.slice(ja).map(figuraDe).join(''));
+    else lista.innerHTML = st.recortes.map(figuraDe).join('');
   }
 
   function pintar() {
@@ -180,6 +197,14 @@ export function montarNomesNaTela({ escolha, vodEm, candidatos, jaNoLance, aoMud
     pintarSoltos();
     pintarRecortes();
     pintarApelidos();
+  }
+
+  // A cada quadro lido só muda o que se leu: as propostas, os nomes soltos e as miniaturas novas.
+  function pintarLendo() {
+    if (!$('nomesTela')) return;
+    pintarPropostas();
+    pintarSoltos();
+    pintarRecortes(true);
   }
 
   async function ler() {
@@ -202,6 +227,15 @@ export function montarNomesNaTela({ escolha, vodEm, candidatos, jaNoLance, aoMud
     st.lidos = [];
     st.recortes = [];
     st.lance = `${e.canal}|${e.ms}`;
+    // Se o momento mudar a meio (outro lance, o ao vivo), o que se leu já não é dele: pára e esquece.
+    const parou = () => {
+      if (controlo.signal.aborted) return true;
+      const agora = escolha();
+      if (agora && `${agora.canal}|${agora.ms}` === st.lance) return false;
+      limpar();
+      aoMudar();
+      return true;
+    };
     pintar();
     const seg = Number($('nomesTrecho').value) || 60;
     const qualidade = Number($('nomesQualidade').value) || 1080;
@@ -212,29 +246,31 @@ export function montarNomesNaTela({ escolha, vodEm, candidatos, jaNoLance, aoMud
     try {
       $('nomesEstado').textContent = t('nomes.aCarregar');
       try { leitor = await abrirLeitor(); } catch { $('nomesEstado').textContent = t('nomes.semLeitor'); return; }
-      if (controlo.signal.aborted) return;
+      if (parou()) return;
       fonte = await quadros(vod, { buscar, qualidade });
       if (!fonte) throw new Error('sem-fonte');
       for (let i = 0; i < instantes.length; i++) {
-        if (controlo.signal.aborted) return;
+        if (parou()) return;
         $('nomesEstado').textContent = t('nomes.aLer', { feitos: i + 1, total: instantes.length });
         const q = await fonte.quadro(instantes[i]);
-        if (controlo.signal.aborted) return;
+        if (parou()) return;
         if (!q) continue;
         comQuadro++;
         for (const regiao of REGIOES) {
           const r = recortar(q.tela, regiao, q);
           if (r.fracao < MINIMO_DE_LETRA) continue;
           const lido = await leitor.ler(r.tela);
-          if (controlo.signal.aborted) return;
+          if (parou()) return;
           const texto = lido.linhas.map((l) => l.texto).join('\n');
           for (const l of lido.linhas) st.lidos.push({ texto: l.texto, ms: instantes[i], regiao: regiao.id });
           // Só os recortes onde se leu alguma coisa vão para o painel, até ao limite: são esses que quem
-          // confere precisa de ver ao lado do texto.
-          if (texto && st.recortes.length < MAXIMO_RECORTES) st.recortes.push({ ms: instantes[i], regiao: regiao.id, miniatura: r.miniatura, texto });
+          // confere precisa de ver ao lado do texto. A miniatura só se faz para esses.
+          if (texto && st.recortes.length < MAXIMO_RECORTES) {
+            st.recortes.push({ ms: instantes[i], regiao: regiao.id, miniatura: miniatura(q.tela, regiao, q), texto });
+          }
         }
         recasar();
-        pintar();
+        pintarLendo();
       }
       if (!comQuadro) { $('nomesEstado').textContent = t('nomes.semQuadro', { canal: e.canal }); return; }
       recasar();
@@ -242,7 +278,7 @@ export function montarNomesNaTela({ escolha, vodEm, candidatos, jaNoLance, aoMud
       $('nomesEstado').textContent = n ? tn(n, 'nomes.fimUm', 'nomes.fimN', { quadros: comQuadro })
         : t('nomes.nada', { quadros: comQuadro });
     } catch (erro) {
-      if (erro?.name === 'AbortError' || controlo.signal.aborted) return;
+      if (erro?.name === 'AbortError' || parou()) return;
       $('nomesEstado').textContent = comQuadro ? t('nomes.erro') : t('nomes.semQuadro', { canal: e.canal });
     } finally {
       fonte?.fechar();
@@ -258,8 +294,8 @@ export function montarNomesNaTela({ escolha, vodEm, candidatos, jaNoLance, aoMud
     $('nomesTrecho').onchange = pintarGasto;
     $('nomesQualidade').onchange = pintarGasto;
     $('nomesNovoGuardar').onclick = () => {
-      guardarUm($('nomesNovoCanal').value, $('nomesNovoApelido').value, 'nomesNovoCanal');
-      $('nomesNovoApelido').value = '';
+      // O apelido só sai da caixa quando ficou guardado: recusado, fica lá para corrigir o canal.
+      if (guardarUm($('nomesNovoCanal').value, $('nomesNovoApelido').value, 'nomesNovoCanal')) $('nomesNovoApelido').value = '';
     };
     $('nomesTela').addEventListener('toggle', () => { if ($('nomesTela').open) { pintarCanais(); pintar(); } });
   }
@@ -275,7 +311,7 @@ export function montarNomesNaTela({ escolha, vodEm, candidatos, jaNoLance, aoMud
       const antes = lerApelidos();
       const depois = juntarApelidos(antes, mapa);
       const contar = (m) => [...m.values()].reduce((n, l) => n + l.length, 0);
-      guardarApelidos(depois);
+      mudarApelidos(depois);
       return contar(depois) - contar(antes);
     },
   };

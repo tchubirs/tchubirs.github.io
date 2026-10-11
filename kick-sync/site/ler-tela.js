@@ -62,15 +62,19 @@ export function limiarizar(dados, filtro) {
 /** Quanto ampliar: o leitor gosta de letras com uns 30 px, e a lista do time tem uns 17 px em 1080p. */
 export const escalaPara = (alturaDoQuadro) => Math.min(4, Math.max(2, Math.round((2 * 1080) / Math.max(1, alturaDoQuadro))));
 
+const caixaDe = (regiao, { largura, altura }) => ({
+  sx: Math.round(regiao.x * largura),
+  sy: Math.round(regiao.y * altura),
+  sl: Math.round(regiao.l * largura),
+  sa: Math.round(regiao.a * altura),
+});
+
 /**
- * Um recorte de uma região, ampliado e a preto no branco. Devolve { tela, miniatura, letras }:
- * a tela vai ao leitor, a miniatura (o recorte como estava, pequeno) vai para o painel.
+ * Um recorte de uma região, ampliado e a preto no branco. Devolve { tela, letras, fracao }: a tela vai
+ * ao leitor. A miniatura para o painel é à parte (`miniatura`), só para os recortes que ficam.
  */
 export function recortar(fonte, regiao, { largura, altura }) {
-  const sx = Math.round(regiao.x * largura);
-  const sy = Math.round(regiao.y * altura);
-  const sl = Math.round(regiao.l * largura);
-  const sa = Math.round(regiao.a * altura);
+  const { sx, sy, sl, sa } = caixaDe(regiao, { largura, altura });
   const e = escalaPara(altura);
   const tela = document.createElement('canvas');
   tela.width = sl * e;
@@ -82,13 +86,18 @@ export function recortar(fonte, regiao, { largura, altura }) {
   const img = g.getImageData(0, 0, tela.width, tela.height);
   const letras = limiarizar(img.data, regiao.filtro);
   g.putImageData(img, 0, 0);
-  // A miniatura é o recorte original: quem confere quer ver o que o vídeo mostrava, e não a máscara.
+  return { tela, letras, fracao: letras / (tela.width * tela.height) };
+}
+
+/** A miniatura de uma região: o recorte original, pequeno, em JPEG. Quem confere quer ver o que o vídeo mostrava, e não a máscara. */
+export function miniatura(fonte, regiao, { largura, altura }) {
+  const { sx, sy, sl, sa } = caixaDe(regiao, { largura, altura });
   const mini = document.createElement('canvas');
   const k = Math.min(1, 240 / sl);
   mini.width = Math.max(1, Math.round(sl * k));
   mini.height = Math.max(1, Math.round(sa * k));
   mini.getContext('2d').drawImage(fonte, sx, sy, sl, sa, 0, 0, mini.width, mini.height);
-  return { tela, miniatura: mini.toDataURL('image/jpeg', 0.7), letras, fracao: letras / (tela.width * tela.height) };
+  return mini.toDataURL('image/jpeg', 0.7);
 }
 
 // ── o leitor ──────────────────────────────────────────────────────────────

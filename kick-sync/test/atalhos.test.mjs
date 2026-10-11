@@ -95,6 +95,24 @@ test('a acção de uma tecla: a exacta primeiro, e com Shift a mesma sem ele', (
   assert.equal(a.acaoDe(tecla('j', { code: 'KeyJ' })).id, 'voltar');
 });
 
+test('no AZERTY a vírgula e o ? moram na posição do M e não viram M', () => {
+  // Num teclado francês a tecla KeyM escreve ',' e, com Shift, '?'.
+  assert.equal(comboDoEvento(tecla(',', { code: 'KeyM' })), ',');
+  assert.equal(comboDoEvento(tecla('?', { code: 'KeyM', shiftKey: true })), '?');
+  // Uma letra fora do a-z (cirílico) ainda vai pela posição, e com Ctrl ou Alt também.
+  assert.equal(comboDoEvento(tecla('ь', { code: 'KeyM' })), 'M');
+  assert.equal(comboDoEvento(tecla('Ь', { code: 'KeyM', shiftKey: true })), 'Shift+M');
+  assert.equal(comboDoEvento(tecla(',', { code: 'KeyM', ctrlKey: true })), 'Ctrl+M');
+  const a = criarAtalhos(armazem());
+  assert.notEqual(a.acaoDe(tecla(',', { code: 'KeyM' }))?.id, 'marcarKill', 'a vírgula não marca kill');
+  assert.equal(a.acaoDe(tecla('?', { code: 'KeyM', shiftKey: true })).id, 'atalhos', 'o ? abre a ajuda no AZERTY');
+  assert.equal(a.acaoDe(tecla('?', { code: 'Slash', shiftKey: true })).id, 'atalhos', 'e no QWERTY');
+  assert.equal(a.acaoDe(tecla('m', { code: 'KeyM' })).id, 'marcarKill');
+  // Shift+J e Shift+F continuam como antes.
+  assert.deepEqual(a.acaoDe(tecla('J', { code: 'KeyJ', shiftKey: true })), { id: 'voltar', combo: 'J', largo: true });
+  assert.equal(comboDoEvento(tecla('F', { code: 'KeyF', shiftKey: true })), 'Shift+F');
+});
+
 test('gravar, conflito, trocar, limpar, padrão: e só a diferença fica guardada', () => {
   const arm = armazem();
   const a = criarAtalhos(arm);
@@ -239,6 +257,38 @@ test('o ? abre a lista por áreas, com busca, e a tecla de cada botão aparece n
   await p.locator('#fecharAjuda').focus();
   await p.keyboard.press('?');
   await p.waitForSelector('#modalAjuda', { state: 'hidden' });
+  assert.deepEqual(erros, []);
+  await p.close();
+});
+
+test('num AZERTY o ? abre a ajuda e a vírgula não marca kill; o assistente sem faixa não fica no passo 2', semNavegador, async () => {
+  const { p, erros } = await abrirNoite();
+  // No teclado francês o '?' e a ',' estão na tecla que no QWERTY é o M.
+  const azerty = (key, shiftKey = false) => p.evaluate(({ k, s }) => document.body.dispatchEvent(new KeyboardEvent('keydown', {
+    key: k, code: 'KeyM', shiftKey: s, bubbles: true, cancelable: true,
+  })), { k: key, s: shiftKey });
+  const antes = await p.evaluate(() => window.__estado.momentos.length);
+  await azerty(',');
+  assert.equal(await p.evaluate(() => window.__estado.momentos.length), antes, 'a vírgula marcou uma kill');
+  await azerty('?', true);
+  await p.waitForSelector('#modalAjuda:not([hidden])');
+  await azerty('?', true);
+  await p.waitForSelector('#modalAjuda', { state: 'hidden' });
+
+  // Um atalho para Ler chat quando o foco não tem faixa: não abre nada, e a próxima faixa abre no passo 1.
+  await p.evaluate(() => {
+    localStorage.setItem('replay.atalhos', JSON.stringify({ lerChat: ['Shift+L'] }));
+    window.dispatchEvent(new StorageEvent('storage', { key: 'replay.atalhos' }));
+    window.__foco = window.__estado.focos;
+    window.__estado.focos = ['ninguem'];
+  });
+  await p.locator('body').press('Shift+L');
+  await p.evaluate(() => { window.__estado.focos = window.__foco; });
+  assert.equal(await p.locator('#acoesFaixa').isHidden(), true);
+  assert.equal(await p.evaluate(() => localStorage.getItem('povix.assistente')), null);
+  await p.click('#faixas button.nome[data-quem="tchubi"]');
+  await p.waitForSelector('#acoesFaixa:not([hidden])');
+  assert.equal(await p.locator('#escolherChat').isVisible(), true, 'a faixa abriu já no passo 2');
   assert.deepEqual(erros, []);
   await p.close();
 });
