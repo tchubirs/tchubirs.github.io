@@ -191,6 +191,11 @@
     <path d="M3.4 7.6h8.2M17.2 7.6h3.4"/><circle cx="14.4" cy="7.6" r="2.4"/>
     <path d="M3.4 16.4h3.4M12.4 16.4h8.2"/><circle cx="9.6" cy="16.4" r="2.4"/>
   </symbol>
+  <!-- Um balão de conversa: o chat da live. -->
+  <symbol id="i-chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4.4 5.2h15.2a1.4 1.4 0 0 1 1.4 1.4v9a1.4 1.4 0 0 1-1.4 1.4H10l-4.6 3.4v-3.4h-1a1.4 1.4 0 0 1-1.4-1.4v-9a1.4 1.4 0 0 1 1.4-1.4Z"/>
+    <path d="M7.6 9.6h8.8M7.6 12.8h5.6"/>
+  </symbol>
   <symbol id="i-olho" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
     <path d="M2.4 12S6 5.4 12 5.4 21.6 12 21.6 12 18 18.6 12 18.6 2.4 12 2.4 12Z"/>
     <circle cx="12" cy="12" r="3.1"/>
@@ -623,40 +628,28 @@
        duas colunas — longe do video, que e para onde ele olha. -->
   <div class="palcoFundo">
 
-  <!-- A montagem. O fluxo do dono: marca-se a kill, e a pagina entrega a POV
-       dele longa e as POVs de quem morreu curtinhas, ja numeradas. -->
-  <!-- A deteção automática à parte, e no fim.
-       "A parte dos clipes automáticos está muito ruim — temos que pôr escrito
-       teste, e puxar um pouco mais para baixo, separada das funções normais."
-       Tem razão: estava no meio dos botões que funcionam, e um botão que
-       acerta em cinco de seis não pode ter o mesmo peso de um que acerta
-       sempre. -->
-  <!-- O Sincronizar por áudio é uma ferramenta da NOITE, como a deteção: vive
-       aqui e não na coluna do relógio, que num portátil não tinha altura para
-       ele — os saltos escorriam por cima do botão. -->
-  <div class="linha sincronizar">
+  <!-- As ferramentas da tela, por tarefa (o dono, 10/10: "separar as tarefas com nomes claros"). Rever: pôr
+       os ângulos no mesmo instante pelo som. Encontrar lances: ler o chat e a detecção, que é experimental
+       e por isso fica com a etiqueta ao lado e sem cor. Recomeçar, que apaga, fica no fim e calado. -->
+  <div class="linha sincronizar grupoFerramenta" role="group" aria-labelledby="tituloRever">
+      <span id="tituloRever" class="rotuloGrupo" data-t="tarefa.rever">Rever</span>
       <button id="alinhar" data-t-titulo="alinhar.ajuda" title="Analisa o áudio de cada ângulo e corrige o desvio"><svg class="ic ic-p" aria-hidden="true"><use href="#i-onda"/></svg><span data-t="alinhar.botao">Sincronizar por áudio</span></button>
       <span id="estadoAlinhar" class="nota" role="status" aria-live="polite"></span>
     </div>
-  <section id="automatico">
-    <h2><span data-t="auto.titulo">Detecção automática</span> <b class="etiqueta" data-t="auto.teste">teste</b></h2>
-    <p class="nota" data-t="auto.explica">Ouve a sua POV procurando tiroteios. Acerta a maioria, mas ainda marca menus e inventário: confira sempre com o Rever antes de exportar.</p>
+  <section id="automatico" class="grupoFerramenta" aria-labelledby="tituloLances">
+    <h2 id="tituloLances" class="rotuloGrupo" data-t="tarefa.lances">Encontrar lances</h2>
+    <button id="lerChat" type="button" data-t-titulo="faixa.lerChatAjuda" title="as mensagens e os picos do chat"><svg class="ic ic-p" aria-hidden="true"><use href="#i-chat"/></svg><span data-t="faixa.lerChat">Ler chat</span></button>
     <div class="linha">
-      <button id="procurarKills" aria-describedby="dicaAuto"><svg class="ic ic-p" aria-hidden="true"><use href="#i-mira"/></svg><span data-t="auto.botao">Detecção automática</span></button>
+      <button id="procurarKills" aria-describedby="dicaAuto autoExplica"><svg class="ic ic-p" aria-hidden="true"><use href="#i-mira"/></svg><span data-t="auto.botao">Detectar lances</span></button>
+      <b class="etiqueta" data-t="auto.teste">experimental</b>
       <span id="dicaAuto" class="soLeitor" data-t="auto.escolha">De quem e quanto: escolha na linha do tempo o nome de uma pessoa (ou Todos), e depois trecho ou tudo.</span>
     </div>
+    <p id="autoExplica" class="soLeitor" data-t="auto.explica">Ouve a sua POV procurando tiroteios. Acerta a maioria, mas ainda marca menus e inventário: confira cada lance antes de exportar.</p>
   </section>
 
-
-  <div class="linha">
-    <button id="limparFila"><svg class="ic ic-p" aria-hidden="true"><use href="#i-lixo"/></svg><span data-t="fila.limpar">Limpar exportações</span></button>
-    <button id="recomecar"><svg class="ic ic-p" aria-hidden="true"><use href="#i-anular"/></svg><span data-t="fila.recomecar">Recomeçar</span></button>
-    <span id="memoria" class="nota"></span>
+  <div class="linha recomecarLinha">
+    <button id="recomecar" class="discreto"><svg class="ic ic-p" aria-hidden="true"><use href="#i-anular"/></svg><span data-t="fila.recomecar">Recomeçar</span></button>
   </div>
-  <!-- Trinta e seis ficheiros num so. Aparece sozinho quando ha mais do que
-       um clipe pronto — com um clipe so, o ZIP e um passo a mais. -->
-  <div id="zip" class="linha"></div>
-  <ul id="fila" class="fila"></ul>
   </div><!-- .palcoFundo -->
   </div><!-- .palcoVideo -->
 
@@ -665,6 +658,8 @@
        se ordena sozinha. A montagem continua a ser a que guarda a lista de kills e o Exportar. -->
   <div class="palcoDireita">
   <div id="barraGrelha" class="barraGrelha" hidden>
+    <!-- Rever: a lista dos ângulos, com o nome de cada streamer, a ordem e a procura. -->
+    <h2 class="tituloPainel"><span data-t="painel.angulos">Ângulos</span> <output id="contaAngulos" class="conta"></output></h2>
     <!-- Sem o rótulo "ORDEM" à frente: os dois botões passaram a dizer o que
          ordenam ("Por ordem de adição", "A-Z"), e "ordem  Por ordem de
          adição" era a mesma palavra duas vezes na mesma linha. -->
@@ -690,7 +685,14 @@
        de PC: la ela vive na coluna da direita, por baixo dos botoes de salto,
        com a lista a rolar por dentro e o Exportar sempre a vista. No telemovel
        e num ecra baixo fica por baixo de tudo, como sempre esteve. -->
-  <section id="montagem" class="semKills">
+  <!-- Montagem e Exportar em separadores, no mesmo painel (o dono, 10/10: tarefas com nomes claros, sem
+       caixas espalhadas). A Montagem é a de sempre; o Exportar junta o trecho marcado, os arquivos prontos e o
+       ZIP. Marcar uma kill mostra a Montagem, e começar uma exportação mostra o Exportar (app.js). -->
+  <div class="abasTrabalho" role="tablist" data-t-aria="abas.rotulo" aria-label="Montagem e exportação">
+    <button id="abaMontagem" class="aba" type="button" role="tab" data-painel="montagem" aria-controls="montagem" aria-selected="true"><span data-t="montagem.titulo">Montagem</span><output id="contaMontagem" class="conta"></output></button>
+    <button id="abaExportar" class="aba" type="button" role="tab" data-painel="exportar" aria-controls="exportacoes" aria-selected="false" tabindex="-1"><span data-t="exportar.titulo">Exportar</span><output id="contaExportar" class="conta"></output></button>
+  </div>
+  <section id="montagem" class="semKills" role="tabpanel" aria-labelledby="abaMontagem">
     <h2 data-t="montagem.titulo">Montagem</h2>
     <!-- As margens vivem fechadas. São quatro caixas de número que se acertam
          uma vez e nunca mais se tocam, e estavam permanentemente ao lado do
@@ -744,10 +746,21 @@
       <span id="estadoMontagem" class="nota" role="status" aria-live="polite"></span>
     </div>
   </section>
-  <section id="corte">
-    <h2 data-t="corte.titulo">Cortar</h2>
-    <ul id="listaCorte" class="corte"></ul>
-    <p id="comoCortar" class="nota"></p>
+  <section id="exportacoes" class="exportacoes" role="tabpanel" aria-labelledby="abaExportar" hidden>
+    <h2 data-t="exportar.titulo">Exportar</h2>
+    <section id="corte">
+      <h2 data-t="corte.titulo">Cortar</h2>
+      <ul id="listaCorte" class="corte"></ul>
+      <p id="comoCortar" class="nota"></p>
+    </section>
+    <!-- Os arquivos prontos, o mais novo em cima. O ZIP aparece sozinho quando há mais do que um. -->
+    <p id="filaVazia" class="nota filaVazia" data-t="exportar.vazio">Os clipes que você exportar aparecem aqui, prontos para salvar.</p>
+    <div id="zip" class="linha"></div>
+    <ul id="fila" class="fila"></ul>
+    <div class="linha filaFim">
+      <span id="memoria" class="nota"></span>
+      <button id="limparFila" class="discreto"><svg class="ic ic-p" aria-hidden="true"><use href="#i-lixo"/></svg><span data-t="fila.limpar">Limpar exportações</span></button>
+    </div>
   </section>
   </div><!-- .palcoDireita -->
 

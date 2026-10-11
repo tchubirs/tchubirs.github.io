@@ -205,6 +205,10 @@ const diaLocal = (ms) => {
 let picosDoEvento = () => new Map();
 let mensagensDoEvento = () => new Map();
 let timerGuardar = null;
+// Os dois separadores do painel da direita (o separador e o painel de cada um), e quantas kills havia
+// na última pintura da lista (-1 antes da primeira, para a sessão guardada não trocar de painel).
+const PAINEIS = { montagem: ['abaMontagem', 'montagem'], exportar: ['abaExportar', 'exportacoes'] };
+let killsPintadas = -1;
 // Depois do "Recomecar" confirmado nao se guarda mais nada: o `beforeunload`
 // escrevia a sessao inteira outra vez no sitio de onde ela acabava de sair.
 let semGuardar = false;
@@ -3709,6 +3713,10 @@ const soUmCanal = () => estado.linhas.length < 2;
 
 function pintarMomentos() {
   $('montagem').classList.toggle('semKills', !estado.momentos.length);
+  // A conta no separador da Montagem, e a Montagem à vista quando entra uma kill nova (marcada ou achada).
+  $('contaMontagem').textContent = estado.momentos.length ? String(estado.momentos.length) : '';
+  if (estado.momentos.length > killsPintadas && killsPintadas >= 0) mostrarPainel('montagem');
+  killsPintadas = estado.momentos.length;
   // Uma prévia de uma kill que já não existe pára aqui. O Remover e o apagar
   // aos molhos tiravam a kill e deixavam o ciclo a tocar, e o botão Parar
   // estava na linha que acabara de sair: a única maneira de o desligar era
@@ -6053,6 +6061,49 @@ $('formatoMontagem').onchange = () => {
 };
 $('baixarMontagem').onclick = () => (estado.montagem ? estado.montagem.abort() : baixarMontagem());
 $('limparFila').onclick = limparFila;
+
+// ── Montagem e Exportar, dois separadores no mesmo painel ─────────────────────
+// O dono (10/10): as tarefas com nomes claros, e um painel que não seja uma pilha de caixas. A troca é
+// sozinha quando a tarefa muda: marcar uma kill mostra a Montagem, e uma exportação que começa (ou um
+// trecho marcado com entrada e saída) mostra o Exportar, onde o arquivo vai aparecer.
+function mostrarPainel(nome, { focar = false } = {}) {
+  if (!PAINEIS[nome]) return;
+  for (const [chave, [aba, painel]] of Object.entries(PAINEIS)) {
+    const sim = chave === nome;
+    $(aba).setAttribute('aria-selected', String(sim));
+    $(aba).tabIndex = sim ? 0 : -1;
+    $(painel).hidden = !sim;
+  }
+  if (focar) $(PAINEIS[nome][0]).focus();
+}
+for (const [nome, [aba]] of Object.entries(PAINEIS)) $(aba).onclick = () => mostrarPainel(nome);
+// As setas andam entre os separadores, como em qualquer lista de separadores (WAI-ARIA).
+document.querySelector('.abasTrabalho').addEventListener('keydown', (e) => {
+  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const nomes = Object.keys(PAINEIS);
+  const agora = nomes.findIndex((n) => $(PAINEIS[n][0]).getAttribute('aria-selected') === 'true');
+  const i = e.key === 'Home' ? 0 : e.key === 'End' ? nomes.length - 1
+    : (agora + (e.key === 'ArrowRight' ? 1 : -1) + nomes.length) % nomes.length;
+  mostrarPainel(nomes[i], { focar: true });
+});
+// Quantos arquivos há na lista, no separador; e a frase de lista vazia quando não há nada.
+function pintarContaExportar() {
+  const n = $('fila').querySelectorAll(':scope > li').length;
+  $('contaExportar').textContent = n ? String(n) : '';
+  $('filaVazia').hidden = n > 0 || !$('corte').hidden;
+}
+new MutationObserver((mudancas) => {
+  if (mudancas.some((m) => [...m.addedNodes].some((no) => no.nodeName === 'LI'))) mostrarPainel('exportar');
+  pintarContaExportar();
+}).observe($('fila'), { childList: true });
+new MutationObserver(() => {
+  if (!$('corte').hidden) mostrarPainel('exportar');
+  pintarContaExportar();
+}).observe($('corte'), { attributes: true, attributeFilter: ['hidden'] });
+pintarContaExportar();
+$('lerChat').onclick = () => abrirAssistente('chat');
 // Sem argumento nenhum, e não `= abrirClipe`: assim o objecto do clique ia
 // como momento, e um dia em que ele passe a ter um `.ms` isto abre o clipe no
 // sítio errado sem avisar ninguém.

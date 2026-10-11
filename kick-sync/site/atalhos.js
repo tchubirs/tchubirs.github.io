@@ -51,8 +51,8 @@ export const ACOES = [
   { id: 'ajusteMais', grupo: 'vista', rotulo: 'atalhos.ajusteMais', padrao: ['.'], noite: true, repete: true },
 
   { id: 'canais', grupo: 'paineis', rotulo: 'atalhos.canais', padrao: [], botao: 'editarCanais' },
-  { id: 'lerChat', grupo: 'paineis', rotulo: 'faixa.lerChat', padrao: [], noite: true },
-  { id: 'detetar', grupo: 'paineis', rotulo: 'faixa.detetarLances', padrao: [], noite: true },
+  { id: 'lerChat', grupo: 'paineis', rotulo: 'faixa.lerChat', padrao: [], botao: 'lerChat', noite: true },
+  { id: 'detetar', grupo: 'paineis', rotulo: 'faixa.detetarLances', padrao: [], botao: 'procurarKills', noite: true },
   { id: 'sincronizar', grupo: 'paineis', rotulo: 'alinhar.botao', padrao: [], botao: 'alinhar', noite: true },
   { id: 'partilhar', grupo: 'paineis', rotulo: 'partilha.botao', padrao: [], botao: 'partilhar', noite: true },
   { id: 'inicio', grupo: 'paineis', rotulo: 'atalhos.inicio', padrao: [], botao: 'inicio' },
