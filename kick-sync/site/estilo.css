@@ -3135,3 +3135,5 @@ body:not(:has(#noites:not([hidden]))) .topo .barraSessao.noTopo { display: none;
 /* A explicação ao parar o mouse num botão (dicas.js). */
 .dica { position: fixed; z-index: 1000; max-width: 280px; padding: 6px 10px; border-radius: var(--r-2); background: #0b0b0b; color: #f3f0ea; border: 1px solid var(--linha-2); font-size: 13px; line-height: 1.35; pointer-events: none; box-shadow: 0 6px 20px rgb(0 0 0 / .5); }
 .dica[hidden] { display: none; }
+/* Marcar entrada e saída: só o ícone e a tecla; o que fazem aparece ao parar o mouse (o dono, 13/10). */
+.marcaCurta { gap: 6px; padding-inline: 10px; }

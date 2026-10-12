@@ -268,6 +268,8 @@ const TEXTOS = {
 
     'marca.inicio': 'Marcar entrada',
     'marca.fim': 'Marcar saída',
+    'marca.inicioDica': 'Marca o começo do trecho na hora em que o vídeo está. O Criar clipe e o Detectar lances usam esse trecho.',
+    'marca.fimDica': 'Marca o fim do trecho na hora em que o vídeo está. O Criar clipe e o Detectar lances usam esse trecho.',
     'marca.faltaFim': 'entrada {de}, falta a saída',
     'marca.feita': '{de} → {ate} ({dur})',
 
@@ -1538,6 +1540,8 @@ const TEXTOS = {
 
     'marca.inicio': 'Set in point',
     'marca.fim': 'Set out point',
+    'marca.inicioDica': 'Marks where the stretch starts, at the time the video is on. Create clip and Detect plays use this stretch.',
+    'marca.fimDica': 'Marks where the stretch ends, at the time the video is on. Create clip and Detect plays use this stretch.',
     'marca.faltaFim': 'in {de}, out missing',
     'marca.feita': '{de} → {ate} ({dur})',
 
@@ -2808,6 +2812,8 @@ const TEXTOS = {
 
     'marca.inicio': 'Marcar entrada',
     'marca.fim': 'Marcar salida',
+    'marca.inicioDica': 'Marca el inicio del tramo en el momento en que está el video. Crear clip y Detectar jugadas usan ese tramo.',
+    'marca.fimDica': 'Marca el final del tramo en el momento en que está el video. Crear clip y Detectar jugadas usan ese tramo.',
     'marca.faltaFim': 'entrada {de}, falta la salida',
     'marca.feita': '{de} → {ate} ({dur})',
 
