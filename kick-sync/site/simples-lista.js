@@ -200,3 +200,62 @@ export function lancesParaLista(lances = [], { mensagens = new Map() } = {}) {
   }
   return itens.sort((a, b) => b.pontos - a.pontos || a.ms - b.ms);
 }
+
+// ── o que já se achou, lembrado neste aparelho ────────────────────────────
+
+export const CHAVE_VODS = 'povix.simplesVods';
+export const CHAVE_ULTIMO = 'povix.simplesUltimo';
+/** Quantos vídeos ficam lembrados (os mais velhos saem primeiro). */
+export const MAX_VODS = 8;
+/** O início do mesmo vídeo vem da lista da Kick, do link e da playlist com uns segundos de diferença. */
+export const IGUAL_MS = 120_000;
+/** Uma live ainda no ar cresce: o que se achou nela vale só uns minutos. */
+export const VALE_AO_VIVO_MS = 10 * 60_000;
+const AO_VIVO_MS = 15 * 60_000;
+const MAX_MENSAGENS = 2000;
+
+/** Os vídeos lembrados: [{ slug, inicio, em, aoVivo, completo, picos, mensagens, lista }], o mais novo por último. */
+export function lerVods(armazem) {
+  try {
+    const l = JSON.parse(armazem.getItem(CHAVE_VODS) || '[]');
+    return Array.isArray(l) ? l.filter((e) => e && typeof e.slug === 'string' && Number.isFinite(e.inicio)) : [];
+  } catch { return []; }
+}
+
+/** O que se lembra deste vídeo (o início pode diferir uns segundos), ou null. */
+export function acharVod(armazem, slug, inicioMs, agora = Date.now()) {
+  if (!slug || !Number.isFinite(inicioMs)) return null;
+  const e = lerVods(armazem).find((x) => x.slug === slug && Math.abs(x.inicio - inicioMs) <= IGUAL_MS);
+  if (!e || (e.aoVivo && agora - e.em > VALE_AO_VIVO_MS)) return null;
+  return e;
+}
+
+/** Lembrar (ou atualizar) um vídeo. Devolve os que saíram para dar lugar, para quem guarda fotos deles. */
+export function guardarVod(armazem, entrada, agora = Date.now()) {
+  const nova = { ...entrada, em: agora, aoVivo: Number.isFinite(entrada.ateMs) && entrada.ateMs > agora - AO_VIVO_MS };
+  const todos = lerVods(armazem).filter((x) => !(x.slug === nova.slug && Math.abs(x.inicio - nova.inicio) <= IGUAL_MS));
+  todos.push(nova);
+  const saiu = todos.splice(0, Math.max(0, todos.length - MAX_VODS));
+  try { armazem.setItem(CHAVE_VODS, JSON.stringify(todos)); } catch { /* janela privada, ou cheio */ }
+  return saiu;
+}
+
+/** O chat em volta dos picos, só o que a conta de "reclama do som" lê (a de `partesDeFalha`). */
+export function mensagensDosPicos(mensagens = [], picos = []) {
+  const perto = mensagens.filter((m) => picos.some((p) => m.ms >= p.ms - 60_000 && m.ms <= p.ms + 30_000));
+  return perto.slice(-MAX_MENSAGENS).map((m) => ({ ms: m.ms, texto: String(m.texto || '').slice(0, 80) }));
+}
+
+/** O último vídeo que a pessoa estava vendo ({ slug, inicio }), para a página reabrir nele. */
+export function lerUltimo(armazem) {
+  try {
+    const u = JSON.parse(armazem.getItem(CHAVE_ULTIMO) || 'null');
+    return u && typeof u.slug === 'string' && Number.isFinite(u.inicio) ? { slug: u.slug, inicio: u.inicio } : null;
+  } catch { return null; }
+}
+export function guardarUltimo(armazem, ultimo) {
+  try {
+    if (ultimo) armazem.setItem(CHAVE_ULTIMO, JSON.stringify({ slug: ultimo.slug, inicio: ultimo.inicio }));
+    else armazem.removeItem(CHAVE_ULTIMO);
+  } catch { /* janela privada */ }
+}

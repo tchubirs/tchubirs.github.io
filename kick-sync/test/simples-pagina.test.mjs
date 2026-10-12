@@ -383,3 +383,39 @@ test('no celular (390x844): nenhum controle do modo simples abaixo de 44 px, e n
     assert.deepEqual(erros, []);
     await p.close();
   });
+
+test('modo simples: o vídeo já procurado abre na hora ao recarregar, sem barra; Começar de novo esvazia a caixa',
+  { ...semNavegador, timeout: 120_000 }, async () => {
+    const { p, erros } = await abrir({ ecra: { width: 1366, height: 768 }, caminho: null, modo: 'simples' });
+    await preparar(p, { video: false });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    // O que uma procura completa deixaria guardado (o Chromium destes testes não ouve o som, e sem ele não completa).
+    await p.evaluate((inicio) => {
+      const lista = [
+        { ms: inicio + 600_000, deMs: inicio + 575_000, ateMs: inicio + 605_000, tipos: ['chat', 'tiros'], pontos: 6, falha: false, tiros: 5, nota: 'muitoBom', canal: 'tchubi' },
+        { ms: inicio + 1_200_000, deMs: inicio + 1_175_000, ateMs: inicio + 1_205_000, tipos: ['chat'], pontos: 2, falha: false, tiros: 0, nota: 'talvez', canal: 'tchubi' },
+      ];
+      localStorage.setItem('povix.simplesVods', JSON.stringify([{ slug: 'tchubi', inicio, em: Date.now(), aoVivo: false, completo: true, lista }]));
+      localStorage.setItem('povix.simplesUltimo', JSON.stringify({ slug: 'tchubi', inicio }));
+    }, T);
+    await p.reload({ waitUntil: 'networkidle' });
+    await p.waitForSelector('#simplesLista li', { timeout: 10_000 });
+    assert.equal(await p.locator('#simplesLista li').count(), 2);
+    assert.equal(await p.locator('#simplesBarra').isVisible(), false);
+    assert.equal(await p.locator('#simplesForm').isVisible(), false);
+    assert.match(await p.locator('#simplesQuem').innerText(), /^tchubi, live de \d\d\/\d\d às \d\d:\d\d$/);
+    assert.match(await p.locator('#simplesLista li').first().locator('.simplesQuando').innerText(), /^Aos 10 min da live/);
+    assert.equal(await p.locator('#simplesRefazer').isVisible(), true);
+    // O que ela excluiu continua fora depois de recarregar.
+    await p.locator('#simplesLista li').first().locator('button[data-acao="nao"]').click();
+    await p.reload({ waitUntil: 'networkidle' });
+    await p.waitForSelector('#simplesLista li', { timeout: 10_000 });
+    assert.equal(await p.locator('#simplesLista li').count(), 1);
+    // Começar de novo: a caixa vazia, e recarregar não traz a lista de volta.
+    await p.click('#simplesDeNovo');
+    await p.reload({ waitUntil: 'networkidle' });
+    assert.equal(await p.locator('#simplesForm').isVisible(), true);
+    assert.equal(await p.locator('#simplesLista li').count(), 0);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });

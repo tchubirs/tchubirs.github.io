@@ -453,3 +453,20 @@ em francês). Tudo revisado pela regra 14 em 28/09.
     e na janela; a lista volta como estava. "Não quero" virou "Excluir"; "Baixar deitado" virou "Baixar tela cheia".
   - o espaço e as outras teclas do avançado não agem mais nos vídeos escondidos no modo simples; ao voltar do
     avançado os vídeos ficam parados.
+- Feito em 12/10, o Povix lembra o que já achou (`simples.js`, `simples-lista.js`, `index.html`, `idiomas.js`):
+  - o dono recarregava a página ou abria o mesmo vídeo e a procura recomeçava do zero ("Ouvindo a live de tchubi,
+    faltam uns 1 min"). Agora a lista de cada vídeo fica neste aparelho (`povix.simplesVods`, até 8 vídeos; as
+    imagens no IndexedDB `povix-simples`) e o mesmo vídeo, por link, por nome ou ao recarregar, abre na hora, sem
+    barra e sem abrir o vídeo (Baixar, a prévia e Editar abrem o canal quando se toca, como no evento).
+  - recarregar volta ao último vídeo visto (`povix.simplesUltimo`); "Começar de novo" apaga isso. O que foi
+    excluído continua fora (`povix.simplesNao`). "Procurar de novo" (no topo da lista) refaz tudo.
+  - o chat lido fica lembrado separado: se a página fechar no meio do som, volta e só ouve de novo (o som não
+    volta pela metade: a memória dele são vetores grandes, `estado.somOuvido`). Live ainda no ar: o que se achou
+    vale 10 min.
+  - de brinde: quem nunca tocou no botão de modo caía no avançado ao recarregar depois da primeira busca (a sessão
+    salva fazia o `caminho-cedo.js` achar que já usava o Povix); agora a primeira busca já grava o modo simples.
+  - testes: 5 novos em `test/simples-lista.test.mjs`; 1 de página em `test/simples-pagina.test.mjs` (só roda com
+    Chromium, ficou pulado aqui). Visto no navegador do Claude com o VOD do tchubi: recarregar, nome, excluir,
+    assistir e Procurar de novo.
+  - falta: o evento (nome, ?e=) ainda relê o chat de todos ao recarregar, e "Pronto" do evento não volta do cache; um
+    link de vídeo ainda faz uma chamada à Kick para saber o canal antes de achar o cache.

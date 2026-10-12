@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   lerEntrada, nomeDeEvento, montarLista, nomeDoArquivo, tempoNaLive, partesDeFalha, MAX_CLIPE_MS, lancesParaLista,
+  acharVod, guardarVod, lerVods, mensagensDosPicos, lerUltimo, guardarUltimo, MAX_VODS, IGUAL_MS, VALE_AO_VIVO_MS,
 } from '../site/simples-lista.js';
 import { sinaisDoEvento, melhoresLances, filtrarLances } from '../site/melhores.js';
 import { motivoEmPalavras, quemEstavaNoLance } from '../site/simples.js';
@@ -142,4 +143,72 @@ test('evento: chat que reclama do som cai, e quem não está no ar não entra', 
   assert.deepEqual(lista.map((m) => m.canal), ['cyrus', 'xguiry']);
   assert.equal(lista[1].falha, true);
   assert.equal(lista[0].falha, false);
+});
+
+// ── o que já se achou, lembrado neste aparelho ────────────────────────────
+
+const armazemFalso = () => {
+  const d = new Map();
+  return { getItem: (k) => d.get(k) ?? null, setItem: (k, v) => d.set(k, String(v)), removeItem: (k) => d.delete(k), d };
+};
+
+test('o vídeo procurado fica lembrado, e o mesmo vídeo (início com uns segundos de diferença) acha a lista', () => {
+  const a = armazemFalso();
+  const lista = montarLista({ picos: [{ ms: min(10), msgs: 40, vezes: 6 }], limites: { deMs: T, ateMs: min(120) } });
+  guardarVod(a, { slug: 'tchubi', inicio: T, ateMs: min(120), completo: true, lista }, min(200));
+  const e = acharVod(a, 'tchubi', T + 4000, min(201));
+  assert.equal(e.completo, true);
+  assert.deepEqual(e.lista, JSON.parse(JSON.stringify(lista)));
+  assert.equal(acharVod(a, 'tchubi', T + IGUAL_MS + 1000, min(201)), null, 'outra live do mesmo streamer');
+  assert.equal(acharVod(a, 'outro', T, min(201)), null);
+  assert.equal(acharVod(a, 'tchubi', null), null);
+});
+
+test('guardar de novo o mesmo vídeo troca a entrada, e passando de oito saem os mais velhos', () => {
+  const a = armazemFalso();
+  guardarVod(a, { slug: 'x', inicio: T, picos: [] }, 1);
+  guardarVod(a, { slug: 'x', inicio: T + 1000, completo: true, lista: [] }, 2);
+  assert.equal(lerVods(a).length, 1);
+  assert.equal(lerVods(a)[0].completo, true);
+  let saiu = [];
+  for (let i = 1; i <= MAX_VODS; i++) saiu = guardarVod(a, { slug: `c${i}`, inicio: T + i * 3_600_000, lista: [] }, 10 + i);
+  assert.equal(lerVods(a).length, MAX_VODS);
+  assert.deepEqual(saiu.map((e) => e.slug), ['x']);
+});
+
+test('uma live ainda no ar só vale uns minutos; uma que já acabou vale sempre', () => {
+  const a = armazemFalso();
+  const agora = min(500);
+  guardarVod(a, { slug: 'vivo', inicio: T, ateMs: agora - 60_000, completo: true, lista: [] }, agora);
+  guardarVod(a, { slug: 'velho', inicio: T, ateMs: agora - 3_600_000, completo: true, lista: [] }, agora);
+  assert.ok(acharVod(a, 'vivo', T, agora + VALE_AO_VIVO_MS - 1));
+  assert.equal(acharVod(a, 'vivo', T, agora + VALE_AO_VIVO_MS + 1), null);
+  assert.ok(acharVod(a, 'velho', T, agora + 7 * 24 * 3_600_000));
+});
+
+test('o chat lembrado só leva as mensagens em volta dos picos, no formato da conta de falha', () => {
+  const picos = [{ ms: min(10) }];
+  const mensagens = [{ ms: min(1), texto: 'longe', autor: 'a' }, { ms: min(10) - 30_000, texto: 'esta muted no?', autor: 'b' }, { ms: min(10) + 10_000, texto: 'f5' }];
+  const perto = mensagensDosPicos(mensagens, picos);
+  assert.deepEqual(perto, [{ ms: min(10) - 30_000, texto: 'esta muted no?' }, { ms: min(10) + 10_000, texto: 'f5' }]);
+  assert.equal(partesDeFalha(perto, min(10)), 0, 'com menos de cinco mensagens a conta não decide');
+});
+
+test('o último vídeo visto vai e volta, e Começar de novo apaga; armazenamento quebrado não atira', () => {
+  const a = armazemFalso();
+  assert.equal(lerUltimo(a), null);
+  guardarUltimo(a, { slug: 'tchubi', inicio: T });
+  assert.deepEqual(lerUltimo(a), { slug: 'tchubi', inicio: T });
+  guardarUltimo(a, null);
+  assert.equal(lerUltimo(a), null);
+  const quebrado = { getItem() { throw new Error('SecurityError'); }, setItem() { throw new Error('cheio'); }, removeItem() { throw new Error('x'); } };
+  assert.deepEqual(lerVods(quebrado), []);
+  assert.equal(acharVod(quebrado, 'x', T), null);
+  assert.deepEqual(guardarVod(quebrado, { slug: 'x', inicio: T }), []);
+  assert.equal(lerUltimo(quebrado), null);
+  guardarUltimo(quebrado, { slug: 'x', inicio: T });
+  guardarUltimo(quebrado, null);
+  const sujo = armazemFalso();
+  sujo.setItem('povix.simplesVods', '{nao e lista');
+  assert.deepEqual(lerVods(sujo), []);
 });

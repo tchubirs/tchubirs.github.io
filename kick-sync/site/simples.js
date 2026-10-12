@@ -12,7 +12,10 @@
 
 import { t, tn } from './idiomas.js';
 import { procurarCanais, vodsDoCanal, vodDaKick, slugDoNome } from './kick.js';
-import { lerEntrada, montarLista, lancesParaLista, nomeDoArquivo, tempoNaLive, NOMES_NO_LANCE, QUANTOS } from './simples-lista.js';
+import {
+  lerEntrada, montarLista, lancesParaLista, nomeDoArquivo, tempoNaLive, NOMES_NO_LANCE, QUANTOS,
+  acharVod, guardarVod, mensagensDosPicos, lerUltimo, guardarUltimo,
+} from './simples-lista.js';
 import { varrerNoite } from './procurar-momentos.js';
 import { somDoCanal } from './alinhar.js';
 import { TAXA_TIROS } from './tiros.js';
@@ -26,6 +29,54 @@ const CHAVE_VISTO = 'povix.simplesVisto';
 const CHAVE_NAO = 'povix.simplesNao';
 const MAX_NAO = 300;
 const $ = (id) => document.getElementById(id);
+
+// O que já se achou de um vídeo fica neste aparelho (simples-lista.js): a lista no localStorage, as imagens
+// no IndexedDB (pesam demais para o localStorage). O `localStorage` só é tocado dentro das funções de lá,
+// que já se defendem de uma janela privada.
+const armazem = {
+  getItem: (k) => localStorage.getItem(k),
+  setItem: (k, v) => localStorage.setItem(k, v),
+  removeItem: (k) => localStorage.removeItem(k),
+};
+const prefixoDe = (v) => `${v.slug}|${v.inicio}|`;
+let bancoDeFotos = null;
+function banco() {
+  bancoDeFotos ??= new Promise((ok) => {
+    try {
+      const r = indexedDB.open('povix-simples', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('fotos');
+      r.onsuccess = () => ok(r.result);
+      r.onerror = () => ok(null);
+      r.onblocked = () => ok(null);
+    } catch { ok(null); }
+  });
+  return bancoDeFotos;
+}
+/** Uma operação no banco das imagens; sem banco (janela privada) é como se não houvesse imagens. */
+async function nasFotos(modo, fazer, seNao) {
+  const db = await banco();
+  if (!db) return seNao;
+  return new Promise((ok) => {
+    try {
+      const tx = db.transaction('fotos', modo);
+      const r = fazer(tx.objectStore('fotos'));
+      tx.oncomplete = () => ok(r?.result ?? seNao);
+      tx.onerror = () => ok(seNao);
+      tx.onabort = () => ok(seNao);
+    } catch { ok(seNao); }
+  });
+}
+const faixaDe = (prefixo) => IDBKeyRange.bound(prefixo, `${prefixo}\uffff`);
+/** As imagens lembradas de um vídeo: Map chave-do-cartão -> data URL. */
+async function fotosGuardadas(prefixo) {
+  const mapa = new Map();
+  const chaves = await nasFotos('readonly', (s) => s.getAllKeys(faixaDe(prefixo)), []);
+  const valores = await nasFotos('readonly', (s) => s.getAll(faixaDe(prefixo)), []);
+  chaves.forEach((c, i) => { if (typeof valores[i] === 'string') mapa.set(String(c).slice(prefixo.length), valores[i]); });
+  return mapa;
+}
+const guardarFoto = (prefixo, k, url) => nasFotos('readwrite', (s) => s.put(url, prefixo + k), null);
+const tirarFotos = (prefixo) => nasFotos('readwrite', (s) => s.delete(faixaDe(prefixo)), null);
 
 /** Quanto tempo uma espera pode ficar parada antes de dizer alguma coisa, e antes de desistir. */
 export const AVISO_MS = 30_000;
@@ -186,6 +237,10 @@ export function montarSimples(ponte) {
   // neste aparelho) e os que estão na tela agora (o `data-i` de cada cartão conta nesta lista).
   let mostrar = QUANTOS;
   let mostrados = [];
+  // O vídeo da lista de agora ({ slug, inicio }, a chave do cache e das imagens guardadas) e, quando a lista
+  // veio do cache sem abrir o vídeo, o início dele (a "hora na live" dos cartões).
+  let vodAtual = null;
+  let inicioGuardado = null;
   const naoQuero = lerNaoQuero();
   const feitos = new Map();
   const tocaVideo = tocaVideoDaKick();
@@ -282,7 +337,16 @@ export function montarSimples(ponte) {
     comecar(caixa.value);
   });
   // A caixa volta com o que estava escrito, já selecionado: escrever outro nome troca tudo de uma vez.
-  $('simplesDeNovo').onclick = () => { ponte.pararChatDoEvento?.(); parar(); mostrarInicio(); $('simplesErro').hidden = true; caixa.focus(); caixa.select(); };
+  $('simplesDeNovo').onclick = () => {
+    ponte.pararChatDoEvento?.(); parar(); mostrarInicio(); guardarUltimo(armazem, null);
+    $('simplesErro').hidden = true; caixa.focus(); caixa.select();
+  };
+  $('simplesRefazer').onclick = () => {
+    const v = vodAtual;
+    if (!v) return;
+    parar();
+    abrirStreamer(v.slug, { inicioMs: v.inicio, forcar: true });
+  };
   $('simplesParar').onclick = () => { busca?.abort(); };
 
   function erro(texto) {
@@ -306,6 +370,9 @@ export function montarSimples(ponte) {
     $('simplesTrabalho').hidden = false;
     $('simplesQuem').textContent = titulo;
     $('simplesAviso').hidden = true;
+    $('simplesRefazer').hidden = true;
+    vodAtual = null;
+    inicioGuardado = null;
     lista.innerHTML = '';
     ultimos = [];
     mostrados = [];
@@ -340,6 +407,9 @@ export function montarSimples(ponte) {
     const e = soCanal ? { tipo: 'canal', slug: String(texto).trim() } : lerEntrada(texto);
     if (!e) { erro(t('simples.naoEntendi')); return; }
     marcarVisto();
+    // Quem nunca tocou no botão de modo ainda não tem escolha guardada, e depois de usar o simples a sessão
+    // salva fazia o caminho-cedo.js entrar no avançado ao recarregar.
+    escolherModo('simples');
     $('simplesDica').hidden = true;
     parar();
     if (e.tipo === 'evento') { await abrirEvento({ nome: e.nome }); return; }
@@ -380,6 +450,7 @@ export function montarSimples(ponte) {
   }
 
   async function abrirEvento(qual) {
+    guardarUltimo(armazem, null);
     mostrarTrabalho(t('simples.abrindoEvento'));
     dizer(t('simples.abrindoEventoEstado'));
     const minha = geracao;
@@ -439,10 +510,13 @@ export function montarSimples(ponte) {
     atualizar();
   }
 
-  async function abrirStreamer(nome, { inicioMs = null } = {}) {
+  async function abrirStreamer(nome, { inicioMs = null, forcar = false } = {}) {
     const minha = geracao;
     const velha = () => minha !== geracao;
     const slug = slugDoNome(nome);
+    // Um vídeo já procurado neste aparelho abre na hora, sem rede e sem barra.
+    const jaTinha = !forcar && inicioMs != null ? acharVod(armazem, slug, inicioMs) : null;
+    if (jaTinha?.completo) { await mostrarGuardado(jaTinha); return; }
     mostrarTrabalho(t('simples.abrindoTitulo'));
     dizer(t('simples.procurandoVideo', { canal: slug }));
     let r = await comPrazo(vodsDoCanal(slug), 20_000, { slug, estado: 'sem-rede', vods: [] });
@@ -461,6 +535,9 @@ export function montarSimples(ponte) {
       return;
     }
     ponte.memorizarVods(r);
+    // Sem o início dito, é a live mais recente da lista.
+    const guardado = forcar ? null : acharVod(armazem, r.slug, inicioMs ?? r.vods.at(-1)?.inicioApi);
+    if (guardado?.completo) { await mostrarGuardado(guardado); return; }
     const controlo = new AbortController();
     busca = controlo;
     dizer(t('simples.abrindoVideo', { canal: r.slug }));
@@ -473,9 +550,31 @@ export function montarSimples(ponte) {
     }
     ponte.pausar();
     linhaAberta = linha;
+    vodAtual = { slug: r.slug, inicio: linha.inicio };
+    guardarUltimo(armazem, vodAtual);
     $('simplesQuem').textContent = t('simples.titulo', { canal: r.slug, dia: diaDe(linha.inicio), hora: horaDe(linha.inicio) });
     if (!tocaVideo) avisar(t('simples.abraNoChrome'));
-    await procurar(linha, controlo);
+    await procurar(linha, controlo, guardado);
+  }
+
+  /**
+   * A lista de um vídeo já procurado, do cache: sem abrir o vídeo (Baixar, a prévia e Editar abrem quando a
+   * pessoa tocar, como no evento) e sem barra. "Procurar de novo" refaz tudo.
+   */
+  async function mostrarGuardado(e) {
+    mostrarTrabalho(t('simples.titulo', { canal: e.slug, dia: diaDe(e.inicio), hora: horaDe(e.inicio) }));
+    const minha = geracao;
+    vodAtual = { slug: e.slug, inicio: e.inicio };
+    inicioGuardado = e.inicio;
+    guardarUltimo(armazem, vodAtual);
+    for (const [k, url] of await comPrazo(fotosGuardadas(prefixoDe(vodAtual)), 1500, new Map())) fotos.set(k, url);
+    if (minha !== geracao) return;
+    ultimos = e.lista || [];
+    if (!tocaVideo) avisar(t('simples.abraNoChrome'));
+    pintarLista();
+    const n = queridos().length;
+    dizer(n ? tn(n, 'simples.prontoUm', 'simples.pronto', { n }) : t('simples.nada'), false);
+    $('simplesRefazer').hidden = false;
   }
 
   async function mostrarParecidos(slug) {
@@ -489,6 +588,7 @@ export function montarSimples(ponte) {
   }
 
   async function abrirClipe(id) {
+    guardarUltimo(armazem, null);
     const minha = geracao;
     mostrarTrabalho(t('simples.abrindoTitulo'));
     dizer(t('simples.lendoLink'));
@@ -514,7 +614,7 @@ export function montarSimples(ponte) {
   }
 
   // ── procurar: o chat primeiro, depois o som ──────────────────────────────
-  async function procurar(linha, controlo) {
+  async function procurar(linha, controlo, guardado = null) {
     const slug = linha.slug;
     const vivo = ponte.aoVivoDe(slug);
     if (!vivo) { dizer(t('simples.naoAbriu'), false); return; }
@@ -523,6 +623,11 @@ export function montarSimples(ponte) {
     let picos = [];
     let mensagens = [];
     let sons = [];
+    // O que já se achou deste vídeo (o chat) não se refaz; o que se acha agora fica lembrado, passo a passo.
+    const chatGuardado = Array.isArray(guardado?.picos);
+    const lembrar = (mais) => {
+      for (const s of guardarVod(armazem, { slug, inicio: linha.inicio, ateMs: vivo.ateMs, ...mais })) tirarFotos(prefixoDe(s));
+    };
     const refazer = () => {
       ultimos = montarLista({ picos, sons, mensagens, limites: vivo, quantos: 60 }).map((m) => ({ ...m, canal: slug }));
       pintarLista();
@@ -530,7 +635,7 @@ export function montarSimples(ponte) {
     };
     try {
       // 1. O chat: dá os primeiros momentos em segundos.
-      dizer(t('simples.lendoChat', { canal: slug, pct: 0 }), 0);
+      if (!chatGuardado) dizer(t('simples.lendoChat', { canal: slug, pct: 0 }), 0);
       const chatControlo = new AbortController();
       const pararChat = () => chatControlo.abort();
       sinal.addEventListener('abort', pararChat, { once: true });
@@ -540,7 +645,7 @@ export function montarSimples(ponte) {
         aoDesistir: () => { avisar(t('simples.chatDesistiu')); chatControlo.abort(); },
       });
       try {
-        if (ponte.chat && vivo.deMs < Date.now()) {
+        if (!chatGuardado && ponte.chat && vivo.deMs < Date.now()) {
           await ponte.chat.lerChatTrecho(slug, vivo.deMs, vivo.ateMs, {
             sinal: chatControlo.signal,
             aoProgredir: ({ fracao }) => { v1.andou(); dizer(t('simples.lendoChat', { canal: slug, pct: Math.round(fracao * 100) }), fracao); },
@@ -554,9 +659,17 @@ export function montarSimples(ponte) {
         sinal.removeEventListener('abort', pararChat);
       }
       if (!chatControlo.signal.aborted) avisar(tocaVideo ? '' : t('simples.abraNoChrome'));
-      picos = (ponte.chat?.estado.marcas?.get(slug) || []).filter((m) => m.ms >= vivo.deMs && m.ms < vivo.ateMs);
-      mensagens = ponte.chat?.estado.mensagens?.get(slug) || [];
+      if (chatGuardado) {
+        picos = guardado.picos;
+        mensagens = guardado.mensagens || [];
+      } else {
+        picos = (ponte.chat?.estado.marcas?.get(slug) || []).filter((m) => m.ms >= vivo.deMs && m.ms < vivo.ateMs);
+        mensagens = ponte.chat?.estado.mensagens?.get(slug) || [];
+      }
       refazer();
+      // O chat lido até o fim (e não largado pelo vigia) fica lembrado: se a página fechar no meio do som, volta daqui.
+      const chatFeito = chatGuardado || (Boolean(ponte.chat) && vivo.deMs < Date.now() && !chatControlo.signal.aborted);
+      if (chatFeito && !chatGuardado) lembrar({ picos, mensagens: mensagensDosPicos(mensagens, picos) });
       if (sinal.aborted) throw new DOMException('parado', 'AbortError');
 
       // 2. O som: só em volta dos picos do chat (o modo esperto do Detectar lances); sem picos, tudo.
@@ -566,6 +679,7 @@ export function montarSimples(ponte) {
       const pararSom = () => somControlo.abort();
       sinal.addEventListener('abort', pararSom, { once: true });
       let desistiu = false;
+      let somFeito = false;
       const v2 = vigia({
         desisteMs: DESISTE_SOM_MS,
         aoAvisar: () => avisar(t('simples.somDemora')),
@@ -597,6 +711,7 @@ export function montarSimples(ponte) {
           ...(r.candidatos || []).map((c) => ({ ...c, tipo: 'tiros' })),
           ...(r.explosoes || []).map((c) => ({ ...c, tipo: 'explosao' })),
         ];
+        somFeito = true;
         avisar(tocaVideo ? '' : t('simples.abraNoChrome'));
       } catch (x) {
         if (sinal.aborted) throw x;
@@ -607,8 +722,10 @@ export function montarSimples(ponte) {
         sinal.removeEventListener('abort', pararSom);
       }
       refazer();
+      if (somFeito && chatFeito) lembrar({ completo: true, lista: ultimos });
       const n = queridos().length;
       dizer(n ? tn(n, 'simples.prontoUm', 'simples.pronto', { n }) : t('simples.nada'), false);
+      $('simplesRefazer').hidden = false;
     } catch (x) {
       if (x?.name !== 'AbortError' && !sinal.aborted) throw x;
       const n = queridos().length;
@@ -638,7 +755,7 @@ export function montarSimples(ponte) {
     $('simplesMais').hidden = sobra <= 0;
     $('simplesMais').textContent = t('simples.mais', { n: Math.min(sobra, QUANTOS) });
     $('simplesDicaLista').hidden = !mostrados.length || !primeiraVez;
-    const inicio = linhaAberta?.inicio ?? mostrados[0]?.ms ?? 0;
+    const inicio = linhaAberta?.inicio ?? inicioGuardado ?? mostrados[0]?.ms ?? 0;
     lista.innerHTML = mostrados.map((m, i) => {
       const k = chave(m);
       const foto = fotos.get(k);
@@ -1050,6 +1167,7 @@ export function montarSimples(ponte) {
         try { url = c.toDataURL('image/jpeg', 0.7); } catch { url = null; }
         if (!url) { falhas++; continue; }
         fotos.set(k, url);
+        if (vodAtual && !m.doEvento && !m.doClipe && vodAtual.slug === linha.slug) guardarFoto(prefixoDe(vodAtual), k, url);
         const img = lista.querySelector(`li[data-chave="${CSS.escape(k)}"] .simplesFoto`);
         if (img) img.innerHTML = `<img src="${url}" alt="">`;
       }
@@ -1062,6 +1180,17 @@ export function montarSimples(ponte) {
   // ── o link de um evento (?e=abisal) aberto no modo simples ───────────────
   if (ponte.eventoDoLink && modoSimples()) {
     ponte.eventoDoLink.then((aberto) => { if (aberto) { marcarVisto(); $('simplesDica').hidden = true; mostrarEvento(); } }).catch(() => {});
+  }
+
+  // A página recarregada volta ao último vídeo que a pessoa via, com a lista lembrada (ou continua de onde o
+  // som parou). Um evento do endereço manda; "Começar de novo" apaga o último.
+  const ultimo = ponte.eventoDoLink || !modoSimples() ? null : lerUltimo(armazem);
+  const lembrado = ultimo && acharVod(armazem, ultimo.slug, ultimo.inicio);
+  if (lembrado) {
+    marcarVisto();
+    $('simplesDica').hidden = true;
+    if (lembrado.completo) mostrarGuardado(lembrado);
+    else abrirStreamer(ultimo.slug, { inicioMs: ultimo.inicio });
   }
 
   return {
