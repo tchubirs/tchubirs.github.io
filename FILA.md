@@ -333,3 +333,12 @@ em francês). Tudo revisado pela regra 14 em 28/09.
   não ouve o grito do streamer (nota de "Screaming" de 0,04 no máximo na live) e marca explosão junto com tiro: nos
   quadros de 30 acertos, só 6 mostram um explosivo (20%), quase o mesmo que quando o tiro ganha (17%). Ficam os
   filtros de explosão e grito que já existem. Ver `kick-sync/ESTUDO-SONS.md` e `kick-sync/IDEIAS.md`, item 10.
+
+## Pedido do dono (12/10): só o jogo do evento
+- Feito em 12/10. O evento ganhou o campo `jogo` (o Abisal é "Rust"; sem o campo, nada muda). A Kick diz o jogo
+  de cada VOD em `categories[0]`; uma live de outro jogo fica fora da detecção, dos melhores lances, do time pelo
+  som, do ler chat de todos e do "Guardar todos agora", e aparece a cinza no mapa com "outro jogo nesta noite",
+  e abre à mão sozinha. "Just Chatting" e outras categorias que não são jogo contam como do jogo: o sapoiq jogou
+  Rust do Abisal num VOD que a Kick chama "Just Chatting".
+- Na Kick real, na noite de 05/10: 16 canais da lista só noutro jogo (GTA, LoL, CS2 e outros), entre eles o
+  mills_rp e o britus99 (o "estava" duvidoso do teste do som era GTA). Os melhores lances já não os mostram.
