@@ -290,5 +290,5 @@ em francês). Tudo revisado pela regra 14 em 28/09.
 6. Abrir 33 ângulos demora 40 s; sincronizar 33 por áudio leva 30 min (um por vez). Carregar e sincronizar em paralelo, os do lance primeiro.
 7. Vítima: tela de inventário confundida com morte.
 8. Detecção: download de som sem tempo limite pode travar.
-9. Chat da Kick: pedidos demais e respostas sem CORS; menos pedidos e nova tentativa.
+9. Chat da Kick: pedidos demais e respostas recusadas pelo navegador; menos pedidos e nova tentativa.
 10. Com dois canais, abre a janela de tempo com um só; preferir a que tem os dois.
