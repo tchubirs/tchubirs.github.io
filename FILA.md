@@ -327,3 +327,9 @@ em francês). Tudo revisado pela regra 14 em 28/09.
 - Também em 12/10, achados por testes que falhavam com a máquina ocupada: juntar dois 9:16 gravados falhava quando o
   gravador do Chrome punha o som antes da imagem numa das gravações (as faixas agora ligam-se pelo tipo); um 429 da
   Kick podia deixar sair um pedido no meio da pausa; e um teste da página da Twitch lia o estado cedo demais.
+
+## Ideia (12/10): sons de explosão e grito com o YAMNet
+- Medido em 12/10, não entrou no site. Em 4 h de live real de 6 canais do Abisal e em 23 clipes do Rust, o YAMNet
+  não ouve o grito do streamer (nota de "Screaming" de 0,04 no máximo na live) e marca explosão junto com tiro: nos
+  quadros de 30 acertos, só 6 mostram um explosivo (20%), quase o mesmo que quando o tiro ganha (17%). Ficam os
+  filtros de explosão e grito que já existem. Ver `kick-sync/ESTUDO-SONS.md` e `kick-sync/IDEIAS.md`, item 10.

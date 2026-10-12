@@ -179,6 +179,13 @@ semana), grande (mais que isso). Estimativas minhas.
 - **No Povix:** testar o YAMNet nos trechos que o detector de tiros já escolhe, não no VOD inteiro. Não conferido:
   se os rótulos de explosão e grito acertam o som do Rust; um usuário relata que o modelo marca quase tudo como fala
   [36]. Medir com gravações reais antes de prometer.
+- **Estado (12/10): medido, não entrou.** Rodei o YAMNet (o arquivo do MediaPipe, 4,1 MB) em 4 h de som de 6 canais
+  do Abisal e em 23 clipes do Rust. Grito: a nota de "Screaming" ficou em 0,04 no máximo na live inteira e em 0,06 ou
+  menos em 11 de 12 clipes de susto; para o modelo o grito do streamer é fala, como o relato dizia. Explosão: dispara
+  junto com o tiro (81% das vezes os dois passam de 0,5), e nos quadros de 30 acertos só 6 mostram um explosivo
+  (20%), contra 17% quando o tiro ganha. Não separa um foguete de uma rajada, por isso nada foi para a tela. Números,
+  método e pontos fracos em `ESTUDO-SONS.md`. Para voltar a isto falta verdade ouvida (umas 50 explosões e 50 gritos
+  marcados por alguém).
 
 ## 2. Ferramentas de IA: o que fazem sozinhas e se o Povix consegue igual
 
@@ -186,7 +193,7 @@ semana), grande (mais que isso). Estimativas minhas.
 
 | O que a IA faz | Quem faz | Grátis no navegador? | Esforço |
 |---|---|---|---|
-| Achar os momentos num VOD longo | Opus [8], Eklipse [6], ClipGPT [10], CapCut [27], Vizard [25], Klap [26], Veed [30], FragCut [37] | Sim. Já fazemos com chat e tiros. Faltam mortes do servidor (item 1) e sons (item 10) | Pequeno a médio |
+| Achar os momentos num VOD longo | Opus [8], Eklipse [6], ClipGPT [10], CapCut [27], Vizard [25], Klap [26], Veed [30], FragCut [37] | Sim. Já fazemos com chat e tiros. Faltam mortes do servidor (item 1); sons pelo YAMNet medidos e fracos (item 10) | Pequeno a médio |
 | Nota de "vai viralizar" | Opus [8], ClipGPT [10], FragCut [37] | Sim, com regra explicada (item 2) | Pequeno |
 | Seguir o rosto no corte vertical | Opus [8], Vizard [25], Klap [26], CapCut [27], StreamLadder [10] | Sim, MediaPipe [28] | Feito (12/10): a caixa da webcam, por ângulo |
 | Legenda automática palavra por palavra | StreamLadder [10], Submagic [29], CapCut [27], Opus [23], Veed [30] | Sim, Whisper ou Moonshine [31, 32]. Pesa de 50 a 200 MB na primeira vez e precisa de WebGPU para ser rápido | Médio a grande |
