@@ -1,0 +1,28 @@
+Discord Death
+APP
+ — Today at 21:14
+Abisal Rust
+⚔️ Newt shot Zeca using their Assault Rifle over a distance of 45.3 meters. ⚔️
+Victim Type
+Player
+Victim
+Zeca(76561198000000001)
+Body Part
+Head
+Attacker Type
+Player
+Attacker
+Newt (76561198000000002)
+Attacker Health
+63.00 HP
+Weapon
+Assault Rifle (Holosight, Silencer)
+Distance
+45.30 Meters
+Entity Owner
+Unknown Owner
+Discord Death
+APP
+ — Today at 21:20
+Abisal Rust
+:crossed_swords: Damoniak killed Elchapo using their Thompson. :crossed_swords:

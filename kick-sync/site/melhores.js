@@ -32,8 +32,9 @@ export const ANTES_MS = 10_000;
 // canal a mais no mesmo lance, 2. São escolhas, e estão escritas na página (melhores.como).
 // O chat a pedir clipe ("clip", "clipa", "clipe") dá 3 por canal. O que a pessoa marcou ao vivo com a
 // tecla dá 5, e além disso vai sempre para o topo da lista: foi ela que viu.
+// Uma morte que o servidor registou (mortes.js) dá 6: é o sinal mais certo de todos, o servidor viu.
 export const PONTOS = Object.freeze({
-  chatMax: 10, tiros: 2, explosao: 2, grito: 1, kill: 5, canal: 2, voce: 5, pedidoClip: 3,
+  chatMax: 10, tiros: 2, explosao: 2, grito: 1, kill: 5, canal: 2, voce: 5, pedidoClip: 3, morte: 6,
 });
 
 // As palavras do pedido de clipe, pelo mesmo filtro de palavras do chat (chat.js): "clip" acha também
@@ -97,9 +98,19 @@ export function unirJanelas(janelas) {
  * marcados ao vivo com a tecla (`origem: 'aovivo'`) são um sinal "você" em cada ângulo que estava no
  * ar, no instante de cada um (`vivo: [{ c, ms }]`), e ficam juntos num lance só.
  * `mensagens`: Map canal -> mensagens do chat; o chat a pedir clipe é mais um sinal.
+ * `mortes`: as mortes do servidor já com o canal de cada nome (mortes.js, `casarMortes`) e o instante
+ * `ms`. Cada uma é um sinal na faixa de quem matou e na de quem morreu, os dois no mesmo lance.
  */
-export function sinaisDoEvento({ marcas = new Map(), momentos = [], mensagens = new Map() } = {}) {
+export function sinaisDoEvento({ marcas = new Map(), momentos = [], mensagens = new Map(), mortes = [] } = {}) {
   const sinais = [];
+  for (const m of mortes || []) {
+    if (!m || !Number.isFinite(m.ms)) continue;
+    const morte = { id: m.id, matador: m.matador, vitima: m.vitima, canalMatador: m.canalMatador || null, canalVitima: m.canalVitima || null };
+    if (m.canalMatador) sinais.push({ tipo: 'morte', canal: m.canalMatador, ms: m.ms, marca: `morte:${m.id}`, papel: 'matou', morte });
+    if (m.canalVitima && m.canalVitima !== m.canalMatador) {
+      sinais.push({ tipo: 'morte', canal: m.canalVitima, ms: m.ms, marca: `morte:${m.id}`, papel: 'morreu', morte });
+    }
+  }
   for (const [canal, lista] of marcas) {
     for (const m of lista || []) {
       if (m?.tipo !== 'chat' || !Number.isFinite(m.ms)) continue;
@@ -120,7 +131,9 @@ export function sinaisDoEvento({ marcas = new Map(), momentos = [], mensagens = 
         }
       }
     }
-    const kill = (!m.auto && m.origem !== 'lances' && m.origem !== 'aovivo') || (Array.isArray(m.vitimas) && m.vitimas.length > 0);
+    // Uma morte do servidor posta na montagem já conta como morte do servidor: não conta outra vez.
+    const kill = m.origem !== 'servidor'
+      && ((!m.auto && m.origem !== 'lances' && m.origem !== 'aovivo') || (Array.isArray(m.vitimas) && m.vitimas.length > 0));
     if (kill) sinais.push({ tipo: 'kill', canal, ms: m.ms });
     if (!m.auto) continue;
     const tipos = new Set(m.tipos?.length ? m.tipos : [m.tipo]);
@@ -185,11 +198,12 @@ export function agrupar(sinais, {
 export function resumirLance(grupo) {
   const porCanal = new Map();
   const doCanal = (c) => {
-    if (!porCanal.has(c)) porCanal.set(c, { canal: c, vezes: null, msgs: 0, sons: new Set(), kills: 0, pedidos: 0, voce: 0, pontos: 0 });
+    if (!porCanal.has(c)) porCanal.set(c, { canal: c, vezes: null, msgs: 0, sons: new Set(), kills: 0, pedidos: 0, voce: 0, morte: 0, pontos: 0 });
     return porCanal.get(c);
   };
   const kills = [];
   const marcasVoce = new Set();
+  const mortes = new Map();
   for (const s of grupo.sinais) {
     const c = doCanal(s.canal);
     if (s.tipo === 'voce') {
@@ -201,6 +215,10 @@ export function resumirLance(grupo) {
     } else if (s.tipo === 'chat') {
       const v = Number.isFinite(s.vezes) ? s.vezes : 0;
       if (c.vezes == null || v > c.vezes) { c.vezes = v; c.msgs = s.msgs ?? c.msgs; }
+    } else if (s.tipo === 'morte') {
+      mortes.set(s.morte?.id ?? s.marca, s.morte);
+      // Quem matou vai à frente quando o lance abre; quem morreu vem logo atrás.
+      c.morte = Math.max(c.morte, s.papel === 'matou' ? PONTOS.morte : 1);
     } else if (s.tipo === 'kill') {
       // A mesma kill marcada duas vezes (dois cliques, ou a do link e a do aparelho) conta uma.
       if (!kills.some((k) => k.canal === s.canal && Math.abs(k.ms - s.ms) < 2000)) { kills.push(s); c.kills++; }
@@ -210,7 +228,7 @@ export function resumirLance(grupo) {
   for (const c of canais) {
     c.chatPontos = c.vezes != null ? Math.round(Math.min(c.vezes, PONTOS.chatMax)) : 0;
     c.pontos = c.chatPontos + [...c.sons].reduce((n, tipo) => n + PONTOS[tipo], 0) + c.kills * PONTOS.kill
-      + (c.pedidos ? PONTOS.pedidoClip : 0) + c.voce;
+      + (c.pedidos ? PONTOS.pedidoClip : 0) + c.voce + c.morte;
   }
   const comChat = canais.filter((c) => c.vezes != null);
   const sons = Object.fromEntries(SONS.map((tipo) => [tipo, canais.filter((c) => c.sons.has(tipo)).map((c) => c.canal)]));
@@ -222,6 +240,7 @@ export function resumirLance(grupo) {
   if (comChat.length) partes.push({ tipo: 'chat', pontos: chatPontos });
   if (pedidos) partes.push({ tipo: 'pedidoClip', pontos: pedidos * PONTOS.pedidoClip });
   for (const tipo of SONS) if (sons[tipo].length) partes.push({ tipo, pontos: sons[tipo].length * PONTOS[tipo] });
+  if (mortes.size) partes.push({ tipo: 'morte', pontos: mortes.size * PONTOS.morte });
   if (kills.length) partes.push({ tipo: 'kill', pontos: kills.length * PONTOS.kill });
   if (canais.length > 1) partes.push({ tipo: 'juntos', pontos: (canais.length - 1) * PONTOS.canal, canais: canais.length });
   const pontos = partes.reduce((n, p) => n + p.pontos, 0);
@@ -249,6 +268,7 @@ export function resumirLance(grupo) {
     },
     sons,
     kills: kills.length,
+    mortes: [...mortes.values()].filter(Boolean),
     voce: marcasVoce.size,
     pedidosClip: pedidos,
     partes,
@@ -297,7 +317,7 @@ export function filtrarLances(lances, {
   const saida = [];
   for (const l of lances || []) {
     if (l.canais.length < minCanais) continue;
-    if (soKills && !l.kills) continue;
+    if (soKills && !l.kills && !l.mortes?.length) continue;
     if (l.ateMs < deMs || l.deMs > ateMs) continue;
     const descartado = coincide(l, descartados);
     if (descartado && !comDescartados) continue;
@@ -327,6 +347,12 @@ export function motivoDoLance(l) {
   if (n('tiros')) partes.push(tn(n('tiros'), 'melhores.tirosUm', 'melhores.tiros'));
   if (n('explosao')) partes.push(tn(n('explosao'), 'melhores.explosoesUm', 'melhores.explosoes'));
   if (n('grito')) partes.push(tn(n('grito'), 'melhores.gritosUm', 'melhores.gritos'));
+  const mortes = l.mortes || [];
+  if (mortes.length === 1) partes.push(t('melhores.morteUm', { matador: mortes[0].matador, vitima: mortes[0].vitima }));
+  else if (mortes.length > 1) {
+    const lista = mortes.slice(0, 2).map((m) => t('melhores.morteDe', { matador: m.matador, vitima: m.vitima })).join('; ');
+    partes.push(t('melhores.mortes', { n: mortes.length, lista: mortes.length > 2 ? `${lista}; …` : lista }));
+  }
   if (l.kills) partes.push(tn(l.kills, 'melhores.killUm', 'melhores.kills'));
   return partes.join(', ');
 }

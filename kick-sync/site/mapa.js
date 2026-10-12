@@ -659,11 +659,21 @@ export function ordenarFaixas(canais, {
 function marcasDaLinha(linha, lerMarcas) {
   const canais = linha.tipo === 'canal' ? [linha.canal] : (linha.canais || []);
   const saida = [];
-  for (const canal of canais) {
-    const m = lerMarcas(canal);
-    if (Array.isArray(m) && m.length) saida.push([canal, m]);
+  for (const ler of lerMarcas) {
+    for (const canal of canais) {
+      const m = ler(canal);
+      if (Array.isArray(m) && m.length) saida.push([canal, m]);
+    }
   }
   return saida;
+}
+
+/**
+ * Os leitores das marcas: uma coleção (os picos de chat) ou várias numa lista (os picos e as mortes do
+ * servidor), cada uma com o seu leitor, sem juntar as listas a cada pintura.
+ */
+function leitores(marcas) {
+  return (Array.isArray(marcas) ? marcas : [marcas]).filter(Boolean).map(leitor);
 }
 
 /**
@@ -699,14 +709,17 @@ export function oQueEstaAqui(mapa, { x, y, topo = 0, vista, largura, marcas, rai
   let ms = tempoDoX(x, vista, largura);
   let marca = null;
   if (ms != null && marcas && linha.tipo !== 'time') {
-    const ler = leitor(marcas);
+    const ler = leitores(marcas);
     let melhor = Infinity;
     for (const [canal, lista] of marcasDaLinha(linha, ler)) {
       for (const m of lista) {
         const mx = xDoTempo(m?.ms, vista, largura);
         if (mx == null) continue;
         const d = Math.abs(mx - x);
-        if (d <= raioPx && d < melhor) { melhor = d; marca = { ms: m.ms, tipo: m.tipo ?? null, canal }; }
+        if (d <= raioPx && d < melhor) {
+          melhor = d;
+          marca = { ms: m.ms, tipo: m.tipo ?? null, canal, ...(m.id != null ? { id: m.id } : {}) };
+        }
       }
     }
     if (marca) ms = marca.ms;
@@ -1088,7 +1101,7 @@ export function pintarMapa(ctx, mapa, {
     naoAchado: typeof naoAchado === 'string' ? naoAchado : '',
     outroJogo: outroJogo instanceof Set ? outroJogo : null,
     outroJogoTexto: typeof outroJogoTexto === 'string' ? outroJogoTexto : '',
-    lerMarcas: marcas ? leitor(marcas) : null,
+    lerMarcas: marcas ? leitores(marcas) : null,
   };
 
   ctx.save();

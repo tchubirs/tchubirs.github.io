@@ -306,6 +306,11 @@
     <span id="seloAoVivo" class="seloAoVivo" hidden data-t="evento.aoVivo">ao vivo</span>
     <output id="resumoEvento" class="nota"></output>
     <span id="legendaPico" class="nota legenda" hidden><b class="legendaPico" aria-hidden="true"></b> <span data-t="evento.legendaPico">pico de chat</span></span>
+    <span id="legendaMorte" class="nota legenda" hidden><b class="legendaMorte" aria-hidden="true"></b> <span data-t="evento.legendaMorte">morte no servidor</span></span>
+    <!-- A morte aberta, na barra que fica à vista com o vídeo: é com o vídeo à frente que se diz
+         "a morte é agora" e todas as mortes andam a mesma diferença. -->
+    <span id="morteAberta" class="morteAberta" hidden><output id="morteAbertaTexto" class="nota"></output>
+      <button id="morteAgora" type="button" data-t-titulo="mortes.agoraAjuda" title="Pare o vídeo no instante da morte e clique: todas as mortes andam a mesma diferença"><svg class="ic ic-p" aria-hidden="true"><use href="#i-relogio"/></svg><span data-t="mortes.agora">A morte é agora</span></button></span>
     <span class="espaco"></span>
     <input id="procurarEvento" type="search" autocomplete="off" spellcheck="false" data-t-aria="evento.procurar"
       data-t-ph="evento.procurarPh" placeholder="procurar streamer ou time">
@@ -337,6 +342,7 @@
     <span class="espaco"></span>
     <button id="adicionarStreamer" aria-haspopup="dialog"><svg class="ic ic-p" aria-hidden="true"><use href="#i-mais"/></svg><span data-t="adicionar.streamer">Adicionar streamer</span></button>
     <button id="adicionarLista" aria-haspopup="dialog"><svg class="ic ic-p" aria-hidden="true"><use href="#i-arquivo"/></svg><span data-t="adicionar.lista">Adicionar lista</span></button>
+    <button id="importarMortes" aria-haspopup="dialog" data-t-titulo="mortes.importarAjuda" title="As mortes do servidor de Rust (DeathNotes, Discord Death, Rustcord) como marcas no mapa"><svg class="ic ic-p" aria-hidden="true"><use href="#i-mira"/></svg><span data-t="mortes.importar">Importar mortes</span></button>
     <output id="estadoAdicionar" class="nota" aria-live="polite"></output>
   </div>
   <p id="dicaEvento" class="nota dica" data-t="evento.dica">Clique numa faixa para escolher o streamer e o instante. Clique no nome de um time para abrir ou fechar. Arraste para os lados para andar no tempo; Ctrl + roda do mouse: zoom.</p>
@@ -459,6 +465,35 @@
     <ol id="melhoresLista" class="melhoresLista" data-t-aria="melhores.lista" aria-describedby="melhoresTeclas"></ol>
     <p id="melhoresVazio" class="nota" hidden></p>
     <button id="melhoresMais" type="button" class="discreto" hidden></button>
+  </section>
+  <!-- As mortes do servidor (mortes.js e mortes-ui.js): o fuso das horas, o alinhamento com uma morte
+       vista, os nomes do jogo sem canal, as linhas que não se leram e a lista. -->
+  <section id="mortes" class="mortes" aria-labelledby="mortesTitulo" hidden>
+    <div class="melhoresCabeca">
+      <h3 id="mortesTitulo" class="melhoresTitulo"><span data-t="mortes.secao">Mortes do servidor</span> <output id="mortesConta" class="conta"></output></h3>
+      <span class="espaco"></span>
+      <button id="mortesMais" type="button" aria-haspopup="dialog"><svg class="ic ic-p" aria-hidden="true"><use href="#i-mais"/></svg><span data-t="mortes.importarMais">Importar mais</span></button>
+      <button id="mortesTodasMontagem" type="button"><svg class="ic ic-p" aria-hidden="true"><use href="#i-marcador"/></svg><span data-t="mortes.todasMontagem">Pôr todas na montagem</span></button>
+      <button id="mortesApagar" type="button" class="discreto"><svg class="ic ic-p" aria-hidden="true"><use href="#i-lixo"/></svg><span data-t="mortes.apagar">Apagar mortes</span></button>
+    </div>
+    <div class="linha mortesHora">
+      <label class="pequeno"><span data-t="mortes.fuso">Fuso das horas do registro</span>
+        <select id="mortesFuso" aria-describedby="mortesFusoAjuda"></select></label>
+      <output id="mortesAjuste" class="nota" aria-live="polite"></output>
+      <button id="mortesDesalinhar" type="button" class="discreto" hidden data-t="mortes.desalinhar">Desfazer alinhamento</button>
+    </div>
+    <p id="mortesFusoAjuda" class="nota" data-t="mortes.fusoAjuda">O Discord mostra a hora de quem copiou: o fuso deste aparelho costuma servir. O log do servidor usa a hora do servidor. Para acertar o segundo, abra uma morte, pare o vídeo no instante dela e clique em "A morte é agora".</p>
+    <details id="mortesNomes" class="mortesNomes" hidden>
+      <summary id="mortesNomesTitulo"></summary>
+      <p class="nota" data-t="mortes.nomesAjuda">Escolha o canal de cada nome do jogo. Fica guardado como apelido, só neste aparelho.</p>
+      <ul id="mortesNomesLista" class="mortesNomesLista"></ul>
+    </details>
+    <details id="mortesNaoLidas" class="mortesNaoLidas" hidden>
+      <summary id="mortesNaoLidasTitulo"></summary>
+      <ul id="mortesNaoLidasLista" class="mortesNaoLidasLista"></ul>
+    </details>
+    <output id="mortesEstado" class="nota" aria-live="polite"></output>
+    <ol id="mortesLista" class="mortesLista" data-t-aria="mortes.lista" aria-label="Mortes do servidor"></ol>
   </section>
 </section>
 
@@ -1060,6 +1095,28 @@
       <button id="adicionarVariosBotao" class="principal"><svg class="ic ic-p" aria-hidden="true"><use href="#i-mais"/></svg><span data-t="adicionar.listaBotao">Adicionar ao evento</span></button>
     </div>
     <output id="estadoAdicionarJanela" class="nota" aria-live="polite"></output>
+  </div>
+</div>
+
+<div id="modalMortes" class="modal doEvento" hidden>
+  <div class="modalCaixa estreita" role="dialog" aria-modal="true" aria-labelledby="mortesJanelaTitulo">
+    <div class="modalTopo">
+      <b id="mortesJanelaTitulo" data-t="mortes.titulo">Importar mortes do servidor</b>
+      <button id="fecharMortes" class="discreto" data-t-aria="mortes.fechar" aria-label="fechar"><svg class="ic" aria-hidden="true"><use href="#i-fechar"/></svg></button>
+    </div>
+    <div class="formJanela">
+      <label class="campo"><span class="rotuloCampo" data-t="mortes.textoRotulo">Cole o registro de mortes</span>
+        <textarea id="mortesTexto" rows="7" spellcheck="false" aria-describedby="mortesFormatos" data-t-ph="mortes.textoPh" placeholder="[21:14:07] [DeathNotes] Newt shot Zeca using their Assault Rifle over a distance of 45.3 meters."></textarea></label>
+      <p id="mortesFormatos" class="nota" data-t="mortes.formatos">Aceita o chat ou o console do servidor com o plugin DeathNotes, as mensagens do Discord Death e do Rustcord copiadas do canal do Discord (com a hora que o Discord mostra) e linhas simples como "21:14:07 fulano killed ciclano (AK, 45 m)". O texto fica só neste aparelho.</p>
+      <div class="linha">
+        <button id="mortesArquivo" type="button" aria-describedby="mortesTipos"><svg class="ic ic-p" aria-hidden="true"><use href="#i-arquivo"/></svg><span data-t="evento.abrirArquivo">Abrir arquivo</span></button>
+        <span id="mortesTipos" class="nota" data-t="mortes.arquivoTipos">.txt ou .log</span>
+        <input id="mortesArquivoCampo" type="file" class="soLeitor" tabindex="-1" aria-hidden="true" accept=".txt,.log,.csv,text/plain">
+      </div>
+      <button id="mortesLer" class="principal"><svg class="ic ic-p" aria-hidden="true"><use href="#i-mira"/></svg><span data-t="mortes.ler">Ler e pôr no mapa</span></button>
+    </div>
+    <output id="mortesEstadoJanela" class="nota" aria-live="polite"></output>
+    <ul id="mortesNaoLidasJanela" class="mortesNaoLidasLista"></ul>
   </div>
 </div>
 

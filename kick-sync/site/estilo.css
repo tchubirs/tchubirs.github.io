@@ -1736,6 +1736,7 @@ body:not(.mesa) #sugestoes button { width: auto; min-height: 30px; font-size: va
 .soLeitor { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .legenda { display: inline-flex; align-items: center; gap: var(--e1); }
 .legendaPico { display: inline-block; width: 7px; height: 7px; background: var(--marca); box-shadow: 0 0 0 1px var(--sup-0); }
+.legendaMorte { display: inline-block; width: 7px; height: 7px; background: var(--perigo); box-shadow: 0 0 0 1px var(--sup-0); }
 .picosChat { gap: var(--e1); }
 .picosChat .pico { min-height: 30px; padding: 0 var(--e2); font-family: var(--letra-mono); font-size: var(--t-menor); }
 .aoVivoLinha input { flex: 1 1 auto; min-width: 0; }
@@ -2819,3 +2820,40 @@ body.mesa .guardarAgora .nota.mau { color: var(--aviso); }
 /* O recado do "Marcar agora": some quando está vazio, para não abrir um buraco na Montagem. */
 body.mesa #montagem .estadoAoVivo { margin: var(--e2) 0 0; }
 body.mesa #montagem .estadoAoVivo:empty { display: none; }
+
+/* As mortes do servidor (mortes-ui.js): a mesma caixa dos melhores lances, e uma linha por morte. */
+.mortes { display: flex; flex-direction: column; gap: var(--e3); padding: var(--e4); background: var(--sup-2); border: 1px solid var(--linha); border-radius: var(--r-3); }
+.mortes[hidden] { display: none; }
+.mortesHora { gap: var(--e2) var(--e4); align-items: center; flex-wrap: wrap; }
+.mortesHora label.pequeno { display: inline-flex; align-items: center; gap: var(--e2); }
+.mortesHora select { width: auto; max-width: 100%; }
+#mortesFusoAjuda, #mortesEstado { margin: 0; }
+#mortesEstado:empty { display: none; }
+.mortesNomes > summary, .mortesNaoLidas > summary { cursor: pointer; font-size: var(--t-menor); width: max-content; max-width: 100%; border-radius: var(--r-1); }
+.mortesNomes > summary:focus-visible, .mortesNaoLidas > summary:focus-visible { box-shadow: var(--foco); outline: none; }
+.mortesNomesLista, .mortesNaoLidasLista { margin: var(--e2) 0 0; padding: 0; list-style: none; display: grid; gap: var(--e2); max-height: 16em; overflow: auto; }
+.mortesNomesLista li { display: flex; flex-wrap: wrap; gap: var(--e2); align-items: center; }
+.mortesNomesLista b { font-family: var(--letra-mono); font-weight: 600; overflow-wrap: anywhere; }
+.mortesNomesLista select { width: auto; max-width: 100%; }
+.mortesNaoLidasLista li { font-family: var(--letra-mono); font-size: var(--t-micro); color: var(--tinta-2); overflow-wrap: anywhere; }
+.mortesNaoLidasLista li span { color: var(--tinta-3); font-family: var(--letra); }
+.mortesNaoLidasLista:empty { display: none; }
+.mortesLista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e2); max-height: 28em; overflow: auto; }
+.mortesLista:empty { display: none; }
+.morte { display: grid; grid-template-columns: 6.5em minmax(0, 1fr) auto; gap: 2px var(--e4); align-items: center; padding: var(--e2) var(--e3); background: var(--sup-1); border: 1px solid var(--linha); border-radius: var(--r-2); }
+.morte.aberta { border-color: var(--perigo); box-shadow: inset 3px 0 0 var(--perigo); }
+.morteHora { margin: 0; font-family: var(--letra-mono); font-size: var(--t-base); font-weight: 600; white-space: nowrap; }
+.morteHora small { display: block; font-family: var(--letra); font-size: var(--t-micro); font-weight: 400; color: var(--tinta-3); }
+.morteQuem { margin: 0; overflow-wrap: anywhere; }
+.morteQuem .semCanal { color: var(--tinta-3); font-size: var(--t-micro); }
+.morteAcoes { display: flex; gap: var(--e2); flex-wrap: wrap; justify-content: flex-end; }
+.morteAcoes button { min-height: 32px; padding: 0 var(--e3); white-space: nowrap; }
+.morteAberta { display: inline-flex; align-items: center; gap: var(--e2); flex-wrap: wrap; min-width: 0; }
+.morteAberta[hidden] { display: none; }
+.morteAberta output { overflow-wrap: anywhere; }
+@media (max-width: 759px) {
+  .mortes { padding: var(--e3); }
+  .morte { grid-template-columns: minmax(0, 1fr); }
+  .morteAcoes { justify-content: stretch; }
+  .morteAcoes button { flex: 1 1 auto; }
+}

@@ -1,0 +1,7 @@
+[21:14:07] [DeathNotes] Newt shot Zeca using their Assault Rifle over a distance of 45.3 meters.
+[21:15:12] [DeathNotes] Zeca was shot by Newt with their Compound Bow over a distance of 12.8 meters.
+[21:15:40] [DeathNotes] Damoniak killed a Boar using their Hunting Bow.
+[21:16:02] [DeathNotes] [ABS] Elchapo slashed Newt into pieces with their Machete.
+[21:17:30] <color=#838383>[<color=#80D000>DeathNotes</color>] <color=#C4FF00>Newt</color> inflamed <color=#C4FF00>Elchapo</color> with their <color=#C4FF00>Flame Thrower</color>.</color>
+[21:18:00] [DeathNotes] A Scientist shot down Zeca.
+[DeathNotes] Zeca killed Damoniak using their Satchel Charge.
