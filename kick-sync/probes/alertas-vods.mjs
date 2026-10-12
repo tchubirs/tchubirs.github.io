@@ -22,7 +22,7 @@ import zlib from 'node:zlib';
 import { medirGraves, explosoes as acharExplosoes } from '../site/explosoes.js';
 import { chao } from '../site/tiros.js';
 import {
-  medirEspectro, assinar, tirarAlertas, treinarPositivo, pontuar, FPS_ESP, BANDAS, TAXA_ESP, POSITIVO,
+  medirEspectro, assinar, tirarAlertas, treinarPositivo, pontuar, ondaDe, FPS_ESP, BANDAS, TAXA_ESP, POSITIVO,
 } from '../site/alertas.js';
 
 const TAXA = TAXA_ESP;
@@ -31,6 +31,9 @@ const pega = (nome) => { const i = args.indexOf(`--${nome}`); if (i < 0) return 
 const saida = pega('saida') || '.';
 const positivoArq = pega('positivo');
 const treinarArq = pega('treinar');
+// --sem-onda: a regra de antes (só o espectro), para comparar com a que também exige a forma de onda repetida.
+const semOnda = args.includes('--sem-onda');
+if (semOnda) args.splice(args.indexOf('--sem-onda'), 1);
 mkdirSync(saida, { recursive: true });
 
 function ler(caminho) {
@@ -98,7 +101,7 @@ for (const arq of args) {
   const som = ler(arq);
   const duracaoS = som.length / TAXA;
   const m = medirGraves(som, TAXA);
-  const achadas = acharExplosoes(m, chao(m.forca));
+  const achadas = acharExplosoes(m, chao(m.forca)).map((e) => ({ ...e, onda: semOnda ? null : ondaDe(som, TAXA, e.inicioS, e.fimS) }));
   const esp = medirEspectro(som, TAXA);
   const r = tirarAlertas(achadas, esp, { positivo });
   const so = tirarAlertas(achadas, esp, { positivo: null });
@@ -110,7 +113,7 @@ for (const arq of args) {
     const grupo = r.grupos.findIndex((g) => g.indices.includes(i));
     const nota = positivo && a ? pontuar(a, positivo.modelo).toFixed(2) : ' -- ';
     console.log(`   ${relogio(e.picoS)}  ${e.duracaoS.toFixed(1).padStart(4)}s ${e.pico.toFixed(0).padStart(5)}x  ${a ? a.plano.toFixed(2) : ' -- '}  ${nota}   `
-      + `${fora ? `SAI (${fora.porque}, grupo ${grupo}${fora.repeticoes ? `, ${fora.repeticoes} repetições, semelhança ${fora.semelhanca.toFixed(2)}` : ''})` : 'fica'}`
+      + `${fora ? `SAI (${fora.porque}, grupo ${grupo}${fora.repeticoes ? `, ${fora.repeticoes} repetições, semelhança ${fora.semelhanca.toFixed(2)}${fora.onda != null ? `, onda ${fora.onda.toFixed(2)}` : ''}` : ''})` : 'fica'}`
       + (!fora && grupo >= 0 && r.grupos[grupo].indices.length > 1 ? `  [grupo ${grupo}: ${r.grupos[grupo].indices.length} parecidas, semelhança ${r.grupos[grupo].media.toFixed(2)}, plano ${r.grupos[grupo].plano.toFixed(2)}]` : ''));
   });
   // amostras dos alertas aprendidos

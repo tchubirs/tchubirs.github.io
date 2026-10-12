@@ -20,6 +20,7 @@ import { varrerNoite } from './procurar-momentos.js';
 import { somDoCanal } from './alinhar.js';
 import { TAXA_TIROS } from './tiros.js';
 import { alertasDoCanal } from './alertas.js';
+import { montarIndice, chaveDoIndice, indiceValido } from './indice.js';
 import { janelasDosPicos, estimarFalta, tempoFalta } from './ouvir.js';
 import { onde } from './relogio.js';
 import { abrirQuadrosEscondidos } from './rosto.js';
@@ -46,8 +47,11 @@ let bancoDeFotos = null;
 function banco() {
   bancoDeFotos ??= new Promise((ok) => {
     try {
-      const r = indexedDB.open('povix-simples', 1);
-      r.onupgradeneeded = () => r.result.createObjectStore('fotos');
+      // Versão 2: o índice de cada live (indice.js) vai numa loja ao lado das imagens.
+      const r = indexedDB.open('povix-simples', 2);
+      r.onupgradeneeded = () => {
+        for (const loja of ['fotos', 'indices']) if (!r.result.objectStoreNames.contains(loja)) r.result.createObjectStore(loja);
+      };
       r.onsuccess = () => ok(r.result);
       r.onerror = () => ok(null);
       r.onblocked = () => ok(null);
@@ -55,14 +59,14 @@ function banco() {
   });
   return bancoDeFotos;
 }
-/** Uma operação no banco das imagens; sem banco (janela privada) é como se não houvesse imagens. */
-async function nasFotos(modo, fazer, seNao) {
+/** Uma operação numa loja do banco; sem banco (janela privada) é como se não houvesse nada guardado. */
+async function naLoja(loja, modo, fazer, seNao) {
   const db = await banco();
   if (!db) return seNao;
   return new Promise((ok) => {
     try {
-      const tx = db.transaction('fotos', modo);
-      const r = fazer(tx.objectStore('fotos'));
+      const tx = db.transaction(loja, modo);
+      const r = fazer(tx.objectStore(loja));
       tx.oncomplete = () => ok(r?.result ?? seNao);
       tx.onerror = () => ok(seNao);
       tx.onabort = () => ok(seNao);
@@ -70,6 +74,14 @@ async function nasFotos(modo, fazer, seNao) {
   });
 }
 const faixaDe = (prefixo) => IDBKeyRange.bound(prefixo, `${prefixo}\uffff`);
+const nasFotos = (modo, fazer, seNao) => naLoja('fotos', modo, fazer, seNao);
+/** O índice de uma live (indice.js): de uma passada de análise, para consultar sem ouvir de novo. */
+const guardarIndice = (indice) => naLoja('indices', 'readwrite', (s) => s.put(indice, chaveDoIndice(indice.slug, indice.inicio)), null);
+const tirarIndice = (v) => naLoja('indices', 'readwrite', (s) => s.delete(chaveDoIndice(v.slug, v.inicio)), null);
+export const lerIndice = async (slug, inicio) => {
+  const i = await naLoja('indices', 'readonly', (s) => s.get(chaveDoIndice(slug, inicio)), null);
+  return indiceValido(i) ? i : null;
+};
 /** As imagens lembradas de um vídeo: Map chave-do-cartão -> data URL. */
 async function fotosGuardadas(prefixo) {
   const mapa = new Map();
@@ -166,8 +178,12 @@ export function motivoEmPalavras(m) {
   // Uma morte do servidor (ou achada na tela de morte) diz quem matou quem, e o tiroteio vira o lugar dela.
   const morte = m.mortes?.[0];
   const noTiroteio = Boolean(morte) && m.tipos.includes('tiros');
+  // Com acerto confirmado pelo som do jogo, o tiroteio é um PvP, e a frase diz quantos acertos (e quantos na cabeça).
+  const pvp = m.acertos > 0 && !noTiroteio;
   const partes = ['chat', 'tiros', 'explosao', 'grito'].filter((x) => m.tipos.includes(x) && !(noTiroteio && x === 'tiros'))
-    .map((x) => t(`simples.motivo.${x}`));
+    .map((x) => (x === 'tiros' && pvp
+      ? t(m.cabecas > 0 ? 'simples.motivo.pvpAcertosCabeca' : 'simples.motivo.pvpAcertos', { n: m.acertos, c: m.cabecas })
+      : t(`simples.motivo.${x}`)));
   if (morte) {
     const mais = m.mortes.length - 1;
     const quem = morte.matador ? t(noTiroteio ? 'simples.motivo.matouNoTiroteio' : 'simples.motivo.matou', morte)
@@ -193,7 +209,7 @@ export function quemEstavaNoLance(m) {
 /** A palavra do nome do arquivo: o que aconteceu de mais forte. */
 function palavraDoArquivo(m) {
   const tipo = ['tiros', 'explosao', 'grito', 'chat'].find((x) => m.tipos.includes(x)) || 'chat';
-  return t(`simples.arquivo.${tipo}`);
+  return t(tipo === 'tiros' && m.acertos > 0 ? 'simples.arquivo.pvp' : `simples.arquivo.${tipo}`);
 }
 
 // Os ícones do player da prévia: brancos, sem caixa (o CSS pinta com currentColor).
@@ -635,10 +651,11 @@ export function montarSimples(ponte) {
     // O que já se achou deste vídeo (o chat) não se refaz; o que se acha agora fica lembrado, passo a passo.
     const chatGuardado = Array.isArray(guardado?.picos);
     const lembrar = (mais) => {
-      for (const s of guardarVod(armazem, { slug, inicio: linha.inicio, ateMs: vivo.ateMs, ...mais })) tirarFotos(prefixoDe(s));
+      for (const s of guardarVod(armazem, { slug, inicio: linha.inicio, ateMs: vivo.ateMs, ...mais })) { tirarFotos(prefixoDe(s)); tirarIndice(s); }
     };
+    let lutas = [];
     const refazer = () => {
-      ultimos = montarLista({ picos, sons, mensagens, limites: vivo, quantos: 60 }).map((m) => ({ ...m, canal: slug }));
+      ultimos = montarLista({ picos, sons, mensagens, limites: vivo, quantos: 60, lutas }).map((m) => ({ ...m, canal: slug }));
       pintarLista();
       fotografar();
     };
@@ -705,7 +722,8 @@ export function montarSimples(ponte) {
           nudgeMs: ponte.estado.nudges[slug] || 0,
           sinal: somControlo.signal,
           memoria: ponte.estado.somOuvido,
-          filtros: { tiros: true, explosoes: true, gritos: false },
+          // O índice leva tudo (gritos e acertos também): o que a lista mostra é só uma consulta dele.
+          filtros: { tiros: true, explosoes: true, gritos: true, acertos: true },
           alertas: alertasDoCanal(slug),
           lerSom: (l, quandoMs, duracaoS, opcoes) => somDoCanal(l, quandoMs, duracaoS, { ...opcoes, taxa: TAXA_TIROS }),
           aoProgresso: (x) => {
@@ -721,6 +739,9 @@ export function montarSimples(ponte) {
           ...(r.candidatos || []).map((c) => ({ ...c, tipo: 'tiros' })),
           ...(r.explosoes || []).map((c) => ({ ...c, tipo: 'explosao' })),
         ];
+        const indice = montarIndice({ slug, inicioMs: linha.inicio, fimMs: vivo.ateMs, som: r, picos });
+        lutas = indice.lutas;
+        guardarIndice(indice);
         somFeito = true;
         avisar(tocaVideo ? '' : t('simples.abraNoChrome'));
       } catch (x) {
@@ -732,7 +753,7 @@ export function montarSimples(ponte) {
         sinal.removeEventListener('abort', pararSom);
       }
       refazer();
-      if (somFeito && chatFeito) lembrar({ completo: true, lista: ultimos });
+      if (somFeito && chatFeito) lembrar({ completo: true, lista: ultimos, indiceV: 1 });
       const n = queridos().length;
       dizer(n ? tn(n, 'simples.prontoUm', 'simples.pronto', { n }) : t('simples.nada'), false);
       $('simplesRefazer').hidden = false;

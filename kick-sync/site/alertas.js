@@ -48,11 +48,17 @@ export const PADROES = {
   tonalForte: 0.2,
   repetidoTonal: 0.85,
   lembradoTonal: 0.85,
+  // A forma de onda também tem que se repetir: um alerta toca o MESMO clipe, uma explosão não. Medido com o som do
+  // dono (live do tchubi, 08/10, os 2 alertas do mesmo sub, banda de 80 a 4000 Hz, folga de 0,5 s): 0,49. Os 16
+  // sons do crreg que a regra do espectro tirava (e que parecem explosões de raid): mediana 0,20, que é o chão do
+  // ruído (duas coisas sem relação dão 0,15 a 0,25). O corte fica entre os dois. Sem a forma de onda (som não
+  // guardado) vale só o espectro, como antes.
+  ondaMin: 0.35,
 };
 
 // ── o espectro ──────────────────────────────────────────────────────────────
 
-function fft(re, im) {
+export function fft(re, im) {
   const n = re.length;
   for (let i = 1, j = 0; i < n; i++) {
     let bit = n >> 1;
@@ -227,13 +233,96 @@ export function semelhanca(a, b) {
   return Math.max(correlacao(a, b, 0), correlacao(a, b, 1), correlacao(a, b, -1));
 }
 
+// ── a forma de onda de um som achado ────────────────────────────────────────
+
+export const TAXA_ONDA = 6000;
+const MAX_ONDA_S = 3.5;
+const FOLGA_ONDA_S = 0.5;
+
+/**
+ * Um pedaço do som para comparar a forma de onda de dois sons parecidos: de `inicioS` a `fimS` (mais 0,3 s antes e
+ * 0,5 s depois, no máximo 3,5 s), a 6 kHz (média de 4 amostras, que é também o passa-baixas) e sem o que está
+ * abaixo de uns 80 Hz (menos a média móvel de 12 ms). 84 KB por som: guarda-se só dos sons que podem ser explosão.
+ */
+export function ondaDe(amostras, taxa, inicioS, fimS) {
+  const de = Math.max(0, Math.floor((inicioS - 0.3) * taxa));
+  const ate = Math.min(amostras.length, de + Math.round(Math.min(MAX_ONDA_S, fimS - inicioS + 0.8) * taxa));
+  const passo = Math.max(1, Math.round(taxa / TAXA_ONDA));
+  const n = Math.floor((ate - de) / passo);
+  if (n < 256) return null;
+  const v = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    let s = 0;
+    for (let k = 0; k < passo; k++) s += amostras[de + i * passo + k];
+    v[i] = s / passo;
+  }
+  const j = Math.round(0.012 * TAXA_ONDA);
+  const cum = new Float64Array(n + 1);
+  for (let i = 0; i < n; i++) cum[i + 1] = cum[i] + v[i];
+  const saida = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const a = Math.max(0, i - j);
+    const z = Math.min(n, i + j + 1);
+    saida[i] = v[i] - (cum[z] - cum[a]) / (z - a);
+  }
+  return { v: saida, t0S: de / taxa };
+}
+
+/**
+ * O quanto a forma de onda de dois sons se parece, de 0 a 1: a melhor correlação em módulo com até 0,5 s de folga
+ * (a detecção corta o começo de cada um ao sabor do volume). Duas coisas sem relação dão 0,15 a 0,25; o mesmo clipe
+ * por cima de fundos diferentes, 0,4 a 0,6; um sem mistura, 0,9. Sem onda em um dos dois: null.
+ */
+export function semelhancaOnda(a, b) {
+  if (!a?.v || !b?.v) return null;
+  const n = Math.min(a.v.length, b.v.length);
+  if (n < 256) return null;
+  let N = 1;
+  while (N < 2 * n) N <<= 1;
+  const ar = new Float64Array(N);
+  const ai = new Float64Array(N);
+  const br = new Float64Array(N);
+  const bi = new Float64Array(N);
+  let na = 0;
+  let nb = 0;
+  for (let i = 0; i < n; i++) { ar[i] = a.v[i]; br[i] = b.v[i]; na += ar[i] * ar[i]; nb += br[i] * br[i]; }
+  if (!(na > 0 && nb > 0)) return null;
+  fft(ar, ai);
+  fft(br, bi);
+  // A * conj(B); a inversa sai da mesma fft, conjugando a entrada e a saída.
+  for (let i = 0; i < N; i++) {
+    const re = ar[i] * br[i] + ai[i] * bi[i];
+    const im = ai[i] * br[i] - ar[i] * bi[i];
+    ar[i] = re; ai[i] = -im;
+  }
+  fft(ar, ai);
+  const folga = Math.min(n - 1, Math.round(FOLGA_ONDA_S * TAXA_ONDA));
+  let melhor = 0;
+  for (let l = -folga; l <= folga; l++) melhor = Math.max(melhor, Math.abs(ar[(l + N) % N]) / N);
+  return melhor / Math.sqrt(na * nb);
+}
+
+/** A mediana da semelhança de onda entre os pares do grupo que têm onda, ou null se nenhum par tem. */
+function ondaDoGrupo(indices, ondas) {
+  const v = [];
+  for (let x = 0; x < indices.length; x++) {
+    for (let y = x + 1; y < indices.length; y++) {
+      const c = semelhancaOnda(ondas[indices[x]], ondas[indices[y]]);
+      if (c !== null) v.push(c);
+    }
+  }
+  if (!v.length) return null;
+  v.sort((p, q) => p - q);
+  return v[Math.floor(v.length / 2)];
+}
+
 // ── aprender o que se repete ────────────────────────────────────────────────
 
 /**
  * Agrupa as assinaturas (pela ordem em que vêm) e diz quais grupos são alertas.
  * Devolve `{ grupos: [{ indices, media, plano, alerta, modelo }], dosAlertas: Set<índice> }`.
  */
-export function aprender(assinaturas, opcoes = {}) {
+export function aprender(assinaturas, opcoes = {}, ondas = []) {
   const o = { ...PADROES, ...opcoes };
   const grupos = [];
   const sims = [];
@@ -263,6 +352,10 @@ export function aprender(assinaturas, opcoes = {}) {
     g.alerta = (k >= o.nRepete && g.media >= o.repetido && g.plano <= o.tonalMax)
       || (k >= 2 && g.media >= o.identico && g.plano <= o.tonalIdentico)
       || (k >= 2 && g.media >= o.repetidoTonal && g.plano <= o.tonalForte);
+    g.onda = ondaDoGrupo(g.indices, ondas);
+    g.pelaOnda = false;
+    // Parecido no espectro, mas a forma de onda não se repete: não é o mesmo clipe, é som parecido (explosões).
+    if (g.alerta && g.onda !== null && g.onda < o.ondaMin) { g.alerta = false; g.pelaOnda = true; }
     if (g.alerta) {
       // O modelo é o membro mais parecido com os outros.
       let melhorI = g.indices[0];
@@ -289,13 +382,15 @@ export function tirarAlertas(achados, esp, { lembrados = [], opcoes = {}, positi
   const o = { ...PADROES, ...opcoes };
   if (!achados.length || !esp?.plano?.length) return { mantidos: [...achados], removidos: [], novos: [], grupos: [] };
   const ass = achados.map((e) => assinar(esp, e.inicioS, e.fimS));
-  const { grupos, dosAlertas } = aprender(ass, opcoes);
+  const { grupos, dosAlertas } = aprender(ass, opcoes, achados.map((e) => e.onda || null));
   const mantidos = [];
   const removidos = [];
   achados.forEach((e, i) => {
     if (dosAlertas.has(i)) {
       const g = grupos.findIndex((x) => x.indices.includes(i));
-      removidos.push({ ...e, porque: 'repete', grupo: g, repeticoes: grupos[g].indices.length, semelhanca: grupos[g].media });
+      removidos.push({
+        ...e, porque: 'repete', grupo: g, repeticoes: grupos[g].indices.length, semelhanca: grupos[g].media, onda: grupos[g].onda,
+      });
       return;
     }
     let casou = -1;
@@ -308,6 +403,8 @@ export function tirarAlertas(achados, esp, { lembrados = [], opcoes = {}, positi
     if (positivo?.modelo && ass[i]) {
       const nota = pontuar(ass[i], positivo.modelo);
       if (nota < (positivo.minimo ?? 0.05)) { removidos.push({ ...e, porque: 'nao-parece-explosao', nota }); return; }
+      mantidos.push({ ...e, nota });
+      return;
     }
     mantidos.push(e);
   });

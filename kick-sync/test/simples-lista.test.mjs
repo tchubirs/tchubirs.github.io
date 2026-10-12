@@ -212,3 +212,10 @@ test('o último vídeo visto vai e volta, e Começar de novo apaga; armazenament
   sujo.setItem('povix.simplesVods', '{nao e lista');
   assert.deepEqual(lerVods(sujo), []);
 });
+
+test('com acerto confirmado pelo som do jogo, o motivo diz PvP e quantos acertos (e quantos na cabeça)', () => {
+  assert.equal(motivoEmPalavras({ tipos: ['tiros'], acertos: 0 }), 'Teve tiroteio');
+  assert.equal(motivoEmPalavras({ tipos: ['tiros', 'acerto'], acertos: 5, cabecas: 0 }), 'Teve PvP, 5 acertos');
+  assert.equal(motivoEmPalavras({ tipos: ['tiros', 'acerto'], acertos: 5, cabecas: 2 }), 'Teve PvP, 5 acertos e 2 na cabeça');
+  assert.equal(motivoEmPalavras({ tipos: ['tiros', 'acerto', 'chat'], acertos: 3, cabecas: 0 }), 'O chat explodiu e teve PvP, 3 acertos');
+});

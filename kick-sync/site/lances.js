@@ -45,6 +45,7 @@ export function juntarProximos(achados, juntarMs = 0) {
       antes.combateDeMs = Math.min(antes.combateDeMs ?? antes.ms, de);
       antes.combateAteMs = Math.max(antes.combateAteMs ?? antes.ms, ate);
       if (!antes.tipos.includes(c.tipo)) antes.tipos.push(c.tipo);
+      if (c.acertos) { antes.acertos = (antes.acertos || 0) + c.acertos; antes.cabecas = (antes.cabecas || 0) + (c.cabecas || 0); }
       if (c.palavras?.length) antes.palavras = [...new Set([...(antes.palavras || []), ...c.palavras])];
       antes.juntos += 1;
       continue;

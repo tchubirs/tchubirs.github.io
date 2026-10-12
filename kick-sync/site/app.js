@@ -3445,7 +3445,7 @@ function contagemPorTipo(conta) {
 /** O tipo de um momento achado pela detecção, como aparece na lista. */
 function rotuloDoTipo(m) {
   if (m.tipos?.length > 1) return m.tipos.map((tipo) => rotuloDoTipo({ ...m, tipos: null, tipo })).join(', ');
-  if (m.tipo === 'tiros') return t('filtros.tipoTiros');
+  if (m.tipo === 'tiros') return m.acertos > 0 ? t('filtros.tipoPvp', { n: m.acertos }) : t('filtros.tipoTiros');
   if (m.tipo === 'explosao') return t('filtros.tipoExplosao');
   if (m.tipo === 'grito') return t('filtros.tipoGrito');
   if (m.tipo === 'chat') return t('filtros.tipoChat', { palavras: (m.palavras || []).join(', ') });
@@ -3653,7 +3653,8 @@ async function detetar(quem, quanto, { resto = false } = {}) {
           nudgeMs: estado.nudges[canal] || 0,
           sinal: controlo.signal,
           memoria: estado.somOuvido,
-          filtros: { tiros: filtros.tiros, explosoes: filtros.explosoes, gritos: filtros.gritos },
+          // Os sons de acerto do jogo só entram com os tiros: marcam o tiroteio que é PvP (acertou um jogador).
+          filtros: { tiros: filtros.tiros, explosoes: filtros.explosoes, gritos: filtros.gritos, acertos: filtros.tiros },
           opcoes: opcoesDaSensibilidade(filtros.sens),
           alertas: alertasDoCanal(canal),
           // 24 kHz, e nao os 8 do alinhamento: o tiro vive no agudo.
@@ -3682,7 +3683,10 @@ async function detetar(quem, quanto, { resto = false } = {}) {
         for (const e of r.estouros || []) estouros.push(e.canal ? e : { ...e, canal });
         falhados += r.falhados || 0;
         ouvido = r.ouvido || ouvido;
-        for (const c of r.candidatos || []) doCanal.push({ ...c, canal, tipo: 'tiros' });
+        for (const c of r.candidatos || []) {
+          const hs = (r.acertos || []).filter((a) => a.ms >= c.combateDeMs - 1500 && a.ms <= c.combateAteMs + 1500);
+          doCanal.push({ ...c, canal, tipo: 'tiros', ...(hs.length ? { acertos: hs.length, cabecas: hs.filter((a) => a.tipo === 'cabeca').length } : {}) });
+        }
         for (const c of r.explosoes || []) doCanal.push({ ...c, canal, tipo: 'explosao' });
         for (const c of r.gritos || []) doCanal.push({ ...c, canal, tipo: 'grito' });
       }
@@ -3745,6 +3749,7 @@ async function detetar(quem, quanto, { resto = false } = {}) {
           ...tamanhos(), auto: true, tipo: c.tipo,
           ...(c.tipos?.length > 1 ? { tipos: c.tipos } : {}),
           ...(c.tipo === 'tiros' ? { tiros: c.tiros } : {}),
+          ...(c.tipo === 'tiros' && c.acertos ? { acertos: c.acertos, cabecas: c.cabecas } : {}),
           ...(c.tipo === 'chat' ? { palavras: c.palavras } : {}),
           combateDeMs: c.combateDeMs, combateAteMs: c.combateAteMs,
         }),

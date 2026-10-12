@@ -4,7 +4,8 @@ import {
 import { recortar } from './aprender.js';
 import { juntar as juntarIntervalos } from './ouvir.js';
 import { medirGraves, explosoes as acharExplosoes, FPS as FPS_EXPLOSOES } from './explosoes.js';
-import { medirEspectro, cortarEsp, colarEsp, tirarAlertas, FPS_ESP } from './alertas.js';
+import { medirAcertos, confirmarAcertos } from './acertos.js';
+import { medirEspectro, cortarEsp, colarEsp, tirarAlertas, ondaDe, FPS_ESP } from './alertas.js';
 import { medirVoz, gritos as acharGritos, normalDaVoz, FPS as FPS_GRITOS } from './gritos.js';
 
 // Achar as kills sozinho — pela forca do som.
@@ -109,8 +110,25 @@ function tamanhoDe(entrada) {
   somar(entrada.graves);
   somar(entrada.esp);
   somar(entrada.voz);
+  for (const c of entrada.acertos || []) n += c.trecho.byteLength + 32;
+  for (const o of entrada.ondas || []) n += o.onda.v.byteLength + 24;
   for (const c of entrada.recortes || []) n += c.recorte.byteLength + 24;
   return n;
+}
+
+/**
+ * A forma de onda dos sons de um bocado que podem ser explosão (a regra do alerta compara a forma de onda de sons
+ * parecidos: o mesmo clipe se repete, uma explosão não). O chão ainda não é o da noite, então a altura mínima é mais
+ * baixa e ficam só os 12 mais fortes do bocado; o som em si não se guarda, só 3,5 s de cada a 6 kHz.
+ */
+function ondasDosSons(som, taxa, graves) {
+  const piso = chao(graves.forca);
+  const saida = [];
+  for (const e of acharExplosoes(graves, piso, { alturaMin: 6 }).sort((a, b) => b.pico - a.pico).slice(0, 12)) {
+    const onda = ondaDe(som, taxa, e.inicioS, e.fimS);
+    if (onda) saida.push({ iniS: e.inicioS, onda });
+  }
+  return saida;
 }
 
 /** Guardar uma entrada, e tirar as mais antigas (de qualquer canal) quando passa do tecto. */
@@ -162,6 +180,8 @@ export async function varrerNoite({
   const querTiros = filtros?.tiros !== false;
   const querExplosoes = Boolean(filtros?.explosoes);
   const querGritos = Boolean(filtros?.gritos);
+  // Os sons de acerto do jogo (o estalo de acertar um jogador): confirmam que o tiro foi em gente (acertos.js).
+  const querAcertos = Boolean(filtros?.acertos);
   // Os alertas da live (sub, follow, doação) soam como explosão: precisam do espectro de cada bocado.
   const querAlertas = querExplosoes && Boolean(alertas);
   const partes = [];
@@ -194,7 +214,7 @@ export async function varrerNoite({
 
   // O que a memoria ja tem deste canal, com as medidas que agora se pedem.
   const slug = linha?.slug ?? '';
-  const serve = (e) => (!querTiros || e.env) && (!querExplosoes || e.graves) && (!querAlertas || e.esp) && (!querGritos || e.voz);
+  const serve = (e) => (!querTiros || e.env) && (!querExplosoes || e.graves) && (!querAlertas || e.esp) && (!querGritos || e.voz) && (!querAcertos || e.acertos);
   const guardadas = (memoria?.get(slug) || []).filter(serve);
   const cobertos = juntarIntervalos(guardadas.map((e) => [e.de - nudgeMs, e.ate - nudgeMs]));
 
@@ -226,7 +246,15 @@ export async function varrerNoite({
     const f10 = Math.round(((Math.min(b, e.ate - nudgeMs) - t0) / 1000) * FPS_EXPLOSOES);
     if (querExplosoes) parte.graves = cortarMedida(e.graves, i10, f10);
     if (querAlertas) parte.esp = cortarEsp(e.esp, Math.round(i10 * FPS_ESP / FPS_EXPLOSOES), Math.round(f10 * FPS_ESP / FPS_EXPLOSOES));
+    if (querAlertas) {
+      const fim = Math.min(b, e.ate - nudgeMs);
+      parte.ondas = (e.ondas || []).map((o) => ({ iniMs: t0 + o.iniS * 1000, onda: o.onda })).filter((o) => o.iniMs >= de && o.iniMs < fim);
+    }
     if (querGritos) parte.voz = cortarMedida(e.voz, Math.round(i10 * FPS_GRITOS / FPS_EXPLOSOES), Math.round(f10 * FPS_GRITOS / FPS_EXPLOSOES));
+    if (querAcertos) {
+      const fimA = Math.min(b, e.ate - nudgeMs);
+      parte.acertos = (e.acertos || []).map((c) => ({ ...c, ms: t0 + c.s * 1000 })).filter((c) => c.ms >= de && c.ms < fimA);
+    }
     partes.push(parte);
     if (querTiros && e.env) {
       meterNoPoco(parte, (e.recortes || [])
@@ -309,8 +337,9 @@ export async function varrerNoite({
           e.recortes = recortesDe(e.env, som, taxaSom, opcoes);
         }
         if (querExplosoes) e.graves = medirGraves(som, taxaSom);
-        if (querAlertas) e.esp = medirEspectro(som, taxaSom);
+        if (querAlertas) { e.esp = medirEspectro(som, taxaSom); e.ondas = ondasDosSons(som, taxaSom, e.graves); }
         if (querGritos) e.voz = medirVoz(som, taxaSom);
+        if (querAcertos) e.acertos = medirAcertos(som, taxaSom);
         som = null;
         usar(e, t, fimT);
         if (memoria) guardarNaMemoria(memoria, slug, e);
@@ -339,20 +368,37 @@ export async function varrerNoite({
   // Tirar o que é alerta (repete na live ou o canal já conhecia). Fica dito o que saiu e porquê.
   let alertasFora = [];
   if (querAlertas && explosoesBrutas.length) {
-    const r = tirarAlertas(explosoesBrutas, colarEsp(partes, deMs, ateMs), { lembrados: alertas.lembrados || [], positivo: alertas.positivo });
-    explosoesBrutas = r.mantidos;
-    alertasFora = r.removidos.map((x) => ({ ms: Math.round(deMs + x.picoS * 1000), porque: x.porque, grupo: x.grupo }));
+    // A forma de onda de cada explosão: a do som guardado que começa mais perto dela (até 1,2 s).
+    const ondas = partes.flatMap((p) => p.ondas || []);
+    const comOnda = explosoesBrutas.map((x) => {
+      const ini = deMs + x.inicioS * 1000;
+      let melhor = null;
+      for (const o of ondas) if (Math.abs(o.iniMs - ini) < 1200 && (!melhor || Math.abs(o.iniMs - ini) < Math.abs(melhor.iniMs - ini))) melhor = o;
+      return melhor ? { ...x, onda: melhor.onda } : x;
+    });
+    const r = tirarAlertas(comOnda, colarEsp(partes, deMs, ateMs), { lembrados: alertas.lembrados || [], positivo: alertas.positivo });
+    explosoesBrutas = r.mantidos.map(({ onda, ...x }) => x);
+    alertasFora = r.removidos.map((x) => ({
+      ms: Math.round(deMs + x.picoS * 1000), porque: x.porque, grupo: x.grupo, semelhanca: x.semelhanca, onda: x.onda, nota: x.nota,
+    }));
     if (r.novos.length) alertas.aoAprender?.(r.novos);
   }
+  // Os acertos: só valem os modelos que se repetem (ver acertos.js); sem repetição não há nenhum, e a lista segue sem eles.
+  const { acertos, modelos: modelosAcerto } = querAcertos
+    ? confirmarAcertos(partes.flatMap((p) => p.acertos || []))
+    : { acertos: [], modelos: [] };
   const explosoes = paraOMomento(explosoesBrutas, deMs, limite);
-  const gritos = !querGritos ? [] : paraOMomento(acharGritos(
+  const explosoesTodas = paraOMomento(explosoesBrutas, deMs, Infinity);
+  const gritosBrutos = !querGritos ? [] : acharGritos(
     colar(partes, 'voz', ['forca', 'voz'], deMs, ateMs, FPS_GRITOS),
     normalDaVoz(ouvidosDe(partes, 'voz', 'voz')),
     opcoes.gritos,
-  ), deMs, limite);
+  );
+  const gritos = paraOMomento(gritosBrutos, deMs, limite);
+  const gritosTodos = paraOMomento(gritosBrutos, deMs, Infinity);
   if (!querTiros) {
     return {
-      ouvido: null, candidatos: [], estouros: [], explosoes, alertasFora, gritos, bytes, falhados, curva: new Float32Array(0),
+      ouvido: null, candidatos: [], estouros: [], explosoes, explosoesTodas, alertasFora, gritos, gritosTodos, acertos, modelosAcerto, bytes, falhados, curva: new Float32Array(0),
       cobertura: juntarIntervalos(prontos), reaproveitadoMs,
     };
   }
@@ -397,7 +443,8 @@ export async function varrerNoite({
   // Os bocados que estiveram altos e ASSIM FICARAM, ordenados pelo tempo
   // quente. Ver `regioes` em `tiros.js` para a medicao que matou a procura
   // por impulsos soltos: o tiroteio verdadeiro dele dava ZERO com ela.
-  const achadas = regioes(tudo, piso, opcoes).slice(0, limite);
+  const todasAsRegioes = regioes(tudo, piso, opcoes);
+  const achadas = todasAsRegioes.slice(0, limite);
 
   // O que se ouviu, para quando nao se achou nada.
   //
@@ -405,6 +452,25 @@ export async function varrerNoite({
   // "nenhum tiroteio nesse intervalo", que e a mesma coisa que nao dizer nada.
   const dos = impulsos(tudo, piso, { brilhos, ...opcoes });
   const semBrilho = impulsos(tudo, piso, { ...opcoes, brilhos: null });
+  // As medidas de cada região para o índice da live (indice.js): quantos impulsos (e quantos bem altos) caem nela e
+  // quanto do som é voz. Sem o corte por hora: o índice guarda tudo e quem consulta decide o que mostrar.
+  const vozColada = querGritos ? colar(partes, 'voz', ['forca', 'voz'], deMs, ateMs, FPS_GRITOS) : null;
+  const medidasDe = (g) => {
+    const de = g.inicioS * FPS;
+    const ate = g.fimS * FPS;
+    let nImp = 0;
+    let nAltos = 0;
+    for (const i of semBrilho) if (i.bloco >= de && i.bloco <= ate) { nImp++; if (i.altura >= 30) nAltos++; }
+    let vozMed = null;
+    if (vozColada) {
+      const r = [];
+      for (let b = Math.round(g.inicioS * FPS_GRITOS); b < Math.round(g.fimS * FPS_GRITOS) && b < vozColada.forca.length; b++) r.push(vozColada.voz[b] / (vozColada.forca[b] + 1e-9));
+      r.sort((a, b) => a - b);
+      if (r.length) vozMed = Math.round(r[Math.floor(r.length / 2)] * 100) / 100;
+    }
+    return { nImp, nAltos, vozMed };
+  };
+  const comMedidas = (g) => ({ ...g, ...medidasDe(g) });
   const ouvido = {
     altos: semBrilho.length,
     chumbados: semBrilho.length - dos.length,
@@ -413,30 +479,42 @@ export async function varrerNoite({
   };
   return {
     ouvido,
-    candidatos: achadas.map((g) => ({
-      // O instante e o do som MAIS ALTO da regiao. E ai que a coisa acontece —
-      // "quando ocorre um acerto na cabeca, o som e muito alto" — e e esse o
-      // frame que o "quem morreu" tem de ver.
-      ms: Math.round(deMs + g.picoS * 1000),
-      // E o clipe e a regiao inteira: do momento em que aquilo comecou a ser
-      // alto ate ao momento em que arrefeceu. No tiroteio verdadeiro dele isso
-      // da 219,4 s a 226,0 s — comeca antes do primeiro tiro que se ouve e
-      // acaba depois de ele morrer, aos 222.
-      combateDeMs: Math.round(deMs + g.inicioS * 1000),
-      combateAteMs: Math.round(deMs + Math.max(g.fimS, g.inicioS + 2) * 1000),
-      tiros: Math.round(g.quenteS * 10) / 10,
-      pico: g.pico,
-      duracaoS: g.fimS - g.inicioS,
-    })),
+    // Todas as regiões, sem o corte por hora, para o índice (indice.js).
+    candidatosTodos: todasAsRegioes.map((g) => paraCandidato(g, deMs, medidasDe(g))),
+    candidatos: achadas.map((g) => paraCandidato(g, deMs, medidasDe(g))),
     estouros,
     explosoes,
+    explosoesTodas,
     alertasFora,
     gritos,
+    gritosTodos,
+    acertos,
+    modelosAcerto,
     bytes,
     falhados,
     curva: tudo,
     cobertura: juntarIntervalos(prontos),
     reaproveitadoMs,
+  };
+}
+
+/**
+ * Uma região de som alto como candidato da lista.
+ *
+ * O instante é o do som MAIS ALTO da região: é aí que a coisa acontece ("quando ocorre um acerto na cabeça, o som é
+ * muito alto") e é esse o frame que o "quem morreu" tem de ver. O clipe é a região inteira: do momento em que aquilo
+ * começou a ser alto até ao momento em que arrefeceu (no tiroteio verdadeiro dele, 219,4 s a 226,0 s: começa antes do
+ * primeiro tiro que se ouve e acaba depois de ele morrer, aos 222). `medidas` (impulsos, voz) vão para o índice.
+ */
+function paraCandidato(g, deMs, medidas = {}) {
+  return {
+    ms: Math.round(deMs + g.picoS * 1000),
+    combateDeMs: Math.round(deMs + g.inicioS * 1000),
+    combateAteMs: Math.round(deMs + Math.max(g.fimS, g.inicioS + 2) * 1000),
+    tiros: Math.round(g.quenteS * 10) / 10,
+    pico: g.pico,
+    duracaoS: g.fimS - g.inicioS,
+    ...medidas,
   };
 }
 
@@ -482,6 +560,7 @@ function paraOMomento(achados, deMs, limite) {
       combateAteMs: Math.round(deMs + Math.max(g.fimS, g.inicioS + 2) * 1000),
       pico: g.pico,
       duracaoS: g.duracaoS,
+      ...(g.nota != null ? { nota: g.nota } : {}),
     }));
 }
 

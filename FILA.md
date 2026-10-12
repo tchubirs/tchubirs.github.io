@@ -550,6 +550,12 @@ pedra, árvore). Só vetores vão para o git; os WAV ficam fora.
   desliga sem mexer em mais nada.
 - Demucs (htdemucs, 80 MB, PyTorch CPU): 0,12 a 0,20 s de CPU por segundo de áudio com 16 núcleos. Não testado a legenda.
 
+### Sons de acerto, índice por live, lutas e alerta do crreg (13/10)
+- Pronto:  (7 modelos do bundle, correlação de forma de onda),  e  (eventos com conf e fonte, lutas, consulta, IndexedDB ), lutas de confiança 0,85 ou mais sem corte na lista simples, tags de acerto no avançado, regra do alerta com forma de onda (ondaMin 0,35). 22 testes novos; sondas em , , .
+- Medido: na live do tchubi (2 h, 266,9 MB baixados) os sons de acerto do Rust NÃO aparecem (0 aceitos; clipe somado a 12 dB abaixo é achado com 0,8 a 0,95), então lutas só pela altura do som: 32 lutas (27 de confiança alta), lista de 23 para 43. As 100 e poucas lutas não saem sem o som de acerto.
+- crreg antes/depois: explosões que ficam 6 para 21 (repetidas tiradas 22 para 0, modelo 8 para 15); par de alertas do tchubi (onda 0,54) continua tirado; corte 0,35 vem de 1 par confirmado.
+- Confiança: tiro e voz vêm de rótulos (8 janelas, 1 live); acerto e explosão de som sintético; alerta, grito e chat estimados. Falta: tela do filtro/precisão, índice no avançado, índices de vídeos antigos, acerto visto em live real, separar farm e voz do tiro fraco.
+
 ## Qualidade da exportação dos clipes (12/10)
 - Feito (`retrato.js`, `chat-clipe.js`, `legenda.js`, `app.js`, `estilo.css`, `index.html`, `idiomas.js`):
   - A gravação do 9:16 e do 16:9 com chat ou legenda usa os fps da playlist da Kick (`FRAME-RATE`, 59.94 vira 60,

@@ -6,6 +6,7 @@
 // picos do chat dele e o que o som dele achou, juntos num momento quando caem a menos de um minuto.
 
 import { lerLinkKick } from './kick.js';
+import { CONF_SEM_CORTE } from './indice.js';
 
 /** O nome de um evento salvo como o arquivo dele: "Abisal" e "abisal" são eventos/abisal.json. */
 export function nomeDeEvento(texto) {
@@ -52,6 +53,10 @@ export const ANTES_MS = 5000;
 export const DEPOIS_MS = 3000;
 export const MAX_CLIPE_MS = 60_000;
 export const MIN_CLIPE_MS = 12_000;
+/** Uma luta (PvP) pode ser mais longa que um momento comum: o indice.js corta a luta em 75 s e o clipe leva as margens. */
+export const MAX_CLIPE_LUTA_MS = 90_000;
+/** O chat e os sons a menos disto da luta entram nela. */
+const MARGEM_LUTA_MS = 30_000;
 /** O chat reage depois do lance: o clipe de um pico do chat começa antes dele. */
 export const CHAT_ANTES_MS = 25_000;
 export const CHAT_DEPOIS_MS = 5000;
@@ -84,10 +89,15 @@ function pontosDe(s) {
  *
  * Cada momento: { ms, deMs, ateMs, tipos: [...], pontos, nota: 'muitoBom' | 'bom' | 'talvez', falha }.
  */
-export function montarLista({ picos = [], sons = [], mensagens = [], limites = null, quantos = QUANTOS } = {}) {
+export function montarLista({
+  picos = [], sons = [], mensagens = [], limites = null, quantos = QUANTOS, lutas = [],
+} = {}) {
+  // As lutas (indice.js) já vêm juntas, uma por luta: levam o que é do chat e dos sons em volta delas e o resto segue.
+  const dasLutas = lutas.map((l) => momentoDeLuta(l, { picos, sons, limites }));
+  const nelas = (s) => lutas.some((l) => s.ms >= l.deMs - MARGEM_LUTA_MS && s.ms <= l.ateMs + MARGEM_LUTA_MS);
   const sinais = [
-    ...picos.filter((p) => Number.isFinite(p.ms)).map((p) => ({ ...p, tipo: 'chat' })),
-    ...sons.filter((s) => Number.isFinite(s.ms)),
+    ...picos.filter((p) => Number.isFinite(p.ms) && !nelas(p)).map((p) => ({ ...p, tipo: 'chat' })),
+    ...sons.filter((s) => Number.isFinite(s.ms) && !nelas(s)),
   ].sort((a, b) => a.ms - b.ms);
   const grupos = [];
   for (const s of sinais) {
@@ -130,10 +140,44 @@ export function montarLista({ picos = [], sons = [], mensagens = [], limites = n
       tiros: Math.max(0, ...ss.map((s) => s.tiros || 0)),
     };
   });
-  lista.sort((a, b) => b.pontos - a.pontos || a.ms - b.ms);
-  return lista.slice(0, quantos).map((m) => ({
+  // O corte (`quantos`) vale para o que não é luta e para a luta que não tem confiança alta; a luta de confiança alta (sobretudo
+  // a que tem acerto confirmado) aparece inteira.
+  const livres = dasLutas.filter((m) => (m.conf ?? 0) >= CONF_SEM_CORTE);
+  const resto = [...lista, ...dasLutas.filter((m) => (m.conf ?? 0) < CONF_SEM_CORTE)];
+  resto.sort((a, b) => b.pontos - a.pontos || a.ms - b.ms);
+  const todos = [...livres, ...resto.slice(0, quantos)];
+  todos.sort((a, b) => b.pontos - a.pontos || a.ms - b.ms);
+  return todos.map((m) => ({
     ...m, nota: m.pontos >= 6 ? 'muitoBom' : m.pontos >= 4 ? 'bom' : 'talvez',
   }));
+}
+
+/**
+ * Uma luta do índice como momento da lista: o clipe vai do começo da luta (menos 5 s) ao fim dela, e leva os
+ * tipos do que caiu em volta (chat, explosão). `acertos` e `cabecas` dizem o que o som de acerto do jogo confirmou.
+ */
+function momentoDeLuta(l, { picos, sons, limites }) {
+  const perto = (s) => s.ms >= l.deMs - MARGEM_LUTA_MS && s.ms <= l.ateMs + MARGEM_LUTA_MS;
+  const doChat = picos.filter((p) => Number.isFinite(p.ms) && perto(p));
+  const explosoes = sons.filter((s) => s.tipo === 'explosao' && perto(s));
+  const tipos = ['tiros'];
+  if (l.acertos > 0) tipos.push('acerto');
+  if (explosoes.length) tipos.push('explosao');
+  if (doChat.length) tipos.push('chat');
+  if (l.mortes > 0) tipos.push('morte');
+  let deMs = l.deMs - ANTES_MS;
+  let ateMs = l.ateMs + DEPOIS_MS;
+  if (ateMs - deMs > MAX_CLIPE_LUTA_MS) ateMs = deMs + MAX_CLIPE_LUTA_MS;
+  if (ateMs - deMs < MIN_CLIPE_MS) { const falta = MIN_CLIPE_MS - (ateMs - deMs); deMs -= falta / 2; ateMs += falta / 2; }
+  if (limites) {
+    if (deMs < limites.deMs) { ateMs += limites.deMs - deMs; deMs = limites.deMs; }
+    if (ateMs > limites.ateMs) { deMs = Math.max(limites.deMs, deMs - (ateMs - limites.ateMs)); ateMs = limites.ateMs; }
+  }
+  return {
+    ms: l.ms, deMs: Math.round(deMs), ateMs: Math.round(ateMs), tipos, falha: false, luta: true, conf: l.conf,
+    pontos: l.pontos + (doChat.length ? 1 : 0) + (explosoes.length ? 1 : 0),
+    tiros: l.tiros, acertos: l.acertos, cabecas: l.cabecas, abates: l.abates,
+  };
 }
 
 // ── o arquivo ─────────────────────────────────────────────────────────────
