@@ -144,7 +144,7 @@ const IGUAIS_DE_PROPOSITO = {
     'tempo.menos5m', 'tempo.menos3s', 'tempo.mais3s', 'tempo.mais5m',
     'montagem.umaKill', 'montagem.kills', 'montagem.marcar',
     // "Exportar retrato" e "A–Z" escrevem-se exactamente assim nas duas.
-    'retrato.exportar', 'grelha.az', 'ajuda.teclaEsc',
+    'grelha.az', 'ajuda.teclaEsc',
     // "{n} de {total}" escreve-se exactamente assim nas duas linguas.
     'grelha.deQuantos',
     'procurar.seguidores', 'noite.umCanal',
@@ -165,10 +165,8 @@ const IGUAIS_DE_PROPOSITO = {
     'filtros.umGrito', 'filtros.gritosN', 'filtros.tipoGrito', 'filtros.sensNormal', 'faixa.detetar',
     'filtros.umMomentoTodos', 'filtros.momentosTodos', 'faixa.quemTodos', 'faixa.quandoTrecho',
     'filtros.juntar5', 'filtros.juntar10', 'filtros.juntar20', 'filtros.juntar30',
-    // "Exportar 16:9" e "Exportar 9:16" sao o mesmo nas duas linguas — e o
-    // numero e a metade que interessa. Ele abriu a janela e nao encontrou a
-    // versao horizontal; agora os dois botoes dizem qual e qual.
-    'clipe.guardar', 'retrato.exportar',
+    // Os passos de meio segundo do editor: "−0,5 s" e "+0,5 s" escrevem-se igual em espanhol.
+    'clipe.passoMenos', 'clipe.passoMais',
     // As escolhas do chat no vídeo: "Automática" e "Grande" escrevem-se igual.
     'chatClipe.posAuto', 'chatClipe.tamG',
     // A legenda: "Estilo", "Turquesa" e os botões de ±0,1 s escrevem-se igual em espanhol.

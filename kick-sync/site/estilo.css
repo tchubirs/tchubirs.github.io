@@ -998,6 +998,10 @@ body.mesa #palco.muitosAngulos #grade .tile .numAngulo { border-color: var(--lin
 .modalTopo select { width: auto; min-width: 150px; }
 .modalTopo button { width: 34px; min-width: 34px; padding: 0; background: transparent; border-color: transparent; color: var(--tinta-2); }
 .modalTopo button:hover { background: var(--sup-3); color: var(--tinta); border-color: transparent; }
+/* O Voltar para a lista tem texto: não cabe nos 34 px do fechar, e partia-se em três linhas. Ganha o espaço dele
+   e a janela do clipe passa a quebrar a linha do topo em vez de apertar. */
+.modalTopo { flex-wrap: wrap; row-gap: var(--e3); }
+.modalTopo button.voltarLista { width: auto; min-width: 0; min-height: 44px; padding: 0 var(--e4); white-space: nowrap; gap: var(--e2); }
 
 /* A linha que TERMINA a tarefa fica presa ao fundo da janela. Numa janela
    que rola — e num telemóvel em pé rola sempre — o Exportar ficava noventa
@@ -1194,18 +1198,26 @@ body.mesa .webcamAchada[hidden] { display: none; }
   background: var(--sup-1); border: 1px solid var(--linha); touch-action: none; cursor: pointer;
 }
 .barraClipe .seleccao { position: absolute; top: 0; bottom: 0; background: var(--marca-eco); border-inline: 1px solid var(--marca-fio); }
+/* Início verde e Fim vermelho, e cada pega com o seu desenho (seta para a frente, quadrado de parar):
+   quem não distingue as cores distingue as formas. */
 .barraClipe .pega {
-  position: absolute; top: 0; bottom: 0; width: 14px; margin: 0; padding: 0; min-height: 0;
-  background: var(--marca); border: 0; border-radius: 0; cursor: ew-resize; z-index: 3;
+  position: absolute; top: 0; bottom: 0; width: 18px; margin: 0; padding: 0; min-height: 0;
+  background: var(--inicio); border: 0; border-radius: 0; cursor: ew-resize; z-index: 3;
 }
-.barraClipe .pega:hover { background: var(--marca-alto); }
+.barraClipe .pega.ate { background: var(--fim); }
+.barraClipe .pega.de:hover { background: var(--inicio-alto); }
+.barraClipe .pega.ate:hover { background: var(--fim-alto); }
 .barraClipe .pega::after {
   content: ''; position: absolute; inset: 50% auto auto 50%; transform: translate(-50%, -50%);
-  width: 2px; height: 14px; background: var(--sobre-marca); border-radius: 1px;
-  box-shadow: 3px 0 0 var(--sobre-marca), -3px 0 0 var(--sobre-marca);
 }
+.barraClipe .pega.de::after {
+  width: 0; height: 0; margin-left: 1px; border-style: solid; border-width: 6px 0 6px 8px;
+  border-color: transparent transparent transparent var(--sobre-inicio);
+}
+.barraClipe .pega.ate::after { width: 9px; height: 9px; background: var(--sobre-fim); border-radius: 1px; }
 .barraClipe .pega.de { border-radius: var(--r-fio) 0 0 var(--r-fio); }
 .barraClipe .pega.ate { border-radius: 0 var(--r-fio) var(--r-fio) 0; }
+.barraClipe .seleccao { border-inline: 0; }
 /* A agulha do clipe: a mesma peça da linha do tempo, uma linha com a cabeça em cima, centrada nela.
    Só a cabeça apanha o rato e o dedo; a linha deixa passar, para as pegas por baixo continuarem a ser
    agarradas. Fora da cabeça, o clique na barra é que a leva. */
@@ -1229,13 +1241,21 @@ body.mesa .webcamAchada[hidden] { display: none; }
    sozinho para baixo — e um par de setas partido ao meio deixa de se ler
    como um par. Em grelha de quatro colunas isso não pode acontecer. */
 .aparar {
-  display: grid; grid-template-columns: auto minmax(48px, 1fr) minmax(48px, 1fr) 56px;
-  gap: var(--e3); align-items: stretch; justify-content: start; max-width: 420px;
+  display: grid; grid-template-columns: minmax(0, 1fr) 56px minmax(0, 1fr); gap: var(--e3);
+  align-items: stretch; max-width: 520px;
 }
-.aparar .rotuloCampo { align-self: center; }
-.aparar .passo { min-height: 44px; width: auto; min-width: 0; padding: 0; }
-.aparar .ver { grid-row: 1 / span 2; grid-column: 4; width: auto; min-width: 0; padding: 0; }
-/* A seta dupla aponta para onde o botão anda. */
+/* Cada ponta: o nome em cima, na cor dela, e o par de passos por baixo. O passo é de meio segundo
+   (com Shift, 0,1 s), e o botão diz isso. */
+.apararGrupo {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 4px var(--e2); align-content: start;
+  padding-left: var(--e3); border-left: 3px solid var(--inicio);
+}
+.apararFim { border-left-color: var(--fim); }
+.apararGrupo .rotuloCampo { grid-column: 1 / -1; font-size: var(--t-base); font-weight: 600; }
+.apararInicio .rotuloCampo { color: var(--inicio); }
+.apararFim .rotuloCampo { color: var(--fim); }
+.aparar .passo { min-height: 44px; width: auto; min-width: 0; padding: 0 var(--e2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.aparar .ver { align-self: end; min-height: 44px; width: auto; min-width: 0; padding: 0; }
 .aparar .recua .ic, .saltos button[id^="menos"] .ic { transform: rotate(180deg); }
 
 /* ═══ 11 · o ecrã de PC ═════════════════════════════════════════════════════ */
@@ -1629,7 +1649,6 @@ body.mesa .webcamAchada[hidden] { display: none; }
      uma coluna de 175 e a página passava a andar de lado — 448 px medidos. */
   .palcoFoco { grid-auto-flow: row; }
   .palcoFoco .tile, .palcoFoco.dois .tile { min-height: 150px; }
-  .aparar { grid-template-columns: auto minmax(44px, 1fr) minmax(44px, 1fr) 52px; gap: var(--e3) 6px; }
   .relogio { --coluna: 76px; padding: var(--e4) calc(var(--e3) + 14px) var(--e4) var(--e3); }
   .bloco { padding: var(--e4); }
   .palcoFundo > section, .palcoFundo > .linha, .palcoFundo > #zip, #montagem { padding: var(--e4); }
@@ -2660,6 +2679,15 @@ body.mesa #exportacoes .fila li > .nota { grid-column: 1; grid-row: 2; font-size
 body.mesa #exportacoes .fila li > .editarUm { grid-column: 2; grid-row: 1 / span 2; }
 body.mesa #exportacoes .fila li > .apagarUm { grid-column: 3; grid-row: 1 / span 2; width: 28px; min-width: 28px; padding: 0; background: transparent; border-color: transparent; color: var(--tinta-3); }
 body.mesa #exportacoes .fila li > .apagarUm:hover { color: var(--perigo); background: var(--perigo-eco); }
+/* Ajustar clipe: Cancelar sem caixa, à esquerda, e o botão cheio é o formato de onde a pessoa veio. Aberto pelo
+   Editar de um cartão (veioDaLista), é o Baixar para TikTok; senão é o Baixar tela cheia, como sempre. */
+#modalClipe #estadoClipe { order: -2; }
+#modalClipe #cancelarClipe { order: -1; margin-right: auto; background: transparent; border-color: transparent; color: var(--tinta-2); }
+#modalClipe #cancelarClipe:hover:not(:disabled) { background: var(--sup-3); color: var(--tinta); border-color: transparent; }
+body.veioDaLista #modalClipe #guardarRetrato:not(:disabled) { background: var(--acento); color: var(--sobre-acento); border-color: transparent; font-weight: 600; order: 2; }
+body.veioDaLista #modalClipe #guardarRetrato:hover:not(:disabled) { background: var(--acento-alto); border-color: transparent; }
+body.veioDaLista #modalClipe #guardarClipe:not(:disabled) { background: var(--sup-3); color: var(--tinta); border-color: var(--linha-3); font-weight: 500; order: 1; }
+body.veioDaLista #modalClipe #guardarClipe:hover:not(:disabled) { background: var(--sup-4); border-color: var(--tinta-3); }
 /* Ajustar clipe aberto de uma kill: o botão cheio é Salvar ajustes (a tarefa é acertar e voltar à
    montagem), e o Exportar 16:9 fica com o peso dos outros exportar. Um botão cheio por área. */
 body.mesa #modalClipe .linha.fim:has(#guardarAjustes:not([hidden])) #guardarClipe:not(:hover) {
@@ -2969,6 +2997,14 @@ body.mesa #montagem .estadoAoVivo:empty { display: none; }
 .simplesBotoes { display: flex; flex-wrap: wrap; gap: var(--e2); align-items: center; }
 .simples .simplesBotoes button { min-height: 44px; font-size: 15px; padding-inline: var(--e4); }
 .simplesBotoes .curto { display: none; }
+/* Um botão forte por cartão: Baixar para TikTok cheio; Tela cheia com borda e fundo mais claros; Editar sem caixa;
+   a lixeira lá longe, cinza, e só vermelha quando o dedo está em cima (o vermelho é do Fim). */
+.simples .simplesBotoes .simplesDeitado { background: var(--sup-3); border-color: var(--linha-3); color: var(--tinta); }
+.simples .simplesBotoes .simplesDeitado:hover:not(:disabled) { background: var(--sup-4); border-color: var(--tinta-3); }
+.simples .simplesBotoes .simplesEditar { background: transparent; border-color: transparent; color: var(--tinta-2); }
+.simples .simplesBotoes .simplesEditar:hover:not(:disabled) { background: var(--sup-3); color: var(--tinta); border-color: transparent; }
+.simples .simplesBotoes .simplesNao { margin-left: auto; background: transparent; border-color: transparent; color: var(--tinta-3); }
+.simples .simplesBotoes .simplesNao:is(:hover, :focus-visible):not(:disabled) { background: var(--perigo-eco); color: var(--perigo); border-color: transparent; }
 .simplesNao span { margin-left: var(--e2); }
 /* A imagem do cartão é o botão de assistir; a prévia toma o lugar dela. */
 .simples button.simplesFoto { position: relative; padding: 0; width: 100%; border: 0; cursor: pointer; }
@@ -3022,7 +3058,7 @@ body.mesa #montagem .estadoAoVivo:empty { display: none; }
 .simplesLinha::-moz-range-thumb { width: 13px; height: 13px; border-radius: 50%; background: #f00; border: 0; }
 /* Voltar para a lista: só no avançado aberto pelo Editar de um cartão, e na janela do clipe. */
 .voltarLista { display: none; }
-body.veioDaLista .voltarLista { display: inline-block; }
+body.veioDaLista .voltarLista { display: inline-flex; white-space: nowrap; flex: none; }
 :root[data-modo="simples"] .voltarLista { display: none !important; }
 .simplesBaixando { margin: 0; line-height: var(--lh); }
 .simplesBaixando:empty { display: none; }

@@ -531,3 +531,10 @@ dono grava no servidor dele cada arma e explosivo em várias distâncias, que se
   - Cópia sem recodificar ("tela cheia") não mexe: os bytes da Kick já têm a cadência da live.
 - Falta: o clipe de vários ângulos (`angulos.js`) ainda grava a 30 fps; exportar um clipe real pela tela (a aba do
   navegador de teste estava escondida e o Povix pausa a gravação nesse caso).
+- Botões com hierarquia (aprovada pelo dono). Cartão: TikTok cheio, Tela cheia com borda mais clara e ícone, Editar
+  sem caixa com tesoura, lixeira cinza lá na ponta direita (vermelha só no hover/foco). Editor: pega do Início verde
+  com seta e do Fim vermelha com quadrado (tokens `--inicio` e `--fim`), passos "−0,5 s / +0,5 s" (o passo real é meio
+  segundo) agrupados sob Início e Fim, Cancelar sem caixa à esquerda, "Baixar para TikTok" / "Baixar tela cheia"
+  nas 3 línguas, cheio é o TikTok quando o editor veio do Editar de um cartão, senão a tela cheia. "Voltar para a
+  lista" numa linha só. Conferido no navegador a 1280 e 375 px. Os PNG em `prints-facil/` não foram salvos (o
+  navegador do painel não grava arquivo).

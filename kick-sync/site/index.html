@@ -276,7 +276,7 @@
     <!-- Volta ao modo simples (ESTUDO-FACIL.md, plano 12). Só aparece no avançado. -->
     <button id="modoSimples" class="modoSimples" type="button" data-t="simples.voltarSimples">Modo simples</button>
     <!-- Só aparece quando o avançado foi aberto pelo Editar de um cartão da lista simples. -->
-    <button id="voltarLista" class="voltarLista principal" type="button" data-t="simples.voltarLista">Voltar para a lista</button>
+    <button id="voltarLista" class="voltarLista principal" type="button"><svg class="ic ic-p ic-esq" aria-hidden="true"><use href="#i-seta"/></svg><span data-t="simples.voltarLista">Voltar para a lista</span></button>
     <a class="paraTwitch" href="twitch.html"><svg class="ic" aria-hidden="true"><use href="#i-twitch"/></svg><span data-t="app.twitch">Versão Twitch</span></a>
     <button id="ajuda" class="discreto" data-t-aria="ajuda.abrir" aria-haspopup="dialog"><svg class="ic" aria-hidden="true"><use href="#i-ajuda"/></svg></button>
     <select id="idioma" data-t-aria="idioma.rotulo" aria-label="idioma da página"></select>
@@ -1227,7 +1227,7 @@
     <div class="modalTopo">
       <b data-t="clipe.titulo">Ajustar clipe</b>
       <select id="canalClipe" data-t-aria="clipe.angulo" aria-label="ângulo"></select>
-      <button id="voltarListaClipe" class="voltarLista" type="button" data-t="simples.voltarLista">Voltar para a lista</button>
+      <button id="voltarListaClipe" class="voltarLista" type="button"><svg class="ic ic-p ic-esq" aria-hidden="true"><use href="#i-seta"/></svg><span data-t="simples.voltarLista">Voltar para a lista</span></button>
       <button id="fecharClipe" data-t-titulo="clipe.fechar" title="fechar"><svg class="ic" aria-hidden="true"><use href="#i-fechar"/></svg></button>
     </div>
     <!-- O editor do retrato, ao lado da fonte — como no da Twitch que ele
@@ -1301,13 +1301,17 @@
          há modo nenhum para decorar. O ▶ toca só o pedaço escolhido. -->
     <output id="tempoClipe" class="nota"></output>
     <div class="aparar">
-      <span class="rotuloCampo" data-t="clipe.inicioLabel">Início</span>
-      <button id="inicioMenos" class="passo recua" data-t-titulo="clipe.recuar" title="meio segundo para trás" aria-label="início: meio segundo para trás"><svg class="ic ic-p" aria-hidden="true"><use href="#i-seta2"/></svg></button>
-      <button id="inicioMais" class="passo" data-t-titulo="clipe.avancar" title="meio segundo para a frente" aria-label="início: meio segundo para a frente"><svg class="ic ic-p" aria-hidden="true"><use href="#i-seta2"/></svg></button>
+      <div class="apararGrupo apararInicio" role="group" aria-labelledby="rotuloInicioClipe">
+        <span class="rotuloCampo" id="rotuloInicioClipe" data-t="clipe.inicioLabel">Início</span>
+        <button id="inicioMenos" class="passo" data-t-titulo="clipe.recuar" title="meio segundo para trás" aria-label="início: meio segundo para trás"><span data-t="clipe.passoMenos">−0,5 s</span></button>
+        <button id="inicioMais" class="passo" data-t-titulo="clipe.avancar" title="meio segundo para a frente" aria-label="início: meio segundo para a frente"><span data-t="clipe.passoMais">+0,5 s</span></button>
+      </div>
       <button id="verClipe" class="ver" aria-pressed="false" data-t-titulo="clipe.ver" title="ver o clipe" aria-label="ver o clipe"><svg class="ic" aria-hidden="true"><use href="#i-tocar"/></svg></button>
-      <span class="rotuloCampo" data-t="clipe.fimLabel">Fim</span>
-      <button id="fimMenos" class="passo recua" data-t-titulo="clipe.recuar" title="meio segundo para trás" aria-label="fim: meio segundo para trás"><svg class="ic ic-p" aria-hidden="true"><use href="#i-seta2"/></svg></button>
-      <button id="fimMais" class="passo" data-t-titulo="clipe.avancar" title="meio segundo para a frente" aria-label="fim: meio segundo para a frente"><svg class="ic ic-p" aria-hidden="true"><use href="#i-seta2"/></svg></button>
+      <div class="apararGrupo apararFim" role="group" aria-labelledby="rotuloFimClipe">
+        <span class="rotuloCampo" id="rotuloFimClipe" data-t="clipe.fimLabel">Fim</span>
+        <button id="fimMenos" class="passo" data-t-titulo="clipe.recuar" title="meio segundo para trás" aria-label="fim: meio segundo para trás"><span data-t="clipe.passoMenos">−0,5 s</span></button>
+        <button id="fimMais" class="passo" data-t-titulo="clipe.avancar" title="meio segundo para a frente" aria-label="fim: meio segundo para a frente"><span data-t="clipe.passoMais">+0,5 s</span></button>
+      </div>
     </div>
     <!-- O chat do streamer por cima do vídeo exportado (chat-clipe.js). Desligado por omissão; ligado,
          as duas prévias de cima pintam-no exactamente como sai no ficheiro. -->
@@ -1422,8 +1426,8 @@
       <button id="angulosSeguido" class="soVarios" data-t-titulo="angulos.seguidoAjuda" title="O lance visto por até 4 streamers, um depois do outro, com o nome de cada um"><svg class="ic ic-p" aria-hidden="true"><use href="#i-descarregar"/></svg><span data-t="angulos.seguido">Ângulos 16:9</span></button>
       <button id="angulosEmpilhado" class="soVarios" data-t-titulo="angulos.empilhadoAjuda" title="Dois streamers, um em cima do outro, para TikTok, Reels e Shorts"><svg class="ic ic-p" aria-hidden="true"><use href="#i-descarregar"/></svg><span data-t="angulos.empilhado">Ângulos 9:16</span></button>
       <button id="guardarRetrato"
-        data-t-titulo="retrato.custo" title="Reconverte em tempo real"><svg class="ic ic-p" aria-hidden="true"><use href="#i-descarregar"/></svg><span data-t="retrato.exportar">Exportar 9:16</span></button>
-      <button id="guardarClipe" class="principal"><svg class="ic" aria-hidden="true"><use href="#i-descarregar"/></svg><span data-t="clipe.guardar">Exportar 16:9</span></button>
+        data-t-titulo="retrato.custo" title="Reconverte em tempo real"><svg class="ic ic-p" aria-hidden="true"><use href="#i-descarregar"/></svg><span data-t="retrato.exportar">Baixar para TikTok</span></button>
+      <button id="guardarClipe" class="principal"><svg class="ic" aria-hidden="true"><use href="#i-descarregar"/></svg><span data-t="clipe.guardar">Baixar tela cheia</span></button>
     </div>
   </div>
 </div>
