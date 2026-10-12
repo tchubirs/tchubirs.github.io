@@ -3106,3 +3106,14 @@ body:not(:has(#noites:not([hidden]))) .topo .barraSessao.noTopo { display: none;
 #noites:has(#estadoNoite:empty) { display: none; }
 .relogio > .pesTempo { order: 5; display: flex; justify-content: flex-end; margin-top: var(--e2); }
 .pesTempo #zoomTempo { width: 160px; }
+/* Ferramentas: um botão que abre o menu com o que cada uma faz (o dono, 13/10). */
+.ferramentas { position: relative; display: inline-block; }
+.ferramentasBotao { list-style: none; display: inline-flex; align-items: center; gap: var(--e2); min-height: 36px; padding: 0 var(--e3); border: 1px solid var(--linha-2); border-radius: var(--r-2); background: var(--sup-2); cursor: pointer; color: var(--tinta); }
+.ferramentasBotao::-webkit-details-marker { display: none; }
+.ferramentasBotao::after { content: ""; width: 6px; height: 6px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); margin: -3px 0 0 4px; }
+.ferramentasMenu { position: absolute; z-index: 30; left: 0; bottom: calc(100% + 6px); width: min(380px, 90vw); display: grid; gap: 2px; padding: 6px; background: var(--sup-3); border: 1px solid var(--linha-2); border-radius: var(--r-3); box-shadow: 0 10px 30px rgb(0 0 0 / .5); }
+.ferramentaItem { display: flex; align-items: flex-start; gap: var(--e3); width: 100%; text-align: left; padding: var(--e2) var(--e3); border: 0; background: none; border-radius: var(--r-2); white-space: normal; }
+.ferramentaItem:hover:not(:disabled), .ferramentaItem:focus-visible { background: var(--sup-2); }
+.ferramentaItem .ic { margin-top: 2px; color: var(--acento); flex: none; }
+.ferrNome { display: flex; align-items: center; gap: var(--e2); color: var(--tinta); font-weight: 500; }
+.ferrDiz { display: block; margin-top: 2px; color: var(--tinta-3); font-size: var(--t-pequeno, 13px); line-height: 1.35; font-weight: 400; }

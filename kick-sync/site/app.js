@@ -7574,6 +7574,13 @@ $('filtroMomentos').onchange = (e) => {
   pintarMomentos();
 };
 $('procurarKills').onclick = procurarKills;
+// O menu Ferramentas fecha ao escolher um item e ao tocar fora dele.
+{
+  const menu = document.querySelector('details.ferramentas');
+  menu?.querySelector('.ferramentasMenu').addEventListener('click', (e) => { if (e.target.closest('button')) menu.open = false; });
+  document.addEventListener('pointerdown', (e) => { if (menu?.open && !menu.contains(e.target)) menu.open = false; });
+  menu?.addEventListener('keydown', (e) => { if (e.key === 'Escape' && menu.open) { e.stopPropagation(); menu.open = false; menu.querySelector('summary').focus(); } });
+}
 // Seta, e nao a funcao directamente: o `onclick` passa o evento como primeiro
 // argumento, e ele ia parar ao `soEsta` como se fosse uma lista de kills.
 try {

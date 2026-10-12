@@ -762,21 +762,19 @@
   <!-- As ferramentas da tela, por tarefa (o dono, 10/10: "separar as tarefas com nomes claros"). Rever: pôr
        os ângulos no mesmo instante pelo som. Encontrar lances: ler o chat e a detecção, que é experimental
        e por isso fica com a etiqueta ao lado e sem cor. Recomeçar, que apaga, fica no fim e calado. -->
-  <div class="linha sincronizar grupoFerramenta" role="group" aria-labelledby="tituloRever">
-      <span id="tituloRever" class="rotuloGrupo" data-t="tarefa.rever">Rever</span>
-      <button id="alinhar" data-t-titulo="alinhar.ajuda" title="Analisa o áudio de cada ângulo e corrige o desvio"><svg class="ic ic-p" aria-hidden="true"><use href="#i-onda"/></svg><span data-t="alinhar.botao">Sincronizar por áudio</span></button>
-      <span id="estadoAlinhar" class="nota" role="status" aria-live="polite"></span>
-    </div>
-  <section id="automatico" class="grupoFerramenta" aria-labelledby="tituloLances">
-    <h2 id="tituloLances" class="rotuloGrupo" data-t="tarefa.lances">Encontrar lances</h2>
-    <button id="lerChat" type="button" data-t-titulo="faixa.lerChatAjuda" title="as mensagens e os picos do chat"><svg class="ic ic-p" aria-hidden="true"><use href="#i-chat"/></svg><span data-t="faixa.lerChat">Ler chat</span></button>
-    <div class="linha">
-      <button id="procurarKills" aria-describedby="dicaAuto autoExplica"><svg class="ic ic-p" aria-hidden="true"><use href="#i-mira"/></svg><span data-t="auto.botao">Detectar lances</span></button>
-      <b class="etiqueta" data-t="auto.teste">experimental</b>
+  <!-- O dono (13/10): um botão só; o menu diz o que cada ferramenta faz e quanto demora, e todas estão em teste. -->
+  <details class="ferramentas">
+    <summary class="ferramentasBotao"><svg class="ic ic-p" aria-hidden="true"><use href="#i-deslizadores"/></svg><span data-t="ferr.botao">Ferramentas</span></summary>
+    <div class="ferramentasMenu" role="group" data-t-aria="ferr.botao" aria-label="Ferramentas">
+      <button id="alinhar" class="ferramentaItem" data-t-titulo="alinhar.ajuda" title="Analisa o áudio de cada ângulo e corrige o desvio"><svg class="ic" aria-hidden="true"><use href="#i-onda"/></svg><span><span class="ferrNome"><span data-t="alinhar.botao">Sincronizar por áudio</span><b class="etiqueta" data-t="ferr.teste">em teste</b></span><span class="ferrDiz" data-t="ferr.alinharDiz">Acerta o tempo entre os streamers pelo som. Use quando os vídeos estiverem fora de tempo.</span></span></button>
+      <button id="lerChat" type="button" class="ferramentaItem" data-t-titulo="faixa.lerChatAjuda" title="as mensagens e os picos do chat"><svg class="ic" aria-hidden="true"><use href="#i-chat"/></svg><span><span class="ferrNome"><span data-t="faixa.lerChat">Ler chat</span><b class="etiqueta" data-t="ferr.teste">em teste</b></span><span class="ferrDiz" data-t="ferr.chatDiz">Lê o chat da live e marca onde ele explodiu. É rápido e quase não gasta internet.</span></span></button>
+      <button id="procurarKills" class="ferramentaItem" aria-describedby="dicaAuto autoExplica"><svg class="ic" aria-hidden="true"><use href="#i-mira"/></svg><span><span class="ferrNome"><span data-t="auto.botao">Detectar lances</span><b class="etiqueta" data-t="ferr.teste">em teste</b></span><span class="ferrDiz" data-t="ferr.detetarDiz">Ouve o jogo e acha tiros, explosões e PvP. Baixa o som da live, por isso demora alguns minutos.</span></span></button>
       <span id="dicaAuto" class="soLeitor" data-t="auto.escolha">De quem e quanto: escolha na linha do tempo o nome de uma pessoa (ou Todos), e depois trecho ou tudo.</span>
+      <p id="autoExplica" class="soLeitor" data-t="auto.explica">Ouve a sua POV procurando tiroteios. Acerta a maioria, mas ainda marca menus e inventário: confira cada lance antes de exportar.</p>
     </div>
-    <p id="autoExplica" class="soLeitor" data-t="auto.explica">Ouve a sua POV procurando tiroteios. Acerta a maioria, mas ainda marca menus e inventário: confira cada lance antes de exportar.</p>
-  </section>
+  </details>
+  <span id="estadoAlinhar" class="nota" role="status" aria-live="polite"></span>
+  <section id="automatico" hidden></section>
 
   <div class="linha recomecarLinha">
     <button id="recomecar" class="discreto"><svg class="ic ic-p" aria-hidden="true"><use href="#i-anular"/></svg><span data-t="fila.recomecar">Recomeçar</span></button>
