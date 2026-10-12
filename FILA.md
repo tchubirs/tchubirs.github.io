@@ -300,3 +300,9 @@ em francês). Tudo revisado pela regra 14 em 28/09.
   streamer (detector do MediaPipe no navegador, versão fixa e conferida, uns 12 MB da primeira vez) e põe a caixa
   da webcam nele. Em cada ângulo, guardado por streamer. Sem rosto, fica o modelo e um aviso curto. O ajuste à mão
   manda; o botão "Achar webcam" procura de novo. Ver `kick-sync/IDEIAS.md`, item 3.
+
+## Ideia (12/10): aviso de prazo do VOD e guardar o lance agora
+- Feito em 12/10. Cada faixa diz "some em N dias" (7 dias desde a live, ou 30 quando a lista do canal prova que ele
+  guarda 30), com a conta explicada ao parar o mouse. Na Montagem, cada lance diz o prazo, e "Guardar todos agora"
+  baixa a cópia rápida de todos, os que somem primeiro à frente, um de cada vez, com progresso e Parar. Ver
+  `kick-sync/IDEIAS.md`, item 7.

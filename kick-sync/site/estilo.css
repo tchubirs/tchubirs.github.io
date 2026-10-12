@@ -2778,3 +2778,18 @@ body.mesa .falaBotao.apagar:hover { color: var(--perigo); }
   body.mesa .falaTempo, body.mesa .falaTexto, body.mesa .falaBotao { min-height: 44px; }
   body.mesa .falaBotao.apagar { width: 44px; min-width: 44px; }
 }
+
+/* ── o prazo do VOD (IDEIAS.md, item 7) ───────────────────────────────────
+   "some em N dias" no fim do trilho de cada faixa e em cada lance da Montagem. Discreto até faltarem
+   2 dias; aí ganha a cor do aviso. Por cima do trilho e encostado à direita, sem mexer na grelha
+   das faixas, que a régua e a barra partilham. */
+body.mesa .trilho .prazoFaixa {
+  position: absolute; right: 2px; top: 50%; transform: translateY(-50%); z-index: 1;
+  font-size: 10px; line-height: 11px; padding: 0 4px; border-radius: var(--r-1);
+  background: var(--sup-2); color: var(--tinta-3); white-space: nowrap; cursor: help;
+}
+body.mesa .trilho .prazoFaixa.perto { color: var(--aviso); background: color-mix(in srgb, var(--aviso) 14%, var(--sup-2)); }
+body.mesa .momentos li .prazo { font-size: var(--t-micro); color: var(--tinta-3); white-space: nowrap; cursor: help; }
+body.mesa .momentos li .prazo.perto { color: var(--aviso); }
+body.mesa .guardarAgora { align-items: center; }
+body.mesa .guardarAgora .nota.mau { color: var(--aviso); }

@@ -778,6 +778,13 @@
       <h3 id="chatVideoTitulo" class="chatTitulo"></h3>
       <ol id="chatLinhas" class="chatLinhas" aria-live="off"></ol>
     </section>
+    <!-- Guardar antes que suma (IDEIAS.md, item 7): a Kick apaga o VOD em 7 dias (30 nos canais
+         verificados). Um clique baixa a cópia rápida de todos os lances marcados, os que somem primeiro à
+         frente. O progresso e o Parar são os da montagem. -->
+    <div id="guardarAgora" class="linha guardarAgora" hidden>
+      <button id="guardarLances" type="button" data-t-titulo="prazo.guardarAjuda" title="Baixa a cópia rápida de todos os lances marcados, começando pelos que somem primeiro"><svg class="ic ic-p" aria-hidden="true"><use href="#i-descarregar"/></svg><span data-t="prazo.guardar">Guardar todos agora</span></button>
+      <span id="prazoMontagem" class="nota"></span>
+    </div>
     <div class="linha">
       <select id="formatoMontagem" data-t-aria="montagem.formato" data-t-titulo="montagem.formato" aria-label="formato da montagem" title="formato da montagem: só 16:9, ou também 9:16 para TikTok, Reels e Shorts; com &quot;1 vídeo&quot;, os clipes saem juntos num arquivo só, na ordem">
         <option value="16x9" data-t="montagem.formato169">16:9</option>

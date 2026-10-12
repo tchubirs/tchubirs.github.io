@@ -52,6 +52,7 @@ import {
   planearCorte, executarCorte, nomeDoFicheiro, largarOQueNaoServe, oQueFalta,
 } from './baixar.js';
 import { criarZip, crc32 } from './zip.js';
+import { retencaoDoCanal, prazoDoVod, ordemDeGuardar } from './prazo.js';
 import { queFazerComOLeitor } from './leitor.js';
 import { criarApanhador } from './frames.js';
 import { varrerNoite, custoVarrerMB } from './procurar-momentos.js';
@@ -1249,6 +1250,14 @@ function ligarZoom() {
   }
 }
 
+/** O "some em N dias" no fim do trilho de uma faixa. Sem prazo conhecido (live no ar, sem hora), nada. */
+function prazoNaFaixa(slug) {
+  const p = prazoDe(slug);
+  if (!p) return '';
+  const { texto, ajuda, perto } = textoDoPrazo(p);
+  return `<span class="prazoFaixa${perto ? ' perto' : ''}" title="${escapar(ajuda)}">${escapar(texto)}</span>`;
+}
+
 function pintarFaixas() {
   const { inicio, fim } = vistaAgora() || {};
   const alvo = $('faixas');
@@ -1301,8 +1310,11 @@ function pintarFaixas() {
         const de = Math.max(0, pct(p.playlist.inicio - nudge));
         const ate = Math.min(100, pct(p.playlist.fim - nudge));
         return `<i style="left:${de}%;width:${Math.max(0.4, ate - de)}%"></i>`;
-      }).join('')}${marcasLidas(linha.slug, inicio, fim)}${marcasOuvidas(linha.slug, inicio, fim)}</div>`;
+      }).join('')}${marcasLidas(linha.slug, inicio, fim)}${marcasOuvidas(linha.slug, inicio, fim)}${prazoNaFaixa(linha.slug)}</div>`;
     f.querySelector('.trilho').onclick = (e) => irAoClique(e, linha.slug);
+    // O prazo é um aviso, e não um sítio da faixa: clicar nele não leva o vídeo para o fim do trilho.
+    const pz = f.querySelector('.prazoFaixa');
+    if (pz) pz.onclick = (e) => e.stopPropagation();
     alvo.append(f);
   }
   marcarFaixas();
@@ -3658,6 +3670,46 @@ const filmava = (slug, deMs, ateMs) => {
     || onde(l, ateMs, { nudgeMs: nudge }).estado === 'toca';
 };
 
+// ── o prazo do VOD (IDEIAS.md, item 7) ──────────────────────────────────────
+// A Kick apaga o VOD 7 dias depois da live (30 nos canais verificados), e um lance marcado no primeiro
+// dia do evento pode sumir antes do recap. Cada faixa diz quando o VOD dela some, e a Montagem guarda
+// os lances começando pelos que somem primeiro. As contas estão em prazo.js.
+
+/** O prazo do VOD de `slug` que tem o instante `ms`; sem `ms`, o do VOD da faixa que some primeiro. */
+function prazoDe(slug, ms = null) {
+  const l = estado.linhas.find((x) => x.slug === slug);
+  if (!l) return null;
+  const ret = retencaoDoCanal((estado.vodsPorCanal.get(slug) || estado.vodsDoEvento.get(slug))?.vods);
+  const nudge = estado.nudges[slug] || 0;
+  const pecas = (l.pecasCompletas || l.pecas || []).filter((p) => ms == null
+    || (p.playlist && ms + nudge >= p.playlist.inicio && ms + nudge <= p.playlist.fim));
+  const agoraMs = Date.now();
+  let melhor = null;
+  for (const p of pecas) {
+    const prazo = prazoDoVod(p.vod, { retencaoDias: ret.dias, agoraMs });
+    if (prazo && (!melhor || prazo.expiraMs < melhor.expiraMs)) melhor = prazo;
+  }
+  return melhor && { ...melhor, visto: ret.visto };
+}
+
+/** O prazo de um lance: o do ângulo dele que some primeiro. */
+function prazoDoLance(m) {
+  const canais = estado.linhas.map((l) => l.slug);
+  let melhor = null;
+  for (const c of planoDaMontagem([m], canais, { filmava })) {
+    const p = prazoDe(c.canal, c.deMs);
+    if (p && (!melhor || p.expiraMs < melhor.expiraMs)) melhor = { ...p, canal: c.canal };
+  }
+  return melhor;
+}
+
+/** "some em 3 dias", e a explicação da conta para o `title`. */
+function textoDoPrazo(p) {
+  const texto = p.dias <= 0 ? t('prazo.jaPode') : tn(p.dias, 'prazo.umDia', 'prazo.dias');
+  const data = new Date(p.expiraMs).toLocaleDateString(idiomaActual(), { day: 'numeric', month: 'short' });
+  return { texto, ajuda: t(p.visto ? 'prazo.ajuda30' : 'prazo.ajuda7', { data }), perto: p.dias <= 2 };
+}
+
 function marcarKill() {
   if (!estado.linhas.length) return;
   estado.momentos = acrescentar(
@@ -3937,6 +3989,7 @@ function pintarMomentos() {
       + `<span class="quem">${escapar(m.protagonista || '')}</span>`
       // O que a detecção achou ali, quando foi ela: tiroteio, explosão, grito, ou as palavras do chat.
       + (m.tipo ? `<span class="tipo">${escapar(rotuloDoTipo(m))}</span>` : '')
+      + prazoNoLance(m)
       + `<button class="ver ${estado.previa?.ms === m.ms ? 'aVer' : ''}">`
       + `${t(estado.previa?.ms === m.ms ? 'montagem.parar' : 'montagem.ver')}</button>`
       + `<button class="cliparUma">${t('montagem.clipar')}</button>`
@@ -4019,6 +4072,7 @@ function pintarMomentos() {
   // quando há o que exportar.
   if (estado.montagem) trocarRotulo($('baixarMontagem'), 'montagem.parar'); else pintarSelecao();
   $('baixarMontagem').disabled = estado.montagem ? false : !total;
+  pintarGuardar(lista, total);
   const semVitima = sozinho ? 0 : lista.filter((m) => !temMorte(m)).length;
   const escondidos = lista.length - visiveis.length;
   $('estadoMontagem').textContent = total
@@ -4028,6 +4082,40 @@ function pintarMomentos() {
       // O filtro nunca pode esconder trabalho em silencio: a montagem que se
       // descarrega e a lista INTEIRA, e nao a que esta a ver.
       + (escondidos ? t('sel.escondidos', { n: escondidos }) : '')
+    : '';
+}
+
+/** O prazo de um lance na lista da Montagem. */
+function prazoNoLance(m) {
+  const p = prazoDoLance(m);
+  if (!p) return '';
+  const { texto, ajuda, perto } = textoDoPrazo(p);
+  return `<span class="prazo${perto ? ' perto' : ''}" title="${escapar(`${p.canal}: ${ajuda}`)}">${escapar(texto)}</span>`;
+}
+
+/**
+ * "Guardar todos agora": a cópia rápida de todos os lances marcados, os que somem primeiro à frente.
+ * A correr, o botão é o Parar dela; outra exportação a correr apaga-o.
+ */
+function pintarGuardar(lista, total) {
+  const botao = $('guardarLances');
+  $('guardarAgora').hidden = !lista.length;
+  if (estado.montagem) {
+    trocarRotulo(botao, estado.guardando ? 'montagem.parar' : 'prazo.guardar');
+    botao.disabled = !estado.guardando;
+    return;
+  }
+  trocarRotulo(botao, 'prazo.guardar');
+  botao.disabled = !total;
+  let primeiro = null;
+  for (const m of lista) {
+    const p = prazoDoLance(m);
+    if (p && (!primeiro || p.expiraMs < primeiro.expiraMs)) primeiro = p;
+  }
+  const nota = $('prazoMontagem');
+  nota.classList.toggle('mau', Boolean(primeiro && primeiro.dias <= 2));
+  nota.textContent = primeiro
+    ? t('prazo.primeiro', { quando: textoDoPrazo(primeiro).texto, canal: primeiro.canal })
     : '';
 }
 
@@ -4085,7 +4173,7 @@ function anularApagar() {
  *   ridículo. Nesse caso a lista NÃO é limpa: ele pode ir buscando uma a uma e
  *   elas juntam-se em baixo.
  */
-async function baixarMontagem(soEsta = null) {
+async function baixarMontagem(soEsta = null, { guardar = false } = {}) {
   // Uma exportação de cada vez.
   //
   // Qualquer redesenho da lista (marcar quem morreu, filtrar, Rever) voltava a
@@ -4098,25 +4186,36 @@ async function baixarMontagem(soEsta = null) {
   const todas = ordenar(estado.momentos);
   // Só as marcadas na caixa, quando há alguma marcada (o teste real de 12/10: com 2 de 8 marcadas,
   // exportava as 8). O botão diz quantas (ver `pintarSelecao`).
-  const escolhidas = soEsta || (estado.selecao.size ? todas.filter((m) => estado.selecao.has(m.ms)) : null);
+  // "Guardar todos agora" leva todas, sem olhar à seleção: é o seguro contra o VOD sumir.
+  const escolhidas = soEsta || (!guardar && estado.selecao.size ? todas.filter((m) => estado.selecao.has(m.ms)) : null);
   // A numeração é sempre a da montagem inteira, mesmo a pedir uma só: é este
   // número que vai no nome do ficheiro, e tem de ser o mesmo nos dois caminhos.
-  const plano = planoDaMontagem(todas, canais, { filmava })
+  let plano = planoDaMontagem(todas, canais, { filmava })
     .filter((c) => !escolhidas || escolhidas.some((m) => m.ms === c.ms));
+  // A guardar, o que some primeiro vai primeiro (ver prazo.js), e só a cópia rápida dos bytes da Kick:
+  // sem 9:16, sem chat nem legenda gravados por cima, que levam o tempo do clipe a tocar e podem
+  // esperar pelo VOD guardado.
+  const prazos = new Map();
+  if (guardar) {
+    for (const c of plano) prazos.set(c, prazoDe(c.canal, c.deMs));
+    plano = ordemDeGuardar(plano, (c) => prazos.get(c)?.expiraMs)
+      .map((c) => ({ ...c, retrato: null, chat: null, legenda: null, guardar: true }));
+  }
   // "Um vídeo só": os clipes juntam-se pela ordem num ficheiro (o 16:9 no mp4.js, o 9:16 em
   // juntar-gravados.js), em vez de um ficheiro por clipe e o ZIP.
-  const umSo = !soEsta && $('formatoMontagem').value.endsWith('-um');
+  const umSo = !soEsta && !guardar && $('formatoMontagem').value.endsWith('-um');
   const para16 = [];
   const para916 = [];
   // O formato para todos de uma vez (o dono, 07/10: "escolher TikTok para todos"). Com 9:16, a POV de
   // cada kill sai também em vertical; sem enquadramento guardado, o do meio (ver `renderizarGravado`).
-  if ($('formatoMontagem').value.startsWith('ambos')) {
+  if (!guardar && $('formatoMontagem').value.startsWith('ambos')) {
     for (const c of plano) {
       if (c.papel === 'protagonista' && !c.retrato) c.retrato = retratoLembrado(c.canal);
     }
   }
   const controlo = new AbortController();
   estado.montagem = controlo;
+  estado.guardando = guardar;
   if (!soEsta) limparFila();
   pintarMomentos();
   $('estadoMontagem').classList.remove('mau');
@@ -4147,7 +4246,9 @@ async function baixarMontagem(soEsta = null) {
     if (controlo.signal.aborted) break;
     const linha = estado.linhas.find((l) => l.slug === clipe.canal);
     const nudge = estado.nudges[clipe.canal] || 0;
-    $('estadoMontagem').textContent = `${i + 1}/${plano.length}: ${clipe.prefixo} ${clipe.canal}`;
+    const prazo = clipe.guardar ? prazoDe(clipe.canal, clipe.deMs) : null;
+    $('estadoMontagem').textContent = `${i + 1}/${plano.length}: ${clipe.prefixo} ${clipe.canal}`
+      + (prazo ? `, ${textoDoPrazo(prazo).texto}` : '');
 
     // O 9:16 deste clipe, numa linha à parte da fila. 'parar' quando a montagem foi parada a meio.
     const tirarRetrato = async (nome) => {
@@ -4309,12 +4410,13 @@ async function baixarMontagem(soEsta = null) {
   jaTemos.clear();
   if (umSo && !parada) juntarNumSo(para16, para916);
   estado.montagem = null;
+  estado.guardando = false;
   // Redesenhar devolve o botão e os de cada kill ao normal; a frase do fim vem
   // depois, para não ser tapada pelo resumo da lista.
   pintarMomentos();
   $('estadoMontagem').classList.toggle('mau', Boolean(falhas) && !parada);
   $('estadoMontagem').textContent = parada
-    ? t('montagem.parada', { feitos: prontos, total: plano.length })
+    ? t(guardar ? 'prazo.parado' : 'montagem.parada', { feitos: prontos, total: plano.length })
     : t('montagem.pronto', { feitos: prontos, total: plano.length })
       + (falhas ? t('montagem.falharam', { n: falhas }) : '');
   // O ZIP é da montagem inteira. A pedir uma kill só, juntar num ZIP era pôr
@@ -7173,6 +7275,7 @@ $('formatoMontagem').onchange = () => {
   try { localStorage.setItem('povix.formato', $('formatoMontagem').value); } catch { /* janela privada */ }
 };
 $('baixarMontagem').onclick = () => (estado.montagem ? estado.montagem.abort() : baixarMontagem());
+$('guardarLances').onclick = () => (estado.montagem ? estado.montagem.abort() : baixarMontagem(null, { guardar: true }));
 $('limparFila').onclick = limparFila;
 
 // ── Montagem e Exportar, dois separadores no mesmo painel ─────────────────────

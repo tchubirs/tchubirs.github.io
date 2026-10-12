@@ -107,6 +107,14 @@ semana), grande (mais que isso). Estimativas minhas.
 - **No Povix:** em cada faixa, "some em N dias". Uma lista "Lances marcados" com um botão que baixa todos os
   trechos de uma vez, começando pelos que somem primeiro. Já estava no `ESTUDO.md` (item 3 da seção 7); conferir se
   foi feito.
+- **Estado (12/10): feito.** Não estava feito: nada no site falava de prazo. Agora cada faixa da linha do tempo diz
+  "some em N dias", contado do início da live. A Kick não diz na lista de VODs se o canal é verificado; o Povix conta
+  30 dias quando a própria lista tem um VOD mais de 8 dias mais velho que o mais novo (prova de que o canal guarda 30)
+  e 7 nos outros casos, e diz essa conta no texto que aparece ao parar o mouse. O endpoint do canal tem o campo
+  `verified`, mas seria um pedido a mais por canal; fica para quando fizer falta. Na Montagem, cada lance diz o prazo
+  do ângulo que some primeiro, e "Guardar todos agora" baixa a cópia rápida de todos (sem 9:16, chat ou legenda), um
+  de cada vez, os que somem primeiro à frente, com o progresso e o Parar da montagem, e dá o ZIP no fim. Código em
+  `site/prazo.js`, testes em `test/prazo.test.mjs`.
 
 ### 8. Ouvir um ângulo só e trocar com um toque (valor médio, esforço pequeno)
 
