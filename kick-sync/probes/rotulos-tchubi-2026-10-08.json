@@ -20,6 +20,15 @@
       "alerta": null,
       "tiro": "arma de paintball no começo; PvP de MP5 com alguns headshots; depois PvP de M249 com 2 headshots",
       "texto": "começa com disparos de arma de paintball depois tem um pvp de mp5 com alguns headshots depois outro pvp com m249 e 2hs"
+    },
+    {
+      "hora": "22:50",
+      "minDaLive": 8,
+      "clipeS": 60,
+      "explosao": false,
+      "alerta": null,
+      "tiro": "PvP de M4 (escopeta); 2 PvPs com intervalo de nailgun; 1 PvP de besta (crossbow); mais 1 PvP de M4 (escopeta); por último PvP de M16 (nome dito pelo dono; no Rust pode ser a LR-300)",
+      "texto": "aqui teve um pvp de m4 escopeta, depois 2 pvp com intervalos com arma nailgun, depois 1 pvp de crossbal e mais 1 pvp de m4 e por utlimo pvp de m16"
     }
   ],
   "semExplosao": [
