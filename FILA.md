@@ -600,3 +600,4 @@ pedra, árvore). Só vetores vão para o git; os WAV ficam fora.
 - API do Claude: a chave está em ANTHROPIC_API_KEY (variável do usuário), mas não é de workspace; falta o ID
   do workspace (ou uma chave criada dentro de um). Script pronto: scratchpad/povix-audio/rotular_claude.py.
 - O agente do som de acerto e do índice da live pode ter deixado trabalho; ver o último commit dele.
+- Pedido 13/10: na kill da montagem, um campo para digitar o nome de quem morreu (além dos botões "Quem morreu?"), para pegar a POV de quem matou. É o que mais vai servir.
