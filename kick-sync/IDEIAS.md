@@ -98,6 +98,16 @@ semana), grande (mais que isso). Estimativas minhas.
 - **No Povix:** "Baixar pacote do lance": os trechos de cada ângulo (a cópia rápida já existe), um arquivo `.fcpxml`
   multicâmera com o atraso de cada um, e um arquivo de texto com nomes, horários e links. Cuidado: há relatos de
   nomes trocados ao importar multicâmera no DaVinci [34]; testar nos dois programas.
+- **Estado (12/10): feito, sem testar no DaVinci e no Final Cut de verdade.** Cada lance da Montagem tem o botão
+  "Pacote", que baixa um ZIP com: o trecho de cada ângulo que filmava o lance (a cópia rápida em MP4, cortada no
+  relógio comum com o atraso medido de cada canal), um `.fcpxml` multicâmera e um `.txt` com nomes, horários em UTC,
+  o atraso medido e o link do VOD (kick.com/canal/videos/uuid, com o ponto do VOD). O `.fcpxml` é da versão 1.9:
+  `format`, `asset` com `media-rep`, `media` com `multicam` e um `mc-angle` por canal (nome e `angleID` são o slug,
+  tal e qual), e um projeto com o `mc-clip`. Um ângulo que começa depois dos outros (a live entrou no meio do clipe)
+  entra com um `gap` e o deslocamento certo. Conferido com o xmllint contra as DTDs 1.9 e 1.10 da Apple e lido pelo
+  leitor de XML do Chromium nos testes. Falta abrir num DaVinci e num Final Cut: os ficheiros vão com caminho
+  relativo (`./01_canal.mp4`), e o Final Cut costuma querer caminho absoluto, então pode pedir para religar os
+  arquivos. Código em `site/pacote.js`, testes em `test/pacote.test.mjs` e `test/pacote-pagina.test.mjs`.
 
 ### 7. Aviso de prazo do VOD e "guardar o lance agora" (valor alto no evento, esforço pequeno)
 

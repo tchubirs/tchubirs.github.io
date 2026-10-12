@@ -53,6 +53,7 @@ import {
 } from './baixar.js';
 import { criarZip, crc32 } from './zip.js';
 import { retencaoDoCanal, prazoDoVod, ordemDeGuardar } from './prazo.js';
+import { fcpxmlMulticam, textoDoPacote, linkDoVod } from './pacote.js';
 import { queFazerComOLeitor } from './leitor.js';
 import { criarApanhador } from './frames.js';
 import { varrerNoite, custoVarrerMB } from './procurar-momentos.js';
@@ -3994,6 +3995,7 @@ function pintarMomentos() {
       + `${t(estado.previa?.ms === m.ms ? 'montagem.parar' : 'montagem.ver')}</button>`
       + `<button class="cliparUma">${t('montagem.clipar')}</button>`
       + `<button class="baixarUma" ${n && !estado.montagem ? '' : 'disabled'}>${t('montagem.baixarUma')}</button>`
+      + `<button class="pacoteUma" ${n && !estado.montagem ? '' : 'disabled'} title="${escapar(t('pacote.ajuda'))}">${t('pacote.botao')}</button>`
       + (estado.estouros.length ? `<button class="foiKill">${t('auto.foiKill')}</button>` : '')
       + `<button class="fora">${t('montagem.apagar')}</button>`
       + (sozinho ? '' : `<button class="verMortes">${t('montagem.verMortes')}</button>`)
@@ -4029,6 +4031,10 @@ function pintarMomentos() {
     li.querySelector('.baixarUma').onclick = () => {
       const m = estado.momentos.find((x) => x.ms === ms);
       if (m) baixarMontagem([m]);
+    };
+    li.querySelector('.pacoteUma').onclick = () => {
+      const m = estado.momentos.find((x) => x.ms === ms);
+      if (m) baixarPacote(m);
     };
     const vm = li.querySelector('.verMortes');
     if (vm) {
@@ -4422,6 +4428,114 @@ async function baixarMontagem(soEsta = null, { guardar = false } = {}) {
   // O ZIP é da montagem inteira. A pedir uma kill só, juntar num ZIP era pôr
   // ali um botão que só levava a última coisa que ele carregou.
   if (!soEsta && !umSo) oferecerZip(paraZip);
+}
+
+/**
+ * O pacote do lance para o editor (IDEIAS.md, item 6): um ZIP com o trecho de cada ângulo que filmava o
+ * lance (a cópia rápida, em MP4), um projeto multicâmera .fcpxml com os ângulos alinhados e um texto com
+ * nomes, horários e links dos VODs. Cada trecho sai cortado no relógio comum, já com o atraso medido de
+ * cada canal (o mesmo corte da montagem); o que sobra de diferença no início de cada ficheiro vai no
+ * .fcpxml como o deslocamento do ângulo. As contas e o XML estão em pacote.js.
+ *
+ * Um ângulo de cada vez, com o Parar e o progresso da montagem. Um ângulo que não sai fica de fora e é
+ * dito; os outros vão no pacote.
+ */
+async function baixarPacote(m) {
+  if (estado.montagem) return;
+  const canais = estado.linhas.map((l) => l.slug);
+  const todas = ordenar(estado.momentos);
+  const num = numeroNaMontagem(todas.indexOf(m), todas.length);
+  const clipes = planoDaMontagem([m], canais, { filmava });
+  const base = clipes.find((c) => c.papel === 'protagonista') || clipes[0];
+  if (!base) return;
+  const { deMs, ateMs } = base;
+  // Quem de quem marcou o lance primeiro: é o ângulo que o projeto abre ligado.
+  const linhas = [...estado.linhas]
+    .sort((a, b) => (b.slug === m.protagonista) - (a.slug === m.protagonista))
+    .filter((l) => filmava(l.slug, deMs, ateMs));
+  const controlo = new AbortController();
+  estado.montagem = controlo;
+  estado.guardando = false;
+  pintarMomentos();
+  const estadoEl = $('estadoMontagem');
+  estadoEl.classList.remove('mau');
+  const cache = new Map();
+  const angulos = [];
+  const ficheiros = [];
+  const falhas = [];
+  for (const [i, linha] of linhas.entries()) {
+    if (controlo.signal.aborted) break;
+    const nudge = estado.nudges[linha.slug] || 0;
+    estadoEl.textContent = t('pacote.aBaixar', { i: i + 1, n: linhas.length, canal: linha.slug });
+    try {
+      const p = await planearCorte({ linha, deMs: deMs + nudge, ateMs: ateMs + nudge, cache, sinal: controlo.signal });
+      if (p.estado !== 'ok') { falhas.push(`${linha.slug} (${porqueNaoSaiu(p)})`); continue; }
+      const r = await executarCorte(p, { sinal: controlo.signal });
+      if (controlo.signal.aborted) break;
+      if (r.estado !== 'pronto') {
+        falhas.push(`${linha.slug} (${t('corte.incompleto', { obtidos: r.obtidos ?? 0, total: r.total ?? 0 })})`);
+        continue;
+      }
+      // Onde o ficheiro começa no relógio da playlist: o pedido, mais o que faltou (sobra negativa) ou
+      // menos o que veio a mais (o .ts de recurso começa no pedaço inteiro).
+      const inicioPlaylist = r.plano.pedido.deMs - r.plano.sobraInicioS * 1000;
+      const duracaoS = Number.isFinite(r.duracaoS) ? r.duracaoS : (r.plano.fimReal - r.plano.inicioReal) / 1000;
+      const ficheiro = `${num}_${linha.slug}.${sufixoDe(r.tipo)}`;
+      const peca = (linha.pecasCompletas || linha.pecas || []).find((x) => x.playlist
+        && inicioPlaylist >= x.playlist.inicio && inicioPlaylist < x.playlist.fim);
+      angulos.push({
+        canal: linha.slug,
+        ficheiro,
+        inicioMs: inicioPlaylist - nudge,
+        duracaoS,
+        largura: p.qualidade?.largura,
+        altura: p.qualidade?.altura,
+        fps: p.qualidade?.fps,
+        atrasoMs: nudge,
+        link: linkDoVod(linha.slug, peca?.vod),
+        noVodS: peca ? (inicioPlaylist - peca.playlist.inicio) / 1000 : null,
+      });
+      ficheiros.push({ nome: ficheiro, blob: new Blob([r.bytes], { type: r.tipo }), crc: crc32(r.bytes), tamanho: r.bytes.length });
+    } catch (e) {
+      if (e.name === 'AbortError' || controlo.signal.aborted) break;
+      falhas.push(`${linha.slug} (${porqueNaoSaiu({ estado: 'erro', erro: e.message })})`);
+    }
+  }
+  const parada = controlo.signal.aborted;
+  estado.montagem = null;
+  pintarMomentos();
+  if (parada) { estadoEl.textContent = t('pacote.parado'); return; }
+  if (!angulos.length) {
+    estadoEl.classList.add('mau');
+    estadoEl.textContent = t('pacote.nada', { falhas: falhas.join(', ') || '?' });
+    return;
+  }
+  const titulo = t('pacote.titulo', { n: num, hora: relogioCurto(m.ms) });
+  const texto = (conteudo) => {
+    const bytes = new TextEncoder().encode(conteudo);
+    return { blob: new Blob([bytes]), crc: crc32(bytes), tamanho: bytes.length };
+  };
+  ficheiros.push({ nome: `${num}_lance.fcpxml`, ...texto(fcpxmlMulticam({ titulo, angulos })) });
+  ficheiros.push({ nome: `${num}_lance.txt`, ...texto(textoDoPacote({ titulo, instanteMs: m.ms, angulos, t })) });
+  let zip;
+  try {
+    zip = criarZip(ficheiros);
+  } catch (e) {
+    estadoEl.classList.add('mau');
+    estadoEl.textContent = t(e.message === 'ZIP-GRANDE-DEMAIS' ? 'fila.zipGrande' : 'fila.zipErro');
+    return;
+  }
+  const item = document.createElement('li');
+  $('fila').prepend(item);
+  linhaDeFicheiro(item, {
+    nome: `lance-${num}-${diaLocal(m.ms)}.zip`,
+    url: guardarFicheiro(zip),
+    nota: `${(zip.size / 1048576).toFixed(1)} MB, ${tn(angulos.length, 'pacote.umAngulo', 'pacote.angulos')}`,
+    momentoMs: m.ms,
+  });
+  estadoEl.classList.toggle('mau', Boolean(falhas.length));
+  estadoEl.textContent = t('pacote.pronto', { n: angulos.length })
+    + (falhas.length ? t('pacote.ficaramFora', { lista: falhas.join(', ') }) : '');
 }
 
 /**

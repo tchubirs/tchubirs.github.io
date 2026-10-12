@@ -306,3 +306,8 @@ em francês). Tudo revisado pela regra 14 em 28/09.
   guarda 30), com a conta explicada ao parar o mouse. Na Montagem, cada lance diz o prazo, e "Guardar todos agora"
   baixa a cópia rápida de todos, os que somem primeiro à frente, um de cada vez, com progresso e Parar. Ver
   `kick-sync/IDEIAS.md`, item 7.
+
+## Ideia (12/10): pacote do lance para o editor
+- Feito em 12/10. Botão "Pacote" em cada lance da Montagem: ZIP com o trecho de cada ângulo, um projeto multicâmera
+  `.fcpxml` (versão 1.9) com os ângulos alinhados e com o nome de cada canal, e um texto com nomes, horários e links.
+  Falta testar num DaVinci e num Final Cut de verdade. Ver `kick-sync/IDEIAS.md`, item 6.

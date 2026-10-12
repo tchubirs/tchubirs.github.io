@@ -73,6 +73,8 @@ export async function vodsDoCanal(slug, { buscar = fetch } = {}) {
     // O idioma que o streamer declarou na Kick ("Portuguese", "Spanish"). A legenda usa-o quando a
     // escolha é Automático: o Whisper, sozinho, ouviu inglês num clipe de Rust em português (12/10).
     idioma: typeof v.language === 'string' ? v.language.slice(0, 40) : DESCONHECIDO,
+    // O endereço do VOD na Kick é kick.com/<canal>/videos/<uuid> (o pacote do lance leva o link).
+    uuid: typeof v.video?.uuid === 'string' ? v.video.uuid.slice(0, 64) : DESCONHECIDO,
     privado: v.video?.is_private === true,
     apagado: v.video?.is_pruned === true || Boolean(v.video?.deleted_at),
   })).filter((v) => v.master && !v.privado && !v.apagado);
