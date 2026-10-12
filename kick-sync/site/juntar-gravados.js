@@ -245,6 +245,8 @@ function lerWebm(b) {
             const trilha = lerTamanho(b, r);
             const rel = dv(b).getInt16(r + trilha.n);
             blocos.at(-1).rel = rel;
+            // Onde está o número da faixa dentro do bloco: ao juntar, pode ter de passar a ser o da primeira.
+            blocos.at(-1).trilha = { o: r - f.o, n: trilha.n, v: trilha.v };
           }
         }
         q = f.dentro + f.n;
@@ -270,31 +272,71 @@ function lerWebm(b) {
   return { b, cabecalho: b.subarray(0, seg.o), seg, info, faixas, escala, clusters };
 }
 
-/** As faixas sem o TrackUID, que o gravador sorteia a cada gravação: o resto tem de ser igual. */
-function semUid(b) {
-  const out = [];
-  const passar = (de, ate) => {
-    for (let q = de; q < ate;) {
-      const f = elemento(b, q);
-      if (!f || f.n < 0) break;
-      if (f.id === 0xae) { out.push(0xae); passar(f.dentro, f.dentro + f.n); } else if (f.id !== 0x73c5) {
-        for (let k = f.o; k < f.dentro + f.n; k++) out.push(b[k]);
-      }
-      q = f.dentro + f.n;
-    }
-  };
+/**
+ * As faixas de um WebM, uma a uma: o número (TrackNumber) e o resto sem o TrackUID, que o gravador
+ * sorteia a cada gravação, e sem o próprio número.
+ *
+ * Pelo número não dá para as ligar: medido no Chromium 141 (36 gravações, 6 ao mesmo tempo), a ordem
+ * das faixas muda de gravação para gravação, imagem primeiro ou som primeiro, conforme o que chega
+ * antes ao gravador. Comparar o bloco Tracks inteiro dizia "faixas diferentes" a duas gravações iguais.
+ */
+function faixasDe(b) {
+  const lista = [];
   const t = elemento(b, 0);
-  passar(t.dentro, t.dentro + t.n);
-  return out;
+  for (let q = t.dentro; q < t.dentro + t.n;) {
+    const f = elemento(b, q);
+    if (!f || f.n < 0) break;
+    if (f.id === 0xae) {
+      let numero = null;
+      const resto = [];
+      for (let r = f.dentro; r < f.dentro + f.n;) {
+        const g = elemento(b, r);
+        if (!g || g.n < 0) break;
+        if (g.id === 0xd7) { numero = 0; for (let k = 0; k < g.n; k++) numero = numero * 256 + b[g.dentro + k]; } else if (g.id !== 0x73c5) {
+          for (let k = g.o; k < g.dentro + g.n; k++) resto.push(b[k]);
+        }
+        r = g.dentro + g.n;
+      }
+      lista.push({ numero, assinatura: resto.join(',') });
+    }
+    q = f.dentro + f.n;
+  }
+  return lista;
+}
+
+/** Os números das faixas de `l` nos da primeira gravação, pela forma de cada faixa, ou null se não casam. */
+function ligarFaixas(faixasL, faixasP) {
+  if (faixasL.length !== faixasP.length) return null;
+  const livres = [...faixasP];
+  const mapa = new Map();
+  for (const f of faixasL) {
+    const i = livres.findIndex((x) => x.assinatura === f.assinatura);
+    if (i < 0 || f.numero == null) return null;
+    mapa.set(f.numero, livres[i].numero);
+    livres.splice(i, 1);
+  }
+  return mapa;
+}
+
+/** Um bloco com o número da faixa trocado pelo da primeira gravação (o mesmo tamanho, noutra cópia). */
+function comFaixa(x, mapa) {
+  const novo = x.trilha && mapa.get(x.trilha.v);
+  if (novo == null || novo === x.trilha.v) return x;
+  if (novo >= 2 ** (7 * x.trilha.n) - 1) throw erro('JUNTAR-FAIXAS', 'número de faixa grande demais');
+  const copia = new Uint8Array(x);
+  let v = novo;
+  for (let k = x.trilha.n - 1; k >= 0; k--) { copia[x.trilha.o + k] = v & 255; v = Math.floor(v / 256); }
+  copia[x.trilha.o] |= 0x80 >> (x.trilha.n - 1);
+  return copia;
 }
 
 function juntarWebm(listas) {
   const lidos = listas.map(lerWebm);
   const p = lidos[0];
-  const igual = (x, y) => x.length === y.length && x.every((v, i) => v === y[i]);
-  const faixasP = semUid(p.faixas);
-  for (const l of lidos.slice(1)) {
-    if (!igual(semUid(l.faixas), faixasP) || l.escala !== p.escala) throw erro('JUNTAR-FAIXAS', 'faixas diferentes');
+  const faixasP = faixasDe(p.faixas);
+  for (const l of lidos) {
+    l.mapa = ligarFaixas(faixasDe(l.faixas), faixasP);
+    if (!l.mapa || l.escala !== p.escala) throw erro('JUNTAR-FAIXAS', 'faixas diferentes');
   }
   // O Info sem a duração do primeiro ficheiro (seria a dele, e não a do vídeo inteiro).
   const info = [];
@@ -317,7 +359,8 @@ function juntarWebm(listas) {
     for (const c of l.clusters) {
       const tempo = c.tempo - t0 + desvio;
       const corpo = c.blocos.reduce((t, x) => t + x.length, 0) + 10;
-      partes.push(new Uint8Array([...bytesId(ID.CLUSTER), ...tamanho8(corpo), ...uint(ID.TEMPO, tempo)]), ...c.blocos);
+      partes.push(new Uint8Array([...bytesId(ID.CLUSTER), ...tamanho8(corpo), ...uint(ID.TEMPO, tempo)]),
+        ...c.blocos.map((x) => comFaixa(x, l.mapa)));
       for (const x of c.blocos) if (x.rel != null) fim = Math.max(fim, c.tempo - t0 + x.rel);
     }
     desvio += fim + umQuadro;

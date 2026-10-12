@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   mesmoLugar, normalDoChat, unirJanelas, sinaisDoEvento, agrupar, resumirLance, melhoresLances, filtrarLances, coincide,
-  motivoDoLance, contaDoLance, vezesEmTexto, PONTOS, ANTES_MS,
+  motivoDoLance, contaDoLance, vezesEmTexto, PONTOS, ANTES_MS, pedidosDeClipe,
 } from '../site/melhores.js';
 import { definirIdioma } from '../site/idiomas.js';
 
@@ -188,4 +188,56 @@ test('só juntam canais do mesmo time ou confirmados pelo som; picos que calhara
   assert.equal(mesmoLugar('b1', 'solto', T, { grupoDe, confirmados: [{ ms: T + 10 * MIN, canais: ['b1', 'solto'] }] }), false);
   // Dois sem time nenhum nunca são do mesmo lugar só por isso.
   assert.equal(mesmoLugar('solto', 'outro', T, { grupoDe }), false);
+});
+
+// IDEIAS.md, item 9: o que a pessoa marcou ao vivo com a tecla e o chat a pedir clipe.
+
+test('marcado ao vivo: um lance só com todos os ângulos da marca, no topo, e não conta como kill', () => {
+  definirIdioma('pt');
+  const momentos = [
+    { ms: T + 10 * S, protagonista: 'a', origem: 'aovivo', vitimas: [], vivo: [{ c: 'a', ms: T + 10 * S }, { c: 'b', ms: T + 7 * S }] },
+    // Uma kill com muito mais pontos noutro sítio, de outro time.
+    { ms: T + 20 * MIN, protagonista: 'c', vitimas: ['d'] },
+  ];
+  const marcas = new Map([['c', [{ tipo: 'chat', ms: T + 20 * MIN, vezes: 9 }]]]);
+  const sinais = sinaisDoEvento({ marcas, momentos });
+  assert.deepEqual(sinais.filter((s) => s.tipo === 'voce').map((s) => [s.canal, s.ms]), [['a', T + 10 * S], ['b', T + 7 * S]]);
+  assert.equal(sinais.filter((s) => s.tipo === 'kill' && s.canal === 'a').length, 0, 'marcar ao vivo não é marcar kill');
+  // Cada canal no seu time: mesmo assim, os dois ângulos da marca são um lance.
+  const lances = melhoresLances(sinais, { grupoDe: (c) => c });
+  assert.equal(lances.length, 2);
+  const [primeiro, segundo] = lances;
+  assert.deepEqual([...primeiro.canais].sort(), ['a', 'b']);
+  assert.equal(primeiro.canais[0], 'a', 'o ângulo que se via quando se marcou abre primeiro');
+  assert.ok(segundo.pontos > primeiro.pontos, 'a kill tem mais pontos e mesmo assim fica atrás');
+  assert.equal(primeiro.voce, 1);
+  assert.equal(primeiro.ms, T + 7 * S, 'o instante é o da marca, e não 10 s antes');
+  assert.match(motivoDoLance(primeiro), /^marcado por você/);
+  assert.deepEqual(contaDoLance(primeiro)[0], { rotulo: 'marcado por você', pontos: PONTOS.voce });
+});
+
+test('o chat a pedir clipe ("clip", "clipa", "clipe") é mais um sinal, pelo mesmo filtro de palavras do chat', () => {
+  definirIdioma('pt');
+  // Um canal com 2 mensagens por minuto de conversa, e um surto de pedidos de clipe às 21:10.
+  const mensagens = [];
+  for (let m = 0; m < 30; m++) {
+    mensagens.push({ ms: T + m * MIN, texto: 'boa noite' }, { ms: T + m * MIN + 30 * S, texto: 'que mapa é esse' });
+  }
+  for (const [k, texto] of ['CLIPA', 'clip clip', 'cliiiipe isso', 'alguém clipou?', 'clipe'].entries()) {
+    mensagens.push({ ms: T + 10 * MIN + 5 * S + k * 2 * S, texto });
+  }
+  mensagens.sort((a, b) => a.ms - b.ms);
+  const pedidos = pedidosDeClipe(mensagens);
+  assert.equal(pedidos.length, 1, 'um surto, um pedido');
+  assert.ok(pedidos[0].ms >= T + 10 * MIN && pedidos[0].ms <= T + 10 * MIN + 15 * S);
+  assert.equal(pedidosDeClipe(mensagens), pedidos, 'a mesma lista não se volta a contar');
+  assert.deepEqual(pedidosDeClipe(mensagens.filter((m) => !/cli/i.test(m.texto))), [], 'sem pedidos, nada');
+
+  const sinais = sinaisDoEvento({ mensagens: new Map([['a', mensagens]]) });
+  assert.deepEqual(sinais.map((s) => [s.tipo, s.canal]), [['pedidoClip', 'a']]);
+  const [lance] = melhoresLances(sinais);
+  assert.equal(lance.pedidosClip, 1);
+  assert.equal(lance.pontos, PONTOS.pedidoClip);
+  assert.equal(lance.msAbrir, lance.ms - ANTES_MS, 'o chat reage depois: abre antes do pedido');
+  assert.equal(motivoDoLance(lance), 'o chat pediu clipe');
 });

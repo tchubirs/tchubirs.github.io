@@ -66,3 +66,44 @@ test('dois 9:16 gravados viram um vídeo com a soma das durações', { skip: !po
   }
   assert.deepEqual(erros, []);
 });
+
+// O teste de cima falhou uma vez na suíte inteira com "faixas diferentes": medido depois, em 36 gravações
+// feitas 6 ao mesmo tempo, o gravador do Chromium pôs o som antes da imagem em 33 e a imagem antes do som
+// em 3. As faixas ligam-se pela forma de cada uma, e os blocos da segunda passam a usar os números da
+// primeira. Aqui com dois WebM mínimos feitos à mão, um com cada ordem, para não depender da sorte.
+test('duas gravações com as faixas em ordem trocada juntam-se, com os blocos na faixa certa', async () => {
+  const { juntarGravados } = await import('../site/juntar-gravados.js');
+  const el = (id, corpo) => [...id, 0x80 | corpo.length, ...corpo];
+  const faixa = (numero, tipo, codec) => el([0xae], [
+    ...el([0xd7], [numero]), ...el([0x73, 0xc5], [1, 2, 3, 4, 5, 6, 7, numero * 9]), ...el([0x83], [tipo]),
+    ...el([0x86], [...codec].map((c) => c.charCodeAt(0))),
+  ]);
+  // Um SimpleBlock: o número da faixa, o tempo relativo (2 bytes), as flags e um byte de dados que diz de quem é.
+  const bloco = (numero, rel, dado) => el([0xa3], [0x80 | numero, rel >> 8, rel & 255, 0x80, dado]);
+  const webm = (ordem) => {
+    const num = Object.fromEntries(ordem.map((t, i) => [t, i + 1]));
+    const faixas = ordem.map((t) => (t === 'v' ? faixa(num.v, 1, 'V_VP8') : faixa(num.a, 2, 'A_OPUS')));
+    return new Uint8Array([
+      ...el([0x1a, 0x45, 0xdf, 0xa3], []),
+      0x18, 0x53, 0x80, 0x67, 0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      ...el([0x15, 0x49, 0xa9, 0x66], el([0x2a, 0xd7, 0xb1], [0x0f, 0x42, 0x40])),
+      ...el([0x16, 0x54, 0xae, 0x6b], faixas.flat()),
+      0x1f, 0x43, 0xb6, 0x75, 0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+      ...el([0xe7], [0]), ...bloco(num.v, 0, 0x56), ...bloco(num.a, 10, 0x41), ...bloco(num.v, 33, 0x56),
+    ]);
+  };
+  const primeira = webm(['v', 'a']);
+  const segunda = webm(['a', 'v']);
+  const { partes } = juntarGravados([primeira, segunda]);
+  const tudo = new Uint8Array(await new Blob(partes).arrayBuffer());
+  // Cada bloco da saída: o número da faixa e o byte de dados. Na primeira, a imagem é 1 e o som é 2.
+  const blocos = [];
+  for (let i = 0; i + 5 < tudo.length; i++) {
+    if (tudo[i] === 0xa3 && tudo[i + 1] === 0x85) blocos.push([tudo[i + 2] & 0x7f, String.fromCharCode(tudo[i + 6])]);
+  }
+  assert.deepEqual(blocos, [[1, 'V'], [2, 'A'], [1, 'V'], [1, 'V'], [2, 'A'], [1, 'V']]);
+  // E duas faixas que não casam (outro codec) continuam a ser recusadas.
+  const outra = webm(['v', 'a']);
+  outra[outra.indexOf(0x4f)] = 0x58; // "A_OPUS" vira "A_XPUS"
+  assert.throws(() => juntarGravados([primeira, outra]), /faixas diferentes/);
+});

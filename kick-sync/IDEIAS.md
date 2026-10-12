@@ -155,6 +155,20 @@ semana), grande (mais que isso). Estimativas minhas.
 - **No Povix:** uma tecla marca "agora" em todos os POVs abertos, já descontando os 2 a 12 s de atraso medidos. Os
   marcadores entram na lista do item 2. Contar no chat palavras como "clip" ou "clipa" como sinal extra (o filtro de
   palavras já existe).
+- **Estado (12/10): feito.** A tecla V (ou o botão "Marcar agora" da Montagem, que só aparece com alguém ao vivo na
+  noite aberta) marca o agora em todos os ângulos ao vivo abertos. Com o ao vivo a tocar no Povix, o instante é o da
+  tela, o mesmo em todos, porque a página já os mostra alinhados. Parado (a ver a live na Kick, por exemplo), é o
+  agora menos o atraso de cada canal, medido a cada leitura da playlist (quanto antes do relógio acabou o último
+  pedaço), preso entre 2 e 12 s, com o ajuste de relógio de cada um; sem medida, 6 s, e a dica do botão diz isso. O
+  recado depois de marcar diz o atraso usado. A marca entra na Montagem como um lance ("marcado ao vivo"), guardada
+  como as kills, e nos melhores lances como "marcado por você": os ângulos da marca ficam num lance só, mesmo de
+  times diferentes, o lance vai sempre para o topo, já marcado e guardado com os outros lances marcados, e abre no
+  ângulo que se estava a ver. O chat a pedir clipe ("clip", "clipa", "clipe", pelo mesmo filtro de palavras da
+  detecção) virou mais um sinal, 3 pontos por canal. A tecla é um atalho como os outros e pode ser trocada. Código em
+  `site/aovivo.js` (`medirAtraso`, `instantesAoVivo`), `site/app.js` (`marcarAoVivo`), `site/melhores.js` e
+  `site/evento-ui.js`; testes em `test/aovivo-marcar.test.mjs`, `test/aovivo.test.mjs` e `test/melhores.test.mjs`.
+  Falta conferir numa live de verdade: o atraso medido na playlist não conta o buffer do leitor da Kick, que pode
+  pôr mais uns segundos.
 
 ### 10. Sons específicos: explosão, grito (valor médio, esforço médio)
 

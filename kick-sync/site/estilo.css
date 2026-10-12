@@ -2807,3 +2807,7 @@ body.mesa .momentos li .prazo { font-size: var(--t-micro); color: var(--tinta-3)
 body.mesa .momentos li .prazo.perto { color: var(--aviso); }
 body.mesa .guardarAgora { align-items: center; }
 body.mesa .guardarAgora .nota.mau { color: var(--aviso); }
+
+/* O recado do "Marcar agora": some quando está vazio, para não abrir um buraco na Montagem. */
+body.mesa #montagem .estadoAoVivo { margin: var(--e2) 0 0; }
+body.mesa #montagem .estadoAoVivo:empty { display: none; }

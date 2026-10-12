@@ -465,7 +465,9 @@ test('se o player da Twitch não carregou, diz isso e não culpa os nomes',
     const { p, erros } = await abrir();
     await twitchFalsa(p, { semEmbed: true });
     await carregar(p);
-    await p.waitForFunction(() => document.getElementById('estado').textContent.length > 3,
+    // Esperar a resposta final, e não um texto qualquer: o "perguntando à Twitch…" do caminho já tem mais
+    // de três letras, e numa máquina ocupada o teste lia-o antes de o player falhar (visto na suíte de 12/10).
+    await p.waitForFunction(() => /player\.twitch\.tv|Confira os nomes/.test(document.getElementById('estado').textContent),
       null, { timeout: 15000 });
     const estado = await p.locator('#estado').innerText();
     assert.match(estado, /player\.twitch\.tv/);

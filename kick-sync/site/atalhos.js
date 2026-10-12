@@ -40,6 +40,8 @@ export const ACOES = [
   { id: 'marcarIn', grupo: 'marcar', rotulo: 'atalhos.marcarIn', padrao: ['I'], botao: 'marcarIn', noite: true },
   { id: 'marcarOut', grupo: 'marcar', rotulo: 'atalhos.marcarOut', padrao: ['O'], botao: 'marcarOut', noite: true },
   { id: 'marcarKill', grupo: 'marcar', rotulo: 'atalhos.marcarKill', padrao: ['M'], botao: 'marcarKill', noite: true },
+  // Marcar ao vivo (IDEIAS.md, item 9): o V de "vivo", que estava livre.
+  { id: 'marcarAgora', grupo: 'marcar', rotulo: 'atalhos.marcarAgora', padrao: ['V'], botao: 'marcarAoVivo', noite: true },
   { id: 'clipar', grupo: 'marcar', rotulo: 'atalhos.clipar', padrao: ['C'], botao: 'clipar', noite: true },
   { id: 'exportarClipe', grupo: 'marcar', rotulo: 'atalhos.exportarClipe', padrao: [], botao: 'guardarClipe', clipe: true },
   { id: 'exportarRetrato', grupo: 'marcar', rotulo: 'atalhos.exportarRetrato', padrao: [], botao: 'guardarRetrato', clipe: true },

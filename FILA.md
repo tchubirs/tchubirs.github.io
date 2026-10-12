@@ -317,3 +317,13 @@ em francês). Tudo revisado pela regra 14 em 28/09.
   podem trocar) passam o som para o ângulo com esse número, que aparece no canto do quadrado; quem tem som leva um
   altifalante. O clipe de vários ângulos agora grava o som de quem está na tela, medido com dois tons num Chromium.
   Ver `kick-sync/IDEIAS.md`, item 8.
+
+## Ideia (12/10): marcar ao vivo com uma tecla
+- Feito em 12/10. A tecla V marca o agora em todos os ângulos ao vivo abertos, tirando o atraso medido de cada canal
+  (2 a 12 s, ou 6 s sem medida); com o ao vivo a tocar no Povix, marca o que está na tela. A marca vai para a
+  Montagem e para o topo dos melhores lances como "marcado por você", guardada como os outros lances marcados. O
+  chat pedindo clipe ("clip", "clipa", "clipe") virou mais um sinal. Falta conferir o atraso numa live de verdade.
+  Ver `kick-sync/IDEIAS.md`, item 9.
+- Também em 12/10, achados por testes que falhavam com a máquina ocupada: juntar dois 9:16 gravados falhava quando o
+  gravador do Chrome punha o som antes da imagem numa das gravações (as faixas agora ligam-se pelo tipo); um 429 da
+  Kick podia deixar sair um pedido no meio da pausa; e um teste da página da Twitch lia o estado cedo demais.

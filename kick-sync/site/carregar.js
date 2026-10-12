@@ -212,6 +212,17 @@ export async function carregarCanais(slugs, {
       if (fechada) { libertar(); return { slug: chave, estado: 'rate-limit', vods: [] }; }
       const minhaGeracao = geracao;
       let r;
+      // A pausa de um 429 começa ANTES de o lugar ficar livre, pela mesma razão do corte: o `libertar`
+      // anda com a fila, e com a pausa ainda por contar o lugar ia para o próximo, que pedia à Kick no
+      // meio da pausa. Acontecia só quando havia menos pedidos no ar do que o limite (visto na suíte
+      // inteira, numa máquina ocupada, a 12/10). Se afinal não se espera, a pausa larga-se logo.
+      let pausaPresa = false;
+      const largarPausa = () => {
+        if (!pausaPresa) return;
+        pausaPresa = false;
+        pausas--;
+        andar();
+      };
       try {
         r = await vodsDoCanal(chave, { buscar: buscarComSinal });
         // ANTES de libertar o lugar: se fosse depois, o lugar livre ia já para
@@ -222,6 +233,8 @@ export async function carregarCanais(slugs, {
             limite = Math.max(piso, Math.floor(limite / 2));
             geracao++;
           }
+          pausas++;
+          pausaPresa = true;
         } else {
           outras++;
         }
@@ -230,10 +243,11 @@ export async function carregarCanais(slugs, {
       }
       // Um fetch largado pelo sinal volta como 'sem-rede', que é transitório e
       // seria tentado outra vez. Não pode: a pessoa mandou parar.
-      if (sinal?.aborted || parar) throw cancelado();
+      if (sinal?.aborted || parar) { largarPausa(); throw cancelado(); }
       const de429 = r.estado === 'rate-limit';
       if (de429 && !antes) antes = { recusas: recusas - 1, outras: outras };
       if (!transitorio(r.estado) || feitas >= tentativas) {
+        largarPausa();
         const seco = de429 && antes && outras === antes.outras && recusas - antes.recusas > feitas + 1;
         if (!seco || fechada) return r;
         if (sonda) {
@@ -248,11 +262,11 @@ export async function carregarCanais(slugs, {
       // A espera não precisa de correr contra o sinal aqui dentro: quem
       // chamou já recebeu o AbortError pela corrida lá de baixo, e quando
       // esta espera acabar o canal dá com o `parar` antes de pedir o que seja.
-      if (de429) pausas++;
       try {
         await esperar(1000 * 2 ** feitas);
       } finally {
-        if (de429) pausas--;
+        // Sem andar com a fila aqui: quem esperou volta à frente dela (o `vez` logo a seguir).
+        if (pausaPresa) { pausaPresa = false; pausas--; }
       }
     }
   }

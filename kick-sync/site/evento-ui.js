@@ -2095,7 +2095,8 @@ export function montarEvento({
     const j = janelaMelhores();
     if (!ev.elenco || !j) return;
     const doEvento = new Set(todosDoEvento());
-    const sinais = sinaisDoEvento({ marcas: ev.marcas, momentos: momentos() }).filter((s) => doEvento.has(s.canal));
+    const sinais = sinaisDoEvento({ marcas: ev.marcas, momentos: momentos(), mensagens: ev.mensagens })
+      .filter((s) => doEvento.has(s.canal));
     const times = indiceDeTimes(ev.elenco);
     const todos = melhoresLances(sinais, { grupoDe: (c) => times.get(c) ?? null, confirmados: ev.confirmados });
     const comuns = { deMs: j.deMs, ateMs: j.ateMs, descartados: melhores.descartados, marcados: melhores.marcados };
@@ -2429,5 +2430,14 @@ export function montarEvento({
     abrirElenco, abrirDoTexto, abrirDoLink, abrirGuardado, esquecerEvento, lerChatTrecho, faltaLer, pintarComoPico, ordenar, estado: ev,
     // A página avisa quando a montagem muda (uma kill marcada, a detecção que achou tiros).
     sinaisMudaram: () => agendarMelhores(),
+    // O "Marcar agora" do ao vivo: o lance fica marcado na lista, guardado como os do botão Marcar.
+    marcadoAoVivo: ({ ms, canais }) => {
+      if (!ev.elenco || !Number.isFinite(ms) || !canais?.length) { agendarMelhores(); return; }
+      if (!melhores.marcados.some((g) => Number.isFinite(g?.ms) && Math.abs(g.ms - ms) < 2000)) {
+        melhores.marcados = [...melhores.marcados, { ms, c: [...canais] }];
+        guardarMelhores();
+      }
+      agendarMelhores();
+    },
   };
 }

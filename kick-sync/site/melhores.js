@@ -17,6 +17,7 @@
 // Tudo aqui é conta, sem página: os testes correm em node.
 
 import { t, tn, idiomaActual } from './idiomas.js';
+import { termosDoFiltro, momentosDePalavras } from './chat.js';
 
 // Dois sinais a menos disto um do outro (de qualquer canal) são o mesmo lance.
 export const JUNTAR_MS = 60_000;
@@ -29,7 +30,39 @@ export const ANTES_MS = 10_000;
 // Os pontos de cada sinal. O chat dá as vezes que passou do normal daquele canal, até 10 por canal;
 // tiros e explosões dão 2 por ângulo que os ouviu; um grito, 1; uma kill marcada à mão, 5; e cada
 // canal a mais no mesmo lance, 2. São escolhas, e estão escritas na página (melhores.como).
-export const PONTOS = Object.freeze({ chatMax: 10, tiros: 2, explosao: 2, grito: 1, kill: 5, canal: 2 });
+// O chat a pedir clipe ("clip", "clipa", "clipe") dá 3 por canal. O que a pessoa marcou ao vivo com a
+// tecla dá 5, e além disso vai sempre para o topo da lista: foi ela que viu.
+export const PONTOS = Object.freeze({
+  chatMax: 10, tiros: 2, explosao: 2, grito: 1, kill: 5, canal: 2, voce: 5, pedidoClip: 3,
+});
+
+// As palavras do pedido de clipe, pelo mesmo filtro de palavras do chat (chat.js): "clip" acha também
+// "clipa", "clipou" e "clipar", e as letras repetidas encolhem ("cliiiip").
+export const PALAVRAS_CLIPE = 'clip, clipa, clipe';
+const TERMOS_CLIPE = termosDoFiltro(PALAVRAS_CLIPE);
+// A lista de mensagens de um canal é trocada por outra quando chega chat novo: a conta guarda-se pela
+// lista, e a lista dos melhores, que se refaz a cada mudança, não volta a ler as mensagens todas.
+const pedidosGuardados = new WeakMap();
+
+/**
+ * Os momentos em que o chat de um canal pediu clipe: mensagens com as palavras de `PALAVRAS_CLIPE`, em
+ * baldes de 30 s, 3 vezes o normal dessas palavras nesse chat e pelo menos 3 mensagens.
+ */
+export function pedidosDeClipe(mensagens) {
+  if (!Array.isArray(mensagens) || !mensagens.length) return [];
+  const ja = pedidosGuardados.get(mensagens);
+  if (ja) return ja;
+  let de = Infinity;
+  let ate = -Infinity;
+  for (const m of mensagens) {
+    if (!Number.isFinite(m?.ms)) continue;
+    de = Math.min(de, m.ms);
+    ate = Math.max(ate, m.ms);
+  }
+  const achados = ate >= de ? momentosDePalavras(mensagens, TERMOS_CLIPE, de, ate + 1, { minimo: 3 }) : [];
+  pedidosGuardados.set(mensagens, achados);
+  return achados;
+}
 
 const SONS = ['tiros', 'explosao', 'grito'];
 
@@ -60,9 +93,12 @@ export function unirJanelas(janelas) {
  *
  * `marcas`: Map canal -> picos de chat ({ ms, msgs, vezes }). `momentos`: as kills e os achados da
  * montagem (momentos.js), com `protagonista`, `auto`, `tipo`/`tipos` e `vitimas`. Os que vieram desta
- * lista (`origem: 'lances'`) não contam como kill: marcar um lance não o pode pôr mais acima.
+ * lista (`origem: 'lances'`) não contam como kill: marcar um lance não o pode pôr mais acima. Os
+ * marcados ao vivo com a tecla (`origem: 'aovivo'`) são um sinal "você" em cada ângulo que estava no
+ * ar, no instante de cada um (`vivo: [{ c, ms }]`), e ficam juntos num lance só.
+ * `mensagens`: Map canal -> mensagens do chat; o chat a pedir clipe é mais um sinal.
  */
-export function sinaisDoEvento({ marcas = new Map(), momentos = [] } = {}) {
+export function sinaisDoEvento({ marcas = new Map(), momentos = [], mensagens = new Map() } = {}) {
   const sinais = [];
   for (const [canal, lista] of marcas) {
     for (const m of lista || []) {
@@ -70,10 +106,21 @@ export function sinaisDoEvento({ marcas = new Map(), momentos = [] } = {}) {
       sinais.push({ tipo: 'chat', canal, ms: m.ms, vezes: Number.isFinite(m.vezes) ? m.vezes : null, msgs: m.msgs ?? null });
     }
   }
+  for (const [canal, lista] of mensagens || []) {
+    for (const p of pedidosDeClipe(lista)) sinais.push({ tipo: 'pedidoClip', canal, ms: p.ms, vezes: p.vezes });
+  }
   for (const m of momentos || []) {
     if (!m || !Number.isFinite(m.ms) || !m.protagonista) continue;
     const canal = m.protagonista;
-    const kill = (!m.auto && m.origem !== 'lances') || (Array.isArray(m.vitimas) && m.vitimas.length > 0);
+    if (m.origem === 'aovivo') {
+      const vivo = Array.isArray(m.vivo) && m.vivo.length ? m.vivo : [{ c: canal, ms: m.ms }];
+      for (const v of vivo) {
+        if (typeof v?.c === 'string' && v.c && Number.isFinite(v.ms)) {
+          sinais.push({ tipo: 'voce', canal: v.c, ms: v.ms, marca: m.ms, principal: v.c === canal });
+        }
+      }
+    }
+    const kill = (!m.auto && m.origem !== 'lances' && m.origem !== 'aovivo') || (Array.isArray(m.vitimas) && m.vitimas.length > 0);
     if (kill) sinais.push({ tipo: 'kill', canal, ms: m.ms });
     if (!m.auto) continue;
     const tipos = new Set(m.tipos?.length ? m.tipos : [m.tipo]);
@@ -113,8 +160,11 @@ export function agrupar(sinais, {
   const grupos = [];
   for (const s of ordem) {
     const fim = Math.max(s.ms, Number.isFinite(s.ateMs) ? s.ateMs : s.ms);
+    // Os ângulos de uma marca ao vivo são o mesmo lance, sejam de que time forem: foi a pessoa que os
+    // viu juntos.
     const aberto = grupos.find((g) => s.ms - g.ateMs <= juntarMs && s.ms - g.deMs <= maxMs
-      && g.sinais.some((x) => mesmoLugar(x.canal, s.canal, s.ms, { grupoDe, confirmados, juntarMs })));
+      && g.sinais.some((x) => (s.marca != null && x.marca === s.marca)
+        || mesmoLugar(x.canal, s.canal, s.ms, { grupoDe, confirmados, juntarMs })));
     if (aberto) {
       aberto.sinais.push(s);
       aberto.ateMs = Math.max(aberto.ateMs, fim);
@@ -135,13 +185,20 @@ export function agrupar(sinais, {
 export function resumirLance(grupo) {
   const porCanal = new Map();
   const doCanal = (c) => {
-    if (!porCanal.has(c)) porCanal.set(c, { canal: c, vezes: null, msgs: 0, sons: new Set(), kills: 0, pontos: 0 });
+    if (!porCanal.has(c)) porCanal.set(c, { canal: c, vezes: null, msgs: 0, sons: new Set(), kills: 0, pedidos: 0, voce: 0, pontos: 0 });
     return porCanal.get(c);
   };
   const kills = [];
+  const marcasVoce = new Set();
   for (const s of grupo.sinais) {
     const c = doCanal(s.canal);
-    if (s.tipo === 'chat') {
+    if (s.tipo === 'voce') {
+      // O ângulo que se estava a ver quando se marcou vai à frente: é ele que abre com o lance.
+      c.voce = Math.max(c.voce || 0, s.principal ? 2 : 1);
+      marcasVoce.add(s.marca ?? s.ms);
+    } else if (s.tipo === 'pedidoClip') {
+      c.pedidos = Math.max(c.pedidos, Number.isFinite(s.vezes) ? s.vezes : 1);
+    } else if (s.tipo === 'chat') {
       const v = Number.isFinite(s.vezes) ? s.vezes : 0;
       if (c.vezes == null || v > c.vezes) { c.vezes = v; c.msgs = s.msgs ?? c.msgs; }
     } else if (s.tipo === 'kill') {
@@ -152,21 +209,28 @@ export function resumirLance(grupo) {
   const canais = [...porCanal.values()];
   for (const c of canais) {
     c.chatPontos = c.vezes != null ? Math.round(Math.min(c.vezes, PONTOS.chatMax)) : 0;
-    c.pontos = c.chatPontos + [...c.sons].reduce((n, tipo) => n + PONTOS[tipo], 0) + c.kills * PONTOS.kill;
+    c.pontos = c.chatPontos + [...c.sons].reduce((n, tipo) => n + PONTOS[tipo], 0) + c.kills * PONTOS.kill
+      + (c.pedidos ? PONTOS.pedidoClip : 0) + c.voce;
   }
   const comChat = canais.filter((c) => c.vezes != null);
   const sons = Object.fromEntries(SONS.map((tipo) => [tipo, canais.filter((c) => c.sons.has(tipo)).map((c) => c.canal)]));
+  const pedidos = canais.filter((c) => c.pedidos > 0).length;
   const partes = [];
+  // Marcado por você vem primeiro, na conta e no motivo: é o que põe o lance no topo.
+  if (marcasVoce.size) partes.push({ tipo: 'voce', pontos: PONTOS.voce });
   const chatPontos = comChat.reduce((n, c) => n + c.chatPontos, 0);
   if (comChat.length) partes.push({ tipo: 'chat', pontos: chatPontos });
+  if (pedidos) partes.push({ tipo: 'pedidoClip', pontos: pedidos * PONTOS.pedidoClip });
   for (const tipo of SONS) if (sons[tipo].length) partes.push({ tipo, pontos: sons[tipo].length * PONTOS[tipo] });
   if (kills.length) partes.push({ tipo: 'kill', pontos: kills.length * PONTOS.kill });
   if (canais.length > 1) partes.push({ tipo: 'juntos', pontos: (canais.length - 1) * PONTOS.canal, canais: canais.length });
   const pontos = partes.reduce((n, p) => n + p.pontos, 0);
   // Quem mais somou vai à frente: é o foco quando o lance abre.
   canais.sort((a, b) => b.pontos - a.pontos || a.canal.localeCompare(b.canal));
-  const fortes = grupo.sinais.filter((s) => s.tipo !== 'chat').map((s) => s.ms);
-  const primeiroChat = Math.min(...grupo.sinais.filter((s) => s.tipo === 'chat').map((s) => s.ms));
+  // O chat (e o chat a pedir clipe) reage depois do lance; o resto marca o próprio instante.
+  const doChat = (s) => s.tipo === 'chat' || s.tipo === 'pedidoClip';
+  const fortes = grupo.sinais.filter((s) => !doChat(s)).map((s) => s.ms);
+  const primeiroChat = Math.min(...grupo.sinais.filter(doChat).map((s) => s.ms));
   const ms = fortes.length ? Math.min(...fortes) : primeiroChat;
   return {
     ms,
@@ -185,6 +249,8 @@ export function resumirLance(grupo) {
     },
     sons,
     kills: kills.length,
+    voce: marcasVoce.size,
+    pedidosClip: pedidos,
     partes,
     pontos,
   };
@@ -204,7 +270,8 @@ export function melhoresLances(sinais, opcoes = {}) {
       .map((o) => o.canais[0]).filter((c) => !l.canais.includes(c));
     l.perto = [...new Set(l.perto)];
   }
-  return lances.sort((a, b) => b.pontos - a.pontos || b.canais.length - a.canais.length || a.ms - b.ms);
+  // O que a pessoa marcou ao vivo vai à frente de tudo; entre esses, e entre os outros, a nota manda.
+  return lances.sort((a, b) => (b.voce > 0) - (a.voce > 0) || b.pontos - a.pontos || b.canais.length - a.canais.length || a.ms - b.ms);
 }
 
 /**
@@ -248,12 +315,14 @@ export function vezesEmTexto(v) {
 /** O motivo em palavras: "chat 6 vezes o normal em 3 canais, tiros ouvidos em 4 ângulos, 1 kill marcada". */
 export function motivoDoLance(l) {
   const partes = [];
+  if (l.voce) partes.push(t('melhores.voce'));
   if (l.chat.canais) {
     const forte = l.chat.vezesMax > 0;
     if (!forte) partes.push(tn(l.chat.canais, 'melhores.chatSemNormalUm', 'melhores.chatSemNormal'));
     else if (l.chat.canais === 1) partes.push(t('melhores.chatUm', { vezes: vezesEmTexto(l.chat.vezesMax) }));
     else partes.push(t('melhores.chatVarios', { vezes: vezesEmTexto(l.chat.vezesMax), n: l.chat.canais }));
   }
+  if (l.pedidosClip) partes.push(tn(l.pedidosClip, 'melhores.pedidoClipUm', 'melhores.pedidoClip'));
   const n = (tipo) => l.sons[tipo]?.length || 0;
   if (n('tiros')) partes.push(tn(n('tiros'), 'melhores.tirosUm', 'melhores.tiros'));
   if (n('explosao')) partes.push(tn(n('explosao'), 'melhores.explosoesUm', 'melhores.explosoes'));

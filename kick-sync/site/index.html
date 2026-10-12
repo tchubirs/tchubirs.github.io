@@ -741,6 +741,9 @@
          os valores sem ser preciso abrir. -->
     <div class="linha">
       <button id="marcarKill"><svg class="ic" aria-hidden="true"><use href="#i-marcador"/></svg><span data-t="montagem.marcar">Marcar kill</span> <kbd>M</kbd></button>
+      <!-- Marcar ao vivo (IDEIAS.md, item 9): só com alguém ao vivo na noite aberta. A dica diz o atraso
+           de omissão de quem ainda não foi medido. -->
+      <button id="marcarAoVivo" hidden data-t-titulo="aoVivoMarca.ajuda" title="Marca o que você acabou de ver em todos os ângulos ao vivo abertos. Tirando o atraso medido de cada canal, ou 6 s enquanto não há medida"><svg class="ic" aria-hidden="true"><use href="#i-marcador"/></svg><span data-t="aoVivoMarca.botao">Marcar agora</span> <kbd>V</kbd></button>
       <details id="margens" class="margens">
         <summary><svg class="ic ic-p" aria-hidden="true"><use href="#i-deslizadores"/></svg><span data-t="montagem.margens">Margens</span> <output id="resumoMargens" class="nota"></output></summary>
         <div class="linha">
@@ -753,6 +756,7 @@
         </div>
       </details>
     </div>
+    <p id="estadoAoVivo" class="nota estadoAoVivo" role="status" aria-live="polite"></p>
     <!-- A barra de selecao. Uma noite varrida da dezenas de candidatos e a
          maioria nao e kill; apagar um a um era o trabalho manual que a busca
          automatica existe para tirar. -->

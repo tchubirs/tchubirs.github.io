@@ -17,7 +17,7 @@ import {
 import { cortarTodosOsAngulos } from './baixar.js';
 import { juntarMp4 } from './mp4.js';
 import { juntarGravados } from './juntar-gravados.js';
-import { instanteAoVivo } from './aovivo.js';
+import { instanteAoVivo, bordaAoVivo, medirAtraso, instantesAoVivo, ATRASO_PADRAO_MS } from './aovivo.js';
 import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js';
 import { abrirJanela, irAEcraCheio, capacidades } from './janela.js';
 import { ordemDosAngulos, aplicarOrdem } from './grelha.js';
@@ -109,6 +109,8 @@ const estado = {
   mudo: {},
   // O ângulo escolhido para ouvir sozinho (clique no vídeo, ou o 1 a 9). Só nesta visita.
   ouvir: null,
+  // O atraso de cada canal ao vivo, medido a cada leitura da playlist dele: { slug: { ms, em } }.
+  atrasosVivo: {},
   momentos: [],
   // As kills das outras noites. A lista de cima so mostra as da noite aberta,
   // e mudar de noite filtrava-as para fora de vez: quarenta kills do dia 1
@@ -760,6 +762,7 @@ async function lerNoite(noite) {
       if (!master.length) { naoLidos.add(slug); return; }
       const barato = master.at(-1);
       const playlist = lerPlaylist(await lerTexto(barato.url), barato.url);
+      if (v.aoVivo) estado.atrasosVivo[slug] = medirAtraso(playlist.fim) || estado.atrasosVivo[slug];
       const peca = { vod: v, playlist, escada: master, barato };
       // Só se guarda o que tem relógio. Uma peça sem ele não entra na linha do
       // canal, e guardada impedia o Carregar seguinte de a tentar outra vez.
@@ -893,6 +896,9 @@ async function lerNoite(noite) {
   // Alinhar pelo som e uma operacao entre canais. Com um so, o botao existia
   // para nao fazer nada.
   $('alinhar').hidden = soUmCanal();
+  // O "Marcar agora" só existe com alguém ao vivo na noite aberta.
+  $('marcarAoVivo').hidden = !estado.linhas.some((l) => l.pecas.some((p) => p.vod?.aoVivo));
+  $('estadoAoVivo').textContent = '';
   // Sem noite aberta não há nada para partilhar, e um botão que copia um link
   // vazio é pior do que um botão que não está lá.
   $('partilhar').disabled = !estado.linhas.length || !estado.janela;
@@ -946,6 +952,8 @@ function seguirLives() {
           try {
             // eslint-disable-next-line no-await-in-loop
             const playlist = lerPlaylist(await lerTexto(peca.barato.url), peca.barato.url);
+            // O atraso de agora (para o "Marcar agora"), mesmo quando a playlist não cresceu.
+            if (minhaNoite === vezNoite) estado.atrasosVivo[l.slug] = medirAtraso(playlist.fim) || estado.atrasosVivo[l.slug];
             if (minhaNoite !== vezNoite || !Number.isFinite(playlist.fim) || !(playlist.fim > peca.playlist.fim)) continue;
             peca.playlist = playlist;
             Object.assign(l, linhaDoCanal(l.slug, pecas), { pecasCompletas: pecas });
@@ -3777,6 +3785,57 @@ function textoDoPrazo(p) {
   return { texto, ajuda: t(p.visto ? 'prazo.ajuda30' : 'prazo.ajuda7', { data }), perto: p.dias <= 2 };
 }
 
+/**
+ * Marcar ao vivo com uma tecla (IDEIAS.md, item 9): o que se acabou de ver, em todos os ângulos ao
+ * vivo abertos. A tocar o ao vivo aqui, o instante é o que está na tela; senão (a ver na Kick, ou com
+ * a página parada), é o agora menos o atraso medido de cada canal (`instantesAoVivo`). Entra na
+ * montagem como um lance (guardado como as kills) e nos melhores lances como "marcado por você".
+ */
+const NA_TELA_AO_VIVO_MS = 60_000;
+function marcarAoVivo() {
+  const agora = Date.now();
+  const vivas = estado.linhas.filter((l) => l.pecas.some((p) => p.vod?.aoVivo));
+  const { vivos } = bordaAoVivo(vivas, { agoraMs: agora, nudges: estado.nudges });
+  const canais = vivas.map((l) => l.slug).filter((s) => vivos.includes(s));
+  const dizer = (texto) => { $('estadoAoVivo').textContent = texto; };
+  if (!canais.length) { dizer(t('aoVivoMarca.nenhum')); return; }
+  const atras = agora - estado.agoraMs;
+  const naTela = !estado.parado && atras >= 0 && atras <= NA_TELA_AO_VIVO_MS ? estado.agoraMs : null;
+  const marcas = instantesAoVivo(canais, { agoraMs: agora, medidos: estado.atrasosVivo, nudges: estado.nudges, naTelaMs: naTela });
+  const prot = canais.includes(estado.focos[0]) ? estado.focos[0] : canais[0];
+  const daProt = marcas.find((m) => m.slug === prot);
+  const novo = novoMomento(daProt.ms, prot, {
+    ...tamanhos(),
+    origem: 'aovivo',
+    vivo: marcas.map(({ slug, ms, atrasoMs, fonte }) => ({ c: slug, ms, atrasoMs, fonte })),
+  });
+  const antes = estado.momentos;
+  estado.momentos = acrescentar(estado.momentos, novo);
+  if (estado.momentos === antes) { dizer(t('aoVivoMarca.jaMarcado', { hora: relogioCurto(novo.ms) })); return; }
+  pintarMomentos();
+  guardar();
+  chatDoEvento?.marcadoAoVivo?.({ ms: novo.ms, canais });
+  dizer(textoDaMarcaAoVivo(novo.ms, marcas));
+}
+
+/** "Marcado 21:04:10 em 3 ângulos ao vivo, descontando o atraso de cada canal (medido: 3 a 8 s)." */
+function textoDaMarcaAoVivo(ms, marcas) {
+  const hora = relogioCurto(ms);
+  const angulos = tn(marcas.length, 'aoVivoMarca.umAngulo', 'aoVivoMarca.angulos');
+  if (marcas[0]?.fonte === 'tela') return t('aoVivoMarca.feitoTela', { hora, angulos });
+  const segundos = (x) => Math.round(x / 1000);
+  const medidos = marcas.filter((m) => m.fonte === 'medido').map((m) => segundos(m.atrasoMs));
+  const partes = [];
+  if (medidos.length) {
+    const de = Math.min(...medidos);
+    const ate = Math.max(...medidos);
+    partes.push(de === ate ? t('aoVivoMarca.medidoUm', { s: de }) : t('aoVivoMarca.medido', { de, ate }));
+  }
+  const semMedida = marcas.length - medidos.length;
+  if (semMedida) partes.push(tn(semMedida, 'aoVivoMarca.padraoUm', 'aoVivoMarca.padrao', { s: segundos(ATRASO_PADRAO_MS) }));
+  return t('aoVivoMarca.feito', { hora, angulos, atrasos: partes.join(', ') });
+}
+
 function marcarKill() {
   if (!estado.linhas.length) return;
   estado.momentos = acrescentar(
@@ -4056,6 +4115,7 @@ function pintarMomentos() {
       + `<span class="quem">${escapar(m.protagonista || '')}</span>`
       // O que a detecção achou ali, quando foi ela: tiroteio, explosão, grito, ou as palavras do chat.
       + (m.tipo ? `<span class="tipo">${escapar(rotuloDoTipo(m))}</span>` : '')
+      + (m.origem === 'aovivo' ? `<span class="tipo">${escapar(t('aoVivoMarca.tipo'))}</span>` : '')
       + prazoNoLance(m)
       + `<button class="ver ${estado.previa?.ms === m.ms ? 'aVer' : ''}">`
       + `${t(estado.previa?.ms === m.ms ? 'montagem.parar' : 'montagem.ver')}</button>`
@@ -7414,6 +7474,7 @@ $('marcarIn').onclick = () => { estado.marca = { de: estado.agoraMs, ate: null }
 $('marcarOut').onclick = () => { estado.marca.ate = estado.agoraMs; pintarMarca(); guardar(); };
 $('alinhar').onclick = alinhar;
 $('marcarKill').onclick = marcarKill;
+$('marcarAoVivo').onclick = marcarAoVivo;
 // O resumo tem de acompanhar as caixas, senão fechá-las mente sobre o que lá está.
 // As margens só aparecem depois da primeira kill (o dono, 07/10), e cada kill guarda as suas ao ser
 // marcada. Mudar as margens passa então para as kills que ainda têm as de antes; as que foram
@@ -7978,6 +8039,8 @@ const FAZER = {
   },
   lerChat: () => abrirAssistente('chat'),
   detetar: () => abrirAssistente('detetar'),
+  // O V marca o agora de todos os ângulos ao vivo, mesmo com o separador Exportar aberto (como o M).
+  marcarAgora: () => marcarAoVivo(),
   // O 1 a 9: o som passa para o ângulo com esse número (o do canto de cada quadrado).
   ...Object.fromEntries(Array.from({ length: 9 }, (_, i) => [`ouvir${i + 1}`, () => {
     const slug = angulosNumerados()[i];

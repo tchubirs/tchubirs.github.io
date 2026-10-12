@@ -14,6 +14,7 @@ import { linhaDoCanal } from '../site/relogio.js';
 import {
   novosSegmentos, bordaAoVivo, agendar, dormir,
   LIMITE_FORA_DO_AR_MS, INTERVALO_MS, TETO_MS,
+  medirAtraso, instantesAoVivo, ATRASO_PADRAO_MS, ATRASO_MIN_MS, ATRASO_MAX_MS,
 } from '../site/aovivo.js';
 
 const F = new URL('../probes/fixtures/', import.meta.url);
@@ -957,4 +958,36 @@ test('os valores por omissao seguem o relogio de verdade', async () => {
   } finally { largar(); }
   assert.equal(quando.length, 3);
   assert.ok(quando[2] - quando[0] >= 25, `duas esperas de 15 ms, mediu ${quando[2] - quando[0]}`);
+});
+
+// ── Marcar agora (IDEIAS.md, item 9) ──────────────────────────────────────
+
+test('marcar agora: cada canal tira o seu atraso medido, preso entre 2 e 12 s, ou 6 s sem medida', () => {
+  const agora = 1_000_000;
+  const medidos = {
+    a: medirAtraso(agora - 4000 - 1000, agora - 1000), // lido há 1 s: 4 s de atraso
+    b: medirAtraso(agora - 500, agora),                // 0,5 s: rápido demais, conta 2 s
+    c: medirAtraso(agora - 40_000, agora),             // 40 s: leitura velha, conta 12 s
+    d: medirAtraso(agora - 5000 - 200_000, agora - 200_000), // medido há 200 s: já não vale
+  };
+  const r = instantesAoVivo(['a', 'b', 'c', 'd', 'e', 'a'], { agoraMs: agora, medidos, nudges: { a: 3000, e: 'x' } });
+  assert.deepEqual(r.map((x) => [x.slug, x.atrasoMs, x.fonte]), [
+    ['a', 4000, 'medido'], ['b', ATRASO_MIN_MS, 'medido'], ['c', ATRASO_MAX_MS, 'medido'],
+    ['d', ATRASO_PADRAO_MS, 'padrao'], ['e', ATRASO_PADRAO_MS, 'padrao'],
+  ], 'um por canal, sem repetidos');
+  // O +3 s de `a` põe o que ele carimbou em S no instante S - 3 s do relógio partilhado.
+  assert.equal(r[0].ms, agora - 4000 - 3000);
+  assert.equal(r[1].ms, agora - 2000);
+  assert.equal(r[4].ms, agora - ATRASO_PADRAO_MS, 'um ajuste que não é número conta zero');
+  assert.equal(ATRASO_PADRAO_MS, 6000);
+  assert.equal(medirAtraso(NaN), null);
+});
+
+test('marcar agora com o ao vivo a tocar na página: o instante é o da tela, o mesmo em todos', () => {
+  const r = instantesAoVivo(['a', 'b'], { agoraMs: 100_000, naTelaMs: 91_500, nudges: { a: 3000 }, medidos: { a: { ms: 4000, em: 100_000 } } });
+  assert.deepEqual(r, [
+    { slug: 'a', ms: 91_500, atrasoMs: 8500, fonte: 'tela' },
+    { slug: 'b', ms: 91_500, atrasoMs: 8500, fonte: 'tela' },
+  ]);
+  assert.deepEqual(instantesAoVivo([], {}), []);
 });

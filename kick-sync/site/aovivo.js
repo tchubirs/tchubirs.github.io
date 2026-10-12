@@ -296,6 +296,60 @@ export function instanteAoVivo(linhas, { pedidoMs = Infinity, agoraMs = Date.now
   return { ms, margemMs, atrasoMs: borda.agoraMs - ms };
 }
 
+// ── Marcar agora ───────────────────────────────────────────────────────────
+
+/** O atraso de omissão de um canal ainda sem medida: o meio do que se mediu (2,2 a 11,8 s). */
+export const ATRASO_PADRAO_MS = 6000;
+/** O atraso medido fica dentro disto: fora, é a medida que está errada (uma leitura velha). */
+export const ATRASO_MIN_MS = 2000;
+export const ATRASO_MAX_MS = 12_000;
+/** Uma medida mais velha do que isto já não diz o atraso de agora. */
+export const MEDIDA_VALE_MS = 90_000;
+
+/**
+ * O atraso de um canal ao vivo, medido ao ler a playlist dele: quanto antes do relógio acabou o último
+ * segmento pronto. `fimMs` é o fim do último segmento com relógio (no relógio do próprio canal) e
+ * `lidoEm` o instante da leitura. Devolve `{ ms, em }`, ou null sem um fim.
+ */
+export function medirAtraso(fimMs, lidoEm = Date.now()) {
+  if (!Number.isFinite(fimMs) || !Number.isFinite(lidoEm)) return null;
+  return { ms: lidoEm - fimMs, em: lidoEm };
+}
+
+/**
+ * O "agora" de cada ângulo ao vivo, para a tecla de marcar ao vivo (IDEIAS.md, item 9).
+ *
+ * Quem vê a live (na Kick ou aqui) vê cada canal uns segundos atrás do relógio. O instante que a pessoa
+ * quis marcar é o agora menos o atraso daquele canal: o medido (`medidos[slug]`, de `medirAtraso`),
+ * preso entre `minMs` e `maxMs`, ou `padraoMs` quando ainda não há medida que valha. No relógio
+ * partilhado da página, que é o dos ajustes (`nudges`): um canal com +3 s mostra no instante Q o que
+ * carimbou em Q + 3 s, e por isso o que ele carimbou em S está em S - 3 s.
+ *
+ * Com `naTelaMs` (a página está a tocar o ao vivo), o instante é o que está na tela, o mesmo em todos os
+ * ângulos, porque a página já os mostra alinhados; o atraso é então o que a pessoa tem de verdade.
+ *
+ * Devolve `[{ slug, ms, atrasoMs, fonte: 'tela' | 'medido' | 'padrao' }]`, pela ordem de `canais`.
+ */
+export function instantesAoVivo(canais, {
+  agoraMs = Date.now(), medidos = {}, nudges = {}, naTelaMs = null,
+  padraoMs = ATRASO_PADRAO_MS, minMs = ATRASO_MIN_MS, maxMs = ATRASO_MAX_MS, valeMs = MEDIDA_VALE_MS,
+} = {}) {
+  const ajuste = (slug) => {
+    const n = nudges?.[slug];
+    return typeof n === 'number' && Number.isFinite(n) ? n : 0;
+  };
+  const unicos = [...new Set((canais || []).filter((c) => typeof c === 'string' && c))];
+  if (Number.isFinite(naTelaMs)) {
+    return unicos.map((slug) => ({ slug, ms: Math.round(naTelaMs), atrasoMs: Math.max(0, agoraMs - naTelaMs), fonte: 'tela' }));
+  }
+  return unicos.map((slug) => {
+    const m = medidos?.[slug];
+    const vale = m && Number.isFinite(m.ms) && Number.isFinite(m.em) && agoraMs - m.em <= valeMs && m.em <= agoraMs + 5000;
+    const atrasoMs = vale ? Math.min(maxMs, Math.max(minMs, m.ms)) : padraoMs;
+    return { slug, ms: Math.round(agoraMs - atrasoMs - ajuste(slug)), atrasoMs, fonte: vale ? 'medido' : 'padrao' };
+  });
+}
+
 // ── Voltar a pedir ─────────────────────────────────────────────────────────
 
 /**
