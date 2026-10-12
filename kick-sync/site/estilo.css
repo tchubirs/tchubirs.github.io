@@ -2821,9 +2821,19 @@ body.mesa .guardarAgora .nota.mau { color: var(--aviso); }
 body.mesa #montagem .estadoAoVivo { margin: var(--e2) 0 0; }
 body.mesa #montagem .estadoAoVivo:empty { display: none; }
 
-/* As mortes do servidor (mortes-ui.js): a mesma caixa dos melhores lances, e uma linha por morte. */
+/* As mortes (mortes-ui.js): achadas nos vídeos, com o registro do servidor à parte. A mesma caixa dos
+   melhores lances, e uma linha por morte. */
 .mortes { display: flex; flex-direction: column; gap: var(--e3); padding: var(--e4); background: var(--sup-2); border: 1px solid var(--linha); border-radius: var(--r-3); }
 .mortes[hidden] { display: none; }
+.mortesAchar { gap: var(--e2) var(--e4); align-items: center; flex-wrap: wrap; }
+.mortesAchar label.pequeno { display: inline-flex; align-items: center; gap: var(--e2); }
+.mortesAchar select { width: auto; max-width: 100%; }
+.mortesBarra { flex: 1 1 10em; min-width: 8em; height: 6px; }
+.mortesBarra[hidden] { display: none; }
+.mortesServidor > summary { cursor: pointer; font-size: var(--t-menor); width: max-content; max-width: 100%; border-radius: var(--r-1); color: var(--tinta-2); }
+.mortesServidor > summary:focus-visible { box-shadow: var(--foco); outline: none; }
+.mortesServidor[open] { display: flex; flex-direction: column; gap: var(--e3); }
+.origemMorte { color: var(--tinta-3); font-size: var(--t-micro); border: 1px solid var(--linha); border-radius: var(--r-1); padding: 0 4px; white-space: nowrap; }
 .mortesHora { gap: var(--e2) var(--e4); align-items: center; flex-wrap: wrap; }
 .mortesHora label.pequeno { display: inline-flex; align-items: center; gap: var(--e2); }
 .mortesHora select { width: auto; max-width: 100%; }

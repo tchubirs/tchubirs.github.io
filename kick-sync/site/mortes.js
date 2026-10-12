@@ -396,8 +396,9 @@ export function casarMortes(mortes, canais, apelidos = new Map()) {
 export function nomesSemCanal(casadas) {
   const conta = new Map();
   for (const m of casadas || []) {
-    if (!m.canalMatador) conta.set(m.matador, (conta.get(m.matador) || 0) + 1);
-    if (!m.canalVitima) conta.set(m.vitima, (conta.get(m.vitima) || 0) + 1);
+    // Uma morte achada no vídeo sem o nome de quem matou não tem nome nenhum para casar.
+    if (!m.canalMatador && m.matador) conta.set(m.matador, (conta.get(m.matador) || 0) + 1);
+    if (!m.canalVitima && m.vitima) conta.set(m.vitima, (conta.get(m.vitima) || 0) + 1);
   }
   return [...conta].map(([nome, vezes]) => ({ nome, vezes })).sort((a, b) => b.vezes - a.vezes || a.nome.localeCompare(b.nome));
 }

@@ -51,6 +51,17 @@ semana), grande (mais que isso). Estimativas minhas.
   deixa trocar as frases; uma frase trocada cai na lista de não lidas). O jeito exato como o Discord copia
   as mensagens foi montado a partir do que se sabe do Discord, sem um registro real do evento. O Discord só dá
   o minuto: o segundo vem do alinhamento.
+- **Estado (12/10, depois): as mortes vêm dos vídeos, sozinhas.** O dono não quer colar nada ("Sem essa de
+  bloco de notas"). O Povix procura a tela de morte do Rust no 160p (faixa cinzenta lisa em cima, caixa verde do
+  tempo vivo, caixa vermelha de quem matou; igual em espanhol e em inglês) e lê o nome de quem matou num quadro
+  nítido. Corre sozinho perto dos tiroteios que a detecção acha; "Achar mortes nos vídeos" olha também o vídeo
+  todo. A morte é do mesmo tipo das do servidor (marcas, abrir 10 s antes, melhores lances, montagem), e o tiro
+  de quem matou, quando é um canal do evento, confirma e dá o segundo do lado dele. O registro do servidor
+  ficou como opção, fechado. Medido em 12 trechos reais de 05/10 (4 h): 22 mortes achadas, todas certas, e 8 de
+  8 nos 40 min vistos a olho do começo ao fim; nome lido certo em 13 de 13 quadros nítidos. No Abisal o modo
+  streamer troca os nomes por nomes inventados, por isso quem matou quase nunca casa com um canal. Código em
+  `site/achar-mortes.js`, `site/achar-mortes-video.js` e `site/video-ts.js`; números e limites em `FILA.md`
+  (raiz), "mortes achadas sozinhas".
 
 ### 2. Lista única dos melhores lances, com a nota explicada (valor alto, esforço pequeno)
 

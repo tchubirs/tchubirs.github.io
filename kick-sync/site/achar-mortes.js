@@ -29,9 +29,9 @@ import { base } from './nomes.js';
  *  plano    — a fração da faixa de cima (12,5% da altura) que é cinzento liso e escuro;
  *  vermelho — a fração da zona das caixas (3,3% a 10% da altura, 30% a 75% da largura) em vermelho;
  *  verde    — a mesma fração em verde (a caixa do tempo vivo).
- * Medido nas 24 telas verdadeiras de test/telas-morte/: plano 0,36 a 0,89 (a webcam e os seguidores do
- * skylane7 tapam parte da faixa), vermelho 0,063 a 0,275 e verde 0,009 a 0,042. Nos 69 quadros que não
- * são morte (jogo, inventário, ecrã de carregar, "ABATIDO", mapa, luzes vermelhas da base) há faixa
+ * Medido nos 24 quadros de tela de morte de test/telas-morte/ (22 mortes; duas vistas no 160p e no 720p):
+ * plano 0,36 a 0,89 (a webcam e os seguidores do skylane7 tapam parte da faixa), vermelho 0,063 a 0,275 e
+ * verde 0,009 a 0,042. Nos 69 quadros que não são morte (jogo, inventário, ecrã de carregar, "ABATIDO", mapa, luzes vermelhas da base) há faixa
  * lisa com vermelho (até 0,39) ou com verde (o inventário, até 0,028), mas nunca os dois juntos.
  */
 export function medirTela(pixeis, largura = 160, altura = Math.floor(pixeis.length / 4 / largura)) {
@@ -164,11 +164,13 @@ export const ampliacaoDoNome = (alturaDaCaixa) => Math.max(2, Math.min(8, Math.r
 
 /**
  * Deixar o nome a preto no branco. As letras são claras sobre o vermelho, e o que as separa é o verde
- * (o vermelho tem g perto de 68, as letras perto de 180). O limite fica a meio entre a mediana e o
- * topo do verde da zona, para servir com o vídeo mais escuro ou mais claro. Muda `dados` (RGBA) no
- * sítio e devolve quantos pixéis ficaram letra.
+ * (o vermelho tem g perto de 68, as letras perto de 180). O limite fica entre a mediana e o topo do
+ * verde da zona (a `fracao` do caminho), para servir com o vídeo mais escuro ou mais claro. A meio
+ * (0,5) as letras do 720p colavam umas às outras e o leitor não lia "leona"; com 0,6 e 0,7 os 13
+ * quadros nítidos de test/telas-morte/ leem-se todos. Muda `dados` (RGBA) no sítio e devolve quantos
+ * pixéis ficaram letra.
  */
-export function nomeAPretoEBranco(dados) {
+export function nomeAPretoEBranco(dados, { fracao = 0.65 } = {}) {
   const n = dados.length / 4;
   if (!n) return 0;
   const gs = new Uint8Array(n);
@@ -176,7 +178,7 @@ export function nomeAPretoEBranco(dados) {
   const ordem = Uint8Array.from(gs).sort();
   const mediana = ordem[Math.floor(n / 2)];
   const topo = ordem[Math.min(n - 1, Math.floor(n * 0.99))];
-  const limite = (mediana + topo) / 2;
+  const limite = mediana + (topo - mediana) * fracao;
   let letras = 0;
   for (let i = 0; i < n; i++) {
     const sim = topo - mediana > 25 && gs[i] > limite;

@@ -12,7 +12,7 @@
 
 import { imagensDoTs } from './video-ts.js';
 import {
-  medirTela, juntarTelas, caixaDoMatador, zonaDoNome, ampliacaoDoNome, nomeAPretoEBranco, escolherNome, msDoPts,
+  medirTela, juntarTelas, caixaDoMatador, zonaDoNome, ampliacaoDoNome, nomeAPretoEBranco, escolherNome, msDoPts, limparNomeLido,
   ATRASO_DA_TELA_MS,
 } from './achar-mortes.js';
 
@@ -112,11 +112,17 @@ export async function lerNomeNoQuadro(fonte, largura, altura, leitor) {
   p.imageSmoothingEnabled = true;
   p.imageSmoothingQuality = 'high';
   p.drawImage(fonte, z.x, z.y, z.l, z.a, margem, margem, z.l * k, z.a * k);
-  const img = p.getImageData(margem, margem, z.l * k, z.a * k);
-  if (!nomeAPretoEBranco(img.data)) return { nome: '', caixa };
-  p.putImageData(img, margem, margem);
-  const { texto } = await leitor.ler(tela);
-  return { nome: texto.trim(), caixa };
+  const original = p.getImageData(margem, margem, z.l * k, z.a * k);
+  // O limite de sempre, e quando não sai nada, um mais apertado e um mais largo.
+  for (const fracao of [0.65, 0.8, 0.5]) {
+    const img = new ImageData(new Uint8ClampedArray(original.data), original.width, original.height);
+    if (!nomeAPretoEBranco(img.data, { fracao })) continue;
+    p.putImageData(img, margem, margem);
+    // eslint-disable-next-line no-await-in-loop
+    const nome = limparNomeLido((await leitor.ler(tela)).texto);
+    if (nome) return { nome, caixa };
+  }
+  return { nome: '', caixa };
 }
 
 // ── o andamento ───────────────────────────────────────────────────────────
@@ -194,6 +200,7 @@ export async function procurarMortes({
         if (e?.name === 'AbortError' || sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
         falhados++;
       }
+      if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
       feitoMs += ate - de;
       contar();
     }

@@ -23,7 +23,7 @@ import {
 import { procurarAngulos, ordenarCandidatos, resumo } from './cena.js';
 import { lerMaster, lerPlaylist, procurarCanais, slugDoNome } from './kick.js';
 import { linhaDoCanal } from './relogio.js';
-import { somDoCanal } from './alinhar.js';
+import { somDoCanal, tsDoCanal } from './alinhar.js';
 import { t, tn, idiomaActual } from './idiomas.js';
 import { atalhos } from './atalhos.js';
 import { escapar } from './escapar.js';
@@ -1334,7 +1334,7 @@ export function montarEvento({
     return r?.vods.find((v) => ms >= v.inicioApi - 60_000
       && ms <= (aoVivoVod(v) ? AGORA() : v.inicioApi + (v.duracaoMs > 0 ? v.duracaoMs : 0))) || null;
   }
-  async function somDe(slug, deMs, duracaoS) {
+  async function linhaDe(slug, deMs) {
     const vod = vodEm(slug, deMs);
     if (!vod) return null;
     // Um VOD ao vivo cresce: a playlist lida há minutos não tem o lance de agora.
@@ -1348,8 +1348,16 @@ export function montarEvento({
       peca = { vod, playlist, escada: master, barato };
       pecas.set(chave, peca);
     }
-    const linha = { ...linhaDoCanal(slug, [peca]), pecasCompletas: [peca] };
-    return somDoCanal(linha, deMs, duracaoS, { buscar });
+    return { ...linhaDoCanal(slug, [peca]), pecasCompletas: [peca] };
+  }
+  async function somDe(slug, deMs, duracaoS) {
+    const linha = await linhaDe(slug, deMs);
+    return linha ? somDoCanal(linha, deMs, duracaoS, { buscar }) : null;
+  }
+  // Os bytes do 160p, para as telas de morte (achar-mortes-video.js): o mesmo caminho do som.
+  async function tsDe(slug, deMs, duracaoS, opcoes = {}) {
+    const linha = await linhaDe(slug, deMs);
+    return linha ? tsDoCanal(linha, deMs, duracaoS, { buscar, ...opcoes }) : null;
   }
 
   // Quem o som pôs no mesmo sítio que o canal escolhido, guardado para os melhores lances.
@@ -1432,11 +1440,24 @@ export function montarEvento({
     aoMudar: () => pintarLance(),
   });
 
-  // ── as mortes do servidor ──────────────────────────────────────────────
+  // ── as mortes ──────────────────────────────────────────────────────────
   //
-  // O registro de mortes do servidor (IDEIAS.md, item 1) vira marcas na faixa de quem matou e de quem
-  // morreu. Clicar numa abre os dois 10 s antes. Ver mortes-ui.js.
+  // As mortes achadas sozinhas na tela de morte dos vídeos (e, opcional, as do registro do servidor)
+  // viram marcas na faixa de quem matou e de quem morreu. Clicar numa abre os dois 10 s antes. A procura
+  // corre sozinha perto dos tiroteios que a detecção acha. Ver mortes-ui.js.
+  /** Os tiroteios (e explosões) achados pela detecção, por canal, no relógio dos vídeos. */
+  const tirosDoEvento = () => momentos()
+    .filter((m) => m?.auto && m.protagonista && Number.isFinite(m.ms)
+      && (m.tipos?.length ? m.tipos : [m.tipo]).some((x) => x === 'tiros' || x === 'explosao'))
+    .map((m) => ({ canal: m.protagonista, ms: m.ms, combateDeMs: m.combateDeMs, combateAteMs: m.combateAteMs }));
   const mortes = montarMortes({
+    tsDe,
+    vodEm,
+    tiros: tirosDoEvento,
+    coberturas: () => ev.coberturas,
+    janela: () => ev.trecho || ev.limites,
+    ehRust: () => !ev.jogo || /rust/i.test(ev.jogo),
+    buscar,
     canais: () => todosDoEvento(),
     chave: () => chaveDoEvento(),
     refMs: () => (ev.trecho || ev.limites)?.deMs ?? null,
@@ -2505,7 +2526,7 @@ export function montarEvento({
     abrirElenco, abrirDoTexto, abrirDoLink, abrirGuardado, esquecerEvento, lerChatTrecho, faltaLer, pintarComoPico, ordenar, estado: ev,
     mortes,
     // A página avisa quando a montagem muda (uma kill marcada, a detecção que achou tiros).
-    sinaisMudaram: () => agendarMelhores(),
+    sinaisMudaram: () => { agendarMelhores(); mortes.sinaisMudaram(); },
     // O "Marcar agora" do ao vivo: o lance fica marcado na lista, guardado como os do botão Marcar.
     marcadoAoVivo: ({ ms, canais }) => {
       if (!ev.elenco || !Number.isFinite(ms) || !canais?.length) { agendarMelhores(); return; }

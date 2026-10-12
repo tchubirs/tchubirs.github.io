@@ -363,6 +363,43 @@ em francês). Tudo revisado pela regra 14 em 28/09.
 - Falta saber se os organizadores do Abisal usam um desses plugins e se passam o registro. Ver
   `kick-sync/IDEIAS.md`, item 1.
 
+## Pedido do dono (12/10): mortes achadas sozinhas
+- O dono: "Sem essa de bloco de notas, você tem que fazer tudo." Nada de colar registro: as mortes vêm dos vídeos.
+- Feito em 12/10. O Povix procura a tela de morte do Rust no 160p de cada canal (2 imagens por segundo, tiradas
+  do próprio vídeo pelo navegador, sem buscas no player) e lê quem matou num quadro nítido (1080p ou 720p) com
+  o leitor de texto que já existia. Corre sozinho perto de cada tiroteio que a detecção acha, sem clique; o
+  botão "Achar mortes nos vídeos" olha também o vídeo todo, com barra, tempo que falta e Parar. Cada morte é do
+  mesmo tipo das do servidor: marca na faixa de quem morreu e na de quem matou, abre os dois 10 s antes, entra
+  nos melhores lances e na montagem. Quando quem matou é um canal do evento, o tiro dele por perto confirma e a
+  marca dele vai para o segundo do tiro. O registro do servidor ficou num details fechado, opcional.
+- A tela de morte, vista em quadros reais: faixa cinzenta lisa em cima, caixa verde "Vivo durante", caixa
+  vermelha "Matado por" (ícone e nome), às vezes a arma e a distância; igual em inglês. Fica 1 a 5 s à vista
+  (o crreg tapa-a com uma imagem própria), quase um minuto no ispdep.
+- Medido em 12 trechos de 20 min de VODs do Abisal de 05/10 (crreg, elwasabitm, ispdep, poionako, skylane7,
+  xguiry), 4 h 03 min, 14 549 quadros a 1 por segundo: 22 mortes achadas, as 22 conferidas a olho (nenhuma
+  falsa). O trecho do xguiry aos 15581 s foi visto também em 720p: as mesmas 2 mortes.
+  Nos dois trechos vistos a olho do começo ao fim (xguiry 131495449 aos 15581 s e aos 9741 s, 40 min) havia 8
+  mortes e as 8 foram achadas; o "Abatido" com reanimação, o inventário, o ecrã de carregar e as luzes
+  vermelhas da base não contam. Nos outros trechos não vi tudo a olho, por isso a falta de mortes não achadas
+  ali não está medida. No trecho de 720p do xguiry não há morte aos 14:40 ("Me mataron"): as duas mortes são
+  aos 4:17 (matou-o "cyrus") e aos 16:21 (matou-o "leona", depois do "Abatido").
+- Quem matou: lido certo em 13 de 13 quadros nítidos de 11 mortes (crreg, ispdep, poionako, xguiry; 1080p e
+  720p). O limite do preto e branco foi escolhido nesses mesmos quadros, por isso este número é dentro da
+  amostra. No Abisal os streamers jogam com o modo streamer, e o jogo troca os nomes dos outros por nomes
+  inventados ("bernard", "chasidy", "cyrus", "leona", "rupert"); houve também "Torreta automática", "Trabuco"
+  (armadilha) e "yer" (o próprio crreg com o F1 kill). Nenhum desses nomes é canal do evento: nessas mortes a
+  marca fica só na faixa de quem morreu, com "quem matou: bernard". Casa com o canal quando o nome do jogo é o
+  do canal ou um apelido guardado.
+- Velocidade: o 160p tem uns 132 MB por hora de live. Aqui, 10 min dele baixaram em 3,8 s, e o ffmpeg
+  descodifica o 160p a 156 vezes o tempo real num núcleo. Uma noite inteira de 6 canais de 6 h (36 h de vídeo,
+  uns 4,7 GB) daria uns 13 min a 50 Mbit/s e uns 14 min de descodificação num núcleo (a página usa três ao
+  mesmo tempo); só perto dos tiros é perto de um quinto disso. A velocidade do descodificador num navegador de
+  verdade não foi medida (o Chromium dos testes não tem H.264).
+- Testes: `kick-sync/test/achar-mortes.test.mjs` (as telas e as caixas em quadros reais de
+  `kick-sync/test/telas-morte/`, o vídeo tirado do TS como o ffmpeg o vê) e `kick-sync/test/achar-mortes-pagina.test.mjs`
+  (o leitor nos quadros nítidos, e a página: depois da detecção as mortes aparecem sozinhas no mapa, sem colar
+  nada). Falta: ver num Chrome de verdade, com a Kick real, a descodificação e o tempo de uma noite inteira.
+
 
 ## Pedido do dono (12/10): Povix fácil para quem nunca usou (obrigatório)
 - A mulher dele, que é clipadora, usou hoje e não conseguiu mexer em nada. Ele quer o Povix como "braço direito,

@@ -50,7 +50,11 @@ test('mortes do servidor: importar, marcas nas duas faixas, abrir os dois POVs, 
     await p.fill('#elenco', ELENCO);
     await p.click('#abrirElenco');
     await p.waitForFunction(() => window.__evento?.mapa && window.__evento.vista, null, { timeout: 15000 });
-    assert.equal(await p.locator('#mortes').isVisible(), false);
+    // A secção das mortes está à vista com o evento aberto (é dela que sai o "Achar mortes nos vídeos");
+    // o registro do servidor fica à parte, fechado num details.
+    assert.equal(await p.locator('#mortes').isVisible(), true);
+    assert.equal(await p.locator('#importarMortes').isVisible(), false);
+    await p.locator('#mortesServidor > summary').click();
 
     // Colar o registro: duas mortes lidas, a linha "banana" listada, Damoniak sem canal.
     await p.click('#importarMortes');
@@ -138,6 +142,8 @@ test('mortes do servidor no telemóvel: a seção cabe em 390 px, sem rolar para
   await p.waitForFunction(() => window.__evento?.mapa && window.__evento.vista, null, { timeout: 15000 });
   await p.evaluate((texto) => window.__mortes.importar(texto), REGISTRO);
   await p.locator('#mortes').scrollIntoViewIfNeeded();
+  // O registro do servidor aberto também tem de caber.
+  await p.locator('#mortesServidor > summary').click();
   const medida = await p.evaluate(() => {
     const fora = [];
     for (const el of document.querySelectorAll('#mortes *')) {
