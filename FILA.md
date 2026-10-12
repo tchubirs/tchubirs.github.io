@@ -363,3 +363,12 @@ em francês). Tudo revisado pela regra 14 em 28/09.
 - Falta saber se os organizadores do Abisal usam um desses plugins e se passam o registro. Ver
   `kick-sync/IDEIAS.md`, item 1.
 
+
+## Pedido do dono (12/10): Povix fácil para quem nunca usou (obrigatório)
+- A mulher dele, que é clipadora, usou hoje e não conseguiu mexer em nada. Ele quer o Povix como "braço direito,
+  esquerdo, olhos e ouvidos" do clipador, e que qualquer pessoa consiga usar sem saber nada.
+- Primeiro um estudo: usar o site como quem nunca viu (computador e celular), anotar onde trava e cada palavra
+  difícil, comparar com o Opus, e escrever o plano do "modo simples" em `kick-sync/ESTUDO-FACIL.md`.
+- Depois fazer o modo simples: uma caixa ("cole o nome do streamer, o link ou o evento") e um botão; o Povix
+  faz o resto e mostra a lista de clipes prontos, cada um com "Baixar". O resto vai para "Modo avançado".
+- Testar com ela, com 5 tarefas curtas, antes de dar por feito.
