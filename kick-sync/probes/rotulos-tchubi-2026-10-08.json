@@ -3,7 +3,31 @@
   "horas": "no horário que o Povix mostrou ao dono (UTC+2 nessa máquina: 22:46 = 20:46 UTC)",
   "fonte": "o dono, lance por lance, a partir de 13/10",
   "lances": [
-    { "hora": "22:46", "minDaLive": 4, "clipeS": 15, "explosao": false, "alerta": "2 sons de alerta para o mesmo sub", "tiro": "AK bem longe, no fim", "texto": "ganhei 1 sub, foram 2 alertas pro mesmo sub e no final disparos de AK bem longe" }
+    {
+      "hora": "22:46",
+      "minDaLive": 4,
+      "clipeS": 15,
+      "explosao": false,
+      "alerta": "2 sons de alerta para o mesmo sub",
+      "tiro": "AK bem longe, no fim",
+      "texto": "ganhei 1 sub, foram 2 alertas pro mesmo sub e no final disparos de AK bem longe"
+    },
+    {
+      "hora": "22:48",
+      "minDaLive": 6,
+      "clipeS": 33,
+      "explosao": false,
+      "alerta": null,
+      "tiro": "arma de paintball no começo; PvP de MP5 com alguns headshots; depois PvP de M249 com 2 headshots",
+      "texto": "começa com disparos de arma de paintball depois tem um pvp de mp5 com alguns headshots depois outro pvp com m249 e 2hs"
+    }
   ],
-  "semExplosao": ["22:46", "22:50", "22:58", "23:45"]
+  "semExplosao": [
+    "22:46",
+    "22:50",
+    "22:58",
+    "23:45",
+    "22:48"
+  ],
+  "notas": "Quando o dono cita uma arma, é porque o som do tiro dela está no clipe."
 }
