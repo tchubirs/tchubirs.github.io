@@ -538,3 +538,16 @@ dono grava no servidor dele cada arma e explosivo em várias distâncias, que se
   nas 3 línguas, cheio é o TikTok quando o editor veio do Editar de um cartão, senão a tela cheia. "Voltar para a
   lista" numa linha só. Conferido no navegador a 1280 e 375 px. Os PNG em `prints-facil/` não foram salvos (o
   navegador do painel não grava arquivo).
+
+## Pedido do dono (13/10): fila do Povix, para depois
+- Título do lance que diz o que aconteceu ("Rocketada e PvP com 2 armas", "C4", "grito") e uma fala do clipe entre
+  aspas, nos dois modos. Depende do modelo dos sons do Rust (agente em curso).
+- Filtro no topo da lista simples: um botão "Filtrar" abre um menu pequeno com busca por palavra dita no clipe,
+  tipo de lance (PvP, foguete, C4, grito, morte), nota (só "Muito bom"), quantidade de mortes, e ordenar (melhor,
+  hora, mais mortes). "Aplicar" fecha o menu; sem resultado mostra "Nada com esse filtro" e "Limpar filtro".
+  Fica para depois (o dono: "deixa isso pra mais tarde").
+- "Achar webcam" pega a borda da caixa da webcam inteira (linhas paradas em vários quadros), não só o rosto, e
+  ajusta a faixa ao formato dela.
+- Editor travado durante a gravação: aviso "Gravando o clipe: 23 s de 60" com Parar.
+- Parte que o TikTok tapa: escurecer em vez do tracejado, com "O TikTok tapa a parte escura".
+- Clipe de vários ângulos (angulos.js) no FPS da live, como os outros.
