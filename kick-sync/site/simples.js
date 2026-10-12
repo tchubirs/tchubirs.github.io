@@ -40,6 +40,8 @@ const armazem = {
   removeItem: (k) => localStorage.removeItem(k),
 };
 const prefixoDe = (v) => `${v.slug}|${v.inicio}|`;
+// 13/10: as imagens de 640x360 a partir do 480p ficam sob "f2|"; as velhas, borradas, só servem até haver estas.
+const NITIDA = 'f2|';
 let bancoDeFotos = null;
 function banco() {
   bancoDeFotos ??= new Promise((ok) => {
@@ -228,6 +230,7 @@ export function montarSimples(ponte) {
   let ultimos = [];
   let linhaAberta = null;
   let fotos = new Map();
+  let nitidas = new Set();
   let aBaixar = false;
   // A prévia aberta num cartão (uma só): { k, li, video, hls, alternar, acabou }. Com ela aberta a lista não se
   // refaz (o cartão não pode sumir debaixo do dedo), como enquanto um clipe é feito.
@@ -568,7 +571,9 @@ export function montarSimples(ponte) {
     vodAtual = { slug: e.slug, inicio: e.inicio };
     inicioGuardado = e.inicio;
     guardarUltimo(armazem, vodAtual);
-    for (const [k, url] of await comPrazo(fotosGuardadas(prefixoDe(vodAtual)), 1500, new Map())) fotos.set(k, url);
+    for (const [k, url] of await comPrazo(fotosGuardadas(prefixoDe(vodAtual)), 1500, new Map())) {
+      if (k.startsWith(NITIDA)) { fotos.set(k.slice(NITIDA.length), url); nitidas.add(k.slice(NITIDA.length)); } else if (!nitidas.has(k)) fotos.set(k, url);
+    }
     if (minha !== geracao) return;
     ultimos = e.lista || [];
     if (!tocaVideo) avisar(t('simples.abraNoChrome'));
@@ -576,6 +581,9 @@ export function montarSimples(ponte) {
     const n = queridos().length;
     dizer(n ? tn(n, 'simples.prontoUm', 'simples.pronto', { n }) : t('simples.nada'), false);
     $('simplesRefazer').hidden = false;
+    // Imagens borradas de antes (ou nenhuma): abre a live por trás e tira as nítidas, sem tocar nada.
+    const falta = mostrados.find((m) => m && !nitidas.has(chave(m)) && m.canal === e.slug);
+    if (falta && tocaVideo) abrirCanalDoMomento(falta).then((l) => { if (l && minha === geracao) fotografar(); });
   }
 
   async function mostrarParecidos(slug) {
@@ -1153,23 +1161,26 @@ export function montarSimples(ponte) {
         const m = mostrados[i];
         if (!m) break;
         const k = chave(m);
-        if (fotos.has(k) || m.canal !== linha.slug) continue;
+        if (nitidas.has(k) || m.canal !== linha.slug) continue;
         const ms = m.doClipe ? m.deMs + 1000 : m.ms;
         const r = onde(linha, ms, { nudgeMs: ponte.estado.nudges[linha.slug] || 0 });
         if (r.estado !== 'toca') continue;
         const peca = linha.pecasCompletas?.find((p) => p.vod.id === r.peca.vod.id) || r.peca;
-        const degrau = peca.barato || peca.escada?.at(-1);
+        // O 480p (ou o mais perto acima de 360p): o 160p dava a foto borrada no cartão; o 720p pesa o dobro.
+        const meio = peca.escada?.filter((d) => d.altura >= 360).sort((a, b) => Math.abs(a.altura - 480) - Math.abs(b.altura - 480))[0];
+        const degrau = meio || peca.barato || peca.escada?.at(-1);
         // eslint-disable-next-line no-await-in-loop
         const q = await quadros.quadro({ url: degrau?.url, tempoS: r.tempoS, ms, canal: linha.slug });
         if (!q?.tela) { falhas++; continue; }
         const c = document.createElement('canvas');
-        c.width = 320; c.height = 180;
-        c.getContext('2d').drawImage(q.tela, 0, 0, 320, 180);
+        c.width = 640; c.height = 360;
+        c.getContext('2d').drawImage(q.tela, 0, 0, 640, 360);
         let url = null;
-        try { url = c.toDataURL('image/jpeg', 0.7); } catch { url = null; }
+        try { url = c.toDataURL('image/jpeg', 0.82); } catch { url = null; }
         if (!url) { falhas++; continue; }
         fotos.set(k, url);
-        if (vodAtual && !m.doEvento && !m.doClipe && vodAtual.slug === linha.slug) guardarFoto(prefixoDe(vodAtual), k, url);
+        nitidas.add(k);
+        if (vodAtual && !m.doEvento && !m.doClipe && vodAtual.slug === linha.slug) guardarFoto(prefixoDe(vodAtual) + NITIDA, k, url);
         const img = lista.querySelector(`li[data-chave="${CSS.escape(k)}"] .simplesFoto`);
         if (img) img.innerHTML = `<img src="${url}" alt="">`;
       }
@@ -1199,6 +1210,6 @@ export function montarSimples(ponte) {
     comecar,
     // Para os testes de página.
     get lista() { return ultimos; },
-    limparFotos() { fotos = new Map(); },
+    limparFotos() { fotos = new Map(); nitidas = new Set(); },
   };
 }
