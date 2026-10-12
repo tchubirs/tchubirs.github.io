@@ -1481,7 +1481,8 @@ function pintarRegua() {
   }
 
   alvo.innerHTML = partes.join('');
-  pintarSobreFaixas(inicio, fim, grade);
+  // Os traços pequenos também descem: a faixa fica cortada como a régua e segue o zoom (o dono, 13/10).
+  pintarSobreFaixas(inicio, fim, [...grade, ...tiques.map((ms) => ({ ms, menor: true }))]);
   for (const b of alvo.querySelectorAll('.kill')) {
     // A marca de outra kill desliga a prévia desta, senão volta para trás logo.
     b.onclick = () => { largarPrevia(); irPara(Number(b.dataset.ms)); };
@@ -1509,7 +1510,7 @@ function pintarSobreFaixas(inicio, fim, grade) {
   const total = fim - inicio;
   // As linhas da régua descem pelas faixas, muito fracas, como as horas no mapa: vê-se até onde já
   // se andou sem ter de subir os olhos até à régua.
-  const linhas = grade.map(({ ms, vira }) => `<span class="linhaHora${vira ? ' vira' : ''}" aria-hidden="true" `
+  const linhas = grade.map(({ ms, vira, menor }) => `<span class="linhaHora${vira ? ' vira' : ''}${menor ? ' menor' : ''}" aria-hidden="true" `
     + `style="left:${((ms - inicio) / total) * 100}%"></span>`).join('');
   if (linhas) for (const tr of caixa.querySelectorAll('.faixa > .trilho, .faixaGeral > .trilho')) tr.insertAdjacentHTML('afterbegin', linhas);
   // Preso a meio losango das pontas: o trilho corta o que sai dele, e um pico no primeiro segundo

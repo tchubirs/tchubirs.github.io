@@ -3126,3 +3126,7 @@ body:not(:has(#noites:not([hidden]))) .topo .barraSessao.noTopo { display: none;
 .pesTempo #zoomTempo { writing-mode: vertical-lr; direction: rtl; width: 30px; height: auto; flex: 1 1 auto; min-height: 40px; }
 .pesTempo .zoomQuanto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .cabecaTempo .saltos { display: none; }
+/* As divisões cortam a faixa colorida, como num editor: traço escuro por cima da gravação, mais fraco nos pequenos. */
+.trilho .linhaHora { z-index: 3; background: rgb(0 0 0 / .55); box-shadow: 1px 0 0 color-mix(in srgb, var(--tinta) 7%, transparent); }
+.trilho .linhaHora.menor { background: rgb(0 0 0 / .28); box-shadow: none; }
+.trilho .linhaHora.vira { background: rgb(0 0 0 / .7); box-shadow: 1px 0 0 color-mix(in srgb, var(--tinta) 22%, transparent); }
