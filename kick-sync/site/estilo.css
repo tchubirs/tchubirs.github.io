@@ -1853,7 +1853,7 @@ body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) > #evento { flex: 0 0 aut
 .melhor {
   display: grid; gap: 2px var(--e4); align-items: center; padding: var(--e3) var(--e4);
   grid-template-columns: 11.5em minmax(0, 1fr) auto;
-  grid-template-areas: "cab canais acoes" "cab motivo acoes" "cab conta acoes";
+  grid-template-areas: "cab canais acoes" "cab motivo acoes" "cab perto acoes" "cab conta acoes";
   background: var(--sup-1); border: 1px solid var(--linha); border-radius: var(--r-2);
 }
 .melhor.marcado { border-color: var(--acento-fio); box-shadow: inset 3px 0 0 var(--acento); }
@@ -1872,6 +1872,7 @@ body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) > #evento { flex: 0 0 aut
 .melhorCanais { grid-area: canais; margin: 0; font-family: var(--letra-mono); font-size: var(--t-menor); color: var(--tinta-2); overflow-wrap: anywhere; }
 .melhorCanais b { color: var(--tinta); font-weight: 600; }
 .melhorMotivo { grid-area: motivo; margin: 0; font-size: var(--t-base); color: var(--tinta); }
+.melhorPerto { grid-area: perto; margin: 0; font-size: var(--t-micro); color: var(--tinta-3); font-style: italic; }
 .melhorConta { grid-area: conta; margin: 0; font-size: var(--t-micro); color: var(--tinta-3); }
 .melhorConta b { color: var(--tinta-2); font-weight: 600; }
 .melhorAcoes { grid-area: acoes; display: flex; gap: var(--e2); align-items: center; justify-content: flex-end; flex-wrap: wrap; }
@@ -1881,7 +1882,7 @@ body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) > #evento { flex: 0 0 aut
 #melhoresMais { align-self: flex-start; }
 @media (max-width: 759px) {
   .melhores { padding: var(--e3); }
-  .melhor { grid-template-columns: minmax(0, 1fr); grid-template-areas: "cab" "canais" "motivo" "conta" "acoes"; gap: var(--e2); padding: var(--e3); }
+  .melhor { grid-template-columns: minmax(0, 1fr); grid-template-areas: "cab" "canais" "motivo" "perto" "conta" "acoes"; gap: var(--e2); padding: var(--e3); }
   .melhorCabeca { grid-template-columns: auto auto minmax(0, 1fr); grid-template-rows: auto; }
   .melhorPos { grid-row: auto; }
   .melhorPontos { justify-self: end; }

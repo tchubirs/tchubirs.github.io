@@ -7,8 +7,9 @@
 //
 // Os sinais são os que o Povix já tem: os picos de chat de cada canal (lidos no mapa ou na faixa), o que
 // a detecção ouviu (tiros, explosões, gritos) e as kills marcadas na montagem. Sinais de canais
-// diferentes a menos de um minuto uns dos outros são o mesmo lance: é isso que nenhuma ferramenta de um
-// canal só consegue dizer, "4 POVs ouviram a mesma briga".
+// diferentes a menos de um minuto uns dos outros são o mesmo lance quando os canais são do mesmo time
+// ou o som confirmou que estavam no mesmo sítio: é isso que nenhuma ferramenta de um canal só consegue
+// dizer, "4 POVs ouviram a mesma briga". Dois picos que só calharam no mesmo minuto ficam separados.
 //
 // O chat conta pelo normal de cada canal, e não pelo número de mensagens: 30 mensagens num minuto num
 // canal de 2 por minuto é um lance; num canal de 200 mil seguidores é o chat a passar.
@@ -84,22 +85,42 @@ export function sinaisDoEvento({ marcas = new Map(), momentos = [] } = {}) {
 }
 
 /**
- * Agrupar os sinais em lances: pela ordem do relógio, um sinal entra no lance aberto se começou a
- * menos de `juntarMs` do fim dele e o lance não passa de `maxMs`. Cada lance é { deMs, ateMs, sinais }.
+ * Se dois canais podem estar no mesmo lance: o mesmo canal, o mesmo time da lista, ou o som que os pôs
+ * no mesmo sítio ("Achar quem mais estava") a menos de `juntarMs` deste instante.
+ *
+ * Sem isto, o teste real do ABISAL de 12/10 juntava picos de chat que só caíram no mesmo minuto por
+ * acaso: com 33 canais no ar há sempre outro pico a menos de um minuto, e o "canais juntos" premiava
+ * a coincidência (até um canal de GTA RP entrava num lance de Rust).
  */
-export function agrupar(sinais, { juntarMs = JUNTAR_MS, maxMs = LANCE_MAX_MS } = {}) {
+export function mesmoLugar(a, b, ms, { grupoDe = (c) => c, confirmados = [], juntarMs = JUNTAR_MS } = {}) {
+  if (a === b) return true;
+  const ga = grupoDe(a);
+  if (ga != null && ga === grupoDe(b)) return true;
+  return (confirmados || []).some((k) => Math.abs(k.ms - ms) <= juntarMs && k.canais.includes(a) && k.canais.includes(b));
+}
+
+/**
+ * Agrupar os sinais em lances: pela ordem do relógio, um sinal entra num lance aberto se começou a
+ * menos de `juntarMs` do fim dele, o lance não passa de `maxMs` e algum canal do lance é do mesmo
+ * lugar que o dele (`mesmoLugar`). Cada lance é { deMs, ateMs, sinais }.
+ *
+ * `grupoDe(canal)` dá o time (ou null); `confirmados` são as buscas pelo som: [{ ms, canais }].
+ */
+export function agrupar(sinais, {
+  juntarMs = JUNTAR_MS, maxMs = LANCE_MAX_MS, grupoDe = (c) => c, confirmados = [],
+} = {}) {
   const ordem = [...(sinais || [])].filter((s) => Number.isFinite(s?.ms)).sort((a, b) => a.ms - b.ms);
   const grupos = [];
-  let aberto = null;
   for (const s of ordem) {
     const fim = Math.max(s.ms, Number.isFinite(s.ateMs) ? s.ateMs : s.ms);
-    if (aberto && s.ms - aberto.ateMs <= juntarMs && s.ms - aberto.deMs <= maxMs) {
+    const aberto = grupos.find((g) => s.ms - g.ateMs <= juntarMs && s.ms - g.deMs <= maxMs
+      && g.sinais.some((x) => mesmoLugar(x.canal, s.canal, s.ms, { grupoDe, confirmados, juntarMs })));
+    if (aberto) {
       aberto.sinais.push(s);
       aberto.ateMs = Math.max(aberto.ateMs, fim);
       continue;
     }
-    aberto = { deMs: s.ms, ateMs: fim, sinais: [s] };
-    grupos.push(aberto);
+    grupos.push({ deMs: s.ms, ateMs: fim, sinais: [s] });
   }
   return grupos;
 }
@@ -174,13 +195,29 @@ export function resumirLance(grupo) {
  * mais canais, e depois o mais cedo.
  */
 export function melhoresLances(sinais, opcoes = {}) {
-  return agrupar(sinais, opcoes).map(resumirLance)
-    .sort((a, b) => b.pontos - a.pontos || b.canais.length - a.canais.length || a.ms - b.ms);
+  const juntarMs = opcoes.juntarMs ?? JUNTAR_MS;
+  const lances = agrupar(sinais, opcoes).map(resumirLance);
+  // Os outros lances a menos de um minuto, sem juntar: ficam como uma dica na linha ("outro pico perto"),
+  // para quem conhece o evento decidir se é a mesma briga.
+  for (const l of lances) {
+    l.perto = lances.filter((o) => o !== l && o.deMs - l.ateMs <= juntarMs && l.deMs - o.ateMs <= juntarMs)
+      .map((o) => o.canais[0]).filter((c) => !l.canais.includes(c));
+    l.perto = [...new Set(l.perto)];
+  }
+  return lances.sort((a, b) => b.pontos - a.pontos || b.canais.length - a.canais.length || a.ms - b.ms);
 }
 
-/** Se um lance é o de um instante guardado (descartado ou marcado): o instante cai nele, com folga. */
-export function coincide(lance, msGuardados, folgaMs = 30_000) {
-  return (msGuardados || []).some((ms) => ms >= lance.deMs - folgaMs && ms <= lance.ateMs + folgaMs);
+/**
+ * Se um lance é o de uma marca guardada (descartada ou marcada): o instante cai nele, com folga, e a
+ * marca é de algum canal dele. Uma marca é { ms, c: [canais] }; um número solto vale só pelo instante.
+ * Sem os canais, dois lances separados no mesmo minuto (dois canais sem time) eram descartados juntos.
+ */
+export function coincide(lance, guardados, folgaMs = 30_000) {
+  return (guardados || []).some((g) => {
+    const ms = typeof g === 'number' ? g : g?.ms;
+    if (!(ms >= lance.deMs - folgaMs && ms <= lance.ateMs + folgaMs)) return false;
+    return !Array.isArray(g?.c) || g.c.some((c) => lance.canais.includes(c));
+  });
 }
 
 /**

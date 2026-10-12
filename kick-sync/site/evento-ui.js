@@ -29,7 +29,7 @@ import { escapar } from './escapar.js';
 import { idDoCanal, mensagensEntre, calor, picos, segundoDoPico } from './chat.js';
 import { agendar } from './aovivo.js';
 import {
-  normalDoChat, unirJanelas, sinaisDoEvento, melhoresLances, filtrarLances, motivoDoLance, contaDoLance,
+  normalDoChat, unirJanelas, sinaisDoEvento, melhoresLances, filtrarLances, motivoDoLance, contaDoLance, coincide,
 } from './melhores.js';
 
 // Um canal ao vivo tem na lista um VOD de duração zero que vai crescendo. Até se pedir a lista outra
@@ -188,6 +188,9 @@ export function montarEvento({
     info: null,
     // O "abrir N vídeos" à espera do segundo clique, quando são muitos.
     confirmar: null,
+    // O que o "Achar quem mais estava" confirmou pelo som: [{ ms, canais }]. É o que junta canais de
+    // times diferentes num lance só dos melhores lances.
+    confirmados: [],
   };
 
   // ── abrir ──────────────────────────────────────────────────────────────
@@ -207,6 +210,7 @@ export function montarEvento({
     ev.fechadasOrdem = new Set();
     ev.info = info;
     ev.confirmar = null;
+    ev.confirmados = [];
     $('lance').hidden = true;
     $('picosChat').innerHTML = '';
     $('estadoAdicionar').textContent = '';
@@ -1308,6 +1312,17 @@ export function montarEvento({
     return somDoCanal(linha, deMs, duracaoS, { buscar });
   }
 
+  // Quem o som pôs no mesmo sítio que o canal escolhido, guardado para os melhores lances.
+  function confirmarPeloSom(e) {
+    const estava = resumo(ev.achados).estava.map((a) => a.canal);
+    if (!estava.length) return;
+    const canais = [e.canal, ...estava];
+    const antes = ev.confirmados.find((k) => k.ms === e.ms && k.canais[0] === e.canal);
+    if (antes) antes.canais = canais;
+    else ev.confirmados.push({ ms: e.ms, canais });
+    agendarMelhores();
+  }
+
   async function procurarOutros() {
     // A meio de uma busca o botão é "Parar busca": com 500 canais ela pode levar minutos.
     if (ev.procura) {
@@ -1344,6 +1359,7 @@ export function montarEvento({
       })) {
         ev.feitos++;
         ev.achados.push(r);
+        confirmarPeloSom(e);
         $('estadoLance').textContent = t('lance.aOuvir', { feitos: ev.feitos, total });
         pintarLance();
       }
@@ -2021,7 +2037,7 @@ export function montarEvento({
   }
   function carregarMelhores() {
     const g = lerMelhoresGuardados()[chaveDoEvento()] || {};
-    const so = (l) => (Array.isArray(l) ? l.filter(Number.isFinite) : []);
+    const so = (l) => (Array.isArray(l) ? l.filter((g) => Number.isFinite(g) || (Number.isFinite(g?.ms) && Array.isArray(g.c))) : []);
     melhores.descartados = so(g.d);
     melhores.marcados = so(g.m);
     melhores.comDescartados = false;
@@ -2080,7 +2096,8 @@ export function montarEvento({
     if (!ev.elenco || !j) return;
     const doEvento = new Set(todosDoEvento());
     const sinais = sinaisDoEvento({ marcas: ev.marcas, momentos: momentos() }).filter((s) => doEvento.has(s.canal));
-    const todos = melhoresLances(sinais);
+    const times = indiceDeTimes(ev.elenco);
+    const todos = melhoresLances(sinais, { grupoDe: (c) => times.get(c) ?? null, confirmados: ev.confirmados });
     const comuns = { deMs: j.deMs, ateMs: j.ateMs, descartados: melhores.descartados, marcados: melhores.marcados };
     const naJanela = filtrarLances(todos, { ...comuns, comDescartados: true });
     const descartadosN = naJanela.filter((l) => l.descartado).length;
@@ -2132,6 +2149,9 @@ export function montarEvento({
       + '</div>'
       + `<p class="melhorCanais">${canais}</p>`
       + `<p class="melhorMotivo">${escapar(motivoDoLance(l))}</p>`
+      + (l.perto?.length ? `<p class="melhorPerto nota">${escapar(tn(l.perto.length, 'melhores.pertoUm', 'melhores.perto', {
+        canais: l.perto.slice(0, 3).join(', ') + (l.perto.length > 3 ? ` +${l.perto.length - 3}` : ''),
+      }))}</p>` : '')
       + `<p class="melhorConta nota"><span class="soLeitor">${escapar(t('melhores.soma'))}: </span>${conta}${l.partes.length > 1 ? ` = <b>${l.pontos}</b>` : ''}</p>`
       + '<div class="melhorAcoes">'
       + `<button type="button" class="principal" data-acao="abrir"${noAr.length ? '' : ' disabled'} title="${escapar(t('melhores.abrirAjuda', { canais: noAr.join(', '), hora: horaLocal(l.msAbrir) }))}">`
@@ -2231,10 +2251,10 @@ export function montarEvento({
 
   function marcarMelhor(l) {
     if (l.marcado) {
-      melhores.marcados = melhores.marcados.filter((ms) => !(ms >= l.deMs - 30_000 && ms <= l.ateMs + 30_000));
+      melhores.marcados = melhores.marcados.filter((g) => !coincide(l, [g]));
     } else {
       marcar({ ms: l.msMarcar, canal: l.canais[0], canais: l.canais });
-      melhores.marcados = [...melhores.marcados, l.ms];
+      melhores.marcados = [...melhores.marcados, { ms: l.ms, c: l.canais }];
       $('melhoresEstado').textContent = t('melhores.marcadoMontagem', { hora: horaLocal(l.msMarcar) });
     }
     guardarMelhores();
@@ -2242,7 +2262,7 @@ export function montarEvento({
   }
 
   function descartarMelhor(l, i) {
-    melhores.descartados = [...melhores.descartados, l.ms];
+    melhores.descartados = [...melhores.descartados, { ms: l.ms, c: l.canais }];
     guardarMelhores();
     pintarMelhores();
     // O foco passa ao lance seguinte (ou ao de cima, no fim da lista), e não volta ao topo da página.
@@ -2252,7 +2272,7 @@ export function montarEvento({
   }
 
   function voltarMelhor(l) {
-    melhores.descartados = melhores.descartados.filter((ms) => !(ms >= l.deMs - 30_000 && ms <= l.ateMs + 30_000));
+    melhores.descartados = melhores.descartados.filter((g) => !coincide(l, [g]));
     guardarMelhores();
     pintarMelhores();
   }
