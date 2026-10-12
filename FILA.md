@@ -342,3 +342,8 @@ em francês). Tudo revisado pela regra 14 em 28/09.
   Rust do Abisal num VOD que a Kick chama "Just Chatting".
 - Na Kick real, na noite de 05/10: 16 canais da lista só noutro jogo (GTA, LoL, CS2 e outros), entre eles o
   mills_rp e o britus99 (o "estava" duvidoso do teste do som era GTA). Os melhores lances já não os mostram.
+
+## Teste real de 12/10, tarde
+- Feito em 12/10. Webcam sozinha no 9:16, Pacote, "Guardar todos agora", "some em N dias" e o som com as teclas
+  1 a 9, com a Kick real e o Abisal: tudo passa. Corrigido: com a caixa no rosto achado, o botão do canto da
+  webcam ficava carregado no canto errado. Ver `kick-sync/QA-REAL.md`, seção "Teste real de 12/10, tarde".

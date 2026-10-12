@@ -324,6 +324,8 @@ test('2 enquadramentos: a caixa 1 vai para o rosto de cada canal, e fica guardad
   let cx = await caixa1(p);
   assert.ok(dentro(cx, [150 / 1920, 760 / 1080]), `a caixa 1 não tem o rosto do tchubi: ${JSON.stringify(cx)}`);
   assert.match(await aviso(p), /tchubi/);
+  // A caixa saiu do rosto e não do modelo: nenhum botão de canto fica carregado (teste real de 12/10).
+  assert.deepEqual(await p.$$eval('.modeloWebcam', (bs) => bs.filter((b) => b.getAttribute('aria-pressed') === 'true').length), 0);
   const pedidos = await p.evaluate(() => window.__pedidosRosto);
   assert.equal(pedidos.length, 5, 'cinco quadros');
   assert.ok(pedidos.every((q) => q.canal === 'tchubi' && q.url));

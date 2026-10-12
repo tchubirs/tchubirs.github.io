@@ -5878,9 +5878,11 @@ function pintarModos() {
   for (const b of document.querySelectorAll('.modoRetrato')) {
     b.setAttribute('aria-pressed', String(b.dataset.modo === c.modo));
   }
-  // O modelo só está "carregado" em dois enquadramentos: num só, a webcam não tem faixa.
+  // O modelo só está "carregado" em dois enquadramentos: num só, a webcam não tem faixa. Com a caixa
+  // posta no rosto achado também não: o teste real de 12/10 achou a webcam em cima à direita e o botão
+  // de "embaixo à esquerda" continuava carregado.
   for (const b of document.querySelectorAll('.modeloWebcam')) {
-    b.setAttribute('aria-pressed', String(c.modo === 'dois' && b.dataset.modelo === c.modelo));
+    b.setAttribute('aria-pressed', String(c.modo === 'dois' && c.origem !== 'rosto' && b.dataset.modelo === c.modelo));
   }
 }
 
@@ -5921,6 +5923,7 @@ function aplicarRosto(c, rosto) {
   c.rectsFonte = { ...fonte };
   c.origem = 'rosto';
   lembrarEncaixe();
+  pintarModos();
   pintarRecortes();
   return true;
 }

@@ -174,3 +174,30 @@ O que ficou por fazer ou não se conseguiu provar aqui:
 Suite inteira depois das correções: 1113 de 1113 (`node --test test/*.mjs`, 299 s). Uma corrida feita com
 o Chromium do teste real ainda aberto com 33 vídeos a tocar deu 4 falhas por tempo (o gravador e um
 prazo de 400 s); com ele fechado, tudo verde.
+
+## Teste real de 12/10, tarde
+
+Os recursos novos do dia, com a Kick real e o Abisal real (`?e=abisal`, noite de 05/10, horas em UTC), no
+Chromium com H.264 (`/opt/pw-browsers/chromium-1243`) e o site local. Lance de 22:44 com três ângulos de Rust:
+`deowasd`, `xguiry` e `ispdep`. Ficheiros conferidos com o ffmpeg 7.0.2 e o `zipfile` e o `xml` do Python.
+Fotos em `.arena/prints/fotos/` (`qa-tarde-*.png`, `jogo-abisal-mapa.png`).
+
+| O quê | Resultado |
+|---|---|
+| Só o jogo do evento | **passa**: 16 canais da lista só noutro jogo nessa noite (GTA, LoL, CS2, WoW e outros), a cinza no mapa com "outro jogo nesta noite", entre eles o `mills_rp` e o `britus99`. Clicar no `mills_rp` às 23:16 diz que era outro jogo e abre só ele; "Achar quem mais estava" fica desligado. O chat de todos lê só os 34 do jogo |
+| Melhores lances depois do filtro | **passa**: nenhum dos 16 aparece nos 225 lances. Os cinco primeiros: 18:54:56 `xguiry`, 19:04:45 `xguiry`, 22:12:56 `ispdep`, 22:19:06 `ispdep`, 22:27:24 `deowasd`, todos com 10 pontos (o teto do chat) |
+| Webcam achada sozinha no 9:16 | **passa** nos três: a caixa 1 cai no rosto da webcam verdadeira (`deowasd` em cima à direita, `xguiry` embaixo à esquerda, `ispdep` em cima à esquerda), nota 0,93, 5 quadros. O detector baixa da primeira vez |
+| Botão do canto da webcam | **falhava**: com a caixa no rosto em cima à direita, o botão "embaixo à esquerda" continuava carregado. Corrigido: com a caixa no rosto nenhum canto fica carregado (`rosto.test.mjs`) |
+| Pacote do lance | **passa**: ZIP de 25,1 MB sem erros com `01_deowasd.mp4`, `01_xguiry.mp4`, `01_ispdep.mp4` (7,00 s cada, H.264 1080p60 e AAC 48 kHz, 0 erros a descodificar), `01_lance.fcpxml` (lê-se como XML: versão 1.9, 3 assets, um multicam com 3 ângulos com o nome do canal) e `01_lance.txt` com os links dos VODs. Falta abrir num DaVinci e num Final Cut |
+| "Guardar todos agora" | **passa**: duas kills, os dois `.mp4` (7,00 s, 0 erros) e o ZIP em 2,6 s, com o progresso dito. Guarda o clipe de quem marcou a kill (e da vítima), como a montagem; os outros ângulos vão no Pacote |
+| "some em N dias" | **passa**: `deowasd`, `xguiry` e `ispdep` têm na lista VODs com mais de 7 dias (o `xguiry` de 12/09), por isso 30 dias. VODs de 05/10 (09:59 e 14:30): somem a 04/11, e às 13:02 de 12/10 faltam 22,9 e 23,1 dias, ditos "some em 23 dias" e "some em 24 dias" |
+| Som num ângulo com as teclas 1 a 9 | **passa**: 1, 2 e 3 no canto dos quadrados; cada tecla deixa só aquele com som (`muted` falso num só) e com o altifalante |
+
+Achados pelo caminho:
+
+- A categoria da Kick é uma por VOD, e "Just Chatting" não quer dizer que não jogou: o `sapoiq` jogou Rust do
+  Abisal num VOD assim, e o `deowasd` mostra a POV de outro jogador num VOD "Just Chatting". Por isso só uma
+  categoria que é jogo (grupo 1 da Kick) e não é Rust fica de fora.
+- O `britus99`, que o "Achar quem mais estava" deu como "estava" no teste anterior, estava no GTA nessa noite.
+- A Kick ainda recusa parte dos pedidos de chat sem `CORS` (6 de 34 canais na primeira leitura); clicar de novo
+  leu os seis.
