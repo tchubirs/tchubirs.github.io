@@ -1,0 +1,9 @@
+{
+  "vod": "tchubi, live de 2026-10-08, início 20:42:01 UTC (uuid antigo dd5ebb85-1daf-4106-bf73-e8ad1b454f3c)",
+  "horas": "no horário que o Povix mostrou ao dono (UTC+2 nessa máquina: 22:46 = 20:46 UTC)",
+  "fonte": "o dono, lance por lance, a partir de 13/10",
+  "lances": [
+    { "hora": "22:46", "minDaLive": 4, "clipeS": 15, "explosao": false, "alerta": "2 sons de alerta para o mesmo sub", "tiro": "AK bem longe, no fim", "texto": "ganhei 1 sub, foram 2 alertas pro mesmo sub e no final disparos de AK bem longe" }
+  ],
+  "semExplosao": ["22:46", "22:50", "22:58", "23:45"]
+}
