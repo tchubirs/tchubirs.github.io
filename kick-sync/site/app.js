@@ -6022,7 +6022,9 @@ function acharWebcam() {
 // O dono (10/10): a webcam de cada streamer está sempre no mesmo sítio, e acertar o 9:16 a cada clipe
 // era fazer o mesmo trabalho outra vez. Fica no aparelho, por streamer, em fracções da fonte (servem a
 // qualquer qualidade do vídeo): o modo, o modelo da webcam e, para cada modo, os recortes e a divisão.
-const CHAVE_ENCAIXES = 'replay.encaixes';
+// 13/10: chave nova porque a faixa da webcam passou a nascer em 16:9; os encaixes velhos (faixa de 0,35)
+// abriam a webcam com o quadro inteiro.
+const CHAVE_ENCAIXES = 'replay.encaixes.169';
 
 function lerEncaixes() {
   try {
