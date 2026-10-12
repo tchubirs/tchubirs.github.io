@@ -280,3 +280,15 @@ em francês). Tudo revisado pela regra 14 em 28/09.
   - o chat do streamer naquele trecho, por cima do vídeo (estilo sobreposição de chat), com posição, tamanho e quantas linhas;
   - legenda da fala do streamer (Whisper no navegador, ver o estudo de voz em kick-sync), revisável antes de exportar.
 - Vale para 16:9 e 9:16. Fazer depois da parte 2 da reorganização (mesmos arquivos).
+
+## Correções do teste real com a Kick (12/10), na ordem (ver kick-sync/QA-REAL.md)
+1. Ver ao vivo agora: abre o início da live (50 min atrás) e só 1 de 24 canais. Prender no fim da playlist e abrir todos.
+2. Exportar: 16:9 sai em .ts e mais longo que o pedido. Sair em .mp4 com a duração certa (aceito por TikTok, Instagram e X).
+3. Exportar montagem ignora a seleção. Exportar só as marcadas; opção de um vídeo só com os lances em sequência.
+4. Achar quem mais estava no lance: erra o time e não aplica o atraso medido. Melhorar a comparação de som e aplicar o atraso.
+5. Link do projeto perde as kills marcadas.
+6. Abrir 33 ângulos demora 40 s; sincronizar 33 por áudio leva 30 min (um por vez). Carregar e sincronizar em paralelo, os do lance primeiro.
+7. Vítima: tela de inventário confundida com morte.
+8. Detecção: download de som sem tempo limite pode travar.
+9. Chat da Kick: pedidos demais e respostas sem CORS; menos pedidos e nova tentativa.
+10. Com dois canais, abre a janela de tempo com um só; preferir a que tem os dois.
