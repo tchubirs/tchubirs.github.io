@@ -103,7 +103,13 @@ export function instantesParaOuvir(linhas, janela, { quantos = 3, duracaoS = 120
  * Um navegador sem AAC (o Chromium open-source, por exemplo) nao consegue
  * sequer TOCAR os VODs da Kick — dize-lo e mais util do que um zero calado.
  */
-export async function descodificarAac(aac, { taxaAlvo = TAXA } = {}) {
+export async function descodificarAac(aac, { taxaAlvo = TAXA, noFio = false } = {}) {
+  // Na página, num Worker (ver som-worker.js); sem Worker (node, um browser antigo) ou se ele falhar,
+  // aqui mesmo.
+  if (!noFio) {
+    const r = await noWorker(aac, taxaAlvo);
+    if (r) return r;
+  }
   const bytes = aac.buffer.slice(aac.byteOffset, aac.byteOffset + aac.byteLength);
 
   if (typeof AudioDecoder !== 'undefined') {
@@ -164,6 +170,42 @@ export async function descodificarAac(aac, { taxaAlvo = TAXA } = {}) {
   const e = new Error('este navegador nao sabe descodificar o audio AAC da Kick');
   e.name = 'SEM-DESCODIFICADOR';
   throw e;
+}
+
+let trabalhador = null;
+let pedidosAoWorker = 0;
+const aEspera = new Map();
+/** O AAC descodificado no som-worker.js, ou null quando não há Worker (e então descodifica-se aqui). */
+function noWorker(aac, taxaAlvo) {
+  if (typeof Worker === 'undefined' || typeof window === 'undefined' || trabalhador === false) return Promise.resolve(null);
+  if (!trabalhador) {
+    try {
+      trabalhador = new Worker(new URL('./som-worker.js', import.meta.url), { type: 'module' });
+      trabalhador.onmessage = ({ data }) => {
+        const p = aEspera.get(data.id);
+        if (!p) return;
+        aEspera.delete(data.id);
+        if (data.mono) p.ok(data.mono);
+        else p.nao(Object.assign(new Error(data.erro), { name: data.nome }));
+      };
+      // Um Worker que nem arranca (o ficheiro não carregou, uma política que o proíbe): os que estavam
+      // à espera e os seguintes descodificam-se na página, como antes.
+      trabalhador.onerror = () => {
+        trabalhador = false;
+        for (const p of aEspera.values()) p.ok(null);
+        aEspera.clear();
+      };
+    } catch {
+      trabalhador = false;
+      return Promise.resolve(null);
+    }
+  }
+  const id = ++pedidosAoWorker;
+  const copia = aac.slice();
+  return new Promise((ok, nao) => {
+    aEspera.set(id, { ok, nao });
+    trabalhador.postMessage({ id, aac: copia, taxaAlvo }, [copia.buffer]);
+  });
 }
 
 /** Baixa linear para a taxa de trabalho. Nada disto precisa de fidelidade: o

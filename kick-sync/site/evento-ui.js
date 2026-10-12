@@ -963,6 +963,7 @@ export function montarEvento({
   // ainda não se leu. Não depende do mapa do evento: na noite sem evento funciona igual, porque o chat
   // vem do canal e não do elenco. As mensagens e os picos vão para o mesmo sítio dos do evento.
   const TRECHO_MAX_PEDIDOS = 400;
+  const TRECHO_PICOS_MS = 5 * 60_000;
   async function lerChatTrecho(c, deMs, ateMs, { sinal, aoProgredir = () => {} } = {}) {
     const ate = Math.min(ateMs, Date.now());
     const falta = faltaLer(c, deMs, ate);
@@ -985,6 +986,13 @@ export function montarEvento({
       });
       // Parado a meio: o que veio já ficou guardado pelo `lerJanela`.
       if (sinal?.aborted) throw new DOMException('parado', 'AbortError');
+      // Os picos medem-se em bocados de 5 min, como quando se lia um pedido por bocado: um minuto com
+      // 8 mensagens num canal calado é pico no bocado dele, e numa noite inteira de 14 h perdia-se na média.
+      if (id != null && !msgs.incompleto) {
+        const bocadosLidos = [];
+        for (let x = a; x < b; x += TRECHO_PICOS_MS) bocadosLidos.push([x, Math.min(b, x + TRECHO_PICOS_MS)]);
+        janelasLidas.set(c, [...(janelasLidas.get(c) || []), ...bocadosLidos]);
+      }
       andado += b - a;
       aoProgredir({ fracao: total ? andado / total : 1 });
       if (id == null) { semCanal = true; break; }

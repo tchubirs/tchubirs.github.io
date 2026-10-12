@@ -68,13 +68,6 @@ function misturar(...partes) {
   return y;
 }
 
-/** De 0 a `corteS` um som, dali para a frente outro. */
-function emendar(antes, depois, corteS) {
-  const y = Float32Array.from(depois);
-  y.set(antes.subarray(0, s(corteS)));
-  return y;
-}
-
 const CENA = cliques(1);
 const REF = misturar([CENA, 1], [ruido(2), 1]);
 const junto = (atrasoS, semente, ganho = 1) => misturar([atrasado(CENA, atrasoS), ganho], [ruido(semente), ganho]);
