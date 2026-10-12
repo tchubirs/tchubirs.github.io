@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  telaDe, destinoDe, recorteAoCentro, planoDeAngulos, quemSeVe, credito, desenharAngulos, gravarAngulos, DEITADO,
+  telaDe, destinoDe, recorteAoCentro, planoDeAngulos, quemSeVe, credito, desenharAngulos, gravarAngulos, DEITADO, somEm,
 } from '../site/angulos.js';
 import { RETRATO } from '../site/retrato.js';
 
@@ -142,4 +142,72 @@ test('falta de vídeos para o plano é um erro de quem chama', async () => {
     () => gravarAngulos([videoFalso('A')], { plano: planoDeAngulos({ canais: ['a', 'b'], duracaoS: 1 }), formato: 'video/webm' }),
     RangeError,
   );
+});
+
+// IDEIAS.md, item 8: o clipe de vários ângulos usa o som de quem está na tela. Antes era o do primeiro
+// ângulo do princípio ao fim, e no seguido via-se o defensor com o tiro ouvido pelo atacante.
+test('o som é de quem está na tela: no seguido troca com a imagem; no empilhado é o escolhido', () => {
+  const seguido = planoDeAngulos({ canais: ['a', 'b', 'c'], duracaoS: 9, trocasS: [3, 6] });
+  assert.deepEqual([0, 2.9, 3, 5.9, 6, 8.9].map((t) => somEm(seguido, t)), [0, 0, 1, 1, 2, 2]);
+  assert.equal(somEm(seguido, 4, 2), 1, 'no seguido o escolhido não manda: manda a imagem');
+  const empilhado = planoDeAngulos({ modo: 'empilhado', canais: ['a', 'b'], duracaoS: 5 });
+  assert.equal(somEm(empilhado, 1), 0, 'por omissão o de cima');
+  assert.equal(somEm(empilhado, 1, 1), 1, 'ou o que se estava a ouvir');
+  assert.equal(somEm(empilhado, 1, 7), 0, 'um índice de fora vale o de cima');
+});
+
+class ContextoFalso {
+  static ultimo = null;
+  constructor() {
+    this.state = 'running';
+    this.currentTime = 0;
+    this.ganhos = [];
+    this.ligacoes = [];
+    this.fechado = false;
+    ContextoFalso.ultimo = this;
+  }
+  createMediaStreamDestination() { return { stream: { getAudioTracks: () => [{ id: 'mistura' }] } }; }
+  createGain() {
+    const g = { gain: { value: 1, setTargetAtTime(v) { this.value = v; } }, connect() {} };
+    this.ganhos.push(g);
+    return g;
+  }
+  createMediaStreamSource(fluxo) { return { connect: (g) => this.ligacoes.push([fluxo, g]) }; }
+  close() { this.fechado = true; }
+}
+
+test('com Web Audio, o seguido grava uma faixa só, que deixa passar o som de quem está na tela', async () => {
+  const videos = [videoFalso('A', { faixas: [{ id: 'somA' }] }), videoFalso('B', { faixas: [{ id: 'somB' }] })];
+  const { tela, MRFalso, faixasNaTela } = gravacaoFalsa(videos);
+  const plano = planoDeAngulos({ canais: ['a', 'b'], duracaoS: 0.6, trocasS: [0.3] });
+  const trocas = [];
+  const volumes = [];
+  await gravarAngulos(videos, {
+    plano, formato: 'video/webm', criarTela: () => tela, MR: MRFalso, Contexto: ContextoFalso,
+    aoSom: (i, tS) => {
+      trocas.push([i, tS]);
+      volumes.push(ContextoFalso.ultimo.ganhos.map((g) => g.gain.value));
+    },
+  });
+  assert.deepEqual(faixasNaTela, [{ id: 'mistura' }], 'a faixa da mistura, e não a de um ângulo');
+  assert.equal(ContextoFalso.ultimo.ligacoes.length, 2, 'os dois ângulos entram na mistura');
+  assert.deepEqual(trocas.map(([i]) => i), [0, 1], 'começa no primeiro e passa ao segundo');
+  assert.ok(trocas[1][1] >= 0.3 && trocas[1][1] < 0.4, `a troca do som é a da imagem (${trocas[1][1]})`);
+  assert.deepEqual(volumes, [[1, 0], [0, 1]], 'um de cada vez, nunca os dois');
+  assert.equal(ContextoFalso.ultimo.fechado, true, 'o contexto fecha no fim');
+});
+
+test('sem Web Audio, ou com o contexto parado, fica o som de um ângulo só, como antes', async () => {
+  class Parado extends ContextoFalso {
+    constructor() { super(); this.state = 'suspended'; }
+    resume() { return Promise.resolve(); }
+  }
+  for (const Contexto of [undefined, Parado]) {
+    const videos = [videoFalso('A', { faixas: [{ id: 'somA' }] }), videoFalso('B', { faixas: [{ id: 'somB' }] })];
+    const { tela, MRFalso, faixasNaTela } = gravacaoFalsa(videos);
+    await gravarAngulos(videos, {
+      plano: planoDeAngulos({ canais: ['a', 'b'], duracaoS: 0.1 }), formato: 'video/webm', criarTela: () => tela, MR: MRFalso, Contexto,
+    });
+    assert.deepEqual(faixasNaTela, [{ id: 'somA' }]);
+  }
 });

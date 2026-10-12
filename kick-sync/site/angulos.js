@@ -84,6 +84,69 @@ export function quemSeVe(plano, tS) {
   return [i];
 }
 
+/**
+ * De que ângulo é o som `tS` segundos depois do início do clipe (um índice em `plano.canais`).
+ *
+ * No seguido é o de quem está na tela: o clipe conta o lance por um lado e depois pelo outro, e o tiro
+ * que se ouve tem de ser o da imagem que se vê. No empilhado os dois estão na tela o tempo todo, e o
+ * som é o de `somDe` (o ângulo que se estava a ouvir na grelha), ou o de cima.
+ */
+export function somEm(plano, tS, somDe = 0) {
+  if (plano.modo === 'empilhado') return somDe === 1 && plano.canais.length > 1 ? 1 : 0;
+  return quemSeVe(plano, tS)[0];
+}
+
+/**
+ * Um misturador que deixa passar o som de um ângulo de cada vez, pelo Web Audio: uma entrada por
+ * vídeo, cada uma com o seu volume, e uma saída que vai para o gravador. Trocar é mudar os volumes,
+ * com uma rampa de 15 ms para a troca não estalar. Devolve null quando não há como (sem Web Audio, ou
+ * um contexto que o navegador deixou parado): aí o clipe fica com o som de um ângulo só, como antes.
+ */
+export async function misturador(videos, { Contexto = globalThis.AudioContext } = {}) {
+  if (typeof Contexto !== 'function') return null;
+  let ctx = null;
+  try {
+    ctx = new Contexto();
+    if (ctx.state === 'suspended') await Promise.race([ctx.resume?.(), new Promise((ok) => setTimeout(ok, 500))]);
+    if (ctx.state === 'suspended') { ctx.close?.(); return null; }
+    const destino = ctx.createMediaStreamDestination();
+    let entradas = 0;
+    const ganhos = videos.map((v) => {
+      const g = ctx.createGain();
+      g.gain.value = 0;
+      g.connect(destino);
+      try {
+        const fluxo = v.captureStream?.() || v.mozCaptureStream?.();
+        if (fluxo?.getAudioTracks?.().length) {
+          ctx.createMediaStreamSource(fluxo).connect(g);
+          entradas++;
+        }
+      } catch { /* este ângulo fica calado; os outros continuam */ }
+      return g;
+    });
+    if (!entradas) { ctx.close?.(); return null; }
+    let atual = -1;
+    return {
+      faixas: destino.stream.getAudioTracks(),
+      ouvir(i) {
+        if (i === atual) return;
+        const agora = ctx.currentTime;
+        for (const [k, g] of ganhos.entries()) {
+          const alvo = k === i ? 1 : 0;
+          if (atual === -1) g.gain.value = alvo;
+          else g.gain.setTargetAtTime(alvo, agora, 0.015);
+        }
+        atual = i;
+      },
+      get atual() { return atual; },
+      fechar() { try { ctx.close?.(); } catch { /* já fechado */ } },
+    };
+  } catch {
+    try { ctx?.close?.(); } catch { /* nada */ }
+    return null;
+  }
+}
+
 /** O crédito que vai no vídeo: o endereço do canal, que é o que quem vê pode procurar. */
 export const credito = (canal) => `kick.com/${canal}`;
 
@@ -137,14 +200,17 @@ export function desenharAngulos(ctx, fontes, plano, tS) {
  * Os vídeos chegam já postos no instante certo de cada um (com os ajustes de relógio de cada canal);
  * aqui só se arrancam juntos. O relógio do clipe é o do primeiro.
  *
- * Som: o do ângulo `somDe` (por omissão o primeiro), ou nenhum com `mudo`. Sem som é a saída para
- * música com direitos de autor tocando ao fundo da live, que é a causa de quase todas as reclamações
- * de direitos (ver ESTUDO.md, riscos).
+ * Som: o de quem está na tela (`somEm`), trocando com a imagem, quando o navegador tem Web Audio
+ * (`Contexto`); sem ele, o do ângulo `somDe` (por omissão o primeiro) do princípio ao fim. Nenhum com
+ * `mudo`. Sem som é a saída para música com direitos de autor tocando ao fundo da live, que é a causa
+ * de quase todas as reclamações de direitos (ver ESTUDO.md, riscos). `aoSom(i, tS)` diz cada troca.
  */
 export async function gravarAngulos(videos, {
   plano, mudo = false, somDe = 0, aoProgresso = () => {}, sinal, formato,
   criarTela = () => document.createElement('canvas'),
   MR = globalThis.MediaRecorder,
+  Contexto = globalThis.AudioContext,
+  aoSom = () => {},
 } = {}) {
   if (!plano || !Array.isArray(videos) || videos.length < plano.canais.length) {
     throw new RangeError('falta um vídeo para cada ângulo do plano');
@@ -161,13 +227,38 @@ export async function gravarAngulos(videos, {
   ctx.imageSmoothingQuality = 'high';
 
   const fluxo = tela.captureStream(30);
-  if (!mudo) {
+  // A mistura só faz falta quando o som muda de ângulo durante o clipe: no seguido com mais de um.
+  const mistura = !mudo && plano.modo === 'seguido' && plano.canais.length > 1
+    ? await misturador(videos.slice(0, plano.canais.length), { Contexto }) : null;
+  let somAtual = -1;
+  const trocarSom = (tS) => {
+    if (!mistura) return;
+    const i = somEm(plano, tS, somDe);
+    if (i === somAtual) return;
+    somAtual = i;
+    mistura.ouvir(i);
+    try { aoSom(i, tS); } catch { /* só aviso */ }
+  };
+  if (mistura) {
+    for (const faixa of mistura.faixas) fluxo.addTrack(faixa);
+    trocarSom(0);
+  } else if (!mudo) {
     try {
-      const v = videos[somDe] || videos[0];
+      const i = videos[somDe] ? somDe : 0;
+      const v = videos[i];
       const som = v.captureStream?.() || v.mozCaptureStream?.();
       for (const faixa of som?.getAudioTracks?.() || []) fluxo.addTrack(faixa);
+      aoSom(i, 0);
     } catch { /* sem som: o vídeo continua a valer */ }
   }
+  try {
+    return await gravarFluxo(videos, { plano, fluxo, tipo, ctx, sinal, aoProgresso, MR, trocarSom });
+  } finally {
+    mistura?.fechar();
+  }
+}
+
+async function gravarFluxo(videos, { plano, fluxo, tipo, ctx, sinal, aoProgresso, MR, trocarSom }) {
   const gravador = new MR(fluxo, { mimeType: tipo, videoBitsPerSecond: BITS_VIDEO, audioBitsPerSecond: BITS_SOM });
   const pedacos = [];
   gravador.ondataavailable = (e) => { if (e.data?.size) pedacos.push(e.data); };
@@ -189,6 +280,7 @@ export async function gravarAngulos(videos, {
     if (parar) return;
     const feito = Math.max(0, relogio.currentTime - inicio);
     desenharAngulos(ctx, videos, plano, feito);
+    trocarSom(feito);
     voltas = feito > 0.05 ? 0 : voltas + 1;
     if (voltas > PARADO_MAX) { paradoDemais = true; acabar(); return; }
     aoProgresso({ feito, total: plano.duracaoS });

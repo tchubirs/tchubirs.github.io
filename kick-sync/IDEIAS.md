@@ -134,6 +134,18 @@ semana), grande (mais que isso). Estimativas minhas.
 - **Por que importa:** com 4 ou mais POVs, o som de todos ao mesmo tempo não dá para entender.
 - **No Povix:** clicar no vídeo põe o som nele; números 1 a 9 trocam o som; o clipe de vários ângulos usa o som de
   quem está na tela. Conferir o que já existe antes.
+- **Estado (12/10): feito.** O que já existia: o altifalante e o volume em cada quadrado do visor (a mistura à
+  mão) e o som que seguia o principal; nenhuma tecla de número; e o clipe de vários ângulos gravava o som do primeiro
+  ângulo do princípio ao fim, mesmo no seguido, em que a imagem troca. Agora um clique no vídeo do visor dá-lhe o som e
+  cala o outro, sem trocar ninguém de lugar (antes o clique trocava o par de lado); um clique na grelha abre o ângulo
+  no visor já com o som. As teclas 1 a 9 passam o som para o ângulo com esse número, que aparece no canto de cada
+  quadrado (a ordem é a da grelha); são atalhos como os outros, num grupo "Som" da janela do "?", e podem ser
+  trocadas lá. Quem tem som leva um altifalante ao lado do número e, com dois no visor, o fio na cor da marca. No
+  clipe seguido o som troca com a imagem (Web Audio, uma rampa de 15 ms); no empilhado é o do ângulo que se estava a
+  ouvir. Sem Web Audio fica o som de um ângulo só, como antes. Medido num Chromium: dois vídeos com tons de 300 e
+  1200 Hz, e o ficheiro soa a 300 Hz antes da troca e a 1200 Hz depois. Código em `site/app.js` (`ouvirAngulo`),
+  `site/angulos.js` (`somEm`, `misturador`) e `site/atalhos.js`; testes em `test/som.test.mjs` e
+  `test/angulos.test.mjs`.
 
 ### 9. Marcar ao vivo com uma tecla (valor médio, esforço pequeno)
 

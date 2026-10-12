@@ -311,3 +311,9 @@ em francês). Tudo revisado pela regra 14 em 28/09.
 - Feito em 12/10. Botão "Pacote" em cada lance da Montagem: ZIP com o trecho de cada ângulo, um projeto multicâmera
   `.fcpxml` (versão 1.9) com os ângulos alinhados e com o nome de cada canal, e um texto com nomes, horários e links.
   Falta testar num DaVinci e num Final Cut de verdade. Ver `kick-sync/IDEIAS.md`, item 6.
+
+## Ideia (12/10): ouvir um ângulo só e trocar com um toque
+- Feito em 12/10. Clique no vídeo dá o som a ele e cala o outro, sem mudar a tela; as teclas 1 a 9 (atalhos que se
+  podem trocar) passam o som para o ângulo com esse número, que aparece no canto do quadrado; quem tem som leva um
+  altifalante. O clipe de vários ângulos agora grava o som de quem está na tela, medido com dois tons num Chromium.
+  Ver `kick-sync/IDEIAS.md`, item 8.

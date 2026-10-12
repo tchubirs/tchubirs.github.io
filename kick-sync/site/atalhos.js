@@ -13,7 +13,7 @@
 // Assim as regras (o que é uma tecla, quem a tem, o que acontece num conflito) testam-se em Node.
 
 /** As áreas da lista, pela ordem em que aparecem. */
-export const GRUPOS = ['tocar', 'marcar', 'vista', 'paineis', 'evento'];
+export const GRUPOS = ['tocar', 'marcar', 'vista', 'som', 'paineis', 'evento'];
 
 /**
  * Todas as acções que um atalho pode disparar.
@@ -49,6 +49,13 @@ export const ACOES = [
   { id: 'ecraCheio', grupo: 'vista', rotulo: 'ajuda.ecraCheio', padrao: ['F'], noite: true },
   { id: 'ajusteMenos', grupo: 'vista', rotulo: 'atalhos.ajusteMenos', padrao: [','], noite: true, repete: true },
   { id: 'ajusteMais', grupo: 'vista', rotulo: 'atalhos.ajusteMais', padrao: ['.'], noite: true, repete: true },
+
+  // O som de um ângulo só (IDEIAS.md, item 8): o 1 a 9 passam o som para o ângulo com esse número, o
+  // mesmo que se vê no canto de cada quadrado. Os números estavam livres; com Shift o 1 vira '!', que
+  // não é de ninguém, e por isso não pisam em nada.
+  ...Array.from({ length: 9 }, (_, i) => ({
+    id: `ouvir${i + 1}`, grupo: 'som', rotulo: `atalhos.ouvir${i + 1}`, padrao: [String(i + 1)], noite: true,
+  })),
 
   { id: 'canais', grupo: 'paineis', rotulo: 'atalhos.canais', padrao: [], botao: 'editarCanais' },
   { id: 'lerChat', grupo: 'paineis', rotulo: 'faixa.lerChat', padrao: [], botao: 'lerChat', noite: true },

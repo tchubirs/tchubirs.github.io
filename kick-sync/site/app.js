@@ -107,6 +107,8 @@ const estado = {
   focos: [],
   margens: {},
   mudo: {},
+  // O ângulo escolhido para ouvir sozinho (clique no vídeo, ou o 1 a 9). Só nesta visita.
+  ouvir: null,
   momentos: [],
   // As kills das outras noites. A lista de cima so mostra as da noite aberta,
   // e mudar de noite filtrava-as para fora de vez: quarenta kills do dia 1
@@ -1722,25 +1724,56 @@ function verMomento(ms) {
 }
 
 function temSom(slug) {
+  // Um ângulo escolhido para ouvir (clique ou tecla de 1 a 9) fala sozinho enquanto estiver no visor.
+  if (estado.ouvir && ehFoco(estado.ouvir)) return slug === estado.ouvir;
   if (slug in estado.mudo) return !estado.mudo[slug];
   return ehPrincipal(slug);
 }
 
+/**
+ * Ouvir este ângulo e só este. Num ângulo do visor só o som muda de sítio; um da grelha abre no
+ * visor, como sempre abriu com um clique, e já com o som. Sem `estado.mudo`: essa é a mistura feita à
+ * mão no altifalante de cada quadrado, e fica guardada para quando se voltar a ela.
+ */
+function ouvirAngulo(slug) {
+  if (!estado.linhas.some((l) => l.slug === slug)) return;
+  const abrir = !ehFoco(slug);
+  if (abrir) estado.focos = [slug];
+  estado.ouvir = slug;
+  // Escolher ouvir um ângulo com o volume a zero era não ouvir nada.
+  if (estado.volume[slug] === 0) estado.volume[slug] = 1;
+  aplicarFoco();
+  if (abrir) irPara(estado.agoraMs);
+  // O `play()` sai do clique ou da tecla: o navegador só deixa tocar com som depois de um gesto.
+  const v = tileDe(slug)?.querySelector('video');
+  if (v && !estado.parado && ehFoco(slug)) v.play?.().catch(() => {});
+  guardar();
+}
+
+/** O número do ângulo (1 a 9) na ordem da grelha, a mesma que se vê no canto de cada quadrado. */
+function angulosNumerados() {
+  return ordemDosAngulos(estado.linhas, estado.ordemGrelha, listaDeCanais()).slice(0, 9);
+}
+
+/**
+ * Passar do "só este" para a mistura à mão: cada quadrado do visor fica com o som que tem agora, e o
+ * altifalante ou o volume mexem a partir daí. Sem isto, ligar o som do outro com um ângulo escolhido
+ * não fazia nada, porque o escolhido continuava a mandar.
+ */
+function largarOuvir() {
+  if (!estado.ouvir) return;
+  for (const s of estado.focos) estado.mudo[s] = !temSom(s);
+  estado.ouvir = null;
+}
+
 function alternarSom(slug) {
+  largarOuvir();
   estado.mudo[slug] = temSom(slug);
   aplicarFoco();
   const v = tileDe(slug)?.querySelector('video');
   // Este `play()` sai de um clique, e e por isso que existe: o browser so
   // deixa tocar com som depois de alguem carregar em alguma coisa.
   if (v && temSom(slug)) v.play?.().catch(() => {});
-  guardar();
-}
-
-function tornarPrincipal(slug) {
-  if (!ehFoco(slug)) return;
-  estado.focos = [slug, ...estado.focos.filter((s) => s !== slug)];
-  aplicarFoco();
-  irPara(estado.agoraMs);
   guardar();
 }
 
@@ -1820,6 +1853,15 @@ function aplicarFoco() {
     v.toggleAttribute('muted', cala);
     v.volume = Math.min(1, Math.max(0, nivel));
 
+    // A marca de quem tem som: o altifalante ao lado do número, e o fio do quadrado noutra cor.
+    const ouve = foco && !cala && nivel > 0;
+    tile.classList.toggle('ouvindo', ouve);
+    tile.querySelector('.comSomLeitor').hidden = !ouve;
+    // A dica de que o clique no vídeo é o som: só onde há outro ângulo para onde o tirar.
+    const dica = foco && estado.linhas.length > 1 ? t('tile.ouvirDica') : '';
+    if (dica) tile.title = dica;
+    else tile.removeAttribute('title');
+
     const som = tile.querySelector('.som');
     som.hidden = !foco;
     const botao = som.querySelector('.somBtn');
@@ -1862,10 +1904,30 @@ function pintarOrdemDaGrelha() {
   // trocava-os um pelo outro — o principal deixava de ser o da esquerda.
   for (const tile of $('palcoFoco').querySelectorAll('.tile')) tile.style.order = '';
   aplicarOrdem(tiles, ordemDosAngulos(estado.linhas, estado.ordemGrelha, listaDeCanais()));
+  pintarNumeros();
   for (const b of document.querySelectorAll('.ordemGrelha')) {
     b.setAttribute('aria-pressed', String(b.dataset.ordem === estado.ordemGrelha));
   }
   pintarFiltroDaGrelha();
+}
+
+/**
+ * O número de cada ângulo, que é a tecla que lhe passa o som. Com um ângulo só não há o que trocar, e
+ * o número não aparece. O que tem som leva o altifalante à frente do número.
+ */
+function pintarNumeros() {
+  const numerados = angulosNumerados();
+  const varios = estado.linhas.length > 1;
+  for (const [slug, tile] of quadros) {
+    const b = tile.querySelector('.numAngulo');
+    if (!b) continue;
+    const i = numerados.indexOf(slug);
+    const ouve = tile.classList.contains('ouvindo');
+    const numero = varios && i >= 0 ? String(i + 1) : '';
+    b.hidden = !numero && !(ouve && varios);
+    const html = `${ouve && varios ? ICONE('som') : ''}${numero}`;
+    if (b.innerHTML !== html) b.innerHTML = html;
+  }
 }
 
 /**
@@ -1930,7 +1992,9 @@ function montarGrade() {
     tile.className = 'tile';
     tile.dataset.slug = linha.slug;
     tile.innerHTML = '<video muted playsinline preload="none"></video>'
-      + `<span class="rotulo">${linha.slug}`
+      // O número do ângulo (a tecla que lhe passa o som) e, no que tem som, o altifalante.
+      + `<span class="rotulo"><b class="numAngulo" aria-hidden="true"></b>${linha.slug}`
+      + `<span class="soLeitor comSomLeitor" data-t="tile.comSom" hidden>${t('tile.comSom')}</span>`
       + `${linha.relogio !== 'exato' ? ` <b class="aviso" data-t-titulo="tile.relogioIncerto" title="${t('tile.relogioIncerto')}">≈</b>` : ''}`
       + ' <b class="posicao"></b></span>'
       + '<span class="estadoTile"></span>'
@@ -1972,10 +2036,11 @@ function montarGrade() {
       + '</span>';
 
     tile.onclick = () => {
-      // Num quadrado que já está em foco, o clique promove-o a principal em vez
-      // de desfazer o par: com dois no ecrã, é isso que se quer dizer.
-      if (ehFoco(linha.slug)) tornarPrincipal(linha.slug);
-      else { estado.focos = [linha.slug]; aplicarFoco(); irPara(estado.agoraMs); }
+      // Clicar num vídeo dá-lhe o som, e cala os outros (IDEIAS.md, item 8). Num quadrado que já
+      // está em foco, mais nada muda: antes o clique promovia-o a principal e o par trocava de lado,
+      // e quem só queria ouvir o outro perdia o sítio de cada um. Na grelha, o clique continua a
+      // abrir o ângulo no visor, já com o som.
+      ouvirAngulo(linha.slug);
     };
     for (const b of tile.querySelectorAll('.ajuste button')) {
       b.onclick = (e) => {
@@ -2049,6 +2114,7 @@ function montarGrade() {
       estado.volume[linha.slug] = Number(vol.value) / 100;
       // Mexer no volume LIGA o som: ninguém arrasta o cursor de um canal
       // calado à espera de continuar a não ouvir nada.
+      largarOuvir();
       if (Number(vol.value) > 0) estado.mudo[linha.slug] = false;
       aplicarFoco();
       guardar();
@@ -6710,12 +6776,18 @@ async function guardarAngulos(modo) {
       const linha = estado.linhas.find((l) => l.slug === slug);
       abertos.push(await abrirVideoEscondido(linha, c.deMs, { sinal: controlo.signal }));
     }
-    // O som é o do primeiro ângulo; os outros ficam mudos, como na grelha.
-    abertos[0].v.muted = false;
-    abertos[0].v.volume = 0;
+    // O som segue quem está na tela (angulos.js, `somEm`): todos saem do mudo, com o volume a zero
+    // para não se ouvirem aqui, e o gravador deixa passar um de cada vez. No 9:16 empilhado, os dois
+    // estão na tela, e o som é o do ângulo que se estava a ouvir na grelha, se for um deles.
+    for (const a of abertos) { a.v.muted = false; a.v.volume = 0; }
+    const ouvido = canais.findIndex((slug) => ehFoco(slug) && temSom(slug));
+    const trocas = [];
+    window.__ultimoSomAngulos = { canais, trocas };
     const { blob, extensao } = await gravarAngulos(abertos.map((a) => a.v), {
       plano,
       formato,
+      somDe: Math.max(0, ouvido),
+      aoSom: (i, tS) => trocas.push({ canal: canais[i], tS }),
       sinal: controlo.signal,
       aoProgresso: ({ feito, total }) => {
         if (aindaEste()) $('estadoClipe').textContent = t('angulos.aGravar', { n: canais.length, feito: feito.toFixed(1), total: total.toFixed(1) });
@@ -7906,6 +7978,11 @@ const FAZER = {
   },
   lerChat: () => abrirAssistente('chat'),
   detetar: () => abrirAssistente('detetar'),
+  // O 1 a 9: o som passa para o ângulo com esse número (o do canto de cada quadrado).
+  ...Object.fromEntries(Array.from({ length: 9 }, (_, i) => [`ouvir${i + 1}`, () => {
+    const slug = angulosNumerados()[i];
+    if (slug) ouvirAngulo(slug);
+  }])),
 };
 const painelAtalhos = montarPainelAtalhos({ atalhos, t, raiz: $('modalAjuda') });
 // A lista existe desde o arranque, e não só depois de abrir: quem lê a página (e o leitor de ecrã) acha-a lá.

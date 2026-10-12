@@ -554,6 +554,20 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 .procuraGrelha .lupa { left: var(--e3); width: 14px; height: 14px; }
 /* Escondido pelo filtro, e não tirado: o leitor continua vivo por trás. */
 #grade .tile.foraDoFiltro { display: none; }
+/* O número de cada ângulo (a tecla de 1 a 9 que lhe passa o som) e, no que tem som, o altifalante.
+   O quadrado com som leva o fio na cor da marca, que é outra cor que a do foco: com dois no visor
+   vê-se de longe qual dos dois se está a ouvir. */
+body.mesa .tile .numAngulo {
+  display: inline-flex; align-items: center; gap: 3px; flex: 0 0 auto;
+  min-width: 18px; height: 18px; padding: 0 4px; justify-content: center;
+  border: 1px solid #ffffff70; border-radius: var(--r-1);
+  font: 600 var(--t-micro)/1 var(--letra-mono); color: #fff; text-shadow: none;
+}
+body.mesa .tile .numAngulo[hidden] { display: none; }
+body.mesa .tile .numAngulo .ic { width: 12px; height: 12px; }
+body.mesa .tile.ouvindo .numAngulo { background: var(--marca); border-color: var(--marca); color: var(--sobre-marca); }
+body.mesa .palcoFoco.dois .tile.ouvindo { border-color: var(--marca); box-shadow: inset 0 0 0 1px var(--marca-fio); }
+body.mesa #palco.muitosAngulos #grade .tile .numAngulo { border-color: var(--linha-3); color: var(--tinta-2); }
 .barraGrelha #quantosNaGrelha { margin-left: auto; }
 /* Muitos ângulos: no máximo dois vídeos grandes, e os outros só nomes para clicar (o dono, 10/10). O
    leitor continua vivo por trás, e um clique no nome põe aquele ângulo no visor. O botão de pôr lado a

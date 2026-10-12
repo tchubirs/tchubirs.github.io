@@ -231,7 +231,7 @@ test('o ? abre a lista por áreas, com busca, e a tecla de cada botão aparece n
   await p.keyboard.press('?');
   await p.waitForSelector('#modalAjuda:not([hidden])');
   const grupos = await p.locator('#listaAtalhos h3').allInnerTexts();
-  assert.deepEqual(grupos, ['Assistir e andar no tempo', 'Marcar e cortar', 'Vista', 'Painéis e ferramentas', 'Tela do evento']);
+  assert.deepEqual(grupos, ['Assistir e andar no tempo', 'Marcar e cortar', 'Vista', 'Som', 'Painéis e ferramentas', 'Tela do evento']);
   assert.equal(await p.locator('#listaAtalhos li').count(), ACOES.length);
   assert.equal(await teclasDe(p, 'pausa'), 'Espaço ou K');
   assert.equal(await teclasDe(p, 'canais'), 'sem atalho');
