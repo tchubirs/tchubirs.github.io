@@ -14,6 +14,7 @@ import {
   apelidosDoTexto,
 } from './elenco.js';
 import { montarNomesNaTela } from './nomes-ui.js';
+import { montarMortes } from './mortes-ui.js';
 import { carregarCanais, procurarAoVivo } from './carregar.js';
 import { escolherCaminho } from './portas.js';
 import {
@@ -149,6 +150,8 @@ export function montarEvento({
   // Os melhores lances: as kills e os achados da montagem (momentos.js), e o "Marcar" que põe um lance
   // nela. São da página de sempre; sem ela a lista conta só com o chat.
   momentos = () => [], marcar = () => {},
+  // O instante do vídeo aberto (ou null): é com ele que "a morte é agora" alinha as mortes do servidor.
+  agoraDoVideo = () => null,
   // As janelas (com o foco preso dentro e devolvido ao fechar) são da página: ela passa as suas.
   dialogo = { mostrar: (m) => { m.hidden = false; }, esconder: (m) => { m.hidden = true; } },
 } = {}) {
@@ -280,6 +283,7 @@ export function montarEvento({
     ev.link = await codificar(elenco);
     lembrarEvento();
     carregarMelhores();
+    mortes.carregar();
     agendarMelhores();
     $('partilharEventoTexto').textContent = t('evento.partilharEvento');
     pintar();
@@ -532,7 +536,8 @@ export function montarEvento({
         largura,
         vista: ev.vista,
         agoraMs: ev.escolha?.ms ?? null,
-        marcas: ev.marcas,
+        // As mortes primeiro: num empate do clique, a morte ganha ao pico de chat.
+        marcas: [mortes.marcas(), ev.marcas],
         escolhido: ev.escolha?.canal ?? null,
         // Quem o lance vai abrir fica com uma risca: é o que muda ao juntar um time ou achar pelo som.
         realcados: ev.escolha ? new Set(canaisDoLance(ev.escolha)) : null,
@@ -556,7 +561,7 @@ export function montarEvento({
       fundo: v('--sup-0'), faixa: v('--sup-1'), time: v('--sup-2'), linha: v('--linha'),
       texto: v('--tinta'), texto2: v('--tinta-2'), cobertura: v('--acento'), marca: v('--marca'),
       perigo: v('--perigo'), escolha: v('--acento-eco'),
-      marcas: { chat: v('--marca') },
+      marcas: { chat: v('--marca'), morte: v('--perigo') },
     };
   }
 
@@ -732,13 +737,15 @@ export function montarEvento({
       largura: rolo.clientWidth,
       // Um clique perto de um pico do chat vai ao pico: acertar numa risca de 2 px a seco é pedir
       // pontaria a quem só quer ver o momento.
-      marcas: ev.marcas,
+      marcas: [mortes.marcas(), ev.marcas],
       raioPx: tocar() ? 16 : 8,
     });
   }
 
   function escolher(alvo) {
     if (!alvo) return;
+    // Uma morte do servidor: abre quem matou e quem morreu, 10 s antes.
+    if (alvo.marca?.tipo === 'morte' && alvo.marca.id != null) { mortes.abrirMorte(alvo.marca.id); return; }
     if (alvo.ordenar) {
       // O ícone de ordenar no cabeçalho: abre a ordem das faixas, sem fechar o grupo.
       const seletor = $('ordemFaixas');
@@ -1425,6 +1432,26 @@ export function montarEvento({
     aoMudar: () => pintarLance(),
   });
 
+  // ── as mortes do servidor ──────────────────────────────────────────────
+  //
+  // O registro de mortes do servidor (IDEIAS.md, item 1) vira marcas na faixa de quem matou e de quem
+  // morreu. Clicar numa abre os dois 10 s antes. Ver mortes-ui.js.
+  const mortes = montarMortes({
+    canais: () => todosDoEvento(),
+    chave: () => chaveDoEvento(),
+    refMs: () => (ev.trecho || ev.limites)?.deMs ?? null,
+    fora: (c, ms) => outroJogoEm(c, ms),
+    noAr: (c, ms) => noArEm(ev.coberturas, c, ms),
+    abrir: async (canais, ms, foco) => {
+      escolher({ tipo: 'canal', canal: foco, ms, time: indiceDeTimes(ev.elenco).get(foco) ?? null });
+      await verLance(canais, { exato: true });
+    },
+    marcar: (m) => marcar(m),
+    agoraDoVideo,
+    aoMudar: () => { pintar(); agendarMelhores(); },
+    dialogo,
+  });
+
   // ── ao vivo ────────────────────────────────────────────────────────────
   //
   // Enquanto houver alguém no ar, o fim das faixas de quem está ao vivo anda com o relógio, sem pedir
@@ -1563,6 +1590,7 @@ export function montarEvento({
     ev.info = null;
     dialogo.esconder($('modalPartilhar'));
     dialogo.esconder($('modalAdicionar'));
+    mortes.limpar();
     mostrarMapa(false);
     // pushState e não replaceState: o Voltar do browser traz o evento de volta (ver o popstate).
     if (salvoDoEndereco()) history.pushState(null, '', location.pathname);
@@ -1830,6 +1858,9 @@ export function montarEvento({
     }
     ev.link = await codificar(ev.elenco);
     lembrarEvento();
+    // Os canais novos podem ser de nomes do registro de mortes, e a chave do evento pode ter mudado.
+    mortes.guardar();
+    mortes.refazer();
     if (aoVivo > 0 && !aoVivoControlo) seguirAoVivo(true);
     if (ev.escolha) pintarLance(); else pintar();
     const lista = novos.length > 6 ? `${novos.slice(0, 6).join(', ')} +${novos.length - 6}` : novos.join(', ');
@@ -2133,7 +2164,7 @@ export function montarEvento({
     const doEvento = new Set(todosDoEvento());
     // As lives de outro jogo não dão lances sozinhas (o chat, o pedido de clipe e o som achado); o que se
     // marcou à mão fica.
-    const sinais = sinaisDoEvento({ marcas: ev.marcas, momentos: momentos(), mensagens: ev.mensagens })
+    const sinais = sinaisDoEvento({ marcas: ev.marcas, momentos: momentos(), mensagens: ev.mensagens, mortes: mortes.casadas() })
       .filter((s) => doEvento.has(s.canal))
       .filter((s) => s.tipo === 'voce' || s.tipo === 'kill' || !outroJogoEm(s.canal, s.ms));
     const times = indiceDeTimes(ev.elenco);
@@ -2217,7 +2248,7 @@ export function montarEvento({
         : comVideo.length === 1 ? t('melhores.chatTodoLidoUm') : t('melhores.chatTodoLido', { n: comVideo.length }));
     }
     if (!lances.some((l) => Object.values(l.sons).some((x) => x.length))) linhas.push(t('melhores.faltaSom'));
-    if (!lances.some((l) => l.kills)) linhas.push(t('melhores.faltaKills'));
+    if (!lances.some((l) => l.kills || l.mortes?.length)) linhas.push(t('melhores.faltaKills'));
     $('melhoresFalta').innerHTML = linhas.map((x) => `<li>${escapar(x)}</li>`).join('');
     const botao = $('melhoresLerChat');
     if (melhores.leitura) return;
@@ -2293,7 +2324,9 @@ export function montarEvento({
     if (l.marcado) {
       melhores.marcados = melhores.marcados.filter((g) => !coincide(l, [g]));
     } else {
-      marcar({ ms: l.msMarcar, canal: l.canais[0], canais: l.canais });
+      // Com mortes do servidor no lance, quem morreu entra como vítima na montagem.
+      const vitimas = [...new Set((l.mortes || []).map((m) => m.canalVitima).filter((c) => c && c !== l.canais[0]))];
+      marcar({ ms: l.msMarcar, canal: l.canais[0], canais: l.canais, vitimas, origem: l.mortes?.length ? 'servidor' : 'lances' });
       melhores.marcados = [...melhores.marcados, { ms: l.ms, c: l.canais }];
       $('melhoresEstado').textContent = t('melhores.marcadoMontagem', { hora: horaLocal(l.msMarcar) });
     }
@@ -2470,6 +2503,7 @@ export function montarEvento({
   }
   return {
     abrirElenco, abrirDoTexto, abrirDoLink, abrirGuardado, esquecerEvento, lerChatTrecho, faltaLer, pintarComoPico, ordenar, estado: ev,
+    mortes,
     // A página avisa quando a montagem muda (uma kill marcada, a detecção que achou tiros).
     sinaisMudaram: () => agendarMelhores(),
     // O "Marcar agora" do ao vivo: o lance fica marcado na lista, guardado como os do botão Marcar.

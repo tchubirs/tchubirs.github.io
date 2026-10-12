@@ -1289,7 +1289,10 @@ test('todas as mensagens de erro dizem o próximo passo', async () => {
     // O título da lista dos nomes lidos na tela que não casaram com canal nenhum, não um erro.
     'nomes.soltos',
     // Uma escolha do chat no vídeo ("Sem fundo"), não um erro.
-    'chatClipe.fundoNenhum']);
+    'chatClipe.fundoNenhum',
+    // As mortes do servidor: o motivo de uma linha não lida ("sem hora"), o título da lista dos nomes
+    // do jogo sem canal e a marca "nome sem canal" ao lado de uma morte. Não são erros.
+    'mortes.motivo.semHora', 'mortes.nomes', 'mortes.semCanal']);
   const curtas = [];
   for (const [chave, frase] of Object.entries(_TEXTOS.pt)) {
     if (!/erro|falh|não deu|nenhum|sem |não consegui|inválido|passa dos/i.test(frase)) continue;

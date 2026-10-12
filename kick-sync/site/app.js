@@ -8397,9 +8397,12 @@ const evento = montarEvento({
   abrirLance: abrirLanceDoEvento,
   // Os melhores lances somam as kills e os achados da montagem, e o Marcar da lista põe um lance nela.
   momentos: () => unirMomentos(estado.momentos, estado.momentosFora),
-  marcar: ({ ms, canal }) => {
+  marcar: ({ ms, canal, vitimas = [], origem = 'lances' }) => {
     // Na noite aberta entra na lista; fora dela fica guardado e aparece quando a noite dele abrir.
-    const m = novoMomento(ms, slugDoNome(canal), { ...tamanhos(), origem: 'lances' });
+    // Uma morte do servidor entra com quem morreu já marcado (origem 'servidor').
+    const m = novoMomento(ms, slugDoNome(canal), {
+      ...tamanhos(), origem: origem === 'servidor' ? 'servidor' : 'lances', vitimas: (vitimas || []).map(slugDoNome),
+    });
     const j = estado.janela;
     if (j && ms >= j.inicio && ms <= j.fim) estado.momentos = acrescentar(estado.momentos, m);
     else estado.momentosFora = acrescentar(estado.momentosFora, m);
@@ -8407,6 +8410,8 @@ const evento = montarEvento({
     guardar();
   },
   dialogo: { mostrar: mostrarDialogo, esconder: esconderDialogo },
+  // O instante do vídeo aberto, para "a morte é agora" (as mortes do servidor).
+  agoraDoVideo: () => (estado.linhas.length && Number.isFinite(estado.agoraMs) ? estado.agoraMs : null),
   aoMudarPicos: () => { pintarRegua(); pintarChatVideo(estado.agoraMs, true); },
   memorizarVods: (resultados) => {
     estado.vodsDoEvento.clear();
@@ -8415,6 +8420,7 @@ const evento = montarEvento({
 });
 // Para os testes de página, como o `__estado` da noite.
 window.__evento = evento.estado;
+window.__mortes = evento.mortes;
 picosDoEvento = () => evento.estado.marcas;
 mensagensDoEvento = () => evento.estado.mensagens;
 chatDoEvento = evento;

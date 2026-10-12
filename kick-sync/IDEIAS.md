@@ -37,6 +37,20 @@ semana), grande (mais que isso). Estimativas minhas.
 - **Não conferido:** se os organizadores do evento usam um desses plugins e se aceitam passar o registro. É a
   primeira pergunta a fazer a eles. A hora do servidor tem de ser alinhada com a hora dos VODs (uma morte vista
   num POV basta para acertar).
+- **Estado (12/10): feito.** "Importar mortes" no evento. Os formatos vieram do código dos plugins no umod.org
+  (DeathNotes 6.5.8, Discord Death 2.2.1, Rustcord 3.4.3): as frases de omissão do DeathNotes no chat e no
+  console, a frase dele dentro do quadro do Discord Death (com os campos Victim, Attacker, Weapon, Distance), o
+  "killed" simples e o quadro "PLAYER DEATH" do Rustcord, mais a hora que o Discord põe ao copiar. Também lê
+  "21:14:07 fulano killed ciclano (AK, 45 m)". Linha que não vira morte fica listada com o motivo (formato
+  desconhecido, sem hora, bicho ou NPC). Cada morte marca as duas faixas; clicar abre os dois POVs 10 s antes;
+  entra nos melhores lances com 6 pontos e o motivo escrito, e vai para a montagem com a vítima marcada. Fuso à
+  escolha e "A morte é agora" para alinhar todas por uma morte vista. Nomes sem canal casam-se à mão (apelido
+  neste aparelho). Respeita o jogo do evento. Código em `site/mortes.js` e `site/mortes-ui.js`, testes em
+  `test/mortes.test.mjs` e `test/mortes-pagina.test.mjs`, exemplos em `test/mortes/`.
+- **Ainda não conferido:** se os organizadores do Abisal usam um desses plugins, e com que frases (o DeathNotes
+  deixa trocar as frases; uma frase trocada cai na lista de não lidas). O jeito exato como o Discord copia
+  as mensagens foi montado a partir do que se sabe do Discord, sem um registro real do evento. O Discord só dá
+  o minuto: o segundo vem do alinhamento.
 
 ### 2. Lista única dos melhores lances, com a nota explicada (valor alto, esforço pequeno)
 

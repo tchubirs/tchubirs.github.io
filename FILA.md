@@ -347,3 +347,19 @@ em francês). Tudo revisado pela regra 14 em 28/09.
 - Feito em 12/10. Webcam sozinha no 9:16, Pacote, "Guardar todos agora", "some em N dias" e o som com as teclas
   1 a 9, com a Kick real e o Abisal: tudo passa. Corrigido: com a caixa no rosto achado, o botão do canto da
   webcam ficava carregado no canto errado. Ver `kick-sync/QA-REAL.md`, seção "Teste real de 12/10, tarde".
+
+## Ideia (12/10): mortes do servidor
+- Feito em 12/10. Botão "Importar mortes" no evento: cola-se (ou abre-se um arquivo) o registro de mortes do
+  servidor de Rust. Lê o chat e o console do plugin DeathNotes, as mensagens do Discord Death e do Rustcord
+  copiadas do Discord (com "Hoje às 21:14", "[21:15]", data ou ISO) e linhas simples "21:14:07 fulano killed
+  ciclano (AK, 45 m)". As linhas que não viram morte aparecem numa lista, com o motivo.
+- Cada morte é uma marca vermelha na faixa de quem matou e na de quem morreu. Os nomes casam com os canais pelo
+  apelido já guardado (sem maiúsculas nem acentos, sem a tag do clã); os que sobram escolhem-se à mão e ficam
+  como apelido neste aparelho. Clicar numa marca abre os dois POVs 10 s antes. A morte entra nos melhores
+  lances ("morte no servidor: X matou Y", 6 pontos) e vai para a montagem com quem morreu já marcado.
+- As horas: um fuso à escolha (o do aparelho por omissão) e "A morte é agora", que acerta todas pela
+  diferença de uma morte vista no vídeo. Tudo fica neste aparelho, por evento; o que vai para a montagem viaja
+  no link do projeto como as outras kills.
+- Falta saber se os organizadores do Abisal usam um desses plugins e se passam o registro. Ver
+  `kick-sync/IDEIAS.md`, item 1.
+
