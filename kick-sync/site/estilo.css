@@ -3140,3 +3140,5 @@ body:not(:has(#noites:not([hidden]))) .topo .barraSessao.noTopo { display: none;
 /* Arrastar players e miniaturas: o que vai fica meio apagado, o lugar onde cai acende. */
 .tile.aArrastar { opacity: .5; }
 .tile.alvoArrastar { outline: 3px dashed var(--acento); outline-offset: -3px; }
+/* Identificar vítimas fica escondido por enquanto (o dono, 13/10: ainda mal feito). O código continua lá. */
+button.verMortes { display: none; }
