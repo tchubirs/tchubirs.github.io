@@ -252,6 +252,8 @@ const TEXTOS = {
     'corte.semSegmentos': 'sem vídeo nesse trecho',
     'corte.incompleto': 'Faltam pedaços ({obtidos} de {total}) e um arquivo com um buraco no meio não serve. Tente de novo, ou encurte a marca.',
     'corte.comeca': 'começa {s}s antes da sua marca',
+    'corte.exato': 'MP4 cortado na sua marca',
+    'corte.semMp4': 'saiu em .ts porque não deu para passar a MP4 ({erro})',
 
     'fila.limpar': 'Limpar exportações',
     'fila.zip': 'Exportar {n} arquivos (.zip)',
@@ -1091,6 +1093,8 @@ const TEXTOS = {
     'corte.semSegmentos': 'no video in that window',
     'corte.incompleto': 'Pieces are missing ({obtidos} of {total}) and a file with a hole is no use. Try again, or shorten the mark.',
     'corte.comeca': 'starts {s}s before your mark',
+    'corte.exato': 'MP4 cut at your marks',
+    'corte.semMp4': 'saved as .ts because it could not be turned into MP4 ({erro})',
 
     'fila.limpar': 'Clear exports',
     'fila.zip': 'Export {n} files (.zip)',
@@ -1930,6 +1934,8 @@ const TEXTOS = {
     'corte.semSegmentos': 'sin vídeo en esa ventana',
     'corte.incompleto': 'Faltan trozos ({obtidos} de {total}) y un archivo con un hueco no sirve. Prueba otra vez, o acorta la marca.',
     'corte.comeca': 'empieza {s}s antes de tu marca',
+    'corte.exato': 'MP4 cortado en tu marca',
+    'corte.semMp4': 'salió en .ts porque no se pudo pasar a MP4 ({erro})',
 
     'fila.limpar': 'Limpiar exportaciones',
     'fila.zip': 'Exportar {n} archivos (.zip)',

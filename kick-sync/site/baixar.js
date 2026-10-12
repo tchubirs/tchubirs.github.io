@@ -23,6 +23,7 @@
 //    window. Preview quality and file quality are unrelated on purpose.
 
 import { lerMaster, lerPlaylist, segmentosNaJanela } from './kick.js';
+import { tsParaMp4 } from './mp4.js';
 
 /** Kick is not ours to hammer. Nothing here opens more sockets than this. */
 const AO_MESMO_TEMPO = 4;
@@ -230,7 +231,9 @@ export async function planearCorte({
     sobraInicioS: (deMs - inicioReal) / 1000,
     sobraFimS: (fimReal - ateMs) / 1000,
     bytesEstimados: Math.round((melhor.bitrate / 8) * segs.reduce((t, s) => t + s.duracaoS, 0)),
-    nome: nomeDoFicheiro({ canal: linha.slug, quandoMs: deMs }),
+    // O que se pediu, para o MP4 cortar ali (ver `executarCorte`).
+    pedido: { deMs, ateMs },
+    nome: nomeDoFicheiro({ canal: linha.slug, quandoMs: deMs, sufixo: 'mp4' }),
   };
 }
 
@@ -241,7 +244,7 @@ export async function planearCorte({
  * between attempts, so a dropped connection re-fetches only what is missing.
  */
 export async function executarCorte(plano, {
-  buscar = fetch, sinal, aoProgresso, jaTemos = new Map(), prazoMs,
+  buscar = fetch, sinal, aoProgresso, jaTemos = new Map(), prazoMs, guardarClipe = false,
 } = {}) {
   if (plano.estado !== 'ok') return { estado: plano.estado, plano };
 
@@ -272,16 +275,52 @@ export async function executarCorte(plano, {
   const juntos = new Uint8Array(total);
   let deslocamento = 0;
   for (const p of partes) { juntos.set(p, deslocamento); deslocamento += p.length; }
+  return emMp4(plano, juntos, { guardarClipe });
+}
 
+/**
+ * Os pedaços juntos passam a MP4, cortado exatamente no pedido (ver mp4.js).
+ *
+ * O teste real de 12/10: um clipe de 30 s saía num `.ts` de 46 s, que TikTok, Instagram e X recusam.
+ * Agora sai `.mp4` com H.264 e AAC tal como vieram, do instante pedido ao fim pedido. Se a Kick mandar
+ * alguma coisa que o MP4 daqui não sabe embrulhar (outro codec), sai o `.ts` como antes e a razão vai em
+ * `semMp4`, para a página o dizer.
+ */
+export function emMp4(plano, juntos, { guardarClipe = false } = {}) {
+  const pedido = plano.pedido;
+  if (pedido) {
+    try {
+      const r = tsParaMp4(juntos, { inicioMs: plano.inicioReal, deMs: pedido.deMs, ateMs: pedido.ateMs });
+      return {
+        estado: 'pronto',
+        // A sobra agora é zero, a menos que o vídeo não chegue lá (negativa: falta).
+        plano: {
+          ...plano,
+          exato: true,
+          sobraInicioS: Math.min(0, (pedido.deMs - r.deMs) / 1000),
+          sobraFimS: Math.min(0, (r.ateMs - pedido.ateMs) / 1000),
+        },
+        bytes: r.bytes,
+        duracaoS: r.duracaoS,
+        tipo: 'video/mp4',
+        nome: plano.nome.replace(/\.[a-z0-9]+$/i, '.mp4'),
+        ...(guardarClipe ? { clipe: r.clipe } : {}),
+      };
+    } catch (e) {
+      return { ...emTs(plano, juntos), semMp4: e?.message || String(e) };
+    }
+  }
+  return emTs(plano, juntos);
+}
+
+function emTs(plano, juntos) {
   return {
     estado: 'pronto',
     plano,
     bytes: juntos,
-    // `video/mp2t`, not mp4: this is the transport stream as the CDN stores it,
-    // joined and not transformed. Calling it mp4 would be a lie that Premiere
-    // would believe until it opened the file.
+    // `video/mp2t`: o fluxo como a Kick o guarda, só colado.
     tipo: 'video/mp2t',
-    nome: plano.nome,
+    nome: plano.nome.replace(/\.[a-z0-9]+$/i, '.ts'),
   };
 }
 

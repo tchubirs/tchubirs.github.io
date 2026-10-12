@@ -4073,7 +4073,7 @@ async function baixarMontagem(soEsta = null) {
         falhas++;
         continue;
       }
-      const nome = `${clipe.prefixo}_${nomeDoFicheiro({ canal: clipe.canal, quandoMs: clipe.deMs })}`;
+      const nome = `${clipe.prefixo}_${nomeDoFicheiro({ canal: clipe.canal, quandoMs: clipe.deMs, sufixo: sufixoDe(r.tipo) })}`;
       const blob = new Blob([r.bytes], { type: r.tipo });
       paraZip.push({ nome, blob, crc: crc32(r.bytes), tamanho: r.bytes.length });
       prontos++;
@@ -4087,7 +4087,7 @@ async function baixarMontagem(soEsta = null) {
           ...clipe, deMs: resto.deMs - nudge, saltar: resto.saltar, parte: (clipe.parte || 1) + 1, retrato: null,
         });
       }
-      const sobra = notaDaSobra(p, { continua: Boolean(resto), parte: clipe.parte });
+      const sobra = notaDaSobra(r.plano, { continua: Boolean(resto), parte: clipe.parte, semMp4: r.semMp4 });
       linhaDeFicheiro(item, {
         nome,
         url: guardarFicheiro(blob),
@@ -4146,6 +4146,9 @@ function porqueNaoSaiu(r) {
   }
 }
 
+/** A extensão de um ficheiro pelo tipo: .mp4 do corte exato, .ts do de recurso. */
+const sufixoDe = (tipo) => (tipo === 'video/mp4' ? 'mp4' : 'ts');
+
 /**
  * O que o ficheiro tem a mais ou a menos do que se pediu, dito por extenso.
  *
@@ -4154,7 +4157,7 @@ function porqueNaoSaiu(r) {
  * acaba a meio do pedido (a live caiu e voltou noutro VOD) o ficheiro sai
  * mais curto. As duas coisas tinham de ser ditas, e só uma era, e só num sítio.
  */
-function notaDaSobra(plano, { continua = false, parte = 1 } = {}) {
+function notaDaSobra(plano, { continua = false, parte = 1, semMp4 = null } = {}) {
   const partes = [];
   // Numa parte que continua outra, o buraco do início é o da própria queda,
   // e não um "o canal ainda não estava no ar".
@@ -4162,10 +4165,13 @@ function notaDaSobra(plano, { continua = false, parte = 1 } = {}) {
   const faltaInicio = plano.sobraInicioS < -0.05 && !seguinte;
   const corteNoFim = plano.sobraFimS < -0.05;
   if (seguinte) partes.push(t('corte.continuacao'));
+  else if (faltaInicio) partes.push(t('corte.faltaInicio', { s: (-plano.sobraInicioS).toFixed(1) }));
+  // Desde 12/10 o ficheiro sai em MP4 cortado na marca (ver mp4.js): dizer "começa 0.0s antes" era
+  // ruído. Só o .ts de recurso continua a ter sobra, e diz porquê.
+  else if (plano.exato) partes.push(t('corte.exato'));
   else {
-    partes.push(faltaInicio
-      ? t('corte.faltaInicio', { s: (-plano.sobraInicioS).toFixed(1) })
-      : t('corte.comeca', { s: Math.max(0, plano.sobraInicioS).toFixed(1) }));
+    if (semMp4) partes.push(t('corte.semMp4', { erro: semMp4 }));
+    partes.push(t('corte.comeca', { s: Math.max(0, plano.sobraInicioS).toFixed(1) }));
   }
   if (corteNoFim) {
     partes.push(continua ? t('corte.continua') : t('corte.faltaFim', { s: (-plano.sobraFimS).toFixed(1) }));
@@ -4637,7 +4643,7 @@ async function baixarUm(slug) {
 
   if (r?.estado === 'pronto') {
     // A sobra não é um pedido de desculpas — é o número por onde aparar no editor.
-    const sobra = notaDaSobra(r.plano);
+    const sobra = notaDaSobra(r.plano, { semMp4: r.semMp4 });
     linhaDeFicheiro(item, {
       nome: r.nome,
       url: guardarFicheiro(new Blob([r.bytes], { type: r.tipo })),
@@ -6036,7 +6042,7 @@ async function guardarClipe() {
       $('guardarClipe').disabled = false;
       return;
     }
-    const nome = nomeDoClipe({ titulo: $('tituloClipe').value, canal: c.canal, quandoMs: c.deMs });
+    const nome = nomeDoClipe({ titulo: $('tituloClipe').value, canal: c.canal, quandoMs: c.deMs, sufixo: sufixoDe(r.tipo) });
     const url = guardarFicheiro(new Blob([r.bytes], { type: r.tipo }));
     const item = document.createElement('li');
     $('fila').prepend(item);
@@ -6044,7 +6050,7 @@ async function guardarClipe() {
     // pedaço escolhido; o ficheiro, sem recodificar, começa e acaba nos
     // pedaços de 10 s da Kick. Dito na linha do ficheiro, que é o que fica
     // depois de o editor fechar.
-    const sobra = notaDaSobra(plano);
+    const sobra = notaDaSobra(r.plano, { semMp4: r.semMp4 });
     linhaDeFicheiro(item, {
       nome,
       url,
