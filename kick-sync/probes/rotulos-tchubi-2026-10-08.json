@@ -83,6 +83,16 @@
       "falsoTiro": "andando de cavalo e o time falando",
       "valeClipe": false,
       "texto": "esse teve andando a cavalo e meu time falando"
+    },
+    {
+      "hora": "23:35",
+      "minDaLive": 53,
+      "clipeS": 37,
+      "explosao": false,
+      "alerta": null,
+      "tiro": "nailgun; flechadas; facada; por último nailgun e flechada",
+      "falsoTiro": "começa com o dono falando e farm de madeira com machado de metal",
+      "texto": "sou eu falando, depois farmando madeira com machado de metal, depois tiros de nailgun, depois flechadas e depois facada e por ultimo nailgun e flechada"
     }
   ],
   "semExplosao": [
@@ -95,7 +105,8 @@
     "23:15",
     "23:22",
     "23:31",
-    "23:32"
+    "23:32",
+    "23:35"
   ],
   "notas": "Quando o dono cita uma arma, é porque o som do tiro dela está no clipe.",
   "semTiro": [
