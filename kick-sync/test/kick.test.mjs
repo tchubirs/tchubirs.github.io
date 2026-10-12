@@ -158,6 +158,31 @@ test('e diz que nao sabe, em vez de adivinhar', () => {
   }
 });
 
+// ESTUDO-FACIL.md, tarefa A: quem nunca usou escreve o nome solto, ou copia o endereço da aba de
+// vídeos ou de clipes do canal. Os três eram recusados com "Não entendi esse link".
+test('le o nome solto e as abas do canal como um canal', () => {
+  const canal = (slug) => ({ tipo: 'canal', slug });
+  assert.deepEqual(lerLinkKick('xguiry'), canal('xguiry'));
+  assert.deepEqual(lerLinkKick('  @xguiry '), canal('xguiry'));
+  assert.deepEqual(lerLinkKick('Coringa_01'), canal('Coringa_01'));
+  assert.deepEqual(lerLinkKick('https://kick.com/xguiry/videos'), canal('xguiry'));
+  assert.deepEqual(lerLinkKick('kick.com/xguiry/clips'), canal('xguiry'));
+  assert.deepEqual(lerLinkKick('https://kick.com/xguiry/about/'), canal('xguiry'));
+  assert.deepEqual(lerLinkKick('https://m.kick.com/xguiry?ref=share'), canal('xguiry'));
+  assert.deepEqual(lerLinkKick('https://www.kick.com/xguiry/videos?sort=date'), canal('xguiry'));
+  assert.deepEqual(lerLinkKick('kick.com/@xguiry'), canal('xguiry'));
+  // E o vídeo e o clipe dentro do canal continuam a ser vídeo e clipe.
+  assert.deepEqual(lerLinkKick('https://kick.com/xguiry/videos/67f962ed-3448'), { tipo: 'vod', id: '67f962ed-3448' });
+  assert.deepEqual(lerLinkKick('https://kick.com/xguiry/clips/clip_01XYZ?t=3'), { tipo: 'clipe', id: 'clip_01XYZ' });
+});
+
+test('os caminhos da Kick que não são canais continuam recusados', () => {
+  for (const mau of ['https://kick.com/browse', 'kick.com/categories', 'https://kick.com/videos', 'clips',
+    'kick.com/xguiry/outra', 'youtube.com', 'x', 'dois nomes']) {
+    assert.equal(lerLinkKick(mau), null, `devia recusar: ${mau}`);
+  }
+});
+
 // app-3#5, sync-engine#5: a /api/v2/video/<uuid> nao existe (404, medido em
 // 06/10); a v1 responde com o canal e o inicio dentro de `livestream`.
 test('um VOD colado le-se pela v1, com o canal e o inicio', async () => {

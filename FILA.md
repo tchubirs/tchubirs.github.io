@@ -409,3 +409,26 @@ em francês). Tudo revisado pela regra 14 em 28/09.
 - Depois fazer o modo simples: uma caixa ("cole o nome do streamer, o link ou o evento") e um botão; o Povix
   faz o resto e mostra a lista de clipes prontos, cada um com "Baixar". O resto vai para "Modo avançado".
 - Testar com ela, com 5 tarefas curtas, antes de dar por feito.
+- Feito em 12/10, parte 1 do modo simples (`kick-sync/site/simples.js`, `simples-lista.js`):
+  - quem chega pela primeira vez vê uma caixa ("Cole o nome do streamer, o link do vídeo ou o nome do evento") e
+    um botão ("Achar os melhores momentos"). A caixa aceita o nome solto, `@nome`, qualquer link da Kick (canal,
+    aba de vídeos, aba de clipes, vídeo, clipe, `m.kick.com`) e o evento (`abisal`, `?e=abisal`, link `#evento=`).
+    Tocar numa sugestão de canal já começa. O `lerLinkKick` do `kick.js` passou a aceitar o nome solto e as abas.
+  - depois do botão: abre a live gravada mais recente, lê o chat, ouve tiros e explosões só em volta dos picos do
+    chat, e mostra uma lista com imagem, motivo em palavras ("O chat explodiu e teve tiroteio"), nota (muito bom,
+    bom, talvez), a hora, "Baixar para TikTok" (em pé, rosto do streamer achado sozinho, o meio do jogo quando não
+    acha, legenda ligada no computador quando dá) e "Baixar deitado". Arquivo com nome
+    "xguiry - 10-10 - tiroteio.mp4"; no celular, botão para mandar ao TikTok ou salvar (folha de compartilhar).
+  - esperas que dizem o que fazer: aviso aos 30 s parados, desiste aos 90 s (chat) ou 120 s (som) e segue com o
+    que tem; "Abra o Povix no Chrome" quando o navegador não toca ou não ouve a Kick. Chat que fala de som caído
+    ("muted", "lag", "caiu") vale menos.
+  - o evento pelo nome ou pelo link abre o evento e começa a ler o chat de todos sem o segundo toque.
+  - tudo o resto em "Modo avançado", igual a antes, e o aparelho lembra a escolha. Quem já tinha sessão guardada
+    entra no avançado. Botões de 48 px ou mais no modo simples, sem linha do tempo.
+  - testes: `test/simples-lista.test.mjs`, `test/simples-pagina.test.mjs`, links novos em `test/kick.test.mjs`.
+    Fotos em `kick-sync/prints-facil/depois-*.png`.
+- Falta (parte 2): a lista simples também no evento (hoje abre o mapa de sempre, que ainda é difícil); juntar
+  as mortes e o "quem estava no lance" na nota (esperar o trabalho em `melhores.js` e `mortes*.js`); título e
+  texto do post automáticos; "Não quero" e "Mostrar mais" na lista; escolher outra live do mesmo streamer;
+  legenda no celular como botão "pôr legenda"; a janela "Ajustar clipe" e as palavras do modo avançado (tabela
+  do estudo); o "?" com ajuda de verdade; testar com ela, com as 5 tarefas, no celular dela.

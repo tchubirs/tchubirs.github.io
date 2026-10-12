@@ -74,6 +74,7 @@ import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js'
 import { escapar } from './escapar.js';
 import { montarEvento, rotuloDoDia } from './evento-ui.js';
 import { montarPortas } from './portas.js';
+import { montarSimples, modoSimples } from './simples.js';
 import { atalhos, ACAO, comboDoEvento, partes } from './atalhos.js';
 import { montarPainelAtalhos, pintarDicas } from './atalhos-painel.js';
 
@@ -6085,7 +6086,9 @@ function retratoLembrado(slug) {
  * segundos de espera. É o preço de mudar os pixels de sítio, e o botão do lado
  * continua a copiar os bytes sem reconverter nada.
  */
-async function guardarRetrato({ deitado = false } = {}) {
+// `simples`: o modo simples (simples.js) pede o arquivo sem a janela à vista. Dá o nome do arquivo
+// (`nome(extensao)`), quer saber do andamento (`aoProgresso`) e recebe o arquivo pronto (`aoPronto`).
+async function guardarRetrato({ deitado = false, simples = null } = {}) {
   const c = estado.clipe;
   const v = $('previaClipe');
   const mudoAntes = v.muted;
@@ -6184,13 +6187,15 @@ async function guardarRetrato({ deitado = false } = {}) {
       sinal: controlo.signal,
       aoProgresso: ({ feito, total, emPausa }) => {
         if (!aindaEste()) return;
+        simples?.aoProgresso?.({ feito, total });
         $('estadoClipe').textContent = emPausa ? t('retrato.emPausa')
           : deitado ? t('porCima.aGravar', { extras, feito: feito.toFixed(1), total: total.toFixed(1) })
             : t('retrato.aGravar', { feito: feito.toFixed(1), total: total.toFixed(1) });
       },
     });
     const base = nomeDoClipe({ titulo: $('tituloClipe').value, canal: c.canal, quandoMs: c.deMs });
-    const nome = `${base.replace(/\.[a-z0-9]+$/i, '')}${deitado ? '' : '-retrato'}.${extensaoDe(tipo)}`;
+    const nome = simples?.nome ? simples.nome(extensaoDe(tipo))
+      : `${base.replace(/\.[a-z0-9]+$/i, '')}${deitado ? '' : '-retrato'}.${extensaoDe(tipo)}`;
     const url = guardarFicheiro(blob);
     const item = document.createElement('li');
     $('fila').prepend(item);
@@ -6210,6 +6215,7 @@ async function guardarRetrato({ deitado = false } = {}) {
     a.href = url;
     a.download = nome;
     a.click();
+    simples?.aoPronto?.({ blob, nome, curto });
     if (aindaEste()) {
       $('estadoClipe').textContent = curto || (deitado ? t('porCima.pronto', { extras }) : t('retrato.pronto'));
     }
@@ -7188,11 +7194,11 @@ function arrastar(qual) {
   };
 }
 
-async function guardarClipe() {
+async function guardarClipe({ simples = null } = {}) {
   const c = estado.clipe;
   if (!c || c.aGravar || c.pararExportar) return;
   // Com o chat, os pixels mudam: o 16:9 grava-se como o 9:16, com o chat pintado em cada frame.
-  if (c.chat?.ligado || c.legenda?.ligado) { await guardarRetrato({ deitado: true }); return; }
+  if (c.chat?.ligado || c.legenda?.ligado) { await guardarRetrato({ deitado: true, simples }); return; }
   const linha = estado.linhas.find((l) => l.slug === c.canal);
   const nudge = estado.nudges[c.canal] || 0;
   // Fechar o editor (Esc, ✕, Cancelar) pára isto. E tudo o que vem depois de
@@ -7218,6 +7224,7 @@ async function guardarClipe() {
       sinal: controlo.signal,
       aoProgresso: (p) => {
         if (aindaEste()) $('estadoClipe').textContent = t('montagem.pedacos', { prontos: p.prontos, total: p.total });
+        simples?.aoProgresso?.({ feito: p.prontos, total: p.total });
       },
     });
     if (!aindaEste()) return;
@@ -7226,8 +7233,10 @@ async function guardarClipe() {
       $('guardarClipe').disabled = false;
       return;
     }
-    const nome = nomeDoClipe({ titulo: $('tituloClipe').value, canal: c.canal, quandoMs: c.deMs, sufixo: sufixoDe(r.tipo) });
-    const url = guardarFicheiro(new Blob([r.bytes], { type: r.tipo }));
+    const nome = simples?.nome ? simples.nome(sufixoDe(r.tipo))
+      : nomeDoClipe({ titulo: $('tituloClipe').value, canal: c.canal, quandoMs: c.deMs, sufixo: sufixoDe(r.tipo) });
+    const blob = new Blob([r.bytes], { type: r.tipo });
+    const url = guardarFicheiro(blob);
     const item = document.createElement('li');
     $('fila').prepend(item);
     // O editor deixa apurar ao décimo de segundo, e o ▶ toca exactamente o
@@ -7248,6 +7257,7 @@ async function guardarClipe() {
     a.href = url;
     a.download = nome;
     a.click();
+    simples?.aoPronto?.({ blob, nome, curto: sobra.falta ? sobra.texto : '' });
     c.pararExportar = null;
     // Com um 9:16 a gravar no mesmo editor, fechar era matá-lo.
     if (!c.aGravar) fecharClipe();
@@ -7614,6 +7624,34 @@ $('lerChat').onclick = () => abrirAssistente('chat');
  * ângulo, com o nome do canal e um `·clipe` atrás para se distinguir do VOD
  * inteiro do mesmo canal.
  */
+/** Um clipe da Kick como mais um ângulo, no mesmo relógio (ver `abrirLinkKick`). Também do modo simples. */
+async function carregarClipeDaKick(id) {
+  const c = await clipeDaKick(id);
+  const playlist = lerPlaylist(await (await fetch(c.m3u8)).text(), c.m3u8);
+  if (!Number.isFinite(playlist.inicio)) throw new Error('clipe sem relógio');
+  const degrau = { url: c.m3u8, largura: DESCONHECIDO, altura: DESCONHECIDO };
+  const peca = { vod: { id: c.id }, playlist, escada: [degrau], barato: degrau };
+  const slug = `${c.canal}·clipe`;
+  estado.linhas = [
+    ...estado.linhas.filter((l) => l.slug !== slug),
+    { ...linhaDoCanal(slug, [peca]), pecasCompletas: [peca] },
+  ];
+  estado.focos = [slug];
+  estado.janela = janelaComum(estado.linhas);
+  estado.agoraMs = playlist.inicio;
+  mostrarPalco();
+  montarGrade();
+  seguirVideo();
+  pintarConfianca();
+  estado.vista = null;
+  estado.agoraMs = playlist.inicio;
+  acertarVista({ forcar: true });
+  irPara(playlist.inicio);
+  pintarMomentos();
+  guardar();
+  return { c, slug, playlist };
+}
+
 async function abrirLinkKick() {
   const nota = $('estadoLink');
   const botao = $('abrirLink');
@@ -7663,29 +7701,7 @@ async function abrirLinkKick() {
   try {
     botao.disabled = true;
     nota.textContent = t('link.aLer');
-    const c = await clipeDaKick(lido.id);
-    const playlist = lerPlaylist(await (await fetch(c.m3u8)).text(), c.m3u8);
-    if (!Number.isFinite(playlist.inicio)) throw new Error('clipe sem relógio');
-    const degrau = { url: c.m3u8, largura: DESCONHECIDO, altura: DESCONHECIDO };
-    const peca = { vod: { id: c.id }, playlist, escada: [degrau], barato: degrau };
-    const slug = `${c.canal}·clipe`;
-    estado.linhas = [
-      ...estado.linhas.filter((l) => l.slug !== slug),
-      { ...linhaDoCanal(slug, [peca]), pecasCompletas: [peca] },
-    ];
-    estado.focos = [slug];
-    estado.janela = janelaComum(estado.linhas);
-    estado.agoraMs = playlist.inicio;
-    mostrarPalco();
-    montarGrade();
-    seguirVideo();
-    pintarConfianca();
-    estado.vista = null;
-    estado.agoraMs = playlist.inicio;
-    acertarVista({ forcar: true });
-    irPara(playlist.inicio);
-    pintarMomentos();
-    guardar();
+    const { c, slug, playlist } = await carregarClipeDaKick(lido.id);
     nota.textContent = t('link.clipeAberto', {
       canal: c.canal, dur: Math.round(c.duracaoS || (playlist.fim - playlist.inicio) / 1000),
     });
@@ -7747,7 +7763,7 @@ function guardarAjustes() {
 }
 $('guardarAjustes').onclick = guardarAjustes;
 $('cancelarClipe').onclick = fecharClipe;
-$('guardarClipe').onclick = guardarClipe;
+$('guardarClipe').onclick = () => guardarClipe();
 $('guardarRetrato').onclick = () => guardarRetrato();
 for (const b of document.querySelectorAll('.modoRetrato')) {
   b.onclick = () => trocarModo(b.dataset.modo);
@@ -8342,7 +8358,8 @@ if (guardado) {
   estado.mudo = guardado.mudo || {};
   estado.volume = guardado.volume || {};
   estado.restaurar = guardado;
-  if (guardado.canais.length) versaoVista.then((vaiRecarregar) => { if (!vaiRecarregar) carregar(); });
+  // No modo simples a tela é a caixa: a noite guardada fica guardada, e não abre por baixo dela.
+  if (guardado.canais.length && !modoSimples()) versaoVista.then((vaiRecarregar) => { if (!vaiRecarregar) carregar(); });
 }
 
 // ── o evento ────────────────────────────────────────────────────────────────
@@ -8441,9 +8458,114 @@ new MutationObserver(() => {
 window.__abrirLanceDoEvento = abrirLanceDoEvento;
 // E o que fica de fora por ser de outro jogo (ver `foraDoJogo`).
 window.__jogo = { foraDoJogo, pedidosDe: (quem, quanto) => pedidosDe(quem, quanto).map((x) => x.canal) };
-if (vemDeEvento) evento.abrirDoLink();
-// Sem link, o evento que estava aberto volta por baixo da noite restaurada, em barra.
-else evento.abrirGuardado();
+const eventoDoLink = vemDeEvento ? evento.abrirDoLink() : null;
+// Sem link, o evento que estava aberto volta por baixo da noite restaurada, em barra (no avançado).
+if (!vemDeEvento && !modoSimples()) evento.abrirGuardado();
+
+// ── o modo simples (simples.js) ─────────────────────────────────────────────
+//
+// O que a página de sempre empresta ao modo simples: abrir um canal, gravar um clipe sem a janela à vista,
+// abrir um evento. Ver ESTUDO-FACIL.md.
+
+/** O vídeo mais recente de `slug` (ou o da hora `inicioMs`), aberto como uma noite de um canal só. */
+async function abrirCanalSimples(slug, { inicioMs = null } = {}) {
+  const s = slugDoNome(slug);
+  if (estado.clipe) fecharClipe();
+  $('canais').value = s;
+  // As kills de antes ficam guardadas, como quando um lance do evento abre outra noite.
+  estado.momentosFora = unirMomentos(estado.momentos, estado.momentosFora);
+  estado.momentos = [];
+  const vods = estado.vodsPorCanal.get(s)?.vods || [];
+  const agora = inicioMs ?? vods.at(-1)?.inicioApi ?? null;
+  estado.restaurar = agora != null ? { agora: agora + 1000, focos: [s], marca: null, momentos: [] } : null;
+  await carregar();
+  return estado.linhas.find((l) => l.slug === s) || null;
+}
+
+const dormirMs = (ms) => new Promise((ok) => { setTimeout(ok, ms); });
+async function esperarQue(pronto, limiteMs) {
+  const fim = Date.now() + limiteMs;
+  while (Date.now() < fim) {
+    if (pronto()) return true;
+    // eslint-disable-next-line no-await-in-loop
+    await dormirMs(150);
+  }
+  return Boolean(pronto());
+}
+
+/**
+ * Um clipe da lista simples, baixado sem a janela "Ajustar clipe" à vista (ela fica aberta por baixo, sem
+ * se ver: é ela que tem o vídeo e o gravador). Em pé: o rosto do streamer achado sozinho (rosto.js) em
+ * dois enquadramentos; sem rosto, o meio do jogo. A legenda, quando pedida e quando dá. Nunca pergunta nada.
+ * Devolve { blob, nome, curto } ou { erro } (`'semVideo'` quando o vídeo não abriu neste navegador).
+ */
+async function baixarParaSimples({ canal, deMs, ateMs }, {
+  deitado = false, legenda = false, nome, aoFase = () => {}, aoProgresso = () => {},
+} = {}) {
+  const linha = estado.linhas.find((l) => l.slug === canal);
+  if (!linha) return { erro: t('simples.semMotivo') };
+  if (estado.clipe) fecharClipe();
+  document.body.classList.add('simplesGravando');
+  let pronto = null;
+  const simples = { nome, aoProgresso, aoPronto: (r) => { pronto = r; } };
+  try {
+    abrirClipe(novoMomento(Math.round((deMs + ateMs) / 2), canal));
+    const c = estado.clipe;
+    if (!c) return { erro: t('simples.semMotivo') };
+    const j = dentroDosLimites({ deMs, ateMs }, c.limites);
+    c.deMs = j.deMs;
+    c.ateMs = j.ateMs;
+    pintarClipe();
+    if (deitado) {
+      await guardarClipe({ simples });
+    } else {
+      aoFase('abrir');
+      preverClipe(c.deMs);
+      const v = $('previaClipe');
+      const temImagem = await esperarQue(() => estado.clipe !== c || (v.readyState >= 2 && fonteDoClipe() && c.rects.length), 25_000);
+      if (estado.clipe !== c) return { erro: t('simples.semMotivo') };
+      if (!temImagem) return { erro: 'semVideo' };
+      aoFase('rosto');
+      if (c.modo !== 'dois') trocarModo('dois');
+      else if (c.origem === 'modelo') proporWebcam();
+      await esperarQue(() => estado.clipe !== c || !c.rostoBusca, 25_000);
+      c.rostoBusca?.abort();
+      // Sem rosto achado (nem guardado de outra vez), o meio do jogo, sem perguntar.
+      if (c.origem === 'modelo') trocarModo('um');
+      if (legenda && podeLer()) {
+        aoFase('legenda');
+        c.legenda = limparLegenda({ ...c.legenda, ligado: true });
+        const acabou = await Promise.race([gerarLegenda().then(() => true), dormirMs(180_000).then(() => false)]);
+        if (!acabou) c.legendaGerar?.controlo.abort();
+        if (estado.clipe !== c) return { erro: t('simples.semMotivo') };
+        if (!legendaParaDesenhar(c)) c.legenda = limparLegenda({ ...c.legenda, ligado: false });
+      }
+      aoFase('gravar');
+      await guardarRetrato({ simples });
+    }
+    return pronto || { erro: $('estadoClipe').textContent.trim() || t('simples.semMotivo') };
+  } finally {
+    document.body.classList.remove('simplesGravando');
+    if (estado.clipe) fecharClipe();
+    if (!estado.parado && estado.linhas.length) alternarPausa();
+  }
+}
+
+const simples = montarSimples({
+  estado,
+  chat: evento,
+  abrirCanal: abrirCanalSimples,
+  memorizarVods: (r) => { if (r?.estado === 'ok') { estado.vodsPorCanal.set(r.slug, r); guardarVods(); } },
+  aoVivoDe,
+  pausar: () => { if (!estado.parado && estado.linhas.length) alternarPausa(); },
+  carregarClipe: carregarClipeDaKick,
+  baixar: baixarParaSimples,
+  abrirEvento: ({ nome, hash }) => (hash ? evento.abrirDoLink(hash) : evento.abrirDoLink('', { busca: `?e=${encodeURIComponent(nome)}` })),
+  lerChatDoEvento: () => evento.lerChatDeTodos({ semPerguntar: true }),
+  eventoDoLink,
+});
+// Para os testes de página.
+window.__simples = simples;
 
 // Um link #s= colado num separador onde a pagina ja esta aberta muda so o #, e o
 // browser nao recarrega: o link nao fazia nada. Recarregar e o mesmo caminho do

@@ -273,6 +273,8 @@
     <!-- Com um vídeo aberto, a porta de entrada (colar link, procurar canal, lista) sai da frente e fica atrás deste botão.
          Quem está caçando um lance precisa do vídeo e da linha do tempo, e não de quatro formulários. -->
     <button id="editarCanais" class="editarCanais" aria-expanded="false" aria-controls="entrada canaisEstado" data-t-titulo="topo.canaisTitulo" title="Adicionar ou tirar canais"><span data-t="topo.canais">Canais</span></button>
+    <!-- Volta ao modo simples (ESTUDO-FACIL.md, plano 12). Só aparece no avançado. -->
+    <button id="modoSimples" class="modoSimples" type="button" data-t="simples.voltarSimples">Modo simples</button>
     <a class="paraTwitch" href="twitch.html"><svg class="ic" aria-hidden="true"><use href="#i-twitch"/></svg><span data-t="app.twitch">Versão Twitch</span></a>
     <button id="ajuda" class="discreto" data-t-aria="ajuda.abrir" aria-haspopup="dialog"><svg class="ic" aria-hidden="true"><use href="#i-ajuda"/></svg></button>
     <select id="idioma" data-t-aria="idioma.rotulo" aria-label="idioma da página"></select>
@@ -289,6 +291,41 @@
     <li data-passo="3"><b>3</b><span data-t="passo.exportar">Marque e exporte</span></li>
   </ol>
 </header>
+
+<!-- O modo simples (ESTUDO-FACIL.md): uma caixa, um botão, e a lista dos melhores momentos com Baixar.
+     Quem nunca usou o Povix começa aqui; o resto do site fica igual atrás do "Modo avançado". O que
+     está aqui é montado pelo simples.js; a escolha do modo vive no <html> (data-modo, caminho-cedo.js). -->
+<section id="simples" class="simples" aria-labelledby="simplesPergunta">
+  <form id="simplesForm" class="simplesInicio" novalidate>
+    <label for="simplesCaixa" id="simplesPergunta" class="simplesPergunta" data-t="simples.pergunta">Cole o nome do streamer, o link do vídeo ou o nome do evento</label>
+    <div class="simplesCaixaLinha">
+      <input id="simplesCaixa" type="text" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false"
+        enterkeyhint="search"
+        data-t-ph="simples.ph" placeholder="por exemplo: xguiry">
+      <ul id="simplesSugestoes" class="simplesSugestoes" aria-live="polite" data-t-aria="simples.sugestoes" aria-label="Streamers com esse nome" hidden></ul>
+    </div>
+    <button id="simplesAchar" class="principal simplesBotao" type="submit"><svg class="ic" aria-hidden="true"><use href="#i-procurar"/></svg><span data-t="simples.achar">Achar os melhores momentos</span></button>
+    <p id="simplesDica" class="simplesDica" data-t="simples.dica" hidden>Cole aqui o nome de quem você clipa. O Povix acha os melhores momentos e deixa prontos para baixar.</p>
+    <p class="simplesExemplos" data-t="simples.exemplos">Exemplos: xguiry, kick.com/xguiry, abisal</p>
+    <p id="simplesErro" class="simplesErro" role="alert" hidden></p>
+    <div id="simplesParecidos" class="simplesParecidos" hidden></div>
+  </form>
+  <div id="simplesTrabalho" class="simplesTrabalho" hidden>
+    <div class="simplesCabeca">
+      <h2 id="simplesQuem" class="simplesQuem" tabindex="-1"></h2>
+      <button id="simplesDeNovo" type="button" class="simplesSecundario" data-t="simples.deNovo">Começar de novo</button>
+    </div>
+    <div class="simplesProgresso">
+      <p id="simplesEstado" class="simplesEstado" role="status" aria-live="polite"></p>
+      <progress id="simplesBarra" class="simplesBarra" max="1"></progress>
+      <button id="simplesParar" type="button" class="simplesSecundario" data-t="simples.parar" hidden>Parar de procurar</button>
+    </div>
+    <p id="simplesAviso" class="simplesAviso" role="alert" hidden></p>
+    <p id="simplesDicaLista" class="simplesDica" data-t="simples.dicaLista" hidden>Toque em Baixar para TikTok. Não precisa ajustar nada.</p>
+    <ol id="simplesLista" class="simplesLista" data-t-aria="simples.lista" aria-label="Melhores momentos"></ol>
+  </div>
+  <p class="simplesModoLinha"><button id="modoAvancado" type="button" class="simplesSecundario" data-t="simples.avancado">Modo avançado</button></p>
+</section>
 
 <!-- As três coisas do início lado a lado, e não uma por cima da outra.
      Empilhadas ocupavam 900 px de largura e deixavam mil e seiscentos de

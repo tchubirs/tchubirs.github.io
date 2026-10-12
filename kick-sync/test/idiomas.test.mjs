@@ -27,7 +27,7 @@ test('nenhuma chave usada na página fica por escrever', () => {
       usadas.add(m[1]);
     }
   }
-  for (const f of ['../site/app.js', '../site/twitch-app.js', '../site/evento-ui.js', '../site/atalhos-painel.js', '../site/nomes-ui.js', '../site/melhores.js', '../site/mortes-ui.js']) {
+  for (const f of ['../site/app.js', '../site/twitch-app.js', '../site/evento-ui.js', '../site/atalhos-painel.js', '../site/nomes-ui.js', '../site/melhores.js', '../site/mortes-ui.js', '../site/simples.js']) {
     const codigo = ler(f);
     for (const m of codigo.matchAll(/\bt\(\s*'([a-zA-Z0-9_.]+)'/g)) usadas.add(m[1]);
     for (const m of codigo.matchAll(/\btn\([^,]+,\s*'([a-zA-Z0-9_.]+)',\s*'([a-zA-Z0-9_.]+)'/g)) {
@@ -87,6 +87,8 @@ test('as variaveis de cada frase sao as mesmas em todas as linguas', () => {
 const IGUAIS_DE_PROPOSITO = {
   // Nome do produto, simbolos de navegacao, e frases que sao so numeros e datas.
   en: new Set([
+    // O modo simples: "chat" no nome do arquivo é a mesma palavra nas três.
+    'simples.arquivo.chat',
     // O exemplo de linha do DeathNotes é o texto do plugin, em inglês nas três; "45 m" também.
     'mortes.textoPh', 'mortes.distancia',
     // Os melhores lances: "chat" e "kills" são as mesmas palavras na soma da nota.
@@ -109,6 +111,8 @@ const IGUAIS_DE_PROPOSITO = {
   ]),
   // O espanhol e o portugues escrevem estas exactamente da mesma maneira.
   es: new Set([
+    // O modo simples: "chat" e "{n} seguidores" escrevem-se igual em espanhol.
+    'simples.arquivo.chat', 'simples.seguidores',
     // O exemplo do DeathNotes, "45 m", "Abrir", "Guardar" e "1 vez" escrevem-se igual.
     'mortes.textoPh', 'mortes.distancia', 'mortes.abrir', 'mortes.guardarNome', 'mortes.vezUma',
     // Os melhores lances: Marcar, Descartar, chat, gritos e kill marcada escrevem-se igual.

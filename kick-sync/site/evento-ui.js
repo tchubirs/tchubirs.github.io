@@ -2281,8 +2281,9 @@ export function montarEvento({
       : t('melhores.lerChat', { n: porLer.length, dur: duracaoCurta(totalMs) });
   }
 
-  async function lerChatDeTodos() {
-    if (melhores.leitura) { melhores.leitura.abort(); return; }
+  // `semPerguntar`: o modo simples (simples.js) começa a leitura sozinho, sem o segundo toque.
+  async function lerChatDeTodos({ semPerguntar = false } = {}) {
+    if (melhores.leitura) { if (!semPerguntar) melhores.leitura.abort(); return; }
     const j = janelaMelhores();
     if (!j) return;
     const ate = Math.min(j.ateMs, Date.now());
@@ -2291,7 +2292,7 @@ export function montarEvento({
     if (!pedidos.length) return;
     const totalMs = Math.max(...pedidos.map(([, x]) => x[1])) - Math.min(...pedidos.map(([, x]) => x[0]));
     const chave = `${j.deMs}|${ate}|${pedidos.length}`;
-    if (totalMs > MELHORES_LONGO_MS && melhores.confirmar !== chave) {
+    if (totalMs > MELHORES_LONGO_MS && melhores.confirmar !== chave && !semPerguntar) {
       melhores.confirmar = chave;
       $('melhoresEstado').textContent = t('melhores.longo', { dur: duracaoCurta(totalMs), n: pedidos.length });
       return;
@@ -2396,7 +2397,7 @@ export function montarEvento({
       pintarMelhores();
       $('melhoresLista').children[antes]?.querySelector('button[data-acao="abrir"]')?.focus();
     };
-    $('melhoresLerChat').onclick = lerChatDeTodos;
+    $('melhoresLerChat').onclick = () => lerChatDeTodos();
     $('melhoresLista').addEventListener('click', (e) => {
       const b = e.target.closest('button[data-acao]');
       const li = b?.closest('li[data-i]');
@@ -2524,6 +2525,7 @@ export function montarEvento({
   }
   return {
     abrirElenco, abrirDoTexto, abrirDoLink, abrirGuardado, esquecerEvento, lerChatTrecho, faltaLer, pintarComoPico, ordenar, estado: ev,
+    lerChatDeTodos,
     mortes,
     // A página avisa quando a montagem muda (uma kill marcada, a detecção que achou tiros).
     sinaisMudaram: () => { agendarMelhores(); mortes.sinaisMudaram(); },

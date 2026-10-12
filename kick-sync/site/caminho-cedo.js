@@ -6,3 +6,14 @@ try {
   const c = localStorage.getItem('replay.caminho');
   if (c === 'evento' || c === 'vod') document.documentElement.dataset.caminho = c;
 } catch { /* janela privada */ }
+
+// O modo simples ou o avançado (ESTUDO-FACIL.md, plano 12), também antes do primeiro desenho. Quem
+// chega pela primeira vez entra no simples; quem já usava o Povix neste aparelho (há sessão ou porta
+// guardada) entra no avançado, como sempre esteve. A escolha de quem tocou no botão fica guardada.
+try {
+  let m = localStorage.getItem('povix.modo');
+  if (m !== 'simples' && m !== 'avancado') {
+    m = localStorage.getItem('replay') || localStorage.getItem('replay.caminho') ? 'avancado' : 'simples';
+  }
+  document.documentElement.dataset.modo = m;
+} catch { document.documentElement.dataset.modo = 'simples'; }

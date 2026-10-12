@@ -2867,3 +2867,90 @@ body.mesa #montagem .estadoAoVivo:empty { display: none; }
   .morteAcoes { justify-content: stretch; }
   .morteAcoes button { flex: 1 1 auto; }
 }
+
+/* ═══ o modo simples (simples.js, ESTUDO-FACIL.md) ═══════════════════════════
+ *
+ * Uma coluna, letra grande, e nada com menos de 48 px de altura onde se toca. O modo vive no <html>
+ * (data-modo, posto pelo caminho-cedo.js antes do primeiro desenho). No simples: a caixa e o botão; com
+ * a busca a correr (body.simplesTrabalho), a lista; com um evento aberto (body.simplesEvento), o evento
+ * como sempre esteve (a lista simples do evento é a parte 2). O resto da página fica escondido, e
+ * continua igual no avançado.
+ */
+.simples { display: none; }
+:root[data-modo="simples"] .simples { display: block; }
+:root[data-modo="simples"] body.simplesEvento .simples { display: none; }
+:root[data-modo="simples"] body:not(.simplesEvento) :is(.topoTrabalho, #palco, #lema, #passos, #parar),
+:root[data-modo="simples"] body:not(.simplesEvento) .topo :is(#inicio, #editarCanais, .paraTwitch, #ajuda) { display: none !important; }
+:root[data-modo="simples"] .modoSimples,
+:root:not([data-modo="simples"]) #modoAvancado { display: none; }
+:root[data-modo="simples"] .topo #idioma { min-height: 48px; font-size: 16px; }
+.modoSimples { font-size: var(--t-menor); }
+
+.simples {
+  max-width: 640px; margin: 0 auto var(--e7);
+  font-size: var(--t-medio);
+}
+.simplesInicio { display: grid; gap: var(--e4); margin-top: var(--e6); }
+.simplesPergunta { font-size: 22px; font-weight: 600; line-height: var(--lh-apertado); color: var(--tinta); }
+.simplesCaixaLinha { position: relative; }
+.simples input#simplesCaixa {
+  width: 100%; min-height: 56px; font-size: 18px; padding: 0 var(--e5);
+  border-radius: var(--r-3);
+}
+.simples button { min-height: 48px; font-size: 16px; }
+.simples .simplesBotao { width: 100%; min-height: 56px; font-size: 18px; border-radius: var(--r-3); }
+.simplesSecundario { background: transparent; color: var(--tinta-2); }
+.simplesDica { margin: 0; color: var(--tinta); background: var(--acento-eco); border: 1px solid var(--acento-fio);
+  border-radius: var(--r-2); padding: var(--e4); line-height: var(--lh); }
+.simplesExemplos { margin: 0; color: var(--tinta-2); font-size: var(--t-base); }
+.simplesErro, .simplesAviso { margin: 0; color: var(--tinta); background: var(--aviso-eco); border: 1px solid var(--aviso);
+  border-radius: var(--r-2); padding: var(--e4); line-height: var(--lh); }
+.simplesSugestoes, .simplesParecidos { list-style: none; margin: var(--e2) 0 0; padding: 0; display: grid; gap: var(--e2); }
+.simplesParecidos p { margin: 0; color: var(--tinta-2); }
+.simples .simplesSugestao {
+  width: 100%; min-height: 52px; justify-content: space-between; text-align: left; padding: 0 var(--e5);
+}
+.simplesSugestao span { color: var(--tinta-2); font-weight: 400; font-size: var(--t-base); }
+.simplesModoLinha { margin-top: var(--e7); text-align: center; }
+
+.simplesTrabalho { display: grid; gap: var(--e4); margin-top: var(--e5); }
+.simplesCabeca { display: flex; gap: var(--e4); align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.simplesQuem { margin: 0; font-size: 20px; line-height: var(--lh-apertado); }
+.simplesProgresso { display: grid; gap: var(--e3); }
+.simplesEstado { margin: 0; line-height: var(--lh); }
+.simplesBarra, .simplesBarraClipe { width: 100%; height: 10px; accent-color: var(--acento); }
+.simplesProgresso .simplesSecundario { justify-self: start; }
+.simplesLista { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--e5); }
+.simplesCartao {
+  display: grid; grid-template-columns: 1fr; gap: var(--e4);
+  background: var(--sup-2); border: 1px solid var(--linha); border-radius: var(--r-3); padding: var(--e4);
+}
+.simplesFoto {
+  aspect-ratio: 16 / 9; background: var(--video-fundo); border-radius: var(--r-2); overflow: hidden;
+  display: grid; place-items: center;
+}
+.simplesFoto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.simplesSemFoto { color: var(--tinta-3); font-family: var(--letra-mono); font-size: var(--t-grande); display: grid; gap: var(--e2); text-align: center; }
+.simplesSemFoto small { font-family: var(--letra); font-size: var(--t-menor); }
+/* Um nome comprido sem espaços não pode empurrar a tela para o lado. */
+.simples :is(.simplesQuem, .simplesMotivo, .simplesEstado, .simplesAviso, .simplesErro, .simplesSugestao b, .simplesBaixando) { overflow-wrap: anywhere; min-width: 0; }
+.simplesCartao, .simplesInfo { min-width: 0; }
+.simplesInfo { display: grid; gap: var(--e3); align-content: start; }
+.simplesMotivo { margin: 0; font-size: 18px; font-weight: 600; line-height: var(--lh-apertado); }
+.simplesNota { display: inline-block; font-size: var(--t-base); padding: 2px 8px; border-radius: var(--r-redondo);
+  margin-right: var(--e2); vertical-align: 2px; }
+.nota-muitoBom { background: var(--ok-eco); color: var(--ok); }
+.nota-bom { background: var(--acento-eco); color: var(--acento-alto); }
+.nota-talvez { background: var(--sup-3); color: var(--tinta-2); }
+.simplesQuando, .simplesTalvezFalha { margin: 0; color: var(--tinta-2); font-size: var(--t-base); }
+.simplesBotoes { display: grid; gap: var(--e3); }
+.simples .simplesTiktok { min-height: 56px; font-size: 18px; }
+.simplesBaixando { margin: 0; line-height: var(--lh); }
+.simplesBaixando:empty { display: none; }
+@media (min-width: 720px) {
+  .simplesCartao { grid-template-columns: 260px 1fr; }
+  .simplesBotoes { grid-template-columns: 1fr auto; }
+}
+/* O clipe em pé grava-se na janela "Ajustar clipe", que fica aberta e a desenhar mas sem se ver: o vídeo
+   tem de estar no ecrã para dar imagem, e a pessoa não tem de ver uma janela cheia de opções. */
+body.simplesGravando #modalClipe { opacity: 0 !important; pointer-events: none !important; }

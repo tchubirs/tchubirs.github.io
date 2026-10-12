@@ -63,11 +63,14 @@ export function montarPalco(aoAbrir = () => {}) {
   // `caminho`: a porta que a tela inicial abre (portas.js). A primeira visita de verdade não abre
   // nenhuma; os testes que não são da tela inicial escrevem nos campos de uma delas, e por isso
   // começam com a dos canais aberta (ou a do evento, com caminho: 'evento'). Com `null`, nenhuma.
-  async function abrir({ ecra, idioma = 'pt', caminho = 'vod' } = {}) {
+  // `modo`: o simples ou o avançado (caminho-cedo.js). Os testes de antes são do avançado; os do modo
+  // simples pedem `modo: 'simples'`.
+  async function abrir({ ecra, idioma = 'pt', caminho = 'vod', modo = 'avancado', toque = false } = {}) {
     // Idioma fixo, e nao o do sistema: os testes leem frases, e uma maquina de
     // CI noutra lingua fazia-os falhar por uma razao que nao e a deles.
     const p = await navegador.newPage({
       ...(ecra ? { viewport: ecra } : {}),
+      ...(toque ? { hasTouch: true, isMobile: true } : {}),
       locale: idioma === 'pt' ? 'pt-PT' : idioma,
     });
     await p.addInitScript((l) => {
@@ -81,6 +84,11 @@ export function montarPalco(aoAbrir = () => {}) {
       await p.addInitScript((c) => {
         try { if (!localStorage.getItem('replay.caminho')) localStorage.setItem('replay.caminho', c); } catch { /* nada */ }
       }, caminho);
+    }
+    if (modo) {
+      await p.addInitScript((m) => {
+        try { if (!localStorage.getItem('povix.modo')) localStorage.setItem('povix.modo', m); } catch { /* nada */ }
+      }, modo);
     }
     // O detector de rosto do 9:16 (rosto-arquivos.js) não sai para a rede nos testes: sem isto, cada
     // teste que passa a dois enquadramentos baixava 12 MB. Quem quer o modelo de verdade põe uma rota

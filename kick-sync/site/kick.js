@@ -300,6 +300,10 @@ export function lerLinkKick(texto) {
   if (!cru) return null;
   // Um id de clipe colado sozinho, sem endereço nenhum à volta.
   if (/^clip_[A-Za-z0-9]+$/.test(cru)) return { tipo: 'clipe', id: cru };
+  // O nome solto ("xguiry", "@xguiry"): é o que quem nunca usou escreve primeiro (ESTUDO-FACIL.md,
+  // tarefa A). Sem ponto nem barra, para "youtube.com" continuar a ser recusado.
+  const solto = /^@?([A-Za-z0-9_-]{2,60})$/.exec(cru);
+  if (solto) return RESERVADOS.has(solto[1].toLowerCase()) ? null : { tipo: 'canal', slug: solto[1] };
   let u;
   try { u = new URL(/^https?:\/\//i.test(cru) ? cru : `https://${cru}`); } catch { return null; }
   if (!/(^|\.)kick\.com$/i.test(u.hostname)) return null;
@@ -311,12 +315,21 @@ export function lerLinkKick(texto) {
   if (iClip >= 0 && partes[iClip + 1]) return { tipo: 'clipe', id: partes[iClip + 1] };
   const iVod = partes.findIndex((p) => p === 'video' || p === 'videos');
   if (iVod >= 0 && partes[iVod + 1]) return { tipo: 'vod', id: partes[iVod + 1] };
-  // O que sobra com uma parte só é um canal: kick.com/tchubi.
-  if (partes.length === 1 && /^[A-Za-z0-9_-]+$/.test(partes[0])) {
-    return { tipo: 'canal', slug: partes[0] };
+  // O que sobra é um canal: kick.com/tchubi, e também as abas dele sem nada escolhido
+  // (kick.com/tchubi/videos, /clips, /about), que é o que se copia da Kick no celular.
+  const canal = partes[0]?.replace(/^@/, '');
+  if (canal && /^[A-Za-z0-9_-]+$/.test(canal) && !RESERVADOS.has(canal.toLowerCase())
+    && (partes.length === 1 || (partes.length === 2 && ABAS_DO_CANAL.has(partes[1].toLowerCase())))) {
+    return { tipo: 'canal', slug: canal };
   }
   return null;
 }
+
+/** As abas da página de um canal que não apontam para um vídeo nem para um clipe. */
+const ABAS_DO_CANAL = new Set(['videos', 'clips', 'about', 'chat', 'chatroom', 'home']);
+/** Os caminhos da Kick que não são canais: kick.com/browse não é o canal "browse". */
+const RESERVADOS = new Set(['browse', 'categories', 'category', 'search', 'following', 'dashboard', 'video',
+  'videos', 'clips', 'clip', 'settings', 'login', 'signup', 'help', 'terms', 'privacy', 'api']);
 
 /**
  * O canal e o início de um VOD colado pelo endereço.
