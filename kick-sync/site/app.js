@@ -5012,6 +5012,7 @@ function abrirClipe(momento = null) {
   $('guardarAjustes').hidden = !daLista;
   // O aviso da webcam achada era do clipe anterior.
   avisarWebcam('');
+  $('acharWebcam').disabled = false;
   pintarModos();
   pintarChatClipe();
   carregarChatDoClipe();
@@ -5614,7 +5615,7 @@ async function proporWebcam({ forcar = false } = {}) {
   } finally {
     quadros.fechar?.();
     if (c.rostoBusca === controlo) c.rostoBusca = null;
-    if (estado.clipe === c) $('acharWebcam').disabled = false;
+    if (!estado.clipe?.rostoBusca) $('acharWebcam').disabled = false;
   }
 }
 

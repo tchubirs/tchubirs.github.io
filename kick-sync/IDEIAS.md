@@ -62,6 +62,11 @@ semana), grande (mais que isso). Estimativas minhas.
   rosto no navegador. O detector de rosto do MediaPipe roda no aparelho, em tempo real [28]. Basta olhar uns 5
   quadros do VOD, achar o retângulo do rosto e propor a caixa da webcam. No clipe de vários ângulos, fazer isso em
   cada ângulo, o que ninguém faz.
+- **Estado (12/10): feito.** No "2 enquadramentos" do Criar clipe, o Povix olha 5 quadros do vídeo do canal (720p),
+  acha o rosto com o detector do MediaPipe (tasks-vision 1.0.1 e BlazeFace, baixados numa versão fixa e conferidos
+  pelo SHA-256, uns 12 MB da primeira vez) e põe a caixa 1 à volta dele. Cada ângulo tem a sua, e o rosto achado fica
+  guardado por streamer. Sem rosto, fica o modelo do canto com um aviso. O que foi acertado à mão nunca é trocado; o
+  botão "Achar webcam" procura de novo. Código em `site/rosto.js`, testes em `test/rosto.test.mjs`.
 
 ### 4. Legenda gerada no aparelho, fácil de corrigir (valor alto, esforço médio a grande)
 
@@ -139,7 +144,7 @@ semana), grande (mais que isso). Estimativas minhas.
 |---|---|---|---|
 | Achar os momentos num VOD longo | Opus [8], Eklipse [6], ClipGPT [10], CapCut [27], Vizard [25], Klap [26], Veed [30], FragCut [37] | Sim. Já fazemos com chat e tiros. Faltam mortes do servidor (item 1) e sons (item 10) | Pequeno a médio |
 | Nota de "vai viralizar" | Opus [8], ClipGPT [10], FragCut [37] | Sim, com regra explicada (item 2) | Pequeno |
-| Seguir o rosto no corte vertical | Opus [8], Vizard [25], Klap [26], CapCut [27], StreamLadder [10] | Sim, MediaPipe [28] | Médio |
+| Seguir o rosto no corte vertical | Opus [8], Vizard [25], Klap [26], CapCut [27], StreamLadder [10] | Sim, MediaPipe [28] | Feito (12/10): a caixa da webcam, por ângulo |
 | Legenda automática palavra por palavra | StreamLadder [10], Submagic [29], CapCut [27], Opus [23], Veed [30] | Sim, Whisper ou Moonshine [31, 32]. Pesa de 50 a 200 MB na primeira vez e precisa de WebGPU para ser rápido | Médio a grande |
 | Traduzir a legenda | Veed [30], Vizard [25] | Em parte: o Whisper traduz para o inglês (não conferido nesta pesquisa). Para outros idiomas precisaria de um segundo modelo ou de uma API paga | Grande |
 | Título, gancho e hashtags | ClipGPT [10], Opus [8] | Um modelo de linguagem no navegador pesa gigabytes (não conferido). Melhor: um modelo de texto com dados reais ("Fulano e Ciclano, 21:14, time X"), que é de graça e não erra o nome | Pequeno |

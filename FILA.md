@@ -294,3 +294,9 @@ em francês). Tudo revisado pela regra 14 em 28/09.
 8. Detecção: download de som sem tempo limite pode travar.
 9. Chat da Kick: pedidos demais e respostas recusadas pelo navegador; menos pedidos e nova tentativa.
 10. Com dois canais, abre a janela de tempo com um só; preferir a que tem os dois.
+
+## Ideia (12/10): webcam achada sozinha no 9:16
+- Feito em 12/10. No "2 enquadramentos" do Criar clipe, o Povix olha 5 quadros do vídeo do canal, acha o rosto do
+  streamer (detector do MediaPipe no navegador, versão fixa e conferida, uns 12 MB da primeira vez) e põe a caixa
+  da webcam nele. Em cada ângulo, guardado por streamer. Sem rosto, fica o modelo e um aviso curto. O ajuste à mão
+  manda; o botão "Achar webcam" procura de novo. Ver `kick-sync/IDEIAS.md`, item 3.
