@@ -2883,7 +2883,7 @@ body.mesa #montagem .estadoAoVivo:empty { display: none; }
 :root[data-modo="simples"] body:not(.simplesEvento) .topo :is(#inicio, #editarCanais, .paraTwitch, #ajuda) { display: none !important; }
 :root[data-modo="simples"] .modoSimples,
 :root:not([data-modo="simples"]) #modoAvancado { display: none; }
-:root[data-modo="simples"] .topo #idioma { min-height: 48px; font-size: 16px; }
+:root[data-modo="simples"] .topo #idioma { min-height: 48px; font-size: 16px; width: 150px; }
 .modoSimples { font-size: var(--t-menor); }
 
 .simples {

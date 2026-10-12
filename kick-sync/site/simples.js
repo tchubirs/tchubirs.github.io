@@ -604,7 +604,8 @@ export function montarSimples(ponte) {
         },
       });
       if (r?.blob) {
-        const texto = t('simples.baixou') + (r.curto ? ` ${r.curto}` : '');
+        // A nota do avançado fala de "9:16" e de segundos com décimas: aqui, uma frase só.
+        const texto = t('simples.baixou') + (r.curto ? ` ${t('simples.curto')}` : '');
         feitos.set(k, { texto, blob: r.blob, nome: r.nome });
         dizerAqui(texto, false);
         try { localStorage.setItem('povix.simplesBaixou', '1'); } catch { /* janela privada */ }
