@@ -427,8 +427,19 @@ em francês). Tudo revisado pela regra 14 em 28/09.
     entra no avançado. Botões de 48 px ou mais no modo simples, sem linha do tempo.
   - testes: `test/simples-lista.test.mjs`, `test/simples-pagina.test.mjs`, links novos em `test/kick.test.mjs`.
     Fotos em `kick-sync/prints-facil/depois-*.png`.
-- Falta (parte 2): a lista simples também no evento (hoje abre o mapa de sempre, que ainda é difícil); juntar
-  as mortes e o "quem estava no lance" na nota (esperar o trabalho em `melhores.js` e `mortes*.js`); título e
-  texto do post automáticos; "Não quero" e "Mostrar mais" na lista; escolher outra live do mesmo streamer;
-  legenda no celular como botão "pôr legenda"; a janela "Ajustar clipe" e as palavras do modo avançado (tabela
-  do estudo); o "?" com ajuda de verdade; testar com ela, com as 5 tarefas, no celular dela.
+- Feito em 12/10, parte 2, primeira fatia (`simples.js`, `simples-lista.js`, `evento-ui.js`):
+  - o evento (nome, `?e=abisal` ou link `#evento=`) agora abre a mesma lista simples, com todos os canais: título
+    "Evento abisal", "Do streamer fulano" em cada cartão, imagem quando dá, motivo, nota, hora, "Baixar para
+    TikTok" e "Baixar deitado". O chat de todos começa a ser lido sozinho e a lista cresce enquanto lê. O mapa
+    fica fora da vista e volta no "Modo avançado". Ao baixar, o Povix abre a live daquele streamer na hora do
+    momento (`lancesParaLista`, `evento.lancesSimples`).
+  - mortes e "quem estava no lance" já entram: a nota vem da soma do `melhores.js` (morte do servidor ou achada
+    na tela de morte vale 6) e o motivo diz "xguiry matou cyrus no tiroteio", com "Também estavam no lance: a, b".
+  - "Não quero" (o momento sai e não volta neste aparelho) e "Mostrar mais 10" na lista, do evento e do streamer.
+  - testes: `test/simples-lista.test.mjs` (3 novos, rodam sem navegador); `test/simples-pagina.test.mjs` (evento
+    e Não quero, só rodam com Chromium: neste PC ficaram pulados, não foram vistos funcionando).
+- Falta (parte 2): imagem nos cartões do evento só aparece depois de baixar algum momento do mesmo streamer (cada
+  streamer é uma live a abrir; fotografar tudo é pesado); as mortes ainda não entram na lista de um streamer só
+  (só no evento); título e texto do post automáticos; escolher outra live do mesmo streamer; legenda no celular
+  como botão "pôr legenda"; a janela "Ajustar clipe" e as palavras do modo avançado (tabela do estudo); o "?" com
+  ajuda de verdade; rodar os testes de página num Chromium e testar com ela, com as 5 tarefas, no celular dela.

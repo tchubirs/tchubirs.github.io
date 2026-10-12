@@ -8458,7 +8458,8 @@ new MutationObserver(() => {
 window.__abrirLanceDoEvento = abrirLanceDoEvento;
 // E o que fica de fora por ser de outro jogo (ver `foraDoJogo`).
 window.__jogo = { foraDoJogo, pedidosDe: (quem, quanto) => pedidosDe(quem, quanto).map((x) => x.canal) };
-const eventoDoLink = vemDeEvento ? evento.abrirDoLink() : null;
+// No modo simples o link de um lance não abre o palco: quem vê é a lista (simples.js).
+const eventoDoLink = vemDeEvento ? evento.abrirDoLink(location.hash, { abrirLance: !modoSimples() }) : null;
 // Sem link, o evento que estava aberto volta por baixo da noite restaurada, em barra (no avançado).
 if (!vemDeEvento && !modoSimples()) evento.abrirGuardado();
 
@@ -8560,8 +8561,11 @@ const simples = montarSimples({
   pausar: () => { if (!estado.parado && estado.linhas.length) alternarPausa(); },
   carregarClipe: carregarClipeDaKick,
   baixar: baixarParaSimples,
-  abrirEvento: ({ nome, hash }) => (hash ? evento.abrirDoLink(hash) : evento.abrirDoLink('', { busca: `?e=${encodeURIComponent(nome)}` })),
+  abrirEvento: ({ nome, hash }) => (hash ? evento.abrirDoLink(hash, { abrirLance: false }) : evento.abrirDoLink('', { busca: `?e=${encodeURIComponent(nome)}` })),
   lerChatDoEvento: () => evento.lerChatDeTodos({ semPerguntar: true }),
+  lancesDoEvento: evento.lancesSimples,
+  aoMudarEvento: evento.aoMelhores,
+  pararChatDoEvento: () => { if (evento.lancesSimples().lendo) evento.lerChatDeTodos(); },
   eventoDoLink,
 });
 // Para os testes de página.

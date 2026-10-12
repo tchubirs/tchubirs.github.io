@@ -2872,15 +2872,17 @@ body.mesa #montagem .estadoAoVivo:empty { display: none; }
  *
  * Uma coluna, letra grande, e nada com menos de 48 px de altura onde se toca. O modo vive no <html>
  * (data-modo, posto pelo caminho-cedo.js antes do primeiro desenho). No simples: a caixa e o botão; com
- * a busca a correr (body.simplesTrabalho), a lista; com um evento aberto (body.simplesEvento), o evento
- * como sempre esteve (a lista simples do evento é a parte 2). O resto da página fica escondido, e
- * continua igual no avançado.
+ * a busca a correr (body.simplesTrabalho), a lista; um evento aberto também vira essa lista (o mapa fica
+ * no avançado, e aqui só fora da vista, com largura, para o que o desenha não quebrar). O resto da página
+ * fica escondido, e continua igual no avançado.
  */
 .simples { display: none; }
 :root[data-modo="simples"] .simples { display: block; }
-:root[data-modo="simples"] body.simplesEvento .simples { display: none; }
-:root[data-modo="simples"] body:not(.simplesEvento) :is(.topoTrabalho, #palco, #lema, #passos, #parar),
-:root[data-modo="simples"] body:not(.simplesEvento) .topo :is(#inicio, #editarCanais, .paraTwitch, #ajuda) { display: none !important; }
+:root[data-modo="simples"] :is(.topoTrabalho, #palco, #lema, #passos, #parar),
+:root[data-modo="simples"] .topo :is(#inicio, #editarCanais, .paraTwitch, #ajuda) { display: none !important; }
+:root[data-modo="simples"] #evento {
+  position: absolute; left: -10000px; top: 0; width: 1100px; height: 1px; overflow: hidden; visibility: hidden;
+}
 :root[data-modo="simples"] .modoSimples,
 :root:not([data-modo="simples"]) #modoAvancado { display: none; }
 :root[data-modo="simples"] .topo #idioma { min-height: 48px; font-size: 16px; width: 150px; }
@@ -2942,6 +2944,9 @@ body.mesa #montagem .estadoAoVivo:empty { display: none; }
 .nota-muitoBom { background: var(--ok-eco); color: var(--ok); }
 .nota-bom { background: var(--acento-eco); color: var(--acento-alto); }
 .nota-talvez { background: var(--sup-3); color: var(--tinta-2); }
+.simplesStreamer { margin: 0; color: var(--tinta-2); font-size: var(--t-base); font-weight: 600; }
+.simplesTambem { margin: 0; color: var(--tinta-2); font-size: var(--t-base); overflow-wrap: anywhere; }
+.simplesMais { justify-self: center; width: 100%; }
 .simplesQuando, .simplesTalvezFalha { margin: 0; color: var(--tinta-2); font-size: var(--t-base); }
 .simplesBotoes { display: grid; gap: var(--e3); }
 .simples .simplesTiktok { min-height: 56px; font-size: 18px; }
@@ -2949,7 +2954,7 @@ body.mesa #montagem .estadoAoVivo:empty { display: none; }
 .simplesBaixando:empty { display: none; }
 @media (min-width: 720px) {
   .simplesCartao { grid-template-columns: 260px 1fr; }
-  .simplesBotoes { grid-template-columns: 1fr auto; }
+  .simplesBotoes { grid-template-columns: 1fr auto auto; }
 }
 /* O clipe em pé grava-se na janela "Ajustar clipe", que fica aberta e a desenhar mas sem se ver: o vídeo
    tem de estar no ecrã para dar imagem, e a pessoa não tem de ver uma janela cheia de opções. */

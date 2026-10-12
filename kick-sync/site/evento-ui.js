@@ -2178,10 +2178,8 @@ export function montarEvento({
   }
   const horaDoLance = (ms) => [diaDoLance(ms), horaLocal(ms)].filter(Boolean).join(' ');
 
-  function pintarMelhores() {
-    clearTimeout(melhores.relogio);
-    const j = janelaMelhores();
-    if (!ev.elenco || !j) return;
+  /** Todos os lances do evento, do mais forte para o mais fraco (sem filtros). */
+  function calcularLances() {
     const doEvento = new Set(todosDoEvento());
     // As lives de outro jogo não dão lances sozinhas (o chat, o pedido de clipe e o som achado); o que se
     // marcou à mão fica.
@@ -2189,7 +2187,29 @@ export function montarEvento({
       .filter((s) => doEvento.has(s.canal))
       .filter((s) => s.tipo === 'voce' || s.tipo === 'kill' || !outroJogoEm(s.canal, s.ms));
     const times = indiceDeTimes(ev.elenco);
-    const todos = melhoresLances(sinais, { grupoDe: (c) => times.get(c) ?? null, confirmados: ev.confirmados });
+    return melhoresLances(sinais, { grupoDe: (c) => times.get(c) ?? null, confirmados: ev.confirmados });
+  }
+
+  // O modo simples (simples.js) pede a lista do evento inteiro, sem os filtros do avançado, e é avisado
+  // quando ela muda.
+  let aoMudarMelhores = null;
+  function lancesSimples() {
+    const v = ev.trecho || ev.limites;
+    if (!ev.elenco || !v) return { nome: '', lances: [], mensagens: ev.mensagens, lendo: Boolean(melhores.leitura), texto: '' };
+    const lances = filtrarLances(calcularLances(), { deMs: v.deMs, ateMs: v.ateMs })
+      .map((l) => ({ ...l, noAr: l.canais.filter((c) => noArEm(ev.coberturas, c, l.msAbrir) || noArEm(ev.coberturas, c, l.ms)) }));
+    return {
+      nome: ev.elenco.nome && ev.elenco.nome !== t('evento.semNome') ? ev.elenco.nome : '',
+      lances, mensagens: ev.mensagens, lendo: Boolean(melhores.leitura), texto: $('melhoresEstado').textContent,
+    };
+  }
+
+  function pintarMelhores() {
+    clearTimeout(melhores.relogio);
+    const j = janelaMelhores();
+    if (!ev.elenco || !j) return;
+    aoMudarMelhores?.();
+    const todos = calcularLances();
     const comuns = { deMs: j.deMs, ateMs: j.ateMs, descartados: melhores.descartados, marcados: melhores.marcados };
     const naJanela = filtrarLances(todos, { ...comuns, comDescartados: true });
     const descartadosN = naJanela.filter((l) => l.descartado).length;
@@ -2526,6 +2546,8 @@ export function montarEvento({
   return {
     abrirElenco, abrirDoTexto, abrirDoLink, abrirGuardado, esquecerEvento, lerChatTrecho, faltaLer, pintarComoPico, ordenar, estado: ev,
     lerChatDeTodos,
+    lancesSimples,
+    aoMelhores: (f) => { aoMudarMelhores = f; },
     mortes,
     // A página avisa quando a montagem muda (uma kill marcada, a detecção que achou tiros).
     sinaisMudaram: () => { agendarMelhores(); mortes.sinaisMudaram(); },

@@ -156,3 +156,47 @@ export function tempoNaLive(ms, inicioMs) {
   const min = Math.max(0, Math.floor((ms - inicioMs) / 60_000));
   return min >= 60 ? `${Math.floor(min / 60)}h${dois(min % 60)}` : `${min} min`;
 }
+
+// ── a lista do evento ─────────────────────────────────────────────────────
+
+/** Quantos nomes de quem estava no lance cabem na frase; o resto vira "e mais N". */
+export const NOMES_NO_LANCE = 4;
+/** A conta do melhores.js tem outra escala (chat até 10 por canal, morte 6, tiros 2 por ângulo). */
+const MUITO_BOM_EVENTO = 14;
+const BOM_EVENTO = 8;
+
+/**
+ * Os lances do evento (melhores.js, com a morte do servidor já dentro) como a lista simples de um vídeo:
+ * cada um num canal só (o que mais somou e estava no ar), com o clipe, o motivo e a nota. As mortes e quem
+ * mais estava no lance entram na nota (a conta do melhores.js já as soma) e no motivo (`mortes`, `outros`).
+ *
+ * `lances`: de `filtrarLances`, cada um com `noAr` (os canais com vídeo na hora). `mensagens`: Map canal ->
+ * chat, para descontar o pico que só reclama do som. Do melhor para o pior; quem corta é quem chama.
+ */
+export function lancesParaLista(lances = [], { mensagens = new Map() } = {}) {
+  const itens = [];
+  for (const l of lances) {
+    const canal = (l.noAr || l.canais || [])[0];
+    if (!canal || !Number.isFinite(l.ms)) continue;
+    const sons = l.sons || {};
+    const tipos = [];
+    if (l.chat?.canais || l.pedidosClip) tipos.push('chat');
+    for (const s of ['tiros', 'explosao', 'grito']) if (sons[s]?.length) tipos.push(s);
+    const mortes = (l.mortes || []).filter((m) => m?.vitima).map((m) => ({ matador: m.matador || '', vitima: m.vitima }));
+    if (mortes.length) tipos.push('morte');
+    const forte = tipos.some((x) => x !== 'chat') || l.kills > 0 || l.voce > 0;
+    let deMs = forte ? l.ms - ANTES_MS : l.ms - CHAT_ANTES_MS;
+    let ateMs = forte ? Math.max(l.ateMs ?? l.ms, l.ms) + DEPOIS_MS : l.ms + CHAT_DEPOIS_MS;
+    if (ateMs - deMs > MAX_CLIPE_MS) ateMs = deMs + MAX_CLIPE_MS;
+    if (ateMs - deMs < MIN_CLIPE_MS) ateMs = deMs + MIN_CLIPE_MS;
+    const falha = !forte && partesDeFalha(mensagens.get(canal) || [], l.ms) >= 0.3;
+    const pontos = (l.pontos || 0) * (falha ? 0.3 : 1);
+    itens.push({
+      ms: l.ms, deMs: Math.round(deMs), ateMs: Math.round(ateMs), tipos, pontos, falha, canal, doEvento: true,
+      mortes, outros: (l.canais || []).filter((c) => c !== canal),
+      tiros: sons.tiros?.length || 0,
+      nota: pontos >= MUITO_BOM_EVENTO ? 'muitoBom' : pontos >= BOM_EVENTO ? 'bom' : 'talvez',
+    });
+  }
+  return itens.sort((a, b) => b.pontos - a.pontos || a.ms - b.ms);
+}

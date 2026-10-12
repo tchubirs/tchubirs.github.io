@@ -191,27 +191,64 @@ test('modo simples: um nome que não existe diz o que fazer e sugere parecidos',
   await p.close();
 });
 
-test('modo simples: o nome do evento abre o evento e começa a ler o chat de todos sem segundo toque',
+test('modo simples: o nome do evento vira a lista simples, sem o mapa, e o mapa fica no Modo avançado',
   { ...semNavegador, timeout: 120_000 }, async () => {
     const { p, erros } = await abrir({ ecra: { width: 1366, height: 768 }, caminho: null, modo: 'simples' });
     await preparar(p, { video: false });
     await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
     await p.fill('#simplesCaixa', 'Teste');
     await p.click('#simplesAchar');
-    await p.waitForFunction(() => window.__evento?.elenco && !document.getElementById('evento').hidden, null, { timeout: 30_000 });
-    assert.equal(await p.locator('#simples').isVisible(), false);
-    await p.waitForFunction(() => /Chat lido|Lendo/.test(document.getElementById('melhoresEstado').textContent), null, { timeout: 30_000 });
+    await p.waitForFunction(() => window.__evento?.elenco, null, { timeout: 30_000 });
+    // A lista simples do evento: o título, o botão de parar enquanto lê, e o mapa fora da vista.
+    await p.waitForFunction(() => /^Evento Teste$/.test(document.getElementById('simplesQuem').textContent), null, { timeout: 30_000 });
+    assert.equal(await p.locator('#simplesTrabalho').isVisible(), true);
+    assert.equal(await p.locator('#evento').isVisible(), false);
+    assert.equal(await p.locator('#palco').isVisible(), false);
+    await p.waitForFunction(() => /^(Pronto|Não achei momentos fortes)/.test(document.getElementById('simplesEstado').textContent),
+      null, { timeout: 60_000 });
+    // Cada cartão diz de que streamer é e tem os dois Baixar e o Não quero.
+    for (const li of await p.locator('#simplesLista li').all()) {
+      assert.match(await li.locator('.simplesStreamer').innerText(), /^Do streamer (tchubi|outro)$/);
+      for (const a of ['tiktok', 'deitado', 'nao']) assert.equal(await li.locator(`button[data-acao="${a}"]`).count(), 1);
+    }
+    // Modo avançado: o mapa de sempre, com o evento aberto.
+    await p.click('#modoAvancado');
+    assert.equal(await p.locator('#evento').isVisible(), true);
 
     // E o link curto do evento (?e=teste), aberto no modo simples, faz o mesmo.
     const { p: p2, erros: erros2 } = await abrir({ ecra: { width: 1366, height: 768 }, caminho: null, modo: 'simples' });
     await preparar(p2, { video: false });
     await p2.goto(`http://127.0.0.1:${PORTA}/?e=teste`, { waitUntil: 'networkidle' });
-    await p2.waitForFunction(() => window.__evento?.elenco && !document.getElementById('evento').hidden, null, { timeout: 30_000 });
-    await p2.waitForFunction(() => /Chat lido|Lendo/.test(document.getElementById('melhoresEstado').textContent), null, { timeout: 30_000 });
+    await p2.waitForFunction(() => /^Evento Teste$/.test(document.getElementById('simplesQuem').textContent), null, { timeout: 30_000 });
+    assert.equal(await p2.locator('#evento').isVisible(), false);
     assert.deepEqual(erros, []);
     assert.deepEqual(erros2, []);
     await p.close();
     await p2.close();
+  });
+
+test('modo simples: "Não quero" tira o momento e ele não volta; "Mostrar mais" só aparece com mais de dez',
+  { ...semNavegador, timeout: 120_000 }, async () => {
+    const { p, erros } = await abrir({ ecra: { width: 1366, height: 768 }, caminho: null, modo: 'simples' });
+    await preparar(p, { video: false });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#simplesCaixa', 'tchubi');
+    await p.click('#simplesAchar');
+    await listaPronta(p);
+    const antes = await p.locator('#simplesLista li').count();
+    assert.equal(await p.locator('#simplesMais').isVisible(), false);
+    await p.locator('#simplesLista li').first().locator('button[data-acao="nao"]').click();
+    assert.equal(await p.locator('#simplesLista li').count(), antes - 1);
+    assert.equal(await p.evaluate(() => JSON.parse(localStorage.getItem('povix.simplesNao')).length), 1);
+    // Outra busca do mesmo streamer: o que ela não quis continua fora.
+    await p.click('#simplesDeNovo');
+    await p.fill('#simplesCaixa', 'tchubi');
+    await p.click('#simplesAchar');
+    await p.waitForFunction(() => /^(Pronto|Não achei momentos fortes|Parado)/.test(document.getElementById('simplesEstado').textContent),
+      null, { timeout: 60_000 });
+    assert.equal(await p.locator('#simplesLista li').count(), antes - 1);
+    assert.deepEqual(erros, []);
+    await p.close();
   });
 
 test('Modo avançado mostra a tela de antes, fica lembrado, e Modo simples volta', semNavegador, async () => {

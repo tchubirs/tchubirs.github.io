@@ -3,8 +3,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  lerEntrada, nomeDeEvento, montarLista, nomeDoArquivo, tempoNaLive, partesDeFalha, MAX_CLIPE_MS,
+  lerEntrada, nomeDeEvento, montarLista, nomeDoArquivo, tempoNaLive, partesDeFalha, MAX_CLIPE_MS, lancesParaLista,
 } from '../site/simples-lista.js';
+import { sinaisDoEvento, melhoresLances, filtrarLances } from '../site/melhores.js';
+import { motivoEmPalavras, quemEstavaNoLance } from '../site/simples.js';
 
 test('a caixa entende o nome solto, os links da Kick e o evento', () => {
   assert.deepEqual(lerEntrada('xguiry'), { tipo: 'nome', slug: 'xguiry', evento: 'xguiry' });
@@ -81,4 +83,63 @@ test('o arquivo diz quem, que dia e o quê, na hora do aparelho', () => {
 test('o tempo na live em palavras curtas', () => {
   assert.equal(tempoNaLive(min(83), T), '1h23');
   assert.equal(tempoNaLive(min(12), T), '12 min');
+});
+
+// ── o evento na lista simples ─────────────────────────────────────────────
+
+/** Os lances como o evento-ui.js os dá à lista simples: filtrados, cada um com os canais no ar. */
+function lancesDe(entrada) {
+  const todos = melhoresLances(sinaisDoEvento(entrada));
+  return filtrarLances(todos).map((l) => ({ ...l, noAr: l.canais }));
+}
+const morte = (ms, extra = {}) => ({
+  id: 'm1', ms, msMatador: ms, matador: 'xguiry', vitima: 'cyrus', canalMatador: 'xguiry', canalVitima: 'cyrus', ...extra,
+});
+
+test('evento: a morte e quem estava no lance entram na nota e no motivo', () => {
+  const lances = lancesDe({
+    mortes: [morte(min(30))],
+    momentos: [{ ms: min(30) - 2000, protagonista: 'xguiry', auto: true, tipo: 'tiros', origem: 'detectar' }],
+    marcas: new Map([['xguiry', [{ tipo: 'chat', ms: min(30) + 15_000, vezes: 6, msgs: 40 }]]]),
+  });
+  const [m, ...resto] = lancesParaLista(lances);
+  assert.equal(resto.length, 0);
+  assert.equal(m.canal, 'xguiry');
+  assert.deepEqual(m.outros, ['cyrus']);
+  assert.deepEqual(m.mortes, [{ matador: 'xguiry', vitima: 'cyrus' }]);
+  assert.deepEqual(m.tipos.sort(), ['chat', 'morte', 'tiros']);
+  assert.equal(m.nota, 'muitoBom');
+  assert.equal(m.doEvento, true);
+  // O clipe abre uns segundos antes do primeiro sinal forte e não passa de um minuto.
+  assert.ok(m.deMs < m.ms && m.ateMs - m.deMs <= MAX_CLIPE_MS);
+  assert.equal(motivoEmPalavras(m), 'xguiry matou cyrus no tiroteio e o chat explodiu');
+  assert.equal(quemEstavaNoLance(m), 'Também estavam no lance: cyrus');
+});
+
+test('evento: o motivo sem tiroteio, sem quem matou e com várias mortes', () => {
+  const base = { tipos: ['morte'], mortes: [{ matador: 'a', vitima: 'b' }] };
+  assert.equal(motivoEmPalavras(base), 'a matou b');
+  assert.equal(motivoEmPalavras({ ...base, mortes: [{ matador: '', vitima: 'b' }] }), 'b morreu');
+  assert.equal(motivoEmPalavras({ ...base, mortes: [{ matador: 'a', vitima: 'b' }, { matador: 'a', vitima: 'c' }] }), 'a matou b e mais 1 morte');
+  assert.equal(motivoEmPalavras({ tipos: ['tiros'], mortes: [] }), 'Teve tiroteio');
+  const muitos = { outros: ['a', 'b', 'c', 'd', 'e', 'f'] };
+  assert.equal(quemEstavaNoLance(muitos), 'Também estavam no lance: a, b, c, d e mais 2');
+  assert.equal(quemEstavaNoLance({ outros: [] }), '');
+});
+
+test('evento: chat que reclama do som cai, e quem não está no ar não entra', () => {
+  const mensagens = new Map([['xguiry', [
+    ...Array.from({ length: 8 }, (_, i) => ({ ms: min(10) + i * 1000, texto: 'esta muted no?' })),
+    ...Array.from({ length: 2 }, (_, i) => ({ ms: min(10) + i * 1000, texto: 'kkkk' })),
+  ]]]);
+  const marcas = new Map([
+    ['xguiry', [{ tipo: 'chat', ms: min(10), vezes: 10, msgs: 80 }]],
+    ['cyrus', [{ tipo: 'chat', ms: min(50), vezes: 4, msgs: 20 }]],
+    ['fora', [{ tipo: 'chat', ms: min(80), vezes: 9, msgs: 60 }]],
+  ]);
+  const lances = filtrarLances(melhoresLances(sinaisDoEvento({ marcas }))).map((l) => ({ ...l, noAr: l.canais.filter((c) => c !== 'fora') }));
+  const lista = lancesParaLista(lances, { mensagens });
+  assert.deepEqual(lista.map((m) => m.canal), ['cyrus', 'xguiry']);
+  assert.equal(lista[1].falha, true);
+  assert.equal(lista[0].falha, false);
 });

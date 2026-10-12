@@ -12,7 +12,7 @@
 
 import { t, tn } from './idiomas.js';
 import { procurarCanais, vodsDoCanal, vodDaKick, slugDoNome } from './kick.js';
-import { lerEntrada, montarLista, nomeDoArquivo, tempoNaLive } from './simples-lista.js';
+import { lerEntrada, montarLista, lancesParaLista, nomeDoArquivo, tempoNaLive, NOMES_NO_LANCE, QUANTOS } from './simples-lista.js';
 import { varrerNoite } from './procurar-momentos.js';
 import { somDoCanal } from './alinhar.js';
 import { TAXA_TIROS } from './tiros.js';
@@ -23,6 +23,8 @@ import { escapar } from './escapar.js';
 
 const CHAVE_MODO = 'povix.modo';
 const CHAVE_VISTO = 'povix.simplesVisto';
+const CHAVE_NAO = 'povix.simplesNao';
+const MAX_NAO = 300;
 const $ = (id) => document.getElementById(id);
 
 /** Quanto tempo uma espera pode ficar parada antes de dizer alguma coisa, e antes de desistir. */
@@ -94,13 +96,44 @@ const dois = (n) => String(n).padStart(2, '0');
 const horaDe = (ms) => { const d = new Date(ms); return `${dois(d.getHours())}:${dois(d.getMinutes())}`; };
 const diaDe = (ms) => { const d = new Date(ms); return `${dois(d.getDate())}/${dois(d.getMonth() + 1)}`; };
 
+/** Os momentos que a pessoa disse "Não quero", lembrados neste aparelho (a chave é canal|segundo). */
+function lerNaoQuero() {
+  try {
+    const l = JSON.parse(localStorage.getItem(CHAVE_NAO) || '[]');
+    return new Set(Array.isArray(l) ? l.filter((x) => typeof x === 'string') : []);
+  } catch { return new Set(); }
+}
+function guardarNaoQuero(conjunto) {
+  try { localStorage.setItem(CHAVE_NAO, JSON.stringify([...conjunto].slice(-MAX_NAO))); } catch { /* janela privada */ }
+}
+
 /** O motivo do momento numa frase: "O chat explodiu e teve tiroteio". */
 export function motivoEmPalavras(m) {
-  const partes = ['chat', 'tiros', 'explosao', 'grito'].filter((x) => m.tipos.includes(x)).map((x) => t(`simples.motivo.${x}`));
+  // Uma morte do servidor (ou achada na tela de morte) diz quem matou quem, e o tiroteio vira o lugar dela.
+  const morte = m.mortes?.[0];
+  const noTiroteio = Boolean(morte) && m.tipos.includes('tiros');
+  const partes = ['chat', 'tiros', 'explosao', 'grito'].filter((x) => m.tipos.includes(x) && !(noTiroteio && x === 'tiros'))
+    .map((x) => t(`simples.motivo.${x}`));
+  if (morte) {
+    const mais = m.mortes.length - 1;
+    const quem = morte.matador ? t(noTiroteio ? 'simples.motivo.matouNoTiroteio' : 'simples.motivo.matou', morte)
+      : t(noTiroteio ? 'simples.motivo.morreuNoTiroteio' : 'simples.motivo.morreu', morte);
+    partes.unshift(mais > 0 ? `${quem}${tn(mais, 'simples.motivo.maisUma', 'simples.motivo.maisN')}` : quem);
+  }
   if (!partes.length) return '';
   const frase = partes.length === 1 ? partes[0]
     : `${partes.slice(0, -1).join(', ')}${t('simples.e')}${partes.at(-1)}`;
-  return frase.charAt(0).toLocaleUpperCase() + frase.slice(1);
+  // Um apelido de streamer fica como ele escreve: só se põe a maiúscula na frase que começa por palavra.
+  return morte ? frase : frase.charAt(0).toLocaleUpperCase() + frase.slice(1);
+}
+
+/** Quem mais estava no lance, para a frase do cartão: "a, b, c e mais 2". */
+export function quemEstavaNoLance(m) {
+  const outros = m.outros || [];
+  if (!outros.length) return '';
+  const nomes = outros.slice(0, NOMES_NO_LANCE).join(', ');
+  const sobra = outros.length - NOMES_NO_LANCE;
+  return t('simples.tambem', { nomes: sobra > 0 ? `${nomes}${t('simples.eMais', { n: sobra })}` : nomes });
 }
 
 /** A palavra do nome do arquivo: o que aconteceu de mais forte. */
@@ -134,6 +167,11 @@ export function montarSimples(ponte) {
   let linhaAberta = null;
   let fotos = new Map();
   let aBaixar = false;
+  // Quantos cartões a lista mostra ("Mostrar mais" soma), os que a pessoa não quer ("Não quero", lembrados
+  // neste aparelho) e os que estão na tela agora (o `data-i` de cada cartão conta nesta lista).
+  let mostrar = QUANTOS;
+  let mostrados = [];
+  const naoQuero = lerNaoQuero();
   const feitos = new Map();
   const tocaVideo = tocaVideoDaKick();
   const toque = window.matchMedia?.('(pointer: coarse)').matches;
@@ -150,12 +188,6 @@ export function montarSimples(ponte) {
     mostrarInicio();
     window.scrollTo({ top: 0 });
   };
-  // Com o evento aberto o modo simples mostra o evento (a lista simples do evento é a parte 2).
-  const evento = $('evento');
-  const pintarEvento = () => document.body.classList.toggle('simplesEvento', !evento.hidden);
-  new MutationObserver(pintarEvento).observe(evento, { attributes: true, attributeFilter: ['hidden'] });
-  pintarEvento();
-
   // A frase da primeira vez, só até ela começar a primeira busca.
   let visto = false;
   try { visto = Boolean(localStorage.getItem(CHAVE_VISTO)); } catch { visto = false; }
@@ -230,7 +262,7 @@ export function montarSimples(ponte) {
     comecar(caixa.value);
   });
   // A caixa volta com o que estava escrito, já selecionado: escrever outro nome troca tudo de uma vez.
-  $('simplesDeNovo').onclick = () => { parar(); mostrarInicio(); $('simplesErro').hidden = true; caixa.focus(); caixa.select(); };
+  $('simplesDeNovo').onclick = () => { ponte.pararChatDoEvento?.(); parar(); mostrarInicio(); $('simplesErro').hidden = true; caixa.focus(); caixa.select(); };
   $('simplesParar').onclick = () => { busca?.abort(); };
 
   function erro(texto) {
@@ -255,6 +287,9 @@ export function montarSimples(ponte) {
     $('simplesAviso').hidden = true;
     lista.innerHTML = '';
     ultimos = [];
+    mostrados = [];
+    mostrar = QUANTOS;
+    $('simplesMais').hidden = true;
     window.scrollTo({ top: 0 });
   }
 
@@ -274,6 +309,7 @@ export function montarSimples(ponte) {
     geracao++;
     busca?.abort();
     busca = null;
+    ponte.aoMudarEvento?.(null);
   }
 
   // ── começar ───────────────────────────────────────────────────────────
@@ -321,9 +357,8 @@ export function montarSimples(ponte) {
   }
 
   async function abrirEvento(qual) {
-    mostrarInicio();
-    dizer('');
-    $('simplesErro').hidden = true;
+    mostrarTrabalho(t('simples.abrindoEvento'));
+    dizer(t('simples.abrindoEventoEstado'));
     const minha = geracao;
     const aberto = await ponte.abrirEvento(qual);
     if (minha !== geracao) return;
@@ -331,9 +366,54 @@ export function montarSimples(ponte) {
       erro(qual.nome ? t('simples.semEvento', { nome: qual.nome }) : t('simples.naoEntendi'));
       return;
     }
-    // Sem segundo toque: os melhores momentos do evento começam a ser procurados já (pelo chat de todos).
-    ponte.lerChatDoEvento();
-    $('melhores')?.scrollIntoView({ block: 'start' });
+    mostrarEvento();
+  }
+
+  /**
+   * O evento aberto como a mesma lista de um vídeo: os melhores momentos de todos os canais, cada um com o
+   * nome do streamer. Sem segundo toque: o chat de todos começa a ser lido já, e a lista cresce sozinha
+   * (a página avisa quando muda). O mapa fica no "Modo avançado".
+   */
+  function mostrarEvento() {
+    const minha = geracao;
+    const controlo = new AbortController();
+    busca = controlo;
+    linhaAberta = null;
+    const atual = ponte.lancesDoEvento();
+    mostrarTrabalho(atual.nome ? t('simples.tituloEvento', { nome: atual.nome }) : t('simples.tituloEventoSemNome'));
+    if (!tocaVideo) avisar(t('simples.abraNoChrome'));
+    const dizerEstado = (e) => {
+      $('simplesParar').hidden = !e.lendo;
+      const n = queridos().length;
+      if (e.lendo) dizer(e.texto ? t('simples.lendoEvento', { texto: e.texto }) : t('simples.abrindoEventoEstado'), null);
+      else dizer(n ? tn(n, 'simples.prontoUm', 'simples.pronto', { n }) : t('simples.nadaEvento'), false);
+    };
+    const atualizar = () => {
+      if (minha !== geracao) return;
+      const e = ponte.lancesDoEvento();
+      ultimos = lancesParaLista(e.lances, { mensagens: e.mensagens }).map((m) => ({ ...m, nomeCanal: m.canal }));
+      pintarLista();
+      fotografar();
+      dizerEstado(e);
+    };
+    ponte.aoMudarEvento?.(atualizar);
+    // A frase de "lendo o chat de fulano" muda sem a lista mudar: só ela se refaz, de segundo em segundo
+    // (a lista, não: um cartão que muda debaixo do dedo faz errar o toque).
+    const relogio = setInterval(() => {
+      if (minha !== geracao) { clearInterval(relogio); return; }
+      const e = ponte.lancesDoEvento();
+      if (e.lendo) dizerEstado(e);
+    }, 1000);
+    controlo.signal.addEventListener('abort', () => {
+      clearInterval(relogio);
+      if (minha !== geracao) return;
+      ponte.pararChatDoEvento?.();
+      $('simplesParar').hidden = true;
+      const n = queridos().length;
+      dizer(n ? t('simples.paradoCom', { n }) : t('simples.parado'), false);
+    }, { once: true });
+    ponte.lerChatDoEvento()?.finally?.(() => { if (minha === geracao) atualizar(); });
+    atualizar();
   }
 
   async function abrirStreamer(nome, { inicioMs = null } = {}) {
@@ -421,7 +501,7 @@ export function montarSimples(ponte) {
     let mensagens = [];
     let sons = [];
     const refazer = () => {
-      ultimos = montarLista({ picos, sons, mensagens, limites: vivo }).map((m) => ({ ...m, canal: slug }));
+      ultimos = montarLista({ picos, sons, mensagens, limites: vivo, quantos: 60 }).map((m) => ({ ...m, canal: slug }));
       pintarLista();
       fotografar();
     };
@@ -504,11 +584,12 @@ export function montarSimples(ponte) {
         sinal.removeEventListener('abort', pararSom);
       }
       refazer();
-      dizer(ultimos.length ? tn(ultimos.length, 'simples.prontoUm', 'simples.pronto', { n: ultimos.length })
-        : t('simples.nada'), false);
+      const n = queridos().length;
+      dizer(n ? tn(n, 'simples.prontoUm', 'simples.pronto', { n }) : t('simples.nada'), false);
     } catch (x) {
       if (x?.name !== 'AbortError' && !sinal.aborted) throw x;
-      dizer(ultimos.length ? t('simples.paradoCom', { n: ultimos.length }) : t('simples.parado'), false);
+      const n = queridos().length;
+      dizer(n ? t('simples.paradoCom', { n }) : t('simples.parado'), false);
     } finally {
       $('simplesParar').hidden = true;
       if (busca === controlo) busca = null;
@@ -518,14 +599,22 @@ export function montarSimples(ponte) {
   // ── a lista ───────────────────────────────────────────────────────────
   const chave = (m) => `${m.canal}|${Math.round(m.ms / 1000)}`;
 
+  /** Os que a lista mostra agora: sem os "Não quero", e só até onde o "Mostrar mais" chegou. */
+  const queridos = () => ultimos.filter((m) => !naoQuero.has(chave(m)));
+  const visiveis = () => queridos().slice(0, mostrar);
+
   function pintarLista() {
     // Um clipe a ser feito agora não pode sumir debaixo do dedo: a lista refaz-se quando ele acabar.
     if (aBaixar) { pintarLista.adiada = true; return; }
     pintarLista.adiada = false;
     const primeiraVez = (() => { try { return !localStorage.getItem('povix.simplesBaixou'); } catch { return true; } })();
-    $('simplesDicaLista').hidden = !ultimos.length || !primeiraVez;
-    const inicio = linhaAberta?.inicio ?? ultimos[0]?.ms ?? 0;
-    lista.innerHTML = ultimos.map((m, i) => {
+    mostrados = visiveis();
+    const sobra = queridos().length - mostrados.length;
+    $('simplesMais').hidden = sobra <= 0;
+    $('simplesMais').textContent = t('simples.mais', { n: Math.min(sobra, QUANTOS) });
+    $('simplesDicaLista').hidden = !mostrados.length || !primeiraVez;
+    const inicio = linhaAberta?.inicio ?? mostrados[0]?.ms ?? 0;
+    lista.innerHTML = mostrados.map((m, i) => {
       const k = chave(m);
       const foto = fotos.get(k);
       const durS = Math.round((m.ateMs - m.deMs) / 1000);
@@ -535,31 +624,55 @@ export function montarSimples(ponte) {
       return `<li class="simplesCartao" data-i="${i}" data-chave="${escapar(k)}">`
         + `<div class="simplesFoto">${foto ? `<img src="${foto}" alt="">` : `<span class="simplesSemFoto">${escapar(horaDe(m.ms))}<small>${escapar(t('simples.semFoto'))}</small></span>`}</div>`
         + '<div class="simplesInfo">'
+        + (m.doEvento ? `<p class="simplesStreamer">${escapar(t('simples.deQuem', { canal: m.nomeCanal || m.canal }))}</p>` : '')
         + `<p class="simplesMotivo">${nota}${escapar(motivo)}</p>`
+        + (m.outros?.length ? `<p class="simplesTambem">${escapar(quemEstavaNoLance(m))}</p>` : '')
         + (m.falha ? `<p class="simplesTalvezFalha">${escapar(t('simples.talvezFalha'))}</p>` : '')
         + `<p class="simplesQuando">${escapar(m.doClipe ? t('simples.duracao', { s: durS })
           : t('simples.quando', { tempo: tempoNaLive(m.ms, inicio), hora: horaDe(m.ms), s: durS }))}</p>`
         + '<div class="simplesBotoes">'
         + `<button type="button" class="principal simplesTiktok" data-acao="tiktok"><svg class="ic" aria-hidden="true"><use href="#i-descarregar"/></svg><span>${escapar(t('simples.baixarTiktok'))}</span></button>`
         + `<button type="button" class="simplesSecundario simplesDeitado" data-acao="deitado">${escapar(t('simples.baixarDeitado'))}</button>`
+        + `<button type="button" class="simplesSecundario simplesNao" data-acao="nao">${escapar(t('simples.naoQuero'))}</button>`
         + '</div>'
         + `<p class="simplesBaixando" role="status" aria-live="polite">${feito ? escapar(feito.texto) : ''}</p>`
         + `<progress class="simplesBarraClipe" max="1" hidden></progress>`
         + `<button type="button" class="simplesSecundario simplesPartilhar" data-acao="partilhar"${feito?.blob && podePartilhar(feito) ? '' : ' hidden'}>${escapar(t('simples.partilhar'))}</button>`
         + '</div></li>';
     }).join('');
-    for (const b of lista.querySelectorAll('button[data-acao="tiktok"], button[data-acao="deitado"]')) b.disabled = aBaixar;
+    for (const b of lista.querySelectorAll(BOTOES_DO_CLIPE)) b.disabled = aBaixar;
   }
 
   lista.addEventListener('click', (e) => {
     const b = e.target.closest('button[data-acao]');
     if (!b) return;
     const li = b.closest('li');
-    const m = ultimos[Number(li.dataset.i)];
+    const m = mostrados[Number(li.dataset.i)];
     if (!m) return;
+    if (b.dataset.acao === 'nao') { dispensar(m, Number(li.dataset.i)); return; }
     if (b.dataset.acao === 'partilhar') { partilhar(feitos.get(li.dataset.chave)); return; }
     baixar(m, li, { deitado: b.dataset.acao === 'deitado' });
   });
+
+  // Os botões que mexem no clipe: ficam parados enquanto um clipe é feito.
+  const BOTOES_DO_CLIPE = 'button[data-acao="tiktok"], button[data-acao="deitado"], button[data-acao="nao"]';
+
+  /** "Não quero": o momento sai da lista e não volta (neste aparelho). O foco vai para o cartão que subiu. */
+  function dispensar(m, i) {
+    naoQuero.add(chave(m));
+    guardarNaoQuero(naoQuero);
+    pintarLista();
+    const cartao = lista.children[Math.min(i, lista.children.length - 1)];
+    (cartao?.querySelector('button[data-acao="tiktok"]') || $('simplesQuem')).focus?.({ preventScroll: true });
+  }
+
+  $('simplesMais').onclick = () => {
+    const antes = mostrados.length;
+    mostrar += QUANTOS;
+    pintarLista();
+    fotografar();
+    lista.children[antes]?.querySelector('button[data-acao="tiktok"]')?.focus();
+  };
 
   function arquivoDe(f) {
     try { return new File([f.blob], f.nome, { type: f.blob.type || 'video/mp4' }); } catch { return null; }
@@ -574,11 +687,17 @@ export function montarSimples(ponte) {
     try { await navigator.share({ files: [arquivo], title: f.nome }); } catch { /* ela fechou a folha */ }
   }
 
+  /** O vídeo aberto agora é o do canal do momento e cobre a hora dele. */
+  function abertoEm(m) {
+    const vivo = ponte.aoVivoDe(m.canal);
+    return Boolean(vivo && m.ms >= vivo.deMs && m.ms <= vivo.ateMs && linhaAberta?.slug === m.canal);
+  }
+
   async function baixar(m, li, { deitado }) {
     if (aBaixar) return;
     aBaixar = true;
     const k = chave(m);
-    for (const b of lista.querySelectorAll('button[data-acao="tiktok"], button[data-acao="deitado"]')) b.disabled = true;
+    for (const b of lista.querySelectorAll(BOTOES_DO_CLIPE)) b.disabled = true;
     const nota = li.querySelector('.simplesBaixando');
     const barra = li.querySelector('.simplesBarraClipe');
     li.querySelector('.simplesPartilhar').hidden = true;
@@ -592,6 +711,15 @@ export function montarSimples(ponte) {
     const motivo = m.doClipe ? t('simples.arquivo.clipe') : palavraDoArquivo(m);
     const canal = m.nomeCanal || m.canal;
     try {
+      // Um momento do evento é de um canal que pode não estar aberto: abre-se o vídeo dele naquela hora.
+      if (m.doEvento && !abertoEm(m)) {
+        dizerAqui(t('simples.fase.abrirCanal', { canal }));
+        const linha = await comPrazo(ponte.abrirCanal(m.canal, { inicioMs: m.ms }).catch(() => null), ABRIR_MS);
+        if (!linha) { dizerAqui(t('simples.canalNaoAbriu', { canal }), false); return; }
+        ponte.pausar();
+        linhaAberta = linha;
+        dizerAqui(t(`simples.fase.${fase}`));
+      }
       const r = await ponte.baixar({ canal: m.canal, deMs: m.deMs, ateMs: m.ateMs }, {
         deitado,
         // A legenda pesa: no computador sai ligada; no celular fica para a parte 2 (um botão "pôr legenda").
@@ -621,8 +749,10 @@ export function montarSimples(ponte) {
       dizerAqui(t('simples.naoDeu', { motivo: String(x?.message || x).slice(0, 120) }), false);
     } finally {
       aBaixar = false;
-      for (const b of lista.querySelectorAll('button[data-acao="tiktok"], button[data-acao="deitado"]')) b.disabled = false;
+      for (const b of lista.querySelectorAll(BOTOES_DO_CLIPE)) b.disabled = false;
       if (pintarLista.adiada) pintarLista();
+      // O canal que o clipe abriu pode fotografar os outros momentos dele.
+      if (m.doEvento) fotografar();
     }
   }
 
@@ -635,14 +765,14 @@ export function montarSimples(ponte) {
     fotografando = quadros;
     let falhas = 0;
     try {
-      for (let i = 0; i < ultimos.length && falhas < 2; i++) {
+      for (let i = 0; i < mostrados.length && falhas < 2; i++) {
         // Um clipe a ser gravado tem a máquina toda: a foto espera (num celular as duas juntas travam).
         // eslint-disable-next-line no-await-in-loop
         while (aBaixar) await dormir(500);
-        const m = ultimos[i];
+        const m = mostrados[i];
         if (!m) break;
         const k = chave(m);
-        if (fotos.has(k)) continue;
+        if (fotos.has(k) || m.canal !== linha.slug) continue;
         const ms = m.doClipe ? m.deMs + 1000 : m.ms;
         const r = onde(linha, ms, { nudgeMs: ponte.estado.nudges[linha.slug] || 0 });
         if (r.estado !== 'toca') continue;
@@ -669,7 +799,7 @@ export function montarSimples(ponte) {
 
   // ── o link de um evento (?e=abisal) aberto no modo simples ───────────────
   if (ponte.eventoDoLink && modoSimples()) {
-    ponte.eventoDoLink.then((aberto) => { if (aberto) ponte.lerChatDoEvento(); }).catch(() => {});
+    ponte.eventoDoLink.then((aberto) => { if (aberto) { marcarVisto(); $('simplesDica').hidden = true; mostrarEvento(); } }).catch(() => {});
   }
 
   return {
