@@ -3132,3 +3132,6 @@ body:not(:has(#noites:not([hidden]))) .topo .barraSessao.noTopo { display: none;
 .trilho .linhaHora.vira { background: rgb(0 0 0 / .7); box-shadow: 1px 0 0 color-mix(in srgb, var(--tinta) 22%, transparent); }
 /* A sincronia de cada ângulo só no player aberto, grande; nas miniaturas não (o dono, 13/10). */
 .tile:not(.foco) .ajuste { display: none; }
+/* A explicação ao parar o mouse num botão (dicas.js). */
+.dica { position: fixed; z-index: 1000; max-width: 280px; padding: 6px 10px; border-radius: var(--r-2); background: #0b0b0b; color: #f3f0ea; border: 1px solid var(--linha-2); font-size: 13px; line-height: 1.35; pointer-events: none; box-shadow: 0 6px 20px rgb(0 0 0 / .5); }
+.dica[hidden] { display: none; }

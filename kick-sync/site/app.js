@@ -5,6 +5,7 @@
 // bottom rung of Kick's ladder and is what makes thirty tiles a home-connection
 // problem rather than a server problem.
 
+import './dicas.js';
 import {
   vodsDoCanal, lerMaster, lerPlaylist, procurarCanais, lerLinkKick, clipeDaKick, vodDaKick, DESCONHECIDO, slugDoNome,
   segmentosNaJanela,
@@ -2065,9 +2066,9 @@ function montarGrade() {
       // com mais buffer, ou um olho que diz "este está meio segundo à frente".
       + '<span class="ajuste">'
       // O nome do que isto é: "0.0s" com um mais e um menos, solto no vídeo, não dizia que era a sincronia.
-      + `<span class="rotuloAjuste" data-t="tile.sincronia">${t('tile.sincronia')}</span>`
+      // O nome saiu do vídeo (o dono, 13/10): a explicação aparece ao parar o mouse no número ou nos botões.
       + `<button data-passo="-1" data-t-titulo="tile.atrasar" title="${t('tile.atrasar')}">−</button>`
-      + '<b class="nudge">0.0s</b>'
+      + `<b class="nudge" data-t-titulo="tile.sincroniaDica" title="${t('tile.sincroniaDica')}">0.0s</b>`
       + `<button data-passo="1" data-t-titulo="tile.adiantar" title="${t('tile.adiantar')}">+</button>`
       + '</span>'
       // Ecrã cheio e janela à parte no canto de baixo à direita, como no YouTube e na Twitch (o dono, 13/10).
