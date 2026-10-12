@@ -75,6 +75,14 @@ export async function vodsDoCanal(slug, { buscar = fetch } = {}) {
     idioma: typeof v.language === 'string' ? v.language.slice(0, 40) : DESCONHECIDO,
     // O endereço do VOD na Kick é kick.com/<canal>/videos/<uuid> (o pacote do lance leva o link).
     uuid: typeof v.video?.uuid === 'string' ? v.video.uuid.slice(0, 64) : DESCONHECIDO,
+    // O jogo da live ("Rust", "Grand Theft Auto V (GTA)"), em categories[0].name (medido em 12/10 nos
+    // VODs do Abisal: um canal da lista passou noites no GTA RP). Um evento com `jogo` deixa os outros de fora.
+    categoria: typeof v.categories?.[0]?.name === 'string' ? v.categories[0].name.slice(0, 80) : DESCONHECIDO,
+    categoriaSlug: typeof v.categories?.[0]?.slug === 'string' ? v.categories[0].slug.slice(0, 80) : DESCONHECIDO,
+    // Se a categoria é um jogo: na Kick o grupo 1 são os jogos (Rust, GTA, LoL); "Just Chatting" é o 2,
+    // "Just Sleeping" o 6 e os cassinos o 4. Medido em 12/10: o sapoiq jogou Rust do Abisal num VOD que a
+    // Kick chama "Just Chatting", por isso uma categoria que não é jogo não diz que é outro jogo.
+    categoriaJogo: Number.isFinite(v.categories?.[0]?.category_id) ? v.categories[0].category_id === 1 : DESCONHECIDO,
     privado: v.video?.is_private === true,
     apagado: v.video?.is_pruned === true || Boolean(v.video?.deleted_at),
   })).filter((v) => v.master && !v.privado && !v.apagado);

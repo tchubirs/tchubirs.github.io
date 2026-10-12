@@ -2802,6 +2802,14 @@ body.mesa .trilho .prazoFaixa {
   font-size: 10px; line-height: 11px; padding: 0 4px; border-radius: var(--r-1);
   background: var(--sup-2); color: var(--tinta-3); white-space: nowrap; cursor: help;
 }
+/* Outro jogo nesta noite (ver jogo.js): o nome e o vídeo a cinza, e o motivo à esquerda do trilho. */
+body.mesa .faixa.outroJogo .nome { color: var(--tinta-3); }
+body.mesa .faixa.outroJogo .trilho > i { opacity: .4; filter: grayscale(1); }
+body.mesa .trilho .outroJogoFaixa {
+  position: absolute; left: 2px; top: 50%; transform: translateY(-50%); z-index: 1; pointer-events: none;
+  font-size: 10px; line-height: 11px; padding: 0 4px; border-radius: var(--r-1);
+  background: var(--sup-2); color: var(--tinta-3); white-space: nowrap;
+}
 body.mesa .trilho .prazoFaixa.perto { color: var(--aviso); background: color-mix(in srgb, var(--aviso) 14%, var(--sup-2)); }
 body.mesa .momentos li .prazo { font-size: var(--t-micro); color: var(--tinta-3); white-space: nowrap; cursor: help; }
 body.mesa .momentos li .prazo.perto { color: var(--aviso); }

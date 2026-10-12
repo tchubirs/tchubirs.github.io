@@ -26,6 +26,7 @@ import { somDoCanal } from './alinhar.js';
 import { t, tn, idiomaActual } from './idiomas.js';
 import { atalhos } from './atalhos.js';
 import { escapar } from './escapar.js';
+import { separarPorJogo } from './jogo.js';
 import { idDoCanal, mensagensEntre, calor, picos, segundoDoPico } from './chat.js';
 import { agendar } from './aovivo.js';
 import {
@@ -191,7 +192,29 @@ export function montarEvento({
     // O que o "Achar quem mais estava" confirmou pelo som: [{ ms, canais }]. É o que junta canais de
     // times diferentes num lance só dos melhores lances.
     confirmados: [],
+    // O jogo do evento ("Rust"), do eventos/<nome>.json ou do link (&jogo=). Com ele, as lives de outro
+    // jogo ficam fora de `coberturas` (e de tudo o que sai delas) e vão para `outroJogo`, a cinza no
+    // mapa. `doJogo` são as listas de VOD só com as do jogo. Ver jogo.js.
+    jogo: null,
+    doJogo: [],
+    outroJogo: new Map(),
   };
+
+  /** As coberturas do jogo do evento e as de outro jogo, a partir das listas lidas. */
+  function recobrir() {
+    const { doJogo, outro } = separarPorJogo(ev.resultados, ev.jogo);
+    ev.doJogo = doJogo;
+    ev.coberturas = coberturasDe(doJogo);
+    ev.outroJogo = coberturasDe(outro);
+  }
+  /** Se `slug` estava noutro jogo em `ms` (e não no do evento). */
+  const outroJogoEm = (slug, ms) => !noArEm(ev.coberturas, slug, ms) && noArEm(ev.outroJogo, slug, ms);
+  /** Os canais que, no trecho do evento, só têm lives de outro jogo: o nome deles fica a cinza no mapa. */
+  function soOutroJogo() {
+    const j = ev.trecho || ev.limites;
+    const corta = (lista) => (lista || []).some(([a, b]) => !j || (a < j.ateMs && b > j.deMs));
+    return new Set([...ev.outroJogo.keys()].filter((c) => corta(ev.outroJogo.get(c)) && !corta(ev.coberturas.get(c))));
+  }
 
   // ── abrir ──────────────────────────────────────────────────────────────
 
@@ -209,6 +232,7 @@ export function montarEvento({
     ev.ordem = { modo: ordemInicial(), ms: null };
     ev.fechadasOrdem = new Set();
     ev.info = info;
+    ev.jogo = typeof info?.jogo === 'string' && info.jogo.trim() ? info.jogo.trim() : null;
     ev.confirmar = null;
     ev.confirmados = [];
     $('lance').hidden = true;
@@ -238,7 +262,7 @@ export function montarEvento({
     }
     memorizarVods(ev.resultados);
     pintarAvisos();
-    ev.coberturas = coberturasDe(ev.resultados);
+    recobrir();
     const aoVivo = pintarResumo();
     ev.times = [...elenco.times];
     if (elenco.soltos.length) ev.times.push({ nome: null, canais: elenco.soltos });
@@ -440,7 +464,7 @@ export function montarEvento({
     const variosDias = v && dataCurta(v.deMs) !== dataCurta(v.ateMs);
     return variosDias ? `${rotuloDoDia(ms)} ${horaCurta(ms)}` : horaCurta(ms);
   }
-  const vivosAgora = () => new Set(ev.resultados.filter((r) => r?.estado === 'ok' && r.vods.some(aoVivoVod)).map((r) => r.slug));
+  const vivosAgora = () => new Set(ev.doJogo.filter((r) => r?.estado === 'ok' && r.vods.some(aoVivoVod)).map((r) => r.slug));
 
   function remontar() {
     const texto = $('procurarEvento').value.trim();
@@ -459,7 +483,7 @@ export function montarEvento({
     }
     // Num ecrã de toque as faixas crescem para um dedo (36 px em vez de 20).
     const alturas = tocar() ? { canal: 36, time: 40, resumo: 36 } : undefined;
-    ev.mapa = montarMapa({ times, coberturas: ev.coberturas, abertos, alturas, timeDe });
+    ev.mapa = montarMapa({ times, coberturas: ev.coberturas, abertos, alturas, timeDe, outros: ev.outroJogo });
     // A caixa tem a altura do conteúdo, até 62% do ecrã (45% num ecrã estreito, para o lance caber por
     // baixo); daí para cima rola.
     const rolo = $('mapaRolo');
@@ -514,6 +538,8 @@ export function montarEvento({
         realcados: ev.escolha ? new Set(canaisDoLance(ev.escolha)) : null,
         falhados: ev.falhados,
         naoAchado: t('evento.naoAchado'),
+        outroJogo: ev.outroJogo.size ? soOutroJogo() : null,
+        outroJogoTexto: t('evento.outroJogo'),
         cursor: ev.cursor && rolo.matches(':focus-visible') ? ev.cursor : null,
         cores: coresDoTema(),
         semTime: t('evento.semTime'),
@@ -840,7 +866,8 @@ export function montarEvento({
     const time = l.time ?? t('evento.semTime');
     $('mapaVoz').textContent = l.tipo === 'canal'
       ? [l.canal, time, horaLocal(ev.cursor.ms),
-        t(ev.falhados.has(l.canal) ? 'evento.naoAchado' : noArEm(ev.coberturas, l.canal, ev.cursor.ms) ? 'evento.noAr' : 'evento.foraDoArCurto')].join(', ')
+        t(ev.falhados.has(l.canal) ? 'evento.naoAchado' : noArEm(ev.coberturas, l.canal, ev.cursor.ms) ? 'evento.noAr'
+          : outroJogoEm(l.canal, ev.cursor.ms) ? 'evento.outroJogo' : 'evento.foraDoArCurto')].join(', ')
       : [time, tn(l.canais?.length ?? 0, 'evento.canalUm', 'evento.canaisN'), t(l.aberto ? 'evento.aberto' : 'evento.fechado')].join(', ');
   }
 
@@ -1142,12 +1169,16 @@ export function montarEvento({
     // O botão diz quantos ângulos abre. "Ver este lance com o time" abria um só no exemplo sem times,
     // e quem chegava achava que a página não funcionava.
     const noArAgora = noArEm(ev.coberturas, e.canal, e.ms);
+    // Outro jogo naquele instante: não entra no time nem na busca pelo som, mas abre-se à mão, sozinho.
+    const outro = outroJogoEm(e.canal, e.ms);
     const n = canaisDoLance(e).length;
     $('verLanceTexto').textContent = n > 1 ? t('lance.verN', { n }) : t('lance.verSo', { canal: e.canal });
     const cedo = cedoDemais(e.ms, ev.atrasoMin);
-    $('verLance').disabled = !noArAgora;
-    $('verLance').title = noArAgora ? '' : t('lance.foraDoAr', { canal: e.canal, hora: horaLocal(e.ms) });
-    if (!noArAgora && !ev.procura) $('estadoLance').textContent = t('lance.foraDoAr', { canal: e.canal, hora: horaLocal(e.ms) });
+    $('verLance').disabled = !noArAgora && !outro;
+    const fora = outro ? t('lance.outroJogo', { canal: e.canal, jogo: vodEm(e.canal, e.ms)?.categoria || t('lance.outroJogoSemNome'), evento: ev.jogo })
+      : t('lance.foraDoAr', { canal: e.canal, hora: horaLocal(e.ms) });
+    $('verLance').title = noArAgora ? '' : fora;
+    if (!noArAgora && !ev.procura) $('estadoLance').textContent = fora;
     // Com um ângulo só e a busca liberada, o passo útil a seguir é procurar os outros: é ele que leva o
     // destaque.
     const buscaPrincipal = n === 1 && !cedo && noArAgora;
@@ -1207,7 +1238,9 @@ export function montarEvento({
   async function verLance(lista = null, opcoes = {}) {
     const e = ev.escolha;
     if (!e) return;
-    const canais = Array.isArray(lista) ? lista : canaisDoLance(e);
+    let canais = Array.isArray(lista) ? lista : canaisDoLance(e);
+    // Outro jogo naquele instante: abre-se só ele, à mão (ver `pintarLance`).
+    if (!canais.length && !Array.isArray(lista) && outroJogoEm(e.canal, e.ms)) canais = [e.canal];
     if (!canais.length) return;
     const foco = canais.includes(e.canal) ? e.canal : canais[0];
     // O atraso que o "Achar quem mais estava" mediu vai com cada ângulo achado, relativo a quem se
@@ -1413,7 +1446,7 @@ export function montarEvento({
       atualizar: async () => {
         if (!ev.mapa) return;
         const noFim = ev.vista && ev.limites && ev.limites.ateMs - ev.vista.ateMs < 60_000;
-        ev.coberturas = coberturasDe(ev.resultados);
+        recobrir();
         remontar();
         const fim = ev.mapa.fimMs;
         if (Number.isFinite(fim) && ev.limites) {
@@ -1430,7 +1463,7 @@ export function montarEvento({
   function pintarResumo(extra = '') {
     const { times, canais } = contar(ev.elenco);
     const comVideo = ev.coberturas.size;
-    const aoVivo = ev.resultados.filter((r) => r.estado === 'ok' && r.vods.some(aoVivoVod)).length;
+    const aoVivo = ev.doJogo.filter((r) => r.estado === 'ok' && r.vods.some(aoVivoVod)).length;
     $('resumoEvento').textContent = [
       times ? tn(times, 'evento.resumoTimeUm', 'evento.resumoTimes', { times }) : '',
       tn(canais, 'evento.resumoCanalUm', 'evento.resumoCanais', { canais, comVideo }),
@@ -1469,7 +1502,7 @@ export function montarEvento({
         const porSlug = new Map(novos.map((r) => [r.slug, r]));
         ev.resultados = ev.resultados.map((r) => porSlug.get(r.slug) || r);
         memorizarVods(ev.resultados);
-        ev.coberturas = coberturasDe(ev.resultados);
+        recobrir();
         pintarResumo(t('evento.entraram', { lista: entraram.map((r) => r.slug).join(', ') }));
         remontar();
         if (Number.isFinite(ev.mapa.fimMs) && ev.limites) ev.limites = { ...ev.limites, ateMs: Math.max(ev.limites.ateMs, ev.mapa.fimMs) };
@@ -1566,7 +1599,8 @@ export function montarEvento({
     return (nome ? `&nome=${enc(nome)}` : '')
       + (info?.data ? `&data=${enc(info.data)}` : '')
       + (info?.duracao ? `&dur=${enc(info.duracao)}` : '')
-      + (info?.descricao ? `&desc=${enc(info.descricao)}` : '');
+      + (info?.descricao ? `&desc=${enc(info.descricao)}` : '')
+      + (info?.jogo ? `&jogo=${enc(info.jogo)}` : '');
   }
 
   /** O lance escolhido como parâmetros: o instante, o streamer, os ângulos a mais e o atraso. */
@@ -1612,6 +1646,8 @@ export function montarEvento({
       data: $('partilharData').value || null,
       duracao: $('partilharDuracao').value.trim() || null,
       descricao: $('partilharDescricao').value.trim() || null,
+      // O jogo não tem campo na janela: vem do evento salvo ou do link e segue com ele.
+      jogo: ev.info?.jogo || null,
     };
     // O nome e os dados ficam no evento aberto: o título muda, e o próximo link já os leva.
     ev.elenco.nome = nome;
@@ -1769,7 +1805,7 @@ export function montarEvento({
     ev.resultados = [...ev.resultados.filter((r) => !novos.includes(r?.slug)), ...lidos];
     memorizarVods(ev.resultados);
     pintarAvisos();
-    ev.coberturas = coberturasDe(ev.resultados);
+    recobrir();
     const aoVivo = pintarResumo();
     ev.times = [...elenco.times];
     if (elenco.soltos.length) ev.times.push({ nome: null, canais: elenco.soltos });
@@ -2095,8 +2131,11 @@ export function montarEvento({
     const j = janelaMelhores();
     if (!ev.elenco || !j) return;
     const doEvento = new Set(todosDoEvento());
+    // As lives de outro jogo não dão lances sozinhas (o chat, o pedido de clipe e o som achado); o que se
+    // marcou à mão fica.
     const sinais = sinaisDoEvento({ marcas: ev.marcas, momentos: momentos(), mensagens: ev.mensagens })
-      .filter((s) => doEvento.has(s.canal));
+      .filter((s) => doEvento.has(s.canal))
+      .filter((s) => s.tipo === 'voce' || s.tipo === 'kill' || !outroJogoEm(s.canal, s.ms));
     const times = indiceDeTimes(ev.elenco);
     const todos = melhoresLances(sinais, { grupoDe: (c) => times.get(c) ?? null, confirmados: ev.confirmados });
     const comuns = { deMs: j.deMs, ateMs: j.ateMs, descartados: melhores.descartados, marcados: melhores.marcados };
@@ -2384,7 +2423,10 @@ export function montarEvento({
       if (!elenco) { $('estadoEvento').textContent = t('evento.linkEstragado'); return false; }
       // O nome e os dados do evento vão no link longo, ao lado da lista.
       elenco.nome = param('nome').slice(0, 80) || elenco.nome;
-      info = { data: /^\d{4}-\d{2}-\d{2}$/.test(param('data')) ? param('data') : null, duracao: param('dur').slice(0, 40) || null, descricao: param('desc').slice(0, 500) || null };
+      info = {
+        data: /^\d{4}-\d{2}-\d{2}$/.test(param('data')) ? param('data') : null, duracao: param('dur').slice(0, 40) || null,
+        descricao: param('desc').slice(0, 500) || null, jogo: param('jogo').trim().slice(0, 80) || null,
+      };
     } else {
       // O link curto: index.html?e=<nome> lê eventos/<nome>.json, salvo no site.
       const pedido = salvoDoEndereco(busca);

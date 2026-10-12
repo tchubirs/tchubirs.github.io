@@ -53,6 +53,7 @@ import {
 } from './baixar.js';
 import { criarZip, crc32 } from './zip.js';
 import { retencaoDoCanal, prazoDoVod, ordemDeGuardar } from './prazo.js';
+import { eDoJogo } from './jogo.js';
 import { fcpxmlMulticam, textoDoPacote, linkDoVod } from './pacote.js';
 import { queFazerComOLeitor } from './leitor.js';
 import { criarApanhador } from './frames.js';
@@ -1269,6 +1270,23 @@ function prazoNaFaixa(slug) {
   return `<span class="prazoFaixa${perto ? ' perto' : ''}" title="${escapar(ajuda)}">${escapar(texto)}</span>`;
 }
 
+/**
+ * Se a faixa de `slug` é de outro jogo (ver jogo.js): só num canal do evento aberto que tem `jogo`, e
+ * quando todos os VODs dela (ou o que tem o instante `ms`) são de outro jogo. Fica fora da detecção, do
+ * ler chat de todos e do "Guardar todos agora"; abre-se e vê-se como qualquer outra.
+ */
+function foraDoJogo(slug, ms = null) {
+  const ev = chatDoEvento?.estado;
+  if (!ev?.jogo || !ev.elenco) return false;
+  if (!ev.elenco.soltos.includes(slug) && !ev.elenco.times.some((x) => x.canais.includes(slug))) return false;
+  const l = estado.linhas.find((x) => x.slug === slug);
+  if (!l) return false;
+  const nudge = estado.nudges[slug] || 0;
+  const pecas = (l.pecasCompletas || l.pecas || []).filter((p) => ms == null
+    || (p.playlist && ms + nudge >= p.playlist.inicio && ms + nudge <= p.playlist.fim));
+  return pecas.length > 0 && pecas.every((p) => !eDoJogo(p.vod, ev.jogo));
+}
+
 function pintarFaixas() {
   const { inicio, fim } = vistaAgora() || {};
   const alvo = $('faixas');
@@ -1307,7 +1325,8 @@ function pintarFaixas() {
   for (const linha of estado.linhas) {
     const nudge = estado.nudges[linha.slug] || 0;
     const f = document.createElement('div');
-    f.className = 'faixa';
+    const outro = foraDoJogo(linha.slug);
+    f.className = outro ? 'faixa outroJogo' : 'faixa';
     f.dataset.slug = linha.slug;
     f.dataset.quem = linha.slug;
     f.innerHTML = `<button type="button" class="nome" data-quem="${escapar(linha.slug)}" aria-expanded="false" `
@@ -1321,7 +1340,8 @@ function pintarFaixas() {
         const de = Math.max(0, pct(p.playlist.inicio - nudge));
         const ate = Math.min(100, pct(p.playlist.fim - nudge));
         return `<i style="left:${de}%;width:${Math.max(0.4, ate - de)}%"></i>`;
-      }).join('')}${marcasLidas(linha.slug, inicio, fim)}${marcasOuvidas(linha.slug, inicio, fim)}${prazoNaFaixa(linha.slug)}</div>`;
+      }).join('')}${marcasLidas(linha.slug, inicio, fim)}${marcasOuvidas(linha.slug, inicio, fim)}${prazoNaFaixa(linha.slug)}`
+      + `${outro ? `<span class="outroJogoFaixa">${escapar(t('evento.outroJogo'))}</span>` : ''}</div>`;
     f.querySelector('.trilho').onclick = (e) => irAoClique(e, linha.slug);
     // O prazo é um aviso, e não um sítio da faixa: clicar nele não leva o vídeo para o fim do trilho.
     const pz = f.querySelector('.prazoFaixa');
@@ -2785,7 +2805,8 @@ function ligarChatTrecho() {
 
 /** De onde a onde ler para cada canal: o trecho das alças, ou o tempo todo ao vivo. */
 function pedidosDe(quem, quanto) {
-  const canais = quem === TODOS ? estado.linhas.map((l) => l.slug) : [quem];
+  // Todos são os do jogo do evento: uma live de outro jogo só entra pedida pelo nome (ver `foraDoJogo`).
+  const canais = quem === TODOS ? estado.linhas.map((l) => l.slug).filter((c) => !foraDoJogo(c)) : [quem];
   const trecho = quanto === 'trecho' ? acertarChatTrecho() : null;
   const pedidos = [];
   for (const canal of canais) {
@@ -4329,6 +4350,8 @@ async function baixarMontagem(soEsta = null, { guardar = false } = {}) {
   // esperar pelo VOD guardado.
   const prazos = new Map();
   if (guardar) {
+    // Os ângulos de outro jogo (ver `foraDoJogo`) não se guardam: não são do evento.
+    plano = plano.filter((c) => !foraDoJogo(c.canal, c.deMs));
     for (const c of plano) prazos.set(c, prazoDe(c.canal, c.deMs));
     plano = ordemDeGuardar(plano, (c) => prazos.get(c)?.expiraMs)
       .map((c) => ({ ...c, retrato: null, chat: null, legenda: null, guardar: true }));
@@ -8407,6 +8430,8 @@ new MutationObserver(() => {
 }).observe($('grade'), { childList: true });
 // Para os testes de página: o lance sem ter de montar o mapa inteiro.
 window.__abrirLanceDoEvento = abrirLanceDoEvento;
+// E o que fica de fora por ser de outro jogo (ver `foraDoJogo`).
+window.__jogo = { foraDoJogo, pedidosDe: (quem, quanto) => pedidosDe(quem, quanto).map((x) => x.canal) };
 if (vemDeEvento) evento.abrirDoLink();
 // Sem link, o evento que estava aberto volta por baixo da noite restaurada, em barra.
 else evento.abrirGuardado();

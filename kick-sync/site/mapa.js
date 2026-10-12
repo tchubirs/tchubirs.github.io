@@ -190,13 +190,16 @@ function cobre(lista, ms) {
  * `alturas` muda a altura de cada tipo de linha (as de omissão são
  * `ALTURAS`); um valor que não é um número positivo fica na de omissão.
  */
-export function montarMapa({ times, coberturas, abertos, alturas, timeDe } = {}) {
+export function montarMapa({ times, coberturas, abertos, alturas, timeDe, outros } = {}) {
   const A = { ...ALTURAS };
   // `Number.isFinite` e não `> 0` sozinho: '30' > 0 é verdade, e a seguir
   // `y += '30'` cola texto em vez de somar, e o mapa inteiro fica em NaN.
   for (const k of Object.keys(A)) if (Number.isFinite(alturas?.[k]) && alturas[k] > 0) A[k] = alturas[k];
 
   const lerCobertura = leitor(coberturas);
+  // As lives de outro jogo (ver jogo.js): cada faixa de canal leva-as em `outros`, para as pintar a
+  // cinza. Não contam para as pontas do mapa nem para o resumo do time.
+  const lerOutros = outros ? leitor(outros) : null;
   // Com as faixas noutra ordem (ver `ordenarFaixas`), os grupos já não são os times: cada faixa leva o
   // time verdadeiro do canal, e o nome dele ao lado do canal, para não se perder de que lado está.
   const lerTime = timeDe ? leitor(timeDe) : null;
@@ -243,6 +246,8 @@ export function montarMapa({ times, coberturas, abertos, alturas, timeDe } = {})
     if (aberto) {
       canais.forEach((canal, i) => {
         const linha = { tipo: 'canal', time: g.nome, canal, y, altura: A.canal, coberturas: listas[i] };
+        const fora = lerOutros ? intervalos(lerOutros(canal)) : [];
+        if (fora.length) linha.outros = fora;
         if (lerTime) {
           linha.time = lerTime(canal) ?? null;
           linha.grupo = g.nome;
@@ -714,6 +719,8 @@ export function oQueEstaAqui(mapa, { x, y, topo = 0, vista, largura, marcas, rai
     ms: ms == null ? null : Math.round(ms),
     noAr: ms != null && cobre(linha.coberturas || [], ms),
   };
+  // Uma live de outro jogo naquele instante: não é um lance do evento, mas abre-se à mão.
+  if (!saida.noAr && ms != null && linha.outros?.length && cobre(linha.outros, ms)) saida.outroJogo = true;
   if (marca) saida.marca = marca;
   // O ícone de ordenar que `pintarCabecalho` desenhou ao lado do nome do grupo.
   const ic = linha.iconeOrdem;
@@ -938,6 +945,16 @@ function pintarFaixa(ctx, l, ry, o) {
       });
       ctx.restore();
     } else {
+      if (l.outros?.length) {
+        // Outro jogo: a cinza e mais fina, por baixo das barras do jogo do evento.
+        ctx.save();
+        ctx.globalAlpha = 0.45;
+        ctx.fillStyle = c.texto2;
+        const meio = Math.round((y0 + y1) / 2);
+        barras(ctx, l.outros, e, Math.max(y0, meio - 2), Math.min(y1, meio + 2));
+        ctx.restore();
+        ctx.fillStyle = c.cobertura;
+      }
       barras(ctx, l.coberturas || [], e, y0, y1);
     }
     if (o.lerMarcas) {
@@ -947,14 +964,16 @@ function pintarFaixa(ctx, l, ry, o) {
   }
 
   const texto = l.tipo === 'canal' ? (l.rotulo ?? l.canal) : (l.canais || []).join(', ');
+  // Só outro jogo nesta noite: o nome a cinza e o motivo ao lado.
+  const outro = !falhou && l.tipo === 'canal' && o.outroJogo?.has(l.canal);
   // Um nome que a Kick não conhece fica a vermelho e diz porquê: a faixa
   // vazia dele era igual à de quem só não transmitiu.
   rotulo(ctx, texto, 16, ry + l.altura / 2, {
     ...o,
     tam: 12,
     peso: escolhida ? 600 : 400,
-    cor: falhou ? c.perigo : l.tipo === 'canal' ? c.texto : c.texto2,
-    sufixo: falhou && o.naoAchado ? ` (${o.naoAchado})` : '',
+    cor: falhou ? c.perigo : outro ? c.texto2 : l.tipo === 'canal' ? c.texto : c.texto2,
+    sufixo: falhou && o.naoAchado ? ` (${o.naoAchado})` : outro && o.outroJogoTexto ? ` (${o.outroJogoTexto})` : '',
     // Um canal que não existe não tem barras por baixo: o nome pode usar a linha toda, e num telemóvel
     // o "não achado" já não comia o nome até "t…".
     ate: falhou ? Infinity : undefined,
@@ -1046,6 +1065,8 @@ function pintarGrade(ctx, { horas = [], dias = [], ordemMs = null }, { largura, 
  * `realcados` (Set de slugs) são os colegas de quem se escolheu, com uma
  * risca à esquerda; `falhados` (Set de slugs) são os canais que não existem
  * na Kick, com o nome a vermelho seguido de `naoAchado`.
+ * `outroJogo` (Set de slugs) são os canais que nesta noite só jogaram outro jogo: o nome a cinza,
+ * seguido de `outroJogoTexto`. As barras deles (`outros` de montarMapa) vão a cinza em qualquer faixa.
  *
  * Só toca no canvas com fillRect, fillText, beginPath, moveTo, lineTo,
  * stroke, save e restore (e as propriedades de cor, letra e alfa). Nada sai
@@ -1054,7 +1075,7 @@ function pintarGrade(ctx, { horas = [], dias = [], ordemMs = null }, { largura, 
 export function pintarMapa(ctx, mapa, {
   topo = 0, altura, largura, vista, agoraMs = null, marcas, cores, escolhido = null,
   semTime = 'Sem time', letra = LETRA, realcados = null, falhados = null, naoAchado = '', cursor = null,
-  grade = null,
+  grade = null, outroJogo = null, outroJogoTexto = '',
 } = {}) {
   if (!ctx || !(largura > 0) || !(altura > 0)) return;
   const t0 = Number.isFinite(topo) ? topo : 0;
@@ -1065,6 +1086,8 @@ export function pintarMapa(ctx, mapa, {
     realcados: realcados instanceof Set ? realcados : null,
     falhados: falhados instanceof Set ? falhados : null,
     naoAchado: typeof naoAchado === 'string' ? naoAchado : '',
+    outroJogo: outroJogo instanceof Set ? outroJogo : null,
+    outroJogoTexto: typeof outroJogoTexto === 'string' ? outroJogoTexto : '',
     lerMarcas: marcas ? leitor(marcas) : null,
   };
 

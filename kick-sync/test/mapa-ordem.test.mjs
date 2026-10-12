@@ -227,7 +227,7 @@ test('o arquivo do evento leva o nome, a data, a duração, a descrição, os ti
   assert.equal(volta.nome, 'Noite');
   assert.deepEqual(volta.times, j.times);
   assert.deepEqual(volta.soltos, ['solto1']);
-  assert.deepEqual(volta.info, { data: '2026-10-11', duracao: '3 dias', descricao: null });
+  assert.deepEqual(volta.info, { data: '2026-10-11', duracao: '3 dias', descricao: null, jogo: null });
 });
 
 test('um arquivo estragado, sem nome ou sem canais não é um evento; canais inválidos ficam de fora', () => {
@@ -239,11 +239,13 @@ test('um arquivo estragado, sem nome ou sem canais não é um evento; canais inv
   assert.deepEqual(e.times, [{ nome: 'T', canais: ['t1'] }]);
 });
 
-test('o ABISAL salvo no site tem os 144 canais e só os canais', () => {
+test('o ABISAL salvo no site tem os 144 canais, o jogo e só isso', () => {
   const j = JSON.parse(fs.readFileSync(new URL('../site/eventos/abisal.json', import.meta.url), 'utf8'));
   // O arquivo é público: nem notas, nem seguidores, nem nomes de Discord, nem campos a mais.
-  assert.deepEqual(Object.keys(j).sort(), ['canais', 'data', 'descricao', 'duracao', 'nome', 'times']);
+  assert.deepEqual(Object.keys(j).sort(), ['canais', 'data', 'descricao', 'duracao', 'jogo', 'nome', 'times']);
   assert.equal(j.nome, 'ABISAL');
+  // Rust: as lives de GTA RP de quem está na lista ficam de fora (ver jogo.js).
+  assert.equal(j.jogo, 'Rust');
   assert.deepEqual(j.times, []);
   assert.equal(j.canais.length, 144);
   assert.equal(new Set(j.canais).size, 144);

@@ -36,6 +36,9 @@ export async function kickFalsa(pagina, {
   // minuto `min` da noite, por cima das 3 por minuto de sempre. Sem isto, o primeiro canal tem um pico
   // de 40 no minuto 5, como sempre teve.
   chatPicos = null,
+  // O jogo de cada live, como a Kick o diz em categories[0].name: { slug: 'Rust' }, e '*' para os
+  // outros. Sem isto os VODs vêm sem categoria, como sempre vieram nestes testes.
+  categorias = null,
 } = {}) {
   const quantos = comSom ? SEGS_SOM.length : segmentos;
   // Cada noite começa 24 h depois da anterior.
@@ -94,6 +97,14 @@ export async function kickFalsa(pagina, {
         duration: quantos * 10000,
         source: `https://stream.kick.com/falsa/${slug}/n${i}/master.m3u8`,
         video: {},
+        ...(categorias && (categorias[slug] || categorias['*'])
+          ? { categories: [{
+            name: categorias[slug] || categorias['*'],
+            slug: String(categorias[slug] || categorias['*']).toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+            // O grupo da Kick: 1 são os jogos, 2 o "Just Chatting".
+            category_id: /^Just /.test(categorias[slug] || categorias['*']) ? 2 : 1,
+          }] }
+          : {}),
         }))),
     });
   });

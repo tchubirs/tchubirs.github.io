@@ -1400,10 +1400,15 @@ export function nomeDoArquivo(nome) {
 
 const textoOuNulo = (v) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, TEXTO_MAX) : null);
 
-/** O que vai para eventos/<nome>.json: o nome, a data, a duração, a descrição, os times e os canais sem time. */
-export function paraArquivo(elenco, { nome, data, duracao, descricao } = {}) {
+/**
+ * O que vai para eventos/<nome>.json: o nome, a data, a duração, a descrição, os times e os canais sem time.
+ * Com `jogo` ("Rust"), também ele: as lives de outro jogo ficam de fora (ver jogo.js).
+ */
+export function paraArquivo(elenco, { nome, data, duracao, descricao, jogo } = {}) {
   const e = normalizar(elenco);
+  const oJogo = textoOuNulo(jogo)?.slice(0, 80) ?? null;
   return {
+    ...(oJogo ? { jogo: oJogo } : {}),
     nome: textoOuNulo(nome),
     data: /^\d{4}-\d{2}-\d{2}$/.test(data ?? '') ? data : null,
     duracao: textoOuNulo(duracao),
@@ -1437,6 +1442,8 @@ export function deArquivo(j) {
       data: /^\d{4}-\d{2}-\d{2}$/.test(j.data ?? '') ? j.data : null,
       duracao: textoOuNulo(j.duracao),
       descricao: textoOuNulo(j.descricao),
+      // O jogo do evento: sem ele, nenhuma live fica de fora por ser de outro jogo.
+      jogo: textoOuNulo(j.jogo)?.slice(0, 80) ?? null,
     },
   };
 }
