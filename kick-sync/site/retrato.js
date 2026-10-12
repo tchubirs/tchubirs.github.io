@@ -55,7 +55,8 @@ export const DIVISAO_MAX = 0.85;
 // A webcam ocupa menos do que metade. Medido no 9:16 que ele mostrou: a caixa
 // da webcam ficava com cerca de um terço da altura, e o jogo com o resto.
 // Meio a meio dava uma webcam gigante que ele desfazia sempre à mão.
-export const DIVISAO_OMISSAO = 0.35;
+// 13/10: ele pediu a faixa de cima em 16:9, a forma da webcam: 1080 x 607,5 de 1920 = 81/256.
+export const DIVISAO_OMISSAO = 81 / 256;
 export const limparDivisao = (d) => preso(Number.isFinite(d) ? d : DIVISAO_OMISSAO, DIVISAO_MIN, DIVISAO_MAX);
 
 /** A proporção que o recorte `i` tem de ter, para encher o seu destino. */

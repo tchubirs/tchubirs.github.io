@@ -41,7 +41,7 @@ test('os quatro modelos põem a webcam no seu canto, num tamanho típico, e o jo
     }
   }
   // A cara em cima fica com 35 a 40% do 9:16.
-  assert.ok(DIVISAO_OMISSAO >= 0.35 && DIVISAO_OMISSAO <= 0.4);
+  assert.ok(Math.abs(proporcaoDoQuadro('dois', 0, DIVISAO_OMISSAO) - 16 / 9) < 0.01, 'a faixa de cima é 16:9');
   // Um modelo desconhecido cai no padrão, e não rebenta.
   assert.equal(limparModelo('lado'), 'baixoEsq');
   assert.deepEqual(enquadramentoInicial(1920, 1080, 'dois', DIVISAO_OMISSAO, 'lado'),
