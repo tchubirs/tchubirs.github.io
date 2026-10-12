@@ -1,0 +1,135 @@
+{
+"nota": "Recortes da faixa de cima de quadros verdadeiros (720p e 1080p), na posicao x,y do quadro inteiro. nome: o que se le na caixa vermelha, visto a olho.",
+"casos": [
+{
+"arquivo": "nitida-01-crreg.png",
+"largura": 1920,
+"altura": 1080,
+"x": 537,
+"y": 0,
+"vod": "crreg-131523077",
+"segundoDoVod": 15730,
+"nome": "yer"
+},
+{
+"arquivo": "nitida-02-crreg.png",
+"largura": 1920,
+"altura": 1080,
+"x": 537,
+"y": 0,
+"vod": "crreg-131523077",
+"segundoDoVod": 16293,
+"nome": "yer"
+},
+{
+"arquivo": "nitida-03-crreg.png",
+"largura": 1920,
+"altura": 1080,
+"x": 537,
+"y": 0,
+"vod": "crreg-131523077",
+"segundoDoVod": 7075,
+"nome": "bernard"
+},
+{
+"arquivo": "nitida-04-ispdep.png",
+"largura": 1920,
+"altura": 1080,
+"x": 537,
+"y": 0,
+"vod": "ispdep-131403267",
+"segundoDoVod": 9541.6,
+"nome": "rupert"
+},
+{
+"arquivo": "nitida-05-poionako.png",
+"largura": 1920,
+"altura": 1080,
+"x": 537,
+"y": 0,
+"vod": "poionako-131573519",
+"segundoDoVod": 10569.5,
+"nome": "chasidy"
+},
+{
+"arquivo": "nitida-06-poionako.png",
+"largura": 1920,
+"altura": 1080,
+"x": 537,
+"y": 0,
+"vod": "poionako-131573519",
+"segundoDoVod": 10867.5,
+"nome": "Trabuco"
+},
+{
+"arquivo": "nitida-07-xguiry.png",
+"largura": 1920,
+"altura": 1080,
+"x": 537,
+"y": 0,
+"vod": "xguiry-131495449",
+"segundoDoVod": 10500.4,
+"nome": "Torreta automática"
+},
+{
+"arquivo": "nitida-08-xguiry.png",
+"largura": 1920,
+"altura": 1080,
+"x": 537,
+"y": 0,
+"vod": "xguiry-131495449",
+"segundoDoVod": 4065,
+"nome": "Torreta automática"
+},
+{
+"arquivo": "nitida-09-xguiry.png",
+"largura": 1920,
+"altura": 1080,
+"x": 537,
+"y": 0,
+"vod": "xguiry-131495449",
+"segundoDoVod": 4136,
+"nome": "Torreta automática"
+},
+{
+"arquivo": "nitida-10-xguiry.png",
+"largura": 1280,
+"altura": 720,
+"x": 358,
+"y": 0,
+"vod": "xguiry-131495449",
+"segundoDoVod": 15841.2,
+"nome": "cyrus"
+},
+{
+"arquivo": "nitida-11-xguiry.png",
+"largura": 1280,
+"altura": 720,
+"x": 358,
+"y": 0,
+"vod": "xguiry-131495449",
+"segundoDoVod": 15841.7,
+"nome": "cyrus"
+},
+{
+"arquivo": "nitida-12-xguiry.png",
+"largura": 1280,
+"altura": 720,
+"x": 358,
+"y": 0,
+"vod": "xguiry-131495449",
+"segundoDoVod": 16562.7,
+"nome": "leona"
+},
+{
+"arquivo": "nitida-13-xguiry.png",
+"largura": 1280,
+"altura": 720,
+"x": 358,
+"y": 0,
+"vod": "xguiry-131495449",
+"segundoDoVod": 16563.7,
+"nome": "leona"
+}
+]
+}

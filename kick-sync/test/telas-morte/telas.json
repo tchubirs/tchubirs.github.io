@@ -1,0 +1,563 @@
+{
+"nota": "Cada caso e uma tira de 160x12 (as 12 linhas de cima de um quadro de 160x90), empilhadas pela ordem desta lista.",
+"casos": [
+{
+"fonte": "crreg-131523077-15440",
+"segundo": 291,
+"morte": true,
+"o_que": "tela de morte"
+},
+{
+"fonte": "crreg-131523077-15440",
+"segundo": 853,
+"morte": true,
+"o_que": "tela de morte"
+},
+{
+"fonte": "crreg-131523077-6610",
+"segundo": 465,
+"morte": true,
+"o_que": "tela de morte"
+},
+{
+"fonte": "ispdep-131403267-8948",
+"segundo": 608,
+"morte": true,
+"o_que": "tela de morte"
+},
+{
+"fonte": "poionako-131573519-10222",
+"segundo": 347,
+"morte": true,
+"o_que": "tela de morte"
+},
+{
+"fonte": "poionako-131573519-10222",
+"segundo": 644,
+"morte": true,
+"o_que": "tela de morte"
+},
+{
+"fonte": "skylane7-131434094-27569",
+"segundo": 41,
+"morte": true,
+"o_que": "tela de morte"
+},
+{
+"fonte": "skylane7-131434094-27569",
+"segundo": 217,
+"morte": true,
+"o_que": "tela de morte"
+},
+{
+"fonte": "skylane7-131434094-27569",
+"segundo": 633,
+"morte": true,
+"o_que": "tela de morte"
+},
+{
+"fonte": "xguiry-131495449-15593",
+"segundo": 247,
+"morte": true,
+"o_que": "tela de morte"
+},
+{
+"fonte": "xguiry-131495449-15593",
+"segundo": 970,
+"morte": true,
+"o_que": "tela de morte"
+},
+{
+"fonte": "xguiry-131495449-3895",
+"segundo": 169,
+"morte": true,
+"o_que": "tela de morte"
+},
+{
+"fonte": "xguiry-131495449-3895",
+"segundo": 189,
+"morte": true,
+"o_que": "tela de morte"
+},
+{
+"fonte": "xguiry-131495449-3895",
+"segundo": 241,
+"morte": true,
+"o_que": "tela de morte"
+},
+{
+"fonte": "xguiry-131495449-3895",
+"segundo": 588,
+"morte": true,
+"o_que": "tela de morte"
+},
+{
+"fonte": "xguiry-131495449-3895",
+"segundo": 1126,
+"morte": true,
+"o_que": "tela de morte"
+},
+{
+"fonte": "xguiry-131495449-9741",
+"segundo": 733,
+"morte": true,
+"o_que": "tela de morte"
+},
+{
+"fonte": "xguiry-131495449-9741",
+"segundo": 759,
+"morte": true,
+"o_que": "tela de morte"
+},
+{
+"fonte": "xguiry-131495449-9741",
+"segundo": 907,
+"morte": true,
+"o_que": "tela de morte"
+},
+{
+"fonte": "xguiry-131495449-9741",
+"segundo": 947,
+"morte": true,
+"o_que": "tela de morte"
+},
+{
+"fonte": "xguiry-131495449-9741",
+"segundo": 1009,
+"morte": true,
+"o_que": "tela de morte"
+},
+{
+"fonte": "xguiry-131495449-9741",
+"segundo": 1175,
+"morte": true,
+"o_que": "tela de morte"
+},
+{
+"fonte": "xguiry-131495449-15581-720p60",
+"segundo": 260,
+"morte": true,
+"o_que": "tela de morte"
+},
+{
+"fonte": "xguiry-131495449-15581-720p60",
+"segundo": 982,
+"morte": true,
+"o_que": "tela de morte"
+},
+{
+"fonte": "crreg-131523077-15440",
+"segundo": 172,
+"morte": false,
+"o_que": "luz de neon"
+},
+{
+"fonte": "crreg-131523077-15440",
+"segundo": 248,
+"morte": false,
+"o_que": "luz de neon"
+},
+{
+"fonte": "crreg-131523077-15440",
+"segundo": 5,
+"morte": false,
+"o_que": "inventario"
+},
+{
+"fonte": "crreg-131523077-6610",
+"segundo": 100,
+"morte": false,
+"o_que": "abatido"
+},
+{
+"fonte": "crreg-131523077-6610",
+"segundo": 878,
+"morte": false,
+"o_que": "jogo escuro"
+},
+{
+"fonte": "crreg-131523077-6610",
+"segundo": 1105,
+"morte": false,
+"o_que": "inventario"
+},
+{
+"fonte": "elwasabitm-131752855-11352",
+"segundo": 1185,
+"morte": false,
+"o_que": "jogo"
+},
+{
+"fonte": "ispdep-131403267-3574",
+"segundo": 221,
+"morte": false,
+"o_que": "inventario"
+},
+{
+"fonte": "poionako-131573519-10222",
+"segundo": 35,
+"morte": false,
+"o_que": "inventario"
+},
+{
+"fonte": "poionako-131573519-10222",
+"segundo": 605,
+"morte": false,
+"o_que": "jogo"
+},
+{
+"fonte": "poionako-131573519-10222",
+"segundo": 772,
+"morte": false,
+"o_que": "jogo escuro"
+},
+{
+"fonte": "poionako-131573519-10222",
+"segundo": 1038,
+"morte": false,
+"o_que": "luz vermelha"
+},
+{
+"fonte": "xguiry-131495449-15593",
+"segundo": 78,
+"morte": false,
+"o_que": "abatido"
+},
+{
+"fonte": "xguiry-131495449-15593",
+"segundo": 193,
+"morte": false,
+"o_que": "luz vermelha"
+},
+{
+"fonte": "xguiry-131495449-15593",
+"segundo": 313,
+"morte": false,
+"o_que": "inventario"
+},
+{
+"fonte": "xguiry-131495449-15593",
+"segundo": 745,
+"morte": false,
+"o_que": "luz vermelha"
+},
+{
+"fonte": "xguiry-131495449-3895",
+"segundo": 171,
+"morte": false,
+"o_que": "carregando"
+},
+{
+"fonte": "xguiry-131495449-3895",
+"segundo": 174,
+"morte": false,
+"o_que": "carregando"
+},
+{
+"fonte": "xguiry-131495449-9741",
+"segundo": 51,
+"morte": false,
+"o_que": "luz vermelha"
+},
+{
+"fonte": "xguiry-131495449-9741",
+"segundo": 222,
+"morte": false,
+"o_que": "luz vermelha"
+},
+{
+"fonte": "xguiry-131495449-9741",
+"segundo": 992,
+"morte": false,
+"o_que": "luz vermelha"
+},
+{
+"fonte": "xguiry-131495449-9741",
+"segundo": 1079,
+"morte": false,
+"o_que": "carregando"
+},
+{
+"fonte": "xguiry-131495449-9741",
+"segundo": 1096,
+"morte": false,
+"o_que": "mapa"
+},
+{
+"fonte": "xguiry-131495449-9741",
+"segundo": 483,
+"morte": false,
+"o_que": "abatido"
+},
+{
+"fonte": "xguiry-131495449-15581-720p60",
+"segundo": 120,
+"morte": false,
+"o_que": "luz vermelha"
+},
+{
+"fonte": "xguiry-131495449-15581-720p60",
+"segundo": 231,
+"morte": false,
+"o_que": "luz vermelha"
+},
+{
+"fonte": "xguiry-131495449-15581-720p60",
+"segundo": 276,
+"morte": false,
+"o_que": "luz vermelha"
+},
+{
+"fonte": "xguiry-131495449-15581-720p60",
+"segundo": 812,
+"morte": false,
+"o_que": "carregando"
+},
+{
+"fonte": "xguiry-131495449-15581-720p60",
+"segundo": 85,
+"morte": false,
+"o_que": "abatido"
+},
+{
+"fonte": "xguiry-131495449-15581-720p60",
+"segundo": 790,
+"morte": false,
+"o_que": "congelado no inventario"
+},
+{
+"fonte": "crreg-131523077-15440",
+"segundo": 699,
+"morte": false,
+"o_que": "sorteado"
+},
+{
+"fonte": "crreg-131523077-15440",
+"segundo": 344,
+"morte": false,
+"o_que": "sorteado"
+},
+{
+"fonte": "crreg-131523077-15440",
+"segundo": 875,
+"morte": false,
+"o_que": "sorteado"
+},
+{
+"fonte": "crreg-131523077-6610",
+"segundo": 98,
+"morte": false,
+"o_que": "sorteado"
+},
+{
+"fonte": "crreg-131523077-6610",
+"segundo": 148,
+"morte": false,
+"o_que": "sorteado"
+},
+{
+"fonte": "crreg-131523077-6610",
+"segundo": 1130,
+"morte": false,
+"o_que": "sorteado"
+},
+{
+"fonte": "elwasabitm-131752855-11352",
+"segundo": 192,
+"morte": false,
+"o_que": "sorteado"
+},
+{
+"fonte": "elwasabitm-131752855-11352",
+"segundo": 748,
+"morte": false,
+"o_que": "sorteado"
+},
+{
+"fonte": "elwasabitm-131752855-11352",
+"segundo": 1193,
+"morte": false,
+"o_que": "sorteado"
+},
+{
+"fonte": "ispdep-131403267-14320",
+"segundo": 118,
+"morte": false,
+"o_que": "sorteado"
+},
+{
+"fonte": "ispdep-131403267-14320",
+"segundo": 1039,
+"morte": false,
+"o_que": "sorteado"
+},
+{
+"fonte": "ispdep-131403267-14320",
+"segundo": 439,
+"morte": false,
+"o_que": "sorteado"
+},
+{
+"fonte": "ispdep-131403267-3574",
+"segundo": 76,
+"morte": false,
+"o_que": "sorteado"
+},
+{
+"fonte": "ispdep-131403267-3574",
+"segundo": 176,
+"morte": false,
+"o_que": "sorteado"
+},
+{
+"fonte": "ispdep-131403267-3574",
+"segundo": 888,
+"morte": false,
+"o_que": "sorteado"
+},
+{
+"fonte": "ispdep-131403267-8948",
+"segundo": 937,
+"morte": false,
+"o_que": "sorteado"
+},
+{
+"fonte": "ispdep-131403267-8948",
+"segundo": 143,
+"morte": false,
+"o_que": "sorteado"
+},
+{
+"fonte": "ispdep-131403267-8948",
+"segundo": 492,
+"morte": false,
+"o_que": "sorteado"
+},
+{
+"fonte": "poionako-131573519-10222",
+"segundo": 185,
+"morte": false,
+"o_que": "sorteado"
+},
+{
+"fonte": "poionako-131573519-10222",
+"segundo": 1191,
+"morte": false,
+"o_que": "sorteado"
+},
+{
+"fonte": "poionako-131573519-10222",
+"segundo": 932,
+"morte": false,
+"o_que": "sorteado"
+},
+{
+"fonte": "skylane7-131434094-11816",
+"segundo": 121,
+"morte": false,
+"o_que": "sorteado"
+},
+{
+"fonte": "skylane7-131434094-11816",
+"segundo": 1158,
+"morte": false,
+"o_que": "sorteado"
+},
+{
+"fonte": "skylane7-131434094-11816",
+"segundo": 253,
+"morte": false,
+"o_que": "sorteado"
+},
+{
+"fonte": "skylane7-131434094-27569",
+"segundo": 588,
+"morte": false,
+"o_que": "sorteado"
+},
+{
+"fonte": "skylane7-131434094-27569",
+"segundo": 257,
+"morte": false,
+"o_que": "sorteado"
+},
+{
+"fonte": "skylane7-131434094-27569",
+"segundo": 974,
+"morte": false,
+"o_que": "sorteado"
+},
+{
+"fonte": "xguiry-131495449-15593",
+"segundo": 101,
+"morte": false,
+"o_que": "sorteado"
+},
+{
+"fonte": "xguiry-131495449-15593",
+"segundo": 486,
+"morte": false,
+"o_que": "sorteado"
+},
+{
+"fonte": "xguiry-131495449-15593",
+"segundo": 95,
+"morte": false,
+"o_que": "sorteado"
+},
+{
+"fonte": "xguiry-131495449-3895",
+"segundo": 354,
+"morte": false,
+"o_que": "sorteado"
+},
+{
+"fonte": "xguiry-131495449-3895",
+"segundo": 706,
+"morte": false,
+"o_que": "sorteado"
+},
+{
+"fonte": "xguiry-131495449-3895",
+"segundo": 971,
+"morte": false,
+"o_que": "sorteado"
+},
+{
+"fonte": "xguiry-131495449-9741",
+"segundo": 295,
+"morte": false,
+"o_que": "sorteado"
+},
+{
+"fonte": "xguiry-131495449-9741",
+"segundo": 241,
+"morte": false,
+"o_que": "sorteado"
+},
+{
+"fonte": "xguiry-131495449-9741",
+"segundo": 631,
+"morte": false,
+"o_que": "sorteado"
+},
+{
+"fonte": "xguiry-131495449-15581-720p60",
+"segundo": 1212,
+"morte": false,
+"o_que": "sorteado"
+},
+{
+"fonte": "xguiry-131495449-15581-720p60",
+"segundo": 403,
+"morte": false,
+"o_que": "sorteado"
+},
+{
+"fonte": "xguiry-131495449-15581-720p60",
+"segundo": 211,
+"morte": false,
+"o_que": "sorteado"
+}
+]
+}
