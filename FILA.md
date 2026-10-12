@@ -587,3 +587,16 @@ pedra, árvore). Só vetores vão para o git; os WAV ficam fora.
 - Editor travado durante a gravação: aviso "Gravando o clipe: 23 s de 60" com Parar.
 - Parte que o TikTok tapa: escurecer em vez do tracejado, com "O TikTok tapa a parte escura".
 - Clipe de vários ângulos (angulos.js) no FPS da live, como os outros.
+
+## Povix, onde parou (13/10, fim da cota)
+- Feito hoje (tudo commitado, sem push): modo simples (player YouTube no cartão, Editar, grade no PC, ordem da
+  live, rolagem infinita, memória da lista, imagens nítidas); avançado enxuto (data no topo, ferramentas num menu,
+  idioma pela bandeira, zoom vertical, régua de segundos, faixas cortadas, arrastar players, dicas ao parar o
+  mouse, Recomeçar com confirmação, sem "noite"); filtro de alertas e modelo dos sons do Rust (a48eab5).
+- Pedido sem fazer: refazer o visual das faixas da linha do tempo (o dono acha estranho; pesquisar editores);
+  arrastar a linha do tempo sem travar (prévia 160p enquanto arrasta, buscar o vídeo ao soltar); "Achar webcam"
+  pela borda; aviso "Gravando o clipe" no editor; escurecer a parte que o TikTok tapa; título com o que aconteceu
+  e fala do clipe; filtro/busca com precisão em %; vários ângulos no FPS da live.
+- API do Claude: a chave está em ANTHROPIC_API_KEY (variável do usuário), mas não é de workspace; falta o ID
+  do workspace (ou uma chave criada dentro de um). Script pronto: scratchpad/povix-audio/rotular_claude.py.
+- O agente do som de acerto e do índice da live pode ter deixado trabalho; ver o último commit dele.
