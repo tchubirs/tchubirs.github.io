@@ -3,7 +3,7 @@
 
 /**
  * Levar o assistente ao passo final de Detectar lances, na faixa de `quem` (pelo nome; '*' é Todos) ou,
- * sem `quem`, pelo botão Detecção automática do transporte. `quanto` é 'tudo' ou 'trecho' (as alças
+ * sem `quem`, pelo botão Detectar lances, por baixo do transporte. `quanto` é 'tudo' ou 'trecho' (as alças
  * como estiverem). Não carrega no Detectar.
  */
 export async function passo4Detetar(p, { quem = null, quanto = 'tudo' } = {}) {

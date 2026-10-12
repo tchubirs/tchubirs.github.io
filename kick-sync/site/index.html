@@ -613,7 +613,7 @@
       </div>
     </div>
     <div class="trClipe">
-      <button id="clipar" class="principal"><svg class="ic" aria-hidden="true"><use href="#i-tesoura"/></svg><span data-t="clipe.botao">Clipar</span> <kbd>C</kbd></button>
+      <button id="clipar" class="principal"><svg class="ic" aria-hidden="true"><use href="#i-tesoura"/></svg><span data-t="clipe.botao">Criar clipe</span> <kbd>C</kbd></button>
     </div>
     <div class="trMarcas">
       <button id="marcarIn"><svg class="ic ic-p" aria-hidden="true"><use href="#i-entrada"/></svg><span data-t="marca.inicio">Marcar entrada</span> <kbd>I</kbd></button>
@@ -687,7 +687,7 @@
        e num ecra baixo fica por baixo de tudo, como sempre esteve. -->
   <!-- Montagem e Exportar em separadores, no mesmo painel (o dono, 10/10: tarefas com nomes claros, sem
        caixas espalhadas). A Montagem é a de sempre; o Exportar junta o trecho marcado, os arquivos prontos e o
-       ZIP. Marcar uma kill mostra a Montagem, e começar uma exportação mostra o Exportar (app.js). -->
+       ZIP. Marcar uma kill mostra a Montagem; um arquivo novo acende o separador Exportar (app.js). -->
   <div class="abasTrabalho" role="tablist" data-t-aria="abas.rotulo" aria-label="Montagem e exportação">
     <button id="abaMontagem" class="aba" type="button" role="tab" data-painel="montagem" aria-controls="montagem" aria-selected="true"><span data-t="montagem.titulo">Montagem</span><output id="contaMontagem" class="conta"></output></button>
     <button id="abaExportar" class="aba" type="button" role="tab" data-painel="exportar" aria-controls="exportacoes" aria-selected="false" tabindex="-1"><span data-t="exportar.titulo">Exportar</span><output id="contaExportar" class="conta"></output></button>
@@ -749,7 +749,7 @@
   <section id="exportacoes" class="exportacoes" role="tabpanel" aria-labelledby="abaExportar" hidden>
     <h2 data-t="exportar.titulo">Exportar</h2>
     <section id="corte">
-      <h2 data-t="corte.titulo">Cortar</h2>
+      <h2 data-t="corte.titulo">Trecho marcado</h2>
       <ul id="listaCorte" class="corte"></ul>
       <p id="comoCortar" class="nota"></p>
     </section>
@@ -813,7 +813,7 @@
             </div>
             <div id="passo1" class="acoesPasso acoesEscolha">
               <button id="escolherChat" type="button" class="grande" aria-describedby="escolherChatAjuda"><span class="rotulo" data-t="faixa.lerChat">Ler chat</span><span class="nota" id="escolherChatAjuda" data-t="faixa.lerChatAjuda">as mensagens e os picos do chat</span><span class="ultimaVez" data-t="faixa.ultimaVez" hidden>sua última escolha</span></button>
-              <button id="escolherDetetar" type="button" class="grande" aria-describedby="escolherDetetarAjuda"><span class="rotulo"><svg class="ic ic-p" aria-hidden="true"><use href="#i-mira"/></svg><span data-t="faixa.detetarLances">Detectar lances</span></span><span class="nota" id="escolherDetetarAjuda" data-t="faixa.detetarAjuda">tiros, PvP, explosões, gritos, palavras</span><span class="ultimaVez" data-t="faixa.ultimaVez" hidden>sua última escolha</span></button>
+              <button id="escolherDetetar" type="button" class="grande" aria-describedby="escolherDetetarAjuda"><span class="rotulo"><svg class="ic ic-p" aria-hidden="true"><use href="#i-mira"/></svg><span data-t="faixa.detetarLances">Detectar lances</span></span><span class="nota" id="escolherDetetarAjuda" data-t="faixa.detetarAjuda">tiros, PvP, explosões, gritos, palavras</span><b class="etiqueta" data-t="auto.teste">experimental</b><span class="ultimaVez" data-t="faixa.ultimaVez" hidden>sua última escolha</span></button>
             </div>
             <div id="passo2" class="acoesPasso acoesEscolha" hidden>
               <button id="escolherTrecho" type="button" class="grande" aria-describedby="escolherTrechoAjuda"><span class="rotulo" data-t="faixa.umTrecho">Um trecho</span><span class="nota" id="escolherTrechoAjuda" data-t="faixa.umTrechoAjuda">escolha o começo e o fim na faixa</span><span class="ultimaVez" data-t="faixa.ultimaVez" hidden>sua última escolha</span></button>
@@ -837,6 +837,7 @@
                 <button id="lerChatTrecho" type="button" class="principal"><span data-t="faixa.ler">Ler</span></button>
               </div>
               <div id="passo4Detetar" class="passo4Detetar">
+                <p class="nota avisoExperimental" data-t="filtros.confira">Experimental: confira cada lance achado antes de exportar.</p>
                 <fieldset id="filtrosLista" class="filtrosLista" aria-describedby="filtrosExplica">
                   <legend data-t="filtros.legenda">O que procurar</legend>
                   <p class="nota" id="filtrosExplica" data-t="filtros.explica">Marque o que a detecção deve procurar. Cada filtro marcado entra no resultado.</p>
@@ -1058,9 +1059,9 @@
 <!-- Criar clipe: uma janela por cima, com a barra de corte e um limite de
      180 s. E o caminho para "quero um so, agora" — a montagem e para depois. -->
 <div id="modalClipe" class="modal" hidden>
-  <div class="modalCaixa" role="dialog" aria-modal="true" data-t-aria="clipe.titulo" aria-label="Criar clipe">
+  <div class="modalCaixa" role="dialog" aria-modal="true" data-t-aria="clipe.titulo" aria-label="Ajustar clipe">
     <div class="modalTopo">
-      <b data-t="clipe.titulo">Criar clipe</b>
+      <b data-t="clipe.titulo">Ajustar clipe</b>
       <select id="canalClipe" data-t-aria="clipe.angulo" aria-label="ângulo"></select>
       <button id="fecharClipe" data-t-titulo="clipe.fechar" title="fechar"><svg class="ic" aria-hidden="true"><use href="#i-fechar"/></svg></button>
     </div>

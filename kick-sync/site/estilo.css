@@ -1514,10 +1514,10 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
      ficava por baixo do ecrã. No fim continuam sempre à vista: a lista é que
      encolhe, nunca eles. */
   body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .linha:has(#marcarKill) { order: 0; }
-  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .linha:has(#baixarMontagem) { order: 1; }
-  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .barraSelecao { order: 5; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .linha:has(#baixarMontagem) { order: 8; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .barraSelecao { order: 2; }
   body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .momentos {
-    order: 4; flex: 1 1 auto; min-height: 60px; overflow-y: auto; padding-right: var(--e2);
+    order: 3; flex: 1 1 auto; min-height: 60px; overflow-y: auto; padding-right: var(--e2);
     /* Uma coluna: numa faixa de 500 px, duas colunas de kills com dezassete
        nomes cada não se leem. */
     grid-template-columns: 1fr; gap: var(--e2);
@@ -1943,7 +1943,7 @@ body:not(:has(#fila > li)) #limparFila { display: none; }
 .chatLinhas b { color: var(--tinta); font-weight: 600; }
 .chatLinhas .hora { color: var(--tinta-3); font-family: var(--letra-mono); font-size: var(--t-micro); }
 @media (min-width: 1080px) and (min-height: 640px) {
-  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .chatVideo { order: 6; flex: 1 1 0; min-height: 120px; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .chatVideo { order: 4; flex: 1 1 0; min-height: 120px; }
   body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .chatVideo .chatLinhas { flex: 1 1 auto; max-height: none; }
 }
 .chatTitulo { margin: 0; font-size: var(--t-menor); font-weight: 600; color: var(--tinta-2); }
@@ -2368,3 +2368,206 @@ body.mesa.naEntrada .exemploLinha {
   body.mesa.naEntrada .exemploLinha { flex-direction: column; align-items: flex-start; }
   .exemploLinha .exemplo { margin-left: calc(var(--e3) * -1); min-height: 44px; }
 }
+
+/* ═══ 15, a área de trabalho por tarefas ════════════════════════════════════
+   O dono (10/10): "separar as tarefas com nomes claros: Rever, Encontrar lances, Montagem, Ajustar clipe,
+   Exportar", tudo como um só ambiente de editor e não caixas soltas pela página. Só na mesa (body.mesa):
+   a folha é partilhada com a página da Twitch, que não tem nada disto.
+
+   - Por baixo do transporte, as ferramentas por tarefa, cada grupo com o nome à frente: Rever
+     (sincronizar pelo som), Encontrar lances (ler chat, detectar, com a etiqueta experimental). O
+     Recomeçar, que apaga, fica no fim e calado.
+   - À direita, os ângulos com título e procura, e por baixo um painel com dois separadores, Montagem e
+     Exportar. Os separadores são a cabeça do painel, presos a ele: uma peça só, e não duas caixas.
+   - Um botão cheio por área: Criar clipe no transporte, Exportar montagem na Montagem, o ZIP no Exportar. */
+
+/* ── o rótulo de cada grupo ─────────────────────────────────────────────── */
+body.mesa .rotuloGrupo {
+  display: inline-flex; align-items: center; margin: 0; white-space: nowrap;
+  font-size: var(--t-micro); font-weight: 600; letter-spacing: .02em; color: var(--tinta-3);
+}
+body.mesa .palcoFundo { gap: var(--e3) var(--e5); align-items: center; }
+body.mesa .palcoFundo .grupoFerramenta { display: flex; align-items: center; flex-wrap: wrap; gap: var(--e2) var(--e3); min-width: 0; }
+body.mesa .palcoFundo button { min-height: 32px; font-size: var(--t-menor); padding: 0 var(--e4); }
+/* Um fio vertical entre os grupos: a mesma linha, duas tarefas. */
+body.mesa .palcoFundo > #automatico { padding-left: var(--e5) !important; border-left: 1px solid var(--linha) !important; border-radius: 0 !important; }
+body.mesa .palcoFundo > .sincronizar[hidden], body.mesa .palcoFundo > .sincronizar:has(> #alinhar[hidden]):has(> #estadoAlinhar:empty) + #automatico { padding-left: 0 !important; border-left: 0 !important; }
+body.mesa #automatico h2 { display: inline-flex; font-size: var(--t-micro); }
+body.mesa #automatico > .linha { order: 0; gap: var(--e3); flex-wrap: nowrap; }
+body.mesa #automatico .etiqueta { white-space: nowrap; }
+/* A etiqueta experimental é aviso e não alarme: o âmbar do aviso, sem caixa cheia. */
+body.mesa .etiqueta { background: transparent; border: 1px solid color-mix(in srgb, var(--aviso) 45%, transparent); line-height: 16px; padding: 0 6px; }
+body.mesa .palcoFundo > .recomecarLinha { margin-left: auto; }
+body.mesa #recomecar { color: var(--tinta-3); }
+body.mesa #recomecar:hover:not(:disabled) { color: var(--perigo); background: var(--perigo-eco); }
+
+/* ── os ângulos: título, ordem e procura ────────────────────────────────── */
+body.mesa .barraGrelha .tituloPainel {
+  display: inline-flex; align-items: baseline; gap: var(--e2); margin: 0 auto 0 0;
+  font-size: var(--t-base); font-weight: 600; color: var(--tinta);
+}
+body.mesa .conta {
+  font: 500 var(--t-micro)/1 var(--letra-mono); font-variant-numeric: tabular-nums; color: var(--tinta-3);
+}
+body.mesa .conta:empty { display: none; }
+body.mesa .barraGrelha { gap: var(--e2) var(--e3); }
+body.mesa .barraGrelha #quantosNaGrelha { margin-left: 0; flex: 1 0 100%; }
+body.mesa .barraGrelha #quantosNaGrelha:empty { display: none; }
+body.mesa .procuraGrelha { flex: 1 1 140px; }
+
+/* ── Montagem e Exportar: um painel com dois separadores ────────────────── */
+body.mesa .abasTrabalho {
+  display: flex; align-items: stretch; gap: var(--e1); padding: var(--e2) var(--e2) 0;
+  background: var(--sup-1); border: 1px solid var(--linha); border-bottom: 0;
+  border-radius: var(--r-3) var(--r-3) 0 0;
+}
+body.mesa .aba {
+  flex: 1 1 0; min-height: 36px; gap: var(--e3); padding: 0 var(--e4);
+  background: transparent; border: 1px solid transparent; border-bottom: 0;
+  border-radius: var(--r-2) var(--r-2) 0 0; color: var(--tinta-2); font-weight: 500;
+}
+body.mesa .aba:hover:not(:disabled) { background: var(--sup-3); border-color: transparent; color: var(--tinta); }
+/* O separador aberto é da cor do painel e não tem fio por baixo: o painel continua por ele. */
+body.mesa .aba[aria-selected="true"], body.mesa .aba[aria-selected="true"]:hover {
+  background: var(--sup-2); border-color: var(--linha); color: var(--tinta); font-weight: 600;
+  box-shadow: inset 0 2px 0 var(--acento); margin-bottom: -1px;
+}
+body.mesa .aba .conta {
+  min-width: 20px; padding: 3px 5px; border-radius: var(--r-redondo); background: var(--sup-3); color: var(--tinta-2); text-align: center;
+}
+body.mesa .aba[aria-selected="true"] .conta { background: var(--acento-eco); color: var(--acento); }
+body.mesa #montagem, body.mesa #exportacoes {
+  background: var(--sup-2); border: 1px solid var(--linha); border-radius: 0 0 var(--r-3) var(--r-3);
+  padding: var(--e4); margin: 0; min-width: 0;
+}
+body.mesa #montagem[hidden], body.mesa #exportacoes[hidden] { display: none; }
+/* O nome do painel é o separador. O título fica só para quem lê a página em voz alta. */
+body.mesa #montagem > h2, body.mesa #exportacoes > h2 {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; margin: 0;
+}
+body.mesa #exportacoes { display: flex; flex-direction: column; gap: var(--e3); }
+body.mesa #exportacoes > * { flex: 0 0 auto; margin: 0; }
+/* O trecho marcado, por ângulo, entra no painel sem caixa própria: um subtítulo e a lista. */
+body.mesa #exportacoes #corte { background: none; border: 0; border-radius: 0; padding: 0 0 var(--e3); border-bottom: 1px solid var(--linha); }
+body.mesa #exportacoes #corte > h2 { font-size: var(--t-menor); color: var(--tinta-2); margin: 0 0 var(--e3); }
+body.mesa #exportacoes .corte { margin: 0; }
+body.mesa .filaVazia { color: var(--tinta-3); padding: var(--e3) 0; }
+body.mesa .filaVazia[hidden] { display: none; }
+body.mesa #exportacoes .fila { margin: 0; }
+body.mesa #exportacoes .fila li { background: var(--sup-1); }
+body.mesa #exportacoes .filaFim { justify-content: space-between; }
+body.mesa #exportacoes .filaFim:not(:has(#limparFila:not([style*="none"]))):has(#memoria:empty) { display: none; }
+body.mesa #exportacoes #zip:empty { display: none; }
+/* O ZIP é o botão cheio do Exportar: é o que se carrega para levar tudo de uma vez. */
+body.mesa #exportacoes .botaoZip {
+  background: var(--acento); color: var(--sobre-acento); border-color: transparent; font-weight: 600; min-height: 36px;
+}
+body.mesa #exportacoes .botaoZip:hover { background: var(--acento-alto); border-color: transparent; }
+/* Exportar montagem é o botão cheio da Montagem. */
+body.mesa #baixarMontagem:not(:disabled) {
+  background: var(--acento); color: var(--sobre-acento); border-color: transparent; font-weight: 600;
+}
+body.mesa #baixarMontagem:hover:not(:disabled) { background: var(--acento-alto); }
+
+/* No ecrã de PC com o vídeo aberto, o painel rola por dentro como a montagem rolava: os separadores
+   ficam presos em cima, e é a lista de kills (ou a de arquivos) que rola. */
+@media (min-width: 1080px) and (min-height: 640px) {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .abasTrabalho { flex: 0 0 auto; margin-bottom: calc(var(--e3) * -1); }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem { border-radius: 0 0 var(--r-3) var(--r-3); }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #exportacoes {
+    flex: 1 1 0; min-height: 140px; overflow-y: auto; padding: var(--e3) var(--e4);
+  }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .palcoFundo { max-height: none; overflow: visible; }
+}
+/* No telemóvel e nos ecrãs baixos o painel vem depois dos ângulos, pela mesma ordem do PC. */
+@media (max-width: 1079.98px) {
+  body.mesa .abasTrabalho, body.mesa #exportacoes { order: 6; }
+  body.mesa #montagem, body.mesa #exportacoes { margin-top: calc(var(--e4) * -1); }
+}
+body.mesa .barraGrelha.soUm > :not(.tituloPainel) { display: none; }
+/* Estreito: cada grupo numa linha, o nome por cima dos botões, e um fio por cima em vez do de lado. */
+@media (max-width: 759.98px) {
+  body.mesa .palcoFundo { display: grid; gap: var(--e3); align-items: start; }
+  body.mesa .palcoFundo > * { min-width: 0; }
+  body.mesa .palcoFundo .grupoFerramenta .rotuloGrupo { flex: 1 0 100%; }
+  body.mesa .palcoFundo > #automatico { padding: var(--e3) 0 0 !important; border-left: 0 !important; border-top: 1px solid var(--linha) !important; }
+  body.mesa .palcoFundo > .recomecarLinha { margin: 0; justify-content: flex-end; }
+}
+
+/* ── a Montagem por dentro ─────────────────────────────────────────────────
+   De cima para baixo: marcar e margens, a seleção, a lista de kills (que é o que rola), o chat, e no fim,
+   preso ao fundo do painel, o Exportar montagem. O botão que termina a tarefa fica sempre à vista. */
+body.mesa #montagem > .linha:has(#marcarKill) { order: 0; }
+body.mesa #montagem > .barraSelecao { order: 2; }
+body.mesa #montagem > .momentos { order: 3; }
+body.mesa #montagem > .chatVideo { order: 4; }
+body.mesa #montagem > .linha:has(#baixarMontagem),
+body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .linha:has(#baixarMontagem) {
+  order: 8; position: sticky; bottom: calc(var(--e3) * -1); z-index: 2;
+  margin: 0 calc(var(--e4) * -1) calc(var(--e3) * -1); padding: var(--e3) var(--e4);
+  background: var(--sup-2); border-top: 1px solid var(--linha);
+}
+body.mesa #montagem.semKills > .linha:has(#baixarMontagem):has(#estadoMontagem:empty) { display: none; }
+body.mesa #montagem.semKills > .linha:has(#baixarMontagem) { position: static; border-top: 0; }
+body.mesa #montagem > .linha:has(#baixarMontagem) > #estadoMontagem { flex: 1 1 100%; order: 3; }
+body.mesa #montagem > .linha:has(#baixarMontagem) > #baixarMontagem { min-height: 34px; padding: 0 var(--e4); font-size: var(--t-base); }
+body.mesa #formatoMontagem { min-height: 34px; }
+
+/* Cada kill: na primeira linha o que ela é (número, hora, quem, quanto dura); na segunda o que se faz
+   com ela, com o Remover encostado à direita; por baixo, quem morreu. */
+body.mesa .momentos li { gap: 6px var(--e2); }
+body.mesa .momentos li > * { order: 1; }
+body.mesa .momentos li::before { content: ''; order: 2; flex: 1 0 100%; height: 0; }
+body.mesa .momentos li > button { order: 3; }
+body.mesa .momentos li > .fora { order: 4; margin-left: auto; }
+body.mesa .momentos li:has(> .vitimas)::after { content: ''; order: 5; flex: 1 0 100%; height: 0; border-top: 1px dashed var(--linha); }
+body.mesa .momentos li > .vitimas { order: 6; flex: 1 1 auto; min-width: 0; border-top: 0; padding-top: 0; }
+body.mesa .momentos li > .verMortes { order: 7; margin-left: auto; }
+body.mesa .momentos li > .olhar { order: 8; }
+body.mesa .momentos li > .quantos { margin-left: auto; }
+body.mesa .momentos li > .quem { margin-right: var(--e2); }
+body.mesa .momentos li.nota::before { display: none; }
+body.mesa .momentos li .ver { color: var(--tinta-2); }
+
+/* A seleção é ferramenta de apoio: sem caixa, numa linha só por cima da lista. */
+body.mesa #montagem > .barraSelecao { gap: var(--e1) var(--e2); }
+body.mesa #montagem > .barraSelecao :is(#selecionarTudo, #selecionarNada, #anularApagar),
+body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .barraSelecao :is(#selecionarTudo, #selecionarNada, #anularApagar) {
+  background: transparent; border-color: transparent; color: var(--tinta-2); padding: 0 var(--e3);
+}
+body.mesa #montagem > .barraSelecao :is(#selecionarTudo, #selecionarNada, #anularApagar):hover:not(:disabled) { background: var(--sup-3); color: var(--tinta); }
+body.mesa #montagem > .barraSelecao label > span:first-child {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+/* Preso ao fundo só onde o painel rola por dentro (o PC). No telemóvel quem rola é a página, e o botão
+   fica no fim da lista, na ordem de leitura. */
+@media (max-width: 1079.98px), (max-height: 639.98px) {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .linha:has(#baixarMontagem) { position: static; margin: 0; padding: var(--e3) 0 0; }
+  body.mesa #montagem > .barraSelecao select { width: auto; min-width: 0; }
+}
+body.mesa #montagem > .barraSelecao select { max-width: 10em; }
+body.mesa #montagem > .barraSelecao label { flex: 0 1 auto; }
+/* Os nomes dos ângulos um pouco mais baixos no PC: cabem mais filas no mesmo espaço, e o nome lê-se igual. */
+@media (min-width: 1080px) and (min-height: 640px) {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #palco.muitosAngulos #grade .tile { height: 32px; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #palco.muitosAngulos #grade .tile .fora button { min-height: 28px; }
+}
+/* Cada arquivo pronto em duas linhas curtas: o nome (cortado com reticências, o inteiro está no link) e
+   por baixo o tamanho e de quem é; Editar e apagar à direita, à altura das duas. */
+body.mesa #exportacoes .fila li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 2px var(--e2); padding: 6px var(--e3); }
+body.mesa #exportacoes .fila li > :is(a, b) { grid-column: 1; grid-row: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.mesa #exportacoes .fila li > .nota { grid-column: 1; grid-row: 2; font-size: var(--t-micro); }
+body.mesa #exportacoes .fila li > .editarUm { grid-column: 2; grid-row: 1 / span 2; }
+body.mesa #exportacoes .fila li > .apagarUm { grid-column: 3; grid-row: 1 / span 2; width: 28px; min-width: 28px; padding: 0; background: transparent; border-color: transparent; color: var(--tinta-3); }
+body.mesa #exportacoes .fila li > .apagarUm:hover { color: var(--perigo); background: var(--perigo-eco); }
+/* Ajustar clipe aberto de uma kill: o botão cheio é Salvar ajustes (a tarefa é acertar e voltar à
+   montagem), e o Exportar 16:9 fica com o peso dos outros exportar. Um botão cheio por área. */
+body.mesa #modalClipe .linha.fim:has(#guardarAjustes:not([hidden])) #guardarClipe:not(:hover) {
+  background: var(--sup-3); color: var(--tinta); border-color: var(--linha-2); font-weight: 500;
+}
+body.mesa #modalClipe .linha.fim:has(#guardarAjustes:not([hidden])) #guardarClipe:hover:not(:disabled) {
+  background: var(--sup-4); color: var(--tinta); border-color: var(--linha-3);
+}
+body.mesa .avisoExperimental { color: var(--aviso); margin: 0; }
+/* Arquivos novos enquanto a Montagem está aberta: a conta do Exportar fica na cor da ação até ele ser aberto. */
+body.mesa .aba.novidade .conta { background: var(--acento); color: var(--sobre-acento); }

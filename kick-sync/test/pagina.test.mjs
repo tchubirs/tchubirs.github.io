@@ -818,6 +818,8 @@ test('da para limpar a lista e recomecar, e a memoria e mesmo devolvida',
     // entra na conta da memoria, mas segura os mesmos bytes enquanto existir.
     const urls = await p.evaluate(() => [...document.querySelectorAll('#fila a, #zip a')].map((a) => a.href));
     assert.equal(urls.length, 3, 'os dois clipes e o ZIP');
+    // O Limpar vive no separador Exportar, com os arquivos.
+    await p.click('#abaExportar');
     await p.click('#limparFila');
     assert.equal(await p.locator('#fila a').count(), 0);
     assert.equal(await p.locator('#memoria').innerText(), '');
@@ -1161,6 +1163,8 @@ test('a montagem sai num ZIP so, e o unzip do sistema aceita-o',
     }
 
     await p.click('#baixarMontagem');
+    // O ZIP é o botão do separador Exportar.
+    await p.click('#abaExportar');
     await p.waitForSelector('#zip a', { timeout: 40000 });
     assert.equal(await p.locator('#fila a').count(), 4, 'quatro clipes na lista, um a um');
 
@@ -1187,6 +1191,7 @@ test('a montagem sai num ZIP so, e o unzip do sistema aceita-o',
 
     // "Limpar a lista" solta os enderecos; deixar la o botao do ZIP dava um
     // link que parecia bom e descarregava nada.
+    await p.click('#abaExportar');
     await p.click('#limparFila');
     assert.equal(await p.locator('#zip a').count(), 0);
     assert.deepEqual(erros, []);
@@ -1391,6 +1396,54 @@ test('antes de baixar, a linha do corte diz quanto o arquivo sai de verdade',
     await p.waitForSelector('#corte:not([hidden])', { timeout: 10000 });
     const dur = await p.locator('#listaCorte li[data-slug] .dur').first().innerText();
     assert.match(dur, /^0:03, o arquivo sai com 0:\d\d \(\d+ s antes e \d+ s depois do marcado/);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+// A área de trabalho por tarefas (o dono, 10/10): Montagem e Exportar são dois separadores do mesmo
+// painel. Marcar uma kill mostra a Montagem; um arquivo pronto não tira ninguém da Montagem, só acende
+// o separador Exportar com a conta; as setas andam entre os dois; e os nomes dizem o resultado.
+test('Montagem e Exportar: separadores que seguem a tarefa, com conta e teclado',
+  { skip: !podeCorrer && 'sem navegador' }, async () => {
+    const { p, erros } = await abrir({ ecra: { width: 1440, height: 900 } });
+    await kickFalsa(p, { canais: ['tchubi', 'vitima1'] });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#canais', 'tchubi\nvitima1');
+    await p.click('#carregar');
+    await p.waitForSelector('.tile', { timeout: 15000 });
+
+    assert.equal(await p.locator('#abaMontagem').getAttribute('aria-selected'), 'true');
+    assert.equal(await p.locator('#exportacoes').isVisible(), false);
+    assert.equal(await p.locator('#clipar span').first().innerText(), 'Criar clipe');
+    assert.equal(await p.locator('#procurarKills span').innerText(), 'Detectar lances');
+
+    // Abrir o Exportar vazio diz o que vai aparecer lá; marcar uma kill volta à Montagem, com a conta.
+    await p.click('#abaExportar');
+    assert.equal(await p.locator('#montagem').isVisible(), false);
+    assert.equal(await p.locator('#filaVazia').isVisible(), true);
+    await p.click('#mais1m');
+    await p.keyboard.press('m');
+    await p.waitForFunction(() => document.querySelectorAll('#listaMomentos li[data-ms]').length === 1, null, { timeout: 10000 });
+    assert.equal(await p.locator('#abaMontagem').getAttribute('aria-selected'), 'true');
+    assert.equal(await p.locator('#contaMontagem').innerText(), '1');
+    assert.equal(await p.locator('#listaMomentos .cliparUma').innerText(), 'Ajustar clipe');
+
+    // Exportar a kill: a Montagem continua aberta, e o separador Exportar acende com a conta.
+    await p.click('#baixarMontagem');
+    await p.waitForFunction(() => document.querySelectorAll('#fila a').length >= 1, null, { timeout: 30000 });
+    assert.equal(await p.locator('#montagem').isVisible(), true);
+    assert.match(await p.locator('#abaExportar').getAttribute('class'), /novidade/);
+    assert.ok(Number(await p.locator('#contaExportar').innerText()) >= 1);
+
+    // As setas andam entre os separadores, e abrir o Exportar apaga o aceso.
+    await p.focus('#abaMontagem');
+    await p.keyboard.press('ArrowRight');
+    assert.equal(await p.evaluate(() => document.activeElement.id), 'abaExportar');
+    assert.equal(await p.locator('#exportacoes').isVisible(), true);
+    assert.doesNotMatch(await p.locator('#abaExportar').getAttribute('class'), /novidade/);
+    assert.equal(await p.locator('#filaVazia').isVisible(), false);
+    await p.keyboard.press('ArrowLeft');
+    assert.equal(await p.locator('#montagem').isVisible(), true);
     assert.deepEqual(erros, []);
     await p.close();
   });

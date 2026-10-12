@@ -359,7 +359,7 @@ test('conflito: diz de quem é a tecla e pergunta; Trocar troca, Cancelar não m
   await p.keyboard.press('k');
   await p.waitForSelector('#conflitoAtalho:not([hidden])');
   assert.equal(await p.locator('#conflitoTexto').innerText(), 'K já é usada em Pausar e continuar.');
-  assert.equal(await p.locator('#conflitoDepois').innerText(), 'Se trocar, Abrir o clipe fica com ela e Pausar e continuar passa a usar Espaço ou C.');
+  assert.equal(await p.locator('#conflitoDepois').innerText(), 'Se trocar, Criar clipe fica com ela e Pausar e continuar passa a usar Espaço ou C.');
   assert.equal(await p.evaluate(() => document.activeElement.id), 'trocarAtalho', 'o foco não foi para a decisão');
   // Cancelar: nada mudou.
   await p.click('#cancelarAtalho');
@@ -379,7 +379,7 @@ test('conflito: diz de quem é a tecla e pergunta; Trocar troca, Cancelar não m
   await p.click('#trocarAtalho');
   assert.equal(await teclasDe(p, 'clipar'), 'K');
   assert.equal(await teclasDe(p, 'pausa'), 'Espaço ou C');
-  assert.match(await p.locator('#estadoAtalhos').innerText(), /K agora é de Abrir o clipe/);
+  assert.match(await p.locator('#estadoAtalhos').innerText(), /K agora é de Criar clipe/);
   await p.keyboard.press('Escape');
   await p.waitForSelector('#modalAjuda', { state: 'hidden' });
   // O K abre o clipe, e o C pausa.

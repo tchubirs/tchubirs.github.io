@@ -130,7 +130,7 @@ test('uma detecção que não acha nada deixa o botão pronto para outro trecho'
   // O `estado.cancelar` único deu lugar a um por trabalho (a busca é `varredura`), e o botão
   // não fica cinzento a correr: passa a ser o Parar dela e volta ao rótulo no fim.
   assert.equal(await p.evaluate(() => window.__estado.varredura), null);
-  assert.equal(await p.locator('#procurarKills span').innerText(), 'Detecção automática');
+  assert.equal(await p.locator('#procurarKills span').innerText(), 'Detectar lances');
   assert.deepEqual(erros, []);
   await p.close();
 });

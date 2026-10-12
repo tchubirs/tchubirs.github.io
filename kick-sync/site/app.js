@@ -1745,7 +1745,11 @@ function aplicarFoco() {
 function pintarOrdemDaGrelha() {
   const barra = $('barraGrelha');
   const tiles = [...$('grade').querySelectorAll('.tile')];
-  barra.hidden = tiles.length < 2;
+  // O título (com quantos ângulos há) aparece logo com um ângulo na grelha; a ordem e a procura só com
+  // dois ou mais, que é quando há o que ordenar ou procurar.
+  barra.hidden = tiles.length < 1;
+  barra.classList.toggle('soUm', tiles.length < 2);
+  $('contaAngulos').textContent = String(estado.linhas.length);
   // O foco TAMBÉM é uma grelha. Um quadrado que sobe da grelha para o foco
   // levava consigo o `order` que tinha lá em baixo, e com dois em foco isso
   // trocava-os um pelo outro — o principal deixava de ser o da esquerda.
@@ -6064,8 +6068,8 @@ $('limparFila').onclick = limparFila;
 
 // ── Montagem e Exportar, dois separadores no mesmo painel ─────────────────────
 // O dono (10/10): as tarefas com nomes claros, e um painel que não seja uma pilha de caixas. A troca é
-// sozinha quando a tarefa muda: marcar uma kill mostra a Montagem, e uma exportação que começa (ou um
-// trecho marcado com entrada e saída) mostra o Exportar, onde o arquivo vai aparecer.
+// sozinha quando a tarefa muda: marcar uma kill mostra a Montagem, e um trecho marcado com entrada e
+// saída mostra o Exportar, onde ele se exporta por ângulo. Um arquivo pronto só acende o separador.
 function mostrarPainel(nome, { focar = false } = {}) {
   if (!PAINEIS[nome]) return;
   for (const [chave, [aba, painel]] of Object.entries(PAINEIS)) {
@@ -6073,6 +6077,7 @@ function mostrarPainel(nome, { focar = false } = {}) {
     $(aba).setAttribute('aria-selected', String(sim));
     $(aba).tabIndex = sim ? 0 : -1;
     $(painel).hidden = !sim;
+    if (sim) $(aba).classList.remove('novidade');
   }
   if (focar) $(PAINEIS[nome][0]).focus();
 }
@@ -6095,7 +6100,11 @@ function pintarContaExportar() {
   $('filaVazia').hidden = n > 0 || !$('corte').hidden;
 }
 new MutationObserver((mudancas) => {
-  if (mudancas.some((m) => [...m.addedNodes].some((no) => no.nodeName === 'LI'))) mostrarPainel('exportar');
+  // Um arquivo novo não tira a pessoa da Montagem (ela pode estar a exportar kill a kill): o separador
+  // Exportar acende, com a conta, até ser aberto.
+  if ($('exportacoes').hidden && mudancas.some((m) => [...m.addedNodes].some((no) => no.nodeName === 'LI'))) {
+    $('abaExportar').classList.add('novidade');
+  }
   pintarContaExportar();
 }).observe($('fila'), { childList: true });
 new MutationObserver(() => {
@@ -6541,6 +6550,9 @@ const FAZER = {
   correrTras: () => comecarArrasto(-1),
   correrFrente: () => comecarArrasto(1),
   lanceAnterior: () => irAoLance(-1),
+  // O M marca mesmo com o separador Exportar aberto (o botão está escondido, na Montagem); a kill nova
+  // abre a Montagem.
+  marcarKill: () => marcarKill(),
   lanceSeguinte: () => irAoLance(1),
   // O F de full screen, como no YouTube e na Twitch: o vídeo em foco, pelo mesmo botão do canto (que
   // também sai, se já está em tela cheia).
