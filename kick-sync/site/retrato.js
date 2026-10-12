@@ -286,7 +286,78 @@ export const FORMATOS = [
 ];
 
 export const BITS_VIDEO = 12_000_000;
-export const BITS_SOM = 128_000;
+// 192 kbps em vez de 128: é o que o TikTok e o YouTube recomendam para AAC estéreo, e custa 8 KB/s a
+// mais (cerca de 120 KB num clipe de 15 s). O codec não mudou, só o débito.
+export const BITS_SOM = 192_000;
+
+// ── a cadência (fps) ─────────────────────────────────────────────────────────
+
+/** Quando a playlist não diz a cadência: o que o código fazia antes de a ler. */
+export const FPS_OMISSAO = 30;
+/** Acima disto não se grava: o ecrã e o `setInterval` do browser não dão mais, e o ficheiro engordava à toa. */
+export const FPS_MAX = 60;
+
+/**
+ * A cadência em que gravar, a partir da que a playlist da Kick anuncia (`FRAME-RATE`).
+ * A Kick publica 60 ou 30, mas há fontes com 59.94 ou 29.97: arredondam-se ao inteiro, que é o que
+ * `captureStream` e o intervalo de pintura aceitam bem. Sem número que sirva, 30.
+ */
+export function fpsDaFonte(fps) {
+  const n = Number(fps);
+  if (!Number.isFinite(n) || n < 10) return FPS_OMISSAO;
+  return Math.min(FPS_MAX, Math.round(n));
+}
+
+/**
+ * O débito de vídeo para essa cadência. 12 Mbps até 30 fps; a 60 sobe a 18 Mbps (x1,5) e, no meio, é
+ * proporcional (50 fps dá 16). Não é o dobro: frames vizinhos parecem-se, e o codec gasta menos por
+ * frame; a recomendação do YouTube para 1080p é 8 Mbps a 30 fps e 12 Mbps a 60, a mesma razão de 1,5.
+ * Arredondado a 100 kbps.
+ */
+export function bitsDoVideo(fps) {
+  const f = fpsDaFonte(fps);
+  if (f <= 30) return BITS_VIDEO;
+  return Math.round((BITS_VIDEO * (1 + (0.5 * (f - 30)) / 30)) / 100_000) * 100_000;
+}
+
+/** Perdendo mais do que isto dos frames, o clipe vai a engasgar e quem exportou tem de saber. */
+export const PERDA_MAX = 0.05;
+
+/**
+ * Quanto da cadência se perdeu na gravação.
+ * `desenhados`: quantas vezes a tela foi pintada; `esperados`: quantas deviam ter sido (a duração
+ * gravada vezes os fps). Não se usa o `droppedVideoFrames` do vídeo: num `<video>` fora do ecrã o
+ * Chrome conta quase todos como deitados fora (medido: 255 de 256), e daria alarme falso.
+ * Com menos de dez frames esperados não há amostra para dizer nada.
+ * Devolve `{ perdaPct, engasgou }`; a perda é em percentagem, com uma casa.
+ */
+export function perdaDeFrames(desenhados, esperados) {
+  if (!(esperados >= 10)) return { perdaPct: 0, engasgou: false };
+  const falhou = Math.max(0, esperados - Math.max(0, desenhados));
+  const perda = Math.min(1, falhou / esperados);
+  return { perdaPct: Math.round(perda * 1000) / 10, engasgou: perda > PERDA_MAX };
+}
+
+// ── as zonas do TikTok ───────────────────────────────────────────────────────
+
+/**
+ * O que a interface do TikTok tapa num 9:16, em fracção do ecrã. VALORES APROXIMADOS: vêm dos guias
+ * públicos de zona segura para vídeo de 1080x1920 (o do TikTok e os dos criadores), que dão cerca de
+ * 130 px no topo, 340 a 480 px em baixo (legenda, música e nome) e 120 a 140 px à direita (a coluna de
+ * gostar, comentar e partilhar). Não os conferi na fonte oficial, e o TikTok muda a interface; por
+ * isso são três números num só sítio. Os Reels e os Shorts tapam parecido.
+ *   cima 9%  (173 px)   baixo 20% (384 px)   direita 13% (140 px)
+ * O chat, a legenda e o guia da prévia leem daqui.
+ */
+export const ZONA_TIKTOK = Object.freeze({ cima: 0.09, baixo: 0.2, direita: 0.13 });
+
+/** A zona que fica livre numa tela de `alvo`, em pixels: `{ x, y, largura, altura, direita, fundo }`. */
+export function zonaSegura(alvo = RETRATO, zona = ZONA_TIKTOK) {
+  const topo = Math.round(alvo.altura * zona.cima);
+  const fundo = alvo.altura - Math.round(alvo.altura * zona.baixo);
+  const direita = alvo.largura - Math.round(alvo.largura * zona.direita);
+  return { x: 0, y: topo, largura: direita, altura: fundo - topo, direita, fundo };
+}
 
 /** O que o browser DIZ que sabe gravar. */
 export function melhorFormato(MR = globalThis.MediaRecorder) {
@@ -470,6 +541,8 @@ export async function gravar(video, {
   criarTela = () => document.createElement('canvas'),
   MR = globalThis.MediaRecorder,
   pagina = globalThis.document,
+  // A cadência da fonte (a da playlist da Kick). Sem ela, 30.
+  fps: fpsPedido,
 } = {}) {
   if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
   const tipo = formato || await formatoQueFunciona({ MR, criarTela });
@@ -486,7 +559,14 @@ export async function gravar(video, {
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
 
-  const fluxo = tela.captureStream(30);
+  const fps = fpsDaFonte(fpsPedido);
+  // Um frame por pincelada, pedido à mão (`requestFrame`), quando o browser sabe. Com `captureStream(fps)`
+  // o Chrome atira fora o frame que chega antes de passar 1/fps desde o anterior, e o relógio de pintar
+  // nunca é perfeito: medido, 240 pinceladas a 60 fps davam 184 a 229 frames no ficheiro. Com `0` só
+  // sai frame quando se pede, e cada pincelada é um. Sem `requestFrame` (Safari mais velho), o `fps`.
+  const manual = typeof globalThis.CanvasCaptureMediaStreamTrack?.prototype?.requestFrame === 'function';
+  const fluxo = tela.captureStream(manual ? 0 : fps);
+  const faixaVideo = manual ? fluxo.getVideoTracks?.()[0] : null;
   // O som vem do vídeo, quando o browser o deixa sair. Sem isto o retrato sai
   // mudo, e um clipe de Rust mudo não vale nada — o tiro É o clipe.
   let somDoVideo = null;
@@ -503,7 +583,7 @@ export async function gravar(video, {
   };
 
   const gravador = new MR(fluxo, {
-    mimeType: tipo, videoBitsPerSecond: BITS_VIDEO, audioBitsPerSecond: BITS_SOM,
+    mimeType: tipo, videoBitsPerSecond: bitsDoVideo(fps), audioBitsPerSecond: BITS_SOM,
   });
   const pedacos = [];
   gravador.ondataavailable = (e) => { if (e.data?.size) pedacos.push(e.data); };
@@ -520,12 +600,16 @@ export async function gravar(video, {
   // frente, e um sinal que já disparou não volta a disparar para ninguém.
   if (sinal?.aborted) { soltarFaixas(); throw new DOMException('cancelado', 'AbortError'); }
   const inicio = video.currentTime;
+  // A conta dos frames: quantas vezes a tela foi pintada, contra quantas a duração gravada pedia.
+  let desenhados = 0;
+  let maiorFeitoS = 0;
   const pincelar = () => {
     // O instante lido ANTES de pintar: é o do frame que vai para a tela.
     const feitoS = Math.max(0, video.currentTime - inicio);
     if (modo === 'inteiro') desenharInteiro(ctx, video, alvo);
     else desenhar(ctx, video, rects, modo, divisao);
     porCima?.(ctx, feitoS);
+    faixaVideo?.requestFrame?.();
   };
   let parar = false;
   let pincel = null;
@@ -549,7 +633,7 @@ export async function gravar(video, {
   let ultimoS = inicio;
   // Quanto ficou gravado, quando o vídeo do canal acaba antes do clipe.
   let gravadoS = null;
-  const PARADO_MAX = 90;                    // 3 s a 30 pinceladas por segundo
+  const PARADO_MAX = Math.round(3 * fps);   // 3 s de pinceladas
   // Um relógio próprio, e não o ritmo a que o vídeo entrega frames.
   //
   // A primeira versão pintava dentro do `requestVideoFrameCallback`, que é a
@@ -563,8 +647,10 @@ export async function gravar(video, {
   const pintar = () => {
     if (parar) return;
     pincelar();
+    desenhados++;
     const agora = video.currentTime;
     const feito = Math.max(0, agora - inicio);
+    maiorFeitoS = Math.max(maiorFeitoS, feito);
     // O vídeo do canal acabou antes do fim do clipe: a live caiu e voltou
     // noutro VOD, ou acabou mesmo. O que ficou gravado até aqui é bom, e
     // fica; quem chamou é que diz que saiu mais curto. Sem isto, o vídeo
@@ -619,9 +705,23 @@ export async function gravar(video, {
   // separador pode esconder-se e voltar durante o `await video.play()` do
   // início, e os dois sítios que arrancam o pincel deixavam um a correr sem
   // ninguém o parar.
+  //
+  // O relógio acorda mais vezes do que os frames pedidos (a cada oitavo de período) e só pinta quando é
+  // a vez. Um `setInterval(pintar, 1000 / 60)` seco rende bem menos de 60: no Windows os temporizadores
+  // acordam de 15,6 em 15,6 ms e arredondam o 16,7 ms para cima (medido em Node: 36 pinceladas esperadas,
+  // 26 feitas). Com a vez marcada à parte, a média fica nos fps pedidos mesmo com o relógio grosso.
+  const periodo = 1000 / fps;
   const arrancarPincel = () => {
     clearInterval(pincel);
-    pincel = setInterval(pintar, 1000 / 30);
+    let proxima = performance.now() + periodo;
+    pincel = setInterval(() => {
+      const agora = performance.now();
+      // Uns 4% de folga: acordar um nadinha antes da vez conta, senão o relógio grosso perde-a.
+      if (agora < proxima - periodo * 0.04) return;
+      // Atrasada mais de meio período? Não acumula dívida: a pintura que falhou já se contou como perda.
+      proxima = Math.max(proxima + periodo, agora - periodo * 0.5);
+      pintar();
+    }, Math.max(1, periodo / 8));
   };
   const aoMudarDeVista = () => {
     if (parar) return;
@@ -678,8 +778,12 @@ export async function gravar(video, {
   if (!blob.size) throw Object.assign(new Error('não saiu nada'), { name: 'GRAVACAO-VAZIA' });
   // `gravadoS` só vem quando saiu MAIS CURTO do que se pediu: é o número que
   // quem chamou tem de dizer, e não esconder atrás de um "pronto".
+  // Frames esperados: o que ficou gravado (a duração pedida, ou o que o vídeo deu) vezes a cadência.
+  const esperados = Math.round(Math.min(maiorFeitoS, duracaoS) * fps);
+  const { perdaPct, engasgou } = perdaDeFrames(desenhados, esperados);
   return {
     blob, tipo, extensao: extensaoDe(tipo), ...(gravadoS != null ? { gravadoS } : {}),
+    fps, desenhados, esperados, perdaPct, engasgou,
   };
 }
 

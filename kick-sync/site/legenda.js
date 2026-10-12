@@ -12,6 +12,7 @@
 // de gerar a legenda não desalinha nada.
 
 import { geometria as geometriaDoChat, limparChat, LETRA } from './chat-clipe.js';
+import { ZONA_TIKTOK } from './retrato.js';
 
 export const ESTILOS = ['destaque', 'palavra', 'simples'];
 export const TAMANHOS = ['p', 'm', 'g'];
@@ -473,9 +474,12 @@ export function geometriaLegenda(alvo, legenda, { formato = '16:9', modo = 'um',
   // O nome em cima da fala (nos estilos grandes) ocupa mais meia linha.
   const altoBloco = linhas * alturaLinha + (l.nome && l.estilo !== 'simples' ? Math.round(alturaLinha * 0.6) : 0);
   const margem = Math.round((vertical ? 40 : 32) * escala);
-  const largura = Math.round(W * (vertical ? 0.86 : 0.7));
+  // No 9:16 a largura é a da zona livre da TikTok, igual dos dois lados do meio para a legenda ficar
+  // centrada: sem a coluna de botões da direita (e o mesmo espaço à esquerda).
+  const largura = Math.round(W * (vertical ? 1 - 2 * ZONA_TIKTOK.direita : 0.7));
   const base = { fonte, alturaLinha, linhas, largura };
-  const fundo = vertical ? Math.round(H * 0.74) : H - Math.round(H * 0.07);
+  // Em baixo, uns 6% acima do fim da zona livre, onde a TikTok põe a legenda dela.
+  const fundo = vertical ? Math.round(H * (1 - ZONA_TIKTOK.baixo - 0.06)) : H - Math.round(H * 0.07);
   const topo = vertical ? Math.round(H * 0.14) : Math.round(H * 0.08);
   const em = (pos) => {
     if (pos === 'cima') return { ...base, x: W / 2, y: topo, ancora: 'cima' };
@@ -510,7 +514,7 @@ export function geometriaLegenda(alvo, legenda, { formato = '16:9', modo = 'um',
   const acima = { ...desejada, y: Math.round(caixa.y - margem) };
   if (acima.y - altoBloco >= topo) return acima;
   const abaixo = { ...desejada, y: Math.round(caixa.y + caixa.altura + margem), ancora: 'cima' };
-  if (abaixo.y + altoBloco <= Math.round(H * 0.8)) return abaixo;
+  if (abaixo.y + altoBloco <= Math.round(H * (1 - ZONA_TIKTOK.baixo))) return abaixo;
   return em('meio');
 }
 

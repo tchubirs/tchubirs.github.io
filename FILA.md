@@ -516,3 +516,18 @@ partida. O risco que só dado real resolve: o mesmo C4 também toca o mesmo clip
 parecer entre si quase tanto quanto um jingle; a barreira é o achatamento (ruído contra tom).
 Para fechar: com o ok, baixar 20 min de cada um dos 6 canais do Abisal, descodificar para f32 e rodar a sonda; ou o
 dono grava no servidor dele cada arma e explosivo em várias distâncias, que serve de treino limpo do modelo positivo.
+
+## Qualidade da exportação dos clipes (12/10)
+- Feito (`retrato.js`, `chat-clipe.js`, `legenda.js`, `app.js`, `estilo.css`, `index.html`, `idiomas.js`):
+  - A gravação do 9:16 e do 16:9 com chat ou legenda usa os fps da playlist da Kick (`FRAME-RATE`, 59.94 vira 60,
+    sem número vira 30, teto 60). Débito do vídeo 12 Mbps até 30 fps e 18 Mbps a 60 (razão 1,5, a mesma que o
+    YouTube recomenda para 1080p).
+  - Cada pincelada pede o frame à mão (`requestFrame`) e o relógio marca a vez de cada uma. Medido no Chrome com
+    fonte sintética de 60 fps: 240 frames em 4 s no arquivo, com AAC. `captureStream(60)` seco dava 184 a 229.
+  - Se a gravação perde mais de 5% dos frames, aparece o aviso "o PC não deu conta" (nas 3 línguas) junto ao arquivo.
+  - Áudio de 128 para 192 kbps; lista de codecs igual (AAC no mp4 continua).
+  - Zonas do TikTok no 9:16 (topo 9%, rodapé 20%, direita 13%, valores aproximados, não conferidos na fonte
+    oficial): chat e legenda ficam dentro; a prévia do "Ajustar clipe" 9:16 mostra um tracejado fino.
+  - Cópia sem recodificar ("tela cheia") não mexe: os bytes da Kick já têm a cadência da live.
+- Falta: o clipe de vários ângulos (`angulos.js`) ainda grava a 30 fps; exportar um clipe real pela tela (a aba do
+  navegador de teste estava escondida e o Povix pausa a gravação nesse caso).

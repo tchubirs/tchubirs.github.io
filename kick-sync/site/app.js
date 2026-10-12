@@ -4413,12 +4413,13 @@ async function baixarMontagem(soEsta = null, { guardar = false } = {}) {
       const rotulo = `${i + 1}/${plano.length}: ${clipe.prefixo} ${clipe.canal}, 9:16`;
       $('estadoMontagem').textContent = rotulo;
       try {
-        const { blob: b2, tipo: t2, gravadoS } = await renderizarGravado(linha, clipe, {
+        const gravado2 = await renderizarGravado(linha, clipe, {
           sinal: controlo.signal,
           aoProgresso: ({ emPausa }) => {
             $('estadoMontagem').textContent = emPausa ? t('retrato.emPausa') : rotulo;
           },
         });
+        const { blob: b2, tipo: t2, gravadoS } = gravado2;
         const nome2 = `${nome.replace(/\.[a-z0-9]+$/i, '')}-retrato.${extensaoDe(t2)}`;
         const bytes2 = new Uint8Array(await b2.arrayBuffer());
         if (umSo) {
@@ -4427,7 +4428,8 @@ async function baixarMontagem(soEsta = null, { guardar = false } = {}) {
           return null;
         }
         paraZip.push({ nome: nome2, blob: b2, crc: crc32(bytes2), tamanho: bytes2.length });
-        const curto = notaDoRetratoCurto(gravadoS, (clipe.ateMs - clipe.deMs) / 1000);
+        const curto = [notaDoRetratoCurto(gravadoS, (clipe.ateMs - clipe.deMs) / 1000), notaDoEngasgo(gravado2)]
+          .filter(Boolean).join(', ');
         linhaDeFicheiro(item2, {
           nome: nome2,
           url: guardarFicheiro(b2),
@@ -4477,8 +4479,9 @@ async function baixarMontagem(soEsta = null, { guardar = false } = {}) {
         paraZip.push({ nome, blob, crc: crc32(bytes), tamanho: bytes.length });
         prontos++;
         const totalS = (clipe.ateMs - clipe.deMs) / 1000;
-        const curto = gravadoS >= 0 && gravadoS < totalS - 0.5
-          ? t('chatClipe.curto', { feito: gravadoS.toFixed(1), total: totalS.toFixed(1) }) : '';
+        const curto = [gravadoS >= 0 && gravadoS < totalS - 0.5
+          ? t('chatClipe.curto', { feito: gravadoS.toFixed(1), total: totalS.toFixed(1) }) : '', notaDoEngasgo(gravado)]
+          .filter(Boolean).join(', ');
         linhaDeFicheiro(item, {
           nome,
           url: guardarFicheiro(blob),
@@ -4814,6 +4817,11 @@ function motivoDoRetrato(e) {
  * linha do ficheiro: um vertical de 4 s com cara de pronto era a mesma
  * mentira do 16:9 cortado pela reconexão.
  */
+/** Se a gravação perdeu mais de 5% dos frames (o PC não deu conta), a frase que avisa; senão vazio. */
+function notaDoEngasgo(r) {
+  return r?.engasgou ? t('retrato.engasgou', { perda: String(Math.round(r.perdaPct)) }) : '';
+}
+
 function notaDoRetratoCurto(gravadoS, totalS) {
   if (!(gravadoS >= 0) || gravadoS >= totalS - 0.5) return '';
   return t('retrato.curto', { feito: gravadoS.toFixed(1), total: totalS.toFixed(1) });
@@ -4894,7 +4902,7 @@ async function abrirVideoEscondido(linha, quandoMs, { sinal } = {}) {
     fechar();
     throw e;
   }
-  return { v, fechar };
+  return { v, fechar, fps: alvo.fps };
 }
 
 async function renderizarGravado(linha, clipe, { deitado = false, sinal, aoProgresso } = {}) {
@@ -4911,7 +4919,7 @@ async function renderizarGravado(linha, clipe, { deitado = false, sinal, aoProgr
       // Sem chat lido, o clipe sai na mesma com o que houver.
     }
   }
-  const { v, fechar } = await abrirVideoEscondido(linha, clipe.deMs, { sinal });
+  const { v, fechar, fps } = await abrirVideoEscondido(linha, clipe.deMs, { sinal });
   try {
     // Som: de mudo sai uma faixa silenciosa. Volume a zero para não se ouvir
     // a gravação na sala — a mesma conta do `guardarRetrato`.
@@ -4940,6 +4948,7 @@ async function renderizarGravado(linha, clipe, { deitado = false, sinal, aoProgr
       }),
       duracaoS: (clipe.ateMs - clipe.deMs) / 1000,
       formato,
+      fps,
       sinal,
       aoProgresso,
     });
@@ -6169,7 +6178,8 @@ async function guardarRetrato({ deitado = false, simples = null } = {}) {
     v.muted = false;
     v.volume = 0;
     const alvo = deitado ? DEITADO : RETRATO;
-    const { blob, tipo, gravadoS } = await gravar(v, {
+    const gravacao = await gravar(v, {
+      fps: c.fonteFps,
       // Uma cópia: o gravador lê os recortes a cada frame, e um arrasto que
       // escapasse à tranca mexia no ficheiro a meio.
       rects: c.rects.map((r) => ({ ...r })),
@@ -6193,16 +6203,19 @@ async function guardarRetrato({ deitado = false, simples = null } = {}) {
             : t('retrato.aGravar', { feito: feito.toFixed(1), total: total.toFixed(1) });
       },
     });
+    const { blob, tipo, gravadoS } = gravacao;
     const base = nomeDoClipe({ titulo: $('tituloClipe').value, canal: c.canal, quandoMs: c.deMs });
     const nome = simples?.nome ? simples.nome(extensaoDe(tipo))
       : `${base.replace(/\.[a-z0-9]+$/i, '')}${deitado ? '' : '-retrato'}.${extensaoDe(tipo)}`;
     const url = guardarFicheiro(blob);
     const item = document.createElement('li');
     $('fila').prepend(item);
-    const curto = deitado
+    const curtoSo = deitado
       ? (gravadoS >= 0 && gravadoS < duracaoS - 0.5
         ? t('chatClipe.curto', { feito: gravadoS.toFixed(1), total: duracaoS.toFixed(1) }) : '')
       : notaDoRetratoCurto(gravadoS, duracaoS);
+    // O aviso do engasgo entra junto: o PC não deu conta de todos os frames e o clipe pode ficar com falhas.
+    const curto = [curtoSo, notaDoEngasgo(gravacao)].filter(Boolean).join(' ');
     linhaDeFicheiro(item, {
       nome, url,
       nota: `${(blob.size / 1048576).toFixed(1)} MB, ${alvo.largura}x${alvo.altura}`
@@ -7023,6 +7036,8 @@ function preverClipe(quandoMs, { fino = false } = {}) {
   // O tamanho vem do manifesto e não do vídeo: é o mesmo número, e chega
   // meia noite mais cedo. Sem isto o editor do 9:16 esperava por bytes.
   if (alvo.largura > 0 && alvo.altura > 0) { c.fonteW = alvo.largura; c.fonteH = alvo.altura; }
+  // A cadência também vem do manifesto: é com ela que o 9:16 e o 16:9 gravados saem.
+  c.fonteFps = alvo.fps;
   if (c.url !== alvo.url) {
     c.hls?.destroy();
     c.url = alvo.url;

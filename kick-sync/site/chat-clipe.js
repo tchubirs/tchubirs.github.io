@@ -11,6 +11,8 @@
 // de cada canal anda no relógio da noite mais o ajuste dele (o nudge), e por isso o instante a pedir
 // aqui é o da noite (o início do clipe mais o que já se gravou), e não o do vídeo.
 
+import { ZONA_TIKTOK } from './retrato.js';
+
 /** Quanto tempo uma mensagem fica no ecrã, e quanto desse tempo leva a sumir. */
 export const VIDA_MS = 10_000;
 export const SUMIR_MS = 800;
@@ -198,7 +200,8 @@ export const LETRA = '"IBM Plex Sans", system-ui, sans-serif';
  * Onde fica o chat numa tela de `alvo` (a do ficheiro), e com que letra.
  *
  * `formato` é '16:9' ou '9:16'. No 9:16 há duas zonas que a TikTok, os Reels e os Shorts tapam com
- * os botões e a legenda (o fundo e o topo), e o chat fica fora delas. Em automático: num 16:9 em
+ * os botões e a legenda (o fundo e o topo) e a coluna de botões (a direita), e o chat fica fora delas
+ * (os números estão em `ZONA_TIKTOK`, em retrato.js). Em automático: num 16:9 em
  * baixo à esquerda, onde as sobreposições de chat costumam estar; num 9:16 de dois quadros logo
  * abaixo da divisória, na faixa de cima do jogo, que é céu ou chão e não a mira; num 9:16 de um
  * quadro, em baixo à esquerda, por cima da zona da legenda.
@@ -214,7 +217,9 @@ export function geometria(alvo, chat, { formato = '16:9', modo = 'um', divisao =
   const escala = vertical ? W / 1080 : H / 1080;
   const fonte = Math.round(CORPO[c.tamanho] * escala * (vertical ? 1.25 : 1));
   const margem = Math.round((vertical ? 40 : 32) * escala);
-  const largura = Math.min(Math.round(fonte * (vertical ? 16 : 17)), W - 2 * margem);
+  // A beira direita até onde o chat pode ir: no 9:16, a de dentro da coluna de botões da TikTok.
+  const limiteDir = vertical ? W - Math.round(W * ZONA_TIKTOK.direita) : W - margem;
+  const largura = Math.min(Math.round(fonte * (vertical ? 16 : 17)), limiteDir - margem);
   const base = { largura, fonte, alturaLinha: Math.round(fonte * 1.3), folga: Math.round(fonte * 0.3) };
   let pos = c.posicao;
   if (pos === 'auto' && vertical && modo === 'dois') {
@@ -223,9 +228,9 @@ export function geometria(alvo, chat, { formato = '16:9', modo = 'um', divisao =
   }
   if (pos === 'auto') pos = 'baixoEsq';
   const lado = pos.endsWith('Dir') ? 'dir' : 'esq';
-  const x = lado === 'dir' ? W - margem - largura : margem;
-  const topo = vertical ? Math.round(H * 0.09) : margem;
-  const fundo = vertical ? Math.round(H * 0.8) : H - margem;
+  const x = lado === 'dir' ? limiteDir - largura : margem;
+  const topo = vertical ? Math.round(H * ZONA_TIKTOK.cima) : margem;
+  const fundo = vertical ? Math.round(H * (1 - ZONA_TIKTOK.baixo)) : H - margem;
   if (pos.startsWith('baixo')) return { ...base, x, y: fundo, ancora: 'baixo', lado };
   if (pos.startsWith('cima')) return { ...base, x, y: topo, ancora: 'cima', lado };
   return { ...base, x, y: Math.round(H / 2), ancora: 'meio', lado };

@@ -1138,6 +1138,13 @@ body.mesa #palco.muitosAngulos #grade .tile .numAngulo { border-color: var(--lin
 .puxar.se { bottom: -9px; right: -9px; cursor: nwse-resize; }
 
 .molduraRetrato { position: relative; line-height: 0; }
+/* O guia da zona livre do TikTok na prévia 9:16. Os três números são os de ZONA_TIKTOK em retrato.js
+   (cima 9%, baixo 20%, direita 13%): um teste confere que são os mesmos. Só se vê, não vai no ficheiro. */
+.zonaTikTok {
+  position: absolute; top: 9%; bottom: 20%; left: 0; right: 13%; z-index: 1; pointer-events: none;
+  border: 1px dashed color-mix(in srgb, var(--tinta) 60%, transparent); border-left: 0;
+  box-shadow: 0 0 0 1px #0006;
+}
 .telaRetrato {
   width: auto; height: 34vh; max-height: 34vh; display: block;
   background: var(--video-fundo); border: 1px solid var(--linha); border-radius: var(--r-2);
