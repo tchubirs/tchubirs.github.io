@@ -601,3 +601,4 @@ pedra, árvore). Só vetores vão para o git; os WAV ficam fora.
   do workspace (ou uma chave criada dentro de um). Script pronto: scratchpad/povix-audio/rotular_claude.py.
 - O agente do som de acerto e do índice da live pode ter deixado trabalho; ver o último commit dele.
 - Pedido 13/10: na kill da montagem, um campo para digitar o nome de quem morreu (além dos botões "Quem morreu?"), para pegar a POV de quem matou. É o que mais vai servir.
+- Pedido 13/10: no editor Ajustar clipe, todos os atalhos têm de funcionar (espaço pausa e retoma, A e D andam 3 s); hoje não funcionam com a janela aberta.
