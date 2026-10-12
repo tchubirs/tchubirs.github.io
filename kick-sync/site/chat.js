@@ -30,6 +30,14 @@ const API = 'https://kick.com/api/v2';
 // uma página CHEIA de mensagens já vistas, que é um cursor que não andou.
 const PAGINA = 25;
 
+/** Esperar, acordando ao cancelar. */
+function dormirChat(ms, sinal) {
+  return new Promise((ok) => {
+    const t = setTimeout(ok, ms);
+    sinal?.addEventListener('abort', () => { clearTimeout(t); ok(); }, { once: true });
+  });
+}
+
 /** O mesmo erro que o resto da página usa para "o utilizador desistiu". */
 function cancelado() {
   return new DOMException('cancelado', 'AbortError');
@@ -115,6 +123,13 @@ export async function idDoCanal(slug, { buscar = fetch, sinal } = {}) {
  */
 export async function mensagensEntre(id, deMs, ateMs, {
   buscar = fetch, maxPedidos = 400, sinal, aoProgredir = () => {},
+  // O teste real de 12/10: às vezes a Kick responde sem o cabeçalho de permissão (CORS), o browser vê
+  // isso como "sem rede", e a leitura parava ali. Uma página que falha (rede, 429, 5xx) volta a ser
+  // pedida, com espera a dobrar, antes de desistir.
+  tentativas = 3, esperaMs = 1000, esperar = (ms, s) => dormirChat(ms, s),
+  // Cancelar devolve o que já veio (com `motivo: 'cancelado'`) em vez de atirar: um trecho longo lê-se
+  // de uma vez, e o Parar a meio tem de guardar as páginas que já chegaram.
+  devolverAoCancelar = false,
 } = {}) {
   const recolhidas = [];
   // TODAS as que já passaram, dentro e fora da janela. As páginas da Kick
@@ -132,128 +147,150 @@ export async function mensagensEntre(id, deMs, ateMs, {
     return Object.assign(lista, { incompleto: motivo !== null, motivo, pedidos });
   };
 
-  if (id === null || id === undefined || id === '') {
-    motivo = 'sem-canal';
-    return entregar();
-  }
-  // Uma ponta que não é número (uma data que não se leu, ou Infinity por
-  // "até agora") não é uma janela calada: nada foi perguntado à Kick, e uma
-  // lista vazia "completa" jurava que o canal não disse nada.
-  if (!Number.isFinite(deMs) || !Number.isFinite(ateMs)) {
-    motivo = 'janela-invalida';
-    return entregar();
-  }
-  // Uma janela vazia ou invertida não tem mensagens, e isso não é uma falha.
-  if (ateMs <= deMs) return entregar();
-
-  // Microssegundos inteiros: é a unidade do cursor da própria Kick. Cabe num
-  // número normal sem perder nada (2^53 µs são uns 285 anos).
-  let cursor = Math.floor(ateMs) * 1000;
-  let chegouMs = ateMs;
-  // Um travão que não é número não pode virar "sem travão": NaN parava logo,
-  // e diz-se porquê, em vez de deixar um canal enorme andar sem fim.
-  const travao = Math.max(0, Math.floor(Number(maxPedidos)) || 0);
-
-  for (;;) {
-    if (sinal?.aborted) throw cancelado();
-    if (pedidos >= travao) { motivo = 'max-pedidos'; break; }
-    pedidos++;
-
-    let r;
-    try {
-      r = await buscar(`${API}/channels/${encodeURIComponent(id)}/messages?cursor=${cursor}`, { signal: sinal });
-    } catch (e) {
-      if (e?.name === 'AbortError' || sinal?.aborted) throw cancelado();
-      motivo = 'sem-rede';
-      break;
+  try {
+    return await percorrer();
+  } catch (e) {
+    if (e?.name === 'AbortError' && devolverAoCancelar) {
+      motivo = 'cancelado';
+      return entregar();
     }
-    if (!r || typeof r !== 'object') { motivo = 'sem-rede'; break; }
-    if (r.status === 429) { motivo = 'rate-limit'; break; }
-    if (r.status === 404) { motivo = 'canal-nao-existe'; break; }
-    if (!r.ok) { motivo = `http-${r.status}`; break; }
-    let j;
-    try { j = await r.json(); } catch {
+    throw e;
+  }
+
+  async function percorrer() {
+    if (id === null || id === undefined || id === '') {
+      motivo = 'sem-canal';
+      return entregar();
+    }
+    // Uma ponta que não é número (uma data que não se leu, ou Infinity por
+    // "até agora") não é uma janela calada: nada foi perguntado à Kick, e uma
+    // lista vazia "completa" jurava que o canal não disse nada.
+    if (!Number.isFinite(deMs) || !Number.isFinite(ateMs)) {
+      motivo = 'janela-invalida';
+      return entregar();
+    }
+    // Uma janela vazia ou invertida não tem mensagens, e isso não é uma falha.
+    if (ateMs <= deMs) return entregar();
+
+    // Microssegundos inteiros: é a unidade do cursor da própria Kick. Cabe num
+    // número normal sem perder nada (2^53 µs são uns 285 anos).
+    let cursor = Math.floor(ateMs) * 1000;
+    let chegouMs = ateMs;
+    // Um travão que não é número não pode virar "sem travão": NaN parava logo,
+    // e diz-se porquê, em vez de deixar um canal enorme andar sem fim.
+    const travao = Math.max(0, Math.floor(Number(maxPedidos)) || 0);
+
+    for (;;) {
       if (sinal?.aborted) throw cancelado();
-      motivo = 'resposta-ilegivel';
-      break;
-    }
-    const pagina = j?.data?.messages;
-    if (!Array.isArray(pagina)) { motivo = 'formato-inesperado'; break; }
-    // Página vazia: não há nada mais velho. É o fim do histórico, e o que se
-    // tem é tudo o que existe — não é uma lista incompleta.
-    if (!pagina.length) break;
+      if (pedidos >= travao) { motivo = 'max-pedidos'; break; }
+      pedidos++;
 
-    let maisVelha = Infinity;
-    let maisNova = -Infinity;
-    let novas = 0;
-    for (const m of pagina) {
-      const ms = instante(m?.created_at);
-      if (!Number.isFinite(ms)) continue;
-      if (ms < maisVelha) maisVelha = ms;
-      if (ms > maisNova) maisNova = ms;
-      // A Kick manda sempre `id`. Se um dia não mandar, a chave composta ainda
-      // apanha a mensagem repetida na fronteira das páginas, que é o caso que
-      // importa; perde-se no máximo um "kkk" repetido pela mesma pessoa no
-      // mesmo segundo.
-      const chave = m.id ?? `${ms}|${m.sender?.id ?? ''}|${m.content ?? ''}`;
-      if (vistas.has(chave)) continue;
-      vistas.add(chave);
-      novas++;
-      if (ms < deMs || ms >= ateMs) continue;
-      recolhidas.push({
-        id: chave,
-        ms,
-        texto: typeof m.content === 'string' ? m.content : String(m.content ?? ''),
-        autor: m.sender?.slug ?? m.sender?.username ?? null,
+      let r;
+      let falha = null;
+      for (let tentativa = 0; ; tentativa++) {
+        r = null;
+        falha = null;
+        try {
+          r = await buscar(`${API}/channels/${encodeURIComponent(id)}/messages?cursor=${cursor}`, { signal: sinal });
+          if (!r || typeof r !== 'object') falha = 'sem-rede';
+          else if (r.status === 429) falha = 'rate-limit';
+          else if (r.status >= 500) falha = `http-${r.status}`;
+        } catch (e) {
+          if (e?.name === 'AbortError' || sinal?.aborted) throw cancelado();
+          falha = 'sem-rede';
+        }
+        if (!falha || tentativa >= tentativas) break;
+        // Espera a dobrar, com um pouco de acaso: dez canais a tentar ao mesmo tempo não batem juntos.
+        await esperar(esperaMs * (2 ** tentativa) * (0.75 + Math.random() / 2), sinal);
+        if (sinal?.aborted) throw cancelado();
+      }
+      if (falha) { motivo = falha; break; }
+      if (r.status === 404) { motivo = 'canal-nao-existe'; break; }
+      if (!r.ok) { motivo = `http-${r.status}`; break; }
+      let j;
+      try { j = await r.json(); } catch {
+        if (sinal?.aborted) throw cancelado();
+        motivo = 'resposta-ilegivel';
+        break;
+      }
+      const pagina = j?.data?.messages;
+      if (!Array.isArray(pagina)) { motivo = 'formato-inesperado'; break; }
+      // Página vazia: não há nada mais velho. É o fim do histórico, e o que se
+      // tem é tudo o que existe — não é uma lista incompleta.
+      if (!pagina.length) break;
+
+      let maisVelha = Infinity;
+      let maisNova = -Infinity;
+      let novas = 0;
+      for (const m of pagina) {
+        const ms = instante(m?.created_at);
+        if (!Number.isFinite(ms)) continue;
+        if (ms < maisVelha) maisVelha = ms;
+        if (ms > maisNova) maisNova = ms;
+        // A Kick manda sempre `id`. Se um dia não mandar, a chave composta ainda
+        // apanha a mensagem repetida na fronteira das páginas, que é o caso que
+        // importa; perde-se no máximo um "kkk" repetido pela mesma pessoa no
+        // mesmo segundo.
+        const chave = m.id ?? `${ms}|${m.sender?.id ?? ''}|${m.content ?? ''}`;
+        if (vistas.has(chave)) continue;
+        vistas.add(chave);
+        novas++;
+        if (ms < deMs || ms >= ateMs) continue;
+        recolhidas.push({
+          id: chave,
+          ms,
+          texto: typeof m.content === 'string' ? m.content : String(m.content ?? ''),
+          autor: m.sender?.slug ?? m.sender?.username ?? null,
+        });
+      }
+      // Mensagens que vieram e nenhuma com data que se leia: a Kick mudou a
+      // forma. Seguir em frente dava uma lista vazia "completa" — um canal
+      // calado a noite toda — e é exactamente o erro que não se vê.
+      if (!Number.isFinite(maisVelha)) { motivo = 'formato-inesperado'; break; }
+      if (maisVelha < chegouMs) chegouMs = maisVelha;
+      aoProgredir({
+        pedidos,
+        mensagens: recolhidas.length,
+        chegouMs,
+        // Quanto da janela já se andou, de 0 a 1. Sabe-se o tempo e não o
+        // número de mensagens, por isso a barra anda pelo relógio.
+        fracao: Math.min(1, Math.max(0, (ateMs - chegouMs) / (ateMs - deMs))),
       });
-    }
-    // Mensagens que vieram e nenhuma com data que se leia: a Kick mudou a
-    // forma. Seguir em frente dava uma lista vazia "completa" — um canal
-    // calado a noite toda — e é exactamente o erro que não se vê.
-    if (!Number.isFinite(maisVelha)) { motivo = 'formato-inesperado'; break; }
-    if (maisVelha < chegouMs) chegouMs = maisVelha;
-    aoProgredir({
-      pedidos,
-      mensagens: recolhidas.length,
-      chegouMs,
-      // Quanto da janela já se andou, de 0 a 1. Sabe-se o tempo e não o
-      // número de mensagens, por isso a barra anda pelo relógio.
-      fracao: Math.min(1, Math.max(0, (ateMs - chegouMs) / (ateMs - deMs))),
-    });
 
-    // Passou do princípio da janela: está tudo. Estritamente mais velha, e não
-    // "igual": as datas vêm ao segundo, e pode haver mais mensagens do mesmo
-    // segundo de `deMs` na página seguinte.
-    if (chegouMs < deMs) break;
-    // Uma página só com mensagens já vistas. Se é a fronteira repetida (tudo
-    // do segundo mais velho a que já se chegou, numa página que não vem
-    // cheia), é uma página vazia disfarçada: o fim, e completo. Sem isto, um
-    // cursor que repete a fronteira prendia o ciclo até ao travão e marcava
-    // como incompleto um canal que já tinha dado tudo.
-    // Mas a mesma página outra vez (mensagens mais novas do que onde se ia),
-    // ou uma página cheia de um segundo só que o cursor de recurso não passa,
-    // é um cursor que não serviu, e o resto da noite ficou por ler. Dizer
-    // "acabou" aí era a lista parcial calada que o topo desta função proíbe.
-    if (!novas) {
-      if (maisNova > chegouMs || pagina.length >= PAGINA) motivo = 'cursor-parado';
-      break;
-    }
+      // Passou do princípio da janela: está tudo. Estritamente mais velha, e não
+      // "igual": as datas vêm ao segundo, e pode haver mais mensagens do mesmo
+      // segundo de `deMs` na página seguinte.
+      if (chegouMs < deMs) break;
+      // Uma página só com mensagens já vistas. Se é a fronteira repetida (tudo
+      // do segundo mais velho a que já se chegou, numa página que não vem
+      // cheia), é uma página vazia disfarçada: o fim, e completo. Sem isto, um
+      // cursor que repete a fronteira prendia o ciclo até ao travão e marcava
+      // como incompleto um canal que já tinha dado tudo.
+      // Mas a mesma página outra vez (mensagens mais novas do que onde se ia),
+      // ou uma página cheia de um segundo só que o cursor de recurso não passa,
+      // é um cursor que não serviu, e o resto da noite ficou por ler. Dizer
+      // "acabou" aí era a lista parcial calada que o topo desta função proíbe.
+      if (!novas) {
+        if (maisNova > chegouMs || pagina.length >= PAGINA) motivo = 'cursor-parado';
+        break;
+      }
 
-    // O cursor da Kick e, se um dia faltar, o segundo da mensagem mais velha
-    // (mais um, porque as datas vêm truncadas ao segundo e a mais velha ainda
-    // pode ter irmãs desse segundo; as repetidas caem fora pelo `id`). Andando
-    // ao segundo, um segundo com uma página cheia de mensagens não se
-    // atravessa: aí pára como 'cursor-parado', e não como fim.
-    const doServidor = Number(j.data.cursor);
-    const proximo = j.data.cursor != null && Number.isSafeInteger(doServidor) && doServidor > 0
-      ? doServidor
-      : (maisVelha + 1000) * 1000;
-    // Tem de andar para trás. Um cursor que fica onde está (ou avança) é um
-    // ciclo infinito à espera de acontecer.
-    if (!(proximo < cursor)) { motivo = 'cursor-parado'; break; }
-    cursor = proximo;
+      // O cursor da Kick e, se um dia faltar, o segundo da mensagem mais velha
+      // (mais um, porque as datas vêm truncadas ao segundo e a mais velha ainda
+      // pode ter irmãs desse segundo; as repetidas caem fora pelo `id`). Andando
+      // ao segundo, um segundo com uma página cheia de mensagens não se
+      // atravessa: aí pára como 'cursor-parado', e não como fim.
+      const doServidor = Number(j.data.cursor);
+      const proximo = j.data.cursor != null && Number.isSafeInteger(doServidor) && doServidor > 0
+        ? doServidor
+        : (maisVelha + 1000) * 1000;
+      // Tem de andar para trás. Um cursor que fica onde está (ou avança) é um
+      // ciclo infinito à espera de acontecer.
+      if (!(proximo < cursor)) { motivo = 'cursor-parado'; break; }
+      cursor = proximo;
+    }
+    return entregar();
   }
-  return entregar();
 }
 
 /**

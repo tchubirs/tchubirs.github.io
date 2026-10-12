@@ -287,3 +287,48 @@ test('as janelas caem onde há mais ângulos no ar, não nos quartos da noite', 
   }
   assert.ok(instantes[2] - instantes[0] > H, 'e continuam espalhadas pelo evento');
 });
+
+// O teste real de 12/10: uma detecção ficou quase 4 min parada à espera de um pedaço que nunca chegou.
+// Agora cada pedaço tem prazo e volta a ser pedido, como na exportação.
+test('um pedaço de som que nunca responde é pedido outra vez, e o som chega', async () => {
+  const { somDoCanal } = await import('../site/alinhar.js');
+  const fs = await import('node:fs');
+  const seg = new Uint8Array(fs.readFileSync(new URL('../probes/fixtures/segmento-kodd.ts', import.meta.url)));
+  const linha = linhaDoCanal('a', [peca(T, 60)]);
+  const vezes = new Map();
+  const buscar = (url, { signal } = {}) => {
+    const n = (vezes.get(url) || 0) + 1;
+    vezes.set(url, n);
+    // A primeira vez de cada pedaço fica pendurada para sempre (só o aborto a solta).
+    if (n === 1) return new Promise((_, nao) => signal?.addEventListener('abort', () => nao(new DOMException('x', 'AbortError'))));
+    return Promise.resolve(new Response(seg));
+  };
+  const inicio = Date.now();
+  const som = await somDoCanal(linha, T + 2000, 12, {
+    buscar, prazoMs: 150, descodificar: async () => new Float32Array(TAXA * 30),
+  });
+  assert.ok(som && som.length === 12 * TAXA, 'o som chegou inteiro');
+  assert.ok([...vezes.values()].every((n) => n === 2), 'cada pedaço foi pedido de novo uma vez');
+  assert.ok(Date.now() - inicio < 5000, 'sem ficar preso');
+});
+
+test('com muitos canais, ouve-se vários de cada vez e os do lance vão à frente', async () => {
+  const atrasos = Object.fromEntries(Array.from({ length: 8 }, (_, i) => [`c${i}`, 0]));
+  const { linhas, janela } = montar(atrasos);
+  const ordem = [];
+  let aoMesmoTempo = 0;
+  let maximo = 0;
+  await alinharPeloSom({
+    linhas, janela, janelas: 1, duracaoS: 60, primeiro: ['c6', 'c7'], paralelos: 4,
+    lerSom: async (l) => {
+      ordem.push(l.slug);
+      aoMesmoTempo++;
+      maximo = Math.max(maximo, aoMesmoTempo);
+      await new Promise((k) => setTimeout(k, 20));
+      aoMesmoTempo--;
+      return null;
+    },
+  });
+  assert.deepEqual(ordem.slice(0, 2), ['c6', 'c7'], 'os do lance primeiro');
+  assert.equal(maximo, 4, 'quatro de cada vez, e não um');
+});

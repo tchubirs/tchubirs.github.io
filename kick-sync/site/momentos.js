@@ -37,6 +37,34 @@ export function novoMomento(quandoMs, protagonista, extra = {}) {
   };
 }
 
+/**
+ * As kills para o link do "Compartilhar projeto", sem o que é igual ao de omissão.
+ *
+ * O teste real de 12/10: o link levava `"momentos":[]` com 8 kills marcadas. Com elas, cada kill custa
+ * o que tem de seu (o instante, o canal, quem morreu, um tamanho mexido); o resto volta na leitura por
+ * `momentosDoLink`. Os ajustes do editor (corte, 9:16, chat) também vão: são trabalho dele.
+ */
+export function momentosParaLink(momentos) {
+  return (momentos || []).map((m) => {
+    const c = {};
+    for (const [k, v] of Object.entries(m)) {
+      if (v == null || v === '' || v === false) continue;
+      if (Array.isArray(v) && !v.length) continue;
+      if (k in PADRAO && v === PADRAO[k]) continue;
+      c[k] = v;
+    }
+    return c;
+  });
+}
+
+/** O inverso de `momentosParaLink`: cada kill com os campos de omissão de volta. */
+export function momentosDoLink(momentos) {
+  return (momentos || []).filter((m) => m && Number.isFinite(m.ms)).map((m) => ({
+    protagonista: null, vitimas: [], nota: '', ...PADRAO, ...m,
+    vitimas: Array.isArray(m.vitimas) ? m.vitimas.filter((v) => typeof v === 'string') : [],
+  }));
+}
+
 /** Pôr ou tirar alguém da lista de quem morreu neste momento. */
 export function alternarVitima(momento, slug) {
   const tem = (momento.vitimas || []).includes(slug);

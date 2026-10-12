@@ -268,6 +268,34 @@ export function bordaAoVivo(linhas, { agoraMs = Date.now(), limiteMs = LIMITE_FO
   };
 }
 
+/**
+ * O instante do "Ver ao vivo agora", já dentro do vídeo que existe.
+ *
+ * O teste real de 12/10 (QA-REAL.md): o botão pedia "agora menos 20 s", mas a playlist da live acabava
+ * uns 30 s atrás do ar. O instante caía depois do fim do vídeo, o restauro achava-o fora da noite e o
+ * leitor voltava ao começo da live, 50 min atrás. Aqui o instante é a borda comum de quem está no ar
+ * (`bordaAoVivo`) menos uma folga medida na própria playlist: um segmento e meio, o que o leitor
+ * precisa de ter à frente para não ficar à espera do segmento seguinte. Nunca depois do `pedidoMs`.
+ *
+ * @returns {{ms: number, margemMs: number, atrasoMs: number} | null} null sem ninguém com fim conhecido
+ */
+export function instanteAoVivo(linhas, { pedidoMs = Infinity, agoraMs = Date.now(), nudges = {}, margemMinMs = 4000 } = {}) {
+  const borda = bordaAoVivo(linhas, { agoraMs, nudges });
+  const fins = (linhas || []).filter((l) => Number.isFinite(l?.fim));
+  if (!fins.length) return null;
+  const vivas = fins.filter((l) => borda.vivos.includes(l.slug));
+  const base = borda.comumMs ?? Math.max(...fins.map((l) => l.fim));
+  // A duração dos últimos segmentos de quem está no ar (dos que se usam para a borda).
+  let maior = 0;
+  for (const l of vivas.length ? vivas : fins) {
+    const peca = (l.pecas || []).reduce((a, p) => (!a || (p.playlist?.fim ?? -Infinity) > (a.playlist?.fim ?? -Infinity) ? p : a), null);
+    for (const sg of (peca?.playlist?.segmentos || []).slice(-3)) maior = Math.max(maior, (sg.duracaoS || 0) * 1000);
+  }
+  const margemMs = Math.max(margemMinMs, Math.round(1.5 * maior));
+  const ms = Math.min(base - margemMs, Number.isFinite(pedidoMs) ? pedidoMs : Infinity);
+  return { ms, margemMs, atrasoMs: borda.agoraMs - ms };
+}
+
 // ── Voltar a pedir ─────────────────────────────────────────────────────────
 
 /**

@@ -475,3 +475,28 @@ test('num celular de 390 px nada rola para o lado, com as janelas e a régua', s
   assert.ok(doc <= ecra);
   assert.deepEqual(erros, []);
 });
+
+// O teste real de 12/10: o "Achar quem mais estava" mediu nikots 0,87 s atrás, e o lance abria com a
+// sincronia de cada ângulo a 0,0 s. O atraso medido vai agora com o ângulo, relativo a quem se escolheu.
+test('o atraso medido pelo som entra na sincronia do ângulo quando o lance abre', semNavegador, async () => {
+  const { p, erros } = await abrir({ caminho: 'evento' });
+  await kickFalsa(p, { canais: ['tchubi', 'outro', 'lobo'] });
+  await abrirEvento(p, 'tchubi\noutro\nlobo');
+  await verDe(p, T - 5 * 60_000, T + 15 * 60_000);
+  await clicarNoMapa(p, 'tchubi', T + 3 * 60_000);
+  await p.waitForSelector('#lance:not([hidden])');
+  await p.evaluate(() => {
+    window.__evento.achados = [
+      { canal: 'outro', estado: 'estava', forca: 16, desvioS: 0.87 },
+      { canal: 'lobo', estado: 'nao', forca: 4, desvioS: null },
+    ];
+  });
+  await p.evaluate(() => document.getElementById('verLance').click());
+  await p.waitForFunction(() => window.__estado.linhas.length === 2, null, { timeout: 15000 });
+  assert.deepEqual(await abertosNaGrelha(p), ['outro', 'tchubi']);
+  const nudges = await p.evaluate(() => window.__estado.nudges);
+  assert.equal(nudges.outro, 870);
+  assert.ok(!nudges.lobo, 'quem não estava não ganha ajuste');
+  assert.match(await p.locator('.tile[data-slug="outro"] .nudge').innerText(), /\+0\.9s/);
+  assert.deepEqual(erros, []);
+});

@@ -103,3 +103,29 @@ export function rotuloDaNoite(n, { t } = {}) {
   const ateRotulo = t ? t('noite.ate') : 'até';
   return `${dia(n.inicio)}, ${hora(n.inicio)} ${ateRotulo} ${ate}, ${quantos}`;
 }
+
+/**
+ * Que noite abrir depois de carregar os canais.
+ *
+ * O teste real de 12/10 (QA-REAL.md): com `xguiry` e `poionako`, abria a noite mais recente, que só
+ * tinha o `xguiry`; as noites com os dois estavam mais abaixo. Quem pede dois canais quer vê-los juntos.
+ *
+ * - `fixoMs` (um instante a restaurar: o F5, um lance do evento, um link): a noite dele, sempre.
+ * - senão, a noite com mais dos canais pedidos; num empate, a mais recente.
+ * - `ondeEstavaMs` (acrescentar um canal a meio): fica-se nessa noite, a menos que outra tenha mais
+ *   canais. Acrescentar alguém que está ao vivo não rouba o ecrã para uma noite só dele.
+ *
+ * @param {Array} noites as de `agruparPorNoite`, da mais recente para a mais antiga
+ * @returns {number} o índice
+ */
+export function noiteParaAbrir(noites, { fixoMs = null, ondeEstavaMs = null } = {}) {
+  if (!noites?.length) return -1;
+  const dentro = (ms) => (ms == null ? -1 : noites.findIndex((n) => ms >= n.inicio && ms <= n.fim));
+  const fixa = dentro(fixoMs);
+  if (fixa >= 0) return fixa;
+  let melhor = 0;
+  for (let i = 1; i < noites.length; i++) if (noites[i].canais > noites[melhor].canais) melhor = i;
+  const estava = dentro(ondeEstavaMs);
+  if (estava >= 0 && noites[estava].canais >= noites[melhor].canais) return estava;
+  return melhor;
+}

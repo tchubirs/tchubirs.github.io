@@ -1953,7 +1953,7 @@ body:not(:has(#fila > li)) #limparFila { display: none; }
 @media (max-width: 759px) { #trechoVisto { flex: 1 0 100%; min-width: 0; } }
 #horasAuto[hidden] { display: none; }
 #janelaAuto { max-width: 13em; }
-body.mesa #formatoMontagem { width: auto; min-width: 0; max-width: 8em; min-height: 30px; padding: 0 var(--e5) 0 var(--e3); font-size: var(--t-menor); }
+body.mesa #formatoMontagem { width: auto; min-width: 0; max-width: 10em; min-height: 30px; padding: 0 var(--e5) 0 var(--e3); font-size: var(--t-menor); }
 .soVarios[hidden] { display: none; }
 
 

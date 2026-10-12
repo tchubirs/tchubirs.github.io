@@ -109,7 +109,10 @@ test('the joined file is the pieces, in order, byte for byte', async () => {
   const r = await executarCorte(p, { buscar });
   assert.equal(r.estado, 'pronto');
   assert.equal(r.bytes.length, 700 * p.segmentos.length);
-  assert.equal(r.tipo, 'video/mp2t', 'not mp4 — calling it mp4 would be a lie Premiere believes');
+  // Estes pedaços falsos não são MPEG-TS a sério: o MP4 não os sabe abrir e sai o .ts de recurso, a
+  // dizer porquê (o caminho do MP4 está em mp4.test.mjs, com um pedaço verdadeiro da Kick).
+  assert.equal(r.tipo, 'video/mp2t');
+  assert.ok(r.semMp4, 'o porquê de não ter saído MP4');
 });
 
 // A hole in the middle is a clip that jumps, and the editor only finds out on

@@ -554,3 +554,18 @@ export function tsParaMp4(bytes, { inicioMs, deMs, ateMs }) {
   const { bytes: mp4, duracaoS } = juntarMp4([clipe]);
   return { bytes: mp4, duracaoS, deMs: clipe.deMs, ateMs: clipe.ateMs, clipe };
 }
+
+/**
+ * Uma cópia do clipe só com os seus bytes. O de `recortar` aponta para dentro dos pedaços inteiros (uns
+ * 11 MB por pedaço de 1080p60), e uma montagem num vídeo só guarda todos até ao fim.
+ */
+export function compactar(c) {
+  const copia = (x) => x.slice();
+  return {
+    ...c,
+    sps: copia(c.sps),
+    pps: copia(c.pps),
+    video: c.video.map((s) => ({ ...s, corpo: s.corpo.map(copia), params: s.params.map(copia) })),
+    audio: c.audio.map((s) => ({ ...s, dados: copia(s.dados) })),
+  };
+}

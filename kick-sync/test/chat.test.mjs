@@ -308,12 +308,36 @@ test('mensagensEntre: cada falha a meio tem nome, e o que já veio fica', async 
   ];
   for (const [motivo, falha] of casos) {
     const k = kickDoChat(registo, { roteiro: { 2: falha } });
-    const lista = await mensagensEntre(ID, T0, T0 + 60 * MIN, { buscar: k.buscar });
+    // Sem novas tentativas, para ver cada nome; as tentativas têm o teste delas a seguir.
+    const lista = await mensagensEntre(ID, T0, T0 + 60 * MIN, { buscar: k.buscar, tentativas: 0 });
     assert.equal(lista.motivo, motivo, motivo);
     assert.equal(lista.incompleto, true, motivo);
     assert.equal(lista.length, 25, `${motivo}: a primeira página fica`);
     assert.equal(k.pedidos.length, 2, `${motivo}: não insiste`);
   }
+});
+
+// O teste real de 12/10: a Kick às vezes responde sem CORS (o browser vê "sem rede") ou com 429, e a
+// leitura parava ali. Uma página que falha volta a ser pedida, com espera a dobrar.
+test('mensagensEntre: uma página recusada volta a ser pedida e a leitura acaba', async () => {
+  const registo = chatSintetico(HORA, { texto: textoDaHora });
+  const esperas = [];
+  const esperar = async (ms) => { esperas.push(ms); };
+  for (const falha of [() => { throw new TypeError('Failed to fetch'); }, () => resposta(429, {}), () => resposta(503, {})]) {
+    esperas.length = 0;
+    const k = kickDoChat(registo, { roteiro: { 2: falha, 3: falha } });
+    const lista = await mensagensEntre(ID, T0, T0 + 60 * MIN, { buscar: k.buscar, esperar });
+    assert.equal(lista.incompleto, false, 'acabou');
+    assert.equal(lista.length, registo.length, 'todas');
+    assert.equal(esperas.length, 2, 'esperou antes de cada nova tentativa');
+    assert.ok(esperas[1] > esperas[0], 'a espera dobra');
+  }
+  // Sempre recusada: desiste ao fim das tentativas, com o nome certo.
+  const sempre = Object.fromEntries([2, 3, 4, 5, 6].map((n) => [n, () => resposta(429, {})]));
+  const k = kickDoChat(registo, { roteiro: sempre });
+  const lista = await mensagensEntre(ID, T0, T0 + 60 * MIN, { buscar: k.buscar, esperar });
+  assert.equal(lista.motivo, 'rate-limit');
+  assert.equal(k.pedidos.length, 5, 'a primeira página e 1 + 3 tentativas da segunda');
 });
 
 test('mensagensEntre: um canal que falha logo à primeira devolve vazio e incompleto', async () => {

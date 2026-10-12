@@ -164,6 +164,62 @@ export function classificar(primeira, segunda) {
 }
 
 /**
+ * Quanto o atraso de duas janelas pode diferir para contarem como o mesmo som.
+ *
+ * Medido no teste real de 12/10 (QA-REAL.md), lance `polys0800` às 23:27:40 de 05/10, oito instantes
+ * de 30 em 30 s, janelas de 20 s: quem estava junto (`nikots`, `hai_suzy`, `karinios0`) repetiu o
+ * atraso a 0,01-0,15 s de janela para janela; quem não estava (`dichanho`, `newtrc`, `sapoiq`) caiu em
+ * qualquer ponto dos ±8 s.
+ */
+export const CONCORDA_S = 0.15;
+
+/**
+ * A força somada das janelas que concordam a partir da qual é "estava".
+ *
+ * No mesmo teste real: os três que estavam somaram 10,0 a 25,3 com 2 ou 3 janelas a concordar; dos que
+ * não estavam, a melhor soma de duas janelas a concordar foi 8,6. Uma janela sozinha nunca chega: o
+ * `dichanho` deu 5,8 na janela do lance (o Povix deu 6,3 e dizia "estava"), e as outras não concordaram.
+ */
+export const SOMA_ESTAVA = 9.5;
+
+/** Uma janela só, forte mas sem outra a concordar: "talvez" (mais do que o melhor acaso medido, 5,8). */
+export const FORCA_SO = 6.5;
+
+/** Quantas janelas se medem: a do lance, a de antes e a de depois. */
+export const JANELAS = 3;
+
+/**
+ * A decisão com várias janelas (`medicoes[0]` é a do lance; as outras, a de antes e a de depois, podem
+ * faltar). Com uma janela só (ao vivo, a de depois ainda não existe e a de antes é de outro VOD) fica a
+ * regra de uma janela (`classificar`).
+ *
+ * @returns {{estado: string, forca: number, desvioS: number|null, janelas: number}}
+ */
+export function decidir(medicoes) {
+  const ms = (medicoes || []).filter(medida);
+  if (!ms.length) return { estado: 'sem-som', forca: 0, desvioS: null, janelas: 0 };
+  if (ms.length === 1) {
+    const estado = classificar(ms[0]);
+    return { estado, forca: ms[0].forca, desvioS: estado === 'nao' ? null : ms[0].desvioS, janelas: 1 };
+  }
+  let melhor = null;
+  for (const a of ms) {
+    const grupo = ms.filter((b) => Math.abs(b.desvioS - a.desvioS) <= CONCORDA_S + 1e-9);
+    const soma = grupo.reduce((t, b) => t + b.forca, 0);
+    if (!melhor || grupo.length > melhor.grupo.length || (grupo.length === melhor.grupo.length && soma > melhor.soma)) {
+      melhor = { grupo, soma };
+    }
+  }
+  const media = melhor.grupo.reduce((t, b) => t + b.desvioS, 0) / melhor.grupo.length;
+  if (melhor.grupo.length >= 2 && melhor.soma >= SOMA_ESTAVA) {
+    return { estado: 'estava', forca: melhor.soma, desvioS: Math.round(media * 100) / 100, janelas: melhor.grupo.length };
+  }
+  const forte = ms.reduce((a, b) => (b.forca > a.forca ? b : a));
+  if (forte.forca >= FORCA_SO) return { estado: 'talvez', forca: forte.forca, desvioS: forte.desvioS, janelas: 1 };
+  return { estado: 'nao', forca: forte.forca, desvioS: null, janelas: 0 };
+}
+
+/**
  * Por que ordem perguntar: o time da referência primeiro, depois todos os
  * outros que estavam no ar naquele instante. Quem não estava no ar fica de
  * fora — não pode ter ouvido nada que se possa mostrar.
@@ -328,20 +384,22 @@ export async function* procurarAngulos({
     // Primeiro e sozinha: sem ela não há com que comparar, e um canal mudo
     // naquele instante deitaria fora seis downloads já a meio.
     //
-    // Pedem-se as DUAS janelas de uma vez. A segunda só serve aos "talvez",
-    // mas são 20 s a mais uma vez só (~700 KB), contra pedir de novo a meio
-    // da procura, com 6 candidatos à espera dela.
+    // Três janelas seguidas de uma vez: a de antes, a do lance e a de depois (ver `decidir`). Uma
+    // janela só enganava (teste real de 12/10: um falso "estava" e dois "não" de quem estava junto).
+    const inicio = deMs - janelaS * 1000;
     let somRef;
     try {
-      somRef = await contraOSinal(somDe(referencia, deMs, 2 * janelaS, { sinal: interno.signal }), sinal);
+      somRef = await contraOSinal(somDe(referencia, inicio, JANELAS * janelaS, { sinal: interno.signal }), sinal);
     } catch (e) {
       if (e?.name === 'AbortError' || e?.name === 'SEM-DESCODIFICADOR') throw e;
       throw Object.assign(new Error(`a referência não se ouve naquele instante: ${e?.message ?? e}`), {
         name: 'REFERENCIA-SEM-SOM', cause: e,
       });
     }
-    const ref1 = somRef?.length ? fatia(somRef, 0, n) : null;
-    if (!ref1 || !temSom(ref1)) {
+    // A ordem das janelas no som pedido: 0 é a de antes, 1 a do lance, 2 a de depois.
+    const janelaDe = (som, k) => (som?.length ? fatia(som, k * n, (k + 1) * n) : null);
+    const ref1 = janelaDe(somRef, 1);
+    if (!ref1?.length || !temSom(ref1)) {
       throw Object.assign(new Error('a referência não tem som naquele instante'), { name: 'REFERENCIA-SEM-SOM' });
     }
     // Cortada, a janela da referência punha TODOS os candidatos contra uma
@@ -352,17 +410,12 @@ export async function* procurarAngulos({
         `a referência só tem ${segundos(ref1)} s de som naquele instante (a medida pede ${janelaS} s)`,
       ), { name: 'REFERENCIA-SEM-SOM' });
     }
-    const envRef = envolvente(ref1);
-    // A segunda janela da referência só se calcula quando um "talvez" a pede:
-    // são ~95 ms de contas que a maior parte das procuras nunca usa. Cortada
-    // ou muda, não há com que comparar e o "talvez" fica "talvez".
-    let envRef2;
-    const segundaDaRef = () => {
-      if (envRef2 !== undefined) return envRef2;
-      const ref2 = fatia(somRef, n, 2 * n);
-      envRef2 = ref2.length >= cheia && temSom(ref2) ? envolvente(ref2) : null;
-      return envRef2;
-    };
+    // As envolventes da referência, por janela; null onde não há uma janela inteira com som (ao vivo, a
+    // de depois ainda não foi gravada; no começo do VOD, a de antes não existe).
+    const envRef = [0, 1, 2].map((k) => {
+      const j = janelaDe(somRef, k);
+      return j && j.length >= cheia && temSom(j) ? envolvente(j) : null;
+    });
 
     // ── os candidatos ─────────────────────────────────────────────────────
     const prontos = [];
@@ -378,65 +431,52 @@ export async function* procurarAngulos({
     // pode deixar os outros 499 sem resposta.
     const fatal = (e) => parar || e?.name === 'AbortError';
 
-    // Devolve a medição, null quando não há som, ou `{ cortadaS }` quando veio
-    // só parte da janela: os limites são de janelas inteiras, e numa cortada
-    // o acaso chega a 6 (ver JANELA_S). Não se mede, e diz-se porquê.
-    const ouvir = async (canal, de, envDaRef) => {
-      const som = await somDe(canal, de, janelaS, { sinal: interno.signal });
+    // As medições de um candidato nas três janelas, a do lance primeiro. Uma janela sem som fica null;
+    // uma cortada (os limites são de janelas inteiras, e numa cortada o acaso chega a 6) também, e a
+    // do lance cortada diz-se em `cortadaS`.
+    const ouvir = async (canal) => {
+      // O mesmo início e a mesma duração da referência: cada janela começa no mesmo instante do relógio.
+      const som = await somDe(canal, inicio, JANELAS * janelaS, { sinal: interno.signal });
       if (parar) throw cancelado();
-      if (!som?.length) return null;
-      const janela = fatia(som, 0, n);
-      if (!temSom(janela)) return null;
-      if (janela.length < cheia) return { cortadaS: segundos(janela) };
-      // (candidato, referência) e não ao contrário: assim o desvio positivo
-      // quer dizer "o candidato chegou mais tarde", que é o que a página
-      // aplica nele. Fixado por um teste com um atraso conhecido.
-      const m = desvio(envolvente(janela), envDaRef, { limiteS });
-      return m.desvioS == null ? null : { forca: m.forca, desvioS: m.desvioS };
+      const medicoes = [];
+      let cortadaS = null;
+      for (const k of [1, 0, 2]) {
+        const j = janelaDe(som, k);
+        if (!j?.length || !temSom(j) || !envRef[k]) { medicoes.push(null); continue; }
+        if (j.length < cheia) {
+          if (k === 1) cortadaS = segundos(j);
+          medicoes.push(null);
+          continue;
+        }
+        // (candidato, referência) e não ao contrário: assim o desvio positivo
+        // quer dizer "o candidato chegou mais tarde", que é o que a página
+        // aplica nele. Fixado por um teste com um atraso conhecido.
+        const m = desvio(envolvente(j), envRef[k], { limiteS });
+        medicoes.push(m.desvioS == null ? null : { forca: m.forca, desvioS: m.desvioS });
+      }
+      return { medicoes, cortadaS };
     };
 
     const umCandidato = async (canal) => {
       let erro;
       let aviso;
-      let primeira = null;
+      let medicoes = [];
       try {
-        primeira = await ouvir(canal, deMs, envRef);
+        const r = await ouvir(canal);
+        medicoes = r.medicoes;
+        if (r.cortadaS != null) {
+          aviso = `só ${r.cortadaS} s de som naquele instante (a medida pede ${janelaS} s): não se mediu`;
+          // Sem a janela do lance inteira, as outras não chegam para dizer nada sobre ELE.
+          medicoes = [];
+        }
       } catch (e) {
         if (fatal(e)) throw e;
         // Um canal que não se consegue ouvir não pode matar a procura dos
         // outros: fica 'sem-som', com a razão dita.
         erro = e?.message ?? String(e);
       }
-      if (primeira?.cortadaS != null) {
-        aviso = `só ${primeira.cortadaS} s de som naquele instante (a medida pede ${janelaS} s): não se mediu`;
-        primeira = null;
-      }
-      let estado = classificar(primeira);
-      if (estado === 'talvez') {
-        // Sem a segunda janela da referência não há com que comparar a do
-        // candidato, e descarregá-la era gastar 700 KB para nada.
-        const env2 = segundaDaRef();
-        if (env2) {
-          let segunda = null;
-          try {
-            segunda = await ouvir(canal, deMs + janelaS * 1000, env2);
-          } catch (e) {
-            if (fatal(e)) throw e;
-            erro = e?.message ?? String(e);
-          }
-          if (segunda?.cortadaS != null) {
-            aviso = `a segunda janela só tem ${segunda.cortadaS} s de som (a medida pede ${janelaS} s): fica "talvez"`;
-            segunda = null;
-          }
-          estado = classificar(primeira, segunda);
-        }
-      }
-      const r = {
-        canal,
-        estado,
-        forca: primeira?.forca ?? 0,
-        desvioS: estado === 'estava' || estado === 'talvez' ? primeira.desvioS : null,
-      };
+      const d = decidir(medicoes);
+      const r = { canal, estado: d.estado, forca: d.forca, desvioS: d.desvioS, janelas: d.janelas };
       if (erro !== undefined) r.erro = erro;
       if (aviso !== undefined) r.aviso = aviso;
       return r;

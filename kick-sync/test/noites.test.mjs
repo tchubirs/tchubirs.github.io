@@ -142,3 +142,20 @@ test('uma semana de canais a horas diferentes não vira uma noite só', () => {
   assert.ok(noites.length >= 7, `deu ${noites.length} noites`);
   for (const n of noites) assert.ok(n.fim - n.inicio <= 17 * 3600_000, `uma noite de ${(n.fim - n.inicio) / 3600_000} h`);
 });
+
+// O teste real de 12/10: com dois canais, abria a noite mais recente, que só tinha um deles.
+test('sem sítio a restaurar, abre a noite com mais canais; num empate, a mais recente', async () => {
+  const { noiteParaAbrir } = await import('../site/noites.js');
+  const H = 3600_000;
+  const noites = [
+    { inicio: 100 * H, fim: 104 * H, canais: 1 },
+    { inicio: 76 * H, fim: 80 * H, canais: 2 },
+    { inicio: 52 * H, fim: 56 * H, canais: 2 },
+  ];
+  assert.equal(noiteParaAbrir(noites), 1, 'a dos dois, e a mais recente das que têm os dois');
+  assert.equal(noiteParaAbrir(noites, { fixoMs: 101 * H }), 0, 'um instante a restaurar manda');
+  assert.equal(noiteParaAbrir(noites, { ondeEstavaMs: 53 * H }), 2, 'a meio do trabalho numa noite com os dois, fica');
+  assert.equal(noiteParaAbrir(noites, { ondeEstavaMs: 101 * H }), 1, 'numa noite com menos canais, vai para a que tem mais');
+  assert.equal(noiteParaAbrir([{ inicio: 0, fim: 1, canais: 1 }]), 0);
+  assert.equal(noiteParaAbrir([]), -1);
+});

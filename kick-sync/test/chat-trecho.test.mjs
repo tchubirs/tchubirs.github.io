@@ -258,8 +258,9 @@ test('parar a leitura do trecho guarda o que veio, e ler outra vez acaba só o q
     await p.waitForSelector('#pararChatTrecho:not([hidden])');
     assert.ok(await p.locator('#lerChatTrecho').isDisabled());
     await p.waitForFunction(() => /Lendo o chat de tchubi/.test(document.getElementById('estadoChatTrecho').textContent));
-    // O primeiro bocado de 5 minutos chega, e pára-se a meio do segundo.
-    await p.waitForFunction(() => (window.__evento.mensagens.get('tchubi') || []).length > 0, null, { timeout: 15000 });
+    // O trecho lê-se de uma vez, do fim para o princípio (o teste real de 12/10: um pedido por bocado de
+    // 5 min eram 60 pedidos onde 3 chegavam). Pára-se depois da primeira página.
+    await p.waitForFunction(() => /: [1-9]\d*%/.test(document.getElementById('estadoChatTrecho').textContent), null, { timeout: 15000 });
     await p.click('#pararChatTrecho');
     await p.waitForFunction(() => /parada/.test(document.getElementById('estadoChatTrecho').textContent), null, { timeout: 5000 });
     assert.ok(await p.locator('#pararChatTrecho').isHidden());
@@ -270,8 +271,8 @@ test('parar a leitura do trecho guarda o que veio, e ler outra vez acaba só o q
     p.on('request', (q) => { if (q.url().includes('/messages')) cursores.push(Number(new URL(q.url()).searchParams.get('cursor')) / 1000); });
     await ler(p);
     await p.waitForFunction(() => /^Chat de tchubi, de 21:00:00 até 21:10:00: 70 mensagens/.test(document.getElementById('estadoChatTrecho').textContent), null, { timeout: 20000 });
-    // O bocado que já tinha vindo não se pede outra vez.
-    assert.ok(cursores.every((ms) => ms > T + 5 * 60_000 - 1000), `voltou ao princípio: ${cursores.map((ms) => (ms - T) / 1000)}`);
+    // O que já tinha vindo (o fim do trecho) não se pede outra vez: a leitura recomeça onde parou.
+    assert.ok(cursores.every((ms) => ms < T + 10 * 60_000 - 1000), `voltou ao fim: ${cursores.map((ms) => (ms - T) / 1000)}`);
     const ids = await p.evaluate(() => window.__evento.mensagens.get('tchubi').map((m) => m.id));
     assert.equal(new Set(ids).size, 70);
     assert.deepEqual(erros, []);
@@ -418,6 +419,24 @@ test('com o toque, as alças e os botões da barra têm 44 px', semNavegador, as
     for (const [k, v] of Object.entries(medidas)) if (k !== 'larguraPagina') assert.ok(v >= 44, `${k}: ${v} px`);
     assert.ok(medidas.larguraPagina <= 390, `a página anda de lado: ${medidas.larguraPagina}`);
   }
+  assert.deepEqual(erros, []);
+  await p.close();
+});
+
+// O teste real de 12/10: o chat de um canal com 58 mensagens em 14 h custou 60 pedidos (um por bocado de
+// 5 min); 3 chegavam. Uma noite de 10 min com 70 mensagens cabe em 3 páginas de 25.
+test('ler um trecho custa as páginas que ele tem, e não um pedido por bocado', semNavegador, async () => {
+  const { p, erros } = await abrir({ ecra: { width: 1440, height: 900 } });
+  await abrirNoite(p, ['tchubi']);
+  const pedidos = [];
+  p.on('request', (q) => { if (q.url().includes('/messages')) pedidos.push(q.url()); });
+  await p.locator('#alcaInicio').focus();
+  await p.keyboard.press('Home');
+  await p.locator('#alcaFim').focus();
+  await p.keyboard.press('End');
+  await ler(p);
+  await p.waitForFunction(() => /^Chat de tchubi, de 21:00:00 até 21:10:00: 70 mensagens/.test(document.getElementById('estadoChatTrecho').textContent), null, { timeout: 20000 });
+  assert.ok(pedidos.length <= 4, `${pedidos.length} pedidos`);
   assert.deepEqual(erros, []);
   await p.close();
 });

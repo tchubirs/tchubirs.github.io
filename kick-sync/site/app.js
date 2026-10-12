@@ -15,6 +15,9 @@ import {
   ZOOM_MIN_MS, larguraDoZoom, valorDoZoom, zoomEmVolta, andarVista,
 } from './relogio.js';
 import { cortarTodosOsAngulos } from './baixar.js';
+import { juntarMp4 } from './mp4.js';
+import { juntarGravados } from './juntar-gravados.js';
+import { instanteAoVivo } from './aovivo.js';
 import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js';
 import { abrirJanela, irAEcraCheio, capacidades } from './janela.js';
 import { ordemDosAngulos, aplicarOrdem } from './grelha.js';
@@ -28,11 +31,11 @@ import {
   VIDA_MS as VIDA_CHAT_MS, LETRA as LETRA_CHAT,
 } from './chat-clipe.js';
 import { planoDeAngulos, gravarAngulos } from './angulos.js';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js';
+import { agruparPorNoite, rotuloDaNoite, noiteParaAbrir } from './noites.js';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
   alternarVitima, filtrar, temMorte, clipesDoMomento, comAjuste, numeroNaMontagem,
-  ajusteDe, ajustesQueContam,
+  ajusteDe, ajustesQueContam, momentosParaLink, momentosDoLink,
 } from './momentos.js';
 import {
   planearCorte, executarCorte, nomeDoFicheiro, largarOQueNaoServe, oQueFalta,
@@ -526,7 +529,13 @@ async function carregarAgora() {
     // (rate-limit, rede) pede-se, porque da próxima pode dar.
     if (memo && memo.estado === 'ok') { canais.push(memo); continue; }
     $('estadoCarga').textContent = `${i + 1}/${nomes.length}: ${nome}`;
-    const r = await vodsDoCanal(nome);
+    let r = await vodsDoCanal(nome);
+    // A Kick às vezes responde sem o cabeçalho de permissão (CORS), e o browser vê isso como "sem rede"
+    // (teste real de 12/10: o `xguiry` falhou assim e voltou a dar logo a seguir). Mais uma vez, 1 s depois.
+    if (r.estado === 'sem-rede') {
+      await new Promise((k) => setTimeout(k, 1000));
+      r = await vodsDoCanal(nome);
+    }
     if (r.estado === 'ok') estado.vodsPorCanal.set(r.slug, r);
     canais.push(r);
   }
@@ -544,8 +553,11 @@ async function carregarAgora() {
   // alguem que esta AO VIVO agora cria uma noite nova, de hoje, que passava a
   // ser a mais recente e roubava o ecra. Ele ficava sem a noite em que estava
   // a trabalhar e sem perceber porque.
-  const alvo = estado.restaurar?.agora ?? (estado.linhas.length ? estado.agoraMs : null);
-  const i = alvo != null ? noites.findIndex((n) => alvo >= n.inicio && alvo <= n.fim) : -1;
+  // E sem sítio onde estar, a noite com mais dos canais pedidos (ver `noiteParaAbrir`).
+  const i = noiteParaAbrir(noites, {
+    fixoMs: estado.restaurar?.agora ?? null,
+    ondeEstavaMs: estado.linhas.length ? estado.agoraMs : null,
+  });
   $('noite').value = String(i >= 0 ? i : 0);
   await abrirNoite(noites[i >= 0 ? i : 0]);
 }
@@ -691,6 +703,9 @@ async function lerTexto(url, { limiteMs = 20_000 } = {}) {
   }
 }
 
+/** Quantas listas (master e playlist) se pedem ao mesmo tempo ao abrir uma noite. */
+const LISTAS_DE_UMA_VEZ = 6;
+
 async function lerNoite(noite) {
   const minhaVez = ++vezNoite;
   const desactualizada = () => minhaVez !== vezNoite;
@@ -711,32 +726,44 @@ async function lerNoite(noite) {
   const porCanal = new Map();
   // Quem não se conseguiu ler, para o dizer pelo nome no fim.
   const naoLidos = new Set();
-  for (const { slug, v } of noite.itens) {
-    // Uma leitura que já não interessa a ninguém pára aqui. Continuava a pedir
-    // as playlists todas até ao fim, ao mesmo tempo que a nova.
-    if (desactualizada()) break;
-    if (!v.master) continue;
+  // Várias de cada vez, e o canal em foco primeiro. O teste real de 12/10: "Abrir todos" com 33
+  // canais eram 66 pedidos um a seguir ao outro antes do primeiro vídeo, e levava 40 s. Seis no ar de
+  // cada vez é pouco para a Kick e chega para as listas (texto pequeno) não esperarem umas pelas outras.
+  const primeiros = new Set(estado.restaurar?.focos || estado.focos || []);
+  const itens = [...noite.itens].sort((a, b) => (primeiros.has(b.slug) ? 1 : 0) - (primeiros.has(a.slug) ? 1 : 0));
+  const lidas = new Map();
+  let proximo = 0;
+  const lerUm = async ({ slug, v }) => {
+    if (!v.master) return;
     const chave = `${slug}|${v.id}`;
     // A playlist de um VOD acabado nunca muda; a de quem está no ar cresce a cada segmento. Guardada,
     // abrir um lance de agora mostrava o vídeo de quando se carregou da primeira vez.
     const lida = v.aoVivo ? null : estado.pecasLidas.get(chave);
-    if (lida) {
-      if (!porCanal.has(slug)) porCanal.set(slug, []);
-      porCanal.get(slug).push(lida);
-      continue;
-    }
+    if (lida) { lidas.set(chave, lida); return; }
     try {
       const master = lerMaster(await lerTexto(v.master), v.master);
-      if (!master.length) { naoLidos.add(slug); continue; }
+      if (!master.length) { naoLidos.add(slug); return; }
       const barato = master.at(-1);
       const playlist = lerPlaylist(await lerTexto(barato.url), barato.url);
       const peca = { vod: v, playlist, escada: master, barato };
       // Só se guarda o que tem relógio. Uma peça sem ele não entra na linha do
       // canal, e guardada impedia o Carregar seguinte de a tentar outra vez.
       if (Number.isFinite(playlist.inicio)) estado.pecasLidas.set(chave, peca);
-      if (!porCanal.has(slug)) porCanal.set(slug, []);
-      porCanal.get(slug).push(peca);
+      lidas.set(chave, peca);
     } catch { naoLidos.add(slug); }
+  };
+  const trabalhador = async () => {
+    // Uma leitura que já não interessa a ninguém pára aqui. Continuava a pedir
+    // as playlists todas até ao fim, ao mesmo tempo que a nova.
+    while (proximo < itens.length && !desactualizada()) await lerUm(itens[proximo++]);
+  };
+  await Promise.all(Array.from({ length: Math.min(LISTAS_DE_UMA_VEZ, itens.length) }, trabalhador));
+  // Pela ordem da noite, como antes, para a ordem das peças de cada canal não depender de quem chegou primeiro.
+  for (const { slug, v } of noite.itens) {
+    const peca = lidas.get(`${slug}|${v.id}`);
+    if (!peca) continue;
+    if (!porCanal.has(slug)) porCanal.set(slug, []);
+    porCanal.get(slug).push(peca);
   }
   if (!desactualizada()) $('noite').disabled = false;
   // Se ele mudou de noite outra vez enquanto isto lia, esta resposta já não
@@ -818,7 +845,14 @@ async function lerNoite(noite) {
   const g = estado.restaurar;
   if (g) {
     const existe = (c) => estado.linhas.some((l) => l.slug === c);
-    if (g.agora >= estado.janela.inicio && g.agora <= estado.janela.fim) estado.agoraMs = g.agora;
+    // O "Ver ao vivo agora" (e qualquer instante depois do fim do vídeo de uma live): prende-se à borda
+    // do que já está gravado, com folga. Antes caía fora da janela e ficava o começo da noite: a live
+    // abria 50 min atrás do ar (teste real de 12/10, ver `instanteAoVivo`).
+    const live = estado.linhas.some((l) => l.pecas.some((p) => p.vod?.aoVivo));
+    if (g.aoVivo || (live && g.agora > estado.janela.fim)) {
+      const r = instanteAoVivo(estado.linhas, { pedidoMs: g.agora, nudges: estado.nudges });
+      if (r) estado.agoraMs = Math.max(estado.janela.inicio, Math.min(r.ms, estado.janela.fim));
+    } else if (g.agora >= estado.janela.inicio && g.agora <= estado.janela.fim) estado.agoraMs = g.agora;
     const focos = (g.focos || []).filter(existe);
     if (focos.length) estado.focos = focos;
     if (g.marca && g.marca.de >= estado.janela.inicio && g.marca.ate <= estado.janela.fim) {
@@ -862,6 +896,7 @@ async function lerNoite(noite) {
   pintarMarca();
   pintarMomentos();
   guardar();
+  seguirLives();
   // Só na primeira noite depois de abrir a página: a seguir, quem rola é ele.
   if (rolarPendente != null) {
     const y = rolarPendente;
@@ -870,6 +905,50 @@ async function lerNoite(noite) {
   }
 }
 let rolarPendente = null;
+
+// Com alguém ao vivo na noite aberta, as playlists dele leem-se outra vez de tempos a tempos: sem isso
+// o fim de cada faixa ficava no instante em que a noite abriu, e o relógio da página dava o canal como
+// "acabou" enquanto o vídeo (ver `carregadorAoVivo`) continuava a andar.
+const RELER_AO_VIVO_MS = 15_000;
+let releitura = null;
+function seguirLives() {
+  clearTimeout(releitura);
+  releitura = null;
+  const vivas = () => estado.linhas.filter((l) => l.pecas.some((p) => p.vod?.aoVivo));
+  if (!vivas().length) return;
+  const minhaNoite = vezNoite;
+  const reler = async () => {
+    if (minhaNoite !== vezNoite) return;
+    if (document.visibilityState !== 'hidden') {
+      const lista = vivas();
+      let i = 0;
+      const um = async () => {
+        while (i < lista.length) {
+          const l = lista[i++];
+          const pecas = l.pecasCompletas || l.pecas;
+          const peca = pecas.find((p) => p.vod?.aoVivo);
+          if (!peca) continue;
+          try {
+            // eslint-disable-next-line no-await-in-loop
+            const playlist = lerPlaylist(await lerTexto(peca.barato.url), peca.barato.url);
+            if (minhaNoite !== vezNoite || !Number.isFinite(playlist.fim) || !(playlist.fim > peca.playlist.fim)) continue;
+            peca.playlist = playlist;
+            Object.assign(l, linhaDoCanal(l.slug, pecas), { pecasCompletas: pecas });
+          } catch { /* fica a de antes; tenta-se na volta seguinte */ }
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(LISTAS_DE_UMA_VEZ, lista.length) }, um));
+      if (minhaNoite !== vezNoite || !estado.janela) return;
+      const fim = Math.max(...estado.linhas.map((l) => l.fim).filter(Number.isFinite));
+      if (fim > estado.janela.fim) {
+        estado.janela = { ...janelaComum(estado.linhas), inicio: estado.janela.inicio, fim };
+        pintarFaixas();
+      }
+    }
+    releitura = setTimeout(reler, RELER_AO_VIVO_MS);
+  };
+  releitura = setTimeout(reler, RELER_AO_VIVO_MS);
+}
 
 /* Num telemovel o palco nasce a dois mil pixels do topo: por cima dele estao a
    caixa dos canais, a lista de noites e o estado de cada canal — 1 680 px de
@@ -2655,6 +2734,7 @@ async function lerChat(quem, quanto) {
       const p = tn(r.picos, 'chatTrecho.umPico', 'chatTrecho.picos');
       if (r.semCanal) estadoEl.textContent = t('chatTrecho.semCanal', { canal });
       else if (r.jaLido) estadoEl.textContent = t('chatTrecho.jaLido', { ...quando, msgs: m, picos: p });
+      else if (r.motivo === 'rate-limit' || r.motivo === 'sem-rede') estadoEl.textContent = t('chatTrecho.bloqueado', { ...quando, msgs: m });
       else if (r.motivo) estadoEl.textContent = t('chatTrecho.parou', { ...quando, msgs: m });
       else estadoEl.textContent = t('chatTrecho.lido', { ...quando, msgs: m, picos: p });
     }
@@ -2736,7 +2816,16 @@ function irPara(quandoMs) {
     // olhar para os dois. Vem depois do principal, e não ao mesmo tempo — que
     // era o que fazia o par demorar o dobro a aparecer.
     for (const [l, r, v] of segundo) tocar(l, r, v, { alta: true, correr: true, comSom: temSom(l.slug) });
+    // Os à vista, poucos de cada vez (o teste real de 12/10: 33 ângulos pediam tudo ao mesmo tempo e o
+    // primeiro vídeo levava 40 s). Cada lote espera que o anterior tenha imagem, ou 3 s.
+    let lote = [];
     for (const [l, r, v] of secundarios) {
+      if (lote.length >= LEITORES_DE_UMA_VEZ) {
+        // eslint-disable-next-line no-await-in-loop
+        await Promise.all(lote.map((x) => primeiroFrame(x, 3000)));
+        if (geracao !== estado.geracao) return;
+        lote = [];
+      }
       if (naoSeVe(l.slug)) {
         porAcertar.add(l.slug);
         // Quem saiu do foco volta para a grelha, e quase sempre para um lugar
@@ -2748,10 +2837,34 @@ function irPara(quandoMs) {
         continue;
       }
       porAcertar.delete(l.slug);
+      const tinha = estado.players.get(l.slug);
       tocar(l, r, v, { alta: false, correr: false });
+      if (estado.players.get(l.slug) !== tinha) lote.push(v);
     }
   }, 220);
 }
+
+/** O `pLoader` do hls.js que tira o ENDLIST das playlists de quem está ao vivo (ver `tocar`). */
+function carregadorAoVivo() {
+  const Base = window.Hls?.DefaultConfig?.loader;
+  if (!Base) return {};
+  class AoVivo extends Base {
+    load(contexto, config, chamadas) {
+      const sucesso = chamadas.onSuccess;
+      super.load(contexto, config, {
+        ...chamadas,
+        onSuccess: (resposta, ...resto) => {
+          if (typeof resposta?.data === 'string') resposta.data = resposta.data.replace(/#EXT-X-ENDLIST\s*/g, '');
+          sucesso(resposta, ...resto);
+        },
+      });
+    }
+  }
+  return { pLoader: AoVivo };
+}
+
+/** Quantos leitores novos de 160p arrancam ao mesmo tempo (ver o lote dos secundários). */
+const LEITORES_DE_UMA_VEZ = 4;
 
 /** Um leitor que não é o de um secundário: degrau de cima, ou a andar. */
 function leitorCaro(linha, r, video) {
@@ -2834,7 +2947,14 @@ function tocar(linha, r, video, { alta = false, correr = false, comSom = false }
     // O que já passou também fica: o hls.js guarda tudo o que tocou
     // (`backBufferLength` infinito de origem). Com trinta ângulos numa noite
     // de horas era essa a memória que crescia até o separador cair.
-    const hls = new window.Hls({ startPosition: r.tempoS, maxBufferLength: alta ? 30 : correr ? 8 : 2, backBufferLength: alta ? 30 : 10 });
+    const hls = new window.Hls({
+      startPosition: r.tempoS, maxBufferLength: alta ? 30 : correr ? 8 : 2, backBufferLength: alta ? 30 : 10,
+      // Quem está ao vivo: a Kick serve a gravação em curso como uma playlist EVENT já fechada com
+      // ENDLIST, e o hls.js tocava-a como VOD e parava no fim do que estava gravado quando a leu (medido
+      // a 12/10: o "Ver ao vivo agora" congelava ~15 s depois). Sem o ENDLIST, o hls.js volta a pedi-la
+      // a cada segmento e o vídeo continua.
+      ...(peca.vod?.aoVivo ? carregadorAoVivo() : {}),
+    });
     const leitor = { url: alvo.url, destroy: () => hls.destroy() };
     // Um erro fatal (403, 429, a rede que caiu) faz o hls.js parar de carregar
     // de vez. O leitor ficava guardado com o mesmo endereço, cada salto a seguir
@@ -2934,20 +3054,47 @@ async function alinhar() {
   // a única saída de uma sincronia de centenas de MB era fechar o separador.
   estado.cancelar = () => controlo.abort();
 
+  // Os do lance primeiro (o teste real de 12/10: 33 ângulos, 30 min, um de cada vez): com muitos
+  // ângulos, os que estão em foco e no ar neste instante medem-se e aplicam-se antes, e só depois todos,
+  // nos mesmos minutos (o que já se ouviu não se ouve outra vez).
+  const noAr = (l) => onde(l, estado.agoraMs, { nudgeMs: estado.nudges[l.slug] || 0 }).estado === 'toca';
+  const doLance = [...new Set([...estado.focos, ...estado.linhas.filter(noAr).map((l) => l.slug)])]
+    .slice(0, MUITOS_ANGULOS);
+  const progresso = (prefixo) => (p) => {
+    nota.textContent = prefixo + (p.fase === 'ouvir'
+      ? t('alinhar.aOuvir', {
+        canal: p.canal, feito: p.feito, total: p.total, mb: (p.bytes / 1048576).toFixed(0),
+      })
+      : p.total ? t('alinhar.aCompararQuantos', { feito: p.feito, total: p.total })
+        : t('alinhar.aComparar'));
+  };
   try {
+    if (estado.linhas.length > MUITOS_ANGULOS && doLance.length > 1) {
+      const r1 = await alinharPeloSom({
+        linhas: estado.linhas.filter((l) => doLance.includes(l.slug)),
+        janela: estado.janela,
+        instantes,
+        memoria: estado.memoriaAlinhar,
+        sinal: controlo.signal,
+        aoProgresso: progresso(t('alinhar.primeiro', { n: doLance.length })),
+      });
+      if (estado.linhas !== linhasMedidas) {
+        nota.classList.add('mau');
+        nota.textContent = t('alinhar.noiteMudou');
+        return;
+      }
+      for (const [slug, ms] of Object.entries(r1.ajustesMs)) estado.nudges[slug] = ms;
+      pintarFaixas();
+      irPara(estado.agoraMs);
+    }
     const r = await alinharPeloSom({
       linhas: estado.linhas,
       janela: estado.janela,
+      instantes,
       memoria: estado.memoriaAlinhar,
       sinal: controlo.signal,
-      aoProgresso: (p) => {
-        nota.textContent = p.fase === 'ouvir'
-          ? t('alinhar.aOuvir', {
-            canal: p.canal, feito: p.feito, total: p.total, mb: (p.bytes / 1048576).toFixed(0),
-          })
-          : p.total ? t('alinhar.aCompararQuantos', { feito: p.feito, total: p.total })
-            : t('alinhar.aComparar');
-      },
+      primeiro: doLance,
+      aoProgresso: progresso(''),
     });
     if (estado.linhas !== linhasMedidas) {
       nota.classList.add('mau');
@@ -3856,7 +4003,7 @@ function pintarMomentos() {
   const total = planoDaMontagem(lista, canais, { filmava }).length;
   // A correr, o botão é o Parar dela e fica sempre aceso; parado, só acende
   // quando há o que exportar.
-  trocarRotulo($('baixarMontagem'), estado.montagem ? 'montagem.parar' : 'montagem.baixar');
+  if (estado.montagem) trocarRotulo($('baixarMontagem'), 'montagem.parar'); else pintarSelecao();
   $('baixarMontagem').disabled = estado.montagem ? false : !total;
   const semVitima = sozinho ? 0 : lista.filter((m) => !temMorte(m)).length;
   const escondidos = lista.length - visiveis.length;
@@ -3875,6 +4022,11 @@ function pintarSelecao() {
   const n = estado.selecao.size;
   $('apagarSelecionados').disabled = !n;
   $('estadoSelecao').textContent = n ? t('sel.quantos', { n }) : '';
+  // O botão da montagem diz o que exporta: as marcadas, quando há, e senão todas.
+  if (!estado.montagem) {
+    trocarRotulo($('baixarMontagem'), 'montagem.baixar');
+    if (n) $('baixarMontagem').querySelector('span[data-t]').textContent = t('montagem.baixarSel', { n });
+  }
 }
 
 /**
@@ -3930,13 +4082,21 @@ async function baixarMontagem(soEsta = null) {
   if (estado.montagem) return;
   const canais = estado.linhas.map((l) => l.slug);
   const todas = ordenar(estado.momentos);
+  // Só as marcadas na caixa, quando há alguma marcada (o teste real de 12/10: com 2 de 8 marcadas,
+  // exportava as 8). O botão diz quantas (ver `pintarSelecao`).
+  const escolhidas = soEsta || (estado.selecao.size ? todas.filter((m) => estado.selecao.has(m.ms)) : null);
   // A numeração é sempre a da montagem inteira, mesmo a pedir uma só: é este
   // número que vai no nome do ficheiro, e tem de ser o mesmo nos dois caminhos.
   const plano = planoDaMontagem(todas, canais, { filmava })
-    .filter((c) => !soEsta || soEsta.some((m) => m.ms === c.ms));
+    .filter((c) => !escolhidas || escolhidas.some((m) => m.ms === c.ms));
+  // "Um vídeo só": os clipes juntam-se pela ordem num ficheiro (o 16:9 no mp4.js, o 9:16 em
+  // juntar-gravados.js), em vez de um ficheiro por clipe e o ZIP.
+  const umSo = !soEsta && $('formatoMontagem').value.endsWith('-um');
+  const para16 = [];
+  const para916 = [];
   // O formato para todos de uma vez (o dono, 07/10: "escolher TikTok para todos"). Com 9:16, a POV de
   // cada kill sai também em vertical; sem enquadramento guardado, o do meio (ver `renderizarGravado`).
-  if ($('formatoMontagem').value === 'ambos') {
+  if ($('formatoMontagem').value.startsWith('ambos')) {
     for (const c of plano) {
       if (c.papel === 'protagonista' && !c.retrato) c.retrato = retratoLembrado(c.canal);
     }
@@ -3990,6 +4150,11 @@ async function baixarMontagem(soEsta = null) {
         });
         const nome2 = `${nome.replace(/\.[a-z0-9]+$/i, '')}-retrato.${extensaoDe(t2)}`;
         const bytes2 = new Uint8Array(await b2.arrayBuffer());
+        if (umSo) {
+          para916.push({ bytes: bytes2, tipo: t2 });
+          item2.remove();
+          return null;
+        }
         paraZip.push({ nome: nome2, blob: b2, crc: crc32(bytes2), tamanho: bytes2.length });
         const curto = notaDoRetratoCurto(gravadoS, (clipe.ateMs - clipe.deMs) / 1000);
         linhaDeFicheiro(item2, {
@@ -4013,7 +4178,8 @@ async function baixarMontagem(soEsta = null) {
     try {
       // Com o chat por cima (guardado nesta kill), o 16:9 grava-se em tempo real como o 9:16, com o
       // chat DESTE canal: os pixels mudam, e copiar os bytes da Kick não os muda.
-      if (clipe.chat) {
+      // Num vídeo só, o 16:9 é o da Kick sem recodificar, e por isso sai sem o chat por cima.
+      if (clipe.chat && !umSo) {
         const rotulo = `${i + 1}/${plano.length}: ${clipe.prefixo} ${clipe.canal}, ${t('chatClipe.naFila')}`;
         $('estadoMontagem').textContent = rotulo;
         let gravado;
@@ -4061,7 +4227,7 @@ async function baixarMontagem(soEsta = null) {
         falhas++;
         continue;
       }
-      const r = await executarCorte(p, { sinal: controlo.signal, jaTemos });
+      const r = await executarCorte(p, { sinal: controlo.signal, jaTemos, guardarClipe: umSo });
       for (const s of p.segmentos) {
         sitios.set(s.url, { canal: clipe.canal, inicio: s.inicio, fim: s.inicio + s.duracaoS * 1000 });
       }
@@ -4074,6 +4240,24 @@ async function baixarMontagem(soEsta = null) {
         continue;
       }
       const nome = `${clipe.prefixo}_${nomeDoFicheiro({ canal: clipe.canal, quandoMs: clipe.deMs, sufixo: sufixoDe(r.tipo) })}`;
+      const resto = oQueFalta(linha, p, clipe.ateMs + nudge, clipe.saltar);
+      if (resto) {
+        plano.splice(i + 1, 0, {
+          ...clipe, deMs: resto.deMs - nudge, saltar: resto.saltar, parte: (clipe.parte || 1) + 1, retrato: null,
+        });
+      }
+      if (umSo) {
+        if (!r.clipe) {
+          falhas++;
+          mau(item, clipe, t('montagem.umSoFora', { erro: r.semMp4 || '?' }));
+        } else {
+          para16.push(r.clipe);
+          prontos++;
+          item.remove();
+        }
+        if (clipe.retrato && await tirarRetrato(nome) === 'parar') break;
+        continue;
+      }
       const blob = new Blob([r.bytes], { type: r.tipo });
       paraZip.push({ nome, blob, crc: crc32(r.bytes), tamanho: r.bytes.length });
       prontos++;
@@ -4081,12 +4265,6 @@ async function baixarMontagem(soEsta = null) {
       // mesmo canal, e entra na fila logo a seguir, como um ficheiro com o
       // mesmo número e a hora de onde continua (ver `oQueFalta`). Sem isto o
       // clipe saía cortado na queda, e a kill podia estar do lado de lá.
-      const resto = oQueFalta(linha, p, clipe.ateMs + nudge, clipe.saltar);
-      if (resto) {
-        plano.splice(i + 1, 0, {
-          ...clipe, deMs: resto.deMs - nudge, saltar: resto.saltar, parte: (clipe.parte || 1) + 1, retrato: null,
-        });
-      }
       const sobra = notaDaSobra(r.plano, { continua: Boolean(resto), parte: clipe.parte, semMp4: r.semMp4 });
       linhaDeFicheiro(item, {
         nome,
@@ -4113,6 +4291,7 @@ async function baixarMontagem(soEsta = null) {
 
   const parada = controlo.signal.aborted;
   jaTemos.clear();
+  if (umSo && !parada) juntarNumSo(para16, para916);
   estado.montagem = null;
   // Redesenhar devolve o botão e os de cada kill ao normal; a frase do fim vem
   // depois, para não ser tapada pelo resumo da lista.
@@ -4124,7 +4303,51 @@ async function baixarMontagem(soEsta = null) {
       + (falhas ? t('montagem.falharam', { n: falhas }) : '');
   // O ZIP é da montagem inteira. A pedir uma kill só, juntar num ZIP era pôr
   // ali um botão que só levava a última coisa que ele carregou.
-  if (!soEsta) oferecerZip(paraZip);
+  if (!soEsta && !umSo) oferecerZip(paraZip);
+}
+
+/**
+ * O fim do "Um vídeo só": os clipes de 16:9 num MP4, e os de 9:16 noutro, cada um pela ordem da montagem.
+ * Se os 9:16 não se deixarem juntar (gravados em formatos diferentes), saem soltos, a dizer porquê.
+ */
+function juntarNumSo(para16, para916) {
+  const dia = new Date().toISOString().slice(0, 10);
+  const pronto = (blob, nome, duracaoS, n) => {
+    const item = document.createElement('li');
+    $('fila').prepend(item);
+    linhaDeFicheiro(item, {
+      nome,
+      url: guardarFicheiro(blob),
+      nota: `${(blob.size / 1048576).toFixed(1)} MB, ${t('montagem.umSoNota', { n, s: duracaoS.toFixed(1) })}`,
+    });
+  };
+  if (para16.length) {
+    try {
+      const { bytes, duracaoS } = juntarMp4(para16);
+      pronto(new Blob([bytes], { type: 'video/mp4' }), `montagem-${dia}.mp4`, duracaoS, para16.length);
+    } catch (e) {
+      const item = document.createElement('li');
+      $('fila').prepend(item);
+      item.innerHTML = `<span class="nota mau">${escapar(t('montagem.umSoErro', { erro: e.message }))}</span>`;
+    }
+  }
+  if (para916.length) {
+    const tipo = para916[0].tipo;
+    try {
+      const { partes, duracaoS } = juntarGravados(para916.map((x) => x.bytes));
+      pronto(new Blob(partes, { type: tipo }), `montagem-${dia}-retrato.${extensaoDe(tipo)}`, duracaoS, para916.length);
+    } catch (e) {
+      const item = document.createElement('li');
+      $('fila').prepend(item);
+      item.innerHTML = `<span class="nota mau">${escapar(t('montagem.umSoErro', { erro: e.message }))}</span>`;
+      for (const [k, x] of para916.entries()) {
+        const solto = document.createElement('li');
+        $('fila').append(solto);
+        const blob = new Blob([x.bytes], { type: x.tipo });
+        linhaDeFicheiro(solto, { nome: `montagem-${dia}-${k + 1}-retrato.${extensaoDe(x.tipo)}`, url: guardarFicheiro(blob), nota: `${(blob.size / 1048576).toFixed(1)} MB` });
+      }
+    }
+  }
 }
 
 /**
@@ -6244,11 +6467,14 @@ function pintarPartilha() {
 
 function linkDaNoite() {
   if (!estado.linhas.length || !estado.janela) return '';
+  // Com as kills marcadas e as margens (o teste real de 12/10: o link saía com "momentos":[]).
   const magro = paraLink({
     canais: estado.linhas.map((l) => l.slug),
     janela: estado.janela,
     nudges: estado.nudges,
     agoraMs: estado.agoraMs,
+    margens: estado.margens,
+    momentos: momentosParaLink(estado.momentos),
   });
   const base = `${location.origin}${location.pathname}`;
   // Depois do #, e nao no ?s=: o que vem depois do # nao vai ao servidor. Uma
@@ -6352,7 +6578,10 @@ $('filtroMomentos').onchange = (e) => {
 $('procurarKills').onclick = procurarKills;
 // Seta, e nao a funcao directamente: o `onclick` passa o evento como primeiro
 // argumento, e ele ia parar ao `soEsta` como se fosse uma lista de kills.
-try { const f = localStorage.getItem('povix.formato'); if (f === 'ambos') $('formatoMontagem').value = f; } catch { /* janela privada */ }
+try {
+  const f = localStorage.getItem('povix.formato');
+  if (['ambos', '16x9-um', 'ambos-um'].includes(f)) $('formatoMontagem').value = f;
+} catch { /* janela privada */ }
 $('formatoMontagem').onchange = () => {
   try { localStorage.setItem('povix.formato', $('formatoMontagem').value); } catch { /* janela privada */ }
 };
@@ -7082,7 +7311,8 @@ painelAtalhos.pintar();
 const vemDeEvento = /[#&]evento=/.test(location.hash) || new URLSearchParams(location.search).has('e');
 // O link partilhado vem no # (ver `linkDaNoite`); os de antes vinham no ?s=.
 const sDoHash = new URLSearchParams(location.hash.slice(1)).get('s');
-const doEndereco = doLink(new URLSearchParams(location.search).get('s') || sDoHash || '');
+const doEnderecoCru = doLink(new URLSearchParams(location.search).get('s') || sDoHash || '');
+const doEndereco = doEnderecoCru && { ...doEnderecoCru, momentos: momentosDoLink(doEnderecoCru.momentos) };
 let local = null;
 // Com os dados do site bloqueados o localStorage atira um SecurityError, e aqui
 // isso parava o arranque inteiro, com o guardar e o beforeunload por registar.
@@ -7139,14 +7369,23 @@ if (guardado) {
 //
 // O mapa do evento entrega à página de sempre os canais de um lance e o instante dele. Daqui para a
 // frente é uma noite como outra qualquer: a grelha, o alinhamento, a montagem e o clipe.
-async function abrirLanceDoEvento(canais, ms, foco, { exato = false } = {}) {
+async function abrirLanceDoEvento(canais, ms, foco, {
+  exato = false, aoVivo = false, ajustes = {}, referencia = null,
+} = {}) {
+  // Os atrasos medidos pelo som do lance (ver `verLance` em evento-ui.js), relativos à referência.
+  const ref = referencia && slugDoNome(referencia);
+  for (const [c, desvioMs] of Object.entries(ajustes || {})) {
+    if (!Number.isFinite(desvioMs)) continue;
+    estado.nudges[slugDoNome(c)] = (estado.nudges[ref] || 0) + desvioMs;
+  }
   // Com esses canais já na grelha e o instante dentro da noite aberta, é só andar no tempo. Recarregar
   // tudo para ir de um pico ao outro era o que mais travava o uso (o dono, a 07/10).
   // Com `exato` (o "Abrir só quem está ao vivo" e o "Abrir todos com vídeo"), a grelha tem de ficar
   // com esses e só esses: quem pediu só os ao vivo não quer os outros que já lá estavam.
   const abertos = new Set(estado.linhas.map((l) => l.slug));
   const j = estado.janela;
-  if (j && ms >= j.inicio && ms <= j.fim && canais.length
+  // Ao vivo o pedido pode estar uns segundos depois do fim lido: prende-se à borda mais abaixo.
+  if (j && ms >= j.inicio && (ms <= j.fim || (aoVivo && ms <= j.fim + 120_000)) && canais.length
     && canais.every((c) => abertos.has(slugDoNome(c)))
     && (!exato || abertos.size === new Set(canais.map(slugDoNome)).size)) {
     const f = foco && slugDoNome(foco);
@@ -7155,7 +7394,10 @@ async function abrirLanceDoEvento(canais, ms, foco, { exato = false } = {}) {
       aplicarFoco();
     }
     if (estado.parado) alternarPausa();
-    irPara(ms);
+    if (Object.keys(ajustes || {}).length) { pintarFaixas(); pintarConfianca(); guardar(); }
+    // Ao vivo, a playlist lida pode já ter crescido: o instante é a borda dela, e não o pedido.
+    const vivo = aoVivo ? instanteAoVivo(estado.linhas, { pedidoMs: ms, nudges: estado.nudges }) : null;
+    irPara(vivo ? Math.max(j.inicio, Math.min(vivo.ms, j.fim)) : ms);
     window.scrollTo({ top: 0 });
     return;
   }
@@ -7166,7 +7408,7 @@ async function abrirLanceDoEvento(canais, ms, foco, { exato = false } = {}) {
   // e nada mais, o guardar seguinte apagava-as do localStorage.
   estado.momentosFora = unirMomentos(estado.momentos, estado.momentosFora);
   estado.momentos = [];
-  estado.restaurar = { agora: ms, focos: foco ? [foco] : [], marca: null, momentos: [] };
+  estado.restaurar = { agora: ms, focos: foco ? [foco] : [], marca: null, momentos: [], aoVivo };
   guardar();
   await carregar();
   window.scrollTo({ top: 0 });

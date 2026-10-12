@@ -937,7 +937,7 @@ export function montarEvento({
     if (id != null) idsDoChat.set(c, id);
     let chegouMs = ateMs;
     const msgs = await mensagensEntre(id, deMs, ateMs, {
-      buscar: buscarChat, sinal, maxPedidos,
+      buscar: buscarChat, sinal, maxPedidos, devolverAoCancelar: soOQueVeio,
       aoProgredir: (p) => { chegouMs = p.chegouMs; aoProgredir(p); },
     });
     juntarMensagens(c, msgs);
@@ -963,15 +963,15 @@ export function montarEvento({
   // ainda não se leu. Não depende do mapa do evento: na noite sem evento funciona igual, porque o chat
   // vem do canal e não do elenco. As mensagens e os picos vão para o mesmo sítio dos do evento.
   const TRECHO_MAX_PEDIDOS = 400;
-  const TRECHO_BOCADO_MS = 5 * 60_000;
   async function lerChatTrecho(c, deMs, ateMs, { sinal, aoProgredir = () => {} } = {}) {
     const ate = Math.min(ateMs, Date.now());
     const falta = faltaLer(c, deMs, ate);
     const total = falta.reduce((s, [a, b]) => s + (b - a), 0);
-    // Em bocados de 5 minutos, por ordem de relógio: parar a meio guarda os bocados que já vieram, e um
-    // clique a seguir lê só o resto. Custa um pedido a mais por bocado, que é o da fronteira.
-    const bocados = [];
-    for (const [a, b] of falta) for (let x = a; x < b; x += TRECHO_BOCADO_MS) bocados.push([x, Math.min(b, x + TRECHO_BOCADO_MS)]);
+    // Cada pedaço que falta lê-se de uma vez, andando para trás página a página. Eram bocados de 5 min,
+    // um pedido por bocado mesmo sem mensagens: o teste real de 12/10 contou 60 pedidos para as 58
+    // mensagens de 14 h de um canal (3 páginas chegavam). Parar a meio continua a guardar o que veio:
+    // `lerJanela` com `soOQueVeio` marca como lido só do fim até onde a leitura chegou.
+    const bocados = falta;
     const antes = (ev.mensagens.get(c) || []).length;
     let andado = 0;
     let motivo = null;
@@ -983,6 +983,8 @@ export function montarEvento({
         maxPedidos: TRECHO_MAX_PEDIDOS,
         aoProgredir: ({ fracao }) => aoProgredir({ fracao: total ? (andado + fracao * (b - a)) / total : 1 }),
       });
+      // Parado a meio: o que veio já ficou guardado pelo `lerJanela`.
+      if (sinal?.aborted) throw new DOMException('parado', 'AbortError');
       andado += b - a;
       aoProgredir({ fracao: total ? andado / total : 1 });
       if (id == null) { semCanal = true; break; }
@@ -1157,7 +1159,20 @@ export function montarEvento({
   // ao mesmo tempo que as playlists do lance faziam a live demorar a abrir (o dono, 07/10: "lento").
   // Enquanto um lance abre, cada pedido do chat espera; a seguir continua de onde estava.
   let livre = Promise.resolve();
-  const buscarChat = async (...args) => { await livre; return buscar(...args); };
+  // O mesmo endereço pedido duas vezes ao mesmo tempo (o time e o trecho, ou dois cliques) vai à Kick
+  // uma vez só, e cada um recebe a sua cópia da resposta.
+  const emCurso = new Map();
+  const buscarChat = async (url, opcoes) => {
+    await livre;
+    const chave = String(url);
+    let p = emCurso.get(chave);
+    if (!p) {
+      p = buscar(url, opcoes).finally(() => emCurso.delete(chave));
+      emCurso.set(chave, p);
+    }
+    const r = await p;
+    return typeof r?.clone === 'function' ? r.clone() : r;
+  };
 
   async function verLance(lista = null, opcoes = {}) {
     const e = ev.escolha;
@@ -1165,11 +1180,17 @@ export function montarEvento({
     const canais = Array.isArray(lista) ? lista : canaisDoLance(e);
     if (!canais.length) return;
     const foco = canais.includes(e.canal) ? e.canal : canais[0];
+    // O atraso que o "Achar quem mais estava" mediu vai com cada ângulo achado, relativo a quem se
+    // escolheu (o teste real de 12/10: mediu nikots 0,87 s e o lance abria com a sincronia a 0,0 s).
+    const ajustes = {};
+    for (const a of resumo(ev.achados).estava) {
+      if (canais.includes(a.canal) && Number.isFinite(a.desvioS)) ajustes[a.canal] = Math.round(a.desvioS * 1000);
+    }
     mostrarMapa(false);
     let soltar;
     livre = new Promise((r) => { soltar = r; });
     try {
-      await abrirLance(canais, e.ms, foco, opcoes);
+      await abrirLance(canais, e.ms, foco, { ...opcoes, ajustes, referencia: e.canal });
       // O dono, 10/10: com o lance aberto o que importa é o visor. Se o mapa voltou a abrir enquanto os
       // vídeos carregavam, fecha-se outra vez na barra, e num ecrã estreito a página desce até ao visor.
       mostrarMapa(false);
@@ -1416,17 +1437,24 @@ export function montarEvento({
     });
   }
 
-  // O lance escolhido (ou o primeiro streamer no ar) quase no ar: 20 s atrás, onde todos já gravaram.
+  // O lance escolhido (ou o primeiro streamer no ar) quase no ar, com todos os que estão ao vivo.
+  //
+  // O teste real de 12/10: abria um canal dos 24 ao vivo, e 50 min atrás do ar. O instante pedido é só
+  // um palpite para escolher a noite: a página prende-o à borda do que a playlist já tem
+  // (`instanteAoVivo`, no restauro de app.js), com a folga medida nos segmentos dela.
   async function irAoVivo() {
     const agora = Date.now() - ATRAS_DO_AR_MS;
-    const canal = ev.escolha && noArEm(ev.coberturas, ev.escolha.canal, agora) ? ev.escolha.canal
-      : [...ev.coberturas.keys()].find((c) => noArEm(ev.coberturas, c, agora));
+    const vivos = vivosAgora();
+    const noAr = (c) => vivos.has(c) && noArEm(ev.coberturas, c, agora);
+    const canal = ev.escolha && noAr(ev.escolha.canal) ? ev.escolha.canal
+      : [...ev.coberturas.keys()].find(noAr) || [...ev.coberturas.keys()].find((c) => noArEm(ev.coberturas, c, agora));
     if (!canal) return;
     ev.escolha = { canal, ms: agora, time: indiceDeTimes(ev.elenco).get(canal) ?? null };
     // Outro momento: quem se confirmou pelos nomes na tela era do momento de antes.
     nomes.limpar();
     pintarLance();
-    await verLance();
+    const todos = aoVivoEm(ev.escolha);
+    await verLance(todos.length ? todos : null, { exato: true, aoVivo: true });
   }
 
   // ── com um lance aberto ────────────────────────────────────────────────

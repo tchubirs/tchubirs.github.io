@@ -179,3 +179,77 @@ test('se nunca vira, nao se inventa um instante', () => {
   const l = limiar(medir(JOGO), medir(MORTE));
   assert.equal(pontoDeViragem([{ ms: 1000, medida: medir(JOGO) }], l), null);
 });
+
+// ── o inventário não é uma morte (QA-REAL.md, 12/10) ─────────────────────────
+
+const L = 160;
+const A = 90;
+/** Um quadro de 160x90 pintado com retângulos [x, y, l, a, r, g, b], por cima de um fundo. */
+function pintado(fundo, retangulos = [], ruido = 0) {
+  const p = new Uint8ClampedArray(L * A * 4);
+  let s = 7;
+  const rnd = () => ((s = (s * 1103515245 + 12345) >>> 0) / 2 ** 32);
+  for (let y = 0; y < A; y++) {
+    for (let x = 0; x < L; x++) {
+      const i = (y * L + x) * 4;
+      const c = typeof fundo === 'function' ? fundo(x, y) : fundo;
+      for (let k = 0; k < 3; k++) p[i + k] = c[k] + (ruido ? (rnd() - 0.5) * ruido : 0);
+      p[i + 3] = 255;
+    }
+  }
+  for (const [x0, y0, l, a, r, g, b] of retangulos) {
+    for (let y = y0; y < y0 + a; y++) for (let x = x0; x < x0 + l; x++) {
+      const i = (y * L + x) * 4;
+      p[i] = r; p[i + 1] = g; p[i + 2] = b;
+    }
+  }
+  return p;
+}
+// O jogo: chão, céu e coisas, com ruído (nada é liso num quadro de jogo).
+const jogo = () => pintado((x, y) => (y < 40 ? [110, 130, 150] : [90, 100, 50]), [[60, 30, 20, 40, 60, 40, 30]], 40);
+// O inventário do Rust: fundo oliva liso, a grelha de casas dos itens, o boneco à esquerda.
+const inventario = () => {
+  const casas = [];
+  for (let r = 0; r < 4; r++) for (let c = 0; c < 6; c++) casas.push([60 + c * 9, 55 + r * 8, 7, 6, 70, 68, 60]);
+  for (let r = 0; r < 6; r++) for (let c = 0; c < 6; c++) casas.push([105 + c * 8, 45 + r * 7, 6, 5, 75, 72, 62]);
+  return pintado([38, 38, 32], [...casas, [20, 45, 14, 40, 120, 60, 50], [50, 8, 70, 6, 60, 60, 55]]);
+};
+// O ecrã de morte: escuro e puxado ao vermelho, o "you died" e os botões de renascer ao meio.
+const morte = () => pintado((x, y) => [40 + Math.round(20 * (1 - Math.abs(y - 45) / 45)), 14, 16],
+  [[50, 35, 60, 8, 190, 40, 40], [60, 60, 40, 7, 90, 30, 30], [60, 70, 40, 7, 90, 30, 30]], 6);
+
+test('o inventário pintado e o ecrã de morte pintado distinguem-se', async () => {
+  const { pareceInventario } = await import('../site/morte.js');
+  assert.equal(pareceInventario(inventario()).sim, true);
+  assert.equal(pareceInventario(morte()).sim, false);
+  assert.equal(pareceInventario(jogo()).sim, false);
+  // Os quadros planos dos testes de cima (o cinzento de morte é azulado, não oliva) também não.
+  assert.equal(pareceInventario(MORTE, 20).sim, false);
+});
+
+test('abrir o inventário não faz de ninguém vítima; morrer continua a fazer', () => {
+  const notas = {
+    saqueia: notaDeMorte(jogo(), inventario()),
+    morreu: notaDeMorte(jogo(), morte()),
+    vivo: notaDeMorte(jogo(), jogo()),
+  };
+  assert.equal(notas.saqueia.inventario, true);
+  assert.ok(notas.morreu.nota > notas.saqueia.nota * 5, `morreu ${notas.morreu.nota}, saqueia ${notas.saqueia.nota}`);
+  assert.deepEqual(quemMorreu(notas).sugeridos, ['morreu']);
+});
+
+test('nos quadros verdadeiros do teste real: o inventário do nikots sim, o jogo não', async () => {
+  const fs = await import('node:fs');
+  const { pareceInventario } = await import('../site/morte.js');
+  const ler = (nome) => {
+    const rgb = fs.readFileSync(new URL(`../probes/fixtures/${nome}-160x90.rgb`, import.meta.url));
+    const p = new Uint8ClampedArray(L * A * 4);
+    for (let i = 0; i < L * A; i++) { p[i * 4] = rgb[i * 3]; p[i * 4 + 1] = rgb[i * 3 + 1]; p[i * 4 + 2] = rgb[i * 3 + 2]; p[i * 4 + 3] = 255; }
+    return p;
+  };
+  const inv = pareceInventario(ler('inventario-nikots'));
+  assert.ok(inv.sim && inv.fracao > 0.4, `fração ${inv.fracao}`);
+  for (const nome of ['jogo-nikots', 'jogo-polys0800']) assert.equal(pareceInventario(ler(nome)).fracao, 0, nome);
+  const n = notaDeMorte(ler('jogo-nikots'), ler('inventario-nikots'));
+  assert.equal(n.inventario, true);
+});

@@ -23,7 +23,7 @@
 //    window. Preview quality and file quality are unrelated on purpose.
 
 import { lerMaster, lerPlaylist, segmentosNaJanela } from './kick.js';
-import { tsParaMp4 } from './mp4.js';
+import { tsParaMp4, compactar } from './mp4.js';
 
 /** Kick is not ours to hammer. Nothing here opens more sockets than this. */
 const AO_MESMO_TEMPO = 4;
@@ -108,7 +108,7 @@ async function lerCorpo(r, vivo) {
   return junto.buffer;
 }
 
-async function pegarSegmento(url, { buscar, sinal, aoTentar, prazoMs }) {
+export async function pegarSegmento(url, { buscar, sinal, aoTentar, prazoMs }) {
   let ultimo = null;
   for (let tentativa = 1; tentativa <= TENTATIVAS; tentativa++) {
     if (sinal?.aborted) throw new Error('cancelado');
@@ -304,7 +304,7 @@ export function emMp4(plano, juntos, { guardarClipe = false } = {}) {
         duracaoS: r.duracaoS,
         tipo: 'video/mp4',
         nome: plano.nome.replace(/\.[a-z0-9]+$/i, '.mp4'),
-        ...(guardarClipe ? { clipe: r.clipe } : {}),
+        ...(guardarClipe ? { clipe: compactar(r.clipe) } : {}),
       };
     } catch (e) {
       return { ...emTs(plano, juntos), semMp4: e?.message || String(e) };

@@ -14,6 +14,7 @@ import { aacDeSegmentos } from './audio-ts.js';
 import { envolvente, desvio, consolidar, resolver, TAXA } from './sinal.js';
 import { segmentosNaJanela } from './kick.js';
 import { onde } from './relogio.js';
+import { pegarSegmento } from './baixar.js';
 
 /**
  * Quantos MB isto vai custar, antes de começar.
@@ -186,6 +187,9 @@ function reamostrar(pedacos, de, para) {
   return saida;
 }
 
+/** Quanto um pedaço de som (160p, ~300 KB) pode ficar sem mandar nada antes de se tentar outra vez. */
+export const PRAZO_SOM_MS = 20_000;
+
 /**
  * O som de um canal, num instante, ja em mono a 8 kHz e a comecar em `quandoMs`.
  *
@@ -194,7 +198,7 @@ function reamostrar(pedacos, de, para) {
  * e a unica parte que pertence ao browser e nao a este codigo.
  */
 export async function somDoCanal(linha, quandoMs, duracaoS, {
-  buscar = fetch, sinal, descodificar = descodificarAac, contador, taxa = TAXA, paralelo = 4,
+  buscar = fetch, sinal, descodificar = descodificarAac, contador, taxa = TAXA, paralelo = 4, prazoMs,
 } = {}) {
   const r = onde(linha, quandoMs);
   if (r.estado !== 'toca') return null;
@@ -216,17 +220,17 @@ export async function somDoCanal(linha, quandoMs, duracaoS, {
       if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
       const i = proximo++;
       try {
+        // Com prazo e novas tentativas, como a exportação. O teste real de 12/10: uma detecção ficou
+        // quase 4 min parada em "0 s de 10 min" à espera de um pedido que nunca acabou.
         // eslint-disable-next-line no-await-in-loop
-        const resp = await buscar(segs[i].url, { signal: sinal });
-        if (!resp.ok) throw new Error(`segmento ${resp.status}`);
-        // eslint-disable-next-line no-await-in-loop
-        const b = new Uint8Array(await resp.arrayBuffer());
+        const b = await pegarSegmento(segs[i].url, { buscar, sinal, prazoMs: prazoMs ?? PRAZO_SOM_MS });
         partes[i] = b;
         total += b.length;
         contador?.(b.length);
       } catch (e) {
-        falhou = falhou || e;
-        throw e;
+        const erro = sinal?.aborted ? new DOMException('cancelado', 'AbortError') : e;
+        falhou = falhou || erro;
+        throw erro;
       }
     }
   };
@@ -271,40 +275,55 @@ export async function alinharPeloSom({
   linhas, janela, janelas = 3, duracaoS = 120,
   sinal, aoProgresso = () => {}, buscar = fetch, descodificar, lerSom = somDoCanal,
   memoria = new Map(),
+  // O teste real de 12/10: 33 ângulos levaram 30 min a ouvir, um canal de cada vez. Agora ouvem-se
+  // `paralelos` canais ao mesmo tempo, cada um com 2 pedaços no ar (8 pedidos de uma vez, o dobro do
+  // de antes e ainda pouco para a Kick), e os de `primeiro` (os do lance aberto) vão à frente.
+  // `instantes` deixa quem chama medir um grupo e depois todos nos mesmos minutos, sem ouvir duas vezes.
+  paralelos = 4, primeiro = [], instantes: fixos = null,
 } = {}) {
-  const instantes = instantesParaOuvir(linhas, janela, { quantos: janelas, duracaoS, memoria });
+  const instantes = fixos || instantesParaOuvir(linhas, janela, { quantos: janelas, duracaoS, memoria });
   const envelopes = memoria;
   const problemas = [];
   let bytes = 0;
   let passo = 0;
   // Só conta o que falta MESMO ouvir. Uma barra de progresso que conta o que
   // já está em memória diz "31 de 31" e demora dois segundos: parece avariada.
-  const porOuvir = instantes.flatMap((t) => linhas
-    .filter((l) => !envelopes.has(`${t}|${l.slug}`))
-    .map((l) => [t, l]));
+  const vemPrimeiro = (l) => (primeiro.includes(l.slug) ? 0 : 1);
+  const porOuvir = [...linhas].sort((a, b) => vemPrimeiro(a) - vemPrimeiro(b))
+    .flatMap((l) => instantes.filter((t) => !envelopes.has(`${t}|${l.slug}`)).map((t) => [t, l]));
   const passos = porOuvir.length;
   const reaproveitados = instantes.length * linhas.length - passos;
 
-  for (const [t, linha] of porOuvir) {
-    {
+  let proximo = 0;
+  let parar = null;
+  const trabalhador = async (ate = Infinity) => {
+    while (proximo < Math.min(ate, porOuvir.length) && !parar) {
       if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
-      aoProgresso({ fase: 'ouvir', canal: linha.slug, feito: ++passo, total: passos, bytes });
+      const [t, linha] = porOuvir[proximo++];
+      aoProgresso({ fase: 'ouvir', canal: linha.slug, feito: passo, total: passos, bytes });
       try {
+        // eslint-disable-next-line no-await-in-loop
         const som = await lerSom(linha, t, duracaoS, {
-          buscar, sinal, descodificar, contador: (n) => { bytes += n; },
+          buscar, sinal, descodificar, contador: (n) => { bytes += n; }, paralelo: 2,
         });
         if (som) envelopes.set(`${t}|${linha.slug}`, envolvente(som));
       } catch (e) {
         if (e.name === 'AbortError') throw e;
         // Um navegador sem AAC nao vai passar a ter a meio da medicao, e
         // insistir canal a canal so faz o utilizador esperar por nada.
-        if (e.name === 'SEM-DESCODIFICADOR') throw e;
+        if (e.name === 'SEM-DESCODIFICADOR') { parar = e; throw e; }
         // Um canal que não se consegue ouvir não pode matar a medição dos
         // outros: fica sem ajuste automático e é dito pelo nome no fim.
         problemas.push({ canal: linha.slug, erro: e.message });
       }
+      passo++;
+      aoProgresso({ fase: 'ouvir', canal: linha.slug, feito: passo, total: passos, bytes });
     }
-  }
+  };
+  // O primeiro sozinho: se o navegador não sabe AAC, falha uma vez e não quatro.
+  await trabalhador(1);
+  await Promise.all(Array.from({ length: Math.max(1, Math.min(paralelos, porOuvir.length - proximo)) }, () => trabalhador()));
+  if (parar) throw parar;
 
   const nomes = linhas.map((l) => l.slug);
   const pares = [];

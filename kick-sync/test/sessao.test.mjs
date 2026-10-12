@@ -131,6 +131,41 @@ test('o link copiado leva a noite depois do #, que não vai ao servidor', comNav
   await q.close();
 });
 
+// O teste real de 12/10: "Compartilhar projeto" saía com "momentos":[] e quem abria não via as kills.
+test('o link do projeto leva as kills marcadas, com quem morreu e as margens', comNavegador, async () => {
+  const { p, erros } = await abrir();
+  await kickFalsa(p, { canais: ['tchubi', 'outro'] });
+  await p.addInitScript(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: (t) => { window.__copiado = t; return Promise.resolve(); } },
+    });
+  });
+  await abrirNoite(p, ['tchubi', 'outro']);
+  await marcarKill(p);
+  await p.click('#mais1m');
+  await marcarKill(p);
+  await p.locator('#listaMomentos li[data-ms]').first().locator('.vit[data-canal="outro"]').click();
+  const antes = await p.evaluate(() => window.__estado.momentos.map((m) => ({ ms: m.ms, p: m.protagonista, v: m.vitimas })));
+  assert.equal(antes.length, 2);
+  await p.click('#partilhar');
+  const u = await p.evaluate(() => window.__copiado);
+  const magro = JSON.parse(Buffer.from(decodeURIComponent(u.split('#s=')[1]), 'base64').toString());
+  assert.equal(magro.momentos.length, 2, 'as kills vão no link');
+  assert.ok(!('protagonistaAntesS' in magro.momentos[0]), 'sem o que é igual ao de omissão');
+
+  const { p: q, erros: errosQ } = await abrir();
+  await kickFalsa(q, { canais: ['tchubi', 'outro'] });
+  await q.goto(u.replace(/^https?:\/\/[^/]+\//, raiz()), { waitUntil: 'networkidle' });
+  await q.waitForSelector('.tile', { timeout: 15000 });
+  await q.waitForFunction(() => document.querySelectorAll('#listaMomentos li[data-ms]').length === 2, null, { timeout: 10000 });
+  const depois = await q.evaluate(() => window.__estado.momentos.map((m) => ({ ms: m.ms, p: m.protagonista, v: m.vitimas })));
+  assert.deepEqual(depois, antes);
+  assert.equal(await q.evaluate(() => window.__estado.momentos[0].protagonistaAntesS), 5, 'o de omissão volta');
+  assert.deepEqual([...erros, ...errosQ], []);
+  await p.close();
+  await q.close();
+});
+
 test('um link #s= aberto num separador onde a página já está abre a noite', comNavegador, async () => {
   // Só o # muda, e o browser não recarrega: sem quem ouça o hashchange o link não fazia nada.
   const { p, erros } = await abrir();

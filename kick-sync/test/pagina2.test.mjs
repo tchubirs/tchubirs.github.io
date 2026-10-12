@@ -363,7 +363,10 @@ test('mudar de noite diz o que está a fazer, e a última escolha é a que fica'
 
     // 1. Diz o que está a fazer, ao pé do controlo — e fecha o selector
     //    enquanto lê, para não se poder mudar outra vez a meio.
-    await p.selectOption('#noite', { index: 1 });
+    // A noite que abre é a que tem os dois canais (o teste real de 12/10, `noiteParaAbrir`): muda-se
+    // para a outra.
+    const outra = await p.evaluate(() => (document.getElementById('noite').value === '0' ? 1 : 0));
+    await p.selectOption('#noite', { index: outra });
     await p.waitForFunction(() => document.getElementById('estadoNoite').textContent.trim() !== ''
       || document.getElementById('noite').disabled, null, { timeout: 3000 });
     const aMeio = await p.evaluate(() => ({
