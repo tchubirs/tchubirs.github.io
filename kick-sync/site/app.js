@@ -1374,9 +1374,11 @@ function pintarFaixas() {
  * escritas. Abaixo de um minuto a hora leva os segundos.
  */
 const PASSOS_REGUA = [
-  [5e3, 1e3], [10e3, 2e3], [15e3, 5e3], [30e3, 5e3], [60e3, 10e3], [2 * 60e3, 30e3], [5 * 60e3, 60e3],
-  [10 * 60e3, 2 * 60e3], [15 * 60e3, 5 * 60e3], [30 * 60e3, 5 * 60e3], [3600e3, 15 * 60e3], [2 * 3600e3, 30 * 60e3],
-  [3 * 3600e3, 3600e3], [6 * 3600e3, 3600e3], [12 * 3600e3, 3 * 3600e3], [24 * 3600e3, 6 * 3600e3],
+  // Traços pequenos densos como num editor (o dono, 13/10): uns 5 a 15 por divisão escrita; os que ficariam
+  // a menos de 5 px uns dos outros não se desenham.
+  [5e3, 500], [10e3, 1e3], [15e3, 1e3], [30e3, 2e3], [60e3, 5e3], [2 * 60e3, 10e3], [5 * 60e3, 30e3],
+  [10 * 60e3, 60e3], [15 * 60e3, 60e3], [30 * 60e3, 2 * 60e3], [3600e3, 5 * 60e3], [2 * 3600e3, 10 * 60e3],
+  [3 * 3600e3, 15 * 60e3], [6 * 3600e3, 30 * 60e3], [12 * 3600e3, 3600e3], [24 * 3600e3, 2 * 3600e3],
 ];
 
 /**
@@ -1425,7 +1427,7 @@ function pintarRegua() {
   const larguraPx = alvo.clientWidth || 600;
   reguaMedida = larguraPx;
   const px = (ms) => ((ms - inicio) / total) * larguraPx;
-  const { horas, tiques, comSegundos } = marcasDaRegua(inicio, fim, larguraPx);
+  const { horas, tiques, comSegundos, sub } = marcasDaRegua(inicio, fim, larguraPx);
 
   const partes = [];
   // Onde já há texto, em px: as datas primeiro, depois as horas, depois os números das kills. Nada se
@@ -1482,7 +1484,9 @@ function pintarRegua() {
 
   alvo.innerHTML = partes.join('');
   // Os traços pequenos também descem: a faixa fica cortada como a régua e segue o zoom (o dono, 13/10).
-  pintarSobreFaixas(inicio, fim, [...grade, ...tiques.map((ms) => ({ ms, menor: true }))]);
+  // Nas faixas, os pequenos só com folga (12 px), para a barra não virar risca.
+  const pequenos = (sub / total) * larguraPx >= 12 ? tiques.map((ms) => ({ ms, menor: true })) : [];
+  pintarSobreFaixas(inicio, fim, [...grade, ...pequenos]);
   for (const b of alvo.querySelectorAll('.kill')) {
     // A marca de outra kill desliga a prévia desta, senão volta para trás logo.
     b.onclick = () => { largarPrevia(); irPara(Number(b.dataset.ms)); };
@@ -1879,7 +1883,7 @@ function aplicarFoco() {
     // lado a lado, que é o que o botão faz, e o ângulo aberto mostra um olho,
     // que é o que ele já está a fazer. E os dois têm a sua própria frase.
     const par = tile.querySelector('.par');
-    par.innerHTML = ICONE(foco ? 'olho' : 'lado-a-lado');
+    par.innerHTML = ICONE('olho');
     const dizPar = t(foco ? 'tile.aVer' : 'tile.par');
     par.title = dizPar;
     par.setAttribute('aria-label', dizPar);
@@ -2084,6 +2088,8 @@ function montarGrade() {
       // está em foco, mais nada muda: antes o clique promovia-o a principal e o par trocava de lado,
       // e quem só queria ouvir o outro perdia o sítio de cada um. Na grelha, o clique continua a
       // abrir o ângulo no visor, já com o som.
+      // O dono (13/10): tocar numa miniatura, em qualquer sítio, abre-a grande, ou ao lado do player que já está aberto.
+      if (!ehFoco(linha.slug) && estado.focos.length) { alternarPar(linha.slug); estado.ouvir = linha.slug; aplicarFoco(); return; }
       ouvirAngulo(linha.slug);
     };
     for (const b of tile.querySelectorAll('.ajuste button')) {

@@ -3130,3 +3130,5 @@ body:not(:has(#noites:not([hidden]))) .topo .barraSessao.noTopo { display: none;
 .trilho .linhaHora { z-index: 3; background: rgb(0 0 0 / .55); box-shadow: 1px 0 0 color-mix(in srgb, var(--tinta) 7%, transparent); }
 .trilho .linhaHora.menor { background: rgb(0 0 0 / .28); box-shadow: none; }
 .trilho .linhaHora.vira { background: rgb(0 0 0 / .7); box-shadow: 1px 0 0 color-mix(in srgb, var(--tinta) 22%, transparent); }
+/* A sincronia de cada ângulo só no player aberto, grande; nas miniaturas não (o dono, 13/10). */
+.tile:not(.foco) .ajuste { display: none; }
