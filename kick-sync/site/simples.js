@@ -19,7 +19,7 @@ import {
 import { varrerNoite } from './procurar-momentos.js';
 import { somDoCanal } from './alinhar.js';
 import { TAXA_TIROS } from './tiros.js';
-import { memoriaDoCanal } from './alertas.js';
+import { alertasDoCanal } from './alertas.js';
 import { janelasDosPicos, estimarFalta, tempoFalta } from './ouvir.js';
 import { onde } from './relogio.js';
 import { abrirQuadrosEscondidos } from './rosto.js';
@@ -706,7 +706,7 @@ export function montarSimples(ponte) {
           sinal: somControlo.signal,
           memoria: ponte.estado.somOuvido,
           filtros: { tiros: true, explosoes: true, gritos: false },
-          alertas: memoriaDoCanal(slug),
+          alertas: alertasDoCanal(slug),
           lerSom: (l, quandoMs, duracaoS, opcoes) => somDoCanal(l, quandoMs, duracaoS, { ...opcoes, taxa: TAXA_TIROS }),
           aoProgresso: (x) => {
             if (!('bytes' in x) && !x.pronto) return;
@@ -866,6 +866,10 @@ export function montarSimples(ponte) {
   }
 
   // ── assistir: o pedaço do momento toca no próprio cartão ──────────────────
+  // Tocar fora do cartão que toca (e fora dos outros cartões, que tratam o seu próprio play) devolve-o à imagem.
+  document.addEventListener('pointerdown', (e) => {
+    if (previa && !previa.li.contains(e.target) && !e.target.closest?.('#simplesLista > li')) pararPrevia();
+  });
   function pararPrevia() {
     const p = previa;
     if (!p) return;

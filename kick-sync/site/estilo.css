@@ -3021,6 +3021,8 @@ body.mesa #montagem .estadoAoVivo:empty { display: none; }
   background: linear-gradient(to top, rgb(0 0 0 / .7), rgb(0 0 0 / 0)); transition: opacity .2s;
 }
 .simplesPlayer.semControles .simplesControles { opacity: 0; pointer-events: none; }
+/* Dentro do player, o foco é um anel branco fino no próprio ícone, e não a caixa grande que tapava a webcam. */
+.simplesPlayer :focus-visible { box-shadow: none; outline: 2px solid rgb(255 255 255 / .85); outline-offset: -8px; border-radius: 50%; }
 .simplesPlayer.semControles video { cursor: none; }
 .simplesControlesLinha { display: flex; align-items: center; gap: 4px; margin: -6px 0 -4px; }
 .simplesTempoPlayer { font-size: 13px; font-variant-numeric: tabular-nums; margin-right: auto; padding-left: 6px; white-space: nowrap; }
@@ -3071,6 +3073,11 @@ body.veioDaLista .voltarLista { display: inline-flex; white-space: nowrap; flex:
   .simples .simplesBotoes button { min-height: 34px; font-size: 14px; padding-inline: var(--e3); white-space: nowrap; }
   .simples .simplesBotoes .simplesNao { padding-inline: 0; width: 34px; justify-content: center; flex: none; }
   .simplesNao span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); margin: 0; }
+  /* O cartão que toca cresce um pouco por cima dos vizinhos, a partir do lado da coluna, para não sair da tela. */
+  .simplesCartao { transition: transform .18s ease; }
+  .simplesCartao.comPrevia { transform: scale(1.18); transform-origin: center top; z-index: 5; position: relative; box-shadow: 0 12px 40px rgb(0 0 0 / .55); background: var(--sup-2); }
+  .simplesCartao.comPrevia:nth-child(3n+1) { transform-origin: left top; }
+  .simplesCartao.comPrevia:nth-child(3n) { transform-origin: right top; }
 }
 @container (max-width: 430px) {
   .simplesBotoes .longo { display: none; }
