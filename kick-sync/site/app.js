@@ -2102,6 +2102,37 @@ function montarGrade() {
       };
     }
     tile.querySelector('.par').onclick = (e) => { e.stopPropagation(); alternarPar(linha.slug); };
+    // Arrastar (o dono, 13/10): um player aberto para cima do outro troca os dois de lugar; uma miniatura para
+    // cima de um player aberto entra no lugar dele.
+    tile.draggable = true;
+    tile.addEventListener('dragstart', (e) => {
+      if (e.target.closest('button, input')) { e.preventDefault(); return; }
+      e.dataTransfer.setData('text/povix-angulo', linha.slug);
+      e.dataTransfer.effectAllowed = 'move';
+      tile.classList.add('aArrastar');
+    });
+    tile.addEventListener('dragend', () => tile.classList.remove('aArrastar'));
+    tile.addEventListener('dragover', (e) => {
+      if (!ehFoco(linha.slug) || !e.dataTransfer.types.includes('text/povix-angulo')) return;
+      e.preventDefault();
+      tile.classList.add('alvoArrastar');
+    });
+    tile.addEventListener('dragleave', () => tile.classList.remove('alvoArrastar'));
+    tile.addEventListener('drop', (e) => {
+      tile.classList.remove('alvoArrastar');
+      const de = e.dataTransfer.getData('text/povix-angulo');
+      if (!de || de === linha.slug || !ehFoco(linha.slug)) return;
+      e.preventDefault();
+      const focos = [...estado.focos];
+      const iAlvo = focos.indexOf(linha.slug);
+      const iDe = focos.indexOf(de);
+      if (iDe >= 0) [focos[iAlvo], focos[iDe]] = [focos[iDe], focos[iAlvo]];
+      else focos[iAlvo] = de;
+      estado.focos = focos;
+      aplicarFoco();
+      irPara(estado.agoraMs);
+      guardar();
+    });
     tile.querySelector('.ecraCheio').onclick = async (e) => {
       e.stopPropagation();
       // Sair, se já lá está. Um botão que só sabe entrar deixa a pessoa presa
