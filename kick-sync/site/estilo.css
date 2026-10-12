@@ -2948,13 +2948,68 @@ body.mesa #montagem .estadoAoVivo:empty { display: none; }
 .simplesTambem { margin: 0; color: var(--tinta-2); font-size: var(--t-base); overflow-wrap: anywhere; }
 .simplesMais { justify-self: center; width: 100%; }
 .simplesQuando, .simplesTalvezFalha { margin: 0; color: var(--tinta-2); font-size: var(--t-base); }
-.simplesBotoes { display: grid; gap: var(--e3); }
+.simplesBotoes { display: grid; grid-template-columns: 1fr 1fr; gap: var(--e3); }
+.simplesBotoes :is(.simplesTiktok, .simplesDeitado) { grid-column: 1 / -1; }
 .simples .simplesTiktok { min-height: 56px; font-size: 18px; }
+/* A imagem do cartão é o botão de assistir; a prévia toma o lugar dela. */
+.simples button.simplesFoto { position: relative; padding: 0; width: 100%; border: 0; cursor: pointer; }
+.simplesFoto::after {
+  content: "▶"; position: absolute; left: 50%; top: 50%; width: 64px; height: 64px; margin: -32px 0 0 -32px;
+  display: grid; place-items: center; padding-left: 5px; box-sizing: border-box; font-size: 28px;
+  color: #fff; background: rgb(0 0 0 / .62); border: 3px solid #fff; border-radius: 50%; pointer-events: none;
+}
+.simplesFoto[hidden] { display: none; }
+.simplesPrevia { display: grid; gap: var(--e2); min-width: 0; }
+.simplesPrevia[hidden] { display: none; }
+.simplesPrevia video { width: 100%; aspect-ratio: 16 / 9; background: var(--video-fundo); border-radius: var(--r-2); display: block; cursor: pointer; }
+/* O player da prévia, como o do YouTube: controles por cima do vídeo, embaixo, sobre um degradê escuro. */
+.simplesPlayer { position: relative; background: #000; border-radius: var(--r-2); overflow: hidden; }
+.simplesPlayer video { display: block; width: 100%; aspect-ratio: 16 / 9; background: #000; cursor: pointer; }
+.simplesPlayer:fullscreen { display: grid; border-radius: 0; }
+.simplesPlayer:fullscreen video { width: 100%; height: 100%; aspect-ratio: auto; object-fit: contain; }
+.simplesControles {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 10px 0; color: #fff;
+  background: linear-gradient(to top, rgb(0 0 0 / .7), rgb(0 0 0 / 0)); transition: opacity .2s;
+}
+.simplesPlayer.semControles .simplesControles { opacity: 0; pointer-events: none; }
+.simplesPlayer.semControles video { cursor: none; }
+.simplesControlesLinha { display: flex; align-items: center; gap: 4px; margin: -4px 0 -5px; }
+.simplesTempoPlayer { font-size: 13px; font-variant-numeric: tabular-nums; margin-right: auto; padding-left: 6px; white-space: nowrap; }
+.simples .simplesIcone {
+  min-height: 44px; min-width: 44px; padding: 0; background: none; border: 0; border-radius: 0; color: #fff;
+  display: inline-grid; place-items: center; cursor: pointer;
+}
+.simples .simplesIcone:hover:not(:disabled) { background: none; }
+.simplesIcone svg { width: 26px; height: 26px; display: block; }
+.simplesVol { display: inline-flex; align-items: center; }
+.simplesVolume { width: 0; opacity: 0; transition: width .15s, opacity .15s; accent-color: #fff; margin: 0; }
+.simplesVol:hover .simplesVolume, .simplesVol:focus-within .simplesVolume { width: 64px; opacity: 1; margin: 0 6px; }
+/* A barra do tempo: fina, de ponta a ponta, vermelha no que já passou, com a bolinha; engrossa ao passar o mouse. */
+.simplesLinha {
+  -webkit-appearance: none; appearance: none; display: block; width: 100%; height: 14px; margin: 0; padding: 0;
+  background: transparent; cursor: pointer; --feito: 0%;
+}
+.simplesLinha::-webkit-slider-runnable-track {
+  height: 3px; border-radius: 2px; transition: height .1s;
+  background: linear-gradient(to right, #f00 var(--feito), rgb(255 255 255 / .35) var(--feito));
+}
+.simplesLinha::-moz-range-track { height: 3px; border-radius: 2px; background: rgb(255 255 255 / .35); }
+.simplesLinha::-moz-range-progress { height: 3px; border-radius: 2px; background: #f00; }
+.simplesLinha:hover::-webkit-slider-runnable-track { height: 5px; }
+.simplesLinha::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 13px; height: 13px; border-radius: 50%; background: #f00; border: 0; margin-top: -5px;
+}
+.simplesLinha:hover::-webkit-slider-thumb { margin-top: -4px; }
+.simplesLinha::-moz-range-thumb { width: 13px; height: 13px; border-radius: 50%; background: #f00; border: 0; }
+/* Voltar para a lista: só no avançado aberto pelo Editar de um cartão, e na janela do clipe. */
+.voltarLista { display: none; }
+body.veioDaLista .voltarLista { display: inline-block; }
+:root[data-modo="simples"] .voltarLista { display: none !important; }
 .simplesBaixando { margin: 0; line-height: var(--lh); }
 .simplesBaixando:empty { display: none; }
 @media (min-width: 720px) {
   .simplesCartao { grid-template-columns: 260px 1fr; }
-  .simplesBotoes { grid-template-columns: 1fr auto auto; }
+  .simplesCartao.comPrevia { grid-template-columns: 1fr; }
 }
 /* O clipe em pé grava-se na janela "Ajustar clipe", que fica aberta e a desenhar mas sem se ver: o vídeo
    tem de estar no ecrã para dar imagem, e a pessoa não tem de ver uma janela cheia de opções. */

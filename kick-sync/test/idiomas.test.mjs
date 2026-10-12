@@ -173,6 +173,8 @@ const IGUAIS_DE_PROPOSITO = {
     'chatClipe.posAuto', 'chatClipe.tamG',
     // A legenda: "Estilo", "Turquesa" e os botões de ±0,1 s escrevem-se igual em espanhol.
     'legenda.estilo', 'legenda.corTurquesa', 'legenda.menos', 'legenda.mais',
+    // O player do lance no modo simples: "Pausar", "Continuar" e "Editar" escrevem-se igual em espanhol.
+    'simples.pausar', 'simples.continuar', 'simples.editar',
   ]),
 };
 

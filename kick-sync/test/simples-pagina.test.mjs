@@ -206,7 +206,7 @@ test('modo simples: o nome do evento vira a lista simples, sem o mapa, e o mapa 
     assert.equal(await p.locator('#palco').isVisible(), false);
     await p.waitForFunction(() => /^(Pronto|Não achei momentos fortes)/.test(document.getElementById('simplesEstado').textContent),
       null, { timeout: 60_000 });
-    // Cada cartão diz de que streamer é e tem os dois Baixar e o Não quero.
+    // Cada cartão diz de que streamer é e tem os dois Baixar e o Excluir.
     for (const li of await p.locator('#simplesLista li').all()) {
       assert.match(await li.locator('.simplesStreamer').innerText(), /^Do streamer (tchubi|outro)$/);
       for (const a of ['tiktok', 'deitado', 'nao']) assert.equal(await li.locator(`button[data-acao="${a}"]`).count(), 1);
@@ -227,7 +227,7 @@ test('modo simples: o nome do evento vira a lista simples, sem o mapa, e o mapa 
     await p2.close();
   });
 
-test('modo simples: "Não quero" tira o momento e ele não volta; "Mostrar mais" só aparece com mais de dez',
+test('modo simples: "Excluir" tira o momento e ele não volta; "Mostrar mais" só aparece com mais de dez',
   { ...semNavegador, timeout: 120_000 }, async () => {
     const { p, erros } = await abrir({ ecra: { width: 1366, height: 768 }, caminho: null, modo: 'simples' });
     await preparar(p, { video: false });
@@ -247,6 +247,73 @@ test('modo simples: "Não quero" tira o momento e ele não volta; "Mostrar mais"
     await p.waitForFunction(() => /^(Pronto|Não achei momentos fortes|Parado)/.test(document.getElementById('simplesEstado').textContent),
       null, { timeout: 60_000 });
     assert.equal(await p.locator('#simplesLista li').count(), antes - 1);
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+test('modo simples: o espaço não toca vídeo escondido, e tocar a imagem toca no cartão e pausa com o espaço',
+  { ...semNavegador, timeout: 120_000 }, async () => {
+    const { p, erros } = await abrir({ ecra: { width: 1366, height: 768 }, caminho: null, modo: 'simples' });
+    await preparar(p);
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#simplesCaixa', 'tchubi');
+    await p.click('#simplesAchar');
+    await listaPronta(p);
+    const tocandoFora = () => p.evaluate(() => [...document.querySelectorAll('video')]
+      .filter((v) => !v.closest('.simplesPrevia') && !v.paused).length);
+    // Sem prévia aberta o espaço não faz nada: antes tocava o vídeo do avançado, que ninguém vê.
+    await p.locator('body').click({ position: { x: 5, y: 5 } });
+    await p.keyboard.press('Space');
+    assert.equal(await tocandoFora(), 0);
+
+    const cartao = p.locator('#simplesLista li').first();
+    await cartao.locator('button.simplesFoto').click();
+    await p.waitForSelector('#simplesLista li .simplesPrevia video', { timeout: 30_000 });
+    assert.equal(await cartao.locator('.simplesFoto').isVisible(), false);
+    assert.equal(await cartao.locator('.simplesPrevia video').evaluate((v) => v.muted), false);
+    // O espaço (fora de um botão) pausa a prévia e continua: e nunca toca os escondidos.
+    await p.evaluate(() => document.activeElement?.blur());
+    const antes = await cartao.locator('.simplesPrevia video').evaluate((v) => v.paused);
+    await p.keyboard.press('Space');
+    assert.equal(await cartao.locator('.simplesPrevia video').evaluate((v) => v.paused), !antes);
+    assert.equal(await tocandoFora(), 0);
+    // Os controles de um player comum: tocar/pausar e a barra do pedaço do lance.
+    assert.equal(await cartao.locator('.simplesPreviaToca').count(), 1);
+    assert.equal(await cartao.locator('input.simplesPreviaBarra').count(), 1);
+    // Dar play em outro cartão devolve este à imagem: uma prévia só por vez.
+    if (await p.locator('#simplesLista li').count() > 1) {
+      await p.locator('#simplesLista li').nth(1).locator('button.simplesFoto').click();
+      await p.waitForSelector('#simplesLista li:nth-child(2) .simplesPrevia video', { timeout: 30_000 });
+      assert.equal(await cartao.locator('.simplesPrevia video').count(), 0);
+      assert.equal(await cartao.locator('.simplesFoto').isVisible(), true);
+    }
+    assert.deepEqual(erros, []);
+    await p.close();
+  });
+
+test('modo simples: Editar abre o clipe do cartão no avançado, e Voltar para a lista traz a lista de volta',
+  { ...semNavegador, timeout: 120_000 }, async () => {
+    const { p, erros } = await abrir({ ecra: { width: 1366, height: 768 }, caminho: null, modo: 'simples' });
+    await preparar(p);
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#simplesCaixa', 'tchubi');
+    await p.click('#simplesAchar');
+    await listaPronta(p);
+    const n = await p.locator('#simplesLista li').count();
+    const duracao = await p.locator('#simplesLista li').first().locator('.simplesQuando').innerText();
+    const segundos = Number(/Clipe de (\d+) s/.exec(duracao)[1]);
+    await p.locator('#simplesLista li').first().locator('button[data-acao="editar"]').click();
+    await p.waitForSelector('#modalClipe:not([hidden])', { timeout: 30_000 });
+    assert.equal(await p.evaluate(() => document.documentElement.dataset.modo), 'avancado');
+    // O pedaço do cartão já está marcado no editor.
+    const noEditor = Number(/, ([\d.]+)s de/.exec(await p.locator('#tempoClipe').innerText())[1]);
+    assert.ok(Math.abs(noEditor - segundos) <= 1, `o editor abriu com ${noEditor} s e o cartão dizia ${segundos} s`);
+    assert.equal(await p.locator('#voltarListaClipe').isVisible(), true);
+    await p.click('#voltarListaClipe');
+    assert.equal(await p.evaluate(() => document.documentElement.dataset.modo), 'simples');
+    assert.equal(await p.locator('#modalClipe').isVisible(), false);
+    assert.equal(await p.locator('#simplesLista li').count(), n);
+    assert.equal(await p.locator('#voltarLista').isVisible(), false);
     assert.deepEqual(erros, []);
     await p.close();
   });

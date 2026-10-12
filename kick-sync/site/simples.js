@@ -96,7 +96,7 @@ const dois = (n) => String(n).padStart(2, '0');
 const horaDe = (ms) => { const d = new Date(ms); return `${dois(d.getHours())}:${dois(d.getMinutes())}`; };
 const diaDe = (ms) => { const d = new Date(ms); return `${dois(d.getDate())}/${dois(d.getMonth() + 1)}`; };
 
-/** Os momentos que a pessoa disse "Não quero", lembrados neste aparelho (a chave é canal|segundo). */
+/** Os momentos que a pessoa disse "Excluir", lembrados neste aparelho (a chave é canal|segundo). */
 function lerNaoQuero() {
   try {
     const l = JSON.parse(localStorage.getItem(CHAVE_NAO) || '[]');
@@ -142,6 +142,16 @@ function palavraDoArquivo(m) {
   return t(`simples.arquivo.${tipo}`);
 }
 
+// Os ícones do player da prévia: brancos, sem caixa (o CSS pinta com currentColor).
+const svg = (d) => `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="${d}"/></svg>`;
+const ICONES = {
+  toca: svg('M8 5v14l11-7z'),
+  pausa: svg('M6 5h4v14H6zM14 5h4v14h-4z'),
+  som: svg('M3 9v6h4l5 5V4L7 9zM16.5 12A4.5 4.5 0 0 0 14 8v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z'),
+  mudo: svg('M16.5 12A4.5 4.5 0 0 0 14 8v2.2l2.4 2.4c.1-.2.1-.4.1-.6zM19 12a7 7 0 0 1-.9 3.4l1.5 1.5A9 9 0 0 0 21 12a9 9 0 0 0-7-8.8v2.1A7 7 0 0 1 19 12zM4.3 3 3 4.3 7.7 9H3v6h4l5 5v-6.7l4.3 4.3a7 7 0 0 1-2.3 1.1v2.1a9 9 0 0 0 3.7-1.8l2 2 1.3-1.3L12 7.7zM12 4 9.9 6.1 12 8.2z'),
+  cheia: svg('M5 5h5v2H7v3H5zM14 5h5v5h-2V7h-3zM5 14h2v3h3v2H5zM17 14h2v5h-5v-2h3z'),
+};
+
 const seguidores = (n) => {
   try { return new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 }).format(n); } catch { return String(n); }
 };
@@ -167,7 +177,12 @@ export function montarSimples(ponte) {
   let linhaAberta = null;
   let fotos = new Map();
   let aBaixar = false;
-  // Quantos cartões a lista mostra ("Mostrar mais" soma), os que a pessoa não quer ("Não quero", lembrados
+  // A prévia aberta num cartão (uma só): { k, li, video, hls, alternar, acabou }. Com ela aberta a lista não se
+  // refaz (o cartão não pode sumir debaixo do dedo), como enquanto um clipe é feito.
+  let previa = null;
+  // O cartão cujo Editar abriu o avançado, para o "Voltar para a lista" cair nele.
+  let ultimoEditado = null;
+  // Quantos cartões a lista mostra ("Mostrar mais" soma), os que a pessoa não quer ("Excluir", lembrados
   // neste aparelho) e os que estão na tela agora (o `data-i` de cada cartão conta nesta lista).
   let mostrar = QUANTOS;
   let mostrados = [];
@@ -184,10 +199,15 @@ export function montarSimples(ponte) {
     window.scrollTo({ top: 0 });
   };
   $('modoSimples').onclick = () => {
+    // Os vídeos do avançado não podem seguir tocando por trás da caixa.
+    ponte.pausar();
+    if (document.body.classList.contains('veioDaLista')) { voltarParaLista(); return; }
     escolherModo('simples');
     mostrarInicio();
     window.scrollTo({ top: 0 });
   };
+  $('voltarLista').onclick = () => voltarParaLista();
+  $('voltarListaClipe').onclick = () => voltarParaLista();
   // A frase da primeira vez, só até ela começar a primeira busca.
   let visto = false;
   try { visto = Boolean(localStorage.getItem(CHAVE_VISTO)); } catch { visto = false; }
@@ -278,6 +298,7 @@ export function montarSimples(ponte) {
   }
 
   function mostrarTrabalho(titulo) {
+    pararPrevia();
     document.body.classList.add('simplesTrabalho');
     $('simplesForm').hidden = true;
     $('simplesErro').hidden = true;
@@ -307,6 +328,8 @@ export function montarSimples(ponte) {
 
   function parar() {
     geracao++;
+    pararPrevia();
+    document.body.classList.remove('veioDaLista');
     busca?.abort();
     busca = null;
     ponte.aoMudarEvento?.(null);
@@ -599,14 +622,16 @@ export function montarSimples(ponte) {
   // ── a lista ───────────────────────────────────────────────────────────
   const chave = (m) => `${m.canal}|${Math.round(m.ms / 1000)}`;
 
-  /** Os que a lista mostra agora: sem os "Não quero", e só até onde o "Mostrar mais" chegou. */
+  /** Os que a lista mostra agora: sem os "Excluir", e só até onde o "Mostrar mais" chegou. */
   const queridos = () => ultimos.filter((m) => !naoQuero.has(chave(m)));
   const visiveis = () => queridos().slice(0, mostrar);
 
   function pintarLista() {
     // Um clipe a ser feito agora não pode sumir debaixo do dedo: a lista refaz-se quando ele acabar.
-    if (aBaixar) { pintarLista.adiada = true; return; }
+    // Uma prévia tocando (ou abrindo) também segura a lista; parada, ela cede o lugar.
+    if (aBaixar || (previa && !previa.video?.paused)) { pintarLista.adiada = true; return; }
     pintarLista.adiada = false;
+    pararPrevia();
     const primeiraVez = (() => { try { return !localStorage.getItem('povix.simplesBaixou'); } catch { return true; } })();
     mostrados = visiveis();
     const sobra = queridos().length - mostrados.length;
@@ -622,7 +647,8 @@ export function montarSimples(ponte) {
       const nota = m.nota ? `<b class="simplesNota nota-${m.nota}">${escapar(t(`simples.nota.${m.nota}`))}</b> ` : '';
       const feito = feitos.get(k);
       return `<li class="simplesCartao" data-i="${i}" data-chave="${escapar(k)}">`
-        + `<div class="simplesFoto">${foto ? `<img src="${foto}" alt="">` : `<span class="simplesSemFoto">${escapar(horaDe(m.ms))}<small>${escapar(t('simples.semFoto'))}</small></span>`}</div>`
+        + `<button type="button" class="simplesFoto" data-acao="assistir" aria-label="${escapar(t('simples.assistirAria'))}">${foto ? `<img src="${foto}" alt="">` : `<span class="simplesSemFoto">${escapar(horaDe(m.ms))}<small>${escapar(t('simples.semFoto'))}</small></span>`}</button>`
+        + '<div class="simplesPrevia" hidden></div>'
         + '<div class="simplesInfo">'
         + (m.doEvento ? `<p class="simplesStreamer">${escapar(t('simples.deQuem', { canal: m.nomeCanal || m.canal }))}</p>` : '')
         + `<p class="simplesMotivo">${nota}${escapar(motivo)}</p>`
@@ -633,6 +659,7 @@ export function montarSimples(ponte) {
         + '<div class="simplesBotoes">'
         + `<button type="button" class="principal simplesTiktok" data-acao="tiktok"><svg class="ic" aria-hidden="true"><use href="#i-descarregar"/></svg><span>${escapar(t('simples.baixarTiktok'))}</span></button>`
         + `<button type="button" class="simplesSecundario simplesDeitado" data-acao="deitado">${escapar(t('simples.baixarDeitado'))}</button>`
+        + `<button type="button" class="simplesSecundario simplesEditar" data-acao="editar">${escapar(t('simples.editar'))}</button>`
         + `<button type="button" class="simplesSecundario simplesNao" data-acao="nao">${escapar(t('simples.naoQuero'))}</button>`
         + '</div>'
         + `<p class="simplesBaixando" role="status" aria-live="polite">${feito ? escapar(feito.texto) : ''}</p>`
@@ -650,15 +677,20 @@ export function montarSimples(ponte) {
     const m = mostrados[Number(li.dataset.i)];
     if (!m) return;
     if (b.dataset.acao === 'nao') { dispensar(m, Number(li.dataset.i)); return; }
+    if (b.dataset.acao === 'assistir') { assistir(m, li); return; }
+    if (b.dataset.acao === 'editar') { editar(m, li); return; }
+    if (b.dataset.acao === 'pausar') { previa?.alternar(); return; }
     if (b.dataset.acao === 'partilhar') { partilhar(feitos.get(li.dataset.chave)); return; }
     baixar(m, li, { deitado: b.dataset.acao === 'deitado' });
   });
 
   // Os botões que mexem no clipe: ficam parados enquanto um clipe é feito.
-  const BOTOES_DO_CLIPE = 'button[data-acao="tiktok"], button[data-acao="deitado"], button[data-acao="nao"]';
+  // Assistir (a imagem) e Editar também: os dois abrem o vídeo e a janela que o clipe em andamento está usando.
+  const BOTOES_DO_CLIPE = ['tiktok', 'deitado', 'nao', 'assistir', 'editar'].map((a) => `button[data-acao="${a}"]`).join(', ');
 
-  /** "Não quero": o momento sai da lista e não volta (neste aparelho). O foco vai para o cartão que subiu. */
+  /** "Excluir": o momento sai da lista e não volta (neste aparelho). O foco vai para o cartão que subiu. */
   function dispensar(m, i) {
+    pararPrevia();
     naoQuero.add(chave(m));
     guardarNaoQuero(naoQuero);
     pintarLista();
@@ -667,6 +699,7 @@ export function montarSimples(ponte) {
   }
 
   $('simplesMais').onclick = () => {
+    pararPrevia();
     const antes = mostrados.length;
     mostrar += QUANTOS;
     pintarLista();
@@ -690,11 +723,242 @@ export function montarSimples(ponte) {
   /** O vídeo aberto agora é o do canal do momento e cobre a hora dele. */
   function abertoEm(m) {
     const vivo = ponte.aoVivoDe(m.canal);
-    return Boolean(vivo && m.ms >= vivo.deMs && m.ms <= vivo.ateMs && linhaAberta?.slug === m.canal);
+    const linha = ponte.estado.linhas.find((l) => l.slug === m.canal);
+    if (!linha || !vivo || m.ms < vivo.deMs || m.ms > vivo.ateMs) return false;
+    linhaAberta = linha;
+    return true;
+  }
+
+  /** Abre a live do canal do momento na hora dele (o que o evento, ou um Editar na volta do avançado, pede). */
+  async function abrirCanalDoMomento(m) {
+    const linha = await comPrazo(ponte.abrirCanal(m.canal, { inicioMs: m.ms }).catch(() => null), ABRIR_MS);
+    if (!linha) return null;
+    ponte.pausar();
+    linhaAberta = linha;
+    return linha;
+  }
+
+  // ── assistir: o pedaço do momento toca no próprio cartão ──────────────────
+  function pararPrevia() {
+    const p = previa;
+    if (!p) return;
+    previa = null;
+    p.limpar?.();
+    p.hls?.destroy();
+    if (p.video) {
+      p.video.pause();
+      p.video.removeAttribute('src');
+      p.video.load?.();
+    }
+    if (p.li.isConnected) {
+      const caixa = p.li.querySelector('.simplesPrevia');
+      caixa.replaceChildren();
+      caixa.hidden = true;
+      p.li.querySelector('.simplesFoto').hidden = false;
+      p.li.classList.remove('comPrevia');
+    }
+    if (pintarLista.adiada) pintarLista();
+  }
+
+  /**
+   * Assistir: o vídeo da live, com som, só no pedaço do clipe (o mesmo que o Baixar corta), no lugar da imagem
+   * do cartão. É um <video> do próprio cartão com a mesma fonte do editor (a melhor qualidade da live); o
+   * vídeo escondido do avançado fica quieto. Só uma toca por vez: dar play em outro cartão devolve este à imagem.
+   */
+  async function assistir(m, li) {
+    if (aBaixar) return;
+    pararPrevia();
+    const p = { k: chave(m), li, video: null, hls: null, arrastando: false, alternar: null };
+    previa = p;
+    const nota = li.querySelector('.simplesBaixando');
+    const falhou = () => { if (previa !== p) return; nota.textContent = t('simples.previaNao'); pararPrevia(); };
+    nota.textContent = t('simples.fase.abrir');
+    if (!m.doClipe && !abertoEm(m)) {
+      nota.textContent = t('simples.fase.abrirCanal', { canal: m.nomeCanal || m.canal });
+      const aberta = await abrirCanalDoMomento(m);
+      if (previa !== p) return;
+      if (!aberta) { falhou(); return; }
+    }
+    const linha = ponte.estado.linhas.find((l) => l.slug === m.canal);
+    const r = linha && onde(linha, m.deMs, { nudgeMs: ponte.estado.nudges[m.canal] || 0 });
+    if (r?.estado !== 'toca') { falhou(); return; }
+    const peca = linha.pecasCompletas?.find((x) => x.vod.id === r.peca.vod.id) || r.peca;
+    const url = (peca.escada?.[0] || peca.barato)?.url;
+    if (!url) { falhou(); return; }
+    nota.textContent = '';
+    const inicioS = r.tempoS;
+    const fimS = inicioS + (m.ateMs - m.deMs) / 1000;
+    const v = document.createElement('video');
+    v.playsInline = true;
+    // Um player como o do YouTube, do tamanho do cartão: os controles por cima do vídeo, embaixo, com a barra
+    // do tempo só do pedaço do lance. Somem depois de uns segundos sem mexer e voltam ao mexer ou tocar.
+    const jogador = document.createElement('div');
+    jogador.className = 'simplesPlayer';
+    jogador.innerHTML = '<div class="simplesControles">'
+      + `<input type="range" class="simplesLinha" min="0" max="${(fimS - inicioS).toFixed(1)}" step="0.1" value="0" aria-label="${escapar(t('simples.barraPrevia'))}">`
+      + '<div class="simplesControlesLinha">'
+      + '<button type="button" class="simplesIcone simplesToca" data-acao="pausar"></button>'
+      + '<span class="simplesVol"><button type="button" class="simplesIcone simplesMudo"></button>'
+      + `<input type="range" class="simplesVolume" min="0" max="1" step="0.05" value="1" aria-label="${escapar(t('simples.volumePrevia'))}"></span>`
+      + '<span class="simplesTempoPlayer">0:00 / 0:00</span>'
+      + `<button type="button" class="simplesIcone simplesCheia" aria-label="${escapar(t('simples.telaCheiaPrevia'))}">${ICONES.cheia}</button>`
+      + '</div></div>';
+    jogador.prepend(v);
+    const q = (c) => jogador.querySelector(c);
+    const [botaoPausa, botaoMudo, botaoCheia, barra, volume, tempo] = ['.simplesToca', '.simplesMudo', '.simplesCheia', '.simplesLinha', '.simplesVolume', '.simplesTempoPlayer'].map(q);
+    const minutos = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+    const totalS = fimS - inicioS;
+    const pintarTempo = (s) => {
+      const aqui = Math.min(totalS, Math.max(0, s));
+      tempo.textContent = `${minutos(aqui)} / ${minutos(totalS)}`;
+      barra.value = aqui;
+      barra.style.setProperty('--feito', `${totalS ? (aqui / totalS) * 100 : 0}%`);
+    };
+    const rotulo = (tocando) => {
+      botaoPausa.innerHTML = tocando ? ICONES.pausa : ICONES.toca;
+      botaoPausa.setAttribute('aria-label', t(tocando ? 'simples.pausar' : 'simples.continuar'));
+    };
+    const rotuloSom = () => {
+      const mudo = v.muted || v.volume === 0;
+      botaoMudo.innerHTML = mudo ? ICONES.mudo : ICONES.som;
+      botaoMudo.setAttribute('aria-label', t('simples.volumePrevia'));
+    };
+    rotulo(true);
+    rotuloSom();
+    pintarTempo(0);
+    const caixa = li.querySelector('.simplesPrevia');
+    caixa.replaceChildren(jogador);
+    caixa.hidden = false;
+    li.querySelector('.simplesFoto').hidden = true;
+    li.classList.add('comPrevia');
+    p.video = v;
+    p.alternar = () => { if (v.paused) v.play().catch(() => {}); else v.pause(); };
+    // Pular dentro do pedaço (as teclas A, D, J, L e as setas), sem sair dele.
+    p.pular = (s) => {
+      v.currentTime = Math.min(fimS - 0.1, Math.max(inicioS, v.currentTime + s));
+      pintarTempo(v.currentTime - inicioS);
+    };
+    // Os controles aparecem ao mexer e somem em 2,5 s com o vídeo tocando. O primeiro toque num celular só
+    // os mostra; com eles à vista, tocar no vídeo pausa ou toca.
+    let sumir = null;
+    const mostrar = () => {
+      jogador.classList.remove('semControles');
+      clearTimeout(sumir);
+      if (!v.paused) sumir = setTimeout(() => jogador.classList.add('semControles'), 2500);
+    };
+    p.limpar = () => clearTimeout(sumir);
+    for (const ev of ['pointermove', 'pointerdown', 'focusin', 'keydown']) jogador.addEventListener(ev, mostrar);
+    v.addEventListener('click', () => {
+      if (jogador.classList.contains('semControles')) { mostrar(); return; }
+      p.alternar();
+    });
+    v.addEventListener('play', () => { rotulo(true); mostrar(); });
+    v.addEventListener('pause', () => { rotulo(false); mostrar(); });
+    // No fim do pedaço volta ao começo, parado: o play (ou a barra) vê de novo.
+    const noFim = () => {
+      v.pause();
+      v.currentTime = inicioS;
+      pintarTempo(0);
+    };
+    v.addEventListener('timeupdate', () => {
+      if (v.currentTime >= fimS) { noFim(); return; }
+      if (!p.arrastando) pintarTempo(v.currentTime - inicioS);
+    });
+    barra.addEventListener('input', () => {
+      p.arrastando = true;
+      v.currentTime = inicioS + Number(barra.value);
+      pintarTempo(Number(barra.value));
+    });
+    barra.addEventListener('change', () => { p.arrastando = false; });
+    volume.addEventListener('input', () => { v.volume = Number(volume.value); v.muted = v.volume === 0; });
+    v.addEventListener('volumechange', () => { volume.value = v.muted ? 0 : v.volume; rotuloSom(); });
+    botaoMudo.addEventListener('click', () => {
+      v.muted = !v.muted;
+      if (!v.muted && v.volume === 0) v.volume = 0.5;
+    });
+    botaoCheia.addEventListener('click', () => {
+      if (document.fullscreenElement) { document.exitFullscreen?.(); return; }
+      if (jogador.requestFullscreen) jogador.requestFullscreen().catch(() => {});
+      else v.webkitEnterFullscreen?.();
+    });
+    v.addEventListener('ended', noFim);
+    v.addEventListener('error', falhou);
+    if (window.Hls?.isSupported()) {
+      const hls = new window.Hls({ startPosition: inicioS, maxBufferLength: 20, backBufferLength: 30 });
+      p.hls = hls;
+      hls.on(window.Hls.Events.ERROR, (_, d) => { if (d?.fatal) falhou(); });
+      hls.loadSource(url);
+      hls.attachMedia(v);
+    } else {
+      v.addEventListener('loadedmetadata', () => { v.currentTime = inicioS; }, { once: true });
+      v.src = url;
+    }
+    v.play().catch(() => rotulo(false));
+    li.scrollIntoView?.({ block: 'nearest' });
+  }
+
+  // As teclas da prévia aberta, as mesmas do avançado: espaço pausa; A e D saltam 3 s; J, L e as setas saltam
+  // 1 s (10 s com Shift); o Esc devolve o cartão à imagem. Só nela, e nunca com o cursor numa caixa de texto.
+  document.addEventListener('keydown', (e) => {
+    if (!previa?.video || !modoSimples() || e.ctrlKey || e.metaKey || e.altKey) return;
+    const alvo = e.target;
+    if (alvo?.isContentEditable || alvo?.tagName === 'TEXTAREA' || (alvo?.tagName === 'INPUT' && alvo.type !== 'range')) return;
+    if (e.key === 'Escape') { pararPrevia(); return; }
+    const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    const salto = { a: -3, d: 3, j: -(e.shiftKey ? 10 : 1), l: e.shiftKey ? 10 : 1, ArrowLeft: -(e.shiftKey ? 10 : 1), ArrowRight: e.shiftKey ? 10 : 1 }[k];
+    if (salto !== undefined) {
+      // A barra e o volume já andam sozinhos com as setas.
+      if (alvo?.type === 'range' && k.startsWith('Arrow')) return;
+      e.preventDefault();
+      previa.pular(salto);
+      return;
+    }
+    if (e.code !== 'Space' || alvo?.closest?.('button, a, input:not([type="range"]), select, textarea, summary')) return;
+    e.preventDefault();
+    previa.alternar();
+  });
+
+  // ── editar: o momento no editor do avançado, e o caminho de volta ──────────
+  async function editar(m, li) {
+    if (aBaixar) return;
+    pararPrevia();
+    const nota = li.querySelector('.simplesBaixando');
+    const canal = m.nomeCanal || m.canal;
+    if (!m.doClipe && !abertoEm(m)) {
+      nota.textContent = t('simples.fase.abrirCanal', { canal });
+      if (!await abrirCanalDoMomento(m)) { nota.textContent = t('simples.editarNao'); return; }
+      nota.textContent = '';
+    }
+    escolherModo('avancado');
+    if (!ponte.editar({ canal: m.canal, deMs: m.deMs, ateMs: m.ateMs })) {
+      escolherModo('simples');
+      nota.textContent = t('simples.editarNao');
+      return;
+    }
+    ultimoEditado = chave(m);
+    document.body.classList.add('veioDaLista');
+    document.body.classList.remove('simplesTrabalho');
+    window.scrollTo({ top: 0 });
+  }
+
+  /** Do avançado de volta à lista simples, do jeito que estava: o editor fecha, os vídeos ficam quietos. */
+  function voltarParaLista() {
+    ponte.fecharEditor?.();
+    ponte.pausar();
+    escolherModo('simples');
+    document.body.classList.remove('veioDaLista');
+    document.body.classList.add('simplesTrabalho');
+    $('simplesForm').hidden = true;
+    $('simplesTrabalho').hidden = false;
+    window.scrollTo({ top: 0 });
+    const cartao = ultimoEditado ? lista.querySelector(`li[data-chave="${CSS.escape(ultimoEditado)}"]`) : null;
+    cartao?.scrollIntoView?.({ block: 'center' });
+    (cartao?.querySelector('button.simplesEditar') || $('simplesQuem')).focus?.({ preventScroll: true });
   }
 
   async function baixar(m, li, { deitado }) {
     if (aBaixar) return;
+    pararPrevia();
     aBaixar = true;
     const k = chave(m);
     for (const b of lista.querySelectorAll(BOTOES_DO_CLIPE)) b.disabled = true;
@@ -711,13 +975,11 @@ export function montarSimples(ponte) {
     const motivo = m.doClipe ? t('simples.arquivo.clipe') : palavraDoArquivo(m);
     const canal = m.nomeCanal || m.canal;
     try {
-      // Um momento do evento é de um canal que pode não estar aberto: abre-se o vídeo dele naquela hora.
-      if (m.doEvento && !abertoEm(m)) {
+      // Um momento do evento é de um canal que pode não estar aberto (e na volta do avançado, o de um
+      // streamer só também): abre-se o vídeo dele naquela hora.
+      if (!m.doClipe && !abertoEm(m)) {
         dizerAqui(t('simples.fase.abrirCanal', { canal }));
-        const linha = await comPrazo(ponte.abrirCanal(m.canal, { inicioMs: m.ms }).catch(() => null), ABRIR_MS);
-        if (!linha) { dizerAqui(t('simples.canalNaoAbriu', { canal }), false); return; }
-        ponte.pausar();
-        linhaAberta = linha;
+        if (!await abrirCanalDoMomento(m)) { dizerAqui(t('simples.canalNaoAbriu', { canal }), false); return; }
         dizerAqui(t(`simples.fase.${fase}`));
       }
       const r = await ponte.baixar({ canal: m.canal, deMs: m.deMs, ateMs: m.ateMs }, {

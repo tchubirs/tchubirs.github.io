@@ -275,6 +275,8 @@
     <button id="editarCanais" class="editarCanais" aria-expanded="false" aria-controls="entrada canaisEstado" data-t-titulo="topo.canaisTitulo" title="Adicionar ou tirar canais"><span data-t="topo.canais">Canais</span></button>
     <!-- Volta ao modo simples (ESTUDO-FACIL.md, plano 12). Só aparece no avançado. -->
     <button id="modoSimples" class="modoSimples" type="button" data-t="simples.voltarSimples">Modo simples</button>
+    <!-- Só aparece quando o avançado foi aberto pelo Editar de um cartão da lista simples. -->
+    <button id="voltarLista" class="voltarLista principal" type="button" data-t="simples.voltarLista">Voltar para a lista</button>
     <a class="paraTwitch" href="twitch.html"><svg class="ic" aria-hidden="true"><use href="#i-twitch"/></svg><span data-t="app.twitch">Versão Twitch</span></a>
     <button id="ajuda" class="discreto" data-t-aria="ajuda.abrir" aria-haspopup="dialog"><svg class="ic" aria-hidden="true"><use href="#i-ajuda"/></svg></button>
     <select id="idioma" data-t-aria="idioma.rotulo" aria-label="idioma da página"></select>
@@ -1225,6 +1227,7 @@
     <div class="modalTopo">
       <b data-t="clipe.titulo">Ajustar clipe</b>
       <select id="canalClipe" data-t-aria="clipe.angulo" aria-label="ângulo"></select>
+      <button id="voltarListaClipe" class="voltarLista" type="button" data-t="simples.voltarLista">Voltar para a lista</button>
       <button id="fecharClipe" data-t-titulo="clipe.fechar" title="fechar"><svg class="ic" aria-hidden="true"><use href="#i-fechar"/></svg></button>
     </div>
     <!-- O editor do retrato, ao lado da fonte — como no da Twitch que ele

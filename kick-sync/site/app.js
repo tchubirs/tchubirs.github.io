@@ -8097,6 +8097,9 @@ atalhos.aoMudar(() => pintarDicas(atalhos, t));
 window.addEventListener('storage', (e) => { if (e.key === 'replay.atalhos') atalhos.recarregar(); });
 
 document.addEventListener('keydown', (e) => {
+  // No modo simples os vídeos do avançado estão escondidos: o espaço e as outras teclas não podem tocar
+  // nem andar com eles (o espaço tocava o som de um vídeo que ninguém vê). A prévia do cartão tem a sua tecla.
+  if (modoSimples()) return;
   const alvo = e.target;
   const achada = atalhos.acaoDe(e);
   // Ctrl, Cmd e Alt são do sistema: Ctrl+C copia, Ctrl+A escolhe tudo, Ctrl+D guarda a página. Com
@@ -8552,6 +8555,24 @@ async function baixarParaSimples({ canal, deMs, ateMs }, {
   }
 }
 
+/**
+ * Um momento da lista simples aberto no editor "Ajustar clipe" do avançado, já no pedaço do cartão: é só o
+ * que o baixar faz antes de gravar, mas com a janela à vista. Devolve false se o canal não está aberto.
+ */
+function editarParaSimples({ canal, deMs, ateMs }) {
+  if (!estado.linhas.some((l) => l.slug === canal)) return false;
+  if (estado.clipe) fecharClipe();
+  abrirClipe(novoMomento(Math.round((deMs + ateMs) / 2), canal));
+  const c = estado.clipe;
+  if (!c) return false;
+  const j = dentroDosLimites({ deMs, ateMs }, c.limites);
+  c.deMs = j.deMs;
+  c.ateMs = j.ateMs;
+  pintarClipe();
+  preverClipe(c.deMs);
+  return true;
+}
+
 const simples = montarSimples({
   estado,
   chat: evento,
@@ -8561,6 +8582,8 @@ const simples = montarSimples({
   pausar: () => { if (!estado.parado && estado.linhas.length) alternarPausa(); },
   carregarClipe: carregarClipeDaKick,
   baixar: baixarParaSimples,
+  editar: editarParaSimples,
+  fecharEditor: () => { if (estado.clipe) fecharClipe(); },
   abrirEvento: ({ nome, hash }) => (hash ? evento.abrirDoLink(hash, { abrirLance: false }) : evento.abrirDoLink('', { busca: `?e=${encodeURIComponent(nome)}` })),
   lerChatDoEvento: () => evento.lerChatDeTodos({ semPerguntar: true }),
   lancesDoEvento: evento.lancesSimples,

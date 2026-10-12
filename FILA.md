@@ -441,5 +441,15 @@ em francês). Tudo revisado pela regra 14 em 28/09.
 - Falta (parte 2): imagem nos cartões do evento só aparece depois de baixar algum momento do mesmo streamer (cada
   streamer é uma live a abrir; fotografar tudo é pesado); as mortes ainda não entram na lista de um streamer só
   (só no evento); título e texto do post automáticos; escolher outra live do mesmo streamer; legenda no celular
-  como botão "pôr legenda"; a janela "Ajustar clipe" e as palavras do modo avançado (tabela do estudo); o "?" com
-  ajuda de verdade; rodar os testes de página num Chromium e testar com ela, com as 5 tarefas, no celular dela.
+  como botão "pôr legenda"; as palavras do modo avançado (tabela do estudo); o "?" com ajuda de verdade; rodar os
+  testes de página num Chromium (os 2 novos de assistir e editar só foram vistos no navegador do Claude, não nos
+  testes) e testar com ela, com as 5 tarefas, no celular dela.
+- Feito em 12/10, parte 2, terceira fatia (`simples.js`, `app.js`, `estilo.css`, `idiomas.js`):
+  - tocar na imagem do cartão (play grande no meio) toca o pedaço do lance ali mesmo, com som, num player do
+    tamanho do cartão: controles por cima do vídeo (play, volume, tempo, tela cheia) e barra do tempo só do pedaço.
+    Só um toca por vez: dar play em outro cartão devolve o anterior à imagem. Teclas as do avançado: espaço, A e D
+    (3 s), J, L e setas (1 s, 10 s com Shift), Esc.
+  - "Editar" abre o clipe do cartão no editor do avançado, já no pedaço dele, com "Voltar para a lista" no topo
+    e na janela; a lista volta como estava. "Não quero" virou "Excluir"; "Baixar deitado" virou "Baixar tela cheia".
+  - o espaço e as outras teclas do avançado não agem mais nos vídeos escondidos no modo simples; ao voltar do
+    avançado os vídeos ficam parados.
