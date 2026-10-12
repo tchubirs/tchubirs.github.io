@@ -158,6 +158,8 @@ const IGUAIS_DE_PROPOSITO = {
     'clipe.guardar', 'retrato.exportar',
     // As escolhas do chat no vídeo: "Automática" e "Grande" escrevem-se igual.
     'chatClipe.posAuto', 'chatClipe.tamG',
+    // A legenda: "Estilo", "Turquesa" e os botões de ±0,1 s escrevem-se igual em espanhol.
+    'legenda.estilo', 'legenda.corTurquesa', 'legenda.menos', 'legenda.mais',
   ]),
 };
 

@@ -171,6 +171,9 @@ const chaveDaPeca = (p) => p.vod.master || p.barato?.url;
 
 export async function planearCorte({
   linha, deMs, ateMs, buscar = fetch, cache = new Map(), sinal, prazoMs, saltar = [],
+  // Que degrau da escada: o mais alto, para o vídeo. A legenda só quer o som e escolhe outro (ver
+  // legenda-voz.js); quem passa isto passa também uma `cache` sua, que a chave é só o master.
+  degrau = (escada) => escada[0],
 }) {
   if (!(ateMs > deMs)) return { estado: 'janela-invalida' };
 
@@ -204,7 +207,7 @@ export async function planearCorte({
     if (!rm.ok) return { estado: 'master-falhou', http: rm.status };
     const escada = lerMaster(rm.texto, chave);
     if (!escada.length) return { estado: 'sem-renditions' };
-    const melhor = escada[0];
+    const melhor = degrau(escada) || escada[0];
     const rp = await ler(melhor.url);
     if (!rp.ok) return { estado: 'playlist-falhou', http: rp.status };
     cache.set(chave, { melhor, playlist: lerPlaylist(rp.texto, melhor.url) });

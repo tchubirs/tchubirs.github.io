@@ -280,6 +280,8 @@ em francês). Tudo revisado pela regra 14 em 28/09.
   - o chat do streamer naquele trecho, por cima do vídeo (estilo sobreposição de chat), com posição, tamanho e quantas linhas;
   - legenda da fala do streamer (Whisper no navegador, ver o estudo de voz em kick-sync), revisável antes de exportar.
 - Vale para 16:9 e 9:16. Fazer depois da parte 2 da reorganização (mesmos arquivos).
+- Feito em 12/10: o chat no vídeo e a legenda da fala (Whisper base no navegador, 107 MB da primeira vez, texto
+  para corrigir antes de exportar, guardado na kill). Tempos e acertos medidos em `kick-sync/ESTUDO-VOZ.md`, seção 8.
 
 ## Correções do teste real com a Kick (12/10), na ordem (ver o relatório do teste real em kick-sync)
 1. Ver ao vivo agora: abre o início da live (50 min atrás) e só 1 de 24 canais. Prender no fim da playlist e abrir todos.

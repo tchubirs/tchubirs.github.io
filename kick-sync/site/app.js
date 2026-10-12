@@ -30,6 +30,13 @@ import {
   limparChat, geometria as geometriaDoChat, desenharChat, mensagensDoClipe, prepararEmotes,
   VIDA_MS as VIDA_CHAT_MS, LETRA as LETRA_CHAT,
 } from './chat-clipe.js';
+import {
+  limparLegenda, limparTranscricao, geometriaLegenda, desenharLegenda, transcricaoDoAudio, textoDaLinha,
+  editarLinha, apagarLinha, deslocarLinha, rotuloTempo, cobre, linhaNoInstante, PASSO_MS, fonteDe as fonteDaLegenda,
+  idiomaParaOuvir,
+} from './legenda.js';
+import { abrirVoz, somDosPedacos, degrauDoSom, estimativaS, faltaBaixar } from './legenda-voz.js';
+import { podeLer } from './ler-tela.js';
 import { planoDeAngulos, gravarAngulos } from './angulos.js';
 import { agruparPorNoite, rotuloDaNoite, noiteParaAbrir } from './noites.js';
 import {
@@ -3938,7 +3945,8 @@ function pintarMomentos() {
       // Só os ajustes de ângulos que ainda entram na kill (ver `ajustesQueContam`).
       + (ajustados.length ? `<span class="ajustado">${t(ajustados.some((a) => a.formato)
         ? 'montagem.ajustadoRetrato' : 'montagem.ajustado')}${ajustados.some((a) => a.chat?.ligado)
-        ? `, ${t('montagem.comChat')}` : ''}</span>` : '')
+        ? `, ${t('montagem.comChat')}` : ''}${ajustados.some((a) => a.legenda?.ligado)
+        ? `, ${t('montagem.comLegenda')}` : ''}</span>` : '')
       // "Vítimas" só quando há alguma. Antes a etiqueta estava lá sempre, em
       // cima de uma fila de nomes que ninguém tinha medido — e dizer "Vítimas"
       // por cima de seis nomes que não morreram é afirmar uma coisa que a
@@ -4179,8 +4187,10 @@ async function baixarMontagem(soEsta = null) {
       // Com o chat por cima (guardado nesta kill), o 16:9 grava-se em tempo real como o 9:16, com o
       // chat DESTE canal: os pixels mudam, e copiar os bytes da Kick não os muda.
       // Num vídeo só, o 16:9 é o da Kick sem recodificar, e por isso sai sem o chat por cima.
-      if (clipe.chat && !umSo) {
-        const rotulo = `${i + 1}/${plano.length}: ${clipe.prefixo} ${clipe.canal}, ${t('chatClipe.naFila')}`;
+      const extrasDoClipe = [clipe.chat ? t('chatClipe.naFila') : '', legendaDoClipeGuardado(clipe) ? t('legenda.naFila') : '']
+        .filter(Boolean).join(', ');
+      if (extrasDoClipe && !umSo) {
+        const rotulo = `${i + 1}/${plano.length}: ${clipe.prefixo} ${clipe.canal}, ${extrasDoClipe}`;
         $('estadoMontagem').textContent = rotulo;
         let gravado;
         try {
@@ -4210,7 +4220,7 @@ async function baixarMontagem(soEsta = null) {
           nome,
           url: guardarFicheiro(blob),
           nota: `${(blob.size / 1048576).toFixed(1)} MB, `
-            + `${clipe.papel === 'protagonista' ? t('fila.tuaPov') : t('fila.quemMorreu')}, ${t('chatClipe.naFila')}`
+            + `${clipe.papel === 'protagonista' ? t('fila.tuaPov') : t('fila.quemMorreu')}, ${extrasDoClipe}`
             + (curto ? `, ${curto}` : ''),
           momentoMs: clipe.ms,
         });
@@ -4519,6 +4529,8 @@ async function renderizarGravado(linha, clipe, { deitado = false, sinal, aoProgr
   // O chat primeiro, antes de abrir o vídeo: ler à Kick pode demorar, e um vídeo aberto e parado à
   // espera desistia por falta de imagem.
   const chat = clipe.chat?.ligado ? limparChat(clipe.chat) : null;
+  const legenda = legendaDoClipeGuardado(clipe);
+  if (legenda) await carregarLetraDaLegenda(legenda);
   if (chat) {
     try {
       await prepararChat(clipe.canal, clipe.deMs, clipe.ateMs, { sinal });
@@ -4550,10 +4562,10 @@ async function renderizarGravado(linha, clipe, { deitado = false, sinal, aoProgr
       modo: deitado ? 'inteiro' : r.modo,
       divisao,
       alvo,
-      porCima: chat ? porCimaDoChat({
-        canal: clipe.canal, deMs: clipe.deMs, ateMs: clipe.ateMs, chat, alvo,
+      porCima: porCimaDoClipe({
+        canal: clipe.canal, deMs: clipe.deMs, ateMs: clipe.ateMs, chat, legenda, alvo,
         formato: deitado ? '16:9' : '9:16', modo: r.modo, divisao,
-      }) : null,
+      }),
       duracaoS: (clipe.ateMs - clipe.deMs) / 1000,
       formato,
       sinal,
@@ -4985,12 +4997,17 @@ function abrirClipe(momento = null) {
     // O chat por cima do vídeo: as escolhas que ficaram no aparelho, e ligado só se esta kill o
     // guardou ligado (cada clipe começa sem chat).
     chat: limparChat({ ...chatLembrado(), ...(aj?.chat || {}), ligado: aj?.chat?.ligado === true }),
+    // A legenda da fala: como o chat, ligada só se esta kill a guardou ligada. O texto (já corrigido)
+    // volta com ela.
+    legenda: limparLegenda({ ...legendaLembrada(), ...(aj?.legenda || {}), ligado: aj?.legenda?.ligado === true }),
+    transcricao: aj?.legenda?.ligado ? limparTranscricao(aj.legenda.transcricao) : null,
   };
   // O botão de guardar só existe quando há uma kill onde guardar.
   $('guardarAjustes').hidden = !daLista;
   pintarModos();
   pintarChatClipe();
   carregarChatDoClipe();
+  pintarLegendaClipe();
 
   $('canalClipe').innerHTML = estado.linhas
     .map((l) => `<option value="${escapar(l.slug)}"${l.slug === linha.slug ? ' selected' : ''}>${escapar(l.slug)}</option>`)
@@ -5582,6 +5599,13 @@ async function guardarRetrato({ deitado = false } = {}) {
     $('estadoClipe').textContent = t('retrato.foraDoAr', { canal: c.canal });
     return;
   }
+  // A legenda também: as escolhas e o texto corrigido deste instante.
+  const legendaAqui = legendaParaDesenhar(c);
+  if (c.legenda?.ligado && !legendaAqui) {
+    // Ligada sem texto que sirva para este pedaço: dizer, em vez de sair um clipe sem legenda.
+    $('estadoClipe').textContent = motivoSemLegenda(c);
+    return;
+  }
   botao.disabled = true;
   const controlo = new AbortController();
   c.pararGravacao = () => controlo.abort();
@@ -5605,6 +5629,8 @@ async function guardarRetrato({ deitado = false } = {}) {
       await prepararChat(c.canal, c.deMs, c.ateMs, { sinal: controlo.signal });
       if (!aindaEste() || controlo.signal.aborted) return;
     }
+    if (legendaAqui) await carregarLetraDaLegenda(legendaAqui);
+    const extras = t(chatAqui && legendaAqui ? 'porCima.ambos' : legendaAqui ? 'porCima.legenda' : 'porCima.chat');
     const duracaoS = (c.ateMs - c.deMs) / 1000;
     // Do princípio do clipe, e não de onde a pré-visualização parou.
     await preverClipe(c.deMs);
@@ -5631,19 +5657,20 @@ async function guardarRetrato({ deitado = false } = {}) {
       modo: deitado ? 'inteiro' : c.modo,
       divisao: c.divisao,
       alvo,
-      porCima: chatAqui ? porCimaDoChat({
-        canal: c.canal, deMs: c.deMs, ateMs: c.ateMs, chat: chatAqui, alvo,
+      porCima: porCimaDoClipe({
+        canal: c.canal, deMs: c.deMs, ateMs: c.ateMs, chat: chatAqui, legenda: legendaAqui, alvo,
         formato: deitado ? '16:9' : '9:16', modo: c.modo, divisao: c.divisao,
         // A prévia segue o instante que está a ser gravado, e não a agulha parada.
         aoInstante: (ms) => { c.chatAgoraMs = ms; },
-      }) : null,
+      }),
       duracaoS,
       formato,
       sinal: controlo.signal,
       aoProgresso: ({ feito, total, emPausa }) => {
         if (!aindaEste()) return;
         $('estadoClipe').textContent = emPausa ? t('retrato.emPausa')
-          : t(deitado ? 'chatClipe.aGravar' : 'retrato.aGravar', { feito: feito.toFixed(1), total: total.toFixed(1) });
+          : deitado ? t('porCima.aGravar', { extras, feito: feito.toFixed(1), total: total.toFixed(1) })
+            : t('retrato.aGravar', { feito: feito.toFixed(1), total: total.toFixed(1) });
       },
     });
     const base = nomeDoClipe({ titulo: $('tituloClipe').value, canal: c.canal, quandoMs: c.deMs });
@@ -5659,6 +5686,7 @@ async function guardarRetrato({ deitado = false } = {}) {
       nome, url,
       nota: `${(blob.size / 1048576).toFixed(1)} MB, ${alvo.largura}x${alvo.altura}`
         + (chatAqui ? `, ${t('chatClipe.naFila')}` : '')
+        + (legendaAqui ? `, ${t('legenda.naFila')}` : '')
         + (curto ? `, ${curto}` : ''),
     });
     if (curto) item.querySelector('.nota')?.classList.add('mau');
@@ -5666,7 +5694,9 @@ async function guardarRetrato({ deitado = false } = {}) {
     a.href = url;
     a.download = nome;
     a.click();
-    if (aindaEste()) $('estadoClipe').textContent = curto || t(deitado ? 'chatClipe.pronto' : 'retrato.pronto');
+    if (aindaEste()) {
+      $('estadoClipe').textContent = curto || (deitado ? t('porCima.pronto', { extras }) : t('retrato.pronto'));
+    }
   } catch (e) {
     // Parada por quem fechou o editor: não há a quem dizer nada.
     if (e.name === 'AbortError' || !aindaEste()) return;
@@ -5730,16 +5760,22 @@ async function prepararChat(canal, deMs, ateMs, { sinal, aoProgredir } = {}) {
 }
 
 /**
- * O pincel do chat para `gravar`: as mensagens do clipe tiradas uma vez, e a cada frame as do instante
- * da noite em que o vídeo está (o início do clipe mais o que já se gravou).
+ * O pincel do que vai por cima do vídeo, para `gravar` e para as prévias: o chat e a legenda, cada um
+ * só se vier. As mensagens do clipe tiram-se uma vez, e a cada frame desenha-se o instante da noite em
+ * que o vídeo está (o início do clipe mais o que já se gravou). A legenda vem por cima do chat e foge
+ * dele (ver `geometriaLegenda`). `legenda` é `{ ...escolhas, transcricao }`, ou null.
  */
-function porCimaDoChat({ canal, deMs, ateMs, chat, alvo, formato, modo, divisao, aoInstante }) {
-  const lista = mensagensDoClipe(mensagensDoCanal(canal), deMs, ateMs);
-  const geo = geometriaDoChat(alvo, chat, { formato, modo, divisao });
+function porCimaDoClipe({ canal, deMs, ateMs, chat, legenda, alvo, formato, modo, divisao, aoInstante, mensagens }) {
+  if (!chat && !legenda) return null;
+  // A prévia passa a lista toda do canal (procura-se por busca binária); a gravação, só as do clipe.
+  const lista = chat ? mensagens || mensagensDoClipe(mensagensDoCanal(canal), deMs, ateMs) : null;
+  const geoChat = chat ? geometriaDoChat(alvo, chat, { formato, modo, divisao }) : null;
+  const geoLegenda = legenda ? geometriaLegenda(alvo, legenda, { formato, modo, divisao, chat }) : null;
   return (ctx, feitoS) => {
     const ms = deMs + feitoS * 1000;
     aoInstante?.(ms);
-    desenharChat(ctx, lista, ms, chat, geo);
+    if (chat) desenharChat(ctx, lista, ms, chat, geoChat);
+    if (legenda) desenharLegenda(ctx, legenda.transcricao, ms, legenda, geoLegenda, { nome: canal });
   };
 }
 
@@ -5749,11 +5785,13 @@ function instanteDoChat(c) {
   return Number.isFinite(c.cabecaMs) ? c.cabecaMs : c.deMs;
 }
 
-/** O chat por cima das duas prévias, a cada frame do ciclo do 9:16. */
+/** O chat e a legenda por cima das duas prévias, a cada frame do ciclo do 9:16. */
 let chatFontePintada = false;
 function pintarChatPrevias(ctx9x16) {
   const c = estado.clipe;
-  const ligado = Boolean(c?.chat?.ligado);
+  const chatLigado = Boolean(c?.chat?.ligado);
+  const legenda = legendaParaDesenhar(c);
+  const ligado = chatLigado || Boolean(legenda);
   // Desligado, a tela do 16:9 limpa-se uma vez e fica quieta: o ciclo corre a cada frame.
   if (!ligado && !chatFontePintada) return;
   const tela = $('chatFonte');
@@ -5766,11 +5804,19 @@ function pintarChatPrevias(ctx9x16) {
   const ms = instanteDoChat(c);
   // O 16:9 na mesma conta de 1920x1080 do ficheiro, só que em ponto pequeno.
   g.setTransform(tela.width / DEITADO.largura, 0, 0, tela.height / DEITADO.altura, 0, 0);
-  desenharChat(g, lista, ms, c.chat, geometriaDoChat(DEITADO, c.chat, { formato: '16:9' }));
+  const pincel16 = porCimaDoClipe({
+    canal: c.canal, deMs: c.deMs, ateMs: c.ateMs, chat: chatLigado ? c.chat : null, legenda, alvo: DEITADO, formato: '16:9',
+    mensagens: lista,
+  });
+  pincel16?.(g, (ms - c.deMs) / 1000);
   if (ctx9x16 && c.rects.length) {
-    desenharChat(ctx9x16, lista, ms, c.chat,
-      geometriaDoChat(RETRATO, c.chat, { formato: '9:16', modo: c.modo, divisao: c.divisao }));
+    const pincel9 = porCimaDoClipe({
+      canal: c.canal, deMs: c.deMs, ateMs: c.ateMs, chat: chatLigado ? c.chat : null, legenda,
+      alvo: RETRATO, formato: '9:16', modo: c.modo, divisao: c.divisao, mensagens: lista,
+    });
+    pincel9?.(ctx9x16, (ms - c.deMs) / 1000);
   }
+  if (legenda) marcarFalaAgora(linhaNoInstante(legenda.transcricao, ms));
 }
 
 /**
@@ -5840,7 +5886,8 @@ function pintarChatClipe() {
   $('chatClipeTamanho').value = ch.tamanho;
   $('chatClipeLinhas').value = String(ch.linhas);
   $('chatClipeFundo').value = ch.fundo;
-  $('chatFonte').hidden = !ch.ligado;
+  // A tela por cima do 16:9 é do chat e da legenda: fica à vista com qualquer um dos dois.
+  $('chatFonte').hidden = !(ch.ligado || c.legenda?.ligado);
   if (!ch.ligado) {
     $('estadoChatClipe').textContent = '';
     $('estadoChatClipe').classList.remove('mau');
@@ -5870,6 +5917,386 @@ function ligarChatClipe() {
   }
 }
 ligarChatClipe();
+
+// ── a legenda da fala ────────────────────────────────────────────────────────
+//
+// O dono, 12/10: a fala do streamer como legenda no clipe baixado, revisável antes de exportar. As
+// contas e o desenho vivem em legenda.js; o som e o leitor de voz em legenda-voz.js (e o Worker em
+// legenda-worker.js). Aqui é a ligação à janela do clipe, à lista para corrigir e à gravação.
+
+const GUARDADO_LEGENDA = 'povix.legenda';
+let vozDaLegenda = null;
+
+/** As escolhas da legenda que ficam no aparelho. O ligar não fica: cada clipe começa sem legenda. */
+function legendaLembrada() {
+  try {
+    return limparLegenda({ ...JSON.parse(localStorage.getItem(GUARDADO_LEGENDA) || 'null'), ligado: false });
+  } catch { return limparLegenda(null); }
+}
+
+function lembrarLegenda(l) {
+  try {
+    const { ligado, ...resto } = limparLegenda(l);
+    void ligado;
+    localStorage.setItem(GUARDADO_LEGENDA, JSON.stringify(resto));
+  } catch { /* janela privada */ }
+}
+
+/** A legenda a desenhar no clipe aberto (escolhas e texto), ou null se não há o que pôr. */
+function legendaParaDesenhar(c) {
+  if (!c?.legenda?.ligado || !c.transcricao) return null;
+  if (cobre(c.transcricao, { canal: c.canal, deMs: c.deMs, ateMs: c.ateMs }) !== 'ok') return null;
+  return { ...c.legenda, transcricao: c.transcricao };
+}
+
+/** Por que a legenda ligada não entra no clipe aberto, numa frase. */
+function motivoSemLegenda(c) {
+  const tr = c?.transcricao;
+  const porque = cobre(tr, { canal: c.canal, deMs: c.deMs, ateMs: c.ateMs });
+  if (porque === 'outroCanal') return t('legenda.outroCanal', { canal: tr.canal, atual: c.canal });
+  if (porque === 'foraDoPedaco') return t('legenda.foraDoPedaco', { de: relogioCurto(tr.deMs), ate: relogioCurto(tr.ateMs) });
+  return t('legenda.falta');
+}
+
+/** A legenda guardada numa kill, para a montagem: só ligada, e só com texto da voz deste canal. */
+function legendaDoClipeGuardado(clipe) {
+  const l = limparLegenda(clipe?.legenda);
+  if (!l.ligado) return null;
+  const tr = limparTranscricao(clipe.legenda.transcricao);
+  if (!tr || cobre(tr, { canal: clipe.canal, deMs: tr.deMs, ateMs: tr.ateMs }) !== 'ok') return null;
+  return { ...l, transcricao: tr };
+}
+
+/** A letra grossa da legenda tem de estar carregada antes do primeiro frame, como a do chat. */
+const carregarLetraDaLegenda = (l) => Promise.all([fonteDaLegenda(l.estilo, 64), fonteDaLegenda('destaque', 32)]
+  .map((f) => document.fonts?.load?.(f))).catch(() => {});
+
+let falaMarcada = -1;
+/** Na lista, a fala que a prévia está a mostrar. */
+function marcarFalaAgora(k) {
+  if (k === falaMarcada) return;
+  falaMarcada = k;
+  for (const li of $('legendaFalas').children) li.classList.toggle('agora', Number(li.dataset.k) === k);
+}
+
+const mbDe = (bytes) => Math.max(1, Math.round(bytes / 1e6));
+
+/** O aviso do que se baixa e de quanto demora, e o rótulo do botão. */
+function pintarAvisoDaLegenda() {
+  const c = estado.clipe;
+  if (!c) return;
+  const durS = Math.round((c.ateMs - c.deMs) / 1000);
+  const estimativa = t('legenda.estimativa', { dur: durS, s: estimativaS(durS) });
+  const falta = c.legendaFalta;
+  const aviso = $('legendaBaixar');
+  const botao = $('gerarLegendaTexto');
+  const podeAqui = podeLer();
+  $('gerarLegenda').disabled = !podeAqui || Boolean(c.aGravar);
+  if (!podeAqui) {
+    aviso.textContent = t('legenda.semLeitor');
+    aviso.classList.add('mau');
+    return;
+  }
+  aviso.classList.remove('mau');
+  aviso.textContent = falta == null || falta.bytes > 0
+    ? `${t(falta && !falta.guarda ? 'legenda.semCache' : 'legenda.baixarPrimeira', { mb: mbDe(falta?.bytes ?? BYTES_LEITOR) })} ${estimativa}`
+    : `${t('legenda.jaBaixado')} ${estimativa}`;
+  botao.textContent = c.legendaGerar ? t('legenda.parar')
+    : falta?.bytes > 0 ? t('legenda.gerarBaixar', { mb: mbDe(falta.bytes) })
+      : c.transcricao ? t('legenda.gerarDeNovo') : t('legenda.gerar');
+  $('gerarLegenda').classList.toggle('principal', !c.transcricao && !c.legendaGerar);
+}
+// O que se baixa da primeira vez, enquanto o cache não responde (legenda-arquivos.js soma 107 MB).
+const BYTES_LEITOR = 107_000_000;
+
+/** A lista das falas para corrigir. Texto só por `value` e `textContent`: nunca vira HTML. */
+function pintarFalas({ foco } = {}) {
+  const c = estado.clipe;
+  const lista = $('legendaFalas');
+  const tr = c?.transcricao;
+  const mostrar = Boolean(c?.legenda?.ligado && tr && cobre(tr, { canal: c.canal, deMs: tr.deMs, ateMs: tr.ateMs }) === 'ok');
+  $('legendaTexto').hidden = !mostrar;
+  lista.replaceChildren();
+  falaMarcada = -1;
+  if (!mostrar) return;
+  const inicio = tr.deMs;
+  tr.linhas.forEach((l, k) => {
+    const quando = rotuloTempo(l.palavras[0].de, inicio);
+    const li = document.createElement('li');
+    li.className = 'fala';
+    li.dataset.k = String(k);
+    const tempo = document.createElement('button');
+    tempo.type = 'button';
+    tempo.className = 'falaTempo';
+    tempo.dataset.acao = 'ver';
+    tempo.textContent = quando;
+    tempo.setAttribute('aria-label', t('legenda.verFala', { t: quando }));
+    const texto = document.createElement('input');
+    texto.type = 'text';
+    texto.className = 'falaTexto';
+    texto.maxLength = 400;
+    texto.spellcheck = true;
+    texto.value = textoDaLinha(l);
+    texto.setAttribute('aria-label', t('legenda.textoFala', { t: quando }));
+    const botao = (acao, rotulo, aria, icone) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = `falaBotao ${acao}`;
+      b.dataset.acao = acao;
+      b.setAttribute('aria-label', aria);
+      b.title = aria;
+      if (icone) {
+        b.innerHTML = ICONE(icone);
+      } else {
+        b.textContent = rotulo;
+      }
+      return b;
+    };
+    li.append(
+      tempo, texto,
+      botao('antes', t('legenda.menos'), t('legenda.antes', { t: quando })),
+      botao('depois', t('legenda.mais'), t('legenda.depois', { t: quando })),
+      botao('apagar', '', t('legenda.apagar', { t: quando }), 'lixo'),
+    );
+    lista.append(li);
+  });
+  if (foco) lista.querySelector(`li[data-k="${foco.k}"] [data-acao="${foco.acao}"]`)?.focus();
+  if (c.aGravar) for (const el of lista.querySelectorAll('input, button')) el.disabled = true;
+}
+
+/** Os controlos da legenda a dizer o que o clipe aberto tem. */
+function pintarLegendaClipe() {
+  const c = estado.clipe;
+  if (!c) return;
+  const l = c.legenda;
+  $('legendaLigada').checked = l.ligado;
+  $('legendaOpcoes').hidden = !l.ligado;
+  $('legendaIdioma').value = l.idioma;
+  $('legendaTraduzir').checked = l.traduzir;
+  $('legendaEstilo').value = l.estilo;
+  $('legendaTamanho').value = l.tamanho;
+  $('legendaPosicao').value = l.posicao;
+  for (const r of document.querySelectorAll('input[name="legendaCor"]')) r.checked = r.value === l.cor;
+  $('legendaNome').checked = l.nome;
+  $('chatFonte').hidden = !(c.chat?.ligado || l.ligado);
+  const nota = $('estadoLegenda');
+  if (!l.ligado) {
+    nota.textContent = '';
+    nota.classList.remove('mau');
+    $('legendaProgresso').hidden = true;
+  } else if (!c.legendaGerar) {
+    $('legendaProgresso').hidden = true;
+    const porque = cobre(c.transcricao, { canal: c.canal, deMs: c.deMs, ateMs: c.ateMs });
+    if (porque === 'ok') {
+      nota.classList.remove('mau');
+      if (!c.legendaNota) {
+        nota.textContent = t(c.transcricao.traduzida ? 'legenda.temTraduzida' : 'legenda.tem',
+          { falas: tn(c.transcricao.linhas.length, 'legenda.umaFala', 'legenda.falas', { n: c.transcricao.linhas.length }) });
+      }
+    } else if (c.transcricao) {
+      nota.textContent = motivoSemLegenda(c);
+      nota.classList.add('mau');
+    } else if (!c.legendaNota) {
+      nota.textContent = '';
+    }
+  }
+  pintarAvisoDaLegenda();
+  pintarFalas();
+  if (l.ligado) {
+    seguirRetrato();
+    if (c.legendaFalta == null) {
+      faltaBaixar().then((f) => {
+        if (estado.clipe !== c) return;
+        c.legendaFalta = f;
+        pintarAvisoDaLegenda();
+      }, () => {});
+    }
+  }
+}
+
+let esperaLegenda = null;
+/** Depois de mexer nas pontas: dizer se o texto ainda cobre o pedaço, quando a mão parar. */
+function agendarLegendaDoClipe() {
+  clearTimeout(esperaLegenda);
+  const c = estado.clipe;
+  if (!c?.legenda?.ligado || c.legendaGerar) return;
+  esperaLegenda = setTimeout(() => {
+    if (estado.clipe !== c) return;
+    c.legendaNota = null;
+    pintarLegendaClipe();
+  }, 350);
+}
+
+/** O erro do caminho todo (som, leitor, modelo) numa frase para quem usa. */
+function motivoDaLegenda(e) {
+  if (e?.name === 'INTEGRIDADE') return t('legenda.integridade');
+  if (e?.name === 'SEM-LEITOR') return t('legenda.semLeitor');
+  if (e?.name === 'SEM-SOM' || e?.name === 'SEM-DESCODIFICADOR') return t('legenda.semSom');
+  if (e?.name === 'SEM-PLANO') return e.message;
+  if (e?.name === 'TypeError' || /fetch|network|rede/i.test(String(e?.message))) return t('legenda.semRede');
+  return t('legenda.erro', { erro: String(e?.message || e).slice(0, 160) });
+}
+
+/**
+ * Gerar a legenda do clipe aberto: o som só deste pedaço e deste streamer, o leitor de voz (baixado da
+ * primeira vez), e o texto na lista. Carregar outra vez a meio pára.
+ */
+async function gerarLegenda() {
+  const c = estado.clipe;
+  if (!c || c.aGravar) return;
+  if (c.legendaGerar) { c.legendaGerar.controlo.abort(); return; }
+  if (!podeLer()) { pintarAvisoDaLegenda(); return; }
+  const controlo = new AbortController();
+  const g = { controlo };
+  c.legendaGerar = g;
+  c.legendaNota = 'aGerar';
+  const aindaEste = () => estado.clipe === c && c.legendaGerar === g;
+  const nota = $('estadoLegenda');
+  const barra = $('legendaProgresso');
+  const dizer = (texto, fracao) => {
+    if (!aindaEste()) return;
+    nota.classList.remove('mau');
+    nota.textContent = texto;
+    barra.hidden = false;
+    if (fracao == null) barra.removeAttribute('value'); else barra.value = Math.max(0, Math.min(1, fracao));
+  };
+  const { canal, deMs, ateMs } = c;
+  const linha = estado.linhas.find((x) => x.slug === canal);
+  const { traduzir } = c.legenda;
+  // Automático: o idioma que a live declara na Kick, se declara (o Whisper sozinho erra em clipe curto).
+  const daLive = linha ? onde(linha, deMs + (estado.nudges[canal] || 0)).peca?.vod?.idioma : null;
+  const idioma = idiomaParaOuvir(c.legenda.idioma, daLive);
+  const nudge = estado.nudges[canal] || 0;
+  const t0 = performance.now();
+  pintarAvisoDaLegenda();
+  dizer(t('legenda.aPreparar'), null);
+  try {
+    const plano = await planearCorte({
+      linha, deMs: deMs + nudge, ateMs: ateMs + nudge, cache: new Map(), sinal: controlo.signal, degrau: degrauDoSom,
+    });
+    if (plano.estado !== 'ok') throw Object.assign(new Error(porqueNaoSaiu(plano)), { name: 'SEM-PLANO' });
+    const audio = await somDosPedacos(plano.segmentos, deMs + nudge, ateMs + nudge, {
+      sinal: controlo.signal,
+      aoBaixar: ({ prontos, total }) => dizer(t('legenda.aBaixarSom', { prontos, total }), prontos / total),
+    });
+    const falta = await faltaBaixar();
+    if (aindaEste()) c.legendaFalta = falta;
+    vozDaLegenda ??= abrirVoz();
+    const durS = (ateMs - deMs) / 1000;
+    let inicioOuvir = null;
+    const r = await vozDaLegenda.transcrever(audio, {
+      idioma, traduzir, sinal: controlo.signal, faltaBytes: falta.bytes,
+      aoProgresso: (p) => {
+        if (p.fase === 'baixar') {
+          dizer(t('legenda.aBaixarLeitor', { feito: mbDe(p.feito), total: mbDe(p.total) }), p.fracao);
+        } else if (p.fase === 'abrir') {
+          dizer(t('legenda.aAbrir'), null);
+        } else if (p.fase === 'ouvir') {
+          const agora = performance.now();
+          inicioOuvir ??= agora;
+          const passou = (agora - inicioOuvir) / 1000;
+          const resta = p.fracao > 0.05 ? (passou / p.fracao) * (1 - p.fracao) : durS * 0.9 - passou;
+          dizer(t('legenda.aOuvir', { pct: Math.round(p.fracao * 100), s: Math.max(1, Math.round(resta)) }), p.fracao);
+        }
+      },
+    });
+    if (!aindaEste()) return;
+    const tr = transcricaoDoAudio(r.palavras, { canal, deMs, ateMs, idioma, traduzida: traduzir });
+    c.transcricao = tr;
+    c.legendaFalta = { bytes: 0, guarda: falta.guarda };
+    const s = Math.round((performance.now() - t0) / 1000);
+    nota.classList.remove('mau');
+    nota.textContent = tr?.linhas.length
+      ? t('legenda.pronta', { falas: tn(tr.linhas.length, 'legenda.umaFala', 'legenda.falas', { n: tr.linhas.length }), s })
+      : t('legenda.nenhumaFala');
+    c.legendaNota = 'pronta';
+  } catch (e) {
+    if (!aindaEste() && e?.name !== 'AbortError') return;
+    if (estado.clipe !== c) return;
+    nota.textContent = e?.name === 'AbortError' ? t('legenda.parou') : motivoDaLegenda(e);
+    nota.classList.toggle('mau', e?.name !== 'AbortError');
+    c.legendaNota = 'erro';
+  } finally {
+    if (c.legendaGerar === g) c.legendaGerar = null;
+    if (estado.clipe === c) {
+      $('legendaProgresso').hidden = true;
+      pintarLegendaClipe();
+    }
+  }
+}
+
+function ligarLegendaClipe() {
+  $('legendaLigada').addEventListener('change', (e) => {
+    const c = estado.clipe;
+    if (!c || c.aGravar) return;
+    c.legenda = limparLegenda({ ...c.legenda, ligado: e.target.checked });
+    if (!c.legenda.ligado) c.legendaGerar?.controlo.abort();
+    c.legendaNota = null;
+    pintarLegendaClipe();
+  });
+  const escolha = (chave, valor) => {
+    const c = estado.clipe;
+    if (!c || c.aGravar) return;
+    c.legenda = limparLegenda({ ...c.legenda, [chave]: valor });
+    lembrarLegenda(c.legenda);
+    if (chave === 'estilo' || chave === 'nome') carregarLetraDaLegenda(c.legenda);
+    pintarLegendaClipe();
+  };
+  for (const [id, chave] of [['legendaIdioma', 'idioma'], ['legendaEstilo', 'estilo'], ['legendaTamanho', 'tamanho'],
+    ['legendaPosicao', 'posicao']]) {
+    $(id).addEventListener('change', (e) => escolha(chave, e.target.value));
+  }
+  $('legendaTraduzir').addEventListener('change', (e) => escolha('traduzir', e.target.checked));
+  $('legendaNome').addEventListener('change', (e) => escolha('nome', e.target.checked));
+  for (const r of document.querySelectorAll('input[name="legendaCor"]')) {
+    r.addEventListener('change', () => { if (r.checked) escolha('cor', r.value); });
+  }
+  $('gerarLegenda').addEventListener('click', () => gerarLegenda());
+  // A lista: um ouvinte só, para todas as falas.
+  const lista = $('legendaFalas');
+  lista.addEventListener('change', (e) => {
+    const c = estado.clipe;
+    const campo = e.target.closest('.falaTexto');
+    if (!c?.transcricao || !campo || c.aGravar) return;
+    const k = Number(campo.closest('li').dataset.k);
+    const antes = c.transcricao.linhas.length;
+    c.transcricao = editarLinha(c.transcricao, k, campo.value);
+    if (c.transcricao.linhas.length !== antes) pintarFalas({ foco: { k: Math.min(k, c.transcricao.linhas.length - 1), acao: 'ver' } });
+    else campo.value = textoDaLinha(c.transcricao.linhas[k]);
+  });
+  // Enter no texto confirma, como num formulário, sem sair da lista.
+  lista.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target.closest('.falaTexto')) { e.preventDefault(); e.target.blur(); e.target.focus(); }
+  });
+  lista.addEventListener('click', (e) => {
+    const c = estado.clipe;
+    const b = e.target.closest('button[data-acao]');
+    if (!c?.transcricao || !b || c.aGravar) return;
+    const k = Number(b.closest('li').dataset.k);
+    const fala = c.transcricao.linhas[k];
+    if (!fala) return;
+    if (b.dataset.acao === 'ver') { levarAgulha(fala.palavras[0].de); return; }
+    if (b.dataset.acao === 'apagar') {
+      c.transcricao = apagarLinha(c.transcricao, k);
+      pintarFalas({ foco: { k: Math.min(k, c.transcricao.linhas.length - 1), acao: 'apagar' } });
+      if (!c.transcricao.linhas.length) $('legendaLigada').focus();
+      return;
+    }
+    const delta = b.dataset.acao === 'antes' ? -PASSO_MS : PASSO_MS;
+    c.transcricao = deslocarLinha(c.transcricao, k, delta);
+    // A mesma fala depois de andar (pode ter trocado de lugar com a vizinha): o mesmo texto, perto.
+    const texto = textoDaLinha(fala);
+    let novoK = k;
+    let melhor = Infinity;
+    c.transcricao.linhas.forEach((l, i) => {
+      const d = Math.abs(l.palavras[0].de - (fala.palavras[0].de + delta));
+      if (textoDaLinha(l) === texto && d < melhor) { melhor = d; novoK = i; }
+    });
+    pintarFalas({ foco: { k: novoK, acao: b.dataset.acao } });
+    levarAgulha(c.transcricao.linhas[novoK].palavras[0].de);
+  });
+}
+ligarLegendaClipe();
 
 /**
  * Trancar o editor enquanto o 9:16 grava, e destrancá-lo no fim.
@@ -5957,12 +6384,19 @@ async function guardarAngulos(modo) {
 function trancarEditor(sim) {
   for (const id of ['inicioMenos', 'inicioMais', 'fimMenos', 'fimMais', 'verClipe', 'canalClipe',
     'guardarClipe', 'guardarAjustes', 'modoUm', 'modoDois', 'divisor', 'angulosSeguido', 'angulosEmpilhado',
-    'voltarModelo', 'chatClipeLigado', 'chatClipePosicao', 'chatClipeTamanho', 'chatClipeLinhas', 'chatClipeFundo']) {
+    'voltarModelo', 'chatClipeLigado', 'chatClipePosicao', 'chatClipeTamanho', 'chatClipeLinhas', 'chatClipeFundo',
+    'legendaLigada', 'legendaIdioma', 'legendaTraduzir', 'gerarLegenda', 'legendaEstilo', 'legendaTamanho',
+    'legendaPosicao', 'legendaNome']) {
     const el = $(id);
     if (el) el.disabled = sim;
   }
   for (const p of $('barraClipe').querySelectorAll('.pega')) p.disabled = sim;
   for (const b of document.querySelectorAll('.modeloWebcam')) b.disabled = sim;
+  for (const b of document.querySelectorAll('#legendaClipe input[name="legendaCor"], #legendaFalas input, #legendaFalas button')) {
+    b.disabled = sim;
+  }
+  // O Gerar volta a dizer se este navegador o corre, e não só "destrancado".
+  if (!sim && estado.clipe) pintarAvisoDaLegenda();
   // A agulha não é um botão: sai da ordem do Tab e diz que está apagada.
   $('agulhaClipe').tabIndex = sim ? -1 : 0;
   $('agulhaClipe').setAttribute('aria-disabled', String(sim));
@@ -5977,6 +6411,8 @@ function fecharClipe() {
   estado.clipe?.pararExportar?.();
   estado.clipe?.pararGravacao?.();
   estado.clipe?.chatLeitura?.controlo.abort();
+  // Uma legenda a ser gerada para este clipe: parar (o leitor de voz é fechado a meio da conta).
+  estado.clipe?.legendaGerar?.controlo.abort();
   clearTimeout(esperaChatClipe);
   const retomarGrelha = estado.clipe?.retomarGrelha;
   pararVer();
@@ -6037,6 +6473,7 @@ function pintarClipe() {
   });
   $('tempoClipe').classList.toggle('mau', dur >= MAXIMO_S);
   agendarChatDoClipe();
+  agendarLegendaDoClipe();
 }
 
 /**
@@ -6231,7 +6668,7 @@ async function guardarClipe() {
   const c = estado.clipe;
   if (!c || c.aGravar || c.pararExportar) return;
   // Com o chat, os pixels mudam: o 16:9 grava-se como o 9:16, com o chat pintado em cada frame.
-  if (c.chat?.ligado) { await guardarRetrato({ deitado: true }); return; }
+  if (c.chat?.ligado || c.legenda?.ligado) { await guardarRetrato({ deitado: true }); return; }
   const linha = estado.linhas.find((l) => l.slug === c.canal);
   const nudge = estado.nudges[c.canal] || 0;
   // Fechar o editor (Esc, ✕, Cancelar) pára isto. E tudo o que vem depois de
@@ -6771,6 +7208,8 @@ function guardarAjustes() {
       deMs: c.deMs, ateMs: c.ateMs, canal: c.canal,
       formato: querRetrato ? c.modo : null, rects: c.rects, divisao: c.divisao,
       chat: c.chat?.ligado ? c.chat : null,
+      // A legenda vai com o texto corrigido: é trabalho dele, e a montagem desenha-o igual.
+      legenda: c.legenda?.ligado ? { ...c.legenda, transcricao: c.transcricao } : null,
     })
     : x));
   const n = ordenar(estado.momentos).findIndex((x) => x.ms === c.momentoMs) + 1;
@@ -6838,6 +7277,9 @@ $('canalClipe').onchange = () => {
   pintarModos();
   pintarRecortes();
   pintarDivisor();
+  // O texto da legenda é da voz de quem estava: com outro ângulo, a página diz que é preciso ouvir este.
+  c.legendaGerar?.controlo.abort();
+  pintarLegendaClipe();
 };
 $('barraClipe').querySelector('.pega.de').onpointerdown = arrastar('de');
 $('barraClipe').querySelector('.pega.ate').onpointerdown = arrastar('ate');

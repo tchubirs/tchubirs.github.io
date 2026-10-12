@@ -1177,6 +1177,69 @@
         <p class="nota chatClipeCusto" data-t="chatClipe.custo">Com o chat, o 16:9 também é convertido de novo e demora o tempo do clipe. Cada mensagem fica 10 segundos.</p>
       </div>
     </section>
+    <!-- A legenda da fala (legenda.js, legenda-voz.js e o Worker legenda-worker.js). Desligada por omissão.
+         Ligada: diz o que se baixa da primeira vez, ouve só o som deste clipe, e mostra o texto para
+         corrigir antes de exportar. As prévias de cima pintam-na como sai no ficheiro. -->
+    <section id="legendaClipe" class="chatClipe legendaClipe" aria-labelledby="legendaRotulo">
+      <div class="chatClipeTopo">
+        <label class="chatClipeLigar"><input type="checkbox" id="legendaLigada" aria-describedby="legendaAjuda" aria-controls="legendaOpcoes"><span><b id="legendaRotulo" data-t="legenda.ligar">Legenda da fala</b> <span class="nota" id="legendaAjuda" data-t="legenda.ajuda">O que o streamer fala vira texto por cima do vídeo, palavra por palavra. O som é lido aqui no computador e não sai dele.</span></span></label>
+        <p id="estadoLegenda" class="nota estadoChatClipe" role="status" aria-live="polite"></p>
+      </div>
+      <div id="legendaOpcoes" class="legendaOpcoes" hidden>
+        <div class="legendaGerar">
+          <p id="legendaBaixar" class="nota legendaBaixar"></p>
+          <div class="legendaGerarLinha">
+            <label class="campo"><span class="rotuloCampo" data-t="legenda.idioma">Idioma da fala</span>
+              <select id="legendaIdioma">
+                <option value="auto" data-t="legenda.idAuto">Automático (o da live)</option>
+                <option value="pt" data-t="legenda.idPt">Português</option>
+                <option value="es" data-t="legenda.idEs">Espanhol</option>
+                <option value="en" data-t="legenda.idEn">Inglês</option>
+              </select></label>
+            <label class="legendaTraduzir"><input type="checkbox" id="legendaTraduzir" aria-describedby="legendaTraduzirAjuda"><span><span data-t="legenda.traduzir">Traduzir para inglês</span> <span class="nota" id="legendaTraduzirAjuda" data-t="legenda.traduzirAjuda">O leitor só traduz para inglês, e aí o tempo de cada palavra é aproximado.</span></span></label>
+            <button id="gerarLegenda" type="button"><svg class="ic ic-p" aria-hidden="true"><use href="#i-onda"/></svg><span id="gerarLegendaTexto" data-t="legenda.gerar">Gerar legenda</span></button>
+          </div>
+          <progress id="legendaProgresso" class="legendaProgresso" max="1" value="0" hidden data-t-aria="legenda.progresso" aria-label="Andamento da legenda"></progress>
+          <p class="nota legendaAviso"><svg class="ic ic-p" aria-hidden="true"><use href="#i-aviso"/></svg><span data-t="legenda.aviso">A legenda pode errar com barulho de tiro; confira antes de exportar.</span></p>
+        </div>
+        <div class="chatClipeOpcoes legendaEstilo" role="group" data-t-aria="legenda.opcoes" aria-label="Como a legenda aparece">
+          <label class="campo"><span class="rotuloCampo" data-t="legenda.estilo">Estilo</span>
+            <select id="legendaEstilo">
+              <option value="destaque" data-t="legenda.estDestaque">Destaque palavra por palavra</option>
+              <option value="palavra" data-t="legenda.estPalavra">Uma palavra por vez</option>
+              <option value="simples" data-t="legenda.estSimples">Simples, duas linhas</option>
+            </select></label>
+          <label class="campo"><span class="rotuloCampo" data-t="chatClipe.tamanho">Tamanho</span>
+            <select id="legendaTamanho">
+              <option value="p" data-t="chatClipe.tamP">Pequeno</option>
+              <option value="m" data-t="chatClipe.tamM">Médio</option>
+              <option value="g" data-t="chatClipe.tamG">Grande</option>
+            </select></label>
+          <label class="campo"><span class="rotuloCampo" data-t="chatClipe.posicao">Posição</span>
+            <select id="legendaPosicao">
+              <option value="auto" data-t="legenda.posAuto">Automática, longe do chat</option>
+              <option value="baixo" data-t="legenda.posBaixo">Embaixo</option>
+              <option value="meio" data-t="legenda.posMeio">No meio</option>
+              <option value="cima" data-t="legenda.posCima">Em cima</option>
+            </select></label>
+          <fieldset class="legendaCores">
+            <legend class="rotuloCampo" data-t="legenda.cor">Cor do destaque</legend>
+            <label class="legendaCor"><input type="radio" name="legendaCor" value="turquesa"><span class="amostra turquesa" aria-hidden="true"></span><span data-t="legenda.corTurquesa">Turquesa</span></label>
+            <label class="legendaCor"><input type="radio" name="legendaCor" value="ambar"><span class="amostra ambar" aria-hidden="true"></span><span data-t="legenda.corAmbar">Âmbar</span></label>
+            <label class="legendaCor"><input type="radio" name="legendaCor" value="branco"><span class="amostra branco" aria-hidden="true"></span><span data-t="legenda.corBranco">Branco</span></label>
+          </fieldset>
+          <label class="legendaNome"><input type="checkbox" id="legendaNome"><span data-t="legenda.nome">Nome do streamer antes da fala</span></label>
+          <p class="nota chatClipeCusto" data-t="legenda.custo">Com a legenda, o 16:9 também é convertido de novo e demora o tempo do clipe.</p>
+        </div>
+        <div id="legendaTexto" class="legendaTexto" hidden>
+          <div class="legendaTextoTopo">
+            <span class="rotuloCampo" id="legendaTextoRotulo" data-t="legenda.texto">Texto da legenda</span>
+            <span class="nota" data-t="legenda.textoAjuda">Corrija as palavras, apague o que não foi dito e acerte o tempo com os botões.</span>
+          </div>
+          <ol id="legendaFalas" class="legendaFalas" aria-labelledby="legendaTextoRotulo"></ol>
+        </div>
+      </div>
+    </section>
     <label for="tituloClipe" data-t="clipe.tituloLabel">Título do clipe</label>
     <input id="tituloClipe" type="text" maxlength="80" data-t-ph="clipe.tituloPh" placeholder="opcional, entra no nome do arquivo">
     <div class="linha fim">

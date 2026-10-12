@@ -39,6 +39,10 @@ cp site/eventos/*.json "$DESTINO/eventos/"
 # São uns 6 MB que só são pedidos quando alguém carrega em Ler os nomes na tela.
 mkdir -p "$DESTINO/vendor/tesseract"
 cp site/vendor/tesseract/* "$DESTINO/vendor/tesseract/"
+# O código do leitor de voz da legenda (transformers.js 4.3.0, 0,6 MB), com a licença. O modelo e o
+# motor não estão aqui: vêm do Hugging Face e do jsDelivr, conferidos (ver site/legenda-arquivos.js).
+mkdir -p "$DESTINO/vendor/whisper"
+cp site/vendor/whisper/* "$DESTINO/vendor/whisper/"
 
 for f in "$DESTINO"/*.js "$DESTINO"/*.html; do
   # `from './x.js'` e `src="app.js"` -> mesmos ficheiros, endereço novo.
@@ -75,8 +79,8 @@ for f in "$DESTINO"/index.html "$DESTINO"/twitch.html "$DESTINO"/app.js "$DESTIN
 done
 # E que a letra foi mesmo junto: cinco caras, e todas com corpo.
 [ -s "$DESTINO/versao.txt" ] || { echo "SEM versao.txt" >&2; exit 1; }
-for f in site/vendor/tesseract/*; do
-  [ -s "$DESTINO/vendor/tesseract/$(basename "$f")" ] || { echo "FALTA O LEITOR: $f" >&2; exit 1; }
+for f in site/vendor/tesseract/* site/vendor/whisper/*; do
+  [ -s "$DESTINO/${f#site/}" ] || { echo "FALTA O LEITOR: $f" >&2; exit 1; }
 done
 for f in site/letra/*.woff2; do
   n=$(basename "$f")

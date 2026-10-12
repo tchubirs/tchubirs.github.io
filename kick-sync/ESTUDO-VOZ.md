@@ -93,6 +93,42 @@ Vosk 0.0.8, 1 fio: pt pequeno levou 32,5 s para 60 s, es pequeno 15,8 s (**medid
 6. Detecção: filtro "palavras faladas" que roda o worker só nos trechos do modo esperto e procura a lista de palavras com comparação aproximada.
 7. Testes: worker com um áudio curto conhecido no Chromium sem tela (o banco de teste deste estudo serve de base); medir num notebook real com e sem WebGPU antes de prometer tempos na tela.
 
+## 8. Medido na implementação (12/10)
+
+A legenda do clipe foi feita como na seção 7, com quatro mudanças:
+
+- O modelo e o motor não entram no repositório. Vêm do Hugging Face (commit `608c49e`) e do jsDelivr
+  (onnxruntime-web `1.31.0-dev.20260914-8d85527a0`), em versão fixa, e só são aceitos com o SHA-256
+  certo (`site/legenda-arquivos.js`). No `site/vendor/whisper/` fica só o `transformers.min.js` 4.3.0
+  (582 KB). O Worker é arquivo nosso: a política de segurança da página não se aplica a ele, e não foi
+  preciso mexer nela.
+- O som sai do degrau de 480p: em dois VODs reais (Gaules e tatarel) o áudio do 1080p, do 720p e do 480p
+  é o mesmo, byte a byte (AAC 160 kb/s, 48 kHz). O 480p pesa 1,8 MB por 10 s, contra 10,6 MB do 1080p.
+  O 360p e o 160p têm outro áudio, mais pobre.
+- O áudio é lido em janelas de 30 s com 5 s de sobra, uma de cada vez. Com a costura do transformers.js
+  e tempo por palavra, as palavras da sobra saíam repetidas ("é, é, né? né?").
+- `repetition_penalty: 1,1`. Sem isso, 30 s de Rust com tiros viraram "o que é o que é..." e 40 s de
+  conta; com isso, a frase certa em 5 s.
+
+Tempos (Chrome for Testing 153 sem tela, que traz AAC; 4 núcleos Xeon 2,8 GHz; um fio; rede de servidor):
+
+| Clipe | Primeira vez (baixar 106,5 MB + abrir + ler) | Com o leitor guardado | Só a leitura |
+|---|---|---|---|
+| Gaules, 60 s de fala corrida | 42,1 s (download 5 s) | | 36,6 s |
+| Gaules, 60 s | | 31,1 s | 27,0 s |
+| Gaules, 30 s | | 19,7 s | 15,3 s |
+| Rust (tatarel, zezinhou), 30 s | | 9,8 a 18,1 s | 4,9 a 14,7 s |
+
+Abrir o modelo guardado leva uns 4 s. Numa casa com 50 Mb/s o download leva uns 20 s.
+
+Acertos em português (o Whisper base contra a legenda que a própria Kick gera para o Gaules, que também
+é automática e repete trechos, por isso a conta é só indicativa): das palavras que o Whisper escreveu,
+80% e 66% estão na legenda da Kick nos dois trechos de narração; num trecho com torcida e música, 35%,
+com uma frase inventada e repetida três vezes. Em Rust as falas são curtas e o texto saiu plausível
+("Nossa, ele se mexeu no que eu carreguei. Não estou vendo mais"), mas sem referência para medir.
+A deteção automática de idioma ouviu inglês num clipe de Rust em português; por isso o Automático usa o
+idioma que a live declara na Kick. A tradução para inglês funcionou ("Where? Oh, if he's moving...").
+
 ## Fontes
 
 1. npm, `@huggingface/transformers` (versões e datas): https://registry.npmjs.org/@huggingface/transformers

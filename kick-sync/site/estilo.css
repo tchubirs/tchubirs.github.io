@@ -62,6 +62,12 @@ body {
   font-family: 'IBM Plex Sans'; font-style: normal; font-weight: 600;
   font-display: block; src: url('letra/ibm-plex-sans-600.woff2') format('woff2');
 }
+/* O 700 só serve à legenda do clipe (legenda.js), que o pinta numa tela: carrega-se quando ela é
+   pedida, e por isso não está entre os pré-carregados. Do mesmo pacote dos outros (@fontsource 5.3.0). */
+@font-face {
+  font-family: 'IBM Plex Sans'; font-style: normal; font-weight: 700;
+  font-display: block; src: url('letra/ibm-plex-sans-700.woff2') format('woff2');
+}
 @font-face {
   font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 400;
   font-display: block; src: url('letra/ibm-plex-mono-400.woff2') format('woff2');
@@ -2608,4 +2614,95 @@ body.mesa .estadoChatClipe:empty { display: none; }
   body.mesa .chatClipeLigar { min-height: 44px; align-items: center; }
   body.mesa .chatClipeLigar input { width: 22px; height: 22px; min-width: 22px; margin-top: 0; }
   body.mesa .chatClipeOpcoes select { min-height: 44px; }
+}
+
+/* ── a legenda da fala, na janela do clipe ─────────────────────────────────
+   A mesma caixa do chat no vídeo, logo abaixo dela. Em cima o que se baixa e o
+   botão de gerar; no meio as escolhas de como aparece; em baixo o texto para
+   corrigir, uma fala por linha, com o tempo à esquerda (que leva a prévia lá)
+   e os botões de mexer no tempo e apagar à direita. */
+body.mesa .legendaClipe:has(#legendaLigada:checked) { border-color: var(--acento-fio); }
+body.mesa .legendaOpcoes { display: grid; gap: var(--e4); }
+body.mesa .legendaOpcoes[hidden] { display: none; }
+body.mesa .legendaGerar { display: grid; gap: var(--e3); }
+body.mesa .legendaBaixar { margin: 0; font-size: var(--t-menor); color: var(--tinta-2); }
+body.mesa .legendaBaixar.mau { color: var(--perigo); }
+body.mesa .legendaGerarLinha { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--e3) var(--e4); }
+body.mesa .legendaGerarLinha .campo { flex: 0 1 190px; min-width: 150px; gap: 4px; }
+body.mesa .legendaGerarLinha select { min-height: 36px; padding-top: 6px; padding-bottom: 6px; font-size: var(--t-menor); }
+body.mesa .legendaTraduzir { display: flex; align-items: flex-start; gap: var(--e3); flex: 1 1 16em; min-width: 0; font-size: var(--t-menor); cursor: pointer; }
+body.mesa .legendaTraduzir input { margin-top: 2px; }
+body.mesa .legendaTraduzir .nota { display: block; color: var(--tinta-3); font-size: var(--t-micro); }
+body.mesa #gerarLegenda { flex: 0 0 auto; min-height: 36px; }
+body.mesa .legendaProgresso { width: 100%; height: 6px; accent-color: var(--acento); }
+body.mesa .legendaProgresso[hidden] { display: none; }
+body.mesa .legendaAviso { display: flex; align-items: center; gap: var(--e2); margin: 0; font-size: var(--t-menor); color: var(--aviso); }
+body.mesa .legendaAviso .ic { flex: 0 0 auto; }
+body.mesa .legendaEstilo { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+body.mesa .legendaCores {
+  grid-column: span 2; display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2);
+  margin: 0; padding: 0; border: 0; min-width: 0;
+}
+body.mesa .legendaCores legend { float: left; width: 100%; padding: 0; margin-bottom: 4px; }
+body.mesa .legendaCor {
+  position: relative; display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 var(--e3);
+  border: 1px solid var(--linha-2); border-radius: var(--r-2); background: var(--sup-3);
+  font-size: var(--t-menor); color: var(--tinta-2); cursor: pointer;
+}
+body.mesa .legendaCor:hover { border-color: var(--linha-3); color: var(--tinta); }
+body.mesa .legendaCor input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; }
+body.mesa .legendaCor:has(input:checked) { border-color: var(--acento); background: var(--acento-eco); color: var(--tinta); }
+body.mesa .legendaCor:has(input:focus-visible) { outline: 2px solid var(--acento-alto); outline-offset: 2px; }
+body.mesa .legendaCor:has(input:disabled) { opacity: .55; cursor: default; }
+body.mesa .legendaCor .amostra { width: 14px; height: 14px; border-radius: 50%; border: 1px solid #0000004d; }
+body.mesa .legendaCor .amostra.turquesa { background: #46C6D6; }
+body.mesa .legendaCor .amostra.ambar { background: #F2B254; }
+body.mesa .legendaCor .amostra.branco { background: #FFFFFF; }
+body.mesa .legendaNome { display: flex; align-items: center; gap: var(--e3); align-self: end; min-height: 36px; font-size: var(--t-menor); cursor: pointer; }
+body.mesa .legendaTexto { display: grid; gap: var(--e2); padding-top: var(--e3); border-top: 1px solid var(--linha); }
+body.mesa .legendaTexto[hidden] { display: none; }
+body.mesa .legendaTextoTopo { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px var(--e4); }
+body.mesa .legendaTextoTopo .nota { font-size: var(--t-micro); color: var(--tinta-3); }
+body.mesa .legendaFalas {
+  list-style: none; margin: 0; padding: 2px; display: grid; gap: 4px;
+  max-height: 300px; overflow-y: auto; overscroll-behavior: contain;
+}
+body.mesa .fala {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto; align-items: center; gap: var(--e2);
+  padding: 3px; border-radius: var(--r-1); border: 1px solid transparent;
+}
+body.mesa .fala.agora { background: var(--acento-eco); border-color: var(--acento-fio); }
+body.mesa .falaTempo {
+  min-width: 62px; min-height: 34px; padding: 0 var(--e2); font-family: var(--letra-mono); font-size: var(--t-menor);
+  background: transparent; border-color: transparent; color: var(--tinta-2);
+}
+body.mesa .falaTempo:hover { background: var(--sup-3); color: var(--tinta); }
+body.mesa .falaTexto { min-height: 34px; padding: 4px var(--e3); font-size: var(--t-base); min-width: 0; width: 100%; }
+body.mesa .falaBotao { min-height: 34px; padding: 0 var(--e2); font-size: var(--t-micro); font-family: var(--letra-mono); color: var(--tinta-2); }
+body.mesa .falaBotao.apagar { width: 34px; min-width: 34px; padding: 0; }
+body.mesa .falaBotao.apagar:hover { color: var(--perigo); }
+@media (max-width: 720px) {
+  body.mesa .legendaEstilo { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body.mesa .legendaCores { grid-column: 1 / -1; }
+  body.mesa .legendaNome { grid-column: 1 / -1; }
+  body.mesa .legendaGerarLinha .campo { flex: 1 1 100%; }
+  body.mesa #gerarLegenda { flex: 1 1 100%; }
+}
+@media (max-width: 560px) {
+  /* As escolhas uma por linha: "Automática, longe do chat" não cabe em meia largura. */
+  body.mesa .legendaEstilo { grid-template-columns: minmax(0, 1fr); }
+  /* Num telemóvel em pé a fala tem a largura toda; o tempo e os botões ficam na linha de baixo. */
+  body.mesa .fala { grid-template-columns: minmax(0, 1fr) auto auto auto; grid-template-areas: "texto texto texto texto" "tempo antes depois apagar"; }
+  body.mesa .fala .falaTexto { grid-area: texto; }
+  body.mesa .fala .falaTempo { grid-area: tempo; justify-self: start; }
+  body.mesa .fala .antes { grid-area: antes; }
+  body.mesa .fala .depois { grid-area: depois; }
+  body.mesa .fala .apagar { grid-area: apagar; }
+  body.mesa .fala { padding: var(--e2) 3px; border-bottom: 1px solid var(--linha); border-radius: 0; }
+}
+@media (pointer: coarse) {
+  body.mesa .legendaTraduzir input, body.mesa .legendaNome input { width: 22px; height: 22px; min-width: 22px; margin-top: 0; }
+  body.mesa .legendaGerarLinha select, body.mesa #gerarLegenda, body.mesa .legendaCor, body.mesa .legendaNome { min-height: 44px; }
+  body.mesa .falaTempo, body.mesa .falaTexto, body.mesa .falaBotao { min-height: 44px; }
+  body.mesa .falaBotao.apagar { width: 44px; min-width: 44px; }
 }

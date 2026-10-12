@@ -51,10 +51,21 @@ export function momentosParaLink(momentos) {
       if (v == null || v === '' || v === false) continue;
       if (Array.isArray(v) && !v.length) continue;
       if (k in PADRAO && v === PADRAO[k]) continue;
-      c[k] = v;
+      c[k] = k === 'ajuste' ? semTextoDaLegenda(v)
+        : k === 'ajustes' && v && typeof v === 'object'
+          ? Object.fromEntries(Object.entries(v).map(([canal, a]) => [canal, semTextoDaLegenda(a)])) : v;
     }
     return c;
   });
+}
+
+/**
+ * Um ajuste sem o texto da legenda. O texto de trinta kills são dezenas de KB, e o link é um endereço:
+ * vão as escolhas (estilo, cor, idioma), e quem abre o link gera o texto no aparelho dele.
+ */
+function semTextoDaLegenda(aj) {
+  if (!aj?.legenda?.transcricao) return aj;
+  return { ...aj, legenda: { ...aj.legenda, transcricao: null } };
 }
 
 /** O inverso de `momentosParaLink`: cada kill com os campos de omissão de volta. */
@@ -189,6 +200,8 @@ export function clipesDoMomento(momento, canais, indice, { filmava = () => true,
       // O chat por cima do vídeo, quando ele o ligou e guardou nesta kill (ver chat-clipe.js): o
       // chat é o DESTE canal, e entra no 16:9 e no 9:16 deste clipe.
       chat: ajustado && aj.chat?.ligado === true ? { ...aj.chat } : null,
+      // A legenda da fala, com o texto que ele corrigiu (ver legenda.js). Também é deste canal.
+      legenda: ajustado && aj.legenda?.ligado === true ? { ...aj.legenda } : null,
       // A que kill este clipe pertence. Sem isto nao havia maneira de pedir os
       // clipes de UMA kill sem refazer o plano todo por fora.
       ms: momento.ms,
@@ -229,7 +242,7 @@ export function planoDaMontagem(momentos, canais, opcoes = {}) {
  * estao em pixels DESSE video.
  */
 export function comAjuste(momento, {
-  deMs, ateMs, formato = null, rects = [], divisao, canal, chat = null,
+  deMs, ateMs, formato = null, rects = [], divisao, canal, chat = null, legenda = null,
 } = {}) {
   if (!Number.isFinite(deMs) || !Number.isFinite(ateMs) || ateMs <= deMs) return momento;
   const ajuste = {
@@ -243,6 +256,15 @@ export function comAjuste(momento, {
     ...(chat && typeof chat === 'object' && chat.ligado === true ? {
       chat: {
         ligado: true, posicao: chat.posicao, tamanho: chat.tamanho, linhas: chat.linhas, fundo: chat.fundo,
+      },
+    } : {}),
+    // A legenda: as escolhas e o texto corrigido, só ligada. O texto vai como está; quem o lê passa-o
+    // por `limparTranscricao` (legenda.js) antes de o usar.
+    ...(legenda && typeof legenda === 'object' && legenda.ligado === true ? {
+      legenda: {
+        ligado: true, estilo: legenda.estilo, tamanho: legenda.tamanho, posicao: legenda.posicao, cor: legenda.cor,
+        nome: legenda.nome === true, idioma: legenda.idioma, traduzir: legenda.traduzir === true,
+        transcricao: legenda.transcricao || null,
       },
     } : {}),
   };
