@@ -80,12 +80,25 @@
 
   /* ── estado ──────────────────────────────────────────────────────────── */
   /* Não são acentos: pertencem à informação, e não à decoração. */
-  --perigo: #E0574F;
-  --perigo-eco: #e0574f1f;
+  /* O vermelho é o texto dos avisos (12,5 px), e tem de se ler em todas as
+     superfícies e sobre o seu próprio eco: 5,3:1 no pior caso (--sup-3) e
+     4,6:1 sobre o eco. O #E0574F de antes dava 4,2:1 no botão do ao vivo. */
+  --perigo: #EE7068;
+  --perigo-eco: #ee706818;
   --ok: #5FAE72;             /* esteve no ar, ficou pronto */
   --ok-eco: #5fae7226;
   --aviso: #D9A441;
   --aviso-eco: #d9a4411f;
+  /* Os dois cortes do clipe. Verde abre, vermelho fecha; o vermelho do Fim é o mesmo da zona de perigo, e o
+     verde não é o do ok (esse é suave demais para uma pega). Cada um tem também um desenho próprio (estilo.css). */
+  --inicio: #3FB950;
+  --inicio-alto: #56D364;
+  --inicio-eco: #3fb95026;
+  --sobre-inicio: #04210B;
+  --fim: #F85149;
+  --fim-alto: #FF7B72;
+  --fim-eco: #f8514926;
+  --sobre-fim: #2B0605;
 
   /* ── a letra ─────────────────────────────────────────────────────────── */
   /* IBM Plex, as duas. Desenhada para produtos técnicos, não para páginas de

@@ -13,12 +13,16 @@
 // que é exactamente o que é verdade.
 
 const SEIS_HORAS = 6 * 3600_000;
+// Uma noite não passa disto, contado do primeiro a entrar. Sem teto, vinte canais que transmitem todos
+// os dias a horas diferentes nunca deixavam um buraco de seis horas, e a semana inteira virava uma
+// "noite" só: a barra do tempo com sete dias e o lance perdido num pixel.
+const DOZE_HORAS = 12 * 3600_000;
 
 /**
  * @param {Array<{slug:string, vods:Array<{inicioApi:number, duracaoMs:number}>}>} canais
  * @returns noites, da mais recente para a mais antiga
  */
-export function agruparPorNoite(canais, { intervaloMs = SEIS_HORAS } = {}) {
+export function agruparPorNoite(canais, { intervaloMs = SEIS_HORAS, maximoMs = DOZE_HORAS, agoraMs = Date.now() } = {}) {
   const pontos = [];
   for (const c of canais || []) {
     for (const v of c.vods || []) {
@@ -29,7 +33,9 @@ export function agruparPorNoite(canais, { intervaloMs = SEIS_HORAS } = {}) {
         de: v.inicioApi,
         // Sem duração conhecida não se inventa um fim: o VOD conta como um
         // instante, e a playlist dirá a verdade quando for lida.
-        ate: v.inicioApi + (Number.isFinite(v.duracaoMs) ? v.duracaoMs : 0),
+        // Quem está no ar vai até agora, e não até ao instante em que entrou.
+        ate: v.aoVivo ? Math.max(v.inicioApi, agoraMs)
+          : v.inicioApi + (Number.isFinite(v.duracaoMs) ? v.duracaoMs : 0),
       });
     }
   }
@@ -41,7 +47,7 @@ export function agruparPorNoite(canais, { intervaloMs = SEIS_HORAS } = {}) {
   const grupos = [];
   for (const p of pontos) {
     const ultimo = grupos.at(-1);
-    if (ultimo && p.de - ultimo.ultimoInicio < intervaloMs) {
+    if (ultimo && p.de - ultimo.ultimoInicio < intervaloMs && p.de - ultimo.inicio < maximoMs) {
       ultimo.ultimoInicio = p.de;
       ultimo.inicios.push(p);
     } else {
@@ -84,13 +90,42 @@ export function agruparPorNoite(canais, { intervaloMs = SEIS_HORAS } = {}) {
  * de quem chama e não uma dependência escondida.
  */
 export function rotuloDaNoite(n, { t } = {}) {
-  const hora = (ms) => new Date(ms).toISOString().slice(11, 16);
-  const dia = (ms) => new Date(ms).toISOString().slice(0, 10);
+  // Hora local, como o resto da página.
+  const p2 = (n) => String(n).padStart(2, '0');
+  const hora = (ms) => { const d = new Date(ms); return `${p2(d.getHours())}:${p2(d.getMinutes())}`; };
+  const dia = (ms) => { const d = new Date(ms); return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`; };
   // Uma noite que atravessa a meia-noite tem de dizer os dois dias, senão
   // quem procura o dia 30 não o encontra numa linha que diz 29.
   const ate = dia(n.fim) === dia(n.inicio) ? hora(n.fim) : `${dia(n.fim)} ${hora(n.fim)}`;
   const quantos = t
     ? t(n.canais === 1 ? 'noite.umCanal' : 'noite.canais', { n: n.canais })
     : `${n.canais} ${n.canais === 1 ? 'canal' : 'canais'}`;
-  return `${dia(n.inicio)} · ${hora(n.inicio)}–${ate} — ${quantos}`;
+  const ateRotulo = t ? t('noite.ate') : 'até';
+  return `${dia(n.inicio)}, ${hora(n.inicio)} ${ateRotulo} ${ate}, ${quantos}`;
+}
+
+/**
+ * Que noite abrir depois de carregar os canais.
+ *
+ * O teste real de 12/10 (QA-REAL.md): com `xguiry` e `poionako`, abria a noite mais recente, que só
+ * tinha o `xguiry`; as noites com os dois estavam mais abaixo. Quem pede dois canais quer vê-los juntos.
+ *
+ * - `fixoMs` (um instante a restaurar: o F5, um lance do evento, um link): a noite dele, sempre.
+ * - senão, a noite com mais dos canais pedidos; num empate, a mais recente.
+ * - `ondeEstavaMs` (acrescentar um canal a meio): fica-se nessa noite, a menos que outra tenha mais
+ *   canais. Acrescentar alguém que está ao vivo não rouba o ecrã para uma noite só dele.
+ *
+ * @param {Array} noites as de `agruparPorNoite`, da mais recente para a mais antiga
+ * @returns {number} o índice
+ */
+export function noiteParaAbrir(noites, { fixoMs = null, ondeEstavaMs = null } = {}) {
+  if (!noites?.length) return -1;
+  const dentro = (ms) => (ms == null ? -1 : noites.findIndex((n) => ms >= n.inicio && ms <= n.fim));
+  const fixa = dentro(fixoMs);
+  if (fixa >= 0) return fixa;
+  let melhor = 0;
+  for (let i = 1; i < noites.length; i++) if (noites[i].canais > noites[melhor].canais) melhor = i;
+  const estava = dentro(ondeEstavaMs);
+  if (estava >= 0 && noites[estava].canais >= noites[melhor].canais) return estava;
+  return melhor;
 }

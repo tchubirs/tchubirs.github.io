@@ -37,6 +37,45 @@ export function novoMomento(quandoMs, protagonista, extra = {}) {
   };
 }
 
+/**
+ * As kills para o link do "Compartilhar projeto", sem o que é igual ao de omissão.
+ *
+ * O teste real de 12/10: o link levava `"momentos":[]` com 8 kills marcadas. Com elas, cada kill custa
+ * o que tem de seu (o instante, o canal, quem morreu, um tamanho mexido); o resto volta na leitura por
+ * `momentosDoLink`. Os ajustes do editor (corte, 9:16, chat) também vão: são trabalho dele.
+ */
+export function momentosParaLink(momentos) {
+  return (momentos || []).map((m) => {
+    const c = {};
+    for (const [k, v] of Object.entries(m)) {
+      if (v == null || v === '' || v === false) continue;
+      if (Array.isArray(v) && !v.length) continue;
+      if (k in PADRAO && v === PADRAO[k]) continue;
+      c[k] = k === 'ajuste' ? semTextoDaLegenda(v)
+        : k === 'ajustes' && v && typeof v === 'object'
+          ? Object.fromEntries(Object.entries(v).map(([canal, a]) => [canal, semTextoDaLegenda(a)])) : v;
+    }
+    return c;
+  });
+}
+
+/**
+ * Um ajuste sem o texto da legenda. O texto de trinta kills são dezenas de KB, e o link é um endereço:
+ * vão as escolhas (estilo, cor, idioma), e quem abre o link gera o texto no aparelho dele.
+ */
+function semTextoDaLegenda(aj) {
+  if (!aj?.legenda?.transcricao) return aj;
+  return { ...aj, legenda: { ...aj.legenda, transcricao: null } };
+}
+
+/** O inverso de `momentosParaLink`: cada kill com os campos de omissão de volta. */
+export function momentosDoLink(momentos) {
+  return (momentos || []).filter((m) => m && Number.isFinite(m.ms)).map((m) => ({
+    protagonista: null, vitimas: [], nota: '', ...PADRAO, ...m,
+    vitimas: Array.isArray(m.vitimas) ? m.vitimas.filter((v) => typeof v === 'string') : [],
+  }));
+}
+
 /** Pôr ou tirar alguém da lista de quem morreu neste momento. */
 export function alternarVitima(momento, slug) {
   const tem = (momento.vitimas || []).includes(slug);
@@ -95,7 +134,16 @@ export function filtrar(momentos, filtro) {
   return momentos;
 }
 
-const dois = (n) => String(n).padStart(2, '0');
+/**
+ * O numero de uma kill, com a largura da montagem inteira.
+ *
+ * Dois algarismos chegavam para uma noite de amigos. Numa noite de evento
+ * passa-se das cem, e o editor (que ordena por bytes) punha o 100a e o 101a
+ * entre o 09 e o 10. Com a largura do total, o 001 vem antes do 010 e este
+ * antes do 100; abaixo de cem continua a ser 01, 02...
+ */
+export const numeroNaMontagem = (indice, total = 0) => String(indice + 1)
+  .padStart(Math.max(2, String(total).length), '0');
 
 /**
  * Os clipes de um momento, na ordem em que entram na montagem.
@@ -106,7 +154,7 @@ const dois = (n) => String(n).padStart(2, '0');
  *
  * @param {(slug:string, deMs:number, ateMs:number) => boolean} filmava
  */
-export function clipesDoMomento(momento, canais, indice, { filmava = () => true } = {}) {
+export function clipesDoMomento(momento, canais, indice, { filmava = () => true, total = 0 } = {}) {
   const saida = [];
   // O combate INTEIRO, e as margens dele por fora.
   //
@@ -127,9 +175,14 @@ export function clipesDoMomento(momento, canais, indice, { filmava = () => true 
   //  ai vou fazendo em tudo e depois baixo tudo junto." O ajuste sao as pontas
   // que ele apurou no editor, e vale so para a POV dele — e a dele que ele
   // corta a mao; as dos outros continuam a sair pelas margens.
-  const aj = momento.ajuste;
+  //
+  // O ajuste é do ângulo em que ele o fez (ver `ajusteDe`). Sem isto, trocar
+  // para a POV de quem morreu, aparar e enquadrar a webcam dele aplicava esses
+  // tempos e esse recorte ao vídeo do protagonista, que é outra fonte, às
+  // vezes noutra resolução.
   const junta = (slug, antesS, depoisS, papel, letra) => {
-    const ajustado = papel === 'protagonista' && aj
+    const aj = ajusteDe(momento, slug);
+    const ajustado = !!aj
       && Number.isFinite(aj.deMs) && Number.isFinite(aj.ateMs) && aj.ateMs > aj.deMs;
     const deMs = ajustado ? aj.deMs : combateDe - antesS * 1000;
     const ateMs = ajustado ? aj.ateMs : combateAte + depoisS * 1000;
@@ -144,12 +197,17 @@ export function clipesDoMomento(momento, canais, indice, { filmava = () => true 
       retrato: ajustado && aj.formato ? {
         modo: aj.formato, rects: aj.rects || [], divisao: aj.divisao,
       } : null,
+      // O chat por cima do vídeo, quando ele o ligou e guardou nesta kill (ver chat-clipe.js): o
+      // chat é o DESTE canal, e entra no 16:9 e no 9:16 deste clipe.
+      chat: ajustado && aj.chat?.ligado === true ? { ...aj.chat } : null,
+      // A legenda da fala, com o texto que ele corrigiu (ver legenda.js). Também é deste canal.
+      legenda: ajustado && aj.legenda?.ligado === true ? { ...aj.legenda } : null,
       // A que kill este clipe pertence. Sem isto nao havia maneira de pedir os
       // clipes de UMA kill sem refazer o plano todo por fora.
       ms: momento.ms,
       // O nome carrega a ordem: no editor os ficheiros caem já certos, e
       // ninguém tem de andar a adivinhar qual vem antes de qual.
-      prefixo: `${dois(indice + 1)}${letra}`,
+      prefixo: `${numeroNaMontagem(indice, total)}${letra}`,
     });
   };
 
@@ -169,7 +227,8 @@ export function clipesDoMomento(momento, canais, indice, { filmava = () => true 
 
 /** A montagem inteira: todos os momentos, todos os clipes, já em ordem. */
 export function planoDaMontagem(momentos, canais, opcoes = {}) {
-  return ordenar(momentos).flatMap((m, i) => clipesDoMomento(m, canais, i, opcoes));
+  const total = momentos.length;
+  return ordenar(momentos).flatMap((m, i) => clipesDoMomento(m, canais, i, { total, ...opcoes }));
 }
 
 
@@ -179,26 +238,84 @@ export function planoDaMontagem(momentos, canais, opcoes = {}) {
  * Devolve um momento novo — os momentos nunca se mudam no sitio, e assim o
  * `guardar()` da sessao e o desenho da lista ficam sempre certos. `formato`
  * nulo quer dizer "so 16:9"; 'um' ou 'dois' quer dizer "e o 9:16 tambem, com
- * estes enquadramentos".
+ * estes enquadramentos". `canal` e o angulo em que ele os fez: os recortes
+ * estao em pixels DESSE video.
  */
-export function comAjuste(momento, { deMs, ateMs, formato = null, rects = [], divisao } = {}) {
+export function comAjuste(momento, {
+  deMs, ateMs, formato = null, rects = [], divisao, canal, chat = null, legenda = null,
+} = {}) {
   if (!Number.isFinite(deMs) || !Number.isFinite(ateMs) || ateMs <= deMs) return momento;
+  const ajuste = {
+    ...(typeof canal === 'string' && canal ? { canal } : {}),
+    deMs: Math.round(deMs),
+    ateMs: Math.round(ateMs),
+    formato: formato === 'um' || formato === 'dois' ? formato : null,
+    rects: rects.map((r) => ({ x: r.x, y: r.y, largura: r.largura, altura: r.altura })),
+    divisao: Number.isFinite(divisao) ? divisao : undefined,
+    // Só as escolhas, e só ligado: um chat desligado é o mesmo que nenhum.
+    ...(chat && typeof chat === 'object' && chat.ligado === true ? {
+      chat: {
+        ligado: true, posicao: chat.posicao, tamanho: chat.tamanho, linhas: chat.linhas, fundo: chat.fundo,
+      },
+    } : {}),
+    // A legenda: as escolhas e o texto corrigido, só ligada. O texto vai como está; quem o lê passa-o
+    // por `limparTranscricao` (legenda.js) antes de o usar.
+    ...(legenda && typeof legenda === 'object' && legenda.ligado === true ? {
+      legenda: {
+        ligado: true, estilo: legenda.estilo, tamanho: legenda.tamanho, posicao: legenda.posicao, cor: legenda.cor,
+        nome: legenda.nome === true, idioma: legenda.idioma, traduzir: legenda.traduzir === true,
+        transcricao: legenda.transcricao || null,
+      },
+    } : {}),
+  };
+  // Um ajuste por ângulo. Havia um só por momento, e guardar o da vítima
+  // apagava sem aviso o corte e o 9:16 que ele tinha feito na POV dele.
+  // `ajuste` continua a ser o último guardado (é por ele que o editor reabre);
+  // `ajustes` guarda todos, pelo canal.
   return {
     ...momento,
-    ajuste: {
-      deMs: Math.round(deMs),
-      ateMs: Math.round(ateMs),
-      formato: formato === 'um' || formato === 'dois' ? formato : null,
-      rects: rects.map((r) => ({ x: r.x, y: r.y, largura: r.largura, altura: r.altura })),
-      divisao: Number.isFinite(divisao) ? divisao : undefined,
-    },
+    ajuste,
+    ajustes: { ...ajustesDe(momento), [ajuste.canal || momento.protagonista]: ajuste },
   };
+}
+
+/**
+ * Os ajustes do momento, pelo canal em que foram feitos.
+ *
+ * Um momento guardado antes de haver `ajustes` só tem o `ajuste`; um ajuste
+ * sem canal é dos que se guardavam antes de o canal ir junto, e esses eram
+ * sempre da POV dele.
+ */
+export function ajustesDe(momento) {
+  const saida = { ...(momento?.ajustes || {}) };
+  const aj = momento?.ajuste;
+  const dele = aj?.canal || momento?.protagonista;
+  if (aj && dele && !saida[dele]) saida[dele] = aj;
+  return saida;
+}
+
+/** O ajuste de um ângulo deste momento, ou null. */
+export function ajusteDe(momento, canal) {
+  return ajustesDe(momento)[canal] || null;
+}
+
+/**
+ * Os ajustes que ainda têm clipe onde cair: os do protagonista e os das
+ * vítimas marcadas. Desmarcar uma vítima deixa o ajuste dela guardado (volta
+ * se ele a marcar outra vez), mas a lista não pode dizer "ajustado · 9:16"
+ * por um clipe que não sai.
+ */
+export function ajustesQueContam(momento) {
+  const dentro = new Set([momento?.protagonista, ...(momento?.vitimas || [])]);
+  return Object.entries(ajustesDe(momento))
+    .filter(([canal]) => dentro.has(canal))
+    .map(([, aj]) => aj);
 }
 
 /** Tirar o ajuste: volta ao combate medido e as margens. */
 export function semAjuste(momento) {
-  if (!momento.ajuste) return momento;
-  const { ajuste, ...resto } = momento;
-  void ajuste;
+  if (!momento.ajuste && !momento.ajustes) return momento;
+  const { ajuste, ajustes, ...resto } = momento;
+  void ajuste; void ajustes;
   return resto;
 }

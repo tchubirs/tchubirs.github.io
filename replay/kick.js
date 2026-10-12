@@ -17,6 +17,17 @@ const API = 'https://kick.com/api/v2';
 export const DESCONHECIDO = null;
 
 /**
+ * O slug da Kick para um nome escrito à mão: sem espaços nas pontas, sem o @
+ * da frente e em minúsculas.
+ *
+ * Num sítio só porque a caixa de texto guarda o nome como ele o escreveu
+ * ("Gaules", "@Coringa") e tudo o que vem da Kick traz o slug. Comparar os dois
+ * crus falhava calado: o ✕ não tirava o canal, o "você quis dizer" trocava
+ * nada e a ordem de adição mandava os nomes com maiúscula para o fim.
+ */
+export const slugDoNome = (nome) => String(nome || '').trim().replace(/^@/, '').toLowerCase();
+
+/**
  * The VODs a channel has, newest first.
  *
  * Every failure mode is a normal state with a name, because each one is a real
@@ -24,7 +35,7 @@ export const DESCONHECIDO = null;
  * expired, a name typed wrong. None of them may render as an empty tile.
  */
 export async function vodsDoCanal(slug, { buscar = fetch } = {}) {
-  const nome = String(slug || '').trim().replace(/^@/, '').toLowerCase();
+  const nome = slugDoNome(slug);
   // Deliberately loose. I do not know Kick's minimum username length, and a
   // validator built on a guess rejects a real channel and blames the user for
   // it. This only refuses what cannot be a path segment at all; anything else
@@ -55,7 +66,23 @@ export async function vodsDoCanal(slug, { buscar = fetch } = {}) {
     // zone would have made a whole hour.
     inicioApi: v.start_time ? Date.parse(`${v.start_time.replace(' ', 'T')}Z`) : DESCONHECIDO,
     duracaoMs: Number.isFinite(v.duration) ? v.duration : DESCONHECIDO,
+    // A transmissão que está no ar aparece na lista com duração 0 e vai crescendo (medido em 06/10).
+    // Sem esta marca, a noite de um evento ao vivo acabava no instante em que o último entrou no ar.
+    aoVivo: v.is_live === true,
     master: v.source ?? DESCONHECIDO,
+    // O idioma que o streamer declarou na Kick ("Portuguese", "Spanish"). A legenda usa-o quando a
+    // escolha é Automático: o Whisper, sozinho, ouviu inglês num clipe de Rust em português (12/10).
+    idioma: typeof v.language === 'string' ? v.language.slice(0, 40) : DESCONHECIDO,
+    // O endereço do VOD na Kick é kick.com/<canal>/videos/<uuid> (o pacote do lance leva o link).
+    uuid: typeof v.video?.uuid === 'string' ? v.video.uuid.slice(0, 64) : DESCONHECIDO,
+    // O jogo da live ("Rust", "Grand Theft Auto V (GTA)"), em categories[0].name (medido em 12/10 nos
+    // VODs do Abisal: um canal da lista passou noites no GTA RP). Um evento com `jogo` deixa os outros de fora.
+    categoria: typeof v.categories?.[0]?.name === 'string' ? v.categories[0].name.slice(0, 80) : DESCONHECIDO,
+    categoriaSlug: typeof v.categories?.[0]?.slug === 'string' ? v.categories[0].slug.slice(0, 80) : DESCONHECIDO,
+    // Se a categoria é um jogo: na Kick o grupo 1 são os jogos (Rust, GTA, LoL); "Just Chatting" é o 2,
+    // "Just Sleeping" o 6 e os cassinos o 4. Medido em 12/10: o sapoiq jogou Rust do Abisal num VOD que a
+    // Kick chama "Just Chatting", por isso uma categoria que não é jogo não diz que é outro jogo.
+    categoriaJogo: Number.isFinite(v.categories?.[0]?.category_id) ? v.categories[0].category_id === 1 : DESCONHECIDO,
     privado: v.video?.is_private === true,
     apagado: v.video?.is_pruned === true || Boolean(v.video?.deleted_at),
   })).filter((v) => v.master && !v.privado && !v.apagado);
@@ -177,6 +204,45 @@ export function segmentosNaJanela({ segmentos }, deMs, ateMs) {
  * and displaying the wrong moment.
  */
 export function tempoDeMidia({ segmentos }, quandoMs) {
+  // Procura binária, e não o ciclo por todos. Isto corre por canal a cada
+  // fotograma (o "N ângulos no ar" do relógio): com 500 canais de 9 h, 3 240
+  // segmentos cada, o ciclo eram 17 ms por fotograma só para esse número.
+  const ind = indiceDe(segmentos);
+  if (!ind) return tempoDeMidiaLento(segmentos, quandoMs);
+  let lo = 0;
+  let hi = ind.length - 1;
+  let achado = -1;
+  while (lo <= hi) {
+    const meio = (lo + hi) >> 1;
+    if (ind[meio].inicio <= quandoMs) { achado = meio; lo = meio + 1; } else hi = meio - 1;
+  }
+  // Um segmento de duração zero pode partilhar o início com o seguinte; o
+  // ciclo devolvia o primeiro que cobrisse o instante, e isto também.
+  while (achado > 0 && ind[achado - 1].inicio === ind[achado].inicio) achado--;
+  for (let i = achado; i >= 0 && i < ind.length && ind[i].inicio <= quandoMs; i++) {
+    const s = ind[i];
+    if (quandoMs < s.inicio + s.duracaoS * 1000) return s.mediaT + (quandoMs - s.inicio) / 1000;
+  }
+  return DESCONHECIDO;
+}
+
+const INDICES = new WeakMap();
+
+/** Os segmentos com relógio, por ordem, ou null se a ordem não for crescente. */
+function indiceDe(segmentos) {
+  const guardado = INDICES.get(segmentos);
+  if (guardado && guardado.tamanho === segmentos.length) return guardado.ind;
+  let ind = segmentos.filter((s) => Number.isFinite(s.inicio));
+  for (let i = 1; i < ind.length; i++) {
+    // Segmentos que se sobrepõem ou recuam: a procura binária não sabe qual
+    // vem primeiro, e o ciclo antigo sabe. Fica o ciclo.
+    if (ind[i].inicio < ind[i - 1].inicio + ind[i - 1].duracaoS * 1000 - 1) { ind = null; break; }
+  }
+  INDICES.set(segmentos, { tamanho: segmentos.length, ind });
+  return ind;
+}
+
+function tempoDeMidiaLento(segmentos, quandoMs) {
   for (const s of segmentos) {
     if (!Number.isFinite(s.inicio)) continue;
     const fim = s.inicio + s.duracaoS * 1000;
@@ -234,6 +300,10 @@ export function lerLinkKick(texto) {
   if (!cru) return null;
   // Um id de clipe colado sozinho, sem endereço nenhum à volta.
   if (/^clip_[A-Za-z0-9]+$/.test(cru)) return { tipo: 'clipe', id: cru };
+  // O nome solto ("xguiry", "@xguiry"): é o que quem nunca usou escreve primeiro (ESTUDO-FACIL.md,
+  // tarefa A). Sem ponto nem barra, para "youtube.com" continuar a ser recusado.
+  const solto = /^@?([A-Za-z0-9_-]{2,60})$/.exec(cru);
+  if (solto) return RESERVADOS.has(solto[1].toLowerCase()) ? null : { tipo: 'canal', slug: solto[1] };
   let u;
   try { u = new URL(/^https?:\/\//i.test(cru) ? cru : `https://${cru}`); } catch { return null; }
   if (!/(^|\.)kick\.com$/i.test(u.hostname)) return null;
@@ -244,12 +314,51 @@ export function lerLinkKick(texto) {
   const iClip = partes.findIndex((p) => p === 'clips' || p === 'clip');
   if (iClip >= 0 && partes[iClip + 1]) return { tipo: 'clipe', id: partes[iClip + 1] };
   const iVod = partes.findIndex((p) => p === 'video' || p === 'videos');
-  if (iVod >= 0 && partes[iVod + 1]) return { tipo: 'vod', id: partes[iVod + 1] };
-  // O que sobra com uma parte só é um canal: kick.com/tchubi.
-  if (partes.length === 1 && /^[A-Za-z0-9_-]+$/.test(partes[0])) {
-    return { tipo: 'canal', slug: partes[0] };
+  if (iVod >= 0 && partes[iVod + 1]) {
+    const dono = iVod === 1 ? partes[0].replace(/^@/, '') : '';
+    return dono && /^[A-Za-z0-9_-]+$/.test(dono) && !RESERVADOS.has(dono.toLowerCase())
+      ? { tipo: 'vod', id: partes[iVod + 1], slug: dono }
+      : { tipo: 'vod', id: partes[iVod + 1] };
+  }
+  // O que sobra é um canal: kick.com/tchubi, e também as abas dele sem nada escolhido
+  // (kick.com/tchubi/videos, /clips, /about), que é o que se copia da Kick no celular.
+  const canal = partes[0]?.replace(/^@/, '');
+  if (canal && /^[A-Za-z0-9_-]+$/.test(canal) && !RESERVADOS.has(canal.toLowerCase())
+    && (partes.length === 1 || (partes.length === 2 && ABAS_DO_CANAL.has(partes[1].toLowerCase())))) {
+    return { tipo: 'canal', slug: canal };
   }
   return null;
+}
+
+/** As abas da página de um canal que não apontam para um vídeo nem para um clipe. */
+const ABAS_DO_CANAL = new Set(['videos', 'clips', 'about', 'chat', 'chatroom', 'home']);
+/** Os caminhos da Kick que não são canais: kick.com/browse não é o canal "browse". */
+const RESERVADOS = new Set(['browse', 'categories', 'category', 'search', 'following', 'dashboard', 'video',
+  'videos', 'clips', 'clip', 'settings', 'login', 'signup', 'help', 'terms', 'privacy', 'api']);
+
+/**
+ * O canal e o início de um VOD colado pelo endereço.
+ *
+ * Pela v1: a `/api/v2/video/<uuid>` não existe (404 com `{"message":""}`,
+ * medido em 06/10), e a `/api/v1/video/<uuid>` responde com o canal dentro de
+ * `livestream`, com CORS aberto como o resto.
+ */
+export async function vodDaKick(id, { buscar = fetch, sinal, slug: doLink } = {}) {
+  const r = await buscar(`https://kick.com/api/v1/video/${encodeURIComponent(id)}`, { signal: sinal });
+  // Os links de kick.com/<canal>/videos/<id> passaram a trazer o `vod_id` (UUID v7), que a v1 não
+  // conhece (404, medido em 12/10). Os primeiros 48 bits dele são o início da live em ms.
+  if (r.status === 404 && doLink && /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-/i.test(id)) {
+    return { slug: doLink, inicioMs: parseInt(id.replace(/-/g, '').slice(0, 12), 16) };
+  }
+  if (!r.ok) throw Object.assign(new Error(`vod ${r.status}`), { name: 'SEM-VOD' });
+  const v = await r.json();
+  const slug = v?.livestream?.channel?.slug;
+  if (!slug) throw Object.assign(new Error('vod sem canal'), { name: 'SEM-VOD' });
+  const quando = v.livestream.start_time || v.start_time;
+  // Sem fuso, como na lista de VODs: é UTC.
+  const txt = String(quando || '').replace(' ', 'T');
+  const inicioMs = txt ? Date.parse(/(Z|[+-]\d\d:?\d\d)$/.test(txt) ? txt : `${txt}Z`) : NaN;
+  return { slug, inicioMs: Number.isFinite(inicioMs) ? inicioMs : null };
 }
 
 /** Um clipe da Kick: o que é preciso para o pôr no relógio e para o cortar. */

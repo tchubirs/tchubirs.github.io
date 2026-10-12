@@ -18,13 +18,54 @@ export function mover({ deMs, ateMs }, qual, novoMs, { limites, maxS = MAXIMO_S,
   const min = limites?.inicio ?? -Infinity;
   const max = limites?.fim ?? Infinity;
   const preso = Math.min(Math.max(Math.round(novoMs), min), max);
+  // Nunca ao contrário. Com a janela inteira fora dos limites (outro ângulo
+  // que só entrou no ar depois, ou que já tinha saído) a pega que se mexe é
+  // presa ao limite e a outra ficava onde estava: do lado errado. Saía um
+  // fim antes do início, e o exportar respondia "janela-invalida".
+  const arrumar = (j) => {
+    if (j.ateMs - j.deMs >= minS * 1000) return j;
+    const ate = Math.min(max, Math.max(j.ateMs, j.deMs + minS * 1000));
+    return { deMs: Math.max(min, Math.min(j.deMs, ate - minS * 1000)), ateMs: ate };
+  };
 
   if (qual === 'de') {
     const de = Math.min(preso, ateMs - minS * 1000);
-    return { deMs: Math.max(min, de), ateMs: Math.min(max, Math.min(ateMs, de + maxS * 1000)) };
+    return arrumar({ deMs: Math.max(min, de), ateMs: Math.min(max, Math.min(ateMs, de + maxS * 1000)) });
   }
   const ate = Math.max(preso, deMs + minS * 1000);
-  return { ateMs: Math.min(max, ate), deMs: Math.max(min, Math.max(deMs, ate - maxS * 1000)) };
+  return arrumar({ ateMs: Math.min(max, ate), deMs: Math.max(min, Math.max(deMs, ate - maxS * 1000)) });
+}
+
+/**
+ * Trazer uma janela para dentro de um vídeo, sem a virar ao contrário.
+ *
+ * É o que acontece ao trocar de ângulo no editor: os limites passam a ser os
+ * do vídeo do outro canal, e o pedaço escolhido pode cair meio de fora ou
+ * inteiro de fora. Meio de fora corta-se a ponta que sobra (o resto continua
+ * a ser o mesmo momento). Inteiro de fora não há momento nenhum a guardar, e
+ * a janela desliza para a beira mais próxima com a mesma duração, em vez de
+ * encolher para um segundo que ninguém pediu.
+ */
+export function dentroDosLimites({ deMs, ateMs }, limites, { maxS = MAXIMO_S, minS = MINIMO_S } = {}) {
+  const min = limites?.inicio ?? -Infinity;
+  const max = limites?.fim ?? Infinity;
+  const de = Math.max(deMs, min);
+  const ate = Math.min(ateMs, max, de + maxS * 1000);
+  if (ate - de >= minS * 1000) return { deMs: de, ateMs: ate };
+  const dur = Math.min(Math.max(ateMs - deMs, minS * 1000), maxS * 1000, max - min);
+  const inicio = Math.max(min, Math.min(deMs, max - dur));
+  return { deMs: inicio, ateMs: inicio + dur };
+}
+
+/**
+ * Uma duração curta, em m:ss.
+ *
+ * Arredonda o total ANTES de partir em minutos e segundos: arredondar só os
+ * segundos dava "1:60" para 119,6 s.
+ */
+export function duracaoCurta(s) {
+  const total = Math.round(s);
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
 }
 
 /** A janela inicial de um clipe, à volta do instante em que se está. */

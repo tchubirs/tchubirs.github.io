@@ -202,7 +202,11 @@ export function impulsos(blocos, piso, {
     if (saida.length && b - saida[saida.length - 1].bloco < refractario) continue;
     saida.push({ bloco: b, altura, brilho: brilhos ? brilhos[b] : null });
   }
-  return saida.sort((a, b) => (b.quenteS - a.quenteS) || (b.pico - a.pico));
+  // Pela ordem do relogio, que e a ordem em que se acharam, e a que o `lutas`
+  // precisa para juntar vizinhos. Aqui havia um `sort` copiado das `regioes`,
+  // por `quenteS` e `pico`, que um impulso nao tem: dava NaN e so nao baralhava
+  // tudo por sorte do motor.
+  return saida;
 }
 
 /**
@@ -349,7 +353,7 @@ export function procurarTiros(amostras, { taxa = TAXA_TIROS, ...opcoes } = {}) {
  */
 export function regioes(blocos, piso, {
   alturaMin = 8, fraccaoMin = 0.25, arrefecerS = 1.5, minQuenteS = 0.6,
-  passoS = 0.1,
+  passoS = 0.1, maxRegiaoS = 90,
 } = {}) {
   const saida = [];
   if (!piso || !blocos.length) return saida;
@@ -380,10 +384,19 @@ export function regioes(blocos, piso, {
       picoS: picoBloco / FPS,
     });
   };
+  // Um tecto, como o das `lutas`. Dez minutos de explosoes de raid ou de
+  // musica alta eram UMA regiao de 600 s, a primeira da lista por ter mais
+  // tempo quente, e um clipe de dez minutos para ele rever. Passado o tecto a
+  // regiao fecha-se ali e a seguinte comeca no decimo seguinte.
+  const maximo = Math.max(1, Math.round(maxRegiaoS / passoS));
   let ini = -1;
   let frio = 0;
   for (let d = 0; d < n; d++) {
-    if (quente[d] >= fraccaoMin) { if (ini < 0) ini = d; frio = 0; } else if (ini >= 0) {
+    if (quente[d] >= fraccaoMin) {
+      if (ini < 0) ini = d;
+      frio = 0;
+      if (d - ini + 1 >= maximo) { fechar(ini, d); ini = -1; }
+    } else if (ini >= 0) {
       frio++;
       if (frio >= arrefecer) { fechar(ini, d - frio); ini = -1; frio = 0; }
     }

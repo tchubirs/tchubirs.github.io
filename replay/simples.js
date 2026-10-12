@@ -1,0 +1,1240 @@
+// O modo simples (ESTUDO-FACIL.md): uma caixa, um botão, e a lista dos melhores momentos com Baixar.
+//
+// O pedido do dono, 12/10: a esposa dele, que clipa, não conseguiu usar o Povix. Isto é a tela dela: cola
+// o nome (ou o link, ou o evento), toca um botão, e o Povix faz o resto sozinho com o que já existia: abre
+// o último vídeo do streamer, lê o chat (rápido), ouve os tiros só em volta dos picos do chat, e mostra os
+// momentos com uma imagem, o motivo em palavras e um "Baixar para TikTok" que já sai em pé, com o rosto do
+// streamer achado sozinho. Nada do que existia saiu: está tudo em "Modo avançado".
+//
+// As contas (o que se escreveu, a lista, o nome do arquivo) vivem em simples-lista.js. O que é da página de
+// sempre (abrir o canal, gravar o clipe) chega pela `ponte` que o app.js passa: este arquivo não mexe no
+// estado dele por conta própria.
+
+import { t, tn } from './idiomas.js?v=78c992b68e';
+import { procurarCanais, vodsDoCanal, vodDaKick, slugDoNome } from './kick.js?v=78c992b68e';
+import {
+  lerEntrada, montarLista, lancesParaLista, nomeDoArquivo, tempoNaLive, NOMES_NO_LANCE, QUANTOS,
+  acharVod, guardarVod, mensagensDosPicos, lerUltimo, guardarUltimo,
+} from './simples-lista.js?v=78c992b68e';
+import { varrerNoite } from './procurar-momentos.js?v=78c992b68e';
+import { somDoCanal } from './alinhar.js?v=78c992b68e';
+import { TAXA_TIROS } from './tiros.js?v=78c992b68e';
+import { alertasDoCanal } from './alertas.js?v=78c992b68e';
+import { montarIndice, chaveDoIndice, indiceValido } from './indice.js?v=78c992b68e';
+import { janelasDosPicos, estimarFalta, tempoFalta } from './ouvir.js?v=78c992b68e';
+import { onde } from './relogio.js?v=78c992b68e';
+import { abrirQuadrosEscondidos } from './rosto.js?v=78c992b68e';
+import { escapar } from './escapar.js?v=78c992b68e';
+
+const CHAVE_MODO = 'povix.modo';
+const CHAVE_VISTO = 'povix.simplesVisto';
+const CHAVE_NAO = 'povix.simplesNao';
+const MAX_NAO = 300;
+const $ = (id) => document.getElementById(id);
+
+// O que já se achou de um vídeo fica neste aparelho (simples-lista.js): a lista no localStorage, as imagens
+// no IndexedDB (pesam demais para o localStorage). O `localStorage` só é tocado dentro das funções de lá,
+// que já se defendem de uma janela privada.
+const armazem = {
+  getItem: (k) => localStorage.getItem(k),
+  setItem: (k, v) => localStorage.setItem(k, v),
+  removeItem: (k) => localStorage.removeItem(k),
+};
+const prefixoDe = (v) => `${v.slug}|${v.inicio}|`;
+// 13/10: as imagens de 640x360 a partir do 480p ficam sob "f2|"; as velhas, borradas, só servem até haver estas.
+const NITIDA = 'f2|';
+let bancoDeFotos = null;
+function banco() {
+  bancoDeFotos ??= new Promise((ok) => {
+    try {
+      // Versão 2: o índice de cada live (indice.js) vai numa loja ao lado das imagens.
+      const r = indexedDB.open('povix-simples', 2);
+      r.onupgradeneeded = () => {
+        for (const loja of ['fotos', 'indices']) if (!r.result.objectStoreNames.contains(loja)) r.result.createObjectStore(loja);
+      };
+      r.onsuccess = () => ok(r.result);
+      r.onerror = () => ok(null);
+      r.onblocked = () => ok(null);
+    } catch { ok(null); }
+  });
+  return bancoDeFotos;
+}
+/** Uma operação numa loja do banco; sem banco (janela privada) é como se não houvesse nada guardado. */
+async function naLoja(loja, modo, fazer, seNao) {
+  const db = await banco();
+  if (!db) return seNao;
+  return new Promise((ok) => {
+    try {
+      const tx = db.transaction(loja, modo);
+      const r = fazer(tx.objectStore(loja));
+      tx.oncomplete = () => ok(r?.result ?? seNao);
+      tx.onerror = () => ok(seNao);
+      tx.onabort = () => ok(seNao);
+    } catch { ok(seNao); }
+  });
+}
+const faixaDe = (prefixo) => IDBKeyRange.bound(prefixo, `${prefixo}\uffff`);
+const nasFotos = (modo, fazer, seNao) => naLoja('fotos', modo, fazer, seNao);
+/** O índice de uma live (indice.js): de uma passada de análise, para consultar sem ouvir de novo. */
+const guardarIndice = (indice) => naLoja('indices', 'readwrite', (s) => s.put(indice, chaveDoIndice(indice.slug, indice.inicio)), null);
+const tirarIndice = (v) => naLoja('indices', 'readwrite', (s) => s.delete(chaveDoIndice(v.slug, v.inicio)), null);
+export const lerIndice = async (slug, inicio) => {
+  const i = await naLoja('indices', 'readonly', (s) => s.get(chaveDoIndice(slug, inicio)), null);
+  return indiceValido(i) ? i : null;
+};
+/** As imagens lembradas de um vídeo: Map chave-do-cartão -> data URL. */
+async function fotosGuardadas(prefixo) {
+  const mapa = new Map();
+  const chaves = await nasFotos('readonly', (s) => s.getAllKeys(faixaDe(prefixo)), []);
+  const valores = await nasFotos('readonly', (s) => s.getAll(faixaDe(prefixo)), []);
+  chaves.forEach((c, i) => { if (typeof valores[i] === 'string') mapa.set(String(c).slice(prefixo.length), valores[i]); });
+  return mapa;
+}
+const guardarFoto = (prefixo, k, url) => nasFotos('readwrite', (s) => s.put(url, prefixo + k), null);
+const tirarFotos = (prefixo) => nasFotos('readwrite', (s) => s.delete(faixaDe(prefixo)), null);
+
+/** Quanto tempo uma espera pode ficar parada antes de dizer alguma coisa, e antes de desistir. */
+export const AVISO_MS = 30_000;
+export const DESISTE_CHAT_MS = 90_000;
+export const DESISTE_SOM_MS = 120_000;
+const ABRIR_MS = 60_000;
+
+export const modoSimples = () => document.documentElement.dataset.modo === 'simples';
+
+/** Trocar de modo, e lembrar neste aparelho (o caminho-cedo.js lê isto antes do primeiro desenho). */
+export function escolherModo(modo) {
+  const m = modo === 'avancado' ? 'avancado' : 'simples';
+  document.documentElement.dataset.modo = m;
+  try { localStorage.setItem(CHAVE_MODO, m); } catch { /* janela privada */ }
+}
+
+/** Se este navegador toca o vídeo da Kick (H.264 em HLS). Sem isso o "em pé" não sai, e diz-se já. */
+export function tocaVideoDaKick() {
+  const v = document.createElement('video');
+  if (v.canPlayType('application/vnd.apple.mpegurl')) return true;
+  const MS = window.MediaSource || window.ManagedMediaSource;
+  return Boolean(MS?.isTypeSupported?.('video/mp4; codecs="avc1.64001f,mp4a.40.2"'));
+}
+
+const dormir = (ms) => new Promise((ok) => { setTimeout(ok, ms); });
+
+/** Espera até `pronto()` dar verdade, no máximo `limiteMs`. */
+async function esperar(pronto, limiteMs, sinal) {
+  const fim = Date.now() + limiteMs;
+  while (Date.now() < fim) {
+    if (sinal?.aborted) return false;
+    if (pronto()) return true;
+    // eslint-disable-next-line no-await-in-loop
+    await dormir(150);
+  }
+  return Boolean(pronto());
+}
+
+/** Uma promessa com prazo: passado o prazo, devolve `seNao` (a promessa continua, mas ninguém espera). */
+function comPrazo(promessa, ms, seNao = null) {
+  let r;
+  return Promise.race([
+    promessa.finally(() => clearTimeout(r)),
+    new Promise((ok) => { r = setTimeout(() => ok(seNao), ms); }),
+  ]);
+}
+
+/**
+ * Um vigia para as esperas longas: se o andamento não mexe há `avisoMs`, chama `aoAvisar` (uma frase que
+ * diz o que fazer); se não mexe há `desisteMs`, chama `aoDesistir`. `andou()` a cada passo de verdade.
+ * O estudo viu "faltam uns 1 min" parado sete minutos sem aviso nenhum; isto não deixa acontecer.
+ */
+function vigia({ avisoMs = AVISO_MS, desisteMs, aoAvisar, aoDesistir }) {
+  let ultimo = Date.now();
+  let avisado = false;
+  const r = setInterval(() => {
+    const parado = Date.now() - ultimo;
+    if (parado >= desisteMs) { clearInterval(r); aoDesistir(); return; }
+    if (parado >= avisoMs && !avisado) { avisado = true; aoAvisar(); }
+  }, 1000);
+  return {
+    andou() { ultimo = Date.now(); avisado = false; },
+    parar() { clearInterval(r); },
+  };
+}
+
+const dois = (n) => String(n).padStart(2, '0');
+const horaDe = (ms) => { const d = new Date(ms); return `${dois(d.getHours())}:${dois(d.getMinutes())}`; };
+const diaDe = (ms) => { const d = new Date(ms); return `${dois(d.getDate())}/${dois(d.getMonth() + 1)}`; };
+
+/** Os momentos que a pessoa disse "Excluir", lembrados neste aparelho (a chave é canal|segundo). */
+function lerNaoQuero() {
+  try {
+    const l = JSON.parse(localStorage.getItem(CHAVE_NAO) || '[]');
+    return new Set(Array.isArray(l) ? l.filter((x) => typeof x === 'string') : []);
+  } catch { return new Set(); }
+}
+function guardarNaoQuero(conjunto) {
+  try { localStorage.setItem(CHAVE_NAO, JSON.stringify([...conjunto].slice(-MAX_NAO))); } catch { /* janela privada */ }
+}
+
+/** O motivo do momento numa frase: "O chat explodiu e teve tiroteio". */
+export function motivoEmPalavras(m) {
+  // Uma morte do servidor (ou achada na tela de morte) diz quem matou quem, e o tiroteio vira o lugar dela.
+  const morte = m.mortes?.[0];
+  const noTiroteio = Boolean(morte) && m.tipos.includes('tiros');
+  // Com acerto confirmado pelo som do jogo, o tiroteio é um PvP, e a frase diz quantos acertos (e quantos na cabeça).
+  const pvp = m.acertos > 0 && !noTiroteio;
+  const partes = ['chat', 'tiros', 'explosao', 'grito'].filter((x) => m.tipos.includes(x) && !(noTiroteio && x === 'tiros'))
+    .map((x) => (x === 'tiros' && pvp
+      ? t(m.cabecas > 0 ? 'simples.motivo.pvpAcertosCabeca' : 'simples.motivo.pvpAcertos', { n: m.acertos, c: m.cabecas })
+      : t(`simples.motivo.${x}`)));
+  if (morte) {
+    const mais = m.mortes.length - 1;
+    const quem = morte.matador ? t(noTiroteio ? 'simples.motivo.matouNoTiroteio' : 'simples.motivo.matou', morte)
+      : t(noTiroteio ? 'simples.motivo.morreuNoTiroteio' : 'simples.motivo.morreu', morte);
+    partes.unshift(mais > 0 ? `${quem}${tn(mais, 'simples.motivo.maisUma', 'simples.motivo.maisN')}` : quem);
+  }
+  if (!partes.length) return '';
+  const frase = partes.length === 1 ? partes[0]
+    : `${partes.slice(0, -1).join(', ')}${t('simples.e')}${partes.at(-1)}`;
+  // Um apelido de streamer fica como ele escreve: só se põe a maiúscula na frase que começa por palavra.
+  return morte ? frase : frase.charAt(0).toLocaleUpperCase() + frase.slice(1);
+}
+
+/** Quem mais estava no lance, para a frase do cartão: "a, b, c e mais 2". */
+export function quemEstavaNoLance(m) {
+  const outros = m.outros || [];
+  if (!outros.length) return '';
+  const nomes = outros.slice(0, NOMES_NO_LANCE).join(', ');
+  const sobra = outros.length - NOMES_NO_LANCE;
+  return t('simples.tambem', { nomes: sobra > 0 ? `${nomes}${t('simples.eMais', { n: sobra })}` : nomes });
+}
+
+/** A palavra do nome do arquivo: o que aconteceu de mais forte. */
+function palavraDoArquivo(m) {
+  const tipo = ['tiros', 'explosao', 'grito', 'chat'].find((x) => m.tipos.includes(x)) || 'chat';
+  return t(tipo === 'tiros' && m.acertos > 0 ? 'simples.arquivo.pvp' : `simples.arquivo.${tipo}`);
+}
+
+// Os ícones do player da prévia: brancos, sem caixa (o CSS pinta com currentColor).
+const svg = (d) => `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="${d}"/></svg>`;
+const ICONES = {
+  toca: svg('M8 5v14l11-7z'),
+  pausa: svg('M6 5h4v14H6zM14 5h4v14h-4z'),
+  som: svg('M3 9v6h4l5 5V4L7 9zM16.5 12A4.5 4.5 0 0 0 14 8v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z'),
+  mudo: svg('M16.5 12A4.5 4.5 0 0 0 14 8v2.2l2.4 2.4c.1-.2.1-.4.1-.6zM19 12a7 7 0 0 1-.9 3.4l1.5 1.5A9 9 0 0 0 21 12a9 9 0 0 0-7-8.8v2.1A7 7 0 0 1 19 12zM4.3 3 3 4.3 7.7 9H3v6h4l5 5v-6.7l4.3 4.3a7 7 0 0 1-2.3 1.1v2.1a9 9 0 0 0 3.7-1.8l2 2 1.3-1.3L12 7.7zM12 4 9.9 6.1 12 8.2z'),
+  cheia: svg('M5 5h5v2H7v3H5zM14 5h5v5h-2V7h-3zM5 14h2v3h3v2H5zM17 14h2v5h-5v-2h3z'),
+};
+
+const seguidores = (n) => {
+  try { return new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 }).format(n); } catch { return String(n); }
+};
+
+/**
+ * Montar o modo simples. A `ponte` é o que o app.js empresta:
+ * - `estado`: o estado da página (as linhas, os ajustes, a memória do som);
+ * - `chat`: o leitor de chat do evento (`lerChatTrecho`, `estado.marcas`, `estado.mensagens`);
+ * - `abrirCanal(slug, { inicioMs })`: abre a noite do vídeo mais recente (ou da hora dada) e devolve a linha;
+ * - `memorizarVods(r)`, `aoVivoDe(slug)`, `pausar()`;
+ * - `carregarClipe(id)`: um clipe da Kick como linha;
+ * - `baixar(momento, opcoes)`: o arquivo pronto ({ blob, nome }) ou { erro };
+ * - `abrirEvento({ nome } | { hash })`, `lerChatDoEvento()`, `eventoDoLink` (a promessa do ?e= do endereço).
+ */
+export function montarSimples(ponte) {
+  const caixa = $('simplesCaixa');
+  const lista = $('simplesLista');
+  let busca = null;
+  // Cada busca tem o seu número: o que chega atrasado de uma busca velha (outra caixa, Começar de novo,
+  // Modo avançado) não mexe na tela da nova.
+  let geracao = 0;
+  let ultimos = [];
+  let linhaAberta = null;
+  let fotos = new Map();
+  let nitidas = new Set();
+  let aBaixar = false;
+  // A prévia aberta num cartão (uma só): { k, li, video, hls, alternar, acabou }. Com ela aberta a lista não se
+  // refaz (o cartão não pode sumir debaixo do dedo), como enquanto um clipe é feito.
+  let previa = null;
+  // O cartão cujo Editar abriu o avançado, para o "Voltar para a lista" cair nele.
+  let ultimoEditado = null;
+  // Quantos cartões a lista mostra ("Mostrar mais" soma), os que a pessoa não quer ("Excluir", lembrados
+  // neste aparelho) e os que estão na tela agora (o `data-i` de cada cartão conta nesta lista).
+  let mostrar = QUANTOS;
+  let mostrados = [];
+  // O vídeo da lista de agora ({ slug, inicio }, a chave do cache e das imagens guardadas) e, quando a lista
+  // veio do cache sem abrir o vídeo, o início dele (a "hora na live" dos cartões).
+  let vodAtual = null;
+  let inicioGuardado = null;
+  const naoQuero = lerNaoQuero();
+  const feitos = new Map();
+  const tocaVideo = tocaVideoDaKick();
+  const toque = window.matchMedia?.('(pointer: coarse)').matches;
+
+  // ── os modos ──────────────────────────────────────────────────────────
+  $('modoAvancado').onclick = $('modoAvancadoLista').onclick = () => {
+    parar();
+    escolherModo('avancado');
+    document.body.classList.remove('simplesTrabalho');
+    window.scrollTo({ top: 0 });
+  };
+  $('modoSimples').onclick = () => {
+    // Os vídeos do avançado não podem seguir tocando por trás da caixa.
+    ponte.pausar();
+    if (document.body.classList.contains('veioDaLista')) { voltarParaLista(); return; }
+    escolherModo('simples');
+    mostrarInicio();
+    window.scrollTo({ top: 0 });
+  };
+  $('voltarLista').onclick = () => voltarParaLista();
+  $('voltarListaClipe').onclick = () => voltarParaLista();
+  // A frase da primeira vez, só até ela começar a primeira busca.
+  let visto = false;
+  try { visto = Boolean(localStorage.getItem(CHAVE_VISTO)); } catch { visto = false; }
+  $('simplesDica').hidden = visto;
+  const marcarVisto = () => {
+    try { localStorage.setItem(CHAVE_VISTO, '1'); } catch { /* janela privada */ }
+  };
+
+  // ── a caixa e as sugestões ──────────────────────────────────────────────
+  let timerSugestoes = null;
+  let pedidoSugestoes = null;
+  const fecharSugestoes = () => {
+    $('simplesSugestoes').hidden = true;
+    $('simplesSugestoes').innerHTML = '';
+  };
+  caixa.addEventListener('input', () => {
+    $('simplesErro').hidden = true;
+    $('simplesParecidos').hidden = true;
+    clearTimeout(timerSugestoes);
+    pedidoSugestoes?.abort();
+    const texto = caixa.value.trim();
+    // Só um nome procura sugestões: um link já diz quem é.
+    if (texto.length < 2 || /[/.:?#]/.test(texto)) { fecharSugestoes(); return; }
+    timerSugestoes = setTimeout(async () => {
+      const controlo = new AbortController();
+      pedidoSugestoes = controlo;
+      const canais = await procurarCanais(texto, { sinal: controlo.signal, quantos: 5 });
+      if (controlo.signal.aborted || caixa.value.trim() !== texto) return;
+      pintarSugestoes(canais);
+    }, 300);
+  });
+  function pintarSugestoes(canais) {
+    const ul = $('simplesSugestoes');
+    if (!canais.length) { fecharSugestoes(); return; }
+    ul.innerHTML = canais.map((c) => `<li><button type="button" class="simplesSugestao" data-slug="${escapar(c.slug)}">`
+      + `<b>${escapar(c.slug)}</b><span>${escapar(t('simples.seguidores', { n: seguidores(c.seguidores) }))}`
+      + `${c.aoVivo ? escapar(t('simples.aoVivo')) : ''}</span></button></li>`).join('');
+    ul.hidden = false;
+  }
+  // Tocar numa sugestão já começa: sem "Carregar" (o estudo, travamento 3).
+  $('simplesSugestoes').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-slug]');
+    if (!b) return;
+    caixa.value = b.dataset.slug;
+    fecharSugestoes();
+    comecar(b.dataset.slug, { soCanal: true });
+  });
+  caixa.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') fecharSugestoes();
+    if (e.key === 'ArrowDown' && !$('simplesSugestoes').hidden) {
+      e.preventDefault();
+      $('simplesSugestoes').querySelector('button')?.focus();
+    }
+  });
+  $('simplesSugestoes').addEventListener('keydown', (e) => {
+    if (!['ArrowDown', 'ArrowUp'].includes(e.key)) return;
+    e.preventDefault();
+    const bs = [...$('simplesSugestoes').querySelectorAll('button')];
+    const i = bs.indexOf(document.activeElement);
+    const j = i + (e.key === 'ArrowDown' ? 1 : -1);
+    if (j < 0) caixa.focus(); else bs[Math.min(j, bs.length - 1)]?.focus();
+  });
+  $('simplesParecidos').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-slug]');
+    if (!b) return;
+    caixa.value = b.dataset.slug;
+    comecar(b.dataset.slug, { soCanal: true });
+  });
+  $('simplesForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    fecharSugestoes();
+    comecar(caixa.value);
+  });
+  // A caixa volta com o que estava escrito, já selecionado: escrever outro nome troca tudo de uma vez.
+  $('simplesDeNovo').onclick = () => {
+    ponte.pararChatDoEvento?.(); parar(); mostrarInicio(); guardarUltimo(armazem, null);
+    $('simplesErro').hidden = true; caixa.focus(); caixa.select();
+  };
+  $('simplesRefazer').onclick = () => {
+    const v = vodAtual;
+    if (!v) return;
+    parar();
+    abrirStreamer(v.slug, { inicioMs: v.inicio, forcar: true });
+  };
+  $('simplesParar').onclick = () => { busca?.abort(); };
+
+  function erro(texto) {
+    mostrarInicio();
+    $('simplesErro').textContent = texto;
+    $('simplesErro').hidden = false;
+  }
+
+  function mostrarInicio() {
+    document.body.classList.remove('simplesTrabalho');
+    $('simplesForm').hidden = false;
+    $('simplesTrabalho').hidden = true;
+  }
+
+  function mostrarTrabalho(titulo) {
+    pararPrevia();
+    document.body.classList.add('simplesTrabalho');
+    $('simplesForm').hidden = true;
+    $('simplesErro').hidden = true;
+    $('simplesParecidos').hidden = true;
+    $('simplesTrabalho').hidden = false;
+    $('simplesQuem').textContent = titulo;
+    $('simplesAviso').hidden = true;
+    $('simplesRefazer').hidden = true;
+    vodAtual = null;
+    inicioGuardado = null;
+    lista.innerHTML = '';
+    ultimos = [];
+    mostrados = [];
+    mostrar = QUANTOS;
+    $('simplesMais').hidden = true;
+    window.scrollTo({ top: 0 });
+  }
+
+  function dizer(texto, fracao = null) {
+    $('simplesEstado').textContent = texto;
+    const barra = $('simplesBarra');
+    barra.hidden = fracao === false;
+    if (fracao == null || fracao === false) barra.removeAttribute('value'); else barra.value = Math.max(0, Math.min(1, fracao));
+  }
+
+  function avisar(texto) {
+    $('simplesAviso').textContent = texto;
+    $('simplesAviso').hidden = !texto;
+  }
+
+  function parar() {
+    geracao++;
+    pararPrevia();
+    document.body.classList.remove('veioDaLista');
+    busca?.abort();
+    busca = null;
+    ponte.aoMudarEvento?.(null);
+  }
+
+  // ── começar ───────────────────────────────────────────────────────────
+  async function comecar(texto, { soCanal = false } = {}) {
+    const e = soCanal ? { tipo: 'canal', slug: String(texto).trim() } : lerEntrada(texto);
+    if (!e) { erro(t('simples.naoEntendi')); return; }
+    marcarVisto();
+    // Quem nunca tocou no botão de modo ainda não tem escolha guardada, e depois de usar o simples a sessão
+    // salva fazia o caminho-cedo.js entrar no avançado ao recarregar.
+    escolherModo('simples');
+    $('simplesDica').hidden = true;
+    parar();
+    if (e.tipo === 'evento') { await abrirEvento({ nome: e.nome }); return; }
+    if (e.tipo === 'eventoLink') { await abrirEvento({ hash: e.hash }); return; }
+    if (e.tipo === 'nome') {
+      if (e.evento && await eventoExiste(e.evento)) { await abrirEvento({ nome: e.evento }); return; }
+      if (!e.slug) { erro(t('simples.naoAchei', { nome: texto.trim() })); return; }
+      await abrirStreamer(e.slug);
+      return;
+    }
+    if (e.tipo === 'canal') { await abrirStreamer(e.slug); return; }
+    if (e.tipo === 'vod') {
+      mostrarTrabalho(t('simples.abrindoTitulo'));
+      dizer(t('simples.lendoLink'));
+      const minha = geracao;
+      try {
+        const v = await comPrazo(vodDaKick(e.id, { slug: e.slug }), 20_000);
+        if (minha !== geracao) return;
+        if (!v) throw new Error('prazo');
+        await abrirStreamer(v.slug, { inicioMs: v.inicioMs });
+      } catch (x) {
+        if (minha !== geracao) return;
+        erro(x?.name === 'SEM-VOD' ? t('simples.vodSumiu') : t('simples.semRede'));
+      }
+      return;
+    }
+    if (e.tipo === 'clipe') await abrirClipe(e.id);
+  }
+
+  async function eventoExiste(nome) {
+    if (!/^[a-z0-9-]{1,60}$/.test(nome)) return false;
+    try {
+      const r = await comPrazo(fetch(`eventos/${nome}.json`, { cache: 'no-cache' }), 8000);
+      if (!r?.ok) return false;
+      JSON.parse(await r.text());
+      return true;
+    } catch { return false; }
+  }
+
+  async function abrirEvento(qual) {
+    guardarUltimo(armazem, null);
+    mostrarTrabalho(t('simples.abrindoEvento'));
+    dizer(t('simples.abrindoEventoEstado'));
+    const minha = geracao;
+    const aberto = await ponte.abrirEvento(qual);
+    if (minha !== geracao) return;
+    if (!aberto) {
+      erro(qual.nome ? t('simples.semEvento', { nome: qual.nome }) : t('simples.naoEntendi'));
+      return;
+    }
+    mostrarEvento();
+  }
+
+  /**
+   * O evento aberto como a mesma lista de um vídeo: os melhores momentos de todos os canais, cada um com o
+   * nome do streamer. Sem segundo toque: o chat de todos começa a ser lido já, e a lista cresce sozinha
+   * (a página avisa quando muda). O mapa fica no "Modo avançado".
+   */
+  function mostrarEvento() {
+    const minha = geracao;
+    const controlo = new AbortController();
+    busca = controlo;
+    linhaAberta = null;
+    const atual = ponte.lancesDoEvento();
+    mostrarTrabalho(atual.nome ? t('simples.tituloEvento', { nome: atual.nome }) : t('simples.tituloEventoSemNome'));
+    if (!tocaVideo) avisar(t('simples.abraNoChrome'));
+    const dizerEstado = (e) => {
+      $('simplesParar').hidden = !e.lendo;
+      const n = queridos().length;
+      if (e.lendo) dizer(e.texto ? t('simples.lendoEvento', { texto: e.texto }) : t('simples.abrindoEventoEstado'), null);
+      else dizer(n ? tn(n, 'simples.prontoUm', 'simples.pronto', { n }) : t('simples.nadaEvento'), false);
+    };
+    const atualizar = () => {
+      if (minha !== geracao) return;
+      const e = ponte.lancesDoEvento();
+      ultimos = lancesParaLista(e.lances, { mensagens: e.mensagens }).map((m) => ({ ...m, nomeCanal: m.canal }));
+      pintarLista();
+      fotografar();
+      dizerEstado(e);
+    };
+    ponte.aoMudarEvento?.(atualizar);
+    // A frase de "lendo o chat de fulano" muda sem a lista mudar: só ela se refaz, de segundo em segundo
+    // (a lista, não: um cartão que muda debaixo do dedo faz errar o toque).
+    const relogio = setInterval(() => {
+      if (minha !== geracao) { clearInterval(relogio); return; }
+      const e = ponte.lancesDoEvento();
+      if (e.lendo) dizerEstado(e);
+    }, 1000);
+    controlo.signal.addEventListener('abort', () => {
+      clearInterval(relogio);
+      if (minha !== geracao) return;
+      ponte.pararChatDoEvento?.();
+      $('simplesParar').hidden = true;
+      const n = queridos().length;
+      dizer(n ? t('simples.paradoCom', { n }) : t('simples.parado'), false);
+    }, { once: true });
+    ponte.lerChatDoEvento()?.finally?.(() => { if (minha === geracao) atualizar(); });
+    atualizar();
+  }
+
+  async function abrirStreamer(nome, { inicioMs = null, forcar = false } = {}) {
+    const minha = geracao;
+    const velha = () => minha !== geracao;
+    const slug = slugDoNome(nome);
+    // Um vídeo já procurado neste aparelho abre na hora, sem rede e sem barra.
+    const jaTinha = !forcar && inicioMs != null ? acharVod(armazem, slug, inicioMs) : null;
+    if (jaTinha?.completo) { await mostrarGuardado(jaTinha); return; }
+    mostrarTrabalho(t('simples.abrindoTitulo'));
+    dizer(t('simples.procurandoVideo', { canal: slug }));
+    let r = await comPrazo(vodsDoCanal(slug), 20_000, { slug, estado: 'sem-rede', vods: [] });
+    if (r.estado === 'sem-rede' || r.estado === 'rate-limit') {
+      // A Kick às vezes responde sem permissão e volta logo a seguir (o teste real de 12/10).
+      await dormir(1000);
+      r = await comPrazo(vodsDoCanal(slug), 20_000, { slug, estado: 'sem-rede', vods: [] });
+    }
+    if (velha()) return;
+    if (r.estado !== 'ok') {
+      if (r.estado === 'canal-nao-existe' || r.estado === 'nome-invalido') {
+        erro(t('simples.ninguem'));
+        mostrarParecidos(slug);
+      } else if (['sem-vods', 'vods-indisponiveis'].includes(r.estado)) erro(t('simples.semVideo', { canal: slug }));
+      else erro(t('simples.semRede'));
+      return;
+    }
+    ponte.memorizarVods(r);
+    // Sem o início dito, é a live mais recente da lista.
+    const guardado = forcar ? null : acharVod(armazem, r.slug, inicioMs ?? r.vods.at(-1)?.inicioApi);
+    if (guardado?.completo) { await mostrarGuardado(guardado); return; }
+    const controlo = new AbortController();
+    busca = controlo;
+    dizer(t('simples.abrindoVideo', { canal: r.slug }));
+    const linha = await comPrazo(ponte.abrirCanal(r.slug, { inicioMs }).catch(() => null), ABRIR_MS);
+    if (controlo.signal.aborted || velha()) return;
+    if (!linha) {
+      dizer(t('simples.naoAbriu'), false);
+      busca = null;
+      return;
+    }
+    ponte.pausar();
+    linhaAberta = linha;
+    vodAtual = { slug: r.slug, inicio: linha.inicio };
+    guardarUltimo(armazem, vodAtual);
+    $('simplesQuem').textContent = t('simples.titulo', { canal: r.slug, dia: diaDe(linha.inicio), hora: horaDe(linha.inicio) });
+    if (!tocaVideo) avisar(t('simples.abraNoChrome'));
+    await procurar(linha, controlo, guardado);
+  }
+
+  /**
+   * A lista de um vídeo já procurado, do cache: sem abrir o vídeo (Baixar, a prévia e Editar abrem quando a
+   * pessoa tocar, como no evento) e sem barra. "Procurar de novo" refaz tudo.
+   */
+  async function mostrarGuardado(e) {
+    mostrarTrabalho(t('simples.titulo', { canal: e.slug, dia: diaDe(e.inicio), hora: horaDe(e.inicio) }));
+    const minha = geracao;
+    vodAtual = { slug: e.slug, inicio: e.inicio };
+    inicioGuardado = e.inicio;
+    guardarUltimo(armazem, vodAtual);
+    for (const [k, url] of await comPrazo(fotosGuardadas(prefixoDe(vodAtual)), 1500, new Map())) {
+      if (k.startsWith(NITIDA)) { fotos.set(k.slice(NITIDA.length), url); nitidas.add(k.slice(NITIDA.length)); } else if (!nitidas.has(k)) fotos.set(k, url);
+    }
+    if (minha !== geracao) return;
+    ultimos = e.lista || [];
+    if (!tocaVideo) avisar(t('simples.abraNoChrome'));
+    pintarLista();
+    const n = queridos().length;
+    dizer(n ? tn(n, 'simples.prontoUm', 'simples.pronto', { n }) : t('simples.nada'), false);
+    $('simplesRefazer').hidden = false;
+    // Imagens borradas de antes (ou nenhuma): abre a live por trás e tira as nítidas, sem tocar nada.
+    const falta = mostrados.find((m) => m && !nitidas.has(chave(m)) && m.canal === e.slug);
+    if (falta && tocaVideo) abrirCanalDoMomento(falta).then((l) => { if (l && minha === geracao) fotografar(); });
+  }
+
+  async function mostrarParecidos(slug) {
+    const canais = await procurarCanais(slug, { quantos: 4 });
+    const outros = canais.filter((c) => c.slug.toLowerCase() !== slug.toLowerCase());
+    if (!outros.length) return;
+    $('simplesParecidos').innerHTML = `<p>${escapar(t('simples.talvez'))}</p>`
+      + outros.map((c) => `<button type="button" class="simplesSugestao" data-slug="${escapar(c.slug)}"><b>${escapar(c.slug)}</b>`
+        + `<span>${escapar(t('simples.seguidores', { n: seguidores(c.seguidores) }))}</span></button>`).join('');
+    $('simplesParecidos').hidden = false;
+  }
+
+  async function abrirClipe(id) {
+    guardarUltimo(armazem, null);
+    const minha = geracao;
+    mostrarTrabalho(t('simples.abrindoTitulo'));
+    dizer(t('simples.lendoLink'));
+    try {
+      const r = await comPrazo(ponte.carregarClipe(id), 30_000);
+      if (minha !== geracao) return;
+      if (!r) throw new Error('prazo');
+      ponte.pausar();
+      linhaAberta = ponte.estado.linhas.find((l) => l.slug === r.slug) || null;
+      $('simplesQuem').textContent = t('simples.tituloClipe', { canal: r.c.canal });
+      if (!tocaVideo) avisar(t('simples.abraNoChrome'));
+      ultimos = [{
+        ms: r.playlist.inicio, deMs: r.playlist.inicio, ateMs: r.playlist.fim, tipos: [], pontos: 0, nota: null, canal: r.slug,
+        doClipe: true, nomeCanal: r.c.canal,
+      }];
+      pintarLista();
+      dizer(t('simples.clipePronto'), false);
+      fotografar();
+    } catch (x) {
+      if (minha !== geracao) return;
+      erro(x?.name === 'SEM-CLIPE' ? t('simples.clipeSumiu') : t('simples.semRede'));
+    }
+  }
+
+  // ── procurar: o chat primeiro, depois o som ──────────────────────────────
+  async function procurar(linha, controlo, guardado = null) {
+    const slug = linha.slug;
+    const vivo = ponte.aoVivoDe(slug);
+    if (!vivo) { dizer(t('simples.naoAbriu'), false); return; }
+    const sinal = controlo.signal;
+    $('simplesParar').hidden = false;
+    let picos = [];
+    let mensagens = [];
+    let sons = [];
+    // O que já se achou deste vídeo (o chat) não se refaz; o que se acha agora fica lembrado, passo a passo.
+    const chatGuardado = Array.isArray(guardado?.picos);
+    const lembrar = (mais) => {
+      for (const s of guardarVod(armazem, { slug, inicio: linha.inicio, ateMs: vivo.ateMs, ...mais })) { tirarFotos(prefixoDe(s)); tirarIndice(s); }
+    };
+    let lutas = [];
+    const refazer = () => {
+      ultimos = montarLista({ picos, sons, mensagens, limites: vivo, quantos: 60, lutas }).map((m) => ({ ...m, canal: slug }));
+      pintarLista();
+      fotografar();
+    };
+    try {
+      // 1. O chat: dá os primeiros momentos em segundos.
+      if (!chatGuardado) dizer(t('simples.lendoChat', { canal: slug, pct: 0 }), 0);
+      const chatControlo = new AbortController();
+      const pararChat = () => chatControlo.abort();
+      sinal.addEventListener('abort', pararChat, { once: true });
+      const v1 = vigia({
+        desisteMs: DESISTE_CHAT_MS,
+        aoAvisar: () => avisar(t('simples.chatDemora')),
+        aoDesistir: () => { avisar(t('simples.chatDesistiu')); chatControlo.abort(); },
+      });
+      try {
+        if (!chatGuardado && ponte.chat && vivo.deMs < Date.now()) {
+          await ponte.chat.lerChatTrecho(slug, vivo.deMs, vivo.ateMs, {
+            sinal: chatControlo.signal,
+            aoProgredir: ({ fracao }) => { v1.andou(); dizer(t('simples.lendoChat', { canal: slug, pct: Math.round(fracao * 100) }), fracao); },
+          });
+        }
+      } catch (x) {
+        if (sinal.aborted) throw x;
+        if (x?.name !== 'AbortError') avisar(t('simples.chatDesistiu'));
+      } finally {
+        v1.parar();
+        sinal.removeEventListener('abort', pararChat);
+      }
+      if (!chatControlo.signal.aborted) avisar(tocaVideo ? '' : t('simples.abraNoChrome'));
+      if (chatGuardado) {
+        picos = guardado.picos;
+        mensagens = guardado.mensagens || [];
+      } else {
+        picos = (ponte.chat?.estado.marcas?.get(slug) || []).filter((m) => m.ms >= vivo.deMs && m.ms < vivo.ateMs);
+        mensagens = ponte.chat?.estado.mensagens?.get(slug) || [];
+      }
+      refazer();
+      // O chat lido até o fim (e não largado pelo vigia) fica lembrado: se a página fechar no meio do som, volta daqui.
+      const chatFeito = chatGuardado || (Boolean(ponte.chat) && vivo.deMs < Date.now() && !chatControlo.signal.aborted);
+      if (chatFeito && !chatGuardado) lembrar({ picos, mensagens: mensagensDosPicos(mensagens, picos) });
+      if (sinal.aborted) throw new DOMException('parado', 'AbortError');
+
+      // 2. O som: só em volta dos picos do chat (o modo esperto do Detectar lances); sem picos, tudo.
+      const intervalos = picos.length ? janelasDosPicos(picos, vivo.deMs, vivo.ateMs) : [[vivo.deMs, vivo.ateMs]];
+      const totalMs = intervalos.reduce((s, [a, b]) => s + (b - a), 0);
+      const somControlo = new AbortController();
+      const pararSom = () => somControlo.abort();
+      sinal.addEventListener('abort', pararSom, { once: true });
+      let desistiu = false;
+      let somFeito = false;
+      const v2 = vigia({
+        desisteMs: DESISTE_SOM_MS,
+        aoAvisar: () => avisar(t('simples.somDemora')),
+        aoDesistir: () => { desistiu = true; somControlo.abort(); },
+      });
+      const comecou = Date.now();
+      dizer(t('simples.ouvindo', { canal: slug }), 0);
+      try {
+        const r = await varrerNoite({
+          linha,
+          deMs: vivo.deMs,
+          ateMs: vivo.ateMs,
+          intervalos,
+          nudgeMs: ponte.estado.nudges[slug] || 0,
+          sinal: somControlo.signal,
+          memoria: ponte.estado.somOuvido,
+          // O índice leva tudo (gritos e acertos também): o que a lista mostra é só uma consulta dele.
+          filtros: { tiros: true, explosoes: true, gritos: true, acertos: true },
+          alertas: alertasDoCanal(slug),
+          lerSom: (l, quandoMs, duracaoS, opcoes) => somDoCanal(l, quandoMs, duracaoS, { ...opcoes, taxa: TAXA_TIROS }),
+          aoProgresso: (x) => {
+            if (!('bytes' in x) && !x.pronto) return;
+            v2.andou();
+            const feito = x.ouvidoMs || 0;
+            const falta = estimarFalta({ feitoMs: feito, restoMs: totalMs - feito, bytes: x.bytes || 0, decorridoMs: Date.now() - comecou });
+            dizer(t('simples.ouvindo', { canal: slug })
+              + (falta ? t('simples.falta', { tempo: tempoFalta(falta) }) : ''), totalMs ? feito / totalMs : null);
+          },
+        });
+        sons = [
+          ...(r.candidatos || []).map((c) => ({ ...c, tipo: 'tiros' })),
+          ...(r.explosoes || []).map((c) => ({ ...c, tipo: 'explosao' })),
+        ];
+        const indice = montarIndice({ slug, inicioMs: linha.inicio, fimMs: vivo.ateMs, som: r, picos });
+        lutas = indice.lutas;
+        guardarIndice(indice);
+        somFeito = true;
+        avisar(tocaVideo ? '' : t('simples.abraNoChrome'));
+      } catch (x) {
+        if (sinal.aborted) throw x;
+        avisar(x?.name === 'SEM-DESCODIFICADOR' ? t('simples.semSomNavegador')
+          : desistiu ? t('simples.somDesistiu') : t('simples.somFalhou'));
+      } finally {
+        v2.parar();
+        sinal.removeEventListener('abort', pararSom);
+      }
+      refazer();
+      if (somFeito && chatFeito) lembrar({ completo: true, lista: ultimos, indiceV: 1 });
+      const n = queridos().length;
+      dizer(n ? tn(n, 'simples.prontoUm', 'simples.pronto', { n }) : t('simples.nada'), false);
+      $('simplesRefazer').hidden = false;
+    } catch (x) {
+      if (x?.name !== 'AbortError' && !sinal.aborted) throw x;
+      const n = queridos().length;
+      dizer(n ? t('simples.paradoCom', { n }) : t('simples.parado'), false);
+    } finally {
+      $('simplesParar').hidden = true;
+      if (busca === controlo) busca = null;
+    }
+  }
+
+  // ── a lista ───────────────────────────────────────────────────────────
+  const chave = (m) => `${m.canal}|${Math.round(m.ms / 1000)}`;
+
+  /** Os que a lista mostra agora: sem os "Excluir", e só até onde o "Mostrar mais" chegou. */
+  const queridos = () => ultimos.filter((m) => !naoQuero.has(chave(m)));
+  // Na ordem da live, para o streamer seguir a noite, e mais cartões ao rolar até o fim (o dono, 13/10).
+  const visiveis = () => [...queridos()].sort((a, b) => a.ms - b.ms).slice(0, mostrar);
+
+  function pintarLista() {
+    // Um clipe a ser feito agora não pode sumir debaixo do dedo: a lista refaz-se quando ele acabar.
+    // Uma prévia tocando (ou abrindo) também segura a lista; parada, ela cede o lugar.
+    if (aBaixar || (previa && !previa.video?.paused)) { pintarLista.adiada = true; return; }
+    pintarLista.adiada = false;
+    pararPrevia();
+    const primeiraVez = (() => { try { return !localStorage.getItem('povix.simplesBaixou'); } catch { return true; } })();
+    mostrados = visiveis();
+    const sobra = queridos().length - mostrados.length;
+    $('simplesMais').hidden = sobra <= 0;
+    $('simplesMais').textContent = t('simples.mais', { n: Math.min(sobra, QUANTOS) });
+    $('simplesDicaLista').hidden = !mostrados.length || !primeiraVez;
+    const inicio = linhaAberta?.inicio ?? inicioGuardado ?? mostrados[0]?.ms ?? 0;
+    lista.innerHTML = mostrados.map((m, i) => {
+      const k = chave(m);
+      const foto = fotos.get(k);
+      const durS = Math.round((m.ateMs - m.deMs) / 1000);
+      const motivo = m.doClipe ? t('simples.oClipe') : motivoEmPalavras(m);
+      const nota = m.nota ? `<b class="simplesNota nota-${m.nota}">${escapar(t(`simples.nota.${m.nota}`))}</b> ` : '';
+      const feito = feitos.get(k);
+      return `<li class="simplesCartao" data-i="${i}" data-chave="${escapar(k)}">`
+        + `<button type="button" class="simplesFoto" data-acao="assistir" aria-label="${escapar(t('simples.assistirAria'))}">${foto ? `<img src="${foto}" alt="">` : `<span class="simplesSemFoto">${escapar(horaDe(m.ms))}<small>${escapar(t('simples.semFoto'))}</small></span>`}</button>`
+        + '<div class="simplesPrevia" hidden></div>'
+        + '<div class="simplesInfo">'
+        + (m.doEvento ? `<p class="simplesStreamer">${escapar(t('simples.deQuem', { canal: m.nomeCanal || m.canal }))}</p>` : '')
+        + `<p class="simplesMotivo">${nota}${escapar(motivo)}</p>`
+        + (m.outros?.length ? `<p class="simplesTambem">${escapar(quemEstavaNoLance(m))}</p>` : '')
+        + (m.falha ? `<p class="simplesTalvezFalha">${escapar(t('simples.talvezFalha'))}</p>` : '')
+        + `<p class="simplesQuando">${escapar(m.doClipe ? t('simples.duracao', { s: durS })
+          : t('simples.quando', { tempo: tempoNaLive(m.ms, inicio), hora: horaDe(m.ms), s: durS }))}</p>`
+        + '<div class="simplesBotoes">'
+        + `<button type="button" class="principal simplesTiktok" data-acao="tiktok" aria-label="${escapar(t('simples.baixarTiktok'))}" title="${escapar(t('simples.baixarTiktok'))}"><svg class="ic" aria-hidden="true"><use href="#i-descarregar"/></svg><span class="longo">${escapar(t('simples.baixarTiktok'))}</span><span class="curto" aria-hidden="true">${escapar(t('simples.baixarTiktokCurto'))}</span></button>`
+        + `<button type="button" class="simplesSecundario simplesDeitado" data-acao="deitado" aria-label="${escapar(t('simples.baixarDeitado'))}" title="${escapar(t('simples.baixarDeitado'))}"><svg class="ic" aria-hidden="true"><use href="#i-descarregar"/></svg><span class="longo">${escapar(t('simples.baixarDeitado'))}</span><span class="curto" aria-hidden="true">${escapar(t('simples.baixarDeitadoCurto'))}</span></button>`
+        + `<button type="button" class="simplesSecundario simplesEditar" data-acao="editar"><svg class="ic" aria-hidden="true"><use href="#i-tesoura"/></svg>${escapar(t('simples.editar'))}</button>`
+        + `<button type="button" class="simplesSecundario simplesNao" data-acao="nao" aria-label="${escapar(t('simples.naoQuero'))}" title="${escapar(t('simples.naoQuero'))}"><svg class="ic" aria-hidden="true"><use href="#i-lixo"/></svg><span>${escapar(t('simples.naoQuero'))}</span></button>`
+        + '</div>'
+        + `<p class="simplesBaixando" role="status" aria-live="polite">${feito ? escapar(feito.texto) : ''}</p>`
+        + `<progress class="simplesBarraClipe" max="1" hidden></progress>`
+        + `<button type="button" class="simplesSecundario simplesPartilhar" data-acao="partilhar"${feito?.blob && podePartilhar(feito) ? '' : ' hidden'}>${escapar(t('simples.partilhar'))}</button>`
+        + '</div></li>';
+    }).join('');
+    for (const b of lista.querySelectorAll(BOTOES_DO_CLIPE)) b.disabled = aBaixar;
+  }
+
+  lista.addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-acao]');
+    if (!b) return;
+    const li = b.closest('li');
+    const m = mostrados[Number(li.dataset.i)];
+    if (!m) return;
+    if (b.dataset.acao === 'nao') { dispensar(m, Number(li.dataset.i)); return; }
+    if (b.dataset.acao === 'assistir') { assistir(m, li); return; }
+    if (b.dataset.acao === 'editar') { editar(m, li); return; }
+    if (b.dataset.acao === 'pausar') { previa?.alternar(); return; }
+    if (b.dataset.acao === 'partilhar') { partilhar(feitos.get(li.dataset.chave)); return; }
+    baixar(m, li, { deitado: b.dataset.acao === 'deitado' });
+  });
+
+  // Os botões que mexem no clipe: ficam parados enquanto um clipe é feito.
+  // Assistir (a imagem) e Editar também: os dois abrem o vídeo e a janela que o clipe em andamento está usando.
+  const BOTOES_DO_CLIPE = ['tiktok', 'deitado', 'nao', 'assistir', 'editar'].map((a) => `button[data-acao="${a}"]`).join(', ');
+
+  /** "Excluir": o momento sai da lista e não volta (neste aparelho). O foco vai para o cartão que subiu. */
+  function dispensar(m, i) {
+    pararPrevia();
+    naoQuero.add(chave(m));
+    guardarNaoQuero(naoQuero);
+    pintarLista();
+    const cartao = lista.children[Math.min(i, lista.children.length - 1)];
+    (cartao?.querySelector('button[data-acao="tiktok"]') || $('simplesQuem')).focus?.({ preventScroll: true });
+  }
+
+  // O fim da lista à vista (ou quase) traz os próximos; com uma prévia a tocar, espera ela parar.
+  new IntersectionObserver((vistos) => {
+    if (!vistos.some((v) => v.isIntersecting) || $('simplesMais').hidden || pintarLista.adiada) return;
+    mostrar += QUANTOS;
+    pintarLista();
+    fotografar();
+  }, { rootMargin: '600px 0px' }).observe($('simplesMais'));
+
+  function arquivoDe(f) {
+    try { return new File([f.blob], f.nome, { type: f.blob.type || 'video/mp4' }); } catch { return null; }
+  }
+  function podePartilhar(f) {
+    const arquivo = arquivoDe(f);
+    try { return Boolean(arquivo && navigator.canShare?.({ files: [arquivo] })); } catch { return false; }
+  }
+  async function partilhar(f) {
+    const arquivo = f && arquivoDe(f);
+    if (!arquivo) return;
+    try { await navigator.share({ files: [arquivo], title: f.nome }); } catch { /* ela fechou a folha */ }
+  }
+
+  /** O vídeo aberto agora é o do canal do momento e cobre a hora dele. */
+  function abertoEm(m) {
+    const vivo = ponte.aoVivoDe(m.canal);
+    const linha = ponte.estado.linhas.find((l) => l.slug === m.canal);
+    if (!linha || !vivo || m.ms < vivo.deMs || m.ms > vivo.ateMs) return false;
+    linhaAberta = linha;
+    return true;
+  }
+
+  /** Abre a live do canal do momento na hora dele (o que o evento, ou um Editar na volta do avançado, pede). */
+  async function abrirCanalDoMomento(m) {
+    const linha = await comPrazo(ponte.abrirCanal(m.canal, { inicioMs: m.ms }).catch(() => null), ABRIR_MS);
+    if (!linha) return null;
+    ponte.pausar();
+    linhaAberta = linha;
+    return linha;
+  }
+
+  // ── assistir: o pedaço do momento toca no próprio cartão ──────────────────
+  // Tocar fora do cartão que toca (e fora dos outros cartões, que tratam o seu próprio play) devolve-o à imagem.
+  document.addEventListener('pointerdown', (e) => {
+    if (previa && !previa.li.contains(e.target) && !e.target.closest?.('#simplesLista > li')) pararPrevia();
+  });
+  function pararPrevia() {
+    const p = previa;
+    if (!p) return;
+    previa = null;
+    p.limpar?.();
+    p.hls?.destroy();
+    if (p.video) {
+      p.video.pause();
+      p.video.removeAttribute('src');
+      p.video.load?.();
+    }
+    if (p.li.isConnected) {
+      const caixa = p.li.querySelector('.simplesPrevia');
+      caixa.replaceChildren();
+      caixa.hidden = true;
+      p.li.querySelector('.simplesFoto').hidden = false;
+      p.li.classList.remove('comPrevia');
+    }
+    if (pintarLista.adiada) pintarLista();
+  }
+
+  /**
+   * Assistir: o vídeo da live, com som, só no pedaço do clipe (o mesmo que o Baixar corta), no lugar da imagem
+   * do cartão. É um <video> do próprio cartão com a mesma fonte do editor (a melhor qualidade da live); o
+   * vídeo escondido do avançado fica quieto. Só uma toca por vez: dar play em outro cartão devolve este à imagem.
+   */
+  async function assistir(m, li) {
+    if (aBaixar) return;
+    pararPrevia();
+    const p = { k: chave(m), li, video: null, hls: null, arrastando: false, alternar: null };
+    previa = p;
+    const nota = li.querySelector('.simplesBaixando');
+    const falhou = () => { if (previa !== p) return; nota.textContent = t('simples.previaNao'); pararPrevia(); };
+    nota.textContent = t('simples.fase.abrir');
+    if (!m.doClipe && !abertoEm(m)) {
+      nota.textContent = t('simples.fase.abrirCanal', { canal: m.nomeCanal || m.canal });
+      const aberta = await abrirCanalDoMomento(m);
+      if (previa !== p) return;
+      if (!aberta) { falhou(); return; }
+    }
+    const linha = ponte.estado.linhas.find((l) => l.slug === m.canal);
+    const r = linha && onde(linha, m.deMs, { nudgeMs: ponte.estado.nudges[m.canal] || 0 });
+    if (r?.estado !== 'toca') { falhou(); return; }
+    const peca = linha.pecasCompletas?.find((x) => x.vod.id === r.peca.vod.id) || r.peca;
+    const url = (peca.escada?.[0] || peca.barato)?.url;
+    if (!url) { falhou(); return; }
+    nota.textContent = '';
+    const inicioS = r.tempoS;
+    const fimS = inicioS + (m.ateMs - m.deMs) / 1000;
+    const v = document.createElement('video');
+    v.playsInline = true;
+    // Um player como o do YouTube, do tamanho do cartão: os controles por cima do vídeo, embaixo, com a barra
+    // do tempo só do pedaço do lance. Somem depois de uns segundos sem mexer e voltam ao mexer ou tocar.
+    const jogador = document.createElement('div');
+    jogador.className = 'simplesPlayer';
+    jogador.innerHTML = '<div class="simplesControles">'
+      + `<input type="range" class="simplesLinha" min="0" max="${(fimS - inicioS).toFixed(1)}" step="0.1" value="0" aria-label="${escapar(t('simples.barraPrevia'))}">`
+      + '<div class="simplesControlesLinha">'
+      + '<button type="button" class="simplesIcone simplesToca" data-acao="pausar"></button>'
+      + '<span class="simplesVol"><button type="button" class="simplesIcone simplesMudo"></button>'
+      + `<input type="range" class="simplesVolume" min="0" max="1" step="0.05" value="1" aria-label="${escapar(t('simples.volumePrevia'))}"></span>`
+      + '<span class="simplesTempoPlayer">0:00 / 0:00</span>'
+      + `<button type="button" class="simplesIcone simplesCheia" aria-label="${escapar(t('simples.telaCheiaPrevia'))}">${ICONES.cheia}</button>`
+      + '</div></div>';
+    jogador.prepend(v);
+    const q = (c) => jogador.querySelector(c);
+    const [botaoPausa, botaoMudo, botaoCheia, barra, volume, tempo] = ['.simplesToca', '.simplesMudo', '.simplesCheia', '.simplesLinha', '.simplesVolume', '.simplesTempoPlayer'].map(q);
+    const minutos = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+    const totalS = fimS - inicioS;
+    const pintarTempo = (s) => {
+      const aqui = Math.min(totalS, Math.max(0, s));
+      tempo.textContent = `${minutos(aqui)} / ${minutos(totalS)}`;
+      barra.value = aqui;
+      barra.style.setProperty('--feito', `${totalS ? (aqui / totalS) * 100 : 0}%`);
+    };
+    const rotulo = (tocando) => {
+      botaoPausa.innerHTML = tocando ? ICONES.pausa : ICONES.toca;
+      botaoPausa.setAttribute('aria-label', t(tocando ? 'simples.pausar' : 'simples.continuar'));
+    };
+    const rotuloSom = () => {
+      const mudo = v.muted || v.volume === 0;
+      botaoMudo.innerHTML = mudo ? ICONES.mudo : ICONES.som;
+      botaoMudo.setAttribute('aria-label', t('simples.volumePrevia'));
+    };
+    rotulo(true);
+    rotuloSom();
+    pintarTempo(0);
+    const caixa = li.querySelector('.simplesPrevia');
+    caixa.replaceChildren(jogador);
+    caixa.hidden = false;
+    li.querySelector('.simplesFoto').hidden = true;
+    li.classList.add('comPrevia');
+    p.video = v;
+    p.alternar = () => { if (v.paused) v.play().catch(() => {}); else v.pause(); };
+    // Pular dentro do pedaço (as teclas A, D, J, L e as setas), sem sair dele.
+    p.pular = (s) => {
+      v.currentTime = Math.min(fimS - 0.1, Math.max(inicioS, v.currentTime + s));
+      pintarTempo(v.currentTime - inicioS);
+    };
+    // Os controles aparecem ao mexer e somem em 2,5 s com o vídeo tocando. O primeiro toque num celular só
+    // os mostra; com eles à vista, tocar no vídeo pausa ou toca.
+    let sumir = null;
+    const mostrar = () => {
+      jogador.classList.remove('semControles');
+      clearTimeout(sumir);
+      if (!v.paused) sumir = setTimeout(() => jogador.classList.add('semControles'), 2500);
+    };
+    p.limpar = () => clearTimeout(sumir);
+    for (const ev of ['pointermove', 'pointerdown', 'focusin', 'keydown']) jogador.addEventListener(ev, mostrar);
+    v.addEventListener('click', () => {
+      if (jogador.classList.contains('semControles')) { mostrar(); return; }
+      p.alternar();
+    });
+    v.addEventListener('play', () => { rotulo(true); mostrar(); });
+    v.addEventListener('pause', () => { rotulo(false); mostrar(); });
+    // No fim do pedaço volta ao começo, parado: o play (ou a barra) vê de novo.
+    const noFim = () => {
+      v.pause();
+      v.currentTime = inicioS;
+      pintarTempo(0);
+    };
+    v.addEventListener('timeupdate', () => {
+      if (v.currentTime >= fimS) { noFim(); return; }
+      if (!p.arrastando) pintarTempo(v.currentTime - inicioS);
+    });
+    barra.addEventListener('input', () => {
+      p.arrastando = true;
+      v.currentTime = inicioS + Number(barra.value);
+      pintarTempo(Number(barra.value));
+    });
+    barra.addEventListener('change', () => { p.arrastando = false; });
+    volume.addEventListener('input', () => { v.volume = Number(volume.value); v.muted = v.volume === 0; });
+    v.addEventListener('volumechange', () => { volume.value = v.muted ? 0 : v.volume; rotuloSom(); });
+    botaoMudo.addEventListener('click', () => {
+      v.muted = !v.muted;
+      if (!v.muted && v.volume === 0) v.volume = 0.5;
+    });
+    botaoCheia.addEventListener('click', () => {
+      if (document.fullscreenElement) { document.exitFullscreen?.(); return; }
+      if (jogador.requestFullscreen) jogador.requestFullscreen().catch(() => {});
+      else v.webkitEnterFullscreen?.();
+    });
+    v.addEventListener('ended', noFim);
+    v.addEventListener('error', falhou);
+    if (window.Hls?.isSupported()) {
+      const hls = new window.Hls({ startPosition: inicioS, maxBufferLength: 20, backBufferLength: 30 });
+      p.hls = hls;
+      hls.on(window.Hls.Events.ERROR, (_, d) => { if (d?.fatal) falhou(); });
+      hls.loadSource(url);
+      hls.attachMedia(v);
+    } else {
+      v.addEventListener('loadedmetadata', () => { v.currentTime = inicioS; }, { once: true });
+      v.src = url;
+    }
+    v.play().catch(() => rotulo(false));
+    li.scrollIntoView?.({ block: 'nearest' });
+  }
+
+  // As teclas da prévia aberta, as mesmas do avançado: espaço pausa; A e D saltam 3 s; J, L e as setas saltam
+  // 1 s (10 s com Shift); o Esc devolve o cartão à imagem. Só nela, e nunca com o cursor numa caixa de texto.
+  document.addEventListener('keydown', (e) => {
+    if (!previa?.video || !modoSimples() || e.ctrlKey || e.metaKey || e.altKey) return;
+    const alvo = e.target;
+    if (alvo?.isContentEditable || alvo?.tagName === 'TEXTAREA' || (alvo?.tagName === 'INPUT' && alvo.type !== 'range')) return;
+    if (e.key === 'Escape') { pararPrevia(); return; }
+    const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    const salto = { a: -3, d: 3, j: -(e.shiftKey ? 10 : 1), l: e.shiftKey ? 10 : 1, ArrowLeft: -(e.shiftKey ? 10 : 1), ArrowRight: e.shiftKey ? 10 : 1 }[k];
+    if (salto !== undefined) {
+      // A barra e o volume já andam sozinhos com as setas.
+      if (alvo?.type === 'range' && k.startsWith('Arrow')) return;
+      e.preventDefault();
+      previa.pular(salto);
+      return;
+    }
+    if (e.code !== 'Space' || alvo?.closest?.('button, a, input:not([type="range"]), select, textarea, summary')) return;
+    e.preventDefault();
+    previa.alternar();
+  });
+
+  // ── editar: o momento no editor do avançado, e o caminho de volta ──────────
+  async function editar(m, li) {
+    if (aBaixar) return;
+    pararPrevia();
+    const nota = li.querySelector('.simplesBaixando');
+    const canal = m.nomeCanal || m.canal;
+    if (!m.doClipe && !abertoEm(m)) {
+      nota.textContent = t('simples.fase.abrirCanal', { canal });
+      if (!await abrirCanalDoMomento(m)) { nota.textContent = t('simples.editarNao'); return; }
+      nota.textContent = '';
+    }
+    escolherModo('avancado');
+    if (!ponte.editar({ canal: m.canal, deMs: m.deMs, ateMs: m.ateMs })) {
+      escolherModo('simples');
+      nota.textContent = t('simples.editarNao');
+      return;
+    }
+    ultimoEditado = chave(m);
+    document.body.classList.add('veioDaLista');
+    document.body.classList.remove('simplesTrabalho');
+    window.scrollTo({ top: 0 });
+  }
+
+  /** Do avançado de volta à lista simples, do jeito que estava: o editor fecha, os vídeos ficam quietos. */
+  function voltarParaLista() {
+    ponte.fecharEditor?.();
+    ponte.pausar();
+    escolherModo('simples');
+    document.body.classList.remove('veioDaLista');
+    document.body.classList.add('simplesTrabalho');
+    $('simplesForm').hidden = true;
+    $('simplesTrabalho').hidden = false;
+    window.scrollTo({ top: 0 });
+    const cartao = ultimoEditado ? lista.querySelector(`li[data-chave="${CSS.escape(ultimoEditado)}"]`) : null;
+    cartao?.scrollIntoView?.({ block: 'center' });
+    (cartao?.querySelector('button.simplesEditar') || $('simplesQuem')).focus?.({ preventScroll: true });
+  }
+
+  async function baixar(m, li, { deitado }) {
+    if (aBaixar) return;
+    pararPrevia();
+    aBaixar = true;
+    const k = chave(m);
+    for (const b of lista.querySelectorAll(BOTOES_DO_CLIPE)) b.disabled = true;
+    const nota = li.querySelector('.simplesBaixando');
+    const barra = li.querySelector('.simplesBarraClipe');
+    li.querySelector('.simplesPartilhar').hidden = true;
+    const dizerAqui = (texto, fracao = null) => {
+      nota.textContent = texto;
+      barra.hidden = fracao === false;
+      if (fracao == null || fracao === false) barra.removeAttribute('value'); else barra.value = Math.max(0, Math.min(1, fracao));
+    };
+    let fase = deitado ? 'cortar' : 'abrir';
+    dizerAqui(t(`simples.fase.${fase}`));
+    const motivo = m.doClipe ? t('simples.arquivo.clipe') : palavraDoArquivo(m);
+    const canal = m.nomeCanal || m.canal;
+    try {
+      // Um momento do evento é de um canal que pode não estar aberto (e na volta do avançado, o de um
+      // streamer só também): abre-se o vídeo dele naquela hora.
+      if (!m.doClipe && !abertoEm(m)) {
+        dizerAqui(t('simples.fase.abrirCanal', { canal }));
+        if (!await abrirCanalDoMomento(m)) { dizerAqui(t('simples.canalNaoAbriu', { canal }), false); return; }
+        dizerAqui(t(`simples.fase.${fase}`));
+      }
+      const r = await ponte.baixar({ canal: m.canal, deMs: m.deMs, ateMs: m.ateMs }, {
+        deitado,
+        // A legenda pesa: no computador sai ligada; no celular fica para a parte 2 (um botão "pôr legenda").
+        legenda: !deitado && !toque,
+        nome: (extensao) => nomeDoArquivo({ canal, ms: m.ms, motivo, deitado, deitadoTexto: t('simples.arquivo.deitado'), extensao }),
+        aoFase: (f) => { fase = f; dizerAqui(t(`simples.fase.${f}`)); },
+        aoProgresso: ({ feito, total }) => {
+          if (fase === 'gravar') dizerAqui(t('simples.fase.gravando', { feito: Math.round(feito), total: Math.round(total) }), total ? feito / total : null);
+          else dizerAqui(t('simples.fase.cortando', { feito, total }), total ? feito / total : null);
+        },
+      });
+      if (r?.blob) {
+        // A nota do avançado fala de "9:16" e de segundos com décimas: aqui, uma frase só.
+        const texto = t('simples.baixou') + (r.curto ? ` ${t('simples.curto')}` : '');
+        feitos.set(k, { texto, blob: r.blob, nome: r.nome });
+        dizerAqui(texto, false);
+        try { localStorage.setItem('povix.simplesBaixou', '1'); } catch { /* janela privada */ }
+        const p = li.querySelector('.simplesPartilhar');
+        p.hidden = !podePartilhar(feitos.get(k));
+      } else {
+        const semVideo = r?.erro === 'semVideo';
+        const texto = semVideo ? (tocaVideo ? t('simples.videoNaoAbriu') : t('simples.abraNoChrome'))
+          : t('simples.naoDeu', { motivo: r?.erro || t('simples.semMotivo') });
+        dizerAqui(texto, false);
+      }
+    } catch (x) {
+      dizerAqui(t('simples.naoDeu', { motivo: String(x?.message || x).slice(0, 120) }), false);
+    } finally {
+      aBaixar = false;
+      for (const b of lista.querySelectorAll(BOTOES_DO_CLIPE)) b.disabled = false;
+      if (pintarLista.adiada) pintarLista();
+      // O canal que o clipe abriu pode fotografar os outros momentos dele.
+      if (m.doEvento) fotografar();
+    }
+  }
+
+  // ── as fotos: um quadro de cada momento ────────────────────────────────
+  let fotografando = null;
+  async function fotografar() {
+    if (fotografando || !linhaAberta) return;
+    const linha = linhaAberta;
+    const quadros = window.__povixQuadrosSimples?.() || abrirQuadrosEscondidos({ limiteMs: 12_000 });
+    fotografando = quadros;
+    let falhas = 0;
+    try {
+      for (let i = 0; i < mostrados.length && falhas < 2; i++) {
+        // Um clipe a ser gravado tem a máquina toda: a foto espera (num celular as duas juntas travam).
+        // eslint-disable-next-line no-await-in-loop
+        while (aBaixar) await dormir(500);
+        const m = mostrados[i];
+        if (!m) break;
+        const k = chave(m);
+        if (nitidas.has(k) || m.canal !== linha.slug) continue;
+        const ms = m.doClipe ? m.deMs + 1000 : m.ms;
+        const r = onde(linha, ms, { nudgeMs: ponte.estado.nudges[linha.slug] || 0 });
+        if (r.estado !== 'toca') continue;
+        const peca = linha.pecasCompletas?.find((p) => p.vod.id === r.peca.vod.id) || r.peca;
+        // O 480p (ou o mais perto acima de 360p): o 160p dava a foto borrada no cartão; o 720p pesa o dobro.
+        const meio = peca.escada?.filter((d) => d.altura >= 360).sort((a, b) => Math.abs(a.altura - 480) - Math.abs(b.altura - 480))[0];
+        const degrau = meio || peca.barato || peca.escada?.at(-1);
+        // eslint-disable-next-line no-await-in-loop
+        const q = await quadros.quadro({ url: degrau?.url, tempoS: r.tempoS, ms, canal: linha.slug });
+        if (!q?.tela) { falhas++; continue; }
+        const c = document.createElement('canvas');
+        c.width = 640; c.height = 360;
+        c.getContext('2d').drawImage(q.tela, 0, 0, 640, 360);
+        let url = null;
+        try { url = c.toDataURL('image/jpeg', 0.82); } catch { url = null; }
+        if (!url) { falhas++; continue; }
+        fotos.set(k, url);
+        nitidas.add(k);
+        if (vodAtual && !m.doEvento && !m.doClipe && vodAtual.slug === linha.slug) guardarFoto(prefixoDe(vodAtual) + NITIDA, k, url);
+        const img = lista.querySelector(`li[data-chave="${CSS.escape(k)}"] .simplesFoto`);
+        if (img) img.innerHTML = `<img src="${url}" alt="">`;
+      }
+    } finally {
+      quadros.fechar?.();
+      fotografando = null;
+    }
+  }
+
+  // ── o link de um evento (?e=abisal) aberto no modo simples ───────────────
+  if (ponte.eventoDoLink && modoSimples()) {
+    ponte.eventoDoLink.then((aberto) => { if (aberto) { marcarVisto(); $('simplesDica').hidden = true; mostrarEvento(); } }).catch(() => {});
+  }
+
+  // A página recarregada volta ao último vídeo que a pessoa via, com a lista lembrada (ou continua de onde o
+  // som parou). Um evento do endereço manda; "Começar de novo" apaga o último.
+  const ultimo = ponte.eventoDoLink || !modoSimples() ? null : lerUltimo(armazem);
+  const lembrado = ultimo && acharVod(armazem, ultimo.slug, ultimo.inicio);
+  if (lembrado) {
+    marcarVisto();
+    $('simplesDica').hidden = true;
+    if (lembrado.completo) mostrarGuardado(lembrado);
+    else abrirStreamer(ultimo.slug, { inicioMs: ultimo.inicio });
+  }
+
+  return {
+    comecar,
+    // Para os testes de página.
+    get lista() { return ultimos; },
+    limparFotos() { fotos = new Map(); nitidas = new Set(); },
+  };
+}

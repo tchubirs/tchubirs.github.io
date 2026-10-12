@@ -1,0 +1,12 @@
+Leitor de texto dos "nomes na tela" (carregado só ao carregar em Ler os nomes na tela).
+Baixado do registo do npm em 10/10/2026, integridade conferida com o sha512 do registo.
+
+tesseract.esm.min.js, worker.min.js        tesseract.js 7.0.0 (Apache-2.0, LICENSE-tesseract.js.md)
+  sha512-exPBkd+z+wM1BuMkx/Bjv43OeLBxhL5kKWsz/9JY+DXcXdiBjiAch0V49QR3oAJqCaL5qURE0vx9Eo+G5YE7mA==
+tesseract-core-simd-lstm.js, .wasm         tesseract.js-core 7.0.0 (Apache-2.0, LICENSE-tesseract.js-core.txt)
+  sha512-WnNH518NzmbSq9zgTPeoF8c+xmilS8rFIl1YKbk/ptuuc7p6cLNELNuPAzcmsYw450ca6bLa8j3t0VAtq435Vw==
+eng.traineddata.gz                         @tesseract.js-data/eng 1.0.0, pasta 4.0.0_best_int (MIT;
+                                           o modelo é o tessdata_best do Tesseract, Apache-2.0)
+  sha512-mbTumm6KQPUHyzTPQaF3ObXYnx0SqqfV2nabqFVQBwD6Kl7PhGSLSzOlfFTWy0P3BjghaSKA2W9GB19Jk+ZcTg==
+worker.min.js.LICENSE.txt                  licenças das bibliotecas dentro do worker.min.js
+Só a versão com SIMD do núcleo está aqui: todos os navegadores atuais a têm.

@@ -52,6 +52,21 @@ async function perguntar(query, { buscar = fetch, sinal } = {}) {
 // coisa que se deixe aberta so porque hoje nao da jeito a ninguem.
 const seguro = (s) => String(s).replace(/[^A-Za-z0-9_]/g, '').slice(0, 25);
 
+/**
+ * O login a partir do que ele colou na caixa.
+ *
+ * Um endereco copiado da barra (`twitch.tv/fulano`), um `@fulano` ou um nome
+ * com uma aspa a mais tem de dar o mesmo login que a Twitch conhece. Antes o
+ * slug da pagina era a linha crua: `twitch.tv/x` virava o canal `twitchtvx`, e
+ * uma aspa partia o seletor da grelha.
+ */
+export function loginDoCanal(texto) {
+  let s = String(texto || '').trim().toLowerCase();
+  const m = /twitch\.tv\/([^/?#\s]+)/.exec(s);
+  if (m) s = m[1];
+  return s.replace(/^@/, '').replace(/[^a-z0-9_]/g, '').slice(0, 25);
+}
+
 /** Canais cujo nome se parece com o que ele escreveu. */
 export async function procurarCanais(termo, opcoes = {}) {
   const t = String(termo || '').trim();
@@ -111,16 +126,24 @@ export function pecaDoVod(vod) {
   };
 }
 
+/**
+ * O instante no formato que o player le (`1h2m5s`). Serve o `time` do
+ * Twitch.Player da pagina e o endereco do player, os dois.
+ */
+export function tempoDoPlayer(segundos) {
+  const s = Math.max(0, Math.floor(segundos || 0));
+  return `${Math.floor(s / 3600)}h${Math.floor((s % 3600) / 60)}m${s % 60}s`;
+}
+
 /** O endereco do player oficial, ja no instante certo. */
 export function enderecoDoPlayer(vodId, segundos, { pai = location.hostname, mudo = true } = {}) {
-  const s = Math.max(0, Math.floor(segundos || 0));
   const p = new URLSearchParams({
     video: `v${vodId}`,
     parent: pai,
     autoplay: 'false',
     muted: String(mudo),
     // O player le o tempo neste formato e ignora um numero solto.
-    time: `${Math.floor(s / 3600)}h${Math.floor((s % 3600) / 60)}m${s % 60}s`,
+    time: tempoDoPlayer(segundos),
   });
   return `https://player.twitch.tv/?${p}`;
 }

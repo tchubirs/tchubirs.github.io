@@ -55,7 +55,8 @@ export const DIVISAO_MAX = 0.85;
 // A webcam ocupa menos do que metade. Medido no 9:16 que ele mostrou: a caixa
 // da webcam ficava com cerca de um terço da altura, e o jogo com o resto.
 // Meio a meio dava uma webcam gigante que ele desfazia sempre à mão.
-export const DIVISAO_OMISSAO = 0.35;
+// 13/10: ele pediu a faixa de cima em 16:9, a forma da webcam: 1080 x 607,5 de 1920 = 81/256.
+export const DIVISAO_OMISSAO = 81 / 256;
 export const limparDivisao = (d) => preso(Number.isFinite(d) ? d : DIVISAO_OMISSAO, DIVISAO_MIN, DIVISAO_MAX);
 
 /** A proporção que o recorte `i` tem de ter, para encher o seu destino. */
@@ -66,43 +67,82 @@ export function proporcaoDoQuadro(modo, i = 0, divisao = DIVISAO_OMISSAO) {
 }
 
 /**
+ * Onde fica a webcam na tela do streamer: os quatro modelos do "2 enquadramentos".
+ *
+ * O dono (10/10): o encaixe mais usado em TikTok e Shorts é a cara em cima e o jogo ao meio em baixo, e
+ * o que muda de streamer para streamer é o canto da webcam. Embaixo à esquerda vem primeiro porque é o
+ * mais comum no Rust (medido nos frames dos três canais que vi: o dele, o do kodd e o do Lauta).
+ */
+export const MODELOS_WEBCAM = ['baixoEsq', 'cimaEsq', 'cimaDir', 'baixoDir'];
+export const MODELO_OMISSAO = 'baixoEsq';
+export const limparModelo = (m) => (MODELOS_WEBCAM.includes(m) ? m : MODELO_OMISSAO);
+
+// Quanto da largura da fonte uma webcam costuma ocupar num 16:9: entre um quinto e um terço. Um quarto e
+// pouco apanha a cara inteira nos tamanhos típicos e deixa só pequenos ajustes por fazer.
+const LARGURA_WEBCAM = 0.27;
+
+/**
  * O enquadramento com que isto abre, para uma fonte deitada.
  *
  * 'um': a fita 9:16 mais alta que cabe, ao meio.
- * 'dois': duas fitas, cada uma com metade da altura do alvo — logo cada uma
- *         é 1080x960, ou seja 9:8. A de cima ao meio em cima, a de baixo ao
- *         meio em baixo, que é onde a cara e o jogo costumam estar.
+ * 'dois': o recorte 1 é a webcam, no canto do `modelo` e com a proporção da faixa de cima; o recorte 2
+ *         é o jogo, ao meio e com a altura toda da fonte, para a faixa de baixo.
  */
-export function enquadramentoInicial(largura, altura, modo = 'um', divisao = DIVISAO_OMISSAO) {
+export function enquadramentoInicial(largura, altura, modo = 'um', divisao = DIVISAO_OMISSAO, modelo = MODELO_OMISSAO) {
   if (!(largura > 0 && altura > 0)) return [];
   if (modo === 'dois') {
     const d = limparDivisao(divisao);
-    return [0, 1].map((i) => {
-      const proporcao = proporcaoDoQuadro('dois', i, d);
-      // Metade da altura da fonte para cada um: assim nascem separados, um em
-      // cima e outro em baixo. A primeira versão dava a altura INTEIRA a cada,
-      // e numa fonte 16:9 os dois nasciam no mesmo sítio — dois rectângulos
-      // sobrepostos ao pixel são indistinguíveis de um, e foi o teste que o
-      // apanhou. Sobrepô-los DEPOIS é livre: numa imagem 16:9 a webcam e o
-      // centro da acção partilham espaço.
-      let h = altura / 2;
-      let w = h * proporcao;
-      if (w > largura) { w = largura; h = w / proporcao; }
-      // "Quando clico em dois enquadramentos devia ficar praticamente pronto."
-      //
-      // Ficava a meio, os dois, e ele tinha de arrastar os dois antes de ver
-      // seja o que for. O de cima passa a nascer no CANTO INFERIOR ESQUERDO da
-      // fonte, que é onde a webcam está — medido nos frames dos três canais que
-      // vi (o dele, o do kodd e o do Lauta): nos três, no canto de baixo à
-      // esquerda. O de baixo nasce ao meio, que é onde a acção está.
-      if (i === 0) return { x: 0, y: altura - h, largura: w, altura: h };
-      return { x: (largura - w) / 2, y: (altura - h) / 2, largura: w, altura: h };
-    });
+    const canto = limparModelo(modelo);
+    // A webcam: um tamanho típico, encostada ao canto. Nunca mais alta do que meia fonte, para os dois
+    // recortes nascerem visivelmente separados (dois rectângulos sobrepostos ao pixel lêem-se como um).
+    const pc = proporcaoDoQuadro('dois', 0, d);
+    let wc = largura * LARGURA_WEBCAM;
+    let hc = wc / pc;
+    if (hc > altura / 2) { hc = altura / 2; wc = hc * pc; }
+    const direita = canto === 'cimaDir' || canto === 'baixoDir';
+    const baixo = canto === 'baixoEsq' || canto === 'baixoDir';
+    const cam = { x: direita ? largura - wc : 0, y: baixo ? altura - hc : 0, largura: wc, altura: hc };
+    // O jogo: a fita mais alta que cabe, ao meio, que é onde a acção está.
+    const pj = proporcaoDoQuadro('dois', 1, d);
+    let hj = altura;
+    let wj = hj * pj;
+    if (wj > largura) { wj = largura; hj = wj / pj; }
+    const jogo = { x: (largura - wj) / 2, y: (altura - hj) / 2, largura: wj, altura: hj };
+    return [cam, jogo];
   }
   const proporcao = RETRATO.largura / RETRATO.altura;            // 9:16
   const h = altura;
   const w = Math.min(largura, h * proporcao);
   return [{ x: (largura - w) / 2, y: 0, largura: w, altura: h }];
+}
+
+/**
+ * O encaixe de um streamer, para guardar no aparelho: em fracções da fonte, e não em pixels, para servir
+ * ao próximo clipe dele seja qual for a qualidade que o vídeo trouxer.
+ */
+export function paraFraccoes(rects, fonte) {
+  if (!(fonte?.largura > 0 && fonte?.altura > 0) || !rects?.length) return null;
+  return rects.map((r) => ({
+    x: r.x / fonte.largura, y: r.y / fonte.altura, largura: r.largura / fonte.largura, altura: r.altura / fonte.altura,
+  }));
+}
+
+/**
+ * De volta a pixels de uma fonte. A largura manda e a altura vem da proporção da faixa, para o recorte
+ * encher o seu destino sem esticar mesmo que a fonte nova tenha outra forma. Algo estragado dá `null`, e
+ * aí quem chama usa o modelo.
+ */
+export function deFraccoes(fraccoes, fonte, modo = 'um', divisao = DIVISAO_OMISSAO) {
+  if (!(fonte?.largura > 0 && fonte?.altura > 0) || !Array.isArray(fraccoes)) return null;
+  const precisa = modo === 'dois' ? 2 : 1;
+  if (fraccoes.length !== precisa) return null;
+  const ok = (n) => Number.isFinite(n) && n >= -0.01 && n <= 1.01;
+  if (!fraccoes.every((f) => f && ok(f.x) && ok(f.y) && ok(f.largura) && f.largura > 0.01)) return null;
+  return fraccoes.map((f, i) => {
+    const largura = f.largura * fonte.largura;
+    const altura = largura / proporcaoDoQuadro(modo, i, divisao);
+    return limitar({ x: f.x * fonte.largura, y: f.y * fonte.altura, largura, altura }, fonte);
+  });
 }
 
 /**
@@ -190,6 +230,24 @@ export function desenhar(ctx, fonte, rects, modo = 'um', divisao = DIVISAO_OMISS
 }
 
 /**
+ * A imagem inteira numa tela de `alvo`, sem cortar nada: uma fonte com outra proporção fica com
+ * barras pretas, e não esticada.
+ */
+export function desenharInteiro(ctx, fonte, alvo) {
+  const fw = fonte.videoWidth || fonte.width || alvo.largura;
+  const fh = fonte.videoHeight || fonte.height || alvo.altura;
+  const k = Math.min(alvo.largura / fw, alvo.altura / fh);
+  const w = Math.round(fw * k);
+  const h = Math.round(fh * k);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, alvo.largura, alvo.altura);
+  ctx.drawImage(fonte, Math.round((alvo.largura - w) / 2), Math.round((alvo.altura - h) / 2), w, h);
+}
+
+/** O 16:9 que se grava quando é preciso pintar por cima (o chat). */
+export const DEITADO = { largura: 1920, altura: 1080 };
+
+/**
  * Os formatos por ordem de preferência. MP4 primeiro porque é o que toda a
  * gente sabe abrir; WebM porque é o que o Chrome grava sempre. Com os codecs
  * escritos: pedir sem eles dava ficheiros que o Windows abria como som.
@@ -229,13 +287,93 @@ export const FORMATOS = [
 ];
 
 export const BITS_VIDEO = 12_000_000;
-export const BITS_SOM = 128_000;
+// 192 kbps em vez de 128: é o que o TikTok e o YouTube recomendam para AAC estéreo, e custa 8 KB/s a
+// mais (cerca de 120 KB num clipe de 15 s). O codec não mudou, só o débito.
+export const BITS_SOM = 192_000;
+
+// ── a cadência (fps) ─────────────────────────────────────────────────────────
+
+/** Quando a playlist não diz a cadência: o que o código fazia antes de a ler. */
+export const FPS_OMISSAO = 30;
+/** Acima disto não se grava: o ecrã e o `setInterval` do browser não dão mais, e o ficheiro engordava à toa. */
+export const FPS_MAX = 60;
+
+/**
+ * A cadência em que gravar, a partir da que a playlist da Kick anuncia (`FRAME-RATE`).
+ * A Kick publica 60 ou 30, mas há fontes com 59.94 ou 29.97: arredondam-se ao inteiro, que é o que
+ * `captureStream` e o intervalo de pintura aceitam bem. Sem número que sirva, 30.
+ */
+export function fpsDaFonte(fps) {
+  const n = Number(fps);
+  if (!Number.isFinite(n) || n < 10) return FPS_OMISSAO;
+  return Math.min(FPS_MAX, Math.round(n));
+}
+
+/**
+ * O débito de vídeo para essa cadência. 12 Mbps até 30 fps; a 60 sobe a 18 Mbps (x1,5) e, no meio, é
+ * proporcional (50 fps dá 16). Não é o dobro: frames vizinhos parecem-se, e o codec gasta menos por
+ * frame; a recomendação do YouTube para 1080p é 8 Mbps a 30 fps e 12 Mbps a 60, a mesma razão de 1,5.
+ * Arredondado a 100 kbps.
+ */
+export function bitsDoVideo(fps) {
+  const f = fpsDaFonte(fps);
+  if (f <= 30) return BITS_VIDEO;
+  return Math.round((BITS_VIDEO * (1 + (0.5 * (f - 30)) / 30)) / 100_000) * 100_000;
+}
+
+/** Perdendo mais do que isto dos frames, o clipe vai a engasgar e quem exportou tem de saber. */
+export const PERDA_MAX = 0.05;
+
+/**
+ * Quanto da cadência se perdeu na gravação.
+ * `desenhados`: quantas vezes a tela foi pintada; `esperados`: quantas deviam ter sido (a duração
+ * gravada vezes os fps). Não se usa o `droppedVideoFrames` do vídeo: num `<video>` fora do ecrã o
+ * Chrome conta quase todos como deitados fora (medido: 255 de 256), e daria alarme falso.
+ * Com menos de dez frames esperados não há amostra para dizer nada.
+ * Devolve `{ perdaPct, engasgou }`; a perda é em percentagem, com uma casa.
+ */
+export function perdaDeFrames(desenhados, esperados) {
+  if (!(esperados >= 10)) return { perdaPct: 0, engasgou: false };
+  const falhou = Math.max(0, esperados - Math.max(0, desenhados));
+  const perda = Math.min(1, falhou / esperados);
+  return { perdaPct: Math.round(perda * 1000) / 10, engasgou: perda > PERDA_MAX };
+}
+
+// ── as zonas do TikTok ───────────────────────────────────────────────────────
+
+/**
+ * O que a interface do TikTok tapa num 9:16, em fracção do ecrã. VALORES APROXIMADOS: vêm dos guias
+ * públicos de zona segura para vídeo de 1080x1920 (o do TikTok e os dos criadores), que dão cerca de
+ * 130 px no topo, 340 a 480 px em baixo (legenda, música e nome) e 120 a 140 px à direita (a coluna de
+ * gostar, comentar e partilhar). Não os conferi na fonte oficial, e o TikTok muda a interface; por
+ * isso são três números num só sítio. Os Reels e os Shorts tapam parecido.
+ *   cima 9%  (173 px)   baixo 20% (384 px)   direita 13% (140 px)
+ * O chat, a legenda e o guia da prévia leem daqui.
+ */
+export const ZONA_TIKTOK = Object.freeze({ cima: 0.09, baixo: 0.2, direita: 0.13 });
+
+/** A zona que fica livre numa tela de `alvo`, em pixels: `{ x, y, largura, altura, direita, fundo }`. */
+export function zonaSegura(alvo = RETRATO, zona = ZONA_TIKTOK) {
+  const topo = Math.round(alvo.altura * zona.cima);
+  const fundo = alvo.altura - Math.round(alvo.altura * zona.baixo);
+  const direita = alvo.largura - Math.round(alvo.largura * zona.direita);
+  return { x: 0, y: topo, largura: direita, altura: fundo - topo, direita, fundo };
+}
 
 /** O que o browser DIZ que sabe gravar. */
 export function melhorFormato(MR = globalThis.MediaRecorder) {
   if (!MR?.isTypeSupported) return null;
   return FORMATOS.find((t) => MR.isTypeSupported(t)) || null;
 }
+
+// A resposta da prova, uma por gravador.
+//
+// O comentário da função a seguir promete "uma vez por sessão" e ela não
+// guardava nada: cada 9:16 voltava a gravar meio segundo por formato e abria outro
+// `AudioContext`, e numa montagem com trinta kills enquadradas isso eram
+// trinta provas. Fica guardada por gravador (e não numa variável solta) para
+// que dois gravadores diferentes, como nos testes, não partilhem a resposta.
+const provados = new WeakMap();
 
 /**
  * O que o browser sabe gravar A SÉRIO.
@@ -258,27 +396,38 @@ export function melhorFormato(MR = globalThis.MediaRecorder) {
  *   segundo plano o rAF quase não corre, e o ciclo ficava PENDURADO — foi
  *   assim que esta função se estreou.
  */
-export async function formatoQueFunciona({
-  MR = globalThis.MediaRecorder,
+export async function formatoQueFunciona(opcoes = {}) {
+  const MR = opcoes.MR === undefined ? globalThis.MediaRecorder : opcoes.MR;
+  if (!MR?.isTypeSupported) return null;
+  if (!provados.has(MR)) provados.set(MR, provarFormatos({ ...opcoes, MR }));
+  const tipo = await provados.get(MR);
+  // Um "nenhum" não fica guardado: pode ter sido um acaso (um separador em
+  // segundo plano, a placa ocupada), e guardá-lo calava o 9:16 a noite inteira.
+  if (!tipo) provados.delete(MR);
+  return tipo;
+}
+
+async function provarFormatos({
+  MR,
   criarTela = () => document.createElement('canvas'),
   msPorTentativa = 500,
 } = {}) {
-  if (!MR?.isTypeSupported) return null;
   for (const tipo of FORMATOS) {
     if (!MR.isTypeSupported(tipo)) continue;
     let pincel = null;
+    let fluxo = null;
+    let audio = null;
     try {
       const tela = criarTela();
       tela.width = 320; tela.height = 180;
       const ctx = tela.getContext('2d');
-      const fluxo = tela.captureStream(30);
+      fluxo = tela.captureStream(30);
       // Com uma faixa de SOM, como a gravação a sério tem.
       //
       // A prova era só de vídeo, e por isso aprovava um formato que grava
       // imagem e deita o áudio fora — foi assim que um clipe saiu mudo depois
       // de eu mexer nesta lista. Uma pista de áudio silenciosa é o suficiente:
       // o que se está a perguntar é se o gravador ACEITA áudio neste formato.
-      let audio = null;
       try {
         const Ctx = globalThis.AudioContext || globalThis.webkitAudioContext;
         if (Ctx) {
@@ -307,13 +456,16 @@ export async function formatoQueFunciona({
       await new Promise((k) => setTimeout(k, msPorTentativa));
       if (g.state !== 'inactive') g.stop();
       await parou;
-      for (const f of fluxo.getTracks()) f.stop();
-      await audio?.close?.().catch?.(() => {});
       if (bytes > 0) return tipo;
     } catch {
       /* o próximo */
     } finally {
+      // Aqui e não no fim do `try`: um `new MR(...)` ou um `start()` que
+      // rebente saltava a limpeza, e cada formato recusado deixava uma faixa
+      // de captura e um contexto de áudio vivos até a página fechar.
       if (pincel) clearInterval(pincel);
+      for (const f of fluxo?.getTracks?.() || []) f.stop?.();
+      await audio?.close?.()?.catch?.(() => {});
     }
   }
   return null;
@@ -321,6 +473,9 @@ export async function formatoQueFunciona({
 
 /** A extensão que combina com o tipo. */
 export const extensaoDe = (tipo) => (String(tipo).startsWith('video/mp4') ? 'mp4' : 'webm');
+
+/** Quanto a gravação espera que o salto do vídeo aterre (ver `gravar`). */
+export const ESPERA_PROCURA_MS = 15_000;
 
 /**
  * Esperar que o `<video>` tenha MESMO o frame onde diz estar.
@@ -372,20 +527,31 @@ export function noSitio(video, { esperaMs = 2000 } = {}) {
  * @param {Array} opcoes.rects - enquadramentos, em pixels da fonte
  * @param {'um'|'dois'} opcoes.modo
  * @param {number} opcoes.duracaoS
- * @param {(p: {feito: number, total: number}) => void} [opcoes.aoProgresso]
+ * @param {(p: {feito: number, total: number, emPausa?: boolean}) => void} [opcoes.aoProgresso]
  * @param {AbortSignal} [opcoes.sinal]
+ * @param {Document} [opcoes.pagina] - quem diz se o separador está à vista
+ * @returns {Promise<{blob: Blob, tipo: string, extensao: string, gravadoS?: number}>}
+ *   `gravadoS` só quando o vídeo do canal acabou antes do fim do clipe
  */
 export async function gravar(video, {
   rects, modo = 'um', divisao = DIVISAO_OMISSAO, duracaoS, aoProgresso = () => {}, sinal, formato,
+  // O tamanho da tela e o que vai por cima de cada frame. Com `modo: 'inteiro'` a imagem inteira
+  // enche um 16:9 (o clipe deitado com o chat por cima, ver chat-clipe.js). `porCima(ctx, feitoS)`
+  // recebe quanto do clipe já passou, para pintar o que corresponde a esse instante.
+  alvo = RETRATO, porCima = null,
   criarTela = () => document.createElement('canvas'),
   MR = globalThis.MediaRecorder,
+  pagina = globalThis.document,
+  // A cadência da fonte (a da playlist da Kick). Sem ela, 30.
+  fps: fpsPedido,
 } = {}) {
+  if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
   const tipo = formato || await formatoQueFunciona({ MR, criarTela });
   if (!tipo) throw Object.assign(new Error('sem gravador'), { name: 'SEM-GRAVADOR' });
 
   const tela = criarTela();
-  tela.width = RETRATO.largura;
-  tela.height = RETRATO.altura;
+  tela.width = alvo.largura;
+  tela.height = alvo.altura;
   const ctx = tela.getContext('2d');
   // O recorte quase nunca tem o tamanho do destino: uma webcam de 320 px de
   // largura vai para uma faixa de 1080. Com a reamostragem de omissão isso
@@ -394,24 +560,58 @@ export async function gravar(video, {
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
 
-  const fluxo = tela.captureStream(30);
+  const fps = fpsDaFonte(fpsPedido);
+  // Um frame por pincelada, pedido à mão (`requestFrame`), quando o browser sabe. Com `captureStream(fps)`
+  // o Chrome atira fora o frame que chega antes de passar 1/fps desde o anterior, e o relógio de pintar
+  // nunca é perfeito: medido, 240 pinceladas a 60 fps davam 184 a 229 frames no ficheiro. Com `0` só
+  // sai frame quando se pede, e cada pincelada é um. Sem `requestFrame` (Safari mais velho), o `fps`.
+  const manual = typeof globalThis.CanvasCaptureMediaStreamTrack?.prototype?.requestFrame === 'function';
+  const fluxo = tela.captureStream(manual ? 0 : fps);
+  const faixaVideo = manual ? fluxo.getVideoTracks?.()[0] : null;
   // O som vem do vídeo, quando o browser o deixa sair. Sem isto o retrato sai
   // mudo, e um clipe de Rust mudo não vale nada — o tiro É o clipe.
+  let somDoVideo = null;
   try {
-    const somDoVideo = video.captureStream?.() || video.mozCaptureStream?.();
+    somDoVideo = video.captureStream?.() || video.mozCaptureStream?.();
     for (const faixa of somDoVideo?.getAudioTracks?.() || []) fluxo.addTrack(faixa);
   } catch { /* sem som: o vídeo continua a valer, o silêncio não o impede */ }
+  // As faixas de captura vivem até alguém as parar. Sem isto, cada 9:16
+  // deixava uma tela de 1080x1920 e uma captura do vídeo presas na memória
+  // até a página fechar, e numa montagem com quarenta kills isso acumulava.
+  const soltarFaixas = () => {
+    for (const f of fluxo.getTracks?.() || []) f.stop?.();
+    for (const f of somDoVideo?.getTracks?.() || []) f.stop?.();
+  };
 
   const gravador = new MR(fluxo, {
-    mimeType: tipo, videoBitsPerSecond: BITS_VIDEO, audioBitsPerSecond: BITS_SOM,
+    mimeType: tipo, videoBitsPerSecond: bitsDoVideo(fps), audioBitsPerSecond: BITS_SOM,
   });
   const pedacos = [];
   gravador.ondataavailable = (e) => { if (e.data?.size) pedacos.push(e.data); };
 
   // O frame certo ANTES de medir seja o que for: `inicio` lido em cima de uma
   // procura a meio é a posição de onde ele veio, não a do início do clipe.
-  await noSitio(video);
+  //
+  // Quinze segundos e não os dois de omissão: depois de um salto o vídeo tem
+  // de ir buscar um pedaço inteiro de 1080p60 (perto de 11 MB), e a menos de
+  // ~40 Mbit/s isso leva mais de dois segundos. Desistir aos dois gravava o
+  // frame velho, que é exactamente o lixo que esta espera existe para tirar.
+  await noSitio(video, { esperaMs: ESPERA_PROCURA_MS });
+  // Cancelado durante a espera: o ouvinte do `abort` só se pendura mais à
+  // frente, e um sinal que já disparou não volta a disparar para ninguém.
+  if (sinal?.aborted) { soltarFaixas(); throw new DOMException('cancelado', 'AbortError'); }
   const inicio = video.currentTime;
+  // A conta dos frames: quantas vezes a tela foi pintada, contra quantas a duração gravada pedia.
+  let desenhados = 0;
+  let maiorFeitoS = 0;
+  const pincelar = () => {
+    // O instante lido ANTES de pintar: é o do frame que vai para a tela.
+    const feitoS = Math.max(0, video.currentTime - inicio);
+    if (modo === 'inteiro') desenharInteiro(ctx, video, alvo);
+    else desenhar(ctx, video, rects, modo, divisao);
+    porCima?.(ctx, feitoS);
+    faixaVideo?.requestFrame?.();
+  };
   let parar = false;
   let pincel = null;
   // Um vídeo PARADO dá uma foto, e uma foto não é um clipe.
@@ -425,8 +625,16 @@ export async function gravar(video, {
   // app). Isto é o travão para a PRÓXIMA causa, seja ela qual for: se ao fim
   // de três segundos o relógio do vídeo não andou nada, isto rebenta com um
   // nome próprio em vez de entregar uma fotografia.
+  //
+  // "Não andou" conta-se desde a ÚLTIMA pincelada, e não desde o início. A
+  // conta antiga olhava para o progresso total: passados os primeiros 0,05 s
+  // ela zerava a cada volta, e um vídeo que congelasse a meio (a rede caiu, o
+  // hls.js desistiu) deixava a gravação pendurada para sempre.
   let voltas = 0;
-  const PARADO_MAX = 90;                    // 3 s a 30 pinceladas por segundo
+  let ultimoS = inicio;
+  // Quanto ficou gravado, quando o vídeo do canal acaba antes do clipe.
+  let gravadoS = null;
+  const PARADO_MAX = Math.round(3 * fps);   // 3 s de pinceladas
   // Um relógio próprio, e não o ritmo a que o vídeo entrega frames.
   //
   // A primeira versão pintava dentro do `requestVideoFrameCallback`, que é a
@@ -439,9 +647,25 @@ export async function gravar(video, {
   // que acontecer, e a duração do ficheiro passa a ser a duração do clipe.
   const pintar = () => {
     if (parar) return;
-    desenhar(ctx, video, rects, modo, divisao);
-    const feito = Math.max(0, video.currentTime - inicio);
-    voltas = feito > 0.05 ? 0 : voltas + 1;
+    pincelar();
+    desenhados++;
+    const agora = video.currentTime;
+    const feito = Math.max(0, agora - inicio);
+    maiorFeitoS = Math.max(maiorFeitoS, feito);
+    // O vídeo do canal acabou antes do fim do clipe: a live caiu e voltou
+    // noutro VOD, ou acabou mesmo. O que ficou gravado até aqui é bom, e
+    // fica; quem chamou é que diz que saiu mais curto. Sem isto, o vídeo
+    // parado no fim contava como congelado, e três segundos depois o 9:16
+    // inteiro ia fora com um "o vídeo não andou" que não era verdade.
+    if (video.ended && feito > 0) {
+      parar = true;
+      clearInterval(pincel);
+      gravadoS = feito;
+      if (gravador.state !== 'inactive') gravador.stop();
+      return;
+    }
+    voltas = agora > ultimoS ? 0 : voltas + 1;
+    ultimoS = Math.max(ultimoS, agora);
     if (voltas > PARADO_MAX) {
       parar = true;
       clearInterval(pincel);
@@ -468,21 +692,84 @@ export async function gravar(video, {
     if (gravador.state !== 'inactive') gravador.stop();
   }, { once: true });
 
-  // Pintar ANTES de `start()`, e não depois.
+  // Com o separador escondido, a gravação espera por ele.
   //
-  // A tela acabada de criar é transparente, e `captureStream` publica-a na
-  // mesma: o gravador arranca, o `await` do `play()` devolve a volta ao
-  // browser, e o que fica gravado nesse intervalo são frames PRETOS. Foram
-  // 0,27 s medidos no ficheiro dele. Uma pincelada antes de gravar custa um
-  // frame e o clipe passa a começar na imagem certa.
-  desenhar(ctx, video, rects, modo, divisao);
-  gravador.start();
-  await video.play().catch(() => {});
-  pintar();
-  pincel = setInterval(pintar, 1000 / 30);
-  const blob = await acabou;
-  clearInterval(pincel);
-  video.pause();
+  // Escondido, o Chrome corre o `setInterval` uma vez por segundo (só poupa
+  // as páginas que se OUVEM, e esta toca com o volume a zero) e deixa de
+  // descodificar a imagem do vídeo. Uma montagem com 9:16 deixada a correr
+  // por trás do Discord saía em slides de uma imagem por segundo, ou com uma
+  // imagem parada e som. Parar o vídeo e o gravador juntos, e voltar com os
+  // dois quando a página volta, dá o mesmo ficheiro que se teria à vista: o
+  // tempo em pausa não entra nele.
+  let escondida = false;
+  // Um pincel só, sempre: limpar o anterior antes de arrancar outro. O
+  // separador pode esconder-se e voltar durante o `await video.play()` do
+  // início, e os dois sítios que arrancam o pincel deixavam um a correr sem
+  // ninguém o parar.
+  //
+  // O relógio acorda mais vezes do que os frames pedidos (a cada oitavo de período) e só pinta quando é
+  // a vez. Um `setInterval(pintar, 1000 / 60)` seco rende bem menos de 60: no Windows os temporizadores
+  // acordam de 15,6 em 15,6 ms e arredondam o 16,7 ms para cima (medido em Node: 36 pinceladas esperadas,
+  // 26 feitas). Com a vez marcada à parte, a média fica nos fps pedidos mesmo com o relógio grosso.
+  const periodo = 1000 / fps;
+  const arrancarPincel = () => {
+    clearInterval(pincel);
+    let proxima = performance.now() + periodo;
+    pincel = setInterval(() => {
+      const agora = performance.now();
+      // Uns 4% de folga: acordar um nadinha antes da vez conta, senão o relógio grosso perde-a.
+      if (agora < proxima - periodo * 0.04) return;
+      // Atrasada mais de meio período? Não acumula dívida: a pintura que falhou já se contou como perda.
+      proxima = Math.max(proxima + periodo, agora - periodo * 0.5);
+      pintar();
+    }, Math.max(1, periodo / 8));
+  };
+  const aoMudarDeVista = () => {
+    if (parar) return;
+    if (pagina?.hidden && !escondida) {
+      escondida = true;
+      clearInterval(pincel);
+      video.pause();
+      if (gravador.state === 'recording') gravador.pause?.();
+      aoProgresso({ feito: Math.max(0, video.currentTime - inicio), total: duracaoS, emPausa: true });
+    } else if (!pagina?.hidden && escondida) {
+      escondida = false;
+      voltas = 0;
+      ultimoS = video.currentTime;
+      if (gravador.state === 'paused') gravador.resume?.();
+      video.play().catch(() => {});
+      arrancarPincel();
+    }
+  };
+  pagina?.addEventListener?.('visibilitychange', aoMudarDeVista);
+
+  let blob;
+  try {
+    // Pintar ANTES de `start()`, e não depois.
+    //
+    // A tela acabada de criar é transparente, e `captureStream` publica-a na
+    // mesma: o gravador arranca, o `await` do `play()` devolve a volta ao
+    // browser, e o que fica gravado nesse intervalo são frames PRETOS. Foram
+    // 0,27 s medidos no ficheiro dele. Uma pincelada antes de gravar custa um
+    // frame e o clipe passa a começar na imagem certa.
+    pincelar();
+    gravador.start();
+    await video.play().catch(() => {});
+    // Escondida enquanto o `play()` esperava: o vídeo e o gravador já estão em
+    // pausa, e pintar agora punha o detector de "não andou" a contar sobre um
+    // vídeo parado. O pincel arranca quando a página voltar.
+    if (escondida) video.pause();
+    else { pintar(); arrancarPincel(); }
+    // Já escondida quando começou (a montagem chegou a este 9:16 com ele
+    // noutra janela): fica logo em pausa até ele voltar.
+    if (pagina?.hidden) aoMudarDeVista();
+    blob = await acabou;
+  } finally {
+    clearInterval(pincel);
+    pagina?.removeEventListener?.('visibilitychange', aoMudarDeVista);
+    video.pause();
+    soltarFaixas();
+  }
   if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
   if (paradoDemais) {
     throw Object.assign(new Error('o vídeo não andou'), { name: 'GRAVACAO-PARADA' });
@@ -490,7 +777,15 @@ export async function gravar(video, {
   // Zero bytes é falha, não é ficheiro. Deixar passar dava um .mp4 vazio na
   // pasta de transferências e nenhuma explicação.
   if (!blob.size) throw Object.assign(new Error('não saiu nada'), { name: 'GRAVACAO-VAZIA' });
-  return { blob, tipo, extensao: extensaoDe(tipo) };
+  // `gravadoS` só vem quando saiu MAIS CURTO do que se pediu: é o número que
+  // quem chamou tem de dizer, e não esconder atrás de um "pronto".
+  // Frames esperados: o que ficou gravado (a duração pedida, ou o que o vídeo deu) vezes a cadência.
+  const esperados = Math.round(Math.min(maiorFeitoS, duracaoS) * fps);
+  const { perdaPct, engasgou } = perdaDeFrames(desenhados, esperados);
+  return {
+    blob, tipo, extensao: extensaoDe(tipo), ...(gravadoS != null ? { gravadoS } : {}),
+    fps, desenhados, esperados, perdaPct, engasgou,
+  };
 }
 
 /**

@@ -10,10 +10,11 @@
 // carimbo; o quinto estava 5,7 s à frente e as quatro janelas concordaram.
 // Ou seja: o carimbo quase sempre chega, e quando não chega isto apanha.
 
-import { aacDeSegmentos } from './audio-ts.js?v=e671918e16';
-import { envolvente, desvio, consolidar, resolver, TAXA } from './sinal.js?v=e671918e16';
-import { segmentosNaJanela } from './kick.js?v=e671918e16';
-import { onde } from './relogio.js?v=e671918e16';
+import { aacDeSegmentos } from './audio-ts.js?v=78c992b68e';
+import { envolvente, desvio, consolidar, resolver, TAXA } from './sinal.js?v=78c992b68e';
+import { segmentosNaJanela } from './kick.js?v=78c992b68e';
+import { onde } from './relogio.js?v=78c992b68e';
+import { pegarSegmento } from './baixar.js?v=78c992b68e';
 
 /**
  * Quantos MB isto vai custar, antes de começar.
@@ -28,16 +29,66 @@ export function custoEstimadoMB(quantosCanais, { janelas = 3, duracaoS = 120 } =
   return Math.round((quantosCanais * janelas * (duracaoS + MARGEM_S) * 280_000) / 8 / 1048576);
 }
 
-/** Onde ir buscar som: instantes com o maior número de ângulos no ar. */
-export function instantesParaOuvir(linhas, janela, { quantos = 3, duracaoS = 120 } = {}) {
-  const de = janela.haSobreposicao ? janela.sobreposicaoInicio : janela.inicio;
-  const ate = (janela.haSobreposicao ? janela.sobreposicaoFim : janela.fim) - duracaoS * 1000;
+/**
+ * Onde ir buscar som: instantes com o maior número de ângulos no ar.
+ *
+ * Antes isto partia a sobreposição de todos em quartos e, sem sobreposição,
+ * a noite inteira. Com quinhentos streamers quase nunca há um instante em que
+ * todos estão no ar, e os quartos da noite caíam onde só um ou dois estavam:
+ * descarregava-se tudo e nenhum par chegava às duas janelas que `consolidar`
+ * pede. Agora conta-se, minuto a minuto, quem está no ar do princípio ao fim
+ * da janela, e escolhe-se entre os minutos com perto do máximo.
+ *
+ * Os minutos são os do relógio (múltiplos de 60 s), não fracções da noite:
+ * assim um canal novo que muda a sobreposição não muda os instantes possíveis,
+ * e com `memoria` prefere-se os instantes já ouvidos. Sem isso, acrescentar um
+ * streamer que entrou uma hora depois mandava ouvir os trinta outra vez.
+ */
+export function instantesParaOuvir(linhas, janela, { quantos = 3, duracaoS = 120, memoria } = {}) {
+  const de = janela.inicio;
+  const ate = janela.fim - duracaoS * 1000;
   if (!(ate > de)) return [Math.max(janela.inicio, de)];
+
+  const MINUTO = 60_000;
+  const noAr = (l, t) => (l.pecas || []).some((p) => t >= p.playlist.inicio && t < p.playlist.fim);
+  const candidatos = [];
+  for (let t = Math.ceil(de / MINUTO) * MINUTO; t <= ate; t += MINUTO) {
+    const vivos = linhas.filter((l) => noAr(l, t) && noAr(l, t + duracaoS * 1000 - 1));
+    const ouvidos = memoria ? vivos.filter((l) => memoria.has(`${t}|${l.slug}`)).length : 0;
+    candidatos.push({ t, n: vivos.length, ouvidos: vivos.length ? ouvidos / vivos.length : 0 });
+  }
+  if (!candidatos.length) return [Math.round(de)];
+
+  const maximo = Math.max(...candidatos.map((c) => c.n));
+  const limiar = Math.ceil(0.9 * maximo);
+  let bons = candidatos.filter((c) => c.n >= limiar);
+  if (bons.length < quantos) bons = candidatos;
   // Espalhados pela noite de propósito. Três janelas seguidas medem três vezes
   // o mesmo minuto, e se esse minuto for de música em loop as três concordam
-  // no sítio errado — que é precisamente o erro que a repetição devia apanhar.
-  const passo = (ate - de) / (quantos + 1);
-  return Array.from({ length: quantos }, (_, i) => Math.round(de + passo * (i + 1)));
+  // no sítio errado, que é precisamente o erro que a repetição devia apanhar.
+  const inicioBom = Math.min(...bons.map((c) => c.t));
+  const fimBom = Math.max(...bons.map((c) => c.t));
+  const extensao = Math.max(1, fimBom - inicioBom);
+  const escolhidos = [];
+  while (escolhidos.length < quantos) {
+    let melhor = null;
+    let melhorNota = -Infinity;
+    for (const c of bons) {
+      if (escolhidos.some((e) => Math.abs(e.t - c.t) < duracaoS * 1000)) continue;
+      const longe = Math.min(
+        (c.t - inicioBom + extensao / (quantos + 1)) / extensao,
+        (fimBom - c.t + extensao / (quantos + 1)) / extensao,
+        ...escolhidos.map((e) => Math.abs(e.t - c.t) / extensao),
+      );
+      // Por ordem: quantos estão no ar, o que já se ouviu, e só depois o
+      // espalhar. Os dois primeiros valem mais do que qualquer distância.
+      const nota = (c.n >= limiar ? 4 : c.n / Math.max(1, maximo)) + 2 * c.ouvidos + longe;
+      if (nota > melhorNota) { melhorNota = nota; melhor = c; }
+    }
+    if (!melhor) break;
+    escolhidos.push(melhor);
+  }
+  return escolhidos.map((c) => c.t).sort((x, y) => x - y);
 }
 
 /**
@@ -52,7 +103,13 @@ export function instantesParaOuvir(linhas, janela, { quantos = 3, duracaoS = 120
  * Um navegador sem AAC (o Chromium open-source, por exemplo) nao consegue
  * sequer TOCAR os VODs da Kick — dize-lo e mais util do que um zero calado.
  */
-export async function descodificarAac(aac, { taxaAlvo = TAXA } = {}) {
+export async function descodificarAac(aac, { taxaAlvo = TAXA, noFio = false } = {}) {
+  // Na página, num Worker (ver som-worker.js); sem Worker (node, um browser antigo) ou se ele falhar,
+  // aqui mesmo.
+  if (!noFio) {
+    const r = await noWorker(aac, taxaAlvo);
+    if (r) return r;
+  }
   const bytes = aac.buffer.slice(aac.byteOffset, aac.byteOffset + aac.byteLength);
 
   if (typeof AudioDecoder !== 'undefined') {
@@ -115,6 +172,42 @@ export async function descodificarAac(aac, { taxaAlvo = TAXA } = {}) {
   throw e;
 }
 
+let trabalhador = null;
+let pedidosAoWorker = 0;
+const aEspera = new Map();
+/** O AAC descodificado no som-worker.js, ou null quando não há Worker (e então descodifica-se aqui). */
+function noWorker(aac, taxaAlvo) {
+  if (typeof Worker === 'undefined' || typeof window === 'undefined' || trabalhador === false) return Promise.resolve(null);
+  if (!trabalhador) {
+    try {
+      trabalhador = new Worker(new URL('./som-worker.js', import.meta.url), { type: 'module' });
+      trabalhador.onmessage = ({ data }) => {
+        const p = aEspera.get(data.id);
+        if (!p) return;
+        aEspera.delete(data.id);
+        if (data.mono) p.ok(data.mono);
+        else p.nao(Object.assign(new Error(data.erro), { name: data.nome }));
+      };
+      // Um Worker que nem arranca (o ficheiro não carregou, uma política que o proíbe): os que estavam
+      // à espera e os seguintes descodificam-se na página, como antes.
+      trabalhador.onerror = () => {
+        trabalhador = false;
+        for (const p of aEspera.values()) p.ok(null);
+        aEspera.clear();
+      };
+    } catch {
+      trabalhador = false;
+      return Promise.resolve(null);
+    }
+  }
+  const id = ++pedidosAoWorker;
+  const copia = aac.slice();
+  return new Promise((ok, nao) => {
+    aEspera.set(id, { ok, nao });
+    trabalhador.postMessage({ id, aac: copia, taxaAlvo }, [copia.buffer]);
+  });
+}
+
 /** Baixa linear para a taxa de trabalho. Nada disto precisa de fidelidade: o
  *  que se procura sao ataques, e um ataque continua um ataque a 8 kHz. */
 function reamostrar(pedacos, de, para) {
@@ -136,6 +229,59 @@ function reamostrar(pedacos, de, para) {
   return saida;
 }
 
+/** Quanto um pedaço de som (160p, ~300 KB) pode ficar sem mandar nada antes de se tentar outra vez. */
+export const PRAZO_SOM_MS = 20_000;
+
+/**
+ * Os bytes TS de um canal entre `quandoMs` e `quandoMs + duracaoS`, no degrau mais barato (160p), e os
+ * segmentos que vieram (com o `inicio` de cada um no relógio do VOD). O som (`somDoCanal`) e as telas de
+ * morte (achar-mortes-video.js) saem daqui. Null quando o canal não filmava.
+ */
+export async function tsDoCanal(linha, quandoMs, duracaoS, {
+  buscar = fetch, sinal, contador, paralelo = 4, prazoMs,
+} = {}) {
+  const r = onde(linha, quandoMs);
+  if (r.estado !== 'toca') return null;
+  // A playlist da peca e sempre a do degrau mais barato (160p): `peca.playlist` e lida de
+  // `peca.barato` quando a noite abre. O audio nao se pode pedir sozinho na Kick, e o degrau de baixo
+  // e o que traz menos video junto.
+  const peca = linha.pecasCompletas?.find((p) => p.vod.id === r.peca.vod.id) || r.peca;
+  const segs = segmentosNaJanela(peca.playlist, quandoMs, quandoMs + duracaoS * 1000);
+  if (!segs.length) return null;
+
+  // Ate `paralelo` segmentos no ar ao mesmo tempo, e cada um no seu lugar. Antes ia um de cada vez, e
+  // um bocado de cinco minutos sao dezenas de idas e voltas: o tempo ia na espera, nao nos bytes.
+  const partes = new Array(segs.length);
+  let total = 0;
+  let proximo = 0;
+  let falhou = null;
+  const umPedido = async () => {
+    while (proximo < segs.length && !falhou) {
+      if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
+      const i = proximo++;
+      try {
+        // Com prazo e novas tentativas, como a exportação. O teste real de 12/10: uma detecção ficou
+        // quase 4 min parada em "0 s de 10 min" à espera de um pedido que nunca acabou.
+        // eslint-disable-next-line no-await-in-loop
+        const b = await pegarSegmento(segs[i].url, { buscar, sinal, prazoMs: prazoMs ?? PRAZO_SOM_MS });
+        partes[i] = b;
+        total += b.length;
+        contador?.(b.length);
+      } catch (e) {
+        const erro = sinal?.aborted ? new DOMException('cancelado', 'AbortError') : e;
+        falhou = falhou || erro;
+        throw erro;
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.max(1, Math.min(paralelo, segs.length)) }, umPedido));
+  const ts = new Uint8Array(total);
+  let o = 0;
+  for (const p of partes) { ts.set(p, o); o += p.length; }
+
+  return { ts, segs };
+}
+
 /**
  * O som de um canal, num instante, ja em mono a 8 kHz e a comecar em `quandoMs`.
  *
@@ -144,27 +290,11 @@ function reamostrar(pedacos, de, para) {
  * e a unica parte que pertence ao browser e nao a este codigo.
  */
 export async function somDoCanal(linha, quandoMs, duracaoS, {
-  buscar = fetch, sinal, descodificar = descodificarAac, contador, taxa = TAXA,
+  buscar = fetch, sinal, descodificar = descodificarAac, contador, taxa = TAXA, paralelo = 4, prazoMs,
 } = {}) {
-  const r = onde(linha, quandoMs);
-  if (r.estado !== 'toca') return null;
-  const peca = linha.pecasCompletas?.find((p) => p.vod.id === r.peca.vod.id) || r.peca;
-  const segs = segmentosNaJanela(peca.playlist, quandoMs, quandoMs + duracaoS * 1000);
-  if (!segs.length) return null;
-
-  const partes = [];
-  let total = 0;
-  for (const s of segs) {
-    const resp = await buscar(s.url, { signal: sinal });
-    if (!resp.ok) throw new Error(`segmento ${resp.status}`);
-    const b = new Uint8Array(await resp.arrayBuffer());
-    partes.push(b);
-    total += b.length;
-  }
-  contador?.(total);
-  const ts = new Uint8Array(total);
-  let o = 0;
-  for (const p of partes) { ts.set(p, o); o += p.length; }
+  const baixado = await tsDoCanal(linha, quandoMs, duracaoS, { buscar, sinal, contador, paralelo, prazoMs });
+  if (!baixado) return null;
+  const { ts, segs } = baixado;
 
   // O browser sabe AAC mas nao sabe MPEG-TS. `audio-ts.js` e a ponte, e o que
   // ela produz foi comparado com o ffmpeg amostra a amostra em 500 s: igual.
@@ -202,55 +332,94 @@ export async function alinharPeloSom({
   linhas, janela, janelas = 3, duracaoS = 120,
   sinal, aoProgresso = () => {}, buscar = fetch, descodificar, lerSom = somDoCanal,
   memoria = new Map(),
+  // O teste real de 12/10: 33 ângulos levaram 30 min a ouvir, um canal de cada vez. Agora ouvem-se
+  // `paralelos` canais ao mesmo tempo, cada um com 2 pedaços no ar (8 pedidos de uma vez, o dobro do
+  // de antes e ainda pouco para a Kick), e os de `primeiro` (os do lance aberto) vão à frente.
+  // `instantes` deixa quem chama medir um grupo e depois todos nos mesmos minutos, sem ouvir duas vezes.
+  paralelos = 4, primeiro = [], instantes: fixos = null,
 } = {}) {
-  const instantes = instantesParaOuvir(linhas, janela, { quantos: janelas, duracaoS });
+  const instantes = fixos || instantesParaOuvir(linhas, janela, { quantos: janelas, duracaoS, memoria });
   const envelopes = memoria;
   const problemas = [];
   let bytes = 0;
   let passo = 0;
   // Só conta o que falta MESMO ouvir. Uma barra de progresso que conta o que
   // já está em memória diz "31 de 31" e demora dois segundos: parece avariada.
-  const porOuvir = instantes.flatMap((t) => linhas
-    .filter((l) => !envelopes.has(`${t}|${l.slug}`))
-    .map((l) => [t, l]));
+  const vemPrimeiro = (l) => (primeiro.includes(l.slug) ? 0 : 1);
+  const porOuvir = [...linhas].sort((a, b) => vemPrimeiro(a) - vemPrimeiro(b))
+    .flatMap((l) => instantes.filter((t) => !envelopes.has(`${t}|${l.slug}`)).map((t) => [t, l]));
   const passos = porOuvir.length;
   const reaproveitados = instantes.length * linhas.length - passos;
 
-  for (const [t, linha] of porOuvir) {
-    {
+  let proximo = 0;
+  let parar = null;
+  const trabalhador = async (ate = Infinity) => {
+    while (proximo < Math.min(ate, porOuvir.length) && !parar) {
       if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
-      aoProgresso({ fase: 'ouvir', canal: linha.slug, feito: ++passo, total: passos, bytes });
+      const [t, linha] = porOuvir[proximo++];
+      aoProgresso({ fase: 'ouvir', canal: linha.slug, feito: passo, total: passos, bytes });
       try {
+        // eslint-disable-next-line no-await-in-loop
         const som = await lerSom(linha, t, duracaoS, {
-          buscar, sinal, descodificar, contador: (n) => { bytes += n; },
+          buscar, sinal, descodificar, contador: (n) => { bytes += n; }, paralelo: 2,
         });
         if (som) envelopes.set(`${t}|${linha.slug}`, envolvente(som));
       } catch (e) {
         if (e.name === 'AbortError') throw e;
         // Um navegador sem AAC nao vai passar a ter a meio da medicao, e
         // insistir canal a canal so faz o utilizador esperar por nada.
-        if (e.name === 'SEM-DESCODIFICADOR') throw e;
+        if (e.name === 'SEM-DESCODIFICADOR') { parar = e; throw e; }
         // Um canal que não se consegue ouvir não pode matar a medição dos
         // outros: fica sem ajuste automático e é dito pelo nome no fim.
         problemas.push({ canal: linha.slug, erro: e.message });
       }
+      passo++;
+      aoProgresso({ fase: 'ouvir', canal: linha.slug, feito: passo, total: passos, bytes });
     }
-  }
+  };
+  // O primeiro sozinho: se o navegador não sabe AAC, falha uma vez e não quatro.
+  await trabalhador(1);
+  await Promise.all(Array.from({ length: Math.max(1, Math.min(paralelos, porOuvir.length - proximo)) }, () => trabalhador()));
+  if (parar) throw parar;
 
-  aoProgresso({ fase: 'comparar', feito: passos, total: passos });
   const nomes = linhas.map((l) => l.slug);
   const pares = [];
   const detalhe = [];
+  // Comparar é um par de cada vez, e cada `desvio` são dezenas de milhões de
+  // contas: trinta ângulos dão 435 pares, quinhentos dão 124 750. Num ciclo
+  // só, a página ficava presa minutos (ou horas) com "a página não responde",
+  // sem barra a andar e sem o Parar a funcionar. Por isso devolve-se a vez ao
+  // browser a cada pouco, e é aí que se vê se ele mandou parar.
+  const totalPares = (nomes.length * (nomes.length - 1)) / 2;
+  let feitosPares = 0;
+  let desdeVez = Date.now();
+  const darAVez = async (jaAgora = false) => {
+    if (!jaAgora && Date.now() - desdeVez < 50) return;
+    await new Promise((pronto) => setTimeout(pronto, 0));
+    desdeVez = Date.now();
+    if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
+    aoProgresso({ fase: 'comparar', feito: feitosPares, total: totalPares });
+  };
+  aoProgresso({ fase: 'comparar', feito: 0, total: totalPares });
+  // Uma vez logo à entrada, para o "a comparar" chegar ao ecrã e o Parar ser
+  // visto mesmo quando a comparação (pela FFT) acaba em menos de 50 ms.
+  await darAVez(true);
   for (let i = 0; i < nomes.length; i++) {
     for (let k = i + 1; k < nomes.length; k++) {
-      const medicoes = instantes
-        .map((t) => [envelopes.get(`${t}|${nomes[i]}`), envelopes.get(`${t}|${nomes[k]}`)])
-        .filter(([a, b]) => a?.length && b?.length)
-        .map(([a, b]) => desvio(a, b));
+      const medicoes = [];
+      for (const t of instantes) {
+        const a = envelopes.get(`${t}|${nomes[i]}`);
+        const b = envelopes.get(`${t}|${nomes[k]}`);
+        if (!a?.length || !b?.length) continue;
+        // eslint-disable-next-line no-await-in-loop
+        await darAVez();
+        medicoes.push(desvio(a, b));
+      }
+      feitosPares++;
       if (!medicoes.length) continue;
       const c = consolidar(medicoes);
       detalhe.push({ a: nomes[i], b: nomes[k], ...c });
-      if (c.desvioS != null) pares.push({ a: nomes[i], b: nomes[k], desvioS: c.desvioS });
+      if (c.desvioS != null) pares.push({ a: nomes[i], b: nomes[k], desvioS: c.desvioS, peso: c.peso });
     }
   }
 

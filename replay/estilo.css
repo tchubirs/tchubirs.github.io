@@ -62,6 +62,12 @@ body {
   font-family: 'IBM Plex Sans'; font-style: normal; font-weight: 600;
   font-display: block; src: url('letra/ibm-plex-sans-600.woff2') format('woff2');
 }
+/* O 700 só serve à legenda do clipe (legenda.js), que o pinta numa tela: carrega-se quando ela é
+   pedida, e por isso não está entre os pré-carregados. Do mesmo pacote dos outros (@fontsource 5.3.0). */
+@font-face {
+  font-family: 'IBM Plex Sans'; font-style: normal; font-weight: 700;
+  font-display: block; src: url('letra/ibm-plex-sans-700.woff2') format('woff2');
+}
 @font-face {
   font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 400;
   font-display: block; src: url('letra/ibm-plex-mono-400.woff2') format('woff2');
@@ -95,11 +101,11 @@ h1 { font-size: var(--t-titulo); }
 h2 { font-size: var(--t-medio); }
 p { margin: 0; }
 
-/* O rótulo pequeno em maiúsculas. É o único sítio onde há entrelinha larga,
-   e é isso que o faz ler-se como rótulo e não como texto. */
+/* O rótulo pequeno. Sem maiúsculas: palavra inteira em maiúsculas é gritar, e
+   o que o faz ler-se como rótulo é o tamanho e o peso (regra de texto do
+   projeto). Cor mais firme que antes: 4,9:1 era o mínimo. */
 .rotuloCampo, .barraGrelha .rotuloCampo, #montagem > h2, .palcoFundo > section > h2 {
-  font-size: var(--t-micro); font-weight: 600; letter-spacing: var(--letra-larga);
-  text-transform: uppercase; color: var(--tinta-3);
+  font-size: var(--t-menor); font-weight: 600; color: var(--tinta-2);
 }
 
 .nota { color: var(--tinta-2); font-size: var(--t-menor); }
@@ -116,8 +122,8 @@ p { margin: 0; }
 }
 
 kbd {
-  font-size: var(--t-micro); font-weight: 500; line-height: 1;
-  padding: 3px 5px; border-radius: var(--r-fio);
+  font-size: 10px; font-weight: 500; line-height: 1;
+  padding: 2px 4px; border-radius: var(--r-fio);
   background: var(--sup-1); border: 1px solid var(--linha-2);
   color: var(--tinta-2); box-shadow: inset 0 -1px 0 var(--linha);
 }
@@ -235,10 +241,10 @@ input[type="checkbox"]:checked::after {
 
 .campo { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 
-/* Uma etiqueta de estado: pequena, em maiúsculas, com a cor do que diz. */
+/* Uma etiqueta de estado: pequena, com a cor do que diz. */
 .etiqueta {
-  font-size: var(--t-micro); font-weight: 600; letter-spacing: var(--letra-larga);
-  text-transform: uppercase; padding: 2px 7px; border-radius: var(--r-fio);
+  font-size: var(--t-micro); font-weight: 600;
+  padding: 2px 7px; border-radius: var(--r-fio);
   background: var(--aviso-eco); color: var(--aviso); border: 1px solid transparent;
 }
 
@@ -254,6 +260,10 @@ header { margin-bottom: var(--e6); }
   display: flex; align-items: center; gap: var(--e3);
   margin-right: auto; font-size: var(--t-grande);
 }
+.inicio { display: none; }
+/* Logo, Início e só depois o espaço: o botão fica colado ao nome, onde se procura o caminho de volta. */
+body:has(#noites:not([hidden])) .inicio, body:is(.videoAberto, :has(#palco:not([hidden]))) .inicio { display: inline-flex; margin-right: auto; }
+body:has(#noites:not([hidden])) .topo h1, body:is(.videoAberto, :has(#palco:not([hidden]))) .topo h1 { margin-right: 0; }
 /* A marca desta casa: três gravações de comprimentos diferentes e a agulha a
    atravessá-las no mesmo instante. É o que o sítio faz, desenhado. */
 .topo h1 .ic { width: 22px; height: 22px; color: var(--acento); }
@@ -349,13 +359,18 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
   background: var(--sup-2); border: 1px solid var(--linha-2); border-radius: var(--r-2);
   box-shadow: var(--sombra-flutua);
 }
-.sugestoes li { display: block; }
+.sugestoes li { display: flex; justify-content: space-between; align-items: baseline; gap: var(--e3); }
+.sugestoes .quantos { color: var(--tinta-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .sugestoes button {
   width: 100%; justify-content: flex-start; background: transparent; border-color: transparent;
   font-weight: 400; padding: 0 var(--e3);
 }
 .sugestoes button:hover, .sugestoes li.eSugerido button { background: var(--sup-3); border-color: transparent; }
 .sugestoes .ja { color: var(--tinta-3); }
+.sugestoes li { padding: var(--e2) var(--e3); border-radius: var(--r-1); cursor: pointer; }
+.sugestoes li.ja { cursor: default; }
+/* As setas mexem numa escolha que tem de se ver: e o que o Enter vai acrescentar. */
+.sugestoes li:hover, .sugestoes li[aria-selected="true"] { background: var(--sup-3); }
 
 /* A barra da noite: o selector, a confiança e o partilhar numa linha. */
 .barraSessao { align-items: flex-end; gap: var(--e4); }
@@ -371,8 +386,11 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
   background: var(--sup-1); color: var(--tinta-2);
 }
 .confianca:empty { display: none; }
-.confianca.ha { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent); background: var(--ok-eco); }
-.confianca.mau { color: var(--perigo); border-color: color-mix(in srgb, var(--perigo) 40%, transparent); background: var(--perigo-eco); }
+.confianca.ha, .confianca.exacto { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent); background: var(--ok-eco); }
+.confianca.mau, .confianca.nenhum { color: var(--perigo); border-color: color-mix(in srgb, var(--perigo) 40%, transparent); background: var(--perigo-eco); }
+/* O veredicto tem de levar a cor: o pintarConfianca escreve exacto, parcial
+   ou nenhum, e sem regras para estes nomes os tres saiam no mesmo cinzento. */
+.confianca.parcial { color: var(--aviso); border-color: color-mix(in srgb, var(--aviso) 40%, transparent); background: var(--aviso-eco); }
 
 /* ── o estado de cada canal ─────────────────────────────────────────────── */
 #canaisEstado { margin-top: var(--e4); }
@@ -384,8 +402,8 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
   font-size: var(--t-menor);
 }
 .canais li b { font-family: var(--letra-mono); font-weight: 500; }
-.canais li.vivo { border-left: 2px solid var(--ok); }
-.canais li.mau { border-left: 2px solid var(--perigo); }
+.canais li.vivo { border-color: color-mix(in srgb, var(--ok) 45%, var(--linha)); }
+.canais li.mau { border-color: color-mix(in srgb, var(--perigo) 55%, var(--linha)); }
 .parecidos { display: flex; gap: 6px; flex-wrap: wrap; }
 .parecidos button { min-height: 26px; padding: 0 var(--e3); font-size: var(--t-menor); }
 
@@ -449,6 +467,19 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 }
 .tile.semImagem { border-style: dashed; }
 
+/* Os players da Twitch (twitch.html). A Twitch pede pelo menos 400 px de
+   largura para o embed, e a barra de controlo do player fica em baixo: com o
+   quadro 16:9 do tile e o cabeçalho por cima, o fundo do player ficava
+   cortado e não se via o play nem o volume. Aqui o tile cresce com o player. */
+.grade.gradeTw { grid-template-columns: repeat(auto-fill, minmax(min(400px, 100%), 1fr)); }
+.tile.tw { aspect-ratio: auto; display: flex; flex-direction: column; cursor: default; }
+.tile.tw .cabeca {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--e2);
+  padding: var(--e2) var(--e3);
+}
+.tile.tw .quadro { aspect-ratio: 16/9; min-height: 225px; }
+.tile.tw .estadoTile { inset: auto var(--e3) 50% var(--e3); }
+
 /* Os controlos por cima do vídeo. UMA barra no fundo com dois grupos, e não
    um botão colado a cada canto: colados, batiam uns nos outros assim que o
    quadrado ficava pequeno — e com dezassete na grelha, todos ficam pequenos. */
@@ -457,7 +488,14 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
   display: flex; align-items: center; justify-content: space-between; gap: var(--e2);
   opacity: 0; transition: opacity var(--mov);
 }
+/* Num ecra de toque nao ha hover que os mostre antes do toque: invisiveis, os
+   botoes continuavam a receber o dedo, e um toque na miniatura caia no +
+   escondido e punha o angulo fora de tempo sem ninguem ver. Com rato, o
+   ponteiro passa por cima e eles aparecem antes do clique. */
 .tile:hover .controlos, .tile.foco .controlos, .tile .controlos:focus-within { opacity: 1; }
+@media (hover: none) {
+  .tile:not(.foco) .controlos, .tile:not(.foco) .fora { pointer-events: none; }
+}
 .tile .fora {
   position: absolute; inset: var(--e2) var(--e2) auto auto; z-index: 3;
   display: flex; gap: var(--e2); opacity: 0; transition: opacity var(--mov);
@@ -516,27 +554,81 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 .procuraGrelha .lupa { left: var(--e3); width: 14px; height: 14px; }
 /* Escondido pelo filtro, e não tirado: o leitor continua vivo por trás. */
 #grade .tile.foraDoFiltro { display: none; }
-.barraGrelha #quantosNaGrelha { margin-left: auto; }
-
-/* ── o Clipar ──────────────────────────────────────────────────────────────
-   Vive colado aos ângulos em foco e não no fundo da coluna: é o botão que
-   ele carrega mais vezes, e tem de estar onde os olhos já estão.
-   Do tamanho do que diz, e não da largura do ecrã: uma barra de mil e
-   duzentos pixels de cor a atravessar a página é um berro, e o berro não
-   fica mais visível por ser maior — fica mais difícil de olhar. */
-/* O Clipar EXACTAMENTE por baixo do vídeo, e ao meio dos dois quando são dois.
-   "O botão de clipar coloca exatamente em baixo do player principal, e quando
-    tem dois players rodando ele fica no meio dos 2, em baixo."
-   Três colunas e não uma linha flex: com `justify-content: center` numa linha,
-   o botão escorregava para o lado sempre que a nota ao lado dele mudava de
-   tamanho — e ela muda a cada marca. Assim o botão está no meio da coluna do
-   meio, e a nota cresce na terceira sem lhe tocar. */
-.barraClipar {
-  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
-  gap: var(--e4); margin: 0 0 var(--e4);
+/* O número de cada ângulo (a tecla de 1 a 9 que lhe passa o som) e, no que tem som, o altifalante.
+   O quadrado com som leva o fio na cor da marca, que é outra cor que a do foco: com dois no visor
+   vê-se de longe qual dos dois se está a ouvir. */
+body.mesa .tile .numAngulo {
+  display: inline-flex; align-items: center; gap: 3px; flex: 0 0 auto;
+  min-width: 18px; height: 18px; padding: 0 4px; justify-content: center;
+  border: 1px solid #ffffff70; border-radius: var(--r-1);
+  font: 600 var(--t-micro)/1 var(--letra-mono); color: #fff; text-shadow: none;
 }
-.barraClipar #clipar { grid-column: 2; min-width: 190px; min-height: 46px; font-size: var(--t-medio); }
-.barraClipar #marca { grid-column: 3; justify-self: start; }
+body.mesa .tile .numAngulo[hidden] { display: none; }
+body.mesa .tile .numAngulo .ic { width: 12px; height: 12px; }
+body.mesa .tile.ouvindo .numAngulo { background: var(--marca); border-color: var(--marca); color: var(--sobre-marca); }
+body.mesa .palcoFoco.dois .tile.ouvindo { border-color: var(--marca); box-shadow: inset 0 0 0 1px var(--marca-fio); }
+body.mesa #palco.muitosAngulos #grade .tile .numAngulo { border-color: var(--linha-3); color: var(--tinta-2); }
+.barraGrelha #quantosNaGrelha { margin-left: auto; }
+/* Muitos ângulos: no máximo dois vídeos grandes, e os outros só nomes para clicar (o dono, 10/10). O
+   leitor continua vivo por trás, e um clique no nome põe aquele ângulo no visor. O botão de pôr lado a
+   lado fica, para o segundo vídeo grande. */
+#palco.muitosAngulos #grade { grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: var(--e2); }
+#palco.muitosAngulos #grade .tile {
+  aspect-ratio: auto; height: 36px; display: flex; align-items: center;
+  background: var(--sup-1); border-color: var(--linha-2); border-radius: var(--r-2);
+}
+#palco.muitosAngulos #grade .tile:hover { background: var(--sup-2); border-color: var(--acento); }
+#palco.muitosAngulos #grade .tile :is(video, .estadoTile, .controlos, .recado) { display: none; }
+#palco.muitosAngulos #grade .tile .rotulo {
+  position: static; flex: 1 1 auto; min-width: 0; padding: 0 var(--e2) 0 var(--e3);
+  background: none; text-shadow: none; color: var(--tinta); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* Só o nome: a posição no vídeo de cada um está no visor quando ele abre. */
+#palco.muitosAngulos #grade .tile .rotulo .posicao { display: none; }
+#palco.muitosAngulos #grade .tile .fora { position: static; opacity: 1; padding: 0 2px 0 0; background: none; }
+#palco.muitosAngulos #grade .tile .fora button { min-width: 30px; min-height: 30px; background: transparent; color: var(--tinta-2); }
+
+/* ── o transporte ──────────────────────────────────────────────────────────
+   Uma barra só, colada ao vídeo, como o visor de um editor (Premiere, DaVinci
+   Resolve, CapCut) e como o leitor de qualquer plataforma: o instante à
+   esquerda, tocar e passos no meio, entrada e saída, e no fim o que SAI daqui,
+   o Clipar, que é o único botão cheio de cor desta tela. Antes estas peças
+   viviam em três sítios (o Clipar sob o vídeo, o relógio e os saltos na coluna
+   do lado, entrada e saída no fundo dela) e quem chegava não sabia por onde
+   começar (heurística de Nielsen 6: reconhecer em vez de lembrar). */
+.transporte {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--e3) var(--e5);
+  padding: var(--e3) var(--e4); margin: 0 0 var(--e4);
+  background: var(--sup-2); border: 1px solid var(--linha); border-radius: var(--r-3);
+}
+.trEsq, .trTempo, .trPassos, .trMarcas, .trClipe { display: flex; align-items: center; gap: var(--e2); min-width: 0; }
+.trEsq { gap: var(--e4); flex-wrap: wrap; }
+.trTempo { gap: var(--e3); }
+/* Quando falta largura, a ordem de leitura é: tocar, marcar entrada e saída, Clipar no fim. */
+.trMarcas { order: 2; }
+.trClipe { order: 3; margin-left: auto; }
+/* Com largura (1280 ou mais) o Clipar fica no MEIO do transporte, e portanto exatamente sob o vídeo, e sob o
+   meio dos dois quando há dois (pedido do dono). Três colunas e não uma linha flex: numa linha o botão
+   escorregava quando a nota ao lado mudava de tamanho. Os lados cedem, o meio não. */
+@media (min-width: 1280px) {
+  .transporte { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: var(--e3) var(--e4); }
+  .trEsq { grid-column: 1; justify-self: start; }
+  .trClipe { grid-column: 2; order: 0; margin: 0; justify-self: center; }
+  .trMarcas { grid-column: 3; order: 0; justify-self: end; }
+}
+.transporte button { min-height: 40px; white-space: nowrap; }
+.trPassos button, .trMarcas button { font-size: var(--t-menor); padding: 0 var(--e3); gap: 6px; }
+.trPassos .ic { width: 13px; height: 13px; opacity: .8; }
+.trPassos #menos3s .ic { transform: rotate(180deg); }
+.trPassos #menos3s, .trPassos #mais3s { font-family: var(--letra-mono); color: var(--tinta); font-weight: 600; }
+/* O tocar e pausar é o maior dos botões neutros, no meio dos dois passos (YouTube, Twitch, Kick). */
+.tocarPausar { width: 48px; min-width: 48px; min-height: 44px; padding: 0; justify-content: center; }
+.transporte .tocarPausar .ic { width: 20px; height: 20px; opacity: 1; }
+.transporte .tocarPausar.parado { border-color: var(--acento-fio); color: var(--acento); }
+.transporte #clipar { min-width: 156px; min-height: 48px; font-size: var(--t-medio); }
+/* O trecho marcado, escrito no cabeçalho da linha do tempo (onde ele também está desenhado). */
+#marca { color: var(--marca); font-family: var(--letra-mono); white-space: nowrap; }
+.transporte #agora { font-size: var(--t-grande); }
 
 /* ═══ 7 · o relógio e a linha do tempo ══════════════════════════════════════ */
 
@@ -554,7 +646,8 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
   display: flex; flex-direction: column;
   --coluna: 96px;
   background: var(--sup-2); border: 1px solid var(--linha); border-radius: var(--r-3);
-  padding: var(--e4);
+  /* 18 px a mais à direita: a última hora da régua é centrada no fim da linha e saía cortada pela borda. */
+  padding: var(--e4) calc(var(--e4) + 18px) var(--e4) var(--e4);
 }
 .barraLinha, .reguaLinha, .faixa { display: grid; grid-template-columns: var(--coluna) 1fr; gap: var(--e3); }
 .barraLinha { align-items: center; }
@@ -563,8 +656,13 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
    que ignora este ficheiro, e num painel escuro sai azul-Windows. */
 #barra {
   appearance: none; width: 100%; height: 18px; padding: 0; margin: 0;
-  background: transparent; border: 0; cursor: pointer; touch-action: manipulation;
+  background: transparent; border: 0; cursor: pointer; touch-action: none;
 }
+/* O rato e o dedo na barra são tratados pela página (com a mesma conta da agulha); o pino nativo fica
+   invisível, porque a cabeça da agulha é que mostra onde se está. O teclado continua no input. */
+.barraLinha { touch-action: none; }
+#barra::-webkit-slider-thumb { opacity: 0; }
+#barra::-moz-range-thumb { opacity: 0; }
 #barra::-webkit-slider-runnable-track { height: 4px; border-radius: var(--r-fio); background: var(--sup-4); }
 #barra::-moz-range-track { height: 4px; border-radius: var(--r-fio); background: var(--sup-4); }
 /* O pino ao CENTRO da calha, e não meio pixel acima.
@@ -613,45 +711,89 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 
 /* A agulha do instante actual, por cima de todas as faixas. Branca de
    propósito: é a única coisa que tem de se ver sobre qualquer cor. */
+.relogio { position: relative; }
 .cursor {
-  position: absolute; top: 0; bottom: 0; width: 2px; z-index: 2;
+  position: absolute; top: 0; left: 0; width: 2px; height: 0; z-index: 4;
   background: var(--tinta); box-shadow: 0 0 0 1px #0009; pointer-events: none;
 }
+.cursor[hidden] { display: none; }
+/* A cabeça da agulha: a bolinha que se arrasta, no topo da linha e centrada nela. */
+.cabecaAgulha {
+  position: absolute; left: 50%; top: 0; width: 16px; height: 16px; transform: translate(-50%, -50%);
+  border-radius: var(--r-redondo); background: var(--tinta); border: 2px solid var(--sup-0);
+  pointer-events: auto; cursor: grab; touch-action: none;
+}
+.cabecaAgulha:hover, .cursor.aArrastar .cabecaAgulha { background: var(--acento); }
+.cursor.aArrastar .cabecaAgulha { cursor: grabbing; }
+.relogio:has(#barra:focus-visible) .cabecaAgulha { box-shadow: var(--foco); }
+@media (pointer: coarse) { .cabecaAgulha { width: 24px; height: 24px; } }
 
 /* ── a régua: as horas e as kills marcadas ──────────────────────────────── */
-.relogio > .barraLinha { order: 1; }
-.relogio > .reguaLinha { order: 2; margin-top: var(--e3); }
-.relogio > .faixas { order: 3; }
-.relogio > .linha { order: 4; }
-.relogio > .saltos { order: 5; }
-.relogio > .marcas { order: 6; }
-/* Os riscos e as marcas apontam para BAIXO, para as faixas que estão logo a
-   seguir, e o fio fecha a régua por baixo em vez de por cima. */
+.relogio > .linha { order: 1; }          /* o cabeçalho: zoom, ângulos, saltos grandes */
+.relogio > .barraLinha { order: 2; }
+.relogio > .reguaLinha { order: 3; margin-top: var(--e3); }
+.relogio > .faixas { order: 4; }
+/* A régua como a de um editor e a do mapa: as horas na fila de cima, e por baixo as divisões a apontar
+   para as faixas, um traço maior em cada hora escrita e traços pequenos entre elas. O fio fecha a régua
+   por baixo. */
 .regua { position: relative; height: 30px; border-bottom: 1px solid var(--linha); }
-.regua .risco { position: absolute; top: 0; width: 1px; height: 5px; background: var(--linha-2); }
-/* A passagem de um dia para o outro: o risco atravessa a régua inteira e a
-   etiqueta escreve a data. Numa noite que começa às onze da manhã e acaba às
-   quatro da manhã seguinte, é a única coisa que diz em que dia se está. */
-.regua .risco.vira { height: 100%; background: var(--linha-3); }
-.regua .hora.vira { color: var(--tinta-2); font-weight: 500; }
-.regua .hora {
-  position: absolute; top: 8px; font-size: var(--t-micro); font-weight: 400;
-  color: var(--tinta-3); transform: translateX(-50%); white-space: nowrap;
+.regua .tique {
+  position: absolute; bottom: 0; width: 1px; height: 4px; margin-left: -.5px; pointer-events: none;
+  background: var(--linha-3); opacity: .8;
 }
-/* A kill na régua é ÂMBAR, como o marcador de qualquer mesa de montagem. É a
-   única coisa desta cor na linha do tempo, e é isso que a faz saltar. */
+.regua .tique.grande { height: 9px; background: var(--tinta-3); opacity: 1; }
+/* A passagem de um dia para o outro: o traço atravessa a régua inteira e a etiqueta escreve a data. */
+.regua .tique.vira { height: 100%; background: var(--tinta-2); }
+.regua .hora {
+  position: absolute; top: 2px; font: 400 var(--t-micro)/11px var(--letra-mono);
+  color: var(--tinta-3); transform: translateX(-50%); white-space: nowrap; pointer-events: none;
+}
+.regua .hora.vira { color: var(--tinta); font-weight: 600; padding-left: 4px; }
+.regua .hora.aEsquerda { transform: none; }
+.regua .hora.aDireita, .regua .hora.vira.aDireita { transform: translateX(-100%); padding: 0 4px 0 0; }
+/* A kill na régua é ÂMBAR, como o marcador de qualquer mesa de montagem: o número na fila das horas
+   (que se afastam dele) e o risco a descer para as faixas. */
 .regua .kill {
-  position: absolute; top: 0; height: 100%; width: 16px; transform: translateX(-50%);
-  background: none; border: 0; padding: 0; min-height: 0; cursor: pointer;
-  color: var(--marca); font-size: var(--t-micro); font-family: var(--letra-mono);
+  position: absolute; top: 0; height: 100%; width: 16px; transform: translateX(-50%); z-index: 1;
+  background: none; border: 0; padding: 0; margin: 0; min-height: 0; min-width: 0; cursor: pointer;
+  color: var(--marca); font: 600 var(--t-micro)/11px var(--letra-mono);
 }
 .regua .kill::before {
-  content: ''; position: absolute; left: 50%; top: 0; width: 2px; height: 10px;
-  margin-left: -1px; background: var(--marca); border-radius: 0 0 1px 1px;
+  content: ''; position: absolute; left: 50%; bottom: 0; width: 2px; height: 12px;
+  margin-left: -1px; background: var(--marca); border-radius: 1px 1px 0 0;
 }
-.regua .kill span { position: absolute; top: 11px; left: 50%; transform: translateX(-50%); }
-.regua .kill:hover { background: none; }
+.regua .kill span { position: absolute; top: 2px; left: 50%; transform: translateX(-50%); }
+/* Em cima de uma hora escrita, o número desce para o lado direito do risco. */
+.regua .kill span.baixo { top: 14px; left: calc(50% + 3px); transform: none; line-height: 11px; }
+.regua .kill:hover, .regua .kill:active { background: none; }
 .regua .kill:hover::before { background: var(--marca-alto); }
+.regua .kill:hover span { color: var(--marca-alto); }
+/* As horas da régua descem pelas faixas, muito fracas, como as linhas das horas no mapa. */
+.trilho .linhaHora {
+  position: absolute; top: 0; bottom: 0; width: 1px; margin-left: -.5px; z-index: 1; pointer-events: none;
+  background: color-mix(in srgb, var(--tinta) 9%, transparent);
+}
+.trilho .linhaHora.vira { background: color-mix(in srgb, var(--tinta) 22%, transparent); }
+/* O pico de chat é o mesmo losango da legenda do mapa, em cima da faixa do canal que o teve, a meio
+   da altura do trilho. O contorno escuro é o que o separa do ciano da gravação e dos riscos do que já
+   foi lido e ouvido. */
+.trilho .picoChat {
+  position: absolute; top: 0; bottom: 0; z-index: 2; width: 12px; transform: translateX(-50%);
+  background: none; border: 0; padding: 0; margin: 0; min-height: 0; min-width: 0; cursor: pointer;
+}
+.trilho .picoChat::before {
+  content: ''; position: absolute; left: 50%; top: 50%; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px;
+  background: var(--marca); box-shadow: 0 0 0 1.5px var(--sup-0); transform: rotate(45deg);
+}
+.trilho .picoChat:hover, .trilho .picoChat:active { background: none; }
+.trilho .picoChat:hover::before { background: var(--marca-alto); }
+.trilho .picoChat:focus-visible { outline: none; }
+.trilho .picoChat:focus-visible::before { background: var(--marca-alto); box-shadow: 0 0 0 1.5px var(--sup-0), 0 0 0 3px var(--tinta); }
+/* Na faixa Todos, um risco fraco por minuto: diz que ali houve chat, e os losangos ficam nas faixas. */
+.trilho .picoGeral {
+  position: absolute; top: 3px; bottom: 3px; width: 2px; margin-left: -1px; display: block; pointer-events: none;
+  background: color-mix(in srgb, var(--marca) 55%, transparent); border-radius: 1px;
+}
 
 /* ── o instante, em números ──────────────────────────────────────────────── */
 .relogio .linha { justify-content: space-between; margin-top: var(--e4); }
@@ -669,12 +811,21 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 }
 #agora.parado { color: var(--tinta-3); }
 
-/* ── os saltos ─────────────────────────────────────────────────────────────
-   Oito, simétricos: 5 min e 1 min para achar o sítio, 10 s e 3 s para apurar.
-   Grelha de quatro colunas iguais e não uma linha flex: numa linha flex o
-   quarto botão cai para baixo assim que o ecrã aperta, e aí deixam de se ler
-   como um conjunto. Aqui são sempre duas filas certas, coluna a coluna. */
-.saltos { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--e2); margin-top: var(--e4); }
+/* ── os saltos grandes ────────────────────────────────────────────────────
+   Quatro, no cabeçalho da linha do tempo: 5 min e 1 min para cada lado, para achar o sítio. Os de 3 s,
+   para apurar, estão no transporte, ao lado do tocar. */
+.saltos { display: flex; align-items: center; gap: var(--e2); margin-left: auto; }
+.saltos button { min-width: 0; overflow: hidden; }
+#menos5m, #mais5m { font-size: 11px; }
+#menos3s, #mais3s { color: var(--tinta); font-weight: 600; }
+/* Os seis só cabem numa linha (no telemóvel e no painel ao lado do vídeo) sem
+   as setas nos de minutos: a ordem na linha, recuar à esquerda e avançar à
+   direita, já diz o sentido, e o 3 s, o mais usado, fica com a dele. */
+.saltos button { padding: 0 4px; gap: 3px; }
+#menos5m .ic, #mais5m .ic, #menos1m .ic, #mais1m .ic { display: none; }
+#menos1m, #mais1m { padding: 0 4px; }
+#menos5m, #mais5m { padding: 0 2px; }
+@media (max-width: 520px) { .saltos { gap: 4px; } }
 /* Com cara de botão, e não de texto.
    "Aqui nos botões queria que parecesse botões." Estavam transparentes e sem
    fio, com a ideia de que andar no tempo é navegação e a navegação se cala —
@@ -687,11 +838,6 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 }
 .saltos button:hover { color: var(--tinta); }
 .saltos .ic { width: 13px; height: 13px; opacity: .75; }
-
-/* ── marcar entrada e saída ─────────────────────────────────────────────── */
-.marcas { display: grid; grid-template-columns: 1fr 1fr; gap: var(--e3); margin-top: var(--e3); }
-.marcas button { min-height: 38px; padding: 0 var(--e3); white-space: nowrap; font-size: var(--t-menor); }
-.marcas kbd { margin-left: 2px; }
 
 /* ── sincronizar por áudio ──────────────────────────────────────────────── */
 .sincronizar { gap: var(--e4); }
@@ -743,31 +889,31 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
   display: flex; align-items: center; align-content: center; gap: var(--e3); flex-wrap: wrap;
   padding: var(--e4); border-radius: var(--r-2);
   background: var(--sup-1); border: 1px solid var(--linha);
-  border-left: 3px solid var(--linha-2);
 }
-.momentos li.nota { display: block; border-left-color: var(--linha); color: var(--tinta-3); }
+.momentos li.nota { display: block; color: var(--tinta-3); }
 /* Onde ele está agora, na lista. Sem isto, com trinta kills, o cursor da
    régua e a lista eram dois sítios sem relação nenhuma. */
 .momentos li.aqui {
-  border-color: color-mix(in srgb, var(--acento) 26%, var(--linha));
-  border-left-color: var(--acento);
-  background: color-mix(in srgb, var(--acento) 7%, var(--sup-1));
+  border-color: var(--acento-fio);
+  background: color-mix(in srgb, var(--acento) 10%, var(--sup-1));
 }
-/* Com vítima identificada — a kill está pronta a exportar. */
-.momentos li.confirmada { border-left-color: var(--ok); }
+/* Com vítima identificada: a kill está pronta a exportar. O estado também está escrito na ficha
+   (as vítimas), e a borda só reforça. Sem barra colorida de um lado, que é cara de modelo pronto. */
+.momentos li.confirmada { border-color: color-mix(in srgb, var(--ok) 45%, var(--linha)); }
 .momentos li .n {
   font-size: var(--t-menor); font-weight: 500; color: var(--tinta-3);
   min-width: 20px;
 }
 .momentos li > span:nth-of-type(1) { font-family: var(--letra-mono); font-size: var(--t-menor); }
 .momentos li .quem { font-weight: 500; font-size: var(--t-menor); color: var(--tinta); }
+.momentos li .tipo { font-size: var(--t-micro); color: var(--tinta-2); border: 1px solid var(--linha-2); border-radius: var(--r-1); padding: 0 var(--e2); line-height: 18px; white-space: nowrap; max-width: 16em; overflow: hidden; text-overflow: ellipsis; }
 .momentos li button { min-height: 30px; padding: 0 var(--e3); font-size: var(--t-menor); }
 .momentos li .fora { color: var(--tinta-3); background: transparent; border-color: transparent; }
 .momentos li .fora:hover { color: var(--perigo); background: var(--perigo-eco); border-color: transparent; }
 .momentos li .quantos { margin-left: auto; color: var(--tinta-3); font-size: var(--t-menor); }
 .momentos .ajustado {
-  font-size: var(--t-micro); font-weight: 600; letter-spacing: var(--letra-larga);
-  text-transform: uppercase; padding: 2px 7px; border-radius: var(--r-fio);
+  font-size: var(--t-micro); font-weight: 600;
+  padding: 2px 7px; border-radius: var(--r-fio);
   background: var(--marca-eco); color: var(--marca);
 }
 .momentos .pega { margin: 0; }
@@ -803,6 +949,11 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 }
 .corte li b { font-family: var(--letra-mono); font-weight: 500; }
 .corte .dur { margin-left: auto; color: var(--tinta-3); }
+/* Os dois campos de segundos do corte ficam do tamanho de um número de dois algarismos. Com a largura cheia
+   que todo `input` tem, cada um ocupava uma linha da coluna da direita e o "s" caía por baixo. */
+.corte li { gap: var(--e2) var(--e3); }
+.corte label { display: inline-flex; align-items: center; gap: var(--e2); white-space: nowrap; color: var(--tinta-2); }
+.corte input { width: 4.2em; min-width: 0; padding: 4px 6px; text-align: right; }
 
 /* A fila de ficheiros prontos. */
 .fila { list-style: none; margin: var(--e4) 0 0; padding: 0; display: grid; gap: 6px; }
@@ -825,6 +976,8 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
   padding: var(--e5); background: var(--vidro);
   backdrop-filter: blur(3px);
 }
+/* O foco entra na caixa ao abrir (para o leitor de ecra), sem anel a volta dela. */
+.modalCaixa:focus { outline: none; }
 .modalCaixa {
   width: min(980px, 100%); max-height: calc(100vh - var(--e7));
   overflow-y: auto; display: flex; flex-direction: column; gap: var(--e4);
@@ -845,6 +998,10 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 .modalTopo select { width: auto; min-width: 150px; }
 .modalTopo button { width: 34px; min-width: 34px; padding: 0; background: transparent; border-color: transparent; color: var(--tinta-2); }
 .modalTopo button:hover { background: var(--sup-3); color: var(--tinta); border-color: transparent; }
+/* O Voltar para a lista tem texto: não cabe nos 34 px do fechar, e partia-se em três linhas. Ganha o espaço dele
+   e a janela do clipe passa a quebrar a linha do topo em vez de apertar. */
+.modalTopo { flex-wrap: wrap; row-gap: var(--e3); }
+.modalTopo button.voltarLista { width: auto; min-width: 0; min-height: 44px; padding: 0 var(--e4); white-space: nowrap; gap: var(--e2); }
 
 /* A linha que TERMINA a tarefa fica presa ao fundo da janela. Numa janela
    que rola — e num telemóvel em pé rola sempre — o Exportar ficava noventa
@@ -859,6 +1016,78 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 .atalhos { display: grid; grid-template-columns: auto 1fr; gap: var(--e3) var(--e5); margin: 0; align-items: center; }
 .atalhos dt { display: flex; gap: 5px; }
 .atalhos dd { margin: 0; font-size: var(--t-menor); color: var(--tinta-2); }
+
+/* ── a janela dos atalhos ──────────────────────────────────────────────────
+   Uma tabela de duas colunas, como a dos editores: o que faz à esquerda, as
+   teclas à direita numa caixa que se carrega para gravar outra. A busca e o
+   aviso de conflito ficam por cima da lista, onde o olho já está. */
+.modalCaixa.atalhosCaixa { width: min(680px, 100%); gap: var(--e4); }
+.atalhosComo { margin: 0; line-height: var(--lh); }
+.atalhosBusca { position: relative; }
+.atalhosBusca .ic { position: absolute; left: var(--e4); top: 50%; transform: translateY(-50%); color: var(--tinta-3); pointer-events: none; }
+.atalhosBusca input { padding-left: 34px; }
+.listaAtalhos { display: flex; flex-direction: column; gap: var(--e5); }
+.grupoAtalhos h3 {
+  margin: 0 0 var(--e2); padding: 0 var(--e3);
+  font-size: var(--t-menor); font-weight: 600; color: var(--tinta-2); letter-spacing: .01em;
+}
+.grupoAtalhos ul { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--linha); }
+.grupoAtalhos .grupoNota { margin: var(--e2) 0 0; padding: 0 var(--e3); font-size: var(--t-micro); color: var(--tinta-3); }
+.atalho {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; align-items: center; gap: var(--e2);
+  padding: var(--e2) var(--e2) var(--e2) var(--e3); min-height: 44px;
+  border-bottom: 1px solid var(--linha); cursor: pointer;
+  transition: background var(--mov-rapido);
+}
+.atalho:hover { background: var(--sup-1); }
+.atalho.aGravar { background: var(--acento-eco); }
+.atalhoNome { font-size: var(--t-base); color: var(--tinta); line-height: var(--lh-apertado); padding: var(--e2) 0; }
+.atalhoTeclas {
+  min-width: 128px; min-height: 32px; justify-content: flex-end; gap: 6px; padding: 0 var(--e3);
+  background: var(--sup-1); border-color: var(--linha);
+  font-size: var(--t-menor); color: var(--tinta-2);
+}
+.atalhoTeclas:hover:not(:disabled) { background: var(--sup-2); }
+.atalho.mudado .atalhoTeclas { border-color: var(--acento-fio); }
+.atalho.aGravar .atalhoTeclas, .atalho.aGravar .atalhoTeclas:hover {
+  border-color: var(--acento); background: var(--sup-1); color: var(--acento);
+}
+.atalhoTeclas .combo { display: inline-flex; align-items: center; gap: 3px; }
+.atalhoTeclas kbd { font-size: var(--t-micro); padding: 4px 6px; min-width: 22px; text-align: center; color: var(--tinta); background: var(--sup-3); }
+.atalhoTeclas .mais, .atalhoTeclas .ou { color: var(--tinta-3); font-size: var(--t-micro); }
+.atalhoTeclas .semTecla { color: var(--tinta-3); }
+.atalhoTeclas .aEspera { animation: piscaEspera 1.2s ease-in-out infinite; }
+@keyframes piscaEspera { 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { .atalhoTeclas .aEspera { animation: none; } }
+.atalhoBotao { width: 32px; min-width: 32px; min-height: 32px; color: var(--tinta-3); }
+.atalhoBotao:disabled { opacity: .25; }
+.conflitoAtalho {
+  display: flex; gap: var(--e4); align-items: flex-start;
+  padding: var(--e4); border-radius: var(--r-2);
+  background: var(--aviso-eco); border: 1px solid color-mix(in srgb, var(--aviso) 45%, transparent);
+}
+.conflitoAtalho[hidden] { display: none; }
+/* O aviso abre logo por baixo da linha que se está a mudar, e a linha dona da tecla fica marcada. */
+.listaAtalhos .conflitoLinha { padding: var(--e3) 0; border-bottom: 1px solid var(--linha); cursor: default; }
+.atalho.emConflito { background: var(--aviso-eco); }
+.atalho.emConflito .atalhoTeclas { border-color: var(--aviso); }
+.atalho.donoConflito { box-shadow: inset 2px 0 0 var(--aviso); }
+.atalho.donoConflito .atalhoTeclas { border-color: color-mix(in srgb, var(--aviso) 60%, transparent); }
+.conflitoAtalho > .ic { color: var(--aviso); margin-top: 2px; }
+.conflitoCorpo { display: flex; flex-direction: column; gap: var(--e3); min-width: 0; }
+.conflitoCorpo p { margin: 0; line-height: var(--lh); }
+.conflitoCorpo b { color: var(--tinta); font-weight: 600; }
+.grupoAtalhos.fixos .atalhos { padding: var(--e3) var(--e3) 0; border-top: 1px solid var(--linha); }
+.estadoAtalhos { margin: 0; min-height: 1.5em; color: var(--tinta-2); }
+.atalhosFim .empurra { flex: 1; }
+@media (max-width: 620px) {
+  .atalho { gap: var(--e1); padding: var(--e1) 0 var(--e1) var(--e2); min-height: 48px; }
+  .atalhoNome { font-size: var(--t-menor); padding-right: var(--e2); }
+  .atalhoTeclas { min-width: 96px; min-height: 40px; padding: 0 var(--e2); gap: 4px; }
+  .atalhoBotao { width: 40px; min-width: 40px; min-height: 40px; }
+  .atalhosFim .empurra { display: none; }
+  .modal .atalhosFim #padraoTodos { flex-basis: 100%; }
+}
 
 /* ── o editor do clipe ─────────────────────────────────────────────────────
    À esquerda o vídeo deitado com os enquadramentos por cima; à direita o
@@ -913,6 +1142,13 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 .puxar.se { bottom: -9px; right: -9px; cursor: nwse-resize; }
 
 .molduraRetrato { position: relative; line-height: 0; }
+/* O guia da zona livre do TikTok na prévia 9:16. Os três números são os de ZONA_TIKTOK em retrato.js
+   (cima 9%, baixo 20%, direita 13%): um teste confere que são os mesmos. Só se vê, não vai no ficheiro. */
+.zonaTikTok {
+  position: absolute; top: 9%; bottom: 20%; left: 0; right: 13%; z-index: 1; pointer-events: none;
+  border: 1px dashed color-mix(in srgb, var(--tinta) 60%, transparent); border-left: 0;
+  box-shadow: 0 0 0 1px #0006;
+}
 .telaRetrato {
   width: auto; height: 34vh; max-height: 34vh; display: block;
   background: var(--video-fundo); border: 1px solid var(--linha); border-radius: var(--r-2);
@@ -931,6 +1167,22 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 .modosRetrato { justify-content: center; }
 .modoRetrato { width: 40px; min-width: 40px; padding: 0; }
 .modoRetrato .ic { width: 19px; height: 19px; }
+/* Os modelos de onde fica a webcam, por baixo da tela do streamer: quatro botões com o mesmo desenho,
+   virado para o canto de cada um. O "Voltar ao modelo" fica pequeno, ao fundo da mesma linha. */
+.modelosWebcam { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2) var(--e3); }
+.modelosWebcam[hidden] { display: none; }
+.modelosWebcam > .linha { gap: var(--e2); flex-wrap: nowrap; }
+.modeloWebcam { width: 40px; min-width: 40px; padding: 0; }
+.modeloWebcam .ic { width: 20px; height: 20px; }
+.modeloWebcam[data-modelo="cimaEsq"] .ic { transform: scaleY(-1); }
+.modeloWebcam[data-modelo="cimaDir"] .ic { transform: scale(-1, -1); }
+.modeloWebcam[data-modelo="baixoDir"] .ic { transform: scaleX(-1); }
+.modeloWebcam[aria-pressed="true"] { color: var(--acento); border-color: var(--acento); }
+.voltarModelo { margin-left: auto; font-size: var(--t-menor); padding: 0 var(--e3); }
+/* A webcam achada sozinha: o botão ao lado dos modelos e o aviso numa linha só dele, por baixo. */
+body.mesa .acharWebcam { font-size: var(--t-menor); padding: 0 var(--e3); }
+body.mesa .webcamAchada { flex: 1 0 100%; margin: 0; font-size: var(--t-menor); color: var(--tinta-2); }
+body.mesa .webcamAchada[hidden] { display: none; }
 .semPrevia {
   width: 100%; min-height: 44px; background: var(--aviso-eco); color: var(--aviso);
   border-color: color-mix(in srgb, var(--aviso) 40%, transparent);
@@ -939,9 +1191,11 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 /* ── a barra de corte ──────────────────────────────────────────────────────
    O poço é a gravação, o âmbar é o pedaço escolhido, e a agulha branca é
    onde a imagem está. As mesmas três cores da linha do tempo grande. */
+/* Sem `overflow: hidden`: a cabeça da agulha fica meio por cima da barra, como a da linha do tempo, e
+   o espaço de cima é o que a deixa à vista. */
 .barraClipe {
-  position: relative; height: 44px; border-radius: var(--r-2);
-  background: var(--sup-1); border: 1px solid var(--linha); overflow: hidden; touch-action: none;
+  position: relative; height: 44px; border-radius: var(--r-2); margin-top: var(--e3);
+  background: var(--sup-1); border: 1px solid var(--linha); touch-action: none; cursor: pointer;
 }
 .barraClipe .seleccao { position: absolute; top: 0; bottom: 0; background: var(--marca-eco); border-inline: 1px solid var(--marca-fio); }
 .barraClipe .pega {
@@ -956,20 +1210,45 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 }
 .barraClipe .pega.de { border-radius: var(--r-fio) 0 0 var(--r-fio); }
 .barraClipe .pega.ate { border-radius: 0 var(--r-fio) var(--r-fio) 0; }
-.barraClipe .cabeca { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--tinta); z-index: 4; pointer-events: none; }
+.barraClipe .seleccao { border-inline: 0; }
+/* A agulha do clipe: a mesma peça da linha do tempo, uma linha com a cabeça em cima, centrada nela.
+   Só a cabeça apanha o rato e o dedo; a linha deixa passar, para as pegas por baixo continuarem a ser
+   agarradas. Fora da cabeça, o clique na barra é que a leva. */
+.barraClipe .cabeca {
+  position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; z-index: 4; pointer-events: none;
+  background: var(--tinta); box-shadow: 0 0 0 1px #0009;
+}
+.barraClipe .cabeca:focus { outline: none; }
+.cabecaClipe {
+  position: absolute; left: 50%; top: 0; width: 16px; height: 16px; transform: translate(-50%, -50%);
+  border-radius: var(--r-redondo); background: var(--tinta); border: 2px solid var(--sup-0);
+  pointer-events: auto; cursor: grab; touch-action: none;
+}
+.cabecaClipe:hover, .barraClipe.aArrastar .cabecaClipe { background: var(--acento); }
+.barraClipe.aArrastar .cabecaClipe { cursor: grabbing; }
+.barraClipe .cabeca:focus-visible .cabecaClipe { box-shadow: var(--foco); }
+@media (pointer: coarse) { .cabecaClipe { width: 24px; height: 24px; } }
 
 /* Uma linha por ponta, e o ▶ ao lado das duas: toca o pedaço inteiro e não
    uma das pontas. Numa linha só, num telemóvel em pé, o último botão caía
    sozinho para baixo — e um par de setas partido ao meio deixa de se ler
    como um par. Em grelha de quatro colunas isso não pode acontecer. */
 .aparar {
-  display: grid; grid-template-columns: auto minmax(48px, 1fr) minmax(48px, 1fr) 56px;
-  gap: var(--e3); align-items: stretch; justify-content: start; max-width: 420px;
+  display: grid; grid-template-columns: minmax(0, 1fr) 56px minmax(0, 1fr); gap: var(--e3);
+  align-items: stretch; max-width: 520px;
 }
-.aparar .rotuloCampo { align-self: center; }
-.aparar .passo { min-height: 44px; width: auto; min-width: 0; padding: 0; }
-.aparar .ver { grid-row: 1 / span 2; grid-column: 4; width: auto; min-width: 0; padding: 0; }
-/* A seta dupla aponta para onde o botão anda. */
+/* Cada ponta: o nome em cima, na cor dela, e o par de passos por baixo. O passo é de meio segundo
+   (com Shift, 0,1 s), e o botão diz isso. */
+.apararGrupo {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 4px var(--e2); align-content: start;
+  padding-left: var(--e3); border-left: 3px solid var(--inicio);
+}
+.apararFim { border-left-color: var(--fim); }
+.apararGrupo .rotuloCampo { grid-column: 1 / -1; font-size: var(--t-base); font-weight: 600; }
+.apararInicio .rotuloCampo { color: var(--inicio); }
+.apararFim .rotuloCampo { color: var(--fim); }
+.aparar .passo { min-height: 44px; width: auto; min-width: 0; padding: 0 var(--e2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.aparar .ver { align-self: end; min-height: 44px; width: auto; min-width: 0; padding: 0; }
 .aparar .recua .ic, .saltos button[id^="menos"] .ic { transform: rotate(180deg); }
 
 /* ═══ 11 · o ecrã de PC ═════════════════════════════════════════════════════ */
@@ -986,7 +1265,7 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
   }
   .palcoVideo { grid-area: video; min-width: 0; }
   .palcoLadoCaixa { grid-area: lado; min-width: 0; align-self: stretch; }
-  #montagem { grid-area: monta; min-width: 0; }
+  .palcoDireita { grid-area: monta; min-width: 0; }
   .palcoFundo { min-width: 0; margin-top: var(--e6); }
 
   /* A linha do tempo acompanha a página: ver o vídeo e saber onde se está no
@@ -1017,37 +1296,37 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
    kills a rolar. Medido com dezassete ângulos e uma kill, em 1920×1080 e em
    1366×720: tudo o que se carrega está dentro do ecrã. */
 @media (min-width: 1080px) and (min-height: 640px) {
-  body.mesa:has(#palco:not([hidden])) {
-    height: 100vh; box-sizing: border-box; overflow: hidden;
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) {
+    height: 100vh; box-sizing: border-box;
     display: flex; flex-direction: column;
   }
-  body.mesa:has(#palco:not([hidden])) > header { flex: 0 0 auto; margin-bottom: var(--e2); }
-  body.mesa:has(#palco:not([hidden])) > header .topo { padding-bottom: var(--e3); }
-  body.mesa:has(#palco:not([hidden])) > header .passos { display: none; }
-  body.mesa:has(#palco:not([hidden])) > header .topo h1 { font-size: var(--t-medio); }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) > header { flex: 0 0 auto; margin-bottom: var(--e2); }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) > header .topo { padding-bottom: var(--e3); }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) > header .passos { display: none; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) > header .topo h1 { font-size: var(--t-medio); }
   /* A preparação vira uma BARRA e não um par de painéis com tecto.
      Com `max-height: 10vh` e rolagem por dentro, o que se via era um painel
      cortado a meio de uma palavra — a página parecia partida. Aqui os dois
      painéis deitam-se numa faixa: os rótulos calam-se (o `placeholder` de
      cada caixa já diz o que ela é), a caixa dos canais fica com uma linha de
      altura e cresce por dentro, e tudo cabe em 46 px. */
-  body.mesa:has(#palco:not([hidden])) > .topoTrabalho {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) > .topoTrabalho {
     flex: 0 0 auto; display: flex; align-items: center; gap: var(--e3);
     max-height: none; overflow: visible; margin-bottom: var(--e3);
   }
-  body.mesa:has(#palco:not([hidden])) > .topoTrabalho > * { min-width: 0; }
-  body.mesa:has(#palco:not([hidden])) #entrada,
-  body.mesa:has(#palco:not([hidden])) #noites {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) > .topoTrabalho > * { min-width: 0; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #entrada,
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #noites {
     display: flex; align-items: center; gap: var(--e3); flex: 1 1 0;
     padding: var(--e3); margin: 0; max-width: none; border-radius: var(--r-2);
   }
-  body.mesa:has(#palco:not([hidden])) .topoTrabalho .rotuloCampo,
-  body.mesa:has(#palco:not([hidden])) .topoTrabalho label[for],
-  body.mesa:has(#palco:not([hidden])) #resumoNoite,
-  body.mesa:has(#palco:not([hidden])) #entrada > .campo:first-child { display: none; }
-  body.mesa:has(#palco:not([hidden])) #entrada .entradaGrelha { display: flex; gap: var(--e3); flex: 1 1 auto; min-width: 0; }
-  body.mesa:has(#palco:not([hidden])) #entrada .campo,
-  body.mesa:has(#palco:not([hidden])) #noites .campo { flex: 1 1 0; min-width: 0; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .topoTrabalho .rotuloCampo,
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .topoTrabalho label[for],
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #resumoNoite,
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #corpoVod > .campoLink { display: none; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #entrada .entradaGrelha { display: flex; gap: var(--e3); flex: 1 1 auto; min-width: 0; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #entrada .campo,
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #noites .campo { flex: 1 1 0; min-width: 0; }
   /* Duas linhas e sem calha de rolagem.
      "Isso eu não quero, uma barra lateral pra rolar nessa parte de cima acho
       muito feio: podia utilizar uma linha a mais, pouca coisa de tamanho, com
@@ -1057,7 +1336,7 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
      desenhada. Duas linhas de letra pequena mostram quatro nomes, e quem
      precisar de mais rola com a roda — a caixa continua a rolar, o que
      desaparece é o risco cinzento. */
-  body.mesa:has(#palco:not([hidden])) #entrada textarea {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #entrada textarea {
     /* 66 = 2 de fio + 10 de folga + 3 linhas de 18. A conta é exacta de
        propósito: com uma altura qualquer sobra uma tira da linha seguinte
        encostada ao fundo, e uma letra cortada ao meio lê-se como avaria.
@@ -1067,38 +1346,38 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
     font-size: var(--t-micro); line-height: 18px; white-space: pre;
     overflow: auto; scrollbar-width: none;
   }
-  body.mesa:has(#palco:not([hidden])) #entrada textarea::-webkit-scrollbar { width: 0; height: 0; }
-  body.mesa:has(#palco:not([hidden])) .topoTrabalho input,
-  body.mesa:has(#palco:not([hidden])) .topoTrabalho select { min-height: 34px; padding: 6px var(--e3); }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #entrada textarea::-webkit-scrollbar { width: 0; height: 0; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .topoTrabalho input,
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .topoTrabalho select { min-height: 34px; padding: 6px var(--e3); }
   /* A lupa vive dentro da caixa: com a caixa apertada, a folga da esquerda
      tem de encolher com ela ou o desenho fica por cima da primeira letra. */
-  body.mesa:has(#palco:not([hidden])) .procura input { padding-left: var(--e6); }
-  body.mesa:has(#palco:not([hidden])) .procura .lupa { left: var(--e3); width: 14px; height: 14px; }
-  body.mesa:has(#palco:not([hidden])) .topoTrabalho select { padding-right: var(--e6); }
-  body.mesa:has(#palco:not([hidden])) .topoTrabalho button { min-height: 34px; padding: 0 var(--e4); }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .procura input { padding-left: var(--e6); }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .procura .lupa { left: var(--e3); width: 14px; height: 14px; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .topoTrabalho select { padding-right: var(--e6); }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .topoTrabalho button { min-height: 34px; padding: 0 var(--e4); }
   /* Cada peça da barra com o seu lugar, por ordem de quem não pode faltar.
      Sem isto o selector da noite — que é a coisa que mais se carrega desta
      metade — era espremido até desaparecer pela frase do link, e as duas
      notas embrulhavam em duas linhas cada uma. */
-  body.mesa:has(#palco:not([hidden])) .barraSessao {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .barraSessao {
     flex: 1 1 auto; align-items: center; flex-wrap: nowrap; gap: var(--e3); min-width: 0;
   }
   /* Com `#noites` no selector, e não sem ele: a regra genérica desta barra
      traz um `#` e ganha a qualquer contagem de classes, por mais específica
      que pareça. Foi assim que o selector da noite ficou com sete pixels. */
-  body.mesa:has(#palco:not([hidden])) #noites .barraSessao > .campo { flex: 1 1 210px; min-width: 150px; }
-  body.mesa:has(#palco:not([hidden])) .barraSessao > #partilhar { flex: 0 0 auto; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #noites .barraSessao > .campo { flex: 1 1 210px; min-width: 150px; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .barraSessao > #partilhar { flex: 0 0 auto; }
   /* As notas cedem primeiro, e cortam com reticências em vez de embrulhar:
      duas linhas aqui empurram a barra e roubam altura ao vídeo. */
-  body.mesa:has(#palco:not([hidden])) .barraSessao > .nota,
-  body.mesa:has(#palco:not([hidden])) .barraSessao > .confianca {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .barraSessao > .nota,
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .barraSessao > .confianca {
     flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   /* Entre as duas notas, quem cede primeiro é a confiança: ela diz uma coisa
      que não muda, e a do link diz o instante — que é o que muda a cada
      segundo e a única razão para a frase estar ali. */
-  body.mesa:has(#palco:not([hidden])) .barraSessao > .confianca { flex: 0 4 auto; }
-  body.mesa:has(#palco:not([hidden])) .barraSessao > #estadoPartilha { flex: 0 1 auto; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .barraSessao > .confianca { flex: 0 4 auto; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .barraSessao > #estadoPartilha { flex: 0 1 auto; }
   /* TODOS os nomes, numa linha própria por baixo da barra.
      "Você fez as mudanças na parte de cima do front end no PC que eu falei,
       uma linha a mais com todos os nomes adicionados?"
@@ -1112,164 +1391,184 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
      patológico — a 11 px cabem umas trinta pastilhas em duas linhas, e ele
      usa dezassete no máximo. Se alguma vez passar disso rola com a roda, e
      sem risco cinzento à vista. */
-  body.mesa:has(#palco:not([hidden])) > .topoTrabalho { flex-wrap: wrap; }
-  body.mesa:has(#palco:not([hidden])) #canaisEstado { display: none; }
-  body.mesa:has(#palco:not([hidden])) #canaisEstado:has(li) {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) > .topoTrabalho { flex-wrap: wrap; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #canaisEstado { display: none; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #canaisEstado:has(li) {
     display: block; flex: 1 0 100%; max-width: none; margin: 0;
     /* 54 = 2 pastilhas de 24 (18 de linha + 2+2 de folga + 2 de fio) e 6 de
        intervalo. A conta é exacta de propósito: com 52 sobrava uma tira de
        2 px da segunda linha, e uma letra cortada ao meio lê-se como avaria. */
     max-height: 54px; overflow-y: auto; scrollbar-width: none;
   }
-  body.mesa:has(#palco:not([hidden])) #canaisEstado::-webkit-scrollbar { width: 0; height: 0; }
-  body.mesa:has(#palco:not([hidden])) #canaisEstado .canais {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #canaisEstado::-webkit-scrollbar { width: 0; height: 0; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #canaisEstado .canais {
     display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
   }
-  body.mesa:has(#palco:not([hidden])) #canaisEstado .canais li {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #canaisEstado .canais li {
     flex: 0 0 auto; flex-wrap: nowrap; gap: 6px; white-space: nowrap;
     padding: 2px 4px 2px var(--e3); font-size: var(--t-micro); line-height: 18px;
   }
   /* "1 VOD(s)" vezes dezassete é ruído, e ruído é o que faz uma linha precisar
      de duas. O que ele quer ler aqui é QUEM está carregado. Quem falhou
      continua a dizer porquê: essa nota é a única razão de a linha existir. */
-  body.mesa:has(#palco:not([hidden])) #canaisEstado .canais li:not(.mau) .nota { display: none; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #canaisEstado .canais li:not(.mau) .nota { display: none; }
   /* Sem isto o ✕ herda os 34 px de altura dos botões da barra e cada pastilha
      fica com a altura de um campo de texto. */
-  body.mesa:has(#palco:not([hidden])) #canaisEstado .canais li .tirar {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #canaisEstado .canais li .tirar {
     min-height: 18px; height: 18px; width: 18px; padding: 0;
     font-size: var(--t-micro); line-height: 1;
   }
-  body.mesa:has(#palco:not([hidden])) #canaisEstado .canais li .parecidos button {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #canaisEstado .canais li .parecidos button {
     min-height: 20px; padding: 0 6px; font-size: var(--t-micro);
   }
-  body.mesa:has(#palco:not([hidden])) > footer { display: none; }
-  body.mesa:has(#palco:not([hidden])) #palco:not([hidden]) {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) > footer { display: none; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #palco:not([hidden]) {
     flex: 1 1 auto; min-height: 0; gap: var(--e4);
     grid-template-rows: auto minmax(0, 1fr);
     grid-template-areas: "video tempo" "video monta";
     align-items: stretch;
   }
 
-  /* ESQUERDA. `overflow: hidden` de propósito: o que não couber fica cortado
-     e o teste apanha-o, em vez de escorrer e pôr a página a rolar. */
-  body.mesa:has(#palco:not([hidden])) .palcoVideo {
-    grid-area: video; display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+  /* A tela do vídeo como um editor (Premiere, DaVinci Resolve, CapCut, e o editor de clipes da Kick):
+     o visor com o transporte à esquerda, os ângulos e a montagem numa coluna à direita, e a linha do
+     tempo por baixo, em toda a largura. É onde qualquer editor a põe, e quem já usou um sabe onde olhar.
+     Antes a linha do tempo era uma coluna estreita ao lado do vídeo e o vídeo ficava com 550 px num
+     monitor de 1440. A altura da linha do tempo é a do que tem dentro (até 36% da tela): com dois
+     canais sobra quase tudo para o vídeo; com trinta, as faixas rolam por dentro. */
+  /* A página só não rola enquanto o visor couber. O palco não desce abaixo do que tem dentro
+     (`min-height: auto`, e a linha de cima com `auto` como mínimo): o vídeo com a altura mínima dele,
+     o transporte e as ferramentas. Quando as barras de cima comem mais do que isso, a página rola e
+     nada fica por cima de nada. Antes o mínimo era zero: o palco cedia tudo, o visor virava uma
+     miniatura e o resto escorria por cima da linha do tempo (o dono, 11/10). */
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #palco:not([hidden]) {
+    flex: 1 1 auto; min-height: auto; gap: var(--e3) var(--e4);
+    grid-template-columns: minmax(0, 1fr) clamp(300px, 27vw, 420px);
+    grid-template-rows: minmax(auto, 1fr) auto;
+    grid-template-areas: "video lado" "tempo tempo";
+    align-items: stretch;
   }
-  /* O foco cresce até onde a coluna deixa, e a grelha fica com o resto.
-     Estava preso em 32vh: num monitor de 1920 isso dava 615 px de vídeo numa
-     coluna de 1250, com 600 px de preto vazio dos dois lados — o vídeo é a
-     única coisa desta página que quer espaço, e era a única que não o
-     usava. Vai a 42vh com tecto na largura, e a grelha continua a rolar. */
-  body.mesa:has(#palco:not([hidden])) .palcoFoco {
-    display: flex; justify-content: center; align-items: stretch;
-    height: 48vh; min-height: 140px; max-height: calc(100% - 300px); flex: 0 1 auto; margin: 0 0 var(--e2);
+
+  /* ESQUERDA: o visor. Sem `overflow: hidden` e sem `min-height: 0`: a altura mínima dele é a soma
+     do que tem dentro, e é essa soma que segura a linha de cima do palco. Com o corte, o transporte
+     e o Clipar ficavam escondidos por baixo da linha do tempo quando faltava altura. */
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .palcoVideo {
+    grid-area: video; display: flex; flex-direction: column;
   }
-  body.mesa:has(#palco:not([hidden])) .palcoFoco:empty { display: none; }
-  body.mesa:has(#palco:not([hidden])) .palcoFoco .tile {
+  /* O vídeo em foco leva toda a altura que sobra, e fica com a proporção dele. 200 px de altura é o
+     menor visor em que ainda se vê o jogo (356 px de largura em 16:9); abaixo disso a página rola. */
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .palcoFoco {
+    display: flex; justify-content: center; align-items: stretch; gap: var(--e2);
+    flex: 1 1 0; height: auto; min-height: 200px; max-height: none; margin: 0 0 var(--e3);
+  }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .palcoFoco:empty { display: none; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .palcoFoco .tile {
     height: 100%; width: auto; aspect-ratio: 16/9; min-height: 0; max-width: 100%; flex: 0 1 auto;
   }
-  body.mesa:has(#palco:not([hidden])) .palcoFoco.dois .tile { max-width: calc(50% - 4px); }
-  /* Uma folga entre as quatro coisas empilhadas à esquerda. "Afasta um pouco,
-     parece que tá muito junto: dá uma pequena folga pros botões." Estava tudo
-     a 4 px: os controlos do vídeo, o Clipar, a ordem e a grelha liam-se como
-     um bloco só. */
-  body.mesa:has(#palco:not([hidden])) .barraClipar { flex: 0 0 auto; margin: var(--e4) 0 var(--e3); }
-  body.mesa:has(#palco:not([hidden])) .barraGrelha { flex: 0 0 auto; margin: 0 0 var(--e3); }
-  /* A grelha é a única coisa da esquerda que cede: tudo o resto tem tamanho.
-     Uma grelha com altura definida esmaga as linhas para caber e o
-     `aspect-ratio` perde — ficavam tiras de 25 px umas por cima das outras.
-     As linhas ficam com o tamanho do conteúdo e o resto rola. */
-  body.mesa:has(#palco:not([hidden])) #grade {
-    flex: 1 1 0; min-height: 60px; overflow-y: auto; margin: 0; padding-right: var(--e2);
-    align-content: start; grid-auto-rows: max-content;
-    /* Sombra de rolagem: uma fita escura no topo e no fundo que só aparece
-       quando há mesmo mais quadrados para lá da borda. Sem ela, uma fila
-       cortada ao meio lê-se como um erro de desenho e não como "continua".
-       O truque é o `local` das duas primeiras camadas — elas rolam com o
-       conteúdo e tapam as `scroll` que estão presas à caixa. */
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .palcoFoco.dois .tile { max-width: calc(50% - 4px); }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .transporte { flex: 0 0 auto; margin: 0 0 var(--e3); }
+  /* As ferramentas de vez em quando (sincronizar, detecção, recomeçar, exportações) numa linha só,
+     por baixo do transporte, sem caixa: deixam de disputar a vista com o vídeo. */
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .palcoFundo { flex: 0 0 auto; max-height: 18vh; overflow-y: auto; margin: 0; padding-right: var(--e2); }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .palcoFundo button, body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .palcoFundo select { min-height: 32px; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #corte { flex: 0 1 auto; max-height: 24%; min-height: 0; overflow-y: auto; }
+
+  /* DIREITA: os ângulos em cima, a montagem por baixo. Com um ângulo só não há grelha e a montagem
+     toma a coluna toda. */
+  /* `contain: size`: a coluna não empurra a altura do palco com a lista inteira dos ângulos (essa rola
+     por dentro). O mínimo dela é o que cabe sem nada se tocar: a barra, uma fila e meia de ângulos e o
+     chão da montagem (36 + 60 + 140, mais as folgas). */
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .palcoDireita {
+    grid-area: lado; display: flex; flex-direction: column; gap: var(--e3); min-height: 264px; min-width: 0;
+    contain: size;
+  }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .barraGrelha { flex: 0 0 auto; margin: 0; }
+  /* Duas colunas de miniaturas com o nome legível. Uma grelha com altura definida esmaga as linhas
+     para caber e o `aspect-ratio` perde: as linhas ficam com o tamanho do conteúdo e o resto rola. */
+  /* `flex: 0 1 auto`: quando a coluna aperta, é a lista dos ângulos que encolhe e rola, e não a
+     montagem que escorre por cima da linha do tempo. */
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #grade {
+    flex: 0 1 auto; max-height: 34%; min-height: 60px; overflow-y: auto; margin: 0; padding-right: var(--e2);
+    grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); align-content: start; grid-auto-rows: max-content;
+    /* Sombra de rolagem: uma fita escura no topo e no fundo que só aparece quando há mais
+       quadrados para lá da borda. O `local` das duas primeiras camadas rola com o conteúdo. */
     background:
       linear-gradient(var(--sup-0) 30%, transparent) top / 100% 18px local no-repeat,
       linear-gradient(transparent, var(--sup-0) 70%) bottom / 100% 18px local no-repeat,
       radial-gradient(farthest-side at 50% 0, #000000a6, transparent) top / 100% 10px scroll no-repeat,
       radial-gradient(farthest-side at 50% 100%, #000000a6, transparent) bottom / 100% 10px scroll no-repeat;
   }
-  body.mesa:has(#palco:not([hidden])) #grade .tile { align-self: start; }
-  body.mesa:has(#palco:not([hidden])) .palcoFundo {
-    flex: 0 0 auto; max-height: 22vh; overflow-y: auto; margin-top: 0; padding-right: var(--e2);
-    grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--e4);
-  }
-  body.mesa:has(#palco:not([hidden])) .palcoFundo > section,
-  body.mesa:has(#palco:not([hidden])) .palcoFundo > .linha { padding: var(--e3) var(--e4); margin-bottom: 0; }
-  body.mesa:has(#palco:not([hidden])) #automatico > p { display: none; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #grade .tile { align-self: start; }
+  /* Só nomes: cabem mais por linha e por altura, e a montagem por baixo continua com o seu espaço. */
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #palco.muitosAngulos #grade { max-height: 50%; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+  /* Com uma live só (o dono, 07/10: "parece jogada") a grelha some e o vídeo fica com o espaço dela. */
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #palco.semGrelha #grade { display: none; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .palcoFundo > #fila:not(:has(li)) { display: none; }
 
-  /* DIREITA, em cima: a linha do tempo. */
-  body.mesa:has(#palco:not([hidden])) .palcoLadoCaixa { grid-area: tempo; min-height: 0; display: flex; overflow: hidden; }
-  body.mesa:has(#palco:not([hidden])) .palcoLado {
-    position: static; max-height: 40vh; flex: 1 1 auto; min-height: 0; min-width: 0; width: 100%;
+  /* As duas barras de cima (evento e noite) mais baixas: cada pixel que elas devolvem vai para o vídeo. */
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) > #evento { padding: var(--e2) var(--e4); }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) > #evento button { min-height: 30px; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #noites { padding: var(--e2) var(--e3); }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .topoTrabalho select,
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .topoTrabalho button { min-height: 30px; }
+
+  /* EM BAIXO: a linha do tempo, em toda a largura. */
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .palcoLadoCaixa { grid-area: tempo; min-height: 0; display: flex; overflow: hidden; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .palcoLado {
+    position: static; max-height: clamp(150px, 26vh, 400px); flex: 1 1 auto; min-height: 0; min-width: 0; width: 100%;
     display: flex; flex-direction: column; overflow: hidden; padding-right: 0;
   }
-  body.mesa:has(#palco:not([hidden])) .palcoLado > * { flex: 0 0 auto; }
-  body.mesa:has(#palco:not([hidden])) .palcoLado .relogio,
-  body.mesa:has(#palco:not([hidden])) .palcoLado .marcas,
-  body.mesa:has(#palco:not([hidden])) .palcoLado .linha { min-width: 0; }
-  /* O relógio encolhe (min-height 0) mas não ESCORRE (overflow hidden): as
-     faixas cedem primeiro, até três canais; se ainda assim não couber, é o
-     fim dele que fica cortado — e o teste apanha-o — em vez de os saltos
-     irem parar por cima do que vem a seguir. Medido: com `min-height: auto`
-     o mínimo passava a ser as faixas INTEIRAS (380 px) e o painel rolava. */
-  body.mesa:has(#palco:not([hidden])) .palcoLado > .relogio {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .palcoLado > * { flex: 0 0 auto; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .palcoLado .relogio, body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .palcoLado .linha { min-width: 0; }
+  /* O relógio encolhe (min-height 0) mas não ESCORRE (overflow hidden): as faixas cedem primeiro, e
+     rolam por dentro. */
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .palcoLado > .relogio {
     flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden;
+    padding: var(--e3) calc(var(--e4) + 18px) var(--e3) var(--e4);
   }
-  body.mesa:has(#palco:not([hidden])) .relogio > * { flex: 0 0 auto; }
-  body.mesa:has(#palco:not([hidden])) .relogio > .faixas { flex: 1 1 auto; min-height: 56px; overflow-y: auto; overflow-x: hidden; }
-  body.mesa:has(#palco:not([hidden])) .relogio .saltos { gap: 3px; }
-  body.mesa:has(#palco:not([hidden])) .relogio .saltos button { min-height: 32px; padding: 0 var(--e2); }
-  body.mesa:has(#palco:not([hidden])) .relogio .marcas button { min-height: 32px; padding: 0 var(--e3); }
-  body.mesa:has(#palco:not([hidden])) .relogio .linha { margin-top: var(--e2); }
-  /* Catorze pixels devolvidos ao painel do tempo, num portátil de 720.
-     Medido: a fila do Marcar entrada / Marcar saída ficava 2 px por baixo da
-     borda — cortada — e as faixas cabiam em três canais. Com a régua mais
-     baixa e as folgas apertadas, a fila fica dentro com folga e as faixas
-     passam a quatro. */
-  body.mesa:has(#palco:not([hidden])) .regua { height: 24px; }
-  body.mesa:has(#palco:not([hidden])) .relogio > .reguaLinha { margin-top: var(--e2); }
-  body.mesa:has(#palco:not([hidden])) #agora { font-size: var(--t-medio); }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .relogio > * { flex: 0 0 auto; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .relogio > .faixas { flex: 1 1 auto; min-height: 40px; overflow-y: auto; overflow-x: hidden; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .relogio .saltos button { min-height: 30px; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .relogio > .linha { margin: 0 0 var(--e2); }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .regua { height: 24px; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .regua .kill span.baixo { top: 13px; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .relogio > .reguaLinha { margin-top: var(--e2); }
 
-  /* DIREITA, em baixo: a montagem. */
-  body.mesa:has(#palco:not([hidden])) #montagem {
-    grid-area: monta; min-height: 0; display: flex; flex-direction: column;
-    margin-bottom: 0; overflow: hidden; padding: var(--e3) var(--e4); gap: var(--e2);
+  /* DIREITA, em baixo: a montagem. Rola por dentro quando a coluna aperta: com o chat aberto, o que
+     tem dentro passa dos 140 px, e cortado o fim do chat sumia sem aviso. */
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem {
+    flex: 1 1 0; min-height: 140px; display: flex; flex-direction: column;
+    margin-bottom: 0; overflow-y: auto; padding: var(--e3) var(--e4); gap: var(--e2);
   }
-  body.mesa:has(#palco:not([hidden])) #montagem > * { flex: 0 0 auto; }
-  body.mesa:has(#palco:not([hidden])) #montagem > h2 { display: none; }
-  body.mesa:has(#palco:not([hidden])) #montagem > .linha,
-  body.mesa:has(#palco:not([hidden])) #montagem > .barraSelecao { gap: var(--e2) 6px; margin: 0; }
-  body.mesa:has(#palco:not([hidden])) #montagem > .linha button,
-  body.mesa:has(#palco:not([hidden])) #montagem > .barraSelecao button,
-  body.mesa:has(#palco:not([hidden])) #montagem > .barraSelecao select {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > * { flex: 0 0 auto; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > h2 { display: none; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .linha,
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .barraSelecao { gap: var(--e2) 6px; margin: 0; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .linha button,
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .barraSelecao button,
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .barraSelecao select {
     min-height: 30px; padding: 0 var(--e3); font-size: var(--t-menor);
   }
-  body.mesa:has(#palco:not([hidden])) #marcarKill { min-height: 32px; }
-  body.mesa:has(#palco:not([hidden])) #montagem > .barraSelecao select { min-width: 88px; max-width: 112px; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #marcarKill { min-height: 32px; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .barraSelecao select { min-width: 88px; max-width: 112px; }
   /* Um botão apagado não precisa de sítio: numa faixa de 380 px é a
      diferença entre os filtros numa linha ou em duas. */
-  body.mesa:has(#palco:not([hidden])) #montagem > .barraSelecao button:disabled { display: none; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .barraSelecao button:disabled { display: none; }
   /* A ordem: Marcar kill, Exportar, a LISTA, e os filtros presos ao fundo.
      Com os filtros por cima da lista, num portátil de 720 a primeira kill
      ficava por baixo do ecrã. No fim continuam sempre à vista: a lista é que
      encolhe, nunca eles. */
-  body.mesa:has(#palco:not([hidden])) #montagem > .linha:has(#marcarKill) { order: 0; }
-  body.mesa:has(#palco:not([hidden])) #montagem > .linha:has(#baixarMontagem) { order: 1; }
-  body.mesa:has(#palco:not([hidden])) #montagem > .barraSelecao { order: 5; }
-  body.mesa:has(#palco:not([hidden])) #montagem > .momentos {
-    order: 4; flex: 1 1 auto; min-height: 60px; overflow-y: auto; padding-right: var(--e2);
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .linha:has(#marcarKill) { order: 0; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .linha:has(#baixarMontagem) { order: 8; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .barraSelecao { order: 2; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .momentos {
+    order: 3; flex: 1 1 auto; min-height: 60px; overflow-y: auto; padding-right: var(--e2);
     /* Uma coluna: numa faixa de 500 px, duas colunas de kills com dezassete
        nomes cada não se leem. */
     grid-template-columns: 1fr; gap: var(--e2);
   }
-  body.mesa:has(#palco:not([hidden])) .momentos li { padding: 6px var(--e3); gap: 6px; }
-  body.mesa:has(#palco:not([hidden])) .momentos .vit { min-height: 22px; padding: 0 6px; font-size: var(--t-micro); }
-  body.mesa:has(#palco:not([hidden])) .vitimas { padding-top: var(--e2); }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .momentos li { padding: 6px var(--e3); gap: 6px; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .momentos .vit { min-height: 22px; padding: 0 6px; font-size: var(--t-micro); }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .vitimas { padding-top: var(--e2); }
 }
 
 /* ═══ 12 · o telemóvel ══════════════════════════════════════════════════════ */
@@ -1301,28 +1600,35 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
    Medido depois, no mesmo 390×844: vídeo, Clipar, relógio, oito saltos e as
    duas marcas, tudo dentro do primeiro ecrã. */
 @media (max-width: 1079.98px) {
-  .palcoVideo, .palcoLadoCaixa, .palcoLado { display: contents; }
+  .palcoVideo, .palcoLadoCaixa, .palcoLado, .palcoDireita { display: contents; }
 
   /* Com os invólucros fora, o palco passa a ter sete filhos em vez de três:
-     as margens de cada um deixam de somar com a folga da grelha. */
+     as margens de cada um deixam de somar com a folga da grelha.
+     A ordem de quem caça um lance: o vídeo, o transporte colado a ele, a linha do tempo, os outros
+     ângulos, a montagem, e por fim as ferramentas de vez em quando. Tudo isto cabe no primeiro ecrã de
+     um telemóvel de 390 x 844, menos a montagem. */
   #palco:not([hidden]) { gap: var(--e4); }
   #palcoFoco { order: 1; margin: 0; }
-  .barraClipar { order: 2; margin: 0; }
+  .transporte { order: 2; margin: 0; }
   .relogio { order: 3; }
-  #montagem { order: 4; }
-  .barraGrelha { order: 5; margin: 0; }
-  #grade { order: 6; margin: 0; }
+  .barraGrelha { order: 4; margin: 0; }
+  #grade { order: 5; margin: 0; }
+  #montagem { order: 6; }
   .palcoFundo { order: 7; }
 
-  /* O relógio por dentro. A coluna flex já vem de cima; aqui só muda a ordem. */
-  .relogio > .linha { order: 1; margin-top: 0; }   /* 21:05:00Z · 17 de 17 ângulos */
-  .relogio > .saltos { order: 2; margin-top: var(--e4); }
-  .relogio > .marcas { order: 3; }
-  .relogio > .barraLinha { order: 4; margin-top: var(--e5); }
-  /* A régua por cima das faixas também aqui: num ecrã estreito as horas e as
-     marcas de kill ainda se pisam mais do que num monitor. */
-  .relogio > .reguaLinha { order: 5; margin-top: var(--e3); }
-  .relogio > .faixas { order: 6; }
+  /* A linha dos ângulos é uma tira que rola de lado, e não quinze fileiras de miniaturas: com a grelha
+     por baixo, a linha do tempo e a montagem ficavam a dois ecrãs do vídeo. */
+  #grade {
+    display: flex; gap: var(--e3); overflow-x: auto; overflow-y: hidden; padding-bottom: var(--e2);
+    scroll-snap-type: x proximity; overscroll-behavior-x: contain;
+  }
+  #grade .tile { flex: 0 0 148px; scroll-snap-align: start; }
+
+  /* O relógio por dentro: o cabeçalho (zoom e saltos grandes), a barra, a régua e as faixas. */
+  .relogio > .linha { order: 1; margin: 0 0 var(--e3); }
+  .relogio > .barraLinha { order: 2; }
+  .relogio > .reguaLinha { order: 3; margin-top: var(--e3); }
+  .relogio > .faixas { order: 4; }
 }
 
 /* Num ecrã estreito a coluna dos nomes aperta, e oito botões de salto não
@@ -1336,19 +1642,26 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
      uma coluna de 175 e a página passava a andar de lado — 448 px medidos. */
   .palcoFoco { grid-auto-flow: row; }
   .palcoFoco .tile, .palcoFoco.dois .tile { min-height: 150px; }
-  .aparar { grid-template-columns: auto minmax(44px, 1fr) minmax(44px, 1fr) 52px; gap: var(--e3) 6px; }
-  .relogio { --coluna: 76px; padding: var(--e4) var(--e3); }
+  .relogio { --coluna: 76px; padding: var(--e4) calc(var(--e3) + 14px) var(--e4) var(--e3); }
   .bloco { padding: var(--e4); }
   .palcoFundo > section, .palcoFundo > .linha, .palcoFundo > #zip, #montagem { padding: var(--e4); }
-  .saltos { gap: 5px; }
-  .saltos button { padding: 0; font-size: var(--t-micro); }
-  .saltos .ic { width: 11px; height: 11px; }
   /* Num ecrã estreito não há sítio para a tecla escrita: lá o teclado não
      existe, e o que fica é o número. */
-  .saltos kbd { display: none; }
-  .barraClipar { grid-template-columns: 1fr; }
-  .barraClipar #clipar { grid-column: 1; min-width: 0; }
-  .barraClipar #marca { grid-column: 1; justify-self: center; }
+  .transporte kbd, .saltos kbd { display: none; }
+  /* O transporte em três filas: o instante com os passos, a entrada e a saída lado a lado, e o Clipar
+     na largura toda, onde o polegar chega. Alvos de toque de 44 px (WCAG 2.5.8 pede 24, e a Apple e o
+     Material pedem 44 e 48). */
+  .transporte { display: grid; grid-template-columns: 1fr; gap: var(--e3); padding: var(--e3); }
+  .trEsq { justify-content: space-between; flex-wrap: nowrap; gap: var(--e3); }
+  .trPassos { justify-content: flex-end; }
+  .trMarcas { display: grid; grid-template-columns: 1fr 1fr; justify-self: stretch; }
+  .trClipe { margin: 0; flex-wrap: wrap; gap: var(--e2); justify-self: stretch; }
+  .trClipe #clipar { flex: 1 1 auto; min-width: 0; min-height: 48px; }
+  .transporte button { min-height: 44px; }
+  .saltos { margin-left: auto; gap: 4px; }
+  .saltos button { padding: 0 4px; min-height: 40px; }
+  .relogio .linha select { min-width: 92px; padding-right: var(--e5); padding-left: var(--e2); }
+  .relogio > .linha { flex-wrap: wrap; gap: var(--e2) 4px; }
   /* Uma linha só, e nunca duas. O cabeçalho embrulhava assim que o texto
      mudava de tamanho — e ele MUDA: a página nasce em português com "Twitch"
      escrito no HTML e o guião troca-o por "Versão Twitch" aos 89 ms. O
@@ -1419,3 +1732,1424 @@ body:not(.mesa) > section > h2 { margin: 0; }
 body:not(.mesa) #sugestoes { position: static; display: flex; flex-wrap: wrap; gap: 6px; padding: 0; background: none; border: 0; box-shadow: none; }
 body:not(.mesa) #sugestoes:empty { display: none; }
 body:not(.mesa) #sugestoes button { width: auto; min-height: 30px; font-size: var(--t-menor); background: var(--sup-3); border-color: var(--linha-2); }
+
+/* ═══ O evento ══════════════════════════════════════════════════════════════
+ * As duas portas, lado a lado, e o mapa do evento (uma faixa por streamer, por time). O mapa é um canvas
+ * porque são até 500 faixas: elementos HTML para cada uma pesavam mais do que o próprio vídeo. */
+
+/* As portas. Cada uma diz no título para quem é, e a de cima não empurra a outra para fora do ecrã. */
+.cabecaPorta { display: grid; gap: var(--e1); }
+.tituloPorta { font-size: var(--t-titulo); font-weight: 600; line-height: var(--lh-apertado); margin: 0; text-wrap: balance; }
+.cabecaPorta .nota { margin: 0; }
+.portaEvento textarea { width: 100%; }
+.aoVivoLinha { flex-wrap: nowrap; gap: var(--e3); }
+.explicaCurta { display: none; }
+.fecharEvento { order: -1; }
+.juntados { gap: var(--e1); flex-wrap: wrap; }
+.juntados:empty { display: none; }
+.juntados .chip { min-height: 30px; padding: 0 var(--e2); font-size: var(--t-menor); background: var(--sup-3); }
+.avisosEvento { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2); }
+/* Os picos de chat: a legenda tem a mesma bandeirinha que o mapa pinta (5 px de âmbar com contorno
+   escuro), e os botões levam a cada pico pela hora. */
+/* Só para leitores de ecrã: fora da vista, mas lido. */
+.soLeitor { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.legenda { display: inline-flex; align-items: center; gap: var(--e1); }
+.legendaPico { display: inline-block; width: 7px; height: 7px; background: var(--marca); box-shadow: 0 0 0 1px var(--sup-0); }
+.legendaMorte { display: inline-block; width: 7px; height: 7px; background: var(--perigo); box-shadow: 0 0 0 1px var(--sup-0); }
+.picosChat { gap: var(--e1); }
+.picosChat .pico { min-height: 30px; padding: 0 var(--e2); font-family: var(--letra-mono); font-size: var(--t-menor); }
+.aoVivoLinha input { flex: 1 1 auto; min-width: 0; }
+#entrada { max-width: none; }
+/* Com uma noite aberta a porta do evento sai do caminho: a noite é a de alguns canais. */
+.topoTrabalho:has(#noites:not([hidden])) #portaEvento,
+body:is(.videoAberto, :has(#palco:not([hidden]))) #portaEvento { display: none; }
+body:is(.videoAberto, :has(#palco:not([hidden]))) .cabecaPorta { display: none; }
+/* Com um evento aberto e ainda nenhum lance, as portas saem: o que se faz a seguir é no mapa. */
+body:has(#evento:not([hidden])):has(#palco[hidden]) .topoTrabalho { display: none; }
+
+.evento { display: flex; flex-direction: column; gap: var(--e2); margin-bottom: var(--e4); }
+.barraEvento { gap: var(--e2); }
+.barraEvento .espaco { flex: 1 1 auto; }
+.nomeEvento { margin: 0; font-size: var(--t-titulo); font-weight: 600; }
+.seloAoVivo {
+  background: var(--perigo); color: var(--sobre-acento); border-radius: var(--r-redondo); padding: 2px 10px;
+  font-size: var(--t-menor); font-weight: 600; letter-spacing: var(--letra-larga);
+}
+.mostrarMapa { display: none; }
+.irAoVivo:not([hidden]) { color: var(--perigo); border-color: var(--perigo); }
+/* Com um lance aberto o mapa encolhe numa barra: a grelha dos ângulos precisa do ecrã. O botão
+   "Mapa do evento" volta a abri-lo por cima dela, mais baixo. */
+body:is(.videoAberto, :has(#palco:not([hidden]))) .mostrarMapa { display: inline-flex; }
+body:is(.videoAberto, :has(#palco:not([hidden]))) #evento:not(.comMapa) > :not(.barraEvento) { display: none; }
+body:is(.videoAberto, :has(#palco:not([hidden]))) #evento.comMapa .mapaRolo { height: 34vh; }
+body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) > #evento { flex: 0 0 auto; margin-bottom: var(--e2); padding: var(--e3) var(--e4); }
+/* O mapa aberto por cima dos vídeos (o dono, 10/10: "nao da pra ver nada direito"). No PC a página tem a
+   altura do ecrã e não rola; com os 600 px do mapa e do painel do lance lá dentro, o palco ficava com o
+   resto, e o visor encolhia para uma miniatura de 170 px com os ângulos por cima da linha do tempo. Com o
+   mapa aberto a página volta a rolar e o palco guarda a altura de um ecrã inteiro, por baixo do mapa. */
+@media (min-width: 1080px) and (min-height: 640px) {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))):has(#evento.comMapa:not([hidden])) { height: auto; overflow: visible; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))):has(#evento.comMapa:not([hidden])) #palco:not([hidden]) {
+    flex: 0 0 auto; height: calc(100vh - var(--e5)); min-height: 600px;
+  }
+}
+.dica { margin: 0; }
+.reguaEvento { position: relative; height: 20px; margin: 0 1px; overflow: hidden; color: var(--tinta-3); font-family: var(--letra-mono); font-size: var(--t-micro); cursor: pointer; }
+.reguaEvento span { position: absolute; top: 2px; transform: translateX(-50%); white-space: nowrap; pointer-events: none; }
+/* A mudança de dia: um traço grosso e a data escrita à direita dele, mais clara que as horas. */
+.reguaEvento .dia { transform: none; padding-left: 5px; color: var(--tinta); font-weight: 600; }
+.reguaEvento .dia.fimDaRegua { transform: translateX(-100%); padding: 0 5px 0 0; }
+.reguaEvento i { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--tinta-2); pointer-events: none; }
+/* O instante que ordena as faixas: só a ponta de baixo, para não riscar a hora escrita por cima. */
+.reguaEvento i.ordem { top: 14px; background: var(--acento); }
+.reguaEvento:hover { background: var(--sup-1); }
+/* As divisões da régua, como num editor de vídeo: pequenas entre as horas, maiores em cada hora escrita. */
+.reguaEvento .tique { position: absolute; bottom: 0; width: 1px; height: 4px; background: var(--linha-3, var(--tinta-3)); opacity: .7; pointer-events: none; }
+.reguaEvento .tique.grande { height: 8px; background: var(--tinta-3); opacity: 1; }
+/* O nome dos riscos que atravessam o mapa: o branco é o momento escolhido, o azul o horário da ordem. */
+.reguaEvento .marcaRegua { position: absolute; top: 1px; transform: translateX(-50%); padding: 1px 5px; border-radius: 3px; font-weight: 600; white-space: nowrap; pointer-events: none; line-height: 14px; }
+.reguaEvento .marcaRegua.aEsquerda { transform: none; }
+.reguaEvento .marcaRegua.aDireita { transform: translateX(-100%); }
+.reguaEvento .marcaRegua.lance { background: var(--tinta); color: var(--sup-0); }
+.reguaEvento .marcaRegua.ordem { background: var(--acento); color: var(--sup-0); }
+.fusoEvento { margin: 0; text-align: right; font-size: var(--t-micro); color: var(--tinta-3); }
+.infoEvento { margin: 0; }
+.ferramentasMapa { gap: var(--e2); }
+.ferramentasMapa .espaco { flex: 1 1 auto; }
+.ordemCampo { display: inline-flex; align-items: center; gap: var(--e2); }
+.ordemCampo select { width: auto; }
+.abrirVarios { gap: var(--e2); }
+.abrirVarios button { flex: 1 1 auto; }
+.formJanela { display: flex; flex-direction: column; gap: var(--e3); }
+.formJanela[hidden] { display: none; }
+.doisCampos { align-items: flex-start; }
+.doisCampos > .campo { flex: 1 1 140px; }
+.opcaoLinha { display: flex; align-items: center; gap: var(--e2); font-size: var(--t-menor); }
+.resultadoPartilhar { display: flex; flex-direction: column; gap: var(--e3); }
+.resultadoPartilhar[hidden] { display: none; }
+.resultadoPartilhar input { font-family: var(--letra-mono); font-size: var(--t-menor); }
+.adicionarSugestoes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e1); max-height: 30vh; overflow-y: auto; }
+.adicionarSugestoes:empty { display: none; }
+.adicionarSugestoes button { width: 100%; justify-content: space-between; text-align: left; gap: var(--e2); }
+.adicionarSugestoes button .nota { white-space: nowrap; }
+@media (max-width: 699px) {
+  .ferramentasMapa .espaco { display: none; }
+  .ferramentasMapa > button { flex: 1 1 40%; padding-left: var(--e2); padding-right: var(--e2); }
+  .ferramentasMapa > #ordemVoltar { flex-basis: 100%; }
+  .ordemCampo { flex: 1 1 100%; }
+  .ordemCampo select { flex: 1 1 auto; min-width: 0; }
+}
+@media (pointer: coarse) {
+  .reguaEvento { height: 28px; }
+  .reguaEvento span { top: 7px; }
+  .reguaEvento .marcaRegua { top: 6px; }
+}
+.mapaCaixa { display: grid; gap: var(--e3); grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 1000px) { .mapaCaixa:has(#lance:not([hidden])) { grid-template-columns: minmax(0, 1fr) 320px; } }
+/* align-content: start, porque com o lance ao lado mais alto do que o mapa a grelha esticava a linha
+   da régua, e abria um buraco entre as horas e as faixas. */
+.mapaColuna { display: grid; gap: var(--e1); min-width: 0; align-content: start; }
+/* A altura é a do conteúdo até 62% do ecrã (posta pelo evento-ui.js): com dois times, uma caixa de
+   640 px era um buraco preto debaixo de quatro faixas. */
+.mapaRolo {
+  position: relative; height: min(62vh, 640px); overflow-y: auto; overflow-x: hidden;
+  background: var(--sup-1); border: 1px solid var(--linha); border-radius: var(--r-2); cursor: crosshair;
+}
+.mapaRolo:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+.mapaAltura { width: 1px; }
+/* O canvas fica preso ao topo da caixa e é o espaçador debaixo dele que dá a altura do rolo: o canvas
+   tem sempre o tamanho do que se vê, e a posição do rolo diz que faixas pintar. */
+.mapaRolo canvas { position: sticky; top: 0; left: 0; display: block; }
+.lance { display: flex; flex-direction: column; gap: var(--e2); background: var(--sup-3); border: 1px solid var(--linha); border-radius: var(--r-2); padding: var(--e3); align-self: start; }
+.lanceTitulo { margin: 0; font-size: var(--t-medio); font-family: var(--letra-mono); }
+.lanceAchados { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e1); }
+.lanceAchados:empty { display: none; }
+.lanceAchados li { display: flex; justify-content: space-between; gap: var(--e2); padding: var(--e1) var(--e2); background: var(--acento-eco); border-radius: var(--r-1); }
+/* Os melhores lances: por baixo do mapa, uma linha por lance. No PC cada linha tem três colunas (a hora e a
+   nota, o motivo, os botões); num ecrã estreito empilham. A nota é uma soma escrita, por isso a conta fica
+   à vista, mais pequena, debaixo do motivo. */
+.melhores { display: flex; flex-direction: column; gap: var(--e3); padding: var(--e4); background: var(--sup-2); border: 1px solid var(--linha); border-radius: var(--r-3); }
+.melhoresCabeca { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--e2) var(--e4); }
+.melhoresTitulo { margin: 0; font-size: var(--t-medio); font-weight: 600; display: inline-flex; align-items: baseline; gap: var(--e3); }
+.melhoresTitulo:focus { outline: none; }
+#melhoresConta:empty { display: none; }
+#melhoresConta { font-family: var(--letra-mono); font-size: var(--t-menor); font-weight: 600; padding: 1px 8px; border-radius: var(--r-redondo); background: var(--acento-eco); color: var(--acento); }
+.melhoresComo { font-size: var(--t-menor); color: var(--tinta-2); flex: 1 1 18em; min-width: 0; }
+.melhoresComo > summary { cursor: pointer; width: max-content; max-width: 100%; border-radius: var(--r-1); }
+.melhoresComo > summary:focus-visible { box-shadow: var(--foco); outline: none; }
+.melhoresComo > p { margin: var(--e2) 0 0; max-width: 72ch; }
+.melhoresFiltros { gap: var(--e2) var(--e4); align-items: center; }
+.melhoresFiltros label.pequeno { display: inline-flex; align-items: center; gap: var(--e2); }
+.melhoresFiltros select { width: auto; }
+.melhoresFalta { display: flex; flex-direction: column; gap: var(--e2); }
+.melhoresFalta ul { margin: 0; padding-left: 1.2em; display: grid; gap: 2px; }
+.melhoresFalta ul:empty { display: none; }
+.melhoresLer { gap: var(--e3); align-items: center; }
+.melhoresLer output:empty { display: none; }
+.melhoresLista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e2); }
+.melhoresLista:empty { display: none; }
+.melhor {
+  display: grid; gap: 2px var(--e4); align-items: center; padding: var(--e3) var(--e4);
+  grid-template-columns: 11.5em minmax(0, 1fr) auto;
+  grid-template-areas: "cab canais acoes" "cab motivo acoes" "cab perto acoes" "cab conta acoes";
+  background: var(--sup-1); border: 1px solid var(--linha); border-radius: var(--r-2);
+}
+.melhor.marcado { border-color: var(--acento-fio); box-shadow: inset 3px 0 0 var(--acento); }
+.melhor.descartado { opacity: .62; }
+.melhor.descartado .melhorMotivo { text-decoration: line-through; text-decoration-color: var(--tinta-3); }
+.melhorCabeca { grid-area: cab; display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto; row-gap: 2px; column-gap: var(--e3); align-items: center; align-self: start; }
+.melhorPos {
+  grid-row: 1 / 3; display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: var(--r-redondo);
+  background: var(--sup-3); color: var(--tinta-2); font-family: var(--letra-mono); font-size: var(--t-menor); font-weight: 600;
+}
+.melhor:nth-child(-n+3) .melhorPos { background: var(--marca-eco); color: var(--marca); }
+.melhorHora { margin: 0; font-family: var(--letra-mono); font-size: var(--t-base); font-weight: 600; white-space: nowrap; }
+/* O dia, quando o evento passa de um: numa linha à parte no PC, para a hora não ser cortada. */
+.melhorDia { display: block; font-family: var(--letra); font-size: var(--t-micro); font-weight: 500; color: var(--tinta-3); }
+.melhorPontos { font-size: var(--t-menor); color: var(--acento); font-weight: 600; white-space: nowrap; }
+.melhorCanais { grid-area: canais; margin: 0; font-family: var(--letra-mono); font-size: var(--t-menor); color: var(--tinta-2); overflow-wrap: anywhere; }
+.melhorCanais b { color: var(--tinta); font-weight: 600; }
+.melhorMotivo { grid-area: motivo; margin: 0; font-size: var(--t-base); color: var(--tinta); }
+.melhorPerto { grid-area: perto; margin: 0; font-size: var(--t-micro); color: var(--tinta-3); font-style: italic; }
+.melhorConta { grid-area: conta; margin: 0; font-size: var(--t-micro); color: var(--tinta-3); }
+.melhorConta b { color: var(--tinta-2); font-weight: 600; }
+.melhorAcoes { grid-area: acoes; display: flex; gap: var(--e2); align-items: center; justify-content: flex-end; flex-wrap: wrap; }
+.melhorAcoes button { min-height: 32px; padding: 0 var(--e3); white-space: nowrap; }
+.melhorAcoes button[aria-pressed="true"] { border-color: var(--acento-fio); background: var(--acento-eco); color: var(--acento); }
+#melhoresVazio, #melhoresMais { margin: 0; }
+#melhoresMais { align-self: flex-start; }
+@media (max-width: 759px) {
+  .melhores { padding: var(--e3); }
+  .melhor { grid-template-columns: minmax(0, 1fr); grid-template-areas: "cab" "canais" "motivo" "perto" "conta" "acoes"; gap: var(--e2); padding: var(--e3); }
+  .melhorCabeca { grid-template-columns: auto auto minmax(0, 1fr); grid-template-rows: auto; }
+  .melhorPos { grid-row: auto; }
+  .melhorPontos { justify-self: end; }
+  .melhorDia { display: inline; }
+  .melhorAcoes { justify-content: stretch; }
+  .melhorAcoes button { flex: 1 1 auto; }
+  .melhoresFiltros label.pequeno { flex: 1 1 100%; justify-content: space-between; }
+  .melhoresFiltros select { flex: 1 1 auto; min-width: 0; max-width: 62%; }
+}
+@media (pointer: coarse) {
+  .melhorAcoes button { min-height: 44px; }
+}
+/* Os nomes na tela: um bloco que abre dentro do painel do lance, com o que se leu e o que se propõe. */
+.nomesTela { border-top: 1px solid var(--linha); padding-top: var(--e2); display: flex; flex-direction: column; gap: var(--e2); }
+.nomesTela[open] { gap: var(--e2); }
+.nomesTela > summary {
+  display: flex; align-items: center; flex-wrap: wrap; gap: var(--e2); min-height: 36px; cursor: pointer; list-style: none;
+  font-weight: 600; border-radius: var(--r-2); padding: 0 var(--e1);
+}
+.nomesTela > summary::-webkit-details-marker { display: none; }
+.nomesTela > summary::before {
+  content: ''; width: 0; height: 0; border-style: solid; border-width: 4px 0 4px 6px;
+  border-color: transparent transparent transparent currentColor; transition: transform var(--mov-rapido);
+}
+.nomesTela[open] > summary::before { transform: rotate(90deg); }
+.nomesTela > summary:hover { background: var(--sup-4); }
+.nomesTela > .nota, .nomesTela output { margin: 0; }
+.nomesTela output { display: block; }
+.nomesTela > button { align-self: flex-start; }
+.nomesOpcoes { gap: var(--e2); flex-wrap: wrap; }
+.nomesOpcoes .campo { flex: 1 1 8em; }
+.nomesLista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e1); }
+.nomesLista:empty { display: none; }
+.nomesLista li { display: flex; flex-direction: column; gap: 4px; padding: var(--e2); background: var(--sup-2); border: 1px solid var(--linha); border-radius: var(--r-1); min-width: 0; }
+.nomesLista .nomeCabeca { display: flex; justify-content: space-between; align-items: baseline; gap: var(--e2); flex-wrap: wrap; }
+.nomesLista .nomeCabeca b { font-family: var(--letra-mono); overflow-wrap: anywhere; }
+.nomesLista .nivel { font-size: var(--t-micro); font-weight: 600; padding: 1px 6px; border-radius: var(--r-fio); white-space: nowrap; }
+.nomeProposta.nivel-alta .nivel { background: var(--ok-eco); color: var(--ok); }
+.nomeProposta.nivel-media .nivel { background: var(--aviso-eco); color: var(--aviso); }
+.nomeProposta.nivel-baixa .nivel { background: var(--sup-3); color: var(--tinta-2); }
+.nomeProposta.sim { border-color: var(--acento-fio); background: var(--acento-eco); }
+.nomeProposta.nao { opacity: .7; }
+.nomeProposta.nao b { text-decoration: line-through; }
+.nomeAcoes { gap: var(--e1); flex-wrap: wrap; align-items: center; }
+.nomeAcoes button { min-height: 30px; padding: 0 var(--e2); }
+.nomeAcoes input { flex: 1 1 8em; min-width: 0; min-height: 30px; }
+.nomesSub { margin: var(--e1) 0 0; font-size: var(--t-menor); }
+.nomesRecortes { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 132px), 1fr)); gap: var(--e2); padding: var(--e2) 0; }
+.nomesRecortes figure { margin: 0; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.nomesRecortes img { width: 100%; height: auto; border-radius: var(--r-1); border: 1px solid var(--linha); background: var(--video-fundo); }
+.nomesRecortes figcaption { display: flex; flex-direction: column; gap: 2px; font-size: var(--t-menor); min-width: 0; }
+.nomesRecortes .lido { font-family: var(--letra-mono); white-space: pre-line; overflow-wrap: anywhere; color: var(--tinta); }
+.nomesApelidos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: var(--t-menor); }
+.nomesApelidos:empty { display: none; }
+.nomesApelidos li { display: flex; justify-content: space-between; align-items: center; gap: var(--e2); }
+.nomesApelidos .chip { min-height: 28px; padding: 0 var(--e2); font-size: var(--t-menor); background: var(--sup-3); }
+.nomesNovo { gap: var(--e2); flex-wrap: wrap; align-items: end; }
+.nomesNovo .campo { flex: 1 1 8em; }
+/* No PC, com os nomes abertos o painel fica comprido: rola por dentro, ao lado do mapa, em vez de
+   esticar a página e deixar o mapa para trás. */
+@media (min-width: 1000px) {
+  .lance:has(#nomesTela[open]) { position: sticky; top: var(--e3); max-height: calc(100dvh - 2 * var(--e3)); overflow-y: auto; }
+}
+@media (pointer: coarse) {
+  .nomeAcoes button, .nomeAcoes input, .nomesApelidos .chip { min-height: 44px; }
+}
+/* No telemóvel as duas portas têm de caber com o botão de cada uma no primeiro ecrã. A explicação do
+   elenco sai (o exemplo dentro da caixa já mostra o formato) e a caixa fica com duas linhas. */
+@media (max-width: 699px) {
+  .portaEvento p.explicaLonga { display: none; }
+  /* Montar a lista pelos títulos é trabalho de organizador, num computador; no telemóvel fica o
+     exemplo, que é um toque só, e as duas portas cabem no primeiro ecrã. */
+  .portaEvento .aoVivoRotulo, .portaEvento .aoVivoLinha { display: none; }
+  .portaEvento p.explicaCurta { display: block; }
+  #resumoEvento { flex-basis: 100%; }
+  #procurarEvento { flex: 1 1 100%; }
+  #elenco { height: 4.2em; min-height: 0; }
+  .porta { gap: var(--e3); }
+}
+
+/* escala: o Parar da tarefa longa. Num canto fixo, por cima de tudo menos das
+   janelas: o progresso de cada tarefa vive numa secção diferente, e quem quer
+   parar não pode ter de rolar a página à procura de onde ela está. */
+.parar {
+  position: fixed; right: var(--e5); bottom: var(--e5); z-index: 90;
+  background: var(--sup-2); color: var(--perigo);
+  border-color: color-mix(in srgb, var(--perigo) 45%, transparent);
+  box-shadow: var(--sombra-janela);
+}
+.parar:hover:not(:disabled) { background: var(--sup-4); border-color: var(--perigo); }
+/* Num ecrã estreito o lance fica preso ao fundo, por cima do fim do mapa, como uma folha que sobe: o
+   título e o botão que abre o vídeo estão sempre à vista enquanto se mexe no mapa. */
+@media (max-width: 999px) {
+  /* Altura fixa e não só máxima: o painel crescia depois de aberto (o chat chega mais tarde), subia por
+     cima do mapa e tapava a faixa que se tinha tocado. Com a altura certa desde o início, a página rola
+     uma vez para o mapa ficar por cima dele (destaparMapa, em evento-ui.js). */
+  .lance { position: sticky; bottom: 0; z-index: 2; height: 45vh; max-height: 45vh; overflow-y: auto; box-shadow: var(--sombra-flutua); }
+  /* A explicação da busca pelo som é a mesma a cada lance; num painel preso ao fundo de um telemóvel
+     ela empurrava o resto para fora e o painel tapava o mapa. O botão diz o que faz. */
+  .lance .comoFunciona { display: none; }
+}
+@media (pointer: coarse) {
+  #fecharEvento { min-width: 44px; min-height: 44px; }
+  .picosChat .pico { min-height: 44px; min-width: 56px; }
+}
+
+/* ── só o que serve agora ──────────────────────────────────────────────────
+   O dono (07/10): com o mapa fechado (o vídeo aberto e o mapa recolhido) o zoom e o "Evento inteiro" não mudam
+   nada na tela, e isso confunde; as margens e o exportar montagem não servem
+   sem uma kill; o limpar exportações não serve sem exportações. */
+body:is(.videoAberto, :has(#palco:not([hidden]))) #evento:not(.comMapa) .soComMapa { display: none; }
+#montagem.semKills :is(#margens, .barraSelecao, #baixarMontagem, #formatoMontagem) { display: none; }
+body:not(:has(#fila > li)) #limparFila { display: none; }
+
+/* A caixa do Sincronizar sem botão (um canal só) e sem recado é uma caixa vazia. */
+.sincronizar:has(> #alinhar[hidden]):has(> #estadoAlinhar:empty) { display: none; }
+
+/* O mapa anda no tempo a arrastar: a mão diz que se pode, e o toque de lado é do mapa (o de cima
+   para baixo continua a rolar a página e as faixas). */
+.mapaRolo { cursor: grab; touch-action: pan-y; }
+.mapaRolo.aArrastar { cursor: grabbing; }
+
+/* ── o chat ao lado do vídeo ────────────────────────────────────────────── */
+.chatVideo { display: flex; flex-direction: column; gap: var(--e2); min-height: 0; }
+.chatVideo[hidden] { display: none; }
+.chatLinhas {
+  list-style: none; margin: 0; padding: var(--e2) var(--e3); overflow-y: auto; max-height: 220px;
+  background: var(--sup-1); border: 1px solid var(--linha); border-radius: var(--r-2);
+  font-size: var(--t-menor); line-height: 1.35; display: grid; gap: 2px; align-content: start;
+}
+.chatLinhas li { overflow-wrap: anywhere; color: var(--tinta-2); }
+.chatLinhas b { color: var(--tinta); font-weight: 600; }
+.chatLinhas .hora { color: var(--tinta-3); font-family: var(--letra-mono); font-size: var(--t-micro); }
+@media (min-width: 1080px) and (min-height: 640px) {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .chatVideo { order: 4; flex: 1 1 0; min-height: 120px; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .chatVideo .chatLinhas { flex: 1 1 auto; max-height: none; }
+}
+.chatTitulo { margin: 0; font-size: var(--t-menor); font-weight: 600; color: var(--tinta-2); }
+/* O trecho à vista muda de tamanho a cada zoom; numa barra que quebra linhas, isso mexia a altura dela e
+   empurrava o mapa por baixo do painel do lance. Tamanho fixo, numa linha. */
+#trechoVisto { display: inline-block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 26ch; min-height: 1.4em; line-height: 1.4; }
+@media (max-width: 759px) { #trechoVisto { flex: 1 0 100%; min-width: 0; } }
+#horasAuto[hidden] { display: none; }
+#janelaAuto { max-width: 13em; }
+body.mesa #formatoMontagem { width: auto; min-width: 0; max-width: 10em; min-height: 30px; padding: 0 var(--e5) 0 var(--e3); font-size: var(--t-menor); }
+.soVarios[hidden] { display: none; }
+
+
+/* ═══ 14, a tela do vídeo como editor ═══════════════════════════════════════
+   Regras novas desta tela. Cada uma diz de que referência vem e que problema resolve. */
+
+/* O trecho entre a entrada e a saída, sobre as faixas. Âmbar, porque o âmbar deste sistema é o tempo
+   marcado (tokens.css). Como em Premiere, Resolve, CapCut, Medal e Outplayed: o que vai sair é uma
+   faixa colorida na linha do tempo, e não só duas horas escritas. Sem a saída ainda, fica um risco. */
+.trechoMarcado {
+  position: absolute; top: 0; bottom: 0; z-index: 1; min-width: 3px; pointer-events: none;
+  background: var(--marca-eco); border-left: 2px solid var(--marca); border-right: 2px solid var(--marca);
+}
+.trechoMarcado.semSaida { background: none; border-right: 0; }
+
+/* Os formulários de entrada (colar link, procurar canal, lista) atrás de um botão enquanto há vídeo. Quem caça
+   um lance precisa do vídeo e da linha do tempo, e não de três formulários (heurística de Nielsen 8: desenho
+   minimalista). Ficam à vista a noite, o veredito do relógio e o Compartilhar, que são estado e ação do
+   projeto, e o que falhou ao carregar, que é aviso. */
+.editarCanais { display: none; }
+body:is(.videoAberto, :has(#palco:not([hidden]))) .editarCanais { display: inline-flex; }
+.editarCanais[aria-expanded="true"] { background: var(--acento-eco); border-color: var(--acento-fio); color: var(--tinta); }
+body.mesa:not(.canaisAbertos):is(.videoAberto, :has(#palco:not([hidden]))) #entrada,
+body.mesa:not(.canaisAbertos):is(.videoAberto, :has(#palco:not([hidden]))) #canaisEstado:not(:has(.mau)) { display: none; }
+body.mesa:not(.canaisAbertos):is(.videoAberto, :has(#palco:not([hidden]))) > .topoTrabalho { margin: 0; gap: 0; }
+body.mesa:not(.canaisAbertos):is(.videoAberto, :has(#palco:not([hidden]))) #canaisEstado:has(.mau) { display: block; flex: 1 0 100%; max-height: none; margin: 0 0 var(--e3); }
+@media (max-width: 620px) {
+  .topo { flex-wrap: wrap; row-gap: var(--e3); }
+  .topo .editarCanais { order: 9; flex: 1 0 100%; justify-content: center; min-height: 40px; }
+  /* O resumo do evento (times, canais, quantos com vídeo) é do mapa; na tela do vídeo só empurrava o vídeo para baixo. */
+  body:is(.videoAberto, :has(#palco:not([hidden]))) #resumoEvento { display: none; }
+}
+/* A noite, na tela do vídeo: sem rótulo, sem a lista de nomes (já estão nas faixas) e sem o seletor
+   quando só existe uma noite. Sobram o veredito do relógio e o Compartilhar. */
+body:is(.videoAberto, :has(#palco:not([hidden]))) #noites .rotuloCampo,
+body:is(.videoAberto, :has(#palco:not([hidden]))) #resumoNoite,
+body:is(.videoAberto, :has(#palco:not([hidden]))) #noites .campo:has(#noite):not(:has(option + option)) { display: none; }
+@media (max-width: 620px) {
+  body:is(.videoAberto, :has(#palco:not([hidden]))) #noites { padding: var(--e3); display: grid; gap: var(--e2); }
+  body:is(.videoAberto, :has(#palco:not([hidden]))) #noites .barraSessao { gap: var(--e2) var(--e3); flex-wrap: wrap; align-items: center; }
+  /* O veredito e o Compartilhar na mesma linha: o veredito quebra em duas linhas se precisar (nunca é cortado,
+     porque "sem relógio confiável" é o que mais importa ler), e a nota do link desce para a linha de baixo. */
+  body:is(.videoAberto, :has(#palco:not([hidden]))) #noites .confianca { flex: 1 1 0; min-width: 0; white-space: normal; display: block; }
+  body:is(.videoAberto, :has(#palco:not([hidden]))) #noites .barraSessao > #partilhar { flex: 0 0 auto; }
+  body:is(.videoAberto, :has(#palco:not([hidden]))) #noites .barraSessao > #estadoPartilha { flex: 1 0 100%; white-space: normal; }
+  .topo .editarCanais { min-height: 36px; }
+}
+
+/* As ferramentas de vez em quando, numa linha só e sem caixa. Eram três caixas de tamanhos diferentes
+   (uma âmbar) que ocupavam o espaço do vídeo; o botão de detecção ficou com a etiqueta "teste" ao lado,
+   que é o aviso de que erra, e o Recomeçar, que apaga, fica no fim e à parte. */
+.palcoFundo { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e3) var(--e5); }
+.palcoFundo > section, .palcoFundo > .linha, .palcoFundo > #zip {
+  background: none; border: 0; border-radius: 0; padding: 0; margin: 0;
+}
+.palcoFundo > #corte, .palcoFundo > #fila, .palcoFundo > #zip { flex: 1 0 100%; }
+.palcoFundo > .linha:has(#recomecar) { margin-left: auto; }
+#automatico { display: flex; align-items: center; gap: var(--e3); flex-wrap: wrap; border: 0 !important; background: none !important; }
+#automatico h2 { display: contents; }
+#automatico h2 > span { display: none; }
+#automatico h2 > .etiqueta { order: 2; white-space: nowrap; }
+#automatico select { min-width: 0; max-width: 9em; }
+@media (max-width: 620px) { #automatico select { max-width: 7.5em; } }
+#automatico > p { display: none; }
+#automatico > .linha { order: 1; }
+#recomecar { color: var(--perigo); }
+
+/* A sincronia de cada ângulo (os 0,0 s com mais e menos). No vídeo grande fica sempre à vista e com nome,
+   "Sincronia": escondida até se passar o rato, ninguém a achava, e quem chegava pelo Tab dava com botões
+   invisíveis (Nielsen 6, reconhecer em vez de lembrar). Nas miniaturas não há largura para o nome, e o
+   ajuste só aparece com o ponteiro ou o foco do teclado em cima; no toque (sem hover) fica à vista. */
+.tile .rotuloAjuste {
+  display: none; font-size: var(--t-micro); color: #fff; background: var(--sobre-video);
+  padding: 5px 6px; border-radius: var(--r-fio); white-space: nowrap;
+}
+.palcoFoco .tile .rotuloAjuste { display: inline-block; }
+@media (hover: hover) {
+  #grade .tile .ajuste { opacity: 0; transition: opacity var(--mov); }
+  #grade .tile:hover .ajuste, #grade .tile .ajuste:focus-within { opacity: 1; }
+}
+@media (max-width: 420px) { .palcoFoco.dois .tile .rotuloAjuste { display: none; } }
+
+/* Marcar kill é ação de apoio: o botão cheio da tela é o Clipar, e dois botões cheios lado a lado
+   disputavam o olho. Fica com o desenho de botão comum e o marcador na cor do tempo marcado. */
+#marcarKill .ic { color: var(--marca); }
+
+/* No celular, com o vídeo aberto, a trilha 1 2 3 só empurrava o vídeo para baixo: quem já está no vídeo
+   passou do passo 1, e o que falta (marcar e exportar) está nos botões à vista. */
+@media (max-width: 759.98px) {
+  body:is(.videoAberto, :has(#palco:not([hidden]))) .passos { display: none; }
+}
+
+/* O aviso de leitor quebrado vive fora da porta de entrada, para não ficar atrás do botão Canais fechado. */
+.topoTrabalho > #avisoPlayer { grid-column: 1 / -1; flex: 1 0 100%; margin: 0; }
+
+/* A tela do vídeo no evento: só o que serve agora. O campo de procurar é do mapa; com o mapa fechado não
+   procura nada, e o nome do evento deixa de ser título de página. */
+body:is(.videoAberto, :has(#palco:not([hidden]))) #evento:not(.comMapa) #procurarEvento { display: none; }
+body:is(.videoAberto, :has(#palco:not([hidden]))) .nomeEvento { font-size: var(--t-medio); }
+body:is(.videoAberto, :has(#palco:not([hidden]))) .mostrarMapa { background: var(--sup-3); border-color: var(--linha-3); }
+
+/* O Cortar (um arquivo por canal, com as margens de cada um) é um painel como a montagem. Vive na coluna
+   da direita, e não debaixo do vídeo: com dezessete canais a lista é alta e tirava a altura do vídeo. */
+#corte { background: var(--sup-2); border: 1px solid var(--linha); border-radius: var(--r-3); padding: var(--e3) var(--e4); margin: 0; min-width: 0; }
+#corte[hidden] { display: none; }
+#corte > h2 { margin-bottom: var(--e2); }
+@media (max-width: 1079.98px) { #corte { order: 8; } }
+
+/* ── ler chat e detectar na faixa de cada pessoa ────────────────────────────
+   O nome de cada faixa é um botão: abre por baixo dela uma barra com ler chat e detectar, de um trecho ou
+   de tudo. Em cima, a faixa Todos faz o mesmo para toda a gente. No modo trecho, as duas alças ficam em
+   cima do trilho da faixa escolhida, como a seleção de trecho de um editor (Premiere, Resolve, CapCut).
+   Ciano, a cor de ação deste sistema, para não se confundir com o âmbar da entrada e da saída. Dentro do
+   trilho, mais escuro, o que já foi lido do chat. */
+.faixaGeral { display: grid; grid-template-columns: var(--coluna) 1fr; gap: var(--e3); align-items: center; }
+.faixa > .nome, .faixaGeral > .nome { grid-row: 1; grid-column: 1; }
+.faixa > .trilho, .faixaGeral > .trilho, .faixa > .chatTrecho, .faixaGeral > .chatTrecho { grid-row: 1; grid-column: 2; }
+.faixa button.nome, .faixaGeral button.nome {
+  min-height: 18px; min-width: 0; padding: 0 var(--e1, 2px); margin: 0; border: 0; border-radius: var(--r-fio);
+  background: none; color: var(--tinta-3); font-size: var(--t-menor); font-weight: 400;
+  justify-content: flex-start; text-align: left; display: block; width: 100%;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 18px;
+}
+.faixa.principal button.nome { color: var(--tinta); font-weight: 500; }
+.faixa button.nome:hover:not(:disabled), .faixaGeral button.nome:hover:not(:disabled) { background: var(--sup-3); color: var(--tinta); border-color: transparent; }
+.faixaGeral button.nome { font-family: var(--letra); color: var(--tinta-2); font-weight: 600; }
+.faixa.escolhida button.nome, .faixaGeral.escolhida button.nome {
+  color: var(--tinta); background: var(--acento-eco); box-shadow: inset 2px 0 0 var(--acento);
+}
+.trilhoGeral { background: var(--sup-3); }
+.trilho .lido {
+  position: absolute; bottom: 0; height: 4px; display: block; border-radius: 1px; pointer-events: none;
+  background: color-mix(in srgb, var(--sup-0) 70%, transparent);
+}
+/* E em cima, o que a detecção já ouviu do som: mais escuro, do mesmo jeito. */
+.trilho .ouvido {
+  position: absolute; top: 0; height: 4px; display: block; border-radius: 1px; pointer-events: none;
+  background: color-mix(in srgb, var(--sup-0) 70%, transparent);
+}
+/* As alças por cima do trilho. A calha não apanha cliques (o trilho por baixo continua a levar o vídeo
+   ao sítio clicado); só a faixa do meio e as alças os apanham. */
+.chatTrecho { position: relative; height: 22px; pointer-events: none; z-index: 1; }
+.chatTrecho[hidden] { display: none; }
+.chatTrechoFaixa {
+  position: absolute; top: 2px; bottom: 2px; border-radius: 2px; cursor: grab; touch-action: none; pointer-events: auto;
+  background: color-mix(in srgb, var(--acento) 22%, transparent);
+  border-top: 1px solid var(--acento-fio); border-bottom: 1px solid var(--acento-fio);
+}
+.chatTrechoFaixa.aArrastar { cursor: grabbing; }
+/* A alça desenhada tem 6 px; a área de toque, 24 (WCAG 2.5.8), e 44 num ecrã de toque. */
+.alca {
+  position: absolute; top: -3px; bottom: -3px; width: 24px; transform: translateX(-50%); z-index: 2;
+  cursor: ew-resize; touch-action: none; border-radius: var(--r-2); pointer-events: auto;
+}
+.alca::before {
+  content: ''; position: absolute; left: 50%; top: 2px; bottom: 2px; width: 6px; margin-left: -3px;
+  background: var(--acento); border-radius: 2px; box-shadow: 0 0 0 1px var(--sup-0);
+}
+.alca:hover::before, .alca.aArrastar::before { background: var(--acento-alto); }
+.alca.fora::before { opacity: .45; }
+.alca:focus-visible { outline: none; box-shadow: var(--foco); }
+/* A barra, numa linha logo abaixo da faixa escolhida, na coluna do tempo. */
+/* Por cima da agulha (z-index 4): o painel aberto tapa a linha, como num editor. */
+.acoesFaixa { display: grid; grid-template-columns: var(--coluna) 1fr; gap: var(--e3); margin: 2px 0 var(--e2); position: relative; z-index: 5; }
+.acoesFaixa[hidden] { display: none; }
+.acoesCorpo {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2) var(--e3); min-width: 0;
+  padding: var(--e2); border: 1px solid var(--acento-fio); border-radius: var(--r-2); background: var(--sup-1);
+}
+.acoesCorpo [hidden] { display: none !important; }
+.acoesCorpo button { min-height: 30px; font-size: var(--t-menor); padding: 0 var(--e3); }
+.acoesCorpo #fecharAcoes { width: 30px; min-width: 30px; padding: 0; }
+/* O assistente: em cima o resumo do que vai acontecer, com Voltar e fechar; por baixo, o passo. */
+.acoesCorpo { flex-direction: column; align-items: stretch; flex-wrap: nowrap; }
+.acoesTopo { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2) var(--e3); min-width: 0; }
+.acoesTopo #fecharAcoes { margin-left: auto; }
+/* Estreito: o resumo numa linha só dele, por baixo do Voltar, do passo e do fechar. */
+@media (max-width: 620px) {
+  .acoesResumo { order: 5; flex-basis: 100%; }
+}
+.acoesResumo { flex: 1 1 auto; min-width: 0; margin: 0; font-size: var(--t-menor); font-weight: 500; color: var(--tinta); }
+.acoesPassoN { flex: none; font-size: var(--t-micro); color: var(--tinta-3); white-space: nowrap; }
+.ic-esq { transform: scaleX(-1); }
+.acoesPasso { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2) var(--e3); min-width: 0; }
+/* As escolhas grandes dos passos 1 e 2: um título e uma frase do que fazem. */
+.acoesEscolha { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14em), 1fr)); }
+.acoesCorpo button.grande {
+  display: grid; justify-items: start; justify-content: stretch; align-content: center; gap: 2px; text-align: left;
+  min-height: 56px; padding: var(--e3) var(--e4); font-size: var(--t-base);
+}
+.grande .rotulo { display: inline-flex; align-items: center; gap: var(--e2); font-weight: 600; }
+.grande .nota { font-size: var(--t-menor); color: var(--tinta-2); font-weight: 400; }
+.grande.ultima { border-color: var(--acento-fio); background: var(--acento-eco); }
+.grande .ultimaVez { font-size: var(--t-micro); color: var(--acento-alto); font-weight: 500; }
+.acoesFinal { display: block; }
+.passo4Chat { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2) var(--e4); }
+.passo4Chat select { width: auto; min-height: 30px; padding-top: 4px; padding-bottom: 4px; }
+.passo4Chat .nota { flex: 1 1 16em; margin: 0; font-size: var(--t-menor); color: var(--tinta-2); }
+.passo4Detetar { display: grid; gap: var(--e3); }
+.passo4Detetar > #detetarTrecho, .passo4Chat > #lerChatTrecho { justify-self: start; min-height: 36px; padding: 0 var(--e5); font-size: var(--t-base); }
+@media (pointer: coarse), (max-width: 620px) { .passo4Detetar > #detetarTrecho, .passo4Chat > #lerChatTrecho { min-height: 44px; } }
+.acoesTrabalho { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e3); min-width: 0; }
+.acoesTrabalho:not(:has(#pararChatTrecho:not([hidden]))):not(:has(.estadoChatTrecho:not(:empty))):not(:has(#continuarOuvindo:not([hidden]))) { display: none; }
+/* Quanto já foi ouvido, em horas de live, ao lado do Parar. */
+.barraOuvir { flex: 0 1 140px; width: 140px; min-width: 80px; height: 6px; appearance: none; border: 0; border-radius: var(--r-fio); background: var(--sup-4); overflow: hidden; }
+.barraOuvir::-webkit-progress-bar { background: var(--sup-4); border-radius: var(--r-fio); }
+.barraOuvir::-webkit-progress-value { background: var(--acento); border-radius: var(--r-fio); }
+.barraOuvir::-moz-progress-bar { background: var(--acento); border-radius: var(--r-fio); }
+/* O aviso antes de ouvir muito: a frase e os dois botões, no sítio do progresso. */
+.avisoOuvir {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2) var(--e3); min-width: 0;
+  padding: var(--e3); border: 1px solid color-mix(in srgb, var(--aviso) 45%, transparent); border-radius: var(--r-2); background: var(--aviso-eco);
+}
+.avisoOuvirTexto { flex: 1 1 18em; min-width: 0; margin: 0; font-size: var(--t-base); font-weight: 500; color: var(--tinta); }
+.avisoOuvirBotoes { display: flex; flex-wrap: wrap; gap: var(--e2); }
+.acoesCorpo .avisoOuvirBotoes button { min-height: 36px; padding: 0 var(--e4); font-size: var(--t-base); }
+@media (pointer: coarse), (max-width: 620px) { .acoesCorpo .avisoOuvirBotoes button { min-height: 44px; } }
+.chatTrechoHoras { font: 400 var(--t-menor)/1.2 var(--letra-mono); font-variant-numeric: tabular-nums; color: var(--tinta-2); white-space: nowrap; }
+.estadoChatTrecho { flex: 1 1 14em; min-width: 0; font-size: var(--t-menor); }
+
+/* O zoom, como o de um editor: menos, o deslizante, mais, e quanto tempo está à vista. */
+.zoomTempo { display: inline-flex; align-items: center; gap: var(--e2); flex: 0 1 auto; min-width: 0; }
+.zoomTempo button.so-icone { width: 30px; min-width: 30px; min-height: 30px; font: 600 var(--t-base)/1 var(--letra-mono); }
+#zoomTempo {
+  appearance: none; width: 140px; min-width: 60px; flex: 0 1 140px; height: 18px; padding: 0; margin: 0;
+  background: transparent; border: 0; cursor: pointer; touch-action: manipulation;
+}
+#zoomTempo::-webkit-slider-runnable-track { height: 4px; border-radius: var(--r-fio); background: var(--sup-4); }
+#zoomTempo::-moz-range-track { height: 4px; border-radius: var(--r-fio); background: var(--sup-4); }
+#zoomTempo::-webkit-slider-thumb {
+  appearance: none; box-sizing: border-box; width: 14px; height: 14px; margin-top: -5px;
+  border-radius: var(--r-redondo); background: var(--acento); border: 2px solid var(--sup-0);
+}
+#zoomTempo::-moz-range-thumb { box-sizing: border-box; width: 14px; height: 14px; border-radius: var(--r-redondo); background: var(--acento); border: 2px solid var(--sup-0); }
+#zoomTempo:focus-visible { outline: none; box-shadow: var(--foco); border-radius: var(--r-2); }
+.zoomQuanto { font: 400 var(--t-menor)/1.2 var(--letra-mono); color: var(--tinta-2); white-space: nowrap; min-width: 6.5em; }
+/* Com zoom, as faixas andam para o lado com o rato ou o dedo; para cima e para baixo continuam a rolar. */
+.relogio > .faixas, .relogio .reguaLinha { touch-action: pan-y; }
+
+/* O arquivo da lista, ao lado do campo onde se cola. */
+.arquivoElencoLinha { gap: var(--e3); align-items: center; }
+
+@media (pointer: coarse) {
+  .chatTrecho { height: 30px; }
+  .alca { width: 44px; top: -7px; bottom: -7px; }
+  .faixa button.nome, .faixaGeral button.nome { min-height: 44px; line-height: 44px; }
+  .acoesCorpo button, .acoesCorpo #fecharAcoes { min-height: 44px; }
+  .acoesCorpo #fecharAcoes { width: 44px; min-width: 44px; }
+  .zoomTempo button.so-icone { width: 44px; min-width: 44px; min-height: 44px; }
+  #zoomTempo { height: 44px; }
+  #zoomTempo::-webkit-slider-thumb { width: 24px; height: 24px; margin-top: -10px; }
+  #zoomTempo::-moz-range-thumb { width: 24px; height: 24px; }
+  #abrirArquivoElenco { min-height: 44px; }
+}
+@media (max-width: 620px) {
+  /* A barra na largura toda: a coluna dos nomes, vazia ao lado dela, era um quinto do ecrã perdido. */
+  .acoesVazio { display: none; }
+  .acoesCorpo { grid-column: 1 / -1; }
+  .acoesCorpo button { min-height: 44px; }
+  .zoomTempo { flex: 1 1 100%; order: -1; }
+  #zoomTempo { flex: 1 1 auto; width: auto; }
+}
+/* No telemóvel os tipos do arquivo ficam só para o leitor de ecrã (o botão aponta para eles), e o seletor
+   do sistema já só mostra .csv, .tsv e .txt: escritos, partiam a linha em duas e empurravam o Carregar
+   para baixo da dobra. */
+@media (max-width: 620px) {
+  #tiposArquivoElenco { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+
+/* Os filtros da detecção, no último passo do assistente. */
+.filtrosLista { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: var(--e2); grid-template-columns: repeat(auto-fit, minmax(min(100%, 17em), 1fr)); }
+.filtrosLista > legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.filtrosLista > .nota { grid-column: 1 / -1; margin: 0; font-size: var(--t-menor); color: var(--tinta-2); }
+.filtro { display: block; min-width: 0; padding: var(--e2) var(--e3); border: 1px solid var(--linha); border-radius: var(--r-2); background: var(--sup-2); font-size: var(--t-menor); }
+.filtro label, label.filtro { display: flex; align-items: flex-start; gap: var(--e3); cursor: pointer; }
+.filtro input[type=checkbox] { flex: 0 0 auto; width: 17px; height: 17px; margin: 2px 0 0; accent-color: var(--acento); }
+.filtro b { font-weight: 600; color: var(--tinta); }
+.filtro .nota { color: var(--tinta-2); }
+.filtro:has(input[type=checkbox]:checked) { border-color: var(--acento-fio); background: var(--acento-eco); }
+.filtroChat { display: grid; gap: var(--e2); grid-column: 1 / -1; }
+.filtroChat input[type=text] { width: 100%; min-width: 0; min-height: 30px; padding: 4px var(--e3); font-size: var(--t-base); }
+.filtro.desligado { opacity: .7; grid-column: 1 / -1; }
+.filtro.desligado label, label.filtro.desligado { cursor: default; }
+@media (pointer: coarse) {
+  .maisOpcoes > summary, .opcao select, .opcao .margens input, .passo4Chat select { min-height: 44px; }
+  .filtro input[type=checkbox] { width: 22px; height: 22px; min-width: 22px; margin-top: 0; }
+  .filtro label, label.filtro { min-height: 44px; align-items: center; }
+  .filtroChat input[type=text] { min-height: 44px; }
+}
+/* Por cima das faixas, quando elas são uma caixa baixa que rola (o vídeo aberto num ecrã largo). */
+.acoesFaixa.flutua > .acoesCorpo {
+  position: fixed; z-index: 40; left: var(--flutua-x); bottom: var(--flutua-baixo); width: var(--flutua-largura);
+  max-height: var(--flutua-alto); overflow: auto; padding: var(--e4);
+  background: var(--sup-2); box-shadow: var(--sombra-flutua); border-radius: var(--r-3);
+}
+.acoesFaixa.flutua { min-height: 2px; margin: 0; z-index: 6; }
+.acoesFaixa.flutua > .acoesVazio { display: none; }
+/* Mais opções: fechado por omissão, com cada opção e a frase do que ela faz. */
+.maisOpcoes > summary {
+  display: inline-flex; align-items: center; gap: var(--e2); min-height: 30px; cursor: pointer; list-style: none;
+  font-size: var(--t-menor); font-weight: 600; color: var(--tinta-2); border-radius: var(--r-2); padding: 0 var(--e2);
+}
+.maisOpcoes > summary::-webkit-details-marker { display: none; }
+.maisOpcoes > summary::before {
+  content: ''; width: 0; height: 0; border-style: solid; border-width: 4px 0 4px 6px;
+  border-color: transparent transparent transparent currentColor; transition: transform var(--mov-rapido);
+}
+.maisOpcoes[open] > summary::before { transform: rotate(90deg); }
+.maisOpcoes > summary:hover { color: var(--tinta); background: var(--sup-3); }
+.maisOpcoesCorpo { display: grid; gap: var(--e3); grid-template-columns: repeat(auto-fit, minmax(min(100%, 15em), 1fr)); padding: var(--e2) 0; }
+.opcao { display: grid; gap: var(--e2); align-content: start; font-size: var(--t-menor); padding: var(--e3); border: 1px solid var(--linha); border-radius: var(--r-2); }
+.opcao > span:first-child { font-weight: 600; color: var(--tinta); }
+.opcao .nota { color: var(--tinta-2); }
+.opcao select { min-height: 30px; padding-top: 4px; padding-bottom: 4px; }
+.opcao .margens { display: flex; flex-wrap: wrap; gap: var(--e3); }
+.opcao .margens input { width: 4.5em; min-height: 30px; padding: 4px var(--e2); }
+.opcao .margens label { display: inline-flex; align-items: center; gap: var(--e2); }
+
+/* ═══ A tela inicial: dois caminhos ════════════════════════════════════════
+ * O dono, 10/10: "tela inicial com dois caminhos claros". As duas portas de sempre, com o título de
+ * cada uma feito cartão: Evento inteiro e VOD ou poucos canais, lado a lado e sempre à vista. Os campos
+ * só aparecem para o caminho escolhido, num painel por baixo dos dois cartões.
+ *
+ * Tudo preso a `body.mesa.naEntrada` (posta pelo portas.js: sem vídeo, sem evento e sem noite). Fora
+ * dela as portas são o que eram: o corpo de cada uma não tem caixa própria (display: contents) e o
+ * #entrada continua a ser a barra do botão Canais com o vídeo aberto. A página da Twitch não tem
+ * nenhuma destas peças. */
+.corpoPorta, .colunaPorta { display: contents; }
+.lema, .exemploLinha { display: none; }
+body.mesa:not(.naEntrada) .cabecaPorta { display: none; }
+
+body.mesa.naEntrada .lema {
+  display: block; margin: var(--e4) 0 0; max-width: 100ch;
+  font-size: var(--t-medio); line-height: var(--lh); color: var(--tinta-2); text-wrap: pretty;
+}
+
+body.mesa.naEntrada > .topoTrabalho {
+  grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: var(--e4);
+}
+body.mesa.naEntrada > .topoTrabalho > * { grid-column: 1 / -1; }
+body.mesa.naEntrada .porta { display: contents; }
+body.mesa.naEntrada .cabecaPorta { display: flex; grid-row: 1; margin: 0; font: inherit; }
+body.mesa.naEntrada #portaEvento > .cabecaPorta { grid-column: 1; }
+body.mesa.naEntrada #entrada > .cabecaPorta { grid-column: 2; }
+
+/* O cartão. Um botão, e por isso todo ele se carrega; o escolhido ganha o fio do acento e o ícone aceso. */
+.escolhaPorta {
+  flex: 1 1 auto; width: 100%; min-height: 0; margin: 0; padding: var(--e5);
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; justify-content: stretch;
+  gap: var(--e4); text-align: left;
+  font: 400 var(--t-base)/var(--lh) var(--letra); color: var(--tinta);
+  background: var(--sup-2); border: 1px solid var(--linha); border-radius: var(--r-3);
+}
+.escolhaPorta:hover:not(:disabled) { background: var(--sup-3); border-color: var(--linha-3); }
+.escolhaPorta:active:not(:disabled) { background: var(--sup-3); }
+.escolhaPorta:focus-visible { border-radius: var(--r-3); }
+.escolhaPorta[aria-expanded="true"],
+.escolhaPorta[aria-expanded="true"]:hover:not(:disabled) { border-color: var(--acento); background: var(--sup-2); }
+.iconePorta {
+  width: 20px; height: 20px; padding: 9px; box-sizing: content-box; border-radius: var(--r-2);
+  color: var(--tinta-2); background: var(--sup-3); border: 1px solid var(--linha-2);
+}
+.escolhaPorta[aria-expanded="true"] .iconePorta { color: var(--acento); background: var(--acento-eco); border-color: var(--acento-fio); }
+.textoPorta { display: grid; gap: var(--e2); min-width: 0; }
+.escolhaPorta .tituloPorta { font-size: var(--t-grande); line-height: var(--lh-apertado); }
+.paraPorta { color: var(--tinta-2); text-wrap: pretty; }
+.temPorta { color: var(--tinta-3); font-size: var(--t-menor); }
+.setaPorta { width: 18px; height: 18px; margin-top: 2px; color: var(--tinta-3); transform: rotate(90deg); transition: transform var(--mov), color var(--mov); }
+.escolhaPorta:hover .setaPorta { color: var(--tinta-2); }
+.escolhaPorta[aria-expanded="true"] .setaPorta { color: var(--acento); transform: rotate(-90deg); }
+
+/* O painel do caminho escolhido, por baixo dos dois cartões. */
+body.mesa.naEntrada .corpoPorta { display: none; }
+:root[data-caminho="evento"] body.mesa.naEntrada #corpoEvento,
+:root[data-caminho="vod"] body.mesa.naEntrada #corpoVod {
+  display: grid; gap: var(--e4); grid-row: 2; grid-column: 1 / -1; align-content: start;
+  background: var(--sup-2); border: 1px solid var(--linha); border-radius: var(--r-3); padding: var(--e5);
+}
+body.mesa.naEntrada .colunaPorta { display: grid; gap: var(--e4); align-content: start; min-width: 0; }
+body.mesa.naEntrada #corpoEvento > #estadoEvento { grid-column: 1 / -1; }
+body.mesa.naEntrada #corpoEvento > #estadoEvento:empty { display: none; }
+.salvoNota { margin: 0; }
+@media (min-width: 1000px) {
+  /* O elenco à esquerda, que é o caminho de quase todos; montar pela busca ao vivo à direita, à parte. */
+  :root[data-caminho="evento"] body.mesa.naEntrada #corpoEvento { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); column-gap: var(--e6); }
+  body.mesa.naEntrada .colunaAoVivo { border-left: 1px solid var(--linha); padding-left: var(--e6); }
+}
+@media (max-width: 999px) {
+  body.mesa.naEntrada .colunaAoVivo { border-top: 1px solid var(--linha); padding-top: var(--e4); }
+}
+
+/* O exemplo: uma terceira opção, mais calma, por baixo dos caminhos. */
+body.mesa.naEntrada .exemploLinha {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--e1) var(--e2); margin: 0;
+}
+.exemploLinha .exemplo { color: var(--tinta-2); padding: 0 var(--e3); }
+.exemploLinha .exemplo .ic { color: var(--acento); }
+.exemploLinha .exemplo:hover:not(:disabled) { color: var(--tinta); }
+
+/* No telemóvel os dois cartões continuam lado a lado, só com o título e a frase: os dois caminhos e o
+   começo do painel escolhido cabem no primeiro ecrã. */
+@media (max-width: 699px) {
+  .escolhaPorta { grid-template-columns: minmax(0, 1fr) auto; gap: var(--e3); padding: var(--e4); }
+  .iconePorta, .temPorta { display: none; }
+  .escolhaPorta .tituloPorta { font-size: var(--t-medio); }
+  .paraPorta { font-size: var(--t-menor); line-height: 1.4; }
+  body.mesa.naEntrada > .topoTrabalho { gap: var(--e3); }
+  :root[data-caminho="evento"] body.mesa.naEntrada #corpoEvento,
+  :root[data-caminho="vod"] body.mesa.naEntrada #corpoVod { padding: var(--e4); gap: var(--e3); }
+  body.mesa.naEntrada .lema { font-size: var(--t-base); margin-top: var(--e3); }
+  /* A pergunta por cima e o botão por baixo, os dois encostados à mesma margem. */
+  body.mesa.naEntrada .exemploLinha { flex-direction: column; align-items: flex-start; }
+  .exemploLinha .exemplo { margin-left: calc(var(--e3) * -1); min-height: 44px; }
+}
+
+/* ═══ 15, a área de trabalho por tarefas ════════════════════════════════════
+   O dono (10/10): "separar as tarefas com nomes claros: Rever, Encontrar lances, Montagem, Ajustar clipe,
+   Exportar", tudo como um só ambiente de editor e não caixas soltas pela página. Só na mesa (body.mesa):
+   a folha é partilhada com a página da Twitch, que não tem nada disto.
+
+   - Por baixo do transporte, as ferramentas por tarefa, cada grupo com o nome à frente: Rever
+     (sincronizar pelo som), Encontrar lances (ler chat, detectar, com a etiqueta experimental). O
+     Recomeçar, que apaga, fica no fim e calado.
+   - À direita, os ângulos com título e procura, e por baixo um painel com dois separadores, Montagem e
+     Exportar. Os separadores são a cabeça do painel, presos a ele: uma peça só, e não duas caixas.
+   - Um botão cheio por área: Criar clipe no transporte, Exportar montagem na Montagem, o ZIP no Exportar. */
+
+/* ── o rótulo de cada grupo ─────────────────────────────────────────────── */
+body.mesa .rotuloGrupo {
+  display: inline-flex; align-items: center; margin: 0; white-space: nowrap;
+  font-size: var(--t-micro); font-weight: 600; letter-spacing: .02em; color: var(--tinta-3);
+}
+body.mesa .palcoFundo { gap: var(--e3) var(--e5); align-items: center; }
+body.mesa .palcoFundo .grupoFerramenta { display: flex; align-items: center; flex-wrap: wrap; gap: var(--e2) var(--e3); min-width: 0; }
+body.mesa .palcoFundo button { min-height: 32px; font-size: var(--t-menor); padding: 0 var(--e4); }
+/* Um fio vertical entre os grupos: a mesma linha, duas tarefas. */
+body.mesa .palcoFundo > #automatico { padding-left: var(--e5) !important; border-left: 1px solid var(--linha) !important; border-radius: 0 !important; }
+body.mesa .palcoFundo > .sincronizar[hidden], body.mesa .palcoFundo > .sincronizar:has(> #alinhar[hidden]):has(> #estadoAlinhar:empty) + #automatico { padding-left: 0 !important; border-left: 0 !important; }
+body.mesa #automatico h2 { display: inline-flex; font-size: var(--t-micro); }
+body.mesa #automatico > .linha { order: 0; gap: var(--e3); flex-wrap: nowrap; }
+body.mesa #automatico .etiqueta { white-space: nowrap; }
+/* A etiqueta experimental é aviso e não alarme: o âmbar do aviso, sem caixa cheia. */
+body.mesa .etiqueta { background: transparent; border: 1px solid color-mix(in srgb, var(--aviso) 45%, transparent); line-height: 16px; padding: 0 6px; }
+body.mesa .palcoFundo > .recomecarLinha { margin-left: auto; }
+body.mesa #recomecar { color: var(--tinta-3); }
+body.mesa #recomecar:hover:not(:disabled) { color: var(--perigo); background: var(--perigo-eco); }
+
+/* ── os ângulos: título, ordem e procura ────────────────────────────────── */
+body.mesa .barraGrelha .tituloPainel {
+  display: inline-flex; align-items: baseline; gap: var(--e2); margin: 0 auto 0 0;
+  font-size: var(--t-base); font-weight: 600; color: var(--tinta);
+}
+body.mesa .conta {
+  font: 500 var(--t-micro)/1 var(--letra-mono); font-variant-numeric: tabular-nums; color: var(--tinta-3);
+}
+body.mesa .conta:empty { display: none; }
+body.mesa .barraGrelha { gap: var(--e2) var(--e3); }
+body.mesa .barraGrelha #quantosNaGrelha { margin-left: 0; flex: 1 0 100%; }
+body.mesa .barraGrelha #quantosNaGrelha:empty { display: none; }
+body.mesa .procuraGrelha { flex: 1 1 140px; }
+
+/* ── Montagem e Exportar: um painel com dois separadores ────────────────── */
+body.mesa .abasTrabalho {
+  display: flex; align-items: stretch; gap: var(--e1); padding: var(--e2) var(--e2) 0;
+  background: var(--sup-1); border: 1px solid var(--linha); border-bottom: 0;
+  border-radius: var(--r-3) var(--r-3) 0 0;
+}
+body.mesa .aba {
+  flex: 1 1 0; min-height: 36px; gap: var(--e3); padding: 0 var(--e4);
+  background: transparent; border: 1px solid transparent; border-bottom: 0;
+  border-radius: var(--r-2) var(--r-2) 0 0; color: var(--tinta-2); font-weight: 500;
+}
+body.mesa .aba:hover:not(:disabled) { background: var(--sup-3); border-color: transparent; color: var(--tinta); }
+/* O separador aberto é da cor do painel e não tem fio por baixo: o painel continua por ele. */
+body.mesa .aba[aria-selected="true"], body.mesa .aba[aria-selected="true"]:hover {
+  background: var(--sup-2); border-color: var(--linha); color: var(--tinta); font-weight: 600;
+  box-shadow: inset 0 2px 0 var(--acento); margin-bottom: -1px;
+}
+body.mesa .aba .conta {
+  min-width: 20px; padding: 3px 5px; border-radius: var(--r-redondo); background: var(--sup-3); color: var(--tinta-2); text-align: center;
+}
+body.mesa .aba[aria-selected="true"] .conta { background: var(--acento-eco); color: var(--acento); }
+body.mesa #montagem, body.mesa #exportacoes {
+  background: var(--sup-2); border: 1px solid var(--linha); border-radius: 0 0 var(--r-3) var(--r-3);
+  padding: var(--e4); margin: 0; min-width: 0;
+}
+body.mesa #montagem[hidden], body.mesa #exportacoes[hidden] { display: none; }
+/* O nome do painel é o separador. O título fica só para quem lê a página em voz alta. */
+body.mesa #montagem > h2, body.mesa #exportacoes > h2 {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; margin: 0;
+}
+body.mesa #exportacoes { display: flex; flex-direction: column; gap: var(--e3); }
+body.mesa #exportacoes > * { flex: 0 0 auto; margin: 0; }
+/* O trecho marcado, por ângulo, entra no painel sem caixa própria: um subtítulo e a lista. */
+body.mesa #exportacoes #corte { background: none; border: 0; border-radius: 0; padding: 0 0 var(--e3); border-bottom: 1px solid var(--linha); }
+body.mesa #exportacoes #corte > h2 { font-size: var(--t-menor); color: var(--tinta-2); margin: 0 0 var(--e3); }
+body.mesa #exportacoes .corte { margin: 0; }
+body.mesa .filaVazia { color: var(--tinta-3); padding: var(--e3) 0; }
+body.mesa .filaVazia[hidden] { display: none; }
+body.mesa #exportacoes .fila { margin: 0; }
+body.mesa #exportacoes .fila li { background: var(--sup-1); }
+body.mesa #exportacoes .filaFim { justify-content: space-between; }
+body.mesa #exportacoes .filaFim:not(:has(#limparFila:not([style*="none"]))):has(#memoria:empty) { display: none; }
+body.mesa #exportacoes #zip:empty { display: none; }
+/* O ZIP é o botão cheio do Exportar: é o que se carrega para levar tudo de uma vez. */
+body.mesa #exportacoes .botaoZip {
+  background: var(--acento); color: var(--sobre-acento); border-color: transparent; font-weight: 600; min-height: 36px;
+}
+body.mesa #exportacoes .botaoZip:hover { background: var(--acento-alto); border-color: transparent; }
+/* Exportar montagem é o botão cheio da Montagem. */
+body.mesa #baixarMontagem:not(:disabled) {
+  background: var(--acento); color: var(--sobre-acento); border-color: transparent; font-weight: 600;
+}
+body.mesa #baixarMontagem:hover:not(:disabled) { background: var(--acento-alto); }
+
+/* No ecrã de PC com o vídeo aberto, o painel rola por dentro como a montagem rolava: os separadores
+   ficam presos em cima, e é a lista de kills (ou a de arquivos) que rola. */
+@media (min-width: 1080px) and (min-height: 640px) {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .abasTrabalho { flex: 0 0 auto; margin-bottom: calc(var(--e3) * -1); }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem { border-radius: 0 0 var(--r-3) var(--r-3); }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #exportacoes {
+    flex: 1 1 0; min-height: 140px; overflow-y: auto; padding: var(--e3) var(--e4);
+  }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) .palcoFundo { max-height: none; overflow: visible; }
+}
+/* No telemóvel e nos ecrãs baixos o painel vem depois dos ângulos, pela mesma ordem do PC. */
+@media (max-width: 1079.98px) {
+  body.mesa .abasTrabalho, body.mesa #exportacoes { order: 6; }
+  body.mesa #montagem, body.mesa #exportacoes { margin-top: calc(var(--e4) * -1); }
+}
+body.mesa .barraGrelha.soUm > :not(.tituloPainel) { display: none; }
+/* Estreito: cada grupo numa linha, o nome por cima dos botões, e um fio por cima em vez do de lado. */
+@media (max-width: 759.98px) {
+  body.mesa .palcoFundo { display: grid; gap: var(--e3); align-items: start; }
+  body.mesa .palcoFundo > * { min-width: 0; }
+  body.mesa .palcoFundo .grupoFerramenta .rotuloGrupo { flex: 1 0 100%; }
+  body.mesa .palcoFundo > #automatico { padding: var(--e3) 0 0 !important; border-left: 0 !important; border-top: 1px solid var(--linha) !important; }
+  body.mesa .palcoFundo > .recomecarLinha { margin: 0; justify-content: flex-end; }
+}
+
+/* ── a Montagem por dentro ─────────────────────────────────────────────────
+   De cima para baixo: marcar e margens, a seleção, a lista de kills (que é o que rola), o chat, e no fim,
+   preso ao fundo do painel, o Exportar montagem. O botão que termina a tarefa fica sempre à vista. */
+body.mesa #montagem > .linha:has(#marcarKill) { order: 0; }
+body.mesa #montagem > .barraSelecao { order: 2; }
+body.mesa #montagem > .momentos { order: 3; }
+body.mesa #montagem > .chatVideo { order: 4; }
+body.mesa #montagem > .linha:has(#baixarMontagem),
+body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .linha:has(#baixarMontagem) {
+  order: 8; position: sticky; bottom: calc(var(--e3) * -1); z-index: 2;
+  margin: 0 calc(var(--e4) * -1) calc(var(--e3) * -1); padding: var(--e3) var(--e4);
+  background: var(--sup-2); border-top: 1px solid var(--linha);
+}
+body.mesa #montagem.semKills > .linha:has(#baixarMontagem):has(#estadoMontagem:empty) { display: none; }
+body.mesa #montagem.semKills > .linha:has(#baixarMontagem) { position: static; border-top: 0; }
+body.mesa #montagem > .linha:has(#baixarMontagem) > #estadoMontagem { flex: 1 1 100%; order: 3; }
+body.mesa #montagem > .linha:has(#baixarMontagem) > #baixarMontagem { min-height: 34px; padding: 0 var(--e4); font-size: var(--t-base); }
+body.mesa #formatoMontagem { min-height: 34px; }
+
+/* Cada kill: na primeira linha o que ela é (número, hora, quem, quanto dura); na segunda o que se faz
+   com ela, com o Remover encostado à direita; por baixo, quem morreu. */
+body.mesa .momentos li { gap: 6px var(--e2); }
+body.mesa .momentos li > * { order: 1; }
+body.mesa .momentos li::before { content: ''; order: 2; flex: 1 0 100%; height: 0; }
+body.mesa .momentos li > button { order: 3; }
+body.mesa .momentos li > .fora { order: 4; margin-left: auto; }
+body.mesa .momentos li:has(> .vitimas)::after { content: ''; order: 5; flex: 1 0 100%; height: 0; border-top: 1px dashed var(--linha); }
+body.mesa .momentos li > .vitimas { order: 6; flex: 1 1 auto; min-width: 0; border-top: 0; padding-top: 0; }
+body.mesa .momentos li > .verMortes { order: 7; margin-left: auto; }
+body.mesa .momentos li > .olhar { order: 8; }
+body.mesa .momentos li > .quantos { margin-left: auto; }
+body.mesa .momentos li > .quem { margin-right: var(--e2); }
+body.mesa .momentos li.nota::before { display: none; }
+body.mesa .momentos li .ver { color: var(--tinta-2); }
+
+/* A seleção é ferramenta de apoio: sem caixa, numa linha só por cima da lista. */
+body.mesa #montagem > .barraSelecao { gap: var(--e1) var(--e2); }
+body.mesa #montagem > .barraSelecao :is(#selecionarTudo, #selecionarNada, #anularApagar),
+body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .barraSelecao :is(#selecionarTudo, #selecionarNada, #anularApagar) {
+  background: transparent; border-color: transparent; color: var(--tinta-2); padding: 0 var(--e3);
+}
+body.mesa #montagem > .barraSelecao :is(#selecionarTudo, #selecionarNada, #anularApagar):hover:not(:disabled) { background: var(--sup-3); color: var(--tinta); }
+body.mesa #montagem > .barraSelecao label > span:first-child {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+/* Preso ao fundo só onde o painel rola por dentro (o PC). No telemóvel quem rola é a página, e o botão
+   fica no fim da lista, na ordem de leitura. */
+@media (max-width: 1079.98px), (max-height: 639.98px) {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #montagem > .linha:has(#baixarMontagem) { position: static; margin: 0; padding: var(--e3) 0 0; }
+  body.mesa #montagem > .barraSelecao select { width: auto; min-width: 0; }
+}
+body.mesa #montagem > .barraSelecao select { max-width: 10em; }
+body.mesa #montagem > .barraSelecao label { flex: 0 1 auto; }
+/* Os nomes dos ângulos um pouco mais baixos no PC: cabem mais filas no mesmo espaço, e o nome lê-se igual. */
+@media (min-width: 1080px) and (min-height: 640px) {
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #palco.muitosAngulos #grade .tile { height: 32px; }
+  body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) #palco.muitosAngulos #grade .tile .fora button { min-height: 28px; }
+}
+/* Cada arquivo pronto em duas linhas curtas: o nome (cortado com reticências, o inteiro está no link) e
+   por baixo o tamanho e de quem é; Editar e apagar à direita, à altura das duas. */
+body.mesa #exportacoes .fila li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 2px var(--e2); padding: 6px var(--e3); }
+body.mesa #exportacoes .fila li > :is(a, b) { grid-column: 1; grid-row: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.mesa #exportacoes .fila li > .nota { grid-column: 1; grid-row: 2; font-size: var(--t-micro); }
+body.mesa #exportacoes .fila li > .editarUm { grid-column: 2; grid-row: 1 / span 2; }
+body.mesa #exportacoes .fila li > .apagarUm { grid-column: 3; grid-row: 1 / span 2; width: 28px; min-width: 28px; padding: 0; background: transparent; border-color: transparent; color: var(--tinta-3); }
+body.mesa #exportacoes .fila li > .apagarUm:hover { color: var(--perigo); background: var(--perigo-eco); }
+/* Ajustar clipe: Cancelar sem caixa, à esquerda, e o botão cheio é o formato de onde a pessoa veio. Aberto pelo
+   Editar de um cartão (veioDaLista), é o Baixar para TikTok; senão é o Baixar tela cheia, como sempre. */
+#modalClipe #estadoClipe { order: -2; }
+#modalClipe #cancelarClipe { order: -1; margin-right: auto; background: transparent; border-color: transparent; color: var(--tinta-2); }
+#modalClipe #cancelarClipe:hover:not(:disabled) { background: var(--sup-3); color: var(--tinta); border-color: transparent; }
+body.veioDaLista #modalClipe #guardarRetrato:not(:disabled) { background: var(--acento); color: var(--sobre-acento); border-color: transparent; font-weight: 600; order: 2; }
+body.veioDaLista #modalClipe #guardarRetrato:hover:not(:disabled) { background: var(--acento-alto); border-color: transparent; }
+body.veioDaLista #modalClipe #guardarClipe:not(:disabled) { background: var(--sup-3); color: var(--tinta); border-color: var(--linha-3); font-weight: 500; order: 1; }
+body.veioDaLista #modalClipe #guardarClipe:hover:not(:disabled) { background: var(--sup-4); border-color: var(--tinta-3); }
+/* Ajustar clipe aberto de uma kill: o botão cheio é Salvar ajustes (a tarefa é acertar e voltar à
+   montagem), e o Exportar 16:9 fica com o peso dos outros exportar. Um botão cheio por área. */
+body.mesa #modalClipe .linha.fim:has(#guardarAjustes:not([hidden])) #guardarClipe:not(:hover) {
+  background: var(--sup-3); color: var(--tinta); border-color: var(--linha-2); font-weight: 500;
+}
+body.mesa #modalClipe .linha.fim:has(#guardarAjustes:not([hidden])) #guardarClipe:hover:not(:disabled) {
+  background: var(--sup-4); color: var(--tinta); border-color: var(--linha-3);
+}
+body.mesa .avisoExperimental { color: var(--aviso); margin: 0; }
+/* Arquivos novos enquanto a Montagem está aberta: a conta do Exportar fica na cor da ação até ele ser aberto. */
+body.mesa .aba.novidade .conta { background: var(--acento); color: var(--sobre-acento); }
+
+/* ── o chat no vídeo, na janela do clipe ───────────────────────────────────
+   Uma caixa como a dos filtros: o ligar em cima, e as escolhas numa grelha que
+   cabe em quatro colunas num PC e em duas num telemóvel em pé. A tela do chat
+   fica por cima do vídeo 16:9 e por baixo das caixas de enquadramento, e não
+   apanha o rato: arrastar as caixas continua a funcionar com o chat à vista. */
+body.mesa .chatFonte { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+body.mesa .chatFonte[hidden] { display: none; }
+body.mesa .chatClipe {
+  display: grid; gap: var(--e3); margin-top: var(--e3); padding: var(--e3);
+  border: 1px solid var(--linha); border-radius: var(--r-2); background: var(--sup-2);
+}
+body.mesa .chatClipe:has(#chatClipeLigado:checked) { border-color: var(--acento-fio); }
+body.mesa .chatClipeLigar { display: flex; align-items: flex-start; gap: var(--e3); cursor: pointer; font-size: var(--t-menor); }
+body.mesa .chatClipeLigar input { margin-top: 2px; }
+body.mesa .chatClipeLigar b { font-weight: 600; color: var(--tinta); }
+body.mesa .chatClipeLigar .nota { color: var(--tinta-2); }
+body.mesa .chatClipeOpcoes {
+  display: grid; gap: var(--e2) var(--e3); grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+body.mesa .chatClipeOpcoes[hidden] { display: none; }
+body.mesa .chatClipeOpcoes .campo { gap: 4px; }
+body.mesa .chatClipeOpcoes select { min-height: 36px; padding-top: 6px; padding-bottom: 6px; font-size: var(--t-menor); }
+body.mesa .chatClipeCusto { grid-column: 1 / -1; margin: 0; font-size: var(--t-micro); color: var(--tinta-3); }
+body.mesa .chatClipeTopo { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--e2) var(--e4); }
+body.mesa .chatClipeTopo .chatClipeLigar { flex: 1 1 22em; min-width: 0; }
+body.mesa .estadoChatClipe { flex: 0 1 auto; margin: 0 0 0 auto; font-size: var(--t-menor); color: var(--tinta-2); }
+body.mesa .estadoChatClipe.mau { color: var(--perigo); }
+body.mesa .estadoChatClipe:empty { display: none; }
+@media (max-width: 720px) {
+  body.mesa .chatClipeOpcoes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body.mesa .estadoChatClipe { flex-basis: 100%; margin-left: 0; }
+}
+@media (pointer: coarse) {
+  body.mesa .chatClipeLigar { min-height: 44px; align-items: center; }
+  body.mesa .chatClipeLigar input { width: 22px; height: 22px; min-width: 22px; margin-top: 0; }
+  body.mesa .chatClipeOpcoes select { min-height: 44px; }
+}
+
+/* ── a legenda da fala, na janela do clipe ─────────────────────────────────
+   A mesma caixa do chat no vídeo, logo abaixo dela. Em cima o que se baixa e o
+   botão de gerar; no meio as escolhas de como aparece; em baixo o texto para
+   corrigir, uma fala por linha, com o tempo à esquerda (que leva a prévia lá)
+   e os botões de mexer no tempo e apagar à direita. */
+body.mesa .legendaClipe:has(#legendaLigada:checked) { border-color: var(--acento-fio); }
+body.mesa .legendaOpcoes { display: grid; gap: var(--e4); }
+body.mesa .legendaOpcoes[hidden] { display: none; }
+body.mesa .legendaGerar { display: grid; gap: var(--e3); }
+body.mesa .legendaBaixar { margin: 0; font-size: var(--t-menor); color: var(--tinta-2); }
+body.mesa .legendaBaixar.mau { color: var(--perigo); }
+body.mesa .legendaGerarLinha { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--e3) var(--e4); }
+body.mesa .legendaGerarLinha .campo { flex: 0 1 190px; min-width: 150px; gap: 4px; }
+body.mesa .legendaGerarLinha select { min-height: 36px; padding-top: 6px; padding-bottom: 6px; font-size: var(--t-menor); }
+body.mesa .legendaTraduzir { display: flex; align-items: flex-start; gap: var(--e3); flex: 1 1 16em; min-width: 0; font-size: var(--t-menor); cursor: pointer; }
+body.mesa .legendaTraduzir input { margin-top: 2px; }
+body.mesa .legendaTraduzir .nota { display: block; color: var(--tinta-3); font-size: var(--t-micro); }
+body.mesa #gerarLegenda { flex: 0 0 auto; min-height: 36px; }
+body.mesa .legendaProgresso { width: 100%; height: 6px; accent-color: var(--acento); }
+body.mesa .legendaProgresso[hidden] { display: none; }
+body.mesa .legendaAviso { display: flex; align-items: center; gap: var(--e2); margin: 0; font-size: var(--t-menor); color: var(--aviso); }
+body.mesa .legendaAviso .ic { flex: 0 0 auto; }
+body.mesa .legendaEstilo { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+body.mesa .legendaCores {
+  grid-column: span 2; display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2);
+  margin: 0; padding: 0; border: 0; min-width: 0;
+}
+body.mesa .legendaCores legend { float: left; width: 100%; padding: 0; margin-bottom: 4px; }
+body.mesa .legendaCor {
+  position: relative; display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 var(--e3);
+  border: 1px solid var(--linha-2); border-radius: var(--r-2); background: var(--sup-3);
+  font-size: var(--t-menor); color: var(--tinta-2); cursor: pointer;
+}
+body.mesa .legendaCor:hover { border-color: var(--linha-3); color: var(--tinta); }
+body.mesa .legendaCor input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; }
+body.mesa .legendaCor:has(input:checked) { border-color: var(--acento); background: var(--acento-eco); color: var(--tinta); }
+body.mesa .legendaCor:has(input:focus-visible) { outline: 2px solid var(--acento-alto); outline-offset: 2px; }
+body.mesa .legendaCor:has(input:disabled) { opacity: .55; cursor: default; }
+body.mesa .legendaCor .amostra { width: 14px; height: 14px; border-radius: 50%; border: 1px solid #0000004d; }
+body.mesa .legendaCor .amostra.turquesa { background: #46C6D6; }
+body.mesa .legendaCor .amostra.ambar { background: #F2B254; }
+body.mesa .legendaCor .amostra.branco { background: #FFFFFF; }
+body.mesa .legendaNome { display: flex; align-items: center; gap: var(--e3); align-self: end; min-height: 36px; font-size: var(--t-menor); cursor: pointer; }
+body.mesa .legendaTexto { display: grid; gap: var(--e2); padding-top: var(--e3); border-top: 1px solid var(--linha); }
+body.mesa .legendaTexto[hidden] { display: none; }
+body.mesa .legendaTextoTopo { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px var(--e4); }
+body.mesa .legendaTextoTopo .nota { font-size: var(--t-micro); color: var(--tinta-3); }
+body.mesa .legendaFalas {
+  list-style: none; margin: 0; padding: 2px; display: grid; gap: 4px;
+  max-height: 300px; overflow-y: auto; overscroll-behavior: contain;
+}
+body.mesa .fala {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto; align-items: center; gap: var(--e2);
+  padding: 3px; border-radius: var(--r-1); border: 1px solid transparent;
+}
+body.mesa .fala.agora { background: var(--acento-eco); border-color: var(--acento-fio); }
+body.mesa .falaTempo {
+  min-width: 62px; min-height: 34px; padding: 0 var(--e2); font-family: var(--letra-mono); font-size: var(--t-menor);
+  background: transparent; border-color: transparent; color: var(--tinta-2);
+}
+body.mesa .falaTempo:hover { background: var(--sup-3); color: var(--tinta); }
+body.mesa .falaTexto { min-height: 34px; padding: 4px var(--e3); font-size: var(--t-base); min-width: 0; width: 100%; }
+body.mesa .falaBotao { min-height: 34px; padding: 0 var(--e2); font-size: var(--t-micro); font-family: var(--letra-mono); color: var(--tinta-2); }
+body.mesa .falaBotao.apagar { width: 34px; min-width: 34px; padding: 0; }
+body.mesa .falaBotao.apagar:hover { color: var(--perigo); }
+@media (max-width: 720px) {
+  body.mesa .legendaEstilo { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body.mesa .legendaCores { grid-column: 1 / -1; }
+  body.mesa .legendaNome { grid-column: 1 / -1; }
+  body.mesa .legendaGerarLinha .campo { flex: 1 1 100%; }
+  body.mesa #gerarLegenda { flex: 1 1 100%; }
+}
+@media (max-width: 560px) {
+  /* As escolhas uma por linha: "Automática, longe do chat" não cabe em meia largura. */
+  body.mesa .legendaEstilo { grid-template-columns: minmax(0, 1fr); }
+  /* Num telemóvel em pé a fala tem a largura toda; o tempo e os botões ficam na linha de baixo. */
+  body.mesa .fala { grid-template-columns: minmax(0, 1fr) auto auto auto; grid-template-areas: "texto texto texto texto" "tempo antes depois apagar"; }
+  body.mesa .fala .falaTexto { grid-area: texto; }
+  body.mesa .fala .falaTempo { grid-area: tempo; justify-self: start; }
+  body.mesa .fala .antes { grid-area: antes; }
+  body.mesa .fala .depois { grid-area: depois; }
+  body.mesa .fala .apagar { grid-area: apagar; }
+  body.mesa .fala { padding: var(--e2) 3px; border-bottom: 1px solid var(--linha); border-radius: 0; }
+}
+@media (pointer: coarse) {
+  body.mesa .legendaTraduzir input, body.mesa .legendaNome input { width: 22px; height: 22px; min-width: 22px; margin-top: 0; }
+  body.mesa .legendaGerarLinha select, body.mesa #gerarLegenda, body.mesa .legendaCor, body.mesa .legendaNome { min-height: 44px; }
+  body.mesa .falaTempo, body.mesa .falaTexto, body.mesa .falaBotao { min-height: 44px; }
+  body.mesa .falaBotao.apagar { width: 44px; min-width: 44px; }
+}
+
+/* ── o prazo do VOD (IDEIAS.md, item 7) ───────────────────────────────────
+   "some em N dias" no fim do trilho de cada faixa e em cada lance da Montagem. Discreto até faltarem
+   2 dias; aí ganha a cor do aviso. Por cima do trilho e encostado à direita, sem mexer na grelha
+   das faixas, que a régua e a barra partilham. */
+body.mesa .trilho .prazoFaixa {
+  position: absolute; right: 2px; top: 50%; transform: translateY(-50%); z-index: 1;
+  font-size: 10px; line-height: 11px; padding: 0 4px; border-radius: var(--r-1);
+  background: var(--sup-2); color: var(--tinta-3); white-space: nowrap; cursor: help;
+}
+/* Outro jogo nesta noite (ver jogo.js): o nome e o vídeo a cinza, e o motivo à esquerda do trilho. */
+body.mesa .faixa.outroJogo .nome { color: var(--tinta-3); }
+body.mesa .faixa.outroJogo .trilho > i { opacity: .4; filter: grayscale(1); }
+body.mesa .trilho .outroJogoFaixa {
+  position: absolute; left: 2px; top: 50%; transform: translateY(-50%); z-index: 1; pointer-events: none;
+  font-size: 10px; line-height: 11px; padding: 0 4px; border-radius: var(--r-1);
+  background: var(--sup-2); color: var(--tinta-3); white-space: nowrap;
+}
+body.mesa .trilho .prazoFaixa.perto { color: var(--aviso); background: color-mix(in srgb, var(--aviso) 14%, var(--sup-2)); }
+body.mesa .momentos li .prazo { font-size: var(--t-micro); color: var(--tinta-3); white-space: nowrap; cursor: help; }
+body.mesa .momentos li .prazo.perto { color: var(--aviso); }
+body.mesa .guardarAgora { align-items: center; }
+body.mesa .guardarAgora .nota.mau { color: var(--aviso); }
+
+/* O recado do "Marcar agora": some quando está vazio, para não abrir um buraco na Montagem. */
+body.mesa #montagem .estadoAoVivo { margin: var(--e2) 0 0; }
+body.mesa #montagem .estadoAoVivo:empty { display: none; }
+
+/* As mortes (mortes-ui.js): achadas nos vídeos, com o registro do servidor à parte. A mesma caixa dos
+   melhores lances, e uma linha por morte. */
+.mortes { display: flex; flex-direction: column; gap: var(--e3); padding: var(--e4); background: var(--sup-2); border: 1px solid var(--linha); border-radius: var(--r-3); }
+.mortes[hidden] { display: none; }
+.mortesAchar { gap: var(--e2) var(--e4); align-items: center; flex-wrap: wrap; }
+.mortesAchar label.pequeno { display: inline-flex; align-items: center; gap: var(--e2); }
+.mortesAchar select { width: auto; max-width: 100%; }
+.mortesBarra { flex: 1 1 10em; min-width: 8em; height: 6px; }
+.mortesBarra[hidden] { display: none; }
+.mortesServidor > summary { cursor: pointer; font-size: var(--t-menor); width: max-content; max-width: 100%; border-radius: var(--r-1); color: var(--tinta-2); }
+.mortesServidor > summary:focus-visible { box-shadow: var(--foco); outline: none; }
+.mortesServidor[open] { display: flex; flex-direction: column; gap: var(--e3); }
+.origemMorte { color: var(--tinta-3); font-size: var(--t-micro); border: 1px solid var(--linha); border-radius: var(--r-1); padding: 0 4px; white-space: nowrap; }
+.mortesHora { gap: var(--e2) var(--e4); align-items: center; flex-wrap: wrap; }
+.mortesHora label.pequeno { display: inline-flex; align-items: center; gap: var(--e2); }
+.mortesHora select { width: auto; max-width: 100%; }
+#mortesFusoAjuda, #mortesEstado { margin: 0; }
+#mortesEstado:empty { display: none; }
+.mortesNomes > summary, .mortesNaoLidas > summary { cursor: pointer; font-size: var(--t-menor); width: max-content; max-width: 100%; border-radius: var(--r-1); }
+.mortesNomes > summary:focus-visible, .mortesNaoLidas > summary:focus-visible { box-shadow: var(--foco); outline: none; }
+.mortesNomesLista, .mortesNaoLidasLista { margin: var(--e2) 0 0; padding: 0; list-style: none; display: grid; gap: var(--e2); max-height: 16em; overflow: auto; }
+.mortesNomesLista li { display: flex; flex-wrap: wrap; gap: var(--e2); align-items: center; }
+.mortesNomesLista b { font-family: var(--letra-mono); font-weight: 600; overflow-wrap: anywhere; }
+.mortesNomesLista select { width: auto; max-width: 100%; }
+.mortesNaoLidasLista li { font-family: var(--letra-mono); font-size: var(--t-micro); color: var(--tinta-2); overflow-wrap: anywhere; }
+.mortesNaoLidasLista li span { color: var(--tinta-3); font-family: var(--letra); }
+.mortesNaoLidasLista:empty { display: none; }
+.mortesLista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e2); max-height: 28em; overflow: auto; }
+.mortesLista:empty { display: none; }
+.morte { display: grid; grid-template-columns: 6.5em minmax(0, 1fr) auto; gap: 2px var(--e4); align-items: center; padding: var(--e2) var(--e3); background: var(--sup-1); border: 1px solid var(--linha); border-radius: var(--r-2); }
+.morte.aberta { border-color: var(--perigo); box-shadow: inset 3px 0 0 var(--perigo); }
+.morteHora { margin: 0; font-family: var(--letra-mono); font-size: var(--t-base); font-weight: 600; white-space: nowrap; }
+.morteHora small { display: block; font-family: var(--letra); font-size: var(--t-micro); font-weight: 400; color: var(--tinta-3); }
+.morteQuem { margin: 0; overflow-wrap: anywhere; }
+.morteQuem .semCanal { color: var(--tinta-3); font-size: var(--t-micro); }
+.morteAcoes { display: flex; gap: var(--e2); flex-wrap: wrap; justify-content: flex-end; }
+.morteAcoes button { min-height: 32px; padding: 0 var(--e3); white-space: nowrap; }
+.morteAberta { display: inline-flex; align-items: center; gap: var(--e2); flex-wrap: wrap; min-width: 0; }
+.morteAberta[hidden] { display: none; }
+.morteAberta output { overflow-wrap: anywhere; }
+@media (max-width: 759px) {
+  .mortes { padding: var(--e3); }
+  .morte { grid-template-columns: minmax(0, 1fr); }
+  .morteAcoes { justify-content: stretch; }
+  .morteAcoes button { flex: 1 1 auto; }
+}
+
+/* ═══ o modo simples (simples.js, ESTUDO-FACIL.md) ═══════════════════════════
+ *
+ * Uma coluna, letra grande, e nada com menos de 48 px de altura onde se toca. O modo vive no <html>
+ * (data-modo, posto pelo caminho-cedo.js antes do primeiro desenho). No simples: a caixa e o botão; com
+ * a busca a correr (body.simplesTrabalho), a lista; um evento aberto também vira essa lista (o mapa fica
+ * no avançado, e aqui só fora da vista, com largura, para o que o desenha não quebrar). O resto da página
+ * fica escondido, e continua igual no avançado.
+ */
+.simples { display: none; }
+:root[data-modo="simples"] .simples { display: block; }
+:root[data-modo="simples"] :is(.topoTrabalho, #palco, #lema, #passos, #parar),
+:root[data-modo="simples"] .topo :is(#inicio, #editarCanais, .paraTwitch, #ajuda) { display: none !important; }
+:root[data-modo="simples"] #evento {
+  position: absolute; left: -10000px; top: 0; width: 1100px; height: 1px; overflow: hidden; visibility: hidden;
+}
+:root[data-modo="simples"] .modoSimples,
+:root:not([data-modo="simples"]) #modoAvancado { display: none; }
+:root[data-modo="simples"] .topo #idioma { min-height: 48px; font-size: 16px; width: 150px; }
+.modoSimples { font-size: var(--t-menor); }
+
+.simples {
+  max-width: 640px; margin: 0 auto var(--e7);
+  font-size: var(--t-medio);
+}
+.simplesInicio { display: grid; gap: var(--e4); margin-top: var(--e6); }
+.simplesPergunta { font-size: 22px; font-weight: 600; line-height: var(--lh-apertado); color: var(--tinta); }
+.simplesCaixaLinha { position: relative; }
+.simples input#simplesCaixa {
+  width: 100%; min-height: 56px; font-size: 18px; padding: 0 var(--e5);
+  border-radius: var(--r-3);
+}
+.simples button { min-height: 48px; font-size: 16px; }
+.simples .simplesBotao { width: 100%; min-height: 56px; font-size: 18px; border-radius: var(--r-3); }
+.simplesSecundario { background: transparent; color: var(--tinta-2); }
+.simplesDica { margin: 0; color: var(--tinta); background: var(--acento-eco); border: 1px solid var(--acento-fio);
+  border-radius: var(--r-2); padding: var(--e4); line-height: var(--lh); }
+.simplesExemplos { margin: 0; color: var(--tinta-2); font-size: var(--t-base); }
+.simplesErro, .simplesAviso { margin: 0; color: var(--tinta); background: var(--aviso-eco); border: 1px solid var(--aviso);
+  border-radius: var(--r-2); padding: var(--e4); line-height: var(--lh); }
+.simplesSugestoes, .simplesParecidos { list-style: none; margin: var(--e2) 0 0; padding: 0; display: grid; gap: var(--e2); }
+.simplesParecidos p { margin: 0; color: var(--tinta-2); }
+.simples .simplesSugestao {
+  width: 100%; min-height: 52px; justify-content: space-between; text-align: left; padding: 0 var(--e5);
+}
+.simplesSugestao span { color: var(--tinta-2); font-weight: 400; font-size: var(--t-base); }
+.simplesModoLinha { margin-top: var(--e7); text-align: center; }
+
+.simplesTrabalho { display: grid; gap: var(--e4); margin-top: var(--e5); }
+/* Título, estado e barra em coluna; os botões da tela (Parar, Procurar de novo, Começar de novo, Modo avançado)
+   numa fila só, à esquerda embaixo da barra enquanto procura e à direita do título quando a lista está pronta. */
+.simplesAcoes { display: flex; flex-wrap: wrap; gap: var(--e3); align-items: center; }
+.simples .simplesAcoes button { min-height: 44px; font-size: 15px; }
+.simplesTrabalho:not([hidden]) ~ .simplesModoLinha { display: none; }
+@media (min-width: 720px) {
+  .simplesTrabalho { grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--e4); }
+  .simplesTrabalho > * { grid-column: 1 / -1; }
+  .simplesTrabalho:has(#simplesParar[hidden]) > .simplesQuem { grid-column: 1; grid-row: 1; align-self: center; }
+  .simplesTrabalho:has(#simplesParar[hidden]) > .simplesAcoes { grid-column: 2; grid-row: 1; justify-content: flex-end; }
+  .simples .simplesAcoes button { min-height: 36px; font-size: 14px; }
+}
+.simplesQuem { margin: 0; font-size: 20px; line-height: var(--lh-apertado); }
+.simplesProgresso { display: grid; gap: var(--e3); }
+.simplesEstado { margin: 0; line-height: var(--lh); }
+.simplesBarra, .simplesBarraClipe { width: 100%; height: 10px; accent-color: var(--acento); }
+.simplesProgresso .simplesSecundario { justify-self: start; }
+.simplesLista { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--e5); }
+.simplesCartao {
+  display: grid; grid-template-columns: 1fr; gap: var(--e4);
+  background: var(--sup-2); border: 1px solid var(--linha); border-radius: var(--r-3); padding: var(--e4);
+}
+.simplesFoto {
+  aspect-ratio: 16 / 9; background: var(--video-fundo); border-radius: var(--r-2); overflow: hidden;
+  display: grid; place-items: center;
+}
+.simplesFoto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.simplesSemFoto { color: var(--tinta-3); font-family: var(--letra-mono); font-size: var(--t-grande); display: grid; gap: var(--e2); text-align: center; }
+.simplesSemFoto small { font-family: var(--letra); font-size: var(--t-menor); }
+/* Um nome comprido sem espaços não pode empurrar a tela para o lado. */
+.simples :is(.simplesQuem, .simplesMotivo, .simplesEstado, .simplesAviso, .simplesErro, .simplesSugestao b, .simplesBaixando) { overflow-wrap: anywhere; min-width: 0; }
+.simplesCartao, .simplesInfo { min-width: 0; }
+.simplesInfo { display: grid; gap: var(--e3); align-content: start; }
+.simplesMotivo { margin: 0; font-size: 18px; font-weight: 600; line-height: var(--lh-apertado); }
+.simplesNota { display: inline-block; font-size: var(--t-base); padding: 2px 8px; border-radius: var(--r-redondo);
+  margin-right: var(--e2); vertical-align: 2px; }
+.nota-muitoBom { background: var(--ok-eco); color: var(--ok); }
+.nota-bom { background: var(--acento-eco); color: var(--acento-alto); }
+.nota-talvez { background: var(--sup-3); color: var(--tinta-2); }
+.simplesStreamer { margin: 0; color: var(--tinta-2); font-size: var(--t-base); font-weight: 600; }
+.simplesTambem { margin: 0; color: var(--tinta-2); font-size: var(--t-base); overflow-wrap: anywhere; }
+/* Não é botão: é a marca do fim da lista que, à vista, carrega mais cartões. */
+.simplesMais { width: 100%; height: 1px; padding: 0; border: 0; opacity: 0; pointer-events: none; }
+.simplesQuando, .simplesTalvezFalha { margin: 0; color: var(--tinta-2); font-size: var(--t-base); }
+.simplesBotoes { display: flex; flex-wrap: wrap; gap: var(--e2); align-items: center; }
+.simples .simplesBotoes button { min-height: 44px; font-size: 15px; padding-inline: var(--e4); }
+.simplesBotoes .curto { display: none; }
+/* Um botão forte por cartão: Baixar para TikTok cheio; Tela cheia com borda e fundo mais claros; Editar sem caixa;
+   a lixeira lá longe, cinza, e só vermelha quando o dedo está em cima (o vermelho é do Fim). */
+.simples .simplesBotoes .simplesDeitado { background: var(--sup-3); border-color: var(--linha-3); color: var(--tinta); }
+.simples .simplesBotoes .simplesDeitado:hover:not(:disabled) { background: var(--sup-4); border-color: var(--tinta-3); }
+.simples .simplesBotoes .simplesEditar { background: transparent; border-color: transparent; color: var(--tinta-2); }
+.simples .simplesBotoes .simplesEditar:hover:not(:disabled) { background: var(--sup-3); color: var(--tinta); border-color: transparent; }
+.simples .simplesBotoes .simplesNao { margin-left: auto; background: transparent; border-color: transparent; color: var(--tinta-3); }
+.simples .simplesBotoes .simplesNao:is(:hover, :focus-visible):not(:disabled) { background: var(--perigo-eco); color: var(--perigo); border-color: transparent; }
+.simplesNao span { margin-left: var(--e2); }
+/* A imagem do cartão é o botão de assistir; a prévia toma o lugar dela. */
+.simples button.simplesFoto { position: relative; padding: 0; width: 100%; border: 0; cursor: pointer; }
+.simplesFoto::after {
+  content: "▶"; position: absolute; left: 50%; top: 50%; width: 64px; height: 64px; margin: -32px 0 0 -32px;
+  display: grid; place-items: center; padding-left: 5px; box-sizing: border-box; font-size: 28px;
+  color: #fff; background: rgb(0 0 0 / .62); border: 3px solid #fff; border-radius: 50%; pointer-events: none;
+}
+.simplesFoto[hidden] { display: none; }
+.simplesPrevia { display: grid; gap: var(--e2); min-width: 0; }
+.simplesPrevia[hidden] { display: none; }
+.simplesPrevia video { width: 100%; aspect-ratio: 16 / 9; background: var(--video-fundo); border-radius: var(--r-2); display: block; cursor: pointer; }
+/* O player da prévia, como o do YouTube: controles por cima do vídeo, embaixo, sobre um degradê escuro. */
+.simplesPlayer { position: relative; background: #000; border-radius: var(--r-2); overflow: hidden; }
+.simplesPlayer video { display: block; width: 100%; aspect-ratio: 16 / 9; background: #000; cursor: pointer; }
+.simplesPlayer:fullscreen { display: grid; border-radius: 0; }
+.simplesPlayer:fullscreen video { width: 100%; height: 100%; aspect-ratio: auto; object-fit: contain; }
+.simplesControles {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: 0 8px; color: #fff;
+  background: linear-gradient(to top, rgb(0 0 0 / .7), rgb(0 0 0 / 0)); transition: opacity .2s;
+}
+.simplesPlayer.semControles .simplesControles { opacity: 0; pointer-events: none; }
+/* Dentro do player, o foco é um anel branco fino no próprio ícone, e não a caixa grande que tapava a webcam. */
+.simplesPlayer :focus-visible { box-shadow: none; outline: 2px solid rgb(255 255 255 / .85); outline-offset: -8px; border-radius: 50%; }
+.simplesPlayer.semControles video { cursor: none; }
+.simplesControlesLinha { display: flex; align-items: center; gap: 4px; margin: -6px 0 -4px; }
+.simplesTempoPlayer { font-size: 13px; font-variant-numeric: tabular-nums; margin-right: auto; padding-left: 6px; white-space: nowrap; }
+.simples .simplesIcone {
+  min-height: 44px; min-width: 44px; padding: 0; background: none; border: 0; border-radius: 0; color: #fff;
+  display: inline-grid; place-items: center; cursor: pointer;
+}
+.simples .simplesIcone:hover:not(:disabled) { background: none; }
+.simplesIcone svg { width: 26px; height: 26px; display: block; }
+.simplesVol { display: inline-flex; align-items: center; }
+.simplesVolume { width: 0; opacity: 0; transition: width .15s, opacity .15s; accent-color: #fff; margin: 0; }
+.simplesVol:hover .simplesVolume, .simplesVol:focus-within .simplesVolume { width: 64px; opacity: 1; margin: 0 6px; }
+/* A barra do tempo: fina, de ponta a ponta, vermelha no que já passou, com a bolinha; engrossa ao passar o mouse. */
+.simplesLinha {
+  -webkit-appearance: none; appearance: none; display: block; width: 100%; height: 10px; margin: 0; padding: 0;
+  background: transparent; cursor: pointer; --feito: 0%;
+}
+.simplesLinha::-webkit-slider-runnable-track {
+  height: 3px; border-radius: 2px; transition: height .1s;
+  background: linear-gradient(to right, #f00 var(--feito), rgb(255 255 255 / .35) var(--feito));
+}
+.simplesLinha::-moz-range-track { height: 3px; border-radius: 2px; background: rgb(255 255 255 / .35); }
+.simplesLinha::-moz-range-progress { height: 3px; border-radius: 2px; background: #f00; }
+.simplesLinha:hover::-webkit-slider-runnable-track { height: 5px; }
+.simplesLinha::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 13px; height: 13px; border-radius: 50%; background: #f00; border: 0; margin-top: -5px;
+}
+.simplesLinha:hover::-webkit-slider-thumb { margin-top: -4px; }
+.simplesLinha::-moz-range-thumb { width: 13px; height: 13px; border-radius: 50%; background: #f00; border: 0; }
+/* Voltar para a lista: só no avançado aberto pelo Editar de um cartão, e na janela do clipe. */
+.voltarLista { display: none; }
+body.veioDaLista .voltarLista { display: inline-flex; white-space: nowrap; flex: none; }
+:root[data-modo="simples"] .voltarLista { display: none !important; }
+.simplesBaixando { margin: 0; line-height: var(--lh); }
+.simplesBaixando:empty { display: none; }
+/* Celular e janela estreita: linha com a imagem à esquerda (40%) e o texto e os botões à direita. */
+.simplesCartao { grid-template-columns: 40% minmax(0, 1fr); align-items: start; }
+.simplesCartao.comPrevia { grid-template-columns: 1fr; }
+.simplesMotivo { font-size: 16px; }
+.simplesFoto::after { width: 40px; height: 40px; margin: -20px 0 0 -20px; font-size: 16px; border-width: 2px; padding-left: 3px; }
+/* PC: grade de cartões, três por linha, imagem em cima e uma fila só de botões pequenos. */
+@media (min-width: 900px) {
+  .simples:has(.simplesTrabalho:not([hidden])) { max-width: 1200px; width: 100%; }
+  .simplesLista { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: var(--e4); align-items: start; }
+  .simplesCartao, .simplesCartao.comPrevia { grid-template-columns: minmax(0, 1fr); gap: var(--e3); padding: var(--e3); container-type: inline-size; }
+  .simplesFoto::after { width: 64px; height: 64px; margin: -32px 0 0 -32px; font-size: 28px; border-width: 3px; padding-left: 5px; }
+  .simplesBotoes { flex-wrap: nowrap; gap: var(--e2); }
+  .simples .simplesBotoes button { min-height: 34px; font-size: 14px; padding-inline: var(--e3); white-space: nowrap; }
+  .simples .simplesBotoes .simplesNao { padding-inline: 0; width: 34px; justify-content: center; flex: none; }
+  .simplesNao span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); margin: 0; }
+  /* O cartão que toca cresce um pouco por cima dos vizinhos, a partir do próprio centro (o dono, 13/10). */
+  .simplesCartao { transition: transform .18s ease; }
+  .simplesCartao.comPrevia { transform: scale(1.18); transform-origin: center; z-index: 5; position: relative; box-shadow: 0 12px 40px rgb(0 0 0 / .55); background: var(--sup-2); }
+}
+@container (max-width: 430px) {
+  .simplesBotoes .longo { display: none; }
+  .simplesBotoes .curto { display: inline; }
+}
+/* O clipe em pé grava-se na janela "Ajustar clipe", que fica aberta e a desenhar mas sem se ver: o vídeo
+   tem de estar no ecrã para dar imagem, e a pessoa não tem de ver uma janela cheia de opções. */
+body.simplesGravando #modalClipe { opacity: 0 !important; pointer-events: none !important; }
+
+/* 13/10: barra do avançado mais curta. O relógio exato saiu; o compartilhar é só o ícone. */
+#confianca { display: none; }
+#partilhar.soIcone { min-width: 40px; padding-inline: 0; justify-content: center; }
+/* Idioma: só a bandeira; a lista abre com bandeira e nome. */
+.idiomaBandeira { position: relative; flex: 0 0 auto; }
+.idiomaBotao { min-width: 44px; padding: 6px 8px; display: inline-grid; place-items: center; }
+.idiomaBandeira svg { width: 26px; height: 18px; display: block; border-radius: 2px; box-shadow: 0 0 0 1px rgb(255 255 255 / .15); }
+.idiomaLista { position: absolute; right: 0; top: calc(100% + 4px); z-index: 40; margin: 0; padding: 4px; list-style: none; min-width: 160px; background: var(--sup-3); border: 1px solid var(--linha-2); border-radius: var(--r-2); box-shadow: 0 8px 24px rgb(0 0 0 / .45); }
+.idiomaLista li { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--r-fio); cursor: pointer; color: var(--tinta); }
+.idiomaLista li:hover, .idiomaLista li:focus-visible, .idiomaLista li[aria-selected="true"] { background: var(--sup-2); }
+/* A lista de canais nasce do tamanho da caixa do nome e cresce uma linha por canal (o dono, 13/10). */
+#canais { field-sizing: content; min-height: 44px; max-height: 240px; resize: none; overflow-y: auto; }
+.topo .barraSessao.noTopo { display: flex; align-items: center; gap: var(--e2); flex: 0 1 auto; margin: 0; padding: 0; border: 0; background: none; }
+body:not(:has(#noites:not([hidden]))) .topo .barraSessao.noTopo { display: none; }
+.topo .barraSessao.noTopo .campo { flex: 0 0 auto; min-width: 0; }
+.topo .barraSessao.noTopo .rotuloCampo { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.topo .barraSessao.noTopo #noite { width: auto; min-width: 0; padding-block: 6px; }
+.topo .barraSessao.noTopo #estadoPartilha:empty { display: none; }
+/* O que havia nesta caixa foi para a barra de cima; a caixa vazia deixava uma faixa sem nada (o dono, 13/10). */
+#noites { display: none !important; }
+.topo .barraSessao.noTopo #estadoNoite:empty { display: none; }
+/* Ferramentas: um botão que abre o menu com o que cada uma faz (o dono, 13/10). */
+.ferramentas { position: relative; display: inline-block; }
+.ferramentasBotao { list-style: none; display: inline-flex; align-items: center; gap: var(--e2); min-height: 36px; padding: 0 var(--e3); border: 1px solid var(--linha-2); border-radius: var(--r-2); background: var(--sup-2); cursor: pointer; color: var(--tinta); }
+.ferramentasBotao::-webkit-details-marker { display: none; }
+.ferramentasBotao::after { content: ""; width: 6px; height: 6px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); margin: -3px 0 0 4px; }
+.ferramentasMenu { position: absolute; z-index: 30; left: 0; bottom: calc(100% + 6px); width: min(380px, 90vw); display: grid; gap: 2px; padding: 6px; background: var(--sup-3); border: 1px solid var(--linha-2); border-radius: var(--r-3); box-shadow: 0 10px 30px rgb(0 0 0 / .5); }
+.ferramentaItem { display: flex; align-items: flex-start; gap: var(--e3); width: 100%; text-align: left; padding: var(--e2) var(--e3); border: 0; background: none; border-radius: var(--r-2); white-space: normal; }
+.ferramentaItem:hover:not(:disabled), .ferramentaItem:focus-visible { background: var(--sup-2); }
+.ferramentaItem .ic { margin-top: 2px; color: var(--acento); flex: none; }
+.ferrNome { display: flex; align-items: center; gap: var(--e2); color: var(--tinta); font-weight: 500; }
+.ferrDiz { display: block; margin-top: 2px; color: var(--tinta-3); font-size: var(--t-pequeno, 13px); line-height: 1.35; font-weight: 400; }
+/* Tela cheia e janela no canto de baixo à direita; no ângulo aberto o olho fica do tamanho de quatro botões (o dono, 13/10). */
+.tile .cantoDir { display: flex; align-items: center; gap: var(--e2); margin-left: auto; }
+.tile.foco .fora .par { width: 64px; min-width: 64px; min-height: 64px; height: 64px; }
+.tile.foco .fora .par .ic { width: 30px; height: 30px; }
+/* Zoom na vertical, colado ao fim das faixas: + em cima, − embaixo (o dono, 13/10). Os saltos de 1 e 5 min saíram. */
+.relogio:has(> .pesTempo) > .faixas, .relogio:has(> .pesTempo) > .reguaLinha, .relogio:has(> .pesTempo) > .barraLinha { margin-right: 44px; }
+.relogio > .pesTempo { position: absolute; right: var(--e2); bottom: var(--e3); top: 64px; display: flex; }
+.pesTempo .zoomTempo { flex-direction: column-reverse; height: 100%; gap: var(--e1, 4px); }
+.pesTempo #zoomTempo { writing-mode: vertical-lr; direction: rtl; width: 30px; height: auto; flex: 1 1 auto; min-height: 40px; }
+.pesTempo .zoomQuanto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.cabecaTempo .saltos { display: none; }
+/* As divisões cortam a faixa colorida, como num editor: traço escuro por cima da gravação, mais fraco nos pequenos. */
+.trilho .linhaHora { z-index: 3; background: rgb(0 0 0 / .55); box-shadow: 1px 0 0 color-mix(in srgb, var(--tinta) 7%, transparent); }
+.trilho .linhaHora.menor { background: rgb(0 0 0 / .28); box-shadow: none; }
+.trilho .linhaHora.vira { background: rgb(0 0 0 / .7); box-shadow: 1px 0 0 color-mix(in srgb, var(--tinta) 22%, transparent); }
+/* A sincronia de cada ângulo só no player aberto, grande; nas miniaturas não (o dono, 13/10). */
+.tile:not(.foco) .ajuste { display: none; }
+/* A explicação ao parar o mouse num botão (dicas.js). */
+.dica { position: fixed; z-index: 1000; max-width: 280px; padding: 6px 10px; border-radius: var(--r-2); background: #0b0b0b; color: #f3f0ea; border: 1px solid var(--linha-2); font-size: 13px; line-height: 1.35; pointer-events: none; box-shadow: 0 6px 20px rgb(0 0 0 / .5); }
+.dica[hidden] { display: none; }
+/* Marcar entrada e saída: só o ícone e a tecla; o que fazem aparece ao parar o mouse (o dono, 13/10). */
+.marcaCurta { gap: 6px; padding-inline: 10px; }
+/* Arrastar players e miniaturas: o que vai fica meio apagado, o lugar onde cai acende. */
+.tile.aArrastar { opacity: .5; }
+.tile.alvoArrastar { outline: 3px dashed var(--acento); outline-offset: -3px; }
+/* Identificar vítimas fica escondido por enquanto (o dono, 13/10: ainda mal feito). O código continua lá. */
+button.verMortes { display: none; }
+/* A confirmação do Recomeçar. */
+dialog.confirmarRecomecar { max-width: 420px; padding: var(--e4); border: 1px solid var(--linha-2); border-radius: var(--r-3); background: var(--sup-2); color: var(--tinta); }
+dialog.confirmarRecomecar::backdrop { background: rgb(0 0 0 / .6); }
+dialog.confirmarRecomecar h2 { margin: 0 0 var(--e2); font-size: 18px; }
+dialog.confirmarRecomecar ul { margin: var(--e2) 0; padding-left: 20px; }
+dialog.confirmarRecomecar .botoes { display: flex; justify-content: flex-end; gap: var(--e2); margin-top: var(--e3); }
+dialog.confirmarRecomecar .apagar { background: var(--perigo); color: #fff; border-color: transparent; }
+/* O guia do TikTok saiu (o dono, 13/10). */
+.zonaTikTok { display: none !important; }

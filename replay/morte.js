@@ -51,26 +51,70 @@ export function diferenca(a, b) {
 }
 
 /**
+ * O inventário do Rust, que não é uma morte.
+ *
+ * O teste real de 12/10 (QA-REAL.md): em 4 de 7 lances o `nikots` saiu como vítima, e nos quadros ele
+ * tinha só aberto o inventário a saquear uma caixa. A tela do inventário escurece e perde a cor como a
+ * de morte, mas tem uma assinatura própria: o fundo é um cinzento-oliva LISO (medido no quadro dele:
+ * R 38, G 38, B 32, desvio abaixo de 1 em blocos inteiros), coisa que nem o jogo nem o ecrã de morte
+ * (escuro, puxado ao vermelho, com o texto e os botões de renascer ao meio) têm. Conta-se a fração de
+ * blocos de 8x8 lisos e dessa cor: no quadro do inventário dá 0,56, nos de jogo 0.
+ *
+ * @param {Uint8ClampedArray} pixeis RGBA
+ * @param {number} largura em pixeis (os quadros da página são de 160x90)
+ */
+export function pareceInventario(pixeis, largura = 160, { minimo = 0.25 } = {}) {
+  if (!pixeis?.length || !largura) return { fracao: 0, sim: false };
+  const altura = Math.floor(pixeis.length / 4 / largura);
+  const L = 8;
+  let blocos = 0;
+  let lisos = 0;
+  for (let by = 0; by + L <= altura; by += L) {
+    for (let bx = 0; bx + L <= largura; bx += L) {
+      blocos++;
+      const soma = [0, 0, 0];
+      const quad = [0, 0, 0];
+      for (let y = by; y < by + L; y++) {
+        for (let x = bx; x < bx + L; x++) {
+          const i = (y * largura + x) * 4;
+          for (let c = 0; c < 3; c++) { soma[c] += pixeis[i + c]; quad[c] += pixeis[i + c] ** 2; }
+        }
+      }
+      const n = L * L;
+      const m = soma.map((v) => v / n);
+      const desvio = quad.reduce((t, q, c) => t + Math.sqrt(Math.max(0, q / n - m[c] ** 2)), 0) / 3;
+      const [r, g, b] = m;
+      if (desvio < 2.5 && g >= 15 && g <= 90 && Math.abs(r - g) <= 6 && g - b >= 2.5) lisos++;
+    }
+  }
+  const fracao = blocos ? lisos / blocos : 0;
+  return { fracao, sim: fracao >= minimo };
+}
+
+/**
  * A nota de "isto parece uma morte", para um canal.
  *
  * Devolve também as partes, porque uma nota sozinha não se pode discutir — e
  * quem está a olhar para o ecrã tem de poder perceber porque é que a página
  * acha o que acha.
  */
-export function notaDeMorte(antes, depois) {
+export function notaDeMorte(antes, depois, { largura = 160 } = {}) {
   if (!antes || !depois) return null;
   const a = medir(antes);
   const d = medir(depois);
   const mudou = diferenca(antes, depois);
   const dessaturou = Math.max(0, a.saturacao - d.saturacao);
   const escureceu = Math.max(0, a.brilho - d.brilho);
+  // Abriu o inventário (ou a caixa que está a saquear): não morreu. Fica com uma nota de quem não mudou.
+  const inventario = pareceInventario(depois, largura).sim && !pareceInventario(antes, largura).sim;
   return {
     mudou,
     dessaturou,
     escureceu,
+    inventario,
     // Os pesos dizem o que importa: perder a cor é o sinal mais próprio do
     // ecrã de morte; mudar tudo acontece em qualquer luta.
-    nota: dessaturou * 2 + escureceu * 1.2 + mudou * 0.6,
+    nota: (dessaturou * 2 + escureceu * 1.2 + mudou * 0.6) * (inventario ? 0.05 : 1),
     brilhoDepois: d.brilho,
     saturacaoDepois: d.saturacao,
   };
@@ -84,20 +128,34 @@ export function notaDeMorte(antes, depois) {
  * quando ele se destaca dos outros, e nunca mais do que dois — em Rust morre
  * um, às vezes dois, nunca a equipa inteira.
  */
-export function quemMorreu(notas, { destaqueMin = 1.6, maximo = 2 } = {}) {
+export function quemMorreu(notas, { destaqueMin = 1.6, maximo = 2, excluir = [] } = {}) {
   const validos = Object.entries(notas).filter(([, v]) => v && Number.isFinite(v.nota));
   if (validos.length < 2) return { sugeridos: [], ordenados: validos.map(([c, v]) => ({ canal: c, ...v })) };
 
   const ordenados = validos.map(([canal, v]) => ({ canal, ...v })).sort((x, y) => y.nota - x.nota);
-  const restantes = ordenados.slice(1).map((x) => x.nota);
-  const mediana = restantes.length
-    ? [...restantes].sort((x, y) => x - y)[Math.floor(restantes.length / 2)]
-    : 0;
+  // Quem pode ser apontado. O protagonista fica de fora daqui mas nao da
+  // conta: e o termo de comparacao que existe com dois canais, e sem ele um
+  // par "eu e a vitima" nunca apontava ninguem. Dentro dos lugares e que nao
+  // pode estar: ele a abrir o saco do morto escurece o ecra como uma morte, e
+  // ficava com um dos dois, a frente da segunda vitima de verdade.
+  const elegiveis = ordenados.filter((x) => !excluir.includes(x.canal));
+  const restantes = ordenados.filter((x) => x !== elegiveis[0]).map((x) => x.nota)
+    .sort((x, y) => x - y);
+  // A mediana a serio, com a media dos dois do meio quando sao um numero par.
+  // O indice len/2 de uma lista par e o de CIMA dos dois: com tres canais e
+  // dois mortos, a "mediana" dos dois de baixo era a outra vitima, e ninguem
+  // passava a 1,6x dela.
+  const meio = Math.floor(restantes.length / 2);
+  const mediana = !restantes.length ? 0
+    : restantes.length % 2 ? restantes[meio]
+      : (restantes[meio - 1] + restantes[meio]) / 2;
 
   const sugeridos = [];
-  for (const c of ordenados.slice(0, maximo)) {
+  for (const c of elegiveis.slice(0, maximo)) {
     // Destacar-se do MEIO do grupo, e não do segundo: com dois mortos, o
     // segundo também está alto e escondia o primeiro.
+    // Quem abriu o inventário nunca é apontado, por mais que tenha mudado (ver `pareceInventario`).
+    if (c.inventario) continue;
     if (mediana > 0 ? c.nota >= mediana * destaqueMin : c.nota > 0.08) sugeridos.push(c.canal);
   }
   return { sugeridos, ordenados };

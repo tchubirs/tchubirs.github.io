@@ -5,7 +5,7 @@
 // an ordered set of VODs plus the gaps, and scrubbing across a gap must either
 // switch VODs by itself or show the hole — never quietly play the wrong moment.
 
-import { tempoDeMidia } from './kick.js?v=e671918e16';
+import { tempoDeMidia } from './kick.js?v=78c992b68e';
 
 /**
  * One channel's night: its VODs in order, and the holes between them.
@@ -34,7 +34,10 @@ export function linhaDoCanal(slug, pecas) {
     pecas: boas,
     buracos,
     inicio: boas[0]?.playlist.inicio ?? null,
-    fim: boas.at(-1)?.playlist.fim ?? null,
+    // O fim que vai mais longe, e não o do último a começar: um VOD de uma
+    // reconexão pode começar depois e acabar antes do comprido, e com o fim
+    // dele o canal dizia "já tinha acabado" com o VOD comprido ainda a tocar.
+    fim: boas.length ? Math.max(...boas.map((p) => p.playlist.fim).filter(Number.isFinite)) : null,
     // Said out loud: with no PDT anywhere, this channel cannot be trusted on
     // the shared clock and the UI has to say so instead of drawing it as equal.
     //
@@ -126,6 +129,13 @@ export function comNudge(sessao, slug, ms) {
  * ajustes, a marca e o tamanho de cada corte. Perder isto por causa de uma
  * página que travou é perder meia hora de procura.
  */
+// Os tectos de uma sessao lida. Eram 50 canais e 300 kills, e o evento tem
+// quinhentos streamers: um F5 deixava cinquenta na caixa e o guardar seguinte
+// gravava esses cinquenta por cima da lista inteira. Continua a haver tecto,
+// para um link escrito a mao nao pedir cinquenta mil canais a Kick.
+export const MAXIMO_CANAIS = 1000;
+export const MAXIMO_MOMENTOS = 5000;
+
 export function paraLink(sessao) {
   const magro = {
     v: 2,
@@ -139,7 +149,7 @@ export function paraLink(sessao) {
     margens: sessao.margens || {},
     mudo: sessao.mudo || {},
     volume: sessao.volume || {},
-    momentos: Array.isArray(sessao.momentos) ? sessao.momentos.slice(0, 300) : [],
+    momentos: Array.isArray(sessao.momentos) ? sessao.momentos.slice(0, MAXIMO_MOMENTOS) : [],
   };
   return btoa(unescape(encodeURIComponent(JSON.stringify(magro))));
 }
@@ -155,19 +165,26 @@ export function doLink(texto) {
     // versão não a perde por causa de um número que mudou.
     if (!j || (j.v !== 1 && j.v !== 2) || !Array.isArray(j.canais)) return null;
     const objecto = (x) => (x && typeof x === 'object' && !Array.isArray(x) ? x : {});
+    // E o que vem dentro de cada objecto tambem se le. Um nudge em texto virava
+    // conta de juntar letras no `onde`, e um volume 'x' dava NaN, que o
+    // <video> recusa com um erro que parava a noite a meio de abrir.
+    const so = (x, valido) => Object.fromEntries(Object.entries(objecto(x))
+      .filter(([, v]) => valido(v)));
+    const numero = (v) => typeof v === 'number' && Number.isFinite(v);
     return {
-      canais: j.canais.filter((c) => typeof c === 'string').slice(0, 50),
-      nudges: objecto(j.nudges),
+      canais: j.canais.filter((c) => typeof c === 'string').slice(0, MAXIMO_CANAIS),
+      nudges: so(j.nudges, numero),
       marca: j.marca && Number.isFinite(j.marca.de) && Number.isFinite(j.marca.ate) ? j.marca : null,
       agora: Number.isFinite(j.agora) ? j.agora : null,
       focos: (Array.isArray(j.focos) ? j.focos : []).filter((c) => typeof c === 'string').slice(0, 2),
-      margens: objecto(j.margens),
-      mudo: objecto(j.mudo),
-      volume: objecto(j.volume),
+      margens: so(j.margens, (m) => m && typeof m === 'object'
+        && ['antesS', 'depoisS'].every((k) => m[k] == null || (numero(m[k]) && m[k] >= 0))),
+      mudo: so(j.mudo, (v) => typeof v === 'boolean'),
+      volume: so(j.volume, (v) => numero(v) && v >= 0 && v <= 1),
       // As kills marcadas sao o que mais custa a juntar: uma hora de video
       // vista a procurar. Perde-las num F5 e perder a tarde.
       momentos: (Array.isArray(j.momentos) ? j.momentos : [])
-        .filter((m) => m && Number.isFinite(m.ms)).slice(0, 300),
+        .filter((m) => m && Number.isFinite(m.ms)).slice(0, MAXIMO_MOMENTOS),
       de: Number.isFinite(j.de) ? j.de : null,
     };
   } catch { return null; }
@@ -196,6 +213,24 @@ export function instanteSeguindo(ancora, video, { limiteMs = 3_600_000 } = {}) {
   // ainda a caminho; longe demais é um pedaço novo com o tempo recomeçado.
   if (!Number.isFinite(ms) || ms < ancora.ms || ms - ancora.ms > limiteMs) return null;
   return ms;
+}
+
+/**
+ * Um passo do relógio que segue o vídeo, já com a âncora puxada para a frente.
+ *
+ * O limite de uma hora de `instanteSeguindo` é para apanhar um salto (um
+ * pedaço novo com o tempo recomeçado), não para medir o tempo de reprodução.
+ * Mas a âncora só se punha no `irPara`, e quem via a reprodução seguida
+ * durante mais de uma hora ficava com o relógio parado: o risco congelava e
+ * "Marcar kill" gravava dez minutos antes do que estava no ecrã. Puxando a
+ * âncora a cada passo, o limite volta a medir só o salto entre dois passos.
+ *
+ * @returns {{ms:number|null, ancora:object}}
+ */
+export function seguirAncora(ancora, video, opcoes) {
+  const ms = instanteSeguindo(ancora, video, opcoes);
+  if (ms == null) return { ms: null, ancora };
+  return { ms, ancora: { ...ancora, ms, tempoS: video.currentTime } };
 }
 
 /**
@@ -270,4 +305,65 @@ export function saiuDaVista(vista, agoraMs, margem = 0.2) {
   if (!vista || !(vista.fim > vista.inicio)) return false;
   const l = vista.fim - vista.inicio;
   return agoraMs < vista.inicio + l * margem || agoraMs > vista.fim - l * margem;
+}
+
+// ── o zoom contínuo da linha do tempo ───────────────────────────────────────
+//
+// O dono, 10/10: "igual nos editores de vídeo: o quanto de linha do tempo aparece, dando zoom e
+// diminuindo a linha, ou tirando zoom e aumentando, até ter o máximo". Um deslizante em vez de cinco
+// degraus fixos. A escala é logarítmica, como a de qualquer editor: cada passo do deslizante multiplica
+// o tempo à vista pelo mesmo fator, e por isso ir de 30 s a 1 min custa o mesmo gesto que de 6 h a 12 h.
+
+/** O menos que a linha mostra: uns 30 segundos, o bastante para ver um tiroteio segundo a segundo. */
+export const ZOOM_MIN_MS = 30_000;
+/** As posições do deslizante. Mil dão um passo de menos de 1% numa noite de dez horas. */
+export const ZOOM_PASSOS = 1000;
+
+/** O mínimo que cabe nesta noite: 30 s, ou a noite inteira se ela for mais curta do que isso. */
+const minimoDe = (totalMs) => Math.min(ZOOM_MIN_MS, totalMs);
+
+/**
+ * Do deslizante (0 = a noite toda, ZOOM_PASSOS = 30 s) para o tempo à vista, em ms.
+ * Fora do intervalo fica na ponta: o máximo é a noite toda, e o mínimo uns 30 s.
+ */
+export function larguraDoZoom(totalMs, valor) {
+  if (!(totalMs > 0)) return 0;
+  const min = minimoDe(totalMs);
+  const v = Math.min(ZOOM_PASSOS, Math.max(0, Number.isFinite(valor) ? valor : 0));
+  return Math.round(totalMs * (min / totalMs) ** (v / ZOOM_PASSOS));
+}
+
+/** O contrário: a posição do deslizante para um tempo à vista. */
+export function valorDoZoom(totalMs, larguraMs) {
+  if (!(totalMs > 0)) return 0;
+  const min = minimoDe(totalMs);
+  if (min >= totalMs) return 0;
+  const l = Math.min(totalMs, Math.max(min, Number.isFinite(larguraMs) && larguraMs > 0 ? larguraMs : totalMs));
+  return Math.round((Math.log(l / totalMs) / Math.log(min / totalMs)) * ZOOM_PASSOS) + 0;
+}
+
+/**
+ * Aproximar ou afastar mantendo um instante no mesmo sítio do ecrã, como o Ctrl + roda de um editor:
+ * o que está debaixo do rato fica debaixo do rato. `pontoMs` é esse instante; sem ele, o meio da vista.
+ * A largura nova fica entre os 30 s e a noite, e a vista nunca sai da noite.
+ */
+export function zoomEmVolta(janela, vista, larguraMs, pontoMs) {
+  if (!janela || !(janela.fim > janela.inicio)) return janela;
+  const total = janela.fim - janela.inicio;
+  const largura = Math.min(total, Math.max(minimoDe(total), Number.isFinite(larguraMs) ? larguraMs : total));
+  if (largura >= total) return { inicio: janela.inicio, fim: janela.fim };
+  const v = vista && vista.fim > vista.inicio ? vista : janela;
+  const ponto = Number.isFinite(pontoMs) ? Math.min(v.fim, Math.max(v.inicio, pontoMs)) : (v.inicio + v.fim) / 2;
+  const fracao = (ponto - v.inicio) / (v.fim - v.inicio);
+  const de = Math.min(Math.max(janela.inicio, ponto - fracao * largura), janela.fim - largura);
+  return { inicio: Math.round(de), fim: Math.round(de) + largura };
+}
+
+/** Andar com a vista, do mesmo tamanho, sem sair da noite. */
+export function andarVista(janela, vista, deltaMs) {
+  if (!janela || !vista || !(vista.fim > vista.inicio)) return vista;
+  const largura = vista.fim - vista.inicio;
+  if (largura >= janela.fim - janela.inicio) return { inicio: janela.inicio, fim: janela.fim };
+  const de = Math.min(Math.max(janela.inicio, vista.inicio + (Number(deltaMs) || 0)), janela.fim - largura);
+  return { inicio: Math.round(de), fim: Math.round(de) + largura };
 }
