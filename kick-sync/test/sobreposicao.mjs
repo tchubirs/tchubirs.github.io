@@ -28,6 +28,7 @@ export const PECAS = {
   mapa: '#mapaRolo',
   lance: '#lance',
   barraEvento: '.barraEvento',
+  melhores: '#melhores',
 };
 
 /**

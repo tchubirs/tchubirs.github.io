@@ -32,6 +32,10 @@ export async function kickFalsa(pagina, {
   // DISTINGUÍVEIS no ecrã: sem isso, duas noites com os mesmos canais dão o
   // mesmo palco e um teste de corrida não consegue dizer qual delas ganhou.
   canaisPorNoite = null,
+  // Os picos de chat de cada canal, para os melhores lances: { slug: [{ min, n }] } põe `n` mensagens no
+  // minuto `min` da noite, por cima das 3 por minuto de sempre. Sem isto, o primeiro canal tem um pico
+  // de 40 no minuto 5, como sempre teve.
+  chatPicos = null,
 } = {}) {
   const quantos = comSom ? SEGS_SOM.length : segmentos;
   // Cada noite começa 24 h depois da anterior.
@@ -151,7 +155,8 @@ export async function kickFalsa(pagina, {
   const chatDe = (i) => {
     const lista = [];
     for (let k = 0; k < quantos * 10 / 60 * 3; k++) lista.push(T + k * 20_000);
-    if (i === 0) for (let k = 0; k < 40; k++) lista.push(T + 5 * 60_000 + k * 1000);
+    const extra = chatPicos ? chatPicos[canais[i]] || [] : i === 0 ? [{ min: 5, n: 40 }] : [];
+    for (const { min, n } of extra) for (let k = 0; k < n; k++) lista.push(T + min * 60_000 + Math.floor(k * Math.min(1000, 59_000 / n)));
     return lista.sort((a, b) => a - b).map((ms, n) => ({
       id: `m${i}-${n}`, created_at: new Date(ms).toISOString().replace(/\.\d+Z$/, 'Z'), content: 'kkk', sender: { slug: `fa${n % 7}` },
     }));

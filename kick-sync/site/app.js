@@ -3874,6 +3874,8 @@ async function afinarInstante(apanhador, slug, ms, { janelaS = 6, precisaoMs = 2
 const soUmCanal = () => estado.linhas.length < 2;
 
 function pintarMomentos() {
+  // Os melhores lances do evento contam com as kills e com o que a detecção ouviu.
+  chatDoEvento?.sinaisMudaram?.();
   $('montagem').classList.toggle('semKills', !estado.momentos.length);
   // A conta no separador da Montagem, e a Montagem à vista quando entra uma kill nova (marcada ou achada).
   $('contaMontagem').textContent = estado.momentos.length ? String(estado.momentos.length) : '';
@@ -7857,6 +7859,17 @@ async function abrirLanceDoEvento(canais, ms, foco, {
 }
 const evento = montarEvento({
   abrirLance: abrirLanceDoEvento,
+  // Os melhores lances somam as kills e os achados da montagem, e o Marcar da lista põe um lance nela.
+  momentos: () => unirMomentos(estado.momentos, estado.momentosFora),
+  marcar: ({ ms, canal }) => {
+    // Na noite aberta entra na lista; fora dela fica guardado e aparece quando a noite dele abrir.
+    const m = novoMomento(ms, slugDoNome(canal), { ...tamanhos(), origem: 'lances' });
+    const j = estado.janela;
+    if (j && ms >= j.inicio && ms <= j.fim) estado.momentos = acrescentar(estado.momentos, m);
+    else estado.momentosFora = acrescentar(estado.momentosFora, m);
+    pintarMomentos();
+    guardar();
+  },
   dialogo: { mostrar: mostrarDialogo, esconder: esconderDialogo },
   aoMudarPicos: () => { pintarRegua(); pintarChatVideo(estado.agoraMs, true); },
   memorizarVods: (resultados) => {

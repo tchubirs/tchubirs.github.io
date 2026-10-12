@@ -419,6 +419,47 @@
       </details>
     </aside>
   </div>
+  <!-- Os melhores lances do evento numa lista só, cada um com o motivo em palavras e a nota escrita como
+       soma (IDEIAS.md, item 2; a conta vive em melhores.js). Fica por baixo do mapa: o mapa diz quando e
+       quem, a lista diz onde vale a pena olhar primeiro. -->
+  <section id="melhores" class="melhores" aria-labelledby="melhoresTitulo">
+    <div class="melhoresCabeca">
+      <h3 id="melhoresTitulo" class="melhoresTitulo"><span data-t="melhores.titulo">Melhores lances</span> <output id="melhoresConta" class="conta"></output></h3>
+      <details class="melhoresComo">
+        <summary data-t="melhores.como">Como a nota é feita</summary>
+        <p class="nota" data-t="melhores.comoTexto">Cada lance junta o que aconteceu a menos de um minuto, em todos os canais.</p>
+      </details>
+    </div>
+    <div class="linha melhoresFiltros">
+      <label class="pequeno"><span data-t="melhores.janela">Quando</span>
+        <select id="melhoresJanela">
+          <option value="tudo" data-t="melhores.janelaTudo">evento inteiro</option>
+          <option value="vista" data-t="melhores.janelaVista">trecho à vista no mapa</option>
+        </select>
+      </label>
+      <label class="pequeno"><span data-t="melhores.minCanais">Canais no lance</span>
+        <select id="melhoresMinCanais">
+          <option value="1" data-t="melhores.min1">1 ou mais</option>
+          <option value="2" data-t="melhores.min2">2 ou mais</option>
+          <option value="3" data-t="melhores.min3">3 ou mais</option>
+          <option value="4" data-t="melhores.min4">4 ou mais</option>
+        </select>
+      </label>
+      <label class="opcaoLinha"><input type="checkbox" id="melhoresSoKills"><span data-t="melhores.soKills">Só com kill</span></label>
+      <button id="melhoresDescartados" type="button" class="discreto" aria-pressed="false" hidden></button>
+    </div>
+    <div class="melhoresFalta">
+      <ul id="melhoresFalta" class="nota"></ul>
+      <div class="linha melhoresLer">
+        <button id="melhoresLerChat" type="button"><svg class="ic ic-p" aria-hidden="true"><use href="#i-chat"/></svg><span id="melhoresLerChatTexto"></span></button>
+        <output id="melhoresEstado" class="nota" aria-live="polite"></output>
+      </div>
+    </div>
+    <p id="melhoresTeclas" class="soLeitor" data-t="melhores.teclas">Na lista: ↑ ↓ passam de um lance para outro.</p>
+    <ol id="melhoresLista" class="melhoresLista" data-t-aria="melhores.lista" aria-describedby="melhoresTeclas"></ol>
+    <p id="melhoresVazio" class="nota" hidden></p>
+    <button id="melhoresMais" type="button" class="discreto" hidden></button>
+  </section>
 </section>
 
 <div class="topoTrabalho">

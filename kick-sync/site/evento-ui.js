@@ -28,6 +28,9 @@ import { atalhos } from './atalhos.js';
 import { escapar } from './escapar.js';
 import { idDoCanal, mensagensEntre, calor, picos, segundoDoPico } from './chat.js';
 import { agendar } from './aovivo.js';
+import {
+  normalDoChat, unirJanelas, sinaisDoEvento, melhoresLances, filtrarLances, motivoDoLance, contaDoLance,
+} from './melhores.js';
 
 // Um canal ao vivo tem na lista um VOD de duração zero que vai crescendo. Até se pedir a lista outra
 // vez, o que ele já tem acaba "agora".
@@ -142,6 +145,9 @@ export function noArEm(coberturas, slug, ms) {
  */
 export function montarEvento({
   abrirLance, memorizarVods = () => {}, aoMudarPicos = () => {}, buscar = fetch,
+  // Os melhores lances: as kills e os achados da montagem (momentos.js), e o "Marcar" que põe um lance
+  // nela. São da página de sempre; sem ela a lista conta só com o chat.
+  momentos = () => [], marcar = () => {},
   // As janelas (com o foco preso dentro e devolvido ao fechar) são da página: ela passa as suas.
   dialogo = { mostrar: (m) => { m.hidden = false; }, esconder: (m) => { m.hidden = true; } },
 } = {}) {
@@ -245,6 +251,8 @@ export function montarEvento({
     if (Number.isFinite(quandoMs)) ev.vista = zoom(ev.vista, quandoMs, 0.1, ev.limites);
     ev.link = await codificar(elenco);
     lembrarEvento();
+    carregarMelhores();
+    agendarMelhores();
     $('partilharEventoTexto').textContent = t('evento.partilharEvento');
     pintar();
     seguirAoVivo(aoVivo > 0);
@@ -472,6 +480,7 @@ export function montarEvento({
 
   function pintar() {
     pintarTrecho();
+    if (melhores.janela === 'vista') agendarMelhores();
     cancelAnimationFrame(pedido);
     pedido = requestAnimationFrame(() => {
       if (!ev.mapa || !ev.vista) return;
@@ -858,16 +867,23 @@ export function montarEvento({
   ev.janelasDoChat = (c) => janelasLidas.get(c) || [];
   function marcasDoChat(c) {
     const msgs = ev.mensagens.get(c) || [];
+    const dentroDe = (deMs, ateMs) => msgs.filter((m) => m.ms >= deMs && m.ms < ateMs);
+    // O normal do canal, minuto a minuto, em tudo o que já se leu dele: é por ele que cada pico diz
+    // quantas vezes passou do normal, e é isso que deixa um canal pequeno contar nos melhores lances.
+    const normal = normalDoChat(unirJanelas(janelasLidas.get(c) || []).map(([a, b]) => calor(dentroDe(a, b), a, b)));
     // Janelas que se sobrepõem (duas escolhas a meia hora uma da outra, ou um trecho escolhido à mão por
     // cima de uma janela já lida) acham o mesmo pico duas vezes: fica um por minuto.
     const porMinuto = new Map();
     for (const [deMs, ateMs] of janelasLidas.get(c) || []) {
-      const dentro = msgs.filter((m) => m.ms >= deMs && m.ms < ateMs);
-      for (const i of picos(calor(dentro, deMs, ateMs), SENSIBILIDADES[sensibilidade])) {
+      const dentro = dentroDe(deMs, ateMs);
+      const baldes = calor(dentro, deMs, ateMs);
+      for (const i of picos(baldes, SENSIBILIDADES[sensibilidade])) {
         const de = deMs + i * 60_000;
         const ms = segundoDoPico(dentro, de, Math.min(ateMs, de + 60_000));
         const minuto = Math.floor(ms / 60_000);
-        if (!porMinuto.has(minuto)) porMinuto.set(minuto, { ms, tipo: 'chat' });
+        if (!porMinuto.has(minuto)) {
+          porMinuto.set(minuto, { ms, tipo: 'chat', msgs: baldes[i], vezes: normal > 0 ? baldes[i] / normal : null });
+        }
       }
     }
     return [...porMinuto.values()].sort((a, b) => a.ms - b.ms);
@@ -946,6 +962,7 @@ export function montarEvento({
     if (lida) janelasLidas.set(c, [...(janelasLidas.get(c) || []), lida]);
     ev.marcas.set(c, marcasDoChat(c));
     aoMudarPicos();
+    agendarMelhores();
     if (!soOQueVeio) chatLido.add(`${c}|${deMs}`);
     return { msgs, id };
   }
@@ -1004,6 +1021,7 @@ export function montarEvento({
       janelasLidas.set(c, [...(janelasLidas.get(c) || []), [deMs, ate]]);
       ev.marcas.set(c, marcasDoChat(c));
       aoMudarPicos();
+      agendarMelhores();
     }
     if (ev.mapa) pintar();
     const lista = ev.mensagens.get(c) || [];
@@ -1478,6 +1496,7 @@ export function montarEvento({
 
   function fecharEvento() {
     esquecerEvento();
+    melhores.leitura?.abort();
     ev.cancelar?.abort();
     ev.procura?.abort();
     ev.elenco = null;
@@ -1859,6 +1878,7 @@ export function montarEvento({
       for (const c of janelasLidas.keys()) ev.marcas.set(c, marcasDoChat(c));
       pintarComoPico();
       aoMudarPicos();
+      agendarMelhores();
       pintar();
       const u = ultimaLeitura;
       if (u && u.e === ev.escolha) pintarPicos(u.e, u.doTime, u.deMs, u.ateMs);
@@ -1960,6 +1980,340 @@ export function montarEvento({
     window.addEventListener('resize', () => { if (ev.mapa) remontar(); pintar(); });
   }
 
+  // ── os melhores lances ─────────────────────────────────────────────────
+  //
+  // Uma lista só com os lances mais fortes do evento, cada um com o motivo em palavras e a nota escrita
+  // como soma (a conta é de melhores.js). Muda sozinha quando chega chat, quando a detecção acha tiros e
+  // quando se marca uma kill, e diz o que ainda falta ler. O que se descarta e o que se marca fica neste
+  // aparelho, por evento.
+  const MELHORES_GUARDADOS = 'povix.melhores';
+  const MELHORES_FILTROS = 'povix.melhoresFiltros';
+  const MELHORES_POR_VEZ = 10;
+  // Ler o chat de todos é texto e não vídeo, mas são muitos canais: três de cada vez.
+  const MELHORES_PARALELOS = 3;
+  // Um trecho mais longo do que isto, e o primeiro clique avisa antes de ler.
+  const MELHORES_LONGO_MS = 3 * 3600e3;
+  const melhores = {
+    janela: 'tudo', minCanais: 1, soKills: false, comDescartados: false, mostrar: MELHORES_POR_VEZ,
+    descartados: [], marcados: [], leitura: null, confirmar: null, visiveis: [], relogio: 0,
+  };
+  try {
+    const f = JSON.parse(localStorage.getItem(MELHORES_FILTROS) || 'null');
+    if (f) {
+      melhores.janela = f.janela === 'vista' ? 'vista' : 'tudo';
+      melhores.minCanais = [1, 2, 3, 4].includes(f.minCanais) ? f.minCanais : 1;
+      melhores.soKills = f.soKills === true;
+    }
+  } catch { /* janela privada: os filtros de omissão */ }
+
+  /** Um nome curto e estável para o evento: o nome dele, ou a lista quando não tem nome. */
+  function chaveDoEvento() {
+    const nome = ev.elenco?.nome && ev.elenco.nome !== t('evento.semNome') ? `n:${ev.elenco.nome}` : `l:${ev.link}`;
+    let h = 0x811c9dc5;
+    for (let i = 0; i < nome.length; i++) h = Math.imul(h ^ nome.charCodeAt(i), 0x01000193) >>> 0;
+    return h.toString(36);
+  }
+  function lerMelhoresGuardados() {
+    try {
+      const tudo = JSON.parse(localStorage.getItem(MELHORES_GUARDADOS) || '{}');
+      return tudo && typeof tudo === 'object' && !Array.isArray(tudo) ? tudo : {};
+    } catch { return {}; }
+  }
+  function carregarMelhores() {
+    const g = lerMelhoresGuardados()[chaveDoEvento()] || {};
+    const so = (l) => (Array.isArray(l) ? l.filter(Number.isFinite) : []);
+    melhores.descartados = so(g.d);
+    melhores.marcados = so(g.m);
+    melhores.comDescartados = false;
+    melhores.mostrar = MELHORES_POR_VEZ;
+    melhores.confirmar = null;
+    $('melhoresEstado').textContent = '';
+  }
+  function guardarMelhores() {
+    const tudo = lerMelhoresGuardados();
+    tudo[chaveDoEvento()] = { d: melhores.descartados, m: melhores.marcados, q: Date.now() };
+    // Só os 30 eventos mais recentes: o resto já não tem VOD para abrir.
+    const ficam = Object.entries(tudo).sort((a, b) => (b[1]?.q || 0) - (a[1]?.q || 0)).slice(0, 30);
+    try { localStorage.setItem(MELHORES_GUARDADOS, JSON.stringify(Object.fromEntries(ficam))); } catch { /* janela privada */ }
+  }
+  function guardarFiltros() {
+    const { janela, minCanais, soKills } = melhores;
+    try { localStorage.setItem(MELHORES_FILTROS, JSON.stringify({ janela, minCanais, soKills })); } catch { /* janela privada */ }
+  }
+
+  function agendarMelhores() {
+    clearTimeout(melhores.relogio);
+    melhores.relogio = setTimeout(pintarMelhores, 120);
+  }
+
+  /** O trecho que a lista olha: o evento inteiro (o mesmo do botão Evento inteiro) ou o que o mapa mostra. */
+  function janelaMelhores() {
+    const v = melhores.janela === 'vista' ? ev.vista : (ev.trecho || ev.limites);
+    return v ? { deMs: v.deMs, ateMs: v.ateMs } : null;
+  }
+  /** O pedaço de [deMs, ateMs] em que o canal tem vídeo, ou null: o chat fora do ar não abre lance nenhum. */
+  function trechoComVideo(c, deMs, ateMs) {
+    let a = Infinity;
+    let b = -Infinity;
+    for (const [x, y] of ev.coberturas.get(c) || []) {
+      if (y <= deMs || x >= ateMs) continue;
+      a = Math.min(a, Math.max(x, deMs));
+      b = Math.max(b, Math.min(y, ateMs));
+    }
+    return b > a ? [a, b] : null;
+  }
+  const todosDoEvento = () => (ev.elenco ? [...new Set([...ev.elenco.times.flatMap((x) => x.canais), ...ev.elenco.soltos])] : []);
+  function duracaoCurta(ms) {
+    const min = Math.max(1, Math.round(ms / 60_000));
+    return min < 60 ? `${min} min` : `${Math.floor(min / 60)} h${min % 60 ? ` ${String(min % 60).padStart(2, '0')}` : ''}`;
+  }
+  // A hora de um lance, com o dia quando o evento passa de um dia.
+  function diaDoLance(ms) {
+    const j = ev.trecho || ev.limites;
+    return j && dataCurta(j.deMs) !== dataCurta(j.ateMs) ? rotuloDoDia(ms) : '';
+  }
+  const horaDoLance = (ms) => [diaDoLance(ms), horaLocal(ms)].filter(Boolean).join(' ');
+
+  function pintarMelhores() {
+    clearTimeout(melhores.relogio);
+    const j = janelaMelhores();
+    if (!ev.elenco || !j) return;
+    const doEvento = new Set(todosDoEvento());
+    const sinais = sinaisDoEvento({ marcas: ev.marcas, momentos: momentos() }).filter((s) => doEvento.has(s.canal));
+    const todos = melhoresLances(sinais);
+    const comuns = { deMs: j.deMs, ateMs: j.ateMs, descartados: melhores.descartados, marcados: melhores.marcados };
+    const naJanela = filtrarLances(todos, { ...comuns, comDescartados: true });
+    const descartadosN = naJanela.filter((l) => l.descartado).length;
+    const lista = filtrarLances(todos, {
+      ...comuns, minCanais: melhores.minCanais, soKills: melhores.soKills, comDescartados: melhores.comDescartados,
+    });
+    const ativos = lista.filter((l) => !l.descartado).length;
+    $('melhoresConta').textContent = ativos ? String(ativos) : '';
+    $('melhoresJanela').value = melhores.janela;
+    $('melhoresMinCanais').value = String(melhores.minCanais);
+    $('melhoresSoKills').checked = melhores.soKills;
+    if (!descartadosN) melhores.comDescartados = false;
+    $('melhoresDescartados').hidden = !descartadosN;
+    $('melhoresDescartados').textContent = melhores.comDescartados ? t('melhores.esconderDescartados') : t('melhores.verDescartados', { n: descartadosN });
+    $('melhoresDescartados').setAttribute('aria-pressed', String(melhores.comDescartados));
+    pintarFaltas(j, naJanela.filter((l) => !l.descartado));
+
+    // O foco fica onde estava quando a lista se refaz por baixo dele (chegou chat, por exemplo).
+    const ativo = document.activeElement?.closest?.('#melhoresLista li[data-chave]');
+    const foco = ativo ? { chave: ativo.dataset.chave, acao: document.activeElement.dataset.acao } : null;
+    const visiveis = lista.slice(0, melhores.mostrar);
+    melhores.visiveis = visiveis;
+    $('melhoresLista').innerHTML = visiveis.map((l, i) => linhaDoMelhor(l, i)).join('');
+    const sobra = lista.length - visiveis.length;
+    $('melhoresMais').hidden = sobra <= 0;
+    $('melhoresMais').textContent = t('melhores.maisN', { n: Math.min(sobra, MELHORES_POR_VEZ) });
+    const vazio = $('melhoresVazio');
+    vazio.hidden = lista.length > 0;
+    const fora = naJanela.filter((l) => !l.descartado).length;
+    vazio.textContent = fora ? tn(fora, 'melhores.vazioFiltroUm', 'melhores.vazioFiltro') : t('melhores.vazio');
+    if (foco) {
+      const li = [...$('melhoresLista').children].find((x) => x.dataset.chave === foco.chave);
+      li?.querySelector(`button[data-acao="${foco.acao}"]`)?.focus({ preventScroll: true });
+    }
+  }
+
+  function linhaDoMelhor(l, i) {
+    const hora = horaDoLance(l.ms);
+    const noAr = l.canais.filter((c) => noArEm(ev.coberturas, c, l.msAbrir) || noArEm(ev.coberturas, c, l.ms));
+    const pontos = tn(l.pontos, 'melhores.pontoUm', 'melhores.pontos');
+    const conta = contaDoLance(l).map((p) => `${escapar(p.rotulo)} <b>${p.pontos}</b>`).join(' + ');
+    const canais = l.canais.map((c, k) => (k === 0 ? `<b>${escapar(c)}</b>` : escapar(c))).join(', ');
+    const idHora = `melhorHora${i}`;
+    return `<li class="melhor${l.descartado ? ' descartado' : ''}${l.marcado ? ' marcado' : ''}" data-chave="${l.ms}" data-i="${i}" aria-labelledby="${idHora}">`
+      + '<div class="melhorCabeca">'
+      + `<span class="melhorPos" aria-hidden="true">${i + 1}</span>`
+      + `<h4 class="melhorHora" id="${idHora}">${diaDoLance(l.ms) ? `<span class="melhorDia">${escapar(diaDoLance(l.ms))}</span> ` : ''}${escapar(horaLocal(l.ms))}</h4>`
+      + `<span class="melhorPontos">${escapar(pontos)}</span>`
+      + '</div>'
+      + `<p class="melhorCanais">${canais}</p>`
+      + `<p class="melhorMotivo">${escapar(motivoDoLance(l))}</p>`
+      + `<p class="melhorConta nota"><span class="soLeitor">${escapar(t('melhores.soma'))}: </span>${conta}${l.partes.length > 1 ? ` = <b>${l.pontos}</b>` : ''}</p>`
+      + '<div class="melhorAcoes">'
+      + `<button type="button" class="principal" data-acao="abrir"${noAr.length ? '' : ' disabled'} title="${escapar(t('melhores.abrirAjuda', { canais: noAr.join(', '), hora: horaLocal(l.msAbrir) }))}">`
+      + `<svg class="ic ic-p" aria-hidden="true"><use href="#i-seta"/></svg><span>${escapar(t('melhores.abrir'))}</span></button>`
+      + `<button type="button" data-acao="marcar" aria-pressed="${l.marcado}" title="${escapar(t(l.marcado ? 'melhores.desmarcarAjuda' : 'melhores.marcarAjuda'))}">`
+      + `<svg class="ic ic-p" aria-hidden="true"><use href="#${l.marcado ? 'i-certo' : 'i-marcador'}"/></svg><span>${escapar(t(l.marcado ? 'melhores.marcado' : 'melhores.marcar'))}</span></button>`
+      + (l.descartado
+        ? `<button type="button" class="discreto" data-acao="voltar" aria-label="${escapar(t('melhores.voltarAria', { hora }))}">${escapar(t('melhores.voltar'))}</button>`
+        : `<button type="button" class="discreto" data-acao="descartar" aria-label="${escapar(t('melhores.descartarAria', { hora }))}">`
+          + `<svg class="ic ic-p" aria-hidden="true"><use href="#i-fechar"/></svg><span>${escapar(t('melhores.descartar'))}</span></button>`)
+      + '</div></li>';
+  }
+
+  // O que ainda falta para a lista ser a do evento inteiro: o chat de quem não foi lido, o som, as kills.
+  function pintarFaltas(j, lances) {
+    const ate = Math.min(j.ateMs, Date.now());
+    const comVideo = todosDoEvento().map((c) => [c, trechoComVideo(c, j.deMs, ate)]).filter(([, x]) => x);
+    const porLer = comVideo.filter(([c, [a, b]]) => faltaLer(c, a, b).length);
+    const linhas = [];
+    if (comVideo.length) {
+      linhas.push(porLer.length
+        ? t('melhores.faltaChat', { lidos: comVideo.length - porLer.length, n: comVideo.length })
+        : comVideo.length === 1 ? t('melhores.chatTodoLidoUm') : t('melhores.chatTodoLido', { n: comVideo.length }));
+    }
+    if (!lances.some((l) => Object.values(l.sons).some((x) => x.length))) linhas.push(t('melhores.faltaSom'));
+    if (!lances.some((l) => l.kills)) linhas.push(t('melhores.faltaKills'));
+    $('melhoresFalta').innerHTML = linhas.map((x) => `<li>${escapar(x)}</li>`).join('');
+    const botao = $('melhoresLerChat');
+    if (melhores.leitura) return;
+    // O botão diz o trecho de relógio que vai ler (de quem começa primeiro a quem acaba por último).
+    const totalMs = porLer.length ? Math.max(...porLer.map(([, x]) => x[1])) - Math.min(...porLer.map(([, x]) => x[0])) : 0;
+    botao.hidden = !porLer.length;
+    $('melhoresLerChatTexto').textContent = porLer.length === 1
+      ? t('melhores.lerChatUm', { dur: duracaoCurta(totalMs) })
+      : t('melhores.lerChat', { n: porLer.length, dur: duracaoCurta(totalMs) });
+  }
+
+  async function lerChatDeTodos() {
+    if (melhores.leitura) { melhores.leitura.abort(); return; }
+    const j = janelaMelhores();
+    if (!j) return;
+    const ate = Math.min(j.ateMs, Date.now());
+    const pedidos = todosDoEvento().map((c) => [c, trechoComVideo(c, j.deMs, ate)])
+      .filter(([c, x]) => x && faltaLer(c, x[0], x[1]).length);
+    if (!pedidos.length) return;
+    const totalMs = Math.max(...pedidos.map(([, x]) => x[1])) - Math.min(...pedidos.map(([, x]) => x[0]));
+    const chave = `${j.deMs}|${ate}|${pedidos.length}`;
+    if (totalMs > MELHORES_LONGO_MS && melhores.confirmar !== chave) {
+      melhores.confirmar = chave;
+      $('melhoresEstado').textContent = t('melhores.longo', { dur: duracaoCurta(totalMs), n: pedidos.length });
+      return;
+    }
+    melhores.confirmar = null;
+    const controlo = new AbortController();
+    melhores.leitura = controlo;
+    $('melhoresLerChatTexto').textContent = t('melhores.parar');
+    let feitos = 0;
+    let lidos = 0;
+    const fila = [...pedidos];
+    const umDeCada = async () => {
+      while (fila.length && !controlo.signal.aborted) {
+        const [c, [a, b]] = fila.shift();
+        feitos++;
+        $('melhoresEstado').textContent = t('melhores.aLer', { canal: c, k: feitos, n: pedidos.length });
+        try {
+          // eslint-disable-next-line no-await-in-loop
+          const r = await lerChatTrecho(c, a, b, { sinal: controlo.signal });
+          if (!r.semCanal && !r.motivo) lidos++;
+        } catch (erro) {
+          if (erro?.name === 'AbortError') return;
+        }
+      }
+    };
+    try {
+      await Promise.all(Array.from({ length: Math.min(MELHORES_PARALELOS, pedidos.length) }, umDeCada));
+      $('melhoresEstado').textContent = controlo.signal.aborted ? t('melhores.parado')
+        : tn(lidos, 'melhores.lidoUm', 'melhores.lido');
+    } finally {
+      melhores.leitura = null;
+      pintarMelhores();
+    }
+  }
+
+  async function abrirMelhor(l) {
+    let ms = l.msAbrir;
+    let canais = l.canais.filter((c) => noArEm(ev.coberturas, c, ms));
+    // Quem entrou no ar no meio do lance não tem os 10 s de antes: abre-se no próprio lance.
+    if (canais.length < l.canais.filter((c) => noArEm(ev.coberturas, c, l.ms)).length) {
+      ms = l.ms;
+      canais = l.canais.filter((c) => noArEm(ev.coberturas, c, ms));
+    }
+    if (!canais.length) { $('melhoresEstado').textContent = t('melhores.foraDoAr', { hora: horaLocal(l.ms) }); return; }
+    const canal = canais[0];
+    escolher({ tipo: 'canal', canal, ms, time: indiceDeTimes(ev.elenco).get(canal) ?? null });
+    await verLance(canais, { exato: true });
+  }
+
+  function marcarMelhor(l) {
+    if (l.marcado) {
+      melhores.marcados = melhores.marcados.filter((ms) => !(ms >= l.deMs - 30_000 && ms <= l.ateMs + 30_000));
+    } else {
+      marcar({ ms: l.msMarcar, canal: l.canais[0], canais: l.canais });
+      melhores.marcados = [...melhores.marcados, l.ms];
+      $('melhoresEstado').textContent = t('melhores.marcadoMontagem', { hora: horaLocal(l.msMarcar) });
+    }
+    guardarMelhores();
+    pintarMelhores();
+  }
+
+  function descartarMelhor(l, i) {
+    melhores.descartados = [...melhores.descartados, l.ms];
+    guardarMelhores();
+    pintarMelhores();
+    // O foco passa ao lance seguinte (ou ao de cima, no fim da lista), e não volta ao topo da página.
+    const lis = [...$('melhoresLista').children];
+    const alvo = lis[Math.min(i, lis.length - 1)];
+    (alvo?.querySelector('button[data-acao="abrir"]') || $('melhoresTitulo')).focus?.();
+  }
+
+  function voltarMelhor(l) {
+    melhores.descartados = melhores.descartados.filter((ms) => !(ms >= l.deMs - 30_000 && ms <= l.ateMs + 30_000));
+    guardarMelhores();
+    pintarMelhores();
+  }
+
+  function ligarMelhores() {
+    $('melhoresTitulo').tabIndex = -1;
+    $('melhoresJanela').onchange = () => {
+      melhores.janela = $('melhoresJanela').value === 'vista' ? 'vista' : 'tudo';
+      melhores.mostrar = MELHORES_POR_VEZ;
+      guardarFiltros();
+      pintarMelhores();
+    };
+    $('melhoresMinCanais').onchange = () => {
+      melhores.minCanais = Number($('melhoresMinCanais').value) || 1;
+      guardarFiltros();
+      pintarMelhores();
+    };
+    $('melhoresSoKills').onchange = () => {
+      melhores.soKills = $('melhoresSoKills').checked;
+      guardarFiltros();
+      pintarMelhores();
+    };
+    $('melhoresDescartados').onclick = () => { melhores.comDescartados = !melhores.comDescartados; pintarMelhores(); };
+    $('melhoresMais').onclick = () => {
+      const antes = melhores.mostrar;
+      melhores.mostrar += MELHORES_POR_VEZ;
+      pintarMelhores();
+      $('melhoresLista').children[antes]?.querySelector('button[data-acao="abrir"]')?.focus();
+    };
+    $('melhoresLerChat').onclick = lerChatDeTodos;
+    $('melhoresLista').addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-acao]');
+      const li = b?.closest('li[data-i]');
+      if (!b || !li || b.disabled) return;
+      const i = Number(li.dataset.i);
+      const l = melhores.visiveis[i];
+      if (!l) return;
+      if (b.dataset.acao === 'abrir') abrirMelhor(l);
+      else if (b.dataset.acao === 'marcar') marcarMelhor(l);
+      else if (b.dataset.acao === 'descartar') descartarMelhor(l, i);
+      else if (b.dataset.acao === 'voltar') voltarMelhor(l);
+    });
+    // ↑ ↓ passam de um lance para o outro, no mesmo botão; Home e End vão às pontas. O Tab continua a
+    // andar botão a botão.
+    $('melhoresLista').addEventListener('keydown', (e) => {
+      if (e.altKey || e.ctrlKey || e.metaKey || !['ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key)) return;
+      const b = e.target.closest?.('button[data-acao]');
+      const li = b?.closest('li[data-i]');
+      if (!li) return;
+      const lis = [...$('melhoresLista').children];
+      const i = lis.indexOf(li);
+      const k = e.key === 'Home' ? 0 : e.key === 'End' ? lis.length - 1 : i + (e.key === 'ArrowDown' ? 1 : -1);
+      const alvo = lis[k];
+      if (!alvo) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const igual = alvo.querySelector(`button[data-acao="${b.dataset.acao}"]:not(:disabled)`);
+      (igual || alvo.querySelector('button:not(:disabled)'))?.focus();
+    });
+  }
+
   /** Abrir um evento que veio num link (#evento=...&t=...&c=...&mais=...). Devolve true se havia um. */
   // ── o evento guardado ──────────────────────────────────────────────────
   //
@@ -2045,6 +2399,7 @@ export function montarEvento({
   }
 
   ligar();
+  ligarMelhores();
   // Num ecrã de toque não há roda nem Ctrl: a dica fala dos botões − e +.
   if (window.matchMedia?.('(hover: none)').matches) {
     const dica = document.querySelector('#evento .dica');
@@ -2052,5 +2407,7 @@ export function montarEvento({
   }
   return {
     abrirElenco, abrirDoTexto, abrirDoLink, abrirGuardado, esquecerEvento, lerChatTrecho, faltaLer, pintarComoPico, ordenar, estado: ev,
+    // A página avisa quando a montagem muda (uma kill marcada, a detecção que achou tiros).
+    sinaisMudaram: () => agendarMelhores(),
   };
 }

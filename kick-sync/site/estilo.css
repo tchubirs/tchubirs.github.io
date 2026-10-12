@@ -1827,6 +1827,73 @@ body.mesa:is(.videoAberto, :has(#palco:not([hidden]))) > #evento { flex: 0 0 aut
 .lanceAchados { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e1); }
 .lanceAchados:empty { display: none; }
 .lanceAchados li { display: flex; justify-content: space-between; gap: var(--e2); padding: var(--e1) var(--e2); background: var(--acento-eco); border-radius: var(--r-1); }
+/* Os melhores lances: por baixo do mapa, uma linha por lance. No PC cada linha tem três colunas (a hora e a
+   nota, o motivo, os botões); num ecrã estreito empilham. A nota é uma soma escrita, por isso a conta fica
+   à vista, mais pequena, debaixo do motivo. */
+.melhores { display: flex; flex-direction: column; gap: var(--e3); padding: var(--e4); background: var(--sup-2); border: 1px solid var(--linha); border-radius: var(--r-3); }
+.melhoresCabeca { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--e2) var(--e4); }
+.melhoresTitulo { margin: 0; font-size: var(--t-medio); font-weight: 600; display: inline-flex; align-items: baseline; gap: var(--e3); }
+.melhoresTitulo:focus { outline: none; }
+#melhoresConta:empty { display: none; }
+#melhoresConta { font-family: var(--letra-mono); font-size: var(--t-menor); font-weight: 600; padding: 1px 8px; border-radius: var(--r-redondo); background: var(--acento-eco); color: var(--acento); }
+.melhoresComo { font-size: var(--t-menor); color: var(--tinta-2); flex: 1 1 18em; min-width: 0; }
+.melhoresComo > summary { cursor: pointer; width: max-content; max-width: 100%; border-radius: var(--r-1); }
+.melhoresComo > summary:focus-visible { box-shadow: var(--foco); outline: none; }
+.melhoresComo > p { margin: var(--e2) 0 0; max-width: 72ch; }
+.melhoresFiltros { gap: var(--e2) var(--e4); align-items: center; }
+.melhoresFiltros label.pequeno { display: inline-flex; align-items: center; gap: var(--e2); }
+.melhoresFiltros select { width: auto; }
+.melhoresFalta { display: flex; flex-direction: column; gap: var(--e2); }
+.melhoresFalta ul { margin: 0; padding-left: 1.2em; display: grid; gap: 2px; }
+.melhoresFalta ul:empty { display: none; }
+.melhoresLer { gap: var(--e3); align-items: center; }
+.melhoresLer output:empty { display: none; }
+.melhoresLista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e2); }
+.melhoresLista:empty { display: none; }
+.melhor {
+  display: grid; gap: 2px var(--e4); align-items: center; padding: var(--e3) var(--e4);
+  grid-template-columns: 11.5em minmax(0, 1fr) auto;
+  grid-template-areas: "cab canais acoes" "cab motivo acoes" "cab conta acoes";
+  background: var(--sup-1); border: 1px solid var(--linha); border-radius: var(--r-2);
+}
+.melhor.marcado { border-color: var(--acento-fio); box-shadow: inset 3px 0 0 var(--acento); }
+.melhor.descartado { opacity: .62; }
+.melhor.descartado .melhorMotivo { text-decoration: line-through; text-decoration-color: var(--tinta-3); }
+.melhorCabeca { grid-area: cab; display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto; row-gap: 2px; column-gap: var(--e3); align-items: center; align-self: start; }
+.melhorPos {
+  grid-row: 1 / 3; display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: var(--r-redondo);
+  background: var(--sup-3); color: var(--tinta-2); font-family: var(--letra-mono); font-size: var(--t-menor); font-weight: 600;
+}
+.melhor:nth-child(-n+3) .melhorPos { background: var(--marca-eco); color: var(--marca); }
+.melhorHora { margin: 0; font-family: var(--letra-mono); font-size: var(--t-base); font-weight: 600; white-space: nowrap; }
+/* O dia, quando o evento passa de um: numa linha à parte no PC, para a hora não ser cortada. */
+.melhorDia { display: block; font-family: var(--letra); font-size: var(--t-micro); font-weight: 500; color: var(--tinta-3); }
+.melhorPontos { font-size: var(--t-menor); color: var(--acento); font-weight: 600; white-space: nowrap; }
+.melhorCanais { grid-area: canais; margin: 0; font-family: var(--letra-mono); font-size: var(--t-menor); color: var(--tinta-2); overflow-wrap: anywhere; }
+.melhorCanais b { color: var(--tinta); font-weight: 600; }
+.melhorMotivo { grid-area: motivo; margin: 0; font-size: var(--t-base); color: var(--tinta); }
+.melhorConta { grid-area: conta; margin: 0; font-size: var(--t-micro); color: var(--tinta-3); }
+.melhorConta b { color: var(--tinta-2); font-weight: 600; }
+.melhorAcoes { grid-area: acoes; display: flex; gap: var(--e2); align-items: center; justify-content: flex-end; flex-wrap: wrap; }
+.melhorAcoes button { min-height: 32px; padding: 0 var(--e3); white-space: nowrap; }
+.melhorAcoes button[aria-pressed="true"] { border-color: var(--acento-fio); background: var(--acento-eco); color: var(--acento); }
+#melhoresVazio, #melhoresMais { margin: 0; }
+#melhoresMais { align-self: flex-start; }
+@media (max-width: 759px) {
+  .melhores { padding: var(--e3); }
+  .melhor { grid-template-columns: minmax(0, 1fr); grid-template-areas: "cab" "canais" "motivo" "conta" "acoes"; gap: var(--e2); padding: var(--e3); }
+  .melhorCabeca { grid-template-columns: auto auto minmax(0, 1fr); grid-template-rows: auto; }
+  .melhorPos { grid-row: auto; }
+  .melhorPontos { justify-self: end; }
+  .melhorDia { display: inline; }
+  .melhorAcoes { justify-content: stretch; }
+  .melhorAcoes button { flex: 1 1 auto; }
+  .melhoresFiltros label.pequeno { flex: 1 1 100%; justify-content: space-between; }
+  .melhoresFiltros select { flex: 1 1 auto; min-width: 0; max-width: 62%; }
+}
+@media (pointer: coarse) {
+  .melhorAcoes button { min-height: 44px; }
+}
 /* Os nomes na tela: um bloco que abre dentro do painel do lance, com o que se leu e o que se propõe. */
 .nomesTela { border-top: 1px solid var(--linha); padding-top: var(--e2); display: flex; flex-direction: column; gap: var(--e2); }
 .nomesTela[open] { gap: var(--e2); }
