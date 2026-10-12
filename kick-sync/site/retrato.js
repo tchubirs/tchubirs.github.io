@@ -229,6 +229,24 @@ export function desenhar(ctx, fonte, rects, modo = 'um', divisao = DIVISAO_OMISS
 }
 
 /**
+ * A imagem inteira numa tela de `alvo`, sem cortar nada: uma fonte com outra proporção fica com
+ * barras pretas, e não esticada.
+ */
+export function desenharInteiro(ctx, fonte, alvo) {
+  const fw = fonte.videoWidth || fonte.width || alvo.largura;
+  const fh = fonte.videoHeight || fonte.height || alvo.altura;
+  const k = Math.min(alvo.largura / fw, alvo.altura / fh);
+  const w = Math.round(fw * k);
+  const h = Math.round(fh * k);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, alvo.largura, alvo.altura);
+  ctx.drawImage(fonte, Math.round((alvo.largura - w) / 2), Math.round((alvo.altura - h) / 2), w, h);
+}
+
+/** O 16:9 que se grava quando é preciso pintar por cima (o chat). */
+export const DEITADO = { largura: 1920, altura: 1080 };
+
+/**
  * Os formatos por ordem de preferência. MP4 primeiro porque é o que toda a
  * gente sabe abrir; WebM porque é o que o Chrome grava sempre. Com os codecs
  * escritos: pedir sem eles dava ficheiros que o Windows abria como som.
@@ -445,6 +463,10 @@ export function noSitio(video, { esperaMs = 2000 } = {}) {
  */
 export async function gravar(video, {
   rects, modo = 'um', divisao = DIVISAO_OMISSAO, duracaoS, aoProgresso = () => {}, sinal, formato,
+  // O tamanho da tela e o que vai por cima de cada frame. Com `modo: 'inteiro'` a imagem inteira
+  // enche um 16:9 (o clipe deitado com o chat por cima, ver chat-clipe.js). `porCima(ctx, feitoS)`
+  // recebe quanto do clipe já passou, para pintar o que corresponde a esse instante.
+  alvo = RETRATO, porCima = null,
   criarTela = () => document.createElement('canvas'),
   MR = globalThis.MediaRecorder,
   pagina = globalThis.document,
@@ -454,8 +476,8 @@ export async function gravar(video, {
   if (!tipo) throw Object.assign(new Error('sem gravador'), { name: 'SEM-GRAVADOR' });
 
   const tela = criarTela();
-  tela.width = RETRATO.largura;
-  tela.height = RETRATO.altura;
+  tela.width = alvo.largura;
+  tela.height = alvo.altura;
   const ctx = tela.getContext('2d');
   // O recorte quase nunca tem o tamanho do destino: uma webcam de 320 px de
   // largura vai para uma faixa de 1080. Com a reamostragem de omissão isso
@@ -498,6 +520,13 @@ export async function gravar(video, {
   // frente, e um sinal que já disparou não volta a disparar para ninguém.
   if (sinal?.aborted) { soltarFaixas(); throw new DOMException('cancelado', 'AbortError'); }
   const inicio = video.currentTime;
+  const pincelar = () => {
+    // O instante lido ANTES de pintar: é o do frame que vai para a tela.
+    const feitoS = Math.max(0, video.currentTime - inicio);
+    if (modo === 'inteiro') desenharInteiro(ctx, video, alvo);
+    else desenhar(ctx, video, rects, modo, divisao);
+    porCima?.(ctx, feitoS);
+  };
   let parar = false;
   let pincel = null;
   // Um vídeo PARADO dá uma foto, e uma foto não é um clipe.
@@ -533,7 +562,7 @@ export async function gravar(video, {
   // que acontecer, e a duração do ficheiro passa a ser a duração do clipe.
   const pintar = () => {
     if (parar) return;
-    desenhar(ctx, video, rects, modo, divisao);
+    pincelar();
     const agora = video.currentTime;
     const feito = Math.max(0, agora - inicio);
     // O vídeo do canal acabou antes do fim do clipe: a live caiu e voltou
@@ -622,7 +651,7 @@ export async function gravar(video, {
     // browser, e o que fica gravado nesse intervalo são frames PRETOS. Foram
     // 0,27 s medidos no ficheiro dele. Uma pincelada antes de gravar custa um
     // frame e o clipe passa a começar na imagem certa.
-    desenhar(ctx, video, rects, modo, divisao);
+    pincelar();
     gravador.start();
     await video.play().catch(() => {});
     // Escondida enquanto o `play()` esperava: o vídeo e o gravador já estão em

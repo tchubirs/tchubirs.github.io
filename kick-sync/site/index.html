@@ -1073,6 +1073,8 @@
         <span class="rotuloCampo" data-t="retrato.horizontal">Versão horizontal, 16:9</span>
         <div id="fonteClipe" class="fonteClipe">
           <video id="previaClipe" playsinline muted></video>
+          <!-- O chat do 16:9, pintado pela mesma função que o põe no ficheiro. -->
+          <canvas id="chatFonte" class="chatFonte" width="960" height="540" aria-hidden="true" hidden></canvas>
           <div id="recortes" class="recortes" hidden></div>
         </div>
         <!-- Onde fica a webcam na tela do streamer: cada modelo põe o recorte 1 (a cara) nesse canto, num
@@ -1136,6 +1138,43 @@
       <button id="fimMenos" class="passo recua" data-t-titulo="clipe.recuar" title="meio segundo para trás" aria-label="fim: meio segundo para trás"><svg class="ic ic-p" aria-hidden="true"><use href="#i-seta2"/></svg></button>
       <button id="fimMais" class="passo" data-t-titulo="clipe.avancar" title="meio segundo para a frente" aria-label="fim: meio segundo para a frente"><svg class="ic ic-p" aria-hidden="true"><use href="#i-seta2"/></svg></button>
     </div>
+    <!-- O chat do streamer por cima do vídeo exportado (chat-clipe.js). Desligado por omissão; ligado,
+         as duas prévias de cima pintam-no exactamente como sai no ficheiro. -->
+    <section id="chatClipe" class="chatClipe" aria-labelledby="chatClipeRotulo">
+      <div class="chatClipeTopo">
+        <label class="chatClipeLigar"><input type="checkbox" id="chatClipeLigado" aria-describedby="chatClipeAjuda" aria-controls="chatClipeOpcoes"><span><b id="chatClipeRotulo" data-t="chatClipe.ligar">Chat no vídeo</b> <span class="nota" id="chatClipeAjuda" data-t="chatClipe.ajuda">As mensagens do chat do streamer aparecem por cima do vídeo, na hora em que foram escritas.</span></span></label>
+        <p id="estadoChatClipe" class="nota estadoChatClipe" role="status" aria-live="polite"></p>
+      </div>
+      <div id="chatClipeOpcoes" class="chatClipeOpcoes" role="group" data-t-aria="chatClipe.opcoes" aria-label="Como o chat aparece" hidden>
+        <label class="campo"><span class="rotuloCampo" data-t="chatClipe.posicao">Posição</span>
+          <select id="chatClipePosicao">
+            <option value="auto" data-t="chatClipe.posAuto">Automática</option>
+            <option value="baixoEsq" data-t="chatClipe.posBaixoEsq">Embaixo à esquerda</option>
+            <option value="baixoDir" data-t="chatClipe.posBaixoDir">Embaixo à direita</option>
+            <option value="cimaEsq" data-t="chatClipe.posCimaEsq">Em cima à esquerda</option>
+            <option value="cimaDir" data-t="chatClipe.posCimaDir">Em cima à direita</option>
+            <option value="meioEsq" data-t="chatClipe.posMeioEsq">No meio, à esquerda</option>
+            <option value="meioDir" data-t="chatClipe.posMeioDir">No meio, à direita</option>
+          </select></label>
+        <label class="campo"><span class="rotuloCampo" data-t="chatClipe.tamanho">Tamanho</span>
+          <select id="chatClipeTamanho">
+            <option value="p" data-t="chatClipe.tamP">Pequeno</option>
+            <option value="m" data-t="chatClipe.tamM">Médio</option>
+            <option value="g" data-t="chatClipe.tamG">Grande</option>
+          </select></label>
+        <label class="campo"><span class="rotuloCampo" data-t="chatClipe.linhas">Linhas</span>
+          <select id="chatClipeLinhas">
+            <option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option>
+            <option value="8">8</option><option value="9">9</option><option value="10">10</option>
+          </select></label>
+        <label class="campo"><span class="rotuloCampo" data-t="chatClipe.fundo">Fundo</span>
+          <select id="chatClipeFundo">
+            <option value="translucido" data-t="chatClipe.fundoTranslucido">Escuro translúcido</option>
+            <option value="nenhum" data-t="chatClipe.fundoNenhum">Sem fundo</option>
+          </select></label>
+        <p class="nota chatClipeCusto" data-t="chatClipe.custo">Com o chat, o 16:9 também é convertido de novo e demora o tempo do clipe. Cada mensagem fica 10 segundos.</p>
+      </div>
+    </section>
     <label for="tituloClipe" data-t="clipe.tituloLabel">Título do clipe</label>
     <input id="tituloClipe" type="text" maxlength="80" data-t-ph="clipe.tituloPh" placeholder="opcional, entra no nome do arquivo">
     <div class="linha fim">

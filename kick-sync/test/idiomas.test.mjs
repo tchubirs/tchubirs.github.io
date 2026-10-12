@@ -156,6 +156,8 @@ const IGUAIS_DE_PROPOSITO = {
     // numero e a metade que interessa. Ele abriu a janela e nao encontrou a
     // versao horizontal; agora os dois botoes dizem qual e qual.
     'clipe.guardar', 'retrato.exportar',
+    // As escolhas do chat no vídeo: "Automática" e "Grande" escrevem-se igual.
+    'chatClipe.posAuto', 'chatClipe.tamG',
   ]),
 };
 

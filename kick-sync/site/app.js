@@ -21,8 +21,12 @@ import { ordemDosAngulos, aplicarOrdem } from './grelha.js';
 import {
   RETRATO, enquadramentoInicial, limitar, desenhar, gravar, formatoQueFunciona, extensaoDe,
   reformar, limparDivisao, DIVISAO_OMISSAO, divisaoDoQuadro, proporcaoDoQuadro, encaixar,
-  MODELO_OMISSAO, limparModelo, paraFraccoes, deFraccoes,
+  MODELO_OMISSAO, limparModelo, paraFraccoes, deFraccoes, DEITADO,
 } from './retrato.js';
+import {
+  limparChat, geometria as geometriaDoChat, desenharChat, mensagensDoClipe, prepararEmotes,
+  VIDA_MS as VIDA_CHAT_MS, LETRA as LETRA_CHAT,
+} from './chat-clipe.js';
 import { planoDeAngulos, gravarAngulos } from './angulos.js';
 import { agruparPorNoite, rotuloDaNoite } from './noites.js';
 import {
@@ -3786,7 +3790,8 @@ function pintarMomentos() {
       // onde vai, numa lista de trinta.
       // Só os ajustes de ângulos que ainda entram na kill (ver `ajustesQueContam`).
       + (ajustados.length ? `<span class="ajustado">${t(ajustados.some((a) => a.formato)
-        ? 'montagem.ajustadoRetrato' : 'montagem.ajustado')}</span>` : '')
+        ? 'montagem.ajustadoRetrato' : 'montagem.ajustado')}${ajustados.some((a) => a.chat?.ligado)
+        ? `, ${t('montagem.comChat')}` : ''}</span>` : '')
       // "Vítimas" só quando há alguma. Antes a etiqueta estava lá sempre, em
       // cima de uma fila de nomes que ninguém tinha medido — e dizer "Vítimas"
       // por cima de seis nomes que não morreram é afirmar uma coisa que a
@@ -3930,7 +3935,7 @@ async function baixarMontagem(soEsta = null) {
   const plano = planoDaMontagem(todas, canais, { filmava })
     .filter((c) => !soEsta || soEsta.some((m) => m.ms === c.ms));
   // O formato para todos de uma vez (o dono, 07/10: "escolher TikTok para todos"). Com 9:16, a POV de
-  // cada kill sai também em vertical; sem enquadramento guardado, o do meio (ver `renderizarRetrato`).
+  // cada kill sai também em vertical; sem enquadramento guardado, o do meio (ver `renderizarGravado`).
   if ($('formatoMontagem').value === 'ambos') {
     for (const c of plano) {
       if (c.papel === 'protagonista' && !c.retrato) c.retrato = retratoLembrado(c.canal);
@@ -3970,9 +3975,83 @@ async function baixarMontagem(soEsta = null) {
     const nudge = estado.nudges[clipe.canal] || 0;
     $('estadoMontagem').textContent = `${i + 1}/${plano.length}: ${clipe.prefixo} ${clipe.canal}`;
 
+    // O 9:16 deste clipe, numa linha à parte da fila. 'parar' quando a montagem foi parada a meio.
+    const tirarRetrato = async (nome) => {
+      const item2 = document.createElement('li');
+      $('fila').append(item2);
+      const rotulo = `${i + 1}/${plano.length}: ${clipe.prefixo} ${clipe.canal}, 9:16`;
+      $('estadoMontagem').textContent = rotulo;
+      try {
+        const { blob: b2, tipo: t2, gravadoS } = await renderizarGravado(linha, clipe, {
+          sinal: controlo.signal,
+          aoProgresso: ({ emPausa }) => {
+            $('estadoMontagem').textContent = emPausa ? t('retrato.emPausa') : rotulo;
+          },
+        });
+        const nome2 = `${nome.replace(/\.[a-z0-9]+$/i, '')}-retrato.${extensaoDe(t2)}`;
+        const bytes2 = new Uint8Array(await b2.arrayBuffer());
+        paraZip.push({ nome: nome2, blob: b2, crc: crc32(bytes2), tamanho: bytes2.length });
+        const curto = notaDoRetratoCurto(gravadoS, (clipe.ateMs - clipe.deMs) / 1000);
+        linhaDeFicheiro(item2, {
+          nome: nome2,
+          url: guardarFicheiro(b2),
+          nota: `${(b2.size / 1048576).toFixed(1)} MB, ${t('fila.retratoDe')} ${clipe.prefixo}`
+            + (curto ? `, ${curto}` : ''),
+          momentoMs: clipe.ms,
+        });
+        if (curto) item2.querySelector('.nota')?.classList.add('mau');
+      } catch (e) {
+        if (e.name === 'AbortError') { item2.remove(); return 'parar'; }
+        falhas++;
+        item2.innerHTML = `<b>${clipe.prefixo} ${escapar(clipe.canal)}, 9:16</b> `
+          + `<span class="nota mau">${t('fila.retratoFalhou', { erro: escapar(motivoDoRetrato(e)) })}</span>`;
+      }
+      return null;
+    };
     const item = document.createElement('li');
     $('fila').append(item);
     try {
+      // Com o chat por cima (guardado nesta kill), o 16:9 grava-se em tempo real como o 9:16, com o
+      // chat DESTE canal: os pixels mudam, e copiar os bytes da Kick não os muda.
+      if (clipe.chat) {
+        const rotulo = `${i + 1}/${plano.length}: ${clipe.prefixo} ${clipe.canal}, ${t('chatClipe.naFila')}`;
+        $('estadoMontagem').textContent = rotulo;
+        let gravado;
+        try {
+          gravado = await renderizarGravado(linha, clipe, {
+            deitado: true,
+            sinal: controlo.signal,
+            aoProgresso: ({ emPausa }) => {
+              $('estadoMontagem').textContent = emPausa ? t('retrato.emPausa') : rotulo;
+            },
+          });
+        } catch (e) {
+          if (e.name === 'AbortError' || controlo.signal.aborted) { item.remove(); break; }
+          falhas++;
+          mau(item, clipe, t('clipe.naoDeu', { erro: motivoDoRetrato(e) }));
+          continue;
+        }
+        const { blob, tipo, gravadoS } = gravado;
+        const nome = `${clipe.prefixo}_${nomeDoFicheiro({ canal: clipe.canal, quandoMs: clipe.deMs })
+          .replace(/\.[a-z0-9]+$/i, '')}.${extensaoDe(tipo)}`;
+        const bytes = new Uint8Array(await blob.arrayBuffer());
+        paraZip.push({ nome, blob, crc: crc32(bytes), tamanho: bytes.length });
+        prontos++;
+        const totalS = (clipe.ateMs - clipe.deMs) / 1000;
+        const curto = gravadoS >= 0 && gravadoS < totalS - 0.5
+          ? t('chatClipe.curto', { feito: gravadoS.toFixed(1), total: totalS.toFixed(1) }) : '';
+        linhaDeFicheiro(item, {
+          nome,
+          url: guardarFicheiro(blob),
+          nota: `${(blob.size / 1048576).toFixed(1)} MB, `
+            + `${clipe.papel === 'protagonista' ? t('fila.tuaPov') : t('fila.quemMorreu')}, ${t('chatClipe.naFila')}`
+            + (curto ? `, ${curto}` : ''),
+          momentoMs: clipe.ms,
+        });
+        if (curto) item.querySelector('.nota')?.classList.add('mau');
+        if (clipe.retrato && await tirarRetrato(nome) === 'parar') break;
+        continue;
+      }
       const p = await planearCorte({
         linha, deMs: clipe.deMs + nudge, ateMs: clipe.ateMs + nudge, cache, sinal: controlo.signal,
         saltar: clipe.saltar,
@@ -4024,37 +4103,7 @@ async function baixarMontagem(soEsta = null) {
       // E o 9:16, quando ele guardou o enquadramento nesta kill. "Faça tudo
       // funcionar perfeitamente, o 9x16 no modo automático" — o vertical sai
       // na mesma volta que o resto, e não um a um à mão.
-      if (clipe.retrato) {
-        const item2 = document.createElement('li');
-        $('fila').append(item2);
-        const rotulo = `${i + 1}/${plano.length}: ${clipe.prefixo} ${clipe.canal}, 9:16`;
-        $('estadoMontagem').textContent = rotulo;
-        try {
-          const { blob: b2, tipo: t2, gravadoS } = await renderizarRetrato(linha, clipe, {
-            sinal: controlo.signal,
-            aoProgresso: ({ emPausa }) => {
-              $('estadoMontagem').textContent = emPausa ? t('retrato.emPausa') : rotulo;
-            },
-          });
-          const nome2 = `${nome.replace(/\.[a-z0-9]+$/i, '')}-retrato.${extensaoDe(t2)}`;
-          const bytes2 = new Uint8Array(await b2.arrayBuffer());
-          paraZip.push({ nome: nome2, blob: b2, crc: crc32(bytes2), tamanho: bytes2.length });
-          const curto = notaDoRetratoCurto(gravadoS, (clipe.ateMs - clipe.deMs) / 1000);
-          linhaDeFicheiro(item2, {
-            nome: nome2,
-            url: guardarFicheiro(b2),
-            nota: `${(b2.size / 1048576).toFixed(1)} MB, ${t('fila.retratoDe')} ${clipe.prefixo}`
-              + (curto ? `, ${curto}` : ''),
-            momentoMs: clipe.ms,
-          });
-          if (curto) item2.querySelector('.nota')?.classList.add('mau');
-        } catch (e) {
-          if (e.name === 'AbortError') { item2.remove(); break; }
-          falhas++;
-          item2.innerHTML = `<b>${clipe.prefixo} ${escapar(clipe.canal)}, 9:16</b> `
-            + `<span class="nota mau">${t('fila.retratoFalhou', { erro: escapar(motivoDoRetrato(e)) })}</span>`;
-        }
-      }
+      if (clipe.retrato && await tirarRetrato(nome) === 'parar') break;
     } catch (e) {
       if (e.name === 'AbortError' || controlo.signal.aborted) { item.remove(); break; }
       falhas++;
@@ -4237,7 +4286,18 @@ async function abrirVideoEscondido(linha, quandoMs, { sinal } = {}) {
   return { v, fechar };
 }
 
-async function renderizarRetrato(linha, clipe, { sinal, aoProgresso } = {}) {
+async function renderizarGravado(linha, clipe, { deitado = false, sinal, aoProgresso } = {}) {
+  // O chat primeiro, antes de abrir o vídeo: ler à Kick pode demorar, e um vídeo aberto e parado à
+  // espera desistia por falta de imagem.
+  const chat = clipe.chat?.ligado ? limparChat(clipe.chat) : null;
+  if (chat) {
+    try {
+      await prepararChat(clipe.canal, clipe.deMs, clipe.ateMs, { sinal });
+    } catch (e) {
+      if (e?.name === 'AbortError' || sinal?.aborted) throw e;
+      // Sem chat lido, o clipe sai na mesma com o que houver.
+    }
+  }
   const { v, fechar } = await abrirVideoEscondido(linha, clipe.deMs, { sinal });
   try {
     // Som: de mudo sai uma faixa silenciosa. Volume a zero para não se ouvir
@@ -4246,17 +4306,25 @@ async function renderizarRetrato(linha, clipe, { sinal, aoProgresso } = {}) {
     v.volume = 0;
     const formato = await formatoQueFunciona();
     if (!formato) throw Object.assign(new Error('sem gravador'), { name: 'SEM-GRAVADOR' });
+    const alvo = deitado ? DEITADO : RETRATO;
     // Sem enquadramento guardado (o 9:16 para todos), a fita mais alta que cabe, ao meio: a mesma com
     // que o editor abre.
     // Com o encaixe que o streamer tem guardado no aparelho, se tiver (ver `retratoLembrado`).
     const fonteV = { largura: v.videoWidth || 1920, altura: v.videoHeight || 1080 };
-    const rects = clipe.retrato.rects?.length ? clipe.retrato.rects
-      : deFraccoes(clipe.retrato.fraccoes, fonteV, clipe.retrato.modo, clipe.retrato.divisao)
-        || enquadramentoInicial(fonteV.largura, fonteV.altura, clipe.retrato.modo, clipe.retrato.divisao, clipe.retrato.modelo);
+    const r = clipe.retrato || { modo: 'um' };
+    const rects = deitado ? [] : r.rects?.length ? r.rects
+      : deFraccoes(r.fraccoes, fonteV, r.modo, r.divisao)
+        || enquadramentoInicial(fonteV.largura, fonteV.altura, r.modo, r.divisao, r.modelo);
+    const divisao = Number.isFinite(r.divisao) ? r.divisao : DIVISAO_OMISSAO;
     return await gravar(v, {
       rects,
-      modo: clipe.retrato.modo,
-      divisao: Number.isFinite(clipe.retrato.divisao) ? clipe.retrato.divisao : DIVISAO_OMISSAO,
+      modo: deitado ? 'inteiro' : r.modo,
+      divisao,
+      alvo,
+      porCima: chat ? porCimaDoChat({
+        canal: clipe.canal, deMs: clipe.deMs, ateMs: clipe.ateMs, chat, alvo,
+        formato: deitado ? '16:9' : '9:16', modo: r.modo, divisao,
+      }) : null,
       duracaoS: (clipe.ateMs - clipe.deMs) / 1000,
       formato,
       sinal,
@@ -4685,10 +4753,15 @@ function abrirClipe(momento = null) {
     // momento feito na hora, e o "Guardar ajustes" aparecia para nao guardar
     // em sitio nenhum e dizer que tinha guardado.
     momentoMs: daLista ? momento.ms : null,
+    // O chat por cima do vídeo: as escolhas que ficaram no aparelho, e ligado só se esta kill o
+    // guardou ligado (cada clipe começa sem chat).
+    chat: limparChat({ ...chatLembrado(), ...(aj?.chat || {}), ligado: aj?.chat?.ligado === true }),
   };
   // O botão de guardar só existe quando há uma kill onde guardar.
   $('guardarAjustes').hidden = !daLista;
   pintarModos();
+  pintarChatClipe();
+  carregarChatDoClipe();
 
   $('canalClipe').innerHTML = estado.linhas
     .map((l) => `<option value="${escapar(l.slug)}"${l.slug === linha.slug ? ' selected' : ''}>${escapar(l.slug)}</option>`)
@@ -5088,6 +5161,8 @@ function seguirRetrato() {
     const c = estado.clipe;
     if (!c || $('modalClipe').hidden) { estado.ciclo9x16 = null; return; }
     if (c.rects.length) desenhar(ctx, $('previaClipe'), c.rects, c.modo, c.divisao);
+    // O chat por cima, com a mesma função e o mesmo instante com que entra no ficheiro.
+    pintarChatPrevias(ctx);
     estado.ciclo9x16 = requestAnimationFrame(passo);
   };
   estado.ciclo9x16 = requestAnimationFrame(passo);
@@ -5250,24 +5325,26 @@ function retratoLembrado(slug) {
  * segundos de espera. É o preço de mudar os pixels de sítio, e o botão do lado
  * continua a copiar os bytes sem reconverter nada.
  */
-async function guardarRetrato() {
+async function guardarRetrato({ deitado = false } = {}) {
   const c = estado.clipe;
   const v = $('previaClipe');
   const mudoAntes = v.muted;
   const volumeAntes = v.volume;
   const devolverSom = () => { v.muted = mudoAntes; v.volume = volumeAntes; };
-  const botao = $('guardarRetrato');
+  // O 16:9 com o chat por cima grava-se como o 9:16 (o chat tem de entrar nos pixels), pelo botão do
+  // 16:9. Sem chat, o 16:9 continua a copiar os bytes (`guardarClipe`).
+  const botao = $(deitado ? 'guardarClipe' : 'guardarRetrato');
   // O que acontece depois de um `await` só vale se este editor ainda for o
   // que está aberto. Fechar e abrir outra kill a meio punha as mensagens (e o
   // botão aceso) no editor da outra.
   const aindaEste = () => estado.clipe === c;
-  if (!c || !c.rects.length) {
+  if (!c || (!deitado && !c.rects.length)) {
     // Nunca em silêncio. Era assim que estava, e "o botão nem fez nada quando
     // apertava" é exactamente o que se sente do outro lado.
     $('estadoClipe').textContent = t('retrato.semPrevia');
     return;
   }
-  if (c.aGravar) return;
+  if (c.aGravar || c.pararExportar) return;
   // O início do clipe tem de estar no ar. Num buraco a prévia nem salta (ver
   // `preverClipe`), e o vídeo ficava onde estava: o 9:16 gravava a duração
   // do clipe a partir do último sítio espreitado, e dizia que estava pronto.
@@ -5277,9 +5354,10 @@ async function guardarRetrato() {
     return;
   }
   botao.disabled = true;
-  const duracaoS = (c.ateMs - c.deMs) / 1000;
   const controlo = new AbortController();
   c.pararGravacao = () => controlo.abort();
+  // O chat entra com as escolhas deste instante: mexer nelas a meio não muda o ficheiro.
+  const chatAqui = c.chat?.ligado ? limparChat(c.chat) : null;
 
   try {
     const formato = await formatoQueFunciona();
@@ -5289,6 +5367,16 @@ async function guardarRetrato() {
       botao.disabled = false;
       return;
     }
+    // O editor fica quieto desde já: com o chat ainda há o chat e os emotes para ir buscar, e um pedaço
+    // mexido nesse meio-tempo gravava um clipe com o chat de outro.
+    trancarEditor(true);
+    if (chatAqui) {
+      $('estadoClipe').textContent = t('montagem.aPreparar');
+      await carregarChatDoClipe();
+      await prepararChat(c.canal, c.deMs, c.ateMs, { sinal: controlo.signal });
+      if (!aindaEste() || controlo.signal.aborted) return;
+    }
+    const duracaoS = (c.ateMs - c.deMs) / 1000;
     // Do princípio do clipe, e não de onde a pré-visualização parou.
     await preverClipe(c.deMs);
     if (!aindaEste()) return;
@@ -5306,31 +5394,42 @@ async function guardarRetrato() {
     // gravação na sala, mas a faixa passa a ter sinal.
     v.muted = false;
     v.volume = 0;
+    const alvo = deitado ? DEITADO : RETRATO;
     const { blob, tipo, gravadoS } = await gravar(v, {
       // Uma cópia: o gravador lê os recortes a cada frame, e um arrasto que
       // escapasse à tranca mexia no ficheiro a meio.
       rects: c.rects.map((r) => ({ ...r })),
-      modo: c.modo,
+      modo: deitado ? 'inteiro' : c.modo,
       divisao: c.divisao,
+      alvo,
+      porCima: chatAqui ? porCimaDoChat({
+        canal: c.canal, deMs: c.deMs, ateMs: c.ateMs, chat: chatAqui, alvo,
+        formato: deitado ? '16:9' : '9:16', modo: c.modo, divisao: c.divisao,
+        // A prévia segue o instante que está a ser gravado, e não a agulha parada.
+        aoInstante: (ms) => { c.chatAgoraMs = ms; },
+      }) : null,
       duracaoS,
       formato,
       sinal: controlo.signal,
       aoProgresso: ({ feito, total, emPausa }) => {
         if (!aindaEste()) return;
-        $('estadoClipe').textContent = emPausa ? t('retrato.emPausa') : t('retrato.aGravar', {
-          feito: feito.toFixed(1), total: total.toFixed(1),
-        });
+        $('estadoClipe').textContent = emPausa ? t('retrato.emPausa')
+          : t(deitado ? 'chatClipe.aGravar' : 'retrato.aGravar', { feito: feito.toFixed(1), total: total.toFixed(1) });
       },
     });
     const base = nomeDoClipe({ titulo: $('tituloClipe').value, canal: c.canal, quandoMs: c.deMs });
-    const nome = `${base.replace(/\.[a-z0-9]+$/i, '')}-retrato.${extensaoDe(tipo)}`;
+    const nome = `${base.replace(/\.[a-z0-9]+$/i, '')}${deitado ? '' : '-retrato'}.${extensaoDe(tipo)}`;
     const url = guardarFicheiro(blob);
     const item = document.createElement('li');
     $('fila').prepend(item);
-    const curto = notaDoRetratoCurto(gravadoS, duracaoS);
+    const curto = deitado
+      ? (gravadoS >= 0 && gravadoS < duracaoS - 0.5
+        ? t('chatClipe.curto', { feito: gravadoS.toFixed(1), total: duracaoS.toFixed(1) }) : '')
+      : notaDoRetratoCurto(gravadoS, duracaoS);
     linhaDeFicheiro(item, {
       nome, url,
-      nota: `${(blob.size / 1048576).toFixed(1)} MB, ${RETRATO.largura}x${RETRATO.altura}`
+      nota: `${(blob.size / 1048576).toFixed(1)} MB, ${alvo.largura}x${alvo.altura}`
+        + (chatAqui ? `, ${t('chatClipe.naFila')}` : '')
         + (curto ? `, ${curto}` : ''),
     });
     if (curto) item.querySelector('.nota')?.classList.add('mau');
@@ -5338,7 +5437,7 @@ async function guardarRetrato() {
     a.href = url;
     a.download = nome;
     a.click();
-    if (aindaEste()) $('estadoClipe').textContent = curto || t('retrato.pronto');
+    if (aindaEste()) $('estadoClipe').textContent = curto || t(deitado ? 'chatClipe.pronto' : 'retrato.pronto');
   } catch (e) {
     // Parada por quem fechou o editor: não há a quem dizer nada.
     if (e.name === 'AbortError' || !aindaEste()) return;
@@ -5352,6 +5451,7 @@ async function guardarRetrato() {
     // deste clipe, e não a de outro que entretanto se tenha aberto.
     c.aGravar = false;
     c.pararGravacao = null;
+    c.chatAgoraMs = null;
     devolverSom();
     if (aindaEste()) {
       trancarEditor(false);
@@ -5359,6 +5459,183 @@ async function guardarRetrato() {
     }
   }
 }
+
+// ── o chat no vídeo ─────────────────────────────────────────────────────────
+//
+// O dono, 12/10: o chat do streamer por cima do clipe baixado, com posição, tamanho e quantas linhas.
+// As contas e o desenho vivem em chat-clipe.js; aqui é a ligação à janela do clipe, à leitura do chat
+// (a mesma do evento, `lerChatTrecho`, que não lê duas vezes o que já leu) e à gravação.
+
+const GUARDADO_CHAT = 'povix.chatClipe';
+
+/** As escolhas do chat que ficam no aparelho. O ligar não fica: cada clipe começa sem chat. */
+function chatLembrado() {
+  try {
+    return limparChat({ ...JSON.parse(localStorage.getItem(GUARDADO_CHAT) || 'null'), ligado: false });
+  } catch { return limparChat(null); }
+}
+
+function lembrarChat(chat) {
+  try {
+    const { posicao, tamanho, linhas, fundo } = limparChat(chat);
+    localStorage.setItem(GUARDADO_CHAT, JSON.stringify({ posicao, tamanho, linhas, fundo }));
+  } catch { /* janela privada */ }
+}
+
+const mensagensDoCanal = (canal) => mensagensDoEvento().get(canal) || [];
+const carregarLetraDoChat = () => Promise.all(['500', '600']
+  .map((peso) => document.fonts?.load?.(`${peso} 34px ${LETRA_CHAT}`))).catch(() => {});
+
+/**
+ * Tudo o que o chat de um clipe precisa antes de gravar: as mensagens (lidas à Kick, se faltarem), as
+ * imagens dos emotes e a letra. Sem a letra carregada a primeira frase saía noutra letra.
+ */
+async function prepararChat(canal, deMs, ateMs, { sinal, aoProgredir } = {}) {
+  let r = null;
+  if (chatDoEvento) {
+    r = await chatDoEvento.lerChatTrecho(canal, deMs - VIDA_CHAT_MS, ateMs, { sinal, aoProgredir });
+  }
+  const lista = mensagensDoClipe(mensagensDoCanal(canal), deMs, ateMs);
+  await Promise.all([prepararEmotes(lista), carregarLetraDoChat()]);
+  return { r, lista };
+}
+
+/**
+ * O pincel do chat para `gravar`: as mensagens do clipe tiradas uma vez, e a cada frame as do instante
+ * da noite em que o vídeo está (o início do clipe mais o que já se gravou).
+ */
+function porCimaDoChat({ canal, deMs, ateMs, chat, alvo, formato, modo, divisao, aoInstante }) {
+  const lista = mensagensDoClipe(mensagensDoCanal(canal), deMs, ateMs);
+  const geo = geometriaDoChat(alvo, chat, { formato, modo, divisao });
+  return (ctx, feitoS) => {
+    const ms = deMs + feitoS * 1000;
+    aoInstante?.(ms);
+    desenharChat(ctx, lista, ms, chat, geo);
+  };
+}
+
+/** O instante da noite que a prévia mostra: o da gravação, se há uma; senão o da agulha. */
+function instanteDoChat(c) {
+  if (c.aGravar && Number.isFinite(c.chatAgoraMs)) return c.chatAgoraMs;
+  return Number.isFinite(c.cabecaMs) ? c.cabecaMs : c.deMs;
+}
+
+/** O chat por cima das duas prévias, a cada frame do ciclo do 9:16. */
+function pintarChatPrevias(ctx9x16) {
+  const c = estado.clipe;
+  const tela = $('chatFonte');
+  const g = tela.getContext('2d');
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.clearRect(0, 0, tela.width, tela.height);
+  if (!c?.chat?.ligado) return;
+  const lista = mensagensDoCanal(c.canal);
+  const ms = instanteDoChat(c);
+  // O 16:9 na mesma conta de 1920x1080 do ficheiro, só que em ponto pequeno.
+  g.setTransform(tela.width / DEITADO.largura, 0, 0, tela.height / DEITADO.altura, 0, 0);
+  desenharChat(g, lista, ms, c.chat, geometriaDoChat(DEITADO, c.chat, { formato: '16:9' }));
+  if (ctx9x16 && c.rects.length) {
+    desenharChat(ctx9x16, lista, ms, c.chat,
+      geometriaDoChat(RETRATO, c.chat, { formato: '9:16', modo: c.modo, divisao: c.divisao }));
+  }
+}
+
+/**
+ * Ler o chat do clipe aberto, se ele o quer, e dizer quantas mensagens tem. Uma leitura de cada vez;
+ * mexer nas pontas a meio troca-a pela do pedaço novo.
+ */
+function carregarChatDoClipe() {
+  const c = estado.clipe;
+  if (!c?.chat?.ligado || !chatDoEvento) return Promise.resolve(null);
+  const canal = c.canal;
+  const deMs = c.deMs;
+  const ateMs = c.ateMs;
+  const chave = `${canal}|${deMs}|${ateMs}`;
+  if (c.chatLeitura?.chave === chave) return c.chatLeitura.promessa;
+  c.chatLeitura?.controlo.abort();
+  const controlo = new AbortController();
+  const leitura = { chave, controlo };
+  c.chatLeitura = leitura;
+  const nota = $('estadoChatClipe');
+  const aindaEsta = () => estado.clipe === c && c.chatLeitura === leitura;
+  nota.classList.remove('mau');
+  nota.textContent = t('chatClipe.aLer', { canal, pct: 0 });
+  leitura.promessa = (async () => {
+    let r = null;
+    try {
+      r = await chatDoEvento.lerChatTrecho(canal, deMs - VIDA_CHAT_MS, ateMs, {
+        sinal: controlo.signal,
+        aoProgredir: ({ fracao }) => {
+          if (aindaEsta()) nota.textContent = t('chatClipe.aLer', { canal, pct: Math.round(fracao * 100) });
+        },
+      });
+    } catch (e) {
+      if (e?.name === 'AbortError' || !aindaEsta()) return null;
+      r = { motivo: 'erro' };
+    }
+    if (!aindaEsta()) return r;
+    const n = mensagensDoCanal(canal).filter((m) => m.ms >= deMs && m.ms <= ateMs).length;
+    const msgs = tn(n, 'chatClipe.umaMsg', 'chatClipe.msgs', { n });
+    nota.classList.toggle('mau', Boolean(r?.semCanal || r?.motivo));
+    nota.textContent = r?.semCanal ? t('chatClipe.semCanal', { canal })
+      : r?.motivo ? t('chatClipe.parou', { msgs })
+        : n ? t('chatClipe.lido', { canal, msgs }) : t('chatClipe.nada', { canal });
+    // As imagens dos emotes, sem esperar: a prévia apanha-as quando chegarem.
+    prepararEmotes(mensagensDoClipe(mensagensDoCanal(canal), deMs, ateMs)).catch(() => {});
+    carregarLetraDoChat();
+    return r;
+  })();
+  return leitura.promessa;
+}
+
+let esperaChatClipe = null;
+/** Depois de mexer nas pontas: ler o que falta do pedaço novo, quando a mão parar. */
+function agendarChatDoClipe() {
+  clearTimeout(esperaChatClipe);
+  if (!estado.clipe?.chat?.ligado) return;
+  esperaChatClipe = setTimeout(() => { carregarChatDoClipe(); }, 450);
+}
+
+/** Os controlos do chat a dizer o que o clipe aberto tem. */
+function pintarChatClipe() {
+  const c = estado.clipe;
+  if (!c) return;
+  const ch = c.chat;
+  $('chatClipeLigado').checked = ch.ligado;
+  $('chatClipeOpcoes').hidden = !ch.ligado;
+  $('chatClipePosicao').value = ch.posicao;
+  $('chatClipeTamanho').value = ch.tamanho;
+  $('chatClipeLinhas').value = String(ch.linhas);
+  $('chatClipeFundo').value = ch.fundo;
+  $('chatFonte').hidden = !ch.ligado;
+  if (!ch.ligado) {
+    $('estadoChatClipe').textContent = '';
+    $('estadoChatClipe').classList.remove('mau');
+  }
+  // O ciclo das prévias também pinta o chat do 16:9, que existe antes de haver 9:16.
+  if (ch.ligado) seguirRetrato();
+}
+
+function ligarChatClipe() {
+  $('chatClipeLigado').addEventListener('change', (e) => {
+    const c = estado.clipe;
+    if (!c || c.aGravar) return;
+    c.chat = limparChat({ ...c.chat, ligado: e.target.checked });
+    pintarChatClipe();
+    if (c.chat.ligado) carregarChatDoClipe();
+    else { c.chatLeitura?.controlo.abort(); c.chatLeitura = null; }
+  });
+  for (const [id, chave] of [['chatClipePosicao', 'posicao'], ['chatClipeTamanho', 'tamanho'],
+    ['chatClipeLinhas', 'linhas'], ['chatClipeFundo', 'fundo']]) {
+    $(id).addEventListener('change', (e) => {
+      const c = estado.clipe;
+      if (!c || c.aGravar) return;
+      c.chat = limparChat({ ...c.chat, [chave]: e.target.value });
+      lembrarChat(c.chat);
+      pintarChatClipe();
+    });
+  }
+}
+ligarChatClipe();
 
 /**
  * Trancar o editor enquanto o 9:16 grava, e destrancá-lo no fim.
@@ -5446,7 +5723,7 @@ async function guardarAngulos(modo) {
 function trancarEditor(sim) {
   for (const id of ['inicioMenos', 'inicioMais', 'fimMenos', 'fimMais', 'verClipe', 'canalClipe',
     'guardarClipe', 'guardarAjustes', 'modoUm', 'modoDois', 'divisor', 'angulosSeguido', 'angulosEmpilhado',
-    'voltarModelo']) {
+    'voltarModelo', 'chatClipeLigado', 'chatClipePosicao', 'chatClipeTamanho', 'chatClipeLinhas', 'chatClipeFundo']) {
     const el = $(id);
     if (el) el.disabled = sim;
   }
@@ -5465,6 +5742,8 @@ function fecharClipe() {
   // meio continuava a gravar um vídeo que já não estava lá.
   estado.clipe?.pararExportar?.();
   estado.clipe?.pararGravacao?.();
+  estado.clipe?.chatLeitura?.controlo.abort();
+  clearTimeout(esperaChatClipe);
   const retomarGrelha = estado.clipe?.retomarGrelha;
   pararVer();
   estado.clipe?.hls?.destroy();
@@ -5523,6 +5802,7 @@ function pintarClipe() {
     de: relogioCurto(c.deMs), ate: relogioCurto(c.ateMs), dur: dur.toFixed(1), max: MAXIMO_S,
   });
   $('tempoClipe').classList.toggle('mau', dur >= MAXIMO_S);
+  agendarChatDoClipe();
 }
 
 /**
@@ -5553,7 +5833,7 @@ function preverClipe(quandoMs, { fino = false } = {}) {
     } else {
       // Directo da CDN, que é outro domínio: sem `crossOrigin` a tela do 9:16
       // fica "suja" e o gravador não tira dela frame nenhum (ver
-      // `renderizarRetrato`).
+      // `renderizarGravado`).
       v.crossOrigin = 'anonymous';
       v.src = alvo.url;
     }
@@ -5716,6 +5996,8 @@ function arrastar(qual) {
 async function guardarClipe() {
   const c = estado.clipe;
   if (!c || c.aGravar || c.pararExportar) return;
+  // Com o chat, os pixels mudam: o 16:9 grava-se como o 9:16, com o chat pintado em cada frame.
+  if (c.chat?.ligado) { await guardarRetrato({ deitado: true }); return; }
   const linha = estado.linhas.find((l) => l.slug === c.canal);
   const nudge = estado.nudges[c.canal] || 0;
   // Fechar o editor (Esc, ✕, Cancelar) pára isto. E tudo o que vem depois de
@@ -6248,6 +6530,7 @@ function guardarAjustes() {
     ? comAjuste(x, {
       deMs: c.deMs, ateMs: c.ateMs, canal: c.canal,
       formato: querRetrato ? c.modo : null, rects: c.rects, divisao: c.divisao,
+      chat: c.chat?.ligado ? c.chat : null,
     })
     : x));
   const n = ordenar(estado.momentos).findIndex((x) => x.ms === c.momentoMs) + 1;
@@ -6260,7 +6543,7 @@ function guardarAjustes() {
 $('guardarAjustes').onclick = guardarAjustes;
 $('cancelarClipe').onclick = fecharClipe;
 $('guardarClipe').onclick = guardarClipe;
-$('guardarRetrato').onclick = guardarRetrato;
+$('guardarRetrato').onclick = () => guardarRetrato();
 for (const b of document.querySelectorAll('.modoRetrato')) {
   b.onclick = () => trocarModo(b.dataset.modo);
 }

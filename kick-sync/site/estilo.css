@@ -2571,3 +2571,40 @@ body.mesa #modalClipe .linha.fim:has(#guardarAjustes:not([hidden])) #guardarClip
 body.mesa .avisoExperimental { color: var(--aviso); margin: 0; }
 /* Arquivos novos enquanto a Montagem está aberta: a conta do Exportar fica na cor da ação até ele ser aberto. */
 body.mesa .aba.novidade .conta { background: var(--acento); color: var(--sobre-acento); }
+
+/* ── o chat no vídeo, na janela do clipe ───────────────────────────────────
+   Uma caixa como a dos filtros: o ligar em cima, e as escolhas numa grelha que
+   cabe em quatro colunas num PC e em duas num telemóvel em pé. A tela do chat
+   fica por cima do vídeo 16:9 e por baixo das caixas de enquadramento, e não
+   apanha o rato: arrastar as caixas continua a funcionar com o chat à vista. */
+body.mesa .chatFonte { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+body.mesa .chatFonte[hidden] { display: none; }
+body.mesa .chatClipe {
+  display: grid; gap: var(--e3); margin-top: var(--e3); padding: var(--e3);
+  border: 1px solid var(--linha); border-radius: var(--r-2); background: var(--sup-2);
+}
+body.mesa .chatClipe:has(#chatClipeLigado:checked) { border-color: var(--acento-fio); }
+body.mesa .chatClipeLigar { display: flex; align-items: flex-start; gap: var(--e3); cursor: pointer; font-size: var(--t-menor); }
+body.mesa .chatClipeLigar input { margin-top: 2px; }
+body.mesa .chatClipeLigar b { font-weight: 600; color: var(--tinta); }
+body.mesa .chatClipeLigar .nota { color: var(--tinta-2); }
+body.mesa .chatClipeOpcoes {
+  display: grid; gap: var(--e2) var(--e3); grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+body.mesa .chatClipeOpcoes[hidden] { display: none; }
+body.mesa .chatClipeOpcoes .campo { gap: 4px; }
+body.mesa .chatClipeOpcoes select { min-height: 36px; padding-top: 6px; padding-bottom: 6px; font-size: var(--t-menor); }
+body.mesa .chatClipeCusto { grid-column: 1 / -1; margin: 0; font-size: var(--t-micro); color: var(--tinta-3); }
+body.mesa .chatClipeTopo { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--e2) var(--e4); }
+body.mesa .chatClipeTopo .chatClipeLigar { flex: 1 1 22em; min-width: 0; }
+body.mesa .estadoChatClipe { flex: 0 1 auto; margin: 0 0 0 auto; font-size: var(--t-menor); color: var(--tinta-2); }
+body.mesa .estadoChatClipe.mau { color: var(--perigo); }
+body.mesa .estadoChatClipe:empty { display: none; }
+@media (max-width: 720px) {
+  body.mesa .chatClipeOpcoes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (pointer: coarse) {
+  body.mesa .chatClipeLigar { min-height: 44px; align-items: center; }
+  body.mesa .chatClipeLigar input { width: 22px; height: 22px; min-width: 22px; margin-top: 0; }
+  body.mesa .chatClipeOpcoes select { min-height: 44px; }
+}

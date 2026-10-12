@@ -158,6 +158,9 @@ export function clipesDoMomento(momento, canais, indice, { filmava = () => true,
       retrato: ajustado && aj.formato ? {
         modo: aj.formato, rects: aj.rects || [], divisao: aj.divisao,
       } : null,
+      // O chat por cima do vídeo, quando ele o ligou e guardou nesta kill (ver chat-clipe.js): o
+      // chat é o DESTE canal, e entra no 16:9 e no 9:16 deste clipe.
+      chat: ajustado && aj.chat?.ligado === true ? { ...aj.chat } : null,
       // A que kill este clipe pertence. Sem isto nao havia maneira de pedir os
       // clipes de UMA kill sem refazer o plano todo por fora.
       ms: momento.ms,
@@ -198,7 +201,7 @@ export function planoDaMontagem(momentos, canais, opcoes = {}) {
  * estao em pixels DESSE video.
  */
 export function comAjuste(momento, {
-  deMs, ateMs, formato = null, rects = [], divisao, canal,
+  deMs, ateMs, formato = null, rects = [], divisao, canal, chat = null,
 } = {}) {
   if (!Number.isFinite(deMs) || !Number.isFinite(ateMs) || ateMs <= deMs) return momento;
   const ajuste = {
@@ -208,6 +211,12 @@ export function comAjuste(momento, {
     formato: formato === 'um' || formato === 'dois' ? formato : null,
     rects: rects.map((r) => ({ x: r.x, y: r.y, largura: r.largura, altura: r.altura })),
     divisao: Number.isFinite(divisao) ? divisao : undefined,
+    // Só as escolhas, e só ligado: um chat desligado é o mesmo que nenhum.
+    ...(chat && typeof chat === 'object' && chat.ligado === true ? {
+      chat: {
+        ligado: true, posicao: chat.posicao, tamanho: chat.tamanho, linhas: chat.linhas, fundo: chat.fundo,
+      },
+    } : {}),
   };
   // Um ajuste por ângulo. Havia um só por momento, e guardar o da vítima
   // apagava sem aviso o corte e o 9:16 que ele tinha feito na POV dele.
