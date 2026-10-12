@@ -29,6 +29,17 @@
       "alerta": null,
       "tiro": "PvP de M4 (escopeta); 2 PvPs com intervalo de nailgun; 1 PvP de besta (crossbow); mais 1 PvP de M4 (escopeta); por último PvP de M16 (nome dito pelo dono; no Rust pode ser a LR-300)",
       "texto": "aqui teve um pvp de m4 escopeta, depois 2 pvp com intervalos com arma nailgun, depois 1 pvp de crossbal e mais 1 pvp de m4 e por utlimo pvp de m16"
+    },
+    {
+      "hora": "23:11",
+      "minDaLive": 29,
+      "clipeS": 36,
+      "explosao": false,
+      "alerta": null,
+      "tiro": null,
+      "falsoTiro": "golpes de pedra em árvore (farm de madeira)",
+      "valeClipe": false,
+      "texto": "aqui é um clip farmando madeira com 1 pedra"
     }
   ],
   "semExplosao": [
@@ -36,7 +47,11 @@
     "22:50",
     "22:58",
     "23:45",
-    "22:48"
+    "22:48",
+    "23:11"
   ],
-  "notas": "Quando o dono cita uma arma, é porque o som do tiro dela está no clipe."
+  "notas": "Quando o dono cita uma arma, é porque o som do tiro dela está no clipe.",
+  "semTiro": [
+    "23:11"
+  ]
 }
