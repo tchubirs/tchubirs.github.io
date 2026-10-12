@@ -7419,13 +7419,31 @@ function limparFila() {
  * Pergunta primeiro, porque leva as kills marcadas — que é o que mais custa a
  * juntar e o que ninguém quer perder por engano.
  */
-function recomecar() {
+/** Pergunta numa janela própria, com o que vai ser apagado e o Cancelar em foco (o dono, 13/10). */
+function confirmarRecomecar(quantas) {
+  return new Promise((ok) => {
+    const d = document.createElement('dialog');
+    d.className = 'confirmarRecomecar';
+    const itens = [t('recomecar.itemCanais'), t('recomecar.itemAjustes'), quantas ? t('recomecar.itemKills', { n: quantas }) : null].filter(Boolean);
+    d.innerHTML = `<h2>${escapar(t('recomecar.titulo'))}</h2><p>${escapar(t('recomecar.diz'))}</p><ul>${itens.map((i) => `<li>${escapar(i)}</li>`).join('')}</ul>`
+      + `<p class="nota">${escapar(t('recomecar.naoVolta'))}</p><div class="botoes"><button type="button" class="cancelar">${escapar(t('recomecar.cancelar'))}</button>`
+      + `<button type="button" class="apagar">${escapar(t('recomecar.apagar'))}</button></div>`;
+    document.body.append(d);
+    const fim = (sim) => { d.close(); d.remove(); ok(sim); };
+    d.querySelector('.cancelar').onclick = () => fim(false);
+    d.querySelector('.apagar').onclick = () => fim(true);
+    d.addEventListener('cancel', (e) => { e.preventDefault(); fim(false); });
+    d.showModal();
+    d.querySelector('.cancelar').focus();
+  });
+}
+
+async function recomecar() {
   const quantas = unirMomentos(estado.momentos, estado.momentosFora).length;
-  const aviso = quantas ? t('recomecar.comKills', { n: quantas }) : t('recomecar.semKills');
   // Pergunta antes de apagar seja o que for: um Cancelar tem de deixar tudo
   // como estava, e apagava a memoria dos VODs, o que com quinhentos canais
   // eram quinhentos pedidos a Kick no Carregar seguinte.
-  if (!confirm(aviso)) return;
+  if (!(await confirmarRecomecar(quantas))) return;
   // O memo vai junto: Repor é a maneira de forçar a Kick outra vez.
   estado.vodsPorCanal.clear();
   estado.pecasLidas.clear();
