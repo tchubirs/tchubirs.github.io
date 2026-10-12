@@ -2968,12 +2968,12 @@ body.mesa #montagem .estadoAoVivo:empty { display: none; }
 .simplesPlayer:fullscreen { display: grid; border-radius: 0; }
 .simplesPlayer:fullscreen video { width: 100%; height: 100%; aspect-ratio: auto; object-fit: contain; }
 .simplesControles {
-  position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 10px 0; color: #fff;
+  position: absolute; left: 0; right: 0; bottom: 0; padding: 0 8px; color: #fff;
   background: linear-gradient(to top, rgb(0 0 0 / .7), rgb(0 0 0 / 0)); transition: opacity .2s;
 }
 .simplesPlayer.semControles .simplesControles { opacity: 0; pointer-events: none; }
 .simplesPlayer.semControles video { cursor: none; }
-.simplesControlesLinha { display: flex; align-items: center; gap: 4px; margin: -4px 0 -5px; }
+.simplesControlesLinha { display: flex; align-items: center; gap: 4px; margin: -6px 0 -4px; }
 .simplesTempoPlayer { font-size: 13px; font-variant-numeric: tabular-nums; margin-right: auto; padding-left: 6px; white-space: nowrap; }
 .simples .simplesIcone {
   min-height: 44px; min-width: 44px; padding: 0; background: none; border: 0; border-radius: 0; color: #fff;
@@ -2986,7 +2986,7 @@ body.mesa #montagem .estadoAoVivo:empty { display: none; }
 .simplesVol:hover .simplesVolume, .simplesVol:focus-within .simplesVolume { width: 64px; opacity: 1; margin: 0 6px; }
 /* A barra do tempo: fina, de ponta a ponta, vermelha no que já passou, com a bolinha; engrossa ao passar o mouse. */
 .simplesLinha {
-  -webkit-appearance: none; appearance: none; display: block; width: 100%; height: 14px; margin: 0; padding: 0;
+  -webkit-appearance: none; appearance: none; display: block; width: 100%; height: 10px; margin: 0; padding: 0;
   background: transparent; cursor: pointer; --feito: 0%;
 }
 .simplesLinha::-webkit-slider-runnable-track {
