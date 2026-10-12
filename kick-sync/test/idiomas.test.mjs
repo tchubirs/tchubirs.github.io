@@ -88,7 +88,7 @@ const IGUAIS_DE_PROPOSITO = {
   // Nome do produto, simbolos de navegacao, e frases que sao so numeros e datas.
   en: new Set([
     // O modo simples: "chat" no nome do arquivo é a mesma palavra nas três.
-    'simples.arquivo.chat',
+    'simples.arquivo.chat', 'simples.baixarTiktokCurto',
     // O exemplo de linha do DeathNotes é o texto do plugin, em inglês nas três; "45 m" também.
     'mortes.textoPh', 'mortes.distancia',
     // Os melhores lances: "chat" e "kills" são as mesmas palavras na soma da nota.
@@ -174,7 +174,7 @@ const IGUAIS_DE_PROPOSITO = {
     // A legenda: "Estilo", "Turquesa" e os botões de ±0,1 s escrevem-se igual em espanhol.
     'legenda.estilo', 'legenda.corTurquesa', 'legenda.menos', 'legenda.mais',
     // O player do lance no modo simples: "Pausar", "Continuar" e "Editar" escrevem-se igual em espanhol.
-    'simples.pausar', 'simples.continuar', 'simples.editar',
+    'simples.pausar', 'simples.continuar', 'simples.editar', 'simples.baixarTiktokCurto',
   ]),
 };
 

@@ -212,7 +212,7 @@ test('modo simples: o nome do evento vira a lista simples, sem o mapa, e o mapa 
       for (const a of ['tiktok', 'deitado', 'nao']) assert.equal(await li.locator(`button[data-acao="${a}"]`).count(), 1);
     }
     // Modo avançado: o mapa de sempre, com o evento aberto.
-    await p.click('#modoAvancado');
+    await p.click('#modoAvancadoLista');
     assert.equal(await p.locator('#evento').isVisible(), true);
 
     // E o link curto do evento (?e=teste), aberto no modo simples, faz o mesmo.

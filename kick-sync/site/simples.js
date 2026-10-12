@@ -247,7 +247,7 @@ export function montarSimples(ponte) {
   const toque = window.matchMedia?.('(pointer: coarse)').matches;
 
   // ── os modos ──────────────────────────────────────────────────────────
-  $('modoAvancado').onclick = () => {
+  $('modoAvancado').onclick = $('modoAvancadoLista').onclick = () => {
     parar();
     escolherModo('avancado');
     document.body.classList.remove('simplesTrabalho');
@@ -774,10 +774,10 @@ export function montarSimples(ponte) {
         + `<p class="simplesQuando">${escapar(m.doClipe ? t('simples.duracao', { s: durS })
           : t('simples.quando', { tempo: tempoNaLive(m.ms, inicio), hora: horaDe(m.ms), s: durS }))}</p>`
         + '<div class="simplesBotoes">'
-        + `<button type="button" class="principal simplesTiktok" data-acao="tiktok"><svg class="ic" aria-hidden="true"><use href="#i-descarregar"/></svg><span>${escapar(t('simples.baixarTiktok'))}</span></button>`
-        + `<button type="button" class="simplesSecundario simplesDeitado" data-acao="deitado">${escapar(t('simples.baixarDeitado'))}</button>`
+        + `<button type="button" class="principal simplesTiktok" data-acao="tiktok" aria-label="${escapar(t('simples.baixarTiktok'))}" title="${escapar(t('simples.baixarTiktok'))}"><svg class="ic" aria-hidden="true"><use href="#i-descarregar"/></svg><span class="longo">${escapar(t('simples.baixarTiktok'))}</span><span class="curto" aria-hidden="true">${escapar(t('simples.baixarTiktokCurto'))}</span></button>`
+        + `<button type="button" class="simplesSecundario simplesDeitado" data-acao="deitado" aria-label="${escapar(t('simples.baixarDeitado'))}" title="${escapar(t('simples.baixarDeitado'))}"><span class="longo">${escapar(t('simples.baixarDeitado'))}</span><span class="curto" aria-hidden="true">${escapar(t('simples.baixarDeitadoCurto'))}</span></button>`
         + `<button type="button" class="simplesSecundario simplesEditar" data-acao="editar">${escapar(t('simples.editar'))}</button>`
-        + `<button type="button" class="simplesSecundario simplesNao" data-acao="nao">${escapar(t('simples.naoQuero'))}</button>`
+        + `<button type="button" class="simplesSecundario simplesNao" data-acao="nao" aria-label="${escapar(t('simples.naoQuero'))}" title="${escapar(t('simples.naoQuero'))}"><svg class="ic" aria-hidden="true"><use href="#i-lixo"/></svg><span>${escapar(t('simples.naoQuero'))}</span></button>`
         + '</div>'
         + `<p class="simplesBaixando" role="status" aria-live="polite">${feito ? escapar(feito.texto) : ''}</p>`
         + `<progress class="simplesBarraClipe" max="1" hidden></progress>`

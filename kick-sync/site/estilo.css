@@ -2916,7 +2916,18 @@ body.mesa #montagem .estadoAoVivo:empty { display: none; }
 .simplesModoLinha { margin-top: var(--e7); text-align: center; }
 
 .simplesTrabalho { display: grid; gap: var(--e4); margin-top: var(--e5); }
-.simplesCabeca { display: flex; gap: var(--e4); align-items: center; justify-content: space-between; flex-wrap: wrap; }
+/* Título, estado e barra em coluna; os botões da tela (Parar, Procurar de novo, Começar de novo, Modo avançado)
+   numa fila só, à esquerda embaixo da barra enquanto procura e à direita do título quando a lista está pronta. */
+.simplesAcoes { display: flex; flex-wrap: wrap; gap: var(--e3); align-items: center; }
+.simples .simplesAcoes button { min-height: 44px; font-size: 15px; }
+.simplesTrabalho:not([hidden]) ~ .simplesModoLinha { display: none; }
+@media (min-width: 720px) {
+  .simplesTrabalho { grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--e4); }
+  .simplesTrabalho > * { grid-column: 1 / -1; }
+  .simplesTrabalho:has(#simplesParar[hidden]) > .simplesQuem { grid-column: 1; grid-row: 1; align-self: center; }
+  .simplesTrabalho:has(#simplesParar[hidden]) > .simplesAcoes { grid-column: 2; grid-row: 1; justify-content: flex-end; }
+  .simples .simplesAcoes button { min-height: 36px; font-size: 14px; }
+}
 .simplesQuem { margin: 0; font-size: 20px; line-height: var(--lh-apertado); }
 .simplesProgresso { display: grid; gap: var(--e3); }
 .simplesEstado { margin: 0; line-height: var(--lh); }
@@ -2948,9 +2959,10 @@ body.mesa #montagem .estadoAoVivo:empty { display: none; }
 .simplesTambem { margin: 0; color: var(--tinta-2); font-size: var(--t-base); overflow-wrap: anywhere; }
 .simplesMais { justify-self: center; width: 100%; }
 .simplesQuando, .simplesTalvezFalha { margin: 0; color: var(--tinta-2); font-size: var(--t-base); }
-.simplesBotoes { display: grid; grid-template-columns: 1fr 1fr; gap: var(--e3); }
-.simplesBotoes :is(.simplesTiktok, .simplesDeitado) { grid-column: 1 / -1; }
-.simples .simplesTiktok { min-height: 56px; font-size: 18px; }
+.simplesBotoes { display: flex; flex-wrap: wrap; gap: var(--e2); align-items: center; }
+.simples .simplesBotoes button { min-height: 44px; font-size: 15px; padding-inline: var(--e4); }
+.simplesBotoes .curto { display: none; }
+.simplesNao span { margin-left: var(--e2); }
 /* A imagem do cartão é o botão de assistir; a prévia toma o lugar dela. */
 .simples button.simplesFoto { position: relative; padding: 0; width: 100%; border: 0; cursor: pointer; }
 .simplesFoto::after {
@@ -3007,9 +3019,25 @@ body.veioDaLista .voltarLista { display: inline-block; }
 :root[data-modo="simples"] .voltarLista { display: none !important; }
 .simplesBaixando { margin: 0; line-height: var(--lh); }
 .simplesBaixando:empty { display: none; }
-@media (min-width: 720px) {
-  .simplesCartao { grid-template-columns: 260px 1fr; }
-  .simplesCartao.comPrevia { grid-template-columns: 1fr; }
+/* Celular e janela estreita: linha com a imagem à esquerda (40%) e o texto e os botões à direita. */
+.simplesCartao { grid-template-columns: 40% minmax(0, 1fr); align-items: start; }
+.simplesCartao.comPrevia { grid-template-columns: 1fr; }
+.simplesMotivo { font-size: 16px; }
+.simplesFoto::after { width: 40px; height: 40px; margin: -20px 0 0 -20px; font-size: 16px; border-width: 2px; padding-left: 3px; }
+/* PC: grade de cartões, três por linha, imagem em cima e uma fila só de botões pequenos. */
+@media (min-width: 900px) {
+  .simples:has(.simplesTrabalho:not([hidden])) { max-width: 1200px; width: 100%; }
+  .simplesLista { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: var(--e4); align-items: start; }
+  .simplesCartao, .simplesCartao.comPrevia { grid-template-columns: minmax(0, 1fr); gap: var(--e3); padding: var(--e3); container-type: inline-size; }
+  .simplesFoto::after { width: 64px; height: 64px; margin: -32px 0 0 -32px; font-size: 28px; border-width: 3px; padding-left: 5px; }
+  .simplesBotoes { flex-wrap: nowrap; gap: var(--e2); }
+  .simples .simplesBotoes button { min-height: 34px; font-size: 14px; padding-inline: var(--e3); white-space: nowrap; }
+  .simples .simplesBotoes .simplesNao { padding-inline: 0; width: 34px; justify-content: center; flex: none; }
+  .simplesNao span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); margin: 0; }
+}
+@container (max-width: 430px) {
+  .simplesBotoes .longo { display: none; }
+  .simplesBotoes .curto { display: inline; }
 }
 /* O clipe em pé grava-se na janela "Ajustar clipe", que fica aberta e a desenhar mas sem se ver: o vídeo
    tem de estar no ecrã para dar imagem, e a pessoa não tem de ver uma janela cheia de opções. */

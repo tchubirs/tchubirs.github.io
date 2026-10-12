@@ -470,3 +470,10 @@ em francês). Tudo revisado pela regra 14 em 28/09.
     assistir e Procurar de novo.
   - falta: o evento (nome, ?e=) ainda relê o chat de todos ao recarregar, e "Pronto" do evento não volta do cache; um
     link de vídeo ainda faz uma chamada à Kick para saber o canal antes de achar o cache.
+- Feito em 12/10, modo simples no PC: com 900 px ou mais a lista (e a do evento) vira grade de cartões, três por
+  linha, página até 1200 px; cada cartão tem imagem em cima, nota e título, linha cinza, e uma fila só de botões
+  pequenos (TikTok, Tela cheia, Editar, lixeira com aria-label "Excluir"; o rótulo curto só entra quando o
+  cartão é estreito, o completo fica no aria-label). No celular: linha com imagem a 40% e botões embaixo do texto,
+  com 44 px. Os botões da tela (Procurar de novo, Começar de novo, Modo avançado) ficam numa fila só, à direita do
+  título no PC; na busca ficam à esquerda embaixo da barra, junto com Parar de procurar. Na primeira tela o
+  Modo avançado continua embaixo (`#modoAvancado`); na lista é `#modoAvancadoLista`.
