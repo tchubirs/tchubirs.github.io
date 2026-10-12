@@ -415,6 +415,10 @@ $('procurar').onkeydown = (e) => {
   }
   else if (e.key === 'Enter') {
     e.preventDefault();
+    // Um link colado (canal, vídeo ou clipe da Kick): o canal entra na lista; vídeo e clipe abrem como no campo do link.
+    const link = /kick\.com/i.test($('procurar').value) ? lerLinkKick($('procurar').value) : null;
+    if (link?.tipo === 'canal') { acrescentarCanal(link.slug.toLowerCase()); return; }
+    if (link) { $('linkKick').value = $('procurar').value.trim(); $('procurar').value = ''; fecharSugestoes(); abrirLinkKick(); return; }
     // A ordem: o que ele escolheu com as setas; senão o nome igual ao que
     // escreveu, mesmo que não seja o mais seguido; só depois o primeiro.
     const escrito = $('procurar').value.trim().toLowerCase();
@@ -584,8 +588,16 @@ async function carregarAgora() {
 
 function pintarNoites(noites) {
   $('noites').hidden = false;
-  $('noite').innerHTML = noites
-    .map((n, i) => `<option value="${i}">${rotuloDaNoite(n, { t })}</option>`).join('');
+  // O dono (13/10): o dia e a hora em que o vídeo começa e acaba; sem a contagem de canais.
+  const p2 = (x) => String(x).padStart(2, '0');
+  const data = (ms) => { const d = new Date(ms); return `${p2(d.getDate())}/${p2(d.getMonth() + 1)}/${d.getFullYear()}`; };
+  const hora = (ms) => { const d = new Date(ms); return `${p2(d.getHours())}:${p2(d.getMinutes())}`; };
+  // Atravessando a meia-noite, o fim diz o dia; com mais de um canal, do primeiro que começa ao último que acaba, e quantos.
+  $('noite').innerHTML = noites.map((n, i) => {
+    const fim = data(n.fim) === data(n.inicio) ? hora(n.fim) : `${data(n.fim).slice(0, 5)} ${hora(n.fim)}`;
+    const quantos = n.canais > 1 ? ` · ${t('noite.canais', { n: n.canais })}` : '';
+    return `<option value="${i}" title="${rotuloDaNoite(n, { t })}">${data(n.inicio)}, ${hora(n.inicio)} ${t('noite.ate')} ${fim}${quantos}</option>`;
+  }).join('');
   $('noite').onchange = () => abrirNoite(noites[Number($('noite').value)]);
 }
 
@@ -7446,13 +7458,8 @@ let voltarAPartilha = 0;
 function pintarPartilha() {
   const nota = $('estadoPartilha');
   if (voltarAPartilha) return;
-  if (!estado.linhas.length || !estado.janela) { nota.textContent = ''; return; }
-  nota.classList.remove('mau');
-  nota.textContent = t('partilha.leva', {
-    n: estado.linhas.length,
-    data: diaLocal(estado.janela.inicio),
-    hora: `${relogioCurto(estado.agoraMs)}`,
-  });
+  // O dono (13/10): a frase fixa ("1 transmissões, data, hora") não ajudava; só o "copiado" aparece aqui.
+  nota.textContent = '';
 }
 
 function linkDaNoite() {
@@ -8300,6 +8307,54 @@ function trocarIdioma(codigo) {
 $('idioma').innerHTML = Object.entries(IDIOMAS)
   .map(([c, nome]) => `<option value="${c}">${nome}</option>`).join('');
 $('idioma').onchange = () => trocarIdioma($('idioma').value);
+
+// O dono (13/10): só a bandeira; ao tocar abre a lista com a bandeira e o nome de cada idioma. Desenhadas em
+// SVG porque o Windows não mostra emoji de bandeira. O <select> fica escondido e continua a guardar o valor.
+const BANDEIRAS = {
+  pt: '<svg viewBox="0 0 28 20" aria-hidden="true"><rect width="28" height="20" fill="#009c3b"/><path d="M14 2.5 25.5 10 14 17.5 2.5 10z" fill="#ffdf00"/><circle cx="14" cy="10" r="4.6" fill="#002776"/></svg>',
+  en: '<svg viewBox="0 0 28 20" aria-hidden="true"><rect width="28" height="20" fill="#fff"/><path d="M0 0h28v1.54H0zm0 3.08h28v1.54H0zm0 3.08h28v1.54H0zm0 3.08h28v1.54H0zm0 3.08h28v1.54H0zm0 3.08h28v1.54H0zm0 3.08h28V20H0z" fill="#b22234"/><rect width="12" height="10.77" fill="#3c3b6e"/></svg>',
+  es: '<svg viewBox="0 0 28 20" aria-hidden="true"><rect width="28" height="20" fill="#c60b1e"/><rect y="5" width="28" height="10" fill="#ffc400"/></svg>',
+};
+{
+  const sel = $('idioma');
+  sel.hidden = true;
+  const caixa = document.createElement('div');
+  caixa.className = 'idiomaBandeira';
+  caixa.innerHTML = `<button type="button" class="discreto idiomaBotao" aria-haspopup="listbox" aria-expanded="false"></button>
+    <ul class="idiomaLista" role="listbox" hidden>${Object.entries(IDIOMAS).map(([c, nome]) =>
+    `<li role="option" data-c="${c}" tabindex="-1">${BANDEIRAS[c] || ''}<span>${nome}</span></li>`).join('')}</ul>`;
+  sel.after(caixa);
+  const botao = caixa.querySelector('button');
+  const listaIdiomas = caixa.querySelector('ul');
+  const pintar = () => {
+    botao.innerHTML = BANDEIRAS[sel.value] || sel.value;
+    botao.setAttribute('aria-label', `${t('idioma.rotulo')}: ${IDIOMAS[sel.value] || sel.value}`);
+    for (const li of listaIdiomas.children) li.setAttribute('aria-selected', String(li.dataset.c === sel.value));
+  };
+  const abrir = (sim) => { listaIdiomas.hidden = !sim; botao.setAttribute('aria-expanded', String(sim)); if (sim) listaIdiomas.querySelector('[aria-selected="true"]')?.focus(); };
+  botao.onclick = () => abrir(listaIdiomas.hidden);
+  listaIdiomas.onclick = (e) => {
+    const li = e.target.closest('li');
+    if (!li) return;
+    sel.value = li.dataset.c;
+    sel.dispatchEvent(new Event('change'));
+    abrir(false);
+    pintar();
+    botao.focus();
+  };
+  listaIdiomas.onkeydown = (e) => {
+    const itens = [...listaIdiomas.children];
+    const i = itens.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown') { e.preventDefault(); itens[(i + 1) % itens.length].focus(); }
+    if (e.key === 'ArrowUp') { e.preventDefault(); itens[(i - 1 + itens.length) % itens.length].focus(); }
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); document.activeElement.click(); }
+    if (e.key === 'Escape') { abrir(false); botao.focus(); }
+  };
+  document.addEventListener('pointerdown', (e) => { if (!caixa.contains(e.target)) abrir(false); });
+  new MutationObserver(pintar).observe(sel, { attributes: true, childList: true });
+  sel.addEventListener('change', pintar);
+  queueMicrotask(pintar);
+}
 
 let guardadoIdioma = null;
 try { guardadoIdioma = localStorage.getItem('replay.idioma'); } catch { /* janela privada */ }

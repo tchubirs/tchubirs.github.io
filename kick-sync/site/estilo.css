@@ -3084,3 +3084,23 @@ body.veioDaLista .voltarLista { display: inline-flex; white-space: nowrap; flex:
 /* O clipe em pé grava-se na janela "Ajustar clipe", que fica aberta e a desenhar mas sem se ver: o vídeo
    tem de estar no ecrã para dar imagem, e a pessoa não tem de ver uma janela cheia de opções. */
 body.simplesGravando #modalClipe { opacity: 0 !important; pointer-events: none !important; }
+
+/* 13/10: barra do avançado mais curta. O relógio exato saiu; o compartilhar é só o ícone. */
+#confianca { display: none; }
+#partilhar.soIcone { min-width: 40px; padding-inline: 0; justify-content: center; }
+/* Idioma: só a bandeira; a lista abre com bandeira e nome. */
+.idiomaBandeira { position: relative; flex: 0 0 auto; }
+.idiomaBotao { min-width: 44px; padding: 6px 8px; display: inline-grid; place-items: center; }
+.idiomaBandeira svg { width: 26px; height: 18px; display: block; border-radius: 2px; box-shadow: 0 0 0 1px rgb(255 255 255 / .15); }
+.idiomaLista { position: absolute; right: 0; top: calc(100% + 4px); z-index: 40; margin: 0; padding: 4px; list-style: none; min-width: 160px; background: var(--sup-3); border: 1px solid var(--linha-2); border-radius: var(--r-2); box-shadow: 0 8px 24px rgb(0 0 0 / .45); }
+.idiomaLista li { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--r-fio); cursor: pointer; color: var(--tinta); }
+.idiomaLista li:hover, .idiomaLista li:focus-visible, .idiomaLista li[aria-selected="true"] { background: var(--sup-2); }
+/* A lista de canais nasce do tamanho da caixa do nome e cresce uma linha por canal (o dono, 13/10). */
+#canais { field-sizing: content; min-height: 44px; max-height: 240px; resize: none; overflow-y: auto; }
+.topo .barraSessao.noTopo { display: flex; align-items: center; gap: var(--e2); flex: 0 1 auto; margin: 0; padding: 0; border: 0; background: none; }
+body:not(:has(#noites:not([hidden]))) .topo .barraSessao.noTopo { display: none; }
+.topo .barraSessao.noTopo .campo { flex: 0 0 auto; min-width: 0; }
+.topo .barraSessao.noTopo .rotuloCampo { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.topo .barraSessao.noTopo #noite { width: auto; min-width: 0; padding-block: 6px; }
+.topo .barraSessao.noTopo #estadoPartilha:empty { display: none; }
+#noites:has(#estadoNoite:empty) { display: none; }

@@ -200,6 +200,7 @@
     <path d="M2.4 12S6 5.4 12 5.4 21.6 12 21.6 12 18 18.6 12 18.6 2.4 12 2.4 12Z"/>
     <circle cx="12" cy="12" r="3.1"/>
   </symbol>
+  <symbol id="i-partilhar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></symbol>
   <symbol id="i-copiar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
     <rect x="8.6" y="8.6" width="12" height="12" rx="2"/>
     <path d="M15.4 8.6V5.4a2 2 0 0 0-2-2H5.4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3.2"/>
@@ -272,7 +273,20 @@
     <button id="inicio" class="inicio" data-t-titulo="topo.inicioTitulo" title="Voltar à tela inicial"><svg class="ic ic-p" aria-hidden="true"><use href="#i-inicio"/></svg><span data-t="topo.inicio">Início</span></button>
     <!-- Com um vídeo aberto, a porta de entrada (colar link, procurar canal, lista) sai da frente e fica atrás deste botão.
          Quem está caçando um lance precisa do vídeo e da linha do tempo, e não de quatro formulários. -->
-    <button id="editarCanais" class="editarCanais" aria-expanded="false" aria-controls="entrada canaisEstado" data-t-titulo="topo.canaisTitulo" title="Adicionar ou tirar canais"><span data-t="topo.canais">Canais</span></button>
+    <!-- A noite e o compartilhar vivem na barra de cima (o dono, 13/10); só aparecem com uma noite aberta. -->
+    <div class="linha barraSessao noTopo">
+      <label class="campo">
+        <span class="rotuloCampo" data-t="noite.label">Qual noite</span>
+        <select id="noite" data-t-aria="noite.label"></select>
+      </label>
+      <output id="confianca" class="confianca"></output>
+      <!-- Passar a noite pronta a outra pessoa. O que vai no link não é a lista
+           de nomes — é o TRABALHO: os ajustes que ele acertou um a um. -->
+      <button id="partilhar" data-t-titulo="partilha.ajuda"
+        title="Copia um link com o projeto de agora" class="soIcone" data-t-aria="partilha.botao" aria-label="Compartilhar projeto"><svg class="ic" aria-hidden="true"><use href="#i-partilhar"/></svg></button>
+      <output id="estadoPartilha" class="nota"></output>
+    </div>
+    <button id="editarCanais" class="editarCanais" aria-expanded="false" aria-controls="entrada canaisEstado" data-t-titulo="topo.canaisTitulo" title="Adicionar ou tirar canais"><svg class="ic ic-p" aria-hidden="true"><use href="#i-mais"/></svg><span data-t="topo.canais">Canais</span></button>
     <!-- Volta ao modo simples (ESTUDO-FACIL.md, plano 12). Só aparece no avançado. -->
     <button id="modoSimples" class="modoSimples" type="button" data-t="simples.voltarSimples">Modo simples</button>
     <!-- Só aparece quando o avançado foi aberto pelo Editar de um cartão da lista simples. -->
@@ -645,14 +659,14 @@
           <span class="procura">
             <input id="procurar" type="search" autocomplete="off" spellcheck="false"
               role="combobox" aria-autocomplete="list" aria-controls="sugestoes" aria-expanded="false"
-              data-t-aria="procurar.label" data-t-ph="procurar.ph" placeholder="nome do streamer">
+              data-t-aria="procurar.label" data-t-ph="procurar.ph" placeholder="nome ou link">
             <svg class="ic lupa" aria-hidden="true"><use href="#i-procurar"/></svg>
             <ul id="sugestoes" class="sugestoes" role="listbox" hidden></ul>
           </span>
         </label>
         <label class="campo">
           <span class="rotuloCampo" data-t="canais.label">Canais desta noite</span>
-          <textarea id="canais" rows="4" spellcheck="false" data-t-aria="canais.label"
+          <textarea id="canais" rows="1" spellcheck="false" data-t-aria="canais.label"
             data-t-ph="canais.ph" placeholder="um por linha"></textarea>
         </label>
       </div>
@@ -675,18 +689,6 @@
        títulos próprios para dois controlos — peso a mais para o que é, no
        fundo, "qual noite e quem lá estava". -->
   <section id="noites" class="bloco" hidden>
-    <div class="linha barraSessao">
-      <label class="campo">
-        <span class="rotuloCampo" data-t="noite.label">Qual noite</span>
-        <select id="noite" data-t-aria="noite.label"></select>
-      </label>
-      <output id="confianca" class="confianca"></output>
-      <!-- Passar a noite pronta a outra pessoa. O que vai no link não é a lista
-           de nomes — é o TRABALHO: os ajustes que ele acertou um a um. -->
-      <button id="partilhar" data-t-titulo="partilha.ajuda"
-        title="Copia um link com o projeto de agora"><svg class="ic ic-p" aria-hidden="true"><use href="#i-copiar"/></svg><span data-t="partilha.botao">Compartilhar projeto</span></button>
-      <output id="estadoPartilha" class="nota"></output>
-    </div>
     <!-- O que está a acontecer, AO PÉ do controlo que o desencadeia.
          A mensagem existia, mas era escrita no cartão de cima, ao lado do
          "Carregar" — e num telemóvel os dois cartões estão a um ecrã de

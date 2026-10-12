@@ -154,7 +154,7 @@ const TEXTOS = {
     'app.rodape': 'A sessão fica salva neste aparelho.',
 
     'procurar.label': 'Procurar um canal',
-    'procurar.ph': 'nome do streamer',
+    'procurar.ph': 'nome ou link',
     'procurar.jaEsta': 'já está',
     'procurar.seguidores': '{n} seguidores',
     'procurar.aoVivo': 'ao vivo',
@@ -1418,7 +1418,7 @@ const TEXTOS = {
     'app.rodape': 'The session is saved on this device.',
 
     'procurar.label': 'Find a channel',
-    'procurar.ph': 'streamer name',
+    'procurar.ph': 'name or link',
     'procurar.jaEsta': 'already added',
     'procurar.seguidores': '{n} followers',
     'procurar.aoVivo': 'live',
@@ -2682,7 +2682,7 @@ const TEXTOS = {
     'app.rodape': 'La sesión queda guardada en este dispositivo.',
 
     'procurar.label': 'Buscar un canal',
-    'procurar.ph': 'nombre del streamer',
+    'procurar.ph': 'nombre o enlace',
     'procurar.jaEsta': 'ya está',
     'procurar.seguidores': '{n} seguidores',
     'procurar.aoVivo': 'en vivo',
