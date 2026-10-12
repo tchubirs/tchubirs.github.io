@@ -579,6 +579,9 @@ pedra, árvore). Só vetores vão para o git; os WAV ficam fora.
   tipo de lance (PvP, foguete, C4, grito, morte), nota (só "Muito bom"), quantidade de mortes, e ordenar (melhor,
   hora, mais mortes). "Aplicar" fecha o menu; sem resultado mostra "Nada com esse filtro" e "Limpar filtro".
   Fica para depois (o dono: "deixa isso pra mais tarde").
+  13/10, mais do dono: a live é analisada uma vez e tudo fica num índice no aparelho; a busca é completa e
+  personalizada (combinar marcas, palavra, mínimo de acertos/headshots/mortes, duração) e mostra a precisão de
+  cada resultado e da busca em %, calibrada nos rótulos do dono quando houver, dita como estimativa quando não.
 - "Achar webcam" pega a borda da caixa da webcam inteira (linhas paradas em vários quadros), não só o rosto, e
   ajusta a faixa ao formato dela.
 - Editor travado durante a gravação: aviso "Gravando o clipe: 23 s de 60" com Parar.
