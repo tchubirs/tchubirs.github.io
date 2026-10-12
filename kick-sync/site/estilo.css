@@ -3104,8 +3104,6 @@ body:not(:has(#noites:not([hidden]))) .topo .barraSessao.noTopo { display: none;
 .topo .barraSessao.noTopo #noite { width: auto; min-width: 0; padding-block: 6px; }
 .topo .barraSessao.noTopo #estadoPartilha:empty { display: none; }
 #noites:has(#estadoNoite:empty) { display: none; }
-.relogio > .pesTempo { order: 5; display: flex; justify-content: flex-end; margin-top: var(--e2); }
-.pesTempo #zoomTempo { width: 160px; }
 /* Ferramentas: um botão que abre o menu com o que cada uma faz (o dono, 13/10). */
 .ferramentas { position: relative; display: inline-block; }
 .ferramentasBotao { list-style: none; display: inline-flex; align-items: center; gap: var(--e2); min-height: 36px; padding: 0 var(--e3); border: 1px solid var(--linha-2); border-radius: var(--r-2); background: var(--sup-2); cursor: pointer; color: var(--tinta); }
@@ -3117,3 +3115,14 @@ body:not(:has(#noites:not([hidden]))) .topo .barraSessao.noTopo { display: none;
 .ferramentaItem .ic { margin-top: 2px; color: var(--acento); flex: none; }
 .ferrNome { display: flex; align-items: center; gap: var(--e2); color: var(--tinta); font-weight: 500; }
 .ferrDiz { display: block; margin-top: 2px; color: var(--tinta-3); font-size: var(--t-pequeno, 13px); line-height: 1.35; font-weight: 400; }
+/* Tela cheia e janela no canto de baixo à direita; no ângulo aberto o olho fica do tamanho de quatro botões (o dono, 13/10). */
+.tile .cantoDir { display: flex; align-items: center; gap: var(--e2); margin-left: auto; }
+.tile.foco .fora .par { width: 64px; min-width: 64px; min-height: 64px; height: 64px; }
+.tile.foco .fora .par .ic { width: 30px; height: 30px; }
+/* Zoom na vertical, colado ao fim das faixas: + em cima, − embaixo (o dono, 13/10). Os saltos de 1 e 5 min saíram. */
+.relogio:has(> .pesTempo) > .faixas, .relogio:has(> .pesTempo) > .reguaLinha, .relogio:has(> .pesTempo) > .barraLinha { margin-right: 44px; }
+.relogio > .pesTempo { position: absolute; right: var(--e2); bottom: var(--e3); top: 64px; display: flex; }
+.pesTempo .zoomTempo { flex-direction: column-reverse; height: 100%; gap: var(--e1, 4px); }
+.pesTempo #zoomTempo { writing-mode: vertical-lr; direction: rtl; width: 30px; height: auto; flex: 1 1 auto; min-height: 40px; }
+.pesTempo .zoomQuanto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.cabecaTempo .saltos { display: none; }

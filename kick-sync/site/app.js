@@ -2065,16 +2065,17 @@ function montarGrade() {
       + '<b class="nudge">0.0s</b>'
       + `<button data-passo="1" data-t-titulo="tile.adiantar" title="${t('tile.adiantar')}">+</button>`
       + '</span>'
-      + '</span>'
-      // Ecrã cheio e janela à parte, no canto de cima à direita — o mesmo sítio
-      // do YouTube, da Twitch e da Kick. Desenhados e não emoji: um ⛶ sai
-      // diferente em cada sistema, e no iPhone sai a cores.
-      + '<span class="fora">'
-      + `<button class="par" title="${t('tile.par')}" aria-label="${t('tile.par')}">${ICONE('lado-a-lado')}</button>`
-      + `<button class="ecraCheio" data-t-titulo="tile.ecraCheio" data-t-aria="tile.ecraCheio" title="${t('tile.ecraCheio')}" aria-label="${t('tile.ecraCheio')}">`
-      + `${ICONE('ecra-cheio')}</button>`
+      // Ecrã cheio e janela à parte no canto de baixo à direita, como no YouTube e na Twitch (o dono, 13/10).
+      + '<span class="cantoDir">'
       + `<button class="aparte" data-t-titulo="tile.aparte" data-t-aria="tile.aparte" title="${t('tile.aparte')}" aria-label="${t('tile.aparte')}" hidden>`
       + `${ICONE('janela')}</button>`
+      + `<button class="ecraCheio" data-t-titulo="tile.ecraCheio" data-t-aria="tile.ecraCheio" title="${t('tile.ecraCheio')}" aria-label="${t('tile.ecraCheio')}">`
+      + `${ICONE('ecra-cheio')}</button>`
+      + '</span>'
+      + '</span>'
+      // Em cima à direita fica só o botão do papel do quadrado (o olho no ângulo aberto).
+      + '<span class="fora">'
+      + `<button class="par" title="${t('tile.par')}" aria-label="${t('tile.par')}">${ICONE('lado-a-lado')}</button>`
       + '</span>';
 
     tile.onclick = () => {
