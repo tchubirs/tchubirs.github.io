@@ -281,7 +281,7 @@ em francês). Tudo revisado pela regra 14 em 28/09.
   - legenda da fala do streamer (Whisper no navegador, ver o estudo de voz em kick-sync), revisável antes de exportar.
 - Vale para 16:9 e 9:16. Fazer depois da parte 2 da reorganização (mesmos arquivos).
 
-## Correções do teste real com a Kick (12/10), na ordem (ver kick-sync/QA-REAL.md)
+## Correções do teste real com a Kick (12/10), na ordem (ver o relatório do teste real em kick-sync)
 1. Ver ao vivo agora: abre o início da live (50 min atrás) e só 1 de 24 canais. Prender no fim da playlist e abrir todos.
 2. Exportar: 16:9 sai em .ts e mais longo que o pedido. Sair em .mp4 com a duração certa (aceito por TikTok, Instagram e X).
 3. Exportar montagem ignora a seleção. Exportar só as marcadas; opção de um vídeo só com os lances em sequência.
