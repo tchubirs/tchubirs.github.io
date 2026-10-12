@@ -610,3 +610,4 @@ pedra, árvore). Só vetores vão para o git; os WAV ficam fora.
 - Pedido 13/10: no editor Ajustar clipe, todos os atalhos têm de funcionar (espaço pausa e retoma, A e D andam 3 s); hoje não funcionam com a janela aberta.
 - Pedido 13/10: o chat no vídeo se move e se redimensiona arrastando direto na prévia, como a caixa da webcam (alças nos cantos), em vez dos menus Posição e Tamanho.
 - Pedido 13/10: escolher quanto tempo cada mensagem do chat fica no vídeo antes de sumir (hoje fixo em 10 s).
+- Pedido 13/10: a legenda da fala também se move e se redimensiona arrastando na prévia, e com o tempo que cada fala fica na tela escolhido.
