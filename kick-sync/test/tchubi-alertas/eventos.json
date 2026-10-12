@@ -1,0 +1,69 @@
+{
+ "nota": "Eventos que a detecção de explosões marcou na live do tchubi de 08/10 (assinaturas em dB, sem áudio). O dono confirmou que nenhum era explosão. Gerado com probes/modelo-explosao.",
+ "eventos": [
+  {
+   "liveS": 268,
+   "rotulo": "alerta de sub (lance 22:46, 4 min)",
+   "n": 80,
+   "plano": 0.178,
+   "d": 6.45,
+   "q": "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"
+  },
+  {
+   "liveS": 467,
+   "rotulo": "sem explosão, provável tiro de perto (lance 22:50, 8 min)",
+   "n": 12,
+   "plano": 0.528,
+   "d": 0.58,
+   "q": "MDArCBEIBAUMDvcB9vLz7uzl5OT39/P/8+7z/vn9//vt8e7m5OTk5CcnIgwS/gEKAwoE/f768vL07uzkGBgG+/zkAwYBAgD9/P349/Hv6OQhIRMOBQsEBQH2+/74+fPy8e3p5BgYGRcI9AELC/wE+fb1+ff28OnkHx8YFA3wAfv++fT47vf18e7t6OQcHBwYEgMQDwgABAD+/Pny8urm5BQUDQX79A0HCf//Bg739fbu6+XkKiouGxIUGRUWEAwHBQP5/PXu7OQXFw3vBwIBBwwDBfj69vHm6OTk5DQ0NB4H8w0NDxMDAwQB+Pby7uzk"
+  },
+  {
+   "liveS": 488,
+   "rotulo": "sem explosão, provável tiro de perto (lance 22:50, 8 min)",
+   "n": 7,
+   "plano": 0.522,
+   "d": 0.32,
+   "q": "JSUaDBQVFRUL+ff1++7s7O7n3d0dHRkaFhQXEwT2/PXx7Ozp6+ne3QkJHB0TEwsMBAD59/L28u3u7OfdIiIOFBwdEQoE+wT5+vnz+PLr59319SEeIBweEggAAf339+7w6Oni3SYmKy0jIh0XDv7++vj98vHx7uXdEBAHCQwTFgYJBfHz6eTl4+Ld3d0="
+  },
+  {
+   "liveS": 510,
+   "rotulo": "sem explosão, provável tiro de perto (lance 22:50, 8 min)",
+   "n": 10,
+   "plano": 0.373,
+   "d": 0.48,
+   "q": "/f0ACggC6+js7Ozw597e3t/b29srKxIYEQoUEg4JDgr/+vPt5eTg2/b2IBgcFwgF/vj17O7u5+Hj4tvbFBQdBRsNFhMTAgP48vnx5+fo4t0rKyYJHCAaGAUVFxEF/gD69/Lv6CQkGBwcHxsPCwUJ/vXz9PTz7vDhISEgIRsMAgIKEhT++/n26uro798FBR0dGg4J8vf0/erw7eni4dvc2yEhFBEVBxAKEhoR+Pz3+fP27ejcIyMiCwkKFhMRDgf99vfn6uTo4ts="
+  },
+  {
+   "liveS": 530,
+   "rotulo": "sem explosão, provável tiro de perto (lance 22:50, 8 min)",
+   "n": 12,
+   "plano": 0.536,
+   "d": 0.54,
+   "q": "HBwE+gD29u7u8fL49/Lz7/H07N8hISQjEQ0OEAb2BAwTCAgB/v/87SYmHA4MEAkMCAb+/xAFAAX+Afvq3d0MBgL3BAYDAPkBB/f6+vT28+ILCxQJEfwEAv/89fb38PHy9PXv5SUlHA8QBAwVCv0BDAsIAAH8/vnvFBQRDAAHBQgC/QL8CAD7/Pv69OYQEAgNAujs8vD96/j89e/29+/u2iEhFA8PAvUEBwMSEw4CBAP6+/bpKioN6f4GBPwG9/j//P35/Pv49eodHQ0MAgEFDQT7/AP9AwUF+fvx4AYGB/T66/f28ezn6Pno5uns5ePa"
+  },
+  {
+   "liveS": 977,
+   "rotulo": "sem explosão, provável tiro de perto (lance 22:58, 16 min)",
+   "n": 75,
+   "plano": 0.545,
+   "d": 3.7,
+   "q": "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"
+  },
+  {
+   "liveS": 1015,
+   "rotulo": "sem explosão, provável tiro de perto (lance 22:58, 16 min)",
+   "n": 6,
+   "plano": 0.575,
+   "d": 0.3,
+   "q": "CwsM5wcMDBMDDP3++vjz8+zo5uYxMTYnFggPEREPCQQEAPb69u3o5hERDgQQCw0SDgADBPv9/Pn29OvmIiIXFAcHCwcC/v//9Pv6/fn07+YbGxT//f0NCAEA+QD6APv7+PDt5gcHAPrz9PkCBfP48PP89vLw7uzm"
+  },
+  {
+   "liveS": 3784,
+   "rotulo": "alerta de sub (1 h 03, mesmo som do de 4 min)",
+   "n": 80,
+   "plano": 0.162,
+   "d": 6.45,
+   "q": "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"
+  }
+ ]
+}

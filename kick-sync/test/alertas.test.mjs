@@ -142,7 +142,7 @@ test('o modelo positivo dá nota alta a uma explosão nova e baixa a um jingle e
     return assinar(medirEspectro(live(20, [[5, som]])), 5, 5 + som.length / S.TAXA);
   });
   const modelo = treinarPositivo(treino);
-  assert.equal(modelo.media.length, BANDAS + 2);
+  assert.equal(modelo.media.length, BANDAS + 3);
   assert.equal(treinarPositivo(treino.slice(0, 2)), null, 'com poucas amostras não treina');
   const nota = (som) => pontuar(assinar(medirEspectro(live(20, [[5, som]])), 5, 5 + som.length / S.TAXA), modelo);
   const nova = nota(explosaoVariada(11));
@@ -179,4 +179,60 @@ test('varrerNoite com alertas: tira o jingle que repete, devolve o que saiu e ap
   assert.equal(com.alertasFora.length, 3);
   assert.ok(com.alertasFora.every((x) => x.porque === 'repete'));
   assert.equal(aprendidos.length, 1);
+});
+
+// ── o que o dono confirmou na live do tchubi de 08/10: nenhum desses 8 sons era explosão ────────────────
+
+import { readFileSync } from 'node:fs';
+import { alertasDoCanal, POSITIVO, PADROES } from '../site/alertas.js';
+import MODELO from '../site/modelo-explosao.js';
+
+const tchubi = JSON.parse(readFileSync(new URL('./tchubi-alertas/eventos.json', import.meta.url), 'utf8'))
+  .eventos.map((e) => ({ ...e, a: deGuardado(e) }));
+
+test('o modelo do app tem os 23 traços e desvios positivos', () => {
+  assert.equal(MODELO.media.length, BANDAS + 3);
+  assert.equal(MODELO.desvio.length, BANDAS + 3);
+  assert.ok(MODELO.desvio.every((d) => d > 0));
+  assert.ok(MODELO.n >= 500);
+});
+
+test('live do tchubi: o modelo positivo dá a todos os 8 sons sem explosão uma nota abaixo do corte do app', () => {
+  assert.equal(tchubi.length, 8);
+  for (const e of tchubi) {
+    const nota = pontuar(e.a, MODELO);
+    assert.ok(nota < POSITIVO.minimo, `${e.rotulo} aos ${e.liveS} s: nota ${nota.toFixed(2)}`);
+  }
+});
+
+test('live do tchubi: os dois alertas do mesmo sub (4 min e 1 h 03) viram um alerta aprendido, os tiros não', () => {
+  const ass = tchubi.map((e) => e.a);
+  const { grupos, dosAlertas } = aprender(ass);
+  const alertas = tchubi.map((e, i) => [e, i]).filter(([e]) => e.rotulo.startsWith('alerta')).map(([, i]) => i);
+  assert.equal(alertas.length, 2);
+  assert.ok(semelhanca(ass[alertas[0]], ass[alertas[1]]) < PADROES.identico, 'a semelhança real é menor que a de 2 repetições idênticas');
+  assert.deepEqual([...dosAlertas].sort(), alertas.sort());
+  assert.equal(grupos.filter((g) => g.alerta).length, 1);
+});
+
+test('tom forte repetido 2 vezes com semelhança 0,85 vira alerta; com achatamento de ruído não', () => {
+  const n = 40;
+  const base = new Float32Array(n * BANDAS).map((_, i) => 10 * Math.sin(i * 0.37) + 4 * Math.cos(i * 0.11));
+  const com = (ruido, plano) => ({ n, v: base.map((x, i) => x + ruido * Math.sin(i * 12.9898) * 3), plano, duracaoS: 2 });
+  const par = (plano) => aprender([com(1, plano), com(-1, plano)]);
+  assert.ok(semelhanca(com(1, 0.1), com(-1, 0.1)) >= PADROES.repetidoTonal && semelhanca(com(1, 0.1), com(-1, 0.1)) < PADROES.identico);
+  assert.equal(par(0.15).dosAlertas.size, 2);
+  assert.equal(par(0.3).dosAlertas.size, 0);
+});
+
+test('alertasDoCanal junta a memória do canal e o modelo positivo, igual para o modo simples e o avançado', () => {
+  const a = alertasDoCanal('tchubi', { getItem: () => null, setItem() {} });
+  assert.deepEqual(a.lembrados, []);
+  assert.equal(typeof a.aoAprender, 'function');
+  assert.equal(a.positivo.modelo, MODELO);
+  assert.equal(a.positivo.minimo, POSITIVO.minimo);
+  for (const f of ['simples.js', 'app.js']) {
+    const src = readFileSync(new URL(`../site/${f}`, import.meta.url), 'utf8');
+    assert.match(src, /alertas: alertasDoCanal\(/, `${f} passa os alertas para varrerNoite`);
+  }
 });

@@ -517,6 +517,39 @@ parecer entre si quase tanto quanto um jingle; a barreira é o achatamento (ruí
 Para fechar: com o ok, baixar 20 min de cada um dos 6 canais do Abisal, descodificar para f32 e rodar a sonda; ou o
 dono grava no servidor dele cada arma e explosivo em várias distâncias, que serve de treino limpo do modelo positivo.
 
+### Medido com som real e com o Rust (13/10), alertas aprendidos e modelo positivo ligado
+Dados: 6 canais do Abisal (12 min de cada, a partir de trechos com morte achados antes; os VODs de 05/10 de crreg e
+elwasabitm já não estavam na lista da Kick, então são os de 10/10 e 11/10) e a live do tchubi de 08/10 (25 min, mais 4
+janelas de 60 a 90 s nos lances que o dono rotulou). Tudo a 160p, som a 24 kHz mono. `audio.bundle` do Rust lido em modo
+leitura (UnityPy 1.25.4, FSB5 decodificou sem erro): 11.289 AudioClips, exportados 109 de explosão, 13 de explosão de
+veículo, 712 de tiro (22 famílias de arma, camadas de corpo, cauda, mecânica e grave) e 64 de coleta (machado, picareta,
+pedra, árvore). Só vetores vão para o git; os WAV ficam fora.
+- Modelo positivo (`site/modelo-explosao.js`, 23 traços, uns 600 bytes): as 122 explosões do jogo foram aumentadas 12 vezes
+  (tom, passa-baixas de distância, reverb, fundo de VOD, AAC de 32 a 96 kbps, altura de 8 a 45 vezes o chão). A detecção
+  real acha 605 de 1.464 (41%: as longe e abafadas somem antes do modelo). O traço novo é o achatamento, e a forma do
+  espectro conta como um traço só: antes um tom de 6 s se diluía nas 20 bandas e passava. Receita em
+  `probes/modelo-explosao/` (cinco passos, scripts pequenos).
+- Nota em explosões do jogo que o treino não viu: p05 0,33, mediana 0,69, p95 0,88. Em 86 tiros do jogo que a detecção tomou
+  por explosão: mediana 0,45 (AUC explosão contra tiro 0,76). Corte de 0,4: ficam 91% das
+  explosões do jogo e 64% dos tiros.
+- Verdade de chão do dono, live do tchubi de 08/10: nenhum desses lances tem explosão. A detecção marcou 8 sons nas janelas
+  deles: 2 alertas de sub (4 min e 1 h 03, 6,5 s cada, achatamento 0,17, mesma forma de onda com correlação 0,66) e 6
+  sons curtos e altos (picos de 53 a 115 vezes o chão, 21 s entre eles, achatamento de ruído). Notas do modelo: alertas 0,01 e
+  0,01; os 6 de tiro de perto entre 0,08 e 0,36. Todos abaixo de 0,4. Separar a voz com Demucs não muda nada: os 8 sons
+  continuam no resto sem voz, menos o de 1 h 03 que some (uma parte dele era voz). O corte de 0,4 foi escolhido olhando
+  essas 8 amostras: afinado dentro da amostra, e 8 amostras de um canal só.
+- Alertas aprendidos: os dois alertas do mesmo sub têm semelhança de espectro 0,88, menos que os 0,97 pedidos para 2
+  repetições. Regra nova: com achatamento até 0,2 (só 1% das explosões do jogo fica abaixo de 0,25) 2 repetições com 0,85
+  bastam, e a memória do canal reconhece com 0,85. Sem isso o canal nunca reaprendia o próprio alerta.
+- Por canal, explosões antes / tiradas por repetir / tiradas pelo modelo / ficam: crreg 36 / 22 / 8 / 6; poionako 15 / 0 / 7 /
+  8; skylane7 18 / 0 / 8 / 10; xguiry 5 / 3 / 0 / 2; elwasabitm, ispdep e tchubi (20 a 45 min) 0. Sem verdade de chão nesses
+  canais: não sei se as 22 do crreg são alerta. Sinais: correlação de forma de onda baixa entre elas (mediana 0,22, um alerta
+  de verdade passa de 0,6), notas do modelo de 0,45 a 0,87 e a série acaba 7 s antes de uma tela de morte. Risco de ter
+  tirado explosões de verdade ali. O que o modelo tira do poionako e do skylane7 também não está conferido.
+- Ligado nos dois modos (`alertasDoCanal` em `alertas.js`, usado por `simples.js` e `app.js`). `POSITIVO.ligado = false`
+  desliga sem mexer em mais nada.
+- Demucs (htdemucs, 80 MB, PyTorch CPU): 0,12 a 0,20 s de CPU por segundo de áudio com 16 núcleos. Não testado a legenda.
+
 ## Qualidade da exportação dos clipes (12/10)
 - Feito (`retrato.js`, `chat-clipe.js`, `legenda.js`, `app.js`, `estilo.css`, `index.html`, `idiomas.js`):
   - A gravação do 9:16 e do 16:9 com chat ou legenda usa os fps da playlist da Kick (`FRAME-RATE`, 59.94 vira 60,

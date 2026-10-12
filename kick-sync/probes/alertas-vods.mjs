@@ -16,12 +16,13 @@
 // confirma por fora (chat, tela, o dono a ouvir as amostras).
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
 import { basename, join } from 'node:path';
 import zlib from 'node:zlib';
 import { medirGraves, explosoes as acharExplosoes } from '../site/explosoes.js';
 import { chao } from '../site/tiros.js';
 import {
-  medirEspectro, assinar, tirarAlertas, treinarPositivo, pontuar, FPS_ESP, BANDAS, TAXA_ESP,
+  medirEspectro, assinar, tirarAlertas, treinarPositivo, pontuar, FPS_ESP, BANDAS, TAXA_ESP, POSITIVO,
 } from '../site/alertas.js';
 
 const TAXA = TAXA_ESP;
@@ -87,7 +88,10 @@ if (treinarArq) {
   process.exit(0);
 }
 
-const positivo = positivoArq ? { modelo: JSON.parse(readFileSync(positivoArq, 'utf8')), minimo: 0.05 } : null;
+// --positivo aceita .json ou .js (como site/modelo-explosao.js); --minimo muda o corte (padrão: o do app).
+const minimoArq = pega('minimo');
+const lerModelo = async (c) => (c.endsWith('.js') ? (await import(pathToFileURL(c).href)).default : JSON.parse(readFileSync(c, 'utf8')));
+const positivo = positivoArq ? { modelo: await lerModelo(positivoArq), minimo: minimoArq ? Number(minimoArq) : POSITIVO.minimo } : null;
 const resumo = [];
 for (const arq of args) {
   const nome = basename(arq).replace(/\.f32$/, '');
@@ -122,6 +126,18 @@ for (const arq of args) {
       console.log(`   amostra: ${base}.wav / .png`);
     });
   });
+  // amostras de o que ficou e do que o modelo positivo tirou (para o dono conferir a olho e de ouvido)
+  const guarda = (lista, rotulo) => lista.slice(0, 4).forEach((e, k) => {
+    const de = Math.max(0, Math.round((e.inicioS - 0.5) * TAXA));
+    const ate = Math.min(som.length, Math.round((e.fimS + 0.5) * TAXA));
+    const base = join(saida, `${nome}-${rotulo}${k + 1}-${relogio(e.picoS).replace(/[:.]/g, '-')}`);
+    wav(`${base}.wav`, som.subarray(de, ate));
+    const q0 = Math.floor(e.inicioS * FPS_ESP);
+    png(`${base}.png`, esp, q0, Math.min(esp.plano.length, q0 + Math.min(80, Math.ceil((e.fimS - e.inicioS) * FPS_ESP) + 2)));
+  });
+  guarda(r.mantidos, 'fica');
+  guarda(r.removidos.filter((x) => x.porque === 'nao-parece-explosao'), 'positivo');
+  guarda(r.removidos.filter((x) => x.porque === 'lembrado'), 'lembrado');
   resumo.push({
     canal: nome,
     duracaoS: Math.round(duracaoS),

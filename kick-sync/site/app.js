@@ -58,6 +58,7 @@ import { fcpxmlMulticam, textoDoPacote, linkDoVod } from './pacote.js';
 import { queFazerComOLeitor } from './leitor.js';
 import { criarApanhador } from './frames.js';
 import { varrerNoite, custoVarrerMB } from './procurar-momentos.js';
+import { alertasDoCanal } from './alertas.js';
 import {
   ESPERTO_A_PARTIR_MS, janelasDosPicos, msPorOuvir, somaMs, juntar, eMuito, estimarFalta, tempoFalta,
 } from './ouvir.js';
@@ -3602,6 +3603,7 @@ async function detetar(quem, quanto, { resto = false } = {}) {
           memoria: estado.somOuvido,
           filtros: { tiros: filtros.tiros, explosoes: filtros.explosoes, gritos: filtros.gritos },
           opcoes: opcoesDaSensibilidade(filtros.sens),
+          alertas: alertasDoCanal(canal),
           // 24 kHz, e nao os 8 do alinhamento: o tiro vive no agudo.
           lerSom: (l, quandoMs, duracaoS, opcoes) => somDoCanal(l, quandoMs, duracaoS, { ...opcoes, taxa: TAXA_TIROS }),
           aoProgresso: (x) => {

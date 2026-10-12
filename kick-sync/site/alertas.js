@@ -22,6 +22,8 @@
  * distância, abafamento e o volume do jogo de cada um mudam o som. Sem modelo treinado não faz nada.
  */
 
+import MODELO_EXPLOSAO from './modelo-explosao.js';
+
 export const TAXA_ESP = 24000;
 export const JANELA = 1024;
 export const SALTO = 1200; // 50 ms a 24 kHz
@@ -40,6 +42,12 @@ export const PADROES = {
   identico: 0.97, // com 2 repetições, só se forem quase iguais E tonais
   tonalIdentico: 0.25,
   lembrado: 0.9, // contra um alerta que o canal já tinha aprendido
+  // Tom forte (achatamento até 0,2: explosão do Rust nunca fica tão tonal, o mínimo medido nas explosões do
+  // jogo é 0,25): basta repetir 2 vezes e a semelhança cai para 0,85. Medido nos 2 alertas do mesmo sub do
+  // tchubi (4 min e 1 h 03 da live de 08/10): semelhança 0,88 e achatamento 0,17.
+  tonalForte: 0.2,
+  repetidoTonal: 0.85,
+  lembradoTonal: 0.85,
 };
 
 // ── o espectro ──────────────────────────────────────────────────────────────
@@ -253,7 +261,8 @@ export function aprender(assinaturas, opcoes = {}) {
     g.media = c ? t / c : 0;
     g.plano = g.indices.reduce((s, j) => s + assinaturas[j].plano, 0) / k;
     g.alerta = (k >= o.nRepete && g.media >= o.repetido && g.plano <= o.tonalMax)
-      || (k >= 2 && g.media >= o.identico && g.plano <= o.tonalIdentico);
+      || (k >= 2 && g.media >= o.identico && g.plano <= o.tonalIdentico)
+      || (k >= 2 && g.media >= o.repetidoTonal && g.plano <= o.tonalForte);
     if (g.alerta) {
       // O modelo é o membro mais parecido com os outros.
       let melhorI = g.indices[0];
@@ -290,8 +299,11 @@ export function tirarAlertas(achados, esp, { lembrados = [], opcoes = {}, positi
       return;
     }
     let casou = -1;
-    let melhor = o.lembrado;
-    lembrados.forEach((m, j) => { const s = semelhanca(ass[i], m); if (s >= melhor) { melhor = s; casou = j; } });
+    let melhor = 0;
+    lembrados.forEach((m, j) => {
+      const s = semelhanca(ass[i], m);
+      if (s >= (m.plano <= o.tonalForte ? o.lembradoTonal : o.lembrado) && s > melhor) { melhor = s; casou = j; }
+    });
     if (casou >= 0) { removidos.push({ ...e, porque: 'lembrado', grupo: casou, semelhanca: melhor }); return; }
     if (positivo?.modelo && ass[i]) {
       const nota = pontuar(ass[i], positivo.modelo);
@@ -345,9 +357,29 @@ export function memoriaDoCanal(slug, armazem = globalThis.localStorage) {
   };
 }
 
+/**
+ * Liga o modelo positivo e diz o corte. Ligado porque, na live do tchubi de 08/10, os 8 sons que a detecção
+ * tomava por explosão (2 alertas de sub e 6 tiros de perto; o dono confirmou: nenhum era explosão) ficam todos
+ * abaixo de 0,4, e 91% das explosões do jogo (aumentadas, não vistas no treino) ficam acima. O corte foi
+ * escolhido nessa mesma live: afinado dentro da amostra.
+ */
+export const POSITIVO = { ligado: true, minimo: 0.4 };
+
+/**
+ * O que `varrerNoite` recebe em `alertas`, igual nos modos simples e avançado: a memória do canal (alertas
+ * já aprendidos) e, se ligado, o modelo positivo.
+ */
+export function alertasDoCanal(slug, armazem) {
+  const memoria = memoriaDoCanal(slug, armazem);
+  return { ...memoria, positivo: POSITIVO.ligado ? { modelo: MODELO_EXPLOSAO, minimo: POSITIVO.minimo } : null };
+}
+
 // ── o modelo positivo: parece uma explosão do Rust? ─────────────────────────
 
-/** O que se mede de uma assinatura para o modelo positivo: forma média do espectro, duração e queda. */
+/**
+ * O que se mede de uma assinatura para o modelo positivo: forma média do espectro (20 números), duração,
+ * queda e achatamento (tom contra ruído; uma explosão é ruído, um jingle ou uma voz cantada não é).
+ */
 export function tracos(a) {
   const forma = new Float32Array(BANDAS);
   for (let i = 0; i < a.n; i++) for (let b = 0; b < BANDAS; b++) forma[b] += a.v[i * BANDAS + b] / a.n;
@@ -361,7 +393,7 @@ export function tracos(a) {
     for (let i = 0; i < k + 1; i++) { ini += nivel(i); fim += nivel(a.n - 1 - i); }
     queda = ((fim - ini) / (k + 1)) / (a.n / FPS_ESP);
   }
-  return [...forma, Math.log2(Math.max(0.3, a.duracaoS)), queda];
+  return [...forma, Math.log2(Math.max(0.3, a.duracaoS)), queda, a.plano];
 }
 
 /** Treina o modelo com assinaturas de explosões confirmadas: média e desvio de cada traço. */
@@ -370,16 +402,24 @@ export function treinarPositivo(assinaturas, { minimo = 4 } = {}) {
   if (t.length < minimo) return null;
   const media = t[0].map((_, j) => t.reduce((s, x) => s + x[j], 0) / t.length);
   // Pisos: uma amostra pequena não pode dizer que a variação é zero.
-  const piso = [...new Array(BANDAS).fill(3), 0.5, 6];
+  const piso = [...new Array(BANDAS).fill(2), 0.4, 3, 0.04];
   const desvio = media.map((m, j) => Math.max(piso[j], Math.sqrt(t.reduce((s, x) => s + (x[j] - m) ** 2, 0) / t.length)));
   const r = (x) => Math.round(x * 100) / 100;
   return { n: t.length, media: media.map(r), desvio: desvio.map(r) };
 }
 
-/** Nota de 0 a 1 de quanto a assinatura lembra o modelo (1 = igual à média; cai com o desvio). */
+/**
+ * Nota de 0 a 1 de quanto a assinatura lembra o modelo (1 = igual à média; cai com o desvio). A forma do
+ * espectro conta como UM traço (a média dos 20 desvios) e a duração, a queda e o achatamento contam um
+ * cada: assim uma coisa muito fora (um tom de 6 s, um tiro com agudo demais) derruba a nota, e não se
+ * dilui nas 20 bandas.
+ */
 export function pontuar(a, modelo) {
-  if (!a || !modelo) return null;
+  if (!a || !modelo || modelo.media?.length !== BANDAS + 3) return null;
   const t = tracos(a);
-  const z2 = t.reduce((s, x, j) => s + ((x - modelo.media[j]) / modelo.desvio[j]) ** 2, 0) / t.length;
+  const z = (j) => ((t[j] - modelo.media[j]) / modelo.desvio[j]) ** 2;
+  let forma = 0;
+  for (let j = 0; j < BANDAS; j++) forma += z(j);
+  const z2 = (forma / BANDAS + z(BANDAS) + z(BANDAS + 1) + z(BANDAS + 2)) / 4;
   return Math.exp(-0.5 * z2);
 }
