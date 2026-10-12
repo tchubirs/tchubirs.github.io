@@ -93,6 +93,16 @@
       "tiro": "nailgun; flechadas; facada; por último nailgun e flechada",
       "falsoTiro": "começa com o dono falando e farm de madeira com machado de metal",
       "texto": "sou eu falando, depois farmando madeira com machado de metal, depois tiros de nailgun, depois flechadas e depois facada e por ultimo nailgun e flechada"
+    },
+    {
+      "hora": "00:39",
+      "minDaLive": 117,
+      "clipeS": 31,
+      "explosao": false,
+      "alerta": null,
+      "tiro": "revólver de alto calibre (Python); depois pistola semiautomática; o dono atira de MP5; atiram nele e o matam com revólver",
+      "morte": "o dono morre (tela FERIDO / abatido)",
+      "texto": "começa com disparo de revolver de alto calibre depois de semi automatica ai eu atiro de mp5 e me disparam e me matam com revolver"
     }
   ],
   "semExplosao": [
@@ -106,7 +116,8 @@
     "23:22",
     "23:31",
     "23:32",
-    "23:35"
+    "23:35",
+    "00:39"
   ],
   "notas": "Quando o dono cita uma arma, é porque o som do tiro dela está no clipe.",
   "semTiro": [
