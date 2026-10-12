@@ -477,3 +477,42 @@ em francês). Tudo revisado pela regra 14 em 28/09.
   com 44 px. Os botões da tela (Procurar de novo, Começar de novo, Modo avançado) ficam numa fila só, à direita do
   título no PC; na busca ficam à esquerda embaixo da barra, junto com Parar de procurar. Na primeira tela o
   Modo avançado continua embaixo (`#modoAvancado`); na lista é `#modoAvancadoLista`.
+
+## Pedido do dono (12/10): alertas da live não são explosão
+
+Problema: no modo simples, momentos diziam "Teve tiroteio e teve explosão" e o som era um alerta da live (sub novo).
+A VOD da Kick tem uma faixa de áudio só (voz, jogo, Discord e alertas misturados), então não dá para separar. Cada
+streamer tem alertas diferentes, então nada vai fixo no código.
+
+Feito (código, sem rede, 9 testes novos em `test/alertas.test.mjs`):
+- `site/alertas.js`: espectro em 20 bandas de 50 em 50 ms de cada som que a detecção de explosões marcou, mais o
+  achatamento do espectro (ruído dá cerca de 0,56, jingle e voz dão 0,2 a 0,35). Sons que se repetem quase iguais
+  (correlação do espectro, sem o volume) formam um grupo. Grupo com 3 ou mais repetições, correlação média de 0,90 ou
+  mais e cara de tom vira "alerta" e sai da lista de explosões. Com 2 repetições só sai se forem quase idênticas
+  (0,97) e bem tonais.
+- Memória por canal no aparelho (`povix.alertas.<canal>` no localStorage, até 8 alertas, uns 2 KB cada): numa live
+  nova, o que casar com um alerta já conhecido sai na primeira vez, sem esperar repetir.
+- Ligado em `varrerNoite` (opção `alertas`) e no modo simples. A resposta traz `alertasFora` (hora, motivo, grupo).
+- Modelo positivo ("parece explosão do Rust?"): `treinarPositivo` e `pontuar` dão uma nota de 0 a 1 pela forma média
+  do espectro, duração e queda. Está pronto e testado em sons sintéticos, mas NÃO está ligado por padrão: não há
+  explosões reais confirmadas para treinar, e um modelo inventado seria enfeite.
+- Sonda `probes/alertas-vods.mjs`: roda a detecção em som real (f32 mono 24 kHz), lista o que sai e porquê, grava
+  WAV e PNG de cada alerta aprendido, e treina o modelo positivo a partir de uma lista de explosões confirmadas.
+
+Medido no chat gravado da Kick (12/10, xqc, 3.610 mensagens de uma hora): só existem os tipos `message` (3.475) e
+`reply` (135). Não vem sub, sub de presente, kicks nem host: esses eventos não ficam no histórico que o Povix lê.
+Nenhuma mensagem de texto tinha a forma de aviso de sub. Um canal só e uma hora só, então confiança de uns 85% de
+que o histórico não traz esses eventos em geral. Um bot do canal que escreva o aviso no chat apareceria como
+mensagem comum, e daria para procurar o texto, mas isso depende do canal. Por isso não há desconto por chat.
+
+Medido com som sintético: jingle repetido 4 vezes sobre fundos e volumes diferentes: correlação 0,86 sem o piso de 40
+dB, 0,9 ou mais com ele, e as 4 saem. Seis explosões variadas: nenhuma vira alerta. O mesmo clipe de explosão 3
+vezes: correlação 0,997, mas achatamento 0,56 (ruído), então não vira alerta. Live sintética de 10 min com 3
+jingles e 2 explosões: antes 5 explosões, depois 2.
+
+Não medido, bloqueado: som real de 4 ou mais streamers (Abisal de 05/10 e o VOD do tchubi). Falta ffmpeg e Python
+com numpy/av neste PC, e baixar os segmentos pede o ok do dono. Os limiares (0,85, 0,90, 0,97, 0,4) são ponto de
+partida. O risco que só dado real resolve: o mesmo C4 também toca o mesmo clipe, então explosões reais podem se
+parecer entre si quase tanto quanto um jingle; a barreira é o achatamento (ruído contra tom).
+Para fechar: com o ok, baixar 20 min de cada um dos 6 canais do Abisal, descodificar para f32 e rodar a sonda; ou o
+dono grava no servidor dele cada arma e explosivo em várias distâncias, que serve de treino limpo do modelo positivo.

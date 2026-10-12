@@ -4,6 +4,7 @@ import {
 import { recortar } from './aprender.js';
 import { juntar as juntarIntervalos } from './ouvir.js';
 import { medirGraves, explosoes as acharExplosoes, FPS as FPS_EXPLOSOES } from './explosoes.js';
+import { medirEspectro, cortarEsp, colarEsp, tirarAlertas, FPS_ESP } from './alertas.js';
 import { medirVoz, gritos as acharGritos, normalDaVoz, FPS as FPS_GRITOS } from './gritos.js';
 
 // Achar as kills sozinho — pela forca do som.
@@ -106,6 +107,7 @@ function tamanhoDe(entrada) {
   const somar = (m) => { for (const v of Object.values(m || {})) if (ArrayBuffer.isView(v)) n += v.byteLength; };
   somar({ env: entrada.env, brilho: entrada.brilho });
   somar(entrada.graves);
+  somar(entrada.esp);
   somar(entrada.voz);
   for (const c of entrada.recortes || []) n += c.recorte.byteLength + 24;
   return n;
@@ -152,7 +154,7 @@ let relogioDaMemoria = 0;
 export async function varrerNoite({
   linha, deMs, ateMs, intervalos = null, bocadoS = 300, lerSom, sinal, aoProgresso = () => {},
   opcoes = {}, taxaSom = TAXA_TIROS, nudgeMs = 0, filtros = { tiros: true },
-  memoria = null, buscar = globalThis.fetch, pedidosAoMesmoTempo = PEDIDOS_AO_MESMO_TEMPO,
+  memoria = null, alertas = null, buscar = globalThis.fetch, pedidosAoMesmoTempo = PEDIDOS_AO_MESMO_TEMPO,
   bocadosAoMesmoTempo = BOCADOS_AO_MESMO_TEMPO,
 }) {
   // O que se procura no som: os tiros (o de sempre), as explosões e os gritos. Cada medida custa uma
@@ -160,6 +162,8 @@ export async function varrerNoite({
   const querTiros = filtros?.tiros !== false;
   const querExplosoes = Boolean(filtros?.explosoes);
   const querGritos = Boolean(filtros?.gritos);
+  // Os alertas da live (sub, follow, doação) soam como explosão: precisam do espectro de cada bocado.
+  const querAlertas = querExplosoes && Boolean(alertas);
   const partes = [];
   // Os bocados cortados pelas pecas do canal, e nao so pelo relogio.
   //
@@ -190,7 +194,7 @@ export async function varrerNoite({
 
   // O que a memoria ja tem deste canal, com as medidas que agora se pedem.
   const slug = linha?.slug ?? '';
-  const serve = (e) => (!querTiros || e.env) && (!querExplosoes || e.graves) && (!querGritos || e.voz);
+  const serve = (e) => (!querTiros || e.env) && (!querExplosoes || e.graves) && (!querAlertas || e.esp) && (!querGritos || e.voz);
   const guardadas = (memoria?.get(slug) || []).filter(serve);
   const cobertos = juntarIntervalos(guardadas.map((e) => [e.de - nudgeMs, e.ate - nudgeMs]));
 
@@ -221,6 +225,7 @@ export async function varrerNoite({
     const i10 = Math.max(0, Math.round(((de - t0) / 1000) * FPS_EXPLOSOES));
     const f10 = Math.round(((Math.min(b, e.ate - nudgeMs) - t0) / 1000) * FPS_EXPLOSOES);
     if (querExplosoes) parte.graves = cortarMedida(e.graves, i10, f10);
+    if (querAlertas) parte.esp = cortarEsp(e.esp, Math.round(i10 * FPS_ESP / FPS_EXPLOSOES), Math.round(f10 * FPS_ESP / FPS_EXPLOSOES));
     if (querGritos) parte.voz = cortarMedida(e.voz, Math.round(i10 * FPS_GRITOS / FPS_EXPLOSOES), Math.round(f10 * FPS_GRITOS / FPS_EXPLOSOES));
     partes.push(parte);
     if (querTiros && e.env) {
@@ -304,6 +309,7 @@ export async function varrerNoite({
           e.recortes = recortesDe(e.env, som, taxaSom, opcoes);
         }
         if (querExplosoes) e.graves = medirGraves(som, taxaSom);
+        if (querAlertas) e.esp = medirEspectro(som, taxaSom);
         if (querGritos) e.voz = medirVoz(som, taxaSom);
         som = null;
         usar(e, t, fimT);
@@ -325,11 +331,20 @@ export async function varrerNoite({
   const { porHora = 15 } = opcoes;
   const limite = Math.max(1, Math.round((porHora * (totalMs || (ateMs - deMs))) / 3_600_000));
   // As explosões e os gritos, cada um contra o normal da noite inteira desta pessoa, como os tiros.
-  const explosoes = !querExplosoes ? [] : paraOMomento(acharExplosoes(
+  let explosoesBrutas = !querExplosoes ? [] : acharExplosoes(
     colar(partes, 'graves', ['forca', 'grave'], deMs, ateMs, FPS_EXPLOSOES),
     chao(ouvidosDe(partes, 'graves', 'forca')),
     opcoes.explosoes,
-  ), deMs, limite);
+  );
+  // Tirar o que é alerta (repete na live ou o canal já conhecia). Fica dito o que saiu e porquê.
+  let alertasFora = [];
+  if (querAlertas && explosoesBrutas.length) {
+    const r = tirarAlertas(explosoesBrutas, colarEsp(partes, deMs, ateMs), { lembrados: alertas.lembrados || [], positivo: alertas.positivo });
+    explosoesBrutas = r.mantidos;
+    alertasFora = r.removidos.map((x) => ({ ms: Math.round(deMs + x.picoS * 1000), porque: x.porque, grupo: x.grupo }));
+    if (r.novos.length) alertas.aoAprender?.(r.novos);
+  }
+  const explosoes = paraOMomento(explosoesBrutas, deMs, limite);
   const gritos = !querGritos ? [] : paraOMomento(acharGritos(
     colar(partes, 'voz', ['forca', 'voz'], deMs, ateMs, FPS_GRITOS),
     normalDaVoz(ouvidosDe(partes, 'voz', 'voz')),
@@ -337,7 +352,7 @@ export async function varrerNoite({
   ), deMs, limite);
   if (!querTiros) {
     return {
-      ouvido: null, candidatos: [], estouros: [], explosoes, gritos, bytes, falhados, curva: new Float32Array(0),
+      ouvido: null, candidatos: [], estouros: [], explosoes, alertasFora, gritos, bytes, falhados, curva: new Float32Array(0),
       cobertura: juntarIntervalos(prontos), reaproveitadoMs,
     };
   }
@@ -415,6 +430,7 @@ export async function varrerNoite({
     })),
     estouros,
     explosoes,
+    alertasFora,
     gritos,
     bytes,
     falhados,
