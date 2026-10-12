@@ -17,3 +17,10 @@ try {
   }
   document.documentElement.dataset.modo = m;
 } catch { document.documentElement.dataset.modo = 'simples'; }
+// Um projeto compartilhado (#s= ou ?s=: os canais, a noite e os acertos de quem o mandou) abre como foi
+// feito, no avançado, só nesta visita: a escolha guardada não muda.
+try {
+  if (/[#&?]s=/.test(location.hash) || new URLSearchParams(location.search).has('s')) {
+    document.documentElement.dataset.modo = 'avancado';
+  }
+} catch { /* endereço estranho: fica o modo de cima */ }
