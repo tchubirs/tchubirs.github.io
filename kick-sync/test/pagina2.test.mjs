@@ -1284,7 +1284,9 @@ test('todas as mensagens de erro dizem o próximo passo', async () => {
     // se trocar, dito antes de se escolher. Não são erros.
     'atalhos.semTecla', 'atalhos.trocarSem',
     // O título da lista dos nomes lidos na tela que não casaram com canal nenhum, não um erro.
-    'nomes.soltos']);
+    'nomes.soltos',
+    // Uma escolha do chat no vídeo ("Sem fundo"), não um erro.
+    'chatClipe.fundoNenhum']);
   const curtas = [];
   for (const [chave, frase] of Object.entries(_TEXTOS.pt)) {
     if (!/erro|falh|não deu|nenhum|sem |não consegui|inválido|passa dos/i.test(frase)) continue;

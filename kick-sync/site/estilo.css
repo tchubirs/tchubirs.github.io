@@ -2602,6 +2602,7 @@ body.mesa .estadoChatClipe.mau { color: var(--perigo); }
 body.mesa .estadoChatClipe:empty { display: none; }
 @media (max-width: 720px) {
   body.mesa .chatClipeOpcoes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body.mesa .estadoChatClipe { flex-basis: 100%; margin-left: 0; }
 }
 @media (pointer: coarse) {
   body.mesa .chatClipeLigar { min-height: 44px; align-items: center; }

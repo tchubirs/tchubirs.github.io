@@ -5344,7 +5344,7 @@ async function guardarRetrato({ deitado = false } = {}) {
     $('estadoClipe').textContent = t('retrato.semPrevia');
     return;
   }
-  if (c.aGravar || c.pararExportar) return;
+  if (c.aGravar || (deitado && c.pararExportar)) return;
   // O início do clipe tem de estar no ar. Num buraco a prévia nem salta (ver
   // `preverClipe`), e o vídeo ficava onde estava: o 9:16 gravava a duração
   // do clipe a partir do último sítio espreitado, e dizia que estava pronto.
@@ -5521,13 +5521,18 @@ function instanteDoChat(c) {
 }
 
 /** O chat por cima das duas prévias, a cada frame do ciclo do 9:16. */
+let chatFontePintada = false;
 function pintarChatPrevias(ctx9x16) {
   const c = estado.clipe;
+  const ligado = Boolean(c?.chat?.ligado);
+  // Desligado, a tela do 16:9 limpa-se uma vez e fica quieta: o ciclo corre a cada frame.
+  if (!ligado && !chatFontePintada) return;
   const tela = $('chatFonte');
   const g = tela.getContext('2d');
   g.setTransform(1, 0, 0, 1, 0, 0);
   g.clearRect(0, 0, tela.width, tela.height);
-  if (!c?.chat?.ligado) return;
+  chatFontePintada = ligado;
+  if (!ligado) return;
   const lista = mensagensDoCanal(c.canal);
   const ms = instanteDoChat(c);
   // O 16:9 na mesma conta de 1920x1080 do ficheiro, só que em ponto pequeno.

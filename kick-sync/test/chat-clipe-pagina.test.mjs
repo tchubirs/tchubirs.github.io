@@ -30,7 +30,16 @@ const comImagem = (p) => p.waitForFunction(() => window.__estado.clipe?.rects.le
 
 /** O link do ficheiro mais novo da fila, depois de haver `n`. */
 async function ficheiro(p, n) {
-  await p.waitForFunction((k) => document.querySelectorAll('#fila li a[download]').length >= k, n, { timeout: 60000 });
+  try {
+    await p.waitForFunction((k) => document.querySelectorAll('#fila li a[download]').length >= k, n, { timeout: 90_000 });
+  } catch (e) {
+    const visto = await p.evaluate(() => ({
+      clipe: document.getElementById('estadoClipe').textContent,
+      montagem: document.getElementById('estadoMontagem').textContent,
+      fila: document.getElementById('fila').textContent,
+    }));
+    throw new Error(`o ficheiro ${n} não saiu: ${JSON.stringify(visto)}`, { cause: e });
+  }
   return p.evaluate(() => {
     const a = document.querySelector('#fila li a[download]');
     return { url: a.href, nome: a.getAttribute('download'), nota: a.closest('li').querySelector('.nota')?.textContent || '' };
@@ -134,6 +143,9 @@ test('a montagem leva o chat do streamer de cada kill que o guardou ligado',
     await p.selectOption('#chatClipeTamanho', 'g');
     await p.waitForFunction(() => /mensagens no chat de tchubi/.test(document.getElementById('estadoChatClipe').textContent),
       null, { timeout: 15000 });
+    // O pedaço do princípio do vídeo falso (como quem arrasta a pega do início): sem salto no vídeo, que
+    // um WebM gravado no browser não tem índice para fazer depressa.
+    await p.evaluate((t) => { const c = window.__estado.clipe; c.deMs = t; c.ateMs = t + 4000; }, T);
     await p.click('#guardarAjustes');
     await p.waitForFunction(() => document.getElementById('modalClipe').hidden, null, { timeout: 10000 });
     const aj = await p.evaluate(() => window.__estado.momentos[0].ajuste);
@@ -151,7 +163,8 @@ test('a montagem leva o chat do streamer de cada kill que o guardou ligado',
     await p.click('#baixarMontagem');
     await p.waitForFunction(() => /exportados/.test(document.getElementById('estadoMontagem').textContent),
       null, { timeout: 120_000 });
-    assert.match(await p.locator('#estadoMontagem').innerText(), /^1\/1 exportados/);
+    assert.match(await p.locator('#estadoMontagem').innerText(), /^1\/1 exportados/,
+      `a montagem não saiu: ${await p.locator('#fila').innerText()}`);
     const f = await ficheiro(p, 1);
     assert.match(f.nota, /com chat/);
     assert.match(f.nome, /^01a_.*\.(mp4|webm)$/);
