@@ -251,15 +251,15 @@ test('a montagem leva a legenda corrigida de cada kill que a guardou ligada',
     await p.close();
   });
 
-// O leitor verdadeiro (legenda-worker.js com o transformers.js do vendor/) arranca neste Chromium, pede
-// o motor ao endereço fixo do jsDelivr, e recusa-o quando os bytes não são os do pacote. Sem rede: o
-// jsDelivr e o Hugging Face são fingidos.
-test('o leitor de voz verdadeiro arranca e recusa um motor adulterado', { skip: !podeCorrer && 'sem navegador', timeout: 120_000 }, async () => {
+// O leitor verdadeiro (legenda-worker.js) arranca neste Chromium com a política de segurança da página,
+// pede o transformers.js ao endereço fixo do jsDelivr, e recusa-o quando os bytes não são os do pacote.
+// Sem rede: o jsDelivr e o Hugging Face são fingidos.
+test('o leitor de voz verdadeiro arranca e recusa um código adulterado', { skip: !podeCorrer && 'sem navegador', timeout: 120_000 }, async () => {
   const { p, erros } = await abrir();
   const pedidos = [];
   await p.context().route(/cdn\.jsdelivr\.net|huggingface\.co/, (r) => {
     pedidos.push(r.request().url());
-    return r.fulfill({ status: 200, contentType: 'application/wasm', body: Buffer.from('não é o motor') });
+    return r.fulfill({ status: 200, contentType: 'text/javascript', body: Buffer.from('self.__adulterado = 1;') });
   });
   await kickFalsa(p, { canais: ['tchubi'] });
   await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
@@ -274,7 +274,7 @@ test('o leitor de voz verdadeiro arranca e recusa um motor adulterado', { skip: 
     } finally { voz.fechar(); }
   });
   assert.equal(r.nome, 'INTEGRIDADE', JSON.stringify(r));
-  assert.deepEqual(pedidos, ['https://cdn.jsdelivr.net/npm/onnxruntime-web@1.31.0-dev.20260914-8d85527a0/dist/ort-wasm-simd-threaded.asyncify.wasm']);
+  assert.deepEqual(pedidos, ['https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.0/dist/transformers.min.js']);
   assert.deepEqual(erros, []);
   await p.close();
 });

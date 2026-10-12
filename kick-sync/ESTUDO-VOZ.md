@@ -97,11 +97,12 @@ Vosk 0.0.8, 1 fio: pt pequeno levou 32,5 s para 60 s, es pequeno 15,8 s (**medid
 
 A legenda do clipe foi feita como na seção 7, com quatro mudanças:
 
-- O modelo e o motor não entram no repositório. Vêm do Hugging Face (commit `608c49e`) e do jsDelivr
-  (onnxruntime-web `1.31.0-dev.20260914-8d85527a0`), em versão fixa, e só são aceitos com o SHA-256
-  certo (`site/legenda-arquivos.js`). No `site/vendor/whisper/` fica só o `transformers.min.js` 4.3.0
-  (582 KB). O Worker é arquivo nosso: a política de segurança da página não se aplica a ele, e não foi
-  preciso mexer nela.
+- Nada do leitor entra no repositório. O `transformers.min.js` 4.3.0 (582 KB) e o motor
+  (onnxruntime-web `1.31.0-dev.20260914-8d85527a0`) vêm do jsDelivr, o modelo do Hugging Face (commit
+  `608c49e`), em versão fixa, e só são aceitos com o SHA-256 certo (`site/legenda-arquivos.js`); o
+  código só vira módulo depois de conferido. O `transformers.min.js` não pôde ficar no repositório: a
+  proteção de segredos do GitHub confunde um trecho dele com uma chave de API e recusa o push. O Worker
+  é arquivo nosso: a política de segurança da página não se aplica a ele, e não foi preciso mexer nela.
 - O som sai do degrau de 480p: em dois VODs reais (Gaules e tatarel) o áudio do 1080p, do 720p e do 480p
   é o mesmo, byte a byte (AAC 160 kb/s, 48 kHz). O 480p pesa 1,8 MB por 10 s, contra 10,6 MB do 1080p.
   O 360p e o 160p têm outro áudio, mais pobre.

@@ -2,7 +2,10 @@
 //
 // Arquivo e não blob: um Worker de blob herda a política de segurança da página, que não deixa compilar
 // WebAssembly; um Worker de arquivo tem a política da resposta dele. Aqui dentro corre o Whisper base
-// (transformers.js 4.3.0, em vendor/whisper/) com um fio só, que é o que o GitHub Pages deixa ter.
+// (transformers.js 4.3.0) com um fio só, que é o que o GitHub Pages deixa ter.
+//
+// O transformers.js, o motor e o modelo vêm do jsDelivr e do Hugging Face numa versão fixa, e cada
+// arquivo é conferido pelo SHA-256 antes de ser usado (ver legenda-arquivos.js).
 //
 // A conversa com a página:
 //   recebe { tipo: 'transcrever', id, audio: Float32Array mono a 16 kHz, idioma, traduzir }
@@ -15,8 +18,7 @@
 // Nenhum pedido sai para fora da lista de legenda-arquivos.js, e nenhum arquivo é aceito sem o SHA-256
 // certo. O texto que sai daqui é só texto: a página desenha-o com fillText e mostra-o com textContent.
 
-import { pipeline, env, WhisperTextStreamer } from './vendor/whisper/transformers.min.js';
-import { MODELO, REVISAO, MOTOR, POR_URL, CACHE_MOTOR, CACHE_MODELO, sha256 } from './legenda-arquivos.js';
+import { MODELO, REVISAO, CODIGO, MOTOR, POR_URL, CACHE_MOTOR, CACHE_MODELO, sha256 } from './legenda-arquivos.js';
 import { palavrasDe, janelasDoAudio, juntarJanelas } from './legenda.js';
 
 const TAXA = 16000;
@@ -58,21 +60,40 @@ async function buscarConferido(url, init = {}) {
   return new Response(bytes, { status: 200, headers: { 'content-length': String(bytes.length) } });
 }
 
-/** O motor WebAssembly: do cache, ou baixado e conferido. */
-async function motor() {
+/** Um arquivo nosso (o código ou o motor): do cache, ou baixado e conferido. */
+async function guardado(alvo) {
   let cache = null;
   try { cache = await caches.open(CACHE_MOTOR); } catch { /* sem Cache Storage: baixa-se sempre */ }
-  let r = await cache?.match(MOTOR.url);
+  let r = await cache?.match(alvo.url);
   if (!r) {
-    r = await buscarConferido(MOTOR.url);
-    try { await cache?.put(MOTOR.url, r.clone()); } catch { /* sem espaço: fica só para esta vez */ }
+    r = await buscarConferido(alvo.url);
+    if (!r.ok) throw Object.assign(new Error(`HTTP ${r.status}`), { name: 'TypeError' });
+    try { await cache?.put(alvo.url, r.clone()); } catch { /* sem espaço: fica só para esta vez */ }
   }
   return r.arrayBuffer();
 }
 
+/**
+ * O transformers.js, importado só depois de conferido. Um `import` direto do jsDelivr não deixa
+ * conferir nada (num Worker não há `integrity` para módulos); aqui os bytes passam pelo SHA-256 e só
+ * então viram módulo, por um endereço `blob:` com exatamente esses bytes.
+ */
+async function transformers() {
+  const bytes = await guardado(CODIGO);
+  if ((await sha256(bytes)) !== CODIGO.sha256) {
+    throw Object.assign(new Error('transformers.js: o arquivo guardado não é o esperado'), { name: 'INTEGRIDADE' });
+  }
+  const url = URL.createObjectURL(new Blob([bytes], { type: 'text/javascript' }));
+  try { return await import(url); } finally { URL.revokeObjectURL(url); }
+}
+
 let leitor = null;
+let WhisperTextStreamer = null;
 async function abrirLeitor() {
   if (leitor) return leitor;
+  const tjs = await transformers();
+  const { pipeline, env } = tjs;
+  ({ WhisperTextStreamer } = tjs);
   env.allowLocalModels = false;
   env.allowRemoteModels = true;
   env.remoteHost = 'https://huggingface.co/';
@@ -85,7 +106,7 @@ async function abrirLeitor() {
   // transformers.min.js e não vai buscar outro a lado nenhum.
   env.useWasmCache = false;
   const onnx = env.backends.onnx;
-  onnx.wasm.wasmBinary = await motor();
+  onnx.wasm.wasmBinary = await guardado(MOTOR);
   onnx.wasm.wasmPaths = {};
   onnx.wasm.numThreads = 1;
   postMessage({ tipo: 'abrir' });

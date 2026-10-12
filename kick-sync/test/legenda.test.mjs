@@ -13,7 +13,7 @@ import {
   desenharLegenda, idiomaParaOuvir, nomeDeQuemFala, comoAparece,
 } from '../site/legenda.js';
 import { abrirVoz, somDosPedacos, degrauDoSom, estimativaS } from '../site/legenda-voz.js';
-import { BYTES_TOTAL, POR_URL, MOTOR, ARQUIVOS_MODELO, oQueFalta, sha256, REVISAO } from '../site/legenda-arquivos.js';
+import { BYTES_TOTAL, POR_URL, MOTOR, CODIGO, ARQUIVOS_MODELO, oQueFalta, REVISAO } from '../site/legenda-arquivos.js';
 import { comAjuste, clipesDoMomento, novoMomento, momentosParaLink, ajusteDe } from '../site/momentos.js';
 import { DEITADO, RETRATO } from '../site/retrato.js';
 
@@ -371,31 +371,28 @@ test('a legenda guardada numa kill volta com o texto corrigido, e o link leva as
 
 // ── os arquivos do leitor ───────────────────────────────────────────────────
 
-test('os arquivos do leitor: versões fixas, 107 MB da primeira vez, e o modelo fora do repositório', () => {
+test('os arquivos do leitor: versões fixas, 107 MB da primeira vez, e nada disso no repositório', () => {
   assert.equal(REVISAO.length, 40);
+  assert.equal(CODIGO.url, 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.0/dist/transformers.min.js');
   assert.match(MOTOR.url, /^https:\/\/cdn\.jsdelivr\.net\/npm\/onnxruntime-web@1\.31\.0-dev\.20260914-8d85527a0\/dist\//);
   for (const a of ARQUIVOS_MODELO) {
     assert.match(a.url, new RegExp(`^https://huggingface\\.co/onnx-community/whisper-base_timestamped/resolve/${REVISAO}/`));
-    assert.match(a.sha256, /^[0-9a-f]{64}$/);
   }
+  for (const a of POR_URL.values()) assert.match(a.sha256, /^[0-9a-f]{64}$/);
   assert.ok(BYTES_TOTAL > 100e6 && BYTES_TOTAL < 110e6, `${BYTES_TOTAL}`);
-  assert.equal(POR_URL.size, 8);
-  // Nada do modelo nem do motor no site: só o código do transformers.js e a licença dele.
-  const vendor = fs.readdirSync(new URL('../site/vendor/whisper/', import.meta.url));
-  assert.deepEqual(vendor.sort(), ['LICENSE-transformers.js.txt', 'VERSOES.txt', 'transformers.min.js']);
-  const tamanho = fs.statSync(new URL('../site/vendor/whisper/transformers.min.js', import.meta.url)).size;
-  assert.ok(tamanho < 700_000, `${tamanho}`);
-});
-
-test('o código do transformers.js guardado aqui é o do pacote 4.3.0', async () => {
-  const bytes = fs.readFileSync(new URL('../site/vendor/whisper/transformers.min.js', import.meta.url));
-  assert.equal(await sha256(bytes), '1475fd440e9932ab206682ee42cb18f6097403e9ee77ea62084c592d0f83597d');
+  assert.equal(POR_URL.size, 9);
+  // Nem o código, nem o motor, nem o modelo no site: só o nosso Worker, que os vai buscar.
+  assert.equal(fs.existsSync(new URL('../site/vendor/whisper/', import.meta.url)), false);
+  const worker = fs.readFileSync(new URL('../site/legenda-worker.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(worker, /from ['"]https?:/, 'o transformers.js não se importa direto da rede, sem conferir');
 });
 
 test('o que falta baixar sai do cache do navegador; sem cache, tudo', async () => {
-  assert.equal((await oQueFalta({ cachesApi: null })).length, 8);
+  assert.equal((await oQueFalta({ cachesApi: null })).length, 9);
   const temTudoMenosMotor = {
-    open: async (nome) => ({ match: async (url) => (nome === 'transformers-cache' && POR_URL.has(url) ? {} : undefined) }),
+    open: async (nome) => ({
+      match: async (url) => ((nome === 'transformers-cache' && POR_URL.has(url)) || (nome === 'povix-legenda-motor' && url === CODIGO.url) ? {} : undefined),
+    }),
   };
   const falta = await oQueFalta({ cachesApi: temTudoMenosMotor });
   assert.deepEqual(falta.map((a) => a.url), [MOTOR.url]);

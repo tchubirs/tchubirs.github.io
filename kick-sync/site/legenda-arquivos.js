@@ -1,9 +1,11 @@
 // Os arquivos do leitor de voz da legenda, com o tamanho e a impressão digital de cada um.
 //
-// O código (o transformers.js 4.3.0, 0,6 MB) está em vendor/whisper/. O resto é grande demais para o
-// repositório: o modelo são 77 MB e o motor 27 MB, e cada versão nova somava isso ao histórico do Git
-// para sempre. Por isso vêm de fora, numa versão fixa, e só quando a pessoa liga a legenda:
+// Nada disto está no repositório. O modelo são 77 MB e o motor 27 MB, e cada versão nova somava isso
+// ao histórico do Git para sempre. O código (transformers.js 4.3.0, 0,6 MB) também não: o minificado
+// tem um trecho que a proteção de segredos do GitHub confunde com uma chave de API e recusa o push.
+// Tudo vem de fora, numa versão fixa, e só quando a pessoa liga a legenda e gera:
 //
+//  - o código do transformers.js do jsDelivr, na versão 4.3.0 (igual byte a byte ao pacote do npm);
 //  - o modelo do Hugging Face, num commit fixo (`REVISAO`), e não no `main`, que pode mudar;
 //  - o motor (o WebAssembly do onnxruntime-web que o transformers.js 4.3.0 traz) do jsDelivr, na
 //    versão exata que o transformers.js pede.
@@ -17,6 +19,13 @@ export const MODELO = 'onnx-community/whisper-base_timestamped';
 export const REVISAO = '608c49e61301901684bc36cac8f74b95ff6b5a8e';
 const BASE_MODELO = `https://huggingface.co/${MODELO}/resolve/${REVISAO}/`;
 export const VERSAO_ORT = '1.31.0-dev.20260914-8d85527a0';
+
+/** O código do transformers.js 4.3.0 (o `dist/transformers.min.js` do pacote do npm, Apache-2.0). */
+export const CODIGO = Object.freeze({
+  url: 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.0/dist/transformers.min.js',
+  sha256: '1475fd440e9932ab206682ee42cb18f6097403e9ee77ea62084c592d0f83597d',
+  bytes: 581935,
+});
 
 /** O motor: o WebAssembly que o código de dentro do transformers.min.js espera, byte a byte. */
 export const MOTOR = Object.freeze({
@@ -37,12 +46,12 @@ export const ARQUIVOS_MODELO = Object.freeze([
 ].map(([caminho, sha256, bytes]) => Object.freeze({ caminho, url: BASE_MODELO + caminho, sha256, bytes })));
 
 /** Tudo o que se baixa, pelo endereço. Um pedido fora desta lista não sai do navegador. */
-export const POR_URL = new Map([MOTOR, ...ARQUIVOS_MODELO].map((a) => [a.url, a]));
+export const POR_URL = new Map([CODIGO, MOTOR, ...ARQUIVOS_MODELO].map((a) => [a.url, a]));
 
 /** Quanto se baixa da primeira vez (uns 107 MB). */
-export const BYTES_TOTAL = [MOTOR, ...ARQUIVOS_MODELO].reduce((s, a) => s + a.bytes, 0);
+export const BYTES_TOTAL = [CODIGO, MOTOR, ...ARQUIVOS_MODELO].reduce((s, a) => s + a.bytes, 0);
 
-/** Onde o navegador guarda: o modelo no cache do próprio transformers.js, o motor num nosso. */
+/** Onde o navegador guarda: o modelo no cache do próprio transformers.js, o código e o motor num nosso. */
 export const CACHE_MODELO = 'transformers-cache';
 export const CACHE_MOTOR = 'povix-legenda-motor';
 
@@ -57,11 +66,12 @@ export async function sha256(bytes) {
  * navegadores), todos: cada vez se baixa de novo, e a página diz isso.
  */
 export async function oQueFalta({ cachesApi = globalThis.caches } = {}) {
-  const todos = [MOTOR, ...ARQUIVOS_MODELO];
+  const todos = [CODIGO, MOTOR, ...ARQUIVOS_MODELO];
   if (!cachesApi?.open) return todos;
   try {
     const [modelo, motor] = await Promise.all([cachesApi.open(CACHE_MODELO), cachesApi.open(CACHE_MOTOR)]);
-    const tem = await Promise.all(todos.map((a) => (a === MOTOR ? motor : modelo).match(a.url).then(Boolean, () => false)));
+    const nosso = (a) => a === MOTOR || a === CODIGO;
+    const tem = await Promise.all(todos.map((a) => (nosso(a) ? motor : modelo).match(a.url).then(Boolean, () => false)));
     return todos.filter((_, i) => !tem[i]);
   } catch {
     return todos;
