@@ -172,7 +172,7 @@ test('le o nome solto e as abas do canal como um canal', () => {
   assert.deepEqual(lerLinkKick('https://www.kick.com/xguiry/videos?sort=date'), canal('xguiry'));
   assert.deepEqual(lerLinkKick('kick.com/@xguiry'), canal('xguiry'));
   // E o vídeo e o clipe dentro do canal continuam a ser vídeo e clipe.
-  assert.deepEqual(lerLinkKick('https://kick.com/xguiry/videos/67f962ed-3448'), { tipo: 'vod', id: '67f962ed-3448' });
+  assert.deepEqual(lerLinkKick('https://kick.com/xguiry/videos/67f962ed-3448'), { tipo: 'vod', id: '67f962ed-3448', slug: 'xguiry' });
   assert.deepEqual(lerLinkKick('https://kick.com/xguiry/clips/clip_01XYZ?t=3'), { tipo: 'clipe', id: 'clip_01XYZ' });
 });
 
@@ -195,4 +195,15 @@ test('um VOD colado le-se pela v1, com o canal e o inicio', async () => {
   const v = await vodDaKick('67f962ed-3448', { buscar });
   assert.deepEqual(v, { slug: 'xqc', inicioMs: Date.parse('2026-08-30T21:00:00Z') });
   await assert.rejects(vodDaKick('x', { buscar: async () => ({ ok: false, status: 404 }) }), { name: 'SEM-VOD' });
+});
+
+// 12/10: kick.com/<canal>/videos/<vod_id> traz o UUID v7 da live, que a v1 nao conhece.
+test('o vod_id novo da Kick abre a live do canal do link pela hora dentro do id', async () => {
+  const link = 'https://kick.com/tchubi/videos/01a11d40-61a8-7d6b-961d-6558d8a5a0d4';
+  const lido = lerLinkKick(link);
+  assert.deepEqual(lido, { tipo: 'vod', id: '01a11d40-61a8-7d6b-961d-6558d8a5a0d4', slug: 'tchubi' });
+  const buscar = async () => ({ ok: false, status: 404 });
+  const v = await vodDaKick(lido.id, { buscar, slug: lido.slug });
+  assert.deepEqual(v, { slug: 'tchubi', inicioMs: Date.parse('2026-10-08T20:42:01Z') });
+  await assert.rejects(vodDaKick(lido.id, { buscar }), { name: 'SEM-VOD' });
 });

@@ -7675,7 +7675,7 @@ async function abrirLinkKick() {
     try {
       botao.disabled = true;
       nota.textContent = t('link.aLer');
-      const { slug, inicioMs } = await vodDaKick(lido.id);
+      const { slug, inicioMs } = await vodDaKick(lido.id, { slug: lido.slug });
       const ja = listaDeCanais().map(slugDoNome);
       if (!ja.includes(slugDoNome(slug))) {
         $('canais').value = [$('canais').value.trim(), slug].filter(Boolean).join('\n');

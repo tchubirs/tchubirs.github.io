@@ -15,7 +15,7 @@ test('a caixa entende o nome solto, os links da Kick e o evento', () => {
   assert.deepEqual(lerEntrada('Kick Off'), { tipo: 'nome', slug: null, evento: 'kick-off' });
   assert.deepEqual(lerEntrada('https://kick.com/xguiry/videos'), { tipo: 'canal', slug: 'xguiry' });
   assert.deepEqual(lerEntrada('kick.com/xguiry/clips'), { tipo: 'canal', slug: 'xguiry' });
-  assert.deepEqual(lerEntrada('https://kick.com/xguiry/videos/abc-1'), { tipo: 'vod', id: 'abc-1' });
+  assert.deepEqual(lerEntrada('https://kick.com/xguiry/videos/abc-1'), { tipo: 'vod', id: 'abc-1', slug: 'xguiry' });
   assert.deepEqual(lerEntrada('https://kick.com/xguiry/clips/clip_01AB'), { tipo: 'clipe', id: 'clip_01AB' });
   assert.deepEqual(lerEntrada('https://povix.app/?e=abisal'), { tipo: 'evento', nome: 'abisal' });
   assert.deepEqual(lerEntrada('?e=Abisal'), { tipo: 'evento', nome: 'abisal' });

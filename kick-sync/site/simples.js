@@ -333,7 +333,7 @@ export function montarSimples(ponte) {
       dizer(t('simples.lendoLink'));
       const minha = geracao;
       try {
-        const v = await comPrazo(vodDaKick(e.id), 20_000);
+        const v = await comPrazo(vodDaKick(e.id, { slug: e.slug }), 20_000);
         if (minha !== geracao) return;
         if (!v) throw new Error('prazo');
         await abrirStreamer(v.slug, { inicioMs: v.inicioMs });

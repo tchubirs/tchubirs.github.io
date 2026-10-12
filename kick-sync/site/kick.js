@@ -314,7 +314,12 @@ export function lerLinkKick(texto) {
   const iClip = partes.findIndex((p) => p === 'clips' || p === 'clip');
   if (iClip >= 0 && partes[iClip + 1]) return { tipo: 'clipe', id: partes[iClip + 1] };
   const iVod = partes.findIndex((p) => p === 'video' || p === 'videos');
-  if (iVod >= 0 && partes[iVod + 1]) return { tipo: 'vod', id: partes[iVod + 1] };
+  if (iVod >= 0 && partes[iVod + 1]) {
+    const dono = iVod === 1 ? partes[0].replace(/^@/, '') : '';
+    return dono && /^[A-Za-z0-9_-]+$/.test(dono) && !RESERVADOS.has(dono.toLowerCase())
+      ? { tipo: 'vod', id: partes[iVod + 1], slug: dono }
+      : { tipo: 'vod', id: partes[iVod + 1] };
+  }
   // O que sobra é um canal: kick.com/tchubi, e também as abas dele sem nada escolhido
   // (kick.com/tchubi/videos, /clips, /about), que é o que se copia da Kick no celular.
   const canal = partes[0]?.replace(/^@/, '');
@@ -338,8 +343,13 @@ const RESERVADOS = new Set(['browse', 'categories', 'category', 'search', 'follo
  * medido em 06/10), e a `/api/v1/video/<uuid>` responde com o canal dentro de
  * `livestream`, com CORS aberto como o resto.
  */
-export async function vodDaKick(id, { buscar = fetch, sinal } = {}) {
+export async function vodDaKick(id, { buscar = fetch, sinal, slug: doLink } = {}) {
   const r = await buscar(`https://kick.com/api/v1/video/${encodeURIComponent(id)}`, { signal: sinal });
+  // Os links de kick.com/<canal>/videos/<id> passaram a trazer o `vod_id` (UUID v7), que a v1 não
+  // conhece (404, medido em 12/10). Os primeiros 48 bits dele são o início da live em ms.
+  if (r.status === 404 && doLink && /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-/i.test(id)) {
+    return { slug: doLink, inicioMs: parseInt(id.replace(/-/g, '').slice(0, 12), 16) };
+  }
   if (!r.ok) throw Object.assign(new Error(`vod ${r.status}`), { name: 'SEM-VOD' });
   const v = await r.json();
   const slug = v?.livestream?.channel?.slug;
