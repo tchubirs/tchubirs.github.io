@@ -29,9 +29,10 @@ import { base } from './nomes.js';
  *  plano    — a fração da faixa de cima (12,5% da altura) que é cinzento liso e escuro;
  *  vermelho — a fração da zona das caixas (3,3% a 10% da altura, 30% a 75% da largura) em vermelho;
  *  verde    — a mesma fração em verde (a caixa do tempo vivo).
- * Medido nos 24 casos verdadeiros: plano 0,34 a 0,89 (a webcam e os seguidores do skylane7 tapam parte
- * da faixa), vermelho 0,03 a 0,27 e verde 0,01 a 0,04. No jogo, no inventário, no ecrã de carregar, no
- * "ABATIDO" e nas luzes vermelhas da base, nunca as três ao mesmo tempo.
+ * Medido nas 24 telas verdadeiras de test/telas-morte/: plano 0,36 a 0,89 (a webcam e os seguidores do
+ * skylane7 tapam parte da faixa), vermelho 0,063 a 0,275 e verde 0,009 a 0,042. Nos 69 quadros que não
+ * são morte (jogo, inventário, ecrã de carregar, "ABATIDO", mapa, luzes vermelhas da base) há faixa
+ * lisa com vermelho (até 0,39) ou com verde (o inventário, até 0,028), mas nunca os dois juntos.
  */
 export function medirTela(pixeis, largura = 160, altura = Math.floor(pixeis.length / 4 / largura)) {
   if (!pixeis?.length || !largura || !altura) return { plano: 0, vermelho: 0, verde: 0, sim: false };
@@ -65,7 +66,7 @@ export function medirTela(pixeis, largura = 160, altura = Math.floor(pixeis.leng
   const plano = planos / (yFaixa * largura);
   const vermelho = vermelhos / zona;
   const verde = verdes / zona;
-  return { plano, vermelho, verde, sim: plano >= 0.3 && vermelho >= 0.025 && verde >= 0.008 };
+  return { plano, vermelho, verde, sim: plano >= 0.3 && vermelho >= 0.025 && verde >= 0.005 };
 }
 
 /** Só o sim ou não. */
@@ -92,9 +93,9 @@ export function juntarTelas(acertos, { folgaMs = 8000 } = {}) {
 }
 
 /**
- * Quanto antes da tela aparecer foi a morte. A tela entra 1 a 2 s depois do tiro (o ecrã escurece
- * primeiro): medido nas 10 mortes vistas a 1 imagem por segundo, a faixa lisa aparece 1 a 2 s antes da
- * caixa vermelha, e o último quadro de jogo está 1 a 3 s antes dela.
+ * Quanto antes da tela aparecer foi a morte. Visto a 1 imagem por segundo em 5 mortes de 1080p: o ecrã
+ * escurece e a faixa lisa aparece 1 a 2 s antes da caixa vermelha, e o último quadro de jogo está um
+ * pouco antes disso.
  */
 export const ATRASO_DA_TELA_MS = 2000;
 

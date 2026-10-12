@@ -105,8 +105,12 @@ export function sinaisDoEvento({ marcas = new Map(), momentos = [], mensagens = 
   const sinais = [];
   for (const m of mortes || []) {
     if (!m || !Number.isFinite(m.ms)) continue;
-    const morte = { id: m.id, matador: m.matador, vitima: m.vitima, canalMatador: m.canalMatador || null, canalVitima: m.canalVitima || null };
-    if (m.canalMatador) sinais.push({ tipo: 'morte', canal: m.canalMatador, ms: m.ms, marca: `morte:${m.id}`, papel: 'matou', morte });
+    const morte = {
+      id: m.id, matador: m.matador, vitima: m.vitima, canalMatador: m.canalMatador || null, canalVitima: m.canalVitima || null,
+      ...(m.origem === 'video' ? { origem: 'video' } : {}),
+    };
+    const msMatador = Number.isFinite(m.msMatador) ? m.msMatador : m.ms;
+    if (m.canalMatador) sinais.push({ tipo: 'morte', canal: m.canalMatador, ms: msMatador, marca: `morte:${m.id}`, papel: 'matou', morte });
     if (m.canalVitima && m.canalVitima !== m.canalMatador) {
       sinais.push({ tipo: 'morte', canal: m.canalVitima, ms: m.ms, marca: `morte:${m.id}`, papel: 'morreu', morte });
     }
@@ -348,10 +352,15 @@ export function motivoDoLance(l) {
   if (n('explosao')) partes.push(tn(n('explosao'), 'melhores.explosoesUm', 'melhores.explosoes'));
   if (n('grito')) partes.push(tn(n('grito'), 'melhores.gritosUm', 'melhores.gritos'));
   const mortes = l.mortes || [];
-  if (mortes.length === 1) partes.push(t('melhores.morteUm', { matador: mortes[0].matador, vitima: mortes[0].vitima }));
-  else if (mortes.length > 1) {
-    const lista = mortes.slice(0, 2).map((m) => t('melhores.morteDe', { matador: m.matador, vitima: m.vitima })).join('; ');
-    partes.push(t('melhores.mortes', { n: mortes.length, lista: mortes.length > 2 ? `${lista}; …` : lista }));
+  // Uma morte achada no vídeo pode não ter quem matou (o nome não se leu): diz-se só quem morreu.
+  const frase = (m) => (m.matador ? t('melhores.morteDe', { matador: m.matador, vitima: m.vitima }) : t('melhores.morreu', { vitima: m.vitima }));
+  if (mortes.length === 1) {
+    partes.push(mortes[0].origem === 'video' ? t('melhores.morteVideoUm', { frase: frase(mortes[0]) })
+      : t('melhores.morteUm', { matador: mortes[0].matador, vitima: mortes[0].vitima }));
+  } else if (mortes.length > 1) {
+    const lista = mortes.slice(0, 2).map(frase).join('; ');
+    const doVideo = mortes.every((m) => m.origem === 'video');
+    partes.push(t(doVideo ? 'melhores.mortesVideo' : 'melhores.mortes', { n: mortes.length, lista: mortes.length > 2 ? `${lista}; …` : lista }));
   }
   if (l.kills) partes.push(tn(l.kills, 'melhores.killUm', 'melhores.kills'));
   return partes.join(', ');

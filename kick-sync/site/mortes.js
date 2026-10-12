@@ -345,6 +345,8 @@ export function horasDasMortes(mortes, { fusoMin = 0, refMs = Date.now(), ajuste
       if (antes != null && ms < antes - 6 * HORA_MS) { dia += DIA_MS; ms += DIA_MS; }
     }
     antes = ms;
+    // As achadas no vídeo (achar-mortes.js) já estão no relógio dos vídeos: nem fuso nem alinhamento.
+    if (m.origem === 'video') return { ...m, ms, soMinuto: false };
     return { ...m, ms: ms + (Number.isFinite(ajusteMs) ? ajusteMs : 0), soMinuto: h.s == null };
   });
 }
@@ -381,7 +383,13 @@ export function casarMortes(mortes, canais, apelidos = new Map()) {
     if (!cache.has(n)) cache.set(n, canalDoNome(n, canais, apelidos));
     return cache.get(n);
   };
-  return (mortes || []).map((m) => ({ ...m, canalMatador: de(m.matador), canalVitima: de(m.vitima) }));
+  return (mortes || []).map((m) => {
+    const canalVitima = de(m.vitima);
+    let canalMatador = de(m.matador);
+    // Na tela de morte, o próprio nome é quem se matou (o F1 kill, uma queda): não é uma kill.
+    if (m.origem === 'video' && canalMatador === canalVitima) canalMatador = null;
+    return { ...m, canalMatador, canalVitima };
+  });
 }
 
 /** Os nomes que não casaram com canal nenhum, com quantas vezes aparecem, os mais vistos primeiro. */
@@ -397,14 +405,16 @@ export function nomesSemCanal(casadas) {
 /**
  * As marcas do mapa: Map canal -> [{ tipo: 'morte', ms, id, papel }], uma na faixa de quem matou e
  * outra na de quem morreu. `fora(canal, ms)` diz que o canal estava noutro jogo nesse instante: aí a
- * marca não entra (o filtro do jogo do evento).
+ * marca não entra (o filtro do jogo do evento). A de quem matou vai para `msMatador` quando o tiro dele
+ * o disse (achar-mortes.js, `confirmarPeloTiro`).
  */
 export function marcasDasMortes(casadas, { fora = () => false } = {}) {
   const marcas = new Map();
   const por = (canal, m, papel) => {
-    if (!canal || fora(canal, m.ms)) return;
+    const ms = papel === 'matou' && Number.isFinite(m.msMatador) ? m.msMatador : m.ms;
+    if (!canal || fora(canal, ms)) return;
     if (!marcas.has(canal)) marcas.set(canal, []);
-    marcas.get(canal).push({ tipo: 'morte', ms: m.ms, id: m.id, papel });
+    marcas.get(canal).push({ tipo: 'morte', ms, id: m.id, papel });
   };
   for (const m of casadas || []) {
     if (!Number.isFinite(m.ms)) continue;
@@ -434,8 +444,9 @@ export function juntarMortes(guardadas, novas) {
 
 /** O que se guarda de cada morte: sem o texto da linha, que não serve depois de lido. */
 export function mortesParaGuardar(mortes) {
-  return (mortes || []).map(({ id, matador, vitima, arma, distancia, hora }) => ({
+  return (mortes || []).map(({ id, matador, vitima, arma, distancia, hora, origem }) => ({
     id, matador, vitima, ...(arma ? { arma } : {}), ...(distancia != null ? { distancia } : {}), hora,
+    ...(origem === 'video' ? { origem } : {}),
   }));
 }
 
@@ -445,6 +456,7 @@ export function mortesGuardadas(lista) {
     && typeof m.matador === 'string' && typeof m.vitima === 'string' && m.hora && Number.isFinite(m.hora.h) && Number.isFinite(m.hora.m))
     .map((m) => ({
       id: m.id, matador: m.matador.slice(0, 64), vitima: m.vitima.slice(0, 64),
+      ...(m.origem === 'video' ? { origem: 'video' } : {}),
       arma: typeof m.arma === 'string' ? m.arma.slice(0, 64) : null,
       distancia: Number.isFinite(m.distancia) ? m.distancia : null,
       hora: {

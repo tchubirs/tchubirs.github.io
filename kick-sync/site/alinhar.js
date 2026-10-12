@@ -233,14 +233,12 @@ function reamostrar(pedacos, de, para) {
 export const PRAZO_SOM_MS = 20_000;
 
 /**
- * O som de um canal, num instante, ja em mono a 8 kHz e a comecar em `quandoMs`.
- *
- * E a costura injectavel do modulo: tudo acima disto (escolher instantes,
- * comparar pares, resolver o grafo) e testavel sem rede e sem codec, e o codec
- * e a unica parte que pertence ao browser e nao a este codigo.
+ * Os bytes TS de um canal entre `quandoMs` e `quandoMs + duracaoS`, no degrau mais barato (160p), e os
+ * segmentos que vieram (com o `inicio` de cada um no relógio do VOD). O som (`somDoCanal`) e as telas de
+ * morte (achar-mortes-video.js) saem daqui. Null quando o canal não filmava.
  */
-export async function somDoCanal(linha, quandoMs, duracaoS, {
-  buscar = fetch, sinal, descodificar = descodificarAac, contador, taxa = TAXA, paralelo = 4, prazoMs,
+export async function tsDoCanal(linha, quandoMs, duracaoS, {
+  buscar = fetch, sinal, contador, paralelo = 4, prazoMs,
 } = {}) {
   const r = onde(linha, quandoMs);
   if (r.estado !== 'toca') return null;
@@ -280,6 +278,23 @@ export async function somDoCanal(linha, quandoMs, duracaoS, {
   const ts = new Uint8Array(total);
   let o = 0;
   for (const p of partes) { ts.set(p, o); o += p.length; }
+
+  return { ts, segs };
+}
+
+/**
+ * O som de um canal, num instante, ja em mono a 8 kHz e a comecar em `quandoMs`.
+ *
+ * E a costura injectavel do modulo: tudo acima disto (escolher instantes,
+ * comparar pares, resolver o grafo) e testavel sem rede e sem codec, e o codec
+ * e a unica parte que pertence ao browser e nao a este codigo.
+ */
+export async function somDoCanal(linha, quandoMs, duracaoS, {
+  buscar = fetch, sinal, descodificar = descodificarAac, contador, taxa = TAXA, paralelo = 4, prazoMs,
+} = {}) {
+  const baixado = await tsDoCanal(linha, quandoMs, duracaoS, { buscar, sinal, contador, paralelo, prazoMs });
+  if (!baixado) return null;
+  const { ts, segs } = baixado;
 
   // O browser sabe AAC mas nao sabe MPEG-TS. `audio-ts.js` e a ponte, e o que
   // ela produz foi comparado com o ffmpeg amostra a amostra em 500 s: igual.

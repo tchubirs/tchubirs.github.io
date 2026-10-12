@@ -118,7 +118,7 @@ export function podeLer() {
  * Tudo vem deste site: nenhum pedido sai para outro domínio. O trabalhador é um ficheiro nosso, e não
  * um blob, para não herdar a política de segurança da página (que não deixa compilar WebAssembly).
  */
-export async function abrirLeitor({ aoProgredir = () => {} } = {}) {
+export async function abrirLeitor({ aoProgredir = () => {}, modo = '11' } = {}) {
   const { default: Tesseract } = await import(`${VENDOR}tesseract.esm.min.js`);
   const worker = await Tesseract.createWorker('eng', 1, {
     workerPath: `${VENDOR}worker.min.js`,
@@ -128,9 +128,10 @@ export async function abrirLeitor({ aoProgredir = () => {} } = {}) {
     gzip: true,
     logger: (m) => { if (typeof m?.progress === 'number') aoProgredir(m); },
   });
-  // 11: texto solto, sem esperar parágrafos. Os nomes estão espalhados e em colunas.
+  // 11: texto solto, sem esperar parágrafos. Os nomes estão espalhados e em colunas. O nome de quem
+  // matou (achar-mortes.js) é uma linha só, e lê-se com o 7.
   // O dpi fixo poupa a estimativa, que o Tesseract anuncia na consola a cada recorte.
-  await worker.setParameters({ tessedit_pageseg_mode: '11', preserve_interword_spaces: '1', user_defined_dpi: '300' });
+  await worker.setParameters({ tessedit_pageseg_mode: modo, preserve_interword_spaces: '1', user_defined_dpi: '300' });
   return {
     async ler(tela) {
       const { data } = await worker.recognize(tela, {}, { text: true, blocks: true });
