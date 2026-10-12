@@ -1154,6 +1154,10 @@ footer .nota { color: var(--tinta-3); font-size: var(--t-micro); }
 .modeloWebcam[data-modelo="baixoDir"] .ic { transform: scaleX(-1); }
 .modeloWebcam[aria-pressed="true"] { color: var(--acento); border-color: var(--acento); }
 .voltarModelo { margin-left: auto; font-size: var(--t-menor); padding: 0 var(--e3); }
+/* A webcam achada sozinha: o botão ao lado dos modelos e o aviso numa linha só dele, por baixo. */
+body.mesa .acharWebcam { font-size: var(--t-menor); padding: 0 var(--e3); }
+body.mesa .webcamAchada { flex: 1 0 100%; margin: 0; font-size: var(--t-menor); color: var(--tinta-2); }
+body.mesa .webcamAchada[hidden] { display: none; }
 .semPrevia {
   width: 100%; min-height: 44px; background: var(--aviso-eco); color: var(--aviso);
   border-color: color-mix(in srgb, var(--aviso) 40%, transparent);

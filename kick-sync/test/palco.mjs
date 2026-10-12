@@ -82,6 +82,10 @@ export function montarPalco(aoAbrir = () => {}) {
         try { if (!localStorage.getItem('replay.caminho')) localStorage.setItem('replay.caminho', c); } catch { /* nada */ }
       }, caminho);
     }
+    // O detector de rosto do 9:16 (rosto-arquivos.js) não sai para a rede nos testes: sem isto, cada
+    // teste que passa a dois enquadramentos baixava 12 MB. Quem quer o modelo de verdade põe uma rota
+    // sua no contexto, que ganha a esta por ser mais nova (rosto.test.mjs).
+    await p.context().route(/tasks-vision@|mediapipe-models/, (r) => r.abort());
     const erros = [];
     p.on('pageerror', (e) => erros.push(String(e.message)));
     p.on('console', (m) => { if (m.type() === 'error' && !/ERR_|404/.test(m.text())) erros.push(m.text()); });

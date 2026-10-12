@@ -1131,7 +1131,10 @@
             <button class="modeloWebcam" data-modelo="cimaDir" data-t-titulo="retrato.camCimaDir" data-t-aria="retrato.camCimaDir" title="Webcam em cima à direita" aria-label="Webcam em cima à direita" aria-pressed="false"><svg class="ic" aria-hidden="true"><use href="#i-webcam-canto"/></svg></button>
             <button class="modeloWebcam" data-modelo="baixoDir" data-t-titulo="retrato.camBaixoDir" data-t-aria="retrato.camBaixoDir" title="Webcam embaixo à direita" aria-label="Webcam embaixo à direita" aria-pressed="false"><svg class="ic" aria-hidden="true"><use href="#i-webcam-canto"/></svg></button>
           </div>
+          <button id="acharWebcam" class="discreto acharWebcam" data-t-titulo="retrato.acharWebcamAjuda" title="Olha uns quadros do vídeo deste streamer, acha o rosto e põe a caixa 1 nele"><span data-t="retrato.acharWebcam">Achar webcam</span></button>
           <button id="voltarModelo" class="discreto voltarModelo" data-t-titulo="retrato.voltarModeloAjuda" title="Desfaz os ajustes deste streamer e volta ao modelo"><span data-t="retrato.voltarModelo">Voltar ao modelo</span></button>
+          <!-- O que a procura da webcam está a fazer, ou o que achou. -->
+          <p id="webcamAchada" class="webcamAchada" role="status" aria-live="polite" hidden></p>
         </div>
       </div>
       <!-- Um aviso que não se pode carregar é um beco. Este é um botão: no

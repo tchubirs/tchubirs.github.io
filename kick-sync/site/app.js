@@ -27,6 +27,10 @@ import {
   MODELO_OMISSAO, limparModelo, paraFraccoes, deFraccoes, DEITADO,
 } from './retrato.js';
 import {
+  abrirDetector, abrirQuadrosEscondidos, procurarRosto, caixaDaWebcam, instantesDoClipe, degrauDoRosto,
+  rostoGuardado, guardarRosto,
+} from './rosto.js';
+import {
   limparChat, geometria as geometriaDoChat, desenharChat, mensagensDoClipe, prepararEmotes,
   VIDA_MS as VIDA_CHAT_MS, LETRA as LETRA_CHAT,
 } from './chat-clipe.js';
@@ -5006,6 +5010,8 @@ function abrirClipe(momento = null) {
   };
   // O botão de guardar só existe quando há uma kill onde guardar.
   $('guardarAjustes').hidden = !daLista;
+  // O aviso da webcam achada era do clipe anterior.
+  avisarWebcam('');
   pintarModos();
   pintarChatClipe();
   carregarChatDoClipe();
@@ -5082,11 +5088,14 @@ function prepararRetrato() {
     if (!c || !fonte) return;
     // Só a primeira vez: um `loadedmetadata` a chegar depois do manifesto não
     // pode atirar fora os enquadramentos que ele já arrastou.
+    let procurar = false;
     if (!c.rects.length) {
       const partida = encaixeDePartida(c.canal, c.modo, fonte, c.modelo);
       c.rects = partida.rects;
       c.divisao = partida.divisao;
+      c.origem = partida.origem;
       c.rectsFonte = { ...fonte };
+      procurar = c.modo === 'dois' && partida.origem === 'modelo';
     }
     acertarRecortes();
     $('ladoRetrato').hidden = false;
@@ -5096,6 +5105,7 @@ function prepararRetrato() {
     pintarRecortes();
     pintarDivisor();
     seguirRetrato();
+    if (procurar) proporWebcam();
   };
   // O EXPORTAR é outra coisa: reconverte a partir da imagem, e para isso o
   // vídeo tem mesmo de ter frames. O editor abre com o manifesto; o botão só
@@ -5208,6 +5218,7 @@ function ligarArrasto(caixa) {
       const c = estado.clipe;
       if (!c || c.aGravar) return;
       c.retratoMexido = true;
+      c.origem = 'mao';
       const dx = (m.clientX - p0.x) * p0.escala;
       const dy = (m.clientY - p0.y) * p0.escala;
 
@@ -5291,6 +5302,7 @@ function ligarArrasto(caixa) {
     }
     c.rects[i] = limitar(novo, fonte);
     c.retratoMexido = true;
+    c.origem = 'mao';
     lembrarEncaixe();
     pintarRecortes();
     // O redesenho troca as caixas por novas: o foco tem de voltar a esta.
@@ -5450,11 +5462,14 @@ function trocarModo(modo) {
   const partida = encaixeDePartida(c.canal, modo, fonte, c.modelo);
   c.rects = partida.rects;
   c.divisao = partida.divisao;
+  c.origem = partida.origem;
   c.rectsFonte = { ...fonte };
   lembrarEncaixe();
   pintarModos();
   pintarRecortes();
   pintarDivisor();
+  // A webcam achada sozinha, quando o que está é só o modelo (ver `proporWebcam`).
+  if (modo === 'dois' && partida.origem === 'modelo') proporWebcam();
 }
 
 /**
@@ -5479,7 +5494,11 @@ function voltarAoModelo() {
   c.retratoMexido = true;
   c.divisao = DIVISAO_OMISSAO;
   c.rects = enquadramentoInicial(fonte.largura, fonte.altura, c.modo, c.divisao, c.modelo);
+  c.origem = 'modelo';
   c.rectsFonte = { ...fonte };
+  // Uma procura a meio não pode vir pôr a caixa achada por cima do modelo que ele acabou de pedir.
+  c.rostoBusca?.abort();
+  avisarWebcam('');
   lembrarEncaixe();
   pintarModos();
   pintarRecortes();
@@ -5497,6 +5516,126 @@ function pintarModos() {
   for (const b of document.querySelectorAll('.modeloWebcam')) {
     b.setAttribute('aria-pressed', String(c.modo === 'dois' && b.dataset.modelo === c.modelo));
   }
+}
+
+// ── a webcam achada sozinha ─────────────────────────────────────────────────
+//
+// IDEIAS.md, ideia 3: no "2 enquadramentos", olhar uns cinco quadros do vídeo deste canal, achar o rosto
+// do streamer e pôr a caixa 1 à volta dele. Só sobre o modelo (o canto, sem ajuste): o que ele acertou à
+// mão nunca é trocado, e o botão "Achar webcam" pede uma procura nova quando ele quiser. O rosto achado
+// fica guardado por streamer no aparelho (rosto.js), e da próxima vez a caixa vem sem procurar nada.
+
+/** O detector, um por página: o Worker carrega o modelo uma vez e serve todos os canais. */
+function detectorDeRosto() {
+  if (estado.detectorRosto) return estado.detectorRosto;
+  const falso = window.__povixRosto?.();
+  estado.detectorRosto = falso || abrirDetector({
+    aoBaixar: ({ feito, total }) => {
+      if (estado.clipe?.rostoBusca) {
+        avisarWebcam(t('retrato.rostoBaixar', { pct: Math.min(100, Math.round((100 * feito) / Math.max(1, total))) }));
+      }
+    },
+  });
+  return estado.detectorRosto;
+}
+
+/** A linha de aviso por baixo dos modelos. Vazia, some. */
+function avisarWebcam(texto) {
+  const el = $('webcamAchada');
+  el.textContent = texto;
+  el.hidden = !texto;
+}
+
+/** Pôr a caixa 1 à volta de um rosto (em fracções da fonte). */
+function aplicarRosto(c, rosto) {
+  const fonte = fonteDoClipe();
+  const caixa = caixaDaWebcam(rosto, fonte, c.divisao);
+  if (!caixa) return false;
+  c.rects[0] = caixa;
+  c.rectsFonte = { ...fonte };
+  c.origem = 'rosto';
+  lembrarEncaixe();
+  pintarRecortes();
+  return true;
+}
+
+/**
+ * Procurar a webcam do canal aberto e propor a caixa. `forcar`: o botão, que procura de novo mesmo com
+ * o rosto guardado e mesmo sobre um ajuste à mão (foi ele que pediu).
+ */
+async function proporWebcam({ forcar = false } = {}) {
+  const c = estado.clipe;
+  const fonte = fonteDoClipe();
+  if (!c || !fonte || c.modo !== 'dois' || c.aGravar) return;
+  const canal = c.canal;
+  estado.rostos = estado.rostos || new Map();
+  // Já procurado (nesta sessão ou noutra): sem ler quadro nenhum.
+  if (!forcar) {
+    const memo = estado.rostos.has(canal) ? estado.rostos.get(canal) : rostoGuardado(canal);
+    if (memo) { if (aplicarRosto(c, memo)) avisarWebcam(t('retrato.rostoAchado', { canal })); return; }
+    if (estado.rostos.has(canal)) { avisarWebcam(t('retrato.rostoNada', { canal })); return; }
+  }
+  c.rostoBusca?.abort();
+  const controlo = new AbortController();
+  c.rostoBusca = controlo;
+  // A caixa como estava ao começar: se ele mexer nela durante a procura, a dele ganha.
+  const antes = JSON.stringify(c.rects[0]);
+  const linha = estado.linhas.find((l) => l.slug === canal);
+  avisarWebcam(t('retrato.rostoProcurando', { canal }));
+  $('acharWebcam').disabled = true;
+  const quadros = window.__povixQuadrosRosto?.() || abrirQuadrosEscondidos();
+  // Cancelado (fechou, trocou de canal, foi gravar): o vídeo escondido sai já, e não no fim do salto.
+  controlo.signal.addEventListener('abort', () => quadros.fechar?.(), { once: true });
+  try {
+    const quadro = async (ms) => {
+      const r = onde(linha, ms, { nudgeMs: estado.nudges[canal] || 0 });
+      if (r.estado !== 'toca') return null;
+      const peca = linha.pecasCompletas?.find((p) => p.vod.id === r.peca.vod.id) || r.peca;
+      const degrau = degrauDoRosto(peca.escada) || peca.barato;
+      return quadros.quadro({ url: degrau?.url, tempoS: r.tempoS, ms, canal });
+    };
+    const { rosto, lidos } = await procurarRosto({
+      instantes: instantesDoClipe(c.deMs, c.ateMs), quadro, detector: detectorDeRosto(), sinal: controlo.signal,
+    });
+    if (controlo.signal.aborted) return;
+    if (!lidos) { avisarWebcam(t('retrato.rostoSemQuadros')); return; }
+    estado.rostos.set(canal, rosto);
+    if (rosto) guardarRosto(canal, rosto);
+    // O editor mudou entretanto (outro canal, outro modo, ou ele mexeu): o achado fica guardado, e não se impõe.
+    if (estado.clipe !== c || c.canal !== canal || c.modo !== 'dois' || c.aGravar) return;
+    if (!rosto) { avisarWebcam(t('retrato.rostoNada', { canal })); return; }
+    if (JSON.stringify(c.rects[0]) !== antes) { avisarWebcam(''); return; }
+    avisarWebcam(aplicarRosto(c, rosto) ? t('retrato.rostoAchado', { canal }) : t('retrato.rostoNada', { canal }));
+  } catch (e) {
+    if (e?.name === 'AbortError' || controlo.signal.aborted) return;
+    if (estado.clipe === c && c.canal === canal) avisarWebcam(t('retrato.rostoErro'));
+    // Um detector que não abriu (sem rede, um arquivo que não bateu) tenta de novo na próxima vez.
+    if (!window.__povixRosto) { estado.detectorRosto?.fechar?.(); estado.detectorRosto = null; }
+  } finally {
+    quadros.fechar?.();
+    if (c.rostoBusca === controlo) c.rostoBusca = null;
+    if (estado.clipe === c) $('acharWebcam').disabled = false;
+  }
+}
+
+/** O botão: procurar de novo, já em dois enquadramentos. */
+function acharWebcam() {
+  const c = estado.clipe;
+  if (!c || !fonteDoClipe() || c.aGravar) return;
+  if (c.modo !== 'dois') {
+    c.retratoMexido = true;
+    c.modo = 'dois';
+    const partida = encaixeDePartida(c.canal, 'dois', fonteDoClipe(), c.modelo);
+    c.rects = partida.rects;
+    c.divisao = partida.divisao;
+    c.origem = partida.origem;
+    c.rectsFonte = { ...fonteDoClipe() };
+    lembrarEncaixe();
+    pintarModos();
+    pintarRecortes();
+    pintarDivisor();
+  }
+  proporWebcam({ forcar: true });
 }
 
 // ── o encaixe de cada streamer, guardado no aparelho ────────────────────────
@@ -5532,23 +5671,27 @@ function lembrarEncaixe() {
     ...antes,
     modo: c.modo,
     modelo: c.modelo,
-    [c.modo]: { rects: fraccoes, divisao: c.modo === 'dois' ? c.divisao : DIVISAO_OMISSAO },
+    // De onde veio o encaixe: 'modelo' (o canto, sem ajuste), 'rosto' (achado sozinho) ou 'mao'. Só
+    // sobre um modelo é que se procura a webcam ao abrir; o que ele acertou à mão nunca é trocado.
+    [c.modo]: { rects: fraccoes, divisao: c.modo === 'dois' ? c.divisao : DIVISAO_OMISSAO, origem: c.origem || 'mao' },
   };
   try { localStorage.setItem(CHAVE_ENCAIXES, JSON.stringify(todos)); } catch { /* janela privada */ }
 }
 
 /**
  * Com que recortes um streamer começa num modo: os que ele guardou, ou o modelo do canto da webcam.
- * @returns {{rects: object[], divisao: number}}
+ * @returns {{rects: object[], divisao: number, origem: string}}
  */
 function encaixeDePartida(slug, modo, fonte, modelo = MODELO_OMISSAO) {
   const guardado = encaixeDe(slug)?.[modo];
   const divisao = modo === 'dois' ? limparDivisao(guardado?.divisao) : DIVISAO_OMISSAO;
   const rects = guardado ? deFraccoes(guardado.rects, fonte, modo, divisao) : null;
-  if (rects) return { rects, divisao };
+  // Um encaixe de antes desta marca não diz de onde veio: conta como acertado à mão, que é o seguro.
+  if (rects) return { rects, divisao, origem: ['modelo', 'rosto', 'mao'].includes(guardado.origem) ? guardado.origem : 'mao' };
   return {
     rects: enquadramentoInicial(fonte.largura, fonte.altura, modo, DIVISAO_OMISSAO, modelo),
     divisao: DIVISAO_OMISSAO,
+    origem: 'modelo',
   };
 }
 
@@ -5640,6 +5783,8 @@ async function guardarRetrato({ deitado = false } = {}) {
     // A partir daqui ninguém pode pausar isto por baixo — nem o `acordarPrevia`
     // com um pause adiado, nem um `preverClipe` que chegue tarde.
     c.aGravar = true;
+    // A procura da webcam lê outro vídeo ao mesmo tempo: parada, para não roubar a imagem à gravação.
+    c.rostoBusca?.abort();
     // E o editor fica quieto. O ▶, as pegas, os ±0,5 s e a troca de ângulo
     // mexem todos no MESMO `<video>` que está a ser gravado: um "fim +0,5 s"
     // a meio saltava o vídeo para o fim e o 9:16 saía com três segundos, e o
@@ -6338,6 +6483,7 @@ async function guardarAngulos(modo) {
   if (!formato) { $('estadoClipe').textContent = t('retrato.semGravador'); return; }
   const controlo = new AbortController();
   c.aGravar = true;
+  c.rostoBusca?.abort();
   c.pararGravacao = () => controlo.abort();
   trancarEditor(true);
   const abertos = [];
@@ -6415,6 +6561,7 @@ function fecharClipe() {
   estado.clipe?.chatLeitura?.controlo.abort();
   // Uma legenda a ser gerada para este clipe: parar (o leitor de voz é fechado a meio da conta).
   estado.clipe?.legendaGerar?.controlo.abort();
+  estado.clipe?.rostoBusca?.abort();
   clearTimeout(esperaChatClipe);
   const retomarGrelha = estado.clipe?.retomarGrelha;
   pararVer();
@@ -7232,6 +7379,7 @@ for (const b of document.querySelectorAll('.modeloWebcam')) {
   b.onclick = () => escolherModelo(b.dataset.modelo);
 }
 $('voltarModelo').onclick = voltarAoModelo;
+$('acharWebcam').onclick = acharWebcam;
 // A ordem, e a preferência guardada no dispositivo.
 for (const b of document.querySelectorAll('.ordemGrelha')) {
   b.onclick = () => {
@@ -7257,6 +7405,7 @@ $('canalClipe').onchange = () => {
   c.porCanal = c.porCanal || {};
   c.porCanal[c.canal] = {
     rects: c.rects.map((r) => ({ ...r })), rectsFonte: c.rectsFonte, divisao: c.divisao, modo: c.modo, modelo: c.modelo,
+    origem: c.origem,
   };
   const guardado = c.porCanal[l.slug];
   // Sem nada nesta sessão do editor, o que o streamer tem guardado no aparelho (o modelo aqui; os
@@ -7265,7 +7414,7 @@ $('canalClipe').onchange = () => {
   const mesmoModo = guardado && guardado.modo === c.modo;
   c.rects = mesmoModo ? guardado.rects.map((r) => ({ ...r })) : [];
   c.rectsFonte = mesmoModo ? guardado.rectsFonte : null;
-  if (mesmoModo) c.divisao = guardado.divisao;
+  if (mesmoModo) { c.divisao = guardado.divisao; c.origem = guardado.origem; }
   c.modelo = limparModelo(guardado ? guardado.modelo : doAparelho?.modelo);
   Object.assign(c, { canal: l.slug, hls: null, url: null, limites: { inicio: l.inicio, fim: l.fim } });
   // O pedaço inteiro para dentro do vídeo do outro, e não só o início: com o
@@ -7282,6 +7431,9 @@ $('canalClipe').onchange = () => {
   // O texto da legenda é da voz de quem estava: com outro ângulo, a página diz que é preciso ouvir este.
   c.legendaGerar?.controlo.abort();
   pintarLegendaClipe();
+  // A webcam procurada era a do outro streamer: a deste procura-se quando o vídeo dele disser o tamanho.
+  c.rostoBusca?.abort();
+  avisarWebcam('');
 };
 $('barraClipe').querySelector('.pega.de').onpointerdown = arrastar('de');
 $('barraClipe').querySelector('.pega.ate').onpointerdown = arrastar('ate');
