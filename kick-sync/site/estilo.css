@@ -3104,3 +3104,5 @@ body:not(:has(#noites:not([hidden]))) .topo .barraSessao.noTopo { display: none;
 .topo .barraSessao.noTopo #noite { width: auto; min-width: 0; padding-block: 6px; }
 .topo .barraSessao.noTopo #estadoPartilha:empty { display: none; }
 #noites:has(#estadoNoite:empty) { display: none; }
+.relogio > .pesTempo { order: 5; display: flex; justify-content: flex-end; margin-top: var(--e2); }
+.pesTempo #zoomTempo { width: 160px; }

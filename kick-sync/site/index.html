@@ -1057,12 +1057,6 @@
              a noite toda e uns 30 segundos, com menos e mais dos lados. Também Ctrl + roda do mouse sobre
              as faixas (o ponto debaixo do mouse fica no lugar), a pinça com dois dedos e as teclas + e -.
              Com zoom, arrastar as faixas para o lado (ou rolar na horizontal) anda pela noite. -->
-        <div class="zoomTempo" role="group" data-t-aria="tempo.zoom" aria-label="Zoom da linha do tempo">
-          <button id="zoomMenos" type="button" class="so-icone" data-t-aria="tempo.zoomMenos" data-t-titulo="tempo.zoomMenos" aria-label="Menos zoom: mostra mais tempo" title="Menos zoom: mostra mais tempo">−</button>
-          <input id="zoomTempo" type="range" min="0" max="1000" step="1" value="0" data-t-aria="tempo.zoom" aria-label="Zoom da linha do tempo">
-          <button id="zoomMais" type="button" class="so-icone" data-t-aria="tempo.zoomMais" data-t-titulo="tempo.zoomMais" aria-label="Mais zoom: mostra menos tempo" title="Mais zoom: mostra menos tempo">+</button>
-          <output id="zoomQuanto" class="zoomQuanto" for="zoomTempo"></output>
-        </div>
         <output id="angulos" class="nota"></output>
         <output id="marca" class="nota" aria-live="polite"></output>
         <div class="saltos">
@@ -1071,6 +1065,15 @@
           <button id="mais1m" data-t-titulo="tempo.avancar1m" title="avançar 1 minuto">+<span data-t="tempo.mais1m">1 min</span><svg class="ic" aria-hidden="true"><use href="#i-seta2"/></svg></button>
           <button id="mais5m" data-t-titulo="tempo.avancar5m" title="avançar 5 minutos">+<span data-t="tempo.mais5m">5 min</span><svg class="ic" aria-hidden="true"><use href="#i-seta2"/></svg></button>
         </div>
+      </div>
+      <!-- O zoom no pé da linha do tempo, à direita, como nos editores (o dono, 13/10). -->
+      <div class="pesTempo">
+      <div class="zoomTempo" role="group" data-t-aria="tempo.zoom" aria-label="Zoom da linha do tempo">
+        <button id="zoomMenos" type="button" class="so-icone" data-t-aria="tempo.zoomMenos" data-t-titulo="tempo.zoomMenos" aria-label="Menos zoom: mostra mais tempo" title="Menos zoom: mostra mais tempo">−</button>
+        <input id="zoomTempo" type="range" min="0" max="1000" step="1" value="0" data-t-aria="tempo.zoom" aria-label="Zoom da linha do tempo">
+        <button id="zoomMais" type="button" class="so-icone" data-t-aria="tempo.zoomMais" data-t-titulo="tempo.zoomMais" aria-label="Mais zoom: mostra menos tempo" title="Mais zoom: mostra menos tempo">+</button>
+        <output id="zoomQuanto" class="zoomQuanto" for="zoomTempo"></output>
+      </div>
       </div>
     </div>
 
