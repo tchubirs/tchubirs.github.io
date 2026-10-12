@@ -3151,3 +3151,5 @@ dialog.confirmarRecomecar h2 { margin: 0 0 var(--e2); font-size: 18px; }
 dialog.confirmarRecomecar ul { margin: var(--e2) 0; padding-left: 20px; }
 dialog.confirmarRecomecar .botoes { display: flex; justify-content: flex-end; gap: var(--e2); margin-top: var(--e3); }
 dialog.confirmarRecomecar .apagar { background: var(--perigo); color: #fff; border-color: transparent; }
+/* O guia do TikTok saiu (o dono, 13/10). */
+.zonaTikTok { display: none !important; }
