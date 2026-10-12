@@ -751,7 +751,8 @@ export function montarSimples(ponte) {
 
   /** Os que a lista mostra agora: sem os "Excluir", e só até onde o "Mostrar mais" chegou. */
   const queridos = () => ultimos.filter((m) => !naoQuero.has(chave(m)));
-  const visiveis = () => queridos().slice(0, mostrar);
+  // Na ordem da live, para o streamer seguir a noite, e mais cartões ao rolar até o fim (o dono, 13/10).
+  const visiveis = () => [...queridos()].sort((a, b) => a.ms - b.ms).slice(0, mostrar);
 
   function pintarLista() {
     // Um clipe a ser feito agora não pode sumir debaixo do dedo: a lista refaz-se quando ele acabar.
@@ -825,14 +826,13 @@ export function montarSimples(ponte) {
     (cartao?.querySelector('button[data-acao="tiktok"]') || $('simplesQuem')).focus?.({ preventScroll: true });
   }
 
-  $('simplesMais').onclick = () => {
-    pararPrevia();
-    const antes = mostrados.length;
+  // O fim da lista à vista (ou quase) traz os próximos; com uma prévia a tocar, espera ela parar.
+  new IntersectionObserver((vistos) => {
+    if (!vistos.some((v) => v.isIntersecting) || $('simplesMais').hidden || pintarLista.adiada) return;
     mostrar += QUANTOS;
     pintarLista();
     fotografar();
-    lista.children[antes]?.querySelector('button[data-acao="tiktok"]')?.focus();
-  };
+  }, { rootMargin: '600px 0px' }).observe($('simplesMais'));
 
   function arquivoDe(f) {
     try { return new File([f.blob], f.nome, { type: f.blob.type || 'video/mp4' }); } catch { return null; }
