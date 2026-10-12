@@ -1198,23 +1198,16 @@ body.mesa .webcamAchada[hidden] { display: none; }
   background: var(--sup-1); border: 1px solid var(--linha); touch-action: none; cursor: pointer;
 }
 .barraClipe .seleccao { position: absolute; top: 0; bottom: 0; background: var(--marca-eco); border-inline: 1px solid var(--marca-fio); }
-/* Início verde e Fim vermelho, e cada pega com o seu desenho (seta para a frente, quadrado de parar):
-   quem não distingue as cores distingue as formas. */
 .barraClipe .pega {
-  position: absolute; top: 0; bottom: 0; width: 18px; margin: 0; padding: 0; min-height: 0;
-  background: var(--inicio); border: 0; border-radius: 0; cursor: ew-resize; z-index: 3;
+  position: absolute; top: 0; bottom: 0; width: 14px; margin: 0; padding: 0; min-height: 0;
+  background: var(--marca); border: 0; border-radius: 0; cursor: ew-resize; z-index: 3;
 }
-.barraClipe .pega.ate { background: var(--fim); }
-.barraClipe .pega.de:hover { background: var(--inicio-alto); }
-.barraClipe .pega.ate:hover { background: var(--fim-alto); }
+.barraClipe .pega:hover { background: var(--marca-alto); }
 .barraClipe .pega::after {
   content: ''; position: absolute; inset: 50% auto auto 50%; transform: translate(-50%, -50%);
+  width: 2px; height: 14px; background: var(--sobre-marca); border-radius: 1px;
+  box-shadow: 3px 0 0 var(--sobre-marca), -3px 0 0 var(--sobre-marca);
 }
-.barraClipe .pega.de::after {
-  width: 0; height: 0; margin-left: 1px; border-style: solid; border-width: 6px 0 6px 8px;
-  border-color: transparent transparent transparent var(--sobre-inicio);
-}
-.barraClipe .pega.ate::after { width: 9px; height: 9px; background: var(--sobre-fim); border-radius: 1px; }
 .barraClipe .pega.de { border-radius: var(--r-fio) 0 0 var(--r-fio); }
 .barraClipe .pega.ate { border-radius: 0 var(--r-fio) var(--r-fio) 0; }
 .barraClipe .seleccao { border-inline: 0; }
