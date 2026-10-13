@@ -108,6 +108,8 @@ const IGUAIS_DE_PROPOSITO = {
     'grelha.az', 'ajuda.teclaEsc',
     // "{acao}: {teclas}." e so as variaveis e a pontuacao.
     'atalhos.feito',
+    // A etiqueta da caixa do chat na prévia e "4 s" escrevem-se igual.
+    'chatClipe.etiqueta', 'legenda.seg4',
   ]),
   // O espanhol e o portugues escrevem estas exactamente da mesma maneira.
   es: new Set([
@@ -169,6 +171,8 @@ const IGUAIS_DE_PROPOSITO = {
     'clipe.passoMenos', 'clipe.passoMais',
     // As escolhas do chat no vídeo: "Automática" e "Grande" escrevem-se igual.
     'chatClipe.posAuto', 'chatClipe.tamG',
+    // A etiqueta da caixa do chat na prévia, "Verde", "Rosa" e os segundos que a legenda fica escrevem-se igual.
+    'chatClipe.etiqueta', 'chatClipe.corVerde', 'chatClipe.corRosa', 'legenda.seg15', 'legenda.seg25', 'legenda.seg4',
     // A legenda: "Estilo", "Turquesa" e os botões de ±0,1 s escrevem-se igual em espanhol.
     'legenda.estilo', 'legenda.corTurquesa', 'legenda.menos', 'legenda.mais',
     // O player do lance no modo simples: "Pausar", "Continuar" e "Editar" escrevem-se igual em espanhol.

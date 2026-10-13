@@ -7,7 +7,9 @@ import assert from 'node:assert/strict';
 import {
   limparChat, mensagensVisiveis, mensagensDoClipe, corDoAutor, partesDaMensagem, geometria, quebrarLinhas,
   arrumarChat, desenharChat, VIDA_MS, SUMIR_MS, CHAT_OMISSAO, POSICOES, TAMANHOS, LINHAS_MIN, LINHAS_MAX,
+  VIDAS_S, VIDA_MAX_MS, vidaMs, CORES_CHAT, retanguloDoChat,
 } from '../site/chat-clipe.js';
+import { ZONA_TIKTOK } from '../site/retrato.js';
 import { gravar, DEITADO, RETRATO, desenharInteiro } from '../site/retrato.js';
 
 const T0 = Date.parse('2026-08-30T21:00:00Z');
@@ -228,4 +230,101 @@ test('gravar pinta o chat por cima de cada frame, com o tempo que já passou, na
   assert.ok(tempos.length >= 3, `só ${tempos.length} pinceladas do chat`);
   assert.equal(tempos[0], 0, 'o primeiro frame é o instante zero do clipe');
   for (let i = 1; i < tempos.length; i++) assert.ok(tempos[i] >= tempos[i - 1], 'o tempo do chat nunca anda para trás');
+});
+
+// ── quanto tempo fica, a cor e a caixa arrastada (13/10) ─────────────────────
+
+test('a vida da mensagem é uma das cinco escolhas, e o que vier estragado volta a 10 s', () => {
+  assert.deepEqual(VIDAS_S, [5, 8, 10, 15, 20]);
+  assert.equal(CHAT_OMISSAO.vida, 10);
+  assert.equal(limparChat({ vida: 15 }).vida, 15);
+  assert.equal(limparChat({ vida: '8' }).vida, 8);
+  assert.equal(limparChat({ vida: 7 }).vida, 10);
+  assert.equal(limparChat({ vida: 9999 }).vida, 10);
+  assert.equal(limparChat({ vida: 'muito' }).vida, 10);
+  assert.equal(vidaMs({ vida: 20 }), 20_000);
+  assert.equal(vidaMs({}), VIDA_MS);
+  assert.equal(VIDA_MAX_MS, 20_000, 'a leitura do chat cobre a maior vida');
+});
+
+test('com a vida de 5 s a mensagem sai mais cedo, e com a de 20 s fica mais tempo', () => {
+  const lista = [msg(0, 'a')];
+  assert.equal(mensagensVisiveis(lista, T0 + 4999, 6, 5000).length, 1);
+  assert.equal(mensagensVisiveis(lista, T0 + 5000, 6, 5000).length, 0);
+  assert.equal(mensagensVisiveis(lista, T0 + 19_999, 6, 20_000).length, 1);
+  assert.equal(mensagensVisiveis(lista, T0 + 20_000, 6, 20_000).length, 0);
+  // Sumir nos últimos SUMIR_MS, também com a vida mais curta.
+  const meio = mensagensVisiveis(lista, T0 + 5000 - SUMIR_MS / 2, 6, 5000)[0].alfa;
+  assert.ok(Math.abs(meio - 0.5) < 1e-9);
+  // Sem dizer a vida, é a de sempre.
+  assert.equal(mensagensVisiveis(lista, T0 + 9999).length, 1);
+  assert.equal(mensagensVisiveis(lista, T0 + 10_000).length, 0);
+});
+
+test('o chat do clipe leva as mensagens de antes que a maior vida ainda mostra', () => {
+  const lista = [msg(-25), msg(-19, 'antes'), msg(0, 'inicio')];
+  assert.deepEqual(mensagensDoClipe(lista, T0, T0 + 10_000).map((m) => m.texto), ['antes', 'inicio']);
+  assert.deepEqual(mensagensDoClipe(lista, T0, T0 + 10_000, 5000).map((m) => m.texto), ['inicio']);
+});
+
+test('a cor do chat é uma das escolhas; cada autor na sua cor é o de omissão', () => {
+  assert.equal(CHAT_OMISSAO.cor, 'auto');
+  assert.equal(limparChat({ cor: 'rosa' }).cor, 'rosa');
+  assert.equal(limparChat({ cor: 'roxo' }).cor, 'auto');
+  assert.equal(limparChat({ cor: 'toString' }).cor, 'auto', 'uma propriedade herdada não é uma cor');
+  const ctx = telaFalsa();
+  desenharChat(ctx, [msg(0, 'gg', 'esperto')], T0 + 1000, { cor: 'ambar' }, geometria(DEITADO, {}, { formato: '16:9' }));
+  const cores = ctx.feito.filter((f) => f[0] === 'fillText').map((f) => f[3]);
+  assert.ok(cores.length >= 2 && cores.every((c) => c === CORES_CHAT.ambar), `nome e texto na cor escolhida: ${cores}`);
+  const auto = telaFalsa();
+  desenharChat(auto, [msg(0, 'gg', 'esperto')], T0 + 1000, {}, geometria(DEITADO, {}, { formato: '16:9' }));
+  const texto = auto.feito.filter((f) => f[0] === 'fillText' && f[1] === 'gg')[0];
+  assert.equal(texto[3], '#f4f5f7', 'em automático o texto continua claro');
+});
+
+test('a caixa arrastada vale por formato, fica no quadro e o que vier estragado é o lugar automático', () => {
+  assert.deepEqual(limparChat({}).caixas, { '16:9': null, '9:16': null });
+  const c = limparChat({ caixas: { '16:9': { x: 0.5, y: 0.2, w: 0.3 }, '9:16': 'lixo' } });
+  assert.deepEqual(c.caixas['16:9'], { x: 0.5, y: 0.2, w: 0.3 });
+  assert.equal(c.caixas['9:16'], null);
+  assert.equal(limparChat({ caixas: { '16:9': { x: 0, y: 0, w: 0.01 } } }).caixas['16:9'].w, 0.15);
+  assert.equal(limparChat({ caixas: { '16:9': { x: 5, y: 0, w: 0.3 } } }).caixas['16:9'].x, 0.7);
+});
+
+test('com a caixa arrastada, a geometria põe o chat nela, e só no formato dela', () => {
+  const chat = limparChat({ caixas: { '16:9': { x: 0.5, y: 0.2, w: 0.3 } } });
+  const g = geometria(DEITADO, chat, { formato: '16:9' });
+  assert.equal(g.x, 960);
+  assert.equal(g.largura, Math.round(0.3 * 1920));
+  assert.equal(g.ancora, 'baixo');
+  assert.equal(g.lado, 'esq');
+  assert.equal(g.y - g.alto, Math.round(0.2 * 1080), 'o topo da caixa é o y guardado');
+  // O 9:16 desta escolha continua no lugar automático.
+  const vertical = geometria(RETRATO, chat, { formato: '9:16' });
+  const automatico = geometria(RETRATO, { posicao: 'auto' }, { formato: '9:16' });
+  assert.deepEqual(vertical, automatico);
+});
+
+test('puxar o canto muda a letra: a caixa mais larga tem a letra maior, e a caixa cobre o chat todo', () => {
+  const com = (w) => limparChat({ caixas: { '16:9': { x: 0.1, y: 0.1, w } } });
+  const pequena = geometria(DEITADO, com(0.2), { formato: '16:9' });
+  const grande = geometria(DEITADO, com(0.4), { formato: '16:9' });
+  assert.ok(grande.fonte > pequena.fonte * 1.8, `${grande.fonte} contra ${pequena.fonte}`);
+  const r = retanguloDoChat(DEITADO, com(0.4), { formato: '16:9' });
+  assert.ok(Math.abs(r.x - 0.1) < 1e-9 && Math.abs(r.y - 0.1) < 0.002 && Math.abs(r.w - 0.4) < 0.001);
+  assert.ok(r.h > 0.1 && r.h < 0.7);
+  // A mesma proporção a qualquer largura: a altura acompanha a largura.
+  const r2 = retanguloDoChat(DEITADO, com(0.2), { formato: '16:9' });
+  assert.ok(Math.abs(r.h / r.w - r2.h / r2.w) < 0.05);
+});
+
+test('no lugar automático a caixa do 9:16 cabe na zona livre do TikTok', () => {
+  for (const modo of ['um', 'dois']) {
+    for (const posicao of POSICOES) {
+      const r = retanguloDoChat(RETRATO, { posicao }, { formato: '9:16', modo, divisao: 0.35 });
+      assert.ok(r.x >= 0 && r.x + r.w <= 1 - ZONA_TIKTOK.direita + 0.002, `${posicao}/${modo}: passou da coluna de botões`);
+      assert.ok(r.y >= ZONA_TIKTOK.cima - 0.002, `${posicao}/${modo}: passou do topo (${r.y})`);
+      assert.ok(r.y + r.h <= 1 - ZONA_TIKTOK.baixo + 0.002, `${posicao}/${modo}: passou do fundo (${r.y + r.h})`);
+    }
+  }
 });

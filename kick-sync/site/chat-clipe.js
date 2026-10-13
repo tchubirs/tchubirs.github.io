@@ -12,9 +12,15 @@
 // aqui é o da noite (o início do clipe mais o que já se gravou), e não o do vídeo.
 
 import { ZONA_TIKTOK } from './retrato.js';
+import { limparCaixas } from './caixa-previa.js';
 
-/** Quanto tempo uma mensagem fica no ecrã, e quanto desse tempo leva a sumir. */
+/**
+ * Quanto tempo uma mensagem fica no ecrã (por omissão), e quanto desse tempo leva a sumir. A pessoa
+ * escolhe entre `VIDAS_S`; `VIDA_MAX_MS` é a maior, para a leitura do chat cobrir qualquer uma.
+ */
 export const VIDA_MS = 10_000;
+export const VIDAS_S = [5, 8, 10, 15, 20];
+export const VIDA_MAX_MS = VIDAS_S.at(-1) * 1000;
 export const SUMIR_MS = 800;
 /** Uma mensagem comprida não toma o chat todo: no máximo três linhas, e o resto em "...". */
 export const LINHAS_POR_MENSAGEM = 3;
@@ -26,9 +32,17 @@ const MAXIMO_LETRAS = 220;
 export const POSICOES = ['auto', 'baixoEsq', 'baixoDir', 'cimaEsq', 'cimaDir', 'meioEsq', 'meioDir'];
 export const TAMANHOS = ['p', 'm', 'g'];
 export const FUNDOS = ['translucido', 'nenhum'];
+/** As cores do chat: 'auto' é a de cada autor (como na Kick); as outras pintam nomes e texto. */
+export const CORES_CHAT = Object.freeze({
+  auto: null, turquesa: '#46C6D6', ambar: '#F2B254', branco: '#FFFFFF', verde: '#69DB7C', rosa: '#F783AC',
+});
 export const CHAT_OMISSAO = Object.freeze({
   ligado: false, posicao: 'auto', tamanho: 'm', linhas: 6, fundo: 'translucido',
+  vida: VIDA_MS / 1000, cor: 'auto', caixas: Object.freeze({ '16:9': null, '9:16': null }),
 });
+
+/** Quanto uma mensagem fica no ecrã nesta escolha, em ms. */
+export const vidaMs = (chat) => (VIDAS_S.includes(Number(chat?.vida)) ? Number(chat.vida) * 1000 : VIDA_MS);
 
 /** As escolhas do chat com tudo dentro dos limites; o que vier estragado volta ao de omissão. */
 export function limparChat(c) {
@@ -40,6 +54,10 @@ export function limparChat(c) {
     tamanho: TAMANHOS.includes(o.tamanho) ? o.tamanho : CHAT_OMISSAO.tamanho,
     linhas: Number.isFinite(linhas) ? Math.min(LINHAS_MAX, Math.max(LINHAS_MIN, linhas)) : CHAT_OMISSAO.linhas,
     fundo: FUNDOS.includes(o.fundo) ? o.fundo : CHAT_OMISSAO.fundo,
+    vida: VIDAS_S.includes(Number(o.vida)) ? Number(o.vida) : CHAT_OMISSAO.vida,
+    cor: Object.hasOwn(CORES_CHAT, o.cor) ? o.cor : CHAT_OMISSAO.cor,
+    // Onde a pessoa pôs a caixa arrastando, por formato (null = o lugar de `posicao`).
+    caixas: limparCaixas(o.caixas, { min: 0.15 }),
   };
 }
 
@@ -57,28 +75,29 @@ function depoisDe(lista, tMs) {
 /**
  * As mensagens no ecrã no instante `tMs`, da mais velha para a mais nova, cada uma com a opacidade.
  *
- * Uma mensagem entra no segundo em que foi escrita e fica `VIDA_MS`; nos últimos `SUMIR_MS` vai
- * sumindo. Nunca mais do que `maximo` (as mais novas ganham, como num chat a sério).
+ * Uma mensagem entra no segundo em que foi escrita e fica `vida` (10 s por omissão); nos últimos
+ * `SUMIR_MS` vai sumindo. Nunca mais do que `maximo` (as mais novas ganham, como num chat a sério).
  * `lista` vem por ordem de relógio, como a guarda o evento.
  */
-export function mensagensVisiveis(lista, tMs, maximo = CHAT_OMISSAO.linhas) {
+export function mensagensVisiveis(lista, tMs, maximo = CHAT_OMISSAO.linhas, vida = VIDA_MS) {
   if (!Array.isArray(lista) || !lista.length || !Number.isFinite(tMs)) return [];
   const saida = [];
+  const sumir = Math.min(SUMIR_MS, vida);
   for (let i = depoisDe(lista, tMs) - 1; i >= 0 && saida.length < maximo; i--) {
     const m = lista[i];
     if (!Number.isFinite(m?.ms)) continue;
     const idade = tMs - m.ms;
-    if (idade >= VIDA_MS) break;
-    const alfa = idade > VIDA_MS - SUMIR_MS ? (VIDA_MS - idade) / SUMIR_MS : 1;
+    if (idade >= vida) break;
+    const alfa = idade > vida - sumir ? (vida - idade) / sumir : 1;
     saida.push({ m, alfa: Math.max(0, Math.min(1, alfa)) });
   }
   return saida.reverse();
 }
 
 /** As mensagens de que um clipe de `deMs` a `ateMs` pode precisar (as de antes ainda no ecrã contam). */
-export function mensagensDoClipe(lista, deMs, ateMs) {
+export function mensagensDoClipe(lista, deMs, ateMs, vida = VIDA_MAX_MS) {
   if (!Array.isArray(lista)) return [];
-  return lista.filter((m) => Number.isFinite(m?.ms) && m.ms > deMs - VIDA_MS && m.ms <= ateMs);
+  return lista.filter((m) => Number.isFinite(m?.ms) && m.ms > deMs - vida && m.ms <= ateMs);
 }
 
 // Cores claras que se leem em cima de preto e de um jogo: as doze do círculo, sem os cinzentos.
@@ -220,7 +239,16 @@ export function geometria(alvo, chat, { formato = '16:9', modo = 'um', divisao =
   // A beira direita até onde o chat pode ir: no 9:16, a de dentro da coluna de botões da TikTok.
   const limiteDir = vertical ? W - Math.round(W * ZONA_TIKTOK.direita) : W - margem;
   const largura = Math.min(Math.round(fonte * (vertical ? 16 : 17)), limiteDir - margem);
-  const base = { largura, fonte, alturaLinha: Math.round(fonte * 1.3), folga: Math.round(fonte * 0.3) };
+  const base = montarBase(largura, fonte, c.linhas);
+  const caixa = c.caixas[formato];
+  if (caixa) {
+    // Arrastada pela pessoa: a largura da caixa manda na letra (a mesma razão de antes), e o resto
+    // fica ancorado no fundo da caixa, que é onde o chat de uma live cresce para cima.
+    const l = Math.round(caixa.w * W);
+    const f = Math.max(8, Math.round(l / (vertical ? 16 : 17)));
+    const b = montarBase(l, f, c.linhas);
+    return { ...b, x: Math.round(caixa.x * W), y: Math.round(caixa.y * H) + b.alto, ancora: 'baixo', lado: 'esq' };
+  }
   let pos = c.posicao;
   if (pos === 'auto' && vertical && modo === 'dois') {
     const d = Number.isFinite(divisao) ? Math.min(0.85, Math.max(0.15, divisao)) : 0.35;
@@ -234,6 +262,24 @@ export function geometria(alvo, chat, { formato = '16:9', modo = 'um', divisao =
   if (pos.startsWith('baixo')) return { ...base, x, y: fundo, ancora: 'baixo', lado };
   if (pos.startsWith('cima')) return { ...base, x, y: topo, ancora: 'cima', lado };
   return { ...base, x, y: Math.round(H / 2), ancora: 'meio', lado };
+}
+
+function montarBase(largura, fonte, linhas) {
+  const alturaLinha = Math.round(fonte * 1.3);
+  const folga = Math.round(fonte * 0.3);
+  const entre = Math.round(fonte * 0.22);
+  // A caixa mais alta que o chat chega a ocupar: todas as linhas cheias.
+  return { largura, fonte, alturaLinha, folga, alto: linhas * (alturaLinha + folga) + entre * (linhas - 1) };
+}
+
+/**
+ * A caixa do chat na prévia, em fração do quadro: `{ x, y, w, h }`. É a que a pessoa arrastou, ou a
+ * do lugar automático; a mesma conta da geometria, e por isso a caixa cobre o que se vê no ficheiro.
+ */
+export function retanguloDoChat(alvo, chat, opcoes) {
+  const g = geometria(alvo, chat, opcoes);
+  const topo = g.ancora === 'baixo' ? g.y - g.alto : g.ancora === 'meio' ? g.y - g.alto / 2 : g.y;
+  return { x: g.x / alvo.largura, y: topo / alvo.altura, w: g.largura / alvo.largura, h: g.alto / alvo.altura };
 }
 
 // ── as linhas ────────────────────────────────────────────────────────────────
@@ -357,8 +403,9 @@ const fonteDe = (peca, px) => `${peca.tipo === 'nome' ? 600 : 500} ${px}px ${LET
  */
 export function desenharChat(ctx, lista, tMs, chat, geo) {
   const c = limparChat(chat);
-  const visiveis = mensagensVisiveis(lista, tMs, c.linhas);
+  const visiveis = mensagensVisiveis(lista, tMs, c.linhas, vidaMs(c));
   if (!visiveis.length) return 0;
+  const acento = CORES_CHAT[c.cor];
   const px = geo.fonte;
   const emoteAlto = Math.round(px * 1.25);
   ctx.save();
@@ -390,7 +437,7 @@ export function desenharChat(ctx, lista, tMs, chat, geo) {
       caixaRedonda(ctx, x0, y, w, altos[i], Math.round(px * 0.3));
       ctx.fill();
     }
-    const cor = corDoAutor(b.m.autor);
+    const cor = acento || corDoAutor(b.m.autor);
     for (const [k, linha] of b.linhas.entries()) {
       const meio = y + folga / 2 + k * lh + lh / 2;
       for (const p of linha) {
@@ -407,7 +454,7 @@ export function desenharChat(ctx, lista, tMs, chat, geo) {
           ctx.lineWidth = Math.max(2, px * 0.16);
           ctx.strokeText(texto, x, meio);
         }
-        ctx.fillStyle = p.tipo === 'nome' ? cor : p.tipo === 'emote' ? '#d0d4dc' : '#f4f5f7';
+        ctx.fillStyle = p.tipo === 'nome' ? cor : p.tipo === 'emote' ? '#d0d4dc' : acento || '#f4f5f7';
         ctx.fillText(texto, x, meio);
       }
     }

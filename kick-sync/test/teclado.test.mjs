@@ -427,3 +427,34 @@ test('no celular, com o vídeo aberto, a trilha 1 2 3 sai da frente', semNavegad
   assert.deepEqual(erros, []);
   await p.close();
 });
+
+test('com o editor de clipe aberto, o espaço pausa e continua, A e D andam 3 s, I e O marcam as pontas', semNavegador, async () => {
+  const { p, erros } = await abrirNoite();
+  await carregar(p);
+  await p.keyboard.press('c');
+  await p.waitForSelector('#modalClipe:not([hidden])', { timeout: 5000 });
+  const cabeca = () => p.evaluate(() => window.__estado.clipe.cabecaMs);
+  const antes = await cabeca();
+  await p.keyboard.press('d');
+  assert.equal(await cabeca(), antes + 3000, 'o D devia andar 3 s na prévia do clipe');
+  await p.keyboard.press('a');
+  assert.equal(await cabeca(), antes, 'o A devia voltar 3 s');
+  await p.keyboard.press('l');
+  assert.equal(await cabeca(), antes + 1000, 'o L devia andar 1 s');
+  await p.keyboard.press('i');
+  assert.equal(await p.evaluate(() => window.__estado.clipe.deMs), antes + 1000, 'o I devia pôr o início na agulha');
+  await p.keyboard.press('d');
+  await p.keyboard.press('o');
+  assert.equal(await p.evaluate(() => window.__estado.clipe.ateMs), antes + 4000, 'o O devia pôr o fim na agulha');
+  // O espaço pausa e, de novo, continua do mesmo ponto.
+  await p.keyboard.press('Space');
+  assert.equal(await p.evaluate(() => window.__estado.clipe.aVer), true);
+  await p.keyboard.press('Space');
+  assert.equal(await p.evaluate(() => window.__estado.clipe.aVer), false);
+  // Escrevendo no título as teclas são do texto.
+  await p.focus('#tituloClipe');
+  await p.keyboard.type('add');
+  assert.equal(await p.inputValue('#tituloClipe'), 'add');
+  assert.deepEqual(erros, []);
+  await p.close();
+});

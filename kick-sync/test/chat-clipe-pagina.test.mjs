@@ -140,7 +140,7 @@ test('a montagem leva o chat do streamer de cada kill que o guardou ligado',
     await comImagem(p);
     assert.equal(await p.isChecked('#chatClipeLigado'), false);
     await p.check('#chatClipeLigado');
-    await p.selectOption('#chatClipeTamanho', 'g');
+    await p.selectOption('#chatClipeVida', '15');
     await p.waitForFunction(() => /mensagens no chat de tchubi/.test(document.getElementById('estadoChatClipe').textContent),
       null, { timeout: 15000 });
     // O pedaço do princípio do vídeo falso (como quem arrasta a pega do início): sem salto no vídeo, que
@@ -150,14 +150,14 @@ test('a montagem leva o chat do streamer de cada kill que o guardou ligado',
     await p.waitForFunction(() => document.getElementById('modalClipe').hidden, null, { timeout: 10000 });
     const aj = await p.evaluate(() => window.__estado.momentos[0].ajuste);
     assert.equal(aj.chat?.ligado, true);
-    assert.equal(aj.chat.tamanho, 'g');
+    assert.equal(aj.chat.vida, 15);
     assert.match(await p.locator('#listaMomentos .ajustado').innerText(), /com chat/);
 
     // Reaberta, a kill volta com o chat ligado e as mesmas escolhas.
     await p.locator('#listaMomentos .cliparUma').first().click();
     await p.waitForSelector('#modalClipe:not([hidden])');
     assert.equal(await p.isChecked('#chatClipeLigado'), true);
-    assert.equal(await p.inputValue('#chatClipeTamanho'), 'g');
+    assert.equal(await p.inputValue('#chatClipeVida'), '15');
     await p.click('#cancelarClipe');
 
     await p.click('#baixarMontagem');

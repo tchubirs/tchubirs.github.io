@@ -8,6 +8,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   PADRAO, novoMomento, ordenar, acrescentar, remover, clipesDoMomento, planoDaMontagem, alternarVitima, removerVarios, filtrar, temMorte, comAjuste, semAjuste, ajusteDe, ajustesQueContam,
+  canalDoNome, comVitimaEscrita, semVitimaEscrita, momentosParaLink, momentosDoLink,
 } from '../site/momentos.js';
 
 const T = Date.parse('2026-08-30T22:00:00.000Z');
@@ -372,4 +373,72 @@ test('cada angulo guarda o seu ajuste, e so contam os que ainda entram na kill',
   assert.deepEqual(ajustesQueContam(fora), [], 'sem clipe, nao ha ajuste a mostrar');
   assert.equal(ajusteDe(alternarVitima(fora, 'vitima1'), 'vitima1').formato, 'um', 'marcada outra vez, volta');
   assert.deepEqual(semAjuste(os2), m);
+});
+
+// ── o nome de quem morreu, escrito à mão (13/10) ─────────────────────────────
+
+const APELIDOS = new Map([['vitima1', ['Newt', 'Mr. Pato']]]);
+
+test('um nome escrito acha o canal pelo slug ou por um apelido guardado, sem maiúsculas nem símbolos', () => {
+  assert.equal(canalDoNome('Vitima2', CANAIS, APELIDOS), 'vitima2');
+  assert.equal(canalDoNome('  VITIMA-2 ', CANAIS, APELIDOS), 'vitima2');
+  assert.equal(canalDoNome('newt', CANAIS, APELIDOS), 'vitima1');
+  assert.equal(canalDoNome('mr pato', CANAIS, APELIDOS), 'vitima1');
+  assert.equal(canalDoNome('ninguem', CANAIS, APELIDOS), null);
+  assert.equal(canalDoNome('', CANAIS, APELIDOS), null);
+  assert.equal(canalDoNome('???', CANAIS, APELIDOS), null);
+  // Um apelido de um canal que não está na montagem não liga a nada.
+  assert.equal(canalDoNome('newt', ['tchubi'], APELIDOS), null);
+});
+
+test('escrever o nome de um canal vale como marcar quem morreu, e escrever outra vez não desmarca', () => {
+  const m = comVitimaEscrita(novoMomento(T, 'tchubi'), 'Newt', CANAIS, APELIDOS);
+  assert.deepEqual(m.vitimas, ['vitima1']);
+  assert.equal(m.vitimasTexto, undefined, 'foi ligado ao canal, não fica também como texto');
+  assert.equal(comVitimaEscrita(m, 'vitima1', CANAIS, APELIDOS), m);
+  assert.deepEqual(clipesDoMomento(m, CANAIS, 0).map((c) => c.canal), ['tchubi', 'vitima1']);
+});
+
+test('um nome sem canal fica como texto na kill, sem repetidos, e conta como morte', () => {
+  let m = novoMomento(T, 'tchubi');
+  m = comVitimaEscrita(m, '  El Chapo  ', CANAIS, APELIDOS);
+  assert.deepEqual(m.vitimasTexto, ['El Chapo']);
+  assert.deepEqual(m.vitimas, []);
+  assert.equal(temMorte(m), true);
+  assert.equal(comVitimaEscrita(m, 'el chapo', CANAIS, APELIDOS), m, 'o mesmo nome por outras letras não repete');
+  m = comVitimaEscrita(m, 'Zeca', CANAIS, APELIDOS);
+  assert.deepEqual(m.vitimasTexto, ['El Chapo', 'Zeca']);
+  assert.deepEqual(clipesDoMomento(m, CANAIS, 0).map((c) => c.canal), ['tchubi'], 'sem canal não há clipe de quem morreu');
+  assert.equal(temMorte(novoMomento(T, 'tchubi')), false);
+});
+
+test('o próprio protagonista escrito fica como texto, e o que não é nome não entra', () => {
+  const m = comVitimaEscrita(novoMomento(T, 'tchubi'), 'tchubi', CANAIS, APELIDOS);
+  assert.deepEqual(m.vitimas, []);
+  assert.deepEqual(m.vitimasTexto, ['tchubi']);
+  const m0 = novoMomento(T, 'tchubi');
+  assert.equal(comVitimaEscrita(m0, '   ', CANAIS), m0);
+  assert.equal(comVitimaEscrita(m0, '<>"', CANAIS), m0);
+  const sujo = comVitimaEscrita(m0, '<b>Zeca</b> "x"', CANAIS);
+  assert.ok(!/[<>"]/.test(sujo.vitimasTexto[0]), 'sem marcação no que fica guardado');
+  assert.ok(comVitimaEscrita(m0, 'a'.repeat(100), CANAIS).vitimasTexto[0].length <= 40);
+});
+
+test('tirar um nome escrito deixa o resto, e sem nenhum o campo some', () => {
+  let m = comVitimaEscrita(comVitimaEscrita(novoMomento(T, 'tchubi'), 'Zeca', CANAIS), 'Bia', CANAIS);
+  m = semVitimaEscrita(m, 'Zeca');
+  assert.deepEqual(m.vitimasTexto, ['Bia']);
+  m = semVitimaEscrita(m, 'Bia');
+  assert.equal('vitimasTexto' in m, false);
+  assert.equal(temMorte(m), false);
+  assert.equal(semVitimaEscrita(m, 'Bia'), m);
+});
+
+test('o nome escrito vai no link do projeto e volta limpo', () => {
+  const m = comVitimaEscrita(novoMomento(T, 'tchubi'), 'Zeca', CANAIS);
+  const volta = momentosDoLink(JSON.parse(JSON.stringify(momentosParaLink([m]))));
+  assert.deepEqual(volta[0].vitimasTexto, ['Zeca']);
+  const torto = momentosDoLink([{ ms: T, vitimasTexto: ['ok', 5, '<i>', null, 'ok'] }]);
+  assert.deepEqual(torto[0].vitimasTexto, ['ok', 'i']);
+  assert.equal('vitimasTexto' in momentosDoLink([{ ms: T }])[0], false);
 });

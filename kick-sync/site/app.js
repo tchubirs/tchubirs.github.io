@@ -25,7 +25,7 @@ import { ordemDosAngulos, aplicarOrdem } from './grelha.js';
 import {
   RETRATO, enquadramentoInicial, limitar, desenhar, gravar, formatoQueFunciona, extensaoDe,
   reformar, limparDivisao, DIVISAO_OMISSAO, divisaoDoQuadro, proporcaoDoQuadro, encaixar,
-  MODELO_OMISSAO, limparModelo, paraFraccoes, deFraccoes, DEITADO,
+  MODELO_OMISSAO, limparModelo, paraFraccoes, deFraccoes, DEITADO, ZONA_TIKTOK,
 } from './retrato.js';
 import {
   abrirDetector, abrirQuadrosEscondidos, procurarRosto, caixaDaWebcam, instantesDoClipe, degrauDoRosto,
@@ -33,12 +33,13 @@ import {
 } from './rosto.js';
 import {
   limparChat, geometria as geometriaDoChat, desenharChat, mensagensDoClipe, prepararEmotes,
-  VIDA_MS as VIDA_CHAT_MS, LETRA as LETRA_CHAT,
+  VIDA_MAX_MS as VIDA_CHAT_MS, LETRA as LETRA_CHAT, retanguloDoChat, CHAT_OMISSAO,
 } from './chat-clipe.js';
+import { ligarCaixa, estiloDaCaixa } from './caixa-previa.js';
 import {
   limparLegenda, limparTranscricao, geometriaLegenda, desenharLegenda, transcricaoDoAudio, textoDaLinha,
   editarLinha, apagarLinha, deslocarLinha, rotuloTempo, cobre, linhaNoInstante, PASSO_MS, fonteDe as fonteDaLegenda,
-  idiomaParaOuvir,
+  idiomaParaOuvir, segurarMs, retanguloDaLegenda, LEGENDA_OMISSAO,
 } from './legenda.js';
 import { abrirVoz, somDosPedacos, degrauDoSom, estimativaS, faltaBaixar } from './legenda-voz.js';
 import { podeLer } from './ler-tela.js';
@@ -47,8 +48,9 @@ import { agruparPorNoite, rotuloDaNoite, noiteParaAbrir } from './noites.js';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
   alternarVitima, filtrar, temMorte, clipesDoMomento, comAjuste, numeroNaMontagem,
-  ajusteDe, ajustesQueContam, momentosParaLink, momentosDoLink,
+  ajusteDe, ajustesQueContam, momentosParaLink, momentosDoLink, comVitimaEscrita, semVitimaEscrita,
 } from './momentos.js';
+import { lerApelidos } from './nomes.js';
 import {
   planearCorte, executarCorte, nomeDoFicheiro, largarOQueNaoServe, oQueFalta,
 } from './baixar.js';
@@ -4186,6 +4188,14 @@ function pintarMomentos() {
         + `${havia ? '' : ` disabled title="${t('montagem.naoFilmava')}"`
           + ` aria-label="${escapar(c)}: ${t('montagem.naoFilmava')}"`}>${escapar(c)}</button>`;
     }).join('');
+    // O nome de quem morreu escrito à mão: serve para quem não tem botão aqui (o jogador sem canal na
+    // montagem) e para achar a POV de quem matou. Nome de canal ou apelido guardado liga-se ao botão.
+    const nomesEscritos = (m.vitimasTexto || []).map((nome) => `<button type="button" class="vit vitTexto sim" data-nome="${escapar(nome)}"`
+      + ` title="${escapar(t('montagem.nomeMortoTirar', { nome }))}" aria-label="${escapar(t('montagem.nomeMortoTirar', { nome }))}">`
+      + `${escapar(nome)}<svg class="ic ic-p" aria-hidden="true"><use href="#i-fechar"/></svg></button>`).join('');
+    const campoNome = `<span class="vitEscrever"><input type="text" class="vitNome" maxlength="40" autocomplete="off"`
+      + ` placeholder="${escapar(t('montagem.nomeMorto'))}" aria-label="${escapar(t('montagem.nomeMorto'))}">`
+      + `<button type="button" class="vitAnotar">${t('montagem.nomeMortoAdd')}</button></span>`;
     const olhar = estado.olhares.get(m.ms);
     return `<li data-ms="${m.ms}" class="${Math.abs(m.ms - estado.agoraMs) < 1500 ? 'aqui' : ''}`
       + `${temMorte(m) ? ' confirmada' : ''}">`
@@ -4220,9 +4230,9 @@ function pintarMomentos() {
       // por cima de seis nomes que não morreram é afirmar uma coisa que a
       // página não sabe. Sem ninguém marcado é uma PERGUNTA, e os botões são a
       // resposta.
-      + (sozinho ? '' : `<span class="vitimas${temMorte(m) ? ' ha' : ''}">`
+      + `<span class="vitimas${temMorte(m) ? ' ha' : ''}">`
         + `<span class="nota">${t(temMorte(m) ? 'montagem.matou' : 'montagem.quemMorreu')}</span>`
-        + `${fichas}</span>`)
+        + `${fichas}${nomesEscritos}${campoNome}</span>`
       + `<div class="olhar"${olhar?.aberto ? '' : ' hidden'}>${olhar ? cartoesDoOlhar(m, olhar) : ''}</div></li>`;
   }).join('') || `<li class="nota">${t('montagem.vazia')}</li>`;
 
@@ -4269,13 +4279,32 @@ function pintarMomentos() {
       if (e.target.checked) estado.selecao.add(ms); else estado.selecao.delete(ms);
       pintarSelecao();
     };
-    for (const b of li.querySelectorAll('.vit')) {
+    for (const b of li.querySelectorAll('.vit:not(.vitTexto)')) {
       b.onclick = () => {
         estado.momentos = estado.momentos.map((m) => (m.ms === ms ? alternarVitima(m, b.dataset.canal) : m));
         pintarMomentos();
         guardar();
       };
     }
+    for (const b of li.querySelectorAll('.vitTexto')) {
+      b.onclick = () => {
+        estado.momentos = estado.momentos.map((m) => (m.ms === ms ? semVitimaEscrita(m, b.dataset.nome) : m));
+        pintarMomentos();
+        guardar();
+      };
+    }
+    const anotar = () => {
+      const campo = li.querySelector('.vitNome');
+      const texto = campo.value;
+      if (!texto.trim()) return;
+      estado.momentos = estado.momentos.map((m) => (m.ms === ms
+        ? comVitimaEscrita(m, texto, estado.linhas.map((l) => l.slug), lerApelidos()) : m));
+      pintarMomentos();
+      guardar();
+      $('listaMomentos').querySelector(`li[data-ms="${ms}"] .vitNome`)?.focus();
+    };
+    li.querySelector('.vitAnotar').onclick = anotar;
+    li.querySelector('.vitNome').onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); anotar(); } };
   }
   pintarRegua();
   pintarSelecao();
@@ -5858,6 +5887,7 @@ function seguirRetrato() {
     if (c.rects.length) desenhar(ctx, $('previaClipe'), c.rects, c.modo, c.divisao);
     // O chat por cima, com a mesma função e o mesmo instante com que entra no ficheiro.
     pintarChatPrevias(ctx);
+    pintarCaixasPrevia();
     estado.ciclo9x16 = requestAnimationFrame(passo);
   };
   estado.ciclo9x16 = requestAnimationFrame(passo);
@@ -6332,8 +6362,8 @@ function chatLembrado() {
 
 function lembrarChat(chat) {
   try {
-    const { posicao, tamanho, linhas, fundo } = limparChat(chat);
-    localStorage.setItem(GUARDADO_CHAT, JSON.stringify({ posicao, tamanho, linhas, fundo }));
+    const { posicao, tamanho, linhas, fundo, vida, cor, caixas } = limparChat(chat);
+    localStorage.setItem(GUARDADO_CHAT, JSON.stringify({ posicao, tamanho, linhas, fundo, vida, cor, caixas }));
   } catch { /* janela privada */ }
 }
 
@@ -6412,7 +6442,7 @@ function pintarChatPrevias(ctx9x16) {
     });
     pincel9?.(ctx9x16, (ms - c.deMs) / 1000);
   }
-  if (legenda) marcarFalaAgora(linhaNoInstante(legenda.transcricao, ms));
+  if (legenda) marcarFalaAgora(linhaNoInstante(legenda.transcricao, ms, segurarMs(legenda)));
 }
 
 /**
@@ -6478,10 +6508,11 @@ function pintarChatClipe() {
   const ch = c.chat;
   $('chatClipeLigado').checked = ch.ligado;
   $('chatClipeOpcoes').hidden = !ch.ligado;
-  $('chatClipePosicao').value = ch.posicao;
-  $('chatClipeTamanho').value = ch.tamanho;
+  $('chatClipeVida').value = String(ch.vida);
   $('chatClipeLinhas').value = String(ch.linhas);
   $('chatClipeFundo').value = ch.fundo;
+  for (const r of document.querySelectorAll('input[name="chatCor"]')) r.checked = r.value === ch.cor;
+  $('chatClipeAuto').disabled = Boolean(c.aGravar) || !(ch.caixas['16:9'] || ch.caixas['9:16']);
   // A tela por cima do 16:9 é do chat e da legenda: fica à vista com qualquer um dos dois.
   $('chatFonte').hidden = !(ch.ligado || c.legenda?.ligado);
   if (!ch.ligado) {
@@ -6501,16 +6532,20 @@ function ligarChatClipe() {
     if (c.chat.ligado) carregarChatDoClipe();
     else { c.chatLeitura?.controlo.abort(); c.chatLeitura = null; }
   });
-  for (const [id, chave] of [['chatClipePosicao', 'posicao'], ['chatClipeTamanho', 'tamanho'],
-    ['chatClipeLinhas', 'linhas'], ['chatClipeFundo', 'fundo']]) {
-    $(id).addEventListener('change', (e) => {
-      const c = estado.clipe;
-      if (!c || c.aGravar) return;
-      c.chat = limparChat({ ...c.chat, [chave]: e.target.value });
-      lembrarChat(c.chat);
-      pintarChatClipe();
-    });
+  const escolher = (chave, valor) => {
+    const c = estado.clipe;
+    if (!c || c.aGravar) return;
+    c.chat = limparChat({ ...c.chat, [chave]: valor });
+    lembrarChat(c.chat);
+    pintarChatClipe();
+  };
+  for (const [id, chave] of [['chatClipeVida', 'vida'], ['chatClipeLinhas', 'linhas'], ['chatClipeFundo', 'fundo']]) {
+    $(id).addEventListener('change', (e) => escolher(chave, e.target.value));
   }
+  for (const r of document.querySelectorAll('input[name="chatCor"]')) {
+    r.addEventListener('change', () => { if (r.checked) escolher('cor', r.value); });
+  }
+  $('chatClipeAuto').addEventListener('click', () => escolher('caixas', CHAT_OMISSAO.caixas));
 }
 ligarChatClipe();
 
@@ -6670,8 +6705,8 @@ function pintarLegendaClipe() {
   $('legendaIdioma').value = l.idioma;
   $('legendaTraduzir').checked = l.traduzir;
   $('legendaEstilo').value = l.estilo;
-  $('legendaTamanho').value = l.tamanho;
-  $('legendaPosicao').value = l.posicao;
+  $('legendaSegurar').value = String(l.segurar);
+  $('legendaAuto').disabled = Boolean(c.aGravar) || !(l.caixas['16:9'] || l.caixas['9:16']);
   for (const r of document.querySelectorAll('input[name="legendaCor"]')) r.checked = r.value === l.cor;
   $('legendaNome').checked = l.nome;
   $('chatFonte').hidden = !(c.chat?.ligado || l.ligado);
@@ -6838,10 +6873,10 @@ function ligarLegendaClipe() {
     if (chave === 'estilo' || chave === 'nome') carregarLetraDaLegenda(c.legenda);
     pintarLegendaClipe();
   };
-  for (const [id, chave] of [['legendaIdioma', 'idioma'], ['legendaEstilo', 'estilo'], ['legendaTamanho', 'tamanho'],
-    ['legendaPosicao', 'posicao']]) {
+  for (const [id, chave] of [['legendaIdioma', 'idioma'], ['legendaEstilo', 'estilo'], ['legendaSegurar', 'segurar']]) {
     $(id).addEventListener('change', (e) => escolha(chave, e.target.value));
   }
+  $('legendaAuto').addEventListener('click', () => escolha('caixas', LEGENDA_OMISSAO.caixas));
   $('legendaTraduzir').addEventListener('change', (e) => escolha('traduzir', e.target.checked));
   $('legendaNome').addEventListener('change', (e) => escolha('nome', e.target.checked));
   for (const r of document.querySelectorAll('input[name="legendaCor"]')) {
@@ -6893,6 +6928,77 @@ function ligarLegendaClipe() {
   });
 }
 ligarLegendaClipe();
+
+// ── as caixas do chat e da legenda nas prévias ──────────────────────────────
+//
+// O dono, 13/10: mover e redimensionar o chat e a legenda arrastando direto na prévia, como a caixa da
+// webcam, no 16:9 e no 9:16. A caixa que se vê é a mesma conta do desenho (`retanguloDoChat` e
+// `retanguloDaLegenda`); o que se arrasta fica em `escolhas.caixas[formato]`, em fração do quadro, e o
+// ficheiro lê a mesma fração. No 9:16 a caixa fica presa à zona livre do TikTok até a pessoa a puxar
+// bem para fora (caixa-previa.js).
+const ZONA_9X16 = { x0: 0, y0: ZONA_TIKTOK.cima, x1: 1 - ZONA_TIKTOK.direita, y1: 1 - ZONA_TIKTOK.baixo };
+const CAIXAS_PREVIA = [];
+function montarCaixasPrevia() {
+  for (const item of ['chat', 'legenda']) {
+    const chaveT = item === 'chat' ? 'chatClipe' : 'legenda';
+    for (const [formato, camada, alvo, quadro] of [['16:9', 'caixasFonte', DEITADO, 'fonteClipe'], ['9:16', 'caixasRetrato', RETRATO, 'telaRetrato']]) {
+      const el = document.createElement('div');
+      el.className = `caixaPrevia ${item}`;
+      el.tabIndex = 0;
+      el.setAttribute('role', 'button');
+      el.dataset.tAria = `${chaveT}.caixaAria`;
+      el.hidden = true;
+      el.innerHTML = `<span class="etiquetaCaixa" data-t="${chaveT}.etiqueta"></span>`
+        + ['no', 'ne', 'so', 'se'].map((k) => `<span class="puxar ${k}" data-canto="${k}"></span>`).join('');
+      $(camada).append(el);
+      const caixa = { item, formato, alvo, el, ultimo: '' };
+      ligarCaixa(el, {
+        quadro: () => $(quadro),
+        ler: () => retanguloDaCaixa(caixa),
+        pode: () => Boolean(estado.clipe) && !estado.clipe.aGravar,
+        zona: () => (formato === '9:16' ? ZONA_9X16 : null),
+        aoMexer: (r) => {
+          const c = estado.clipe;
+          const limpar = item === 'chat' ? limparChat : limparLegenda;
+          c[item] = limpar({ ...c[item], caixas: { ...c[item].caixas, [formato]: r } });
+        },
+        aoSoltar: () => {
+          const c = estado.clipe;
+          if (!c) return;
+          if (item === 'chat') { lembrarChat(c.chat); pintarChatClipe(); } else { lembrarLegenda(c.legenda); pintarLegendaClipe(); }
+        },
+      });
+      CAIXAS_PREVIA.push(caixa);
+    }
+  }
+  aplicarIdioma($('caixasFonte'));
+  aplicarIdioma($('caixasRetrato'));
+}
+/** A caixa de um item num formato agora, ou null se ele não se vê nesse quadro. */
+function retanguloDaCaixa({ item, formato, alvo }) {
+  const c = estado.clipe;
+  if (!c || c.aGravar) return null;
+  if (formato === '9:16' && $('ladoRetrato').hidden) return null;
+  const opcoes = { formato, modo: c.modo, divisao: c.divisao };
+  if (item === 'chat') return c.chat?.ligado ? retanguloDoChat(alvo, c.chat, opcoes) : null;
+  return legendaParaDesenhar(c) ? retanguloDaLegenda(alvo, c.legenda, { ...opcoes, chat: c.chat }) : null;
+}
+/** Pôr cada caixa onde está, a cada frame do ciclo das prévias; só mexe no DOM quando algo muda. */
+function pintarCaixasPrevia() {
+  for (const cx of CAIXAS_PREVIA) {
+    const r = retanguloDaCaixa(cx);
+    if (!r) {
+      if (!cx.el.hidden) { cx.el.hidden = true; cx.ultimo = ''; }
+      continue;
+    }
+    const css = estiloDaCaixa(r);
+    if (css === cx.ultimo && !cx.el.hidden) continue;
+    cx.ultimo = css;
+    cx.el.style.cssText = css;
+    cx.el.hidden = false;
+  }
+}
+montarCaixasPrevia();
 
 /**
  * Trancar o editor enquanto o 9:16 grava, e destrancá-lo no fim.
@@ -6987,15 +7093,15 @@ async function guardarAngulos(modo) {
 function trancarEditor(sim) {
   for (const id of ['inicioMenos', 'inicioMais', 'fimMenos', 'fimMais', 'verClipe', 'canalClipe',
     'guardarClipe', 'guardarAjustes', 'modoUm', 'modoDois', 'divisor', 'angulosSeguido', 'angulosEmpilhado',
-    'voltarModelo', 'chatClipeLigado', 'chatClipePosicao', 'chatClipeTamanho', 'chatClipeLinhas', 'chatClipeFundo',
-    'legendaLigada', 'legendaIdioma', 'legendaTraduzir', 'gerarLegenda', 'legendaEstilo', 'legendaTamanho',
-    'legendaPosicao', 'legendaNome']) {
+    'voltarModelo', 'chatClipeLigado', 'chatClipeVida', 'chatClipeAuto', 'chatClipeLinhas', 'chatClipeFundo',
+    'legendaLigada', 'legendaIdioma', 'legendaTraduzir', 'gerarLegenda', 'legendaEstilo', 'legendaSegurar',
+    'legendaAuto', 'legendaNome']) {
     const el = $(id);
     if (el) el.disabled = sim;
   }
   for (const p of $('barraClipe').querySelectorAll('.pega')) p.disabled = sim;
   for (const b of document.querySelectorAll('.modeloWebcam')) b.disabled = sim;
-  for (const b of document.querySelectorAll('#legendaClipe input[name="legendaCor"], #legendaFalas input, #legendaFalas button')) {
+  for (const b of document.querySelectorAll('#legendaClipe input[name="legendaCor"], #chatClipe input[name="chatCor"], #legendaFalas input, #legendaFalas button')) {
     b.disabled = sim;
   }
   // O Gerar volta a dizer se este navegador o corre, e não só "destrancado".
@@ -8185,6 +8291,36 @@ const FAZER = {
     if (slug) ouvirAngulo(slug);
   }])),
 };
+// Com o editor "Ajustar clipe" aberto, o teclado anda pela prévia do clipe e não pela noite: o espaço
+// pausa e continua (do ponto onde parou), J e L andam 1 s, A e D 3 s, o I e o O põem o início e o fim
+// onde a agulha está. O dono, 13/10: "todos os atalhos têm de funcionar com a janela aberta".
+const PASSO_ATALHO_CLIPE_MS = 3000;
+const andarNoClipe = (ms) => {
+  const c = estado.clipe;
+  if (c && !c.aGravar) levarAgulha((c.cabecaMs ?? c.deMs) + ms);
+};
+const marcarNoClipe = (qual) => {
+  const c = estado.clipe;
+  if (!c || c.aGravar) return;
+  const aqui = c.cabecaMs ?? c.deMs;
+  Object.assign(c, mover(c, qual, aqui, { limites: c.limites }));
+  pintarClipe();
+  // A imagem fica onde a agulha está: o ponto marcado é o que se vê.
+  if (!c.aVer) preverClipe(aqui, { fino: true });
+};
+const FAZER_CLIPE = {
+  pausa: () => {
+    const c = estado.clipe;
+    if (!c || c.aGravar) return;
+    if (c.aVer) pararVer({ voltar: false }); else verClipe();
+  },
+  voltar: (largo) => andarNoClipe(largo ? -10_000 : -1000),
+  avancar: (largo) => andarNoClipe(largo ? 10_000 : 1000),
+  correrTras: () => andarNoClipe(-PASSO_ATALHO_CLIPE_MS),
+  correrFrente: () => andarNoClipe(PASSO_ATALHO_CLIPE_MS),
+  marcarIn: () => marcarNoClipe('de'),
+  marcarOut: () => marcarNoClipe('ate'),
+};
 const painelAtalhos = montarPainelAtalhos({ atalhos, t, raiz: $('modalAjuda') });
 // A lista existe desde o arranque, e não só depois de abrir: quem lê a página (e o leitor de ecrã) acha-a lá.
 painelAtalhos.pintar();
@@ -8195,7 +8331,9 @@ window.addEventListener('storage', (e) => { if (e.key === 'replay.atalhos') atal
 document.addEventListener('keydown', (e) => {
   // No modo simples os vídeos do avançado estão escondidos: o espaço e as outras teclas não podem tocar
   // nem andar com eles (o espaço tocava o som de um vídeo que ninguém vê). A prévia do cartão tem a sua tecla.
-  if (modoSimples()) return;
+  // O editor do clipe é o mesmo nos dois modos, e as teclas dele valem em ambos.
+  const noClipe = !$('modalClipe').hidden;
+  if (modoSimples() && !noClipe) return;
   const alvo = e.target;
   const achada = atalhos.acaoDe(e);
   // Ctrl, Cmd e Alt são do sistema: Ctrl+C copia, Ctrl+A escolhe tudo, Ctrl+D guarda a página. Com
@@ -8227,23 +8365,26 @@ document.addEventListener('keydown', (e) => {
   if (id === 'atalhos') { alternarAjuda(true); return; }
   // Com a janela do clipe aberta, o teclado é dela: o resto não pode andar com
   // o tempo por baixo do que se está a cortar. E as acções dela só valem com ela aberta.
-  if (!$('modalClipe').hidden !== Boolean(acao.clipe)) return;
+  const doClipe = noClipe && FAZER_CLIPE[id];
+  if (noClipe ? !doClipe && !acao.clipe : acao.clipe) return;
   const { tecla } = partes(combo);
+  // As caixas de enquadramento, do chat e da legenda, e o divisor têm as setas e o + e o - para elas.
+  if (noClipe && /^(Arrow|[-+=]$)/.test(tecla) && alvo?.closest?.('#divisor, .recorte, .caixaPrevia')) return;
   // Um botão ou um sumário a que se chegou pelo Tab: o espaço e o Enter carregam-no, como
   // em qualquer página. Só o foco que ficou de um clique de rato (sem anel)
   // deixa o espaço pausar, senão o Pausar deixava de funcionar depois de
   // carregar num botão qualquer.
   const tabulado = focadosPeloTeclado.has(alvo)
     && alvo.matches('button, summary, a[href], [role="button"], input, select');
-  if ((tecla === 'Space' || tecla === 'Enter') && (tabulado || alvo?.type === 'checkbox')) return;
+  if ((tecla === 'Space' || tecla === 'Enter') && (tabulado || alvo?.type === 'checkbox' || alvo?.type === 'radio')) return;
   // As setas num cursor ou num seletor são dele: mudam o valor ou a escolha.
-  const cursor = (alvo?.tagName === 'INPUT' && alvo.type === 'range') || alvo?.tagName === 'SELECT'
+  const cursor = (alvo?.tagName === 'INPUT' && (alvo.type === 'range' || alvo.type === 'radio')) || alvo?.tagName === 'SELECT'
     || alvo?.getAttribute?.('role') === 'slider';
   if (cursor && /^(Arrow|Home$|End$|Page)/.test(tecla)) return;
   // Antes de haver noite não há nada para parar nem para andar: a pausa ficava
   // guardada e a primeira noite abria parada, e as setas rebentavam.
   const haNoite = Boolean(estado.janela) && estado.linhas.length > 0;
-  if (acao.noite && !haNoite) return;
+  if (acao.noite && !haNoite && !doClipe) return;
   // Num seletor a letra também escolhe a opção que começa por ela: o A saltava
   // para "a noite toda" ao mesmo tempo que recuava. A letra que é atalho fica
   // só para o atalho.
@@ -8251,7 +8392,8 @@ document.addEventListener('keydown', (e) => {
   // Segurar uma tecla repete o `keydown`: só o que anda no tempo ou no zoom se repete. Segurar o F
   // entrava e saía da tela cheia sem parar, e segurar o espaço pausava e continuava.
   if (e.repeat && !acao.repete) return;
-  if (FAZER[id]) FAZER[id](largo);
+  if (doClipe) FAZER_CLIPE[id](largo);
+  else if (FAZER[id]) FAZER[id](largo);
   else if (acao.botao) botaoVivo(acao.botao)?.click();
   // A corrida do A e do D pára quando se larga a tecla que a começou (o keyup, mais abaixo).
   if (acao.segurar && arrasto) arrasto.tecla = tecla;

@@ -1244,6 +1244,8 @@
           <!-- O chat do 16:9, pintado pela mesma função que o põe no ficheiro. -->
           <canvas id="chatFonte" class="chatFonte" width="960" height="540" aria-hidden="true" hidden></canvas>
           <div id="recortes" class="recortes" hidden></div>
+          <!-- As caixas do chat e da legenda, para arrastar (caixa-previa.js). -->
+          <div id="caixasFonte" class="caixasPrevia"></div>
         </div>
         <!-- Onde fica a webcam na tela do streamer: cada modelo põe o recorte 1 (a cara) nesse canto, num
              tamanho típico, e o 2 (o jogo) ao meio. Depois são só pequenos ajustes, e o encaixe fica guardado
@@ -1272,6 +1274,7 @@
           <!-- A zona que a interface do TikTok tapa fica fora deste tracejado (ver ZONA_TIKTOK em retrato.js).
                É só um guia da prévia: não vai para o ficheiro. -->
           <div class="zonaTikTok" aria-hidden="true"></div>
+          <div id="caixasRetrato" class="caixasPrevia"></div>
           <!-- O divisor. Arrasta-se para dar mais altura ao quadro de cima ou
                ao de baixo, e mexer aqui muda a FORMA dos recortes do lado
                esquerdo no mesmo instante. -->
@@ -1324,21 +1327,14 @@
         <p id="estadoChatClipe" class="nota estadoChatClipe" role="status" aria-live="polite"></p>
       </div>
       <div id="chatClipeOpcoes" class="chatClipeOpcoes" role="group" data-t-aria="chatClipe.opcoes" aria-label="Como o chat aparece" hidden>
-        <label class="campo"><span class="rotuloCampo" data-t="chatClipe.posicao">Posição</span>
-          <select id="chatClipePosicao">
-            <option value="auto" data-t="chatClipe.posAuto">Automática</option>
-            <option value="baixoEsq" data-t="chatClipe.posBaixoEsq">Embaixo à esquerda</option>
-            <option value="baixoDir" data-t="chatClipe.posBaixoDir">Embaixo à direita</option>
-            <option value="cimaEsq" data-t="chatClipe.posCimaEsq">Em cima à esquerda</option>
-            <option value="cimaDir" data-t="chatClipe.posCimaDir">Em cima à direita</option>
-            <option value="meioEsq" data-t="chatClipe.posMeioEsq">No meio, à esquerda</option>
-            <option value="meioDir" data-t="chatClipe.posMeioDir">No meio, à direita</option>
-          </select></label>
-        <label class="campo"><span class="rotuloCampo" data-t="chatClipe.tamanho">Tamanho</span>
-          <select id="chatClipeTamanho">
-            <option value="p" data-t="chatClipe.tamP">Pequeno</option>
-            <option value="m" data-t="chatClipe.tamM">Médio</option>
-            <option value="g" data-t="chatClipe.tamG">Grande</option>
+        <div class="arrastarDica">
+          <p class="nota" data-t="chatClipe.dica">Arraste o chat na prévia para mover. Puxe um canto para mudar o tamanho.</p>
+          <button id="chatClipeAuto" type="button" class="discreto" data-t="chatClipe.auto">Voltar ao lugar automático</button>
+        </div>
+        <label class="campo"><span class="rotuloCampo" data-t="chatClipe.vida">Cada mensagem fica</span>
+          <select id="chatClipeVida">
+            <option value="5">5 s</option><option value="8">8 s</option><option value="10">10 s</option>
+            <option value="15">15 s</option><option value="20">20 s</option>
           </select></label>
         <label class="campo"><span class="rotuloCampo" data-t="chatClipe.linhas">Linhas</span>
           <select id="chatClipeLinhas">
@@ -1350,6 +1346,15 @@
             <option value="translucido" data-t="chatClipe.fundoTranslucido">Escuro translúcido</option>
             <option value="nenhum" data-t="chatClipe.fundoNenhum">Sem fundo</option>
           </select></label>
+          <fieldset class="legendaCores chatCores">
+            <legend class="rotuloCampo" data-t="chatClipe.cor">Cor do chat</legend>
+            <label class="legendaCor"><input type="radio" name="chatCor" value="auto"><span class="amostra arco" aria-hidden="true"></span><span data-t="chatClipe.corAuto">Cor de cada autor</span></label>
+            <label class="legendaCor"><input type="radio" name="chatCor" value="turquesa"><span class="amostra turquesa" aria-hidden="true"></span><span data-t="legenda.corTurquesa">Turquesa</span></label>
+            <label class="legendaCor"><input type="radio" name="chatCor" value="ambar"><span class="amostra ambar" aria-hidden="true"></span><span data-t="legenda.corAmbar">Âmbar</span></label>
+            <label class="legendaCor"><input type="radio" name="chatCor" value="branco"><span class="amostra branco" aria-hidden="true"></span><span data-t="legenda.corBranco">Branco</span></label>
+            <label class="legendaCor"><input type="radio" name="chatCor" value="verde"><span class="amostra verde" aria-hidden="true"></span><span data-t="chatClipe.corVerde">Verde</span></label>
+            <label class="legendaCor"><input type="radio" name="chatCor" value="rosa"><span class="amostra rosa" aria-hidden="true"></span><span data-t="chatClipe.corRosa">Rosa</span></label>
+          </fieldset>
         <p class="nota chatClipeCusto" data-t="chatClipe.custo">Com o chat, o 16:9 também é convertido de novo e demora o tempo do clipe. Cada mensagem fica 10 segundos.</p>
       </div>
     </section>
@@ -1362,6 +1367,14 @@
         <p id="estadoLegenda" class="nota estadoChatClipe" role="status" aria-live="polite"></p>
       </div>
       <div id="legendaOpcoes" class="legendaOpcoes" hidden>
+        <div class="legendaCima">
+          <fieldset class="legendaCores legendaCoresTopo">
+            <legend class="rotuloCampo" data-t="legenda.cor">Cor da legenda</legend>
+            <label class="legendaCor"><input type="radio" name="legendaCor" value="turquesa"><span class="amostra turquesa" aria-hidden="true"></span><span data-t="legenda.corTurquesa">Turquesa</span></label>
+            <label class="legendaCor"><input type="radio" name="legendaCor" value="ambar"><span class="amostra ambar" aria-hidden="true"></span><span data-t="legenda.corAmbar">Âmbar</span></label>
+            <label class="legendaCor"><input type="radio" name="legendaCor" value="branco"><span class="amostra branco" aria-hidden="true"></span><span data-t="legenda.corBranco">Branco</span></label>
+          </fieldset>
+        </div>
         <div class="legendaGerar">
           <p id="legendaBaixar" class="nota legendaBaixar"></p>
           <div class="legendaGerarLinha">
@@ -1385,25 +1398,17 @@
               <option value="palavra" data-t="legenda.estPalavra">Uma palavra por vez</option>
               <option value="simples" data-t="legenda.estSimples">Simples, duas linhas</option>
             </select></label>
-          <label class="campo"><span class="rotuloCampo" data-t="chatClipe.tamanho">Tamanho</span>
-            <select id="legendaTamanho">
-              <option value="p" data-t="chatClipe.tamP">Pequeno</option>
-              <option value="m" data-t="chatClipe.tamM">Médio</option>
-              <option value="g" data-t="chatClipe.tamG">Grande</option>
+          <label class="campo"><span class="rotuloCampo" data-t="legenda.segurar">Cada fala fica</span>
+            <select id="legendaSegurar">
+              <option value="0.7" data-t="legenda.seg07">0,7 s (padrão)</option>
+              <option value="1.5" data-t="legenda.seg15">1,5 s</option>
+              <option value="2.5" data-t="legenda.seg25">2,5 s</option>
+              <option value="4" data-t="legenda.seg4">4 s</option>
             </select></label>
-          <label class="campo"><span class="rotuloCampo" data-t="chatClipe.posicao">Posição</span>
-            <select id="legendaPosicao">
-              <option value="auto" data-t="legenda.posAuto">Automática, longe do chat</option>
-              <option value="baixo" data-t="legenda.posBaixo">Embaixo</option>
-              <option value="meio" data-t="legenda.posMeio">No meio</option>
-              <option value="cima" data-t="legenda.posCima">Em cima</option>
-            </select></label>
-          <fieldset class="legendaCores">
-            <legend class="rotuloCampo" data-t="legenda.cor">Cor do destaque</legend>
-            <label class="legendaCor"><input type="radio" name="legendaCor" value="turquesa"><span class="amostra turquesa" aria-hidden="true"></span><span data-t="legenda.corTurquesa">Turquesa</span></label>
-            <label class="legendaCor"><input type="radio" name="legendaCor" value="ambar"><span class="amostra ambar" aria-hidden="true"></span><span data-t="legenda.corAmbar">Âmbar</span></label>
-            <label class="legendaCor"><input type="radio" name="legendaCor" value="branco"><span class="amostra branco" aria-hidden="true"></span><span data-t="legenda.corBranco">Branco</span></label>
-          </fieldset>
+          <div class="arrastarDica">
+            <p class="nota" data-t="legenda.dica">Arraste a legenda na prévia para mover. Puxe um canto para mudar o tamanho.</p>
+            <button id="legendaAuto" type="button" class="discreto" data-t="legenda.auto">Voltar ao lugar automático</button>
+          </div>
           <label class="legendaNome"><input type="checkbox" id="legendaNome"><span data-t="legenda.nome">Nome do streamer antes da fala</span></label>
           <p class="nota chatClipeCusto" data-t="legenda.custo">Com a legenda, o 16:9 também é convertido de novo e demora o tempo do clipe.</p>
         </div>

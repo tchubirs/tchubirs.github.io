@@ -10,7 +10,7 @@ import {
   limparLegenda, LEGENDA_OMISSAO, limparTranscricao, palavrasDe, janelasDoAudio, juntarJanelas, semLacos,
   semInventadas, agruparLinhas, transcricaoDoAudio, textoDaLinha, editarLinha, apagarLinha, deslocarLinha,
   rotuloTempo, cobre, linhaNoInstante, SEGURAR_MS, paginar, quadroNoInstante, geometriaLegenda, caixaDoChat,
-  desenharLegenda, idiomaParaOuvir, nomeDeQuemFala, comoAparece,
+  desenharLegenda, idiomaParaOuvir, nomeDeQuemFala, comoAparece, SEGURAR_S, segurarMs, retanguloDaLegenda,
 } from '../site/legenda.js';
 import { abrirVoz, somDosPedacos, degrauDoSom, estimativaS } from '../site/legenda-voz.js';
 import { BYTES_TOTAL, POR_URL, MOTOR, CODIGO, ARQUIVOS_MODELO, oQueFalta, REVISAO } from '../site/legenda-arquivos.js';
@@ -41,7 +41,10 @@ test('a legenda nasce desligada, e o que vier estragado volta ao de omissão', (
   const l = limparLegenda({ ligado: 'sim', estilo: '<b>', tamanho: 'xl', posicao: 'lado', cor: 'roxo', nome: 1, idioma: 'fr', traduzir: 'true' });
   assert.deepEqual(l, { ...LEGENDA_OMISSAO });
   const bom = limparLegenda({ ligado: true, estilo: 'simples', tamanho: 'g', posicao: 'cima', cor: 'ambar', nome: true, idioma: 'es', traduzir: true });
-  assert.deepEqual(bom, { ligado: true, estilo: 'simples', tamanho: 'g', posicao: 'cima', cor: 'ambar', nome: true, idioma: 'es', traduzir: true });
+  assert.deepEqual(bom, {
+    ligado: true, estilo: 'simples', tamanho: 'g', posicao: 'cima', cor: 'ambar', nome: true, idioma: 'es', traduzir: true,
+    segurar: 0.7, caixas: { '16:9': null, '9:16': null },
+  });
   // `cor` vem de um objeto: o nome de uma propriedade herdada não pode passar por cor.
   assert.equal(limparLegenda({ cor: 'toString' }).cor, 'turquesa');
 });
@@ -482,4 +485,68 @@ test('Parar fecha o Worker a meio, e o pedido seguinte abre outro; um Worker que
   await assert.rejects(p2, { name: 'SEM-LEITOR' });
   const erro = abrirVoz({ criar: () => workerFalso((m) => [{ tipo: 'erro', id: m.id, nome: 'INTEGRIDADE', mensagem: 'x' }]) });
   await assert.rejects(erro.transcrever(new Float32Array(10)), { name: 'INTEGRIDADE' });
+});
+
+// ── quanto tempo cada fala fica e a caixa arrastada (13/10) ──────────────────
+
+test('quanto cada fala fica depois da última palavra é uma das escolhas, e 0,7 s é o de sempre', () => {
+  assert.deepEqual(SEGURAR_S, [0.7, 1.5, 2.5, 4]);
+  assert.equal(LEGENDA_OMISSAO.segurar * 1000, SEGURAR_MS);
+  assert.equal(limparLegenda({ segurar: 2.5 }).segurar, 2.5);
+  assert.equal(limparLegenda({ segurar: '4' }).segurar, 4);
+  assert.equal(limparLegenda({ segurar: 3 }).segurar, 0.7);
+  assert.equal(limparLegenda({ segurar: 'sempre' }).segurar, 0.7);
+  assert.equal(segurarMs({ segurar: 1.5 }), 1500);
+  assert.equal(segurarMs({}), SEGURAR_MS);
+});
+
+test('a fala fica no ecrã o tempo escolhido, e a seguinte ainda a tira quando começa', () => {
+  const tr = limparTranscricao({
+    canal: 'tchubi', deMs: T0, ateMs: T0 + 20_000, linhas: [
+      { palavras: [{ t: 'um', de: T0 + 1000, ate: T0 + 2000 }] },
+      { palavras: [{ t: 'dois', de: T0 + 10_000, ate: T0 + 11_000 }] },
+    ],
+  });
+  assert.equal(linhaNoInstante(tr, T0 + 2000 + 1499, 1500), 0);
+  assert.equal(linhaNoInstante(tr, T0 + 2000 + 1500, 1500), -1);
+  assert.equal(linhaNoInstante(tr, T0 + 2000 + 3999, 4000), 0);
+  assert.equal(linhaNoInstante(tr, T0 + 2000 + 4000, 4000), -1);
+  assert.equal(linhaNoInstante(tr, T0 + 9999, 20_000), 0, 'segura até a seguinte entrar');
+  assert.equal(linhaNoInstante(tr, T0 + 10_000, 20_000), 1);
+  // O quadro lê a escolha da legenda.
+  const geo = { fonte: 66, largura: 2000 };
+  const medir = (s) => s.length * 20;
+  assert.equal(quadroNoInstante(tr, T0 + 3500, { estilo: 'destaque' }, geo, medir), null);
+  assert.equal(quadroNoInstante(tr, T0 + 3500, { estilo: 'destaque', segurar: 2.5 }, geo, medir)?.k, 0);
+});
+
+test('a caixa da legenda vale por formato; a largura escala a letra e o texto fica no meio da caixa', () => {
+  assert.deepEqual(limparLegenda({}).caixas, { '16:9': null, '9:16': null });
+  const l = limparLegenda({ caixas: { '16:9': { x: 0.2, y: 0.5, w: 0.7 } } });
+  const g = geometriaLegenda(DEITADO, l, { formato: '16:9' });
+  const inteira = geometriaLegenda(DEITADO, {}, { formato: '16:9' });
+  assert.equal(g.fonte, inteira.fonte, 'a largura de omissão é a letra de omissão');
+  assert.equal(g.largura, Math.round(0.7 * 1920));
+  assert.equal(g.x, Math.round((0.2 + 0.35) * 1920));
+  assert.equal(g.ancora, 'meio');
+  assert.equal(g.y - g.alto / 2, Math.round(0.5 * 1080), 'o topo da caixa é o y guardado');
+  const metade = geometriaLegenda(DEITADO, limparLegenda({ caixas: { '16:9': { x: 0.2, y: 0.5, w: 0.35 } } }), { formato: '16:9' });
+  assert.ok(Math.abs(metade.fonte - inteira.fonte / 2) <= 1, `${metade.fonte} contra ${inteira.fonte}`);
+  // O 9:16 desta escolha continua no lugar automático.
+  assert.deepEqual(geometriaLegenda(RETRATO, l, { formato: '9:16' }), geometriaLegenda(RETRATO, {}, { formato: '9:16' }));
+});
+
+test('a caixa da legenda na prévia é a que se arrastou, e no automático tem a largura inteira', () => {
+  const l = limparLegenda({ caixas: { '9:16': { x: 0.1, y: 0.4, w: 0.5 } } });
+  const r = retanguloDaLegenda(RETRATO, l, { formato: '9:16' });
+  assert.ok(Math.abs(r.x - 0.1) < 1e-9 && Math.abs(r.w - 0.5) < 1e-3);
+  assert.ok(Math.abs(r.y - 0.4) < 0.002);
+  const auto = retanguloDaLegenda(RETRATO, {}, { formato: '9:16' });
+  assert.ok(Math.abs(auto.w - 0.74) < 0.002, 'a largura da zona livre do TikTok');
+  assert.ok(auto.x >= 0 && auto.x + auto.w <= 1);
+  // Fugindo do chat, a legenda estreita mas a caixa mostrada tem a largura inteira (a letra não muda no primeiro arrasto).
+  const chat = { ligado: true, posicao: 'baixoEsq', tamanho: 'g', linhas: 10, fundo: 'translucido' };
+  const fuga = retanguloDaLegenda(DEITADO, {}, { formato: '16:9', chat });
+  const sem = retanguloDaLegenda(DEITADO, {}, { formato: '16:9' });
+  assert.ok(Math.abs(fuga.w - sem.w) < 0.002);
 });

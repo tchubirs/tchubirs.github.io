@@ -13,6 +13,7 @@
 
 import { geometria as geometriaDoChat, limparChat, LETRA } from './chat-clipe.js';
 import { ZONA_TIKTOK } from './retrato.js';
+import { limparCaixas } from './caixa-previa.js';
 
 export const ESTILOS = ['destaque', 'palavra', 'simples'];
 export const TAMANHOS = ['p', 'm', 'g'];
@@ -22,11 +23,14 @@ export const IDIOMAS = ['auto', 'pt', 'es', 'en'];
 export const CORES = Object.freeze({ turquesa: '#46C6D6', ambar: '#F2B254', branco: '#FFFFFF' });
 export const LEGENDA_OMISSAO = Object.freeze({
   ligado: false, estilo: 'destaque', tamanho: 'm', posicao: 'auto', cor: 'turquesa', nome: false,
-  idioma: 'auto', traduzir: false,
+  idioma: 'auto', traduzir: false, segurar: 0.7, caixas: Object.freeze({ '16:9': null, '9:16': null }),
 });
 
 /** Quanto tempo uma fala fica no ecrã depois da última palavra, se a seguinte não começar antes. */
 export const SEGURAR_MS = 700;
+/** As escolhas de quanto cada fala fica depois da última palavra, em segundos (0,7 é o de sempre). */
+export const SEGURAR_S = [0.7, 1.5, 2.5, 4];
+export const segurarMs = (l) => (SEGURAR_S.includes(Number(l?.segurar)) ? Number(l.segurar) * 1000 : SEGURAR_MS);
 /** Quanto uma fala anda por cada toque nos botões da lista. */
 export const PASSO_MS = 100;
 /**
@@ -70,6 +74,9 @@ export function limparLegenda(o) {
     nome: l.nome === true,
     idioma: IDIOMAS.includes(l.idioma) ? l.idioma : LEGENDA_OMISSAO.idioma,
     traduzir: l.traduzir === true,
+    segurar: SEGURAR_S.includes(Number(l.segurar)) ? Number(l.segurar) : LEGENDA_OMISSAO.segurar,
+    // Onde a pessoa pôs a caixa arrastando, por formato (null = o lugar de `posicao`).
+    caixas: limparCaixas(l.caixas, { min: 0.15 }),
   };
 }
 
@@ -332,7 +339,7 @@ export function linhasNoPedaco(tr, deMs, ateMs) {
  * A fala no ecrã no instante `ms`: a última que já começou, enquanto não passar `SEGURAR_MS` do fim
  * dela nem começar a seguinte. -1 quando não há nenhuma.
  */
-export function linhaNoInstante(tr, ms) {
+export function linhaNoInstante(tr, ms, segurar = SEGURAR_MS) {
   const linhas = tr?.linhas;
   if (!linhas?.length || !Number.isFinite(ms)) return -1;
   let lo = 0;
@@ -343,7 +350,7 @@ export function linhaNoInstante(tr, ms) {
   }
   const k = lo - 1;
   if (k < 0) return -1;
-  const fim = linhas[k].palavras.at(-1).ate + SEGURAR_MS;
+  const fim = linhas[k].palavras.at(-1).ate + segurar;
   const seguinte = linhas[k + 1]?.palavras[0].de ?? Infinity;
   return ms < Math.min(fim, seguinte) ? k : -1;
 }
@@ -414,9 +421,9 @@ const arrumadas = new WeakMap();
  * Devolve `{ k, ecra, atual }` ou null. `atual` é o índice da palavra dita (na fala).
  */
 export function quadroNoInstante(tr, ms, legenda, geo, medir, { nome = '' } = {}) {
-  const k = linhaNoInstante(tr, ms);
-  if (k < 0) return null;
   const l = limparLegenda(legenda);
+  const k = linhaNoInstante(tr, ms, segurarMs(l));
+  if (k < 0) return null;
   const linha = tr.linhas[k];
   const prefixo = l.nome && nome && l.estilo === 'simples' ? `${nome}:` : '';
   const chave = `${l.estilo}|${geo.fonte}|${geo.largura}|${prefixo}`;
@@ -477,7 +484,7 @@ export function geometriaLegenda(alvo, legenda, { formato = '16:9', modo = 'um',
   // No 9:16 a largura é a da zona livre da TikTok, igual dos dois lados do meio para a legenda ficar
   // centrada: sem a coluna de botões da direita (e o mesmo espaço à esquerda).
   const largura = Math.round(W * (vertical ? 1 - 2 * ZONA_TIKTOK.direita : 0.7));
-  const base = { fonte, alturaLinha, linhas, largura };
+  const base = { fonte, alturaLinha, linhas, largura, alto: altoBloco };
   // Em baixo, uns 6% acima do fim da zona livre, onde a TikTok põe a legenda dela.
   const fundo = vertical ? Math.round(H * (1 - ZONA_TIKTOK.baixo - 0.06)) : H - Math.round(H * 0.07);
   const topo = vertical ? Math.round(H * 0.14) : Math.round(H * 0.08);
@@ -486,6 +493,19 @@ export function geometriaLegenda(alvo, legenda, { formato = '16:9', modo = 'um',
     if (pos === 'meio') return { ...base, x: W / 2, y: Math.round(H / 2), ancora: 'meio' };
     return { ...base, x: W / 2, y: fundo, ancora: 'baixo' };
   };
+  const caixa0 = l.caixas[formato];
+  if (caixa0) {
+    // Arrastada pela pessoa: a largura da caixa escala a letra (a de 'tamanho' é a de largura inteira),
+    // e o texto fica centrado no meio da caixa.
+    const f = (caixa0.w * W) / largura;
+    const fonteC = Math.max(10, Math.round(fonte * f));
+    const lh = Math.round(fonteC * (l.estilo === 'simples' ? 1.3 : 1.18));
+    const alto = linhas * lh + (l.nome && l.estilo !== 'simples' ? Math.round(lh * 0.6) : 0);
+    return {
+      fonte: fonteC, alturaLinha: lh, linhas, largura: Math.round(caixa0.w * W), alto,
+      x: Math.round((caixa0.x + caixa0.w / 2) * W), y: Math.round(caixa0.y * H + alto / 2), ancora: 'meio',
+    };
+  }
   if (l.posicao !== 'auto') return em(l.posicao);
   const desejada = em('baixo');
   const caixa = caixaDoChat(alvo, chat, { formato, modo, divisao });
@@ -516,6 +536,25 @@ export function geometriaLegenda(alvo, legenda, { formato = '16:9', modo = 'um',
   const abaixo = { ...desejada, y: Math.round(caixa.y + caixa.altura + margem), ancora: 'cima' };
   if (abaixo.y + altoBloco <= Math.round(H * (1 - ZONA_TIKTOK.baixo))) return abaixo;
   return em('meio');
+}
+
+/**
+ * A caixa da legenda na prévia, em fração do quadro: `{ x, y, w, h }`. A que a pessoa arrastou, ou a
+ * do lugar automático (com a largura inteira, para a letra não mudar no primeiro arrasto).
+ */
+export function retanguloDaLegenda(alvo, legenda, opcoes) {
+  const l = limparLegenda(legenda);
+  const formato = opcoes?.formato || '16:9';
+  const g = geometriaLegenda(alvo, l, opcoes);
+  const topo = g.ancora === 'baixo' ? g.y - g.alto : g.ancora === 'meio' ? g.y - g.alto / 2 : g.y;
+  let largura = g.largura;
+  if (!l.caixas[formato]) {
+    const inteira = alvo.largura * (formato === '9:16' ? 1 - 2 * ZONA_TIKTOK.direita : 0.7);
+    largura = Math.max(largura, Math.round(inteira));
+  }
+  const w = largura / alvo.largura;
+  const x = Math.min(Math.max(0, g.x / alvo.largura - w / 2), 1 - w);
+  return { x, y: topo / alvo.altura, w, h: g.alto / alvo.altura };
 }
 
 // ── o desenho ────────────────────────────────────────────────────────────────

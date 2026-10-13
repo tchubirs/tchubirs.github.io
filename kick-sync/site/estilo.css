@@ -3153,3 +3153,36 @@ dialog.confirmarRecomecar .botoes { display: flex; justify-content: flex-end; ga
 dialog.confirmarRecomecar .apagar { background: var(--perigo); color: #fff; border-color: transparent; }
 /* O guia do TikTok saiu (o dono, 13/10). */
 .zonaTikTok { display: none !important; }
+
+/* As caixas do chat e da legenda nas prévias do "Ajustar clipe" (caixa-previa.js): arrastam-se para mover e
+   têm um puxador em cada canto, como a caixa da webcam. A camada não apanha o rato; só as caixas. */
+.caixasPrevia { position: absolute; inset: 0; pointer-events: none; z-index: 3; }
+.fonteClipe .caixasPrevia { z-index: 6; }
+.caixaPrevia {
+  position: absolute; pointer-events: auto; cursor: move; touch-action: none; box-sizing: border-box;
+  border: 2px dashed var(--tinta); border-radius: var(--r-fio); background: #ffffff0f;
+}
+.caixaPrevia[hidden] { display: none; }
+.caixaPrevia.legenda { border-color: var(--ok); background: var(--ok-eco); }
+.caixaPrevia:focus-visible { outline: 2px solid var(--acento-alto); outline-offset: 2px; }
+.caixaPrevia .puxar { background: var(--tinta); }
+.caixaPrevia.legenda .puxar { background: var(--ok); }
+.caixaPrevia .etiquetaCaixa {
+  position: absolute; top: 2px; left: 2px; padding: 0 5px; border-radius: var(--r-fio); pointer-events: none;
+  font: 600 var(--t-micro)/1.6 var(--letra-mono); background: var(--tinta); color: var(--sup-0);
+}
+.caixaPrevia.legenda .etiquetaCaixa { background: var(--ok); }
+/* A dica de arrastar e o botão de voltar ao automático, numa linha só, a toda a largura da grelha. */
+body.mesa .arrastarDica { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2) var(--e3); }
+body.mesa .arrastarDica .nota { margin: 0; flex: 1 1 18em; font-size: var(--t-menor); color: var(--tinta-2); }
+body.mesa .arrastarDica button { min-height: 36px; }
+body.mesa .legendaCima { display: grid; }
+body.mesa .chatCores { grid-column: 1 / -1; }
+body.mesa .legendaCor .amostra.verde { background: #69DB7C; }
+body.mesa .legendaCor .amostra.rosa { background: #F783AC; }
+body.mesa .legendaCor .amostra.arco { background: conic-gradient(#ff6b6b, #ffd43b, #69db7c, #4dabf7, #b197fc, #ff6b6b); }
+/* O campo para escrever quem morreu, na linha das fichas da kill. */
+.vitEscrever { display: inline-flex; align-items: center; gap: 4px; }
+.vitNome { width: 12em; min-height: 26px; padding: 0 var(--e2); font-size: var(--t-menor); }
+.vitAnotar { min-height: 26px; padding: 0 var(--e3); font-size: var(--t-menor); }
+.vit.vitTexto { display: inline-flex; align-items: center; gap: 4px; }
