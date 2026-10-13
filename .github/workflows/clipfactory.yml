@@ -10,14 +10,30 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "run (produz+publica) ou track (só mede)"
+        description: "o que executar"
         type: choice
-        options: [run, track, doctor]
+        options: [run, track, money, doctor]
         default: run
       dry_run:
         description: "renderiza mas não publica"
         type: boolean
         default: false
+      retry_publishing:
+        description: "reabre uma publicação interrompida depois de conferir o destino"
+        type: boolean
+        default: false
+      money_clip:
+        description: "ID do clipe para confirmar pagamento (modo money)"
+        required: false
+      money_to:
+        description: "novo estado: PENDENTE, ELEGIVEL, RETIDO, LIQUIDADO, SACADO ou ESTORNADO"
+        required: false
+      money_usd:
+        description: "valor confirmado em US$ (opcional)"
+        required: false
+      money_reason:
+        description: "observação da confirmação"
+        required: false
 
 concurrency:
   group: clipfactory
@@ -55,8 +71,12 @@ jobs:
           mkdir -p state
           if git ls-remote --exit-code --heads origin clipfactory-state >/dev/null 2>&1; then
             git fetch origin clipfactory-state --depth 1
-            git show origin/clipfactory-state:ledger.db > state/ledger.db 2>/dev/null \
-              || echo "branch existe mas sem ledger ainda"
+            if git cat-file -e origin/clipfactory-state:ledger.db 2>/dev/null; then
+              git show origin/clipfactory-state:ledger.db > state/ledger.db
+            else
+              echo "branch existe mas não contém ledger.db; não vou criar um banco vazio por cima"
+              exit 1
+            fi
           else
             echo "primeira execução — ledger novo"
           fi
@@ -78,6 +98,7 @@ jobs:
           fi
 
       - name: Pré-voo
+        if: github.event.inputs.mode != 'money'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
@@ -86,7 +107,7 @@ jobs:
         run: clipfactory doctor
 
       - name: Produzir e publicar
-        if: github.event.inputs.mode != 'track' && github.event.inputs.mode != 'doctor' && github.event.schedule != '40 23 * * *'
+        if: github.event.inputs.mode != 'track' && github.event.inputs.mode != 'money' && github.event.inputs.mode != 'doctor' && github.event.schedule != '40 23 * * *'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
@@ -99,17 +120,35 @@ jobs:
         run: |
           EXTRA=""
           if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then EXTRA="--dry-run"; fi
+          if [ "${{ github.event.inputs.retry_publishing }}" = "true" ]; then EXTRA="$EXTRA --retry-publishing"; fi
           clipfactory run $EXTRA
 
       - name: Medir views e regras de morte
         id: track
-        if: always() && github.event.inputs.mode != 'doctor'
+        if: always() && github.event.inputs.mode != 'doctor' && github.event.inputs.mode != 'money'
         continue-on-error: true
         env:
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
         run: clipfactory track | tee $GITHUB_STEP_SUMMARY
+
+      - name: Confirmar pagamento pelo celular
+        if: github.event.inputs.mode == 'money'
+        env:
+          MONEY_CLIP: ${{ github.event.inputs.money_clip }}
+          MONEY_TO: ${{ github.event.inputs.money_to }}
+          MONEY_USD: ${{ github.event.inputs.money_usd }}
+          MONEY_REASON: ${{ github.event.inputs.money_reason }}
+        run: |
+          if [ -z "$MONEY_CLIP" ] || [ -z "$MONEY_TO" ]; then
+            echo "::error::Informe money_clip e money_to no formulário do GitHub."
+            exit 1
+          fi
+          args=(money --clip "$MONEY_CLIP" --to "$MONEY_TO")
+          if [ -n "$MONEY_USD" ]; then args+=(--usd "$MONEY_USD"); fi
+          if [ -n "$MONEY_REASON" ]; then args+=(--reason "$MONEY_REASON"); fi
+          clipfactory "${args[@]}" | tee $GITHUB_STEP_SUMMARY
 
       - name: Gravar ledger de volta
         if: always()
@@ -118,6 +157,7 @@ jobs:
           git config user.name  "clipfactory"
           git config user.email "clipfactory@users.noreply.github.com"
           cd "$GITHUB_WORKSPACE"
+          LEDGER_BASE=$(git rev-parse origin/clipfactory-state 2>/dev/null || true)
           TMP=$(mktemp -d); cp clipfactory/state/ledger.db "$TMP/ledger.db"
           git checkout --orphan clipfactory-state-tmp
           git rm -rf --cached . >/dev/null 2>&1 || true
@@ -125,7 +165,11 @@ jobs:
           cp "$TMP/ledger.db" ledger.db
           git add ledger.db
           git commit -q -m "ledger $(date -u +%FT%TZ)" || exit 0
-          git push -f origin clipfactory-state-tmp:clipfactory-state
+          if [ -n "$LEDGER_BASE" ]; then
+            git push --force-with-lease="refs/heads/clipfactory-state:$LEDGER_BASE" origin clipfactory-state-tmp:clipfactory-state
+          else
+            git push origin clipfactory-state-tmp:clipfactory-state
+          fi
 
       # A regra de morte sai com código 3. O job fica vermelho de propósito:
       # é assim que o dono recebe o e-mail do GitHub avisando que algo travou.

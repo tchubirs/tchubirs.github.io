@@ -1303,6 +1303,7 @@ const TEXTOS = {
     'retrato.motivoParou': 'o vídeo parou de andar',
     'retrato.motivoVazio': 'o gravador não entregou nada',
     'retrato.motivoSemImagem': 'o vídeo do canal não carregou',
+    'retrato.motivoSemSom': 'o vídeo não entregou áudio para a gravação',
     // deteccao
     'montagem.margemVitima': 'quem morreu',
     'auto.falhados': ' ({n} trechos não vieram da Kick: rode de novo para ouvir esses também)',
@@ -2676,6 +2677,7 @@ const TEXTOS = {
     'retrato.motivoParou': 'the video stopped moving',
     'retrato.motivoVazio': 'the recorder produced nothing',
     'retrato.motivoSemImagem': 'the channel video did not load',
+    'retrato.motivoSemSom': 'the video did not provide audio for the recording',
     // deteccao
     'montagem.margemVitima': 'who died',
     'auto.falhados': ' ({n} stretches did not come from Kick: run it again to hear those too)',
@@ -4049,6 +4051,7 @@ const TEXTOS = {
     'retrato.motivoParou': 'el vídeo dejó de moverse',
     'retrato.motivoVazio': 'el grabador no entregó nada',
     'retrato.motivoSemImagem': 'el vídeo del canal no cargó',
+    'retrato.motivoSemSom': 'el vídeo no entregó audio para la grabación',
     // deteccao
     'montagem.margemVitima': 'quién murió',
     'auto.falhados': ' ({n} tramos no llegaron de Kick: vuelve a correrla para escuchar esos también)',

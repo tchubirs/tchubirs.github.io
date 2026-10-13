@@ -474,6 +474,60 @@ async function provarFormatos({
 /** A extensão que combina com o tipo. */
 export const extensaoDe = (tipo) => (String(tipo).startsWith('video/mp4') ? 'mp4' : 'webm');
 
+function semSom(causa) {
+  return Object.assign(new Error('o vídeo não tem uma faixa de áudio para gravar'), {
+    name: 'SEM-SOM', cause: causa || undefined,
+  });
+}
+
+/**
+ * Captura a faixa de áudio do vídeo, esperando a faixa quando o browser a
+ * publica só depois de começar a tocar. A gravação vertical usa `exigirSom`;
+ * os chamadores que aceitam vídeo mudo podem deixar a opção desligada.
+ */
+export async function capturarSom(video, { esperaMs = 1000, sinal } = {}) {
+  if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
+  let stream;
+  try {
+    stream = video.captureStream?.() || video.mozCaptureStream?.();
+  } catch (e) {
+    throw semSom(e);
+  }
+  const faixas = () => (stream?.getAudioTracks?.() || []).filter((f) => f.readyState !== 'ended');
+  if (faixas().length) return { stream, faixas: faixas() };
+  if (!stream?.addEventListener) throw semSom();
+
+  return await new Promise((resolve, reject) => {
+    let acabou = false;
+    const limpar = () => {
+      clearTimeout(relogio);
+      stream.removeEventListener?.('addtrack', ver);
+      sinal?.removeEventListener?.('abort', cancelar);
+    };
+    const terminar = (fn, valor) => {
+      if (acabou) return;
+      acabou = true;
+      limpar();
+      fn(valor);
+    };
+    const ver = () => {
+      const audio = faixas();
+      if (audio.length) terminar(resolve, { stream, faixas: audio });
+    };
+    const cancelar = () => {
+      for (const faixa of stream.getTracks?.() || []) faixa.stop?.();
+      terminar(reject, new DOMException('cancelado', 'AbortError'));
+    };
+    const relogio = setTimeout(() => {
+      for (const faixa of stream.getTracks?.() || []) faixa.stop?.();
+      terminar(reject, semSom());
+    }, esperaMs);
+    stream.addEventListener('addtrack', ver);
+    sinal?.addEventListener?.('abort', cancelar, { once: true });
+    ver();
+  });
+}
+
 /** Quanto a gravação espera que o salto do vídeo aterre (ver `gravar`). */
 export const ESPERA_PROCURA_MS = 15_000;
 
@@ -530,6 +584,7 @@ export function noSitio(video, { esperaMs = 2000 } = {}) {
  * @param {(p: {feito: number, total: number, emPausa?: boolean}) => void} [opcoes.aoProgresso]
  * @param {AbortSignal} [opcoes.sinal]
  * @param {Document} [opcoes.pagina] - quem diz se o separador está à vista
+ * @param {boolean} [opcoes.exigirSom] - recusa o arquivo quando não há faixa de áudio
  * @returns {Promise<{blob: Blob, tipo: string, extensao: string, gravadoS?: number}>}
  *   `gravadoS` só quando o vídeo do canal acabou antes do fim do clipe
  */
@@ -542,6 +597,7 @@ export async function gravar(video, {
   criarTela = () => document.createElement('canvas'),
   MR = globalThis.MediaRecorder,
   pagina = globalThis.document,
+  exigirSom = false,
   // A cadência da fonte (a da playlist da Kick). Sem ela, 30.
   fps: fpsPedido,
 } = {}) {
@@ -560,6 +616,11 @@ export async function gravar(video, {
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
 
+  // O salto tem de aterrar antes de capturar o elemento. Em MSE/HLS, pedir a
+  // captura antes disso pode publicar primeiro só a faixa de vídeo.
+  await noSitio(video, { esperaMs: ESPERA_PROCURA_MS });
+  if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
+
   const fps = fpsDaFonte(fpsPedido);
   // Um frame por pincelada, pedido à mão (`requestFrame`), quando o browser sabe. Com `captureStream(fps)`
   // o Chrome atira fora o frame que chega antes de passar 1/fps desde o anterior, e o relógio de pintar
@@ -571,10 +632,6 @@ export async function gravar(video, {
   // O som vem do vídeo, quando o browser o deixa sair. Sem isto o retrato sai
   // mudo, e um clipe de Rust mudo não vale nada — o tiro É o clipe.
   let somDoVideo = null;
-  try {
-    somDoVideo = video.captureStream?.() || video.mozCaptureStream?.();
-    for (const faixa of somDoVideo?.getAudioTracks?.() || []) fluxo.addTrack(faixa);
-  } catch { /* sem som: o vídeo continua a valer, o silêncio não o impede */ }
   // As faixas de captura vivem até alguém as parar. Sem isto, cada 9:16
   // deixava uma tela de 1080x1920 e uma captura do vídeo presas na memória
   // até a página fechar, e numa montagem com quarenta kills isso acumulava.
@@ -591,16 +648,7 @@ export async function gravar(video, {
 
   // O frame certo ANTES de medir seja o que for: `inicio` lido em cima de uma
   // procura a meio é a posição de onde ele veio, não a do início do clipe.
-  //
-  // Quinze segundos e não os dois de omissão: depois de um salto o vídeo tem
-  // de ir buscar um pedaço inteiro de 1080p60 (perto de 11 MB), e a menos de
-  // ~40 Mbit/s isso leva mais de dois segundos. Desistir aos dois gravava o
-  // frame velho, que é exactamente o lixo que esta espera existe para tirar.
-  await noSitio(video, { esperaMs: ESPERA_PROCURA_MS });
-  // Cancelado durante a espera: o ouvinte do `abort` só se pendura mais à
-  // frente, e um sinal que já disparou não volta a disparar para ninguém.
-  if (sinal?.aborted) { soltarFaixas(); throw new DOMException('cancelado', 'AbortError'); }
-  const inicio = video.currentTime;
+  let inicio = video.currentTime;
   // A conta dos frames: quantas vezes a tela foi pintada, contra quantas a duração gravada pedia.
   let desenhados = 0;
   let maiorFeitoS = 0;
@@ -753,6 +801,27 @@ export async function gravar(video, {
     // 0,27 s medidos no ficheiro dele. Uma pincelada antes de gravar custa um
     // frame e o clipe passa a começar na imagem certa.
     pincelar();
+    if (exigirSom) {
+      try {
+        // No Chrome a faixa de áudio de um elemento MSE pode nascer junto com a
+        // primeira reprodução. A tela já foi pintada para que o primeiro frame
+        // do arquivo continue sendo o certo, mesmo enquanto esperamos o som.
+        await video.play?.().catch?.(() => {});
+        const som = await capturarSom(video, { sinal });
+        somDoVideo = som.stream;
+        for (const faixa of som.faixas) fluxo.addTrack(faixa);
+        if (!(fluxo.getAudioTracks?.().length > 0)) throw semSom();
+        inicio = video.currentTime;
+      } catch (e) {
+        if (e.name === 'AbortError') throw e;
+        throw e.name === 'SEM-SOM' ? e : semSom(e);
+      }
+    } else {
+      try {
+        somDoVideo = video.captureStream?.() || video.mozCaptureStream?.();
+        for (const faixa of somDoVideo?.getAudioTracks?.() || []) fluxo.addTrack(faixa);
+      } catch { /* vídeo mudo é permitido pelos chamadores de teste */ }
+    }
     gravador.start();
     await video.play().catch(() => {});
     // Escondida enquanto o `play()` esperava: o vídeo e o gravador já estão em

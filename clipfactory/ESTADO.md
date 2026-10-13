@@ -11,7 +11,7 @@ Não é opinião: é a saída de `pytest` e de `clipfactory doctor` corridos nes
 | yt-dlp | OK |
 | anthropic | OK |
 | google-api-client | OK |
-| `ANTHROPIC_API_KEY` | falta — sem ela a escolha do trecho cai para heurística, que é pior |
+| `ANTHROPIC_API_KEY` | falta — sem ela a execução normal para; heurística só com `--heuristic` |
 | **YouTube OAuth** | **falta — é o único que bloqueia a execução** |
 | Instagram | falta (opcional) |
 

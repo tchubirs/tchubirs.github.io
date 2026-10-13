@@ -4918,6 +4918,7 @@ function motivoDoRetrato(e) {
     'GRAVACAO-PARADA': 'retrato.motivoParou',
     'GRAVACAO-VAZIA': 'retrato.motivoVazio',
     'SEM-IMAGEM': 'retrato.motivoSemImagem',
+    'SEM-SOM': 'retrato.motivoSemSom',
   }[e?.name];
   return chave ? t(chave) : (e?.message || String(e));
 }
@@ -5062,6 +5063,7 @@ async function renderizarGravado(linha, clipe, { deitado = false, sinal, aoProgr
       duracaoS: (clipe.ateMs - clipe.deMs) / 1000,
       formato,
       fps,
+      exigirSom: true,
       sinal,
       aoProgresso,
     });
@@ -6327,6 +6329,7 @@ async function guardarRetrato({ deitado = false, simples = null } = {}) {
       }),
       duracaoS,
       formato,
+      exigirSom: true,
       sinal: controlo.signal,
       aoProgresso: ({ feito, total, emPausa }) => {
         if (!aindaEste()) return;
@@ -7130,6 +7133,7 @@ async function guardarAngulos(modo) {
     const { blob, extensao } = await gravarAngulos(abertos.map((a) => a.v), {
       plano,
       formato,
+      exigirSom: true,
       somDe: Math.max(0, ouvido),
       fps: c.fonteFps,
       aoSom: (i, tS) => trocas.push({ canal: canais[i], tS }),

@@ -19,7 +19,9 @@
 // aí que um erro passa calado: meio pixel fora da fonte é uma barra preta na beira que ninguém vê na
 // pré-visualização.
 
-import { RETRATO, formatoQueFunciona, extensaoDe, noSitio, bitsDoVideo, fpsDaFonte, BITS_SOM } from './retrato.js';
+import {
+  RETRATO, formatoQueFunciona, extensaoDe, noSitio, bitsDoVideo, fpsDaFonte, BITS_SOM, capturarSom,
+} from './retrato.js';
 
 /** O 16:9 do modo seguido. */
 export const DEITADO = Object.freeze({ largura: 1920, altura: 1080 });
@@ -211,6 +213,7 @@ export async function gravarAngulos(videos, {
   MR = globalThis.MediaRecorder,
   Contexto = globalThis.AudioContext,
   aoSom = () => {},
+  exigirSom = false,
 } = {}) {
   if (!plano || !Array.isArray(videos) || videos.length < plano.canais.length) {
     throw new RangeError('falta um vídeo para cada ângulo do plano');
@@ -233,6 +236,7 @@ export async function gravarAngulos(videos, {
   const fluxo = tela.captureStream(manual ? 0 : fps);
   const faixaVideo = manual ? fluxo.getVideoTracks?.()[0] : null;
   // A mistura só faz falta quando o som muda de ângulo durante o clipe: no seguido com mais de um.
+  if (!mudo) await Promise.all(videos.map((v) => v.play?.().catch?.(() => {})));
   const mistura = !mudo && plano.modo === 'seguido' && plano.canais.length > 1
     ? await misturador(videos.slice(0, plano.canais.length), { Contexto }) : null;
   let somAtual = -1;
@@ -251,15 +255,27 @@ export async function gravarAngulos(videos, {
     try {
       const i = videos[somDe] ? somDe : 0;
       const v = videos[i];
-      const som = v.captureStream?.() || v.mozCaptureStream?.();
-      for (const faixa of som?.getAudioTracks?.() || []) fluxo.addTrack(faixa);
+      const som = await capturarSom(v, { sinal });
+      for (const faixa of som.faixas) fluxo.addTrack(faixa);
       aoSom(i, 0);
-    } catch { /* sem som: o vídeo continua a valer */ }
+    } catch (e) {
+      if (exigirSom) {
+        if (e.name === 'AbortError') throw e;
+        throw e.name === 'SEM-SOM' ? e
+        : Object.assign(new Error('o vídeo não tem uma faixa de áudio para gravar'), { name: 'SEM-SOM', cause: e });
+      }
+    }
+  }
+  if (!mudo && exigirSom && !(fluxo.getAudioTracks?.().length > 0)) {
+    mistura?.fechar();
+    for (const faixa of fluxo.getTracks?.() || []) faixa.stop?.();
+    throw Object.assign(new Error('o vídeo não tem uma faixa de áudio para gravar'), { name: 'SEM-SOM' });
   }
   try {
     return await gravarFluxo(videos, { plano, fluxo, tipo, ctx, sinal, aoProgresso, MR, trocarSom, fps, faixaVideo });
   } finally {
     mistura?.fechar();
+    for (const faixa of fluxo.getTracks?.() || []) faixa.stop?.();
   }
 }
 

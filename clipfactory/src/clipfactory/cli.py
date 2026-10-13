@@ -6,6 +6,7 @@ import hashlib
 import json
 import sys
 import traceback
+from datetime import datetime, timezone
 from pathlib import Path
 
 from . import config as cfgmod
@@ -26,8 +27,10 @@ def _clip_id(campaign_id: str, start: float, end: float, source: str = "") -> st
 
 def cmd_doctor(args) -> int:
     from . import doctor
-    doctor.run()
-    return 0
+    checks = doctor.run()
+    blocking = [name for name, ok in checks.items()
+                if not ok and "opcional" not in name]
+    return 1 if blocking else 0
 
 
 def cmd_run(args) -> int:
@@ -41,6 +44,16 @@ def cmd_run(args) -> int:
     ledger = Ledger(args.ledger)
     work = Path(args.workdir)
 
+    if not args.force:
+        from .track import evaluate_kill_rules
+        verdict = evaluate_kill_rules(cfg, ledger)
+        if verdict.halt:
+            print("✗ Execução bloqueada pelas regras de morte:")
+            for reason in verdict.reasons:
+                print(f"  • {reason}")
+            print("Use `--force` só depois de investigar e corrigir a causa.")
+            return 3
+
     print(f"▶ Campanha: {camp.name or camp.id}  (CPM US$ {camp.cpm_usd})")
     print(f"  Licença registrada: {camp.source.license_note[:80]}")
 
@@ -49,6 +62,9 @@ def cmd_run(args) -> int:
     for u, motivo in mat.ignorados:
         print(f"  ignorado: {u[:66]} → {motivo.splitlines()[0][:60]}")
     print(f"  {len(mat.fontes)} fonte(s) de vídeo")
+    if not mat.fontes:
+        print("  Nenhuma fonte de vídeo utilizável foi baixada.")
+        return 2
 
     print("▶ Selecionando trechos…")
     # O orçamento de clipes é da execução, não de cada fonte: numa pasta com 20
@@ -72,7 +88,10 @@ def cmd_run(args) -> int:
             ledger.add_cost(camp.id, "claude.select", sel.cost_usd,
                             f"{sel.input_tokens}in/{sel.output_tokens}out")
         except Exception as e:
-            print(f"  ! seleção por IA indisponível ({e}). Caindo para heurística.")
+            if not args.heuristic:
+                print(f"  ✗ seleção por IA indisponível ({e}). Execução abortada; nada será publicado.")
+                return 1
+            print(f"  ! modo heurístico explícito ({e}).")
             sel = select_heuristic(media.segments, n=por_fonte,
                                    min_s=cfg.production.clip_seconds_min,
                                    max_s=cfg.production.clip_seconds_max)
@@ -90,7 +109,18 @@ def cmd_run(args) -> int:
 
     for i, (media, pick) in enumerate(escolhas, 1):
         cid = _clip_id(camp.id, pick.start_s, pick.end_s, media.url)
-        ledger.add_clip(cid, camp.id, source_url=media.url or camp.source.url,
+        source_url = media.url or camp.source.url
+        existing = ledger.get_clip(cid)
+        if existing and existing["state"] == "PUBLICANDO" and args.retry_publishing:
+            ledger.set_clip(cid, state="FALHOU", notes="nova tentativa autorizada pelo operador")
+            existing = ledger.get_clip(cid)
+        if existing and existing["state"] in ("PUBLICANDO", "PUBLICADO"):
+            print(f"\n  [{i}/{len(escolhas)}] {cid} já está {existing['state']}; pulando para não duplicar.")
+            continue
+        if ledger.has_overlap(camp.id, source_url, pick.start_s, pick.end_s):
+            print(f"\n  [{i}/{len(escolhas)}] {cid} sobrepõe um clipe já registrado; pulando.")
+            continue
+        ledger.add_clip(cid, camp.id, source_url=source_url,
                         start_s=pick.start_s, end_s=pick.end_s, hook=pick.hook)
         print(f"\n  [{i}/{len(escolhas)}] {cid}  "
               f"{pick.start_s:.1f}→{pick.end_s:.1f}s  score {pick.score}")
@@ -119,44 +149,76 @@ def cmd_run(args) -> int:
                 print("        (dry-run: não publicado)")
                 continue
 
+            ledger.set_clip(cid, state="PUBLICANDO")
+            destinos = 0
+            publicou = False
             ycfg = (cfg.publish.get("youtube") or {})
-            if ycfg.get("enabled", True):
+            if ycfg.get("enabled", False):
+                destinos += 1
                 from .publish.youtube import upload_short
                 vid = upload_short(
                     r.path, title=meta.title, description=desc,
                     tags=meta.hashtags,
-                    privacy=ycfg.get("privacy", "public"),
+                    privacy=ycfg.get("privacy", "private"),
                     category_id=str(ycfg.get("category_id", "24")),
                     synthetic_content=bool(
                         ycfg.get("synthetic_content_disclosure", False)),
                 )
-                ledger.set_clip(cid, state="PUBLICADO", youtube_video_id=vid,
-                                published_at=__import__("datetime").datetime.now(
-                                    __import__("datetime").timezone.utc
-                                ).isoformat(timespec="seconds"))
+                ledger.set_clip(cid, youtube_video_id=vid)
                 print(f"        YouTube: https://youtube.com/shorts/{vid}")
-                published += 1
+                publicou = True
 
             icfg = (cfg.publish.get("instagram") or {})
             if icfg.get("enabled", False):
+                destinos += 1
                 from .publish.hosting import publish_temp_url, remove_temp
                 from .publish.instagram import publish_reel
-                url, asset_id = publish_temp_url(r.path)
+                asset_id = None
                 try:
+                    url, asset_id = publish_temp_url(r.path)
                     caption = f"{meta.description}\n\n" + " ".join(
                         f"#{h}" for h in meta.hashtags)
-                    mid = publish_reel(url, caption,
-                                       share_to_feed=icfg.get("share_to_feed", True))
-                    ledger.set_clip(cid, instagram_media_id=mid)
-                    print(f"        Instagram: {mid}")
+                    try:
+                        mid = publish_reel(url, caption,
+                                           share_to_feed=icfg.get("share_to_feed", True))
+                    except Exception as e:
+                        ledger.set_clip(cid, notes=f"Instagram falhou: {str(e)[:400]}")
+                        ledger.event(cid, "instagram.erro", {"erro": str(e)[:800]})
+                        print(f"        ! Instagram falhou; o que já publicou continua registrado: {e}")
+                    else:
+                        ledger.set_clip(cid, instagram_media_id=mid)
+                        print(f"        Instagram: {mid}")
+                        publicou = True
                 finally:
-                    remove_temp(asset_id)
+                    if asset_id:
+                        try:
+                            remove_temp(asset_id)
+                        except Exception as e:
+                            ledger.event(cid, "instagram.limpeza_erro", {"erro": str(e)[:800]})
+                            print(f"        ! não consegui apagar o arquivo temporário do Instagram: {e}")
+
+            if not destinos:
+                ledger.set_clip(cid, state="FALHOU", notes="nenhum destino de publicação está habilitado")
+                raise RuntimeError("nenhum destino de publicação está habilitado")
+            if not publicou:
+                raise RuntimeError("nenhum destino conseguiu publicar o clipe")
+            if publicou:
+                ledger.set_clip(
+                    cid, state="PUBLICADO",
+                    published_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                )
+                published += 1
 
         except Exception as e:
             failed += 1
-            ledger.set_clip(cid, state="FALHOU", notes=str(e)[:500])
+            estado = ledger.get_clip(cid)
+            estado_falha = "PUBLICANDO" if estado and estado["state"] == "PUBLICANDO" else "FALHOU"
+            ledger.set_clip(cid, state=estado_falha, notes=str(e)[:500])
             ledger.event(cid, "erro", {"erro": str(e)[:800]})
-            print(f"        ✗ FALHOU: {e}")
+            if estado_falha == "PUBLICANDO":
+                print(f"        ✗ publicação incerta: {e}. Não vou repetir automaticamente; use --retry-publishing após conferir o destino.")
+            else:
+                print(f"        ✗ FALHOU: {e}")
             if args.verbose:
                 traceback.print_exc()
 
@@ -203,6 +265,11 @@ def cmd_money(args) -> int:
 
 
 def main(argv=None) -> int:
+    # O console do Windows ainda pode abrir em cp1252; os estados e símbolos
+    # exibidos pelo CLI são UTF-8 e não devem derrubar o comando antes da ação.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
     p = argparse.ArgumentParser("clipfactory",
                                 description="Fábrica de clipes licenciados.")
     p.add_argument("--config", default="config.yaml")
@@ -218,6 +285,10 @@ def main(argv=None) -> int:
                    help="renderiza e escreve texto, mas não publica")
     r.add_argument("--heuristic", action="store_true",
                    help="não usa a API do Claude na seleção")
+    r.add_argument("--force", action="store_true",
+                   help="ignora as regras de morte; só use após investigar")
+    r.add_argument("--retry-publishing", action="store_true",
+                   help="reabre publicações interrompidas após conferir se não saíram")
     r.add_argument("--attribution", default="",
                    help="linha de crédito à fonte, exigida por vários briefs")
 

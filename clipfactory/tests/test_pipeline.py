@@ -217,6 +217,22 @@ def test_mesmo_minuto_em_videos_diferentes_da_ids_diferentes():
     assert _clip_id("camp", 0.0, 30.0, "https://drive/AAA") == a
 
 
+def test_ledger_reconhece_clipe_publicando_e_sobreposicao(tmp_path):
+    L = Ledger(tmp_path / "l.db")
+    L.add_clip("c", "camp", source_url="u", start_s=10, end_s=30, hook="h")
+    L.set_clip("c", state="PUBLICANDO")
+    assert L.get_clip("c")["state"] == "PUBLICANDO"
+    assert L.has_overlap("camp", "u", 20, 40)
+    assert not L.has_overlap("camp", "u", 30, 40)
+
+
+def test_ledger_nao_bloqueia_novamente_um_clipe_que_falhou(tmp_path):
+    L = Ledger(tmp_path / "l.db")
+    L.add_clip("c", "camp", source_url="u", start_s=10, end_s=30, hook="h")
+    L.set_clip("c", state="FALHOU")
+    assert not L.has_overlap("camp", "u", 20, 25)
+
+
 # ── A configuração ──
 
 def test_config_aceita_uma_url_ou_uma_lista():

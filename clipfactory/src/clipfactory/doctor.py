@@ -28,7 +28,7 @@ def run(verbose: bool = True) -> dict:
 
     checks["ANTHROPIC_API_KEY"] = (
         bool(os.environ.get("ANTHROPIC_API_KEY")),
-        "sem ela a seleção cai para heurística (pior)",
+        "sem ela `run` para; use `--heuristic` só como exceção consciente",
     )
     yt = all(os.environ.get(k) for k in
              ("YOUTUBE_CLIENT_ID", "YOUTUBE_CLIENT_SECRET", "YOUTUBE_REFRESH_TOKEN"))
@@ -44,7 +44,7 @@ def run(verbose: bool = True) -> dict:
             print(f"  [{_ok(ok)}] {name:26} {'' if ok else '← ' + note}")
         blockers = [n for n, (ok, _) in checks.items()
                     if not ok and "opcional" not in n
-                    and n not in ("ANTHROPIC_API_KEY",)]
+                    ]
         print()
         if blockers:
             print(f"  Bloqueiam a execução: {', '.join(blockers)}")

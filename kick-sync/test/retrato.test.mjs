@@ -8,7 +8,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   RETRATO, enquadramentoInicial, limitar, destinos, desenhar, melhorFormato, extensaoDe, FORMATOS,
-  formatoQueFunciona,
+  formatoQueFunciona, capturarSom,
   reformar, proporcaoDoQuadro, limparDivisao, DIVISAO_MIN, DIVISAO_MAX, DIVISAO_OMISSAO,
   divisaoDoQuadro, encaixar, gravar, noSitio,
 } from '../site/retrato.js';
@@ -410,6 +410,47 @@ test('um video que nao anda rebenta, em vez de dar uma foto', async () => {
     (e) => e.name === 'GRAVACAO-PARADA',
     'tinha de recusar em vez de devolver uma imagem parada',
   );
+});
+
+test('a captura espera a faixa de áudio que chega depois do primeiro play', async () => {
+  const ouvintes = new Set();
+  const faixa = { readyState: 'live' };
+  const stream = {
+    getAudioTracks: () => ouvintes.faixas || [],
+    addEventListener: (_n, f) => ouvintes.add(f),
+    removeEventListener: (_n, f) => ouvintes.delete(f),
+  };
+  const feito = capturarSom({ captureStream: () => stream }, { esperaMs: 50 });
+  ouvintes.faixas = [faixa];
+  for (const f of ouvintes) f();
+  const r = await feito;
+  assert.equal(r.stream, stream);
+  assert.deepEqual(r.faixas, [faixa]);
+});
+
+test('o exportador que exige som recusa vídeo sem faixa antes de começar', async () => {
+  const v = {
+    videoWidth: 1920, videoHeight: 1080, currentTime: 10, readyState: 4,
+    play: async () => {}, pause: () => {}, captureStream: () => ({ getAudioTracks: () => [] }),
+  };
+  const ctx = { drawImage() {}, fillRect() {}, clearRect() {}, save() {}, restore() {} };
+  const tela = {
+    width: 0, height: 0, getContext: () => ctx,
+    captureStream: () => ({ addTrack() {}, getAudioTracks: () => [], getTracks: () => [] }),
+  };
+  let arrancou = false;
+  class MRFalso {
+    constructor() { this.state = 'inactive'; }
+    start() { arrancou = true; this.state = 'recording'; }
+  }
+  await assert.rejects(
+    () => gravar(v, {
+      rects: [{ x: 0, y: 0, largura: 1080, altura: 1080 }], duracaoS: 1,
+      formato: 'video/webm', criarTela: () => tela, MR: MRFalso, exigirSom: true,
+    }),
+    (e) => e.name === 'SEM-SOM',
+  );
+  assert.equal(arrancou, false, 'não pode começar a gerar um arquivo mudo');
 });
 
 // "Acabei de fazer outro, deu várias falhas."

@@ -93,6 +93,22 @@ clipfactory track                    # views, dinheiro, regras de morte
 clipfactory money --list             # onde está cada centavo
 ```
 
+### Operação pelo celular
+
+O workflow `clipfactory` também pode ser executado em **Actions → Run
+workflow**, sem terminal:
+
+- `run`: produz e publica respeitando o ledger;
+- `track`: consulta views e aplica as regras de morte;
+- `doctor`: mostra o que ainda falta configurar;
+- `money`: registra confirmação de pagamento com `clip`, destino e valor.
+
+Uma falha da seleção por Claude interrompe a execução para não publicar um
+clipe que não atende ao brief. `--heuristic` existe como exceção consciente;
+use-o somente quando aceitar essa perda de controle. Se uma publicação cair em
+`PUBLICANDO`, confira o destino antes de marcar uma nova tentativa com
+`--retry-publishing`; isso evita duplicatas depois de um timeout.
+
 Quando a plataforma confirmar pagamento, você registra — a máquina **nunca**
 inventa que recebeu:
 

@@ -167,3 +167,55 @@ test('o clipe de vários ângulos grava o som de quem está na tela, e troca com
   assert.deepEqual(erros, []);
   await p.close();
 });
+
+test('o export vertical recusa silêncio e entrega áudio no Blob', { ...semNavegador, timeout: 90_000 }, async () => {
+  const { p, erros } = await abrir();
+  await kickFalsa(p);
+  await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+  const resultado = await p.evaluate(async () => {
+    const cv = document.createElement('canvas');
+    cv.width = 320; cv.height = 180;
+    const cx = cv.getContext('2d');
+    const ac = new AudioContext();
+    const osc = ac.createOscillator();
+    osc.frequency.value = 440;
+    const destino = ac.createMediaStreamDestination();
+    osc.connect(destino);
+    osc.start();
+    const stream = new MediaStream([
+      ...cv.captureStream(30).getVideoTracks(),
+      ...destino.stream.getAudioTracks(),
+    ]);
+    const rec = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp8,opus' });
+    const partes = [];
+    rec.ondataavailable = (e) => partes.push(e.data);
+    const pintar = setInterval(() => { cx.fillStyle = '#234'; cx.fillRect(0, 0, 320, 180); }, 33);
+    rec.start();
+    await new Promise((ok) => setTimeout(ok, 2500));
+    await new Promise((ok) => { rec.onstop = ok; rec.stop(); });
+    clearInterval(pintar);
+    ac.close();
+
+    const video = document.createElement('video');
+    video.src = URL.createObjectURL(new Blob(partes, { type: 'video/webm' }));
+    video.muted = false;
+    video.volume = 0;
+    await new Promise((ok, mal) => { video.onloadedmetadata = ok; video.onerror = mal; });
+    const { gravar } = await import('/retrato.js');
+    const tela = document.createElement('canvas');
+    const saida = await gravar(video, {
+      modo: 'inteiro', alvo: { largura: 320, altura: 180 }, duracaoS: 1,
+      formato: 'video/webm;codecs=vp8,opus', criarTela: () => tela,
+      exigirSom: true, pagina: document,
+    });
+    const som = await new AudioContext().decodeAudioData(await saida.blob.arrayBuffer());
+    const dados = som.getChannelData(0);
+    let energia = 0;
+    for (let i = 0; i < dados.length; i++) energia += dados[i] ** 2;
+    return { duracao: som.duration, rms: Math.sqrt(energia / dados.length) };
+  });
+  assert.ok(resultado.duracao > 0.7, `o Blob não trouxe duração de áudio: ${resultado.duracao}`);
+  assert.ok(resultado.rms > 0.02, `o Blob trouxe só silêncio: RMS ${resultado.rms}`);
+  assert.deepEqual(erros, []);
+  await p.close();
+});

@@ -39,7 +39,7 @@ ALLOWED: dict[str, set[str]] = {
     "ESTORNADO": set(),
 }
 
-CLIP_STATES = ("PLANEJADO", "RENDERIZADO", "PUBLICADO", "FALHOU", "REMOVIDO")
+CLIP_STATES = ("PLANEJADO", "RENDERIZADO", "PUBLICANDO", "PUBLICADO", "FALHOU", "REMOVIDO")
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS clips (
@@ -136,6 +136,25 @@ class Ledger:
         self.db.execute(f"UPDATE clips SET {cols} WHERE id=?",
                         (*fields.values(), clip_id))
         self.db.commit()
+
+    def get_clip(self, clip_id: str):
+        """Lê um clipe pelo id, para o executor poder ser repetido sem duplicar posts."""
+        return self.db.execute(
+            "SELECT * FROM clips WHERE id=?", (clip_id,)
+        ).fetchone()
+
+    def has_overlap(self, campaign_id: str, source_url: str,
+                    start_s: float, end_s: float) -> bool:
+        """Diz se o mesmo trecho da mesma fonte já está publicado ou em andamento."""
+        row = self.db.execute(
+            """SELECT 1 FROM clips
+               WHERE campaign_id=? AND source_url=?
+                 AND state IN ('PUBLICANDO','PUBLICADO')
+                 AND start_s < ? AND end_s > ?
+               LIMIT 1""",
+            (campaign_id, source_url, end_s, start_s),
+        ).fetchone()
+        return row is not None
 
     def advance_money(self, clip_id: str, to_state: str, *,
                       usd: float | None = None, reason: str = "") -> None:
