@@ -10,9 +10,9 @@ import { kickFalsa } from './falsa.mjs';
 import { montarPalco, podeCorrer } from './palco.mjs';
 import {
   ladrilhos, sobreposicao, semRepetidos, juntarRostos, caixaDaWebcam, instantesDoClipe, degrauDoRosto,
-  rostoGuardado, guardarRosto, abrirDetector, procurarRosto, CHAVE_ROSTOS, FOLGA_ROSTO,
+  rostoGuardado, guardarRosto, abrirDetector, procurarRosto, CHAVE_ROSTOS, FOLGA_ROSTO, bordasDaWebcam, cinzaDoQuadro,
 } from '../site/rosto.js';
-import { proporcaoDoQuadro, DIVISAO_OMISSAO } from '../site/retrato.js';
+import { proporcaoDoQuadro, DIVISAO_OMISSAO, divisaoDoQuadro } from '../site/retrato.js';
 import { TODOS, BYTES_TOTAL } from '../site/rosto-arquivos.js';
 
 let PORTA = 0;
@@ -188,6 +188,150 @@ test('a procura lê os quadros um a um e pára quando se cancela', async () => {
   await assert.rejects(procurarRosto({
     instantes: [1, 2, 3], quadro: async () => { ctl.abort(); return { tela }; }, detector, criarImagem, sinal: ctl.signal,
   }), { name: 'AbortError' });
+});
+
+// ── a borda da webcam: quadros em cinza fingidos ─────────────────────────────
+
+const GW = 480;
+const GH = 270;
+
+/**
+ * Um quadro de jogo que muda a cada vez (blocos e riscas de outro tom) com a webcam parada por cima:
+ * `cam` {x0,y0,x1,y1} em píxeis do quadro, com moldura escura de 2 px e um disco claro (o rosto) que
+ * mexe um pouco. `fixo` desenha uma risca horizontal parada de um HUD (fora da webcam).
+ */
+function quadroFalso(semente, { cam, rosto, fixo = null }) {
+  const cinza = new Uint8Array(GW * GH);
+  let s = semente * 2654435761 >>> 0;
+  const rnd = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+  // O jogo: blocos de 24 px de tons que mudam de quadro para quadro, e a grelha também anda.
+  const oy = Math.floor(rnd() * 24);
+  const ox = Math.floor(rnd() * 24);
+  for (let by = -oy; by < GH; by += 24) {
+    for (let bx = -ox; bx < GW; bx += 24) {
+      const v = Math.round(40 + rnd() * 170);
+      for (let y = Math.max(0, by); y < Math.min(GH, by + 24); y++) for (let x = Math.max(0, bx); x < Math.min(GW, bx + 24); x++) cinza[y * GW + x] = v;
+    }
+  }
+  if (fixo) for (let y = fixo.y; y < fixo.y + 3; y++) for (let x = 0; x < GW; x++) cinza[y * GW + x] = 250;
+  if (cam) {
+    for (let y = cam.y0; y < cam.y1; y++) {
+      for (let x = cam.x0; x < cam.x1; x++) {
+        const moldura = x < cam.x0 + 2 || x >= cam.x1 - 2 || y < cam.y0 + 2 || y >= cam.y1 - 2;
+        cinza[y * GW + x] = moldura ? 15 : 95;
+      }
+    }
+  }
+  if (rosto) {
+    const dx = Math.round((rnd() - 0.5) * 3);
+    for (let y = rosto.cy - rosto.r; y <= rosto.cy + rosto.r; y++) {
+      for (let x = rosto.cx - rosto.r + dx; x <= rosto.cx + rosto.r + dx; x++) {
+        if ((x - rosto.cx - dx) ** 2 + (y - rosto.cy) ** 2 <= rosto.r ** 2) cinza[y * GW + x] = 210;
+      }
+    }
+  }
+  return { largura: GW, altura: GH, cinza };
+}
+
+const quadrosFalsos = (n, opcoes) => Array.from({ length: n }, (_, i) => quadroFalso(i + 1, opcoes));
+const emFraccao = (cx, cy, r) => ({ x: (cx - r) / GW, y: (cy - r) / GH, largura: (2 * r) / GW, altura: (2 * r) / GH });
+
+test('a webcam com moldura no meio do quadro: acha as quatro bordas, e o jogo que se mexe não engana', () => {
+  const cam = { x0: 300, y0: 60, x1: 440, y1: 150 };
+  const rosto = { cx: 370, cy: 105, r: 22 };
+  const w = bordasDaWebcam(quadrosFalsos(5, { cam, rosto }), emFraccao(rosto.cx, rosto.cy, rosto.r));
+  assert.ok(w, 'não achou a webcam');
+  assert.deepEqual(w.lados, { esq: 'linha', dir: 'linha', cima: 'linha', baixo: 'linha' });
+  // Por dentro da moldura (de 2 px), a uns 3 px da borda de fora, no máximo.
+  assert.ok(perto(w.x * GW, cam.x0 + 3, 3), `esquerda ${w.x * GW}`);
+  assert.ok(perto((w.x + w.largura) * GW, cam.x1 - 3, 3), `direita ${(w.x + w.largura) * GW}`);
+  assert.ok(perto(w.y * GH, cam.y0 + 3, 3), `cima ${w.y * GH}`);
+  assert.ok(perto((w.y + w.altura) * GH, cam.y1 - 3, 3), `baixo ${(w.y + w.altura) * GH}`);
+});
+
+test('a webcam encostada ao canto: os lados na borda da tela contam, e a risca parada do HUD não ganha', () => {
+  const cam = { x0: 0, y0: 170, x1: 150, y1: 270 };
+  const rosto = { cx: 75, cy: 220, r: 24 };
+  // Uma risca de HUD parada acima da webcam, mais perto do rosto do que a borda de cima nunca é: fica fora.
+  const w = bordasDaWebcam(quadrosFalsos(5, { cam, rosto, fixo: { y: 100 } }), emFraccao(rosto.cx, rosto.cy, rosto.r));
+  assert.ok(w, 'não achou a webcam');
+  assert.equal(w.lados.dir, 'linha');
+  assert.equal(w.lados.cima, 'linha');
+  assert.ok(perto(w.y * GH, cam.y0 + 3, 3), `cima ${w.y * GH}`);
+  assert.ok(perto((w.x + w.largura) * GW, cam.x1 - 3, 3), `direita ${(w.x + w.largura) * GW}`);
+  assert.ok(w.x * GW <= 4, `esquerda ${w.x * GW}`);
+  assert.ok((w.y + w.altura) * GH >= GH - 6, `baixo ${(w.y + w.altura) * GH}`);
+
+  // Sem moldura nos lados que tocam a tela (só jogo e webcam), esses dois lados encostam na tela.
+  const solta = quadrosFalsos(5, { cam: { x0: 0, y0: 170, x1: 150, y1: 270 }, rosto }).map((q) => {
+    for (let y = 170; y < 270; y++) for (let x = 0; x < 2; x++) q.cinza[y * GW + x] = 95;
+    for (let y = 268; y < 270; y++) for (let x = 0; x < 150; x++) q.cinza[y * GW + x] = 95;
+    return q;
+  });
+  const w2 = bordasDaWebcam(solta, emFraccao(rosto.cx, rosto.cy, rosto.r));
+  assert.ok(w2);
+  assert.equal(w2.lados.esq, 'tela');
+  assert.equal(w2.lados.baixo, 'tela');
+  assert.equal(w2.x, 0);
+  assert.equal(w2.y + w2.altura, 1);
+});
+
+test('a faixa de cima ganha a proporção da webcam achada', () => {
+  const cam = { x0: 300, y0: 60, x1: 440, y1: 150 };
+  const rosto = { cx: 370, cy: 105, r: 22 };
+  const w = bordasDaWebcam(quadrosFalsos(5, { cam, rosto }), emFraccao(rosto.cx, rosto.cy, rosto.r));
+  // Em píxeis de um 1920x1080: a proporção do recorte é a da faixa de cima, que sai da divisão.
+  const rect = { x: w.x * 1920, y: w.y * 1080, largura: w.largura * 1920, altura: w.altura * 1080 };
+  const d = divisaoDoQuadro(rect, 0);
+  assert.ok(d > 0.15 && d < 0.85);
+  assert.ok(perto(proporcaoDoQuadro('dois', 0, d), rect.largura / rect.altura, 0.01));
+});
+
+test('sem moldura nenhuma (só o rosto num jogo que se mexe), ou com poucos quadros, não inventa webcam', () => {
+  const rosto = { cx: 240, cy: 135, r: 22 };
+  const f = emFraccao(rosto.cx, rosto.cy, rosto.r);
+  assert.equal(bordasDaWebcam(quadrosFalsos(5, { cam: null, rosto }), f), null);
+  assert.equal(bordasDaWebcam(quadrosFalsos(1, { cam: { x0: 300, y0: 60, x1: 440, y1: 150 }, rosto }), f), null);
+  assert.equal(bordasDaWebcam([], f), null);
+  assert.equal(bordasDaWebcam(quadrosFalsos(5, { cam: null, rosto }), null), null);
+});
+
+test('um quadro de tamanho diferente ou uma tela que não se lê ficam de fora, sem rebentar', () => {
+  assert.equal(cinzaDoQuadro({ width: 1280, height: 720 }, { criarTela: () => null }), null);
+  assert.equal(cinzaDoQuadro({ width: 0, height: 0 }), null);
+  const cam = { x0: 300, y0: 60, x1: 440, y1: 150 };
+  const rosto = { cx: 370, cy: 105, r: 22 };
+  const bons = quadrosFalsos(4, { cam, rosto });
+  const outro = { largura: 100, altura: 50, cinza: new Uint8Array(5000) };
+  assert.ok(bordasDaWebcam([...bons, outro], emFraccao(rosto.cx, rosto.cy, rosto.r)));
+});
+
+test('a procura devolve a webcam inteira junto do rosto, e ela fica guardada com ele', async () => {
+  const cam = { x0: 300, y0: 60, x1: 440, y1: 150 };
+  const rosto = { cx: 370, cy: 105, r: 22 };
+  const quadros = quadrosFalsos(5, { cam, rosto });
+  let i = 0;
+  const tela = { width: 1280, height: 720 };
+  const criarImagem = async (_t, x, y, w, h, o) => ({ x, y, w, h, k: o.resizeWidth / w });
+  const real = { x: (rosto.cx - rosto.r) * (1280 / GW), y: (rosto.cy - rosto.r) * (720 / GH), largura: 2 * rosto.r * (1280 / GW), altura: 2 * rosto.r * (720 / GH) };
+  const detector = {
+    detectar: async (img) => (real.x >= img.x && real.y >= img.y && real.x + real.largura <= img.x + img.w && real.y + real.altura <= img.y + img.h
+      ? [{ x: (real.x - img.x) * img.k, y: (real.y - img.y) * img.k, largura: real.largura * img.k, altura: real.altura * img.k, nota: 0.9 }] : []),
+  };
+  const r = await procurarRosto({
+    instantes: [1, 2, 3, 4, 5], quadro: async () => ({ tela }), detector, criarImagem, cinza: () => quadros[i++],
+  });
+  assert.ok(r.rosto.webcam, 'sem a webcam no resultado');
+  assert.ok(perto(r.rosto.webcam.x * GW, cam.x0 + 2, 3));
+  assert.ok(r.rosto.webcam.largura > r.rosto.largura * 2);
+  const dados = new Map();
+  const armazem = { getItem: (k) => dados.get(k) ?? null, setItem: (k, v) => dados.set(k, String(v)) };
+  guardarRosto('tchubi', r.rosto, armazem);
+  const volta = rostoGuardado('tchubi', armazem);
+  assert.deepEqual(volta.webcam, r.rosto.webcam);
+  // Uma webcam estragada no armazém é esquecida, o rosto fica.
+  dados.set(CHAVE_ROSTOS, JSON.stringify({ tchubi: { x: 0.1, y: 0.1, largura: 0.1, altura: 0.1, webcam: { x: 'a' } } }));
+  assert.deepEqual(rostoGuardado('tchubi', armazem), { x: 0.1, y: 0.1, largura: 0.1, altura: 0.1 });
 });
 
 // ── no navegador ────────────────────────────────────────────────────────────

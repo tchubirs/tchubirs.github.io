@@ -1233,6 +1233,11 @@
       <button id="voltarListaClipe" class="voltarLista" type="button"><svg class="ic ic-p ic-esq" aria-hidden="true"><use href="#i-seta"/></svg><span data-t="simples.voltarLista">Voltar para a lista</span></button>
       <button id="fecharClipe" data-t-titulo="clipe.fechar" title="fechar"><svg class="ic" aria-hidden="true"><use href="#i-fechar"/></svg></button>
     </div>
+    <!-- Enquanto grava, o editor está trancado: este aviso diz porquê e deixa parar (aviso de gravação, app.js). -->
+    <div id="avisoGravando" class="avisoGravando" role="status" aria-live="polite" hidden>
+      <span id="avisoGravandoTexto"></span>
+      <button id="pararGravandoClipe" type="button" data-t="clipe.parar">Parar</button>
+    </div>
     <!-- O editor do retrato, ao lado da fonte — como no da Twitch que ele
          mandou. À esquerda o vídeo deitado com as caixas de enquadramento por
          cima; à direita o 9:16 a sério, pintado em tempo real. -->

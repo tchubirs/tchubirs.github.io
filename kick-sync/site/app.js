@@ -58,7 +58,7 @@ import { criarZip, crc32 } from './zip.js';
 import { retencaoDoCanal, prazoDoVod, ordemDeGuardar } from './prazo.js';
 import { eDoJogo } from './jogo.js';
 import { fcpxmlMulticam, textoDoPacote, linkDoVod } from './pacote.js';
-import { queFazerComOLeitor } from './leitor.js';
+import { queFazerComOLeitor, limitarSaltos } from './leitor.js';
 import { criarApanhador } from './frames.js';
 import { varrerNoite, custoVarrerMB } from './procurar-momentos.js';
 import { alertasDoCanal } from './alertas.js';
@@ -1339,11 +1339,12 @@ function pintarFaixas() {
     g.querySelector('.trilho').onclick = (e) => irAoClique(e, null);
     alvo.append(g);
   }
+  let fila = 0;
   for (const linha of estado.linhas) {
     const nudge = estado.nudges[linha.slug] || 0;
     const f = document.createElement('div');
     const outro = foraDoJogo(linha.slug);
-    f.className = outro ? 'faixa outroJogo' : 'faixa';
+    f.className = `faixa${outro ? ' outroJogo' : ''}${fila++ % 2 ? ' par' : ''}`;
     f.dataset.slug = linha.slug;
     f.dataset.quem = linha.slug;
     f.innerHTML = `<button type="button" class="nome" data-quem="${escapar(linha.slug)}" aria-expanded="false" `
@@ -2304,13 +2305,12 @@ function pintarAgulha() {
 
 /** Arrastar pela cabeça ou pela barra: o ponteiro vira um instante pela conta da agulha. */
 function ligarAgulha() {
-  const irAoPonteiro = (e) => {
+  const msDoPonteiro = (e) => {
     const vista = vistaAgora();
-    if (!vista) return;
+    if (!vista) return null;
     const eixo = eixoDoTempo();
     const f = Math.min(1, Math.max(0, (e.clientX - eixo.left) / eixo.width));
-    largarPrevia();
-    irPara(Math.round(vista.inicio + (vista.fim - vista.inicio) * f));
+    return Math.round(vista.inicio + (vista.fim - vista.inicio) * f);
   };
   const agarrar = (el) => {
     el.addEventListener('pointerdown', (e) => {
@@ -2319,13 +2319,26 @@ function ligarAgulha() {
       $('barra').focus({ preventScroll: true });
       try { el.setPointerCapture(e.pointerId); } catch { /* um ponteiro sintético não se prende */ }
       $('cursor').classList.add('aArrastar');
-      irAoPonteiro(e);
-      const mover = (m) => irAoPonteiro(m);
+      largarPrevia();
+      // Arrastando, a agulha e a hora andam já com o rato, mas os vídeos só saltam uns 4 vezes por
+      // segundo; ao largar, salta-se para o ponto exato.
+      const saltos = limitarSaltos(irPara);
+      let ultimoMs = msDoPonteiro(e);
+      saltos.pedir(ultimoMs);
+      const mover = (m) => {
+        const ms = msDoPonteiro(m);
+        if (ms == null) return;
+        ultimoMs = ms;
+        estado.agoraMs = ms;
+        pintarRelogio(ms);
+        saltos.pedir(ms);
+      };
       const largar = () => {
         $('cursor').classList.remove('aArrastar');
         el.removeEventListener('pointermove', mover);
         el.removeEventListener('pointerup', largar);
         el.removeEventListener('pointercancel', largar);
+        if (ultimoMs != null) saltos.fechar(ultimoMs);
       };
       el.addEventListener('pointermove', mover);
       el.addEventListener('pointerup', largar);
@@ -6013,12 +6026,28 @@ function avisarWebcam(texto) {
   el.hidden = !texto;
 }
 
+/** O aviso de achada: diz se a caixa pegou a câmera inteira ou só o rosto. */
+const avisoAchada = (rosto, canal) => t(rosto.webcam ? 'retrato.webcamAchada' : 'retrato.rostoAchado', { canal });
+
 /** Pôr a caixa 1 à volta de um rosto (em fracções da fonte). */
 function aplicarRosto(c, rosto) {
   const fonte = fonteDoClipe();
-  const caixa = caixaDaWebcam(rosto, fonte, c.divisao);
-  if (!caixa) return false;
-  c.rects[0] = caixa;
+  // Com as bordas da webcam achadas, a caixa é ela inteira e a faixa de cima ganha a proporção dela;
+  // sem elas, a caixa à volta do rosto, como antes.
+  const w = rosto.webcam;
+  const cam = w ? {
+    x: w.x * fonte.largura, y: w.y * fonte.altura, largura: w.largura * fonte.largura, altura: w.altura * fonte.altura,
+  } : null;
+  const divisao = cam ? divisaoDoQuadro(cam, 0) : null;
+  if (cam && divisao != null) {
+    c.divisao = divisao;
+    c.rects = reformar([cam, c.rects[1]], { modo: 'dois', divisao, fonte });
+    pintarDivisor();
+  } else {
+    const caixa = caixaDaWebcam(rosto, fonte, c.divisao);
+    if (!caixa) return false;
+    c.rects[0] = caixa;
+  }
   c.rectsFonte = { ...fonte };
   c.origem = 'rosto';
   lembrarEncaixe();
@@ -6040,7 +6069,7 @@ async function proporWebcam({ forcar = false } = {}) {
   // Já procurado (nesta sessão ou noutra): sem ler quadro nenhum.
   if (!forcar) {
     const memo = estado.rostos.has(canal) ? estado.rostos.get(canal) : rostoGuardado(canal);
-    if (memo) { if (aplicarRosto(c, memo)) avisarWebcam(t('retrato.rostoAchado', { canal })); return; }
+    if (memo) { if (aplicarRosto(c, memo)) avisarWebcam(avisoAchada(memo, canal)); return; }
     if (estado.rostos.has(canal)) { avisarWebcam(t('retrato.rostoNada', { canal })); return; }
   }
   c.rostoBusca?.abort();
@@ -6073,7 +6102,7 @@ async function proporWebcam({ forcar = false } = {}) {
     if (estado.clipe !== c || c.canal !== canal || c.modo !== 'dois' || c.aGravar) return;
     if (!rosto) { avisarWebcam(t('retrato.rostoNada', { canal })); return; }
     if (JSON.stringify(c.rects[0]) !== antes) { avisarWebcam(''); return; }
-    avisarWebcam(aplicarRosto(c, rosto) ? t('retrato.rostoAchado', { canal }) : t('retrato.rostoNada', { canal }));
+    avisarWebcam(aplicarRosto(c, rosto) ? avisoAchada(rosto, canal) : t('retrato.rostoNada', { canal }));
   } catch (e) {
     if (e?.name === 'AbortError' || controlo.signal.aborted) return;
     if (estado.clipe === c && c.canal === canal) avisarWebcam(t('retrato.rostoErro'));
@@ -6288,6 +6317,7 @@ async function guardarRetrato({ deitado = false, simples = null } = {}) {
       sinal: controlo.signal,
       aoProgresso: ({ feito, total, emPausa }) => {
         if (!aindaEste()) return;
+        pintarAvisoGravando(feito);
         simples?.aoProgresso?.({ feito, total });
         $('estadoClipe').textContent = emPausa ? t('retrato.emPausa')
           : deitado ? t('porCima.aGravar', { extras, feito: feito.toFixed(1), total: total.toFixed(1) })
@@ -7059,10 +7089,13 @@ async function guardarAngulos(modo) {
       plano,
       formato,
       somDe: Math.max(0, ouvido),
+      fps: c.fonteFps,
       aoSom: (i, tS) => trocas.push({ canal: canais[i], tS }),
       sinal: controlo.signal,
       aoProgresso: ({ feito, total }) => {
-        if (aindaEste()) $('estadoClipe').textContent = t('angulos.aGravar', { n: canais.length, feito: feito.toFixed(1), total: total.toFixed(1) });
+        if (!aindaEste()) return;
+        pintarAvisoGravando(feito);
+        $('estadoClipe').textContent = t('angulos.aGravar', { n: canais.length, feito: feito.toFixed(1), total: total.toFixed(1) });
       },
     });
     const base = nomeDoClipe({ titulo: $('tituloClipe').value, canal: c.canal, quandoMs: c.deMs });
@@ -7090,7 +7123,16 @@ async function guardarAngulos(modo) {
   }
 }
 
+/** O aviso por cima do editor trancado, com os segundos já gravados. */
+function pintarAvisoGravando(feito = 0) {
+  const c = estado.clipe;
+  const total = c ? Math.round((c.ateMs - c.deMs) / 1000) : 0;
+  $('avisoGravandoTexto').textContent = t('clipe.gravando', { feito: Math.min(total, Math.floor(feito)), total });
+}
+
 function trancarEditor(sim) {
+  $('avisoGravando').hidden = !sim;
+  if (sim) pintarAvisoGravando(0);
   for (const id of ['inicioMenos', 'inicioMais', 'fimMenos', 'fimMais', 'verClipe', 'canalClipe',
     'guardarClipe', 'guardarAjustes', 'modoUm', 'modoDois', 'divisor', 'angulosSeguido', 'angulosEmpilhado',
     'voltarModelo', 'chatClipeLigado', 'chatClipeVida', 'chatClipeAuto', 'chatClipeLinhas', 'chatClipeFundo',
@@ -7131,6 +7173,7 @@ function fecharClipe() {
   v.pause?.();
   v.removeAttribute('src');
   estado.clipe = null;
+  $('avisoGravando').hidden = true;
   esconderDialogo($('modalClipe'));
   if (retomarGrelha && estado.parado) alternarPausa();
 }
@@ -7965,6 +8008,12 @@ function guardarAjustes() {
 }
 $('guardarAjustes').onclick = guardarAjustes;
 $('cancelarClipe').onclick = fecharClipe;
+// Parar a gravação sem fechar o editor: os ajustes voltam e o clipe fica como estava.
+$('pararGravandoClipe').onclick = () => {
+  if (!estado.clipe?.pararGravacao) return;
+  estado.clipe.pararGravacao();
+  $('estadoClipe').textContent = t('clipe.gravacaoParada');
+};
 $('guardarClipe').onclick = () => guardarClipe();
 $('guardarRetrato').onclick = () => guardarRetrato();
 for (const b of document.querySelectorAll('.modoRetrato')) {

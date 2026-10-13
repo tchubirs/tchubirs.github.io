@@ -91,13 +91,17 @@ function gravacaoFalsa(videos) {
   ctx.drawImage = (...a) => { desenhar(...a); for (const v of videos) v.andar(); };
   const fill = ctx.fillRect.bind(ctx);
   ctx.fillRect = (...a) => { fill(...a); if (!videos.some((v) => v.videoWidth)) for (const v of videos) v.andar(); };
-  const tela = { width: 0, height: 0, getContext: () => ctx, captureStream: () => ({ addTrack(f) { faixasNaTela.push(f); } }) };
+  const visto = {};
+  const tela = {
+    width: 0, height: 0, getContext: () => ctx,
+    captureStream: (fps) => { visto.fps = fps; return { addTrack(f) { faixasNaTela.push(f); } }; },
+  };
   class MRFalso {
-    constructor() { this.state = 'inactive'; }
+    constructor(_f, opcoes) { this.state = 'inactive'; visto.bits = opcoes?.videoBitsPerSecond; }
     start() { this.state = 'recording'; }
     stop() { this.state = 'inactive'; this.ondataavailable?.({ data: new Blob(['x']) }); this.onstop?.(); }
   }
-  return { tela, MRFalso, faixasNaTela, ctx };
+  return { tela, MRFalso, faixasNaTela, ctx, visto };
 }
 
 test('a gravação arranca os vídeos juntos, põe o som do ângulo escolhido e acaba no fim do clipe', async () => {
@@ -209,5 +213,20 @@ test('sem Web Audio, ou com o contexto parado, fica o som de um ângulo só, com
       plano: planoDeAngulos({ canais: ['a', 'b'], duracaoS: 0.1 }), formato: 'video/webm', criarTela: () => tela, MR: MRFalso, Contexto,
     });
     assert.deepEqual(faixasNaTela, [{ id: 'somA' }]);
+  }
+});
+
+// O clipe de vários ângulos gravava sempre a 30 fps e 12 Mbps; agora segue a live, com a regra do retrato.
+test('grava na cadência da live e com o débito que combina com ela', async () => {
+  const casos = [[60, 60, 18_000_000], [30, 30, 12_000_000], [undefined, 30, 12_000_000], [59.94, 60, 18_000_000]];
+  for (const [pedido, fps, bits] of casos) {
+    const videos = [videoFalso('A'), videoFalso('B')];
+    const { tela, MRFalso, visto } = gravacaoFalsa(videos);
+    const r = await gravarAngulos(videos, {
+      plano: planoDeAngulos({ canais: ['a', 'b'], duracaoS: 0.1 }), formato: 'video/webm', criarTela: () => tela, MR: MRFalso, fps: pedido,
+    });
+    assert.equal(visto.fps, fps, `captureStream com ${pedido}`);
+    assert.equal(visto.bits, bits, `débito com ${pedido}`);
+    assert.equal(r.fps, fps);
   }
 });

@@ -11,7 +11,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { queFazerComOLeitor } from '../site/leitor.js';
+import { queFazerComOLeitor, limitarSaltos } from '../site/leitor.js';
 
 const q = (correr, parado, pausado) => queFazerComOLeitor({ correr, parado, pausado });
 
@@ -51,4 +51,65 @@ test('as oito combinacoes estao todas decididas', () => {
     }
   }
   assert.equal(vistos.size, 8);
+});
+
+// Arrastar a agulha: no máximo uns 4 saltos por segundo, o último pedido ganha, e ao largar salta-se certo.
+function relogioFalso() {
+  let agora = 0;
+  let fila = [];
+  return {
+    relogio: () => agora,
+    agendar: (f, ms) => { const t = { f, em: agora + ms }; fila.push(t); return t; },
+    cancelar: (t) => { fila = fila.filter((x) => x !== t); },
+    avancar(ms) {
+      agora += ms;
+      for (const t of fila.filter((x) => x.em <= agora)) { fila = fila.filter((x) => x !== t); t.f(); }
+    },
+  };
+}
+
+test('arrastando: o primeiro pedido salta já, os seguintes esperam e só o último corre', () => {
+  const r = relogioFalso();
+  const feitos = [];
+  const s = limitarSaltos((ms) => feitos.push(ms), { minimoMs: 250, ...r });
+  s.pedir(1000);
+  s.pedir(2000);
+  s.pedir(3000);
+  assert.deepEqual(feitos, [1000]);
+  r.avancar(100);
+  s.pedir(4000);
+  r.avancar(149);
+  assert.deepEqual(feitos, [1000]);
+  r.avancar(1);
+  assert.deepEqual(feitos, [1000, 4000]);
+});
+
+test('sessenta pedidos num segundo viram uns 4 saltos', () => {
+  const r = relogioFalso();
+  let n = 0;
+  const s = limitarSaltos(() => { n++; }, { minimoMs: 250, ...r });
+  for (let i = 0; i < 60; i++) { s.pedir(i * 100); r.avancar(1000 / 60); }
+  r.avancar(300);
+  assert.ok(n >= 4 && n <= 6, `saltos: ${n}`);
+});
+
+test('ao largar salta ao ponto exato e cancela o que estava à espera', () => {
+  const r = relogioFalso();
+  const feitos = [];
+  const s = limitarSaltos((ms) => feitos.push(ms), { minimoMs: 250, ...r });
+  s.pedir(1000);
+  s.pedir(2000);
+  s.fechar(2500);
+  assert.deepEqual(feitos, [1000, 2500]);
+  r.avancar(1000);
+  assert.deepEqual(feitos, [1000, 2500], 'o pedido pendente não corre depois de largar');
+});
+
+test('largar no mesmo ponto que já saltou não repete o salto', () => {
+  const r = relogioFalso();
+  const feitos = [];
+  const s = limitarSaltos((ms) => feitos.push(ms), { minimoMs: 250, ...r });
+  s.pedir(1000);
+  s.fechar(1000);
+  assert.deepEqual(feitos, [1000]);
 });
