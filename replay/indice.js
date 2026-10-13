@@ -24,7 +24,7 @@
  * mais longa é cortada onde as marcas deixam, e cada pedaço é uma luta).
  */
 
-import { CALIBRACAO, VERSAO_CALIBRACAO, confianca } from './calibracao.js?v=78c992b68e';
+import { CALIBRACAO, VERSAO_CALIBRACAO, confianca } from './calibracao.js?v=7e158988ac';
 
 export const VERSAO_INDICE = 1;
 /** Região de tiro com confiança a partir daqui é semente de luta. */
@@ -52,7 +52,7 @@ function evento(tipo, ms, deMs, ateMs, c, extras = {}) {
 }
 
 /** Uma curva que sobe de 0 e fica abaixo de 0,9: para o que ainda não tem exemplo que o meça (grito, chat). */
-const curva = (forca, meio) => Math.min(0.9, forca / (forca + meio));
+export const curva = (forca, meio) => Math.min(0.9, forca / (forca + meio));
 
 /**
  * Do resultado de `varrerNoite` (e do chat, e das mortes) ao índice. `som` é o que `varrerNoite` devolveu (com

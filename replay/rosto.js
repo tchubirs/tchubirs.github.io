@@ -20,7 +20,7 @@
 //
 // A geometria (os ladrilhos, juntar os rostos, a caixa) é pura, para se testar sem navegador.
 
-import { proporcaoDoQuadro, limitar, encaixar, DIVISAO_OMISSAO } from './retrato.js?v=78c992b68e';
+import { proporcaoDoQuadro, limitar, encaixar, DIVISAO_OMISSAO } from './retrato.js?v=7e158988ac';
 
 /** Quantos quadros se olham por canal. */
 export const QUADROS_POR_CANAL = 5;
@@ -145,6 +145,174 @@ export function caixaDaWebcam(rosto, fonte, divisao = DIVISAO_OMISSAO) {
   return limitar(encaixar(solta, fonte).rect, fonte);
 }
 
+// ── a borda da webcam ────────────────────────────────────────────────────────
+//
+// O rosto sozinho dá uma caixa que corta a moldura da webcam (o dono: a caixa tem de pegar a webcam
+// INTEIRA, de borda a borda). A moldura é um retângulo parado por cima de um jogo que se mexe: em vários
+// quadros, as linhas retas (horizontais e verticais) que se repetem em quase todos e ficam à volta do
+// rosto são as bordas dela. O jogo atrás muda de quadro para quadro e as suas arestas somem.
+
+/** Maior largura do quadro em cinza onde se procuram as bordas (3 px do 1280 cabem em 1 aqui). */
+export const LARGURA_BORDAS = 480;
+
+/**
+ * O quadro em tons de cinza, encolhido, para procurar as bordas. `null` quando não se consegue ler
+ * (uma tela suja, um quadro de mentira): a borda é um extra, e sem ela fica a caixa do rosto.
+ */
+export function cinzaDoQuadro(tela, { criarTela = () => globalThis.document?.createElement('canvas') } = {}) {
+  try {
+    if (!(tela?.width > 0 && tela?.height > 0)) return null;
+    const k = Math.min(1, LARGURA_BORDAS / tela.width);
+    const largura = Math.max(1, Math.round(tela.width * k));
+    const altura = Math.max(1, Math.round(tela.height * k));
+    const c = criarTela();
+    if (!c) return null;
+    c.width = largura;
+    c.height = altura;
+    const g = c.getContext('2d', { willReadFrequently: true });
+    g.drawImage(tela, 0, 0, largura, altura);
+    const d = g.getImageData(0, 0, largura, altura).data;
+    const cinza = new Uint8Array(largura * altura);
+    for (let i = 0; i < cinza.length; i++) cinza[i] = (d[i * 4] * 77 + d[i * 4 + 1] * 150 + d[i * 4 + 2] * 29) >> 8;
+    return { largura, altura, cinza };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * A caixa da webcam inteira a partir de uns quadros em cinza e do rosto (em fracção da fonte).
+ *
+ * `quadros`: [{ largura, altura, cinza }] do mesmo tamanho, de instantes diferentes. Uma aresta conta
+ * quando passa do `limiar` em todos os quadros menos um. Para cada lado, a linha reta mais perto do
+ * rosto que cubra a maior parte do trecho (vertical: a altura do rosto; horizontal: a largura da caixa
+ * já achada). Sem linha, e com a borda da tela perto do rosto, a caixa encosta nela (as webcams vivem
+ * nos cantos). Com menos de três lados, ou uma caixa que não parece uma webcam, devolve `null`.
+ *
+ * @returns {{x:number,y:number,largura:number,altura:number,lados:object}|null} em fracção da fonte
+ */
+export function bordasDaWebcam(quadros, rosto, { limiar = 10, cobertura = 0.8 } = {}) {
+  const q = (quadros || []).filter((f) => f?.cinza && f.largura > 8 && f.altura > 8);
+  if (q.length < 2 || !rosto) return null;
+  const { largura: W, altura: H } = q[0];
+  const usados = q.filter((f) => f.largura === W && f.altura === H);
+  if (usados.length < 2) return null;
+  const faltaPouco = usados.length >= 4 ? 1 : 0;
+  const preciso = usados.length - faltaPouco;
+
+  // Arestas que se repetem: PV = vertical (muda para os lados), PH = horizontal (muda para cima e baixo).
+  const PV = new Uint8Array(W * H);
+  const PH = new Uint8Array(W * H);
+  for (let y = 1; y < H - 1; y++) {
+    for (let x = 1; x < W - 1; x++) {
+      let v = 0;
+      let h = 0;
+      const i = y * W + x;
+      for (const f of usados) {
+        const c = f.cinza;
+        if (Math.abs(c[i + 1] - c[i - 1]) >= limiar) v++;
+        if (Math.abs(c[i + W] - c[i - W]) >= limiar) h++;
+      }
+      if (v >= preciso) PV[i] = 1;
+      if (h >= preciso) PH[i] = 1;
+    }
+  }
+
+  const fx = rosto.x * W;
+  const fy = rosto.y * H;
+  const fw = rosto.largura * W;
+  const fh = rosto.altura * H;
+  if (!(fw > 2 && fh > 2)) return null;
+  // Quantos pontos da linha `p` (vertical em x, ou horizontal em y) têm aresta, na corrida que passa pelo
+  // ponto `c` do outro eixo: anda para os dois lados enquanto houver aresta (até 2 px de falha seguidos).
+  // Conta só a coluna (ou linha) `p`: uma linha cheia vale mais do que uma cheia de buracos, e uma zona de
+  // textura (o cabelo, uma estante) não ganha por ter arestas espalhadas à volta.
+  const corrida = (vertical, p, c) => {
+    const n = vertical ? H : W;
+    const outro = (vertical ? W : H) - 2;
+    const tem = (t) => (p >= 1 && p <= outro && (vertical ? PV[t * W + p] : PH[p * W + t]) === 1);
+    const lado = (passo) => {
+      let acertos = 0;
+      let falhas = 0;
+      for (let t = Math.round(c); t >= 1 && t <= n - 2; t += passo) {
+        if (tem(t)) { acertos++; falhas = 0; } else if (++falhas > 2) break;
+      }
+      return acertos;
+    };
+    return lado(-1) + lado(1);
+  };
+  // A linha que cobre mais (até `tecto`), e entre as que quase igualam essa, a mais perto de `de`.
+  // Uma aresta de dentro da webcam (a cadeira, a estante) é curta; a borda dela corre a altura toda.
+  // Devolve também a densidade (de 0 a 1) da escolhida.
+  const procurar = (vertical, de, ate, centro, tecto, minimo) => {
+    const passo = ate > de ? 1 : -1;
+    const fim = (vertical ? W : H) - 3;
+    const notas = [];
+    for (let p = Math.round(de); passo > 0 ? p <= ate : p >= ate; p += passo) {
+      if (p < 2 || p > fim) continue;
+      notas.push([p, Math.min(tecto, corrida(vertical, p, centro))]);
+    }
+    const melhor = Math.max(0, ...notas.map((x) => x[1]));
+    if (melhor < minimo) return null;
+    const escolhida = notas.find((x) => x[1] >= melhor * 0.9);
+    return escolhida ? { p: escolhida[0], dens: escolhida[1] / tecto } : null;
+  };
+
+  const lados = { esq: null, dir: null, cima: null, baixo: null };
+  const pos = { esq: null, dir: null, cima: null, baixo: null };
+  const dens = { esq: 0, dir: 0, cima: 0, baixo: 0 };
+  const poe = (lado, r) => { pos[lado] = r ? r.p : null; dens[lado] = r ? r.dens : 0; };
+  const verticais = (centro, tecto, minimo) => {
+    poe('esq', procurar(true, fx - fw * 0.15, fx - fw * 5, centro, tecto, minimo));
+    poe('dir', procurar(true, fx + fw * 1.15, fx + fw * 6, centro, tecto, minimo));
+  };
+  const horizontais = () => {
+    const xa = pos.esq ?? fx;
+    const xb = pos.dir ?? fx + fw;
+    const largo = xb - xa;
+    poe('cima', procurar(false, fy - fh * 0.1, fy - fh * 3, (xa + xb) / 2, largo, largo * cobertura));
+    poe('baixo', procurar(false, fy + fh * 1.1, fy + fh * 4, (xa + xb) / 2, largo, largo * cobertura));
+  };
+  // Primeiro as verticais pela altura do rosto, depois as horizontais pela largura achada, e outra vez as
+  // verticais pela altura da webcam (que é onde a borda dela se separa das arestas de dentro).
+  verticais(fy + fh / 2, fh * 3.5, fh * cobertura);
+  horizontais();
+  const cimaP = pos.cima ?? fy;
+  const baixoP = pos.baixo ?? (H - (fy + fh) <= fh * 1.4 ? H : fy + fh);
+  verticais((cimaP + baixoP) / 2, baixoP - cimaP, (baixoP - cimaP) * cobertura);
+  horizontais();
+  for (const k of Object.keys(pos)) lados[k] = pos[k] != null ? 'linha' : null;
+
+  // A borda da tela a poucos rostos de distância é a borda da webcam, salvo uma linha quase perfeita.
+  const encosta = (lado, perto, tela) => {
+    if (perto && (pos[lado] == null || dens[lado] < 0.95)) { pos[lado] = tela; lados[lado] = 'tela'; }
+  };
+  encosta('esq', fx <= fw * 1.1, 0);
+  encosta('dir', W - (fx + fw) <= fw * 1.1, W);
+  encosta('cima', fy <= fh * 0.9, 0);
+  encosta('baixo', H - (fy + fh) <= fh * 1.4, H);
+
+  const achados = Object.values(pos).filter((v) => v != null).length;
+  if (achados < 3) return null;
+  // Um lado em falta espelha o oposto à volta do rosto.
+  if (pos.esq == null) pos.esq = Math.max(0, 2 * fx + fw - pos.dir);
+  if (pos.dir == null) pos.dir = Math.min(W, 2 * fx + fw - pos.esq);
+  if (pos.cima == null) pos.cima = Math.max(0, 2 * fy + fh - pos.baixo);
+  if (pos.baixo == null) pos.baixo = Math.min(H, 2 * fy + fh - pos.cima);
+
+  // Entra 1 px para dentro das linhas, para não levar o jogo que a moldura deixa passar.
+  const esq = lados.esq === 'linha' ? pos.esq + 1 : pos.esq;
+  const dir = lados.dir === 'linha' ? pos.dir - 1 : pos.dir;
+  const cima = lados.cima === 'linha' ? pos.cima + 1 : pos.cima;
+  const baixo = lados.baixo === 'linha' ? pos.baixo - 1 : pos.baixo;
+  const largura = dir - esq;
+  const altura = baixo - cima;
+  // Menor do que o rosto com folga, ou maior do que a maior parte da tela, não é uma webcam.
+  if (largura < fw * 1.15 || altura < fh * 1.1 || largura > W * 0.7 || altura > H * 0.85) return null;
+  if (esq > fx || dir < fx + fw || cima > fy || baixo < fy + fh) return null;
+  return { x: esq / W, y: cima / H, largura: largura / W, altura: altura / H, lados };
+}
+
 /** Os instantes a olhar dentro do clipe: espalhados, sem as pontas (a entrada e a saída mudam de cena). */
 export function instantesDoClipe(deMs, ateMs, n = QUADROS_POR_CANAL) {
   if (!(ateMs > deMs) || !(n > 0)) return [];
@@ -238,16 +406,24 @@ export async function rostosDoQuadro(tela, detector, { criarImagem = globalThis.
  *
  * @returns {Promise<{rosto: object|null, lidos: number}>}
  */
-export async function procurarRosto({ instantes, quadro, detector, sinal, criarImagem }) {
+export async function procurarRosto({ instantes, quadro, detector, sinal, criarImagem, cinza = cinzaDoQuadro }) {
   const porQuadro = [];
+  const cinzas = [];
   for (const ms of instantes) {
     if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
     const q = await quadro(ms);
     if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
     if (!q?.tela?.width) continue;
     porQuadro.push(await rostosDoQuadro(q.tela, detector, { criarImagem }));
+    // Lido já, antes de o vídeo escondido saltar para outro instante e a tela mudar.
+    const g = cinza(q.tela);
+    if (g) cinzas.push(g);
   }
-  return { rosto: juntarRostos(porQuadro), lidos: porQuadro.length };
+  const rosto = juntarRostos(porQuadro);
+  // A caixa da webcam inteira, quando as bordas se acham; senão fica só o rosto (e a caixa à volta dele).
+  const webcam = rosto ? bordasDaWebcam(cinzas, rosto) : null;
+  if (webcam) rosto.webcam = { x: webcam.x, y: webcam.y, largura: webcam.largura, altura: webcam.altura };
+  return { rosto, lidos: porQuadro.length };
 }
 
 // ── os quadros ───────────────────────────────────────────────────────────────
@@ -346,7 +522,10 @@ export function rostoGuardado(slug, armazem = globalThis.localStorage) {
     const r = todos?.[slug];
     const ok = (n) => Number.isFinite(n) && n >= 0 && n <= 1;
     if (r && ok(r.x) && ok(r.y) && ok(r.largura) && ok(r.altura) && r.largura > 0 && r.altura > 0) {
-      return { x: r.x, y: r.y, largura: r.largura, altura: r.altura };
+      const w = r.webcam;
+      const webcam = w && ok(w.x) && ok(w.y) && ok(w.largura) && ok(w.altura) && w.largura > 0 && w.altura > 0
+        ? { x: w.x, y: w.y, largura: w.largura, altura: w.altura } : null;
+      return { x: r.x, y: r.y, largura: r.largura, altura: r.altura, ...(webcam ? { webcam } : {}) };
     }
   } catch { /* estragado ou sem armazém: procura-se de novo */ }
   return null;
@@ -357,7 +536,9 @@ export function guardarRosto(slug, rosto, armazem = globalThis.localStorage) {
   try {
     const todos = JSON.parse(armazem?.getItem(CHAVE_ROSTOS) || '{}');
     const limpo = todos && typeof todos === 'object' && !Array.isArray(todos) ? todos : {};
+    const w = rosto.webcam;
     limpo[slug] = { x: rosto.x, y: rosto.y, largura: rosto.largura, altura: rosto.altura };
+    if (w) limpo[slug].webcam = { x: w.x, y: w.y, largura: w.largura, altura: w.altura };
     armazem?.setItem(CHAVE_ROSTOS, JSON.stringify(limpo));
   } catch { /* janela privada: fica só nesta sessão */ }
 }

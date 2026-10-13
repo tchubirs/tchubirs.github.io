@@ -10,21 +10,26 @@
 // sempre (abrir o canal, gravar o clipe) chega pela `ponte` que o app.js passa: este arquivo não mexe no
 // estado dele por conta própria.
 
-import { t, tn } from './idiomas.js?v=78c992b68e';
-import { procurarCanais, vodsDoCanal, vodDaKick, slugDoNome } from './kick.js?v=78c992b68e';
+import { t, tn } from './idiomas.js?v=7e158988ac';
+import { procurarCanais, vodsDoCanal, vodDaKick, slugDoNome } from './kick.js?v=7e158988ac';
 import {
   lerEntrada, montarLista, lancesParaLista, nomeDoArquivo, tempoNaLive, NOMES_NO_LANCE, QUANTOS,
   acharVod, guardarVod, mensagensDosPicos, lerUltimo, guardarUltimo,
-} from './simples-lista.js?v=78c992b68e';
-import { varrerNoite } from './procurar-momentos.js?v=78c992b68e';
-import { somDoCanal } from './alinhar.js?v=78c992b68e';
-import { TAXA_TIROS } from './tiros.js?v=78c992b68e';
-import { alertasDoCanal } from './alertas.js?v=78c992b68e';
-import { montarIndice, chaveDoIndice, indiceValido } from './indice.js?v=78c992b68e';
-import { janelasDosPicos, estimarFalta, tempoFalta } from './ouvir.js?v=78c992b68e';
-import { onde } from './relogio.js?v=78c992b68e';
-import { abrirQuadrosEscondidos } from './rosto.js?v=78c992b68e';
-import { escapar } from './escapar.js?v=78c992b68e';
+} from './simples-lista.js?v=7e158988ac';
+import { varrerNoite } from './procurar-momentos.js?v=7e158988ac';
+import { somDoCanal } from './alinhar.js?v=7e158988ac';
+import { TAXA_TIROS } from './tiros.js?v=7e158988ac';
+import { alertasDoCanal } from './alertas.js?v=7e158988ac';
+import { montarIndice, chaveDoIndice, indiceValido } from './indice.js?v=7e158988ac';
+import { janelasDosPicos, estimarFalta, tempoFalta } from './ouvir.js?v=7e158988ac';
+import { onde } from './relogio.js?v=7e158988ac';
+import { abrirQuadrosEscondidos } from './rosto.js?v=7e158988ac';
+import { escapar } from './escapar.js?v=7e158988ac';
+import { tituloDoMomento, etiquetasDoMomento, confExibida, confMedia } from './titulo.js?v=7e158988ac';
+import {
+  lerFiltro, guardarFiltro, limparFiltro, filtroAtivo, filtraAlgo, aplicarFiltro, chipsDoFiltro, semChip, comFala, TIPOS_DO_FILTRO,
+} from './simples-filtro.js?v=7e158988ac';
+import { lerFalas, acharNaLista, melhorFala } from './falas.js?v=7e158988ac';
 
 const CHAVE_MODO = 'povix.modo';
 const CHAVE_VISTO = 'povix.simplesVisto';
@@ -206,10 +211,9 @@ export function quemEstavaNoLance(m) {
   return t('simples.tambem', { nomes: sobra > 0 ? `${nomes}${t('simples.eMais', { n: sobra })}` : nomes });
 }
 
-/** A palavra do nome do arquivo: o que aconteceu de mais forte. */
+/** A palavra do nome do arquivo: o mesmo título do cartão (titulo.js). */
 function palavraDoArquivo(m) {
-  const tipo = ['tiros', 'explosao', 'grito', 'chat'].find((x) => m.tipos.includes(x)) || 'chat';
-  return t(tipo === 'tiros' && m.acertos > 0 ? 'simples.arquivo.pvp' : `simples.arquivo.${tipo}`);
+  return tituloDoMomento(m);
 }
 
 // Os ícones do player da prévia: brancos, sem caixa (o CSS pinta com currentColor).
@@ -262,6 +266,14 @@ export function montarSimples(ponte) {
   let vodAtual = null;
   let inicioGuardado = null;
   const naoQuero = lerNaoQuero();
+  // O filtro da lista (simples-filtro.js), lembrado neste aparelho, e o que o streamer falou em cada momento (falas.js).
+  let filtro = lerFiltro(armazem);
+  let falasLidas = null;
+  const todasFalas = () => (falasLidas ??= lerFalas(armazem));
+  const falaDe = (m) => acharNaLista(todasFalas(), m.canal, m.deMs, m.ateMs)?.linhas || null;
+  // A fala que está sendo lida agora ({ k, controlo, texto }) e o erro da última de cada cartão.
+  let transcrevendo = null;
+  const errosFala = new Map();
   const feitos = new Map();
   const tocaVideo = tocaVideoDaKick();
   const toque = window.matchMedia?.('(pointer: coarse)').matches;
@@ -505,7 +517,7 @@ export function montarSimples(ponte) {
     const atualizar = () => {
       if (minha !== geracao) return;
       const e = ponte.lancesDoEvento();
-      ultimos = lancesParaLista(e.lances, { mensagens: e.mensagens }).map((m) => ({ ...m, nomeCanal: m.canal }));
+      ultimos = lancesParaLista(e.lances, { mensagens: e.mensagens }).map((m) => ({ ...m, nomeCanal: m.canal, etiquetas: etiquetasDoMomento(m) }));
       pintarLista();
       fotografar();
       dizerEstado(e);
@@ -591,7 +603,11 @@ export function montarSimples(ponte) {
       if (k.startsWith(NITIDA)) { fotos.set(k.slice(NITIDA.length), url); nitidas.add(k.slice(NITIDA.length)); } else if (!nitidas.has(k)) fotos.set(k, url);
     }
     if (minha !== geracao) return;
-    ultimos = e.lista || [];
+    // Lista guardada antes do índice por etiqueta: lê o índice da live para dar a cada momento o título e a confiança.
+    const guardada = e.lista || [];
+    const indice = guardada.some((m) => !m.etiquetas) ? await comPrazo(lerIndice(e.slug, e.inicio), 1500, null) : null;
+    if (minha !== geracao) return;
+    ultimos = guardada.map((m) => (m.etiquetas ? m : { ...m, etiquetas: etiquetasDoMomento(m, indice) }));
     if (!tocaVideo) avisar(t('simples.abraNoChrome'));
     pintarLista();
     const n = queridos().length;
@@ -654,8 +670,10 @@ export function montarSimples(ponte) {
       for (const s of guardarVod(armazem, { slug, inicio: linha.inicio, ateMs: vivo.ateMs, ...mais })) { tirarFotos(prefixoDe(s)); tirarIndice(s); }
     };
     let lutas = [];
+    let indiceDaBusca = null;
     const refazer = () => {
-      ultimos = montarLista({ picos, sons, mensagens, limites: vivo, quantos: 60, lutas }).map((m) => ({ ...m, canal: slug }));
+      ultimos = montarLista({ picos, sons, mensagens, limites: vivo, quantos: 60, lutas })
+        .map((m) => ({ ...m, canal: slug, etiquetas: etiquetasDoMomento(m, indiceDaBusca) }));
       pintarLista();
       fotografar();
     };
@@ -741,6 +759,7 @@ export function montarSimples(ponte) {
         ];
         const indice = montarIndice({ slug, inicioMs: linha.inicio, fimMs: vivo.ateMs, som: r, picos });
         lutas = indice.lutas;
+        indiceDaBusca = indice;
         guardarIndice(indice);
         somFeito = true;
         avisar(tocaVideo ? '' : t('simples.abraNoChrome'));
@@ -773,7 +792,139 @@ export function montarSimples(ponte) {
   /** Os que a lista mostra agora: sem os "Excluir", e só até onde o "Mostrar mais" chegou. */
   const queridos = () => ultimos.filter((m) => !naoQuero.has(chave(m)));
   // Na ordem da live, para o streamer seguir a noite, e mais cartões ao rolar até o fim (o dono, 13/10).
-  const visiveis = () => [...queridos()].sort((a, b) => a.ms - b.ms).slice(0, mostrar);
+  // O filtro manda na ordem (a da live é a de omissão) e esconde o que não passa; "Excluir" vale antes dele.
+  const filtrados = () => aplicarFiltro(queridos(), filtro, { falas: falaDe });
+
+  // ── a confiança, a fala e o filtro de cada cartão ─────────────────────
+  /** "Luta 88%" (medida em rótulos) ou "Luta ~70%" (estimativa, com a dica no mouse). */
+  function confHtml(m) {
+    const c = m.doClipe ? null : confExibida(etiquetasDoMomento(m));
+    if (!c) return '';
+    return `<p class="simplesConf"><span class="simplesConfPct${c.estimativa ? ' estimativa' : ''}" tabindex="0" title="${escapar(t(c.estimativa ? 'filtro.estimativa' : 'filtro.medida'))}">${escapar(c.texto)}</span></p>`;
+  }
+
+  /** O que o cartão diz da fala: a frase mais forte entre aspas, ou o botão que lê só este trecho. */
+  function falaHtml(m) {
+    if (m.doClipe) return '';
+    const k = chave(m);
+    const erroDela = errosFala.get(k) ? `<p class="simplesFalaEstado erro">${escapar(t('fala.erro', { motivo: errosFala.get(k) }))}</p>` : '';
+    if (transcrevendo?.k === k) {
+      return `<p class="simplesFalaEstado" role="status">${escapar(transcrevendo.texto)}</p>`
+        + `<button type="button" class="simplesFalaBotao" data-acao="fala">${escapar(t('fala.parar'))}</button>`;
+    }
+    const linhas = falaDe(m);
+    if (linhas) {
+      const frase = melhorFala(linhas, m.ms);
+      return frase ? `<p class="simplesFala">"${escapar(frase)}"</p>` : `<p class="simplesFalaEstado">${escapar(t('fala.nada'))}</p>`;
+    }
+    return `<button type="button" class="simplesFalaBotao" data-acao="fala"${transcrevendo ? ' disabled' : ''}>${escapar(t('fala.ver'))}</button>${erroDela}`;
+  }
+
+  /** "Ver o que ele falou": lê só o trecho deste cartão (o leitor da legenda) e mostra a frase mais forte. */
+  async function verFala(m, li) {
+    const k = chave(m);
+    if (transcrevendo) { if (transcrevendo.k === k) transcrevendo.controlo.abort(); return; }
+    const atual = { k, controlo: new AbortController(), texto: t('fala.lendo') };
+    transcrevendo = atual;
+    errosFala.delete(k);
+    const caixa = () => [...lista.children].find((x) => x.dataset.chave === k)?.querySelector('.simplesFalaCaixa');
+    const pintar = () => { const c = caixa(); if (c) c.innerHTML = falaHtml(m); };
+    const dizerAqui = (texto) => { atual.texto = texto; const e = caixa()?.querySelector('.simplesFalaEstado'); if (e) e.textContent = texto; };
+    const travar = (parado) => { for (const b of lista.querySelectorAll('button[data-acao="fala"]')) if (b.closest('li') !== li) b.disabled = parado; };
+    pintar();
+    travar(true);
+    try {
+      if (!abertoEm(m)) {
+        dizerAqui(t('simples.fase.abrirCanal', { canal: m.nomeCanal || m.canal }));
+        if (!await abrirCanalDoMomento(m)) throw Object.assign(new Error(t('simples.canalNaoAbriu', { canal: m.nomeCanal || m.canal })), { name: 'SEM-PLANO' });
+      }
+      dizerAqui(t('fala.lendo'));
+      await ponte.transcrever(m, {
+        sinal: atual.controlo.signal,
+        aoProgresso: (p) => {
+          if (p.fase === 'baixar') dizerAqui(t('fala.baixando', { mb: Math.max(1, Math.round((p.total || 0) / 1e6)) }));
+          else if (p.fase === 'ouvir') dizerAqui(t('fala.ouvindo', { pct: Math.round((p.fracao || 0) * 100) }));
+          else dizerAqui(t('fala.lendo'));
+        },
+      });
+    } catch (x) {
+      if (x?.name !== 'AbortError') errosFala.set(k, String(ponte.motivoDaFala ? ponte.motivoDaFala(x) : x?.message || x).slice(0, 160).replace(/[.\s]+$/, ''));
+    } finally {
+      transcrevendo = null;
+      falasLidas = null;
+      travar(false);
+      // Com um filtro por palavra ligado a fala nova pode mudar quem passa; sem ele só este cartão muda.
+      if (filtro.palavra) pintarLista(); else pintar();
+    }
+  }
+
+  const painel = $('simplesFiltro');
+  /** O painel mostra o filtro de agora. */
+  function preencherPainel() {
+    $('filtroPalavra').value = filtro.palavra;
+    for (const c of painel.querySelectorAll('input[name="filtroTipo"]')) c.checked = filtro.tipos.includes(c.value);
+    $('filtroNota').value = filtro.notaMin;
+    $('filtroLuta').value = String(filtro.lutaMinS);
+    $('filtroOrdem').value = filtro.ordem;
+    dicaDaPalavra();
+  }
+  function dicaDaPalavra() {
+    const q = queridos();
+    $('filtroPalavraDica').textContent = t('filtro.palavraDica', { n: comFala(q, falaDe), total: q.length });
+  }
+  function filtroDoPainel() {
+    return limparFiltro({
+      palavra: $('filtroPalavra').value,
+      tipos: [...painel.querySelectorAll('input[name="filtroTipo"]:checked')].map((c) => c.value).filter((v) => TIPOS_DO_FILTRO.includes(v)),
+      notaMin: $('filtroNota').value,
+      lutaMinS: Number($('filtroLuta').value),
+      ordem: $('filtroOrdem').value,
+    });
+  }
+  function abrirPainel(abrir) {
+    painel.hidden = !abrir;
+    $('simplesFiltrar').setAttribute('aria-expanded', String(abrir));
+    if (abrir) { falasLidas = null; preencherPainel(); $('filtroPalavra').focus({ preventScroll: true }); }
+  }
+  function mudarFiltro(novo) {
+    filtro = novo;
+    guardarFiltro(armazem, filtro);
+    mostrar = QUANTOS;
+    pintarLista();
+    fotografar();
+  }
+  /** Botão Filtrar, chips dos filtros ativos, a confiança média e o "Nada com esse filtro". */
+  function pintarCabecalho(passam) {
+    const soClipe = ultimos.length > 0 && ultimos.every((m) => m.doClipe);
+    const q = queridos();
+    $('simplesFiltrar').hidden = soClipe || (!q.length && !filtroAtivo(filtro));
+    if ($('simplesFiltrar').hidden) painel.hidden = true;
+    const chips = chipsDoFiltro(filtro);
+    $('simplesChips').hidden = !chips.length;
+    $('simplesChips').innerHTML = chips.map((c, i) => `<li><button type="button" class="simplesChip" data-i="${i}" aria-label="${escapar(t('filtro.tirar', { nome: c.rotulo }))}">`
+      + `${escapar(c.rotulo)}<svg class="ic ic-p" aria-hidden="true"><use href="#i-fechar"/></svg></button></li>`).join('');
+    $('simplesChips').chipsAtuais = chips;
+    const media = soClipe ? null : confMedia(passam);
+    $('simplesMedia').hidden = !media;
+    if (media) {
+      const texto = `${media.estimativa ? '~' : ''}${media.pct}%`;
+      $('simplesMedia').innerHTML = `<span class="simplesConfPct${media.estimativa ? ' estimativa' : ''}" tabindex="0" title="${escapar(t(media.estimativa ? 'filtro.estimativa' : 'filtro.medida'))}">`
+        + `${escapar(t('filtro.media', { pct: texto }))}</span>`
+        + (filtraAlgo(filtro) ? ` <span class="simplesMediaConta">${escapar(t('filtro.mostrando', { n: passam.length, total: q.length }))}</span>` : '');
+    }
+    $('simplesVazio').hidden = !(filtroAtivo(filtro) && q.length && !passam.length);
+    if (!painel.hidden) dicaDaPalavra();
+  }
+  $('simplesFiltrar').onclick = () => abrirPainel(painel.hidden);
+  painel.addEventListener('submit', (e) => { e.preventDefault(); abrirPainel(false); mudarFiltro(filtroDoPainel()); });
+  const limparTudo = () => { abrirPainel(false); mudarFiltro(limparFiltro(null)); };
+  $('filtroLimpar').onclick = $('simplesLimparFiltro').onclick = limparTudo;
+  painel.addEventListener('keydown', (e) => { if (e.key === 'Escape') { abrirPainel(false); $('simplesFiltrar').focus(); } });
+  $('simplesChips').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-i]');
+    const chip = b && $('simplesChips').chipsAtuais?.[Number(b.dataset.i)];
+    if (chip) mudarFiltro(semChip(filtro, chip));
+  });
 
   function pintarLista() {
     // Um clipe a ser feito agora não pode sumir debaixo do dedo: a lista refaz-se quando ele acabar.
@@ -782,8 +933,11 @@ export function montarSimples(ponte) {
     pintarLista.adiada = false;
     pararPrevia();
     const primeiraVez = (() => { try { return !localStorage.getItem('povix.simplesBaixou'); } catch { return true; } })();
-    mostrados = visiveis();
-    const sobra = queridos().length - mostrados.length;
+    falasLidas = null;
+    const passam = filtrados();
+    mostrados = passam.slice(0, mostrar);
+    const sobra = passam.length - mostrados.length;
+    pintarCabecalho(passam);
     $('simplesMais').hidden = sobra <= 0;
     $('simplesMais').textContent = t('simples.mais', { n: Math.min(sobra, QUANTOS) });
     $('simplesDicaLista').hidden = !mostrados.length || !primeiraVez;
@@ -792,7 +946,7 @@ export function montarSimples(ponte) {
       const k = chave(m);
       const foto = fotos.get(k);
       const durS = Math.round((m.ateMs - m.deMs) / 1000);
-      const motivo = m.doClipe ? t('simples.oClipe') : motivoEmPalavras(m);
+      const motivo = m.doClipe ? t('simples.oClipe') : tituloDoMomento(m);
       const nota = m.nota ? `<b class="simplesNota nota-${m.nota}">${escapar(t(`simples.nota.${m.nota}`))}</b> ` : '';
       const feito = feitos.get(k);
       return `<li class="simplesCartao" data-i="${i}" data-chave="${escapar(k)}">`
@@ -801,6 +955,8 @@ export function montarSimples(ponte) {
         + '<div class="simplesInfo">'
         + (m.doEvento ? `<p class="simplesStreamer">${escapar(t('simples.deQuem', { canal: m.nomeCanal || m.canal }))}</p>` : '')
         + `<p class="simplesMotivo">${nota}${escapar(motivo)}</p>`
+        + confHtml(m)
+        + `<div class="simplesFalaCaixa">${falaHtml(m)}</div>`
         + (m.outros?.length ? `<p class="simplesTambem">${escapar(quemEstavaNoLance(m))}</p>` : '')
         + (m.falha ? `<p class="simplesTalvezFalha">${escapar(t('simples.talvezFalha'))}</p>` : '')
         + `<p class="simplesQuando">${escapar(m.doClipe ? t('simples.duracao', { s: durS })
@@ -825,6 +981,7 @@ export function montarSimples(ponte) {
     const li = b.closest('li');
     const m = mostrados[Number(li.dataset.i)];
     if (!m) return;
+    if (b.dataset.acao === 'fala') { verFala(m, li); return; }
     if (b.dataset.acao === 'nao') { dispensar(m, Number(li.dataset.i)); return; }
     if (b.dataset.acao === 'assistir') { assistir(m, li); return; }
     if (b.dataset.acao === 'editar') { editar(m, li); return; }

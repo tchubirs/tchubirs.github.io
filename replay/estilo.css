@@ -685,8 +685,13 @@ body.mesa #palco.muitosAngulos #grade .tile .numAngulo { border-color: var(--lin
 /* ── as faixas: uma linha por canal ────────────────────────────────────────
    Sem tecto: ele quer os trinta de uma vez, e numa coluna alta e estreita a
    forma da lista é a forma do sítio. Quem lhe põe tecto é o ecrã de PC. */
-.faixas { position: relative; margin-top: var(--e3); display: grid; gap: 3px; }
+.faixas { position: relative; margin-top: var(--e3); display: grid; gap: 0; }
 .faixa { align-items: center; }
+/* Linhas de editor (Premiere, Resolve, CapCut): cada canal numa fila com o seu fundo, uma sim e outra não
+   um tom mais claro, e a fila de Todos separada das outras por um fio. */
+.faixa, .faixaGeral { padding: 2px 0; border-radius: var(--r-fio); }
+.faixa.par { background: color-mix(in srgb, var(--tinta) 3.5%, transparent); }
+.faixaGeral { margin-bottom: 2px; border-bottom: 1px solid var(--linha); border-radius: 0; }
 .faixa .nome {
   font-size: var(--t-menor); color: var(--tinta-3);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -695,16 +700,17 @@ body.mesa #palco.muitosAngulos #grade .tile .numAngulo { border-color: var(--lin
 /* A calha é o vazio, e o traço é a gravação. Raio de fio e não de painel:
    uma faixa de tempo não tem a forma de um cartão. */
 .trilho {
-  position: relative; height: 13px; border-radius: var(--r-fio);
+  position: relative; height: 18px; border-radius: var(--r-fio);
   background: var(--sup-1); cursor: pointer; overflow: hidden;
 }
 /* Dezassete faixas cheias de cor a atravessar o painel é uma parede: a
    informação aqui é ONDE HÁ e onde NÃO HÁ gravação, e para isso chega um
    tom. A do canal dele leva a cor inteira — é a única que ele procura. */
 .trilho i {
-  position: absolute; top: 0; bottom: 0; display: block;
+  position: absolute; top: 2px; bottom: 2px; display: block; z-index: 1;
   background: color-mix(in srgb, var(--acento) 30%, var(--sup-1));
-  border-radius: 1px;
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--acento) 38%, transparent);
 }
 .faixa.principal .trilho i { background: color-mix(in srgb, var(--acento) 78%, var(--sup-1)); }
 .trilho:hover i { background: color-mix(in srgb, var(--acento) 52%, var(--sup-1)); }
@@ -714,7 +720,7 @@ body.mesa #palco.muitosAngulos #grade .tile .numAngulo { border-color: var(--lin
 .relogio { position: relative; }
 .cursor {
   position: absolute; top: 0; left: 0; width: 2px; height: 0; z-index: 4;
-  background: var(--tinta); box-shadow: 0 0 0 1px #0009; pointer-events: none;
+  background: var(--tinta); box-shadow: 0 0 0 1px #0009, 0 0 5px 1px #0007; pointer-events: none;
 }
 .cursor[hidden] { display: none; }
 /* A cabeça da agulha: a bolinha que se arrasta, no topo da linha e centrada nela. */
@@ -770,10 +776,10 @@ body.mesa #palco.muitosAngulos #grade .tile .numAngulo { border-color: var(--lin
 .regua .kill:hover span { color: var(--marca-alto); }
 /* As horas da régua descem pelas faixas, muito fracas, como as linhas das horas no mapa. */
 .trilho .linhaHora {
-  position: absolute; top: 0; bottom: 0; width: 1px; margin-left: -.5px; z-index: 1; pointer-events: none;
-  background: color-mix(in srgb, var(--tinta) 9%, transparent);
+  position: absolute; top: 0; bottom: 0; width: 1px; margin-left: -.5px; z-index: 0; pointer-events: none;
+  background: color-mix(in srgb, var(--tinta) 6%, transparent);
 }
-.trilho .linhaHora.vira { background: color-mix(in srgb, var(--tinta) 22%, transparent); }
+.trilho .linhaHora.vira { background: color-mix(in srgb, var(--tinta) 14%, transparent); }
 /* O pico de chat é o mesmo losango da legenda do mapa, em cima da faixa do canal que o teve, a meio
    da altura do trilho. O contorno escuro é o que o separa do ciano da gravação e dos riscos do que já
    foi lido e ouvido. */
@@ -2190,6 +2196,11 @@ body:is(.videoAberto, :has(#palco:not([hidden]))) .mostrarMapa { background: var
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 18px;
 }
 .faixa.principal button.nome { color: var(--tinta); font-weight: 500; }
+/* O canal em foco leva um quadradinho da cor dos blocos antes do nome. */
+.faixa.principal button.nome::before {
+  content: ''; display: inline-block; width: 5px; height: 5px; margin-right: 5px; vertical-align: 1px;
+  background: var(--acento); border-radius: 1px;
+}
 .faixa button.nome:hover:not(:disabled), .faixaGeral button.nome:hover:not(:disabled) { background: var(--sup-3); color: var(--tinta); border-color: transparent; }
 .faixaGeral button.nome { font-family: var(--letra); color: var(--tinta-2); font-weight: 600; }
 .faixa.escolhida button.nome, .faixaGeral.escolhida button.nome {
@@ -2197,12 +2208,12 @@ body:is(.videoAberto, :has(#palco:not([hidden]))) .mostrarMapa { background: var
 }
 .trilhoGeral { background: var(--sup-3); }
 .trilho .lido {
-  position: absolute; bottom: 0; height: 4px; display: block; border-radius: 1px; pointer-events: none;
+  position: absolute; bottom: 0; height: 4px; z-index: 1; display: block; border-radius: 1px; pointer-events: none;
   background: color-mix(in srgb, var(--sup-0) 70%, transparent);
 }
 /* E em cima, o que a detecção já ouviu do som: mais escuro, do mesmo jeito. */
 .trilho .ouvido {
-  position: absolute; top: 0; height: 4px; display: block; border-radius: 1px; pointer-events: none;
+  position: absolute; top: 0; height: 4px; z-index: 1; display: block; border-radius: 1px; pointer-events: none;
   background: color-mix(in srgb, var(--sup-0) 70%, transparent);
 }
 /* As alças por cima do trilho. A calha não apanha cliques (o trilho por baixo continua a levar o vídeo
@@ -2829,8 +2840,11 @@ body.mesa .falaBotao.apagar:hover { color: var(--perigo); }
 body.mesa .trilho .prazoFaixa {
   position: absolute; right: 2px; top: 50%; transform: translateY(-50%); z-index: 1;
   font-size: 10px; line-height: 11px; padding: 0 4px; border-radius: var(--r-1);
-  background: var(--sup-2); color: var(--tinta-3); white-space: nowrap; cursor: help;
+  background: var(--sup-0); color: var(--tinta-2); white-space: nowrap; cursor: help;
+  opacity: 0; transition: opacity .12s;
 }
+/* Só aparece com o mouse na faixa (ou perto do prazo, que é aviso): no resto do tempo o trilho fica limpo. */
+body.mesa .faixa:hover .prazoFaixa, body.mesa .trilho .prazoFaixa.perto { opacity: 1; }
 /* Outro jogo nesta noite (ver jogo.js): o nome e o vídeo a cinza, e o motivo à esquerda do trilho. */
 body.mesa .faixa.outroJogo .nome { color: var(--tinta-3); }
 body.mesa .faixa.outroJogo .trilho > i { opacity: .4; filter: grayscale(1); }
@@ -2839,7 +2853,7 @@ body.mesa .trilho .outroJogoFaixa {
   font-size: 10px; line-height: 11px; padding: 0 4px; border-radius: var(--r-1);
   background: var(--sup-2); color: var(--tinta-3); white-space: nowrap;
 }
-body.mesa .trilho .prazoFaixa.perto { color: var(--aviso); background: color-mix(in srgb, var(--aviso) 14%, var(--sup-2)); }
+body.mesa .trilho .prazoFaixa.perto { color: var(--aviso); background: color-mix(in srgb, var(--aviso) 14%, var(--sup-0)); }
 body.mesa .momentos li .prazo { font-size: var(--t-micro); color: var(--tinta-3); white-space: nowrap; cursor: help; }
 body.mesa .momentos li .prazo.perto { color: var(--aviso); }
 body.mesa .guardarAgora { align-items: center; }
@@ -2988,6 +3002,37 @@ body.mesa #montagem .estadoAoVivo:empty { display: none; }
 /* Não é botão: é a marca do fim da lista que, à vista, carrega mais cartões. */
 .simplesMais { width: 100%; height: 1px; padding: 0; border: 0; opacity: 0; pointer-events: none; }
 .simplesQuando, .simplesTalvezFalha { margin: 0; color: var(--tinta-2); font-size: var(--t-base); }
+/* O filtro da lista: painel pequeno, chips dos filtros ativos, a confiança média e o vazio. Tudo fica à esquerda. */
+.simplesFiltro { display: grid; gap: var(--e4); background: var(--sup-2); border: 1px solid var(--linha); border-radius: var(--r-3); padding: var(--e4); }
+.simplesFiltro[hidden] { display: none; }
+.filtroCampo { display: grid; gap: var(--e2); color: var(--tinta-2); font-size: var(--t-base); min-width: 0; }
+.filtroCampo input, .filtroCampo select { width: 100%; min-height: 44px; font-size: 16px; }
+.filtroDica { margin: 0; color: var(--tinta-3); font-size: var(--t-menor); }
+.filtroTipos { display: flex; flex-wrap: wrap; gap: var(--e2) var(--e4); margin: 0; padding: 0; border: 0; min-width: 0; }
+.filtroTipos legend { padding: 0; margin-bottom: var(--e2); color: var(--tinta-2); font-size: var(--t-base); }
+.filtroTipos label { display: inline-flex; align-items: center; gap: var(--e2); min-height: 44px; color: var(--tinta); }
+.filtroLinha { display: grid; gap: var(--e4); grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+.filtroBotoes { display: flex; flex-wrap: wrap; gap: var(--e3); }
+.simples .filtroBotoes button { min-height: 44px; font-size: 15px; }
+.simplesChips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--e2); }
+.simplesChips[hidden] { display: none; }
+.simples .simplesChips button.simplesChip { min-height: 36px; font-size: 14px; padding: 0 var(--e3); gap: var(--e2); border-radius: var(--r-2); background: var(--sup-3); color: var(--tinta); }
+.simplesMedia { margin: 0; color: var(--tinta-2); font-size: var(--t-base); }
+.simplesMedia[hidden] { display: none; }
+.simplesMediaConta { color: var(--tinta-3); }
+.simplesVazio { display: grid; gap: var(--e3); justify-items: start; }
+.simplesVazio[hidden] { display: none; }
+.simplesVazio p { margin: 0; font-size: 18px; font-weight: 600; }
+.simplesConf { margin: 0; font-size: var(--t-base); }
+.simplesConfPct { font-family: var(--letra-mono); color: var(--tinta); border-bottom: 1px dotted var(--tinta-3); cursor: help; }
+.simplesConfPct.estimativa { color: var(--tinta-2); }
+.simplesFalaCaixa { display: grid; gap: var(--e2); justify-items: start; min-width: 0; }
+.simplesFalaCaixa:empty { display: none; }
+.simplesFala, .simplesFalaEstado { margin: 0; overflow-wrap: anywhere; line-height: var(--lh); }
+.simplesFala { font-style: italic; color: var(--tinta); }
+.simplesFalaEstado { color: var(--tinta-2); font-size: var(--t-base); }
+.simplesFalaEstado.erro { color: var(--tinta); }
+.simples .simplesFalaBotao { min-height: 36px; font-size: 14px; padding: 0 var(--e3); background: transparent; border-color: transparent; color: var(--tinta-2); text-decoration: underline; text-underline-offset: 3px; }
 .simplesBotoes { display: flex; flex-wrap: wrap; gap: var(--e2); align-items: center; }
 .simples .simplesBotoes button { min-height: 44px; font-size: 15px; padding-inline: var(--e4); }
 .simplesBotoes .curto { display: none; }
@@ -3128,10 +3173,11 @@ body:not(:has(#noites:not([hidden]))) .topo .barraSessao.noTopo { display: none;
 .pesTempo #zoomTempo { writing-mode: vertical-lr; direction: rtl; width: 30px; height: auto; flex: 1 1 auto; min-height: 40px; }
 .pesTempo .zoomQuanto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .cabecaTempo .saltos { display: none; }
-/* As divisões cortam a faixa colorida, como num editor: traço escuro por cima da gravação, mais fraco nos pequenos. */
-.trilho .linhaHora { z-index: 3; background: rgb(0 0 0 / .55); box-shadow: 1px 0 0 color-mix(in srgb, var(--tinta) 7%, transparent); }
-.trilho .linhaHora.menor { background: rgb(0 0 0 / .28); box-shadow: none; }
-.trilho .linhaHora.vira { background: rgb(0 0 0 / .7); box-shadow: 1px 0 0 color-mix(in srgb, var(--tinta) 22%, transparent); }
+/* As divisões ficam ATRÁS dos blocos de gravação (o dono estranhou os cortes por cima, 13/10): fios claros e
+   fracos que só se veem nos vazios entre os blocos e na calha. */
+.trilho .linhaHora { z-index: 0; background: color-mix(in srgb, var(--tinta) 8%, transparent); box-shadow: none; }
+.trilho .linhaHora.menor { background: color-mix(in srgb, var(--tinta) 4%, transparent); }
+.trilho .linhaHora.vira { background: color-mix(in srgb, var(--tinta) 16%, transparent); box-shadow: none; }
 /* A sincronia de cada ângulo só no player aberto, grande; nas miniaturas não (o dono, 13/10). */
 .tile:not(.foco) .ajuste { display: none; }
 /* A explicação ao parar o mouse num botão (dicas.js). */
@@ -3153,3 +3199,47 @@ dialog.confirmarRecomecar .botoes { display: flex; justify-content: flex-end; ga
 dialog.confirmarRecomecar .apagar { background: var(--perigo); color: #fff; border-color: transparent; }
 /* O guia do TikTok saiu (o dono, 13/10). */
 .zonaTikTok { display: none !important; }
+
+/* As caixas do chat e da legenda nas prévias do "Ajustar clipe" (caixa-previa.js): arrastam-se para mover e
+   têm um puxador em cada canto, como a caixa da webcam. A camada não apanha o rato; só as caixas. */
+.caixasPrevia { position: absolute; inset: 0; pointer-events: none; z-index: 3; }
+.fonteClipe .caixasPrevia { z-index: 6; }
+.caixaPrevia {
+  position: absolute; pointer-events: auto; cursor: move; touch-action: none; box-sizing: border-box;
+  border: 2px dashed var(--tinta); border-radius: var(--r-fio); background: #ffffff0f;
+}
+.caixaPrevia[hidden] { display: none; }
+.caixaPrevia.legenda { border-color: var(--ok); background: var(--ok-eco); }
+.caixaPrevia:focus-visible { outline: 2px solid var(--acento-alto); outline-offset: 2px; }
+.caixaPrevia .puxar { background: var(--tinta); }
+.caixaPrevia.legenda .puxar { background: var(--ok); }
+.caixaPrevia .etiquetaCaixa {
+  position: absolute; top: 2px; left: 2px; padding: 0 5px; border-radius: var(--r-fio); pointer-events: none;
+  font: 600 var(--t-micro)/1.6 var(--letra-mono); background: var(--tinta); color: var(--sup-0);
+}
+.caixaPrevia.legenda .etiquetaCaixa { background: var(--ok); }
+/* A dica de arrastar e o botão de voltar ao automático, numa linha só, a toda a largura da grelha. */
+body.mesa .arrastarDica { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2) var(--e3); }
+body.mesa .arrastarDica .nota { margin: 0; flex: 1 1 18em; font-size: var(--t-menor); color: var(--tinta-2); }
+body.mesa .arrastarDica button { min-height: 36px; }
+body.mesa .legendaCima { display: grid; }
+body.mesa .chatCores { grid-column: 1 / -1; }
+body.mesa .legendaCor .amostra.verde { background: #69DB7C; }
+body.mesa .legendaCor .amostra.rosa { background: #F783AC; }
+body.mesa .legendaCor .amostra.arco { background: conic-gradient(#ff6b6b, #ffd43b, #69db7c, #4dabf7, #b197fc, #ff6b6b); }
+/* O campo para escrever quem morreu, na linha das fichas da kill. */
+.vitEscrever { display: inline-flex; align-items: center; gap: 4px; }
+.vitNome { width: 12em; min-height: 26px; padding: 0 var(--e2); font-size: var(--t-menor); }
+.vitAnotar { min-height: 26px; padding: 0 var(--e3); font-size: var(--t-menor); }
+.vit.vitTexto { display: inline-flex; align-items: center; gap: 4px; }
+
+/* Aviso por cima do editor trancado: preso ao topo da janela, que rola. */
+.avisoGravando {
+  position: sticky; top: calc(var(--e5) * -1); z-index: 6; display: flex; align-items: center; gap: var(--e4);
+  margin: 0 calc(var(--e5) * -1); padding: var(--e3) var(--e5);
+  background: var(--sup-1); border-top: 1px solid var(--acento-fio); border-bottom: 1px solid var(--acento-fio);
+  color: var(--tinta); font-size: var(--t-base); font-weight: 500;
+}
+.avisoGravando[hidden] { display: none; }
+.avisoGravando span { flex: 1 1 auto; min-width: 0; }
+.avisoGravando button { flex: none; min-height: 34px; }

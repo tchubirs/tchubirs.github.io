@@ -19,7 +19,7 @@
 // aí que um erro passa calado: meio pixel fora da fonte é uma barra preta na beira que ninguém vê na
 // pré-visualização.
 
-import { RETRATO, formatoQueFunciona, extensaoDe, noSitio, BITS_VIDEO, BITS_SOM } from './retrato.js?v=78c992b68e';
+import { RETRATO, formatoQueFunciona, extensaoDe, noSitio, bitsDoVideo, fpsDaFonte, BITS_SOM } from './retrato.js?v=7e158988ac';
 
 /** O 16:9 do modo seguido. */
 export const DEITADO = Object.freeze({ largura: 1920, altura: 1080 });
@@ -206,7 +206,7 @@ export function desenharAngulos(ctx, fontes, plano, tS) {
  * de quase todas as reclamações de direitos (ver ESTUDO.md, riscos). `aoSom(i, tS)` diz cada troca.
  */
 export async function gravarAngulos(videos, {
-  plano, mudo = false, somDe = 0, aoProgresso = () => {}, sinal, formato,
+  plano, mudo = false, somDe = 0, aoProgresso = () => {}, sinal, formato, fps: fpsPedido,
   criarTela = () => document.createElement('canvas'),
   MR = globalThis.MediaRecorder,
   Contexto = globalThis.AudioContext,
@@ -226,7 +226,12 @@ export async function gravarAngulos(videos, {
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
 
-  const fluxo = tela.captureStream(30);
+  // A cadência da live (a do 9:16 e do 16:9 de um ângulo só), e o débito que vai com ela.
+  const fps = fpsDaFonte(fpsPedido);
+  // Um frame por pincelada, pedido à mão, quando o browser sabe (o mesmo motivo de retrato.js).
+  const manual = typeof globalThis.CanvasCaptureMediaStreamTrack?.prototype?.requestFrame === 'function';
+  const fluxo = tela.captureStream(manual ? 0 : fps);
+  const faixaVideo = manual ? fluxo.getVideoTracks?.()[0] : null;
   // A mistura só faz falta quando o som muda de ângulo durante o clipe: no seguido com mais de um.
   const mistura = !mudo && plano.modo === 'seguido' && plano.canais.length > 1
     ? await misturador(videos.slice(0, plano.canais.length), { Contexto }) : null;
@@ -252,14 +257,14 @@ export async function gravarAngulos(videos, {
     } catch { /* sem som: o vídeo continua a valer */ }
   }
   try {
-    return await gravarFluxo(videos, { plano, fluxo, tipo, ctx, sinal, aoProgresso, MR, trocarSom });
+    return await gravarFluxo(videos, { plano, fluxo, tipo, ctx, sinal, aoProgresso, MR, trocarSom, fps, faixaVideo });
   } finally {
     mistura?.fechar();
   }
 }
 
-async function gravarFluxo(videos, { plano, fluxo, tipo, ctx, sinal, aoProgresso, MR, trocarSom }) {
-  const gravador = new MR(fluxo, { mimeType: tipo, videoBitsPerSecond: BITS_VIDEO, audioBitsPerSecond: BITS_SOM });
+async function gravarFluxo(videos, { plano, fluxo, tipo, ctx, sinal, aoProgresso, MR, trocarSom, fps, faixaVideo }) {
+  const gravador = new MR(fluxo, { mimeType: tipo, videoBitsPerSecond: bitsDoVideo(fps), audioBitsPerSecond: BITS_SOM });
   const pedacos = [];
   gravador.ondataavailable = (e) => { if (e.data?.size) pedacos.push(e.data); };
 
@@ -280,6 +285,7 @@ async function gravarFluxo(videos, { plano, fluxo, tipo, ctx, sinal, aoProgresso
     if (parar) return;
     const feito = Math.max(0, relogio.currentTime - inicio);
     desenharAngulos(ctx, videos, plano, feito);
+    faixaVideo?.requestFrame?.();
     trocarSom(feito);
     voltas = feito > 0.05 ? 0 : voltas + 1;
     if (voltas > PARADO_MAX) { paradoDemais = true; acabar(); return; }
@@ -298,12 +304,21 @@ async function gravarFluxo(videos, { plano, fluxo, tipo, ctx, sinal, aoProgresso
   gravador.start();
   await Promise.all(videos.map((v) => v.play().catch(() => {})));
   pintar();
-  pincel = setInterval(pintar, 1000 / 30);
+  // Acorda mais vezes do que os frames e só pinta quando é a vez: um setInterval seco a 60 fps rende
+  // menos (os temporizadores do Windows acordam de 15,6 em 15,6 ms).
+  const periodo = 1000 / fps;
+  let proxima = performance.now() + periodo;
+  pincel = setInterval(() => {
+    const agora = performance.now();
+    if (agora < proxima - periodo * 0.04) return;
+    proxima = Math.max(proxima + periodo, agora - periodo * 0.5);
+    pintar();
+  }, Math.max(1, periodo / 8));
   const blob = await acabou;
   clearInterval(pincel);
   for (const v of videos) v.pause();
   if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
   if (paradoDemais) throw Object.assign(new Error('o vídeo não andou'), { name: 'GRAVACAO-PARADA' });
   if (!blob.size) throw Object.assign(new Error('não saiu nada'), { name: 'GRAVACAO-VAZIA' });
-  return { blob, tipo, extensao: extensaoDe(tipo) };
+  return { blob, tipo, extensao: extensaoDe(tipo), fps };
 }

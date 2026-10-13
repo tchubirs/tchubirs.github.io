@@ -9,76 +9,80 @@ import './dicas.js';
 import {
   vodsDoCanal, lerMaster, lerPlaylist, procurarCanais, lerLinkKick, clipeDaKick, vodDaKick, DESCONHECIDO, slugDoNome,
   segmentosNaJanela,
-} from './kick.js?v=78c992b68e';
+} from './kick.js?v=7e158988ac';
 import {
   linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, seguirAncora,
   passoDoArrasto, ARRASTO_INTERVALO_MS, ARRASTO_ESPERA_MS, vistaDaLinha, saiuDaVista,
   ZOOM_MIN_MS, larguraDoZoom, valorDoZoom, zoomEmVolta, andarVista,
-} from './relogio.js?v=78c992b68e';
-import { cortarTodosOsAngulos } from './baixar.js?v=78c992b68e';
-import { juntarMp4 } from './mp4.js?v=78c992b68e';
-import { juntarGravados } from './juntar-gravados.js?v=78c992b68e';
-import { instanteAoVivo, bordaAoVivo, medirAtraso, instantesAoVivo, ATRASO_PADRAO_MS } from './aovivo.js?v=78c992b68e';
-import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=78c992b68e';
-import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=78c992b68e';
-import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=78c992b68e';
+} from './relogio.js?v=7e158988ac';
+import { cortarTodosOsAngulos } from './baixar.js?v=7e158988ac';
+import { juntarMp4 } from './mp4.js?v=7e158988ac';
+import { juntarGravados } from './juntar-gravados.js?v=7e158988ac';
+import { instanteAoVivo, bordaAoVivo, medirAtraso, instantesAoVivo, ATRASO_PADRAO_MS } from './aovivo.js?v=7e158988ac';
+import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=7e158988ac';
+import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=7e158988ac';
+import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=7e158988ac';
 import {
   RETRATO, enquadramentoInicial, limitar, desenhar, gravar, formatoQueFunciona, extensaoDe,
   reformar, limparDivisao, DIVISAO_OMISSAO, divisaoDoQuadro, proporcaoDoQuadro, encaixar,
-  MODELO_OMISSAO, limparModelo, paraFraccoes, deFraccoes, DEITADO,
-} from './retrato.js?v=78c992b68e';
+  MODELO_OMISSAO, limparModelo, paraFraccoes, deFraccoes, DEITADO, ZONA_TIKTOK,
+} from './retrato.js?v=7e158988ac';
 import {
   abrirDetector, abrirQuadrosEscondidos, procurarRosto, caixaDaWebcam, instantesDoClipe, degrauDoRosto,
   rostoGuardado, guardarRosto,
-} from './rosto.js?v=78c992b68e';
+} from './rosto.js?v=7e158988ac';
 import {
   limparChat, geometria as geometriaDoChat, desenharChat, mensagensDoClipe, prepararEmotes,
-  VIDA_MS as VIDA_CHAT_MS, LETRA as LETRA_CHAT,
-} from './chat-clipe.js?v=78c992b68e';
+  VIDA_MAX_MS as VIDA_CHAT_MS, LETRA as LETRA_CHAT, retanguloDoChat, CHAT_OMISSAO,
+} from './chat-clipe.js?v=7e158988ac';
+import { ligarCaixa, estiloDaCaixa } from './caixa-previa.js?v=7e158988ac';
 import {
   limparLegenda, limparTranscricao, geometriaLegenda, desenharLegenda, transcricaoDoAudio, textoDaLinha,
   editarLinha, apagarLinha, deslocarLinha, rotuloTempo, cobre, linhaNoInstante, PASSO_MS, fonteDe as fonteDaLegenda,
-  idiomaParaOuvir,
-} from './legenda.js?v=78c992b68e';
-import { abrirVoz, somDosPedacos, degrauDoSom, estimativaS, faltaBaixar } from './legenda-voz.js?v=78c992b68e';
-import { podeLer } from './ler-tela.js?v=78c992b68e';
-import { planoDeAngulos, gravarAngulos } from './angulos.js?v=78c992b68e';
-import { agruparPorNoite, rotuloDaNoite, noiteParaAbrir } from './noites.js?v=78c992b68e';
+  idiomaParaOuvir, segurarMs, retanguloDaLegenda, LEGENDA_OMISSAO,
+} from './legenda.js?v=7e158988ac';
+import { abrirVoz, somDosPedacos, degrauDoSom, estimativaS, faltaBaixar } from './legenda-voz.js?v=7e158988ac';
+import { guardarFala, linhasDaTranscricao } from './falas.js?v=7e158988ac';
+import { tituloDeDeteccao, confDoSom } from './titulo.js?v=7e158988ac';
+import { podeLer } from './ler-tela.js?v=7e158988ac';
+import { planoDeAngulos, gravarAngulos } from './angulos.js?v=7e158988ac';
+import { agruparPorNoite, rotuloDaNoite, noiteParaAbrir } from './noites.js?v=7e158988ac';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
   alternarVitima, filtrar, temMorte, clipesDoMomento, comAjuste, numeroNaMontagem,
-  ajusteDe, ajustesQueContam, momentosParaLink, momentosDoLink,
-} from './momentos.js?v=78c992b68e';
+  ajusteDe, ajustesQueContam, momentosParaLink, momentosDoLink, comVitimaEscrita, semVitimaEscrita,
+} from './momentos.js?v=7e158988ac';
+import { lerApelidos } from './nomes.js?v=7e158988ac';
 import {
   planearCorte, executarCorte, nomeDoFicheiro, largarOQueNaoServe, oQueFalta,
-} from './baixar.js?v=78c992b68e';
-import { criarZip, crc32 } from './zip.js?v=78c992b68e';
-import { retencaoDoCanal, prazoDoVod, ordemDeGuardar } from './prazo.js?v=78c992b68e';
-import { eDoJogo } from './jogo.js?v=78c992b68e';
-import { fcpxmlMulticam, textoDoPacote, linkDoVod } from './pacote.js?v=78c992b68e';
-import { queFazerComOLeitor } from './leitor.js?v=78c992b68e';
-import { criarApanhador } from './frames.js?v=78c992b68e';
-import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=78c992b68e';
-import { alertasDoCanal } from './alertas.js?v=78c992b68e';
+} from './baixar.js?v=7e158988ac';
+import { criarZip, crc32 } from './zip.js?v=7e158988ac';
+import { retencaoDoCanal, prazoDoVod, ordemDeGuardar } from './prazo.js?v=7e158988ac';
+import { eDoJogo } from './jogo.js?v=7e158988ac';
+import { fcpxmlMulticam, textoDoPacote, linkDoVod } from './pacote.js?v=7e158988ac';
+import { queFazerComOLeitor, limitarSaltos } from './leitor.js?v=7e158988ac';
+import { criarApanhador } from './frames.js?v=7e158988ac';
+import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=7e158988ac';
+import { alertasDoCanal } from './alertas.js?v=7e158988ac';
 import {
   ESPERTO_A_PARTIR_MS, janelasDosPicos, msPorOuvir, somaMs, juntar, eMuito, estimarFalta, tempoFalta,
-} from './ouvir.js?v=78c992b68e';
-import { TAXA_TIROS } from './tiros.js?v=78c992b68e';
-import { termosDoFiltro, momentosDePalavras } from './chat.js?v=78c992b68e';
-import { SENSIBILIDADES_DETECAO, opcoesDaSensibilidade, juntarProximos } from './lances.js?v=78c992b68e';
-import { parecidos, juntarPerto } from './aprender.js?v=78c992b68e';
-import { somDoCanal } from './alinhar.js?v=78c992b68e';
+} from './ouvir.js?v=7e158988ac';
+import { TAXA_TIROS } from './tiros.js?v=7e158988ac';
+import { termosDoFiltro, momentosDePalavras } from './chat.js?v=7e158988ac';
+import { SENSIBILIDADES_DETECAO, opcoesDaSensibilidade, juntarProximos } from './lances.js?v=7e158988ac';
+import { parecidos, juntarPerto } from './aprender.js?v=7e158988ac';
+import { somDoCanal } from './alinhar.js?v=7e158988ac';
 import {
   MAXIMO_S, mover, janelaInicial, nomeDoClipe, posicaoDaCabeca, dentroDosLimites, duracaoCurta,
-} from './clipe.js?v=78c992b68e';
-import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=78c992b68e';
-import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=78c992b68e';
-import { escapar } from './escapar.js?v=78c992b68e';
-import { montarEvento, rotuloDoDia } from './evento-ui.js?v=78c992b68e';
-import { montarPortas } from './portas.js?v=78c992b68e';
-import { montarSimples, modoSimples } from './simples.js?v=78c992b68e';
-import { atalhos, ACAO, comboDoEvento, partes } from './atalhos.js?v=78c992b68e';
-import { montarPainelAtalhos, pintarDicas } from './atalhos-painel.js?v=78c992b68e';
+} from './clipe.js?v=7e158988ac';
+import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=7e158988ac';
+import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=7e158988ac';
+import { escapar } from './escapar.js?v=7e158988ac';
+import { montarEvento, rotuloDoDia } from './evento-ui.js?v=7e158988ac';
+import { montarPortas } from './portas.js?v=7e158988ac';
+import { montarSimples, modoSimples } from './simples.js?v=7e158988ac';
+import { atalhos, ACAO, comboDoEvento, partes } from './atalhos.js?v=7e158988ac';
+import { montarPainelAtalhos, pintarDicas } from './atalhos-painel.js?v=7e158988ac';
 
 /* Os glifos dos controlos do vídeo são DESENHO e não emoji.
    Um ⏸ ou um 🔇 sai diferente em cada sistema — no iPhone sai a cores, no
@@ -1337,11 +1341,12 @@ function pintarFaixas() {
     g.querySelector('.trilho').onclick = (e) => irAoClique(e, null);
     alvo.append(g);
   }
+  let fila = 0;
   for (const linha of estado.linhas) {
     const nudge = estado.nudges[linha.slug] || 0;
     const f = document.createElement('div');
     const outro = foraDoJogo(linha.slug);
-    f.className = outro ? 'faixa outroJogo' : 'faixa';
+    f.className = `faixa${outro ? ' outroJogo' : ''}${fila++ % 2 ? ' par' : ''}`;
     f.dataset.slug = linha.slug;
     f.dataset.quem = linha.slug;
     f.innerHTML = `<button type="button" class="nome" data-quem="${escapar(linha.slug)}" aria-expanded="false" `
@@ -2302,13 +2307,12 @@ function pintarAgulha() {
 
 /** Arrastar pela cabeça ou pela barra: o ponteiro vira um instante pela conta da agulha. */
 function ligarAgulha() {
-  const irAoPonteiro = (e) => {
+  const msDoPonteiro = (e) => {
     const vista = vistaAgora();
-    if (!vista) return;
+    if (!vista) return null;
     const eixo = eixoDoTempo();
     const f = Math.min(1, Math.max(0, (e.clientX - eixo.left) / eixo.width));
-    largarPrevia();
-    irPara(Math.round(vista.inicio + (vista.fim - vista.inicio) * f));
+    return Math.round(vista.inicio + (vista.fim - vista.inicio) * f);
   };
   const agarrar = (el) => {
     el.addEventListener('pointerdown', (e) => {
@@ -2317,13 +2321,26 @@ function ligarAgulha() {
       $('barra').focus({ preventScroll: true });
       try { el.setPointerCapture(e.pointerId); } catch { /* um ponteiro sintético não se prende */ }
       $('cursor').classList.add('aArrastar');
-      irAoPonteiro(e);
-      const mover = (m) => irAoPonteiro(m);
+      largarPrevia();
+      // Arrastando, a agulha e a hora andam já com o rato, mas os vídeos só saltam uns 4 vezes por
+      // segundo; ao largar, salta-se para o ponto exato.
+      const saltos = limitarSaltos(irPara);
+      let ultimoMs = msDoPonteiro(e);
+      saltos.pedir(ultimoMs);
+      const mover = (m) => {
+        const ms = msDoPonteiro(m);
+        if (ms == null) return;
+        ultimoMs = ms;
+        estado.agoraMs = ms;
+        pintarRelogio(ms);
+        saltos.pedir(ms);
+      };
       const largar = () => {
         $('cursor').classList.remove('aArrastar');
         el.removeEventListener('pointermove', mover);
         el.removeEventListener('pointerup', largar);
         el.removeEventListener('pointercancel', largar);
+        if (ultimoMs != null) saltos.fechar(ultimoMs);
       };
       el.addEventListener('pointermove', mover);
       el.addEventListener('pointerup', largar);
@@ -3442,8 +3459,17 @@ function contagemPorTipo(conta) {
   return Object.entries(chaves).filter(([k]) => conta[k]).map(([k, [um, varios]]) => tn(conta[k], um, varios)).join(', ');
 }
 
+/** A confiança do que a detecção ouviu (a mesma conta do índice), para o título dizer só o que se sabe. */
+function confDaDeteccao(c) {
+  if (!['tiros', 'explosao', 'grito', 'chat'].includes(c.tipo)) return {};
+  const r = confDoSom(c.tipo, c);
+  return r.conf == null ? {} : { conf: r.conf, confFonte: r.fonte, confN: r.n };
+}
+
 /** O tipo de um momento achado pela detecção, como aparece na lista. */
 function rotuloDoTipo(m) {
+  // O título diz o que aconteceu, com o que o som provou (titulo.js); o chat achado por palavra mantém as palavras.
+  if (!(m.tipo === 'chat' && m.palavras?.length)) return tituloDeDeteccao(m);
   if (m.tipos?.length > 1) return m.tipos.map((tipo) => rotuloDoTipo({ ...m, tipos: null, tipo })).join(', ');
   if (m.tipo === 'tiros') return m.acertos > 0 ? t('filtros.tipoPvp', { n: m.acertos }) : t('filtros.tipoTiros');
   if (m.tipo === 'explosao') return t('filtros.tipoExplosao');
@@ -3749,6 +3775,7 @@ async function detetar(quem, quanto, { resto = false } = {}) {
           ...tamanhos(), auto: true, tipo: c.tipo,
           ...(c.tipos?.length > 1 ? { tipos: c.tipos } : {}),
           ...(c.tipo === 'tiros' ? { tiros: c.tiros } : {}),
+          ...confDaDeteccao(c),
           ...(c.tipo === 'tiros' && c.acertos ? { acertos: c.acertos, cabecas: c.cabecas } : {}),
           ...(c.tipo === 'chat' ? { palavras: c.palavras } : {}),
           combateDeMs: c.combateDeMs, combateAteMs: c.combateAteMs,
@@ -4186,6 +4213,14 @@ function pintarMomentos() {
         + `${havia ? '' : ` disabled title="${t('montagem.naoFilmava')}"`
           + ` aria-label="${escapar(c)}: ${t('montagem.naoFilmava')}"`}>${escapar(c)}</button>`;
     }).join('');
+    // O nome de quem morreu escrito à mão: serve para quem não tem botão aqui (o jogador sem canal na
+    // montagem) e para achar a POV de quem matou. Nome de canal ou apelido guardado liga-se ao botão.
+    const nomesEscritos = (m.vitimasTexto || []).map((nome) => `<button type="button" class="vit vitTexto sim" data-nome="${escapar(nome)}"`
+      + ` title="${escapar(t('montagem.nomeMortoTirar', { nome }))}" aria-label="${escapar(t('montagem.nomeMortoTirar', { nome }))}">`
+      + `${escapar(nome)}<svg class="ic ic-p" aria-hidden="true"><use href="#i-fechar"/></svg></button>`).join('');
+    const campoNome = `<span class="vitEscrever"><input type="text" class="vitNome" maxlength="40" autocomplete="off"`
+      + ` placeholder="${escapar(t('montagem.nomeMorto'))}" aria-label="${escapar(t('montagem.nomeMorto'))}">`
+      + `<button type="button" class="vitAnotar">${t('montagem.nomeMortoAdd')}</button></span>`;
     const olhar = estado.olhares.get(m.ms);
     return `<li data-ms="${m.ms}" class="${Math.abs(m.ms - estado.agoraMs) < 1500 ? 'aqui' : ''}`
       + `${temMorte(m) ? ' confirmada' : ''}">`
@@ -4220,9 +4255,9 @@ function pintarMomentos() {
       // por cima de seis nomes que não morreram é afirmar uma coisa que a
       // página não sabe. Sem ninguém marcado é uma PERGUNTA, e os botões são a
       // resposta.
-      + (sozinho ? '' : `<span class="vitimas${temMorte(m) ? ' ha' : ''}">`
+      + `<span class="vitimas${temMorte(m) ? ' ha' : ''}">`
         + `<span class="nota">${t(temMorte(m) ? 'montagem.matou' : 'montagem.quemMorreu')}</span>`
-        + `${fichas}</span>`)
+        + `${fichas}${nomesEscritos}${campoNome}</span>`
       + `<div class="olhar"${olhar?.aberto ? '' : ' hidden'}>${olhar ? cartoesDoOlhar(m, olhar) : ''}</div></li>`;
   }).join('') || `<li class="nota">${t('montagem.vazia')}</li>`;
 
@@ -4269,13 +4304,32 @@ function pintarMomentos() {
       if (e.target.checked) estado.selecao.add(ms); else estado.selecao.delete(ms);
       pintarSelecao();
     };
-    for (const b of li.querySelectorAll('.vit')) {
+    for (const b of li.querySelectorAll('.vit:not(.vitTexto)')) {
       b.onclick = () => {
         estado.momentos = estado.momentos.map((m) => (m.ms === ms ? alternarVitima(m, b.dataset.canal) : m));
         pintarMomentos();
         guardar();
       };
     }
+    for (const b of li.querySelectorAll('.vitTexto')) {
+      b.onclick = () => {
+        estado.momentos = estado.momentos.map((m) => (m.ms === ms ? semVitimaEscrita(m, b.dataset.nome) : m));
+        pintarMomentos();
+        guardar();
+      };
+    }
+    const anotar = () => {
+      const campo = li.querySelector('.vitNome');
+      const texto = campo.value;
+      if (!texto.trim()) return;
+      estado.momentos = estado.momentos.map((m) => (m.ms === ms
+        ? comVitimaEscrita(m, texto, estado.linhas.map((l) => l.slug), lerApelidos()) : m));
+      pintarMomentos();
+      guardar();
+      $('listaMomentos').querySelector(`li[data-ms="${ms}"] .vitNome`)?.focus();
+    };
+    li.querySelector('.vitAnotar').onclick = anotar;
+    li.querySelector('.vitNome').onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); anotar(); } };
   }
   pintarRegua();
   pintarSelecao();
@@ -5455,7 +5509,8 @@ function abrirClipe(momento = null) {
   $('canalClipe').innerHTML = estado.linhas
     .map((l) => `<option value="${escapar(l.slug)}"${l.slug === linha.slug ? ' selected' : ''}>${escapar(l.slug)}</option>`)
     .join('');
-  $('tituloClipe').value = '';
+  // O nome do arquivo parte do que aconteceu quando a kill veio da detecção; o dono pode trocar.
+  $('tituloClipe').value = daLista && momento.tipo ? tituloDeDeteccao(momento) : '';
   $('estadoClipe').textContent = '';
   trancarEditor(false);
   $('guardarClipe').disabled = false;
@@ -5858,6 +5913,7 @@ function seguirRetrato() {
     if (c.rects.length) desenhar(ctx, $('previaClipe'), c.rects, c.modo, c.divisao);
     // O chat por cima, com a mesma função e o mesmo instante com que entra no ficheiro.
     pintarChatPrevias(ctx);
+    pintarCaixasPrevia();
     estado.ciclo9x16 = requestAnimationFrame(passo);
   };
   estado.ciclo9x16 = requestAnimationFrame(passo);
@@ -5983,12 +6039,28 @@ function avisarWebcam(texto) {
   el.hidden = !texto;
 }
 
+/** O aviso de achada: diz se a caixa pegou a câmera inteira ou só o rosto. */
+const avisoAchada = (rosto, canal) => t(rosto.webcam ? 'retrato.webcamAchada' : 'retrato.rostoAchado', { canal });
+
 /** Pôr a caixa 1 à volta de um rosto (em fracções da fonte). */
 function aplicarRosto(c, rosto) {
   const fonte = fonteDoClipe();
-  const caixa = caixaDaWebcam(rosto, fonte, c.divisao);
-  if (!caixa) return false;
-  c.rects[0] = caixa;
+  // Com as bordas da webcam achadas, a caixa é ela inteira e a faixa de cima ganha a proporção dela;
+  // sem elas, a caixa à volta do rosto, como antes.
+  const w = rosto.webcam;
+  const cam = w ? {
+    x: w.x * fonte.largura, y: w.y * fonte.altura, largura: w.largura * fonte.largura, altura: w.altura * fonte.altura,
+  } : null;
+  const divisao = cam ? divisaoDoQuadro(cam, 0) : null;
+  if (cam && divisao != null) {
+    c.divisao = divisao;
+    c.rects = reformar([cam, c.rects[1]], { modo: 'dois', divisao, fonte });
+    pintarDivisor();
+  } else {
+    const caixa = caixaDaWebcam(rosto, fonte, c.divisao);
+    if (!caixa) return false;
+    c.rects[0] = caixa;
+  }
   c.rectsFonte = { ...fonte };
   c.origem = 'rosto';
   lembrarEncaixe();
@@ -6010,7 +6082,7 @@ async function proporWebcam({ forcar = false } = {}) {
   // Já procurado (nesta sessão ou noutra): sem ler quadro nenhum.
   if (!forcar) {
     const memo = estado.rostos.has(canal) ? estado.rostos.get(canal) : rostoGuardado(canal);
-    if (memo) { if (aplicarRosto(c, memo)) avisarWebcam(t('retrato.rostoAchado', { canal })); return; }
+    if (memo) { if (aplicarRosto(c, memo)) avisarWebcam(avisoAchada(memo, canal)); return; }
     if (estado.rostos.has(canal)) { avisarWebcam(t('retrato.rostoNada', { canal })); return; }
   }
   c.rostoBusca?.abort();
@@ -6043,7 +6115,7 @@ async function proporWebcam({ forcar = false } = {}) {
     if (estado.clipe !== c || c.canal !== canal || c.modo !== 'dois' || c.aGravar) return;
     if (!rosto) { avisarWebcam(t('retrato.rostoNada', { canal })); return; }
     if (JSON.stringify(c.rects[0]) !== antes) { avisarWebcam(''); return; }
-    avisarWebcam(aplicarRosto(c, rosto) ? t('retrato.rostoAchado', { canal }) : t('retrato.rostoNada', { canal }));
+    avisarWebcam(aplicarRosto(c, rosto) ? avisoAchada(rosto, canal) : t('retrato.rostoNada', { canal }));
   } catch (e) {
     if (e?.name === 'AbortError' || controlo.signal.aborted) return;
     if (estado.clipe === c && c.canal === canal) avisarWebcam(t('retrato.rostoErro'));
@@ -6258,6 +6330,7 @@ async function guardarRetrato({ deitado = false, simples = null } = {}) {
       sinal: controlo.signal,
       aoProgresso: ({ feito, total, emPausa }) => {
         if (!aindaEste()) return;
+        pintarAvisoGravando(feito);
         simples?.aoProgresso?.({ feito, total });
         $('estadoClipe').textContent = emPausa ? t('retrato.emPausa')
           : deitado ? t('porCima.aGravar', { extras, feito: feito.toFixed(1), total: total.toFixed(1) })
@@ -6332,8 +6405,8 @@ function chatLembrado() {
 
 function lembrarChat(chat) {
   try {
-    const { posicao, tamanho, linhas, fundo } = limparChat(chat);
-    localStorage.setItem(GUARDADO_CHAT, JSON.stringify({ posicao, tamanho, linhas, fundo }));
+    const { posicao, tamanho, linhas, fundo, vida, cor, caixas } = limparChat(chat);
+    localStorage.setItem(GUARDADO_CHAT, JSON.stringify({ posicao, tamanho, linhas, fundo, vida, cor, caixas }));
   } catch { /* janela privada */ }
 }
 
@@ -6412,7 +6485,7 @@ function pintarChatPrevias(ctx9x16) {
     });
     pincel9?.(ctx9x16, (ms - c.deMs) / 1000);
   }
-  if (legenda) marcarFalaAgora(linhaNoInstante(legenda.transcricao, ms));
+  if (legenda) marcarFalaAgora(linhaNoInstante(legenda.transcricao, ms, segurarMs(legenda)));
 }
 
 /**
@@ -6478,10 +6551,11 @@ function pintarChatClipe() {
   const ch = c.chat;
   $('chatClipeLigado').checked = ch.ligado;
   $('chatClipeOpcoes').hidden = !ch.ligado;
-  $('chatClipePosicao').value = ch.posicao;
-  $('chatClipeTamanho').value = ch.tamanho;
+  $('chatClipeVida').value = String(ch.vida);
   $('chatClipeLinhas').value = String(ch.linhas);
   $('chatClipeFundo').value = ch.fundo;
+  for (const r of document.querySelectorAll('input[name="chatCor"]')) r.checked = r.value === ch.cor;
+  $('chatClipeAuto').disabled = Boolean(c.aGravar) || !(ch.caixas['16:9'] || ch.caixas['9:16']);
   // A tela por cima do 16:9 é do chat e da legenda: fica à vista com qualquer um dos dois.
   $('chatFonte').hidden = !(ch.ligado || c.legenda?.ligado);
   if (!ch.ligado) {
@@ -6501,16 +6575,20 @@ function ligarChatClipe() {
     if (c.chat.ligado) carregarChatDoClipe();
     else { c.chatLeitura?.controlo.abort(); c.chatLeitura = null; }
   });
-  for (const [id, chave] of [['chatClipePosicao', 'posicao'], ['chatClipeTamanho', 'tamanho'],
-    ['chatClipeLinhas', 'linhas'], ['chatClipeFundo', 'fundo']]) {
-    $(id).addEventListener('change', (e) => {
-      const c = estado.clipe;
-      if (!c || c.aGravar) return;
-      c.chat = limparChat({ ...c.chat, [chave]: e.target.value });
-      lembrarChat(c.chat);
-      pintarChatClipe();
-    });
+  const escolher = (chave, valor) => {
+    const c = estado.clipe;
+    if (!c || c.aGravar) return;
+    c.chat = limparChat({ ...c.chat, [chave]: valor });
+    lembrarChat(c.chat);
+    pintarChatClipe();
+  };
+  for (const [id, chave] of [['chatClipeVida', 'vida'], ['chatClipeLinhas', 'linhas'], ['chatClipeFundo', 'fundo']]) {
+    $(id).addEventListener('change', (e) => escolher(chave, e.target.value));
   }
+  for (const r of document.querySelectorAll('input[name="chatCor"]')) {
+    r.addEventListener('change', () => { if (r.checked) escolher('cor', r.value); });
+  }
+  $('chatClipeAuto').addEventListener('click', () => escolher('caixas', CHAT_OMISSAO.caixas));
 }
 ligarChatClipe();
 
@@ -6670,8 +6748,8 @@ function pintarLegendaClipe() {
   $('legendaIdioma').value = l.idioma;
   $('legendaTraduzir').checked = l.traduzir;
   $('legendaEstilo').value = l.estilo;
-  $('legendaTamanho').value = l.tamanho;
-  $('legendaPosicao').value = l.posicao;
+  $('legendaSegurar').value = String(l.segurar);
+  $('legendaAuto').disabled = Boolean(c.aGravar) || !(l.caixas['16:9'] || l.caixas['9:16']);
   for (const r of document.querySelectorAll('input[name="legendaCor"]')) r.checked = r.value === l.cor;
   $('legendaNome').checked = l.nome;
   $('chatFonte').hidden = !(c.chat?.ligado || l.ligado);
@@ -6799,6 +6877,8 @@ async function gerarLegenda() {
     if (!aindaEste()) return;
     const tr = transcricaoDoAudio(r.palavras, { canal, deMs, ateMs, idioma, traduzida: traduzir });
     c.transcricao = tr;
+    // O texto fica lembrado para a frase do cartão e o filtro por palavra do modo simples.
+    if (tr?.linhas.length) guardarFala(localStorage, { canal, deMs, ateMs, linhas: linhasDaTranscricao(tr) });
     c.legendaFalta = { bytes: 0, guarda: falta.guarda };
     const s = Math.round((performance.now() - t0) / 1000);
     nota.classList.remove('mau');
@@ -6821,6 +6901,33 @@ async function gerarLegenda() {
   }
 }
 
+/**
+ * "Ver o que ele falou" de um cartão do modo simples: o som só deste pedaço, o mesmo leitor da legenda, e o texto fica
+ * lembrado (falas.js). Não mexe no editor. `aoProgresso({ fase: 'som' | 'baixar' | 'abrir' | 'ouvir', fracao, feito, total })`.
+ */
+async function transcreverParaCartao({ canal, deMs, ateMs }, { sinal, aoProgresso = () => {} } = {}) {
+  if (!podeLer()) throw Object.assign(new Error('sem leitor'), { name: 'SEM-LEITOR' });
+  const linha = estado.linhas.find((x) => x.slug === canal);
+  if (!linha) throw Object.assign(new Error(t('simples.semMotivo')), { name: 'SEM-PLANO' });
+  const nudge = estado.nudges[canal] || 0;
+  const idioma = idiomaParaOuvir('auto', onde(linha, deMs + nudge).peca?.vod?.idioma);
+  const plano = await planearCorte({
+    linha, deMs: deMs + nudge, ateMs: ateMs + nudge, cache: new Map(), sinal, degrau: degrauDoSom,
+  });
+  if (plano.estado !== 'ok') throw Object.assign(new Error(porqueNaoSaiu(plano)), { name: 'SEM-PLANO' });
+  const audio = await somDosPedacos(plano.segmentos, deMs + nudge, ateMs + nudge, {
+    sinal, aoBaixar: ({ prontos, total }) => aoProgresso({ fase: 'som', fracao: prontos / total }),
+  });
+  const falta = await faltaBaixar();
+  vozDaLegenda ??= abrirVoz();
+  const r = await vozDaLegenda.transcrever(audio, {
+    idioma, traduzir: false, sinal, faltaBytes: falta.bytes, aoProgresso: (p) => aoProgresso(p),
+  });
+  const linhas = linhasDaTranscricao(transcricaoDoAudio(r.palavras, { canal, deMs, ateMs, idioma, traduzida: false }));
+  guardarFala(localStorage, { canal, deMs, ateMs, linhas });
+  return { linhas };
+}
+
 function ligarLegendaClipe() {
   $('legendaLigada').addEventListener('change', (e) => {
     const c = estado.clipe;
@@ -6838,10 +6945,10 @@ function ligarLegendaClipe() {
     if (chave === 'estilo' || chave === 'nome') carregarLetraDaLegenda(c.legenda);
     pintarLegendaClipe();
   };
-  for (const [id, chave] of [['legendaIdioma', 'idioma'], ['legendaEstilo', 'estilo'], ['legendaTamanho', 'tamanho'],
-    ['legendaPosicao', 'posicao']]) {
+  for (const [id, chave] of [['legendaIdioma', 'idioma'], ['legendaEstilo', 'estilo'], ['legendaSegurar', 'segurar']]) {
     $(id).addEventListener('change', (e) => escolha(chave, e.target.value));
   }
+  $('legendaAuto').addEventListener('click', () => escolha('caixas', LEGENDA_OMISSAO.caixas));
   $('legendaTraduzir').addEventListener('change', (e) => escolha('traduzir', e.target.checked));
   $('legendaNome').addEventListener('change', (e) => escolha('nome', e.target.checked));
   for (const r of document.querySelectorAll('input[name="legendaCor"]')) {
@@ -6893,6 +7000,77 @@ function ligarLegendaClipe() {
   });
 }
 ligarLegendaClipe();
+
+// ── as caixas do chat e da legenda nas prévias ──────────────────────────────
+//
+// O dono, 13/10: mover e redimensionar o chat e a legenda arrastando direto na prévia, como a caixa da
+// webcam, no 16:9 e no 9:16. A caixa que se vê é a mesma conta do desenho (`retanguloDoChat` e
+// `retanguloDaLegenda`); o que se arrasta fica em `escolhas.caixas[formato]`, em fração do quadro, e o
+// ficheiro lê a mesma fração. No 9:16 a caixa fica presa à zona livre do TikTok até a pessoa a puxar
+// bem para fora (caixa-previa.js).
+const ZONA_9X16 = { x0: 0, y0: ZONA_TIKTOK.cima, x1: 1 - ZONA_TIKTOK.direita, y1: 1 - ZONA_TIKTOK.baixo };
+const CAIXAS_PREVIA = [];
+function montarCaixasPrevia() {
+  for (const item of ['chat', 'legenda']) {
+    const chaveT = item === 'chat' ? 'chatClipe' : 'legenda';
+    for (const [formato, camada, alvo, quadro] of [['16:9', 'caixasFonte', DEITADO, 'fonteClipe'], ['9:16', 'caixasRetrato', RETRATO, 'telaRetrato']]) {
+      const el = document.createElement('div');
+      el.className = `caixaPrevia ${item}`;
+      el.tabIndex = 0;
+      el.setAttribute('role', 'button');
+      el.dataset.tAria = `${chaveT}.caixaAria`;
+      el.hidden = true;
+      el.innerHTML = `<span class="etiquetaCaixa" data-t="${chaveT}.etiqueta"></span>`
+        + ['no', 'ne', 'so', 'se'].map((k) => `<span class="puxar ${k}" data-canto="${k}"></span>`).join('');
+      $(camada).append(el);
+      const caixa = { item, formato, alvo, el, ultimo: '' };
+      ligarCaixa(el, {
+        quadro: () => $(quadro),
+        ler: () => retanguloDaCaixa(caixa),
+        pode: () => Boolean(estado.clipe) && !estado.clipe.aGravar,
+        zona: () => (formato === '9:16' ? ZONA_9X16 : null),
+        aoMexer: (r) => {
+          const c = estado.clipe;
+          const limpar = item === 'chat' ? limparChat : limparLegenda;
+          c[item] = limpar({ ...c[item], caixas: { ...c[item].caixas, [formato]: r } });
+        },
+        aoSoltar: () => {
+          const c = estado.clipe;
+          if (!c) return;
+          if (item === 'chat') { lembrarChat(c.chat); pintarChatClipe(); } else { lembrarLegenda(c.legenda); pintarLegendaClipe(); }
+        },
+      });
+      CAIXAS_PREVIA.push(caixa);
+    }
+  }
+  aplicarIdioma($('caixasFonte'));
+  aplicarIdioma($('caixasRetrato'));
+}
+/** A caixa de um item num formato agora, ou null se ele não se vê nesse quadro. */
+function retanguloDaCaixa({ item, formato, alvo }) {
+  const c = estado.clipe;
+  if (!c || c.aGravar) return null;
+  if (formato === '9:16' && $('ladoRetrato').hidden) return null;
+  const opcoes = { formato, modo: c.modo, divisao: c.divisao };
+  if (item === 'chat') return c.chat?.ligado ? retanguloDoChat(alvo, c.chat, opcoes) : null;
+  return legendaParaDesenhar(c) ? retanguloDaLegenda(alvo, c.legenda, { ...opcoes, chat: c.chat }) : null;
+}
+/** Pôr cada caixa onde está, a cada frame do ciclo das prévias; só mexe no DOM quando algo muda. */
+function pintarCaixasPrevia() {
+  for (const cx of CAIXAS_PREVIA) {
+    const r = retanguloDaCaixa(cx);
+    if (!r) {
+      if (!cx.el.hidden) { cx.el.hidden = true; cx.ultimo = ''; }
+      continue;
+    }
+    const css = estiloDaCaixa(r);
+    if (css === cx.ultimo && !cx.el.hidden) continue;
+    cx.ultimo = css;
+    cx.el.style.cssText = css;
+    cx.el.hidden = false;
+  }
+}
+montarCaixasPrevia();
 
 /**
  * Trancar o editor enquanto o 9:16 grava, e destrancá-lo no fim.
@@ -6953,10 +7131,13 @@ async function guardarAngulos(modo) {
       plano,
       formato,
       somDe: Math.max(0, ouvido),
+      fps: c.fonteFps,
       aoSom: (i, tS) => trocas.push({ canal: canais[i], tS }),
       sinal: controlo.signal,
       aoProgresso: ({ feito, total }) => {
-        if (aindaEste()) $('estadoClipe').textContent = t('angulos.aGravar', { n: canais.length, feito: feito.toFixed(1), total: total.toFixed(1) });
+        if (!aindaEste()) return;
+        pintarAvisoGravando(feito);
+        $('estadoClipe').textContent = t('angulos.aGravar', { n: canais.length, feito: feito.toFixed(1), total: total.toFixed(1) });
       },
     });
     const base = nomeDoClipe({ titulo: $('tituloClipe').value, canal: c.canal, quandoMs: c.deMs });
@@ -6984,18 +7165,27 @@ async function guardarAngulos(modo) {
   }
 }
 
+/** O aviso por cima do editor trancado, com os segundos já gravados. */
+function pintarAvisoGravando(feito = 0) {
+  const c = estado.clipe;
+  const total = c ? Math.round((c.ateMs - c.deMs) / 1000) : 0;
+  $('avisoGravandoTexto').textContent = t('clipe.gravando', { feito: Math.min(total, Math.floor(feito)), total });
+}
+
 function trancarEditor(sim) {
+  $('avisoGravando').hidden = !sim;
+  if (sim) pintarAvisoGravando(0);
   for (const id of ['inicioMenos', 'inicioMais', 'fimMenos', 'fimMais', 'verClipe', 'canalClipe',
     'guardarClipe', 'guardarAjustes', 'modoUm', 'modoDois', 'divisor', 'angulosSeguido', 'angulosEmpilhado',
-    'voltarModelo', 'chatClipeLigado', 'chatClipePosicao', 'chatClipeTamanho', 'chatClipeLinhas', 'chatClipeFundo',
-    'legendaLigada', 'legendaIdioma', 'legendaTraduzir', 'gerarLegenda', 'legendaEstilo', 'legendaTamanho',
-    'legendaPosicao', 'legendaNome']) {
+    'voltarModelo', 'chatClipeLigado', 'chatClipeVida', 'chatClipeAuto', 'chatClipeLinhas', 'chatClipeFundo',
+    'legendaLigada', 'legendaIdioma', 'legendaTraduzir', 'gerarLegenda', 'legendaEstilo', 'legendaSegurar',
+    'legendaAuto', 'legendaNome']) {
     const el = $(id);
     if (el) el.disabled = sim;
   }
   for (const p of $('barraClipe').querySelectorAll('.pega')) p.disabled = sim;
   for (const b of document.querySelectorAll('.modeloWebcam')) b.disabled = sim;
-  for (const b of document.querySelectorAll('#legendaClipe input[name="legendaCor"], #legendaFalas input, #legendaFalas button')) {
+  for (const b of document.querySelectorAll('#legendaClipe input[name="legendaCor"], #chatClipe input[name="chatCor"], #legendaFalas input, #legendaFalas button')) {
     b.disabled = sim;
   }
   // O Gerar volta a dizer se este navegador o corre, e não só "destrancado".
@@ -7025,6 +7215,7 @@ function fecharClipe() {
   v.pause?.();
   v.removeAttribute('src');
   estado.clipe = null;
+  $('avisoGravando').hidden = true;
   esconderDialogo($('modalClipe'));
   if (retomarGrelha && estado.parado) alternarPausa();
 }
@@ -7859,6 +8050,12 @@ function guardarAjustes() {
 }
 $('guardarAjustes').onclick = guardarAjustes;
 $('cancelarClipe').onclick = fecharClipe;
+// Parar a gravação sem fechar o editor: os ajustes voltam e o clipe fica como estava.
+$('pararGravandoClipe').onclick = () => {
+  if (!estado.clipe?.pararGravacao) return;
+  estado.clipe.pararGravacao();
+  $('estadoClipe').textContent = t('clipe.gravacaoParada');
+};
 $('guardarClipe').onclick = () => guardarClipe();
 $('guardarRetrato').onclick = () => guardarRetrato();
 for (const b of document.querySelectorAll('.modoRetrato')) {
@@ -8185,6 +8382,36 @@ const FAZER = {
     if (slug) ouvirAngulo(slug);
   }])),
 };
+// Com o editor "Ajustar clipe" aberto, o teclado anda pela prévia do clipe e não pela noite: o espaço
+// pausa e continua (do ponto onde parou), J e L andam 1 s, A e D 3 s, o I e o O põem o início e o fim
+// onde a agulha está. O dono, 13/10: "todos os atalhos têm de funcionar com a janela aberta".
+const PASSO_ATALHO_CLIPE_MS = 3000;
+const andarNoClipe = (ms) => {
+  const c = estado.clipe;
+  if (c && !c.aGravar) levarAgulha((c.cabecaMs ?? c.deMs) + ms);
+};
+const marcarNoClipe = (qual) => {
+  const c = estado.clipe;
+  if (!c || c.aGravar) return;
+  const aqui = c.cabecaMs ?? c.deMs;
+  Object.assign(c, mover(c, qual, aqui, { limites: c.limites }));
+  pintarClipe();
+  // A imagem fica onde a agulha está: o ponto marcado é o que se vê.
+  if (!c.aVer) preverClipe(aqui, { fino: true });
+};
+const FAZER_CLIPE = {
+  pausa: () => {
+    const c = estado.clipe;
+    if (!c || c.aGravar) return;
+    if (c.aVer) pararVer({ voltar: false }); else verClipe();
+  },
+  voltar: (largo) => andarNoClipe(largo ? -10_000 : -1000),
+  avancar: (largo) => andarNoClipe(largo ? 10_000 : 1000),
+  correrTras: () => andarNoClipe(-PASSO_ATALHO_CLIPE_MS),
+  correrFrente: () => andarNoClipe(PASSO_ATALHO_CLIPE_MS),
+  marcarIn: () => marcarNoClipe('de'),
+  marcarOut: () => marcarNoClipe('ate'),
+};
 const painelAtalhos = montarPainelAtalhos({ atalhos, t, raiz: $('modalAjuda') });
 // A lista existe desde o arranque, e não só depois de abrir: quem lê a página (e o leitor de ecrã) acha-a lá.
 painelAtalhos.pintar();
@@ -8195,7 +8422,9 @@ window.addEventListener('storage', (e) => { if (e.key === 'replay.atalhos') atal
 document.addEventListener('keydown', (e) => {
   // No modo simples os vídeos do avançado estão escondidos: o espaço e as outras teclas não podem tocar
   // nem andar com eles (o espaço tocava o som de um vídeo que ninguém vê). A prévia do cartão tem a sua tecla.
-  if (modoSimples()) return;
+  // O editor do clipe é o mesmo nos dois modos, e as teclas dele valem em ambos.
+  const noClipe = !$('modalClipe').hidden;
+  if (modoSimples() && !noClipe) return;
   const alvo = e.target;
   const achada = atalhos.acaoDe(e);
   // Ctrl, Cmd e Alt são do sistema: Ctrl+C copia, Ctrl+A escolhe tudo, Ctrl+D guarda a página. Com
@@ -8227,23 +8456,26 @@ document.addEventListener('keydown', (e) => {
   if (id === 'atalhos') { alternarAjuda(true); return; }
   // Com a janela do clipe aberta, o teclado é dela: o resto não pode andar com
   // o tempo por baixo do que se está a cortar. E as acções dela só valem com ela aberta.
-  if (!$('modalClipe').hidden !== Boolean(acao.clipe)) return;
+  const doClipe = noClipe && FAZER_CLIPE[id];
+  if (noClipe ? !doClipe && !acao.clipe : acao.clipe) return;
   const { tecla } = partes(combo);
+  // As caixas de enquadramento, do chat e da legenda, e o divisor têm as setas e o + e o - para elas.
+  if (noClipe && /^(Arrow|[-+=]$)/.test(tecla) && alvo?.closest?.('#divisor, .recorte, .caixaPrevia')) return;
   // Um botão ou um sumário a que se chegou pelo Tab: o espaço e o Enter carregam-no, como
   // em qualquer página. Só o foco que ficou de um clique de rato (sem anel)
   // deixa o espaço pausar, senão o Pausar deixava de funcionar depois de
   // carregar num botão qualquer.
   const tabulado = focadosPeloTeclado.has(alvo)
     && alvo.matches('button, summary, a[href], [role="button"], input, select');
-  if ((tecla === 'Space' || tecla === 'Enter') && (tabulado || alvo?.type === 'checkbox')) return;
+  if ((tecla === 'Space' || tecla === 'Enter') && (tabulado || alvo?.type === 'checkbox' || alvo?.type === 'radio')) return;
   // As setas num cursor ou num seletor são dele: mudam o valor ou a escolha.
-  const cursor = (alvo?.tagName === 'INPUT' && alvo.type === 'range') || alvo?.tagName === 'SELECT'
+  const cursor = (alvo?.tagName === 'INPUT' && (alvo.type === 'range' || alvo.type === 'radio')) || alvo?.tagName === 'SELECT'
     || alvo?.getAttribute?.('role') === 'slider';
   if (cursor && /^(Arrow|Home$|End$|Page)/.test(tecla)) return;
   // Antes de haver noite não há nada para parar nem para andar: a pausa ficava
   // guardada e a primeira noite abria parada, e as setas rebentavam.
   const haNoite = Boolean(estado.janela) && estado.linhas.length > 0;
-  if (acao.noite && !haNoite) return;
+  if (acao.noite && !haNoite && !doClipe) return;
   // Num seletor a letra também escolhe a opção que começa por ela: o A saltava
   // para "a noite toda" ao mesmo tempo que recuava. A letra que é atalho fica
   // só para o atalho.
@@ -8251,7 +8483,8 @@ document.addEventListener('keydown', (e) => {
   // Segurar uma tecla repete o `keydown`: só o que anda no tempo ou no zoom se repete. Segurar o F
   // entrava e saía da tela cheia sem parar, e segurar o espaço pausava e continuava.
   if (e.repeat && !acao.repete) return;
-  if (FAZER[id]) FAZER[id](largo);
+  if (doClipe) FAZER_CLIPE[id](largo);
+  else if (FAZER[id]) FAZER[id](largo);
   else if (acao.botao) botaoVivo(acao.botao)?.click();
   // A corrida do A e do D pára quando se larga a tecla que a começou (o keyup, mais abaixo).
   if (acao.segurar && arrasto) arrasto.tecla = tecla;
@@ -8726,6 +8959,8 @@ const simples = montarSimples({
   pausar: () => { if (!estado.parado && estado.linhas.length) alternarPausa(); },
   carregarClipe: carregarClipeDaKick,
   baixar: baixarParaSimples,
+  transcrever: transcreverParaCartao,
+  motivoDaFala: motivoDaLegenda,
   editar: editarParaSimples,
   fecharEditor: () => { if (estado.clipe) fecharClipe(); },
   abrirEvento: ({ nome, hash }) => (hash ? evento.abrirDoLink(hash, { abrirLance: false }) : evento.abrirDoLink('', { busca: `?e=${encodeURIComponent(nome)}` })),

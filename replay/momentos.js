@@ -10,6 +10,8 @@
 // esta página tem de entregar é essa lista pronta, com os ficheiros já
 // numerados para caírem na ordem certa dentro do editor.
 
+import { base, limparApelido } from './nomes.js?v=7e158988ac';
+
 /** Quanto tempo, por omissão, de cada lado — os números do próprio dono. */
 export const PADRAO = {
   protagonistaAntesS: 5,
@@ -73,6 +75,7 @@ export function momentosDoLink(momentos) {
   return (momentos || []).filter((m) => m && Number.isFinite(m.ms)).map((m) => ({
     protagonista: null, vitimas: [], nota: '', ...PADRAO, ...m,
     vitimas: Array.isArray(m.vitimas) ? m.vitimas.filter((v) => typeof v === 'string') : [],
+    ...(Array.isArray(m.vitimasTexto) ? { vitimasTexto: nomesEscritos(m.vitimasTexto) } : {}),
   }));
 }
 
@@ -85,6 +88,58 @@ export function alternarVitima(momento, slug) {
       ? momento.vitimas.filter((v) => v !== slug)
       : [...(momento.vitimas || []), slug],
   };
+}
+
+const MAX_NOMES_ESCRITOS = 8;
+/** Os nomes escritos à mão de quem morreu: limpos, sem repetidos e em número que cabe na linha. */
+const nomesEscritos = (lista) => {
+  const fora = [];
+  for (const x of lista) {
+    const nome = typeof x === 'string' ? limparApelido(x) : '';
+    if (nome && base(nome) && !fora.some((y) => base(y) === base(nome))) fora.push(nome);
+  }
+  return fora.slice(0, MAX_NOMES_ESCRITOS);
+};
+
+/**
+ * O canal a que um nome escrito corresponde: o slug ou um apelido guardado neste aparelho (nomes.js),
+ * comparados sem maiúsculas, acentos nem símbolos. Só entre os canais que estão na montagem. Ou null.
+ */
+export function canalDoNome(texto, canais, apelidos = new Map()) {
+  const n = base(texto);
+  if (!n) return null;
+  const doSlug = canais.find((c) => base(c) === n);
+  if (doSlug) return doSlug;
+  for (const [slug, lista] of apelidos) {
+    if (canais.includes(slug) && lista.some((a) => base(a) === n)) return slug;
+  }
+  return null;
+}
+
+/**
+ * Anotar quem morreu escrevendo o nome, qualquer um (o do jogo, o do Discord, o de quem não tem canal
+ * aqui). Se o nome é o de um canal da montagem, ou um apelido dele, vale como marcar esse canal em
+ * "Quem morreu?" (e entra o clipe dele); senão fica só como texto em `vitimasTexto`, na linha da kill.
+ */
+export function comVitimaEscrita(momento, texto, canais = [], apelidos = new Map()) {
+  const nome = limparApelido(texto);
+  if (!nome || !base(nome)) return momento;
+  const slug = canalDoNome(nome, canais, apelidos);
+  if (slug && slug !== momento.protagonista) {
+    return (momento.vitimas || []).includes(slug) ? momento : alternarVitima(momento, slug);
+  }
+  const atuais = nomesEscritos(momento.vitimasTexto || []);
+  if (atuais.some((x) => base(x) === base(nome))) return momento;
+  return { ...momento, vitimasTexto: nomesEscritos([...atuais, nome].slice(-MAX_NOMES_ESCRITOS)) };
+}
+
+/** Tirar um nome escrito da lista de quem morreu. */
+export function semVitimaEscrita(momento, nome) {
+  const resto = (momento.vitimasTexto || []).filter((x) => x !== nome);
+  if (resto.length === (momento.vitimasTexto || []).length) return momento;
+  const { vitimasTexto, ...outros } = momento;
+  void vitimasTexto;
+  return resto.length ? { ...outros, vitimasTexto: resto } : outros;
 }
 
 /** Sempre por ordem de relógio: é a ordem em que entram na montagem. */
@@ -118,7 +173,7 @@ export function removerVarios(momentos, msLista) {
 }
 
 /** Um momento so conta como kill confirmada se se viu alguem morrer nele. */
-export const temMorte = (m) => Boolean((m.vitimas || []).length);
+export const temMorte = (m) => Boolean((m.vitimas || []).length || (m.vitimasTexto || []).length);
 
 /**
  * A lista que ele quer ver, e nao a lista toda.
@@ -256,6 +311,7 @@ export function comAjuste(momento, {
     ...(chat && typeof chat === 'object' && chat.ligado === true ? {
       chat: {
         ligado: true, posicao: chat.posicao, tamanho: chat.tamanho, linhas: chat.linhas, fundo: chat.fundo,
+        vida: chat.vida, cor: chat.cor, caixas: chat.caixas,
       },
     } : {}),
     // A legenda: as escolhas e o texto corrigido, só ligada. O texto vai como está; quem o lê passa-o
@@ -264,6 +320,7 @@ export function comAjuste(momento, {
       legenda: {
         ligado: true, estilo: legenda.estilo, tamanho: legenda.tamanho, posicao: legenda.posicao, cor: legenda.cor,
         nome: legenda.nome === true, idioma: legenda.idioma, traduzir: legenda.traduzir === true,
+        segurar: legenda.segurar, caixas: legenda.caixas,
         transcricao: legenda.transcricao || null,
       },
     } : {}),

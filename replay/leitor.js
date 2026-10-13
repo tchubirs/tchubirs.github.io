@@ -24,3 +24,45 @@ export function queFazerComOLeitor({ correr, parado, pausado }) {
   if (correr) return pausado ? 'tocar' : 'nada';
   return pausado ? 'nada' : 'parar';
 }
+
+/**
+ * Saltos pedidos a toda a hora, feitos devagar.
+ *
+ * Arrastar a agulha dispara um pedido por movimento do rato, e cada salto manda todos os leitores
+ * buscar outro pedaço de 10 s (1080p, uns 11 MB): a imagem engasgava. Aqui o pedido mais recente
+ * espera, no máximo um salto por `minimoMs`, e `fechar` faz o salto certo ao largar (sem repetir
+ * o que já foi feito). O relógio e as horas pintam-se à parte, logo, sem esperar por isto.
+ */
+export function limitarSaltos(saltar, { minimoMs = 250, relogio = Date.now, agendar = setTimeout, cancelar = clearTimeout } = {}) {
+  let ultimo = -Infinity;
+  let feito = null;
+  let pendente = null;
+  let timer = null;
+  const correr = () => {
+    timer = null;
+    const ms = pendente;
+    pendente = null;
+    if (ms == null) return;
+    ultimo = relogio();
+    feito = ms;
+    saltar(ms);
+  };
+  return {
+    pedir(ms) {
+      pendente = ms;
+      if (timer != null) return;
+      const espera = ultimo + minimoMs - relogio();
+      if (espera <= 0) correr();
+      else timer = agendar(correr, espera);
+    },
+    fechar(ms) {
+      if (timer != null) cancelar(timer);
+      timer = null;
+      pendente = null;
+      if (ms === feito) return;
+      ultimo = relogio();
+      feito = ms;
+      saltar(ms);
+    },
+  };
+}
