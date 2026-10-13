@@ -3002,6 +3002,37 @@ body.mesa #montagem .estadoAoVivo:empty { display: none; }
 /* Não é botão: é a marca do fim da lista que, à vista, carrega mais cartões. */
 .simplesMais { width: 100%; height: 1px; padding: 0; border: 0; opacity: 0; pointer-events: none; }
 .simplesQuando, .simplesTalvezFalha { margin: 0; color: var(--tinta-2); font-size: var(--t-base); }
+/* O filtro da lista: painel pequeno, chips dos filtros ativos, a confiança média e o vazio. Tudo fica à esquerda. */
+.simplesFiltro { display: grid; gap: var(--e4); background: var(--sup-2); border: 1px solid var(--linha); border-radius: var(--r-3); padding: var(--e4); }
+.simplesFiltro[hidden] { display: none; }
+.filtroCampo { display: grid; gap: var(--e2); color: var(--tinta-2); font-size: var(--t-base); min-width: 0; }
+.filtroCampo input, .filtroCampo select { width: 100%; min-height: 44px; font-size: 16px; }
+.filtroDica { margin: 0; color: var(--tinta-3); font-size: var(--t-menor); }
+.filtroTipos { display: flex; flex-wrap: wrap; gap: var(--e2) var(--e4); margin: 0; padding: 0; border: 0; min-width: 0; }
+.filtroTipos legend { padding: 0; margin-bottom: var(--e2); color: var(--tinta-2); font-size: var(--t-base); }
+.filtroTipos label { display: inline-flex; align-items: center; gap: var(--e2); min-height: 44px; color: var(--tinta); }
+.filtroLinha { display: grid; gap: var(--e4); grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+.filtroBotoes { display: flex; flex-wrap: wrap; gap: var(--e3); }
+.simples .filtroBotoes button { min-height: 44px; font-size: 15px; }
+.simplesChips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--e2); }
+.simplesChips[hidden] { display: none; }
+.simples .simplesChips button.simplesChip { min-height: 36px; font-size: 14px; padding: 0 var(--e3); gap: var(--e2); border-radius: var(--r-2); background: var(--sup-3); color: var(--tinta); }
+.simplesMedia { margin: 0; color: var(--tinta-2); font-size: var(--t-base); }
+.simplesMedia[hidden] { display: none; }
+.simplesMediaConta { color: var(--tinta-3); }
+.simplesVazio { display: grid; gap: var(--e3); justify-items: start; }
+.simplesVazio[hidden] { display: none; }
+.simplesVazio p { margin: 0; font-size: 18px; font-weight: 600; }
+.simplesConf { margin: 0; font-size: var(--t-base); }
+.simplesConfPct { font-family: var(--letra-mono); color: var(--tinta); border-bottom: 1px dotted var(--tinta-3); cursor: help; }
+.simplesConfPct.estimativa { color: var(--tinta-2); }
+.simplesFalaCaixa { display: grid; gap: var(--e2); justify-items: start; min-width: 0; }
+.simplesFalaCaixa:empty { display: none; }
+.simplesFala, .simplesFalaEstado { margin: 0; overflow-wrap: anywhere; line-height: var(--lh); }
+.simplesFala { font-style: italic; color: var(--tinta); }
+.simplesFalaEstado { color: var(--tinta-2); font-size: var(--t-base); }
+.simplesFalaEstado.erro { color: var(--tinta); }
+.simples .simplesFalaBotao { min-height: 36px; font-size: 14px; padding: 0 var(--e3); background: transparent; border-color: transparent; color: var(--tinta-2); text-decoration: underline; text-underline-offset: 3px; }
 .simplesBotoes { display: flex; flex-wrap: wrap; gap: var(--e2); align-items: center; }
 .simples .simplesBotoes button { min-height: 44px; font-size: 15px; padding-inline: var(--e4); }
 .simplesBotoes .curto { display: none; }

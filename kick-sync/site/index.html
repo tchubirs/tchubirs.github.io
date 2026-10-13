@@ -334,11 +334,42 @@
     <div class="simplesAcoes">
       <button id="simplesParar" type="button" class="simplesSecundario" data-t="simples.parar" hidden>Parar de procurar</button>
       <button id="simplesRefazer" type="button" class="simplesSecundario" data-t="simples.refazer" hidden>Procurar de novo</button>
+      <button id="simplesFiltrar" type="button" class="simplesSecundario" data-t="filtro.botao" aria-expanded="false" aria-controls="simplesFiltro" hidden>Filtrar</button>
       <button id="simplesDeNovo" type="button" class="simplesSecundario" data-t="simples.deNovo">Começar de novo</button>
       <button id="modoAvancadoLista" type="button" class="simplesSecundario" data-t="simples.avancado">Modo avançado</button>
     </div>
     <p id="simplesAviso" class="simplesAviso" role="alert" hidden></p>
     <p id="simplesDicaLista" class="simplesDica" data-t="simples.dicaLista" hidden>Toque em Baixar para TikTok. Não precisa ajustar nada.</p>
+    <form id="simplesFiltro" class="simplesFiltro" novalidate hidden>
+      <label class="filtroCampo"><span data-t="filtro.palavra">Palavra dita</span>
+        <input id="filtroPalavra" type="text" maxlength="60" autocomplete="off" spellcheck="false" data-t-ph="filtro.palavraPh" placeholder="por exemplo: granada"></label>
+      <p id="filtroPalavraDica" class="filtroDica"></p>
+      <fieldset class="filtroTipos"><legend data-t="filtro.tipoTitulo">Tipo de momento</legend>
+        <label><input type="checkbox" name="filtroTipo" value="tiros"><span data-t="filtro.tipo.tiros">Luta</span></label>
+        <label><input type="checkbox" name="filtroTipo" value="explosao"><span data-t="filtro.tipo.explosao">Explosão</span></label>
+        <label><input type="checkbox" name="filtroTipo" value="morte"><span data-t="filtro.tipo.morte">Morte</span></label>
+        <label><input type="checkbox" name="filtroTipo" value="grito"><span data-t="filtro.tipo.grito">Grito</span></label>
+        <label><input type="checkbox" name="filtroTipo" value="chat"><span data-t="filtro.tipo.chat">Chat</span></label>
+      </fieldset>
+      <div class="filtroLinha">
+        <label class="filtroCampo"><span data-t="filtro.nota">Nota mínima</span>
+          <select id="filtroNota"><option value="" data-t="filtro.qualquer">Qualquer</option><option value="bom" data-t="simples.nota.bom">Bom</option><option value="muitoBom" data-t="simples.nota.muitoBom">Muito bom</option></select></label>
+        <label class="filtroCampo"><span data-t="filtro.luta">Luta de pelo menos</span>
+          <select id="filtroLuta"><option value="0" data-t="filtro.qualquer">Qualquer</option><option value="10">10 s</option><option value="20">20 s</option><option value="30">30 s</option><option value="60">60 s</option></select></label>
+        <label class="filtroCampo"><span data-t="filtro.ordenar">Ordenar</span>
+          <select id="filtroOrdem"><option value="live" data-t="filtro.ordem.live">Ordem da live</option><option value="melhores" data-t="filtro.ordem.melhores">Melhores primeiro</option><option value="longas" data-t="filtro.ordem.longas">Mais longas</option></select></label>
+      </div>
+      <div class="filtroBotoes">
+        <button type="submit" class="principal" data-t="filtro.aplicar">Aplicar</button>
+        <button id="filtroLimpar" type="button" class="simplesSecundario" data-t="filtro.limpar">Limpar filtro</button>
+      </div>
+    </form>
+    <ul id="simplesChips" class="simplesChips" data-t-aria="filtro.chips" aria-label="Filtros ativos" hidden></ul>
+    <p id="simplesMedia" class="simplesMedia" hidden></p>
+    <div id="simplesVazio" class="simplesVazio" hidden>
+      <p data-t="filtro.nada">Nada com esse filtro</p>
+      <button id="simplesLimparFiltro" type="button" class="simplesSecundario" data-t="filtro.limpar">Limpar filtro</button>
+    </div>
     <ol id="simplesLista" class="simplesLista" data-t-aria="simples.lista" aria-label="Melhores momentos"></ol>
     <div id="simplesMais" class="simplesMais" aria-hidden="true" hidden></div>
   </div>

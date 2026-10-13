@@ -42,6 +42,8 @@ import {
   idiomaParaOuvir, segurarMs, retanguloDaLegenda, LEGENDA_OMISSAO,
 } from './legenda.js';
 import { abrirVoz, somDosPedacos, degrauDoSom, estimativaS, faltaBaixar } from './legenda-voz.js';
+import { guardarFala, linhasDaTranscricao } from './falas.js';
+import { tituloDeDeteccao, confDoSom } from './titulo.js';
 import { podeLer } from './ler-tela.js';
 import { planoDeAngulos, gravarAngulos } from './angulos.js';
 import { agruparPorNoite, rotuloDaNoite, noiteParaAbrir } from './noites.js';
@@ -3457,8 +3459,17 @@ function contagemPorTipo(conta) {
   return Object.entries(chaves).filter(([k]) => conta[k]).map(([k, [um, varios]]) => tn(conta[k], um, varios)).join(', ');
 }
 
+/** A confiança do que a detecção ouviu (a mesma conta do índice), para o título dizer só o que se sabe. */
+function confDaDeteccao(c) {
+  if (!['tiros', 'explosao', 'grito', 'chat'].includes(c.tipo)) return {};
+  const r = confDoSom(c.tipo, c);
+  return r.conf == null ? {} : { conf: r.conf, confFonte: r.fonte, confN: r.n };
+}
+
 /** O tipo de um momento achado pela detecção, como aparece na lista. */
 function rotuloDoTipo(m) {
+  // O título diz o que aconteceu, com o que o som provou (titulo.js); o chat achado por palavra mantém as palavras.
+  if (!(m.tipo === 'chat' && m.palavras?.length)) return tituloDeDeteccao(m);
   if (m.tipos?.length > 1) return m.tipos.map((tipo) => rotuloDoTipo({ ...m, tipos: null, tipo })).join(', ');
   if (m.tipo === 'tiros') return m.acertos > 0 ? t('filtros.tipoPvp', { n: m.acertos }) : t('filtros.tipoTiros');
   if (m.tipo === 'explosao') return t('filtros.tipoExplosao');
@@ -3764,6 +3775,7 @@ async function detetar(quem, quanto, { resto = false } = {}) {
           ...tamanhos(), auto: true, tipo: c.tipo,
           ...(c.tipos?.length > 1 ? { tipos: c.tipos } : {}),
           ...(c.tipo === 'tiros' ? { tiros: c.tiros } : {}),
+          ...confDaDeteccao(c),
           ...(c.tipo === 'tiros' && c.acertos ? { acertos: c.acertos, cabecas: c.cabecas } : {}),
           ...(c.tipo === 'chat' ? { palavras: c.palavras } : {}),
           combateDeMs: c.combateDeMs, combateAteMs: c.combateAteMs,
@@ -5497,7 +5509,8 @@ function abrirClipe(momento = null) {
   $('canalClipe').innerHTML = estado.linhas
     .map((l) => `<option value="${escapar(l.slug)}"${l.slug === linha.slug ? ' selected' : ''}>${escapar(l.slug)}</option>`)
     .join('');
-  $('tituloClipe').value = '';
+  // O nome do arquivo parte do que aconteceu quando a kill veio da detecção; o dono pode trocar.
+  $('tituloClipe').value = daLista && momento.tipo ? tituloDeDeteccao(momento) : '';
   $('estadoClipe').textContent = '';
   trancarEditor(false);
   $('guardarClipe').disabled = false;
@@ -6864,6 +6877,8 @@ async function gerarLegenda() {
     if (!aindaEste()) return;
     const tr = transcricaoDoAudio(r.palavras, { canal, deMs, ateMs, idioma, traduzida: traduzir });
     c.transcricao = tr;
+    // O texto fica lembrado para a frase do cartão e o filtro por palavra do modo simples.
+    if (tr?.linhas.length) guardarFala(localStorage, { canal, deMs, ateMs, linhas: linhasDaTranscricao(tr) });
     c.legendaFalta = { bytes: 0, guarda: falta.guarda };
     const s = Math.round((performance.now() - t0) / 1000);
     nota.classList.remove('mau');
@@ -6884,6 +6899,33 @@ async function gerarLegenda() {
       pintarLegendaClipe();
     }
   }
+}
+
+/**
+ * "Ver o que ele falou" de um cartão do modo simples: o som só deste pedaço, o mesmo leitor da legenda, e o texto fica
+ * lembrado (falas.js). Não mexe no editor. `aoProgresso({ fase: 'som' | 'baixar' | 'abrir' | 'ouvir', fracao, feito, total })`.
+ */
+async function transcreverParaCartao({ canal, deMs, ateMs }, { sinal, aoProgresso = () => {} } = {}) {
+  if (!podeLer()) throw Object.assign(new Error('sem leitor'), { name: 'SEM-LEITOR' });
+  const linha = estado.linhas.find((x) => x.slug === canal);
+  if (!linha) throw Object.assign(new Error(t('simples.semMotivo')), { name: 'SEM-PLANO' });
+  const nudge = estado.nudges[canal] || 0;
+  const idioma = idiomaParaOuvir('auto', onde(linha, deMs + nudge).peca?.vod?.idioma);
+  const plano = await planearCorte({
+    linha, deMs: deMs + nudge, ateMs: ateMs + nudge, cache: new Map(), sinal, degrau: degrauDoSom,
+  });
+  if (plano.estado !== 'ok') throw Object.assign(new Error(porqueNaoSaiu(plano)), { name: 'SEM-PLANO' });
+  const audio = await somDosPedacos(plano.segmentos, deMs + nudge, ateMs + nudge, {
+    sinal, aoBaixar: ({ prontos, total }) => aoProgresso({ fase: 'som', fracao: prontos / total }),
+  });
+  const falta = await faltaBaixar();
+  vozDaLegenda ??= abrirVoz();
+  const r = await vozDaLegenda.transcrever(audio, {
+    idioma, traduzir: false, sinal, faltaBytes: falta.bytes, aoProgresso: (p) => aoProgresso(p),
+  });
+  const linhas = linhasDaTranscricao(transcricaoDoAudio(r.palavras, { canal, deMs, ateMs, idioma, traduzida: false }));
+  guardarFala(localStorage, { canal, deMs, ateMs, linhas });
+  return { linhas };
 }
 
 function ligarLegendaClipe() {
@@ -8917,6 +8959,8 @@ const simples = montarSimples({
   pausar: () => { if (!estado.parado && estado.linhas.length) alternarPausa(); },
   carregarClipe: carregarClipeDaKick,
   baixar: baixarParaSimples,
+  transcrever: transcreverParaCartao,
+  motivoDaFala: motivoDaLegenda,
   editar: editarParaSimples,
   fecharEditor: () => { if (estado.clipe) fecharClipe(); },
   abrirEvento: ({ nome, hash }) => (hash ? evento.abrirDoLink(hash, { abrirLance: false }) : evento.abrirDoLink('', { busca: `?e=${encodeURIComponent(nome)}` })),

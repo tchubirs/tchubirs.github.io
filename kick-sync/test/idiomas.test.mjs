@@ -27,7 +27,7 @@ test('nenhuma chave usada na página fica por escrever', () => {
       usadas.add(m[1]);
     }
   }
-  for (const f of ['../site/app.js', '../site/twitch-app.js', '../site/evento-ui.js', '../site/atalhos-painel.js', '../site/nomes-ui.js', '../site/melhores.js', '../site/mortes-ui.js', '../site/simples.js']) {
+  for (const f of ['../site/app.js', '../site/twitch-app.js', '../site/evento-ui.js', '../site/atalhos-painel.js', '../site/nomes-ui.js', '../site/melhores.js', '../site/mortes-ui.js', '../site/simples.js', '../site/titulo.js', '../site/simples-filtro.js']) {
     const codigo = ler(f);
     for (const m of codigo.matchAll(/\bt\(\s*'([a-zA-Z0-9_.]+)'/g)) usadas.add(m[1]);
     for (const m of codigo.matchAll(/\btn\([^,]+,\s*'([a-zA-Z0-9_.]+)',\s*'([a-zA-Z0-9_.]+)'/g)) {
@@ -110,6 +110,8 @@ const IGUAIS_DE_PROPOSITO = {
     'atalhos.feito',
     // A etiqueta da caixa do chat na prévia e "4 s" escrevem-se igual.
     'chatClipe.etiqueta', 'legenda.seg4',
+    // O filtro e o título dos momentos: 'Chat' e '{s} s' escrevem-se igual em inglês.
+    'titulo.rotulo.chat', 'filtro.tipo.chat', 'filtro.lutaN',
   ]),
   // O espanhol e o portugues escrevem estas exactamente da mesma maneira.
   es: new Set([
@@ -179,6 +181,9 @@ const IGUAIS_DE_PROPOSITO = {
     'simples.pausar', 'simples.continuar', 'simples.editar', 'simples.baixarTiktokCurto',
     // A confirmação do Recomeçar: "Cancelar" escreve-se igual em espanhol.
     'recomecar.cancelar',
+    // O filtro e o título dos momentos: 'Chat', 'Grito', 'Filtrar', 'Aplicar', 'Ordenar', 'Parar' e '{s} s' escrevem-se igual em espanhol.
+    'titulo.rotulo.chat', 'titulo.rotulo.grito', 'titulo.grito', 'filtro.tipo.chat', 'filtro.tipo.grito', 'filtro.lutaN', 'filtro.botao',
+    'filtro.aplicar', 'filtro.ordenar', 'filtro.tipoTitulo', 'fala.parar', 'filtro.nota', 'filtro.mostrando', 'titulo.fraco.grito',
   ]),
 };
 

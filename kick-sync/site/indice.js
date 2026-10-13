@@ -52,7 +52,7 @@ function evento(tipo, ms, deMs, ateMs, c, extras = {}) {
 }
 
 /** Uma curva que sobe de 0 e fica abaixo de 0,9: para o que ainda não tem exemplo que o meça (grito, chat). */
-const curva = (forca, meio) => Math.min(0.9, forca / (forca + meio));
+export const curva = (forca, meio) => Math.min(0.9, forca / (forca + meio));
 
 /**
  * Do resultado de `varrerNoite` (e do chat, e das mortes) ao índice. `som` é o que `varrerNoite` devolveu (com
