@@ -177,6 +177,8 @@ const IGUAIS_DE_PROPOSITO = {
     'legenda.estilo', 'legenda.corTurquesa', 'legenda.menos', 'legenda.mais',
     // O player do lance no modo simples: "Pausar", "Continuar" e "Editar" escrevem-se igual em espanhol.
     'simples.pausar', 'simples.continuar', 'simples.editar', 'simples.baixarTiktokCurto',
+    // A confirmação do Recomeçar: "Cancelar" escreve-se igual em espanhol.
+    'recomecar.cancelar',
   ]),
 };
 
