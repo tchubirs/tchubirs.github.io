@@ -1,0 +1,54 @@
+name: revisão do front end com Claude
+
+on:
+  workflow_dispatch:
+    inputs:
+      base:
+        description: "Commit inicial do diff"
+        required: true
+        default: "8a3dceb"
+      arquivos:
+        description: "Arquivos ou pasta para revisar"
+        required: true
+        default: "clipfactory/src .github/workflows/clipfactory.yml"
+      pedido:
+        description: "O que a Claude deve investigar"
+        required: true
+        default: "Revise a automação de seleção, renderização, publicação e controle de dinheiro. Procure duplicação, perda do ledger, publicação insegura e falhas que deixam o operador sem saber o que fazer. Dê gravidade, arquivo, linha, evidência e correção mínima."
+      branch:
+        description: "Branch com o código que será revisado"
+        required: true
+        default: "claude/ai-revenue-automation-map-g00jks"
+      modelo:
+        description: "ID do modelo Claude (vazio = Sonnet mais barato disponível)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  revisar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar cliente Anthropic
+        run: python -m pip install --quiet anthropic
+
+      - name: Rodar revisão
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_BASE: ${{ inputs.base }}
+          CLAUDE_FILES: ${{ inputs.arquivos }}
+          CLAUDE_PROMPT: ${{ inputs.pedido }}
+          CLAUDE_MODEL: ${{ inputs.modelo }}
+        run: python .github/scripts/revisao_claude.py
