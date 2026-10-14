@@ -6,6 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { kickFalsa } from './falsa.mjs';
 import { montarPalco, podeCorrer } from './palco.mjs';
 import {
@@ -137,7 +138,7 @@ test('os arquivos do detector vêm numa versão fixa e com impressão digital', 
   }
   assert.ok(BYTES_TOTAL < 15e6, 'a primeira vez baixa uns 12 MB, não mais');
   // Nada disto no repositório: o código minificado e o motor vêm de fora.
-  const site = new URL('../site/', import.meta.url).pathname;
+  const site = fileURLToPath(new URL('../site/', import.meta.url));
   const pesados = fs.readdirSync(site, { recursive: true }).filter((f) => /vision_|\.tflite$|tasks-vision/.test(String(f)));
   assert.deepEqual(pesados, []);
 });

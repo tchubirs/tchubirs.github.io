@@ -7,7 +7,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { kickFalsa, T } from './falsa.mjs';
-import { montarPalco, podeCorrer } from './palco.mjs';
+import { montarPalco, podeCorrer, saltarTempo } from './palco.mjs';
 
 let PORTA = 0;
 const { abrir } = montarPalco((p) => { PORTA = p; });
@@ -307,7 +307,7 @@ test('escolher um lance lê o chat do time e marca no mapa onde ele explodiu',
     assert.equal(await p.locator('#regua .picoChat').count(), 0);
     assert.equal(await p.locator('.faixaGeral .picoGeral').count(), 1);
     assert.equal(await p.locator('.faixaGeral .picoChat').count(), 0);
-    await p.click('#mais5m');
+    await saltarTempo(p, 300_000);
     await naFaixa.first().click();
     assert.equal(await p.evaluate(() => window.__estado.agoraMs), pico - 10_000);
     // Com o vídeo aberto e o mapa recolhido, o zoom do mapa não muda nada na tela: some.
@@ -512,7 +512,7 @@ test('o chat de quem está em foco anda ao lado do vídeo, no tempo dele',
     const h1 = await ultima();
     assert.ok(h1 && h1 <= agora, `mensagem do futuro: ${h1} com o vídeo em ${agora}`);
     // Andar um minuto traz mensagens mais novas.
-    await p.click('#mais1m');
+    await saltarTempo(p, 60_000);
     await p.waitForFunction((antes) => {
       const hs = [...document.querySelectorAll('#chatLinhas .hora')].map((h) => h.textContent);
       return hs.at(-1) > antes;

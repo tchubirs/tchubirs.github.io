@@ -329,6 +329,12 @@
   </form>
   <div id="simplesTrabalho" class="simplesTrabalho" hidden>
     <h2 id="simplesQuem" class="simplesQuem" tabindex="-1"></h2>
+    <div id="simplesMeuPov" class="simplesMeuPov" hidden>
+      <label for="simplesCanalPov" data-t="simples.meuPov.rotulo">Seu canal neste evento</label>
+      <input id="simplesCanalPov" type="text" list="simplesCanaisPov" autocomplete="off" autocapitalize="none" spellcheck="false" data-t-ph="simples.meuPov.ph" placeholder="Digite seu canal da Kick" aria-describedby="simplesMeuPovEstado">
+      <datalist id="simplesCanaisPov"></datalist>
+      <p id="simplesMeuPovEstado" role="status" aria-live="polite"></p>
+    </div>
     <p id="simplesEstado" class="simplesEstado" role="status" aria-live="polite"></p>
     <progress id="simplesBarra" class="simplesBarra" max="1"></progress>
     <div class="simplesAcoes">
@@ -1467,8 +1473,8 @@
            em tudo e depois baixo tudo junto". -->
       <button id="guardarAjustes" class="principal" hidden><svg class="ic" aria-hidden="true"><use href="#i-certo"/></svg><span data-t="clipe.guardarAjustes">Salvar ajustes</span></button>
       <!-- O mesmo lance visto por vários streamers, com o nome de cada um no vídeo (angulos.js). -->
-      <button id="angulosSeguido" class="soVarios" data-t-titulo="angulos.seguidoAjuda" title="O lance visto por até 4 streamers, um depois do outro, com o nome de cada um"><svg class="ic ic-p" aria-hidden="true"><use href="#i-descarregar"/></svg><span data-t="angulos.seguido">Ângulos 16:9</span></button>
-      <button id="angulosEmpilhado" class="soVarios" data-t-titulo="angulos.empilhadoAjuda" title="Dois streamers, um em cima do outro, para TikTok, Reels e Shorts"><svg class="ic ic-p" aria-hidden="true"><use href="#i-descarregar"/></svg><span data-t="angulos.empilhado">Ângulos 9:16</span></button>
+      <button id="angulosSeguido" class="soVarios" data-t-titulo="angulos.seguidoAjuda" title="Mostra até 4 jogadores, um por vez, com o nome de cada um"><svg class="ic ic-p" aria-hidden="true"><use href="#i-descarregar"/></svg><span data-t="angulos.seguido">Baixar horizontal (até 4, um por vez)</span></button>
+      <button id="angulosEmpilhado" class="soVarios" data-t-titulo="angulos.empilhadoAjuda" title="Mostra dois jogadores juntos, um em cima do outro, para TikTok, Reels e Shorts"><svg class="ic ic-p" aria-hidden="true"><use href="#i-descarregar"/></svg><span data-t="angulos.empilhado">Baixar vertical (2 na tela)</span></button>
       <button id="guardarRetrato"
         data-t-titulo="retrato.custo" title="Reconverte em tempo real"><svg class="ic ic-p" aria-hidden="true"><use href="#i-descarregar"/></svg><span data-t="retrato.exportar">Baixar para TikTok</span></button>
       <button id="guardarClipe" class="principal"><svg class="ic" aria-hidden="true"><use href="#i-descarregar"/></svg><span data-t="clipe.guardar">Baixar tela cheia</span></button>

@@ -11,7 +11,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { kickFalsa } from './falsa.mjs';
-import { montarPalco, podeCorrer } from './palco.mjs';
+import { montarPalco, podeCorrer, saltarTempo, trocarIdioma } from './palco.mjs';
 
 let PORTA = 0;
 const { abrir } = montarPalco((p) => { PORTA = p; });
@@ -120,7 +120,7 @@ test('trocar de idioma traduz os quadros sem refazer nenhum leitor',
     const antes = await p.evaluate(() => ({ n: window.__hls.length, urls: window.__carregados.length }));
     const titulo = () => p.locator('.tile[data-slug="kodd"] .ecraCheio').getAttribute('title');
     const pt = await titulo();
-    await p.selectOption('#idioma', 'en');
+    await trocarIdioma(p, 'en');
     await p.waitForTimeout(500);
     assert.notEqual(await titulo(), pt, 'o quadro não foi traduzido');
     assert.deepEqual(await p.evaluate(() => ({ n: window.__hls.length, urls: window.__carregados.length })), antes,
@@ -156,7 +156,7 @@ test('um salto só move os quadros que se vêem, e os outros acertam quando apar
     assert.ok(escondidos.length > 0, 'o ecrã do teste mostra a grelha inteira e não prova nada');
 
     await p.evaluate(() => { window.__buscas = []; });
-    await p.click('#mais1m');
+    await saltarTempo(p, 60_000);
     await p.waitForTimeout(800);
     const buscados = await p.evaluate(() => window.__buscas);
     const indevidos = buscados.filter((s) => escondidos.includes(s));

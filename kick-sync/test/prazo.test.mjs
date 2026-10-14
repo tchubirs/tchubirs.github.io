@@ -6,7 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { kickFalsa, T } from './falsa.mjs';
-import { montarPalco, podeCorrer } from './palco.mjs';
+import { montarPalco, podeCorrer, saltarTempo } from './palco.mjs';
 import { pedacoNumero } from './pedaco.mjs';
 import {
   retencaoDoCanal, prazoDoVod, ordemDeGuardar, DIA_MS, RETENCAO_PADRAO, RETENCAO_VERIFICADO,
@@ -77,7 +77,7 @@ async function preparar(p, { lento = 0 } = {}) {
 /** Duas kills: a 1.ª na POV do tchubi (30 dias), a 2.ª na do outro (7 dias). */
 async function marcarDuas(p) {
   for (const quem of ['tchubi', 'outro']) {
-    await p.click('#mais1m');
+    await saltarTempo(p, 60_000);
     await p.evaluate((q) => { window.__estado.focos = [q]; }, quem);
     await p.click('#marcarKill');
   }

@@ -9,7 +9,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { kickFalsa, T } from './falsa.mjs';
-import { montarPalco, podeCorrer } from './palco.mjs';
+import { montarPalco, podeCorrer, saltarTempo } from './palco.mjs';
 
 let PORTA = 0;
 const { abrir } = montarPalco((p) => { PORTA = p; });
@@ -199,7 +199,7 @@ test('o botão lê só o chat do streamer escolhido e só o trecho entre as alç
     assert.equal(await p.locator('#chatVideoTitulo').innerText(), 'Chat de outro');
     // O chat anda com o vídeo: a partir das 21:02 aparecem as mensagens lidas.
     for (let k = 0; k < 4 && !(await p.locator('#chatLinhas li:not(.nota)').count()); k++) {
-      await p.click('#mais1m');
+      await saltarTempo(p, 60_000);
       await p.waitForTimeout(300);
     }
     assert.ok(await p.locator('#chatLinhas li:not(.nota)').count() > 0, await p.locator('#agora').innerText());

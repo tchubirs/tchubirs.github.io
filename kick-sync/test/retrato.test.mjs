@@ -8,7 +8,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   RETRATO, enquadramentoInicial, limitar, destinos, desenhar, melhorFormato, extensaoDe, FORMATOS,
-  formatoQueFunciona, capturarSom,
+  formatoQueFunciona, capturarSom, prepararSomDaGravacao,
   reformar, proporcaoDoQuadro, limparDivisao, DIVISAO_MIN, DIVISAO_MAX, DIVISAO_OMISSAO,
   divisaoDoQuadro, encaixar, gravar, noSitio,
 } from '../site/retrato.js';
@@ -428,6 +428,126 @@ test('a captura espera a faixa de áudio que chega depois do primeiro play', asy
   assert.deepEqual(r.faixas, [faixa]);
 });
 
+function audioDeElemento({ suspenso = false, mudo = false } = {}) {
+  const estado = { fontes: 0, destinos: [], conexoes: new Set() };
+  class Contexto {
+    constructor() { this.state = suspenso ? 'suspended' : 'running'; this.destination = {}; }
+    resume() { return Promise.resolve(); }
+    createMediaElementSource(video) {
+      estado.fontes++;
+      estado.video = video;
+      return {
+        connect: (destino) => estado.conexoes.add(destino),
+        disconnect: (destino) => estado.conexoes.delete(destino),
+      };
+    }
+    createGain() { return { gain: { value: 1 }, connect() {} }; }
+    createMediaStreamDestination() {
+      const faixa = { readyState: 'live', stop() { this.readyState = 'ended'; } };
+      const destino = { stream: { getTracks: () => [faixa], getAudioTracks: () => [faixa] } };
+      estado.destinos.push(destino);
+      return destino;
+    }
+    createAnalyser() {
+      return { fftSize: 256, getFloatTimeDomainData(a) {
+        a.fill(mudo || estado.video.muted ? 0 : estado.video.volume * 0.2);
+      } };
+    }
+  }
+  return { Contexto, estado };
+}
+
+test('sem captureStream, captura áudio do MP4 pelo elemento e restaura o player', async () => {
+  const { Contexto, estado } = audioDeElemento();
+  const video = { volume: 0, muted: true, play: async () => {} };
+  assert.equal(await prepararSomDaGravacao({ Contexto }), true);
+  const som = await capturarSom(video, { Contexto, esperaMs: 30 });
+  assert.equal(som.faixas.length, 1);
+  assert.equal(video.volume, 1, 'o volume zero tornaria a faixa muda');
+  assert.equal(video.muted, false);
+  som.fechar();
+  assert.equal(video.volume, 0);
+  assert.equal(video.muted, true);
+  assert.equal(som.faixas[0].readyState, 'ended');
+  assert.equal(estado.conexoes.size, 1, 'só o monitor do player continua conectado');
+
+  const outra = await capturarSom(video, { Contexto, esperaMs: 30 });
+  assert.equal(estado.fontes, 1, 'um elemento não aceita duas MediaElementAudioSource');
+  outra.fechar();
+});
+
+test('contexto suspenso não é aceito como uma captura de som', async () => {
+  const { Contexto, estado } = audioDeElemento({ suspenso: true });
+  await assert.rejects(() => capturarSom({ play: async () => {} }, { Contexto }),
+    (e) => e.name === 'SEM-SOM');
+  assert.equal(estado.fontes, 0, 'não pode entregar uma faixa viva de um contexto parado');
+});
+
+test('uma faixa viva que só entrega zeros é recusada e o roteamento é limpo', async () => {
+  const { Contexto, estado } = audioDeElemento({ mudo: true });
+  const video = { volume: 0.4, muted: false, play: async () => {} };
+  await assert.rejects(() => capturarSom(video, { Contexto, esperaMs: 30 }),
+    (e) => e.name === 'SEM-SOM');
+  assert.equal(video.volume, 0.4);
+  assert.equal(estado.conexoes.size, 1);
+  assert.equal(estado.destinos[0].stream.getAudioTracks()[0].readyState, 'ended');
+});
+
+test('cancelar a confirmação do áudio limpa a captura do elemento', async () => {
+  const { Contexto, estado } = audioDeElemento({ mudo: true });
+  const video = { volume: 0, muted: true, play: async () => {} };
+  const controle = new AbortController();
+  const captura = capturarSom(video, { Contexto, sinal: controle.signal, esperaMs: 100 });
+  setTimeout(() => controle.abort(), 5);
+  await assert.rejects(() => captura, (e) => e.name === 'AbortError');
+  assert.equal(video.volume, 0);
+  assert.equal(video.muted, true);
+  assert.equal(estado.destinos[0].stream.getAudioTracks()[0].readyState, 'ended');
+});
+
+test('áudio do MP4 acompanha play, pausa e saltos sem desmutar o vídeo', async () => {
+  const offsets = [];
+  let paradas = 0;
+  class Contexto {
+    constructor() { this.state = 'running'; }
+    async decodeAudioData() { return { numberOfChannels: 2, length: 480000, duration: 10 }; }
+    createMediaStreamDestination() {
+      const faixa = { readyState: 'live', stop() { this.readyState = 'ended'; } };
+      return { stream: { getTracks: () => [faixa], getAudioTracks: () => [faixa] } };
+    }
+    createBufferSource() {
+      return { connect() {}, disconnect() {}, start(_quando, offset) { offsets.push(offset); }, stop() { paradas++; } };
+    }
+  }
+  const video = new EventTarget();
+  Object.assign(video, { paused: true, muted: true, volume: 0, currentTime: 2, seeking: false });
+  const som = await capturarSom(video, { Contexto, arquivoSom: new Blob(['AAC']) });
+  assert.deepEqual(offsets, [], 'o vídeo parado não dispara áudio');
+  video.paused = false; video.dispatchEvent(new Event('playing'));
+  assert.deepEqual(offsets, [2]);
+  video.dispatchEvent(new Event('waiting'));
+  assert.equal(paradas, 1);
+  video.currentTime = 2.4; video.dispatchEvent(new Event('playing'));
+  video.seeking = true; video.dispatchEvent(new Event('seeking'));
+  video.currentTime = 6; video.seeking = false; video.dispatchEvent(new Event('seeked'));
+  assert.deepEqual(offsets, [2, 2.4, 6], 'cada retomada usa o mesmo instante da imagem');
+  assert.equal(video.muted, true, 'Safari pode tocar o vídeo mudo sem outro gesto');
+  assert.equal(video.volume, 0);
+  som.fechar();
+  assert.equal(som.faixas[0].readyState, 'ended');
+  video.dispatchEvent(new Event('playing'));
+  assert.equal(offsets.length, 3, 'ouvintes removidos ao terminar');
+});
+
+test('um MP4 sem áudio decodificável é recusado', async () => {
+  class Contexto {
+    constructor() { this.state = 'running'; }
+    async decodeAudioData() { throw new DOMException('no audio', 'EncodingError'); }
+  }
+  await assert.rejects(() => capturarSom(new EventTarget(), { Contexto, arquivoSom: new Blob(['sem AAC']) }),
+    (e) => e.name === 'SEM-SOM');
+});
+
 test('o exportador que exige som recusa vídeo sem faixa antes de começar', async () => {
   const v = {
     videoWidth: 1920, videoHeight: 1080, currentTime: 10, readyState: 4,
@@ -695,6 +815,58 @@ test('sem AudioContext a prova de formato continua a dar resposta', async () => 
     );
   } finally {
     if (antes) globalThis.AudioContext = antes;
+  }
+});
+
+test('Safari sem isTypeSupported ainda precisa produzir MP4 de verdade', async () => {
+  const tela = {
+    getContext: () => ({ fillRect() {} }),
+    captureStream: () => ({ addTrack() {}, getTracks: () => [] }),
+  };
+  class Safari {
+    constructor(_stream, { mimeType }) {
+      assert.equal(mimeType, 'video/mp4');
+      this.mimeType = 'video/mp4;codecs=avc1.42000a,mp4a.40.2';
+      this.state = 'inactive';
+    }
+    start() { this.state = 'recording'; }
+    stop() {
+      this.state = 'inactive';
+      this.ondataavailable?.({ data: new Blob(['mp4']) });
+      this.onstop?.();
+    }
+  }
+  assert.equal(melhorFormato(Safari), 'video/mp4');
+  assert.equal(await formatoQueFunciona({ MR: Safari, criarTela: () => tela, msPorTentativa: 5 }),
+    'video/mp4', 'o perfil do vídeo pequeno não deve limitar a gravação de 1080p');
+  class SemBytes extends Safari { stop() { this.state = 'inactive'; this.onstop?.(); } }
+  assert.equal(await formatoQueFunciona({ MR: SemBytes, criarTela: () => tela, msPorTentativa: 5 }), null);
+});
+
+test('a prova não adiciona uma faixa de contexto suspenso que trava o WebKit', async () => {
+  let faixas = 0;
+  const tela = {
+    getContext: () => ({ fillRect() {} }),
+    captureStream: () => ({ addTrack() { faixas++; }, getTracks: () => [] }),
+  };
+  class MR {
+    static isTypeSupported() { return true; }
+    constructor() { this.state = 'inactive'; }
+    start() { this.state = 'recording'; }
+    stop() { this.state = 'inactive'; this.ondataavailable?.({ data: new Blob(['mp4']) }); this.onstop?.(); }
+  }
+  const antes = globalThis.AudioContext;
+  globalThis.AudioContext = class {
+    constructor() { this.state = 'suspended'; }
+    resume() { return Promise.resolve(); }
+    createMediaStreamDestination() { throw new Error('não pode usar enquanto suspenso'); }
+    close() { return Promise.resolve(); }
+  };
+  try {
+    assert.ok(await formatoQueFunciona({ MR, criarTela: () => tela, msPorTentativa: 5 }));
+    assert.equal(faixas, 0);
+  } finally {
+    if (antes) globalThis.AudioContext = antes; else delete globalThis.AudioContext;
   }
 });
 

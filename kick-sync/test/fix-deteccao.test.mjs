@@ -10,7 +10,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { kickFalsa, T } from './falsa.mjs';
-import { montarPalco, podeCorrer } from './palco.mjs';
+import { montarPalco, podeCorrer, saltarTempo } from './palco.mjs';
 import { passo4Detetar } from './assistente.mjs';
 
 let PORTA = 0;
@@ -199,7 +199,7 @@ test('o Rever de uma kill mostra a POV de quem matou, e não a que está em foco
   const { p, erros } = await abrir();
   await kickFalsa(p, { canais: ['tchubi', 'outro'] });
   await abrirNoite(p, ['tchubi', 'outro']);
-  await p.click('#mais1m');
+  await saltarTempo(p, 60_000);
   await p.click('#marcarKill');
   await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
   assert.equal((await momentos(p))[0].protagonista, 'tchubi');
@@ -223,7 +223,7 @@ test('quem morreu: aponta as vítimas e não quem matou, acerta o instante, e os
     await kickFalsa(p, { canais });
     await ecrasFalsos(p);
     await abrirNoite(p, canais);
-    await p.click('#mais1m');
+    await saltarTempo(p, 60_000);
     await p.click('#marcarKill');
     await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
     const ms = (await momentos(p))[0].ms;
@@ -304,7 +304,7 @@ test('a detecção vê quem morreu mesmo com o filtro a esconder as novas, e o r
 
 /** Uma kill marcada, e os estouros que uma varredura do `canal` teria guardado. */
 async function noiteComEstouros(p, instantes, canal = 'tchubi') {
-  await p.click('#mais1m');
+  await saltarTempo(p, 60_000);
   await p.click('#marcarKill');
   await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
   const ms = (await momentos(p))[0].ms;
@@ -503,9 +503,9 @@ test('a detecção ouve o trecho das alças (que pega a marca), de uma pessoa ou
   p.on('dialog', (d) => { perguntas.push(d.message()); d.accept(); });
 
   // A entrada e a saída viram o trecho das alças.
-  await p.click('#mais1m');
+  await saltarTempo(p, 60_000);
   await p.click('#marcarIn');
-  await p.click('#mais1m');
+  await saltarTempo(p, 60_000);
   await p.click('#marcarOut');
   const marca = await p.evaluate(() => ({ ...window.__estado.marca }));
   await detectar(p, { quem: 'tchubi', quanto: 'trecho' });

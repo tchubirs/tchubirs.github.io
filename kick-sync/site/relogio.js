@@ -111,6 +111,21 @@ export function onde(linha, quandoMs, { nudgeMs = 0 } = {}) {
   return b ? { estado: 'buraco', buraco: b } : { estado: 'sem-video' };
 }
 
+/** Intervalo compartilhado pelos VODs que estão tocando nesse instante, com os ajustes de sincronização. */
+export function trechoComum(linhas, quandoMs, { nudges = {} } = {}) {
+  if (!linhas.length || linhas.some((l) => !l)) return null;
+  const trechos = linhas.map((linha) => {
+    const ajuste = nudges[linha.slug] || 0;
+    const r = onde(linha, quandoMs, { nudgeMs: ajuste });
+    if (r.estado !== 'toca') return null;
+    return { inicio: r.peca.playlist.inicio - ajuste, fim: r.peca.playlist.fim - ajuste };
+  });
+  if (trechos.some((x) => !x)) return null;
+  const inicio = Math.max(...trechos.map((x) => x.inicio));
+  const fim = Math.min(...trechos.map((x) => x.fim));
+  return fim > inicio ? { inicio, fim } : null;
+}
+
 /**
  * The manual nudge, per channel, persisted with the session.
  *

@@ -7,7 +7,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { kickFalsa } from './falsa.mjs';
-import { montarPalco, podeCorrer } from './palco.mjs';
+import { montarPalco, podeCorrer, saltarTempo } from './palco.mjs';
 import { pedacoNumero } from './pedaco.mjs';
 
 let PORTA = 0;
@@ -25,7 +25,7 @@ async function preparar(p) {
   await p.click('#carregar');
   await p.waitForSelector('.tile', { timeout: 20000 });
   for (let i = 0; i < 3; i++) {
-    await p.click('#mais1m');
+    await saltarTempo(p, 60_000);
     await p.click('#marcarKill');
   }
   await p.waitForFunction(() => document.querySelectorAll('#listaMomentos li[data-ms]').length === 3, null, { timeout: 10000 });

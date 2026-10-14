@@ -308,3 +308,34 @@ test('o botão olha o vídeo todo, com andamento, e o Parar pára', { ...semNave
   assert.deepEqual(erros, []);
   await p.close();
 });
+
+test('a nova tentativa olha só os pedaços que falharam e mantém as mortes achadas', { ...semNavegador, timeout: 120_000 }, async () => {
+  const { p, erros } = await abrir({ caminho: 'evento' });
+  await kickFalsa(p, { canais: CANAIS });
+  await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+  await p.fill('#elenco', ELENCO);
+  await p.click('#abrirElenco');
+  await p.waitForFunction(() => window.__evento?.mapa && window.__evento.vista, null, { timeout: 15000 });
+  await telasVerdadeiras(p);
+  await p.evaluate((inicio) => {
+    const original = window.__povixTelas;
+    window.__povixTelas = async (canal, de, ate, cadaMs) => {
+      if (canal === 'crreg' && de === inicio + 360_000) throw new Error('CDN temporariamente indisponível');
+      return original(canal, de, ate, cadaMs);
+    };
+  }, T);
+  await p.evaluate(() => window.__mortes.acharMortes({ modo: 'tudo' }));
+  assert.deepEqual(await p.evaluate(() => window.__mortes.casadas().map((m) => m.vitima)), ['xguiry']);
+  assert.match(await p.locator('#mortesEstado').innerText(), /1 pedaço/);
+  const varridos = await p.evaluate(() => window.__mortes.estado.varrido.get('crreg'));
+  assert.deepEqual(varridos, [[T, T + 360_000], [T + 480_000, T + 600_000]]);
+
+  await telasVerdadeiras(p);
+  await p.evaluate(() => window.__mortes.acharMortes({ modo: 'tudo' }));
+  assert.deepEqual(await p.evaluate(() => window.__telasPedidas), [
+    { canal: 'crreg', deMs: T + 360_000, ateMs: T + 480_000 },
+  ]);
+  assert.deepEqual(await p.evaluate(() => window.__mortes.casadas().map((m) => m.vitima)), ['xguiry', 'crreg']);
+  assert.deepEqual(erros, []);
+  await p.close();
+});

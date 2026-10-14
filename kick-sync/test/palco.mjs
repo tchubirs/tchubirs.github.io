@@ -15,11 +15,24 @@ import { before, after } from 'node:test';
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const SITE = new URL('../site/', import.meta.url).pathname;
+const SITE = fileURLToPath(new URL('../site/', import.meta.url));
 const temPlaywright = await import('playwright').then(() => true, () => false);
 const CHROME = process.env.DETETIVE_CHROME || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 export const podeCorrer = temPlaywright && fs.existsSync(CHROME);
+
+export async function saltarTempo(p, deltaMs) {
+  if (!Number.isFinite(deltaMs) || deltaMs % 10_000) throw new Error('salto deve ser múltiplo de 10 segundos');
+  await p.focus('#tocarPausar');
+  const tecla = deltaMs > 0 ? 'Shift+ArrowRight' : 'Shift+ArrowLeft';
+  for (let i = 0; i < Math.abs(deltaMs) / 10_000; i++) await p.keyboard.press(tecla);
+}
+
+export async function trocarIdioma(p, idioma) {
+  await p.locator('.idiomaBotao').click();
+  await p.locator(`.idiomaLista [data-c="${idioma}"]`).click();
+}
 
 /**
  * Montar o palco deste ficheiro de testes.

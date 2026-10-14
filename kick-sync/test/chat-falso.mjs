@@ -91,13 +91,16 @@ export async function chatEVideo(p, { canais = ['tchubi'], comEmote = true } = {
   await p.route('**/hls-*.js', (rota) => rota.fulfill({
     status: 200,
     contentType: 'text/javascript',
+    // simples.js chama hls.on(Hls.Events.ERROR, ...) sem `?.` (ver `assistir`); sem os dois, rebentava.
     body: 'window.__carregados=[];'
       + 'window.Hls=function(o){var m=null;var s=(o&&o.startPosition)||0;'
       + 'this.loadSource=function(u){window.__carregados.push(u);};'
       + 'this.attachMedia=function(v){m=v;var ir=function(){if(!window.__fonteFalsa){return setTimeout(ir,50);}'
       + 'm.src=window.__fonteFalsa;m.addEventListener("loadedmetadata",function(){try{if(s>0)m.currentTime=s;}catch(e){}},{once:true});};ir();};'
+      + 'this.on=function(){};'
       + 'this.destroy=function(){};};'
-      + 'window.Hls.isSupported=function(){return true;};',
+      + 'window.Hls.isSupported=function(){return true;};'
+      + 'window.Hls.Events={ERROR:"hlsError"};',
   }));
 }
 
@@ -137,14 +140,36 @@ export async function gravarFonte(p, { ms = 6000, estilo = 'liso' } = {}) {
     };
     pintar();
     const t = setInterval(pintar, 33);
-    const gravador = new MediaRecorder(cv.captureStream(30), { mimeType: 'video/webm' });
-    const pedacos = [];
-    gravador.ondataavailable = (e) => pedacos.push(e.data);
-    gravador.start();
-    await new Promise((k) => setTimeout(k, duracao));
-    await new Promise((k) => { gravador.onstop = k; gravador.stop(); });
-    clearInterval(t);
-    window.__fonteFalsa = URL.createObjectURL(new Blob(pedacos, { type: 'video/webm' }));
+
+    // A exportação recusa vídeo sem som (capturarSom); há VOD mudo de verdade, mas este fixture não pode ser um.
+    const ctxSom = new (window.AudioContext || window.webkitAudioContext)();
+    if (ctxSom.state === 'suspended') await ctxSom.resume();
+    const osc = ctxSom.createOscillator();
+    osc.frequency.value = 440;
+    const ganho = ctxSom.createGain();
+    ganho.gain.value = 0.2;
+    const destinoSom = ctxSom.createMediaStreamDestination();
+    osc.connect(ganho).connect(destinoSom);
+    osc.start();
+
+    const fluxo = cv.captureStream(30);
+    for (const faixa of destinoSom.stream.getAudioTracks()) fluxo.addTrack(faixa);
+
+    try {
+      const gravador = new MediaRecorder(fluxo, { mimeType: 'video/webm' });
+      const pedacos = [];
+      gravador.ondataavailable = (e) => pedacos.push(e.data);
+      gravador.start();
+      await new Promise((k) => setTimeout(k, duracao));
+      await new Promise((k) => { gravador.onstop = k; gravador.stop(); });
+      window.__fonteFalsa = URL.createObjectURL(new Blob(pedacos, { type: 'video/webm' }));
+    } finally {
+      // Mesmo se a gravação falhar: oscilador, faixas e contexto não podem ficar vivos.
+      clearInterval(t);
+      osc.stop();
+      for (const faixa of fluxo.getTracks()) faixa.stop();
+      await ctxSom.close();
+    }
   }, { duracao: ms, jogo: estilo === 'jogo' });
 }
 

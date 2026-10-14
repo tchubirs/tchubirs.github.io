@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo, MAXIMO_CANAIS,
+  linhaDoCanal, janelaComum, onde, trechoComum, quantosNoAr, comNudge, paraLink, doLink, instanteSeguindo, MAXIMO_CANAIS,
   passoDoArrasto, ARRASTO_INTERVALO_MS, vistaDaLinha, saiuDaVista,
   ZOOM_MIN_MS, ZOOM_PASSOS, larguraDoZoom, valorDoZoom, zoomEmVolta, andarVista,
 } from '../site/relogio.js';
@@ -20,6 +20,17 @@ const peca = (inicio, segundos, fonte = 'program-date-time') => {
 };
 
 const T = Date.parse('2026-08-30T21:00:00.000Z');
+
+test('clipe com vários POVs fica no VOD compartilhado, sem atravessar a reconexão', () => {
+  const a = linhaDoCanal('a', [peca(T, 1200)]);
+  const b = linhaDoCanal('b', [peca(T, 600), peca(T + 900_000, 600)]);
+  assert.deepEqual(trechoComum([a, b], T + 590_000), { inicio: T, fim: T + 600_000 });
+  assert.deepEqual(trechoComum([a, b], T + 1_000_000), { inicio: T + 900_000, fim: T + 1_200_000 });
+  assert.equal(trechoComum([a, b], T + 700_000), null);
+  assert.equal(trechoComum([a, null], T + 30_000), null);
+  assert.deepEqual(trechoComum([a, b], T + 590_000, { nudges: { b: 5000 } }),
+    { inicio: T, fim: T + 595_000 });
+});
 
 // A streamer who crashed and reconnected has several VODs covering one night.
 // If the timeline pretends that is one continuous video, scrubbing past the

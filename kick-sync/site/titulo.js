@@ -11,8 +11,20 @@ import { t, tn } from './idiomas.js';
 import { confianca } from './calibracao.js';
 import { curva } from './indice.js';
 
-/** Marca com confiança menor que isto não entra no título nem no filtro por tipo. */
+/** Marca com confiança menor que isto não entra no título. */
 export const CONF_TITULO = 0.5;
+/**
+ * O piso do FILTRO (diferente do título): grito e chat saem do detector sempre fracos (indice.js, `curva()` nunca
+ * passa de 0,9 e sobe devagar — pico 3 de grito dá 0,43; pico 5 de chat dá 0,45), então exigir 0,5 deles descartava
+ * o que o próprio detector tinha aceitado. O dono, 14/10: filtrar Grito ou Chat na live do Kodd dava lista vazia.
+ */
+export const CONF_FILTRO_POR_TIPO = { tiros: 0.5, explosao: 0.5, morte: 0.5, grito: 0.25, chat: 0.25 };
+/**
+ * Versão do CRITÉRIO de rótulo (não da calibração — calibracao.js tem a sua): muda quando a REGRA que decide o
+ * título e o percentual muda, mesmo com os mesmos números de baixo. Uma lista guardada com versão antiga tem as
+ * etiquetas descartadas e recalculadas (simples.js), para um "Luta 99%" de antes não ficar preso no cache.
+ */
+export const VERSAO_ETIQUETAS = 2;
 /** A luta a partir daqui é "longa"; abaixo de LUTA_RAPIDA_S é uma troca de tiros rápida. */
 export const LUTA_LONGA_S = 30;
 export const LUTA_RAPIDA_S = 12;
@@ -30,6 +42,36 @@ const medida = (e) => e?.conf != null
   && (e.fonte === 'servidor' || ((e.fonte === 'rotulos' || e.fonte === 'sintetico') && (e.n ?? 0) >= MIN_EXEMPLOS));
 /** O percentual desta etiqueta é medido em exemplos de verdade (e não uma estimativa)? */
 export const ehMedida = medida;
+
+/**
+ * Só áudio nunca confirma que O PRÓPRIO jogador lutou: um tiro, um acerto, um headshot são indício de combate em
+ * algum lugar, não prova de participação. O que confirma é (a) uma morte do SERVIDOR realmente ligada a este POV
+ * (`vinculoProprio`, abaixo — não qualquer morte do evento, que pode ser de outro jogador ou sem matador
+ * identificado), ou (b) o veredito do contexto visual+fala dizendo `{ tipo: 'combate', participacao: 'confirmada' }`.
+ * Um veredito NEGATIVO (`reacao`/`conversa`/`ambiente`, ou `participacao: 'ausente'`) não pode ser revertido por uma
+ * morte não ligada a este POV: a Camada C já olhou o quadro certo, uma morte perto é prova mais fraca.
+ */
+export const combatePorContexto = (e) => e?.contexto?.tipo === 'combate' && e?.contexto?.participacao === 'confirmada';
+// Só um veredito NEGATIVO explícito bloqueia. "indeterminado" / "indeterminada" não é negativo: não anula uma morte
+// verificada ligada ao POV (a IA sem certeza não derruba um fato do servidor).
+const contextoNegativo = (e) => Boolean(e?.contexto)
+  && (['reacao', 'conversa', 'ambiente'].includes(e.contexto.tipo) || e.contexto.participacao === 'ausente');
+/** Fontes que PROVAM uma morte: `servidor` (log real do servidor) e `manual` (a pessoa confirmou o clipe). Vídeo/OCR
+ * (`video`), `indice` (legado) e fonte ausente NÃO são prova. */
+const FONTES_PROVA = ['servidor', 'manual'];
+/** Uma morte confirmável, avaliada MORTE A MORTE (nunca pela fonte da etiqueta, que pode misturar um log do servidor
+ * com uma leitura de vídeo): fonte de prova própria, vínculo PRÓPRIO verificado (`vinculoProprio === true`, nunca
+ * presumido) e matador E vítima conhecidos. Morte de outro jogador ou de matador desconhecido também não é prova. */
+const provaDeMorte = (k) => FONTES_PROVA.includes(k?.fonte) && k.vinculoProprio === true && Boolean(k.matador) && Boolean(k.vitima);
+const morteProva = (x) => x.tipo === 'morte' && (x.mortes || []).some(provaDeMorte);
+const vinculoDeMorte = (lista) => lista.some(morteProva);
+/** 'tiros' é elegível a virar a marca principal (com percentual, ou a palavra "luta" no título) só com confirmação.
+ * Exportada para o filtro (simples-filtro.js): o filtro "Luta" tem de significar combate confirmado do próprio
+ * jogador, não qualquer indício de som — mas o cartão continua na lista padrão (indício), só não casa o filtro. */
+export const tirosConfirmado = (e, lista) => {
+  if (contextoNegativo(e)) return false;
+  return combatePorContexto(e) || vinculoDeMorte(lista);
+};
 
 const arred = (x, c = 2) => Math.round(x * 10 ** c) / 10 ** c;
 
@@ -51,8 +93,26 @@ export function confDoSom(tipo, c = {}, tabela) {
   return { conf: null, fonte: 'estimado', n: 0 };
 }
 
-const mortesDe = (m) => (m.mortes || []).filter((x) => x?.vitima).map((x) => ({ matador: x.matador || '', vitima: x.vitima }));
-const etiquetaDeMorte = (mortes) => ({ tipo: 'morte', conf: 0.95, fonte: 'servidor', n: 0, mortes });
+/**
+ * As mortes do momento, com `vinculoProprio`: o servidor ligou o matador OU a vítima ao CANAL deste cartão
+ * (`m.canal`)? Sem canal para comparar (lista fora do evento, um streamer só), presume-se ligada — é a mesma
+ * live, não tem com quem confundir. No evento (vários canais), uma morte entre dois OUTROS jogadores não prova
+ * nada deste POV, mesmo caindo no mesmo lance.
+ */
+// Sem canal do cartão não há como provar o vínculo: `vinculoProprio` fica FALSO (não presumido). A proveniência
+// (`fonte`) é a do produtor, sem valor padrão inventado.
+const mortesDe = (m) => {
+  const canal = String(m?.canal || '').toLowerCase();
+  return (m.mortes || []).filter((x) => x?.vitima).map((x) => ({
+    matador: x.matador || '', vitima: x.vitima, fonte: x.fonte || null,
+    vinculoProprio: canal ? (String(x.canalMatador || '').toLowerCase() === canal || String(x.canalVitima || '').toLowerCase() === canal) : false,
+  }));
+};
+/** A etiqueta de morte. O percentual (0,95) só existe para a fonte do servidor; de outra origem a confiança é nula
+ * (sem medida), e uma morte sem vínculo próprio nem entra na lista (ver etiquetasDoMomento). */
+const etiquetaDeMorte = (mortes, { fonte = null, vinculoProprio = false } = {}) => ({
+  tipo: 'morte', conf: fonte === 'servidor' ? 0.95 : null, fonte, n: 0, mortes, vinculoProprio,
+});
 
 /** O melhor (maior confiança) de uma lista de eventos do índice. */
 const melhorDe = (lista) => lista.reduce((a, b) => ((b.conf ?? 0) > (a?.conf ?? -1) ? b : a), null);
@@ -69,10 +129,19 @@ export function etiquetasDoMomento(m, indice = null) {
   const perto = (e) => e.ms >= m.deMs - MARGEM_MS && e.ms <= m.ateMs + MARGEM_MS;
   const out = [];
   const mortes = mortesDe(m);
-  if (mortes.length) out.push(etiquetaDeMorte(mortes));
-  else if (tipos.includes('morte')) {
+  if (mortes.length) {
+    // Todas ficam para o título (a morte de outro jogador é dita como tal), mas só a ligada ao POV, de fonte
+    // explícita, confirma o combate (morteProva). A confiança 0,95 é só da fonte do servidor.
+    // A fonte da etiqueta resume a morte que importa ao POV: a que prova, senão a ligada ao POV, senão a primeira com
+    // fonte. Só um resumo: quem confirma o combate é `morteProva`, morte a morte.
+    const fonte = (mortes.find((x) => x.vinculoProprio && FONTES_PROVA.includes(x.fonte))
+      || mortes.find((x) => x.vinculoProprio && x.fonte)
+      || mortes.find((x) => x.fonte))?.fonte || null;
+    out.push(etiquetaDeMorte(mortes, { fonte, vinculoProprio: mortes.some((x) => x.vinculoProprio) }));
+  } else if (tipos.includes('morte')) {
+    // Legado: o índice diz "morte" sem a ligação ao POV. Não é prova e não tem percentual (conf nula).
     const ev = eventos.filter((e) => e.tipo === 'morte' && perto(e));
-    out.push(ev.length ? etiquetaDeMorte(ev.map((e) => ({ matador: e.matador || '', vitima: e.vitima || '' })).filter((x) => x.vitima)) : etiquetaDeMorte([]));
+    out.push(etiquetaDeMorte(ev.map((e) => ({ matador: e.matador || '', vitima: e.vitima || '' })).filter((x) => x.vitima), { fonte: 'indice', vinculoProprio: false }));
   }
   if (tipos.includes('tiros')) {
     const luta = m.luta && indice ? (indice.lutas || []).find((l) => Math.abs(l.ms - m.ms) < 1) : null;
@@ -105,8 +174,12 @@ export function etiquetasDoMomento(m, indice = null) {
   return out;
 }
 
-/** As etiquetas que valem para título e filtro: confiança de 50% para cima (ou sem medida, aceita pelo detector). */
+/** As etiquetas que valem para o TÍTULO: confiança de 50% para cima (ou sem medida, aceita pelo detector). */
 export const etiquetasFortes = (etiquetas) => (etiquetas || []).filter((e) => e.conf == null || e.conf >= CONF_TITULO);
+/** As etiquetas que valem para o FILTRO: o piso é por tipo (`CONF_FILTRO_POR_TIPO`), não um só para todos — senão o
+ * grito (pico 3 = 0,43) e o chat (pico 5 = 0,45) que o próprio detector aceitou somem da busca por Grito/Chat. */
+export const etiquetasParaFiltro = (etiquetas) => (etiquetas || [])
+  .filter((e) => e.conf == null || e.conf >= (CONF_FILTRO_POR_TIPO[e.tipo] ?? CONF_TITULO));
 
 const maiuscula = (s) => s.charAt(0).toLocaleUpperCase() + s.slice(1);
 const minuscula = (s) => s.charAt(0).toLocaleLowerCase() + s.slice(1);
@@ -120,6 +193,22 @@ function fraseDaLuta(e, sozinha) {
   if (!sozinha || s < LUTA_RAPIDA_S) return base;
   const hits = e.acertos > 0 ? t('titulo.acertos', { n: e.acertos }) : '';
   return `${base} (${t('titulo.segTiros', { s })}${hits})`;
+}
+
+/**
+ * Sem confirmação (sem morte do servidor, sem contexto visual/fala): o som é indício, nunca "luta". "Tiros ouvidos"
+ * quando o som de acerto (acertos.js) distingue o estalo de acertar alguém; "Som alto" quando só se sabe que esteve
+ * alto (o detector de tiro ainda não separa um tiro de outro som sustentado qualquer — ver plano-contexto.md 0.1a).
+ */
+function fraseDeIndicio(e, sozinha) {
+  const distingueTiro = (e.acertos || 0) > 0 || (e.cabecas || 0) > 0 || (e.abates || 0) > 0;
+  const base = t(distingueTiro ? 'titulo.indicio.tiros' : 'titulo.indicio.somAlto');
+  const s = e.durS;
+  if (!sozinha || s == null || !(s > 0)) return base;
+  // Sem o som de acerto, `durS` é só quanto tempo esteve ALTO — não quanto tempo teve tiro — e "{s} s de tiros"
+  // afirmaria o que não se mediu. Com acerto, aí sim o detector distingue tiro de outro som sustentado qualquer.
+  const hits = distingueTiro && e.acertos > 0 ? t('titulo.acertos', { n: e.acertos }) : '';
+  return `${base} (${t(distingueTiro ? 'titulo.segTiros' : 'titulo.segAlto', { s })}${hits})`;
 }
 
 /** A frase da morte: com nomes quando se sabe; `canal` é quem está no card, para saber quem matou quem. */
@@ -159,7 +248,7 @@ export function tituloDeEtiquetas(etiquetas, { canal = '' } = {}) {
   for (const tipo of ordemTitulo) {
     const e = fortes.find((x) => x.tipo === tipo);
     if (!e) continue;
-    if (tipo === 'tiros') partes.push(fraseDaLuta(e, sozinha));
+    if (tipo === 'tiros') partes.push(tirosConfirmado(e, fortes) ? fraseDaLuta(e, sozinha) : fraseDeIndicio(e, sozinha));
     else if (tipo === 'morte') {
       const f = fraseDaMorte(e, canal);
       if (sozinha) { partes.push(f.texto); nomeNoComeco = f.comecaPorNome; } else {
@@ -177,6 +266,19 @@ export function tituloDeEtiquetas(etiquetas, { canal = '' } = {}) {
   return nomeNoComeco ? inteira : maiuscula(inteira);
 }
 
+/**
+ * O resumo FACTUAL de um veredito do contexto já validado (quadro + fala): o que se viu, e se a análise teve
+ * fala ou só imagem. Nunca um percentual, nunca o nome de arma. `null` sem veredito.
+ */
+export function textoDoContexto(ctx) {
+  if (!ctx || typeof ctx !== 'object') return null;
+  const chave = ctx.tipo === 'combate'
+    ? (ctx.participacao === 'confirmada' ? 'combate' : ctx.participacao === 'ausente' ? 'combateAusente' : 'combateIndeterminado')
+    : ['reacao', 'conversa', 'ambiente', 'indeterminado'].includes(ctx.tipo) ? ctx.tipo : null;
+  if (!chave) return null;
+  return { titulo: t(`contexto.resumo.${chave}`), status: t(ctx.recebeuFala ? 'contexto.status.imagemFala' : 'contexto.status.imagem') };
+}
+
 /** O título de um momento (com o índice quando se tem). */
 export const tituloDoMomento = (m, indice = null) => tituloDeEtiquetas(etiquetasDoMomento(m, indice), { canal: m?.canal || '' });
 
@@ -184,25 +286,51 @@ export const tituloDoMomento = (m, indice = null) => tituloDeEtiquetas(etiquetas
 
 const ROTULO_DO_TIPO = { tiros: 'luta', explosao: 'explosao', morte: 'morte', grito: 'grito', chat: 'chat' };
 
-/** A etiqueta principal de um momento (a primeira da ordem que tem confiança). */
+/** A etiqueta principal de um momento (a primeira da ordem que tem confiança). Usada pelo título fraco (diz o que o
+ * sensor mediu mesmo sem confirmação, já com palavra honesta como "Som alto" — nunca um percentual de combate). */
 export function etiquetaPrincipal(etiquetas) {
   const lista = (etiquetas || []).filter((e) => e.conf != null);
   return ORDEM.map((tipo) => lista.find((e) => e.tipo === tipo)).find(Boolean) || null;
 }
 
-/** Para a tela: `{ tipo, rotulo, pct, estimativa, texto }`, "Luta 88%" ou "Luta ~70%"; null sem etiqueta com confiança. */
+/** Como `etiquetaPrincipal`, mas para quem mostra um estado de combate: 'tiros' só entra se confirmado (morte
+ * vinculada ao POV, ou contexto), senão o som fica de fora e a tela mostra o próximo tipo (explosão, grito,
+ * chat) ou nada. */
+function principalConfirmado(etiquetas) {
+  const lista = (etiquetas || []).filter((e) => e.conf != null);
+  return ORDEM.map((tipo) => lista.find((e) => e.tipo === tipo && (tipo !== 'tiros' || tirosConfirmado(e, lista)))).find(Boolean) || null;
+}
+
+/** Como `etiquetaPrincipal`, mas só para quem mostra PERCENTUAL: 'tiros' nunca entra (confirmado ou não) — o
+ * número vem da calibração do SOM (indice.js/calibracao.js), que mede "isto soou como luta em algum lugar", não
+ * "é a luta do jogador". Confirmar o combate muda a PALAVRA (ver `confExibida`), nunca inventa um percentual. */
+function principalNumerico(etiquetas) {
+  const lista = (etiquetas || []).filter((e) => e.conf != null && e.tipo !== 'tiros');
+  return ORDEM.map((tipo) => lista.find((e) => e.tipo === tipo)).find(Boolean) || null;
+}
+
+/**
+ * Para a tela: `{ tipo, rotulo, pct, estimativa, texto }`. Com `tiros` confirmado: `pct: null` e um texto de
+ * ESTADO ("Luta confirmada"), nunca o percentual do som (que não mede a luta do jogador, só o som). Com morte ou
+ * explosão/grito/chat, o percentual de sempre. `null` sem etiqueta com confiança (ou com só som sem confirmação:
+ * aí não há nada de combate a mostrar, honestamente).
+ */
 export function confExibida(etiquetas) {
-  const e = etiquetaPrincipal(etiquetas);
+  const e = principalConfirmado(etiquetas);
   if (!e) return null;
+  if (e.tipo === 'tiros') {
+    return { tipo: 'tiros', rotulo: t('titulo.rotulo.luta'), pct: null, estimativa: false, texto: t('titulo.lutaConfirmada') };
+  }
   const pct = Math.round(e.conf * 100);
   const estimativa = !medida(e);
   const rotulo = t(`titulo.rotulo.${ROTULO_DO_TIPO[e.tipo]}`);
   return { tipo: e.tipo, rotulo, pct, estimativa, texto: `${rotulo} ${estimativa ? '~' : ''}${pct}%` };
 }
 
-/** A média das confianças principais da lista de agora: `{ pct, estimativa, n }`, ou null sem nenhuma. */
+/** A média das confianças principais da lista de agora: `{ pct, estimativa, n }`, ou null sem nenhuma. Nunca
+ * conta `tiros` (confirmado ou não — ver `principalNumerico`): a média seria o som, não a luta. */
 export function confMedia(momentos) {
-  const principais = (momentos || []).map((m) => etiquetaPrincipal(etiquetasDoMomento(m))).filter(Boolean);
+  const principais = (momentos || []).map((m) => principalNumerico(etiquetasDoMomento(m))).filter(Boolean);
   if (!principais.length) return null;
   const soma = principais.reduce((s, e) => s + e.conf, 0);
   return { pct: Math.round((soma / principais.length) * 100), estimativa: principais.some((e) => !medida(e)), n: principais.length };
@@ -217,8 +345,10 @@ export function confMedia(momentos) {
 export function etiquetasDeDeteccao(m) {
   const tipos = m?.tipos?.length > 1 ? m.tipos : m?.tipo ? [m.tipo] : [];
   const out = [];
+  // Marcação manual ("Quem morreu?"): a pessoa confirmou com os olhos que esta vítima morreu neste clipe do
+  // protagonista — vínculo próprio por construção, não por nome batendo.
   const vitima = (m.vitimas || [])[0] || (m.vitimasTexto || [])[0] || '';
-  if (vitima) out.push(etiquetaDeMorte([{ matador: m.protagonista || '', vitima }]));
+  if (vitima) out.push(etiquetaDeMorte([{ matador: m.protagonista || '', vitima, fonte: 'manual', vinculoProprio: true }], { fonte: 'manual', vinculoProprio: true }));
   for (const tipo of tipos) {
     if (!ORDEM.includes(tipo) && tipo !== 'tiros') continue;
     const propria = tipo === m.tipo && m.conf != null;

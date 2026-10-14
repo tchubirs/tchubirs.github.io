@@ -350,7 +350,7 @@ export function montarMortes({
     let falhados = 0;
     const leitor = podeLer() || window.__povixQuadros ? () => abrirLeitor({ modo: '7' }) : null;
     try {
-      await procurarMortes({
+      const { concluidos } = await procurarMortes({
         alvos,
         tsDe,
         vodEm,
@@ -378,8 +378,8 @@ export function montarMortes({
           refazer();
         },
       });
-      // Só o que acabou de ser olhado fica como olhado: um Parar a meio deixa tudo por olhar.
-      for (const a of alvos) st.varrido.set(a.canal, juntar([...(st.varrido.get(a.canal) || []), ...a.intervalos]));
+      // A falha de um pedaço não impede outra tentativa nem repete os que já deram certo.
+      for (const a of concluidos) st.varrido.set(a.canal, juntar([...(st.varrido.get(a.canal) || []), [a.deMs, a.ateMs]]));
       guardar();
       $('mortesEstado').textContent = (achadas ? tn(achadas, 'mortes.achadaUma', 'mortes.achadas') : t('mortes.nenhumaVideo'))
         + (falhados ? t('mortes.falhados', { n: falhados }) : '');

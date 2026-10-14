@@ -11,7 +11,7 @@ import {
   segmentosNaJanela,
 } from './kick.js';
 import {
-  linhaDoCanal, janelaComum, onde, quantosNoAr, comNudge, paraLink, doLink, seguirAncora,
+  linhaDoCanal, janelaComum, onde, trechoComum, quantosNoAr, comNudge, paraLink, doLink, seguirAncora,
   passoDoArrasto, ARRASTO_INTERVALO_MS, ARRASTO_ESPERA_MS, vistaDaLinha, saiuDaVista,
   ZOOM_MIN_MS, larguraDoZoom, valorDoZoom, zoomEmVolta, andarVista,
 } from './relogio.js';
@@ -23,7 +23,7 @@ import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.j
 import { abrirJanela, irAEcraCheio, capacidades } from './janela.js';
 import { ordemDosAngulos, aplicarOrdem } from './grelha.js';
 import {
-  RETRATO, enquadramentoInicial, limitar, desenhar, gravar, formatoQueFunciona, extensaoDe,
+  RETRATO, enquadramentoInicial, limitar, desenhar, gravar, formatoQueFunciona, extensaoDe, prepararSomDaGravacao,
   reformar, limparDivisao, DIVISAO_OMISSAO, divisaoDoQuadro, proporcaoDoQuadro, encaixar,
   MODELO_OMISSAO, limparModelo, paraFraccoes, deFraccoes, DEITADO, ZONA_TIKTOK,
 } from './retrato.js';
@@ -4441,6 +4441,7 @@ function anularApagar() {
  *   elas juntam-se em baixo.
  */
 async function baixarMontagem(soEsta = null, { guardar = false } = {}) {
+  prepararSomDaGravacao();
   // Uma exportação de cada vez.
   //
   // Qualquer redesenho da lista (marcar quem morreu, filtrar, Rever) voltava a
@@ -4969,7 +4970,7 @@ function trocarRotulo(botao, chave) {
  * Um vídeo escondido de um canal, já parado no instante pedido, para gravar a partir dele (o 9:16 da
  * montagem e o clipe de vários ângulos). `fechar` larga o hls e o elemento.
  */
-async function abrirVideoEscondido(linha, quandoMs, { sinal } = {}) {
+async function abrirVideoEscondido(linha, quandoMs, { sinal, ateMs } = {}) {
   const nudge = estado.nudges[linha.slug] || 0;
   const r = onde(linha, quandoMs, { nudgeMs: nudge });
   if (r.estado !== 'toca') throw new Error(porqueNaoSaiu({ estado: r.estado === 'buraco' ? 'buraco' : 'fora-da-noite' }));
@@ -4987,14 +4988,30 @@ async function abrirVideoEscondido(linha, quandoMs, { sinal } = {}) {
   v.style.cssText = 'position:fixed;left:-9999px;top:0;width:320px;height:180px;';
   document.body.appendChild(v);
   let hls = null;
+  let urlLocal = null;
+  let arquivoSom = null;
+  let inicioS = r.tempoS;
   const fechar = () => {
     hls?.destroy();
     v.pause();
     v.removeAttribute('src');
     v.remove();
+    if (urlLocal) URL.revokeObjectURL(urlLocal);
   };
   try {
-    if (window.Hls?.isSupported()) {
+    if (!(v.captureStream || v.mozCaptureStream) && Number.isFinite(ateMs)) {
+      const plano = await planearCorte({ linha, deMs: quandoMs + nudge, ateMs: ateMs + nudge, sinal });
+      if (plano.estado !== 'ok') throw Object.assign(new Error('o trecho não abriu'), { name: 'SEM-IMAGEM' });
+      const corte = await executarCorte(plano, { sinal });
+      if (corte.estado !== 'pronto' || corte.tipo !== 'video/mp4'
+        || corte.plano.sobraInicioS < -0.1 || corte.plano.sobraFimS < -0.1) {
+        throw Object.assign(new Error('o vídeo não cobre esse trecho'), { name: 'SEM-IMAGEM' });
+      }
+      arquivoSom = new Blob([corte.bytes], { type: 'video/mp4' });
+      urlLocal = URL.createObjectURL(arquivoSom);
+      inicioS = 0;
+      v.src = urlLocal;
+    } else if (window.Hls?.isSupported()) {
       hls = new window.Hls({ startPosition: r.tempoS, maxBufferLength: 30, backBufferLength: 10 });
       hls.loadSource(alvo.url);
       hls.attachMedia(v);
@@ -5002,6 +5019,8 @@ async function abrirVideoEscondido(linha, quandoMs, { sinal } = {}) {
       v.src = alvo.url;
       v.currentTime = r.tempoS;
     }
+    let acordando = true;
+    v.play().then(() => { if (acordando) v.pause(); }).catch(() => {});
     await new Promise((ok, mal) => {
       // Com nome, e não só com a frase: a frase é portuguesa e interna, e a
       // linha da montagem traduz pelo nome (ver `motivoDoRetrato`).
@@ -5011,12 +5030,15 @@ async function abrirVideoEscondido(linha, quandoMs, { sinal } = {}) {
       v.addEventListener('error', () => { clearTimeout(fim); mal(semImagem('o vídeo não carregou')); }, { once: true });
       sinal?.addEventListener('abort', () => { clearTimeout(fim); mal(new DOMException('cancelado', 'AbortError')); }, { once: true });
     });
-    if (Math.abs(v.currentTime - r.tempoS) > 0.5) v.currentTime = r.tempoS;
+    acordando = false;
+    v.pause();
+    if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
+    if (Math.abs(v.currentTime - inicioS) > 0.01) v.currentTime = inicioS;
   } catch (e) {
     fechar();
     throw e;
   }
-  return { v, fechar, fps: alvo.fps };
+  return { v, fechar, fps: alvo.fps, arquivoSom };
 }
 
 async function renderizarGravado(linha, clipe, { deitado = false, sinal, aoProgresso } = {}) {
@@ -5033,11 +5055,11 @@ async function renderizarGravado(linha, clipe, { deitado = false, sinal, aoProgr
       // Sem chat lido, o clipe sai na mesma com o que houver.
     }
   }
-  const { v, fechar, fps } = await abrirVideoEscondido(linha, clipe.deMs, { sinal });
+  const { v, fechar, fps, arquivoSom } = await abrirVideoEscondido(linha, clipe.deMs, { sinal, ateMs: clipe.ateMs });
   try {
     // Som: de mudo sai uma faixa silenciosa. Volume a zero para não se ouvir
     // a gravação na sala — a mesma conta do `guardarRetrato`.
-    v.muted = false;
+    v.muted = Boolean(arquivoSom);
     v.volume = 0;
     const formato = await formatoQueFunciona();
     if (!formato) throw Object.assign(new Error('sem gravador'), { name: 'SEM-GRAVADOR' });
@@ -5052,6 +5074,7 @@ async function renderizarGravado(linha, clipe, { deitado = false, sinal, aoProgr
         || enquadramentoInicial(fonteV.largura, fonteV.altura, r.modo, r.divisao, r.modelo);
     const divisao = Number.isFinite(r.divisao) ? r.divisao : DIVISAO_OMISSAO;
     return await gravar(v, {
+      arquivoSom,
       rects,
       modo: deitado ? 'inteiro' : r.modo,
       divisao,
@@ -6050,9 +6073,11 @@ function aplicarRosto(c, rosto) {
   // Com as bordas da webcam achadas, a caixa é ela inteira e a faixa de cima ganha a proporção dela;
   // sem elas, a caixa à volta do rosto, como antes.
   const w = rosto.webcam;
-  const cam = w ? {
-    x: w.x * fonte.largura, y: w.y * fonte.altura, largura: w.largura * fonte.largura, altura: w.altura * fonte.altura,
-  } : null;
+  const cam = w ? limitar({
+    x: (w.x - w.largura * 0.015) * fonte.largura,
+    y: (w.y - w.altura * 0.015) * fonte.altura,
+    largura: w.largura * 1.03 * fonte.largura, altura: w.altura * 1.03 * fonte.altura,
+  }, fonte) : null;
   const divisao = cam ? divisaoDoQuadro(cam, 0) : null;
   if (cam && divisao != null) {
     c.divisao = divisao;
@@ -6233,6 +6258,7 @@ function retratoLembrado(slug) {
 // `simples`: o modo simples (simples.js) pede o arquivo sem a janela à vista. Dá o nome do arquivo
 // (`nome(extensao)`), quer saber do andamento (`aoProgresso`) e recebe o arquivo pronto (`aoPronto`).
 async function guardarRetrato({ deitado = false, simples = null } = {}) {
+  prepararSomDaGravacao();
   const c = estado.clipe;
   const v = $('previaClipe');
   const mudoAntes = v.muted;
@@ -6272,8 +6298,12 @@ async function guardarRetrato({ deitado = false, simples = null } = {}) {
   c.pararGravacao = () => controlo.abort();
   // O chat entra com as escolhas deste instante: mexer nelas a meio não muda o ficheiro.
   const chatAqui = c.chat?.ligado ? limparChat(c.chat) : null;
+  let videoLocal = null;
 
   try {
+    c.aGravar = true;
+    c.rostoBusca?.abort();
+    trancarEditor(true);
     const formato = await formatoQueFunciona();
     if (!aindaEste()) return;
     if (!formato) {
@@ -6281,9 +6311,6 @@ async function guardarRetrato({ deitado = false, simples = null } = {}) {
       botao.disabled = false;
       return;
     }
-    // O editor fica quieto desde já: com o chat ainda há o chat e os emotes para ir buscar, e um pedaço
-    // mexido nesse meio-tempo gravava um clipe com o chat de outro.
-    trancarEditor(true);
     if (chatAqui) {
       $('estadoClipe').textContent = t('montagem.aPreparar');
       await carregarChatDoClipe();
@@ -6296,11 +6323,6 @@ async function guardarRetrato({ deitado = false, simples = null } = {}) {
     // Do princípio do clipe, e não de onde a pré-visualização parou.
     await preverClipe(c.deMs);
     if (!aindaEste()) return;
-    // A partir daqui ninguém pode pausar isto por baixo — nem o `acordarPrevia`
-    // com um pause adiado, nem um `preverClipe` que chegue tarde.
-    c.aGravar = true;
-    // A procura da webcam lê outro vídeo ao mesmo tempo: parada, para não roubar a imagem à gravação.
-    c.rostoBusca?.abort();
     // E o editor fica quieto. O ▶, as pegas, os ±0,5 s e a troca de ângulo
     // mexem todos no MESMO `<video>` que está a ser gravado: um "fim +0,5 s"
     // a meio saltava o vídeo para o fim e o 9:16 saía com três segundos, e o
@@ -6310,10 +6332,15 @@ async function guardarRetrato({ deitado = false, simples = null } = {}) {
     // E sem som não vale nada: um `captureStream` de um vídeo em mudo dá uma
     // faixa de áudio SILENCIOSA. O volume fica a zero para não se ouvir a
     // gravação na sala, mas a faixa passa a ter sinal.
-    v.muted = false;
+    v.muted = !(v.captureStream || v.mozCaptureStream);
     v.volume = 0;
     const alvo = deitado ? DEITADO : RETRATO;
-    const gravacao = await gravar(v, {
+    if (!(v.captureStream || v.mozCaptureStream)) {
+      videoLocal = await abrirVideoEscondido(linha, c.deMs, { sinal: controlo.signal, ateMs: c.ateMs });
+      if (!aindaEste() || controlo.signal.aborted) return;
+    }
+    const gravacao = await gravar(videoLocal?.v || v, {
+      arquivoSom: videoLocal?.arquivoSom,
       fps: c.fonteFps,
       // Uma cópia: o gravador lê os recortes a cada frame, e um arrasto que
       // escapasse à tranca mexia no ficheiro a meio.
@@ -6383,7 +6410,8 @@ async function guardarRetrato({ deitado = false, simples = null } = {}) {
     c.aGravar = false;
     c.pararGravacao = null;
     c.chatAgoraMs = null;
-    devolverSom();
+    if (aindaEste()) devolverSom();
+    videoLocal?.fechar();
     if (aindaEste()) {
       trancarEditor(false);
       botao.disabled = false;
@@ -6967,6 +6995,7 @@ function ligarLegendaClipe() {
     const k = Number(campo.closest('li').dataset.k);
     const antes = c.transcricao.linhas.length;
     c.transcricao = editarLinha(c.transcricao, k, campo.value);
+    guardarFala(localStorage, { canal: c.transcricao.canal, deMs: c.transcricao.deMs, ateMs: c.transcricao.ateMs, linhas: linhasDaTranscricao(c.transcricao) });
     if (c.transcricao.linhas.length !== antes) pintarFalas({ foco: { k: Math.min(k, c.transcricao.linhas.length - 1), acao: 'ver' } });
     else campo.value = textoDaLinha(c.transcricao.linhas[k]);
   });
@@ -6984,12 +7013,14 @@ function ligarLegendaClipe() {
     if (b.dataset.acao === 'ver') { levarAgulha(fala.palavras[0].de); return; }
     if (b.dataset.acao === 'apagar') {
       c.transcricao = apagarLinha(c.transcricao, k);
+      guardarFala(localStorage, { canal: c.transcricao.canal, deMs: c.transcricao.deMs, ateMs: c.transcricao.ateMs, linhas: linhasDaTranscricao(c.transcricao) });
       pintarFalas({ foco: { k: Math.min(k, c.transcricao.linhas.length - 1), acao: 'apagar' } });
       if (!c.transcricao.linhas.length) $('legendaLigada').focus();
       return;
     }
     const delta = b.dataset.acao === 'antes' ? -PASSO_MS : PASSO_MS;
     c.transcricao = deslocarLinha(c.transcricao, k, delta);
+    guardarFala(localStorage, { canal: c.transcricao.canal, deMs: c.transcricao.deMs, ateMs: c.transcricao.ateMs, linhas: linhasDaTranscricao(c.transcricao) });
     // A mesma fala depois de andar (pode ter trocado de lugar com a vizinha): o mesmo texto, perto.
     const texto = textoDaLinha(fala);
     let novoK = k;
@@ -7088,7 +7119,7 @@ montarCaixasPrevia();
  * no começo do clipe. Reconverte, por isso leva o tempo do clipe.
  */
 function angulosDoClipe(c, modo) {
-  const ordem = [c.canal, ...estado.focos, ...estado.linhas.map((l) => l.slug)];
+  const ordem = c.canaisClipe?.length ? [c.canal, ...c.canaisClipe] : [c.canal, ...estado.focos, ...estado.linhas.map((l) => l.slug)];
   const noAr = [...new Set(ordem)].filter((slug) => {
     const l = estado.linhas.find((x) => x.slug === slug);
     return l && onde(l, c.deMs, { nudgeMs: estado.nudges[slug] || 0 }).estado === 'toca';
@@ -7097,10 +7128,16 @@ function angulosDoClipe(c, modo) {
 }
 
 async function guardarAngulos(modo) {
+  prepararSomDaGravacao();
   const c = estado.clipe;
   if (!c || c.aGravar) return;
   const aindaEste = () => estado.clipe === c;
   const canais = angulosDoClipe(c, modo);
+  const limites = trechoComum(canais.map((slug) => estado.linhas.find((l) => l.slug === slug)), c.deMs, { nudges: estado.nudges });
+  if (!limites || c.deMs < limites.inicio || c.ateMs > limites.fim) {
+    $('estadoClipe').textContent = t('simples.pov.semTrecho');
+    return;
+  }
   if (canais.length < 2) {
     $('estadoClipe').textContent = t('angulos.poucos', { canal: c.canal });
     return;
@@ -7108,9 +7145,6 @@ async function guardarAngulos(modo) {
   const duracaoS = (c.ateMs - c.deMs) / 1000;
   const plano = planoDeAngulos({ modo, canais, duracaoS });
   window.__ultimoPlanoAngulos = plano;
-  const formato = await formatoQueFunciona();
-  if (!aindaEste()) return;
-  if (!formato) { $('estadoClipe').textContent = t('retrato.semGravador'); return; }
   const controlo = new AbortController();
   c.aGravar = true;
   c.rostoBusca?.abort();
@@ -7118,19 +7152,23 @@ async function guardarAngulos(modo) {
   trancarEditor(true);
   const abertos = [];
   try {
+    const formato = await formatoQueFunciona();
+    if (!aindaEste() || controlo.signal.aborted) return;
+    if (!formato) { $('estadoClipe').textContent = t('retrato.semGravador'); return; }
     $('estadoClipe').textContent = t('angulos.aAbrir', { n: canais.length });
     for (const slug of canais) {
       const linha = estado.linhas.find((l) => l.slug === slug);
-      abertos.push(await abrirVideoEscondido(linha, c.deMs, { sinal: controlo.signal }));
+      abertos.push(await abrirVideoEscondido(linha, c.deMs, { sinal: controlo.signal, ateMs: c.ateMs }));
     }
     // O som segue quem está na tela (angulos.js, `somEm`): todos saem do mudo, com o volume a zero
     // para não se ouvirem aqui, e o gravador deixa passar um de cada vez. No 9:16 empilhado, os dois
     // estão na tela, e o som é o do ângulo que se estava a ouvir na grelha, se for um deles.
-    for (const a of abertos) { a.v.muted = false; a.v.volume = 0; }
+    for (const a of abertos) { a.v.muted = Boolean(a.arquivoSom); a.v.volume = 0; }
     const ouvido = canais.findIndex((slug) => ehFoco(slug) && temSom(slug));
     const trocas = [];
     window.__ultimoSomAngulos = { canais, trocas };
     const { blob, extensao } = await gravarAngulos(abertos.map((a) => a.v), {
+      arquivosSom: abertos.map((a) => a.arquivoSom),
       plano,
       formato,
       exigirSom: true,
@@ -8106,7 +8144,8 @@ $('canalClipe').onchange = () => {
   c.rectsFonte = mesmoModo ? guardado.rectsFonte : null;
   if (mesmoModo) { c.divisao = guardado.divisao; c.origem = guardado.origem; }
   c.modelo = limparModelo(guardado ? guardado.modelo : doAparelho?.modelo);
-  Object.assign(c, { canal: l.slug, hls: null, url: null, limites: { inicio: l.inicio, fim: l.fim } });
+  Object.assign(c, { canal: l.slug, hls: null, url: null,
+    limites: c.canaisClipe?.length ? c.limites : { inicio: l.inicio, fim: l.fim } });
   // O pedaço inteiro para dentro do vídeo do outro, e não só o início: com o
   // `mover` de uma pega só, um ângulo que entrou no ar depois do fim dava um
   // pedaço ao contrário, e o exportar respondia "janela-invalida".
@@ -8794,6 +8833,13 @@ async function abrirLanceDoEvento(canais, ms, foco, {
   await carregar();
   window.scrollTo({ top: 0 });
 }
+
+async function abrirPovsParaSimples({ canais, ms, foco, ajustes = {} }) {
+  if (!Array.isArray(canais) || canais.length < 2 || !Number.isFinite(ms) || !foco) return false;
+  if (evento.povsLiberados(ms).liberado === false) return false;
+  await abrirLanceDoEvento(canais, ms, foco, { exato: true, ajustes, referencia: foco });
+  return canais.every((canal) => estado.linhas.some((l) => l.slug === slugDoNome(canal)));
+}
 const evento = montarEvento({
   abrirLance: abrirLanceDoEvento,
   // Os melhores lances somam as kills e os achados da montagem, e o Marcar da lista põe um lance nela.
@@ -8940,17 +8986,30 @@ async function baixarParaSimples({ canal, deMs, ateMs }, {
  * Um momento da lista simples aberto no editor "Ajustar clipe" do avançado, já no pedaço do cartão: é só o
  * que o baixar faz antes de gravar, mas com a janela à vista. Devolve false se o canal não está aberto.
  */
-function editarParaSimples({ canal, deMs, ateMs }) {
+function editarParaSimples({ canal, deMs, ateMs, ms = Math.round((deMs + ateMs) / 2), canais = [] }) {
   if (!estado.linhas.some((l) => l.slug === canal)) return false;
   if (estado.clipe) fecharClipe();
-  abrirClipe(novoMomento(Math.round((deMs + ateMs) / 2), canal));
+  abrirClipe(novoMomento(ms, canal));
   const c = estado.clipe;
   if (!c) return false;
+  const selecionados = [...new Set([canal, ...canais].map(slugDoNome))];
+  if (selecionados.length > 1) {
+    const linhas = selecionados.map((slug) => estado.linhas.find((l) => l.slug === slug));
+    const comum = trechoComum(linhas, ms, { nudges: estado.nudges });
+    if (!comum || comum.fim - comum.inicio < 1000) { fecharClipe(); return false; }
+    c.limites = comum;
+    c.canaisClipe = selecionados;
+  }
   const j = dentroDosLimites({ deMs, ateMs }, c.limites);
+  if (c.canaisClipe?.some((slug) => {
+    const linha = estado.linhas.find((l) => l.slug === slug);
+    return !linha || onde(linha, j.deMs, { nudgeMs: estado.nudges[slug] || 0 }).estado !== 'toca';
+  })) { fecharClipe(); return false; }
   c.deMs = j.deMs;
   c.ateMs = j.ateMs;
   pintarClipe();
   preverClipe(c.deMs);
+  if (c.canaisClipe?.length > 1) $('estadoClipe').textContent = t('angulos.selecionados', { n: c.canaisClipe.length });
   return true;
 }
 
@@ -8963,9 +9022,13 @@ const simples = montarSimples({
   pausar: () => { if (!estado.parado && estado.linhas.length) alternarPausa(); },
   carregarClipe: carregarClipeDaKick,
   baixar: baixarParaSimples,
+  prepararSom: prepararSomDaGravacao,
   transcrever: transcreverParaCartao,
   motivoDaFala: motivoDaLegenda,
   editar: editarParaSimples,
+  abrirPovs: abrirPovsParaSimples,
+  procurarPovs: evento.procurarPovsDoMomento,
+  povsLiberados: evento.povsLiberados,
   fecharEditor: () => { if (estado.clipe) fecharClipe(); },
   abrirEvento: ({ nome, hash }) => (hash ? evento.abrirDoLink(hash, { abrirLance: false }) : evento.abrirDoLink('', { busca: `?e=${encodeURIComponent(nome)}` })),
   lerChatDoEvento: () => evento.lerChatDeTodos({ semPerguntar: true }),

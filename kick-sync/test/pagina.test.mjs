@@ -15,7 +15,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { kickFalsa, T, TEM_SOM } from './falsa.mjs';
-import { montarPalco, podeCorrer } from './palco.mjs';
+import { montarPalco, podeCorrer, saltarTempo, trocarIdioma } from './palco.mjs';
 
 let PORTA = 0;
 const { abrir } = montarPalco((p) => { PORTA = p; });
@@ -551,7 +551,7 @@ test('um F5 devolve os canais, a noite, o instante e a marca',
     await p.click('#carregar');
     await p.waitForSelector('.tile', { timeout: 15000 });
 
-    await p.click('#mais1m');
+    await saltarTempo(p, 60_000);
     await p.click('#mais3s');
     await p.click('#marcarIn');
     await p.click('#mais3s');
@@ -683,9 +683,9 @@ test('marcar kills gera a montagem, em ordem e com os ficheiros numerados',
     await p.waitForSelector('.tile', { timeout: 15000 });
 
     // Duas kills, com um minuto entre elas.
-    await p.click('#mais1m');
+    await saltarTempo(p, 60_000);
     await p.click('#marcarKill');
-    await p.click('#mais1m');
+    await saltarTempo(p, 60_000);
     await p.keyboard.press('m');                       // a tecla, como no uso real
     await p.waitForFunction(() => document.querySelectorAll('#listaMomentos li[data-ms]').length === 2,
       null, { timeout: 10000 });
@@ -760,13 +760,13 @@ test('a régua mostra as horas por cima das barras, e as kills marcadas nela',
     assert.deepEqual(horas, [...horas].sort());
 
     // As kills aparecem na regua, numeradas, e clicar numa salta para la.
-    await p.click('#mais1m');
+    await saltarTempo(p, 60_000);
     await p.click('#marcarKill');
     await p.waitForSelector('#regua .kill', { timeout: 10000 });
     assert.equal(await p.locator('#regua .kill').count(), 1);
     assert.equal(await p.locator('#regua .kill span').innerText(), '1');
 
-    await p.click('#menos1m');
+    await saltarTempo(p, -60_000);
     const fora = await p.locator('#agora').innerText();
     await p.locator('#regua .kill').click();
     assert.notEqual(await p.locator('#agora').innerText(), fora, 'clicar na kill salta para ela');
@@ -803,7 +803,7 @@ test('da para limpar a lista e recomecar, e a memoria e mesmo devolvida',
     await p.click('#carregar');
     await p.waitForSelector('.tile', { timeout: 15000 });
 
-    await p.click('#mais1m');
+    await saltarTempo(p, 60_000);
     await p.click('#marcarKill');
     await p.locator('#listaMomentos .vit[data-canal="vitima1"]').click();
     await p.click('#baixarMontagem');
@@ -856,7 +856,7 @@ test('o botao de quem morreu olha por todos e nunca finge ter visto',
     await p.click('#carregar');
     await p.waitForSelector('.tile', { timeout: 15000 });
 
-    await p.click('#mais1m');
+    await saltarTempo(p, 60_000);
     await p.click('#marcarKill');
     await p.waitForSelector('#listaMomentos .verMortes', { timeout: 10000 });
     await p.click('#listaMomentos .verMortes');
@@ -955,7 +955,7 @@ test('acrescentar um canal a meio nao muda a noite em que se esta',
     await p.click('#carregar');
     await p.waitForSelector('.tile', { timeout: 15000 });
 
-    await p.click('#mais1m');
+    await saltarTempo(p, 60_000);
     const onde = await p.locator('#agora').innerText();
     const noite = await p.locator('#noite').inputValue();
 
@@ -984,13 +984,13 @@ test('a pagina fala portugues, ingles e espanhol, e troca sem perder nada',
     await p.fill('#canais', 'tchubi\noutro');
     await p.click('#carregar');
     await p.waitForSelector('.tile', { timeout: 15000 });
-    await p.click('#mais1m');
+    await saltarTempo(p, 60_000);
     const instante = await p.locator('#agora').innerText();
 
     assert.equal(await p.locator('#carregar').innerText(), 'Carregar');
     assert.equal(await p.locator('html').getAttribute('lang'), 'pt-BR', 'o português daqui é o do Brasil');
 
-    await p.selectOption('#idioma', 'en');
+    await trocarIdioma(p, 'en');
     await p.waitForFunction(() => document.getElementById('carregar').textContent === 'Load',
       null, { timeout: 5000 });
     assert.equal(await p.locator('html').getAttribute('lang'), 'en');
@@ -1002,7 +1002,7 @@ test('a pagina fala portugues, ingles e espanhol, e troca sem perder nada',
     assert.equal(await p.locator('#agora').innerText(), instante, 'o instante fica');
     assert.equal(await p.locator('.tile').count(), 2, 'e a grelha tambem');
 
-    await p.selectOption('#idioma', 'es');
+    await trocarIdioma(p, 'es');
     await p.waitForFunction(() => document.getElementById('carregar').textContent === 'Cargar',
       null, { timeout: 5000 });
     assert.match(await p.locator('#angulos').innerText(), /de \d+ ángulos/);
@@ -1084,7 +1084,7 @@ test('filtrar, seleccionar aos molhos, apagar e anular',
     await p.click('#carregar');
     await p.waitForSelector('.tile', { timeout: 15000 });
 
-    for (let i = 0; i < 3; i++) { await p.click('#mais1m'); await p.click('#marcarKill'); }
+    for (let i = 0; i < 3; i++) { await saltarTempo(p, 60_000); await p.click('#marcarKill'); }
     await p.waitForFunction(() => document.querySelectorAll('#listaMomentos li[data-ms]').length === 3,
       null, { timeout: 10000 });
 
@@ -1131,7 +1131,7 @@ test('o numero de cada kill nao muda quando o filtro esconde as outras',
     await p.click('#carregar');
     await p.waitForSelector('.tile', { timeout: 15000 });
 
-    for (let i = 0; i < 3; i++) { await p.click('#mais1m'); await p.click('#marcarKill'); }
+    for (let i = 0; i < 3; i++) { await saltarTempo(p, 60_000); await p.click('#marcarKill'); }
     await p.waitForFunction(() => document.querySelectorAll('#listaMomentos li[data-ms]').length === 3,
       null, { timeout: 10000 });
     await p.locator('#listaMomentos li[data-ms]').nth(2).locator('.vit[data-canal="vitima1"]').click();
@@ -1155,7 +1155,7 @@ test('a montagem sai num ZIP so, e o unzip do sistema aceita-o',
     await p.waitForSelector('.tile', { timeout: 15000 });
 
     // Duas kills, e em ambas alguem morreu — sao quatro clipes.
-    for (let i = 0; i < 2; i++) { await p.click('#mais1m'); await p.click('#marcarKill'); }
+    for (let i = 0; i < 2; i++) { await saltarTempo(p, 60_000); await p.click('#marcarKill'); }
     await p.waitForFunction(() => document.querySelectorAll('#listaMomentos li[data-ms]').length === 2,
       null, { timeout: 10000 });
     for (let i = 0; i < 2; i++) {
@@ -1213,7 +1213,7 @@ test('os seis ângulos são vistos ao mesmo tempo, e não um de cada vez',
     await p.fill('#canais', canais.join('\n'));
     await p.click('#carregar');
     await p.waitForSelector('.tile', { timeout: 20000 });
-    await p.click('#mais1m');
+    await saltarTempo(p, 60_000);
     await p.click('#marcarKill');
     await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
 
@@ -1248,7 +1248,7 @@ test('dá para baixar uma kill só, e o número dela não muda por isso',
     await p.click('#carregar');
     await p.waitForSelector('.tile', { timeout: 15000 });
 
-    for (let i = 0; i < 3; i++) { await p.click('#mais1m'); await p.click('#marcarKill'); }
+    for (let i = 0; i < 3; i++) { await saltarTempo(p, 60_000); await p.click('#marcarKill'); }
     await p.waitForFunction(() => document.querySelectorAll('#listaMomentos li[data-ms]').length === 3,
       null, { timeout: 10000 });
     await p.locator('#listaMomentos li[data-ms]').nth(1).locator('.vit[data-canal="vitima1"]').click();
@@ -1281,7 +1281,7 @@ test('com um canal só, a página não fala de grupo',
     await p.fill('#canais', 'tchubi');
     await p.click('#carregar');
     await p.waitForSelector('.tile', { timeout: 15000 });
-    await p.click('#mais1m');
+    await saltarTempo(p, 60_000);
     await p.click('#marcarKill');
     await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
 
@@ -1309,7 +1309,7 @@ test('com dois canais, tudo o que é de grupo volta',
     await p.fill('#canais', 'tchubi\nvitima1');
     await p.click('#carregar');
     await p.waitForSelector('.tile', { timeout: 15000 });
-    await p.click('#mais1m');
+    await saltarTempo(p, 60_000);
     await p.click('#marcarKill');
     await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
 
@@ -1336,7 +1336,7 @@ test('dá para ver a kill antes de a baixar, e a prévia é o mesmo pedaço do f
 
     // Margens diferentes das de origem, para o teste não passar por acaso.
     // As margens vivem numa gaveta fechada: abre-se como uma pessoa abriria.
-    await p.click('#mais1m');
+    await saltarTempo(p, 60_000);
     await p.click('#marcarKill');
     await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
     // As margens só aparecem depois da primeira kill.
@@ -1421,7 +1421,7 @@ test('Montagem e Exportar: separadores que seguem a tarefa, com conta e teclado'
     await p.click('#abaExportar');
     assert.equal(await p.locator('#montagem').isVisible(), false);
     assert.equal(await p.locator('#filaVazia').isVisible(), true);
-    await p.click('#mais1m');
+    await saltarTempo(p, 60_000);
     await p.keyboard.press('m');
     await p.waitForFunction(() => document.querySelectorAll('#listaMomentos li[data-ms]').length === 1, null, { timeout: 10000 });
     assert.equal(await p.locator('#abaMontagem').getAttribute('aria-selected'), 'true');

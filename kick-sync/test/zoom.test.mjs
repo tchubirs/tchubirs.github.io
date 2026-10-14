@@ -8,7 +8,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { kickFalsa } from './falsa.mjs';
-import { montarPalco, podeCorrer } from './palco.mjs';
+import { montarPalco, podeCorrer, saltarTempo } from './palco.mjs';
 
 let PORTA = 0;
 const { abrir } = montarPalco((p) => { PORTA = p; });
@@ -243,7 +243,7 @@ test('a pinça com dois dedos aproxima e afasta no meio dos dedos', semNavegador
 test('a régua tem divisões e linhas pelas faixas, e o passo segue o zoom', semNavegador, async () => {
   const { p, erros } = await abrir({ ecra: { width: 1440, height: 900 } });
   await abrirNoite(p);
-  await p.click('#mais5m');
+  await saltarTempo(p, 300_000);
   const medir = () => p.evaluate(() => {
     const regua = document.getElementById('regua');
     const r = regua.getBoundingClientRect();

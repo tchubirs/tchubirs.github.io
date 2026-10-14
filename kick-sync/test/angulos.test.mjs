@@ -141,6 +141,37 @@ test('um vídeo que não anda rebenta, em vez de gravar uma foto', async () => {
   );
 });
 
+test('um ângulo que congela depois de andar é cancelado', { timeout: 8000 }, async () => {
+  const videos = [videoFalso('A'), videoFalso('B')];
+  for (const v of videos) {
+    v.andar = function () { if (this.currentTime < 100.3) this.currentTime += 0.05; };
+  }
+  const { tela, MRFalso } = gravacaoFalsa(videos);
+  await assert.rejects(() => gravarAngulos(videos, {
+    plano: planoDeAngulos({ canais: ['a', 'b'], duracaoS: 10 }), mudo: true,
+    formato: 'video/webm', criarTela: () => tela, MR: MRFalso,
+  }), (e) => e.name === 'GRAVACAO-PARADA');
+  assert.ok(videos[0].currentTime > 100.2, 'o lance andou antes de congelar');
+});
+
+test('conferir o som não desloca o começo dos POVs', async () => {
+  const videos = [videoFalso('A'), videoFalso('B')];
+  videos[1].currentTime = 200;
+  for (const v of videos) {
+    v.play = async function () { this.currentTime += 0.5; };
+    v.captureStream = () => ({ getAudioTracks: () => [{ id: 'som' }] });
+  }
+  const { tela, MRFalso } = gravacaoFalsa(videos);
+  let comeco;
+  class MR extends MRFalso { start() { comeco = videos.map((v) => v.currentTime); super.start(); } }
+  await gravarAngulos(videos, {
+    plano: planoDeAngulos({ modo: 'empilhado', canais: ['a', 'b'], duracaoS: 0.1 }),
+    formato: 'video/webm', criarTela: () => tela, MR,
+  });
+  assert.ok(comeco[0] < 100.2 && comeco[1] < 200.2,
+    `a conferência de áudio avançou o início: ${comeco}`);
+});
+
 test('falta de vídeos para o plano é um erro de quem chama', async () => {
   await assert.rejects(
     () => gravarAngulos([videoFalso('A')], { plano: planoDeAngulos({ canais: ['a', 'b'], duracaoS: 1 }), formato: 'video/webm' }),
@@ -199,6 +230,67 @@ test('com Web Audio, o seguido grava uma faixa só, que deixa passar o som de qu
   assert.ok(trocas[1][1] >= 0.3 && trocas[1][1] < 0.4, `a troca do som é a da imagem (${trocas[1][1]})`);
   assert.deepEqual(volumes, [[1, 0], [0, 1]], 'um de cada vez, nunca os dois');
   assert.equal(ContextoFalso.ultimo.fechado, true, 'o contexto fecha no fim');
+});
+
+test('MP4s mudos na tela preservam áudio de cada POV e soltam as capturas', async () => {
+  for (const modo of ['empilhado', 'seguido']) {
+    const pistas = [];
+    const fontes = [];
+    let contexto;
+    class Contexto extends ContextoFalso {
+      constructor() { super(); contexto = this; }
+      async decodeAudioData() { return { numberOfChannels: 2, length: 48000, duration: 10 }; }
+      createBufferSource() {
+        const f = { connect() {}, disconnect() {}, start() { this.tocando = true; }, stop() { this.tocando = false; } };
+        fontes.push(f);
+        return f;
+      }
+      createMediaStreamDestination() {
+        const f = { id: `audio-${pistas.length}`, stop() { this.parado = true; } };
+        pistas.push(f);
+        return { stream: { getAudioTracks: () => [f], getTracks: () => [f] } };
+      }
+    }
+    const videos = ['A', 'B'].map((nome) => {
+      const v = Object.assign(new EventTarget(), videoFalso(nome), { currentTime: 0, paused: true, muted: true });
+      v.play = async function () { this.paused = false; this.dispatchEvent(new Event('playing')); };
+      v.pause = function () { this.paused = true; this.dispatchEvent(new Event('pause')); };
+      v.captureStream = undefined;
+      return v;
+    });
+    const { tela, MRFalso, faixasNaTela } = gravacaoFalsa(videos);
+    tela.captureStream = () => ({
+      addTrack(f) { faixasNaTela.push(f); }, getAudioTracks: () => faixasNaTela, getTracks: () => faixasNaTela,
+    });
+    await gravarAngulos(videos, {
+      plano: planoDeAngulos({ modo, canais: ['a', 'b'], duracaoS: 0.2 }),
+      formato: 'video/mp4', criarTela: () => tela, MR: MRFalso, Contexto, exigirSom: true,
+      arquivosSom: [new Blob(['AAC-a']), new Blob(['AAC-b'])],
+    });
+    assert.equal(faixasNaTela.length, 1);
+    assert.ok(pistas.every((f) => f.parado), `captura de ${modo} ficou aberta`);
+    assert.ok(fontes.every((f) => !f.tocando), `áudio de ${modo} ficou tocando`);
+    assert.ok(videos.every((v) => v.muted), 'não deve desmutar o player no iPhone');
+    assert.equal(contexto.fechado, false, 'o contexto compartilhado segue liberado para o próximo clipe');
+  }
+});
+
+test('uma falha ao verificar o segundo áudio libera a primeira captura e a tela', async () => {
+  let parada = false;
+  const videos = [videoFalso('A'), videoFalso('B')];
+  videos[0].captureStream = () => ({
+    getAudioTracks: () => [{ id: 'somA' }], getTracks: () => [{ stop() { parada = true; } }],
+  });
+  const { tela, MRFalso } = gravacaoFalsa(videos);
+  let telaParou = false;
+  tela.captureStream = () => ({ addTrack() {}, getTracks: () => [{ stop() { telaParou = true; } }] });
+  await assert.rejects(() => gravarAngulos(videos, {
+    plano: planoDeAngulos({ canais: ['a', 'b'], duracaoS: 1 }), formato: 'video/webm',
+    criarTela: () => tela, MR: MRFalso, Contexto: ContextoFalso, exigirSom: true,
+  }), (e) => e.name === 'SEM-SOM');
+  assert.equal(parada, true);
+  assert.equal(telaParou, true);
+  assert.ok(videos.every((v) => v.parou));
 });
 
 test('sem Web Audio, ou com o contexto parado, fica o som de um ângulo só, como antes', async () => {

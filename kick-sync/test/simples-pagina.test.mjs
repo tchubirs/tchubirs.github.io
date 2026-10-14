@@ -116,9 +116,17 @@ test('modo simples: o nome escrito abre a lista, e o Baixar para TikTok e o deit
     const primeiro = p.locator('#simplesLista li').first();
     assert.match(await primeiro.locator('.simplesMotivo').innerText(), /O chat explodiu/);
     assert.match(await primeiro.locator('.simplesQuando').innerText(), /^Aos \d+ min da live, às \d\d:\d\d\. Clipe de \d+ s\.$/);
-    assert.match(await p.locator('#simplesEstado').innerText(), /^Pronto: \d+ momentos?/);
-    // Este Chromium não ouve o AAC da Kick: diz-se, com o que fazer.
-    assert.match(await p.locator('#simplesAviso').innerText(), /Chrome/);
+    // Só ouve em volta do pico do chat (modo esperto): varrido fica "picos", nunca "tudo" nem "Pronto".
+    assert.match(await p.locator('#simplesEstado').innerText(), /^Busca rápida: \d+ momentos?/);
+    const vodCache = await p.evaluate(() => JSON.parse(localStorage.getItem('povix.simplesVods') || '[]')
+      .find((v) => v.slug === 'tchubi'));
+    assert.equal(vodCache?.varrido, 'picos', `varredura inesperada: ${JSON.stringify(vodCache)}`);
+    assert.equal(vodCache?.pendente, false, 'o áudio ficou pendente: a fonte de teste não deu som de verdade');
+    const suportaVideo = await p.evaluate(() => Boolean(
+      document.createElement('video').canPlayType('application/vnd.apple.mpegurl')
+      || (window.MediaSource || window.ManagedMediaSource)?.isTypeSupported?.('video/mp4; codecs="avc1.64001f,mp4a.40.2"'),
+    ));
+    if (!suportaVideo) assert.match(await p.locator('#simplesAviso').innerText(), /Chrome/);
     assert.equal(await p.locator('#simplesDicaLista').isVisible(), true);
 
     // Baixar para TikTok: em pé, sem janela à vista, com o nome que ela entende.
@@ -135,7 +143,8 @@ test('modo simples: o nome escrito abre a lista, e o Baixar para TikTok e o deit
       }),
       primeiro.locator('button[data-acao="tiktok"]').click(),
     ]);
-    assert.match(tiktok.suggestedFilename(), /^tchubi - \d\d-\d\d - chat\.(mp4|webm)$/);
+    // titulo.js virou frase inteira ("O chat explodiu"), não a palavra curta de antes.
+    assert.match(tiktok.suggestedFilename(), /^tchubi - \d\d-\d\d - O chat explodiu\.(mp4|webm)$/);
     await p.waitForFunction(() => /Pronto\. O clipe está na pasta Downloads\./.test(
       document.querySelector('#simplesLista li .simplesBaixando').textContent), null, { timeout: 15_000 });
     assert.equal(await p.locator('#modalClipe').isVisible(), false);
@@ -149,7 +158,8 @@ test('modo simples: o nome escrito abre a lista, e o Baixar para TikTok e o deit
       p.waitForEvent('download', { timeout: 60_000 }),
       primeiro.locator('button[data-acao="deitado"]').click(),
     ]);
-    assert.match(deitado.suggestedFilename(), /^tchubi - \d\d-\d\d - chat \(deitado\)\.(mp4|ts)$/);
+    // 'simples.arquivo.deitado' virou "tela cheia", não "deitado".
+    assert.match(deitado.suggestedFilename(), /^tchubi - \d\d-\d\d - O chat explodiu \(tela cheia\)\.(mp4|ts)$/);
     // Começar de novo volta à caixa.
     await p.click('#simplesDeNovo');
     assert.equal(await p.locator('#simplesCaixa').isVisible(), true);
@@ -244,8 +254,12 @@ test('modo simples: "Excluir" tira o momento e ele não volta; "Mostrar mais" s�
     await p.click('#simplesDeNovo');
     await p.fill('#simplesCaixa', 'tchubi');
     await p.click('#simplesAchar');
-    await p.waitForFunction(() => /^(Pronto|Não achei momentos fortes|Parado)/.test(document.getElementById('simplesEstado').textContent),
-      null, { timeout: 60_000 });
+    // Cache já completo (varrido "picos"): o estado é "Busca rápida", não "Pronto"/"Parado" de antes.
+    await p.waitForFunction(() => {
+      const v = JSON.parse(localStorage.getItem('povix.simplesVods') || '[]').find((x) => x.slug === 'tchubi');
+      return /^Busca rápida: \d+ momentos?/.test(document.getElementById('simplesEstado').textContent)
+        && v?.varrido === 'picos' && v?.pendente === false;
+    }, null, { timeout: 60_000 });
     assert.equal(await p.locator('#simplesLista li').count(), antes - 1);
     assert.deepEqual(erros, []);
     await p.close();
@@ -278,8 +292,8 @@ test('modo simples: o espaço não toca vídeo escondido, e tocar a imagem toca 
     assert.equal(await cartao.locator('.simplesPrevia video').evaluate((v) => v.paused), !antes);
     assert.equal(await tocandoFora(), 0);
     // Os controles de um player comum: tocar/pausar e a barra do pedaço do lance.
-    assert.equal(await cartao.locator('.simplesPreviaToca').count(), 1);
-    assert.equal(await cartao.locator('input.simplesPreviaBarra').count(), 1);
+    assert.equal(await cartao.locator('.simplesToca').count(), 1);
+    assert.equal(await cartao.locator('input.simplesLinha').count(), 1);
     // Dar play em outro cartão devolve este à imagem: uma prévia só por vez.
     if (await p.locator('#simplesLista li').count() > 1) {
       await p.locator('#simplesLista li').nth(1).locator('button.simplesFoto').click();

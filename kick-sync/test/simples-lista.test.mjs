@@ -8,6 +8,7 @@ import {
 } from '../site/simples-lista.js';
 import { sinaisDoEvento, melhoresLances, filtrarLances } from '../site/melhores.js';
 import { motivoEmPalavras, quemEstavaNoLance } from '../site/simples.js';
+import { tituloDoMomento } from '../site/titulo.js';
 
 test('a caixa entende o nome solto, os links da Kick e o evento', () => {
   assert.deepEqual(lerEntrada('xguiry'), { tipo: 'nome', slug: 'xguiry', evento: 'xguiry' });
@@ -107,7 +108,10 @@ test('evento: a morte e quem estava no lance entram na nota e no motivo', () => 
   assert.equal(resto.length, 0);
   assert.equal(m.canal, 'xguiry');
   assert.deepEqual(m.outros, ['cyrus']);
-  assert.deepEqual(m.mortes, [{ matador: 'xguiry', vitima: 'cyrus' }]);
+  // `fonte: null` explícito (simples-lista.js, proveniência): sem valor padrão, a morte sem fonte dita
+  // nunca é confundida com "servidor" (titulo.js só confirma pelo que realmente veio do produtor).
+  assert.deepEqual(m.mortes, [{ matador: 'xguiry', vitima: 'cyrus', canalMatador: 'xguiry', canalVitima: 'cyrus', fonte: null }]);
+  assert.deepEqual(m.povs, [{ canal: 'cyrus', relacao: 'vitima', pessoa: 'cyrus' }]);
   assert.deepEqual(m.tipos.sort(), ['chat', 'morte', 'tiros']);
   assert.equal(m.nota, 'muitoBom');
   assert.equal(m.doEvento, true);
@@ -126,6 +130,16 @@ test('evento: o motivo sem tiroteio, sem quem matou e com várias mortes', () =>
   const muitos = { outros: ['a', 'b', 'c', 'd', 'e', 'f'] };
   assert.equal(quemEstavaNoLance(muitos), 'Também estavam no lance: a, b, c, d e mais 2');
   assert.equal(quemEstavaNoLance({ outros: [] }), '');
+});
+
+test('evento: o canal escolhido é o principal e só entram lances com esse POV disponível', () => {
+  const lances = lancesDe({ mortes: [morte(min(30))] });
+  const [m] = lancesParaLista(lances, { canalPrincipal: '@Cyrus' });
+  assert.equal(m.canal, 'cyrus');
+  assert.equal(m.meuPov, true);
+  assert.deepEqual(m.povs, [{ canal: 'xguiry', relacao: 'matou', pessoa: 'xguiry' }]);
+  assert.deepEqual(lancesParaLista(lances, { canalPrincipal: 'fora-do-evento' }), []);
+  assert.deepEqual(lancesParaLista(lances.map((l) => ({ ...l, noAr: ['xguiry'] })), { canalPrincipal: 'cyrus' }), []);
 });
 
 test('evento: chat que reclama do som cai, e quem não está no ar não entra', () => {
@@ -218,4 +232,30 @@ test('com acerto confirmado pelo som do jogo, o motivo diz PvP e quantos acertos
   assert.equal(motivoEmPalavras({ tipos: ['tiros', 'acerto'], acertos: 5, cabecas: 0 }), 'Teve PvP, 5 acertos');
   assert.equal(motivoEmPalavras({ tipos: ['tiros', 'acerto'], acertos: 5, cabecas: 2 }), 'Teve PvP, 5 acertos e 2 na cabeça');
   assert.equal(motivoEmPalavras({ tipos: ['tiros', 'acerto', 'chat'], acertos: 3, cabecas: 0 }), 'O chat explodiu e teve PvP, 3 acertos');
+});
+
+// ── proveniência da morte, da fonte ao título (cadeia real: sinais → lances → lista → título) ──
+
+const listaDaMorte = (fonte) => {
+  const lances = lancesDe({
+    mortes: [morte(min(30), fonte === undefined ? {} : { fonte })],
+    momentos: [{ ms: min(30) - 2000, protagonista: 'xguiry', auto: true, tipo: 'tiros', origem: 'detectar' }],
+    marcas: new Map([['xguiry', [{ tipo: 'chat', ms: min(30) + 15_000, vezes: 6, msgs: 40 }]]]),
+  });
+  return lancesParaLista(lances);
+};
+
+test('proveniência: o log do servidor ligado ao canal chega à lista e confirma o combate no título', () => {
+  const [m] = listaDaMorte('servidor');
+  assert.equal(m.mortes[0].fonte, 'servidor', 'a fonte não se perde no caminho');
+  assert.match(tituloDoMomento(m), /^Troca de tiros, morte/, 'o log do servidor confirma');
+});
+
+test('proveniência: morte de vídeo ou sem fonte não confirma o combate, e nunca vira servidor', () => {
+  const [v] = listaDaMorte('video');
+  assert.equal(v.mortes[0].fonte, 'video');
+  assert.match(tituloDoMomento(v), /^Som alto, morte/, 'leitura de vídeo não confirma');
+  const [s] = listaDaMorte(undefined);
+  assert.equal(s.mortes[0].fonte, null, 'sem fonte fica sem fonte');
+  assert.match(tituloDoMomento(s), /^Som alto, morte/, 'sem fonte não confirma');
 });

@@ -8,7 +8,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { kickFalsa, T } from './falsa.mjs';
-import { montarPalco, podeCorrer } from './palco.mjs';
+import { montarPalco, podeCorrer, saltarTempo } from './palco.mjs';
 
 let PORTA = 0;
 const { abrir } = montarPalco((p) => { PORTA = p; });
@@ -25,7 +25,7 @@ async function abrirNoite(p, canais) {
 
 async function marcarKill(p) {
   const antes = await p.locator('#listaMomentos li[data-ms]').count();
-  await p.click('#mais1m');
+  await saltarTempo(p, 60_000);
   await p.click('#marcarKill');
   await p.waitForFunction((n) => document.querySelectorAll('#listaMomentos li[data-ms]').length > n,
     antes, { timeout: 5000 });
@@ -142,7 +142,7 @@ test('o link do projeto leva as kills marcadas, com quem morreu e as margens', c
   });
   await abrirNoite(p, ['tchubi', 'outro']);
   await marcarKill(p);
-  await p.click('#mais1m');
+  await saltarTempo(p, 60_000);
   await marcarKill(p);
   await p.locator('#listaMomentos li[data-ms]').first().locator('.vit[data-canal="outro"]').click();
   const antes = await p.evaluate(() => window.__estado.momentos.map((m) => ({ ms: m.ms, p: m.protagonista, v: m.vitimas })));

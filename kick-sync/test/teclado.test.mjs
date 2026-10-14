@@ -9,7 +9,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { kickFalsa } from './falsa.mjs';
-import { montarPalco, podeCorrer } from './palco.mjs';
+import { montarPalco, podeCorrer, trocarIdioma } from './palco.mjs';
 import { _TEXTOS } from '../site/idiomas.js';
 
 let PORTA = 0;
@@ -224,7 +224,7 @@ test('o botão do som chama-se som, e o volume diz-se na língua da página', se
   assert.equal(await p.locator('.tile.foco .somBtn').getAttribute('aria-label'),
     await p.locator('.tile.foco .somBtn').getAttribute('title'));
   assert.equal(await p.locator('.tile.foco .vol').getAttribute('aria-label'), _TEXTOS.pt['tile.volume']);
-  await p.selectOption('#idioma', 'en');
+  await trocarIdioma(p, 'en');
   await p.waitForFunction(() => document.documentElement.lang.startsWith('en'), null, { timeout: 5000 }).catch(() => {});
   assert.equal(await p.locator('#idioma').getAttribute('aria-label'), _TEXTOS.en['idioma.rotulo']);
   const nomeEn = await p.locator('.tile.foco .somBtn').getAttribute('aria-label');

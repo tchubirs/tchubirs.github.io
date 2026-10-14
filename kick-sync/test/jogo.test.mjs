@@ -9,7 +9,7 @@ import { vodsDoCanal } from '../site/kick.js';
 import { paraArquivo, deArquivo, lerElenco } from '../site/elenco.js';
 import { montarMapa, oQueEstaAqui } from '../site/mapa.js';
 import { kickFalsa, T } from './falsa.mjs';
-import { montarPalco, podeCorrer } from './palco.mjs';
+import { montarPalco, podeCorrer, saltarTempo } from './palco.mjs';
 import { pedacoNumero } from './pedaco.mjs';
 
 const GTA = 'Grand Theft Auto V (GTA)';
@@ -172,7 +172,7 @@ test('evento de Rust: quem estava no GTA fica a cinza, fora dos melhores lances 
 
     // "Guardar todos agora": uma kill na POV do gta1 e outra na do rust1; o gta1 não se guarda.
     for (const quem of ['gta1', 'rust1']) {
-      await p.click('#mais1m');
+      await saltarTempo(p, 60_000);
       await p.evaluate((q) => { window.__estado.focos = [q]; }, quem);
       await p.click('#marcarKill');
     }

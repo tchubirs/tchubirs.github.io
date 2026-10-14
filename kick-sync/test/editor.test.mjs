@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { kickFalsa } from './falsa.mjs';
-import { montarPalco, podeCorrer } from './palco.mjs';
+import { montarPalco, podeCorrer, saltarTempo } from './palco.mjs';
 
 let PORTA = 0;
 const { abrir } = montarPalco((p) => { PORTA = p; });
@@ -41,7 +41,7 @@ test('o trecho entre entrada e saída aparece sobre as faixas', semNavegador, as
   assert.equal(await p.locator('#trechoMarcado').isVisible(), false);
   await p.click('#marcarIn');
   assert.equal(await p.locator('#trechoMarcado').isVisible(), true, 'só com a entrada, um risco');
-  await p.click('#mais1m');
+  await saltarTempo(p, 60_000);
   await p.click('#marcarOut');
   const caixa = await p.locator('#trechoMarcado').boundingBox();
   assert.ok(caixa.width > 8, `o trecho tem ${caixa.width} px`);

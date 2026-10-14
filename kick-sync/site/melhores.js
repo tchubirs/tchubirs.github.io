@@ -108,6 +108,8 @@ export function sinaisDoEvento({ marcas = new Map(), momentos = [], mensagens = 
     const morte = {
       id: m.id, matador: m.matador, vitima: m.vitima, canalMatador: m.canalMatador || null, canalVitima: m.canalVitima || null,
       ...(m.origem === 'video' ? { origem: 'video' } : {}),
+      // A proveniência como o produtor a deu (servidor = log lido; video = tela de morte). Sem default.
+      ...(m.fonte ? { fonte: m.fonte } : {}),
     };
     const msMatador = Number.isFinite(m.msMatador) ? m.msMatador : m.ms;
     if (m.canalMatador) sinais.push({ tipo: 'morte', canal: m.canalMatador, ms: msMatador, marca: `morte:${m.id}`, papel: 'matou', morte });

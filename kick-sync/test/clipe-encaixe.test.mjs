@@ -5,7 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { kickFalsa } from './falsa.mjs';
-import { montarPalco, podeCorrer } from './palco.mjs';
+import { montarPalco, podeCorrer, saltarTempo } from './palco.mjs';
 import {
   enquadramentoInicial, proporcaoDoQuadro, paraFraccoes, deFraccoes, MODELOS_WEBCAM, MODELO_OMISSAO,
   limparModelo, DIVISAO_OMISSAO,
@@ -259,7 +259,7 @@ for (const [nome, ecra, toque] of [['1440', { width: 1440, height: 900 }, false]
       try { localStorage.setItem('replay.idioma', 'pt'); localStorage.setItem('replay.caminho', 'vod'); } catch { /* nada */ }
     });
     await carregar(p, ['tchubi']);
-    await p.click('#mais1m');
+    await saltarTempo(p, 60_000);
     await abrirClipe(p);
     await espiarVideo(p);
     const m0 = await barra(p);

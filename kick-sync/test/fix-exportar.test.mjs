@@ -7,7 +7,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { kickFalsa, T } from './falsa.mjs';
-import { montarPalco, podeCorrer } from './palco.mjs';
+import { montarPalco, podeCorrer, saltarTempo, trocarIdioma } from './palco.mjs';
 
 let PORTA = 0;
 const { abrir } = montarPalco((p) => { PORTA = p; });
@@ -24,7 +24,7 @@ async function carregar(p, canais, opcoes = {}) {
 
 async function marcarKills(p, n, { saltar = true } = {}) {
   for (let i = 0; i < n; i++) {
-    if (saltar) await p.click('#mais1m');
+    if (saltar) await saltarTempo(p, 60_000);
     await p.click('#marcarKill');
   }
   await p.waitForFunction((k) => document.querySelectorAll('#listaMomentos li[data-ms]').length === k,
@@ -116,7 +116,7 @@ test('trocar de ângulo no editor: o pedaço nunca fica ao contrário, os recort
     await p.click('#carregar');
     await p.waitForSelector('.tile', { timeout: 20000 });
     // A página abre onde estão todos no ar; recuar cinco minutos põe a kill antes de 'tarde'.
-    await p.click('#menos5m');
+    await saltarTempo(p, -300_000);
     await marcarKills(p, 1, { saltar: false });
     await p.locator('#listaMomentos li[data-ms]').first().locator('.vit[data-canal="vitima1"]').click();
 
@@ -187,6 +187,39 @@ async function previaDeVerdade(p, ms = 1200) {
   }, ms);
   await p.waitForFunction(() => !document.getElementById('guardarRetrato').disabled, null, { timeout: 10000 });
 }
+
+test('o editor já fica trancado enquanto confere o formato de gravação', semNavegador, async () => {
+  const { p, erros } = await abrir();
+  await carregar(p, ['tchubi']);
+  await p.click('#clipar');
+  await p.waitForSelector('#modalClipe:not([hidden])');
+  await previaDeVerdade(p);
+  const imediato = await p.evaluate(() => {
+    document.getElementById('guardarRetrato').click();
+    const livres = ['guardarRetrato', 'guardarClipe', 'angulosSeguido', 'inicioMais', 'fimMais', 'verClipe']
+      .filter((id) => !document.getElementById(id).disabled);
+    return { aGravar: window.__estado.clipe.aGravar, livres };
+  });
+  assert.equal(imediato.aGravar, true, 'não deve esperar a prova antes de impedir outra exportação');
+  assert.deepEqual(imediato.livres, [], 'o recorte e os outros formatos devem esperar também');
+  await p.keyboard.press('Escape');
+  await fechado(p);
+  await p.click('#clipar');
+  await p.waitForSelector('#modalClipe:not([hidden])');
+  await p.evaluate(() => {
+    const video = document.getElementById('previaClipe');
+    video.muted = false;
+    video.volume = 0.4;
+  });
+  await p.waitForTimeout(1000);
+  assert.equal(await p.locator('#fila li').count(), 0, 'cancelar durante a prova não deve entregar um arquivo');
+  assert.deepEqual(await p.evaluate(() => {
+    const video = document.getElementById('previaClipe');
+    return { muted: video.muted, volume: video.volume };
+  }), { muted: false, volume: 0.4 }, 'a limpeza anterior não deve mudar o áudio do novo editor');
+  assert.deepEqual(erros, []);
+  await p.close();
+});
 
 // O 9:16 grava em tempo real do mesmo <video> que o editor mexe. Os ±0,5 s, o ▶, as pegas, o
 // ângulo e os recortes estragavam o ficheiro a meio; fechar deixava-o a gravar. E um 16:9
@@ -375,7 +408,7 @@ test('um corte que atravessa uma reconexão diz quanto falta, e o 16:9 do editor
 
     // De 290 s a 310 s: dez segundos antes da reconexão e dez depois.
     await p.evaluate(({ T: t0 }) => { window.__estado.agoraMs = t0; }, { T });
-    for (let i = 0; i < 4; i++) await p.click('#mais1m');
+    for (let i = 0; i < 4; i++) await saltarTempo(p, 60_000);
     for (let i = 0; i < 5; i++) await p.keyboard.press('Shift+L');
     await p.click('#marcarIn');
     await p.keyboard.press('Shift+L');
@@ -406,7 +439,7 @@ test('no editor as pegas ficam na barra, os ciclos do 9:16 não se acumulam, e o
   semNavegador, async () => {
     const { p, erros } = await abrir();
     await carregar(p, ['tchubi']);
-    for (let i = 0; i < 3; i++) await p.click('#mais1m');
+    for (let i = 0; i < 3; i++) await saltarTempo(p, 60_000);
     await marcarKills(p, 1);
     // Um tiroteio de 170 s que acaba na kill.
     await p.evaluate(() => {
@@ -518,7 +551,7 @@ test('refazer a grelha fecha a janela à parte, em vez de a deixar com um leitor
       };
     });
     // Trocar de língua não refaz nada: a janela fica, e o quadro dela também.
-    await p.selectOption('#idioma', 'en');
+    await trocarIdioma(p, 'en');
     await p.waitForFunction(() => document.documentElement.lang === 'en', null, { timeout: 5000 });
     assert.equal(await p.evaluate(() => window.__fechadas), 0, 'trocar de língua fechou a janela à parte');
     assert.ok(await p.evaluate(() => window.__estado.aparte?.tile?.isConnected));
@@ -551,7 +584,7 @@ test('o 9:16 da montagem que não sai diz o porquê na língua de quem usa', sem
     // Um browser que não sabe gravar vídeo.
     window.MediaRecorder = undefined;
   });
-  await p.selectOption('#idioma', 'en');
+  await trocarIdioma(p, 'en');
   await p.waitForFunction(() => document.documentElement.lang === 'en', null, { timeout: 5000 });
   await p.click('#baixarMontagem');
   await p.waitForFunction(() => /exported/.test(document.getElementById('estadoMontagem').textContent),
@@ -588,18 +621,23 @@ test('a detecção automática pára no mesmo botão que a lançou', semNavegado
   }));
   await carregar(p, ['tchubi']);
   p.on('dialog', (d) => d.accept());
+  // O botão vive dentro do <details class="ferramentas">, fechado por omissão: abrir o menu primeiro.
+  await p.click('.ferramentasBotao');
   await p.click('#procurarKills');
   await p.click('#escolherTudo');
   await p.click('#detetarTrecho');
   await p.waitForFunction(() => window.__aOuvir === true, null, { timeout: 5000 });
   // O Parar da barra na faixa também aparece; aqui pára-se pelo botão da secção.
   assert.ok(await p.locator('#pararChatTrecho').isVisible());
-  assert.equal(await p.locator('#procurarKills span').innerText(), 'Parar');
+  // app.js fecha o <details> a cada clique no menu; textContent lê o rótulo sem exigir visibilidade.
+  assert.equal(await p.locator('#procurarKills span[data-t]').first().textContent(), 'Parar');
   assert.equal(await p.locator('#procurarKills').isDisabled(), false, 'o Parar tem de se poder carregar');
 
+  // O menu fechou sozinho depois do primeiro clique: reabrir antes de clicar de novo, nada de forçar.
+  await p.click('.ferramentasBotao');
   await p.click('#procurarKills');
   await p.waitForFunction(() => window.__estado.varredura === null, null, { timeout: 5000 });
-  assert.equal(await p.locator('#procurarKills span').innerText(), 'Detectar lances');
+  assert.equal(await p.locator('#procurarKills span[data-t]').first().textContent(), 'Detectar lances');
   // Parado, e com o que já se ouviu guardado para não ser baixado de novo.
   assert.match(await p.locator('#estadoMontagem').innerText(), /^Parado\. O que já foi ouvido fica guardado/);
   assert.deepEqual(erros, []);
@@ -661,7 +699,7 @@ test('na montagem, um clipe que atravessa uma reconexão sai em duas partes segu
 test('o Clipar abre na entrada e na saída marcadas, para acertar a arrastar', semNavegador, async () => {
   const { p, erros } = await abrir();
   await carregar(p, ['tchubi']);
-  await p.click('#mais1m');
+  await saltarTempo(p, 60_000);
   await p.click('#marcarIn');
   await p.click('#mais3s');
   await p.click('#mais3s');
@@ -696,7 +734,7 @@ test('com 16:9 e 9:16, a montagem tira a POV de cada kill também em vertical, s
 test('o editor tira o clipe de vários ângulos, e só aparece com mais de um canal', semNavegador, async () => {
   const { p, erros } = await abrir();
   await carregar(p, ['tchubi', 'outro']);
-  await p.click('#mais1m');
+  await saltarTempo(p, 60_000);
   await p.click('#clipar');
   await p.waitForSelector('#modalClipe:not([hidden])');
   assert.equal(await p.locator('#angulosSeguido').isVisible(), true);
@@ -704,7 +742,8 @@ test('o editor tira o clipe de vários ângulos, e só aparece com mais de um ca
   // Sem gravador, diz o porquê; e o plano já leva os dois ângulos, o do editor primeiro.
   await p.evaluate(() => { window.MediaRecorder = undefined; });
   await p.click('#angulosSeguido');
-  await p.waitForFunction(() => /não sabe gravar/.test(document.getElementById('estadoClipe').textContent), null, { timeout: 5000 });
+  // A frase mudou (idiomas.js, 'retrato.semGravador'): já não é "não sabe gravar".
+  await p.waitForFunction(() => /A gravação não iniciou/.test(document.getElementById('estadoClipe').textContent), null, { timeout: 5000 });
   const plano = await p.evaluate(() => window.__ultimoPlanoAngulos);
   assert.equal(plano.modo, 'seguido');
   assert.equal(plano.canais.length, 2);

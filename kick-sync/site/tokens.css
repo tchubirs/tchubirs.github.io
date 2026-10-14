@@ -1,75 +1,42 @@
-/* ═══ O sistema visual ══════════════════════════════════════════════════════
- *
- * Um ficheiro, e depois dele nenhum valor solto no meio das regras. Quem
- * quiser mudar a cor, a letra ou o espaço deste sítio mexe aqui e mais lado
- * nenhum.
- *
- * ── A ideia ────────────────────────────────────────────────────────────────
- * Isto não é um site: é um INSTRUMENTO. Dezassete gravações, um relógio só,
- * e alguém a decidir o que corta. A referência não são páginas — é o material
- * de estúdio: caixa preta anodizada, mostrador frio, lâmpada de tally âmbar.
- *
- * Três decisões, e tudo o resto sai delas:
- *
- * 1. O CHÃO É QUENTE. Cinzento com o matiz rodado para 60º e croma quase
- *    nulo (0,004 a 0,010). Toda a ferramenta escura do mundo usa cinzento
- *    azulado; puxar o preto para o lado quente é o que faz isto parecer
- *    equipamento em vez de painel de programador — e é o que dá tensão à
- *    cor fria por cima, que é como o material real se comporta.
- *
- * 2. O AZUL-VERDE É O QUE SE CARREGA. Um acento só, frio, para acção e
- *    selecção. Frio sobre quente é o par complementar; ao lado do chão salta
- *    sem precisar de brilhar.
- *
- * 3. O ÂMBAR É O TEMPO MARCADO, e mais nada. Entrada e saída, marcas de
- *    kill na régua, o instante em que se está. É a cor que qualquer mesa de
- *    montagem usa para marcadores, e aqui não empresta o nome a botões.
- *
- * O verde de néon que estava aqui foi-se. "Esse verde tá muito forte" — e
- * estava: preto quase puro com um verde ácido é o cliché de que este sítio
- * mais precisava de sair.
- *
- * ── A escala das superfícies ───────────────────────────────────────────────
- * Doze passos era demais e três era pouco. São seis, cada um com UM papel,
- * pela mesma lógica das escalas de doze do Radix: fundo da aplicação, fundo
- * afundado, painel, controlo, controlo sob o rato, controlo carregado.
- * Nenhuma regra deste projecto tem o direito de inventar um sétimo.
+/* Superfícies em grafite frio, ciano para ações e âmbar para marcas de tempo.
+ * As mesmas cores servem o modo simples, o editor e o mapa de eventos.
  */
 :root {
   color-scheme: dark;
 
   /* ── superfícies ─────────────────────────────────────────────────────── */
-  --sup-0: #131211;          /* a página */
-  --sup-1: #191817;          /* afundado: caixas de texto, calhas, poços */
-  --sup-2: #1F1E1C;          /* um painel */
-  --sup-3: #262421;          /* um controlo em repouso */
-  --sup-4: #2F2C28;          /* o mesmo controlo sob o rato */
-  --sup-5: #383430;          /* carregado */
+  --sup-0: #0B111A;          /* a página */
+  --sup-1: #101925;          /* afundado: caixas de texto, calhas, poços */
+  --sup-2: #142131;          /* um painel */
+  --sup-3: #1C2B3D;          /* um controlo em repouso */
+  --sup-4: #25374B;          /* o mesmo controlo sob o rato */
+  --sup-5: #30455C;          /* carregado */
+  --background-grid: #90C2D008;
   --video-fundo: #000;       /* atrás do vídeo, e só aí */
-  --sobre-video: #0a0908d9;  /* controlos por cima da imagem */
-  --vidro: #0b0a09e0;        /* por trás de uma janela */
+  --sobre-video: #08121FD9;  /* controlos por cima da imagem */
+  --vidro: #07121FEA;        /* por trás de uma janela */
 
   /* ── linhas ──────────────────────────────────────────────────────────── */
   /* Três, e a diferença entre elas é se a coisa responde ao toque. Um fio
      à volta de um painel não pode ter o mesmo peso do fio à volta de um
      botão: o segundo é uma promessa de que ali se carrega. */
-  --linha: #302D2A;          /* separadores e painéis: não se carrega ali */
-  --linha-2: #413D38;        /* a borda de um controlo */
-  --linha-3: #565046;        /* a borda dele sob o rato */
+  --linha: #293B50;          /* separadores e painéis: não se carrega ali */
+  --linha-2: #3C536C;        /* a borda de um controlo */
+  --linha-3: #59758F;        /* a borda dele sob o rato */
 
   /* ── tinta ───────────────────────────────────────────────────────────── */
   /* Medido sobre --sup-0: 15,6 · 8,0 · 4,9. O terceiro passa AA e é o menor
      que passa — abaixo disto não há terceiro nível, há texto ilegível. */
-  --tinta: #F3F0EA;
-  --tinta-2: #B4AEA4;
-  --tinta-3: #8F8980;
+  --tinta: #E9F1FA;
+  --tinta-2: #B3C2D4;
+  --tinta-3: #9AAFC5;
 
   /* ── acento: o que se carrega ────────────────────────────────────────── */
-  --acento: #2FB3C4;
-  --acento-alto: #46C6D6;    /* sob o rato */
-  --acento-eco: #2fb3c424;   /* fundo esbatido, para estados escolhidos */
-  --acento-fio: #2fb3c46b;
-  --sobre-acento: #04191C;   /* 8,9:1 sobre o acento cheio */
+  --acento: #61D7CE;
+  --acento-alto: #84E5DC;    /* sob o rato */
+  --acento-eco: #61d7ce1c;   /* fundo esbatido, para estados escolhidos */
+  --acento-fio: #61d7ce70;
+  --sobre-acento: #061819;
 
   /* ── âmbar: o tempo marcado ──────────────────────────────────────────── */
   --marca: #E4A13A;

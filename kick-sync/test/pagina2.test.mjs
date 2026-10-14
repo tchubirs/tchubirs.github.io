@@ -15,7 +15,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { kickFalsa, T, TEM_SOM } from './falsa.mjs';
-import { montarPalco, podeCorrer } from './palco.mjs';
+import { montarPalco, podeCorrer, saltarTempo } from './palco.mjs';
 
 let PORTA = 0;
 const { abrir } = montarPalco((p) => { PORTA = p; });
@@ -28,7 +28,7 @@ test('marcar uma kill a sério faz a página procurar o mesmo som na noite',
     await p.fill('#canais', 'tchubi');
     await p.click('#carregar');
     await p.waitForSelector('.tile', { timeout: 15000 });
-    await p.click('#mais1m');
+    await saltarTempo(p, 60_000);
     await p.click('#marcarKill');
     await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
 
@@ -104,7 +104,7 @@ test('depois de o browser recusar o primeiro play, Rever volta a mandar tocar',
     await p.fill('#canais', 'tchubi');
     await p.click('#carregar');
     await p.waitForSelector('.tile', { timeout: 15000 });
-    await p.click('#mais1m');
+    await saltarTempo(p, 60_000);
     await p.click('#marcarKill');
     await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
 
@@ -140,7 +140,7 @@ test('a prévia de um tiroteio leva o combate inteiro e as margens por fora',
     await p.fill('#canais', 'tchubi');
     await p.click('#carregar');
     await p.waitForSelector('.tile', { timeout: 15000 });
-    await p.click('#mais1m');
+    await saltarTempo(p, 60_000);
     await p.click('#marcarKill');
     await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
     // As margens só aparecem depois da primeira kill.
@@ -564,7 +564,7 @@ test('num ecrã de PC a página usa a largura e nada se sobrepõe',
     await p.fill('#canais', 'tchubi\noutro\nterceiro');
     await p.click('#carregar');
     await p.waitForSelector('.tile', { timeout: 20000 });
-    await p.click('#mais1m');
+    await saltarTempo(p, 60_000);
     await p.click('#marcarKill');
     await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
 
@@ -719,8 +719,8 @@ test('cada ponta tem as suas setas, e a imagem vai para onde a ponta foi',
     // Sair do princípio da noite antes de abrir o clipe: colado ao início, o
     // `de` está no limite do VOD e recuar não teria para onde ir — o teste
     // falharia por causa do limite e não por causa do botão.
-    await p.click('#mais1m');
-    await p.click('#mais1m');
+    await saltarTempo(p, 60_000);
+    await saltarTempo(p, 60_000);
     await p.click('#clipar');
     await p.waitForSelector('#modalClipe:not([hidden])', { timeout: 10000 });
 
@@ -962,7 +962,7 @@ test('todos os símbolos usados existem no sprite, e nenhum é emoji',
     await p.fill('#canais', 'tchubi\noutro');
     await p.click('#carregar');
     await p.waitForSelector('.tile', { timeout: 20000 });
-    await p.click('#mais1m');
+    await saltarTempo(p, 60_000);
     await p.click('#marcarKill');
     await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
 
@@ -1321,7 +1321,7 @@ test('a lista pergunta quem morreu, e só diz "vítimas" quando há alguma',
     await p.click('#carregar');
     await p.waitForSelector('.tile', { timeout: 15000 });
 
-    await p.click('#mais1m');
+    await saltarTempo(p, 60_000);
     await p.click('#marcarKill');
     await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
 
@@ -1452,13 +1452,13 @@ test('cada kill marcada abre o mesmo editor de clipe, no instante dela',
     await p.waitForSelector('.tile', { timeout: 20000 });
 
     // Marcar uma kill num sítio, e depois AFASTAR o relógio dela.
-    await p.click('#mais1m');
+    await saltarTempo(p, 60_000);
     await p.click('#marcarKill');
     await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
     const daKill = await p.evaluate(() =>
       Number(document.querySelector('#listaMomentos li[data-ms]').dataset.ms));
-    await p.click('#mais1m');
-    await p.click('#mais1m');
+    await saltarTempo(p, 60_000);
+    await saltarTempo(p, 60_000);
 
     await p.locator('#listaMomentos .cliparUma').first().click();
     await p.waitForSelector('#modalClipe:not([hidden])', { timeout: 10000 });
@@ -1488,8 +1488,8 @@ test('ajeitar uma kill, guardar, e a kill lembra-se — sem exportar nada',
     await p.fill('#canais', 'tchubi\nvitima1');
     await p.click('#carregar');
     await p.waitForSelector('.tile', { timeout: 20000 });
-    await p.click('#mais1m');
-    await p.click('#mais1m');
+    await saltarTempo(p, 60_000);
+    await saltarTempo(p, 60_000);
     await p.click('#marcarKill');
     await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
 
@@ -1536,8 +1536,8 @@ test('os saltos de 3 s e de 5 min andam o que dizem',
     await p.click('#carregar');
     await p.waitForSelector('.tile', { timeout: 20000 });
     // Sair do principio, senao recuar nao tem para onde ir.
-    await p.click('#mais5m');
-    await p.click('#mais5m');
+    await saltarTempo(p, 300_000);
+    await saltarTempo(p, 300_000);
     const seg = async () => {
       const [h, m, s] = (await p.locator('#agora').innerText()).replace(/Z.*$/, '').split(':').map(Number);
       return h * 3600 + m * 60 + s;
@@ -1547,9 +1547,9 @@ test('os saltos de 3 s e de 5 min andam o que dizem',
     assert.equal(await seg() - t0, 3, '3 s para a frente');
     await p.click('#menos3s');
     assert.equal(await seg() - t0, 0, '3 s para tras');
-    await p.click('#menos5m');
+    await saltarTempo(p, -300_000);
     assert.equal(await seg() - t0, -300, '5 min para tras');
-    await p.click('#mais5m');
+    await saltarTempo(p, 300_000);
     assert.equal(await seg() - t0, 0, '5 min para a frente');
     assert.deepEqual(erros, []);
     await p.close();
@@ -1569,8 +1569,8 @@ test('juntar um streamer so vai buscar esse, e nao mexe onde ele estava',
     await p.fill('#canais', 'tchubi');
     await p.click('#carregar');
     await p.waitForSelector('.tile', { timeout: 20000 });
-    await p.click('#mais5m');
-    await p.click('#mais1m');
+    await saltarTempo(p, 300_000);
+    await saltarTempo(p, 60_000);
     await p.click('#marcarKill');
     await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
     const antes = {
@@ -1609,7 +1609,7 @@ test('fechar e voltar traz o mesmo instante, sem ir a Kick outra vez, e no mesmo
     await p.fill('#canais', 'tchubi');
     await p.click('#carregar');
     await p.waitForSelector('.tile', { timeout: 20000 });
-    await p.click('#mais5m');
+    await saltarTempo(p, 300_000);
     await p.click('#mais3s');
     const agora = await p.locator('#agora').innerText();
     await p.evaluate(() => window.scrollTo({ top: 350 }));
@@ -1643,7 +1643,7 @@ for (const ecra of [{ width: 1920, height: 1080 }, { width: 1366, height: 720 }]
       await p.click('#carregar');
       await p.waitForFunction((n) => document.querySelectorAll('.tile').length === n, canais.length,
         { timeout: 40000 });
-      await p.click('#mais5m');
+      await saltarTempo(p, 300_000);
       await p.click('#marcarKill');
       await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
 
@@ -1834,7 +1834,7 @@ test('escolher quanto tempo a linha mostra encolhe a régua e as faixas',
     const noiteToda = await minutosNaRegua();
 
     // Ao meio da noite, para o zoom não bater nas pontas.
-    await p.click('#mais5m');
+    await saltarTempo(p, 300_000);
     // Dois minutos: a noite de teste tem dez, e um zoom maior do que a noite
     // é a noite e não testava nada. Dois toques no mais (cada um divide por
     // dois) e um bocado de deslizante: 10 min, 5, 2,5.
