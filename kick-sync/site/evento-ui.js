@@ -48,6 +48,13 @@ export function cedoDemais(ms, atrasoMin, agoraMs = Date.now()) {
   return Number.isFinite(ms) && ms > agoraMs - Math.max(0, atrasoMin) * 60_000;
 }
 
+export function vodCollectionSignature(results) {
+  return JSON.stringify((results ?? [])
+    .map((r) => [r.slug, r.estado, (r.vods ?? [])
+      .map((v) => [v.id, v.master, v.inicioApi, v.duracaoMs, aoVivoVod(v)])])
+    .sort((a, b) => String(a[0]).localeCompare(String(b[0]))));
+}
+
 const dataCurta = (ms) => new Date(ms).toLocaleDateString([], { day: '2-digit', month: '2-digit' });
 // "sáb 11/10": o dia da semana sem o ponto da abreviatura, e a data. É o que a régua escreve em cada
 // mudança de dia.
@@ -1389,6 +1396,21 @@ export function montarEvento({
     agendarMelhores();
   }
 
+  // A memória das envolventes de uma busca é da COLEÇÃO de VODs do evento: o mesmo canal, no mesmo
+  // instante, dá o mesmo som enquanto a lista de VODs não muda. Se a assinatura mudou (ids, master ou
+  // os limites que vodEm usa), a Map é nova. Não se limpa a antiga: uma busca que ainda corre
+  // continua com a sua, e o que ela lá pôs não vai para a coleção nova.
+  let memoriaVods = null;
+  let assinaturaVods = null;
+  function memoriaDaColecao() {
+    const assinatura = vodCollectionSignature(ev.resultados);
+    if (!memoriaVods || assinatura !== assinaturaVods) {
+      memoriaVods = new Map();
+      assinaturaVods = assinatura;
+    }
+    return memoriaVods;
+  }
+
   async function procurarOutros() {
     // A meio de uma busca o botão é "Parar busca": com 500 canais ela pode levar minutos.
     if (ev.procura) {
@@ -1421,7 +1443,7 @@ export function montarEvento({
     $('procurarOutrosTexto').textContent = t('lance.parar');
     try {
       for await (const r of procurarAngulos({
-        quandoMs: e.ms, referencia: e.canal, candidatos, somDe, sinal: controlo.signal,
+        quandoMs: e.ms, referencia: e.canal, candidatos, somDe, sinal: controlo.signal, memoria: memoriaDaColecao(),
       })) {
         ev.feitos++;
         ev.achados.push(r);
@@ -1459,7 +1481,7 @@ export function montarEvento({
       noAr: (c) => noArEm(ev.coberturas, c, ms),
     });
     const resultados = [];
-    for await (const r of procurarAngulos({ quandoMs: ms, referencia, candidatos, somDe, sinal })) {
+    for await (const r of procurarAngulos({ quandoMs: ms, referencia, candidatos, somDe, sinal, memoria: memoriaDaColecao() })) {
       resultados.push(r);
       aoProgresso({ feito: resultados.length, total: candidatos.length, resultado: r });
     }
