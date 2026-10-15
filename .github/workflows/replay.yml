@@ -100,7 +100,12 @@ jobs:
   # `testes`, que continua a correr a suíte toda em Chromium.
   # Anthropic é mockada pelo próprio teste; nenhuma chave real é usada.
   contexto_chrome:
+    name: contexto_chrome_${{ matrix.suite }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [contexto, completa]
     defaults:
       run:
         working-directory: kick-sync
@@ -157,11 +162,14 @@ jobs:
           })().catch((e) => { console.error(e); process.exit(1); });
           EOF
 
-      # Só este ficheiro. Se o teste saltar por falta de browser, falha aqui.
-      - name: Correr o teste de contexto simples
+      - name: Correr os testes no Chrome
         run: |
           set -o pipefail
-          node --test --test-concurrency=1 test/contexto-simples-pagina.test.mjs 2>&1 | tee /tmp/saida-chrome.txt
+          if [ "${{ matrix.suite }}" = "contexto" ]; then
+            node --test --test-concurrency=1 test/contexto-simples-pagina.test.mjs 2>&1 | tee /tmp/saida-chrome.txt
+          else
+            node --test --test-concurrency=2 --test-timeout=180000 test/*.mjs 2>&1 | tee /tmp/saida-chrome.txt
+          fi
         shell: bash
 
       - name: Garantir que o teste de contexto não foi saltado
