@@ -111,3 +111,25 @@ test('trava recusa outro coletor quando o processo dono ainda existe', async (t)
   assert.match(r.stderr, /Já existe monitor com PID/);
   assert.equal(await fs.readFile(path.join(dir, 'monitor.lock'), 'utf8'), String(process.pid));
 });
+
+test('reinício mantém canais oficiais salvos mesmo quando a nova lista falha', async (t) => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'monitor-abisal-test-'));
+  t.after(async () => {
+    assert.ok(path.resolve(dir).startsWith(path.resolve(os.tmpdir()) + path.sep));
+    await fs.rm(dir, { recursive: true, force: true });
+  });
+  const id = '01a132ac-44ce-73c3-885a-eca55f6bdaba';
+  await fs.writeFile(path.join(dir, 'estado.json'), JSON.stringify({ canais: {}, candidatos: [], fonteEvento: { id }, canaisOficiais: { kodd: 4937119 } }));
+  const log = path.join(dir, 'pedidos.jsonl');
+  const preload = `import fs from 'node:fs';globalThis.fetch=async(url)=>{fs.appendFileSync(${JSON.stringify(log)},JSON.stringify(url)+'\\n');if(String(url).includes('/events/'))return String(url).endsWith('/streams')?new Response('',{status:403}):new Response(JSON.stringify({data:{clips:[]}}));return new Response(JSON.stringify({data:{messages:[]}}));};`;
+  const r = spawnSync(process.execPath, ['--import', `data:text/javascript,${encodeURIComponent(preload)}`, fileURLToPath(new URL('../monitor/rodar.mjs', import.meta.url)), '--saida', dir, '--canais', 'kodd', '--evento-kick-id', id, '--uma-rodada', '--pedido-ms', '1'], { encoding: 'utf8', timeout: 15_000, windowsHide: true });
+  assert.equal(r.status, 0, r.stderr);
+  const resumo = JSON.parse(await fs.readFile(path.join(dir, 'estado.json'), 'utf8'));
+  assert.equal(resumo.canais.kodd.estado, 'lido');
+  assert.equal(resumo.totalCanais, 1);
+  assert.equal(resumo.canaisOficiais.kodd, 4937119);
+  assert.deepEqual(resumo.fonteEvento.falhas, [{ fonte: 'transmissoes', motivo: 'http-403' }]);
+  const pedidos = await fs.readFile(log, 'utf8');
+  assert.match(pedidos, /channels\/4937119\/messages/);
+  assert.doesNotMatch(pedidos, /channels\/kodd/);
+});

@@ -74,7 +74,8 @@ async function salvar(arquivo, valor) { const tmp = `${arquivo}.${process.pid}.t
 const resumo = await lerJson(path.join(saida, 'estado.json'), { evento: elenco.nome, canais: {}, candidatos: [] });
 if (eventoId) canais = [...new Set([...canais, ...Object.keys(resumo.canais)])].filter(c => !selecionar.length || selecionar.includes(c));
 pausaKick = Number.isFinite(Date.parse(resumo.pausaKickAte)) ? Date.parse(resumo.pausaKickAte) : 0;
-const idsOficiais = new Map();
+const idsOficiais = new Map(resumo.fonteEvento?.id === eventoId ? Object.entries(resumo.canaisOficiais || {}) : []);
+if (eventoId) canais = [...new Set([...canais, ...idsOficiais.keys()])].filter(c => !selecionar.length || selecionar.includes(c));
 const clipesEvento = new Map((await lerJson(path.join(saida, 'clipes-evento.json'), { clipes: [] })).clipes.map(c => [c.id, c]));
 const pedidosAnteriores = resumo.pedidos || 0;
 resumo.primeiroInicio ||= resumo.iniciado || new Date(iniciado).toISOString();
@@ -143,6 +144,7 @@ try {
       const fonte = await consultarEventoKick(eventoId, { buscar });
       if (fonte.transmissoes) {
         for (const c of fonte.transmissoes) idsOficiais.set(c.slug, c.id);
+        resumo.canaisOficiais = Object.fromEntries(idsOficiais);
         canais = [...new Set([...canais, ...fonte.transmissoes.map(c => c.slug)])].filter(c => !selecionar.length || selecionar.includes(c));
         resumo.totalCanais = canais.length;
         resumo.canaisAoVivoOficiais = fonte.transmissoes.length;
