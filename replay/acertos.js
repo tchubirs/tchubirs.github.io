@@ -17,8 +17,8 @@
  * Os modelos (`acertos-modelos.js`) são vetores de 3 a 4 mil números em 8 bits, filtrados para a banda de cada um.
  */
 
-import { fft } from './alertas.js?v=5786e60976';
-import MODELOS_PADRAO from './acertos-modelos.js?v=5786e60976';
+import { fft } from './alertas.js?v=5e3892e146';
+import MODELOS_PADRAO from './acertos-modelos.js?v=5e3892e146';
 
 export const TAXA_ACERTO = 12000;
 /** A nota (correlação) mínima de um pico guardado como candidato. */
