@@ -9053,7 +9053,7 @@ const simples = montarSimples({
   procurarPovs: evento.procurarPovsDoMomento,
   povsLiberados: evento.povsLiberados,
   fecharEditor: () => { if (estado.clipe) fecharClipe(); },
-  abrirEvento: ({ nome, hash }) => (hash ? evento.abrirDoLink(hash, { abrirLance: false }) : evento.abrirDoLink('', { busca: `?e=${encodeURIComponent(nome)}` })),
+  abrirEvento: ({ nome, hash, sinal, aoProgresso }) => (hash ? evento.abrirDoLink(hash, { abrirLance: false, sinal, aoProgresso }) : evento.abrirDoLink('', { busca: `?e=${encodeURIComponent(nome)}`, sinal, aoProgresso })),
   lerChatDoEvento: () => evento.lerChatDeTodos({ semPerguntar: true }),
   lancesDoEvento: evento.lancesSimples,
   aoMudarEvento: evento.aoMelhores,

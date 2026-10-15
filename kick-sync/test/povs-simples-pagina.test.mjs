@@ -33,7 +33,9 @@ async function preparar({ meuCanal = 'tchubi', kills = true, liberado = true, vi
         aoMudarEvento(f) { controle.atualizar = f; },
         pararChatDoEvento() {},
         povsLiberados: () => ({ liberado: controle.liberado, min: 15 }),
-        procurarPovs({ aoProgresso, sinal }) {
+        procurarPovs({ aoProgresso, sinal, preferidos }) {
+          controle.preferidos = preferidos;
+          aoProgresso({ feito: 0, total: 2 });
           controle.emitir = (resultado) => aoProgresso({ feito: ++controle.feito, total: 2, resultado });
           return new Promise((resolver, rejeitar) => {
             controle.finalizarBusca = (talvez) => resolver({ estava: [], talvez });
@@ -109,6 +111,20 @@ test('resultado de áudio focado abre o canal do rótulo após a busca reordenar
     assert.equal(await p.evaluate(() => window.__povs.abertos[0].ajustes.alpha), 200);
     await p.evaluate(() => window.__povs.resolverAbertura(true));
     await p.waitForFunction(() => window.__povs.editados.length === 1);
+    assert.deepEqual(erros, []);
+  } finally { await p.close(); }
+});
+
+for (const origem of ['morte', 'video']) test(`busca leva a pista de ${origem} e mostra total enquanto aguarda o áudio`, opcoes, async () => {
+  const { p, erros } = await preparar({ kills: origem === 'morte', video: origem === 'video' });
+  try {
+    await p.locator('button[data-acao="procurarPovs"]').click();
+    await p.waitForFunction(() => Boolean(window.__povs.emitir));
+    assert.deepEqual(await p.evaluate(() => window.__povs.preferidos), ['inimigo']);
+    assert.match(await p.locator('.simplesPovEstado').innerText(), /0 de 2/);
+    assert.equal(await p.locator('.simplesPovOpcao').count(), 1);
+    assert.equal(await p.getByRole('button', { name: 'Criar clipe com inimigo', exact: true }).count(), 1);
+    await p.evaluate(() => window.__povs.finalizarBusca([]));
     assert.deepEqual(erros, []);
   } finally { await p.close(); }
 });

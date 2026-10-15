@@ -246,7 +246,8 @@ export function montarEvento({
 
   // ── abrir ──────────────────────────────────────────────────────────────
 
-  async function abrirElenco(elenco, { quandoMs = null, info = null } = {}) {
+  async function abrirElenco(elenco, { quandoMs = null, info = null, sinal, aoProgresso = () => {} } = {}) {
+    if (sinal?.aborted) return false;
     ev.cancelar?.abort();
     const controlo = new AbortController();
     ev.cancelar = controlo;
@@ -267,7 +268,7 @@ export function montarEvento({
     $('picosChat').innerHTML = '';
     $('estadoAdicionar').textContent = '';
     const todos = [...new Set([...elenco.times.flatMap((x) => x.canais), ...elenco.soltos])];
-    if (!todos.length) { $('estadoEvento').textContent = t('evento.vazio'); return; }
+    if (!todos.length) { $('estadoEvento').textContent = t('evento.vazio'); return false; }
     $('evento').hidden = false;
     $('nomeEvento').textContent = elenco.nome || t('evento.semNome');
     pintarInfo();
@@ -275,19 +276,26 @@ export function montarEvento({
     pintarOrdem();
     const { canais } = contar(elenco);
     $('resumoEvento').textContent = t('evento.aCarregar', { feitos: 0, total: canais });
+    const pararCarga = () => controlo.abort();
+    sinal?.addEventListener('abort', pararCarga, { once: true });
+    aoProgresso({ feitos: 0, total: canais });
     try {
       ev.resultados = await carregarCanais(todos, {
         buscar,
         sinal: controlo.signal,
         aoProgredir: ({ feitos, total }) => {
           $('resumoEvento').textContent = t('evento.aCarregar', { feitos, total });
+          aoProgresso({ feitos, total });
         },
       });
     } catch (e) {
-      if (e?.name === 'AbortError') return;
+      if (e?.name === 'AbortError') return false;
       $('resumoEvento').textContent = t('evento.erro');
-      return;
+      return false;
+    } finally {
+      sinal?.removeEventListener('abort', pararCarga);
     }
+    if (controlo.signal.aborted || sinal?.aborted) return false;
     memorizarVods(ev.resultados);
     pintarAvisos();
     recobrir();
@@ -306,6 +314,7 @@ export function montarEvento({
     ev.trecho = { ...ev.vista };
     if (Number.isFinite(quandoMs)) ev.vista = zoom(ev.vista, quandoMs, 0.1, ev.limites);
     ev.link = await codificar(elenco);
+    if (controlo.signal.aborted || sinal?.aborted || ev.cancelar !== controlo) return false;
     lembrarEvento();
     carregarMelhores();
     mortes.carregar();
@@ -315,6 +324,7 @@ export function montarEvento({
     seguirAoVivo(aoVivo > 0);
     procurarNovatos();
     $('mapaRolo').focus({ preventScroll: true });
+    return true;
   }
 
   // Quem não carregou, agrupado pelo motivo. Num elenco de 500 há sempre um nome mal escrito, e uma
@@ -1469,19 +1479,22 @@ export function montarEvento({
 
   // A lista simples usa a mesma comparação de som do mapa, sem exigir que a pessoa selecione um ponto
   // na linha do tempo. O atraso mínimo continua valendo durante eventos ao vivo.
-  async function procurarPovsDoMomento({ referencia, ms, sinal, aoProgresso = () => {} } = {}) {
+  async function procurarPovsDoMomento({ referencia, ms, preferidos = [], sinal, aoProgresso = () => {} } = {}) {
     if (!ev.elenco || !referencia || !Number.isFinite(ms)) return { erro: 'evento' };
     if (cedoDemais(ms, ev.atrasoMin)) return { erro: 'cedo', atrasoMin: ev.atrasoMin };
     const times = indiceDeTimes(ev.elenco);
     const canais = ev.resultados.filter((r) => r.estado === 'ok').map((r) => r.slug);
-    const candidatos = ordenarCandidatos({
+    const elegiveis = ordenarCandidatos({
       referencia,
       canais,
       priorizarAdversarios: true,
       timeDe: (c) => times.get(c) ?? null,
       noAr: (c) => noArEm(ev.coberturas, c, ms),
     });
+    const pistas = new Set(preferidos.map(slugDoNome));
+    const candidatos = [...elegiveis.filter((c) => pistas.has(c)), ...elegiveis.filter((c) => !pistas.has(c))];
     const resultados = [];
+    aoProgresso({ feito: 0, total: candidatos.length });
     for await (const r of procurarAngulos({ quandoMs: ms, referencia, candidatos, somDe, sinal, memoria: memoriaDaColecao() })) {
       resultados.push(r);
       aoProgresso({ feito: resultados.length, total: candidatos.length, resultado: r });
@@ -2561,7 +2574,7 @@ export function montarEvento({
     return abrirDoLink(hash, { abrirLance: false });
   }
 
-  async function abrirDoLink(hash = location.hash, { abrirLance = true, busca = location.search } = {}) {
+  async function abrirDoLink(hash = location.hash, { abrirLance = true, busca = location.search, sinal, aoProgresso } = {}) {
     const m = /[#&]evento=([^&]+)/.exec(hash);
     const ler = (x) => { try { return decodeURIComponent(x); } catch { return ''; } };
     const param = (nome) => { const r = new RegExp(`[&#]${nome}=([^&]*)`).exec(hash); return r ? ler(r[1]) : ''; };
@@ -2585,13 +2598,14 @@ export function montarEvento({
       elenco = { times: lido.times, soltos: lido.soltos, avisos: [], nome: lido.nome };
       info = lido.info;
     }
+    if (sinal?.aborted) return false;
     const tq = /[&#]t=(\d+)/.exec(hash);
     const aq = /[&#]atraso=(\d+)/.exec(hash);
     const cq = /[&#]c=([^&]+)/.exec(hash);
     const mq = /[&#]mais=([^&]+)/.exec(hash);
     ev.atrasoMin = aq ? Number(aq[1]) : ATRASO_MIN;
     $('elenco').value = '';
-    await abrirElenco(elenco, { quandoMs: tq ? Number(tq[1]) : null, info });
+    if (!await abrirElenco(elenco, { quandoMs: tq ? Number(tq[1]) : null, info, sinal, aoProgresso })) return false;
     if (!tq) return true;
     const ms = Number(tq[1]);
     const pedido = cq ? ler(cq[1]) : '';

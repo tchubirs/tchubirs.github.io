@@ -703,7 +703,21 @@ export function montarSimples(ponte) {
     if (e.tipo === 'evento') { await abrirEvento({ nome: e.nome }); return; }
     if (e.tipo === 'eventoLink') { await abrirEvento({ hash: e.hash }); return; }
     if (e.tipo === 'nome') {
-      if (e.evento && await eventoExiste(e.evento)) { await abrirEvento({ nome: e.evento }); return; }
+      const minha = geracao;
+      const controlo = new AbortController();
+      busca = controlo;
+      mostrarTrabalho(t('simples.abrindoTitulo'));
+      dizer(t('simples.procurandoEntrada'));
+      $('simplesParar').hidden = false;
+      controlo.signal.addEventListener('abort', () => {
+        if (minha !== geracao) return;
+        $('simplesParar').hidden = true;
+        dizer(t('simples.parado'), false);
+      }, { once: true });
+      const existe = e.evento && await eventoExiste(e.evento, controlo.signal);
+      if (minha !== geracao || controlo.signal.aborted) return;
+      if (existe) { await abrirEvento({ nome: e.evento }); return; }
+      busca = null;
       if (!e.slug) { erro(t('simples.naoAchei', { nome: texto.trim() })); return; }
       await abrirStreamer(e.slug);
       return;
@@ -727,10 +741,10 @@ export function montarSimples(ponte) {
     if (e.tipo === 'clipe') await abrirClipe(e.id);
   }
 
-  async function eventoExiste(nome) {
+  async function eventoExiste(nome, sinal) {
     if (!/^[a-z0-9-]{1,60}$/.test(nome)) return false;
     try {
-      const r = await comPrazo(fetch(`eventos/${nome}.json`, { cache: 'no-cache' }), 8000);
+      const r = await comPrazo(fetch(`eventos/${nome}.json`, { cache: 'no-cache', signal: sinal }), 8000);
       if (!r?.ok) return false;
       JSON.parse(await r.text());
       return true;
@@ -742,8 +756,21 @@ export function montarSimples(ponte) {
     mostrarTrabalho(t('simples.abrindoEvento'));
     dizer(t('simples.abrindoEventoEstado'));
     const minha = geracao;
-    const aberto = await ponte.abrirEvento(qual);
-    if (minha !== geracao) return;
+    const controlo = new AbortController();
+    busca = controlo;
+    $('simplesParar').hidden = false;
+    controlo.signal.addEventListener('abort', () => {
+      if (minha !== geracao) return;
+      $('simplesParar').hidden = true;
+      dizer(t('simples.parado'), false);
+    }, { once: true });
+    const aberto = await ponte.abrirEvento({ ...qual, sinal: controlo.signal, aoProgresso: ({ feitos, total }) => {
+      if (minha !== geracao || controlo.signal.aborted) return;
+      dizer(t('evento.aCarregar', { feitos, total }), total ? feitos / total : null);
+    } });
+    if (minha !== geracao || controlo.signal.aborted) return;
+    busca = null;
+    $('simplesParar').hidden = true;
     if (!aberto) {
       erro(qual.nome ? t('simples.semEvento', { nome: qual.nome }) : t('simples.naoEntendi'));
       return;
@@ -1307,6 +1334,7 @@ export function montarSimples(ponte) {
       const resultado = await ponte.procurarPovs({
         referencia: m.canal,
         ms: m.ms,
+        preferidos: (m.povs || []).map((p) => p.canal),
         sinal: buscaAtual.controle.signal,
         aoProgresso: ({ feito, total, resultado: achado }) => {
           if (buscasPov.get(k) !== buscaAtual) return;
