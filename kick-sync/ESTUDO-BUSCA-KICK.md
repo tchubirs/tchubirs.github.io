@@ -1,14 +1,15 @@
 # Busca na Kick: escolher o trabalho antes de começar
 
-Estudo de 15/10/2026. Proposta funcional; seleção de data/trecho/perfil ainda NÃO implementada. Manter Rust/Kick como prioridade; Twitch fica para depois.
+Estudo de 15/10/2026. Proposta funcional; seleção de data/trecho/perfil ainda NÃO implementada. A busca rápida sem picos já foi corrigida para não iniciar áudio da live inteira automaticamente. Manter Rust/Kick como prioridade; Twitch fica para depois.
 
 ## Problemas encontrados no código
 
-- `simples.js:procurar` lê o chat da live inteira antes do áudio. Com picos, ouve janelas em torno deles. SEM picos, passa automaticamente a ouvir tudo. Portanto, “rápida” não tem um limite de trabalho garantido.
+- `simples.js:procurar` lê o chat da live inteira antes do áudio. Com picos, ouve janelas em torno deles. O fallback silencioso que ouvia tudo SEM picos foi removido: agora explica a limitação e oferece o botão existente para ampliar. Isso NÃO limita ainda o tempo da leitura inicial do chat.
 - O filtro atual consulta resultados já indexados. Desmarcar tipos não reduz o download que já ocorreu. Os detectores compartilham a leitura do áudio; desligar um detector isolado não traz necessariamente grande economia.
 - `mostrarEvento` começa a ler chat de todos os participantes. Abisal tem 144 canais cadastrados. Uma busca de um streamer não precisa começar por todos eles.
 - O modo simples não expunha o progresso de abertura do elenco. Correção desta entrega: contagem visível e cancelamento real dos pedidos, inclusive proteção contra respostas de buscas antigas.
 - ETA atual aparece durante etapas medidas; não é uma previsão de toda a tarefa antes de iniciar. Não há medição que confirme a causa exata dos 40 minutos relatados.
+- Corrigido também o cache do chat: exceção, limite retornado ou canal indisponível não contam como leitura concluída. Cache da busca rápida continua `varrido: picos`; somente cobertura real total após ampliação explícita vira `tudo`. `completo` no contrato antigo significa que a passada salva pode abrir do cache, não que todo o áudio da live foi analisado.
 
 ## Fluxo recomendado
 
