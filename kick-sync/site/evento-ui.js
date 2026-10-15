@@ -1477,6 +1477,7 @@ export function montarEvento({
     const candidatos = ordenarCandidatos({
       referencia,
       canais,
+      priorizarAdversarios: true,
       timeDe: (c) => times.get(c) ?? null,
       noAr: (c) => noArEm(ev.coberturas, c, ms),
     });

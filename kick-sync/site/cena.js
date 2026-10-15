@@ -244,11 +244,13 @@ export function decidir(medicoes) {
  * - `noAr(canal)`: se o canal estava a transmitir naquele instante. É
  *   obrigatório de propósito: sem ele a fila eram os 500 inteiros, e isso são
  *   350 MB gastos por esquecimento de quem chamou.
+ * - `priorizarAdversarios`: examina primeiro quem não é do time da referência,
+ *   sem excluir colegas nem transformar a ordem em evidência de participação.
  *
  * Dentro de cada grupo mantém-se a ordem de entrada, e cada canal aparece uma
  * vez só.
  */
-export function ordenarCandidatos({ referencia, canais, timeDe = () => null, noAr } = {}) {
+export function ordenarCandidatos({ referencia, canais, timeDe = () => null, noAr, priorizarAdversarios = false } = {}) {
   if (typeof noAr !== 'function') {
     throw new TypeError('ordenarCandidatos precisa de noAr(canal) para saber quem estava a transmitir');
   }
@@ -271,7 +273,7 @@ export function ordenarCandidatos({ referencia, canais, timeDe = () => null, noA
     vistos.add(k);
     (timeDaRef != null && nomeDoTime(c) === timeDaRef ? doTime : resto).push(c);
   }
-  return [...doTime, ...resto];
+  return priorizarAdversarios ? [...resto, ...doTime] : [...doTime, ...resto];
 }
 
 /**
