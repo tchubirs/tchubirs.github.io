@@ -79,3 +79,18 @@ jobs:
             exit 1
           fi
           echo "nenhum teste saltado por falta de browser"
+
+  contexto_cloudflare:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: kick-sync/cloudflare
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+      - name: Preparar contrato compartilhado
+        run: mkdir -p public && cp ../site/contexto-rust.js public/contexto-rust.js
+      - name: Conferir adaptador e limites sem chamadas pagas
+        run: node --test test/*.test.mjs
