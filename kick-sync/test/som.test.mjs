@@ -82,9 +82,10 @@ test('a tecla de um ângulo da grelha abre-o no visor já com o som; com um âng
     await p.keyboard.press('7');
     await p.waitForTimeout(120);
     assert.deepEqual(await noVisor(p), ['vitima1']);
-    // Um clique na grelha também abre com o som.
+    // A miniatura abre ao lado do player atual, como pedido em 13/10, e recebe o som.
     await p.locator('#grade .tile[data-slug="outro"]').click();
-    await p.waitForFunction(() => document.querySelector('#palcoFoco .tile')?.dataset.slug === 'outro', null, { timeout: 10000 });
+    await p.waitForFunction(() => document.querySelectorAll('#palcoFoco .tile').length === 2, null, { timeout: 10000 });
+    assert.deepEqual(await noVisor(p), ['vitima1', 'outro'], 'abrir a miniatura preserva o player anterior');
     assert.deepEqual(await comSom(p), ['outro']);
     await p.screenshot({ path: `${FOTOS}som-grelha.png` });
 
@@ -93,9 +94,11 @@ test('a tecla de um ângulo da grelha abre-o no visor já com o som; com um âng
     await p.evaluate(() => window.dispatchEvent(new StorageEvent('storage', { key: 'replay.atalhos' })));
     await p.keyboard.press('1');
     await p.waitForTimeout(120);
-    assert.deepEqual(await noVisor(p), ['outro'], 'o 1 já não é do ângulo 1');
+    assert.deepEqual(await noVisor(p), ['vitima1', 'outro'], 'o 1 já não é do ângulo 1');
     await p.keyboard.press('Shift+Q');
     await p.waitForFunction(() => document.querySelector('#palcoFoco .tile')?.dataset.slug === 'tchubi', null, { timeout: 10000 });
+    assert.deepEqual(await noVisor(p), ['tchubi'], 'o atalho abre somente o ângulo escolhido');
+    assert.deepEqual(await comSom(p), ['tchubi']);
     assert.deepEqual(erros, []);
     await p.close();
 
