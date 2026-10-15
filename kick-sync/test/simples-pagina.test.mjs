@@ -357,6 +357,9 @@ test('quem chega sem nada guardado entra no simples; quem já usava entra no ava
   await p.route(/^https?:\/\/(?!127\.0\.0\.1)/, (r) => r.abort());
   await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
   assert.equal(await p.evaluate(() => document.documentElement.dataset.modo), 'simples');
+  await p.evaluate(() => localStorage.setItem('replay.caminho', 'vod'));
+  await p.reload({ waitUntil: 'networkidle' });
+  assert.equal(await p.evaluate(() => document.documentElement.dataset.modo), 'simples', 'recarregar mantém o modo inicial mesmo depois de salvar a porta');
   await p.close();
   const { p: p2 } = await abrir({ ecra: { width: 1366, height: 768 }, caminho: 'vod', modo: null });
   await p2.route(/^https?:\/\/(?!127\.0\.0\.1)/, (r) => r.abort());
