@@ -10,7 +10,7 @@
 // esta página tem de entregar é essa lista pronta, com os ficheiros já
 // numerados para caírem na ordem certa dentro do editor.
 
-import { base, limparApelido } from './nomes.js?v=5e3892e146';
+import { base, limparApelido } from './nomes.js?v=a80b969c0a';
 
 /** Quanto tempo, por omissão, de cada lado — os números do próprio dono. */
 export const PADRAO = {
