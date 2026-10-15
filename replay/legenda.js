@@ -11,9 +11,9 @@
 // da noite (o início do clipe mais o tempo dentro do áudio). Assim, aparar as pontas do clipe depois
 // de gerar a legenda não desalinha nada.
 
-import { geometria as geometriaDoChat, limparChat, LETRA } from './chat-clipe.js?v=257617901c';
-import { ZONA_TIKTOK } from './retrato.js?v=257617901c';
-import { limparCaixas } from './caixa-previa.js?v=257617901c';
+import { geometria as geometriaDoChat, limparChat, LETRA } from './chat-clipe.js?v=bb33c7d6cf';
+import { ZONA_TIKTOK } from './retrato.js?v=bb33c7d6cf';
+import { limparCaixas } from './caixa-previa.js?v=bb33c7d6cf';
 
 export const ESTILOS = ['destaque', 'palavra', 'simples'];
 export const TAMANHOS = ['p', 'm', 'g'];

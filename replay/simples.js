@@ -10,33 +10,33 @@
 // sempre (abrir o canal, gravar o clipe) chega pela `ponte` que o app.js passa: este arquivo não mexe no
 // estado dele por conta própria.
 
-import { t, tn } from './idiomas.js?v=257617901c';
-import { procurarCanais, vodsDoCanal, vodDaKick, slugDoNome } from './kick.js?v=257617901c';
+import { t, tn } from './idiomas.js?v=bb33c7d6cf';
+import { procurarCanais, vodsDoCanal, vodDaKick, slugDoNome } from './kick.js?v=bb33c7d6cf';
 import {
   lerEntrada, montarLista, lancesParaLista, nomeDoArquivo, tempoNaLive, NOMES_NO_LANCE, QUANTOS,
   acharVod, guardarVod, mensagensDosPicos, lerUltimo, guardarUltimo,
-} from './simples-lista.js?v=257617901c';
-import { varrerNoite } from './procurar-momentos.js?v=257617901c';
-import { somDoCanal } from './alinhar.js?v=257617901c';
-import { TAXA_TIROS } from './tiros.js?v=257617901c';
-import { alertasDoCanal } from './alertas.js?v=257617901c';
-import { montarIndice, chaveDoIndice, indiceValido } from './indice.js?v=257617901c';
-import { janelasDosPicos, estimarFalta, estimarFaltaFracao, tempoFalta } from './ouvir.js?v=257617901c';
-import { onde } from './relogio.js?v=257617901c';
-import { abrirQuadrosEscondidos } from './rosto.js?v=257617901c';
-import { escapar } from './escapar.js?v=257617901c';
+} from './simples-lista.js?v=bb33c7d6cf';
+import { varrerNoite } from './procurar-momentos.js?v=bb33c7d6cf';
+import { somDoCanal } from './alinhar.js?v=bb33c7d6cf';
+import { TAXA_TIROS } from './tiros.js?v=bb33c7d6cf';
+import { alertasDoCanal } from './alertas.js?v=bb33c7d6cf';
+import { montarIndice, chaveDoIndice, indiceValido } from './indice.js?v=bb33c7d6cf';
+import { janelasDosPicos, estimarFalta, estimarFaltaFracao, tempoFalta } from './ouvir.js?v=bb33c7d6cf';
+import { onde } from './relogio.js?v=bb33c7d6cf';
+import { abrirQuadrosEscondidos } from './rosto.js?v=bb33c7d6cf';
+import { escapar } from './escapar.js?v=bb33c7d6cf';
 import {
   tituloDoMomento, etiquetasDoMomento, confExibida, confMedia, VERSAO_ETIQUETAS, textoDoContexto,
-} from './titulo.js?v=257617901c';
+} from './titulo.js?v=bb33c7d6cf';
 import {
   lerFiltro, guardarFiltro, limparFiltro, filtroAtivo, filtraAlgo, aplicarFiltro, chipsDoFiltro, semChip, comFala, TIPOS_DO_FILTRO,
-} from './simples-filtro.js?v=257617901c';
-import { lerFalas, guardarFala, acharNaLista, melhorFala } from './falas.js?v=257617901c';
+} from './simples-filtro.js?v=bb33c7d6cf';
+import { lerFalas, guardarFala, acharNaLista, melhorFala } from './falas.js?v=bb33c7d6cf';
 import {
   analisarCandidatos, comContexto, contextoVigente, contextoDoMomento, precisaDeContexto, MAX_CANDIDATOS_POR_LIVE, ENDPOINT_PADRAO,
-} from './contexto-candidatos.js?v=257617901c';
-import { VERSAO_CONTRATO, MAX_IMAGEM_BYTES } from './contexto-rust.js?v=257617901c';
-import { fundirPovsPorCanal } from './simples-lista.js?v=257617901c';
+} from './contexto-candidatos.js?v=bb33c7d6cf';
+import { VERSAO_CONTRATO, MAX_IMAGEM_BYTES } from './contexto-rust.js?v=bb33c7d6cf';
+import { fundirPovsPorCanal } from './simples-lista.js?v=bb33c7d6cf';
 
 const CHAVE_MODO = 'povix.modo';
 const CHAVE_VISTO = 'povix.simplesVisto';
@@ -292,7 +292,7 @@ export function montarSimples(ponte) {
   let atualizarEventoLista = null;
   let meuCanalSalvo = '';
   try { meuCanalSalvo = armazem.getItem(CHAVE_MEUPOV) || ''; } catch { /* armazenamento indisponível */ }
-  let abrindoPov = false;
+  let abrindoPov = null;
   const tocaVideo = tocaVideoDaKick();
   const toque = window.matchMedia?.('(pointer: coarse)').matches;
 
@@ -675,6 +675,9 @@ export function montarSimples(ponte) {
 
   function parar() {
     geracao++;
+    abrindoPov?.abort();
+    abrindoPov = null;
+    atualizarBotoesClipe();
     pararPrevia();
     pararBuscasPov();
     pararContexto();
@@ -1380,15 +1383,16 @@ export function montarSimples(ponte) {
     const p = opcoesPovRenderizadas.get(id);
     if (!p || !ponte.abrirPovs) return;
     const minha = geracao;
-    abrindoPov = true;
+    const controle = new AbortController();
+    abrindoPov = controle;
     pararPrevia();
     pararBuscasPov();
     atualizarBotoesClipe();
     const status = () => [...lista.children].find((item) => item.dataset.chave === chave(m))?.querySelector('.simplesBaixando');
     if (status()) status().textContent = t('simples.pov.abrindo', { canal: p.canal });
     try {
-      const abriu = await ponte.abrirPovs({ canais: p.canais, ms: m.ms, foco: m.canal, ajustes: p.ajustes });
-      if (minha !== geracao || !modoSimples()) return;
+      const abriu = await ponte.abrirPovs({ canais: p.canais, ms: m.ms, foco: m.canal, ajustes: p.ajustes, sinal: controle.signal });
+      if (controle.signal.aborted || minha !== geracao || !modoSimples()) return;
       if (!abriu) {
         if (status()) status().textContent = t('simples.pov.naoAbriu');
         return;
@@ -1406,9 +1410,11 @@ export function montarSimples(ponte) {
     } catch {
       if (minha === geracao && status()) status().textContent = t('simples.pov.naoAbriu');
     } finally {
-      abrindoPov = false;
-      atualizarBotoesClipe();
-      if (pintarLista.adiada) pintarLista();
+      if (abrindoPov === controle) {
+        abrindoPov = null;
+        atualizarBotoesClipe();
+        if (pintarLista.adiada) pintarLista();
+      }
     }
   }
 

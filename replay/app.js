@@ -9,80 +9,81 @@ import './dicas.js';
 import {
   vodsDoCanal, lerMaster, lerPlaylist, procurarCanais, lerLinkKick, clipeDaKick, vodDaKick, DESCONHECIDO, slugDoNome,
   segmentosNaJanela,
-} from './kick.js?v=257617901c';
+} from './kick.js?v=bb33c7d6cf';
 import {
   linhaDoCanal, janelaComum, onde, trechoComum, quantosNoAr, comNudge, paraLink, doLink, seguirAncora,
   passoDoArrasto, ARRASTO_INTERVALO_MS, ARRASTO_ESPERA_MS, vistaDaLinha, saiuDaVista,
   ZOOM_MIN_MS, larguraDoZoom, valorDoZoom, zoomEmVolta, andarVista,
-} from './relogio.js?v=257617901c';
-import { cortarTodosOsAngulos } from './baixar.js?v=257617901c';
-import { juntarMp4 } from './mp4.js?v=257617901c';
-import { juntarGravados } from './juntar-gravados.js?v=257617901c';
-import { instanteAoVivo, bordaAoVivo, medirAtraso, instantesAoVivo, ATRASO_PADRAO_MS } from './aovivo.js?v=257617901c';
-import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=257617901c';
-import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=257617901c';
-import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=257617901c';
+} from './relogio.js?v=bb33c7d6cf';
+import { cortarTodosOsAngulos } from './baixar.js?v=bb33c7d6cf';
+import { juntarMp4 } from './mp4.js?v=bb33c7d6cf';
+import { juntarGravados } from './juntar-gravados.js?v=bb33c7d6cf';
+import { instanteAoVivo, bordaAoVivo, medirAtraso, instantesAoVivo, ATRASO_PADRAO_MS } from './aovivo.js?v=bb33c7d6cf';
+import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=bb33c7d6cf';
+import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=bb33c7d6cf';
+import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=bb33c7d6cf';
 import {
   RETRATO, enquadramentoInicial, limitar, desenhar, gravar, formatoQueFunciona, extensaoDe, prepararSomDaGravacao,
   reformar, limparDivisao, DIVISAO_OMISSAO, divisaoDoQuadro, proporcaoDoQuadro, encaixar,
   MODELO_OMISSAO, limparModelo, paraFraccoes, deFraccoes, DEITADO, ZONA_TIKTOK,
-} from './retrato.js?v=257617901c';
+} from './retrato.js?v=bb33c7d6cf';
 import {
   abrirDetector, abrirQuadrosEscondidos, procurarRosto, caixaDaWebcam, instantesDoClipe, degrauDoRosto,
   rostoGuardado, guardarRosto,
-} from './rosto.js?v=257617901c';
+} from './rosto.js?v=bb33c7d6cf';
 import {
   limparChat, geometria as geometriaDoChat, desenharChat, mensagensDoClipe, prepararEmotes,
   VIDA_MAX_MS as VIDA_CHAT_MS, LETRA as LETRA_CHAT, retanguloDoChat, CHAT_OMISSAO,
-} from './chat-clipe.js?v=257617901c';
-import { ligarCaixa, estiloDaCaixa } from './caixa-previa.js?v=257617901c';
+} from './chat-clipe.js?v=bb33c7d6cf';
+import { ligarCaixa, estiloDaCaixa } from './caixa-previa.js?v=bb33c7d6cf';
 import {
   limparLegenda, limparTranscricao, geometriaLegenda, desenharLegenda, transcricaoDoAudio, textoDaLinha,
   editarLinha, apagarLinha, deslocarLinha, rotuloTempo, cobre, linhaNoInstante, PASSO_MS, fonteDe as fonteDaLegenda,
   idiomaParaOuvir, segurarMs, retanguloDaLegenda, LEGENDA_OMISSAO,
-} from './legenda.js?v=257617901c';
-import { abrirVoz, somDosPedacos, degrauDoSom, estimativaS, faltaBaixar } from './legenda-voz.js?v=257617901c';
-import { guardarFala, linhasDaTranscricao } from './falas.js?v=257617901c';
-import { tituloDeDeteccao, confDoSom } from './titulo.js?v=257617901c';
-import { podeLer } from './ler-tela.js?v=257617901c';
-import { planoDeAngulos, gravarAngulos } from './angulos.js?v=257617901c';
-import { agruparPorNoite, rotuloDaNoite, noiteParaAbrir } from './noites.js?v=257617901c';
+} from './legenda.js?v=bb33c7d6cf';
+import { abrirVoz, somDosPedacos, degrauDoSom, estimativaS, faltaBaixar } from './legenda-voz.js?v=bb33c7d6cf';
+import { guardarFala, linhasDaTranscricao } from './falas.js?v=bb33c7d6cf';
+import { tituloDeDeteccao, confDoSom } from './titulo.js?v=bb33c7d6cf';
+import { podeLer } from './ler-tela.js?v=bb33c7d6cf';
+import { planoDeAngulos, gravarAngulos } from './angulos.js?v=bb33c7d6cf';
+import { agruparPorNoite, rotuloDaNoite, noiteParaAbrir } from './noites.js?v=bb33c7d6cf';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
   alternarVitima, filtrar, temMorte, clipesDoMomento, comAjuste, numeroNaMontagem,
   ajusteDe, ajustesQueContam, momentosParaLink, momentosDoLink, comVitimaEscrita, semVitimaEscrita,
-} from './momentos.js?v=257617901c';
-import { lerApelidos } from './nomes.js?v=257617901c';
+} from './momentos.js?v=bb33c7d6cf';
+import { lerApelidos } from './nomes.js?v=bb33c7d6cf';
 import {
   planearCorte, executarCorte, nomeDoFicheiro, largarOQueNaoServe, oQueFalta,
-} from './baixar.js?v=257617901c';
-import { criarZip, crc32 } from './zip.js?v=257617901c';
-import { retencaoDoCanal, prazoDoVod, ordemDeGuardar } from './prazo.js?v=257617901c';
-import { eDoJogo } from './jogo.js?v=257617901c';
-import { fcpxmlMulticam, textoDoPacote, linkDoVod } from './pacote.js?v=257617901c';
-import { queFazerComOLeitor, limitarSaltos } from './leitor.js?v=257617901c';
-import { criarApanhador } from './frames.js?v=257617901c';
-import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=257617901c';
-import { alertasDoCanal } from './alertas.js?v=257617901c';
+} from './baixar.js?v=bb33c7d6cf';
+import { criarZip, crc32 } from './zip.js?v=bb33c7d6cf';
+import { retencaoDoCanal, prazoDoVod, ordemDeGuardar } from './prazo.js?v=bb33c7d6cf';
+import { eDoJogo } from './jogo.js?v=bb33c7d6cf';
+import { fcpxmlMulticam, textoDoPacote, linkDoVod } from './pacote.js?v=bb33c7d6cf';
+import { queFazerComOLeitor, limitarSaltos } from './leitor.js?v=bb33c7d6cf';
+import { criarApanhador } from './frames.js?v=bb33c7d6cf';
+import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=bb33c7d6cf';
+import { alertasDoCanal } from './alertas.js?v=bb33c7d6cf';
 import {
   ESPERTO_A_PARTIR_MS, janelasDosPicos, msPorOuvir, somaMs, juntar, eMuito, estimarFalta, tempoFalta,
-} from './ouvir.js?v=257617901c';
-import { TAXA_TIROS } from './tiros.js?v=257617901c';
-import { termosDoFiltro, momentosDePalavras } from './chat.js?v=257617901c';
-import { SENSIBILIDADES_DETECAO, opcoesDaSensibilidade, juntarProximos } from './lances.js?v=257617901c';
-import { parecidos, juntarPerto } from './aprender.js?v=257617901c';
-import { somDoCanal } from './alinhar.js?v=257617901c';
+} from './ouvir.js?v=bb33c7d6cf';
+import { TAXA_TIROS } from './tiros.js?v=bb33c7d6cf';
+import { termosDoFiltro, momentosDePalavras } from './chat.js?v=bb33c7d6cf';
+import { SENSIBILIDADES_DETECAO, opcoesDaSensibilidade, juntarProximos } from './lances.js?v=bb33c7d6cf';
+import { parecidos, juntarPerto } from './aprender.js?v=bb33c7d6cf';
+import { somDoCanal } from './alinhar.js?v=bb33c7d6cf';
 import {
   MAXIMO_S, mover, janelaInicial, nomeDoClipe, posicaoDaCabeca, dentroDosLimites, duracaoCurta,
-} from './clipe.js?v=257617901c';
-import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=257617901c';
-import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=257617901c';
-import { escapar } from './escapar.js?v=257617901c';
-import { montarEvento, rotuloDoDia } from './evento-ui.js?v=257617901c';
-import { montarPortas } from './portas.js?v=257617901c';
-import { montarSimples, modoSimples } from './simples.js?v=257617901c';
-import { atalhos, ACAO, comboDoEvento, partes } from './atalhos.js?v=257617901c';
-import { montarPainelAtalhos, pintarDicas } from './atalhos-painel.js?v=257617901c';
+} from './clipe.js?v=bb33c7d6cf';
+import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=bb33c7d6cf';
+import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=bb33c7d6cf';
+import { escapar } from './escapar.js?v=bb33c7d6cf';
+import { montarEvento, rotuloDoDia } from './evento-ui.js?v=bb33c7d6cf';
+import { montarPortas } from './portas.js?v=bb33c7d6cf';
+import { montarSimples, modoSimples } from './simples.js?v=bb33c7d6cf';
+import { prepararPovs } from './povs-preparar.js?v=bb33c7d6cf';
+import { atalhos, ACAO, comboDoEvento, partes } from './atalhos.js?v=bb33c7d6cf';
+import { montarPainelAtalhos, pintarDicas } from './atalhos-painel.js?v=bb33c7d6cf';
 
 /* Os glifos dos controlos do vídeo são DESENHO e não emoji.
    Um ⏸ ou um 🔇 sai diferente em cada sistema — no iPhone sai a cores, no
@@ -704,14 +705,14 @@ let vezNoite = 0;
  * pedidos, sem ele o selector ficava trancado e a única saída era recarregar
  * a página — com a sessão dele lá dentro.
  */
-async function abrirNoite(noite) {
+async function abrirNoite(noite, opcoes) {
   // A vez DESTA leitura. O `lerNoite` soma-a logo na primeira linha, antes de
   // esperar por nada. Comparar com uma variável escrita ao mesmo tempo que a
   // outra dava sempre verdade, e a leitura velha que acabava destrancava o
   // selector com a nova ainda a meio.
   const minhaVez = vezNoite + 1;
   try {
-    return await lerNoite(noite);
+    return await lerNoite(noite, opcoes);
   } finally {
     if (vezNoite === minhaVez) $('noite').disabled = false;
   }
@@ -728,8 +729,11 @@ async function abrirNoite(noite) {
  * E com tempo limite: são dois pedidos por canal, em fila, e um só pendurado
  * deixava "lendo os relógios…" no ecrã para sempre, com o selector trancado.
  */
-async function lerTexto(url, { limiteMs = 20_000 } = {}) {
+async function lerTexto(url, { limiteMs = 20_000, sinal } = {}) {
+  if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
   const controlo = new AbortController();
+  const parar = () => controlo.abort();
+  sinal?.addEventListener('abort', parar, { once: true });
   const relogio = setTimeout(() => controlo.abort(), limiteMs);
   try {
     const r = await fetch(url, { signal: controlo.signal });
@@ -737,13 +741,14 @@ async function lerTexto(url, { limiteMs = 20_000 } = {}) {
     return await r.text();
   } finally {
     clearTimeout(relogio);
+    sinal?.removeEventListener('abort', parar);
   }
 }
 
 /** Quantas listas (master e playlist) se pedem ao mesmo tempo ao abrir uma noite. */
 const LISTAS_DE_UMA_VEZ = 6;
 
-async function lerNoite(noite) {
+async function lerNoite(noite, { preparadas } = {}) {
   const minhaVez = ++vezNoite;
   const desactualizada = () => minhaVez !== vezNoite;
   const dizer = (frase) => { if (!desactualizada()) $('estadoNoite').textContent = frase; };
@@ -775,8 +780,13 @@ async function lerNoite(noite) {
     const chave = `${slug}|${v.id}`;
     // A playlist de um VOD acabado nunca muda; a de quem está no ar cresce a cada segmento. Guardada,
     // abrir um lance de agora mostrava o vídeo de quando se carregou da primeira vez.
-    const lida = v.aoVivo ? null : estado.pecasLidas.get(chave);
-    if (lida) { lidas.set(chave, lida); return; }
+    const lida = preparadas ? preparadas.get(chave) : (v.aoVivo ? null : estado.pecasLidas.get(chave));
+    if (preparadas && !lida) { naoLidos.add(slug); return; }
+    if (lida) {
+      lidas.set(chave, lida);
+      if (v.aoVivo) estado.atrasosVivo[slug] = medirAtraso(lida.playlist.fim) || estado.atrasosVivo[slug];
+      return;
+    }
     try {
       const master = lerMaster(await lerTexto(v.master), v.master);
       if (!master.length) { naoLidos.add(slug); return; }
@@ -8790,7 +8800,7 @@ if (guardado) {
 // O mapa do evento entrega à página de sempre os canais de um lance e o instante dele. Daqui para a
 // frente é uma noite como outra qualquer: a grelha, o alinhamento, a montagem e o clipe.
 async function abrirLanceDoEvento(canais, ms, foco, {
-  exato = false, aoVivo = false, ajustes = {}, referencia = null,
+  exato = false, aoVivo = false, ajustes = {}, referencia = null, preparado = null,
 } = {}) {
   // Os atrasos medidos pelo som do lance (ver `verLance` em evento-ui.js), relativos à referência.
   const ref = referencia && slugDoNome(referencia);
@@ -8830,13 +8840,21 @@ async function abrirLanceDoEvento(canais, ms, foco, {
   estado.momentos = [];
   estado.restaurar = { agora: ms, focos: foco ? [foco] : [], marca: null, momentos: [], aoVivo };
   guardar();
-  await carregar();
+  if (preparado) {
+    for (const r of preparado.catalogo) estado.vodsPorCanal.set(r.slug, r);
+    for (const [chave, peca] of preparado.lidas) if (!peca.vod.aoVivo) estado.pecasLidas.set(chave, peca);
+    guardarVods();
+    pintarCanais(preparado.catalogo);
+    pintarNoites(preparado.noites);
+    $('noite').value = String(preparado.indice);
+    await abrirNoite(preparado.noite, { preparadas: preparado.lidas });
+  } else await carregar();
   window.scrollTo({ top: 0 });
 }
 
-async function abrirPovsParaSimples({ canais, ms, foco, ajustes = {} }) {
+async function abrirPovsParaSimples({ canais, ms, foco, ajustes = {}, sinal }) {
   // Entrada validada antes de tocar na grelha: nomes válidos, >= 2 canais únicos por slug, foco entre eles.
-  if (!Array.isArray(canais) || !Number.isFinite(ms)) return false;
+  if (sinal?.aborted || cargaEmCurso || !Array.isArray(canais) || !Number.isFinite(ms)) return false;
   if (canais.some((c) => typeof c !== 'string' || !slugDoNome(c))) return false;
   const unicos = [...new Set(canais.map(slugDoNome))];
   const f = typeof foco === 'string' ? slugDoNome(foco) : '';
@@ -8860,7 +8878,16 @@ async function abrirPovsParaSimples({ canais, ms, foco, ajustes = {} }) {
   const j = estado.janela;
   const exatoCarregado = abertos.size === unicos.length && unicos.every((s) => abertos.has(s));
   if (exatoCarregado && j && ms >= j.inicio && ms <= j.fim && !cobre(efetivos)) return false;
-  await abrirLanceDoEvento(unicos, ms, f, { exato: true, ajustes, referencia: f });
+  let preparado = null;
+  if (!exatoCarregado || !j || ms < j.inicio || ms > j.fim) {
+    const noiteAntes = vezNoite;
+    const linhasAntes = estado.linhas;
+    preparado = await prepararPovs({ canais: unicos, ms, nudges: efetivos,
+      vodsPorCanal: estado.vodsPorCanal, vodsDoEvento: estado.vodsDoEvento, pecasLidas: estado.pecasLidas,
+      lerTexto, sinal });
+    if (!preparado || sinal?.aborted || cargaEmCurso || vezNoite !== noiteAntes || estado.linhas !== linhasAntes) return false;
+  }
+  await abrirLanceDoEvento(unicos, ms, f, { exato: true, ajustes, referencia: f, preparado });
   return cobre(estado.nudges);
 }
 const evento = montarEvento({

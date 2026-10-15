@@ -10,11 +10,11 @@
 // O leitor: o Whisper base no legenda-worker.js, que se abre uma vez e fica aberto enquanto a página
 // estiver aberta. Parar a meio fecha-o (é a única maneira de parar o WebAssembly a meio de uma conta).
 
-import { pegarSegmento } from './baixar.js?v=257617901c';
-import { aacDeSegmentos } from './audio-ts.js?v=257617901c';
-import { descodificarAac } from './alinhar.js?v=257617901c';
-import { oQueFalta } from './legenda-arquivos.js?v=257617901c';
-import { SEGUNDOS_POR_SEGUNDO, ABRIR_S } from './legenda.js?v=257617901c';
+import { pegarSegmento } from './baixar.js?v=bb33c7d6cf';
+import { aacDeSegmentos } from './audio-ts.js?v=bb33c7d6cf';
+import { descodificarAac } from './alinhar.js?v=bb33c7d6cf';
+import { oQueFalta } from './legenda-arquivos.js?v=bb33c7d6cf';
+import { SEGUNDOS_POR_SEGUNDO, ABRIR_S } from './legenda.js?v=bb33c7d6cf';
 
 export const TAXA_VOZ = 16000;
 const TAXA_ORIGEM = 48000;
