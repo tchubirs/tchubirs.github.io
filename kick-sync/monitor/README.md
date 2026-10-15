@@ -9,9 +9,11 @@ node monitor/rodar.mjs --saida C:/caminho/monitor-abisal --historico-horas 5 --i
 A pasta de saída contém o histórico local por canal, cobertura, fila de candidatos e `estado.json`. Deve ficar fora da publicação e do Git. Para retomar, use a mesma pasta; mensagens são deduplicadas e os intervalos incompletos continuam pendentes. Uma trava por PID impede dois coletores na mesma pasta.
 
 - `--uma-rodada`: coleta uma rodada e encerra.
+- `--desde 2026-10-15T16:00:00Z`: recupera desde um horário UTC explícito, por exemplo o início oficial do evento, em vez de uma janela móvel de cinco horas.
 - `--canais tanizen,geitta`: limita a canais do elenco.
 - `--paginas 12`: limite por intervalo e canal em uma rodada. Cada canal recebe uma vez antes da próxima rodada; mensagens novas têm prioridade sobre o histórico pendente.
 - `--pedido-ms 500`: espaçamento global entre pedidos, além do limite de quatro canais em paralelo. HTTP429 pausa a coleta por pelo menos60segundos e respeita `Retry-After` maior.
+- `--evento-kick-id 01a132ac-44ce-73c3-885a-eca55f6bdaba`: consulta os canais públicos ao vivo do evento e seus clipes recentes/populares a cada rodada. Inclui novos canais sem perder o histórico dos anteriores e reaproveita os IDs oficiais. `clipes-evento.json` mantém links, canal, horário e origem; clipes da Kick também precisam de revisão. O ID é público e foi obtido na página oficial do Abisal.
 
 O intervalo de cinco minutos é a frequência desejada. Se a rodada ou a espera imposta pela Kick demorar mais, não começa outra em paralelo. Não garante recuperar cinco horas de todos os canais em cinco minutos. Histórico indisponível ou incompleto nunca é considerado silêncio.
 

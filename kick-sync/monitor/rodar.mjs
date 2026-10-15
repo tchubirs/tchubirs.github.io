@@ -2,20 +2,26 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { idDoCanal, mensagensEntre } from '../site/chat.js';
 import { acharPicos, ordenarPicos, unirCobertura, trechosFaltando, alvosDaRodada } from './picos.mjs';
+import { consultarEventoKick } from './evento-kick.mjs';
 
 const args = process.argv.slice(2);
 const opcao = (nome, padrao) => { const i = args.indexOf(nome); return i < 0 ? padrao : args[i + 1]; };
 const saida = path.resolve(opcao('--saida', './monitor-saida'));
 const elenco = JSON.parse(await fs.readFile(new URL('../site/eventos/abisal.json', import.meta.url), 'utf8'));
 const selecionar = opcao('--canais', '').split(',').filter(Boolean);
-if (selecionar.some(c => !elenco.canais.includes(c))) throw new Error('Canal selecionado fora do elenco Abisal');
-const canais = [...new Set(elenco.canais)].filter((c) => !selecionar.length || selecionar.includes(c));
+const eventoId = opcao('--evento-kick-id', null);
+if (selecionar.some(c => !/^[a-z0-9_-]{1,60}$/.test(c))) throw new Error('Canal selecionado inválido');
+if (!eventoId && selecionar.some(c => !elenco.canais.includes(c))) throw new Error('Canal selecionado fora do elenco Abisal');
+let canais = [...new Set(elenco.canais)].filter((c) => !selecionar.length || selecionar.includes(c));
 const horas = Number(opcao('--historico-horas', '5'));
 const cicloMs = Number(opcao('--intervalo-segundos', '300')) * 1000;
 const maxHoras = Number(opcao('--max-horas', '8'));
 const maxPaginas = Number(opcao('--paginas', '12'));
 const intervaloPedido = Number(opcao('--pedido-ms', '500'));
-if (![horas, cicloMs, maxHoras, maxPaginas, intervaloPedido].every((n) => Number.isFinite(n) && n > 0) || !canais.length) throw new Error('Opções inválidas');
+const desde = opcao('--desde', null);
+const desdeMs = desde ? Date.parse(desde) : null;
+if (desde && (!Number.isFinite(desdeMs) || desdeMs > Date.now())) throw new Error('Início do histórico inválido');
+if (![horas, cicloMs, maxHoras, maxPaginas, intervaloPedido].every((n) => Number.isFinite(n) && n > 0) || (!canais.length && !eventoId)) throw new Error('Opções inválidas');
 await fs.mkdir(path.join(saida, 'canais'), { recursive: true });
 const trava = path.join(saida, 'monitor.lock');
 try {
@@ -37,7 +43,8 @@ process.on('SIGTERM', () => controle.abort());
 const sinal = controle.signal;
 const iniciado = Date.now();
 const prazo = setTimeout(() => controle.abort(), maxHoras * 3600_000);
-const inicioHistorico = iniciado - horas * 3600_000;
+prazo.unref();
+const inicioHistorico = desdeMs ?? iniciado - horas * 3600_000;
 let proximoPedido = 0;
 let pausaKick = 0;
 let pedidos = 0;
@@ -57,6 +64,7 @@ async function buscar(url, init = {}) {
     const segundos = Number(retryAfter);
     const atraso = retryAfter && Number.isFinite(segundos) ? segundos * 1000 : Date.parse(retryAfter) - Date.now();
     pausaKick = Date.now() + Math.max(60_000, Number.isFinite(atraso) ? atraso : 0);
+    await registrar();
     console.log(JSON.stringify({ estado: 'limite-kick', retomar: new Date(pausaKick).toISOString() }));
   }
   return r;
@@ -64,6 +72,10 @@ async function buscar(url, init = {}) {
 async function lerJson(arquivo, padrao) { try { return JSON.parse(await fs.readFile(arquivo, 'utf8')); } catch (e) { if (e.code === 'ENOENT') return padrao; throw e; } }
 async function salvar(arquivo, valor) { const tmp = `${arquivo}.${process.pid}.tmp`; await fs.writeFile(tmp, JSON.stringify(valor)); await fs.rename(tmp, arquivo); }
 const resumo = await lerJson(path.join(saida, 'estado.json'), { evento: elenco.nome, canais: {}, candidatos: [] });
+if (eventoId) canais = [...new Set([...canais, ...Object.keys(resumo.canais)])].filter(c => !selecionar.length || selecionar.includes(c));
+pausaKick = Number.isFinite(Date.parse(resumo.pausaKickAte)) ? Date.parse(resumo.pausaKickAte) : 0;
+const idsOficiais = new Map();
+const clipesEvento = new Map((await lerJson(path.join(saida, 'clipes-evento.json'), { clipes: [] })).clipes.map(c => [c.id, c]));
 const pedidosAnteriores = resumo.pedidos || 0;
 resumo.primeiroInicio ||= resumo.iniciado || new Date(iniciado).toISOString();
 resumo.iniciado = new Date(iniciado).toISOString();
@@ -81,6 +93,7 @@ function registrar() {
   resumo.atualizado = new Date().toISOString();
   resumo.pedidos = pedidosAnteriores + pedidos;
   resumo.limitesKick = limites;
+  resumo.pausaKickAte = pausaKick > Date.now() ? new Date(pausaKick).toISOString() : null;
   resumo.candidatos = ordenarPicos([...porCanal.values()].flat());
   const copia = structuredClone(resumo);
   guardarResumo = guardarResumo.then(() => salvar(path.join(saida, 'estado.json'), copia));
@@ -89,7 +102,7 @@ function registrar() {
 async function canal(slug, ateMs) {
   const arquivo = path.join(saida, 'canais', `${slug}.json`);
   const estado = await lerJson(arquivo, { slug, id: null, cobertura: [], mensagens: [] });
-  if (!estado.id) estado.id = await idDoCanal(slug, { buscar, sinal });
+  if (!estado.id) estado.id = idsOficiais.get(slug) || await idDoCanal(slug, { buscar, sinal });
   if (!estado.id) { resumo.canais[slug] = { estado: 'sem-acesso', mensagens: 0 }; await registrar(); return; }
   const alvos = alvosDaRodada(resumo.deMs, ateMs, estado.cobertura);
   if (!alvos.length) return;
@@ -126,6 +139,22 @@ try {
   while (!sinal.aborted && Date.now() - iniciado < maxHoras * 3600_000) {
     rodada++;
     const comeco = Date.now();
+    if (eventoId) {
+      const fonte = await consultarEventoKick(eventoId, { buscar });
+      if (fonte.transmissoes) {
+        for (const c of fonte.transmissoes) idsOficiais.set(c.slug, c.id);
+        canais = [...new Set([...canais, ...fonte.transmissoes.map(c => c.slug)])].filter(c => !selecionar.length || selecionar.includes(c));
+        resumo.totalCanais = canais.length;
+        resumo.canaisAoVivoOficiais = fonte.transmissoes.length;
+      }
+      for (const c of [...fonte.recentes || [], ...fonte.populares || []]) clipesEvento.set(c.id, c);
+      const clipes = [...clipesEvento.values()].filter(c => c.ms >= resumo.deMs).sort((a, b) => b.visualizacoes - a.visualizacoes);
+      resumo.clipesPublicos = clipes.length;
+      resumo.fonteEvento = { id: eventoId, atualizado: new Date().toISOString(), falhas: fonte.falhas };
+      await salvar(path.join(saida, 'clipes-evento.json'), { evento: eventoId, atualizado: resumo.fonteEvento.atualizado, clipes });
+      await registrar();
+      console.log(JSON.stringify({ estado: 'evento-atualizado', aoVivo: resumo.canaisAoVivoOficiais, monitorados: canais.length, clipes: clipes.length, falhas: fonte.falhas }));
+    }
     const ateMs = comeco - 10_000;
     const fila = [...canais].sort((a, b) => Number(Boolean(resumo.canais[a])) - Number(Boolean(resumo.canais[b])));
     let indice = 0;
