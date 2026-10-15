@@ -5,7 +5,7 @@
 // an ordered set of VODs plus the gaps, and scrubbing across a gap must either
 // switch VODs by itself or show the hole — never quietly play the wrong moment.
 
-import { tempoDeMidia } from './kick.js?v=7e158988ac';
+import { tempoDeMidia } from './kick.js?v=01db2b72c7';
 
 /**
  * One channel's night: its VODs in order, and the holes between them.
@@ -109,6 +109,21 @@ export function onde(linha, quandoMs, { nudgeMs = 0 } = {}) {
   }
   const b = linha.buracos.find((h) => t >= h.de && t < h.ate);
   return b ? { estado: 'buraco', buraco: b } : { estado: 'sem-video' };
+}
+
+/** Intervalo compartilhado pelos VODs que estão tocando nesse instante, com os ajustes de sincronização. */
+export function trechoComum(linhas, quandoMs, { nudges = {} } = {}) {
+  if (!linhas.length || linhas.some((l) => !l)) return null;
+  const trechos = linhas.map((linha) => {
+    const ajuste = nudges[linha.slug] || 0;
+    const r = onde(linha, quandoMs, { nudgeMs: ajuste });
+    if (r.estado !== 'toca') return null;
+    return { inicio: r.peca.playlist.inicio - ajuste, fim: r.peca.playlist.fim - ajuste };
+  });
+  if (trechos.some((x) => !x)) return null;
+  const inicio = Math.max(...trechos.map((x) => x.inicio));
+  const fim = Math.min(...trechos.map((x) => x.fim));
+  return fim > inicio ? { inicio, fim } : null;
 }
 
 /**

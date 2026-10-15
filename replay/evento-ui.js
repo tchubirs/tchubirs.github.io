@@ -12,27 +12,27 @@
 import {
   lerElenco, codificar, descodificar, contar, paraTexto, juntarElencos, paraArquivo, deArquivo, nomeDoArquivo,
   apelidosDoTexto,
-} from './elenco.js?v=7e158988ac';
-import { montarNomesNaTela } from './nomes-ui.js?v=7e158988ac';
-import { montarMortes } from './mortes-ui.js?v=7e158988ac';
-import { carregarCanais, procurarAoVivo } from './carregar.js?v=7e158988ac';
-import { escolherCaminho } from './portas.js?v=7e158988ac';
+} from './elenco.js?v=01db2b72c7';
+import { montarNomesNaTela } from './nomes-ui.js?v=01db2b72c7';
+import { montarMortes } from './mortes-ui.js?v=01db2b72c7';
+import { carregarCanais, procurarAoVivo } from './carregar.js?v=01db2b72c7';
+import { escolherCaminho } from './portas.js?v=01db2b72c7';
 import {
   montarMapa, linhasVisiveis, tempoDoX, xDoTempo, zoom, oQueEstaAqui, filtrar, pintarMapa, ordenarFaixas, linhasDoTempo,
-} from './mapa.js?v=7e158988ac';
-import { procurarAngulos, ordenarCandidatos, resumo } from './cena.js?v=7e158988ac';
-import { lerMaster, lerPlaylist, procurarCanais, slugDoNome } from './kick.js?v=7e158988ac';
-import { linhaDoCanal } from './relogio.js?v=7e158988ac';
-import { somDoCanal, tsDoCanal } from './alinhar.js?v=7e158988ac';
-import { t, tn, idiomaActual } from './idiomas.js?v=7e158988ac';
-import { atalhos } from './atalhos.js?v=7e158988ac';
-import { escapar } from './escapar.js?v=7e158988ac';
-import { separarPorJogo } from './jogo.js?v=7e158988ac';
-import { idDoCanal, mensagensEntre, calor, picos, segundoDoPico } from './chat.js?v=7e158988ac';
-import { agendar } from './aovivo.js?v=7e158988ac';
+} from './mapa.js?v=01db2b72c7';
+import { procurarAngulos, ordenarCandidatos, resumo } from './cena.js?v=01db2b72c7';
+import { lerMaster, lerPlaylist, procurarCanais, slugDoNome } from './kick.js?v=01db2b72c7';
+import { linhaDoCanal } from './relogio.js?v=01db2b72c7';
+import { somDoCanal, tsDoCanal } from './alinhar.js?v=01db2b72c7';
+import { t, tn, idiomaActual } from './idiomas.js?v=01db2b72c7';
+import { atalhos } from './atalhos.js?v=01db2b72c7';
+import { escapar } from './escapar.js?v=01db2b72c7';
+import { separarPorJogo } from './jogo.js?v=01db2b72c7';
+import { idDoCanal, mensagensEntre, calor, picos, segundoDoPico } from './chat.js?v=01db2b72c7';
+import { agendar } from './aovivo.js?v=01db2b72c7';
 import {
   normalDoChat, unirJanelas, sinaisDoEvento, melhoresLances, filtrarLances, motivoDoLance, contaDoLance, coincide,
-} from './melhores.js?v=7e158988ac';
+} from './melhores.js?v=01db2b72c7';
 
 // Um canal ao vivo tem na lista um VOD de duração zero que vai crescendo. Até se pedir a lista outra
 // vez, o que ele já tem acaba "agora".
@@ -46,6 +46,13 @@ export const ATRASO_MIN = 15;
 /** Se um lance ainda é recente demais para a busca pelo som. */
 export function cedoDemais(ms, atrasoMin, agoraMs = Date.now()) {
   return Number.isFinite(ms) && ms > agoraMs - Math.max(0, atrasoMin) * 60_000;
+}
+
+export function vodCollectionSignature(results) {
+  return JSON.stringify((results ?? [])
+    .map((r) => [r.slug, r.estado, (r.vods ?? [])
+      .map((v) => [v.id, v.master, v.inicioApi, v.duracaoMs, aoVivoVod(v)])])
+    .sort((a, b) => String(a[0]).localeCompare(String(b[0]))));
 }
 
 const dataCurta = (ms) => new Date(ms).toLocaleDateString([], { day: '2-digit', month: '2-digit' });
@@ -135,6 +142,24 @@ export function trechoDoEvento(coberturas, { folgaMs = 15 * 60_000 } = {}) {
 /** Quem estava no ar num instante: só esses podem ter ouvido o lance. */
 export function noArEm(coberturas, slug, ms) {
   return (coberturas.get(slug) || []).some(([de, ate]) => ms >= de && ms <= ate);
+}
+
+/**
+ * Os canais com vídeo no ar num lance da lista simples: os de `l.canais` que estão no ar, e as vítimas que o
+ * protagonista sugeriu (`l.povsSugeridos`, que não estão em `l.canais`) quando também estão no ar. Uma vítima só
+ * entra se o protagonista que a sugeriu estiver no ar. Não mexe em `l.canais`, na conta nem nas mortes.
+ * `noAr(canal)` é a cobertura do protagonista; `vitimaNoAr(canal)` a da vítima (com evento e jogo).
+ */
+export function canaisNoArDoLance(l, { noAr, vitimaNoAr = noAr }) {
+  const base = [...new Set(l.canais || [])].filter((c) => noAr(c));
+  const extra = [];
+  for (const s of l.povsSugeridos || []) {
+    if (!base.includes(s.canal)) continue;
+    for (const v of s.vitimas || []) {
+      if (!base.includes(v) && !extra.includes(v) && vitimaNoAr(v)) extra.push(v);
+    }
+  }
+  return [...base, ...extra];
 }
 
 /**
@@ -1334,29 +1359,29 @@ export function montarEvento({
     return r?.vods.find((v) => ms >= v.inicioApi - 60_000
       && ms <= (aoVivoVod(v) ? AGORA() : v.inicioApi + (v.duracaoMs > 0 ? v.duracaoMs : 0))) || null;
   }
-  async function linhaDe(slug, deMs) {
+  async function linhaDe(slug, deMs, { sinal } = {}) {
     const vod = vodEm(slug, deMs);
     if (!vod) return null;
     // Um VOD ao vivo cresce: a playlist lida há minutos não tem o lance de agora.
     const chave = aoVivoVod(vod) ? `${vod.id}@${Math.floor(deMs / 30_000)}` : vod.id;
     let peca = pecas.get(chave);
     if (!peca) {
-      const master = lerMaster(await (await buscar(vod.master)).text(), vod.master);
+      const master = lerMaster(await (await buscar(vod.master, { signal: sinal })).text(), vod.master);
       if (!master.length) return null;
       const barato = master.at(-1);
-      const playlist = lerPlaylist(await (await buscar(barato.url)).text(), barato.url);
+      const playlist = lerPlaylist(await (await buscar(barato.url, { signal: sinal })).text(), barato.url);
       peca = { vod, playlist, escada: master, barato };
       pecas.set(chave, peca);
     }
     return { ...linhaDoCanal(slug, [peca]), pecasCompletas: [peca] };
   }
-  async function somDe(slug, deMs, duracaoS) {
-    const linha = await linhaDe(slug, deMs);
-    return linha ? somDoCanal(linha, deMs, duracaoS, { buscar }) : null;
+  async function somDe(slug, deMs, duracaoS, opcoes = {}) {
+    const linha = await linhaDe(slug, deMs, opcoes);
+    return linha ? somDoCanal(linha, deMs, duracaoS, { buscar, ...opcoes }) : null;
   }
   // Os bytes do 160p, para as telas de morte (achar-mortes-video.js): o mesmo caminho do som.
   async function tsDe(slug, deMs, duracaoS, opcoes = {}) {
-    const linha = await linhaDe(slug, deMs);
+    const linha = await linhaDe(slug, deMs, opcoes);
     return linha ? tsDoCanal(linha, deMs, duracaoS, { buscar, ...opcoes }) : null;
   }
 
@@ -1369,6 +1394,21 @@ export function montarEvento({
     if (antes) antes.canais = canais;
     else ev.confirmados.push({ ms: e.ms, canais });
     agendarMelhores();
+  }
+
+  // A memória das envolventes de uma busca é da COLEÇÃO de VODs do evento: o mesmo canal, no mesmo
+  // instante, dá o mesmo som enquanto a lista de VODs não muda. Se a assinatura mudou (ids, master ou
+  // os limites que vodEm usa), a Map é nova. Não se limpa a antiga: uma busca que ainda corre
+  // continua com a sua, e o que ela lá pôs não vai para a coleção nova.
+  let memoriaVods = null;
+  let assinaturaVods = null;
+  function memoriaDaColecao() {
+    const assinatura = vodCollectionSignature(ev.resultados);
+    if (!memoriaVods || assinatura !== assinaturaVods) {
+      memoriaVods = new Map();
+      assinaturaVods = assinatura;
+    }
+    return memoriaVods;
   }
 
   async function procurarOutros() {
@@ -1403,7 +1443,7 @@ export function montarEvento({
     $('procurarOutrosTexto').textContent = t('lance.parar');
     try {
       for await (const r of procurarAngulos({
-        quandoMs: e.ms, referencia: e.canal, candidatos, somDe, sinal: controlo.signal,
+        quandoMs: e.ms, referencia: e.canal, candidatos, somDe, sinal: controlo.signal, memoria: memoriaDaColecao(),
       })) {
         ev.feitos++;
         ev.achados.push(r);
@@ -1425,6 +1465,28 @@ export function montarEvento({
       $('procurarOutrosTexto').textContent = t('lance.outros');
       if (ev.escolha) pintarLance();
     }
+  }
+
+  // A lista simples usa a mesma comparação de som do mapa, sem exigir que a pessoa selecione um ponto
+  // na linha do tempo. O atraso mínimo continua valendo durante eventos ao vivo.
+  async function procurarPovsDoMomento({ referencia, ms, sinal, aoProgresso = () => {} } = {}) {
+    if (!ev.elenco || !referencia || !Number.isFinite(ms)) return { erro: 'evento' };
+    if (cedoDemais(ms, ev.atrasoMin)) return { erro: 'cedo', atrasoMin: ev.atrasoMin };
+    const times = indiceDeTimes(ev.elenco);
+    const canais = ev.resultados.filter((r) => r.estado === 'ok').map((r) => r.slug);
+    const candidatos = ordenarCandidatos({
+      referencia,
+      canais,
+      timeDe: (c) => times.get(c) ?? null,
+      noAr: (c) => noArEm(ev.coberturas, c, ms),
+    });
+    const resultados = [];
+    for await (const r of procurarAngulos({ quandoMs: ms, referencia, candidatos, somDe, sinal, memoria: memoriaDaColecao() })) {
+      resultados.push(r);
+      aoProgresso({ feito: resultados.length, total: candidatos.length, resultado: r });
+    }
+    const achados = resumo(resultados);
+    return { estava: achados.estava, talvez: achados.talvez, total: candidatos.length };
   }
 
   // ── os nomes na tela ───────────────────────────────────────────────────
@@ -2196,10 +2258,20 @@ export function montarEvento({
   function lancesSimples() {
     const v = ev.trecho || ev.limites;
     if (!ev.elenco || !v) return { nome: '', lances: [], mensagens: ev.mensagens, lendo: Boolean(melhores.leitura), texto: '' };
+    const doEvento = new Set(todosDoEvento());
     const lances = filtrarLances(calcularLances(), { deMs: v.deMs, ateMs: v.ateMs })
-      .map((l) => ({ ...l, noAr: l.canais.filter((c) => noArEm(ev.coberturas, c, l.msAbrir) || noArEm(ev.coberturas, c, l.ms)) }));
+      .map((l) => ({
+        ...l,
+        noAr: canaisNoArDoLance(l, {
+          noAr: (c) => noArEm(ev.coberturas, c, l.msAbrir) || noArEm(ev.coberturas, c, l.ms),
+          // Uma vítima sugerida só conta dentro do evento, e não se estiver noutro jogo nesse instante.
+          vitimaNoAr: (c) => doEvento.has(c) && !outroJogoEm(c, l.ms)
+            && (noArEm(ev.coberturas, c, l.msAbrir) || noArEm(ev.coberturas, c, l.ms)),
+        }),
+      }));
     return {
       nome: ev.elenco.nome && ev.elenco.nome !== t('evento.semNome') ? ev.elenco.nome : '',
+      canais: [...new Set([...ev.elenco.times.flatMap((x) => x.canais), ...ev.elenco.soltos])],
       lances, mensagens: ev.mensagens, lendo: Boolean(melhores.leitura), texto: $('melhoresEstado').textContent,
     };
   }
@@ -2368,7 +2440,8 @@ export function montarEvento({
     } else {
       // Com mortes do servidor no lance, quem morreu entra como vítima na montagem.
       const vitimas = [...new Set((l.mortes || []).map((m) => m.canalVitima).filter((c) => c && c !== l.canais[0]))];
-      marcar({ ms: l.msMarcar, canal: l.canais[0], canais: l.canais, vitimas, origem: l.mortes?.length ? 'servidor' : 'lances' });
+      // A origem 'servidor' só se alguma morte do lance veio mesmo do log do servidor (fonte), não de uma tela de vídeo.
+      marcar({ ms: l.msMarcar, canal: l.canais[0], canais: l.canais, vitimas, origem: l.mortes?.some((m) => m.fonte === 'servidor') ? 'servidor' : 'lances' });
       melhores.marcados = [...melhores.marcados, { ms: l.ms, c: l.canais }];
       $('melhoresEstado').textContent = t('melhores.marcadoMontagem', { hora: horaLocal(l.msMarcar) });
     }
@@ -2547,6 +2620,11 @@ export function montarEvento({
     abrirElenco, abrirDoTexto, abrirDoLink, abrirGuardado, esquecerEvento, lerChatTrecho, faltaLer, pintarComoPico, ordenar, estado: ev,
     lerChatDeTodos,
     lancesSimples,
+    procurarPovsDoMomento,
+    povsLiberados: (ms) => {
+      const min = Number.isFinite(ev.atrasoMin) ? ev.atrasoMin : ATRASO_MIN;
+      return { liberado: !cedoDemais(ms, min), min };
+    },
     aoMelhores: (f) => { aoMudarMelhores = f; },
     mortes,
     // A página avisa quando a montagem muda (uma kill marcada, a detecção que achou tiros).

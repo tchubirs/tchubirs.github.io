@@ -18,7 +18,7 @@
 //
 // Nada aqui toca na página: os testes correm no Node.
 
-import { base } from './nomes.js?v=7e158988ac';
+import { base } from './nomes.js?v=01db2b72c7';
 
 const DIA_MS = 86400e3;
 const HORA_MS = 3600e3;
@@ -309,7 +309,9 @@ export function lerMortes(texto, { idioma = 'pt' } = {}) {
     else naoLidas.push({ linha: m.linha, texto: m.texto, motivo: 'semHora' });
   }
   naoLidas.sort((a, b) => a.linha - b.linha);
-  return { mortes: comHora, naoLidas };
+  // Tudo o que sai daqui foi lido do registro do servidor (DeathNotes, Discord Death, Rustcord, ou a linha simples
+  // colada): a proveniência é 'servidor' por construção do leitor, não por suposição de quem chama.
+  return { mortes: comHora.map((m) => ({ ...m, fonte: 'servidor' })), naoLidas };
 }
 
 // ── a hora do servidor na hora dos vídeos ───────────────────────────────
@@ -443,11 +445,14 @@ export function juntarMortes(guardadas, novas) {
   return { mortes: saida, novas: novasN, repetidas: (novas || []).length - novasN };
 }
 
+/** As proveniências que se guardam (ver lerMortes: 'servidor'; achar-mortes.js: 'video'). */
+const FONTES_GUARDADAS = ['servidor', 'video'];
 /** O que se guarda de cada morte: sem o texto da linha, que não serve depois de lido. */
 export function mortesParaGuardar(mortes) {
-  return (mortes || []).map(({ id, matador, vitima, arma, distancia, hora, origem }) => ({
+  return (mortes || []).map(({ id, matador, vitima, arma, distancia, hora, origem, fonte }) => ({
     id, matador, vitima, ...(arma ? { arma } : {}), ...(distancia != null ? { distancia } : {}), hora,
     ...(origem === 'video' ? { origem } : {}),
+    ...(FONTES_GUARDADAS.includes(fonte) ? { fonte } : {}),
   }));
 }
 
@@ -458,6 +463,9 @@ export function mortesGuardadas(lista) {
     .map((m) => ({
       id: m.id, matador: m.matador.slice(0, 64), vitima: m.vitima.slice(0, 64),
       ...(m.origem === 'video' ? { origem: 'video' } : {}),
+      // A proveniência guardada. Sem marca (guardado antes desta versão), a morte fica SEM fonte; só a de origem
+      // 'video' (explícita) ganha 'video'. Nunca se presume 'servidor' para o que não trouxe a marca.
+      ...(FONTES_GUARDADAS.includes(m.fonte) ? { fonte: m.fonte } : m.origem === 'video' ? { fonte: 'video' } : {}),
       arma: typeof m.arma === 'string' ? m.arma.slice(0, 64) : null,
       distancia: Number.isFinite(m.distancia) ? m.distancia : null,
       hora: {

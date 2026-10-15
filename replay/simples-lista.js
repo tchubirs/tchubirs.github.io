@@ -5,8 +5,8 @@
 // mortes do servidor) e está a ser mexido por outro trabalho. Aqui é um streamer só e um vídeo só: os
 // picos do chat dele e o que o som dele achou, juntos num momento quando caem a menos de um minuto.
 
-import { lerLinkKick } from './kick.js?v=7e158988ac';
-import { CONF_SEM_CORTE } from './indice.js?v=7e158988ac';
+import { lerLinkKick, slugDoNome } from './kick.js?v=01db2b72c7';
+import { CONF_SEM_CORTE } from './indice.js?v=01db2b72c7';
 
 /** O nome de um evento salvo como o arquivo dele: "Abisal" e "abisal" são eventos/abisal.json. */
 export function nomeDeEvento(texto) {
@@ -160,9 +160,13 @@ function momentoDeLuta(l, { picos, sons, limites }) {
   const perto = (s) => s.ms >= l.deMs - MARGEM_LUTA_MS && s.ms <= l.ateMs + MARGEM_LUTA_MS;
   const doChat = picos.filter((p) => Number.isFinite(p.ms) && perto(p));
   const explosoes = sons.filter((s) => s.tipo === 'explosao' && perto(s));
+  // O grito perto da luta não pode sumir: antes, só `explosao`/`chat`/`morte` eram repostos aqui, e a luta
+  // engolia (±30 s) um grito sem nunca o declarar — a busca por "Grito" dava lista vazia numa live cheia deles.
+  const gritos = sons.filter((s) => s.tipo === 'grito' && perto(s));
   const tipos = ['tiros'];
   if (l.acertos > 0) tipos.push('acerto');
   if (explosoes.length) tipos.push('explosao');
+  if (gritos.length) tipos.push('grito');
   if (doChat.length) tipos.push('chat');
   if (l.mortes > 0) tipos.push('morte');
   let deMs = l.deMs - ANTES_MS;
@@ -217,16 +221,52 @@ const BOM_EVENTO = 8;
  * `lances`: de `filtrarLances`, cada um com `noAr` (os canais com vídeo na hora). `mensagens`: Map canal ->
  * chat, para descontar o pico que só reclama do som. Do melhor para o pior; quem corta é quem chama.
  */
-export function lancesParaLista(lances = [], { mensagens = new Map() } = {}) {
+export function lancesParaLista(lances = [], { mensagens = new Map(), canalPrincipal = '' } = {}) {
   const itens = [];
   for (const l of lances) {
-    const canal = (l.noAr || l.canais || [])[0];
+    const noAr = [...new Set(l.noAr || l.canais || [])];
+    const principal = canalPrincipal && noAr.find((c) => slugDoNome(c) === slugDoNome(canalPrincipal));
+    if (canalPrincipal && !principal) continue;
+    const canal = principal || noAr[0];
     if (!canal || !Number.isFinite(l.ms)) continue;
     const sons = l.sons || {};
     const tipos = [];
     if (l.chat?.canais || l.pedidosClip) tipos.push('chat');
     for (const s of ['tiros', 'explosao', 'grito']) if (sons[s]?.length) tipos.push(s);
-    const mortes = (l.mortes || []).filter((m) => m?.vitima).map((m) => ({ matador: m.matador || '', vitima: m.vitima }));
+    // A proveniência de cada morte passa como veio do produtor (mortes.js: 'servidor'; achar-mortes: 'video'): sem
+    // valor padrão. Uma morte sem fonte fica sem fonte (titulo.js não a usa como prova), nunca vira "servidor".
+    const mortes = (l.mortes || []).filter((m) => m?.vitima).map((m) => ({
+      matador: m.matador || '', vitima: m.vitima,
+      canalMatador: m.canalMatador || null, canalVitima: m.canalVitima || null,
+      fonte: m.fonte ?? null,
+    }));
+    const povs = [];
+    for (const morte of mortes) {
+      let outro = null;
+      let relacao = '';
+      let pessoa = '';
+      if (morte.canalMatador === canal && morte.canalVitima && morte.canalVitima !== canal) {
+        outro = morte.canalVitima;
+        relacao = 'vitima';
+        pessoa = morte.vitima;
+      } else if (morte.canalVitima === canal && morte.canalMatador && morte.canalMatador !== canal) {
+        outro = morte.canalMatador;
+        relacao = 'matou';
+        pessoa = morte.matador;
+      }
+      if (outro && noAr.includes(outro) && !povs.some((p) => p.canal === outro)) {
+        povs.push({ canal: outro, relacao, pessoa });
+      }
+    }
+    // Sugestão visual (kill com vítima sem morte confirmada): só as do próprio protagonista, só com o VOD dela no ar,
+    // e nunca sobre um canal que já é morte real (esse fica como morte). Não vira morte, nem nome, nem causa.
+    for (const s of l.povsSugeridos || []) {
+      if (s?.canal !== canal) continue;
+      for (const v of s.vitimas || []) {
+        if (typeof v !== 'string' || !v || v === canal || !noAr.includes(v) || povs.some((p) => p.canal === v)) continue;
+        povs.push({ canal: v, relacao: '', pessoa: '', origem: 'video' });
+      }
+    }
     if (mortes.length) tipos.push('morte');
     const forte = tipos.some((x) => x !== 'chat') || l.kills > 0 || l.voce > 0;
     let deMs = forte ? l.ms - ANTES_MS : l.ms - CHAT_ANTES_MS;
@@ -236,8 +276,9 @@ export function lancesParaLista(lances = [], { mensagens = new Map() } = {}) {
     const falha = !forte && partesDeFalha(mensagens.get(canal) || [], l.ms) >= 0.3;
     const pontos = (l.pontos || 0) * (falha ? 0.3 : 1);
     itens.push({
-      ms: l.ms, deMs: Math.round(deMs), ateMs: Math.round(ateMs), tipos, pontos, falha, canal, doEvento: true,
-      mortes, outros: (l.canais || []).filter((c) => c !== canal),
+      ms: l.ms, deMs: Math.round(deMs), ateMs: Math.round(ateMs), tipos, pontos, falha, canal,
+      meuPov: Boolean(principal), doEvento: true,
+      mortes, povs, outros: noAr.filter((c) => c !== canal),
       tiros: sons.tiros?.length || 0,
       nota: pontos >= MUITO_BOM_EVENTO ? 'muitoBom' : pontos >= BOM_EVENTO ? 'bom' : 'talvez',
     });
@@ -302,4 +343,20 @@ export function guardarUltimo(armazem, ultimo) {
     if (ultimo) armazem.setItem(CHAVE_ULTIMO, JSON.stringify({ slug: ultimo.slug, inicio: ultimo.inicio }));
     else armazem.removeItem(CHAVE_ULTIMO);
   } catch { /* janela privada */ }
+}
+
+/**
+ * Um canal, uma opção de POV. Fica a primeira entrada (a morte vem antes: relação e pessoa), mas o desvio de áudio
+ * MEDIDO (`desvioS` finito) de outra entrada do mesmo canal não se perde — senão a opção por morte apaga o ajuste.
+ * Sem canal, a entrada sai (não há como abrir o POV).
+ */
+export function fundirPovsPorCanal(opcoes) {
+  const porCanal = new Map();
+  for (const p of opcoes || []) {
+    if (!p || !p.canal) continue;
+    const atual = porCanal.get(p.canal);
+    if (!atual) { porCanal.set(p.canal, { ...p }); continue; }
+    if (!Number.isFinite(atual.desvioS) && Number.isFinite(p.desvioS)) atual.desvioS = p.desvioS;
+  }
+  return [...porCanal.values()];
 }

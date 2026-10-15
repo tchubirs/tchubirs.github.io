@@ -362,7 +362,9 @@ export function zonaSegura(alvo = RETRATO, zona = ZONA_TIKTOK) {
 
 /** O que o browser DIZ que sabe gravar. */
 export function melhorFormato(MR = globalThis.MediaRecorder) {
-  if (!MR?.isTypeSupported) return null;
+  if (!MR) return null;
+  // O primeiro MediaRecorder do Safari grava MP4, mas não expõe esta consulta.
+  if (typeof MR.isTypeSupported !== 'function') return 'video/mp4';
   return FORMATOS.find((t) => MR.isTypeSupported(t)) || null;
 }
 
@@ -398,7 +400,7 @@ const provados = new WeakMap();
  */
 export async function formatoQueFunciona(opcoes = {}) {
   const MR = opcoes.MR === undefined ? globalThis.MediaRecorder : opcoes.MR;
-  if (!MR?.isTypeSupported) return null;
+  if (typeof MR !== 'function') return null;
   if (!provados.has(MR)) provados.set(MR, provarFormatos({ ...opcoes, MR }));
   const tipo = await provados.get(MR);
   // Um "nenhum" não fica guardado: pode ter sido um acaso (um separador em
@@ -412,11 +414,14 @@ async function provarFormatos({
   criarTela = () => document.createElement('canvas'),
   msPorTentativa = 500,
 } = {}) {
-  for (const tipo of FORMATOS) {
-    if (!MR.isTypeSupported(tipo)) continue;
+  const candidatos = typeof MR.isTypeSupported === 'function' ? FORMATOS : ['video/mp4'];
+  for (const tipo of candidatos) {
+    if (MR.isTypeSupported && !MR.isTypeSupported(tipo)) continue;
     let pincel = null;
     let fluxo = null;
     let audio = null;
+    let gravador = null;
+    let limite = null;
     try {
       const tela = criarTela();
       tela.width = 320; tela.height = 180;
@@ -432,22 +437,36 @@ async function provarFormatos({
         const Ctx = globalThis.AudioContext || globalThis.webkitAudioContext;
         if (Ctx) {
           audio = new Ctx();
-          const saida = audio.createMediaStreamDestination();
-          audio.createConstantSource().connect(saida);
-          for (const f of saida.stream.getAudioTracks()) fluxo.addTrack(f);
+          if (audio.state === 'suspended') {
+            await Promise.race([audio.resume?.(), new Promise((ok) => setTimeout(ok, 200))]);
+          }
+          // Uma faixa de um contexto suspenso nunca entrega amostras. No
+          // WebKit isso pode impedir também a saída dos frames de vídeo.
+          if (audio.state !== 'suspended' && audio.state !== 'interrupted') {
+            const saida = audio.createMediaStreamDestination();
+            const fonte = audio.createConstantSource();
+            if (fonte.offset) fonte.offset.value = 0;
+            fonte.connect(saida);
+            fonte.start?.();
+            for (const f of saida.stream.getAudioTracks()) fluxo.addTrack(f);
+          }
         }
       } catch { /* sem áudio de teste: fica a prova de vídeo, como era */ }
       const g = new MR(fluxo, { mimeType: tipo });
+      gravador = g;
       let bytes = 0;
       g.ondataavailable = (e) => { bytes += e.data?.size || 0; };
       const parou = new Promise((ok) => {
         g.onstop = ok;
+        g.onerror = ok;
         // Rede de segurança: um gravador que nunca pára não pode prender a
         // página inteira à espera dele.
-        setTimeout(ok, msPorTentativa * 4);
+        limite = setTimeout(ok, msPorTentativa * 4);
       });
       // Uma tela que não muda pode não produzir frame nenhum: pintar mexe nela.
       let n = 0;
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, 320, 180);
       pincel = setInterval(() => {
         ctx.fillStyle = (n++ % 2) ? '#000' : '#fff';
         ctx.fillRect(0, 0, 320, 180);
@@ -456,6 +475,8 @@ async function provarFormatos({
       await new Promise((k) => setTimeout(k, msPorTentativa));
       if (g.state !== 'inactive') g.stop();
       await parou;
+      // O nível H.264 anunciado pelo gravador de 320x180 pode ser baixo
+      // demais para o clipe de 1080x1920. Reusar o pedido, não esse nível.
       if (bytes > 0) return tipo;
     } catch {
       /* o próximo */
@@ -464,6 +485,8 @@ async function provarFormatos({
       // rebente saltava a limpeza, e cada formato recusado deixava uma faixa
       // de captura e um contexto de áudio vivos até a página fechar.
       if (pincel) clearInterval(pincel);
+      clearTimeout(limite);
+      if (gravador && gravador.state !== 'inactive') gravador.stop();
       for (const f of fluxo?.getTracks?.() || []) f.stop?.();
       await audio?.close?.()?.catch?.(() => {});
     }
@@ -473,6 +496,198 @@ async function provarFormatos({
 
 /** A extensão que combina com o tipo. */
 export const extensaoDe = (tipo) => (String(tipo).startsWith('video/mp4') ? 'mp4' : 'webm');
+
+function semSom(causa) {
+  return Object.assign(new Error('o vídeo não tem uma faixa de áudio para gravar'), {
+    name: 'SEM-SOM', cause: causa || undefined,
+  });
+}
+
+const contextosDeSom = new WeakMap();
+const fontesDeSom = new WeakMap();
+
+/** Chamar no toque do botão, antes de esperar downloads, para liberar o áudio no iPhone. */
+export function prepararSomDaGravacao({ Contexto = globalThis.AudioContext || globalThis.webkitAudioContext } = {}) {
+  if (typeof Contexto !== 'function') return Promise.resolve(false);
+  let contexto = contextosDeSom.get(Contexto);
+  try {
+    if (!contexto || contexto.state === 'closed') {
+      contexto = new Contexto();
+      contextosDeSom.set(Contexto, contexto);
+    }
+    if (contexto.state === 'running') return Promise.resolve(true);
+    // resume() precisa acontecer ainda no gesto, mesmo que sua promessa demore.
+    const retomado = contexto.resume();
+    return new Promise((ok) => {
+      const limite = setTimeout(() => ok(contexto.state === 'running'), 500);
+      Promise.resolve(retomado).then(() => {
+        clearTimeout(limite);
+        ok(contexto.state === 'running');
+      }, () => { clearTimeout(limite); ok(false); });
+    });
+  } catch {
+    return Promise.resolve(false);
+  }
+}
+
+async function capturarSomPeloElemento(video, { esperaMs, sinal, Contexto }) {
+  if (!await prepararSomDaGravacao({ Contexto })) throw semSom();
+  if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
+  const contexto = contextosDeSom.get(Contexto);
+  let entrada = fontesDeSom.get(video);
+  if (!entrada) {
+    const fonte = contexto.createMediaElementSource(video);
+    const monitor = contexto.createGain();
+    fonte.connect(monitor);
+    monitor.connect(contexto.destination);
+    entrada = { fonte, monitor };
+    fontesDeSom.set(video, entrada);
+  }
+  const destino = contexto.createMediaStreamDestination();
+  const medidor = contexto.createAnalyser();
+  medidor.fftSize = 256;
+  entrada.fonte.connect(destino);
+  entrada.fonte.connect(medidor);
+  const volume = video.volume;
+  const mudo = video.muted;
+  entrada.monitor.gain.value = 0;
+  // O volume zero usado para silenciar os vídeos de exportação também zera
+  // MediaElementAudioSource. O monitor é quem os silencia durante a captura.
+  video.muted = false;
+  video.volume = 1;
+  let fechou = false;
+  const fechar = () => {
+    if (fechou) return;
+    fechou = true;
+    entrada.fonte.disconnect(destino);
+    entrada.fonte.disconnect(medidor);
+    for (const faixa of destino.stream.getTracks()) faixa.stop();
+    video.volume = volume;
+    video.muted = mudo;
+    entrada.monitor.gain.value = 1;
+  };
+  try {
+    await video.play();
+    // HLS nativo e mídia sem CORS podem produzir uma faixa viva com zeros.
+    // Só entregamos a captura quando ela realmente fornece áudio.
+    const amostras = new Float32Array(medidor.fftSize);
+    const ate = performance.now() + esperaMs;
+    do {
+      if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
+      if (contexto.state !== 'running') throw semSom();
+      medidor.getFloatTimeDomainData(amostras);
+      if (amostras.some((valor) => Math.abs(valor) > 0.00001)) {
+        const faixas = destino.stream.getAudioTracks().filter((f) => f.readyState !== 'ended');
+        if (!faixas.length) throw semSom();
+        return { stream: destino.stream, faixas, fechar, contexto };
+      }
+      await new Promise((ok) => setTimeout(ok, 25));
+    } while (performance.now() < ate);
+    throw semSom();
+  } catch (e) {
+    fechar();
+    throw e.name === 'AbortError' || e.name === 'SEM-SOM' ? e : semSom(e);
+  }
+}
+
+async function capturarSomPeloArquivo(video, { arquivoSom, sinal, Contexto }) {
+  if (!await prepararSomDaGravacao({ Contexto })) throw semSom();
+  const contexto = contextosDeSom.get(Contexto);
+  let buffer;
+  try {
+    buffer = await contexto.decodeAudioData(await arquivoSom.arrayBuffer());
+  } catch (e) { throw semSom(e); }
+  if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
+  if (!buffer.numberOfChannels || !buffer.length || contexto.state !== 'running') throw semSom();
+  const destino = contexto.createMediaStreamDestination();
+  let fonte = null;
+  let fechado = false;
+  const parar = () => {
+    if (!fonte) return;
+    fonte.stop();
+    fonte.disconnect();
+    fonte = null;
+  };
+  const tocar = () => {
+    parar();
+    if (fechado || video.paused || video.seeking || video.ended) return;
+    const posicao = Math.max(0, video.currentTime);
+    if (posicao >= buffer.duration) return;
+    fonte = contexto.createBufferSource();
+    fonte.buffer = buffer;
+    fonte.connect(destino);
+    fonte.start(0, posicao);
+  };
+  const ouvir = { play: tocar, playing: tocar, seeked: tocar, pause: parar, seeking: parar, waiting: parar, ended: parar };
+  const fechar = () => {
+    if (fechado) return;
+    fechado = true;
+    parar();
+    for (const [nome, fn] of Object.entries(ouvir)) video.removeEventListener(nome, fn);
+    sinal?.removeEventListener('abort', fechar);
+    for (const faixa of destino.stream.getTracks()) faixa.stop();
+  };
+  for (const [nome, fn] of Object.entries(ouvir)) video.addEventListener(nome, fn);
+  sinal?.addEventListener('abort', fechar, { once: true });
+  // O vídeo continua mudo: o AAC é lido do MP4 já baixado. Isso evita a
+  // restrição de autoplay ao desmutar um vídeo depois do download no iPhone.
+  tocar();
+  return { stream: destino.stream, faixas: destino.stream.getAudioTracks(), fechar, contexto };
+}
+
+/**
+ * Captura a faixa de áudio do vídeo, esperando a faixa quando o browser a
+ * publica só depois de começar a tocar. A gravação vertical usa `exigirSom`;
+ * os chamadores que aceitam vídeo mudo podem deixar a opção desligada.
+ */
+export async function capturarSom(video, {
+  esperaMs = 1000, sinal, arquivoSom, Contexto = globalThis.AudioContext || globalThis.webkitAudioContext,
+} = {}) {
+  if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
+  if (arquivoSom) return await capturarSomPeloArquivo(video, { arquivoSom, sinal, Contexto });
+  if (!video.captureStream && !video.mozCaptureStream) {
+    return await capturarSomPeloElemento(video, { esperaMs, sinal, Contexto });
+  }
+  let stream;
+  try {
+    stream = video.captureStream?.() || video.mozCaptureStream?.();
+  } catch (e) {
+    throw semSom(e);
+  }
+  const faixas = () => (stream?.getAudioTracks?.() || []).filter((f) => f.readyState !== 'ended');
+  if (faixas().length) return { stream, faixas: faixas() };
+  if (!stream?.addEventListener) throw semSom();
+
+  return await new Promise((resolve, reject) => {
+    let acabou = false;
+    const limpar = () => {
+      clearTimeout(relogio);
+      stream.removeEventListener?.('addtrack', ver);
+      sinal?.removeEventListener?.('abort', cancelar);
+    };
+    const terminar = (fn, valor) => {
+      if (acabou) return;
+      acabou = true;
+      limpar();
+      fn(valor);
+    };
+    const ver = () => {
+      const audio = faixas();
+      if (audio.length) terminar(resolve, { stream, faixas: audio });
+    };
+    const cancelar = () => {
+      for (const faixa of stream.getTracks?.() || []) faixa.stop?.();
+      terminar(reject, new DOMException('cancelado', 'AbortError'));
+    };
+    const relogio = setTimeout(() => {
+      for (const faixa of stream.getTracks?.() || []) faixa.stop?.();
+      terminar(reject, semSom());
+    }, esperaMs);
+    stream.addEventListener('addtrack', ver);
+    sinal?.addEventListener?.('abort', cancelar, { once: true });
+    ver();
+  });
+}
 
 /** Quanto a gravação espera que o salto do vídeo aterre (ver `gravar`). */
 export const ESPERA_PROCURA_MS = 15_000;
@@ -530,6 +745,7 @@ export function noSitio(video, { esperaMs = 2000 } = {}) {
  * @param {(p: {feito: number, total: number, emPausa?: boolean}) => void} [opcoes.aoProgresso]
  * @param {AbortSignal} [opcoes.sinal]
  * @param {Document} [opcoes.pagina] - quem diz se o separador está à vista
+ * @param {boolean} [opcoes.exigirSom] - recusa o arquivo quando não há faixa de áudio
  * @returns {Promise<{blob: Blob, tipo: string, extensao: string, gravadoS?: number}>}
  *   `gravadoS` só quando o vídeo do canal acabou antes do fim do clipe
  */
@@ -542,11 +758,13 @@ export async function gravar(video, {
   criarTela = () => document.createElement('canvas'),
   MR = globalThis.MediaRecorder,
   pagina = globalThis.document,
+  exigirSom = false,
+  arquivoSom,
   // A cadência da fonte (a da playlist da Kick). Sem ela, 30.
   fps: fpsPedido,
 } = {}) {
   if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
-  const tipo = formato || await formatoQueFunciona({ MR, criarTela });
+  let tipo = formato || await formatoQueFunciona({ MR, criarTela });
   if (!tipo) throw Object.assign(new Error('sem gravador'), { name: 'SEM-GRAVADOR' });
 
   const tela = criarTela();
@@ -560,6 +778,11 @@ export async function gravar(video, {
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
 
+  // O salto tem de aterrar antes de capturar o elemento. Em MSE/HLS, pedir a
+  // captura antes disso pode publicar primeiro só a faixa de vídeo.
+  await noSitio(video, { esperaMs: ESPERA_PROCURA_MS });
+  if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
+
   const fps = fpsDaFonte(fpsPedido);
   // Um frame por pincelada, pedido à mão (`requestFrame`), quando o browser sabe. Com `captureStream(fps)`
   // o Chrome atira fora o frame que chega antes de passar 1/fps desde o anterior, e o relógio de pintar
@@ -571,14 +794,12 @@ export async function gravar(video, {
   // O som vem do vídeo, quando o browser o deixa sair. Sem isto o retrato sai
   // mudo, e um clipe de Rust mudo não vale nada — o tiro É o clipe.
   let somDoVideo = null;
-  try {
-    somDoVideo = video.captureStream?.() || video.mozCaptureStream?.();
-    for (const faixa of somDoVideo?.getAudioTracks?.() || []) fluxo.addTrack(faixa);
-  } catch { /* sem som: o vídeo continua a valer, o silêncio não o impede */ }
+  let fecharSom = null;
   // As faixas de captura vivem até alguém as parar. Sem isto, cada 9:16
   // deixava uma tela de 1080x1920 e uma captura do vídeo presas na memória
   // até a página fechar, e numa montagem com quarenta kills isso acumulava.
   const soltarFaixas = () => {
+    fecharSom?.();
     for (const f of fluxo.getTracks?.() || []) f.stop?.();
     for (const f of somDoVideo?.getTracks?.() || []) f.stop?.();
   };
@@ -591,16 +812,7 @@ export async function gravar(video, {
 
   // O frame certo ANTES de medir seja o que for: `inicio` lido em cima de uma
   // procura a meio é a posição de onde ele veio, não a do início do clipe.
-  //
-  // Quinze segundos e não os dois de omissão: depois de um salto o vídeo tem
-  // de ir buscar um pedaço inteiro de 1080p60 (perto de 11 MB), e a menos de
-  // ~40 Mbit/s isso leva mais de dois segundos. Desistir aos dois gravava o
-  // frame velho, que é exactamente o lixo que esta espera existe para tirar.
-  await noSitio(video, { esperaMs: ESPERA_PROCURA_MS });
-  // Cancelado durante a espera: o ouvinte do `abort` só se pendura mais à
-  // frente, e um sinal que já disparou não volta a disparar para ninguém.
-  if (sinal?.aborted) { soltarFaixas(); throw new DOMException('cancelado', 'AbortError'); }
-  const inicio = video.currentTime;
+  let inicio = video.currentTime;
   // A conta dos frames: quantas vezes a tela foi pintada, contra quantas a duração gravada pedia.
   let desenhados = 0;
   let maiorFeitoS = 0;
@@ -683,7 +895,10 @@ export async function gravar(video, {
 
   let paradoDemais = false;
   const acabou = new Promise((ok, falha) => {
-    gravador.onstop = () => ok(new Blob(pedacos, { type: tipo }));
+    gravador.onstop = () => {
+      tipo = gravador.mimeType || tipo;
+      ok(new Blob(pedacos, { type: tipo }));
+    };
     gravador.onerror = (e) => falha(e.error || new Error('gravação falhou'));
   });
   sinal?.addEventListener('abort', () => {
@@ -753,6 +968,34 @@ export async function gravar(video, {
     // 0,27 s medidos no ficheiro dele. Uma pincelada antes de gravar custa um
     // frame e o clipe passa a começar na imagem certa.
     pincelar();
+    if (exigirSom) {
+      try {
+        // No Chrome a faixa de áudio de um elemento MSE pode nascer junto com a
+        // primeira reprodução. A tela já foi pintada para que o primeiro frame
+        // do arquivo continue sendo o certo, mesmo enquanto esperamos o som.
+        await video.play?.().catch?.(() => {});
+        const som = await capturarSom(video, { sinal, arquivoSom });
+        somDoVideo = som.stream;
+        fecharSom = som.fechar;
+        for (const faixa of som.faixas) fluxo.addTrack(faixa);
+        if (!(fluxo.getAudioTracks?.().length > 0)) throw semSom();
+        // A confirmação do som pode avançar o vídeo. Voltar ao começo evita
+        // perder o primeiro segundo do lance no arquivo exportado.
+        video.pause();
+        video.currentTime = inicio;
+        await noSitio(video, { esperaMs: ESPERA_PROCURA_MS });
+        if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
+        pincelar();
+      } catch (e) {
+        if (e.name === 'AbortError') throw e;
+        throw e.name === 'SEM-SOM' ? e : semSom(e);
+      }
+    } else {
+      try {
+        somDoVideo = video.captureStream?.() || video.mozCaptureStream?.();
+        for (const faixa of somDoVideo?.getAudioTracks?.() || []) fluxo.addTrack(faixa);
+      } catch { /* vídeo mudo é permitido pelos chamadores de teste */ }
+    }
     gravador.start();
     await video.play().catch(() => {});
     // Escondida enquanto o `play()` esperava: o vídeo e o gravador já estão em

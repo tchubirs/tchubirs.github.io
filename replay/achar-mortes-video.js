@@ -10,11 +10,11 @@
 //  - perto dos tiros achados primeiro (quem morre, morre a lutar), e o vídeo todo só a pedido;
 //  - o quadro nítido (1080p) só se pede onde já se viu uma tela de morte: 2 ou 3 quadros por morte.
 
-import { imagensDoTs } from './video-ts.js?v=7e158988ac';
+import { imagensDoTs } from './video-ts.js?v=01db2b72c7';
 import {
   medirTela, juntarTelas, caixaDoMatador, zonaDoNome, ampliacaoDoNome, nomeAPretoEBranco, escolherNome, msDoPts, limparNomeLido,
   ATRASO_DA_TELA_MS,
-} from './achar-mortes.js?v=7e158988ac';
+} from './achar-mortes.js?v=01db2b72c7';
 
 const LARGURA = 160;
 const ALTURA = 90;
@@ -81,7 +81,7 @@ export async function quadrosDoTs(ts, segs, { cadaMs = 500, aoQuadro, sinal } = 
   try { dec.close(); } catch { /* já fechado */ }
   await Promise.all(pendentes);
   if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
-  if (erro && !vistos) throw erro;
+  if (erro) throw erro;
   return vistos;
 }
 
@@ -150,7 +150,8 @@ export function estimarFalta({ feitoMs, totalMs, decorridoMs }) {
  * `abrirLeitor()` -> o leitor de texto de uma linha.
  * `telasDe(canal, deMs, ateMs, cadaMs)` (opcional): as imagens pequenas já prontas, [{ ms, pixeis }],
  *   em vez de baixar e descodificar (os testes, num Chromium sem H.264).
- * Devolve [{ canal, ms, matador, telaDeMs, telaAteMs, quadros }].
+ * Devolve { mortes: [{ canal, ms, matador, telaDeMs, telaAteMs, quadros }],
+ * concluidos: [{ canal, deMs, ateMs }] }, só com os pedaços que foram descodificados.
  */
 export async function procurarMortes({
   alvos, tsDe, vodEm, quadros, abrirLeitor, telasDe = null, sinal, aoProgresso = () => {},
@@ -160,6 +161,7 @@ export async function procurarMortes({
   for (const a of alvos || []) for (const [de, ate] of emPedacos(a.intervalos)) fila.push({ canal: a.canal, de, ate });
   const totalMs = fila.reduce((s, x) => s + (x.ate - x.de), 0);
   const acertos = new Map();
+  const concluidos = [];
   let feitoMs = 0;
   let bytes = 0;
   let imagens = 0;
@@ -180,27 +182,33 @@ export async function procurarMortes({
     while (i < fila.length) {
       if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
       const { canal, de, ate } = fila[i++];
+      let concluido = false;
       try {
+        let vistos = 0;
         if (telasDe) {
           // eslint-disable-next-line no-await-in-loop
           const lista = await telasDe(canal, de, ate, cadaMs);
           for (const q of lista || []) olhar(canal)(q);
-          imagens += (lista || []).length;
+          vistos = (lista || []).length;
         } else {
           // eslint-disable-next-line no-await-in-loop
           const baixado = await tsDe(canal, de, (ate - de) / 1000, { sinal, contador: (n) => { bytes += n; } });
           if (baixado) {
             // eslint-disable-next-line no-await-in-loop
-            imagens += await quadrosDoTs(baixado.ts, baixado.segs, {
+            vistos = await quadrosDoTs(baixado.ts, baixado.segs, {
               cadaMs, sinal, aoQuadro: (q) => { if (q.ms >= de && q.ms < ate) olhar(canal)(q); },
             });
           }
         }
+        imagens += vistos;
+        concluido = vistos > 0;
+        if (!concluido) falhados++;
       } catch (e) {
         if (e?.name === 'AbortError' || sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
         falhados++;
       }
       if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
+      if (concluido) concluidos.push({ canal, deMs: de, ateMs: ate });
       feitoMs += ate - de;
       contar();
     }
@@ -257,5 +265,5 @@ export async function procurarMortes({
     leitor?.fechar?.();
   }
   aoProgresso({ fase: 'fim', feitoMs, totalMs, bytes, imagens, falhados, mortes: saida.length });
-  return saida;
+  return { mortes: saida, concluidos };
 }

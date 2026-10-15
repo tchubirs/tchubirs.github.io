@@ -20,7 +20,7 @@
 //
 // A geometria (os ladrilhos, juntar os rostos, a caixa) é pura, para se testar sem navegador.
 
-import { proporcaoDoQuadro, limitar, encaixar, DIVISAO_OMISSAO } from './retrato.js?v=7e158988ac';
+import { proporcaoDoQuadro, limitar, encaixar, DIVISAO_OMISSAO } from './retrato.js?v=01db2b72c7';
 
 /** Quantos quadros se olham por canal. */
 export const QUADROS_POR_CANAL = 5;
@@ -475,15 +475,23 @@ export function abrirQuadrosEscondidos({ limiteMs = 15_000 } = {}) {
     return new Promise((pronto) => {
       const acabou = (ok) => {
         clearTimeout(t); clearInterval(vigia);
-        video.removeEventListener('seeked', ver); video.removeEventListener('loadeddata', ver);
+        video.removeEventListener('seeked', aoSalto); video.removeEventListener('loadeddata', ver);
         pronto(ok);
       };
-      function ver() { if (!video.seeking && video.readyState >= 2 && Math.abs(video.currentTime - tempoS) < 1) acabou(true); }
+      // Só vale com um 'seeked' DEPOIS de pedir o instante (ou quando o pedido já é o quadro atual): antes disso
+      // o vídeo ainda mostra o quadro anterior, que dentro de 1 s do pedido seria aceito por engano.
+      let saltou = false;
+      function ver() {
+        if (!saltou || video.seeking || video.readyState < 2) return;
+        if (Math.abs(video.currentTime - tempoS) <= 0.3) acabou(true);
+      }
+      function aoSalto() { saltou = true; ver(); }
       const t = setTimeout(() => acabou(false), limiteMs);
       const vigia = setInterval(() => { if (falhou || video.error) acabou(false); else ver(); }, 150);
-      video.addEventListener('seeked', ver);
+      video.addEventListener('seeked', aoSalto);
       video.addEventListener('loadeddata', ver);
       if (Math.abs(video.currentTime - tempoS) > 0.04) video.currentTime = tempoS;
+      else saltou = true; // já está no instante: não há seek a esperar
       ver();
     });
   }

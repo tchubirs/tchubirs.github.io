@@ -1,12 +1,12 @@
 import {
   medir, chao, impulsos, regioes, FPS, TAXA_TIROS, BLOCO_MS, REFRACTARIO_MS,
-} from './tiros.js?v=7e158988ac';
-import { recortar } from './aprender.js?v=7e158988ac';
-import { juntar as juntarIntervalos } from './ouvir.js?v=7e158988ac';
-import { medirGraves, explosoes as acharExplosoes, FPS as FPS_EXPLOSOES } from './explosoes.js?v=7e158988ac';
-import { medirAcertos, confirmarAcertos } from './acertos.js?v=7e158988ac';
-import { medirEspectro, cortarEsp, colarEsp, tirarAlertas, ondaDe, FPS_ESP } from './alertas.js?v=7e158988ac';
-import { medirVoz, gritos as acharGritos, normalDaVoz, FPS as FPS_GRITOS } from './gritos.js?v=7e158988ac';
+} from './tiros.js?v=01db2b72c7';
+import { recortar } from './aprender.js?v=01db2b72c7';
+import { juntar as juntarIntervalos } from './ouvir.js?v=01db2b72c7';
+import { medirGraves, explosoes as acharExplosoes, FPS as FPS_EXPLOSOES } from './explosoes.js?v=01db2b72c7';
+import { medirAcertos, confirmarAcertos } from './acertos.js?v=01db2b72c7';
+import { medirEspectro, cortarEsp, colarEsp, tirarAlertas, ondaDe, FPS_ESP } from './alertas.js?v=01db2b72c7';
+import { medirVoz, gritos as acharGritos, normalDaVoz, FPS as FPS_GRITOS } from './gritos.js?v=01db2b72c7';
 
 // Achar as kills sozinho — pela forca do som.
 //
@@ -268,6 +268,9 @@ export async function varrerNoite({
   const trechos = [];
   // O que ficou ouvido de facto (da memoria ou agora), para a faixa o mostrar mais escuro.
   const prontos = [];
+  // O que NENHUMA lacuna curta conseguiu completar (alvo tão pequeno que nem esticando chega ao mínimo pedível):
+  // fica por ouvir de verdade, e `cobreTudo` (simples.js) tem de saber disto — não é o mesmo que "ouvido".
+  const naoOuvidos = [];
   for (const [a, b] of alvos) {
     for (const e of guardadas) {
       const de = Math.max(a, e.de - nudgeMs);
@@ -280,8 +283,17 @@ export async function varrerNoite({
       }
     }
     for (const [x, y] of oQueFalta(a, b, cobertos)) {
-      if (y - x < MIN_PEDACO_MS && cobertos.length) { ouvidoMs += y - x; continue; }
-      for (let t = x; t < y; t += bocadoS * 1000) trechos.push([t, Math.min(y, t + bocadoS * 1000)]);
+      let [gx, gy] = [x, y];
+      if (gy - gx < MIN_PEDACO_MS && cobertos.length) {
+        // Lacuna curta: antes descartava-se calada (contava como "ouvida" sem nunca se pedir o som). Agora
+        // estica-se até ao mínimo que `somDoCanal` aceita, dentro do próprio alvo — é barato e fecha o buraco.
+        const falta = MIN_PEDACO_MS - (gy - gx);
+        gx = Math.max(a, gx - falta);
+        gy = Math.min(b, gx + MIN_PEDACO_MS);
+        gx = Math.max(a, gy - MIN_PEDACO_MS);
+        if (gy - gx < MIN_PEDACO_MS) { naoOuvidos.push([x, y]); ouvidoMs += y - x; continue; }
+      }
+      for (let t = gx; t < gy; t += bocadoS * 1000) trechos.push([t, Math.min(gy, t + bocadoS * 1000)]);
     }
   }
 
@@ -400,6 +412,10 @@ export async function varrerNoite({
     return {
       ouvido: null, candidatos: [], estouros: [], explosoes, explosoesTodas, alertasFora, gritos, gritosTodos, acertos, modelosAcerto, bytes, falhados, curva: new Float32Array(0),
       cobertura: juntarIntervalos(prontos), reaproveitadoMs,
+      // `alvos`: só o que existe de verdade no VOD (pecas já cruzadas); `disponivelMs`, a soma deles. Quem mede
+      // "cobriu tudo" tem de comparar contra isto, não contra a duração nominal da live (que pode ter buracos
+      // de queda que nunca vão existir para ouvir). `naoOuvidos`: lacunas tão curtas que nem esticar resolveu.
+      alvos, disponivelMs: totalMs, naoOuvidos,
     };
   }
 
@@ -495,6 +511,7 @@ export async function varrerNoite({
     curva: tudo,
     cobertura: juntarIntervalos(prontos),
     reaproveitadoMs,
+    alvos, disponivelMs: totalMs, naoOuvidos,
   };
 }
 

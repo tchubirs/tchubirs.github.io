@@ -21,7 +21,7 @@
 // a voz. É por isso que os do mesmo time vão à frente na fila
 // (`ordenarCandidatos`): é onde já se sabe que a resposta é boa.
 
-import { envolvente, desvio, TAXA } from './sinal.js?v=7e158988ac';
+import { envolvente, desvio, TAXA } from './sinal.js?v=01db2b72c7';
 
 /**
  * A partir desta força o som em comum basta para dizer "estava lá".
@@ -189,6 +189,13 @@ export const FORCA_SO = 6.5;
 export const JANELAS = 3;
 
 /**
+ * Quantos canais (cada um com as suas 3 janelas já resumidas) uma memória de
+ * busca guarda, em LRU. Cada entrada são 3 envolventes (Float32Array, algumas
+ * dezenas de KB no total) e meia dúzia de números — nunca PCM nem vídeo.
+ */
+export const LIMITE_MEMORIA = 256;
+
+/**
  * A decisão com várias janelas (`medicoes[0]` é a do lance; as outras, a de antes e a de depois, podem
  * faltar). Com uma janela só (ao vivo, a de depois ainda não existe e a de antes é de outro VOD) fica a
  * regra de uma janela (`classificar`).
@@ -224,10 +231,10 @@ export function decidir(medicoes) {
  * outros que estavam no ar naquele instante. Quem não estava no ar fica de
  * fora — não pode ter ouvido nada que se possa mostrar.
  *
- * A ordem é o que a pessoa vê primeiro. Cada candidato custa ~700 KB (dois
- * segmentos de 160p, MESMA-CENA.md) e ~0,1 s de contas (medido aqui: ~95 ms
- * por `envolvente` de 20 s em node 22). Os 500 de um evento são ~350 MB e
- * quase um minuto de contas; os 3 colegas de time aparecem nos primeiros
+ * A ordem é o que a pessoa vê primeiro. Cada candidato custa as 3 janelas de
+ * 20 s descarregadas (60 s de som; ver MESMA-CENA.md) e três `envolvente`
+ * (medido aqui: ~95 ms cada, em node 22). Os 500 de um evento são 500 dessas
+ * descargas e minutos de contas, sem memória; os 3 colegas de time aparecem nos primeiros
  * segundos, e são os que mais provavelmente estavam lá — e o único caso já
  * medido (ver o topo do ficheiro).
  *
@@ -307,6 +314,16 @@ export function ordenarCandidatos({ referencia, canais, timeDe = () => null, noA
  *   largados, e a procura rejeita logo com um AbortError. Sair do `for await`
  *   a meio (break) larga tudo da mesma maneira.
  *
+ * - `memoria` (opcional, um Map): as 3 janelas de cada canal, já resumidas,
+ *   por canal + `origem` + instante exacto + `janelaS`. Quem chama é dono do
+ *   Map e do seu âmbito (um evento = uma coleção de VODs). Só entra o que está
+ *   completo (as 3 janelas inteiras, com ou sem som); null, cortado, falho e
+ *   cancelado não entram. Um hit não pede som, mas passa pelas mesmas
+ *   verificações de cancelamento e pelas mesmas regras de janela e de som.
+ *   Limitado a `LIMITE_MEMORIA` entradas, em LRU.
+ * - `origem`: texto que entra na chave (por defeito ''). Muda-o para não
+ *   reutilizar entre fontes diferentes sob o mesmo Map.
+ *
  * Atira `REFERENCIA-SEM-SOM` quando a própria referência não tem som naquele
  * instante, ou só tem parte da janela: sem ela não há com que comparar, e 500
  * "sem-som" escondiam que o problema é um canal só. `SEM-DESCODIFICADOR` vindo
@@ -317,6 +334,7 @@ export function ordenarCandidatos({ referencia, canais, timeDe = () => null, noA
 export async function* procurarAngulos({
   quandoMs, referencia, candidatos, somDe,
   janelaS = JANELA_S, limiteS = 8, paralelos = 6, sinal,
+  memoria = null, origem = '',
 } = {}) {
   if (!Number.isFinite(quandoMs)) {
     throw new TypeError(`quandoMs tem de ser um instante em ms (veio ${quandoMs})`);
@@ -342,6 +360,9 @@ export async function* procurarAngulos({
   // 20 s ainda há medida, mas os limites 6 e 5 já não querem dizer o mesmo.
   if (!(janelaS >= JANELA_S)) {
     throw new RangeError(`janelaS tem de ser >= ${JANELA_S} s, onde os limites foram medidos (veio ${janelaS})`);
+  }
+  if (memoria != null && !(memoria instanceof Map)) {
+    throw new TypeError('memoria tem de ser um Map (ou nada)');
   }
   if (sinal?.aborted) throw cancelado();
 
@@ -387,35 +408,71 @@ export async function* procurarAngulos({
     // Três janelas seguidas de uma vez: a de antes, a do lance e a de depois (ver `decidir`). Uma
     // janela só enganava (teste real de 12/10: um falso "estava" e dois "não" de quem estava junto).
     const inicio = deMs - janelaS * 1000;
-    let somRef;
+
+    // A ordem das janelas no som pedido: 0 é a de antes, 1 a do lance, 2 a de depois.
+    const janelaDe = (som, k) => (som?.length ? fatia(som, k * n, (k + 1) * n) : null);
+    // Uma janela, em resumo: quantas amostras tem, se tem som, e a envolvente
+    // se é inteira e tem som (null nos outros casos, como antes).
+    const resumirJanela = (j) => {
+      const len = j?.length ?? 0;
+      const comSom = len > 0 && temSom(j);
+      return { len, comSom, env: len >= cheia && comSom ? envolvente(j) : null };
+    };
+    // Chave da memória: canal + origem + instante exacto + janelaS. Sem chave
+    // legível (um canal sem nome) não há memória para ele.
+    const chaveMemoria = (canal) => {
+      const k = chaveDoCanal(canal);
+      return typeof k === 'string' ? JSON.stringify([String(origem), k, inicio, janelaS]) : null;
+    };
+    // As três janelas de um canal, já resumidas. Com memória, um hit não pede
+    // som nem faz FFT; um miss pede, e só guarda se as três janelas vierem
+    // inteiras (com ou sem som). Cancelado não guarda nada. Guarda-se o
+    // resumo, nunca o PCM, e não se guarda promise: cada procura é dona de si.
+    const pedir = async (canal) => {
+      const chave = memoria ? chaveMemoria(canal) : null;
+      if (chave != null) {
+        const antes = memoria.get(chave);
+        if (antes) {
+          memoria.delete(chave);
+          memoria.set(chave, antes); // LRU: o que acabou de ser usado fica por último
+          if (parar) throw cancelado();
+          return antes;
+        }
+      }
+      const som = await somDe(canal, inicio, JANELAS * janelaS, { sinal: interno.signal });
+      if (parar) throw cancelado();
+      const janelas = [0, 1, 2].map((k) => resumirJanela(janelaDe(som, k)));
+      if (chave != null && janelas.every((j) => j.len >= cheia)) {
+        memoria.set(chave, janelas);
+        if (memoria.size > LIMITE_MEMORIA) memoria.delete(memoria.keys().next().value);
+      }
+      return janelas;
+    };
+
+    let refJanelas;
     try {
-      somRef = await contraOSinal(somDe(referencia, inicio, JANELAS * janelaS, { sinal: interno.signal }), sinal);
+      refJanelas = await contraOSinal(pedir(referencia), sinal);
     } catch (e) {
       if (e?.name === 'AbortError' || e?.name === 'SEM-DESCODIFICADOR') throw e;
       throw Object.assign(new Error(`a referência não se ouve naquele instante: ${e?.message ?? e}`), {
         name: 'REFERENCIA-SEM-SOM', cause: e,
       });
     }
-    // A ordem das janelas no som pedido: 0 é a de antes, 1 a do lance, 2 a de depois.
-    const janelaDe = (som, k) => (som?.length ? fatia(som, k * n, (k + 1) * n) : null);
-    const ref1 = janelaDe(somRef, 1);
-    if (!ref1?.length || !temSom(ref1)) {
+    const ref1 = refJanelas[1];
+    if (!ref1.comSom) {
       throw Object.assign(new Error('a referência não tem som naquele instante'), { name: 'REFERENCIA-SEM-SOM' });
     }
     // Cortada, a janela da referência punha TODOS os candidatos contra uma
     // medida onde o acaso passa de 6: uma lista cheia de "estava" falsos, sem
     // nada que o mostrasse. Melhor dizê-lo, e a página pede outro instante.
-    if (ref1.length < cheia) {
+    if (ref1.len < cheia) {
       throw Object.assign(new Error(
-        `a referência só tem ${segundos(ref1)} s de som naquele instante (a medida pede ${janelaS} s)`,
+        `a referência só tem ${segundos({ length: ref1.len })} s de som naquele instante (a medida pede ${janelaS} s)`,
       ), { name: 'REFERENCIA-SEM-SOM' });
     }
     // As envolventes da referência, por janela; null onde não há uma janela inteira com som (ao vivo, a
     // de depois ainda não foi gravada; no começo do VOD, a de antes não existe).
-    const envRef = [0, 1, 2].map((k) => {
-      const j = janelaDe(somRef, k);
-      return j && j.length >= cheia && temSom(j) ? envolvente(j) : null;
-    });
+    const envRef = refJanelas.map((j) => j.env);
 
     // ── os candidatos ─────────────────────────────────────────────────────
     const prontos = [];
@@ -436,22 +493,21 @@ export async function* procurarAngulos({
     // do lance cortada diz-se em `cortadaS`.
     const ouvir = async (canal) => {
       // O mesmo início e a mesma duração da referência: cada janela começa no mesmo instante do relógio.
-      const som = await somDe(canal, inicio, JANELAS * janelaS, { sinal: interno.signal });
-      if (parar) throw cancelado();
+      const janelas = await pedir(canal);
       const medicoes = [];
       let cortadaS = null;
       for (const k of [1, 0, 2]) {
-        const j = janelaDe(som, k);
-        if (!j?.length || !temSom(j) || !envRef[k]) { medicoes.push(null); continue; }
-        if (j.length < cheia) {
-          if (k === 1) cortadaS = segundos(j);
+        const j = janelas[k];
+        if (!j.len || !j.comSom || !envRef[k]) { medicoes.push(null); continue; }
+        if (j.len < cheia) {
+          if (k === 1) cortadaS = segundos({ length: j.len });
           medicoes.push(null);
           continue;
         }
         // (candidato, referência) e não ao contrário: assim o desvio positivo
         // quer dizer "o candidato chegou mais tarde", que é o que a página
         // aplica nele. Fixado por um teste com um atraso conhecido.
-        const m = desvio(envolvente(j), envRef[k], { limiteS });
+        const m = desvio(j.env, envRef[k], { limiteS });
         medicoes.push(m.desvioS == null ? null : { forca: m.forca, desvioS: m.desvioS });
       }
       return { medicoes, cortadaS };

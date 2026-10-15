@@ -20,7 +20,7 @@
 //
 // Nada aqui toca na página: os testes correm no Node, com quadros verdadeiros (test/telas-morte/).
 
-import { base } from './nomes.js?v=7e158988ac';
+import { base } from './nomes.js?v=01db2b72c7';
 
 // ── a tela de morte num quadro pequeno ────────────────────────────────────
 
@@ -224,6 +224,8 @@ export function morteDoVideo({ canal, ms, matador = '' }) {
     matador: matador || '',
     vitima: canal,
     origem: 'video',
+    // Leitura de TELA (vídeo), nunca log do servidor: titulo.js não a conta como prova de morte.
+    fonte: 'video',
     hora: {
       data: d.toISOString().slice(0, 10), h: d.getUTCHours(), m: d.getUTCMinutes(), s: d.getUTCSeconds(), absMs: Math.round(ms),
     },

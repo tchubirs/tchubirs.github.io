@@ -34,6 +34,9 @@ body {
   margin: 0;
   padding: var(--e5);
   background: var(--sup-0);
+  background-image: linear-gradient(90deg, var(--background-grid) 1px, transparent 1px),
+    linear-gradient(var(--background-grid) 1px, transparent 1px);
+  background-size: 64px 64px;
   color: var(--tinta);
   font: 400 var(--t-base)/var(--lh) var(--letra);
   font-feature-settings: 'ss02', 'cv05';
@@ -2971,6 +2974,10 @@ body.mesa #montagem .estadoAoVivo:empty { display: none; }
   .simples .simplesAcoes button { min-height: 36px; font-size: 14px; }
 }
 .simplesQuem { margin: 0; font-size: 20px; line-height: var(--lh-apertado); }
+.simplesMeuPov { display: grid; gap: var(--e2); max-width: 520px; }
+.simplesMeuPov label { font-size: var(--t-base); font-weight: 600; }
+.simplesMeuPov input { min-height: 44px; }
+.simplesMeuPov p { color: var(--tinta-2); font-size: var(--t-menor); overflow-wrap: anywhere; }
 .simplesProgresso { display: grid; gap: var(--e3); }
 .simplesEstado { margin: 0; line-height: var(--lh); }
 .simplesBarra, .simplesBarraClipe { width: 100%; height: 10px; accent-color: var(--acento); }
@@ -2991,6 +2998,8 @@ body.mesa #montagem .estadoAoVivo:empty { display: none; }
 .simples :is(.simplesQuem, .simplesMotivo, .simplesEstado, .simplesAviso, .simplesErro, .simplesSugestao b, .simplesBaixando) { overflow-wrap: anywhere; min-width: 0; }
 .simplesCartao, .simplesInfo { min-width: 0; }
 .simplesInfo { display: grid; gap: var(--e3); align-content: start; }
+/* Os dois agrupamentos dentro de .simplesInfo: só grids com o mesmo gap; no celular o empilhamento é o de sempre. */
+.simplesDetalhes, .simplesRodape { display: grid; gap: var(--e3); align-content: start; min-width: 0; }
 .simplesMotivo { margin: 0; font-size: 18px; font-weight: 600; line-height: var(--lh-apertado); }
 .simplesNota { display: inline-block; font-size: var(--t-base); padding: 2px 8px; border-radius: var(--r-redondo);
   margin-right: var(--e2); vertical-align: 2px; }
@@ -2999,6 +3008,23 @@ body.mesa #montagem .estadoAoVivo:empty { display: none; }
 .nota-talvez { background: var(--sup-3); color: var(--tinta-2); }
 .simplesStreamer { margin: 0; color: var(--tinta-2); font-size: var(--t-base); font-weight: 600; }
 .simplesTambem { margin: 0; color: var(--tinta-2); font-size: var(--t-base); overflow-wrap: anywhere; }
+.simplesPovs {
+  grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2) var(--e3);
+  min-width: 0; padding-top: var(--e3); border-top: 1px solid var(--linha);
+}
+.simplesPovsTitulo, .simplesPovEstado { margin: 0; color: var(--tinta-2); font-size: var(--t-base); }
+.simplesPovsTitulo { flex: 1 1 100%; color: var(--tinta); font-weight: 600; }
+.simplesPovOpcoes { flex: 1 1 100%; display: flex; flex-wrap: wrap; align-items: start; gap: var(--e2) var(--e3); min-width: 0; }
+.simplesPovOpcao { flex: 1 1 220px; display: grid; justify-items: start; gap: 2px; min-width: 0; }
+.simplesPovOpcao span { color: var(--tinta-3); font-size: var(--t-menor); overflow-wrap: anywhere; }
+.simples .simplesPovBotao, .simples .simplesPovBuscar {
+  min-height: 44px; max-width: 100%; padding-inline: var(--e3); font-size: 14px; white-space: normal; overflow-wrap: anywhere; text-align: left;
+}
+.simples .simplesPovBotao { background: var(--acento-eco); border-color: var(--acento); color: var(--tinta); }
+.simples .simplesPovBuscar { background: transparent; border-color: var(--linha-3); color: var(--tinta-2); }
+.simplesPovEstado { flex: 1 1 100%; overflow-wrap: anywhere; }
+#modalClipe .soVarios { max-width: 100%; min-height: 44px; white-space: normal; line-height: var(--lh-apertado); }
+#modalClipe .soVarios span { min-width: 0; }
 /* Não é botão: é a marca do fim da lista que, à vista, carrega mais cartões. */
 .simplesMais { width: 100%; height: 1px; padding: 0; border: 0; opacity: 0; pointer-events: none; }
 .simplesQuando, .simplesTalvezFalha { margin: 0; color: var(--tinta-2); font-size: var(--t-base); }
@@ -3111,8 +3137,22 @@ body.veioDaLista .voltarLista { display: inline-flex; white-space: nowrap; flex:
 /* PC: grade de cartões, três por linha, imagem em cima e uma fila só de botões pequenos. */
 @media (min-width: 900px) {
   .simples:has(.simplesTrabalho:not([hidden])) { max-width: 1200px; width: 100%; }
-  .simplesLista { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: var(--e4); align-items: start; }
-  .simplesCartao, .simplesCartao.comPrevia { grid-template-columns: minmax(0, 1fr); gap: var(--e3); padding: var(--e3); container-type: inline-size; }
+  .simplesLista { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: var(--e4); align-items: stretch; }
+  .simplesCartao, .simplesCartao.comPrevia { grid-template-columns: minmax(0, 1fr); gap: var(--e3); padding: var(--e3); }
+  /* Alinhamento por faixas (subgrid): cada cartão ocupa 4 linhas da lista — imagem, detalhes, rodapé (ações e estado) e
+     POV — e os cartões da mesma linha partilham essas faixas. A ordem visual é a ordem do DOM (sem order/display:contents).
+     Sem subgrid (browser antigo) o cartão fica uma coluna empilhada normal, com a mesma ordem. */
+  @supports (grid-template-rows: subgrid) {
+    .simplesCartao { grid-row: span 4; grid-template-rows: subgrid; }
+    .simplesCartao:not(:has(> .simplesPovs)) { padding-bottom: 0; }
+    .simplesFoto, .simplesPrevia { grid-row: 1; }
+    .simplesInfo { grid-row: 2 / span 2; grid-template-rows: subgrid; }
+    .simplesDetalhes { grid-row: 1; }
+    .simplesRodape { grid-row: 2; }
+    .simplesPovs { grid-row: 4; }
+    /* container-type no cartão tira o subgrid (o cartão deixa de ser subgrid). O container fica no rodapé, que tem a mesma largura de conteúdo. */
+    .simplesRodape { container-type: inline-size; }
+  }
   .simplesFoto::after { width: 64px; height: 64px; margin: -32px 0 0 -32px; font-size: 28px; border-width: 3px; padding-left: 5px; }
   .simplesBotoes { flex-wrap: nowrap; gap: var(--e2); }
   .simples .simplesBotoes button { min-height: 34px; font-size: 14px; padding-inline: var(--e3); white-space: nowrap; }
@@ -3135,7 +3175,7 @@ body.simplesGravando #modalClipe { opacity: 0 !important; pointer-events: none !
 #partilhar.soIcone { min-width: 40px; padding-inline: 0; justify-content: center; }
 /* Idioma: só a bandeira; a lista abre com bandeira e nome. */
 .idiomaBandeira { position: relative; flex: 0 0 auto; }
-.idiomaBotao { min-width: 44px; padding: 6px 8px; display: inline-grid; place-items: center; }
+.idiomaBotao { min-width: 44px; min-height: 44px; padding: 6px 8px; display: inline-grid; place-items: center; }
 .idiomaBandeira svg { width: 26px; height: 18px; display: block; border-radius: 2px; box-shadow: 0 0 0 1px rgb(255 255 255 / .15); }
 .idiomaLista { position: absolute; right: 0; top: calc(100% + 4px); z-index: 40; margin: 0; padding: 4px; list-style: none; min-width: 160px; background: var(--sup-3); border: 1px solid var(--linha-2); border-radius: var(--r-2); box-shadow: 0 8px 24px rgb(0 0 0 / .45); }
 .idiomaLista li { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--r-fio); cursor: pointer; color: var(--tinta); }
@@ -3243,3 +3283,8 @@ body.mesa .legendaCor .amostra.arco { background: conic-gradient(#ff6b6b, #ffd43
 .avisoGravando[hidden] { display: none; }
 .avisoGravando span { flex: 1 1 auto; min-width: 0; }
 .avisoGravando button { flex: none; min-height: 34px; }
+@media (pointer: coarse) {
+  /* `.noite` não existe (é `#noite`, select de verdade); `#partilhar.soIcone` precisa da classe
+     para bater a especificidade de `min-width: 40px` em `#partilhar.soIcone` (desktop, acima). */
+  #noite, #partilhar.soIcone, .simples .simplesFalaBotao { min-height: 44px; min-width: 44px; }
+}

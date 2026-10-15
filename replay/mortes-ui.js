@@ -11,17 +11,17 @@
 // servidor e os nomes do jogo sem canal. As mortes ficam só neste aparelho, por evento, como os lances
 // marcados e descartados; as que vão para a montagem viajam no link do projeto com as outras kills.
 
-import { t, tn } from './idiomas.js?v=7e158988ac';
-import { escapar } from './escapar.js?v=7e158988ac';
+import { t, tn } from './idiomas.js?v=01db2b72c7';
+import { escapar } from './escapar.js?v=01db2b72c7';
 import {
   lerMortes, horasDasMortes, casarMortes, nomesSemCanal, marcasDasMortes, juntarMortes, mortesParaGuardar,
   mortesGuardadas, fusoDoAparelho,
-} from './mortes.js?v=7e158988ac';
-import { lerApelidos, guardarApelidos, juntarApelidos } from './nomes.js?v=7e158988ac';
-import { morteDoVideo, juntarDoVideo, confirmarPeloTiro, janelasDosTiros } from './achar-mortes.js?v=7e158988ac';
-import { procurarMortes, podeDescodificar } from './achar-mortes-video.js?v=7e158988ac';
-import { abrirQuadros, abrirLeitor, podeLer } from './ler-tela.js?v=7e158988ac';
-import { juntar, tempoFalta } from './ouvir.js?v=7e158988ac';
+} from './mortes.js?v=01db2b72c7';
+import { lerApelidos, guardarApelidos, juntarApelidos } from './nomes.js?v=01db2b72c7';
+import { morteDoVideo, juntarDoVideo, confirmarPeloTiro, janelasDosTiros } from './achar-mortes.js?v=01db2b72c7';
+import { procurarMortes, podeDescodificar } from './achar-mortes-video.js?v=01db2b72c7';
+import { abrirQuadros, abrirLeitor, podeLer } from './ler-tela.js?v=01db2b72c7';
+import { juntar, tempoFalta } from './ouvir.js?v=01db2b72c7';
 
 const GUARDADO = 'povix.mortes';
 const MAX_EVENTOS = 30;
@@ -350,7 +350,7 @@ export function montarMortes({
     let falhados = 0;
     const leitor = podeLer() || window.__povixQuadros ? () => abrirLeitor({ modo: '7' }) : null;
     try {
-      await procurarMortes({
+      const { concluidos } = await procurarMortes({
         alvos,
         tsDe,
         vodEm,
@@ -378,8 +378,8 @@ export function montarMortes({
           refazer();
         },
       });
-      // Só o que acabou de ser olhado fica como olhado: um Parar a meio deixa tudo por olhar.
-      for (const a of alvos) st.varrido.set(a.canal, juntar([...(st.varrido.get(a.canal) || []), ...a.intervalos]));
+      // A falha de um pedaço não impede outra tentativa nem repete os que já deram certo.
+      for (const a of concluidos) st.varrido.set(a.canal, juntar([...(st.varrido.get(a.canal) || []), [a.deMs, a.ateMs]]));
       guardar();
       $('mortesEstado').textContent = (achadas ? tn(achadas, 'mortes.achadaUma', 'mortes.achadas') : t('mortes.nenhumaVideo'))
         + (falhados ? t('mortes.falhados', { n: falhados }) : '');

@@ -16,8 +16,8 @@
 //
 // Tudo aqui é conta, sem página: os testes correm em node.
 
-import { t, tn, idiomaActual } from './idiomas.js?v=7e158988ac';
-import { termosDoFiltro, momentosDePalavras } from './chat.js?v=7e158988ac';
+import { t, tn, idiomaActual } from './idiomas.js?v=01db2b72c7';
+import { termosDoFiltro, momentosDePalavras } from './chat.js?v=01db2b72c7';
 
 // Dois sinais a menos disto um do outro (de qualquer canal) são o mesmo lance.
 export const JUNTAR_MS = 60_000;
@@ -108,6 +108,8 @@ export function sinaisDoEvento({ marcas = new Map(), momentos = [], mensagens = 
     const morte = {
       id: m.id, matador: m.matador, vitima: m.vitima, canalMatador: m.canalMatador || null, canalVitima: m.canalVitima || null,
       ...(m.origem === 'video' ? { origem: 'video' } : {}),
+      // A proveniência como o produtor a deu (servidor = log lido; video = tela de morte). Sem default.
+      ...(m.fonte ? { fonte: m.fonte } : {}),
     };
     const msMatador = Number.isFinite(m.msMatador) ? m.msMatador : m.ms;
     if (m.canalMatador) sinais.push({ tipo: 'morte', canal: m.canalMatador, ms: msMatador, marca: `morte:${m.id}`, papel: 'matou', morte });
@@ -138,7 +140,13 @@ export function sinaisDoEvento({ marcas = new Map(), momentos = [], mensagens = 
     // Uma morte do servidor posta na montagem já conta como morte do servidor: não conta outra vez.
     const kill = m.origem !== 'servidor'
       && ((!m.auto && m.origem !== 'lances' && m.origem !== 'aovivo') || (Array.isArray(m.vitimas) && m.vitimas.length > 0));
-    if (kill) sinais.push({ tipo: 'kill', canal, ms: m.ms });
+    // As vítimas que a montagem já tem (slugs de canal, sem confirmação de morte) seguem com a kill como
+    // sugestão visual: não contam como kill, não mudam a nota, e não viram morte.
+    if (kill) {
+      const vitimas = [...new Set((Array.isArray(m.vitimas) ? m.vitimas : [])
+        .filter((v) => typeof v === 'string' && v && v !== canal))];
+      sinais.push({ tipo: 'kill', canal, ms: m.ms, ...(vitimas.length ? { vitimas } : {}) });
+    }
     if (!m.auto) continue;
     const tipos = new Set(m.tipos?.length ? m.tipos : [m.tipo]);
     const ateMs = Number.isFinite(m.combateAteMs) ? m.combateAteMs : m.ms;
@@ -208,8 +216,17 @@ export function resumirLance(grupo) {
   const kills = [];
   const marcasVoce = new Set();
   const mortes = new Map();
+  // Ligações sugestivas por canal de quem matou: vítimas sem confirmação (só para a tela, não entram na conta).
+  const sugeridos = new Map();
   for (const s of grupo.sinais) {
     const c = doCanal(s.canal);
+    if (s.tipo === 'kill' && Array.isArray(s.vitimas)) {
+      for (const v of s.vitimas) {
+        if (typeof v !== 'string' || !v || v === s.canal) continue;
+        if (!sugeridos.has(s.canal)) sugeridos.set(s.canal, new Set());
+        sugeridos.get(s.canal).add(v);
+      }
+    }
     if (s.tipo === 'voce') {
       // O ângulo que se estava a ver quando se marcou vai à frente: é ele que abre com o lance.
       c.voce = Math.max(c.voce || 0, s.principal ? 2 : 1);
@@ -277,6 +294,8 @@ export function resumirLance(grupo) {
     pedidosClip: pedidos,
     partes,
     pontos,
+    // Só existe quando há sugestão: { canal (quem matou), vitimas (slugs) }. Não altera nota nem partes.
+    ...(sugeridos.size ? { povsSugeridos: [...sugeridos].map(([canal, vs]) => ({ canal, vitimas: [...vs] })) } : {}),
   };
 }
 

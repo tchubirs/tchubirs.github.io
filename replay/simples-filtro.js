@@ -1,9 +1,9 @@
 // O filtro da lista simples (a do streamer e a do evento): as contas, sem tela. Consulta o que a lista já tem (as etiquetas
 // do índice em titulo.js e as falas lembradas em falas.js); não analisa nada de novo.
 
-import { t } from './idiomas.js?v=7e158988ac';
-import { etiquetasDoMomento, etiquetasFortes } from './titulo.js?v=7e158988ac';
-import { falouIsto } from './falas.js?v=7e158988ac';
+import { t } from './idiomas.js?v=01db2b72c7';
+import { etiquetasDoMomento, etiquetasParaFiltro, tirosConfirmado } from './titulo.js?v=01db2b72c7';
+import { falouIsto } from './falas.js?v=01db2b72c7';
 
 export const CHAVE_FILTRO = 'povix.simplesFiltro';
 /** Os tipos do filtro (o `tipo` da etiqueta) na ordem do painel. */
@@ -41,20 +41,29 @@ export function guardarFiltro(armazem, f) {
   } catch { /* janela privada */ }
 }
 
-/** Os segundos de tiros do momento (da luta ou do tiroteio), ou 0 quando não se sabe. */
+/** Os segundos de tiros do momento, só da luta CONFIRMADA (morte vinculada ao POV, ou contexto) — o mesmo
+ * combate que o filtro "Luta" casa; som sem confirmação não entra na duração mínima, mesmo com `durS` medido. */
 export function lutaDe(m) {
-  return etiquetasDoMomento(m).find((e) => e.tipo === 'tiros')?.durS || 0;
+  const etiquetas = etiquetasDoMomento(m);
+  const e = etiquetas.find((x) => x.tipo === 'tiros');
+  return e && tirosConfirmado(e, etiquetas) ? (e.durS || 0) : 0;
 }
 
 /**
  * `momentos` filtrados e na ordem do filtro. `falas(m)` devolve as linhas já lidas daquele momento (ou null): o filtro por
  * palavra só acha o que já tem texto. Momentos de clipe colado passam sem filtrar o tipo (não têm etiqueta).
+ *
+ * O filtro "Luta" (tipo `tiros`) significa combate CONFIRMADO do próprio jogador — não qualquer indício de som.
+ * Um cartão de som sem confirmação não casa esse filtro, mas continua na lista padrão (sem filtro nenhum
+ * marcado): o filtro não apaga candidato nenhum, só decide o que CASA a busca por "Luta".
  */
 export function aplicarFiltro(momentos, f, { falas = () => null } = {}) {
   const lista = momentos.filter((m) => {
     if (f.tipos.length) {
-      const fortes = etiquetasFortes(etiquetasDoMomento(m));
-      if (!f.tipos.some((tipo) => fortes.some((e) => e.tipo === tipo))) return false;
+      const etiquetas = etiquetasDoMomento(m);
+      const validas = etiquetasParaFiltro(etiquetas);
+      const casa = (tipo) => validas.some((e) => e.tipo === tipo && (tipo !== 'tiros' || tirosConfirmado(e, etiquetas)));
+      if (!f.tipos.some(casa)) return false;
     }
     if (f.notaMin && (RANK[m.nota] ?? 0) < RANK[f.notaMin]) return false;
     if (f.lutaMinS && lutaDe(m) < f.lutaMinS) return false;

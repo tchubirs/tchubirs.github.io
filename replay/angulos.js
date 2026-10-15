@@ -19,7 +19,9 @@
 // aí que um erro passa calado: meio pixel fora da fonte é uma barra preta na beira que ninguém vê na
 // pré-visualização.
 
-import { RETRATO, formatoQueFunciona, extensaoDe, noSitio, bitsDoVideo, fpsDaFonte, BITS_SOM } from './retrato.js?v=7e158988ac';
+import {
+  RETRATO, formatoQueFunciona, extensaoDe, noSitio, bitsDoVideo, fpsDaFonte, BITS_SOM, capturarSom,
+} from './retrato.js?v=01db2b72c7';
 
 /** O 16:9 do modo seguido. */
 export const DEITADO = Object.freeze({ largura: 1920, altura: 1080 });
@@ -102,29 +104,59 @@ export function somEm(plano, tS, somDe = 0) {
  * com uma rampa de 15 ms para a troca não estalar. Devolve null quando não há como (sem Web Audio, ou
  * um contexto que o navegador deixou parado): aí o clipe fica com o som de um ângulo só, como antes.
  */
-export async function misturador(videos, { Contexto = globalThis.AudioContext } = {}) {
+export async function misturador(videos, {
+  Contexto = globalThis.AudioContext || globalThis.webkitAudioContext, sinal, arquivosSom = [], exigirSom = false,
+} = {}) {
   if (typeof Contexto !== 'function') return null;
   let ctx = null;
+  let proprio = false;
+  let destino = null;
+  const capturas = [];
+  const nos = [];
+  let fechado = false;
+  const fechar = () => {
+    if (fechado) return;
+    fechado = true;
+    for (const n of nos) n.disconnect?.();
+    for (const s of capturas) {
+      if (s.fechar) s.fechar();
+      else for (const f of s.stream?.getTracks?.() || []) f.stop?.();
+    }
+    for (const f of destino?.stream.getAudioTracks() || []) f.stop?.();
+    if (proprio) ctx?.close?.();
+  };
   try {
-    ctx = new Contexto();
+    const entradas = [];
+    for (const [i, v] of videos.entries()) {
+      try {
+        const captura = await capturarSom(v, { sinal, Contexto, arquivoSom: arquivosSom[i] });
+        capturas.push(captura);
+        entradas.push(captura);
+      } catch (e) {
+        if (exigirSom || e.name === 'AbortError') throw e;
+        entradas.push(null);
+      }
+    }
+    if (!capturas.length) { fechar(); return null; }
+    // As capturas de MP4 usam o contexto já liberado pelo toque. Abrir
+    // outro aqui voltaria à restrição de áudio do Safari pós-download.
+    ctx = capturas.find((s) => s.contexto)?.contexto;
+    if (!ctx) { ctx = new Contexto(); proprio = true; }
     if (ctx.state === 'suspended') await Promise.race([ctx.resume?.(), new Promise((ok) => setTimeout(ok, 500))]);
-    if (ctx.state === 'suspended') { ctx.close?.(); return null; }
-    const destino = ctx.createMediaStreamDestination();
-    let entradas = 0;
-    const ganhos = videos.map((v) => {
+    if (ctx.state === 'suspended' || ctx.state === 'interrupted') { fechar(); return null; }
+    destino = ctx.createMediaStreamDestination();
+    const ganhos = entradas.map((s) => {
       const g = ctx.createGain();
       g.gain.value = 0;
       g.connect(destino);
-      try {
-        const fluxo = v.captureStream?.() || v.mozCaptureStream?.();
-        if (fluxo?.getAudioTracks?.().length) {
-          ctx.createMediaStreamSource(fluxo).connect(g);
-          entradas++;
-        }
-      } catch { /* este ângulo fica calado; os outros continuam */ }
+      nos.push(g);
+      if (s) {
+        const fonte = ctx.createMediaStreamSource(s.stream);
+        fonte.connect(g);
+        nos.push(fonte);
+      }
       return g;
     });
-    if (!entradas) { ctx.close?.(); return null; }
     let atual = -1;
     return {
       faixas: destino.stream.getAudioTracks(),
@@ -139,10 +171,11 @@ export async function misturador(videos, { Contexto = globalThis.AudioContext } 
         atual = i;
       },
       get atual() { return atual; },
-      fechar() { try { ctx.close?.(); } catch { /* já fechado */ } },
+      fechar,
     };
-  } catch {
-    try { ctx?.close?.(); } catch { /* nada */ }
+  } catch (e) {
+    fechar();
+    if (exigirSom || e.name === 'AbortError') throw e;
     return null;
   }
 }
@@ -209,12 +242,15 @@ export async function gravarAngulos(videos, {
   plano, mudo = false, somDe = 0, aoProgresso = () => {}, sinal, formato, fps: fpsPedido,
   criarTela = () => document.createElement('canvas'),
   MR = globalThis.MediaRecorder,
-  Contexto = globalThis.AudioContext,
+  Contexto = globalThis.AudioContext || globalThis.webkitAudioContext,
   aoSom = () => {},
+  exigirSom = false,
+  arquivosSom = [],
 } = {}) {
   if (!plano || !Array.isArray(videos) || videos.length < plano.canais.length) {
     throw new RangeError('falta um vídeo para cada ângulo do plano');
   }
+  if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
   const tipo = formato || await formatoQueFunciona({ MR, criarTela });
   if (!tipo) throw Object.assign(new Error('sem gravador'), { name: 'SEM-GRAVADOR' });
 
@@ -232,34 +268,58 @@ export async function gravarAngulos(videos, {
   const manual = typeof globalThis.CanvasCaptureMediaStreamTrack?.prototype?.requestFrame === 'function';
   const fluxo = tela.captureStream(manual ? 0 : fps);
   const faixaVideo = manual ? fluxo.getVideoTracks?.()[0] : null;
-  // A mistura só faz falta quando o som muda de ângulo durante o clipe: no seguido com mais de um.
-  const mistura = !mudo && plano.modo === 'seguido' && plano.canais.length > 1
-    ? await misturador(videos.slice(0, plano.canais.length), { Contexto }) : null;
-  let somAtual = -1;
-  const trocarSom = (tS) => {
-    if (!mistura) return;
-    const i = somEm(plano, tS, somDe);
-    if (i === somAtual) return;
-    somAtual = i;
-    mistura.ouvir(i);
-    try { aoSom(i, tS); } catch { /* só aviso */ }
-  };
-  if (mistura) {
-    for (const faixa of mistura.faixas) fluxo.addTrack(faixa);
-    trocarSom(0);
-  } else if (!mudo) {
-    try {
-      const i = videos[somDe] ? somDe : 0;
-      const v = videos[i];
-      const som = v.captureStream?.() || v.mozCaptureStream?.();
-      for (const faixa of som?.getAudioTracks?.() || []) fluxo.addTrack(faixa);
-      aoSom(i, 0);
-    } catch { /* sem som: o vídeo continua a valer */ }
-  }
+  let mistura = null;
+  let captura = null;
   try {
+    await Promise.all(videos.map((v) => noSitio(v, { esperaMs: 15000 })));
+    const inicios = videos.map((v) => v.currentTime);
+    // A mistura só faz falta quando o som muda de ângulo durante o clipe: no seguido com mais de um.
+    if (!mudo) await Promise.all(videos.map((v) => v.play?.().catch?.(() => {})));
+    mistura = !mudo && plano.modo === 'seguido' && plano.canais.length > 1
+      ? await misturador(videos.slice(0, plano.canais.length), { Contexto, sinal, arquivosSom, exigirSom }) : null;
+    let somAtual = -1;
+    const trocarSom = (tS) => {
+      if (!mistura) return;
+      const i = somEm(plano, tS, somDe);
+      if (i === somAtual) return;
+      somAtual = i;
+      mistura.ouvir(i);
+      try { aoSom(i, tS); } catch { /* só aviso */ }
+    };
+    if (mistura) {
+      for (const faixa of mistura.faixas) fluxo.addTrack(faixa);
+      trocarSom(0);
+    } else if (!mudo) {
+      try {
+        const i = videos[somDe] ? somDe : 0;
+        const v = videos[i];
+        const som = await capturarSom(v, { sinal, Contexto, arquivoSom: arquivosSom[i] });
+        captura = som;
+        for (const faixa of som.faixas) fluxo.addTrack(faixa);
+        aoSom(i, 0);
+      } catch (e) {
+        if (exigirSom) {
+          if (e.name === 'AbortError') throw e;
+          throw e.name === 'SEM-SOM' ? e
+          : Object.assign(new Error('o vídeo não tem uma faixa de áudio para gravar'), { name: 'SEM-SOM', cause: e });
+        }
+      }
+    }
+    if (!mudo && exigirSom && !(fluxo.getAudioTracks?.().length > 0)) {
+      throw Object.assign(new Error('o vídeo não tem uma faixa de áudio para gravar'), { name: 'SEM-SOM' });
+    }
+    // Conferir áudio toca os vídeos; todos voltam ao instante combinado
+    // antes de gravar, incluindo o canal cujo áudio foi conferido primeiro.
+    for (const [i, v] of videos.entries()) { v.pause(); v.currentTime = inicios[i]; }
+    await Promise.all(videos.map((v) => noSitio(v, { esperaMs: 15000 })));
+    if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
     return await gravarFluxo(videos, { plano, fluxo, tipo, ctx, sinal, aoProgresso, MR, trocarSom, fps, faixaVideo });
   } finally {
     mistura?.fechar();
+    if (captura?.fechar) captura.fechar();
+    else for (const f of captura?.stream.getTracks?.() || []) f.stop?.();
+    for (const v of videos) v.pause();
+    for (const faixa of fluxo.getTracks?.() || []) faixa.stop?.();
   }
 }
 
@@ -269,13 +329,15 @@ async function gravarFluxo(videos, { plano, fluxo, tipo, ctx, sinal, aoProgresso
   gravador.ondataavailable = (e) => { if (e.data?.size) pedacos.push(e.data); };
 
   await Promise.all(videos.map((v) => noSitio(v)));
+  if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
   const relogio = videos[0];
   const inicio = relogio.currentTime;
   let parar = false;
   let paradoDemais = false;
   let voltas = 0;
+  let ultimoS = inicio;
   let pincel = null;
-  const PARADO_MAX = 90; // 3 s sem o relógio andar
+  const PARADO_MAX = Math.round(3 * fps);
   const acabar = () => {
     parar = true;
     clearInterval(pincel);
@@ -287,36 +349,46 @@ async function gravarFluxo(videos, { plano, fluxo, tipo, ctx, sinal, aoProgresso
     desenharAngulos(ctx, videos, plano, feito);
     faixaVideo?.requestFrame?.();
     trocarSom(feito);
-    voltas = feito > 0.05 ? 0 : voltas + 1;
+    voltas = relogio.currentTime > ultimoS ? 0 : voltas + 1;
+    ultimoS = Math.max(ultimoS, relogio.currentTime);
     if (voltas > PARADO_MAX) { paradoDemais = true; acabar(); return; }
     aoProgresso({ feito, total: plano.duracaoS });
     if (feito >= plano.duracaoS) acabar();
   };
   const acabou = new Promise((ok, falha) => {
-    gravador.onstop = () => ok(new Blob(pedacos, { type: tipo }));
+    gravador.onstop = () => {
+      tipo = gravador.mimeType || tipo;
+      ok(new Blob(pedacos, { type: tipo }));
+    };
     gravador.onerror = (e) => falha(e.error || new Error('gravação falhou'));
   });
   sinal?.addEventListener('abort', acabar, { once: true });
 
   // A primeira imagem antes de o gravador arrancar: sem isto, os primeiros frames do ficheiro eram
   // pretos (o mesmo defeito que retrato.js já teve e mediu).
-  desenharAngulos(ctx, videos, plano, 0);
-  gravador.start();
-  await Promise.all(videos.map((v) => v.play().catch(() => {})));
-  pintar();
-  // Acorda mais vezes do que os frames e só pinta quando é a vez: um setInterval seco a 60 fps rende
-  // menos (os temporizadores do Windows acordam de 15,6 em 15,6 ms).
-  const periodo = 1000 / fps;
-  let proxima = performance.now() + periodo;
-  pincel = setInterval(() => {
-    const agora = performance.now();
-    if (agora < proxima - periodo * 0.04) return;
-    proxima = Math.max(proxima + periodo, agora - periodo * 0.5);
+  let blob;
+  try {
+    desenharAngulos(ctx, videos, plano, 0);
+    gravador.start();
+    await Promise.all(videos.map((v) => v.play().catch(() => {})));
     pintar();
-  }, Math.max(1, periodo / 8));
-  const blob = await acabou;
-  clearInterval(pincel);
-  for (const v of videos) v.pause();
+    // Acorda mais vezes do que os frames e só pinta quando é a vez: um setInterval seco a 60 fps rende
+    // menos (os temporizadores do Windows acordam de 15,6 em 15,6 ms).
+    const periodo = 1000 / fps;
+    let proxima = performance.now() + periodo;
+    pincel = setInterval(() => {
+      const agora = performance.now();
+      if (agora < proxima - periodo * 0.04) return;
+      proxima = Math.max(proxima + periodo, agora - periodo * 0.5);
+      pintar();
+    }, Math.max(1, periodo / 8));
+    blob = await acabou;
+  } finally {
+    clearInterval(pincel);
+    sinal?.removeEventListener('abort', acabar);
+    if (gravador.state !== 'inactive') gravador.stop();
+    for (const v of videos) v.pause();
+  }
   if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
   if (paradoDemais) throw Object.assign(new Error('o vídeo não andou'), { name: 'GRAVACAO-PARADA' });
   if (!blob.size) throw Object.assign(new Error('não saiu nada'), { name: 'GRAVACAO-VAZIA' });
