@@ -44,8 +44,9 @@ before(async () => {
 });
 
 after(async () => {
-  await navegador?.close();
   servidor?.close();
+  servidor?.closeAllConnections();
+  await navegador?.close();
 });
 
 // Dois canais na mesma noite, com inícios diferentes — que é o caso todo:
