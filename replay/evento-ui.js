@@ -12,27 +12,27 @@
 import {
   lerElenco, codificar, descodificar, contar, paraTexto, juntarElencos, paraArquivo, deArquivo, nomeDoArquivo,
   apelidosDoTexto,
-} from './elenco.js?v=3e31802471';
-import { montarNomesNaTela } from './nomes-ui.js?v=3e31802471';
-import { montarMortes } from './mortes-ui.js?v=3e31802471';
-import { carregarCanais, procurarAoVivo } from './carregar.js?v=3e31802471';
-import { escolherCaminho } from './portas.js?v=3e31802471';
+} from './elenco.js?v=b12996cf4f';
+import { montarNomesNaTela } from './nomes-ui.js?v=b12996cf4f';
+import { montarMortes } from './mortes-ui.js?v=b12996cf4f';
+import { carregarCanais, procurarAoVivo } from './carregar.js?v=b12996cf4f';
+import { escolherCaminho } from './portas.js?v=b12996cf4f';
 import {
   montarMapa, linhasVisiveis, tempoDoX, xDoTempo, zoom, oQueEstaAqui, filtrar, pintarMapa, ordenarFaixas, linhasDoTempo,
-} from './mapa.js?v=3e31802471';
-import { procurarAngulos, ordenarCandidatos, resumo } from './cena.js?v=3e31802471';
-import { lerMaster, lerPlaylist, procurarCanais, slugDoNome } from './kick.js?v=3e31802471';
-import { linhaDoCanal } from './relogio.js?v=3e31802471';
-import { somDoCanal, tsDoCanal } from './alinhar.js?v=3e31802471';
-import { t, tn, idiomaActual } from './idiomas.js?v=3e31802471';
-import { atalhos } from './atalhos.js?v=3e31802471';
-import { escapar } from './escapar.js?v=3e31802471';
-import { separarPorJogo } from './jogo.js?v=3e31802471';
-import { idDoCanal, mensagensEntre, calor, picos, segundoDoPico } from './chat.js?v=3e31802471';
-import { agendar } from './aovivo.js?v=3e31802471';
+} from './mapa.js?v=b12996cf4f';
+import { procurarAngulos, ordenarCandidatos, resumo } from './cena.js?v=b12996cf4f';
+import { lerMaster, lerPlaylist, procurarCanais, slugDoNome } from './kick.js?v=b12996cf4f';
+import { linhaDoCanal } from './relogio.js?v=b12996cf4f';
+import { somDoCanal, tsDoCanal } from './alinhar.js?v=b12996cf4f';
+import { t, tn, idiomaActual } from './idiomas.js?v=b12996cf4f';
+import { atalhos } from './atalhos.js?v=b12996cf4f';
+import { escapar } from './escapar.js?v=b12996cf4f';
+import { separarPorJogo } from './jogo.js?v=b12996cf4f';
+import { idDoCanal, mensagensEntre, calor, picos, segundoDoPico } from './chat.js?v=b12996cf4f';
+import { agendar } from './aovivo.js?v=b12996cf4f';
 import {
   normalDoChat, unirJanelas, sinaisDoEvento, melhoresLances, filtrarLances, motivoDoLance, contaDoLance, coincide,
-} from './melhores.js?v=3e31802471';
+} from './melhores.js?v=b12996cf4f';
 
 // Um canal ao vivo tem na lista um VOD de duração zero que vai crescendo. Até se pedir a lista outra
 // vez, o que ele já tem acaba "agora".

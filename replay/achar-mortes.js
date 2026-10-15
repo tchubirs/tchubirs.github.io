@@ -20,7 +20,7 @@
 //
 // Nada aqui toca na página: os testes correm no Node, com quadros verdadeiros (test/telas-morte/).
 
-import { base } from './nomes.js?v=3e31802471';
+import { base } from './nomes.js?v=b12996cf4f';
 
 // ── a tela de morte num quadro pequeno ────────────────────────────────────
 

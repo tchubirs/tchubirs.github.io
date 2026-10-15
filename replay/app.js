@@ -9,80 +9,80 @@ import './dicas.js';
 import {
   vodsDoCanal, lerMaster, lerPlaylist, procurarCanais, lerLinkKick, clipeDaKick, vodDaKick, DESCONHECIDO, slugDoNome,
   segmentosNaJanela,
-} from './kick.js?v=3e31802471';
+} from './kick.js?v=b12996cf4f';
 import {
   linhaDoCanal, janelaComum, onde, trechoComum, quantosNoAr, comNudge, paraLink, doLink, seguirAncora,
   passoDoArrasto, ARRASTO_INTERVALO_MS, ARRASTO_ESPERA_MS, vistaDaLinha, saiuDaVista,
   ZOOM_MIN_MS, larguraDoZoom, valorDoZoom, zoomEmVolta, andarVista,
-} from './relogio.js?v=3e31802471';
-import { cortarTodosOsAngulos } from './baixar.js?v=3e31802471';
-import { juntarMp4 } from './mp4.js?v=3e31802471';
-import { juntarGravados } from './juntar-gravados.js?v=3e31802471';
-import { instanteAoVivo, bordaAoVivo, medirAtraso, instantesAoVivo, ATRASO_PADRAO_MS } from './aovivo.js?v=3e31802471';
-import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=3e31802471';
-import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=3e31802471';
-import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=3e31802471';
+} from './relogio.js?v=b12996cf4f';
+import { cortarTodosOsAngulos } from './baixar.js?v=b12996cf4f';
+import { juntarMp4 } from './mp4.js?v=b12996cf4f';
+import { juntarGravados } from './juntar-gravados.js?v=b12996cf4f';
+import { instanteAoVivo, bordaAoVivo, medirAtraso, instantesAoVivo, ATRASO_PADRAO_MS } from './aovivo.js?v=b12996cf4f';
+import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=b12996cf4f';
+import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=b12996cf4f';
+import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=b12996cf4f';
 import {
   RETRATO, enquadramentoInicial, limitar, desenhar, gravar, formatoQueFunciona, extensaoDe, prepararSomDaGravacao,
   reformar, limparDivisao, DIVISAO_OMISSAO, divisaoDoQuadro, proporcaoDoQuadro, encaixar,
   MODELO_OMISSAO, limparModelo, paraFraccoes, deFraccoes, DEITADO, ZONA_TIKTOK,
-} from './retrato.js?v=3e31802471';
+} from './retrato.js?v=b12996cf4f';
 import {
   abrirDetector, abrirQuadrosEscondidos, procurarRosto, caixaDaWebcam, instantesDoClipe, degrauDoRosto,
   rostoGuardado, guardarRosto,
-} from './rosto.js?v=3e31802471';
+} from './rosto.js?v=b12996cf4f';
 import {
   limparChat, geometria as geometriaDoChat, desenharChat, mensagensDoClipe, prepararEmotes,
   VIDA_MAX_MS as VIDA_CHAT_MS, LETRA as LETRA_CHAT, retanguloDoChat, CHAT_OMISSAO,
-} from './chat-clipe.js?v=3e31802471';
-import { ligarCaixa, estiloDaCaixa } from './caixa-previa.js?v=3e31802471';
+} from './chat-clipe.js?v=b12996cf4f';
+import { ligarCaixa, estiloDaCaixa } from './caixa-previa.js?v=b12996cf4f';
 import {
   limparLegenda, limparTranscricao, geometriaLegenda, desenharLegenda, transcricaoDoAudio, textoDaLinha,
   editarLinha, apagarLinha, deslocarLinha, rotuloTempo, cobre, linhaNoInstante, PASSO_MS, fonteDe as fonteDaLegenda,
   idiomaParaOuvir, segurarMs, retanguloDaLegenda, LEGENDA_OMISSAO,
-} from './legenda.js?v=3e31802471';
-import { abrirVoz, somDosPedacos, degrauDoSom, estimativaS, faltaBaixar } from './legenda-voz.js?v=3e31802471';
-import { guardarFala, linhasDaTranscricao } from './falas.js?v=3e31802471';
-import { tituloDeDeteccao, confDoSom } from './titulo.js?v=3e31802471';
-import { podeLer } from './ler-tela.js?v=3e31802471';
-import { planoDeAngulos, gravarAngulos } from './angulos.js?v=3e31802471';
-import { agruparPorNoite, rotuloDaNoite, noiteParaAbrir } from './noites.js?v=3e31802471';
+} from './legenda.js?v=b12996cf4f';
+import { abrirVoz, somDosPedacos, degrauDoSom, estimativaS, faltaBaixar } from './legenda-voz.js?v=b12996cf4f';
+import { guardarFala, linhasDaTranscricao } from './falas.js?v=b12996cf4f';
+import { tituloDeDeteccao, confDoSom } from './titulo.js?v=b12996cf4f';
+import { podeLer } from './ler-tela.js?v=b12996cf4f';
+import { planoDeAngulos, gravarAngulos } from './angulos.js?v=b12996cf4f';
+import { agruparPorNoite, rotuloDaNoite, noiteParaAbrir } from './noites.js?v=b12996cf4f';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
   alternarVitima, filtrar, temMorte, clipesDoMomento, comAjuste, numeroNaMontagem,
   ajusteDe, ajustesQueContam, momentosParaLink, momentosDoLink, comVitimaEscrita, semVitimaEscrita,
-} from './momentos.js?v=3e31802471';
-import { lerApelidos } from './nomes.js?v=3e31802471';
+} from './momentos.js?v=b12996cf4f';
+import { lerApelidos } from './nomes.js?v=b12996cf4f';
 import {
   planearCorte, executarCorte, nomeDoFicheiro, largarOQueNaoServe, oQueFalta,
-} from './baixar.js?v=3e31802471';
-import { criarZip, crc32 } from './zip.js?v=3e31802471';
-import { retencaoDoCanal, prazoDoVod, ordemDeGuardar } from './prazo.js?v=3e31802471';
-import { eDoJogo } from './jogo.js?v=3e31802471';
-import { fcpxmlMulticam, textoDoPacote, linkDoVod } from './pacote.js?v=3e31802471';
-import { queFazerComOLeitor, limitarSaltos } from './leitor.js?v=3e31802471';
-import { criarApanhador } from './frames.js?v=3e31802471';
-import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=3e31802471';
-import { alertasDoCanal } from './alertas.js?v=3e31802471';
+} from './baixar.js?v=b12996cf4f';
+import { criarZip, crc32 } from './zip.js?v=b12996cf4f';
+import { retencaoDoCanal, prazoDoVod, ordemDeGuardar } from './prazo.js?v=b12996cf4f';
+import { eDoJogo } from './jogo.js?v=b12996cf4f';
+import { fcpxmlMulticam, textoDoPacote, linkDoVod } from './pacote.js?v=b12996cf4f';
+import { queFazerComOLeitor, limitarSaltos } from './leitor.js?v=b12996cf4f';
+import { criarApanhador } from './frames.js?v=b12996cf4f';
+import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=b12996cf4f';
+import { alertasDoCanal } from './alertas.js?v=b12996cf4f';
 import {
   ESPERTO_A_PARTIR_MS, janelasDosPicos, msPorOuvir, somaMs, juntar, eMuito, estimarFalta, tempoFalta,
-} from './ouvir.js?v=3e31802471';
-import { TAXA_TIROS } from './tiros.js?v=3e31802471';
-import { termosDoFiltro, momentosDePalavras } from './chat.js?v=3e31802471';
-import { SENSIBILIDADES_DETECAO, opcoesDaSensibilidade, juntarProximos } from './lances.js?v=3e31802471';
-import { parecidos, juntarPerto } from './aprender.js?v=3e31802471';
-import { somDoCanal } from './alinhar.js?v=3e31802471';
+} from './ouvir.js?v=b12996cf4f';
+import { TAXA_TIROS } from './tiros.js?v=b12996cf4f';
+import { termosDoFiltro, momentosDePalavras } from './chat.js?v=b12996cf4f';
+import { SENSIBILIDADES_DETECAO, opcoesDaSensibilidade, juntarProximos } from './lances.js?v=b12996cf4f';
+import { parecidos, juntarPerto } from './aprender.js?v=b12996cf4f';
+import { somDoCanal } from './alinhar.js?v=b12996cf4f';
 import {
   MAXIMO_S, mover, janelaInicial, nomeDoClipe, posicaoDaCabeca, dentroDosLimites, duracaoCurta,
-} from './clipe.js?v=3e31802471';
-import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=3e31802471';
-import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=3e31802471';
-import { escapar } from './escapar.js?v=3e31802471';
-import { montarEvento, rotuloDoDia } from './evento-ui.js?v=3e31802471';
-import { montarPortas } from './portas.js?v=3e31802471';
-import { montarSimples, modoSimples } from './simples.js?v=3e31802471';
-import { atalhos, ACAO, comboDoEvento, partes } from './atalhos.js?v=3e31802471';
-import { montarPainelAtalhos, pintarDicas } from './atalhos-painel.js?v=3e31802471';
+} from './clipe.js?v=b12996cf4f';
+import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=b12996cf4f';
+import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=b12996cf4f';
+import { escapar } from './escapar.js?v=b12996cf4f';
+import { montarEvento, rotuloDoDia } from './evento-ui.js?v=b12996cf4f';
+import { montarPortas } from './portas.js?v=b12996cf4f';
+import { montarSimples, modoSimples } from './simples.js?v=b12996cf4f';
+import { atalhos, ACAO, comboDoEvento, partes } from './atalhos.js?v=b12996cf4f';
+import { montarPainelAtalhos, pintarDicas } from './atalhos-painel.js?v=b12996cf4f';
 
 /* Os glifos dos controlos do vídeo são DESENHO e não emoji.
    Um ⏸ ou um 🔇 sai diferente em cada sistema — no iPhone sai a cores, no
@@ -8835,10 +8835,33 @@ async function abrirLanceDoEvento(canais, ms, foco, {
 }
 
 async function abrirPovsParaSimples({ canais, ms, foco, ajustes = {} }) {
-  if (!Array.isArray(canais) || canais.length < 2 || !Number.isFinite(ms) || !foco) return false;
+  // Entrada validada antes de tocar na grelha: nomes válidos, >= 2 canais únicos por slug, foco entre eles.
+  if (!Array.isArray(canais) || !Number.isFinite(ms)) return false;
+  if (canais.some((c) => typeof c !== 'string' || !slugDoNome(c))) return false;
+  const unicos = [...new Set(canais.map(slugDoNome))];
+  const f = typeof foco === 'string' ? slugDoNome(foco) : '';
+  if (unicos.length < 2 || !f || !unicos.includes(f)) return false;
   if (evento.povsLiberados(ms).liberado === false) return false;
-  await abrirLanceDoEvento(canais, ms, foco, { exato: true, ajustes, referencia: foco });
-  return canais.every((canal) => estado.linhas.some((l) => l.slug === slugDoNome(canal)));
+  // Mesma conta de `abrirLanceDoEvento`: cada ajuste é relativo à referência (o foco).
+  const efetivos = { ...estado.nudges };
+  for (const [c, desvioMs] of Object.entries(ajustes || {})) {
+    if (!Number.isFinite(desvioMs)) continue;
+    efetivos[slugDoNome(c)] = (efetivos[f] || 0) + desvioMs;
+  }
+  // Sucesso só com vídeo de cada canal no instante (com o ajuste) e uma janela comum de 1 s que o contém.
+  const cobre = (nudges) => {
+    const linhas = unicos.map((s) => estado.linhas.find((l) => l.slug === s));
+    if (linhas.some((l) => !l)) return false;
+    const w = trechoComum(linhas, ms, { nudges });
+    return Boolean(w) && w.inicio <= ms && ms < w.fim && w.fim - w.inicio >= 1000;
+  };
+  // Com esses canais já na grelha, o instante na janela da noite e um buraco em um deles: nem se mexe.
+  const abertos = new Set(estado.linhas.map((l) => l.slug));
+  const j = estado.janela;
+  const exatoCarregado = abertos.size === unicos.length && unicos.every((s) => abertos.has(s));
+  if (exatoCarregado && j && ms >= j.inicio && ms <= j.fim && !cobre(efetivos)) return false;
+  await abrirLanceDoEvento(unicos, ms, f, { exato: true, ajustes, referencia: f });
+  return cobre(estado.nudges);
 }
 const evento = montarEvento({
   abrirLance: abrirLanceDoEvento,

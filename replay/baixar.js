@@ -22,8 +22,8 @@
 //    tiles alive; the export goes to the top rung of the ladder for the same
 //    window. Preview quality and file quality are unrelated on purpose.
 
-import { lerMaster, lerPlaylist, segmentosNaJanela } from './kick.js?v=3e31802471';
-import { tsParaMp4, compactar } from './mp4.js?v=3e31802471';
+import { lerMaster, lerPlaylist, segmentosNaJanela } from './kick.js?v=b12996cf4f';
+import { tsParaMp4, compactar } from './mp4.js?v=b12996cf4f';
 
 /** Kick is not ours to hammer. Nothing here opens more sockets than this. */
 const AO_MESMO_TEMPO = 4;
