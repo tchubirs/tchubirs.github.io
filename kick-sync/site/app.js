@@ -8835,10 +8835,33 @@ async function abrirLanceDoEvento(canais, ms, foco, {
 }
 
 async function abrirPovsParaSimples({ canais, ms, foco, ajustes = {} }) {
-  if (!Array.isArray(canais) || canais.length < 2 || !Number.isFinite(ms) || !foco) return false;
+  // Entrada validada antes de tocar na grelha: nomes válidos, >= 2 canais únicos por slug, foco entre eles.
+  if (!Array.isArray(canais) || !Number.isFinite(ms)) return false;
+  if (canais.some((c) => typeof c !== 'string' || !slugDoNome(c))) return false;
+  const unicos = [...new Set(canais.map(slugDoNome))];
+  const f = typeof foco === 'string' ? slugDoNome(foco) : '';
+  if (unicos.length < 2 || !f || !unicos.includes(f)) return false;
   if (evento.povsLiberados(ms).liberado === false) return false;
-  await abrirLanceDoEvento(canais, ms, foco, { exato: true, ajustes, referencia: foco });
-  return canais.every((canal) => estado.linhas.some((l) => l.slug === slugDoNome(canal)));
+  // Mesma conta de `abrirLanceDoEvento`: cada ajuste é relativo à referência (o foco).
+  const efetivos = { ...estado.nudges };
+  for (const [c, desvioMs] of Object.entries(ajustes || {})) {
+    if (!Number.isFinite(desvioMs)) continue;
+    efetivos[slugDoNome(c)] = (efetivos[f] || 0) + desvioMs;
+  }
+  // Sucesso só com vídeo de cada canal no instante (com o ajuste) e uma janela comum de 1 s que o contém.
+  const cobre = (nudges) => {
+    const linhas = unicos.map((s) => estado.linhas.find((l) => l.slug === s));
+    if (linhas.some((l) => !l)) return false;
+    const w = trechoComum(linhas, ms, { nudges });
+    return Boolean(w) && w.inicio <= ms && ms < w.fim && w.fim - w.inicio >= 1000;
+  };
+  // Com esses canais já na grelha, o instante na janela da noite e um buraco em um deles: nem se mexe.
+  const abertos = new Set(estado.linhas.map((l) => l.slug));
+  const j = estado.janela;
+  const exatoCarregado = abertos.size === unicos.length && unicos.every((s) => abertos.has(s));
+  if (exatoCarregado && j && ms >= j.inicio && ms <= j.fim && !cobre(efetivos)) return false;
+  await abrirLanceDoEvento(unicos, ms, f, { exato: true, ajustes, referencia: f });
+  return cobre(estado.nudges);
 }
 const evento = montarEvento({
   abrirLance: abrirLanceDoEvento,
