@@ -21,7 +21,7 @@ import { somDoCanal } from './alinhar.js';
 import { TAXA_TIROS } from './tiros.js';
 import { alertasDoCanal } from './alertas.js';
 import { montarIndice, chaveDoIndice, indiceValido } from './indice.js';
-import { janelasDosPicos, estimarFalta, tempoFalta } from './ouvir.js';
+import { janelasDosPicos, estimarFalta, estimarFaltaFracao, tempoFalta } from './ouvir.js';
 import { onde } from './relogio.js';
 import { abrirQuadrosEscondidos } from './rosto.js';
 import { escapar } from './escapar.js';
@@ -1021,9 +1021,17 @@ export function montarSimples(ponte) {
       });
       try {
         if (!chatGuardado && ponte.chat && vivo.deMs < Date.now()) {
+          const comecouChat = Date.now();
+          let maiorChat = 0;
           await ponte.chat.lerChatTrecho(slug, vivo.deMs, vivo.ateMs, {
             sinal: chatControlo.signal,
-            aoProgredir: ({ fracao }) => { v1.andou(); dizer(t('simples.lendoChat', { canal: slug, pct: Math.round(fracao * 100) }), fracao); },
+            aoProgredir: ({ fracao }) => {
+              v1.andou();
+              const falta = estimarFaltaFracao({ fracao, anterior: maiorChat, decorridoMs: Date.now() - comecouChat });
+              if (Number.isFinite(fracao)) maiorChat = Math.max(maiorChat, fracao);
+              dizer(t('simples.lendoChat', { canal: slug, pct: Math.round(fracao * 100) })
+                + (falta ? t('simples.faltaChat', { tempo: tempoFalta(falta) }) : ''), fracao);
+            },
           });
         }
       } catch (x) {
@@ -1504,7 +1512,7 @@ export function montarSimples(ponte) {
       return `<li class="simplesCartao" data-i="${i}" data-chave="${escapar(k)}">`
         + `<button type="button" class="simplesFoto" data-acao="assistir" aria-label="${escapar(t('simples.assistirAria'))}">${foto ? `<img src="${foto}" alt="">` : `<span class="simplesSemFoto">${escapar(horaDe(m.ms))}<small>${escapar(t('simples.semFoto'))}</small></span>`}</button>`
         + '<div class="simplesPrevia" hidden></div>'
-        + '<div class="simplesInfo">'
+        + '<div class="simplesInfo"><div class="simplesDetalhes">'
         + (m.doEvento ? `<p class="simplesStreamer">${escapar(t(m.meuPov ? 'simples.seuPov' : 'simples.deQuem', { canal: m.nomeCanal || m.canal }))}</p>` : '')
         + `<p class="simplesMotivo">${nota}${escapar(motivo)}</p>`
         + confHtml(m) + analiseHtml(m)
@@ -1513,6 +1521,7 @@ export function montarSimples(ponte) {
         + (m.falha ? `<p class="simplesTalvezFalha">${escapar(t('simples.talvezFalha'))}</p>` : '')
         + `<p class="simplesQuando">${escapar(m.doClipe ? t('simples.duracao', { s: durS })
           : t('simples.quando', { tempo: tempoNaLive(m.ms, inicio), hora: horaDe(m.ms), s: durS }))}</p>`
+        + '</div><div class="simplesRodape">'
         + '<div class="simplesBotoes">'
         + `<button type="button" class="principal simplesTiktok" data-acao="tiktok" aria-label="${escapar(t('simples.baixarTiktok'))}" title="${escapar(t('simples.baixarTiktok'))}"><svg class="ic" aria-hidden="true"><use href="#i-descarregar"/></svg><span class="longo">${escapar(t('simples.baixarTiktok'))}</span><span class="curto" aria-hidden="true">${escapar(t('simples.baixarTiktokCurto'))}</span></button>`
         + `<button type="button" class="simplesSecundario simplesDeitado" data-acao="deitado" aria-label="${escapar(t('simples.baixarDeitado'))}" title="${escapar(t('simples.baixarDeitado'))}"><svg class="ic" aria-hidden="true"><use href="#i-descarregar"/></svg><span class="longo">${escapar(t('simples.baixarDeitado'))}</span><span class="curto" aria-hidden="true">${escapar(t('simples.baixarDeitadoCurto'))}</span></button>`
@@ -1522,7 +1531,7 @@ export function montarSimples(ponte) {
         + `<p class="simplesBaixando" role="status" aria-live="polite">${feito ? escapar(feito.texto) : ''}</p>`
         + `<progress class="simplesBarraClipe" max="1" hidden></progress>`
         + `<button type="button" class="simplesSecundario simplesPartilhar" data-acao="partilhar"${feito?.blob && podePartilhar(feito) ? '' : ' hidden'}>${escapar(t('simples.partilhar'))}</button>`
-        + '</div>' + povsHtml(m) + '</li>';
+        + '</div></div>' + povsHtml(m) + '</li>';
     }).join('');
     atualizarBotoesClipe();
   }

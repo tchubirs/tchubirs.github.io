@@ -2998,6 +2998,8 @@ body.mesa #montagem .estadoAoVivo:empty { display: none; }
 .simples :is(.simplesQuem, .simplesMotivo, .simplesEstado, .simplesAviso, .simplesErro, .simplesSugestao b, .simplesBaixando) { overflow-wrap: anywhere; min-width: 0; }
 .simplesCartao, .simplesInfo { min-width: 0; }
 .simplesInfo { display: grid; gap: var(--e3); align-content: start; }
+/* Os dois agrupamentos dentro de .simplesInfo: só grids com o mesmo gap; no celular o empilhamento é o de sempre. */
+.simplesDetalhes, .simplesRodape { display: grid; gap: var(--e3); align-content: start; min-width: 0; }
 .simplesMotivo { margin: 0; font-size: 18px; font-weight: 600; line-height: var(--lh-apertado); }
 .simplesNota { display: inline-block; font-size: var(--t-base); padding: 2px 8px; border-radius: var(--r-redondo);
   margin-right: var(--e2); vertical-align: 2px; }
@@ -3135,8 +3137,22 @@ body.veioDaLista .voltarLista { display: inline-flex; white-space: nowrap; flex:
 /* PC: grade de cartões, três por linha, imagem em cima e uma fila só de botões pequenos. */
 @media (min-width: 900px) {
   .simples:has(.simplesTrabalho:not([hidden])) { max-width: 1200px; width: 100%; }
-  .simplesLista { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: var(--e4); align-items: start; }
-  .simplesCartao, .simplesCartao.comPrevia { grid-template-columns: minmax(0, 1fr); gap: var(--e3); padding: var(--e3); container-type: inline-size; }
+  .simplesLista { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: var(--e4); align-items: stretch; }
+  .simplesCartao, .simplesCartao.comPrevia { grid-template-columns: minmax(0, 1fr); gap: var(--e3); padding: var(--e3); }
+  /* Alinhamento por faixas (subgrid): cada cartão ocupa 4 linhas da lista — imagem, detalhes, rodapé (ações e estado) e
+     POV — e os cartões da mesma linha partilham essas faixas. A ordem visual é a ordem do DOM (sem order/display:contents).
+     Sem subgrid (browser antigo) o cartão fica uma coluna empilhada normal, com a mesma ordem. */
+  @supports (grid-template-rows: subgrid) {
+    .simplesCartao { grid-row: span 4; grid-template-rows: subgrid; }
+    .simplesCartao:not(:has(> .simplesPovs)) { padding-bottom: 0; }
+    .simplesFoto, .simplesPrevia { grid-row: 1; }
+    .simplesInfo { grid-row: 2 / span 2; grid-template-rows: subgrid; }
+    .simplesDetalhes { grid-row: 1; }
+    .simplesRodape { grid-row: 2; }
+    .simplesPovs { grid-row: 4; }
+    /* container-type no cartão tira o subgrid (o cartão deixa de ser subgrid). O container fica no rodapé, que tem a mesma largura de conteúdo. */
+    .simplesRodape { container-type: inline-size; }
+  }
   .simplesFoto::after { width: 64px; height: 64px; margin: -32px 0 0 -32px; font-size: 28px; border-width: 3px; padding-left: 5px; }
   .simplesBotoes { flex-wrap: nowrap; gap: var(--e2); }
   .simples .simplesBotoes button { min-height: 34px; font-size: 14px; padding-inline: var(--e3); white-space: nowrap; }

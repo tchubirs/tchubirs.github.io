@@ -11,7 +11,7 @@ import { lerPlaylist } from '../site/kick.js';
 import { linhaDoCanal } from '../site/relogio.js';
 import { TAXA_TIROS as TAXA } from '../site/tiros.js';
 import {
-  janelasDosPicos, estimarFalta, tempoFalta, eMuito, msPorOuvir, faltaOuvir, somaMs,
+  janelasDosPicos, estimarFalta, estimarFaltaFracao, tempoFalta, eMuito, msPorOuvir, faltaOuvir, somaMs,
 } from '../site/ouvir.js';
 import { t, definirIdioma } from '../site/idiomas.js';
 import { kickFalsa, T } from './falsa.mjs';
@@ -251,6 +251,23 @@ test('quanto falta, pela velocidade medida', () => {
   assert.equal(tempoFalta(130 * 60_000), '2 h 10');
   assert.equal(tempoFalta(20_000), '1 min');
   assert.equal(estimarFalta({ restoMs: 0 }), 0);
+});
+
+test('quanto falta para ler o chat, pela fração da janela (sem amostra, sem número inventado)', () => {
+  // Sem amostra (menos de 3 s, ou nada andado) não há estimativa.
+  assert.equal(estimarFaltaFracao({ fracao: 0, decorridoMs: 10_000 }), null);
+  assert.equal(estimarFaltaFracao({ fracao: 0.2, decorridoMs: 2_999 }), null);
+  // Um quarto da janela em dez minutos: as três quartas partes levam trinta.
+  assert.equal(estimarFaltaFracao({ fracao: 0.25, decorridoMs: 10 * 60_000 }), 30 * 60_000);
+  assert.equal(tempoFalta(estimarFaltaFracao({ fracao: 0.25, decorridoMs: 10 * 60_000 })), '30 min');
+  // Conclusão: nada mais a esperar.
+  assert.equal(estimarFaltaFracao({ fracao: 1, decorridoMs: 60_000 }), 0);
+  // Valores que não fazem sentido não dão estimativa.
+  for (const fracao of [NaN, Infinity, undefined, -0.1, 1.2]) assert.equal(estimarFaltaFracao({ fracao, decorridoMs: 60_000 }), null, String(fracao));
+  assert.equal(estimarFaltaFracao({ fracao: 0.5, decorridoMs: NaN }), null);
+  // Recuou em relação ao maior já visto: não se estima a partir de uma queda.
+  assert.equal(estimarFaltaFracao({ fracao: 0.3, anterior: 0.5, decorridoMs: 60_000 }), null);
+  assert.equal(estimarFaltaFracao({ fracao: 0.5, anterior: 0.5, decorridoMs: 60_000 }), 60_000);
 });
 
 test('o aviso e o progresso nas três línguas, sem travessão nem ponto do meio', () => {

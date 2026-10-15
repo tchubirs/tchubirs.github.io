@@ -142,7 +142,7 @@ test('com a chave e a Anthropic mockada (saúde real confirmada): o veredito vir
       const { p, erros } = await abrirPagina();
       await p.goto(`http://127.0.0.1:${porta}/`, { waitUntil: 'networkidle' });
       await p.waitForSelector('#simplesLista li', { timeout: 10_000 });
-      await p.waitForFunction(() => /luta confirmada/i.test(document.querySelector('#simplesLista li')?.innerText || ''), null, { timeout: 25_000 });
+      await p.waitForFunction(() => /Combate do jogador confirmado/i.test(document.querySelector('#simplesLista li')?.innerText || ''), null, { timeout: 25_000 });
       assert.ok(chamadas >= 1, 'o POST /api/contexto-rust foi chamado de verdade (Anthropic mockada)');
       const cartao = p.locator('#simplesLista li').first();
       // O título do cartão é o RESUMO FACTUAL do veredito validado (textoDoContexto), não o rótulo de som nem
@@ -172,7 +172,7 @@ test('com fala mockada explicitamente (window.__povixTranscreverContexto): o sta
       const { p, erros } = await abrirPagina(MOMENTO_TIROS, { falaMock: 'toma essa, acertei em cheio' });
       await p.goto(`http://127.0.0.1:${porta}/`, { waitUntil: 'networkidle' });
       await p.waitForSelector('#simplesLista li', { timeout: 10_000 });
-      await p.waitForFunction(() => /luta confirmada/i.test(document.querySelector('#simplesLista li')?.innerText || ''), null, { timeout: 25_000 });
+      await p.waitForFunction(() => /Combate do jogador confirmado/i.test(document.querySelector('#simplesLista li')?.innerText || ''), null, { timeout: 25_000 });
       const cartao = p.locator('#simplesLista li').first();
       // A fala foi mockada de verdade (não uma corrida esperada sem assert): o PEDIDO real levou transcrição
       // não-vazia (`recebeuFala`, em `construirPedido`/`contexto-rust.js`), o servidor repassa isso em `meta`
@@ -206,7 +206,7 @@ test('regressão: miniaturas prontas + filtro Luta inicialmente vazio ainda anal
       const antes = chamadas;
       // Segunda visita: o filtro "Luta" não é tocado; só a lista guardada e as miniaturas em cache.
       await p.goto(`http://127.0.0.1:${porta}/`, { waitUntil: 'networkidle' });
-      await p.waitForFunction(() => /luta confirmada/i.test(document.querySelector('#simplesLista li')?.innerText || ''), null, { timeout: 25_000 });
+      await p.waitForFunction(() => /Combate do jogador confirmado/i.test(document.querySelector('#simplesLista li')?.innerText || ''), null, { timeout: 25_000 });
       assert.ok(chamadas > antes, 'a segunda visita chamou o servidor de contexto (health + análise), mesmo com tudo em cache');
       await p.click('#simplesFiltrar');
       await p.check('#simplesFiltro input[name="filtroTipo"][value="tiros"]');
@@ -250,7 +250,7 @@ test('regressão: resumo com HTML do veredito aparece como texto no cartão, nun
       const { p, erros } = await abrirPagina();
       await p.goto(`http://127.0.0.1:${porta}/`, { waitUntil: 'networkidle' });
       await p.waitForSelector('#simplesLista li', { timeout: 10_000 });
-      await p.waitForFunction(() => /luta confirmada/i.test(document.querySelector('#simplesLista li')?.innerText || ''), null, { timeout: 25_000 });
+      await p.waitForFunction(() => /Combate do jogador confirmado/i.test(document.querySelector('#simplesLista li')?.innerText || ''), null, { timeout: 25_000 });
       const cartao = p.locator('#simplesLista li').first();
       assert.match(await cartao.innerText(), /<img src=x onerror="window\.__xss=1"> o jogador atira/);
       assert.equal(await cartao.locator('.simplesInfo img[src="x"]').count(), 0, 'nenhum <img> injetado');

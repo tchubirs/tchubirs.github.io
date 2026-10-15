@@ -79,6 +79,18 @@ export function estimarFalta({ feitoMs = 0, restoMs = 0, bytes = 0, decorridoMs 
   return Math.round(restoMs / (andado / decorridoMs));
 }
 
+/**
+ * Quanto falta para ler o chat, pela fração da janela já coberta (0 a 1, pelo relógio). Como `estimarFalta`,
+ * só diz algo com amostra (3 s e avanço real). Fração que não é número, sai de 0..1 ou recua em relação a
+ * `anterior` não dá estimativa: a conta ficaria errada.
+ */
+export function estimarFaltaFracao({ fracao, anterior = 0, decorridoMs = 0 } = {}) {
+  if (!Number.isFinite(fracao) || !Number.isFinite(decorridoMs) || fracao < 0 || fracao > 1) return null;
+  if (fracao < anterior) return null;
+  if (fracao === 1) return 0;
+  return estimarFalta({ feitoMs: fracao, restoMs: 1 - fracao, decorridoMs });
+}
+
 /** "uns 12 min", "uns 2 h 10": arredondado como se diz, nunca menos de um minuto. */
 export function tempoFalta(ms) {
   const min = Math.max(1, Math.round(ms / 60_000));
