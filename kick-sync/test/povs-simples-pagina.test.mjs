@@ -29,6 +29,7 @@ async function preparar({ meuCanal = 'tchubi', kills = true, liberado = true, vi
         pausar() {},
         lancesDoEvento: () => ({ nome: 'Teste', canais, lances: [lance], mensagens: new Map(), lendo: false }),
         eventoDoLink: Promise.resolve(true),
+        abrirEvento: () => Promise.resolve(true),
         lerChatDoEvento: () => Promise.resolve(),
         aoMudarEvento(f) { controle.atualizar = f; },
         pararChatDoEvento() {},
@@ -43,6 +44,7 @@ async function preparar({ meuCanal = 'tchubi', kills = true, liberado = true, vi
           });
         },
         abrirPovs(pedido) {
+          controle.sinalAbertura = pedido.sinal;
           controle.abertos.push(pedido);
           return new Promise((resolver) => { controle.resolverAbertura = resolver; });
         },
@@ -140,11 +142,32 @@ test('abrir outro POV bloqueia downloads e resposta tardia não reabre o editor'
     await p.locator('button[data-acao="tiktok"]').evaluate((b) => b.click());
     assert.equal(await p.evaluate(() => window.__povs.baixados), 0);
     await p.click('#simplesDeNovo');
+    assert.equal(await p.evaluate(() => window.__povs.sinalAbertura.aborted), true);
     await p.evaluate(() => window.__povs.resolverAbertura(true));
     await p.waitForFunction(() => !document.getElementById('simplesCanalPov').disabled);
     assert.equal(await p.locator('#simplesCaixa').isVisible(), true);
     assert.equal(await p.evaluate(() => document.documentElement.dataset.modo), 'simples');
     assert.equal(await p.evaluate(() => window.__povs.editados.length), 0);
+    assert.deepEqual(erros, []);
+  } finally { await p.close(); }
+});
+
+test('resposta de abertura cancelada não libera os botões de uma nova abertura', opcoes, async () => {
+  const { p, erros } = await preparar();
+  try {
+    await p.getByRole('button', { name: 'Criar clipe com inimigo', exact: true }).click();
+    await p.waitForFunction(() => window.__povs.abertos.length === 1);
+    await p.evaluate(() => { window.__povs.resolverAntiga = window.__povs.resolverAbertura; });
+    await p.click('#simplesDeNovo');
+    await p.evaluate(() => window.__povs.simples.comecar('?e=teste'));
+    await p.getByRole('button', { name: 'Criar clipe com inimigo', exact: true }).click();
+    await p.waitForFunction(() => window.__povs.abertos.length === 2);
+    await p.evaluate(() => window.__povs.resolverAntiga(true));
+    assert.equal(await p.locator('button[data-acao="tiktok"]').isDisabled(), true);
+    assert.equal(await p.evaluate(() => window.__povs.sinalAbertura.aborted), false);
+    assert.equal(await p.evaluate(() => window.__povs.editados.length), 0);
+    await p.evaluate(() => window.__povs.resolverAbertura(true));
+    await p.waitForFunction(() => window.__povs.editados.length === 1);
     assert.deepEqual(erros, []);
   } finally { await p.close(); }
 });

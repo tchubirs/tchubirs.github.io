@@ -292,7 +292,7 @@ export function montarSimples(ponte) {
   let atualizarEventoLista = null;
   let meuCanalSalvo = '';
   try { meuCanalSalvo = armazem.getItem(CHAVE_MEUPOV) || ''; } catch { /* armazenamento indisponível */ }
-  let abrindoPov = false;
+  let abrindoPov = null;
   const tocaVideo = tocaVideoDaKick();
   const toque = window.matchMedia?.('(pointer: coarse)').matches;
 
@@ -675,6 +675,9 @@ export function montarSimples(ponte) {
 
   function parar() {
     geracao++;
+    abrindoPov?.abort();
+    abrindoPov = null;
+    atualizarBotoesClipe();
     pararPrevia();
     pararBuscasPov();
     pararContexto();
@@ -1380,15 +1383,16 @@ export function montarSimples(ponte) {
     const p = opcoesPovRenderizadas.get(id);
     if (!p || !ponte.abrirPovs) return;
     const minha = geracao;
-    abrindoPov = true;
+    const controle = new AbortController();
+    abrindoPov = controle;
     pararPrevia();
     pararBuscasPov();
     atualizarBotoesClipe();
     const status = () => [...lista.children].find((item) => item.dataset.chave === chave(m))?.querySelector('.simplesBaixando');
     if (status()) status().textContent = t('simples.pov.abrindo', { canal: p.canal });
     try {
-      const abriu = await ponte.abrirPovs({ canais: p.canais, ms: m.ms, foco: m.canal, ajustes: p.ajustes });
-      if (minha !== geracao || !modoSimples()) return;
+      const abriu = await ponte.abrirPovs({ canais: p.canais, ms: m.ms, foco: m.canal, ajustes: p.ajustes, sinal: controle.signal });
+      if (controle.signal.aborted || minha !== geracao || !modoSimples()) return;
       if (!abriu) {
         if (status()) status().textContent = t('simples.pov.naoAbriu');
         return;
@@ -1406,9 +1410,11 @@ export function montarSimples(ponte) {
     } catch {
       if (minha === geracao && status()) status().textContent = t('simples.pov.naoAbriu');
     } finally {
-      abrindoPov = false;
-      atualizarBotoesClipe();
-      if (pintarLista.adiada) pintarLista();
+      if (abrindoPov === controle) {
+        abrindoPov = null;
+        atualizarBotoesClipe();
+        if (pintarLista.adiada) pintarLista();
+      }
     }
   }
 

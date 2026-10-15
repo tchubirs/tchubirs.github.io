@@ -7,6 +7,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { linhaDoCanal, janelaComum, trechoComum } from '../site/relogio.js';
 import { slugDoNome } from '../site/kick.js';
+import { prepararPovs } from '../site/povs-preparar.js';
 
 const APP = new URL('../site/app.js', import.meta.url);
 const src = readFileSync(APP, 'utf8');
@@ -35,7 +36,12 @@ function pecasDe(trechos) {
 
 // Cenário: estado da página, catálogo de canais carregáveis e um abrirLanceDoEvento que carrega como a página.
 function cenario({ catalogo = {}, nudges = {}, liberado = true, linhas = null } = {}) {
-  const estado = { linhas: [], janela: null, nudges: { ...nudges } };
+  const estado = { linhas: [], janela: null, nudges: { ...nudges }, vodsPorCanal: new Map(), vodsDoEvento: new Map(), pecasLidas: new Map() };
+  for (const [slug, trechos] of Object.entries(catalogo)) {
+    const pecas = pecasDe(trechos);
+    estado.vodsPorCanal.set(slug, { slug, estado: 'ok', vods: pecas.map((p, i) => ({ id: p.vod.id, inicioApi: trechos[i][0], duracaoMs: trechos[i][1] - trechos[i][0] })) });
+    for (const p of pecas) estado.pecasLidas.set(`${slug}|${p.vod.id}`, p);
+  }
   const chamadas = [];
   const carregar = (canais, opts) => {
     const ref = slugDoNome(opts.referencia);
@@ -51,9 +57,13 @@ function cenario({ catalogo = {}, nudges = {}, liberado = true, linhas = null } 
     carregar(canais, opts);
   };
   const evento = { povsLiberados: () => ({ liberado, min: 0 }) };
-  const ctx = vm.createContext({ estado, evento, abrirLanceDoEvento, slugDoNome, trechoComum });
+  const ctx = vm.createContext({ estado, evento, abrirLanceDoEvento, slugDoNome, trechoComum,
+    cargaEmCurso: null, vezNoite: 0,
+    lerTexto: () => { throw new Error('não deveria pedir playlists já em memória'); },
+    prepararPovs: (opcoes) => prepararPovs({ ...opcoes, buscar: async () => new Response('', { status: 404 }) }),
+  });
   const abrirPovs = vm.runInContext(`${CORPO}\n;abrirPovsParaSimples`, ctx);
-  return { abrirPovs, estado, chamadas };
+  return { abrirPovs, estado, chamadas, ctx };
 }
 
 // Arrays criados dentro do vm são de outro realm: compara-se a cópia plana.
@@ -81,7 +91,7 @@ test('sucesso com ajuste de referência não nulo e ajuste relativo', async () =
 test('canal pedido sem linha carregada -> false', async () => {
   const c = cenario({ catalogo: { ana: [[MS - M, MS + M]], bia: [[MS - M, MS + M]] } });
   assert.equal(await c.abrirPovs(pedido({ canais: ['ana', 'bia', 'caio'] })), false);
-  assert.equal(c.chamadas.length, 1);
+  assert.equal(c.chamadas.length, 0, 'canal ausente não troca a sessão');
 });
 
 test('buraco no instante mesmo com a união cobrindo MS -> false', async () => {
@@ -171,4 +181,41 @@ test('seleção exata já carregada e coberta -> segue e confirma', async () => 
   const c = cenario({ linhas, catalogo });
   assert.equal(await c.abrirPovs(pedido()), true);
   assert.equal(c.chamadas.length, 1);
+});
+
+test('nova seleção sem cobertura preserva canais, ajustes, cursor e marcas anteriores', async () => {
+  const linhas = [linhaDoCanal('antigo', pecasDe([[MS - M, MS + M]]))];
+  const c = cenario({ linhas, nudges: { antigo: 1234 }, catalogo: { ana: [[MS - M, MS + M]], bia: [[MS + 1000, MS + M]] } });
+  c.estado.agoraMs = MS - 8000;
+  c.estado.momentos = [{ ms: MS - 9000, canal: 'antigo' }];
+  const antes = { linhas: c.estado.linhas, janela: c.estado.janela, nudges: { ...c.estado.nudges }, agora: c.estado.agoraMs, momentos: c.estado.momentos };
+  assert.equal(await c.abrirPovs(pedido({ ajustes: { bia: 100 } })), false);
+  assert.equal(c.chamadas.length, 0);
+  assert.equal(c.estado.linhas, antes.linhas);
+  assert.equal(c.estado.janela, antes.janela);
+  assert.deepEqual(c.estado.nudges, antes.nudges);
+  assert.equal(c.estado.agoraMs, antes.agora);
+  assert.equal(c.estado.momentos, antes.momentos);
+});
+
+test('outra noite aberta durante preparação invalida resultado antigo', async () => {
+  const c = cenario({ catalogo: { ana: [[MS - M, MS + M]], bia: [[MS - M, MS + M]] } });
+  let liberar;
+  const real = c.ctx.prepararPovs;
+  c.ctx.prepararPovs = async (opcoes) => { const r = await real(opcoes); await new Promise((ok) => { liberar = ok; }); return r; };
+  const p = c.abrirPovs(pedido());
+  while (!liberar) await new Promise(setImmediate);
+  c.ctx.vezNoite++;
+  liberar();
+  assert.equal(await p, false);
+  assert.equal(c.chamadas.length, 0);
+});
+
+test('pedido previamente cancelado ou carregador ocupado não inicia preparação', async () => {
+  const c = cenario();
+  const controle = new AbortController(); controle.abort();
+  assert.equal(await c.abrirPovs(pedido({ sinal: controle.signal })), false);
+  c.ctx.cargaEmCurso = Promise.resolve();
+  assert.equal(await c.abrirPovs(pedido()), false);
+  assert.equal(c.chamadas.length, 0);
 });

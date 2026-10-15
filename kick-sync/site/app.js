@@ -81,6 +81,7 @@ import { escapar } from './escapar.js';
 import { montarEvento, rotuloDoDia } from './evento-ui.js';
 import { montarPortas } from './portas.js';
 import { montarSimples, modoSimples } from './simples.js';
+import { prepararPovs } from './povs-preparar.js';
 import { atalhos, ACAO, comboDoEvento, partes } from './atalhos.js';
 import { montarPainelAtalhos, pintarDicas } from './atalhos-painel.js';
 
@@ -704,14 +705,14 @@ let vezNoite = 0;
  * pedidos, sem ele o selector ficava trancado e a única saída era recarregar
  * a página — com a sessão dele lá dentro.
  */
-async function abrirNoite(noite) {
+async function abrirNoite(noite, opcoes) {
   // A vez DESTA leitura. O `lerNoite` soma-a logo na primeira linha, antes de
   // esperar por nada. Comparar com uma variável escrita ao mesmo tempo que a
   // outra dava sempre verdade, e a leitura velha que acabava destrancava o
   // selector com a nova ainda a meio.
   const minhaVez = vezNoite + 1;
   try {
-    return await lerNoite(noite);
+    return await lerNoite(noite, opcoes);
   } finally {
     if (vezNoite === minhaVez) $('noite').disabled = false;
   }
@@ -728,8 +729,11 @@ async function abrirNoite(noite) {
  * E com tempo limite: são dois pedidos por canal, em fila, e um só pendurado
  * deixava "lendo os relógios…" no ecrã para sempre, com o selector trancado.
  */
-async function lerTexto(url, { limiteMs = 20_000 } = {}) {
+async function lerTexto(url, { limiteMs = 20_000, sinal } = {}) {
+  if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError');
   const controlo = new AbortController();
+  const parar = () => controlo.abort();
+  sinal?.addEventListener('abort', parar, { once: true });
   const relogio = setTimeout(() => controlo.abort(), limiteMs);
   try {
     const r = await fetch(url, { signal: controlo.signal });
@@ -737,13 +741,14 @@ async function lerTexto(url, { limiteMs = 20_000 } = {}) {
     return await r.text();
   } finally {
     clearTimeout(relogio);
+    sinal?.removeEventListener('abort', parar);
   }
 }
 
 /** Quantas listas (master e playlist) se pedem ao mesmo tempo ao abrir uma noite. */
 const LISTAS_DE_UMA_VEZ = 6;
 
-async function lerNoite(noite) {
+async function lerNoite(noite, { preparadas } = {}) {
   const minhaVez = ++vezNoite;
   const desactualizada = () => minhaVez !== vezNoite;
   const dizer = (frase) => { if (!desactualizada()) $('estadoNoite').textContent = frase; };
@@ -775,8 +780,13 @@ async function lerNoite(noite) {
     const chave = `${slug}|${v.id}`;
     // A playlist de um VOD acabado nunca muda; a de quem está no ar cresce a cada segmento. Guardada,
     // abrir um lance de agora mostrava o vídeo de quando se carregou da primeira vez.
-    const lida = v.aoVivo ? null : estado.pecasLidas.get(chave);
-    if (lida) { lidas.set(chave, lida); return; }
+    const lida = preparadas ? preparadas.get(chave) : (v.aoVivo ? null : estado.pecasLidas.get(chave));
+    if (preparadas && !lida) { naoLidos.add(slug); return; }
+    if (lida) {
+      lidas.set(chave, lida);
+      if (v.aoVivo) estado.atrasosVivo[slug] = medirAtraso(lida.playlist.fim) || estado.atrasosVivo[slug];
+      return;
+    }
     try {
       const master = lerMaster(await lerTexto(v.master), v.master);
       if (!master.length) { naoLidos.add(slug); return; }
@@ -8790,7 +8800,7 @@ if (guardado) {
 // O mapa do evento entrega à página de sempre os canais de um lance e o instante dele. Daqui para a
 // frente é uma noite como outra qualquer: a grelha, o alinhamento, a montagem e o clipe.
 async function abrirLanceDoEvento(canais, ms, foco, {
-  exato = false, aoVivo = false, ajustes = {}, referencia = null,
+  exato = false, aoVivo = false, ajustes = {}, referencia = null, preparado = null,
 } = {}) {
   // Os atrasos medidos pelo som do lance (ver `verLance` em evento-ui.js), relativos à referência.
   const ref = referencia && slugDoNome(referencia);
@@ -8830,13 +8840,21 @@ async function abrirLanceDoEvento(canais, ms, foco, {
   estado.momentos = [];
   estado.restaurar = { agora: ms, focos: foco ? [foco] : [], marca: null, momentos: [], aoVivo };
   guardar();
-  await carregar();
+  if (preparado) {
+    for (const r of preparado.catalogo) estado.vodsPorCanal.set(r.slug, r);
+    for (const [chave, peca] of preparado.lidas) if (!peca.vod.aoVivo) estado.pecasLidas.set(chave, peca);
+    guardarVods();
+    pintarCanais(preparado.catalogo);
+    pintarNoites(preparado.noites);
+    $('noite').value = String(preparado.indice);
+    await abrirNoite(preparado.noite, { preparadas: preparado.lidas });
+  } else await carregar();
   window.scrollTo({ top: 0 });
 }
 
-async function abrirPovsParaSimples({ canais, ms, foco, ajustes = {} }) {
+async function abrirPovsParaSimples({ canais, ms, foco, ajustes = {}, sinal }) {
   // Entrada validada antes de tocar na grelha: nomes válidos, >= 2 canais únicos por slug, foco entre eles.
-  if (!Array.isArray(canais) || !Number.isFinite(ms)) return false;
+  if (sinal?.aborted || cargaEmCurso || !Array.isArray(canais) || !Number.isFinite(ms)) return false;
   if (canais.some((c) => typeof c !== 'string' || !slugDoNome(c))) return false;
   const unicos = [...new Set(canais.map(slugDoNome))];
   const f = typeof foco === 'string' ? slugDoNome(foco) : '';
@@ -8860,7 +8878,16 @@ async function abrirPovsParaSimples({ canais, ms, foco, ajustes = {} }) {
   const j = estado.janela;
   const exatoCarregado = abertos.size === unicos.length && unicos.every((s) => abertos.has(s));
   if (exatoCarregado && j && ms >= j.inicio && ms <= j.fim && !cobre(efetivos)) return false;
-  await abrirLanceDoEvento(unicos, ms, f, { exato: true, ajustes, referencia: f });
+  let preparado = null;
+  if (!exatoCarregado || !j || ms < j.inicio || ms > j.fim) {
+    const noiteAntes = vezNoite;
+    const linhasAntes = estado.linhas;
+    preparado = await prepararPovs({ canais: unicos, ms, nudges: efetivos,
+      vodsPorCanal: estado.vodsPorCanal, vodsDoEvento: estado.vodsDoEvento, pecasLidas: estado.pecasLidas,
+      lerTexto, sinal });
+    if (!preparado || sinal?.aborted || cargaEmCurso || vezNoite !== noiteAntes || estado.linhas !== linhasAntes) return false;
+  }
+  await abrirLanceDoEvento(unicos, ms, f, { exato: true, ajustes, referencia: f, preparado });
   return cobre(estado.nudges);
 }
 const evento = montarEvento({
