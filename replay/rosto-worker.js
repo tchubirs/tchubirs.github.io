@@ -14,7 +14,7 @@
 //          { tipo: 'pronto', id, rostos }             rostos: [{ x, y, largura, altura, nota }] em pixels da imagem
 //          { tipo: 'erro', id, nome, mensagem }
 
-import { TODOS, BYTES_TOTAL, CACHE_ROSTO, sha256 } from './rosto-arquivos.js?v=01db2b72c7';
+import { TODOS, BYTES_TOTAL, CACHE_ROSTO, sha256 } from './rosto-arquivos.js?v=3e31802471';
 
 const feitoPor = new Map();
 function avisar(alvo, feito) {

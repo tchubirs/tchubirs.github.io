@@ -11,8 +11,8 @@
 // de cada canal anda no relógio da noite mais o ajuste dele (o nudge), e por isso o instante a pedir
 // aqui é o da noite (o início do clipe mais o que já se gravou), e não o do vídeo.
 
-import { ZONA_TIKTOK } from './retrato.js?v=01db2b72c7';
-import { limparCaixas } from './caixa-previa.js?v=01db2b72c7';
+import { ZONA_TIKTOK } from './retrato.js?v=3e31802471';
+import { limparCaixas } from './caixa-previa.js?v=3e31802471';
 
 /**
  * Quanto tempo uma mensagem fica no ecrã (por omissão), e quanto desse tempo leva a sumir. A pessoa

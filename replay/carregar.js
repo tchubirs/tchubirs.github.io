@@ -15,7 +15,7 @@
 //     abranda-se para metade e volta-se a pedir, sem desistir do canal à
 //     primeira. Quando houver um 429 a sério, é aqui que se afina.
 
-import { vodsDoCanal, DESCONHECIDO } from './kick.js?v=01db2b72c7';
+import { vodsDoCanal, DESCONHECIDO } from './kick.js?v=3e31802471';
 
 /** O mesmo erro que o resto da página usa para "o utilizador desistiu". */
 function cancelado() {

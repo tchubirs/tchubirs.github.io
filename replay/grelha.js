@@ -22,7 +22,7 @@
 // exactamente o tipo de coisa que se escreve à pressa e sai errada num caso
 // que ninguém experimenta — um nome repetido, um vazio, um acento.
 
-import { slugDoNome } from './kick.js?v=01db2b72c7';
+import { slugDoNome } from './kick.js?v=3e31802471';
 
 export const ORDENS = ['adicionado', 'az'];
 

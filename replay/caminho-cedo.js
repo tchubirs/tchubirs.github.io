@@ -10,17 +10,22 @@ try {
 // O modo simples ou o avançado (ESTUDO-FACIL.md, plano 12), também antes do primeiro desenho. Quem
 // chega pela primeira vez entra no simples; quem já usava o Povix neste aparelho (há sessão ou porta
 // guardada) entra no avançado, como sempre esteve. A escolha de quem tocou no botão fica guardada.
+// Um projeto compartilhado (#s= ou ?s=: os canais, a noite e os acertos de quem o mandou) abre como foi
+// feito, no avançado, só nesta visita: a escolha guardada não muda (nem o modo calculado é gravado).
+let compartilhado = false;
+try {
+  compartilhado = /[#&?]s=/.test(location.hash) || new URLSearchParams(location.search).has('s');
+} catch { /* endereço estranho: fica o modo de cima */ }
 try {
   let m = localStorage.getItem('povix.modo');
   if (m !== 'simples' && m !== 'avancado') {
     m = localStorage.getItem('replay') || localStorage.getItem('replay.caminho') ? 'avancado' : 'simples';
+    // Grava o modo calculado na primeira vez, para que o app depois gravar replay.caminho não mude o modo no F5.
+    // Se a escrita falhar (quota), o modo calculado continua valendo, só não fica guardado.
+    if (!compartilhado) {
+      try { localStorage.setItem('povix.modo', m); } catch { /* quota: sem guardar */ }
+    }
   }
   document.documentElement.dataset.modo = m;
 } catch { document.documentElement.dataset.modo = 'simples'; }
-// Um projeto compartilhado (#s= ou ?s=: os canais, a noite e os acertos de quem o mandou) abre como foi
-// feito, no avançado, só nesta visita: a escolha guardada não muda.
-try {
-  if (/[#&?]s=/.test(location.hash) || new URLSearchParams(location.search).has('s')) {
-    document.documentElement.dataset.modo = 'avancado';
-  }
-} catch { /* endereço estranho: fica o modo de cima */ }
+if (compartilhado) document.documentElement.dataset.modo = 'avancado';
