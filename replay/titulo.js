@@ -7,9 +7,9 @@
 // Uma etiqueta: `{ tipo: 'tiros' | 'explosao' | 'morte' | 'grito' | 'chat', conf, fonte, n, durS?, acertos?, cabecas?,
 // mortes?: [{ matador, vitima }] }`. `conf` é de 0 a 1 (ou null: o detector aceitou, mas não há medida).
 
-import { t, tn } from './idiomas.js?v=a80b969c0a';
-import { confianca } from './calibracao.js?v=a80b969c0a';
-import { curva } from './indice.js?v=a80b969c0a';
+import { t, tn } from './idiomas.js?v=257617901c';
+import { confianca } from './calibracao.js?v=257617901c';
+import { curva } from './indice.js?v=257617901c';
 
 /** Marca com confiança menor que isto não entra no título. */
 export const CONF_TITULO = 0.5;

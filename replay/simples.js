@@ -10,33 +10,33 @@
 // sempre (abrir o canal, gravar o clipe) chega pela `ponte` que o app.js passa: este arquivo não mexe no
 // estado dele por conta própria.
 
-import { t, tn } from './idiomas.js?v=a80b969c0a';
-import { procurarCanais, vodsDoCanal, vodDaKick, slugDoNome } from './kick.js?v=a80b969c0a';
+import { t, tn } from './idiomas.js?v=257617901c';
+import { procurarCanais, vodsDoCanal, vodDaKick, slugDoNome } from './kick.js?v=257617901c';
 import {
   lerEntrada, montarLista, lancesParaLista, nomeDoArquivo, tempoNaLive, NOMES_NO_LANCE, QUANTOS,
   acharVod, guardarVod, mensagensDosPicos, lerUltimo, guardarUltimo,
-} from './simples-lista.js?v=a80b969c0a';
-import { varrerNoite } from './procurar-momentos.js?v=a80b969c0a';
-import { somDoCanal } from './alinhar.js?v=a80b969c0a';
-import { TAXA_TIROS } from './tiros.js?v=a80b969c0a';
-import { alertasDoCanal } from './alertas.js?v=a80b969c0a';
-import { montarIndice, chaveDoIndice, indiceValido } from './indice.js?v=a80b969c0a';
-import { janelasDosPicos, estimarFalta, estimarFaltaFracao, tempoFalta } from './ouvir.js?v=a80b969c0a';
-import { onde } from './relogio.js?v=a80b969c0a';
-import { abrirQuadrosEscondidos } from './rosto.js?v=a80b969c0a';
-import { escapar } from './escapar.js?v=a80b969c0a';
+} from './simples-lista.js?v=257617901c';
+import { varrerNoite } from './procurar-momentos.js?v=257617901c';
+import { somDoCanal } from './alinhar.js?v=257617901c';
+import { TAXA_TIROS } from './tiros.js?v=257617901c';
+import { alertasDoCanal } from './alertas.js?v=257617901c';
+import { montarIndice, chaveDoIndice, indiceValido } from './indice.js?v=257617901c';
+import { janelasDosPicos, estimarFalta, estimarFaltaFracao, tempoFalta } from './ouvir.js?v=257617901c';
+import { onde } from './relogio.js?v=257617901c';
+import { abrirQuadrosEscondidos } from './rosto.js?v=257617901c';
+import { escapar } from './escapar.js?v=257617901c';
 import {
   tituloDoMomento, etiquetasDoMomento, confExibida, confMedia, VERSAO_ETIQUETAS, textoDoContexto,
-} from './titulo.js?v=a80b969c0a';
+} from './titulo.js?v=257617901c';
 import {
   lerFiltro, guardarFiltro, limparFiltro, filtroAtivo, filtraAlgo, aplicarFiltro, chipsDoFiltro, semChip, comFala, TIPOS_DO_FILTRO,
-} from './simples-filtro.js?v=a80b969c0a';
-import { lerFalas, guardarFala, acharNaLista, melhorFala } from './falas.js?v=a80b969c0a';
+} from './simples-filtro.js?v=257617901c';
+import { lerFalas, guardarFala, acharNaLista, melhorFala } from './falas.js?v=257617901c';
 import {
   analisarCandidatos, comContexto, contextoVigente, contextoDoMomento, precisaDeContexto, MAX_CANDIDATOS_POR_LIVE, ENDPOINT_PADRAO,
-} from './contexto-candidatos.js?v=a80b969c0a';
-import { VERSAO_CONTRATO, MAX_IMAGEM_BYTES } from './contexto-rust.js?v=a80b969c0a';
-import { fundirPovsPorCanal } from './simples-lista.js?v=a80b969c0a';
+} from './contexto-candidatos.js?v=257617901c';
+import { VERSAO_CONTRATO, MAX_IMAGEM_BYTES } from './contexto-rust.js?v=257617901c';
+import { fundirPovsPorCanal } from './simples-lista.js?v=257617901c';
 
 const CHAVE_MODO = 'povix.modo';
 const CHAVE_VISTO = 'povix.simplesVisto';
@@ -924,7 +924,8 @@ export function montarSimples(ponte) {
     if (!tocaVideo) avisar(t('simples.abraNoChrome'));
     pintarLista();
     const n = queridos().length;
-    dizer(e.varrido === 'picos' ? t(e.pendente ? 'simples.audioPendente' : 'simples.buscaParcial', { n })
+    const semPicos = e.semPicosRapida === true;
+    dizer(e.varrido === 'picos' ? t(e.pendente ? 'simples.audioPendente' : semPicos ? 'simples.semPicosRapida' : 'simples.buscaParcial', { n })
       : n ? tn(n, 'simples.prontoUm', 'simples.pronto', { n }) : t('simples.nada'), false);
     atualizarBotaoRefazer();
     // Imagens borradas de antes (ou nenhuma): abre a live por trás e tira as nítidas, sem tocar nada.
@@ -1020,6 +1021,7 @@ export function montarSimples(ponte) {
     let sons = guardado?.sons || [];
     // O que já se achou deste vídeo (o chat) não se refaz; o que se acha agora fica lembrado, passo a passo.
     const chatGuardado = Array.isArray(guardado?.picos);
+    let chatConcluido = chatGuardado;
     const lembrar = (mais) => {
       if (minha !== geracao) return;
       guardadoAtual = { ...(guardadoAtual || guardado), slug, inicio: linha.inicio, ateMs: vivo.ateMs, ...mais };
@@ -1050,7 +1052,7 @@ export function montarSimples(ponte) {
         if (!chatGuardado && ponte.chat && vivo.deMs < Date.now()) {
           const comecouChat = Date.now();
           let maiorChat = 0;
-          await ponte.chat.lerChatTrecho(slug, vivo.deMs, vivo.ateMs, {
+          const leitura = await ponte.chat.lerChatTrecho(slug, vivo.deMs, vivo.ateMs, {
             sinal: chatControlo.signal,
             aoProgredir: ({ fracao }) => {
               v1.andou();
@@ -1060,6 +1062,7 @@ export function montarSimples(ponte) {
                 + (falta ? t('simples.faltaChat', { tempo: tempoFalta(falta) }) : ''), fracao);
             },
           });
+          chatConcluido = !chatControlo.signal.aborted && !leitura?.motivo && !leitura?.semCanal;
         }
       } catch (x) {
         if (sinal.aborted) throw x;
@@ -1081,12 +1084,19 @@ export function montarSimples(ponte) {
       }
       refazer();
       // O chat lido até o fim (e não largado pelo vigia) fica lembrado: se a página fechar no meio do som, volta daqui.
-      const chatFeito = chatGuardado || (Boolean(ponte.chat) && vivo.deMs < Date.now() && !chatControlo.signal.aborted);
+      const chatFeito = chatConcluido;
       if (chatFeito && !chatGuardado) lembrar({ picos, mensagens: mensagensDosPicos(mensagens, picos) });
       if (sinal.aborted) throw new DOMException('parado', 'AbortError');
 
-      // 2. O som: só em volta dos picos do chat (o modo esperto do Detectar lances); sem picos, tudo.
-      const intervalos = picos.length && !completar ? janelasDosPicos(picos, vivo.deMs, vivo.ateMs) : [[vivo.deMs, vivo.ateMs]];
+      if (!completar && !picos.length) {
+        const parcial = { varrido: 'picos', pendente: false, semPicosRapida: true };
+        if (chatFeito) lembrar({ ...parcial, completo: true, lista: ultimos, sons, lutas, indiceV: VERSAO_ETIQUETAS });
+        else guardadoAtual = { ...guardadoAtual, slug, inicio: linha.inicio, ateMs: vivo.ateMs, ...parcial };
+        dizer(t(chatFeito ? 'simples.semPicosRapida' : 'simples.chatIncompleto'), false);
+        atualizarBotaoRefazer();
+        return;
+      }
+      const intervalos = completar ? [[vivo.deMs, vivo.ateMs]] : janelasDosPicos(picos, vivo.deMs, vivo.ateMs);
       const totalMs = intervalos.reduce((s, [a, b]) => s + (b - a), 0);
       const somControlo = new AbortController();
       const pararSom = () => somControlo.abort();
@@ -1135,17 +1145,12 @@ export function montarSimples(ponte) {
         const indice = montarIndice({ slug, inicioMs: linha.inicio, fimMs: vivo.ateMs, som: r, picos });
         lutas = [...new Map([...lutas, ...indice.lutas].map((c) => [c.id, c])).values()];
         indiceDaBusca = indice;
-        // "Cobriu tudo" só faz sentido quando este passo pediu a live inteira (sem picos, ou "Buscar no
-        // restante"): a busca rápida só ouve em volta do chat, e nunca é "tudo" mesmo com os picos inteiros.
+        // "Cobriu tudo" só faz sentido quando a pessoa pediu "Buscar no restante": a busca rápida
+        // só ouve em volta do chat, e nunca é "tudo" mesmo com os picos inteiros.
         // Com `alvos` (o que varrerNoite viu de disponível de verdade nas peças do VOD — exclui buracos de
         // queda que nunca vão ter o que ouvir), a conta é contra o disponível, não contra a duração nominal da
         // live; sem `alvos` (um `varrerNoite` de teste mais simples), cai no que já havia.
-        // "Cobriu tudo" só faz sentido quando este passo pediu a live inteira (sem picos, ou "Buscar no
-        // restante"): a busca rápida só ouve em volta do chat, e nunca é "tudo" mesmo com os picos inteiros.
-        // Com `alvos` (o que varrerNoite viu de disponível de verdade nas peças do VOD — exclui buracos de
-        // queda que nunca vão ter o que ouvir), a conta é contra o disponível, não contra a duração nominal da
-        // live; sem `alvos` (um `varrerNoite` de teste mais simples), cai no que já havia.
-        const pedindoTudo = !picos.length || completar;
+        const pedindoTudo = completar;
         const cobreAlvo = (a, b) => (r.cobertura || []).some(([x, y]) => x <= a + 1 && y >= b - 1);
         cobreTudo = pedindoTudo && (r.alvos?.length
           ? r.alvos.every(([a, b]) => cobreAlvo(a, b)) && !(r.naoOuvidos || []).length
@@ -1164,7 +1169,7 @@ export function montarSimples(ponte) {
       }
       refazer();
       if (somFeito && chatFeito) lembrar({ completo: true, lista: ultimos, sons, lutas, indiceV: VERSAO_ETIQUETAS,
-        varrido: cobreTudo ? 'tudo' : 'picos', pendente });
+        varrido: cobreTudo ? 'tudo' : 'picos', pendente, semPicosRapida: false });
       const n = queridos().length;
       if (minha !== geracao) return;
       dizer(guardadoAtual?.varrido === 'picos' ? t(guardadoAtual.pendente ? 'simples.audioPendente' : 'simples.buscaParcial', { n })

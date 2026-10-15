@@ -18,7 +18,7 @@
 //
 // Nada aqui toca na página: os testes correm no Node.
 
-import { base } from './nomes.js?v=a80b969c0a';
+import { base } from './nomes.js?v=257617901c';
 
 const DIA_MS = 86400e3;
 const HORA_MS = 3600e3;
