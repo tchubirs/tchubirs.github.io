@@ -334,3 +334,149 @@ test("modelo sem preco conhecido -> 503 modelo_sem_preco antes de qualquer reser
   assert.equal(chamou, false);
   assert.equal(somaMicros(db), 0);
 });
+
+// --- Formato de saida (structured outputs), thinking desabilitado, blocos text, stop_reason ---
+import { TIPOS_CONTEXTO, PARTICIPACOES } from "../public/contexto-rust.js";
+import { SCHEMA_SAIDA_CONTEXTO } from "../lib/contexto-api.ts";
+
+function fetchCapturando(resposta, capturado = {}) {
+  return async (_url, init) => {
+    capturado.corpo = JSON.parse(init.body);
+    return { ok: true, status: 200, json: async () => resposta };
+  };
+}
+
+function contagem(db, tabela) {
+  return db._raw.prepare(`SELECT COUNT(*) AS n FROM ${tabela}`).get().n;
+}
+
+function todosObjetosFechados(schema, caminho = "raiz") {
+  const erros = [];
+  if (schema && typeof schema === "object") {
+    if (schema.type === "object") {
+      if (schema.additionalProperties !== false) erros.push(caminho);
+      for (const [k, v] of Object.entries(schema.properties || {})) erros.push(...todosObjetosFechados(v, caminho + "." + k));
+    }
+    if (schema.type === "array") erros.push(...todosObjetosFechados(schema.items, caminho + "[]"));
+    for (const palavra of ["minLength", "maxLength"]) {
+      if (palavra in schema) erros.push(caminho + " usa " + palavra);
+    }
+  }
+  return erros;
+}
+
+test("corpo Anthropic: thinking desabilitado explicito e schema JSON do contrato", async () => {
+  const cap = {};
+  const env = baseEnv({ fetchImpl: fetchCapturando({ content: [{ type: "text", text: respostaModeloValida() }], stop_reason: "end_turn", usage: { input_tokens: 5, output_tokens: 5 } }, cap) });
+  const r = await tratarContextoRust(pedidoValidoBase(), env);
+  assert.equal(r.status, 200);
+  assert.deepEqual(cap.corpo.thinking, { type: "disabled" });
+  assert.equal(cap.corpo.max_tokens, 1200);
+  assert.equal(cap.corpo.output_config.format.type, "json_schema");
+  assert.deepEqual(cap.corpo.output_config.format.schema, SCHEMA_SAIDA_CONTEXTO);
+  assert.deepEqual(todosObjetosFechados(cap.corpo.output_config.format.schema), []);
+  assert.deepEqual(cap.corpo.output_config.format.schema.properties.tipo.enum, [...TIPOS_CONTEXTO]);
+  assert.deepEqual(cap.corpo.output_config.format.schema.properties.participacao.enum, [...PARTICIPACOES]);
+  assert.deepEqual(cap.corpo.output_config.format.schema.required, ["tipo", "participacao", "evidencias", "resumo"]);
+  assert.equal(JSON.stringify(cap.corpo.output_config).includes("origem"), false);
+});
+
+test("blocos thinking sao ignorados: so o texto vira o veredito", async () => {
+  const env = baseEnv({
+    fetchImpl: fetchCapturando({
+      content: [
+        { type: "thinking", thinking: "rascunho {nao json" },
+        { type: "text", text: respostaModeloValida() },
+      ],
+      stop_reason: "end_turn",
+      usage: { input_tokens: 5, output_tokens: 5 },
+    }),
+  });
+  const r = await tratarContextoRust(pedidoValidoBase(), env);
+  assert.equal(r.status, 200);
+  assert.equal(r.corpo.contexto.tipo, "ambiente");
+  assert.equal(JSON.stringify(r.corpo).includes("rascunho"), false);
+});
+
+test("bloco thinking sem texto nenhum -> resposta_invalida, nunca le o pensamento", async () => {
+  const env = baseEnv({
+    fetchImpl: fetchCapturando({ content: [{ type: "thinking", thinking: JSON.stringify(JSON.parse(respostaModeloValida())) }], stop_reason: "end_turn", usage: { input_tokens: 5, output_tokens: 5 } }),
+  });
+  const r = await tratarContextoRust(pedidoValidoBase(), env);
+  assert.equal(r.status, 502);
+  assert.equal(r.corpo.erro, "resposta_invalida");
+});
+
+test("blocos text sao concatenados na ordem antes do parse", async () => {
+  const texto = respostaModeloValida();
+  const meio = Math.floor(texto.length / 2);
+  const env = baseEnv({
+    fetchImpl: fetchCapturando({
+      content: [
+        { type: "text", text: texto.slice(0, meio) },
+        { type: "text", text: texto.slice(meio) },
+      ],
+      stop_reason: "end_turn",
+      usage: { input_tokens: 5, output_tokens: 5 },
+    }),
+  });
+  const r = await tratarContextoRust(pedidoValidoBase(), env);
+  assert.equal(r.status, 200);
+  assert.equal(r.corpo.contexto.tipo, "ambiente");
+});
+
+test("max_tokens com JSON completo: 502 resposta_truncada, sem cache, custo contado", async () => {
+  const db = criarFakeD1();
+  let chamadas = 0;
+  const env = baseEnv({
+    db,
+    fetchImpl: async () => {
+      chamadas++;
+      return { ok: true, status: 200, json: async () => ({ content: [{ type: "text", text: respostaModeloValida() }], stop_reason: "max_tokens", usage: { input_tokens: 1000, output_tokens: 100 } }) };
+    },
+  });
+  const r = await tratarContextoRust(pedidoValidoBase(), env);
+  assert.equal(r.status, 502);
+  assert.equal(r.corpo.erro, "resposta_truncada");
+  assert.equal(JSON.stringify(r.corpo).includes("tipo"), false);
+  assert.equal(contagem(db, "contexto_cache"), 0);
+  assert.equal(db._raw.prepare("SELECT status FROM contexto_reservas").get().status, "failed");
+  assert.equal(somaMicros(db), 3000);
+  assert.equal(chamadas, 1);
+});
+
+test("max_tokens com JSON parcial: 502 resposta_truncada, nunca parseado nem cacheado", async () => {
+  const db = criarFakeD1();
+  const parcial = respostaModeloValida().slice(0, 60);
+  const env = baseEnv({ db });
+  env.fetchImpl = async () => ({ ok: true, status: 200, json: async () => ({ content: [{ type: "text", text: parcial }], stop_reason: "max_tokens", usage: { input_tokens: 1000, output_tokens: 100 } }) });
+  const r = await tratarContextoRust(pedidoValidoBase(), env);
+  assert.equal(r.status, 502);
+  assert.equal(r.corpo.erro, "resposta_truncada");
+  assert.equal(contagem(db, "contexto_cache"), 0);
+  assert.equal(somaMicros(db), 3000);
+  // Nao ficou cacheada: uma nova tentativa (agora com resposta normal) gera chamada nova e sucesso.
+  env.fetchImpl = fetchCapturando({ content: [{ type: "text", text: respostaModeloValida() }], stop_reason: "end_turn", usage: { input_tokens: 5, output_tokens: 5 } });
+  const r2 = await tratarContextoRust(pedidoValidoBase(), env);
+  assert.equal(r2.status, 200);
+  assert.equal(r2.corpo.doCache, undefined);
+});
+
+test("refusal: 502 resposta_recusada, sem cache, custo contado", async () => {
+  const db = criarFakeD1();
+  const env = baseEnv({
+    db,
+    fetchImpl: async () => ({ ok: true, status: 200, json: async () => ({ content: [{ type: "text", text: "" }], stop_reason: "refusal", usage: { input_tokens: 1000, output_tokens: 100 } }) }),
+  });
+  const r = await tratarContextoRust(pedidoValidoBase(), env);
+  assert.equal(r.status, 502);
+  assert.equal(r.corpo.erro, "resposta_recusada");
+  assert.equal(contagem(db, "contexto_cache"), 0);
+  assert.equal(somaMicros(db), 3000);
+});
+
+test("stop_reason ausente (mock antigo) continua valido pela validacao local", async () => {
+  const env = baseEnv({ fetchImpl: fetchOk(respostaModeloValida()) });
+  const r = await tratarContextoRust(pedidoValidoBase(), env);
+  assert.equal(r.status, 200);
+});

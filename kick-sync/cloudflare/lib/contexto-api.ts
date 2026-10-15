@@ -15,6 +15,8 @@ import {
   validarContexto,
   validarPedidoBruto,
   PROMPT_SISTEMA,
+  TIPOS_CONTEXTO,
+  PARTICIPACOES,
   VERSAO_CONTRATO,
   VERSAO_PROMPT,
   MIN_QUADROS,
@@ -27,6 +29,30 @@ import {
 export const MAX_CORPO_BYTES = 6 * 1024 * 1024; // 6MB raw body cap, enforced by streaming before JSON.parse
 export const MAX_TOKENS = 1200; // no extended thinking, fixed output ceiling
 export const MODELO_PADRAO = "claude-sonnet-5";
+
+// Formato de saida exigido pela API (structured outputs). Espelha o contrato de site/contexto-rust.js:
+// os enums vem das mesmas constantes exportadas la. Sem minLength/maxLength (nao suportados pela API);
+// a validacao de tamanho e de conteudo continua sendo feita localmente por validarContexto.
+// O schema NAO inclui origem/recebeuFala/revisaoPrompt: esses fatos vem do pedido, nunca do modelo.
+export const SCHEMA_SAIDA_CONTEXTO = {
+  type: "object",
+  properties: {
+    tipo: { type: "string", enum: [...TIPOS_CONTEXTO] },
+    participacao: { type: "string", enum: [...PARTICIPACOES] },
+    evidencias: {
+      type: "object",
+      properties: {
+        visuais: { type: "array", items: { type: "string" } },
+        fala: { type: "array", items: { type: "string" } },
+      },
+      required: ["visuais", "fala"],
+      additionalProperties: false,
+    },
+    resumo: { type: "string" },
+  },
+  required: ["tipo", "participacao", "evidencias", "resumo"],
+  additionalProperties: false,
+} as const;
 export const TIMEOUT_MS_PADRAO = 25000;
 export const TIMEOUT_MS_MIN = 20000;
 export const TIMEOUT_MS_MAX = 30000;
@@ -139,7 +165,7 @@ async function chamarAnthropic(
   modelo: string,
   timeoutMs: number,
   sinalExterno: AbortSignal | null,
-): Promise<{ texto: string; inputTokens: number; outputTokens: number; usageConhecido: boolean }> {
+): Promise<{ texto: string; inputTokens: number; outputTokens: number; usageConhecido: boolean; stopReason: string | null }> {
   const fetchImpl = env.fetchImpl || fetch;
   const controlo = new AbortController();
   const prazo = setTimeout(() => controlo.abort(), timeoutMs);
@@ -176,6 +202,8 @@ async function chamarAnthropic(
         body: JSON.stringify({
           model: modelo,
           max_tokens: MAX_TOKENS,
+          thinking: { type: "disabled" },
+          output_config: { format: { type: "json_schema", schema: SCHEMA_SAIDA_CONTEXTO } },
           system: PROMPT_SISTEMA,
           messages: [{ role: "user", content: conteudo }],
         }),
@@ -199,9 +227,15 @@ async function chamarAnthropic(
     }
     const json = (await resp.json()) as {
       content?: Array<{ type: string; text?: string }>;
+      stop_reason?: string | null;
       usage?: { input_tokens?: number; output_tokens?: number };
     };
-    const achado = (json.content || []).find((c) => c.type === "text");
+    // So os blocos "text" formam a resposta, concatenados na ordem. Blocos de outro tipo (ex. thinking)
+    // nao sao lidos nem expostos. Nenhuma extracao por regex: o texto resultante tem de ser JSON inteiro.
+    const texto = (Array.isArray(json.content) ? json.content : [])
+      .filter((c) => c && c.type === "text" && typeof c.text === "string")
+      .map((c) => c.text as string)
+      .join("");
     // usage ausente/incompleto = custo desconhecido: quem chama mantem a reserva conservadora.
     const usageConhecido =
       typeof json.usage?.input_tokens === "number" &&
@@ -209,10 +243,12 @@ async function chamarAnthropic(
       Number.isFinite(json.usage.input_tokens) &&
       Number.isFinite(json.usage.output_tokens);
     return {
-      texto: achado?.text || "",
+      texto,
       inputTokens: Math.max(0, Math.round(json.usage?.input_tokens || 0)),
       outputTokens: Math.max(0, Math.round(json.usage?.output_tokens || 0)),
       usageConhecido,
+      // Mantido como veio. Ausente em mocks antigos (null): nesse caso so a validacao local decide.
+      stopReason: typeof json.stop_reason === "string" ? json.stop_reason : null,
     };
   } finally {
     clearTimeout(prazo);
@@ -377,7 +413,7 @@ export async function tratarContextoRust(
     return falhar({ status: 429, corpo: { erro: "teto_mensal", mensagem: "orcamento mensal estimado atingido." } });
   }
 
-  let resultado: { texto: string; inputTokens: number; outputTokens: number; usageConhecido: boolean };
+  let resultado: { texto: string; inputTokens: number; outputTokens: number; usageConhecido: boolean; stopReason: string | null };
   try {
     resultado = await chamarAnthropic(env, pedido, modelo, timeoutMs, sinalExterno);
   } catch (e) {
@@ -395,6 +431,16 @@ export async function tratarContextoRust(
       .prepare("UPDATE contexto_dia_contadores SET estimated_usd_micros = estimated_usd_micros + ? WHERE dia = ?")
       .bind(custoConhecido - CUSTO_PIOR_CASO_USD_MICROS, dia)
       .run();
+  }
+
+  // Parada anormal do modelo: a resposta NAO e usada nem cacheada, mesmo que o JSON pareca completo
+  // (truncado no limite de tokens pode ainda ser um JSON valido por acaso, ou parcial). O custo ja foi
+  // contabilizado acima. Sem retry automatico: uma nova tentativa do visitante e uma nova chamada paga.
+  if (resultado.stopReason === "max_tokens") {
+    return falhar({ status: 502, corpo: { erro: "resposta_truncada", mensagem: "o modelo atingiu o limite de tokens; resposta descartada." } });
+  }
+  if (resultado.stopReason === "refusal") {
+    return falhar({ status: 502, corpo: { erro: "resposta_recusada", mensagem: "o modelo recusou responder a este trecho." } });
   }
 
   let json: unknown;
