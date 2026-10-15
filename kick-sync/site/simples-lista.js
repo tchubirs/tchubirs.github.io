@@ -258,6 +258,15 @@ export function lancesParaLista(lances = [], { mensagens = new Map(), canalPrinc
         povs.push({ canal: outro, relacao, pessoa });
       }
     }
+    // Sugestão visual (kill com vítima sem morte confirmada): só as do próprio protagonista, só com o VOD dela no ar,
+    // e nunca sobre um canal que já é morte real (esse fica como morte). Não vira morte, nem nome, nem causa.
+    for (const s of l.povsSugeridos || []) {
+      if (s?.canal !== canal) continue;
+      for (const v of s.vitimas || []) {
+        if (typeof v !== 'string' || !v || v === canal || !noAr.includes(v) || povs.some((p) => p.canal === v)) continue;
+        povs.push({ canal: v, relacao: '', pessoa: '', origem: 'video' });
+      }
+    }
     if (mortes.length) tipos.push('morte');
     const forte = tipos.some((x) => x !== 'chat') || l.kills > 0 || l.voce > 0;
     let deMs = forte ? l.ms - ANTES_MS : l.ms - CHAT_ANTES_MS;

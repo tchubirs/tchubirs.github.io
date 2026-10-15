@@ -1164,10 +1164,12 @@ export function montarSimples(ponte) {
     return `<p class="simplesConf"><span class="simplesConfPct${c.estimativa ? ' estimativa' : ''}" tabindex="0" title="${escapar(t(c.estimativa ? 'filtro.estimativa' : 'filtro.medida'))}">${escapar(c.texto)}</span></p>`;
   }
 
-  /** "Análise por imagem" ou "Análise por imagem e fala", só com veredito validado (nunca um número). */
+  /** O resumo factual do veredito validado e "Análise por imagem" ou "...e fala" (nunca um número). Escapado: o
+   * resumo vem de fora (o modelo), nunca entra na página como HTML. */
   function analiseHtml(m) {
     const r = m.doClipe ? null : textoDoContexto(contextoDoMomento(m));
-    return r ? `<p class="simplesConf">${escapar(r.status)}</p>` : '';
+    if (!r) return '';
+    return (r.resumo ? `<p class="simplesConf">${escapar(r.resumo)}</p>` : '') + `<p class="simplesConf">${escapar(r.status)}</p>`;
   }
 
   /** O que o cartão diz da fala: a frase mais forte entre aspas, ou o botão que lê só este trecho. */
@@ -1189,9 +1191,12 @@ export function montarSimples(ponte) {
 
   function povsDo(m) {
     const buscaAtual = buscasPov.get(chave(m));
+    // Ordem = prioridade no fundir (a primeira entrada de cada canal fica): morte real, depois som medido,
+    // depois sugestão visual, e por fim o "talvez" do som.
     const opcoes = [
-      ...(m.povs || []).map((p) => ({ ...p, tipo: 'morte' })),
+      ...(m.povs || []).filter((p) => p.origem !== 'video').map((p) => ({ ...p, tipo: 'morte' })),
       ...(buscaAtual?.estava || []).map((p) => ({ ...p, tipo: 'som' })),
+      ...(m.povs || []).filter((p) => p.origem === 'video').map((p) => ({ ...p, tipo: 'video' })),
       ...(buscaAtual?.talvez || []).map((p) => ({ ...p, tipo: 'talvez' })),
     ];
     return fundirPovsPorCanal(opcoes);
@@ -1209,7 +1214,7 @@ export function montarSimples(ponte) {
       const pessoas = achadosDoTipo.map((p) => p.pessoa || p.canal).join(', ');
       opcoes.push({ tipo, canais, ajustes, pessoas, relacao: achadosDoTipo[0].relacao, canal: achadosDoTipo[0].canal });
     }
-    for (const p of achados.filter((x) => x.tipo === 'talvez')) {
+    for (const p of achados.filter((x) => x.tipo === 'talvez' || x.tipo === 'video')) {
       opcoes.push({ ...p, canais: [m.canal, p.canal], ajustes: Number.isFinite(p.desvioS) ? { [p.canal]: Math.round(p.desvioS * 1000) } : {} });
     }
     return opcoes;
@@ -1249,7 +1254,7 @@ export function montarSimples(ponte) {
         : t('simples.pov.criarGrupo', { n: p.canais.length });
       const origem = p.tipo === 'morte'
         ? t(p.canais.length > 2 ? 'simples.pov.kills' : p.relacao === 'vitima' ? 'simples.pov.vitima' : 'simples.pov.matador', { pessoa: p.pessoas, nomes: p.pessoas })
-        : t(p.tipo === 'talvez' ? 'simples.pov.talvez'
+        : t(p.tipo === 'video' ? 'simples.pov.video' : p.tipo === 'talvez' ? 'simples.pov.talvez'
           : p.canais.length > 2 ? 'simples.pov.somGrupo' : 'simples.pov.som', { nomes: p.pessoas });
       return `<div class="simplesPovOpcao"><button type="button" class="simplesPovBotao" data-acao="pov" data-pov="${escapar(id)}" aria-label="${escapar(rotulo)}"${aBaixar || abrindoPov || !liberado ? ' disabled' : ''}>${escapar(rotulo)}</button><span>${escapar(origem)}</span></div>`;
     }).join('');

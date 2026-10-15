@@ -6,7 +6,7 @@ let PORTA = 0;
 const { abrir } = montarPalco((porta) => { PORTA = porta; });
 const opcoes = { skip: !podeCorrer && 'sem navegador', timeout: 30_000 };
 
-async function preparar({ meuCanal = 'tchubi', kills = true, liberado = true } = {}) {
+async function preparar({ meuCanal = 'tchubi', kills = true, liberado = true, video = false } = {}) {
   const { p, erros } = await abrir({ modo: 'simples', caminho: null, ecra: { width: 390, height: 844 }, toque: true });
   await p.addInitScript((canal) => {
     if (canal) localStorage.setItem('povix.simplesMeuPov', canal);
@@ -17,10 +17,11 @@ async function preparar({ meuCanal = 'tchubi', kills = true, liberado = true } =
       import { montarSimples } from '/simples.js';
       import { aplicarIdioma } from '/idiomas.js';
       aplicarIdioma();
-      const config = ${JSON.stringify({ kills, liberado })};
+      const config = ${JSON.stringify({ kills, liberado, video })};
       const ms = Date.now() - 2 * 60 * 60_000;
       const canais = ['outro', 'tchubi', 'inimigo', 'alpha', 'beta'];
       const lance = { ms, ateMs: ms + 3000, pontos: 16, kills: 1, noAr: canais,
+        povsSugeridos: config.video ? [{ canal: 'tchubi', vitimas: ['inimigo'] }] : [],
         mortes: config.kills ? [{ matador: 'Tchubi', vitima: 'Inimigo', canalMatador: 'tchubi', canalVitima: 'inimigo' }] : [] };
       const controle = window.__povs = { abertos: [], editados: [], baixados: 0, liberado: config.liberado, feito: 0 };
       const ponte = {
@@ -64,6 +65,21 @@ test('escolher seu canal usa seu POV e identifica o outro jogador da kill', opco
     assert.equal(await p.evaluate(() => localStorage.getItem('povix.simplesMeuPov')), 'tchubi');
     await p.getByRole('button', { name: 'Criar clipe com inimigo', exact: true }).click();
     await p.waitForFunction(() => window.__povs.abertos.length === 1, null, { timeout: 4000 });
+    assert.deepEqual(await p.evaluate(() => window.__povs.abertos[0].canais), ['tchubi', 'inimigo']);
+    await p.evaluate(() => window.__povs.resolverAbertura(true));
+    await p.waitForFunction(() => window.__povs.editados.length === 1);
+    assert.deepEqual(erros, []);
+  } finally { await p.close(); }
+});
+
+test('sugestão visual abre os dois POVs e não é apresentada como morte confirmada', opcoes, async () => {
+  const { p, erros } = await preparar({ kills: false, video: true });
+  try {
+    assert.match(await p.locator('.simplesPovs').innerText(), /Possível adversário, pela tela dele/);
+    assert.doesNotMatch(await p.locator('.simplesPovs').innerText(), /Vítima da kill|Kills registradas/);
+    assert.doesNotMatch(await p.locator('.simplesMotivo').innerText(), /Luta confirmada|Troca de tiros/);
+    await p.getByRole('button', { name: 'Criar clipe com inimigo', exact: true }).click();
+    await p.waitForFunction(() => window.__povs.abertos.length === 1);
     assert.deepEqual(await p.evaluate(() => window.__povs.abertos[0].canais), ['tchubi', 'inimigo']);
     await p.evaluate(() => window.__povs.resolverAbertura(true));
     await p.waitForFunction(() => window.__povs.editados.length === 1);

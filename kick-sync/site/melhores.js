@@ -140,7 +140,13 @@ export function sinaisDoEvento({ marcas = new Map(), momentos = [], mensagens = 
     // Uma morte do servidor posta na montagem já conta como morte do servidor: não conta outra vez.
     const kill = m.origem !== 'servidor'
       && ((!m.auto && m.origem !== 'lances' && m.origem !== 'aovivo') || (Array.isArray(m.vitimas) && m.vitimas.length > 0));
-    if (kill) sinais.push({ tipo: 'kill', canal, ms: m.ms });
+    // As vítimas que a montagem já tem (slugs de canal, sem confirmação de morte) seguem com a kill como
+    // sugestão visual: não contam como kill, não mudam a nota, e não viram morte.
+    if (kill) {
+      const vitimas = [...new Set((Array.isArray(m.vitimas) ? m.vitimas : [])
+        .filter((v) => typeof v === 'string' && v && v !== canal))];
+      sinais.push({ tipo: 'kill', canal, ms: m.ms, ...(vitimas.length ? { vitimas } : {}) });
+    }
     if (!m.auto) continue;
     const tipos = new Set(m.tipos?.length ? m.tipos : [m.tipo]);
     const ateMs = Number.isFinite(m.combateAteMs) ? m.combateAteMs : m.ms;
@@ -210,8 +216,17 @@ export function resumirLance(grupo) {
   const kills = [];
   const marcasVoce = new Set();
   const mortes = new Map();
+  // Ligações sugestivas por canal de quem matou: vítimas sem confirmação (só para a tela, não entram na conta).
+  const sugeridos = new Map();
   for (const s of grupo.sinais) {
     const c = doCanal(s.canal);
+    if (s.tipo === 'kill' && Array.isArray(s.vitimas)) {
+      for (const v of s.vitimas) {
+        if (typeof v !== 'string' || !v || v === s.canal) continue;
+        if (!sugeridos.has(s.canal)) sugeridos.set(s.canal, new Set());
+        sugeridos.get(s.canal).add(v);
+      }
+    }
     if (s.tipo === 'voce') {
       // O ângulo que se estava a ver quando se marcou vai à frente: é ele que abre com o lance.
       c.voce = Math.max(c.voce || 0, s.principal ? 2 : 1);
@@ -279,6 +294,8 @@ export function resumirLance(grupo) {
     pedidosClip: pedidos,
     partes,
     pontos,
+    // Só existe quando há sugestão: { canal (quem matou), vitimas (slugs) }. Não altera nota nem partes.
+    ...(sugeridos.size ? { povsSugeridos: [...sugeridos].map(([canal, vs]) => ({ canal, vitimas: [...vs] })) } : {}),
   };
 }
 

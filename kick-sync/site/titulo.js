@@ -267,8 +267,9 @@ export function tituloDeEtiquetas(etiquetas, { canal = '' } = {}) {
 }
 
 /**
- * O resumo FACTUAL de um veredito do contexto já validado (quadro + fala): o que se viu, e se a análise teve
- * fala ou só imagem. Nunca um percentual, nunca o nome de arma. `null` sem veredito.
+ * O resumo FACTUAL de um veredito do contexto já validado (quadro + fala): `titulo` é a categoria curta, `resumo` é o
+ * que o contrato validou (texto cru: quem insere na página escapa), `status` diz se a análise teve fala ou só imagem.
+ * Nunca um percentual, nunca o nome de arma. `null` sem veredito.
  */
 export function textoDoContexto(ctx) {
   if (!ctx || typeof ctx !== 'object') return null;
@@ -276,7 +277,12 @@ export function textoDoContexto(ctx) {
     ? (ctx.participacao === 'confirmada' ? 'combate' : ctx.participacao === 'ausente' ? 'combateAusente' : 'combateIndeterminado')
     : ['reacao', 'conversa', 'ambiente', 'indeterminado'].includes(ctx.tipo) ? ctx.tipo : null;
   if (!chave) return null;
-  return { titulo: t(`contexto.resumo.${chave}`), status: t(ctx.recebeuFala ? 'contexto.status.imagemFala' : 'contexto.status.imagem') };
+  const resumo = typeof ctx.resumo === 'string' ? ctx.resumo.trim() : '';
+  return {
+    titulo: t(`contexto.resumo.${chave}`),
+    resumo,
+    status: t(ctx.recebeuFala ? 'contexto.status.imagemFala' : 'contexto.status.imagem'),
+  };
 }
 
 /** O título de um momento (com o índice quando se tem). */

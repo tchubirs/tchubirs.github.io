@@ -3142,9 +3142,6 @@ body.veioDaLista .voltarLista { display: inline-flex; white-space: nowrap; flex:
   .simples .simplesBotoes button { min-height: 34px; font-size: 14px; padding-inline: var(--e3); white-space: nowrap; }
   .simples .simplesBotoes .simplesNao { padding-inline: 0; width: 34px; justify-content: center; flex: none; }
   .simplesNao span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); margin: 0; }
-  /* O cartão que toca cresce um pouco por cima dos vizinhos, a partir do próprio centro (o dono, 13/10). */
-  .simplesCartao { transition: transform .18s ease; }
-  .simplesCartao.comPrevia { transform: scale(1.18); transform-origin: center; z-index: 5; position: relative; box-shadow: 0 12px 40px rgb(0 0 0 / .55); background: var(--sup-2); }
 }
 @container (max-width: 430px) {
   .simplesBotoes .longo { display: none; }

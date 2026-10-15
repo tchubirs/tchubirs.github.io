@@ -82,6 +82,7 @@ export function montarPalco(aoAbrir = () => {}) {
     // Idioma fixo, e nao o do sistema: os testes leem frases, e uma maquina de
     // CI noutra lingua fazia-os falhar por uma razao que nao e a deles.
     const p = await navegador.newPage({
+      timezoneId: 'UTC',
       ...(ecra ? { viewport: ecra } : {}),
       ...(toque ? { hasTouch: true, isMobile: true } : {}),
       locale: idioma === 'pt' ? 'pt-PT' : idioma,

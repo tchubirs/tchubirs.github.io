@@ -9,6 +9,7 @@
 
 import { construirPedido, pedidoValido, validarContexto, VERSAO_CONTRATO, VERSAO_PROMPT } from './contexto-rust.js';
 import { acharNaLista, linhasDaTranscricao } from './falas.js';
+import { etiquetasParaFiltro } from './titulo.js';
 
 export const MAX_CANDIDATOS_POR_LIVE = 20;
 export const CONCORRENCIA_PADRAO = 2;
@@ -197,16 +198,31 @@ async function codigoDeErro(resp) {
   try { const j = await resp.json(); return typeof j?.erro === 'string' ? j.erro : null; } catch { return null; }
 }
 
+/** Um grito ou chat próprio (o detector aceitou), independente dos tiros: a barulheira ambiente com conversa é outra coisa. */
+const temGritoOuChat = (m) => etiquetasParaFiltro(m.etiquetas).some((e) => e.tipo === 'grito' || e.tipo === 'chat');
+
+/** Só o que não é combate rebaixa: ambiente sem grito/chat próprio, ou o jogador ausente de um combate. Reação e
+ * conversa nunca rebaixam por ausência de combate: são highlights legítimos de grito ou chat. */
+function rebaixaPor(m, contexto) {
+  if (contexto.tipo === 'ambiente') return !temGritoOuChat(m);
+  return contexto.participacao === 'ausente' && contexto.tipo !== 'reacao' && contexto.tipo !== 'conversa';
+}
+
 /** Anexa o veredito. Sem etiqueta de tiros (lista sem etiquetas, ou sem som de tiro) ele fica no próprio momento
- * (`m.contexto`): nunca se perde em silêncio. `null` não apaga o que já havia. */
+ * (`m.contexto`): nunca se perde em silêncio. `null` não apaga o que já havia.
+ * A nota e os pontos ORIGINAIS são guardados na primeira aplicação contextual; cada veredito recalcula a partir
+ * deles (nunca rebaixa em cima do já rebaixado). Um momento que já tinha veredito antes disto (cache antigo) não
+ * ganha original inventado: fica com o valor que tem. */
 export function comContexto(m, contexto) {
   if (!contexto) return m;
   const temTiros = (m.etiquetas || []).some((e) => e.tipo === 'tiros');
   const etiquetas = (m.etiquetas || []).map((e) => (e.tipo === 'tiros' ? Object.assign({}, e, { contexto: contexto }) : e));
-  // Rebaixa só o que é claramente não-combate (ambiente, ou o jogador ausente): a barulheira sozinha não manda.
-  // Reação e conversa mantêm a nota; o candidato continua na lista.
-  const rebaixa = contexto.tipo === 'ambiente' || contexto.participacao === 'ausente';
-  const nota = rebaixa && (m.nota === 'bom' || m.nota === 'muitoBom') ? 'talvez' : m.nota;
-  const pontos = rebaixa && Number.isFinite(m.pontos) ? Math.min(m.pontos, 1) : m.pontos;
-  return Object.assign({}, m, { etiquetas: etiquetas }, temTiros ? {} : { contexto: contexto }, { nota: nota, pontos: pontos });
+  const comOriginais = 'notaOriginal' in m && 'pontosOriginais' in m;
+  const base = comOriginais ? { nota: m.notaOriginal, pontos: m.pontosOriginais } : { nota: m.nota, pontos: m.pontos };
+  const primeira = !comOriginais && !contextoDoMomento(m);
+  const rebaixa = rebaixaPor(m, contexto);
+  const nota = rebaixa && (base.nota === 'bom' || base.nota === 'muitoBom') ? 'talvez' : base.nota;
+  const pontos = rebaixa && Number.isFinite(base.pontos) ? Math.min(base.pontos, 1) : base.pontos;
+  const originais = primeira ? { notaOriginal: m.nota ?? null, pontosOriginais: Number.isFinite(m.pontos) ? m.pontos : null } : {};
+  return Object.assign({}, m, { etiquetas: etiquetas }, temTiros ? {} : { contexto: contexto }, originais, { nota: nota, pontos: pontos });
 }

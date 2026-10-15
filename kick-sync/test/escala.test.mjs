@@ -180,11 +180,16 @@ test('o principal que sai do foco para um lugar fora da vista larga o leitor de 
     await p.waitForFunction(() => /1080p/.test(window.__estado.players.get('canal00')?.url || ''), null, { timeout: 15000 });
     const altos = () => p.evaluate(() => [...window.__estado.players]
       .filter(([, l]) => /1080p/.test(l.url)).map(([s]) => s).sort());
-    const visivel = (s) => p.evaluate((slug) => {
-      const r = document.querySelector(`.tile[data-slug="${slug}"]`).getBoundingClientRect();
-      return r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth && r.width > 0;
-    }, s);
+    // Pela mesma medida que a página usa (um IntersectionObserver): o retângulo ignora o recorte da
+    // grelha, que é um painel com rolagem, e dava "à vista" a um quadro que já não se via.
+    const visivel = (s) => p.evaluate((slug) => new Promise((ok) => {
+      const o = new IntersectionObserver((es) => { o.disconnect(); ok(es[0].isIntersecting); });
+      o.observe(document.querySelector(`.tile[data-slug="${slug}"]`));
+    }), s);
 
+    // O foco é um par (dois ângulos, ver `alternarPar`): clicar numa miniatura põe-na ao lado do que
+    // já está aberto, e o principal continua em qualidade. O antigo principal só sai quando é o
+    // mais antigo do par a ser empurrado, e é aí, já fora da vista, que tem de largar o 1080p.
     for (const s of ['canal55', 'canal57', 'canal05', 'canal58']) {
       const tile = p.locator(`.tile[data-slug="${s}"]`);
       await tile.scrollIntoViewIfNeeded();
@@ -192,12 +197,16 @@ test('o principal que sai do foco para um lugar fora da vista larga o leitor de 
       await p.waitForFunction((slug) => /1080p/.test(window.__estado.players.get(slug)?.url || ''), s, { timeout: 15000 });
       await p.waitForTimeout(600);
       if (s === 'canal55') {
+        assert.ok(/1080p/.test((await p.evaluate(() => window.__estado.players.get('canal00')?.url)) || ''),
+          'o principal ao lado de um segundo ângulo deixou de estar em qualidade');
+      }
+      if (s === 'canal57') {
         assert.equal(await visivel('canal00'), false, 'o antigo principal ficou à vista e o teste não prova nada');
         assert.ok(!/1080p/.test((await p.evaluate(() => window.__estado.players.get('canal00')?.url)) || ''),
           'o antigo principal ficou com o leitor de 1080p fora da vista');
       }
     }
-    assert.deepEqual(await altos(), ['canal58'], 'trocas de foco deixaram leitores de 1080p para trás');
+    assert.deepEqual(await altos(), ['canal05', 'canal58'], 'trocas de foco deixaram leitores de 1080p para trás');
 
     // Ao voltar à vista, o antigo principal tem o leitor barato dos secundários.
     await p.locator('.tile[data-slug="canal00"]').scrollIntoViewIfNeeded();

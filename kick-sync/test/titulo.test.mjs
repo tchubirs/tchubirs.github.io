@@ -384,6 +384,18 @@ test('resumo factual do contexto validado: nunca o rótulo genérico, e diz se t
   }
 });
 
+test('regressão: o resumo validado vem cru e sem aparar o conteúdo; a inserção HTML escapa (sem HTML executável)', async () => {
+  const { textoDoContexto } = await import('../site/titulo.js');
+  const { escapar } = await import('../site/escapar.js');
+  const hostil = '<img src=x onerror="window.__xss=1"> & "q"';
+  const r = textoDoContexto({ tipo: 'ambiente', participacao: 'ausente', recebeuFala: false, resumo: `  ${hostil}  ` });
+  assert.equal(r.resumo, hostil);
+  assert.equal(r.titulo, 'Ambiente, sem combate visível', 'o título continua a categoria curta, nunca o resumo');
+  assert.equal(escapar(r.resumo), '&lt;img src=x onerror=&quot;window.__xss=1&quot;&gt; &amp; &quot;q&quot;');
+  assert.equal(textoDoContexto({ tipo: 'ambiente', participacao: 'ausente', recebeuFala: false }).resumo, '');
+  assert.equal(textoDoContexto({ tipo: 'combate', participacao: 'confirmada', resumo: 42 }).resumo, '');
+});
+
 test('morte legada sem vínculo explícito: não confirma Luta e não ganha percentual inventado', () => {
   const legado = { tipo: 'morte', conf: null, fonte: 'indice', n: 0, mortes: [{ matador: 'a', vitima: 'b' }], vinculoProprio: false };
   assert.equal(tituloDeEtiquetas([luta(40), legado]), 'Som alto e morte: a matou b');

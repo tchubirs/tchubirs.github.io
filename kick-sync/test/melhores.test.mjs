@@ -241,3 +241,33 @@ test('o chat a pedir clipe ("clip", "clipa", "clipe") é mais um sinal, pelo mes
   assert.equal(lance.msAbrir, lance.ms - ANTES_MS, 'o chat reage depois: abre antes do pedido');
   assert.equal(motivoDoLance(lance), 'o chat pediu clipe');
 });
+
+test('sugestão de vítimas da kill: dedupe, sem o protagonista, sem campo quando não há, e sem mudar a nota', () => {
+  const ms = T + 5 * MIN;
+  const com = sinaisDoEvento({ momentos: [{ ms, protagonista: 'ana', vitimas: ['bia', 'bia', 'ana', '', null, 'cyra'] }] });
+  const sem = sinaisDoEvento({ momentos: [{ ms, protagonista: 'ana', vitimas: [] }] });
+  const kill = com.find((s) => s.tipo === 'kill');
+  assert.deepEqual(kill.vitimas, ['bia', 'cyra'], 'o protagonista, vazios, nulos e repetidos saem');
+  assert.equal(sem.find((s) => s.tipo === 'kill').vitimas, undefined, 'sem vítima, o sinal fica como antes');
+
+  const lanceCom = resumirLance({ deMs: ms, ateMs: ms, sinais: com });
+  const lanceSem = resumirLance({ deMs: ms, ateMs: ms, sinais: sem });
+  assert.deepEqual(lanceCom.povsSugeridos, [{ canal: 'ana', vitimas: ['bia', 'cyra'] }]);
+  assert.equal('povsSugeridos' in lanceSem, false, 'só cria o campo quando há sugestão');
+  // Não é morte nem kill extra: a conta e as partes são as mesmas.
+  assert.equal(lanceCom.pontos, lanceSem.pontos);
+  assert.deepEqual(lanceCom.partes, lanceSem.partes);
+  assert.equal(lanceCom.kills, 1);
+  assert.deepEqual(lanceCom.mortes, []);
+});
+
+test('sugestão de vítimas: várias kills do mesmo canal juntam as vítimas, e a kill repetida não duplica', () => {
+  const ms = T + 5 * MIN;
+  const sinais = sinaisDoEvento({ momentos: [
+    { ms, protagonista: 'ana', vitimas: ['bia'] },
+    { ms: ms + 1000, protagonista: 'ana', vitimas: ['cyra', 'bia'] },
+  ] });
+  const lance = resumirLance({ deMs: ms, ateMs: ms + 1000, sinais });
+  assert.equal(lance.kills, 1, 'a mesma kill marcada duas vezes conta uma');
+  assert.deepEqual(lance.povsSugeridos, [{ canal: 'ana', vitimas: ['bia', 'cyra'] }]);
+});

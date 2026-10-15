@@ -35,3 +35,19 @@ test('fundir: entrada sem canal sai, e a lista de entrada não é alterada', () 
   assert.equal(JSON.stringify(entrada), copia);
   assert.deepEqual(fundirPovsPorCanal(null), []);
 });
+
+test('fundir: sugestão de vídeo não ganha da morte nem do som medido; o desvio do som sobrevive', () => {
+  // Ordem que povsDo monta: morte real, som medido, sugestão de vídeo, talvez.
+  const r = fundirPovsPorCanal([
+    { tipo: 'morte', canal: 'ana', relacao: 'vitima', pessoa: 'ana' },
+    { tipo: 'video', canal: 'ana', relacao: '' },
+    { tipo: 'som', canal: 'bia', pessoa: 'bia (som)', desvioS: 0.8 },
+    { tipo: 'video', canal: 'bia', relacao: '' },
+    { tipo: 'video', canal: 'cyra', relacao: '' },
+  ]);
+  assert.equal(r.find((p) => p.canal === 'ana').tipo, 'morte');
+  assert.equal(r.find((p) => p.canal === 'bia').tipo, 'som');
+  assert.equal(r.find((p) => p.canal === 'bia').desvioS, 0.8);
+  assert.equal(r.find((p) => p.canal === 'cyra').tipo, 'video');
+  assert.equal(r.length, 3);
+});

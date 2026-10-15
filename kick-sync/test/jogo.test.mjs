@@ -165,7 +165,7 @@ test('evento de Rust: quem estava no GTA fica a cinza, fora dos melhores lances 
     await p.evaluate((ms) => window.__abrirLanceDoEvento(['rust1', 'rust2', 'gta1'], ms, 'rust1'), T + 3 * 60_000);
     await p.waitForFunction(() => window.__estado?.linhas?.length === 3, null, { timeout: 15000 });
     await p.waitForSelector('.faixa[data-slug="gta1"].outroJogo');
-    assert.equal(await p.locator('.faixa[data-slug="gta1"] .outroJogoFaixa').innerText(), 'outro jogo nesta noite');
+    assert.equal(await p.locator('.faixa[data-slug="gta1"] .outroJogoFaixa').innerText(), 'outro jogo nesta live');
     assert.equal(await p.locator('.faixa[data-slug="rust1"].outroJogo').count(), 0);
     assert.deepEqual(await p.evaluate(() => window.__jogo.pedidosDe('*', 'tudo').sort()), ['rust1', 'rust2']);
     assert.deepEqual(await p.evaluate(() => window.__jogo.pedidosDe('gta1', 'tudo')), ['gta1'], 'pedido pelo nome, entra');

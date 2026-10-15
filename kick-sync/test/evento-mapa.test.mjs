@@ -420,7 +420,7 @@ test('adicionar streamer pela busca da Kick, com time: só ele é lido, e o rest
   assert.deepEqual(depois.vista, antes.vista, 'a vista não mexeu');
   assert.deepEqual(depois.escolha, antes.escolha, 'nem o lance escolhido');
   // O lance passa a contar com ele: é do mesmo time e estava no ar.
-  assert.match(await p.locator('#verLanceTexto').innerText(), /2 ângulos/);
+  assert.match(await p.locator('#verLanceTexto').innerText(), /2 jogadores/);
   assert.deepEqual(erros, []);
 });
 

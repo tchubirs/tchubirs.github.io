@@ -138,6 +138,24 @@ export function noArEm(coberturas, slug, ms) {
 }
 
 /**
+ * Os canais com vídeo no ar num lance da lista simples: os de `l.canais` que estão no ar, e as vítimas que o
+ * protagonista sugeriu (`l.povsSugeridos`, que não estão em `l.canais`) quando também estão no ar. Uma vítima só
+ * entra se o protagonista que a sugeriu estiver no ar. Não mexe em `l.canais`, na conta nem nas mortes.
+ * `noAr(canal)` é a cobertura do protagonista; `vitimaNoAr(canal)` a da vítima (com evento e jogo).
+ */
+export function canaisNoArDoLance(l, { noAr, vitimaNoAr = noAr }) {
+  const base = [...new Set(l.canais || [])].filter((c) => noAr(c));
+  const extra = [];
+  for (const s of l.povsSugeridos || []) {
+    if (!base.includes(s.canal)) continue;
+    for (const v of s.vitimas || []) {
+      if (!base.includes(v) && !extra.includes(v) && vitimaNoAr(v)) extra.push(v);
+    }
+  }
+  return [...base, ...extra];
+}
+
+/**
  * Montar o evento sobre a página.
  *
  * `abrirLance(canais, ms, foco)` é da página de sempre: carrega aqueles canais, abre a noite onde está
@@ -2218,8 +2236,17 @@ export function montarEvento({
   function lancesSimples() {
     const v = ev.trecho || ev.limites;
     if (!ev.elenco || !v) return { nome: '', lances: [], mensagens: ev.mensagens, lendo: Boolean(melhores.leitura), texto: '' };
+    const doEvento = new Set(todosDoEvento());
     const lances = filtrarLances(calcularLances(), { deMs: v.deMs, ateMs: v.ateMs })
-      .map((l) => ({ ...l, noAr: l.canais.filter((c) => noArEm(ev.coberturas, c, l.msAbrir) || noArEm(ev.coberturas, c, l.ms)) }));
+      .map((l) => ({
+        ...l,
+        noAr: canaisNoArDoLance(l, {
+          noAr: (c) => noArEm(ev.coberturas, c, l.msAbrir) || noArEm(ev.coberturas, c, l.ms),
+          // Uma vítima sugerida só conta dentro do evento, e não se estiver noutro jogo nesse instante.
+          vitimaNoAr: (c) => doEvento.has(c) && !outroJogoEm(c, l.ms)
+            && (noArEm(ev.coberturas, c, l.msAbrir) || noArEm(ev.coberturas, c, l.ms)),
+        }),
+      }));
     return {
       nome: ev.elenco.nome && ev.elenco.nome !== t('evento.semNome') ? ev.elenco.nome : '',
       canais: [...new Set([...ev.elenco.times.flatMap((x) => x.canais), ...ev.elenco.soltos])],

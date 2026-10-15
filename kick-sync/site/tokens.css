@@ -48,10 +48,11 @@
   /* ── estado ──────────────────────────────────────────────────────────── */
   /* Não são acentos: pertencem à informação, e não à decoração. */
   /* O vermelho é o texto dos avisos (12,5 px), e tem de se ler em todas as
-     superfícies e sobre o seu próprio eco: 5,3:1 no pior caso (--sup-3) e
-     4,6:1 sobre o eco. O #E0574F de antes dava 4,2:1 no botão do ao vivo. */
+     superfícies e sobre o seu próprio eco: 4,9:1 no pior caso (--sup-3) e
+     4,5:1 sobre o eco nesse mesmo pior caso (o eco a 6% e não a 9%, para
+     passar AA). O #E0574F de antes dava 4,2:1 no botão do ao vivo. */
   --perigo: #EE7068;
-  --perigo-eco: #ee706818;
+  --perigo-eco: #ee706810;
   --ok: #5FAE72;             /* esteve no ar, ficou pronto */
   --ok-eco: #5fae7226;
   --aviso: #D9A441;

@@ -9,6 +9,7 @@ import {
 import { sinaisDoEvento, melhoresLances, filtrarLances } from '../site/melhores.js';
 import { motivoEmPalavras, quemEstavaNoLance } from '../site/simples.js';
 import { tituloDoMomento } from '../site/titulo.js';
+import { canaisNoArDoLance, noArEm } from '../site/evento-ui.js';
 
 test('a caixa entende o nome solto, os links da Kick e o evento', () => {
   assert.deepEqual(lerEntrada('xguiry'), { tipo: 'nome', slug: 'xguiry', evento: 'xguiry' });
@@ -157,6 +158,112 @@ test('evento: chat que reclama do som cai, e quem não está no ar não entra', 
   assert.deepEqual(lista.map((m) => m.canal), ['cyrus', 'xguiry']);
   assert.equal(lista[1].falha, true);
   assert.equal(lista[0].falha, false);
+});
+
+// Sugestão visual de POV: a kill da montagem com vítimas (slugs) sem morte confirmada. Fluxo sinais -> resumo -> lista.
+const ligacoes = (momentos, noAr, extra = {}) => {
+  const lances = filtrarLances(melhoresLances(sinaisDoEvento({ momentos })))
+    .map((l) => ({ ...l, noAr: noAr ?? l.canais, ...extra }));
+  return lancesParaLista(lances, { canalPrincipal: extra.canalPrincipal ?? '' });
+};
+
+test('sugestão: vítimas múltiplas viram POVs de origem vídeo, sem protagonista, sem duplicata, sem morte', () => {
+  const momentos = [{ ms: min(30), protagonista: 'ana', vitimas: ['bia', 'cyra', 'bia', 'ana'] }];
+  const [item, ...resto] = ligacoes(momentos, ['ana', 'bia', 'cyra']);
+  assert.equal(resto.length, 0);
+  assert.equal(item.canal, 'ana');
+  assert.deepEqual(item.povs, [
+    { canal: 'bia', relacao: '', pessoa: '', origem: 'video' },
+    { canal: 'cyra', relacao: '', pessoa: '', origem: 'video' },
+  ]);
+  // Não confirmado: nenhuma morte, nenhum tipo "morte", e o título não tem por onde confirmar combate.
+  assert.deepEqual(item.mortes, []);
+  assert.equal(item.tipos.includes('morte'), false);
+  assert.equal(motivoEmPalavras(item).includes('matou'), false);
+});
+
+test('sugestão: sem o VOD da vítima no ar, ela não vira POV; sem o VOD do protagonista, o lance some', () => {
+  const momentos = [{ ms: min(30), protagonista: 'ana', vitimas: ['bia', 'cyra'] }];
+  const [item] = ligacoes(momentos, ['ana', 'bia']);
+  assert.deepEqual(item.povs.map((p) => p.canal), ['bia']);
+  assert.deepEqual(ligacoes(momentos, ['bia', 'cyra'], { canalPrincipal: 'ana' }), [], 'protagonista fora do ar: sem lance');
+  assert.deepEqual(ligacoes(momentos, ['ana'], { canalPrincipal: 'ana' })[0].povs, [], 'sem VOD das vítimas: sem POV');
+});
+
+test('sugestão: com morte real do mesmo canal, fica a morte (sem origem vídeo), e a outra vítima continua sugerida', () => {
+  const momentos = [{ ms: min(30), protagonista: 'ana', vitimas: ['bia', 'cyra'] }];
+  const lances = filtrarLances(melhoresLances(sinaisDoEvento({
+    momentos,
+    mortes: [{ id: 'm1', matador: 'ana', vitima: 'bia', canalMatador: 'ana', canalVitima: 'bia', ms: min(30), fonte: 'servidor' }],
+  }))).map((l) => ({ ...l, noAr: ['ana', 'bia', 'cyra'] }));
+  const [item] = lancesParaLista(lances, { canalPrincipal: 'ana' });
+  assert.deepEqual(item.povs, [
+    { canal: 'bia', relacao: 'vitima', pessoa: 'bia' },
+    { canal: 'cyra', relacao: '', pessoa: '', origem: 'video' },
+  ]);
+  assert.equal(item.povs.find((p) => p.canal === 'bia').origem, undefined);
+});
+
+// A cadeia real do modo simples (evento-ui.js lancesSimples), sem `noAr` injetado: a cobertura vem do mapa de
+// coberturas, como na página. Só ficam de fora o elenco e o jogo da página (`doEvento`, `outroJogoEm`), que aqui
+// são conjuntos explícitos.
+const cadeiaSimples = (momentos, { coberturas, doEvento, outroJogo = new Map(), canalPrincipal = '' }) => {
+  const lances = filtrarLances(melhoresLances(sinaisDoEvento({ momentos })));
+  const comNoAr = lances.map((l) => ({
+    ...l,
+    noAr: canaisNoArDoLance(l, {
+      noAr: (c) => noArEm(coberturas, c, l.msAbrir) || noArEm(coberturas, c, l.ms),
+      vitimaNoAr: (c) => doEvento.has(c) && !(!noArEm(coberturas, c, l.ms) && noArEm(outroJogo, c, l.ms))
+        && (noArEm(coberturas, c, l.msAbrir) || noArEm(coberturas, c, l.ms)),
+    }),
+  }));
+  return { lances: comNoAr, lista: lancesParaLista(comNoAr, { canalPrincipal }) };
+};
+const aoVivo = (...canais) => new Map(canais.map((c) => [c, [[min(0), min(60)]]]));
+
+test('cadeia real: a vítima sugerida no ar vira POV mesmo fora de l.canais, sem noAr injetado', () => {
+  const momentos = [{ ms: min(30), protagonista: 'ana', vitimas: ['bia'] }];
+  const { lances, lista } = cadeiaSimples(momentos, { coberturas: aoVivo('ana', 'bia'), doEvento: new Set(['ana', 'bia']) });
+  assert.deepEqual(lances[0].canais, ['ana'], 'l.canais continua só com quem emitiu o sinal');
+  assert.deepEqual(lances[0].noAr, ['ana', 'bia']);
+  assert.equal(lista.length, 1);
+  assert.equal(lista[0].canal, 'ana');
+  assert.deepEqual(lista[0].povs, [{ canal: 'bia', relacao: '', pessoa: '', origem: 'video' }]);
+});
+
+test('cadeia real: vítima fora do evento, ou em outro jogo nesse instante, não vira POV', () => {
+  const momentos = [{ ms: min(30), protagonista: 'ana', vitimas: ['bia', 'dan', 'fora'] }];
+  const coberturas = aoVivo('ana', 'bia', 'fora');
+  const outroJogo = aoVivo('dan');
+  const { lista } = cadeiaSimples(momentos, { coberturas, outroJogo, doEvento: new Set(['ana', 'bia', 'dan']) });
+  assert.deepEqual(lista[0].povs.map((p) => p.canal), ['bia'], 'fora do evento (fora) e outro jogo (dan) saem');
+});
+
+test('cadeia real: protagonista sem VOD no instante não traz as vítimas; o protagonista preferido continua o canal', () => {
+  const momentos = [{ ms: min(30), protagonista: 'ana', vitimas: ['bia'] }];
+  const semAna = cadeiaSimples(momentos, { coberturas: aoVivo('bia'), doEvento: new Set(['ana', 'bia']) });
+  assert.deepEqual(semAna.lista, [], 'sem o protagonista no ar, a vítima sozinha não vira lance');
+  const dois = cadeiaSimples(momentos, { coberturas: aoVivo('ana', 'bia'), doEvento: new Set(['ana', 'bia']), canalPrincipal: 'ana' });
+  assert.equal(dois.lista[0].canal, 'ana');
+  assert.equal(dois.lista[0].meuPov, true);
+});
+
+test('cadeia real: a sugestão não entra como morte, nem título a confirma como combate', () => {
+  const momentos = [{ ms: min(30), protagonista: 'ana', vitimas: ['bia'] }];
+  const { lista } = cadeiaSimples(momentos, { coberturas: aoVivo('ana', 'bia'), doEvento: new Set(['ana', 'bia']) });
+  const [item] = lista;
+  assert.deepEqual(item.mortes, []);
+  assert.equal(item.tipos.includes('morte'), false);
+  const titulo = tituloDoMomento({ ...item, vitimas: [], origem: 'lances' });
+  assert.doesNotMatch(String(titulo), /morte|matou|combate|confirm/i, `título: ${titulo}`);
+});
+
+test('sugestão: a nota e o motivo do lance não mudam com as vítimas sugeridas', () => {
+  const base = ligacoes([{ ms: min(30), protagonista: 'ana' }], ['ana', 'bia']);
+  const com = ligacoes([{ ms: min(30), protagonista: 'ana', vitimas: ['bia'] }], ['ana', 'bia']);
+  assert.equal(com[0].pontos, base[0].pontos);
+  assert.equal(com[0].nota, base[0].nota);
+  assert.equal(motivoEmPalavras(com[0]), motivoEmPalavras(base[0]));
 });
 
 // ── o que já se achou, lembrado neste aparelho ────────────────────────────

@@ -225,3 +225,67 @@ test('comContexto: ambiente ou jogador ausente rebaixa a nota de bom/muito bom; 
   assert.equal(reac.nota, 'bom');
   assert.equal(reac.pontos, 4);
 });
+
+// ── regressões da nota: reação/conversa sem combate, ambiente só com tiros, ambiente com grito/chat, reanálise ──
+const ambiente = { tipo: 'ambiente', participacao: 'ausente' };
+const reacaoSemCombate = { tipo: 'reacao', participacao: 'ausente' };
+const conversaSemCombate = { tipo: 'conversa', participacao: 'ausente' };
+const combateConfirmado = { tipo: 'combate', participacao: 'confirmada' };
+const destaque = (over) => Object.assign({ id: 1, nota: 'muitoBom', pontos: 7, etiquetas: [tiro()] }, over || {});
+
+test('regressão: reação ou conversa sem combate (jogador ausente) mantêm a nota e os pontos do highlight', () => {
+  for (const ctx of [reacaoSemCombate, conversaSemCombate]) {
+    const r = comContexto(destaque({ etiquetas: [tiro(), { tipo: 'grito', conf: 0.43 }] }), ctx);
+    assert.equal(r.nota, 'muitoBom', ctx.tipo);
+    assert.equal(r.pontos, 7, ctx.tipo);
+  }
+});
+
+test('regressão: ambiente só com tiros tira a promoção que vinha só do som', () => {
+  const r = comContexto(destaque(), ambiente);
+  assert.equal(r.nota, 'talvez');
+  assert.equal(r.pontos, 1);
+  assert.equal(r.etiquetas.length, 1, 'o candidato continua na lista');
+});
+
+test('regressão: ambiente com grito ou chat próprios (sinal independente dos tiros) não rebaixa', () => {
+  const comGrito = comContexto(destaque({ nota: 'bom', pontos: 4, etiquetas: [tiro(), { tipo: 'grito', conf: 0.43 }] }), ambiente);
+  assert.equal(comGrito.nota, 'bom');
+  assert.equal(comGrito.pontos, 4);
+  const comChat = comContexto(destaque({ nota: 'bom', pontos: 4, etiquetas: [tiro(), { tipo: 'chat', conf: 0.45 }] }), ambiente);
+  assert.equal(comChat.nota, 'bom');
+  assert.equal(comChat.pontos, 4);
+  // Chat abaixo do piso do filtro não é sinal aceito pelo detector: o ambiente ainda rebaixa.
+  const chatFraco = comContexto(destaque({ nota: 'bom', pontos: 4, etiquetas: [tiro(), { tipo: 'chat', conf: 0.1 }] }), ambiente);
+  assert.equal(chatFraco.nota, 'talvez');
+});
+
+test('regressão: jogador ausente de um combate continua rebaixando (critério existente)', () => {
+  const r = comContexto(destaque({ nota: 'bom', pontos: 4 }), { tipo: 'combate', participacao: 'ausente' });
+  assert.equal(r.nota, 'talvez');
+  assert.equal(r.pontos, 1);
+});
+
+test('regressão: reanálise guarda a nota original, recupera ao corrigir e não rebaixa em cima do rebaixado', () => {
+  const amb = comContexto(destaque(), ambiente);
+  assert.equal(amb.notaOriginal, 'muitoBom');
+  assert.equal(amb.pontosOriginais, 7);
+  const deNovo = comContexto(amb, ambiente);
+  assert.deepEqual([deNovo.nota, deNovo.pontos], ['talvez', 1]);
+  const corrigido = comContexto(JSON.parse(JSON.stringify(deNovo)), combateConfirmado);
+  assert.deepEqual([corrigido.nota, corrigido.pontos], ['muitoBom', 7]);
+  assert.deepEqual([comContexto(corrigido, reacaoSemCombate).nota, comContexto(corrigido, reacaoSemCombate).pontos], ['muitoBom', 7]);
+  const outraVez = comContexto(corrigido, ambiente);
+  assert.deepEqual([outraVez.nota, outraVez.pontos], ['talvez', 1]);
+  assert.equal(outraVez.notaOriginal, 'muitoBom', 'o original não muda com as reanálises');
+  assert.equal(outraVez.pontosOriginais, 7);
+});
+
+test('regressão: cache antigo já rebaixado (sem original guardado) não ganha original inventado', () => {
+  const antigo = { id: 1, nota: 'talvez', pontos: 1, etiquetas: [{ ...tiro(), contexto: ambiente }] };
+  const r = comContexto(antigo, combateConfirmado);
+  assert.equal(r.nota, 'talvez', 'sem o original real, não se restaura um valor inventado');
+  assert.equal(r.pontos, 1);
+  assert.equal(r.notaOriginal, undefined);
+  assert.equal(r.pontosOriginais, undefined);
+});

@@ -68,7 +68,7 @@ test('lê os nomes de quadros pintados, casa pelo canal, pelo apelido do Discord
   assert.equal(await p.locator('#verLanceTexto').innerText(), antes);
   await p.click('#nomesPropostas button[data-sim="newtrc"]');
   await p.click('#nomesPropostas button[data-nao="gatomia"]');
-  assert.equal(await p.locator('#verLanceTexto').innerText(), 'Ver este lance com 2 ângulos');
+  assert.equal(await p.locator('#verLanceTexto').innerText(), 'Ver o lance de 2 jogadores');
   assert.match(await p.locator('#nomesPropostas li.sim').innerText(), /newtrc[\s\S]*Entra no lance/);
   assert.match(await p.locator('#nomesPropostas li.nao').innerText(), /gatomia[\s\S]*Recusado/);
   // Desfazer o não volta a deixar escolher.
@@ -168,7 +168,7 @@ test('a leitura não refaz o painel a cada quadro, e o ao vivo não leva quem se
   assert.ok(contas.tiradas <= 24, `${contas.tiradas} miniaturas refeitas`);
 
   await p.click('#nomesPropostas button[data-sim="newtrc"]');
-  assert.equal(await p.locator('#verLanceTexto').innerText(), 'Ver este lance com 2 ângulos');
+  assert.equal(await p.locator('#verLanceTexto').innerText(), 'Ver o lance de 2 jogadores');
   // Ir ao vivo é outro momento (aqui, um minuto depois, com os dois no ar): newtrc ficou no de antes.
   await p.evaluate((ms) => {
     const real = Date.now;
