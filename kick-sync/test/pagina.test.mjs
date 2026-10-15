@@ -16,6 +16,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { kickFalsa, T, TEM_SOM } from './falsa.mjs';
 import { montarPalco, podeCorrer, saltarTempo, trocarIdioma } from './palco.mjs';
+import { abrirFerramentas } from './assistente.mjs';
 
 let PORTA = 0;
 const { abrir } = montarPalco((p) => { PORTA = p; });
@@ -556,12 +557,15 @@ test('um F5 devolve os canais, a noite, o instante e a marca',
     await p.click('#marcarIn');
     await p.click('#mais3s');
     await p.click('#marcarOut');
-    await p.locator('#grade .tile').first().locator('.ajuste button[data-passo="1"]').click();
+    const ajustado = p.locator('.tile[data-slug="outro"]');
+    assert.equal(await ajustado.locator('.ajuste button[data-passo="1"]').isVisible(), false);
+    await ajustado.click();
+    await ajustado.locator('.ajuste button[data-passo="1"]').click();
     await p.waitForSelector('#listaCorte li[data-slug]', { timeout: 10000 });
     const antes = {
       agora: await p.locator('#agora').innerText(),
       marca: await p.locator('#marca').innerText(),
-      nudge: await p.locator('#grade .tile').first().locator('.nudge').innerText(),
+      nudge: await ajustado.locator('.nudge').innerText(),
     };
     await p.waitForTimeout(600);            // a gravacao e adiada, de proposito
 
@@ -572,7 +576,7 @@ test('um F5 devolve os canais, a noite, o instante e a marca',
     assert.equal(await p.locator('#canais').inputValue(), 'tchubi\noutro');
     assert.equal(await p.locator('#agora').innerText(), antes.agora, 'o instante volta');
     assert.equal(await p.locator('#marca').innerText(), antes.marca, 'a marca volta');
-    assert.equal(await p.locator('#grade .tile').first().locator('.nudge').innerText(), antes.nudge,
+    assert.equal(await ajustado.locator('.nudge').innerText(), antes.nudge,
       'e o ajuste tambem');
     assert.equal(await p.locator('#listaCorte li[data-slug]').count(), 2, 'e a lista de corte');
     assert.deepEqual(erros, []);
@@ -592,15 +596,19 @@ test('o ajuste manual existe, é por canal, e não muda o foco',
     await p.click('#carregar');
     await p.waitForSelector('.tile', { timeout: 15000 });
 
-    const segundo = p.locator('.tile:not(.foco)').first();
+    const slug = await p.locator('.tile:not(.foco)').first().getAttribute('data-slug');
+    const segundo = p.locator(`.tile[data-slug="${slug}"]`);
     const focoAntes = await p.locator('.tile.foco').getAttribute('data-slug');
 
+    assert.equal(await segundo.locator('.ajuste button[data-passo="1"]').isVisible(), false);
+    await segundo.click();
+    await p.waitForFunction((s) => window.__estado.focos.includes(s), slug);
     await segundo.locator('.ajuste button[data-passo="1"]').click();
     await segundo.locator('.ajuste button[data-passo="1"]').click();
     assert.equal(await segundo.locator('.nudge').innerText(), '+2.0s');
-    assert.equal(await p.locator('.tile.foco').getAttribute('data-slug'), focoAntes,
+    assert.equal(await p.locator('.tile.principal').getAttribute('data-slug'), focoAntes,
       'ajustar um ângulo não o promove a foco');
-    assert.equal(await p.locator('.tile.foco .nudge').innerText(), '0.0s',
+    assert.equal(await p.locator('.tile.principal .nudge').innerText(), '0.0s',
       'o empurrão é só daquele canal');
 
     await segundo.locator('.ajuste button[data-passo="-1"]').click({ modifiers: ['Shift'] });
@@ -616,12 +624,14 @@ test('o ajuste manual existe, é por canal, e não muda o foco',
 test('o alinhamento pelo som mede um desvio de 3 s e corrige-o',
   { skip: (!podeCorrer && 'sem navegador') || (!TEM_SOM && 'sem fixture de som') }, async () => {
     const { p, erros } = await abrir();
-    await kickFalsa(p, { comSom: true, desviosS: { outro: 3 } });
+    // Três janelas de 120 s precisam de mais que os 160 s da fixture original.
+    await kickFalsa(p, { comSom: true, repetirSom: 4, desviosS: { outro: 3 } });
     await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
     await p.fill('#canais', 'tchubi\noutro');
     await p.click('#carregar');
     await p.waitForSelector('.tile', { timeout: 15000 });
 
+    await abrirFerramentas(p);
     await p.click('#alinhar');
     await p.waitForFunction(
       () => /alinhados|não deu|não decodifica/.test(document.getElementById('estadoAlinhar').textContent),
@@ -660,6 +670,7 @@ test('sem áudio nenhum, o alinhamento diz que não deu em vez de rebentar',
     await p.click('#carregar');
     await p.waitForSelector('.tile', { timeout: 15000 });
 
+    await abrirFerramentas(p);
     await p.click('#alinhar');
     await p.waitForFunction(
       () => /alinhados|não deu|não decodifica/.test(document.getElementById('estadoAlinhar').textContent),

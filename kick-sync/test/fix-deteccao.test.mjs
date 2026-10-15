@@ -11,7 +11,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { kickFalsa, T } from './falsa.mjs';
 import { montarPalco, podeCorrer, saltarTempo } from './palco.mjs';
-import { passo4Detetar } from './assistente.mjs';
+import { passo4Detetar, abrirFerramentas } from './assistente.mjs';
 
 let PORTA = 0;
 const { abrir } = montarPalco((p) => { PORTA = p; });
@@ -49,6 +49,10 @@ async function varreduraFalsa(p, candidatosS = []) {
  * primeira chegar, leva as duas para o mesmo sítio, como num <video> só.
  */
 async function ecrasFalsos(p) {
+  await p.route('**/app.js', (r) => r.fulfill({
+    status: 200, contentType: 'text/javascript',
+    body: `${readFileSync(new URL('../site/app.js', import.meta.url), 'utf8')}\nwindow.__testarSugestaoDeVitimas = verQuemMorreu;`,
+  }));
   await p.route('**/frames.js', (r) => r.fulfill({
     status: 200,
     contentType: 'text/javascript',
@@ -80,6 +84,12 @@ async function abrirNoite(p, canais) {
   await p.fill('#canais', canais.join('\n'));
   await p.click('#carregar');
   await p.waitForSelector('.tile', { timeout: 15000 });
+}
+
+/** A Montagem é um separador: os cartões "quem morreu" (o botão .verMortes) só se veem nela. */
+async function abrirMontagem(p) {
+  if (!await p.locator('#montagem').isVisible()) await p.click('#abaMontagem');
+  await p.waitForSelector('#montagem', { state: 'visible' });
 }
 
 const textoMontagem = (p) => p.locator('#estadoMontagem').innerText();
@@ -130,7 +140,8 @@ test('uma detecção que não acha nada deixa o botão pronto para outro trecho'
   // O `estado.cancelar` único deu lugar a um por trabalho (a busca é `varredura`), e o botão
   // não fica cinzento a correr: passa a ser o Parar dela e volta ao rótulo no fim.
   assert.equal(await p.evaluate(() => window.__estado.varredura), null);
-  assert.equal(await p.locator('#procurarKills span').innerText(), 'Detectar lances');
+  // O menu fechou depois do clique: o rótulo lê-se sem exigir visibilidade (o primeiro span[data-t] é o nome).
+  assert.equal(await p.locator('#procurarKills span[data-t]').first().textContent(), 'Detectar lances');
   assert.deepEqual(erros, []);
   await p.close();
 });
@@ -148,6 +159,7 @@ test('detectar tudo é o tempo todo ao vivo, e um trecho fora dele diz porquê',
 
   await p.evaluate((t) => { window.__estado.agoraMs = t + 400_000; }, T);
   // O botão da secção abre a barra na faixa de quem está no vídeo, e diz o que escolher.
+  await abrirFerramentas(p);
   await p.click('#procurarKills');
   assert.equal(await p.evaluate(() => document.getElementById('acoesFaixa').previousElementSibling.dataset.slug), 'tchubi');
   assert.match(await textoMontagem(p), /escolha um trecho ou tudo/);
@@ -204,10 +216,18 @@ test('o Rever de uma kill mostra a POV de quem matou, e não a que está em foco
   await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
   assert.equal((await momentos(p))[0].protagonista, 'tchubi');
 
+  // Dois é o limite do par, e o clique numa miniatura põe-na em segundo (alternarPar), sem mexer no principal.
   await p.click('.tile[data-slug="outro"]');
-  assert.equal(await p.evaluate(() => window.__estado.focos[0]), 'outro');
+  await p.waitForFunction(() => window.__estado.focos.join() === 'tchubi,outro');
+  assert.equal(await p.locator('#palcoFoco').evaluate((el) => el.classList.contains('dois')), true);
+  // Para o principal ser o outro, arrasta-se o player dele para cima do do tchubi (a troca do palco).
+  await p.locator('#palcoFoco .tile[data-slug="outro"]').dragTo(p.locator('#palcoFoco .tile[data-slug="tchubi"]'));
+  await p.waitForFunction(() => window.__estado.focos[0] === 'outro');
+  // Agora quem está em foco é o outro: o Rever tem de levar o ângulo de quem matou, o tchubi.
+  await abrirMontagem(p);
   await p.locator('#listaMomentos .ver').click();
-  assert.equal(await p.evaluate(() => window.__estado.focos[0]), 'tchubi');
+  await p.waitForFunction(() => window.__estado.focos[0] === 'tchubi');
+  assert.deepEqual(await p.evaluate(() => window.__estado.focos), ['tchubi', 'outro']);
   assert.deepEqual(erros, []);
   await p.close();
 });
@@ -216,7 +236,7 @@ test('o Rever de uma kill mostra a POV de quem matou, e não a que está em foco
 //
 // Seis canais. O tchubi matou o v1 e o v2 e foi logo saquear: o ecrã dele também
 // escurece. Os outros três continuam a jogar.
-test('quem morreu: aponta as vítimas e não quem matou, acerta o instante, e os cartões ficam',
+test('rotina interna de vítimas: exclui quem matou, acerta o instante e preserva cartões; entrada manual segue oculta',
   comNavegador, async () => {
     const canais = ['tchubi', 'v1', 'v2', 'a', 'b', 'c'];
     const { p, erros } = await abrir();
@@ -229,7 +249,10 @@ test('quem morreu: aponta as vítimas e não quem matou, acerta o instante, e os
     const ms = (await momentos(p))[0].ms;
     await p.evaluate((m) => { window.__ecras = { tchubi: m + 1000, v1: m + 500, v2: m + 500 }; }, ms);
 
-    await p.click('#listaMomentos .verMortes');
+    await abrirMontagem(p);
+    assert.equal(await p.locator('#listaMomentos .verMortes').isVisible(), false);
+    // Exercita a rotina interna sem reativar a entrada manual retirada do produto.
+    assert.equal(await p.evaluate((instante) => window.__testarSugestaoDeVitimas(instante), ms), true);
     await p.waitForFunction(() => document.querySelectorAll('#listaMomentos .olhar .cartao').length === 6
       && !document.querySelector('#listaMomentos .verMortes').disabled, null, { timeout: 20000 });
 
@@ -292,11 +315,18 @@ test('a detecção vê quem morreu mesmo com o filtro a esconder as novas, e o r
     assert.match(texto, /^1 tiroteios em tchubi, 1 com vítima identificada/,
       `o resultado foi tapado: "${texto}"`);
 
-    // Os cartões da busca ficaram guardados, fechados. Abrem sem voltar a olhar.
+    // O filtro não descarta as imagens já medidas. A entrada manual continua oculta.
     await p.selectOption('#filtroMomentos', 'todos');
     const antes = await p.evaluate(() => window.__frames);
-    await p.click('#listaMomentos .verMortes');
-    await p.waitForSelector('#listaMomentos .olhar .cartao', { timeout: 5000 });
+    await abrirMontagem(p);
+    assert.equal(await p.locator('#listaMomentos .verMortes').isVisible(), false);
+    const salvo = await p.evaluate((instante) => {
+      const o = window.__estado.olhares.get(instante);
+      return { sugeridos: o?.sugeridos, imagens: Object.keys(o?.imagens || {}), aberto: o?.aberto };
+    }, m.ms);
+    assert.deepEqual(salvo.sugeridos, ['v1']);
+    assert.deepEqual(salvo.imagens.sort(), ['tchubi', 'v1']);
+    assert.equal(salvo.aberto, false);
     assert.equal(await p.evaluate(() => window.__frames), antes, 'abrir não pode voltar a ver tudo');
     assert.deepEqual(erros, []);
     await p.close();

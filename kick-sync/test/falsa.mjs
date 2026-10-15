@@ -20,7 +20,7 @@ const SEGS_SOM = TEM_SOM ? fs.readdirSync(SOM).filter((f) => f.endsWith('.ts')).
  * alinhamento pelo som tem de medir e desfazer.
  */
 export async function kickFalsa(pagina, {
-  canais = ['tchubi', 'outro'], segmentos = 60, comSom = false, desviosS = {}, comecosS = {},
+  canais = ['tchubi', 'outro'], segmentos = 60, comSom = false, repetirSom = 1, desviosS = {}, comecosS = {},
   // Quantas noites, e quanto tempo cada uma demora a responder.
   //
   // Uma só é o caso normal e continua a ser o que sai por omissão. Duas são
@@ -40,7 +40,7 @@ export async function kickFalsa(pagina, {
   // outros. Sem isto os VODs vêm sem categoria, como sempre vieram nestes testes.
   categorias = null,
 } = {}) {
-  const quantos = comSom ? SEGS_SOM.length : segmentos;
+  const quantos = comSom ? SEGS_SOM.length * repetirSom : segmentos;
   // Cada noite começa 24 h depois da anterior.
   const DIA = 24 * 3600 * 1000;
   const playlist = (slug, noite = 0) => {
@@ -122,8 +122,9 @@ export async function kickFalsa(pagina, {
     }
     pedidos.segmentos++;
     const n = Number(u.match(/(\d+)\.ts$/)?.[1] ?? 0);
-    const corpo = comSom && SEGS_SOM[n]
-      ? fs.readFileSync(path.join(SOM, SEGS_SOM[n]))
+    const arquivoSom = SEGS_SOM[n % SEGS_SOM.length];
+    const corpo = comSom && arquivoSom
+      ? fs.readFileSync(path.join(SOM, arquivoSom))
       : Buffer.alloc(4096, 7);
     return rota.fulfill({ status: 200, contentType: 'video/mp2t', body: corpo });
   });

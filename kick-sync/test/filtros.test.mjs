@@ -229,7 +229,8 @@ test('cada filtro marcado entra no resultado, que diz qual achou o quê, e a lis
     assert.match(texto, /^3 momentos em tchubi: 1 tiroteio, 1 explosão, 1 no chat/, texto);
     assert.equal(await p.locator('#estadoMontagem').innerText(), texto);
     // Só o que estava marcado foi pedido ao som: o grito não.
-    assert.deepEqual(await p.evaluate(() => window.__varrer.filtros), { tiros: true, explosoes: true, gritos: false });
+    // `acertos` vai sempre com os tiros (app.js: `acertos: filtros.tiros`): o PvP conta os acertos dentro da luta.
+    assert.deepEqual(await p.evaluate(() => window.__varrer.filtros), { tiros: true, explosoes: true, gritos: false, acertos: true });
     // O assistente fica no último passo, com o resultado no mesmo sítio do progresso.
     assert.ok(await p.locator('#detetarTrecho').isVisible());
 
@@ -239,7 +240,8 @@ test('cada filtro marcado entra no resultado, que diz qual achou o quê, e a lis
     // O surto do chat falso é no minuto 5.
     assert.ok(lista[2].s >= 300 && lista[2].s < 360, `o chat aos ${lista[2].s} s`);
     const tipos = await p.locator('#listaMomentos li[data-ms] .tipo').allInnerTexts();
-    assert.deepEqual(tipos, ['tiroteio', 'explosão', 'chat: KKKK']);
+    // Os mesmos títulos de tituloDeDeteccao (titulo.js): o tiro sem acerto confirmado é "Som alto", não "tiroteio".
+    assert.deepEqual(tipos, ['Som alto (3 s de som alto)', 'Explosão', 'chat: KKKK']);
     assert.deepEqual(erros, []);
     await p.close();
   });
@@ -272,7 +274,8 @@ test('Mais opções mudam o resultado: a sensibilidade chega à escuta, juntar u
     assert.deepEqual(ms[0].tipos, ['tiros', 'explosao']);
     assert.ok(ms[0].dur >= 9000, `o lance junto vai do começo do primeiro ao fim do último: ${ms[0].dur}`);
     assert.deepEqual([ms[0].antes, ms[0].depois], [9, 4]);
-    assert.deepEqual(await p.locator('#listaMomentos li[data-ms] .tipo').allInnerTexts(), ['tiroteio, explosão', 'tiroteio']);
+    // Sem confirmação de acerto, o título fica no que o som mediu: "Som alto", e não um tiroteio afirmado.
+    assert.deepEqual(await p.locator('#listaMomentos li[data-ms] .tipo').allInnerTexts(), ['Som alto e explosão', 'Som alto (3 s de som alto)']);
 
     // Sem juntar e com mais sensibilidade, são três, e a escuta pede menos força.
     await p.evaluate(() => { window.__estado.momentos = []; });

@@ -243,12 +243,15 @@ test('Recomeçar: o Cancelar não mexe em nada, e o OK não volta com a sessão'
   ]);
   assert.deepEqual(await memo(), [2, true]);
 
-  p.once('dialog', (d) => d.dismiss());
   await p.click('#recomecar');
+  const confirmacao = p.locator('dialog.confirmarRecomecar[open]');
+  assert.equal(await confirmacao.isVisible(), true);
+  assert.equal(await confirmacao.locator('.cancelar').evaluate((el) => el === document.activeElement), true);
+  await confirmacao.locator('.cancelar').click();
   assert.deepEqual(await memo(), [2, true], 'o Cancelar apagou a memória dos VODs');
 
-  p.once('dialog', (d) => d.accept());
-  await Promise.all([p.waitForEvent('load'), p.click('#recomecar')]);
+  await p.click('#recomecar');
+  await Promise.all([p.waitForEvent('load'), confirmacao.locator('.apagar').click()]);
   await p.waitForTimeout(800);
   assert.equal(await p.inputValue('#canais'), '', 'os canais voltaram depois de recomeçar');
   assert.equal(await p.locator('.tile').count(), 0);
