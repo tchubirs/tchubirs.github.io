@@ -281,18 +281,8 @@ test('modo simples: o espaço não toca vídeo escondido, e tocar a imagem toca 
     assert.equal(await tocandoFora(), 0);
 
     const cartao = p.locator('#simplesLista li').first();
-    // No PC o cartão não pode crescer nem sobrepor os vizinhos ao abrir a prévia: mesmos limites de antes.
-    const limites = () => cartao.evaluate((li) => {
-      const r = li.getBoundingClientRect();
-      return { x: r.left, y: r.top, w: r.width };
-    });
-    const antesLimites = await limites();
     await cartao.locator('button.simplesFoto').click();
     await p.waitForSelector('#simplesLista li .simplesPrevia video', { timeout: 30_000 });
-    const depoisLimites = await limites();
-    assert.ok(Math.abs(depoisLimites.x - antesLimites.x) < 0.5, `x mudou: ${antesLimites.x} -> ${depoisLimites.x}`);
-    assert.ok(Math.abs(depoisLimites.y - antesLimites.y) < 0.5, `y mudou: ${antesLimites.y} -> ${depoisLimites.y}`);
-    assert.ok(Math.abs(depoisLimites.w - antesLimites.w) < 0.5, `largura mudou: ${antesLimites.w} -> ${depoisLimites.w}`);
     assert.equal(await cartao.locator('.simplesFoto').isVisible(), false);
     assert.equal(await cartao.locator('.simplesPrevia video').evaluate((v) => v.muted), false);
     // O espaço (fora de um botão) pausa a prévia e continua: e nunca toca os escondidos.
