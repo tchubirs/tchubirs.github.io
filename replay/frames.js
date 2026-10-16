@@ -5,7 +5,7 @@
 // tela pequena — pequena de propósito: para saber se alguém morreu não é
 // preciso resolução, é preciso a cor e o brilho.
 
-import { onde } from './relogio.js?v=f5edfd5e44';
+import { onde } from './relogio.js?v=6940da8cfa';
 
 const LARGURA = 160;
 const ALTURA = 90;

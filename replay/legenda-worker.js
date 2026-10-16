@@ -18,8 +18,8 @@
 // Nenhum pedido sai para fora da lista de legenda-arquivos.js, e nenhum arquivo é aceito sem o SHA-256
 // certo. O texto que sai daqui é só texto: a página desenha-o com fillText e mostra-o com textContent.
 
-import { MODELO, REVISAO, CODIGO, MOTOR, POR_URL, CACHE_MOTOR, CACHE_MODELO, sha256 } from './legenda-arquivos.js?v=f5edfd5e44';
-import { palavrasDe, janelasDoAudio, juntarJanelas } from './legenda.js?v=f5edfd5e44';
+import { MODELO, REVISAO, CODIGO, MOTOR, POR_URL, CACHE_MOTOR, CACHE_MODELO, sha256 } from './legenda-arquivos.js?v=6940da8cfa';
+import { palavrasDe, janelasDoAudio, juntarJanelas } from './legenda.js?v=6940da8cfa';
 
 const TAXA = 16000;
 const JANELA_S = 30;

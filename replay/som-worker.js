@@ -4,7 +4,7 @@
 // descodificar 10 s de som (partilha o fio de média com os leitores de vídeo), e o "Sincronizar por
 // áudio" levava 30 min. O mesmo pedaço, descodificado aqui num Worker com os vídeos a tocar: 0,18 s.
 
-import { descodificarAac } from './alinhar.js?v=f5edfd5e44';
+import { descodificarAac } from './alinhar.js?v=6940da8cfa';
 
 onmessage = async ({ data: { id, aac, taxaAlvo } }) => {
   try {
