@@ -337,6 +337,16 @@ test('a fala lembrada acha-se pelo canal e pelo trecho que cobre o clipe', () =>
   assert.equal(lerFalas(a).length, MAX_FALAS);
 });
 
+test('a legenda corrigida no editor, num trecho mais largo, passa à frente da fala lida pelo cartão', () => {
+  const a = memoria();
+  guardarFala(a, { canal: 'x', deMs: 100_000, ateMs: 130_000, linhas: [{ t: 'gerado', de: 105_000, ate: 106_000 }] });
+  guardarFala(a, { canal: 'x', deMs: 95_000, ateMs: 140_000, linhas: [{ t: 'corrigido', de: 105_000, ate: 106_000 }] });
+  assert.equal(acharFala(a, 'x', 100_000, 130_000).linhas[0].t, 'corrigido');
+  // Quem cobre mais continua a ganhar, mesmo mais velha.
+  guardarFala(a, { canal: 'x', deMs: 110_000, ateMs: 130_000, linhas: [{ t: 'parcial', de: 115_000, ate: 116_000 }] });
+  assert.equal(acharFala(a, 'x', 100_000, 130_000).linhas[0].t, 'corrigido');
+});
+
 test('a fala mais forte: perto do lance, com mais palavras ou exclamação', () => {
   const linhas = [
     { t: 'sim', de: 100_000, ate: 100_500 },

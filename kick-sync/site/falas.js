@@ -38,7 +38,11 @@ export function guardarFala(armazem, { canal, deMs, ateMs, linhas }, agora = Dat
   try { armazem.setItem(CHAVE_FALAS, JSON.stringify(todas.slice(-MAX_FALAS))); } catch { /* janela privada, ou cheio */ }
 }
 
-/** A fala, entre as já lidas, que cobre o clipe de `deMs` a `ateMs` do canal (a que cobre mais), ou null. */
+/**
+ * A fala, entre as já lidas, que cobre o clipe de `deMs` a `ateMs` do canal (a que cobre mais), ou null. Se duas
+ * cobrem o mesmo, ganha a mais nova (a lista vem da mais velha para a mais nova): a legenda corrigida no editor,
+ * num trecho mais largo, passa à frente do que o botão do cartão leu antes.
+ */
 export function acharNaLista(falas, canal, deMs, ateMs) {
   const dur = ateMs - deMs;
   if (!canal || !(dur > 0)) return null;
@@ -47,7 +51,7 @@ export function acharNaLista(falas, canal, deMs, ateMs) {
   for (const e of falas) {
     if (e.canal !== canal) continue;
     const cobre = (Math.min(ateMs, e.ateMs) - Math.max(deMs, e.deMs)) / dur;
-    if (cobre >= COBRE_MIN && cobre > melhorCobre) { melhor = e; melhorCobre = cobre; }
+    if (cobre >= COBRE_MIN && cobre >= melhorCobre) { melhor = e; melhorCobre = cobre; }
   }
   return melhor;
 }
