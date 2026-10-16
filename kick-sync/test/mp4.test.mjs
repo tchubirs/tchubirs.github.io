@@ -16,8 +16,10 @@ import { executarCorte } from '../site/baixar.js';
 
 const SEG = new Uint8Array(fs.readFileSync(new URL('../probes/fixtures/segmento-kodd.ts', import.meta.url)));
 const T = Date.parse('2026-10-05T23:27:37Z');
-const FFMPEG = ['/usr/local/lib/python3.11/dist-packages/imageio_ffmpeg/binaries/ffmpeg-linux-x86_64-v7.0.2',
-  ...(process.env.PATH || '').split(':').map((d) => path.join(d, 'ffmpeg'))].find((f) => fs.existsSync(f));
+const FFMPEG = [process.env.DETETIVE_FFMPEG,
+  '/usr/local/lib/python3.11/dist-packages/imageio_ffmpeg/binaries/ffmpeg-linux-x86_64-v7.0.2',
+  ...(process.env.PATH || '').split(path.delimiter).filter(Boolean).map((d) => path.join(d, process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg'))]
+  .find((f) => f && fs.existsSync(f));
 
 /** As caixas de topo e algumas de dentro, para ler durações e listas de edição. */
 function caixas(b, de = 0, ate = b.length) {
@@ -107,15 +109,24 @@ test('executarCorte entrega .mp4 cortado na marca, e a nota diz exato', async ()
   assert.equal(r.plano.sobraFimS, 0);
 });
 
-test('o ffmpeg abre o MP4 sem erros e com a duração pedida', { skip: !FFMPEG && 'sem ffmpeg aqui' }, () => {
+test('o ffmpeg abre o MP4 sem erros e com a duração pedida', { skip: !FFMPEG && !process.env.CI && 'sem ffmpeg aqui' }, () => {
+  assert.ok(FFMPEG, 'a CI precisa instalar ffmpeg para validar o MP4');
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mp4-'));
   const f = path.join(dir, 'c.mp4');
-  fs.writeFileSync(f, tsParaMp4(SEG, { inicioMs: T, deMs: T + 2300, ateMs: T + 9100 }).bytes);
-  const correr = (...args) => spawnSync(FFMPEG, ['-hide_banner', ...args], { encoding: 'utf8' }).stderr;
-  assert.equal(correr('-v', 'error', '-i', f, '-f', 'null', '-').trim(), '', 'nenhum erro de descodificação');
-  const info = correr('-i', f);
-  assert.match(info, /Duration: 00:00:06\.80/);
-  assert.match(info, /Video: h264/);
-  assert.match(info, /Audio: aac/);
-  fs.rmSync(dir, { recursive: true });
+  try {
+    fs.writeFileSync(f, tsParaMp4(SEG, { inicioMs: T, deMs: T + 2300, ateMs: T + 9100 }).bytes);
+    const correr = (...args) => {
+      const r = spawnSync(FFMPEG, ['-hide_banner', ...args, '-i', f, '-f', 'null', '-'], { encoding: 'utf8', windowsHide: true });
+      assert.equal(r.status, 0, r.error?.message || r.stderr);
+      return r.stderr;
+    };
+    assert.equal(correr('-v', 'error').trim(), '', 'nenhum erro de descodificação');
+    const info = correr();
+    assert.match(info, /Duration: 00:00:06\.80/);
+    assert.match(info, /Video: h264/);
+    assert.match(info, /Audio: aac/);
+  } finally {
+    assert.equal(path.dirname(path.resolve(dir)), path.resolve(os.tmpdir()));
+    fs.rmSync(dir, { recursive: true });
+  }
 });

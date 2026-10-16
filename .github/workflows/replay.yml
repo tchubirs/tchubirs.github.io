@@ -28,6 +28,12 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Instalar FFmpeg para validar os MP4 exportados
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y ffmpeg
+          ffmpeg -version
+
       # O Playwright traz o seu próprio Chromium. `--with-deps` porque um
       # runner limpo não tem as bibliotecas de sistema que ele precisa, e sem
       # elas o browser arranca e morre sem dizer porquê.
@@ -120,6 +126,13 @@ jobs:
         run: |
           npm install --no-save playwright@1.56.1
           npx playwright install --with-deps chrome
+
+      - name: Instalar FFmpeg para validar os MP4 exportados
+        if: matrix.suite == 'completa'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y ffmpeg
+          ffmpeg -version
 
       - name: Encontrar o Google Chrome
         run: |
