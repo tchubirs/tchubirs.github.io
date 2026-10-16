@@ -7,9 +7,15 @@ Estudo de15/10/2026, implementação retomada em16/10. A preparação “Tudo à
 - Digitar um streamer primeiro busca o catálogo de transmissões; não inicia chat/áudio antes da confirmação. Padrão: últimos15minutos da transmissão escolhida; live inteira exige seleção explícita.
 - Perfis executam trabalhos distintos. Só chat não chama a varredura de áudio; rápida analisa janelas dos picos; completa analisa o áudio disponível do escopo escolhido. Sem picos não expande silenciosamente.
 - Cache mantém pedido/escopo/perfil. Resultado de trecho completo usa `varrido:trecho`, nunca `tudo`; ampliar o áudio preserva o intervalo e reaproveita o chat concluído, inclusive apósF5.
-- Estimativa antes de começar usa amostras recentes do mesmo canal/perfil/aparelho e durações semelhantes. Sem amostra mostra indisponibilidade explicitamente; ainda NÃO há sonda inicial de estimativa nem medição real que explique/resolva os40min relatados. A faixa é uma aproximação baseada em histórico, nãoSLA.
+- Estimativa antes de começar usa amostras recentes do mesmo canal/perfil/aparelho e durações semelhantes. Sem amostra mostra indisponibilidade explicitamente; ainda NÃO há sonda inicial de estimativa. A medição de chat abaixo não explica nem resolve sozinha os40min relatados. A faixa é uma aproximação baseada em histórico, nãoSLA.
 - A preparação nova é para streamer/VOD. Busca de evento inteiro ainda segue o fluxo anterior. Filtros específicos de combate/morte/reação nesta preparação, cache de múltiplos trechos e retomada de amostragem ainda não foram implementados.
 - Verificações locais usamChrome eKick simulada; não equivalem aSafari físico, carga de200usuários ou medição de tempo emVOD real.
+
+## Medição limitada com Kick real — 16/10/2026
+
+- Kodd, VOD Rust iniciado15/10às20h00m07UTC, trecho21h45–22hUTC: **1.045mensagens,42páginas,41,434s**, leitura concluída sem erro/429. Catálogo mais chat somaram747.300bytes em43GETs. O ensaio usouNode noPC, pausa deliberada200ms entre páginas, máximo60páginas/45s/sem retries; não usou áudio, modelo nem API paga.
+- Reprocessar as mesmas respostas em memória levou5ms, com os mesmos IDs e zero pedidos novos. Isso separa processamento local de paginação/rede neste trecho; não é medição de cache persistente do app, Safari nem comparação contra live inteira. Fonte privada do relatório: outputs/chat-real-15min.json no workspace da conversa.
+- O leitor do app já reaproveita a cobertura do chat em memória ao mudar trecho. Foi reproduzida uma perda na retomada parcial: as datas das mensagens vêm ao segundo, mas a página seguinte pode conter outras do mesmo segundo. Ao interromper e retomar, a fronteira agora é relida e deduplicada; o segundo incompleto não conta como coberto. Teste reproduziu35/45mensagens antes e45/45depois, sem duplicatas; trecho concluído segue sem novos pedidos.
 
 ## Problemas encontrados no código
 

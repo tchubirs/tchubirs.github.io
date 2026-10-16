@@ -1030,8 +1030,10 @@ export function montarEvento({
       aoProgredir: (p) => { chegouMs = p.chegouMs; aoProgredir(p); },
     });
     juntarMensagens(c, msgs);
+    // A data da mensagem vem ao segundo; a página seguinte ainda pode trazer outras desse segundo.
+    const fimDaFronteira = chegouMs + 1000;
     const lida = !soOQueVeio || !msgs.incompleto ? [deMs, ateMs]
-      : id != null && chegouMs < ateMs ? [Math.max(deMs, chegouMs), ateMs] : null;
+      : id != null && fimDaFronteira < ateMs ? [Math.max(deMs, fimDaFronteira), ateMs] : null;
     if (lida) janelasLidas.set(c, [...(janelasLidas.get(c) || []), lida]);
     ev.marcas.set(c, marcasDoChat(c));
     aoMudarPicos();

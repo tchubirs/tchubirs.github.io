@@ -440,3 +440,54 @@ test('ler um trecho custa as páginas que ele tem, e não um pedido por bocado',
   assert.deepEqual(erros, []);
   await p.close();
 });
+
+test('retomar chat interrompido recupera as mensagens restantes do segundo da fronteira sem duplicar',
+  { ...semNavegador, timeout: 25_000 }, async () => {
+    const { p, erros } = await abrir({ ecra: { width: 1440, height: 900 } });
+    let liberar;
+    const pausa = new Promise((resolve) => { liberar = resolve; });
+    let segundaPagina;
+    const chegouSegunda = new Promise((resolve) => { segundaPagina = resolve; });
+    try {
+      await abrirNoite(p, ['tchubi']);
+      const mensagens = [
+        ...Array.from({ length: 10 }, (_, i) => ({ id: `antes-${i}`, instante: T + MIN + i * 100 })),
+        ...Array.from({ length: 30 }, (_, i) => ({ id: `fronteira-${i}`, instante: T + 5 * MIN + i * 20 })),
+        ...Array.from({ length: 5 }, (_, i) => ({ id: `depois-${i}`, instante: T + 6 * MIN + i * 100 })),
+      ];
+      let pedidos = 0;
+      const cursores = [];
+      await p.route('**/api/v2/channels/*/messages**', async (r) => {
+        const cursor = Number(new URL(r.request().url()).searchParams.get('cursor')) / 1000;
+        cursores.push(cursor);
+        if (++pedidos === 2) { segundaPagina(); await pausa; }
+        const pagina = mensagens.filter((m) => m.instante < cursor).slice(-25).reverse();
+        await r.fulfill({ contentType: 'application/json', body: JSON.stringify({ data: {
+          messages: pagina.map((m) => ({ id: m.id, created_at: new Date(m.instante).toISOString().replace(/\.\d+Z$/, 'Z'), content: 'gg', sender: { slug: m.id } })),
+          cursor: pagina.length ? String(pagina.at(-1).instante * 1000) : null,
+        } }) });
+      });
+      await p.locator('#alcaInicio').focus();
+      await p.keyboard.press('Home');
+      await p.locator('#alcaFim').focus();
+      await p.keyboard.press('End');
+      await ler(p);
+      await chegouSegunda;
+      await p.click('#pararChatTrecho');
+      await p.waitForFunction(() => /parada/.test(document.getElementById('estadoChatTrecho').textContent));
+      assert.equal(await p.evaluate(() => window.__evento.mensagens.get('tchubi').length), 25);
+      liberar();
+      const antesDeRetomar = cursores.length;
+      await ler(p);
+      await p.waitForFunction(() => !document.getElementById('lerChatTrecho').disabled);
+      const ids = await p.evaluate(() => window.__evento.mensagens.get('tchubi').map((m) => m.id));
+      assert.equal(ids.length, 45, 'as dez mensagens restantes do mesmo segundo não podem sumir');
+      assert.equal(new Set(ids).size, 45, 'a fronteira relida não duplica as vinte já recebidas');
+      assert.equal(cursores[antesDeRetomar], T + 5 * MIN + 1000, 'retoma incluindo o segundo incompleto');
+      const antesDeRepetir = cursores.length;
+      await ler(p);
+      await p.waitForFunction(() => /já estava lido/.test(document.getElementById('estadoChatTrecho').textContent));
+      assert.equal(cursores.length, antesDeRepetir, 'trecho concluído continua sem baixar outra vez');
+      assert.deepEqual(erros, []);
+    } finally { liberar(); await p.close(); }
+  });
