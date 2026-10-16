@@ -12,27 +12,27 @@
 import {
   lerElenco, codificar, descodificar, contar, paraTexto, juntarElencos, paraArquivo, deArquivo, nomeDoArquivo,
   apelidosDoTexto,
-} from './elenco.js?v=6940da8cfa';
-import { montarNomesNaTela } from './nomes-ui.js?v=6940da8cfa';
-import { montarMortes } from './mortes-ui.js?v=6940da8cfa';
-import { carregarCanais, procurarAoVivo } from './carregar.js?v=6940da8cfa';
-import { escolherCaminho } from './portas.js?v=6940da8cfa';
+} from './elenco.js?v=62a404f650';
+import { montarNomesNaTela } from './nomes-ui.js?v=62a404f650';
+import { montarMortes } from './mortes-ui.js?v=62a404f650';
+import { carregarCanais, procurarAoVivo } from './carregar.js?v=62a404f650';
+import { escolherCaminho } from './portas.js?v=62a404f650';
 import {
   montarMapa, linhasVisiveis, tempoDoX, xDoTempo, zoom, oQueEstaAqui, filtrar, pintarMapa, ordenarFaixas, linhasDoTempo,
-} from './mapa.js?v=6940da8cfa';
-import { procurarAngulos, ordenarCandidatos, resumo } from './cena.js?v=6940da8cfa';
-import { lerMaster, lerPlaylist, procurarCanais, slugDoNome } from './kick.js?v=6940da8cfa';
-import { linhaDoCanal } from './relogio.js?v=6940da8cfa';
-import { somDoCanal, tsDoCanal } from './alinhar.js?v=6940da8cfa';
-import { t, tn, idiomaActual } from './idiomas.js?v=6940da8cfa';
-import { atalhos } from './atalhos.js?v=6940da8cfa';
-import { escapar } from './escapar.js?v=6940da8cfa';
-import { separarPorJogo } from './jogo.js?v=6940da8cfa';
-import { idDoCanal, mensagensEntre, calor, picos, segundoDoPico } from './chat.js?v=6940da8cfa';
-import { agendar } from './aovivo.js?v=6940da8cfa';
+} from './mapa.js?v=62a404f650';
+import { procurarAngulos, ordenarCandidatos, resumo } from './cena.js?v=62a404f650';
+import { lerMaster, lerPlaylist, procurarCanais, slugDoNome } from './kick.js?v=62a404f650';
+import { linhaDoCanal } from './relogio.js?v=62a404f650';
+import { somDoCanal, tsDoCanal } from './alinhar.js?v=62a404f650';
+import { t, tn, idiomaActual } from './idiomas.js?v=62a404f650';
+import { atalhos } from './atalhos.js?v=62a404f650';
+import { escapar } from './escapar.js?v=62a404f650';
+import { separarPorJogo } from './jogo.js?v=62a404f650';
+import { idDoCanal, mensagensEntre, calor, picos, segundoDoPico } from './chat.js?v=62a404f650';
+import { agendar } from './aovivo.js?v=62a404f650';
 import {
   normalDoChat, unirJanelas, sinaisDoEvento, melhoresLances, filtrarLances, motivoDoLance, contaDoLance, coincide,
-} from './melhores.js?v=6940da8cfa';
+} from './melhores.js?v=62a404f650';
 
 // Um canal ao vivo tem na lista um VOD de duração zero que vai crescendo. Até se pedir a lista outra
 // vez, o que ele já tem acaba "agora".
@@ -923,10 +923,10 @@ export function montarEvento({
   // na mesma janela e não leem o chat outra vez. Com o início ao minuto, cada clique era uma janela
   // nova e uns 12 pedidos por hora e por canal. A escolha fica sempre com 1 h antes e 30 min depois.
   const CHAT_GRELHA_MS = 30 * 60e3;
+  const JANELA_MAX_PEDIDOS = 120;
   const PICOS_BOTOES = 8;
   // Quanto antes do segundo do pico o vídeo abre: o lance vem antes da reacção do chat.
   const ANTES_DO_PICO_MS = 10_000;
-  const chatLido = new Set();
   let chatControlo = null;
   // A sensibilidade dos picos (o dono, 07/10: num canal pequeno quase nunca se chega a 8 mensagens num
   // minuto). Normal é a medida de `picos` em chat.js; as outras baixam o fator e o mínimo.
@@ -994,14 +994,19 @@ export function montarEvento({
     const deMs = Math.floor((e.ms - CHAT_JANELA_MS / 2) / CHAT_GRELHA_MS) * CHAT_GRELHA_MS;
     const ateMs = Math.min(Date.now(), deMs + CHAT_JANELA_MS);
     const doTime = colegas(e.canal).filter((c) => noArEm(ev.coberturas, c, e.ms));
-    const canais = doTime.filter((c) => !chatLido.has(`${c}|${deMs}`) && faltaLer(c, deMs, ateMs).length);
+    const canais = doTime.filter((c) => faltaLer(c, deMs, ateMs).length);
     let feitos = 0;
     const aLer = 'lance.aLerChat';
     if (canais.length) $('estadoChat').textContent = t(aLer, { feitos, total: canais.length });
     for (const c of canais) {
       if (controlo.signal.aborted) return;
       try {
-        await lerJanela(c, deMs, ateMs, controlo.signal);
+        let restantes = JANELA_MAX_PEDIDOS;
+        for (const [a, b] of faltaLer(c, deMs, ateMs)) {
+          const { msgs } = await lerJanela(c, a, b, controlo.signal, { maxPedidos: restantes });
+          restantes -= msgs.pedidos;
+          if (msgs.incompleto || restantes <= 0) break;
+        }
       } catch (erro) {
         if (erro?.name === 'AbortError') return;
       }
@@ -1018,9 +1023,8 @@ export function montarEvento({
 
   // Uma janela de chat de um canal: as mensagens ficam (para o chat ao lado do vídeo) e os picos refazem-se.
   //
-  // Com `soOQueVeio`, a janela só conta como lida até onde a leitura chegou: um trecho escolhido à mão
-  // que parou a meio (o travão de pedidos, a Kick a recusar, o botão Parar) volta a ler só o que faltou.
-  async function lerJanela(c, deMs, ateMs, sinal, { soOQueVeio = false, maxPedidos = 120, aoProgredir = () => {} } = {}) {
+  // Leitura parcial só cobre o que chegou; `soOQueVeio` preserva isso também ao cancelar um trecho.
+  async function lerJanela(c, deMs, ateMs, sinal, { soOQueVeio = false, maxPedidos = JANELA_MAX_PEDIDOS, aoProgredir = () => {} } = {}) {
     // O número do canal não muda: um trecho lido aos bocados pergunta-o uma vez só.
     const id = idsDoChat.get(c) ?? await idDoCanal(c, { buscar: buscarChat, sinal });
     if (id != null) idsDoChat.set(c, id);
@@ -1032,13 +1036,12 @@ export function montarEvento({
     juntarMensagens(c, msgs);
     // A data da mensagem vem ao segundo; a página seguinte ainda pode trazer outras desse segundo.
     const fimDaFronteira = chegouMs + 1000;
-    const lida = !soOQueVeio || !msgs.incompleto ? [deMs, ateMs]
+    const lida = !msgs.incompleto ? [deMs, ateMs]
       : id != null && fimDaFronteira < ateMs ? [Math.max(deMs, fimDaFronteira), ateMs] : null;
     if (lida) janelasLidas.set(c, [...(janelasLidas.get(c) || []), lida]);
     ev.marcas.set(c, marcasDoChat(c));
     aoMudarPicos();
     agendarMelhores();
-    if (!soOQueVeio) chatLido.add(`${c}|${deMs}`);
     return { msgs, id };
   }
   const idsDoChat = new Map();
@@ -1125,10 +1128,18 @@ export function montarEvento({
       if (!(ate > de)) continue;
       for (const c of doTime) {
         if (sinal.aborted) return;
-        if (chatLido.has(`${c}|${de}`)) continue;
+        const falta = faltaLer(c, de, ate);
+        if (!falta.length) continue;
         const noAr = (ev.coberturas.get(c) || []).some(([a, b]) => a < ate && b > de);
         if (!noAr) continue;
-        try { await lerJanela(c, de, ate, sinal); } catch (erro) { if (erro?.name === 'AbortError') return; }
+        try {
+          let restantes = JANELA_MAX_PEDIDOS;
+          for (const [a, b] of falta) {
+            const { msgs } = await lerJanela(c, a, b, sinal, { maxPedidos: restantes });
+            restantes -= msgs.pedidos;
+            if (msgs.incompleto || restantes <= 0) break;
+          }
+        } catch (erro) { if (erro?.name === 'AbortError') return; }
         pintar();
       }
     }
@@ -1150,6 +1161,8 @@ export function montarEvento({
     const quem = t('lance.doTime');
     $('estadoChat').textContent = !doTime.length ? ''
       : lista.length ? tn(lista.length, 'lance.umPicoChat', 'lance.picosChat', { quem }) : t('lance.semPicoChat', { quem });
+    const incompletos = doTime.filter((c) => faltaLer(c, deMs, ateMs).length);
+    if (incompletos.length) $('estadoChat').textContent = t('lance.chatIncompleto', { canais: incompletos.join(', ') });
     const perto = lista.sort((a, b) => Math.abs(a.ms - e.ms) - Math.abs(b.ms - e.ms))
       .slice(0, PICOS_BOTOES).sort((a, b) => a.ms - b.ms);
     $('picosChat').innerHTML = perto.length
