@@ -444,6 +444,9 @@ test('adicionar lista de um arquivo: o leitor de arquivo do elenco, e só os can
   await p.click('#adicionarVariosBotao');
   await p.waitForFunction(() => window.__evento.mapa.linhas.some((l) => l.canal === 'lobo'), null, { timeout: 15000 });
   assert.equal(pedidos.api - api, 2, 'outro e lobo, e não o tchubi outra vez');
+  // O mapa remonta antes de o link do evento se codificar (um await), e só depois a frase aparece: ler a
+  // frase logo a seguir ao mapa era uma corrida (a CI de f7d7a4f leu '' numa máquina mais lenta).
+  await p.waitForFunction(() => document.getElementById('estadoAdicionar').textContent !== '', null, { timeout: 15000 });
   assert.equal(await p.locator('#estadoAdicionar').innerText(), '2 entraram no mapa: outro, lobo.');
   assert.deepEqual(await canaisDoMapa(p), ['tchubi', 'outro', 'lobo']);
   assert.match(await p.locator('#resumoEvento').innerText(), /3 canais, 3 com vídeo/);
