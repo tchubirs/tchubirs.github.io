@@ -15,6 +15,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   idDoCanal, mensagensEntre, calor, picos, reacoes, segundoDoPico, normalizarChat, termosDoFiltro, momentosDePalavras,
+  juntarPorOrdem,
 } from '../site/chat.js';
 
 const ID = 541014;
@@ -844,4 +845,36 @@ test('com várias palavras, diz quais apareceram em cada momento, e cada mensage
   const achados = momentosDePalavras(msgs, termosDoFiltro('rocket, clip, gg'), T, T + 20 * 60_000);
   assert.deepEqual(achados.map((m) => m.termos), [['rocket'], ['clip']]);
   assert.ok(achados.every((m) => m.vezes <= 10), 'uma mensagem com a palavra três vezes conta uma');
+});
+
+// ── juntar o que já se tinha com o que chegou ──────────────────────────────
+// Revisão Codex do B4 (16/10): uma leitura que acaba a meio de um segundo traz só o princípio dele, e o
+// fim que já cá estava ia para a frente ([C, A, B] em vez de [A, B, C]).
+
+const msgJ = (id, ms) => ({ id, ms, texto: id, autor: 'x' });
+const ids = (lista) => lista.map((m) => m.id).join(',');
+
+test('a leitura que traz só o princípio de um segundo não atira o fim dele para a frente', () => {
+  const s = 1_000_000;
+  assert.equal(ids(juntarPorOrdem([msgJ('A', s), msgJ('B', s), msgJ('C', s)], [msgJ('A', s), msgJ('B', s)])), 'A,B,C');
+});
+
+test('a leitura que traz o segundo inteiro manda na ordem dele, e nada se repete', () => {
+  const s = 1_000_000;
+  assert.equal(ids(juntarPorOrdem([msgJ('X', s)], [msgJ('W', s), msgJ('X', s), msgJ('Y', s)])), 'W,X,Y');
+  assert.equal(ids(juntarPorOrdem([msgJ('B', s), msgJ('A', s)], [msgJ('A', s), msgJ('B', s)])), 'A,B');
+});
+
+test('segundos diferentes ficam por ordem de relógio, e as que já cá estavam continuam lá', () => {
+  const lista = juntarPorOrdem(
+    [msgJ('P', 1000), msgJ('Q', 3000), msgJ('R', 3000)],
+    [msgJ('N', 2000), msgJ('Q', 3000)],
+  );
+  assert.equal(ids(lista), 'P,N,Q,R');
+});
+
+test('a versão que chegou substitui a antiga da mesma mensagem', () => {
+  const nova = { ...msgJ('A', 1000), texto: 'editada' };
+  const [unica] = juntarPorOrdem([msgJ('A', 1000)], [nova]);
+  assert.equal(unica.texto, 'editada');
 });
