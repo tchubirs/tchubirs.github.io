@@ -456,9 +456,10 @@ test('a grelha ordena-se como ele escreveu, ou de A a Z, à escolha',
     await p.click('#grade .tile');
     await p.waitForTimeout(400);
     const focados = await p.evaluate(() => [...document.querySelectorAll('#palcoFoco .tile')]
-      .map((t) => t.style.order));
-    assert.deepEqual(focados, [''], `o quadrado em foco levou a ordem: ${JSON.stringify(focados)}`);
-    assert.deepEqual(await daGrelha(), ['beta', 'moka', 'zebra'], 'e a grelha continua de A a Z');
+      .map((t) => ({ slug: t.dataset.slug, ordem: t.style.order })));
+    assert.deepEqual(focados, [{ slug: 'zebra', ordem: '' }, { slug: 'alfa', ordem: '' }],
+      'o principal permanece aberto; o segundo não leva a ordem da miniatura');
+    assert.deepEqual(await daGrelha(), ['beta', 'moka'], 'os ângulos restantes continuam de A a Z');
 
     // A escolha fica guardada no dispositivo.
     const guardado = await p.evaluate(() => localStorage.getItem('replay.ordem'));
@@ -794,14 +795,12 @@ test('a miniatura tem um botão só, e o desenho dele diz o que faz',
       assert.equal(await seVe(`#palcoFoco .tile ${botao}`), true,
         `o ângulo aberto ficou sem o ${botao}`);
     }
-    // Numa miniatura fica UM botão, e o desenho dele diz o que faz: dois
-    // painéis lado a lado. No ângulo aberto é um olho — o que ele já está a
-    // fazer. "Tá difícil de entender o que significam os ícones."
+    // O olho abre/recolhe o ângulo; o nome acessível explica o estado.
     const glifo = (sel) => p.getAttribute(`${sel} .par use`, 'href');
-    assert.equal(await glifo('#grade .tile'), '#i-lado-a-lado');
+    assert.equal(await glifo('#grade .tile'), '#i-olho');
     assert.equal(await glifo('#palcoFoco .tile'), '#i-olho');
     // E cada um com a sua frase: a mesma para os dois não explicava nenhum.
-    const dica = (sel) => p.getAttribute(`${sel} .par`, 'title');
+    const dica = (sel) => p.getAttribute(`${sel} .par`, 'aria-label');
     assert.notEqual(await dica('#grade .tile'), await dica('#palcoFoco .tile'),
       'os dois estados do botão diziam a mesma coisa');
 
@@ -1032,34 +1031,40 @@ test('a página da Twitch não fica presa às regras da mesa de montagem',
 
 // O orçamento: a página não pode abanar depois de aparecer.
 //
-// Medido antes de existir esta regra: 0,049 num telemóvel, aos 12,5 s — o
-// momento em que a Rajdhani chega da rede. A fonte nova é mais larga do que a
-// de reserva, o `<h1>` cresce, o selector de idioma deixava de caber e caía
-// para a linha de baixo, e tudo o que vinha a seguir descia 44 px de uma vez —
-// com a página já a ser lida.
+// A troca do select pela bandeira também precisa reservar espaço antes do
+// app carregar: em 16/10 tirava uma linha do cabeçalho (CLS 0,049 no celular).
 //
 // `npm run velocidade` dá o quadro todo (LCP, TBT, bytes, quem salta). Isto
 // aqui é só o portão: um número que não pode voltar a subir sem alguém dar por
 // isso.
-test('a página não salta depois de aparecer',
+for (const [modo, width, height, visto] of [['avancado', 390, 844], ['simples', 390, 844], ['simples', 390, 844, true], ['avancado', 1366, 768]]) {
+test(`a página não salta depois de aparecer (${modo}, ${width}px${visto ? ', retorno' : ''})`,
   { skip: !podeCorrer && 'sem navegador' }, async () => {
-    const { p, erros } = await abrir({ ecra: { width: 390, height: 844 } });
+    const { p, erros } = await abrir({ ecra: { width, height }, modo });
+    if (visto) await p.addInitScript(() => localStorage.setItem('povix.simplesVisto', '1'));
     await kickFalsa(p, { canais: ['tchubi'] });
     await p.addInitScript(`
       window.__cls = 0;
+      window.__clsFontes = [];
       new PerformanceObserver((l) => {
-        for (const e of l.getEntries()) if (!e.hadRecentInput) window.__cls += e.value;
+        for (const e of l.getEntries()) if (!e.hadRecentInput) {
+          window.__cls += e.value;
+          window.__clsFontes.push({ valor: e.value, tempo: e.startTime, fontes: e.sources.map((s) => ({
+            elemento: s.node?.id || s.node?.className || s.node?.nodeName,
+            antes: s.previousRect.toJSON(), depois: s.currentRect.toJSON(),
+          })) });
+        }
       }).observe({ type: 'layout-shift', buffered: true });
     `);
     await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'load' });
-    // As fontes chegam tarde, e é tarde que o salto acontecia. Sem esta espera
-    // o teste media a página antes do momento que ele viu.
+    // Inclui o primeiro desenho, a troca do seletor e a chegada das fontes.
     await p.waitForTimeout(2500);
     const cls = await p.evaluate(() => window.__cls);
-    assert.ok(cls < 0.02, `a página saltou ${cls.toFixed(3)} (o limite é 0,020)`);
+    assert.ok(cls < 0.02, `a página saltou ${cls.toFixed(3)} (o limite é 0,020): ${JSON.stringify(await p.evaluate(() => window.__clsFontes))}`);
     assert.deepEqual(erros, []);
     await p.close();
   });
+}
 
 // "Destaca o botão Clipar. E bota na mesma linha os botões de marcar início e
 //  marcar final. Fica estranho, uma linha de cima, uma linha de baixo."
@@ -1224,7 +1229,7 @@ test('o caminho de três passos diz onde ele está, e sem scroll',
 // O pior caso deste produto não é falhar: é acertar por engano. Um ângulo sem
 // relógio fiável exporta um clipe desalinhado com ar de certo, e ninguém dá
 // por nada até estar montado.
-test('a confiança do alinhamento é dita, e diz o próximo passo',
+test('o ajuste manual aparece no player aberto e no estado interno do relógio',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
     const { p, erros } = await abrir({ ecra: { width: 1440, height: 900 } });
     await kickFalsa(p, { canais: ['tchubi', 'outro'] });
@@ -1233,14 +1238,18 @@ test('a confiança do alinhamento é dita, e diz o próximo passo',
     await p.click('#carregar');
     await p.waitForSelector('.tile', { timeout: 25000 });
 
-    // Com PROGRAM-DATE-TIME nos dois, o relógio é exacto e diz isso.
-    assert.ok(await p.locator('#confianca.exacto').isVisible());
-    assert.match(await p.locator('#confianca').innerText(), /exato/i);
+    // PROGRAM-DATE-TIME é informação de relógio, não promessa de sincronia perfeita.
+    await p.waitForFunction(() => document.getElementById('confianca').classList.contains('exacto'));
+    assert.equal(await p.locator('#confianca').isVisible(), false);
+    assert.match(await p.locator('#confianca').textContent(), /exato/i);
 
     // Um ajuste à mão passa a constar: é informação que muda a confiança.
-    await p.locator('.tile[data-slug="outro"] .ajuste button[data-passo="1"]').click();
+    await p.locator('#grade .tile[data-slug="outro"] .par').click();
+    await p.waitForSelector('#palcoFoco .tile[data-slug="outro"]');
+    await p.locator('#palcoFoco .tile[data-slug="outro"] .ajuste button[data-passo="1"]').click();
     await p.waitForFunction(() => /ajustad/i.test(document.getElementById('confianca').textContent),
       null, { timeout: 5000 });
+    assert.equal(await p.locator('#palcoFoco .tile[data-slug="outro"] .nudge').innerText(), '+1.0s');
     assert.deepEqual(erros, []);
     await p.close();
   });
@@ -1297,7 +1306,11 @@ test('todas as mensagens de erro dizem o próximo passo', async () => {
     // do jogo sem canal e a marca "nome sem canal" ao lado de uma morte. Não são erros.
     'mortes.motivo.semHora', 'mortes.nomes', 'mortes.semCanal',
     // A dica de uma confiança que é estimativa ("ainda sem rótulos suficientes"), não um erro.
-    'filtro.estimativa']);
+    'filtro.estimativa',
+    // Ajuda de perfil/cache e rótulos da análise contextual não são falhas.
+    'busca.chatDica', 'busca.cache', 'contexto.resumo.combateAusente',
+    'contexto.resumo.combateIndeterminado', 'contexto.resumo.reacao',
+    'contexto.resumo.conversa', 'contexto.resumo.ambiente', 'contexto.resumo.indeterminado']);
   const curtas = [];
   for (const [chave, frase] of Object.entries(_TEXTOS.pt)) {
     if (!/erro|falh|não deu|nenhum|sem |não consegui|inválido|passa dos/i.test(frase)) continue;
@@ -1910,13 +1923,13 @@ test('com uma live só o vídeo ocupa o espaço, sem grelha vazia nem caixa vazi
       video: document.querySelector('#palcoFoco .tile').getBoundingClientRect().height,
       coluna: document.querySelector('#palcoFoco').getBoundingClientRect().height,
       grade: getComputedStyle(document.getElementById('grade')).display,
-      sincronizar: getComputedStyle(document.querySelector('.sincronizar')).display,
+      caixaAntiga: document.querySelector('.sincronizar') !== null,
     }));
     // O vídeo é 16:9 numa coluna mais larga do que alta: o que se mede é a ALTURA, que tem de encher
     // o visor (nenhum vazio por baixo do vídeo).
     assert.ok(m.video > m.coluna * 0.95, `vídeo de ${m.video} px de altura num visor de ${m.coluna}`);
     assert.equal(m.grade, 'none');
-    assert.equal(m.sincronizar, 'none');
+    assert.equal(m.caixaAntiga, false, 'a caixa vazia de sincronia foi removida; o comando fica em Ferramentas');
     assert.deepEqual(erros, []);
     await p.close();
   });

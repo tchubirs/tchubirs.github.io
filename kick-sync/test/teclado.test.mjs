@@ -222,7 +222,7 @@ test('o botão do som chama-se som, e o volume diz-se na língua da página', se
   assert.equal(await p.locator('.tile.foco .somBtn').getAttribute('title'), nome);
   await p.locator('.tile.foco .somBtn').click();
   assert.equal(await p.locator('.tile.foco .somBtn').getAttribute('aria-label'),
-    await p.locator('.tile.foco .somBtn').getAttribute('title'));
+    await p.locator('.tile.foco .somBtn').evaluate((b) => b.title || b.dataset.dica));
   assert.equal(await p.locator('.tile.foco .vol').getAttribute('aria-label'), _TEXTOS.pt['tile.volume']);
   await trocarIdioma(p, 'en');
   await p.waitForFunction(() => document.documentElement.lang.startsWith('en'), null, { timeout: 5000 }).catch(() => {});
@@ -254,28 +254,33 @@ test('um ecrã cheio recusado não parte os saltos no tempo', semNavegador, asyn
   await p.close();
 });
 
-test('a confiança do alinhamento tem cor', semNavegador, async () => {
+test('o estado interno do relógio exato não volta a ocupar o cabeçalho', semNavegador, async () => {
   const { p, erros } = await abrirNoite();
   await carregar(p);
-  await p.waitForSelector('#confianca:not(:empty)');
-  const [cor, ok] = await p.evaluate(() => {
-    const prova = document.createElement('span');
-    prova.style.color = 'var(--ok)';
-    document.body.append(prova);
-    return [getComputedStyle(document.getElementById('confianca')).color, getComputedStyle(prova).color];
-  });
-  assert.equal(cor, ok, 'o caso bom saía no mesmo cinzento do caso mau');
+  await p.waitForFunction(() => document.getElementById('confianca').classList.contains('exacto'));
+  assert.equal(await p.locator('#confianca').isVisible(), false);
+  assert.match(await p.locator('#confianca').textContent(), /Relógio exato/);
   assert.deepEqual(erros, []);
   await p.close();
 });
 
 test('os botões de partilhar e de sincronizar guardam o ícone', semNavegador, async () => {
   const { p, erros } = await abrirNoite();
+  await carregar(p);
   for (const id of ['partilhar', 'alinhar']) {
     assert.equal(await p.locator(`#${id} svg`).count(), 1, `#${id} perdeu o ícone`);
-    const texto = (await p.locator(`#${id}`).evaluate((b) => b.textContent)).trim();
-    assert.equal(texto, _TEXTOS.pt[`${id === 'partilhar' ? 'partilha' : 'alinhar'}.botao`], `#${id} diz o nome duas vezes`);
   }
+  assert.equal(await p.locator('#partilhar').getAttribute('aria-label'), _TEXTOS.pt['partilha.botao']);
+  assert.equal((await p.locator('#partilhar').textContent()).trim(), '', 'o botão compacto usa o ícone e o nome acessível');
+  await p.locator('.ferramentasBotao').click();
+  assert.equal(await p.locator('#alinhar').isVisible(), true);
+  assert.equal(await p.locator('#alinhar [data-t="alinhar.botao"]').innerText(), _TEXTOS.pt['alinhar.botao']);
+  await trocarIdioma(p, 'en');
+  assert.equal(await p.locator('#partilhar').getAttribute('aria-label'), _TEXTOS.en['partilha.botao']);
+  await p.locator('.ferramentasBotao').click();
+  assert.equal(await p.locator('#alinhar').isVisible(), true);
+  assert.equal(await p.locator('#alinhar [data-t="alinhar.botao"]').innerText(), _TEXTOS.en['alinhar.botao']);
+  for (const id of ['partilhar', 'alinhar']) assert.equal(await p.locator(`#${id} svg`).count(), 1);
   assert.deepEqual(erros, []);
   await p.close();
 });
@@ -395,13 +400,13 @@ test('o F põe o vídeo em foco em tela cheia, e só com a tecla sozinha', semNa
   await p.close();
 });
 
-test('o vídeo grande diz que o ajuste é a sincronia, e mostra-o sem o rato em cima', semNavegador, async () => {
+test('o vídeo grande explica a sincronia por dica e mantém os ajustes visíveis', semNavegador, async () => {
   const { p, erros } = await abrirNoite(['tchubi', 'outro'], { ecra: { width: 1440, height: 900 } });
   await carregar(p);
   await p.mouse.move(0, 0);
-  const rotulo = p.locator('#palcoFoco .tile .rotuloAjuste').first();
-  assert.equal(await rotulo.isVisible(), true);
-  assert.equal(await rotulo.innerText(), _TEXTOS.pt['tile.sincronia']);
+  assert.equal(await p.locator('#palcoFoco .tile .rotuloAjuste').count(), 0);
+  assert.equal(await p.locator('#palcoFoco .tile .nudge').first().evaluate((e) => e.title || e.dataset.dica),
+    _TEXTOS.pt['tile.sincroniaDica']);
   const opacidade = await p.locator('#palcoFoco .tile .ajuste').first().evaluate((el) => getComputedStyle(el).opacity);
   assert.equal(opacidade, '1', 'o ajuste do vídeo grande só aparecia com o rato em cima');
   // O Marcar kill deixou de ser um segundo botão cheio ao lado do Clipar.

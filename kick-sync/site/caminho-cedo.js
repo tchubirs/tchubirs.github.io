@@ -7,6 +7,11 @@ try {
   if (c === 'evento' || c === 'vod') document.documentElement.dataset.caminho = c;
 } catch { /* janela privada */ }
 
+// A dica da primeira visita já ocupa seu espaço no primeiro desenho.
+try {
+  if (localStorage.getItem('povix.simplesVisto')) document.documentElement.dataset.simplesVisto = '1';
+} catch { /* janela privada: mostra a dica */ }
+
 // O modo simples ou o avançado (ESTUDO-FACIL.md, plano 12), também antes do primeiro desenho. Quem
 // chega pela primeira vez entra no simples; quem já usava o Povix neste aparelho (há sessão ou porta
 // guardada) entra no avançado, como sempre esteve. A escolha de quem tocou no botão fica guardada.

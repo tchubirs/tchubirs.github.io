@@ -288,6 +288,8 @@ body:has(#noites:not([hidden])) .topo h1, body:is(.videoAberto, :has(#palco:not(
    três passos e a página inteira desciam 44 px de uma vez. Salto de 0,149
    medido num ecrã de 390; o orçamento é 0,020. */
 .topo #idioma { width: 132px; flex: 0 0 auto; }
+/* O avançado troca o select pela bandeira: reserva a mesma caixa antes do módulo carregar. */
+body.mesa .topo #idioma { width: 44px; min-height: 44px; padding-inline: 0; }
 .topo #ajuda { width: 34px; min-width: 34px; padding: 0; }
 
 /* ── os três passos ────────────────────────────────────────────────────────
@@ -2930,7 +2932,7 @@ body.mesa #montagem .estadoAoVivo:empty { display: none; }
 }
 :root[data-modo="simples"] .modoSimples,
 :root:not([data-modo="simples"]) #modoAvancado { display: none; }
-:root[data-modo="simples"] .topo #idioma { min-height: 48px; font-size: 16px; width: 150px; }
+:root[data-modo="simples"] .topo #idioma { min-height: 44px; font-size: 16px; width: 44px; }
 .modoSimples { font-size: var(--t-menor); }
 
 .simples {
@@ -2949,6 +2951,7 @@ body.mesa #montagem .estadoAoVivo:empty { display: none; }
 .simplesSecundario { background: transparent; color: var(--tinta-2); }
 .simplesDica { margin: 0; color: var(--tinta); background: var(--acento-eco); border: 1px solid var(--acento-fio);
   border-radius: var(--r-2); padding: var(--e4); line-height: var(--lh); }
+:root[data-simples-visto] #simplesDica { display: none; }
 .simplesExemplos { margin: 0; color: var(--tinta-2); font-size: var(--t-base); }
 .simplesErro, .simplesAviso { margin: 0; color: var(--tinta); background: var(--aviso-eco); border: 1px solid var(--aviso);
   border-radius: var(--r-2); padding: var(--e4); line-height: var(--lh); }
@@ -3183,7 +3186,7 @@ body.simplesGravando #modalClipe { opacity: 0 !important; pointer-events: none !
 #confianca { display: none; }
 #partilhar.soIcone { min-width: 40px; padding-inline: 0; justify-content: center; }
 /* Idioma: só a bandeira; a lista abre com bandeira e nome. */
-.idiomaBandeira { position: relative; flex: 0 0 auto; }
+.idiomaBandeira { position: relative; flex: 0 0 auto; display: flex; }
 .idiomaBotao { min-width: 44px; min-height: 44px; padding: 6px 8px; display: inline-grid; place-items: center; }
 .idiomaBandeira svg { width: 26px; height: 18px; display: block; border-radius: 2px; box-shadow: 0 0 0 1px rgb(255 255 255 / .15); }
 .idiomaLista { position: absolute; right: 0; top: calc(100% + 4px); z-index: 40; margin: 0; padding: 4px; list-style: none; min-width: 160px; background: var(--sup-3); border: 1px solid var(--linha-2); border-radius: var(--r-2); box-shadow: 0 8px 24px rgb(0 0 0 / .45); }

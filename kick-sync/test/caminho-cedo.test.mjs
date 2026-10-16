@@ -28,7 +28,7 @@ function correr({ dados, opcoes, url = 'https://povix.test/', ls }) {
   };
   vm.createContext(ctx);
   vm.runInContext(codigo, ctx);
-  return { modo: documentElement.dataset.modo, ls: armazem };
+  return { modo: documentElement.dataset.modo, dicaVista: documentElement.dataset.simplesVisto, ls: armazem };
 }
 
 test('primeira visita entra no simples, guarda a escolha e segunda execução mantém simples', () => {
@@ -82,6 +82,12 @@ test('leitura que falha fica simples', () => {
   const ls = storage({ replay: 'x' }, { falhaLeitura: true });
   assert.equal(correr({ ls }).modo, 'simples');
   assert.equal('povix.modo' in ls.d, false);
+});
+
+test('a dica da primeira visita é decidida antes do primeiro desenho', () => {
+  assert.equal(correr({ dados: {} }).dicaVista, undefined);
+  assert.equal(correr({ dados: { 'povix.simplesVisto': '1' } }).dicaVista, '1');
+  assert.equal(correr({ dados: {}, opcoes: { falhaLeitura: true } }).dicaVista, undefined);
 });
 
 test('link compartilhado s= abre avançado sem trocar a preferência simples guardada', () => {
