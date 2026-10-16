@@ -38,7 +38,8 @@ function kickFalsa({ roteiro = {}, demora = () => 2 } = {}) {
     k.maxEmVoo = Math.max(k.maxEmVoo, k.emVoo);
     k.chamadas.push({ slug, n, emVoo: k.emVoo, op });
     try {
-      await dormir(demora(slug, n));
+      const atraso = demora(slug, n);
+      if (typeof atraso === 'number') await dormir(atraso); else await atraso;
       const passo = (roteiro[slug] || [])[n - 1] ?? 200;
       if (passo === 'rede') throw new TypeError('Failed to fetch');
       if (passo === 'vazio') return resposta(200, []);
@@ -322,12 +323,18 @@ test('um canal que leva 429 sozinho não dá a Kick por fechada', async () => {
   assert.equal(k.chamadas.length, 9);
 });
 
-test('um 429 atrasado de um pedido que saiu antes do corte não corta outra vez, mas pára os outros', async () => {
+test('um 429 atrasado de um pedido que saiu antes do corte não corta outra vez, mas pára os outros', { timeout: 5000 }, async () => {
   // O c00 sai com o limite de 8 e só volta depois de o c01 ter cortado para 4
   // e de muitos pedidos com o limite novo terem passado. Esse 429 é notícia
   // velha sobre os 8 (o que veio depois diz que os 4 aguentam): não corta. Mas
   // a pausa vale para ele como para qualquer outro.
-  const k = kickFalsa({ roteiro: { c00: [429, 200], c01: [429, 200] }, demora: (slug, n) => (slug === 'c00' && n === 1 ? 40 : 1) });
+  let liberarAntigo;
+  const antigo = new Promise((ok) => { liberarAntigo = ok; });
+  const k = kickFalsa({ roteiro: { c00: [429, 200], c01: [429, 200] }, demora: (slug, n) => {
+    if (slug === 'c00' && n === 1) return antigo;
+    if (k.chamadas.length >= 24) liberarAntigo();
+    return 1;
+  } });
   const progresso = [];
   const durante = [];
   const esperar = async () => {

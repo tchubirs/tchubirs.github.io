@@ -186,15 +186,20 @@ test('o ângulo em foco sai da grelha: ecrã cheio e janela à parte',
 
     const foco = '.tile.foco';
     await p.waitForSelector(`${foco} .ecraCheio`, { timeout: 10000 });
-    // Os três do canto numa fila, sem se sobreporem — que é como os de baixo
-    // já se partiram uma vez.
+    if (process.env.CAPTURAS_LAYOUT) await p.screenshot({ path: `${process.env.CAPTURAS_LAYOUT}/ci-controles-foco.png`, fullPage: true });
+    // O olho fica em cima; janela e tela cheia ficam embaixo. Medir as duas
+    // dimensões: compartilhar x não significa sobreposição entre essas barras.
     const cantos = await p.evaluate((sel) => ['.par', '.ecraCheio', '.aparte']
       .map((s) => document.querySelector(`${sel} ${s}`))
-      .map((e) => (e ? { x: Math.round(e.getBoundingClientRect().x), w: Math.round(e.getBoundingClientRect().width) } : null)), foco);
+      .map((e) => (e ? e.getBoundingClientRect().toJSON() : null)), foco);
     assert.ok(cantos.every(Boolean), `faltou um botão: ${JSON.stringify(cantos)}`);
-    for (let i = 1; i < cantos.length; i++) {
-      assert.ok(cantos[i].x >= cantos[i - 1].x + cantos[i - 1].w,
-        `os botões do canto sobrepõem-se: ${JSON.stringify(cantos)}`);
+    for (let i = 0; i < cantos.length; i++) {
+      assert.ok(cantos[i].width > 0 && cantos[i].height > 0, 'controle escondido');
+      for (let j = i + 1; j < cantos.length; j++) {
+        const a = cantos[i]; const b = cantos[j];
+        assert.ok(a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top,
+          `os botões sobrepõem-se: ${JSON.stringify([a, b])}`);
+      }
     }
 
     await p.click(`${foco} .ecraCheio`);
@@ -667,19 +672,17 @@ test('o modal de clipe cabe num telemóvel em pé',
     await p.click('#clipar');
     await p.waitForSelector('#modalClipe:not([hidden])', { timeout: 10000 });
 
-    // Cada par de setas na sua linha, e as duas setas da mesma ponta lado a
-    // lado — não uma a cair para a linha de baixo sozinha, que foi assim que
-    // ele viu os dois botões antigos no telemóvel.
+    // Início e fim lado a lado, cada um com seu par; o play fica entre eles.
     const cx = async (id) => p.locator(id).boundingBox();
     const [im, iM, fm, fM, ver] = await Promise.all(
       ['#inicioMenos', '#inicioMais', '#fimMenos', '#fimMais', '#verClipe'].map(cx),
     );
+    if (process.env.CAPTURAS_LAYOUT) await p.screenshot({ path: `${process.env.CAPTURAS_LAYOUT}/ci-editor-mobile.png`, fullPage: true });
     assert.ok(Math.abs(im.y - iM.y) < 6, `as setas do início em y=${im.y} e y=${iM.y}`);
     assert.ok(Math.abs(fm.y - fM.y) < 6, `as setas do fim em y=${fm.y} e y=${fM.y}`);
-    assert.ok(fm.y > im.y + 10, 'o fim tem de ficar POR BAIXO do início, e não ao lado');
-    // O ▶ ao lado das duas linhas: toca o pedaço inteiro, não uma das pontas.
-    assert.ok(ver.y <= im.y + 6 && ver.y + ver.height >= fm.y + fm.height - 6,
-      'o ▶ devia acompanhar a altura das duas linhas');
+    assert.ok(Math.abs(fm.y - im.y) < 6, 'os dois pares ficam alinhados');
+    assert.ok(iM.x + iM.width <= ver.x && ver.x + ver.width <= fm.x, 'play e ajustes não se sobrepõem');
+    assert.ok(Math.abs(ver.y - im.y) < 6, 'o play fica alinhado com os ajustes');
     for (const [id, b] of [['#inicioMenos', im], ['#fimMais', fM], ['#verClipe', ver]]) {
       assert.ok(b.width >= 40 && b.height >= 40, `${id} tem ${b.width}x${b.height}, pequeno para um dedo`);
     }
@@ -1647,6 +1650,16 @@ for (const ecra of [{ width: 1920, height: 1080 }, { width: 1366, height: 720 }]
       await p.click('#marcarKill');
       await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
 
+      await p.locator('.ferramentasBotao').click();
+      const detectarAcessivel = await p.locator('#procurarKills').evaluate((el) => {
+        const r = el.getBoundingClientRect();
+        const alvo = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+        return r.width > 0 && r.height > 0 && r.top >= 0 && r.bottom <= innerHeight && el.contains(alvo);
+      });
+      assert.equal(detectarAcessivel, true, 'Detectar lances precisa estar acessível em Ferramentas');
+      await p.locator('.ferramentasBotao').click();
+      assert.equal(await p.locator('#menos5m').isVisible(), false, 'salto removido não deve reaparecer');
+
       const medida = await p.evaluate(() => {
         // "À vista" quer dizer QUE SE PODE CARREGAR, e não só que o rectângulo
         // cai dentro do ecrã.
@@ -1690,9 +1703,10 @@ for (const ecra of [{ width: 1920, height: 1080 }, { width: 1366, height: 720 }]
         // O marcar entrada/saída entra na lista: com a régua por cima das
         // faixas, num portátil de 720 essa fila ficava 2 px por baixo da
         // borda do painel — cortada, e sem nada a dizê-lo.
-        const ids = ['clipar', 'barra', 'marcarKill', 'baixarMontagem', 'procurarKills',
-          'mais3s', 'menos5m', 'marcarIn', 'marcarOut', 'zoomTempo'];
+        const ids = ['clipar', 'barra', 'marcarKill', 'baixarMontagem',
+          'mais3s', 'menos3s', 'marcarIn', 'marcarOut', 'zoomTempo'];
         const fora = ids.filter((id) => !dentro(document.getElementById(id)));
+        if (!dentro(document.querySelector('.ferramentasBotao'))) fora.push('Ferramentas');
         if (!dentro(document.querySelector('.tile.foco'))) fora.push('.tile.foco');
         // Da primeira kill chega ver a CABEÇA — a hora e os botões dela; os
         // nomes das vítimas embrulham por baixo e rolam com a lista.

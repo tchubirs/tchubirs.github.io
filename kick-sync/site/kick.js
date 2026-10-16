@@ -45,7 +45,8 @@ export async function vodsDoCanal(slug, { buscar = fetch, sinal } = {}) {
   }
   let r;
   try {
-    r = await buscar(`${API}/channels/${encodeURIComponent(nome)}/videos`, sinal ? { signal: sinal } : undefined);
+    const url = `${API}/channels/${encodeURIComponent(nome)}/videos`;
+    r = await (sinal ? buscar(url, { signal: sinal }) : buscar(url));
   } catch (e) {
     return { slug: nome, estado: 'sem-rede', erro: e.message, vods: [] };
   }

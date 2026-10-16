@@ -14,6 +14,19 @@ const ler = (n) => readFileSync(new URL(n, F), 'utf8');
 
 const MASTER_URL = 'https://stream.kick.com/x/ivs/v1/1/a/2026/8/30/20/47/b/media/hls/master.m3u8';
 
+test('catálogo mantém a chamada de um argumento sem sinal e encaminha o sinal quando informado', async () => {
+  for (const sinal of [null, new AbortController().signal]) {
+    const chamadas = [];
+    await vodsDoCanal('tchubi', { sinal, buscar: async (...args) => {
+      chamadas.push(args);
+      return { ok: true, status: 200, json: async () => [] };
+    } });
+    assert.equal(chamadas.length, 1);
+    assert.equal(chamadas[0].length, sinal ? 2 : 1);
+    if (sinal) assert.equal(chamadas[0][1].signal, sinal);
+  }
+});
+
 test('the ladder comes out highest-first, and the cheap rung is real', () => {
   const l = lerMaster(ler('xqc-master.m3u8'), MASTER_URL);
   assert.equal(l.length, 5);
