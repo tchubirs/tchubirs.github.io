@@ -110,10 +110,8 @@ test('carrega a noite, mostra a grelha e põe todos no mesmo instante',
     await p.close();
   });
 
-// O pedido do dono, e a razão de trinta ângulos serem possíveis: só um vídeo
-// corre. Os outros ficam parados no frame daquele instante — acompanham, não
-// tocam. Trinta descodificadores a andar ao mesmo tempo derretem a máquina.
-test('só o ângulo em foco toca em qualidade; os outros acompanham parados',
+// Só os ângulos abertos no visor tocam em qualidade; as miniaturas ficam baratas.
+test('só os ângulos abertos tocam em qualidade; as miniaturas acompanham paradas',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
     const { p, erros } = await abrir();
     const pedidos = await kickFalsa(p, { canais: ['tchubi', 'outro', 'terceiro'] });
@@ -139,13 +137,17 @@ test('só o ângulo em foco toca em qualidade; os outros acompanham parados',
       assert.match(t, /^\d+:\d{2}$/, `posição ilegível: "${t}"`);
     }
 
-    // Mudar o foco não acumula: continua a haver um só em alta.
-    await p.locator('.tile:not(.foco)').first().click();
-    await p.waitForTimeout(600);
+    // Clicar numa miniatura abre o segundo ângulo, sem tirar o principal.
+    await p.locator('#grade .tile[data-slug="outro"]').click();
+    await p.waitForFunction(() => window.__estado.players.get('outro')?.url.includes('1080p60'),
+      null, { timeout: 10000 });
     const l2 = await carregados();
     assert.equal(caros(l2).length - caros(l1).length, 1,
-      'o novo foco pede uma vez, e mais nada sobe de qualidade');
-    assert.equal(await p.locator('.tile.foco').count(), 1);
+      'só o novo ângulo aberto sobe de qualidade');
+    assert.equal(await p.locator('.tile.foco').count(), 2);
+    const leitores = await p.evaluate(() => [...window.__estado.players].map(([slug, p]) => ({ slug, url: p.url })));
+    assert.deepEqual(leitores.filter((p) => p.url.includes('1080p60')).map((p) => p.slug).sort(), ['outro', 'tchubi']);
+    assert.match(leitores.find((p) => p.slug === 'terceiro').url, /160p30/);
     assert.deepEqual(erros, []);
     await p.close();
   });
@@ -182,10 +184,8 @@ test('no ecra de um telemovel o foco continua a ocupar espaco',
     await p.close();
   });
 
-// Os saltos, como num editor: os de 3 s ao lado do tocar e pausar (transporte, sob o video) e os de 1 e 5 min
-// no cabecalho da linha do tempo. Cada grupo numa linha so, na ordem de recuar a avancar, mesmo num telemovel
-// de 390 px, com o texto inteiro a caber em cada botao e nada a passar do ecra.
-test('os saltos ficam em dois grupos de uma linha so, e cabem no telemovel',
+// Os saltos de 3 s ficam junto do transporte; os de 1 e 5 min foram removidos pelo dono.
+test('os saltos do transporte ficam numa linha e cabem no celular e no PC',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
     for (const ecra of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
       const { p, erros } = await abrir({ ecra });
@@ -196,7 +196,7 @@ test('os saltos ficam em dois grupos de uma linha so, e cabem no telemovel',
       await p.waitForSelector('.tile', { timeout: 15000 });
 
       assert.equal(await p.locator('#menos10s, #mais10s').count(), 0, 'o de 10 s continua la');
-      for (const ids of [['#menos3s', '#tocarPausar', '#mais3s'], ['#menos5m', '#menos1m', '#mais1m', '#mais5m']]) {
+      for (const ids of [['#menos3s', '#tocarPausar', '#mais3s']]) {
         const bs = await Promise.all(ids.map((id) => p.locator(id).boundingBox()));
         const ys = bs.map((b) => b.y);
         assert.ok(Math.max(...ys) - Math.min(...ys) < 2, `partiram em filas (${ecra.width}): ${ids} ${ys}`);
@@ -207,6 +207,9 @@ test('os saltos ficam em dois grupos de uma linha so, e cabem no telemovel',
           return b.scrollWidth > b.clientWidth + 1;
         }), ids);
         assert.deepEqual(cortados, [], `texto cortado (${ecra.width}): ${bs.map((b) => Math.round(b.width))}`);
+      }
+      for (const id of ['#menos5m', '#menos1m', '#mais1m', '#mais5m']) {
+        assert.equal(await p.locator(id).isVisible(), false, `${id} removido voltou a ocupar a tela`);
       }
       const larguraDaPagina = await p.evaluate(() => document.documentElement.scrollWidth);
       assert.ok(larguraDaPagina <= ecra.width, `a pagina passa do ecra: ${larguraDaPagina}`);
@@ -249,21 +252,24 @@ test('num telemovel a pagina abre no video e os saltos ficam no primeiro ecra',
     );
     assert.ok(Math.abs(topoDoPalco) < 8, `o palco abriu a ${topoDoPalco} px do topo do ecra`);
 
-    // Dois: a ordem na PINTURA. O video, o Clipar, os saltos, e so depois as
-    // faixas dos canais, a montagem e a grelha dos angulos.
-    const y = async (sel) => (await p.locator(sel).boundingBox()).y;
+    // Os comandos de clipar e transporte vêm antes das faixas e miniaturas.
+    const caixa = async (sel) => p.locator(sel).boundingBox();
     const [foco, clipar, salto, faixas, grade] = await Promise.all(
-      ['#palcoFoco', '#clipar', '#menos5m', '#faixas', '#grade'].map(y),
+      ['#palcoFoco', '#clipar', '#menos3s', '#faixas', '#grade'].map(caixa),
     );
-    assert.ok(clipar > foco, 'o Clipar vem por baixo do video');
-    assert.ok(salto > clipar, 'os saltos vem por baixo do Clipar');
-    assert.ok(faixas > salto, 'as faixas dos canais vem por baixo dos saltos');
-    assert.ok(grade > faixas, 'a grelha dos angulos vem por ultimo');
+    assert.ok(clipar.y >= foco.y + foco.height - 1, 'o Clipar vem por baixo do video');
+    assert.ok(salto.y >= foco.y + foco.height - 1, 'os saltos vêm por baixo do vídeo');
+    const sobrepostos = clipar.x < salto.x + salto.width && clipar.x + clipar.width > salto.x
+      && clipar.y < salto.y + salto.height && clipar.y + clipar.height > salto.y;
+    assert.equal(sobrepostos, false, 'o Clipar não cobre os saltos na mesma linha');
+    assert.ok(faixas.y >= Math.max(clipar.y + clipar.height, salto.y + salto.height) - 1,
+      'as faixas dos canais vêm depois dos comandos');
+    assert.ok(grade.y > faixas.y, 'a grelha dos angulos vem por ultimo');
 
     // Tres: e tudo isso cabe num ecra de 844 px, sem rolar. Cada botao que ele
     // carrega para andar no tempo tem de estar a vista ao mesmo tempo que o
     // video — que era a queixa.
-    const fora = await p.evaluate(() => ['#palcoFoco', '#clipar', '#menos5m', '#mais5m', '#marcarIn']
+    const fora = await p.evaluate(() => ['#palcoFoco', '#clipar', '#menos3s', '#mais3s', '#marcarIn']
       .map((s) => [s, document.querySelector(s).getBoundingClientRect()])
       // Um pixel de folga: o `scrollIntoView` pousa em fracções de pixel, e
       // um topo de -0,4 não é "fora do ecrã" — é a mesma linha.
@@ -845,8 +851,13 @@ test('da para limpar a lista e recomecar, e a memoria e mesmo devolvida',
     assert.equal(await p.locator('#listaMomentos li[data-ms]').count(), 1);
 
     // Recomecar apaga tudo e volta ao principio.
-    p.on('dialog', (d) => d.accept());
     await p.click('#recomecar');
+    await p.waitForSelector('dialog.confirmarRecomecar[open]');
+    assert.equal(await p.locator('dialog.confirmarRecomecar .cancelar').evaluate((b) => b === document.activeElement), true);
+    await p.click('dialog.confirmarRecomecar .cancelar');
+    assert.equal(await p.locator('#listaMomentos li[data-ms]').count(), 1, 'cancelar preserva a jogada');
+    await p.click('#recomecar');
+    await p.click('dialog.confirmarRecomecar .apagar');
     // Com `?.`: a página está a recarregar, e enquanto o <head> corre o #canais ainda não existe.
     await p.waitForFunction(() => document.getElementById('canais')?.value === '',
       null, { timeout: 20000 });
@@ -855,10 +866,8 @@ test('da para limpar a lista e recomecar, e a memoria e mesmo devolvida',
     await p.close();
   });
 
-// "Escolher quem morreu e para ser a funcao do app — nao faco ideia de quem
-// matei, por isso e que ia ver o ecra de todos." O botao existe, olha por
-// todos, e diz o que conseguiu ou nao conseguiu ver.
-test('o botao de quem morreu olha por todos e nunca finge ter visto',
+// Identificação visual oculta a pedido do dono (13/10); não promete vítimas automáticas na lista.
+test('identificação visual oculta não sugere vítimas; a seleção manual continua explícita',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
     const { p, erros } = await abrir();
     await kickFalsa(p, { canais: ['tchubi', 'vitima1'] });
@@ -869,27 +878,11 @@ test('o botao de quem morreu olha por todos e nunca finge ter visto',
 
     await saltarTempo(p, 60_000);
     await p.click('#marcarKill');
-    await p.waitForSelector('#listaMomentos .verMortes', { timeout: 10000 });
-    await p.click('#listaMomentos .verMortes');
-
-    // Um cartao por canal, sempre — mesmo quando o video nao se consegue ler.
-    await p.waitForFunction(() => document.querySelectorAll('#listaMomentos .cartao').length === 2,
-      null, { timeout: 60000 });
-    const texto = await p.locator('#listaMomentos .olhar .nota').first().innerText();
-
-    // Este Chromium nao traz H.264, por isso nao ha frames. O que se exige e
-    // que a pagina DIGA isso, em vez de apontar alguem sem ter visto nada.
-    if (/não consegui ver/.test(texto)) {
-      assert.equal(await p.locator('#listaMomentos .cartao.morreu').count(), 0,
-        'sem imagens nao se aponta ninguem');
-      assert.equal(await p.locator('#listaMomentos .semImagem').count(), 2);
-    } else {
-      assert.match(texto, /morreu|ninguém se destacou|não decodificar/);
-      assert.ok(await p.locator('#listaMomentos .cartao.morreu').count() <= 2);
-    }
-
-    // E clicar num cartao marca-o como morto, de uma maneira ou de outra.
-    await p.locator('#listaMomentos .cartao[data-canal="vitima1"]').click();
+    assert.equal(await p.locator('#listaMomentos .verMortes').count(), 1);
+    assert.equal(await p.locator('#listaMomentos .verMortes').isVisible(), false);
+    assert.equal(await p.locator('#listaMomentos .cartao').count(), 0);
+    assert.equal(await p.locator('#listaMomentos .vit.sim').count(), 0, 'ninguém foi identificado automaticamente');
+    await p.locator('#listaMomentos .vit[data-canal="vitima1"]').click();
     await p.waitForSelector('#listaMomentos .vit[data-canal="vitima1"].sim', { timeout: 10000 });
     assert.deepEqual(erros, []);
     await p.close();
@@ -1043,6 +1036,7 @@ test('a busca automatica nunca inventa kills que nao ouviu',
     const perguntas = [];
     p.on('dialog', (d) => { perguntas.push(d.message()); d.accept(); });
     // O botão abre o assistente da faixa direto em Detectar lances: tudo, e o botão Detectar.
+    await abrirFerramentas(p);
     await p.click('#procurarKills');
     await p.click('#escolherTudo');
     await p.click('#detetarTrecho');
@@ -1074,6 +1068,13 @@ test('o aviso do leitor aparece quando o hls.js não carrega',
     // demasiado zeloso. O aviso tem de continuar a existir.
     await p.unroute('**/hls-*.js');
     await p.route('**/hls-*.js', (rota) => rota.abort());
+    // Exercita a falta dos dois leitores, inclusive em Chrome com HLS nativo.
+    await p.addInitScript(() => {
+      const original = HTMLMediaElement.prototype.canPlayType;
+      HTMLMediaElement.prototype.canPlayType = function (tipo) {
+        return /mpegurl/i.test(tipo) ? '' : original.call(this, tipo);
+      };
+    });
     await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'domcontentloaded' });
     await p.fill('#canais', 'tchubi');
     await p.click('#carregar');
@@ -1190,15 +1191,20 @@ test('a montagem sai num ZIP so, e o unzip do sistema aceita-o',
     const f = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'zip-pagina-')), nome);
     fs.writeFileSync(f, Buffer.from(dados));
 
-    assert.match(execFileSync('unzip', ['-t', f], { encoding: 'utf8' }), /No errors detected/);
-    const dentro = execFileSync('unzip', ['-Z1', f], { encoding: 'utf8' }).trim().split('\n');
+    const windows = process.platform === 'win32';
+    const tar = windows ? path.join(process.env.SystemRoot, 'System32/tar.exe') : null;
+    if (!windows) assert.match(execFileSync('unzip', ['-t', f], { encoding: 'utf8' }), /No errors detected/);
+    const dentro = (windows ? execFileSync(tar, ['-tf', f], { encoding: 'utf8' })
+      : execFileSync('unzip', ['-Z1', f], { encoding: 'utf8' })).trim().split(/\r?\n/);
     assert.equal(dentro.length, 4, 'os quatro clipes estao la dentro');
     // A ordem da montagem — a POV dele primeiro, a de quem morreu a seguir —
     // e a ordem por que ele monta. Um ZIP que a baralhasse dava-lhe trabalho.
     assert.deepEqual(dentro.map((n) => n.slice(0, 6)), ['01a_tc', '01b_vi', '02a_tc', '02b_vi']);
     // E os clipes tem de ter mesmo video la dentro, e nao zero bytes.
-    const tamanhos = execFileSync('unzip', ['-l', f], { encoding: 'utf8' });
-    assert.ok(!/\n\s+0\s+2026/.test(tamanhos), `um clipe saiu vazio:\n${tamanhos}`);
+    for (const nome of dentro) {
+      const bytes = windows ? execFileSync(tar, ['-xOf', f, nome]) : execFileSync('unzip', ['-p', f, nome]);
+      assert.ok(bytes.length > 0, `${nome} saiu vazio`);
+    }
 
     // "Limpar a lista" solta os enderecos; deixar la o botao do ZIP dava um
     // link que parecia bom e descarregava nada.
@@ -1209,13 +1215,9 @@ test('a montagem sai num ZIP so, e o unzip do sistema aceita-o',
     await p.close();
   });
 
-// Seis ângulos ao mesmo tempo, e não um de cada vez.
-//
-// Em fila indiana isto eram seis esperas somadas por cada kill, e a busca
-// automática faz isto vinte vezes seguidas. Aqui não há descodificador, por
-// isso cada ângulo desiste ao fim de um tempo fixo — o que torna a diferença
-// entre as duas maneiras mensurável: em fila, seis desistências somadas.
-test('os seis ângulos são vistos ao mesmo tempo, e não um de cada vez',
+// O motor legado continua coberto, embora seu botão esteja oculto. A barreira só
+// libera os leitores depois de todos abrirem: processamento serial não chega lá.
+test('o motor visual legado abre os seis leitores antes de esperar os resultados',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
     const canais = ['tchubi', 'c2', 'c3', 'c4', 'c5', 'c6'];
     const { p, erros } = await abrir();
@@ -1228,18 +1230,35 @@ test('os seis ângulos são vistos ao mesmo tempo, e não um de cada vez',
     await p.click('#marcarKill');
     await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
 
-    const comecou = Date.now();
-    await p.locator('#listaMomentos .verMortes').click();
-    await p.waitForFunction(() => {
-      const c = document.querySelector('#listaMomentos .olhar');
-      return c && !/A identificar|a olhar/.test(c.innerText);
-    }, null, { timeout: 60000 });
-    const demorou = Date.now() - comecou;
-
-    // Medido nesta máquina, com seis ângulos: em fila indiana 10,9 s. O limite
-    // está bem abaixo disso e bem acima do que a versão em paralelo demora,
-    // para não falhar num dia mau da máquina nem deixar passar uma regressão.
-    assert.ok(demorou < 4000, `demorou ${demorou} ms — os ângulos voltaram a ser vistos em fila`);
+    await p.evaluate(() => {
+      const Original = window.Hls;
+      window.__capturasAbertas = 0;
+      window.__falhasCapturas = [];
+      window.Hls = function (...args) {
+        const hls = new Original(...args);
+        let aoErro;
+        hls.on = (_, cb) => { aoErro = cb; };
+        const attachMedia = hls.attachMedia;
+        hls.attachMedia = (v) => {
+          attachMedia.call(hls, v);
+          if (v.style.left === '-9999px') {
+            window.__capturasAbertas++;
+            window.__falhasCapturas.push(() => aoErro?.(null, { fatal: true }));
+          }
+        };
+        return hls;
+      };
+      window.Hls.isSupported = Original.isSupported;
+      window.Hls.Events = { ERROR: 'hlsError' };
+    });
+    assert.equal(await p.locator('#listaMomentos .verMortes').isVisible(), false);
+    await p.locator('#listaMomentos .verMortes').evaluate((b) => b.click());
+    await p.waitForFunction(() => window.__capturasAbertas === 6, null, { timeout: 3000 });
+    await p.evaluate(() => window.__falhasCapturas.forEach((f) => f()));
+    await p.waitForFunction(() => window.__estado.olhares.size === 1, null, { timeout: 3000 });
+    assert.equal(await p.locator('#listaMomentos .cartao').count(), 6);
+    assert.equal(await p.locator('#listaMomentos .cartao.morreu').count(), 0, 'leitores que falharam não comprovam vítima');
+    assert.equal(await p.locator('video[style*="-9999px"]').count(), 0, 'os leitores de captura foram liberados');
     assert.deepEqual(erros, []);
     await p.close();
   });
@@ -1299,7 +1318,8 @@ test('com um canal só, a página não fala de grupo',
     assert.equal(await p.locator('#alinhar').isVisible(), false, 'não há nada para alinhar');
     assert.equal(await p.locator('#angulos').innerText(), '');
     assert.equal(await p.locator('#listaMomentos .verMortes').count(), 0);
-    assert.equal(await p.locator('#listaMomentos .vitimas').count(), 0);
+    assert.equal(await p.locator('#listaMomentos .vit[data-canal]').count(), 0, 'um canal só não oferece outros streamers para marcar');
+    assert.equal(await p.locator('#listaMomentos .vitNome').isVisible(), true, 'continua possível anotar o adversário sem canal');
     assert.ok(!/todos juntos/.test(await p.locator('#resumoNoite').innerText()));
     assert.ok(!/sem ninguém marcado/.test(await p.locator('#estadoMontagem').innerText()),
       await p.locator('#estadoMontagem').innerText());
@@ -1324,6 +1344,7 @@ test('com dois canais, tudo o que é de grupo volta',
     await p.click('#marcarKill');
     await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
 
+    await abrirFerramentas(p);
     assert.equal(await p.locator('#alinhar').isVisible(), true);
     assert.match(await p.locator('#angulos').innerText(), /de 2/);
     assert.equal(await p.locator('#listaMomentos .verMortes').count(), 1);
@@ -1426,7 +1447,7 @@ test('Montagem e Exportar: separadores que seguem a tarefa, com conta e teclado'
     assert.equal(await p.locator('#abaMontagem').getAttribute('aria-selected'), 'true');
     assert.equal(await p.locator('#exportacoes').isVisible(), false);
     assert.equal(await p.locator('#clipar span').first().innerText(), 'Criar clipe');
-    assert.equal(await p.locator('#procurarKills span').innerText(), 'Detectar lances');
+    assert.equal(await p.locator('#procurarKills [data-t="auto.botao"]').textContent(), 'Detectar lances');
 
     // Abrir o Exportar vazio diz o que vai aparecer lá; marcar uma kill volta à Montagem, com a conta.
     await p.click('#abaExportar');

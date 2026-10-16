@@ -6,9 +6,10 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 export const T = Date.parse('2026-08-30T21:00:00.000Z');
-const SOM = new URL('../probes/fixtures/som/', import.meta.url).pathname;
+const SOM = fileURLToPath(new URL('../probes/fixtures/som/', import.meta.url));
 export const TEM_SOM = fs.existsSync(SOM);
 const SEGS_SOM = TEM_SOM ? fs.readdirSync(SOM).filter((f) => f.endsWith('.ts')).sort() : [];
 
