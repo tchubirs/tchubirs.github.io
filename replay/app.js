@@ -9,81 +9,81 @@ import './dicas.js';
 import {
   vodsDoCanal, lerMaster, lerPlaylist, procurarCanais, lerLinkKick, clipeDaKick, vodDaKick, DESCONHECIDO, slugDoNome,
   segmentosNaJanela,
-} from './kick.js?v=bf8f687c0f';
+} from './kick.js?v=f5edfd5e44';
 import {
   linhaDoCanal, janelaComum, onde, trechoComum, quantosNoAr, comNudge, paraLink, doLink, seguirAncora,
   passoDoArrasto, ARRASTO_INTERVALO_MS, ARRASTO_ESPERA_MS, vistaDaLinha, saiuDaVista,
   ZOOM_MIN_MS, larguraDoZoom, valorDoZoom, zoomEmVolta, andarVista,
-} from './relogio.js?v=bf8f687c0f';
-import { cortarTodosOsAngulos } from './baixar.js?v=bf8f687c0f';
-import { juntarMp4 } from './mp4.js?v=bf8f687c0f';
-import { juntarGravados } from './juntar-gravados.js?v=bf8f687c0f';
-import { instanteAoVivo, bordaAoVivo, medirAtraso, instantesAoVivo, ATRASO_PADRAO_MS } from './aovivo.js?v=bf8f687c0f';
-import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=bf8f687c0f';
-import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=bf8f687c0f';
-import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=bf8f687c0f';
+} from './relogio.js?v=f5edfd5e44';
+import { cortarTodosOsAngulos } from './baixar.js?v=f5edfd5e44';
+import { juntarMp4 } from './mp4.js?v=f5edfd5e44';
+import { juntarGravados } from './juntar-gravados.js?v=f5edfd5e44';
+import { instanteAoVivo, bordaAoVivo, medirAtraso, instantesAoVivo, ATRASO_PADRAO_MS } from './aovivo.js?v=f5edfd5e44';
+import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=f5edfd5e44';
+import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=f5edfd5e44';
+import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=f5edfd5e44';
 import {
   RETRATO, enquadramentoInicial, limitar, desenhar, gravar, formatoQueFunciona, extensaoDe, prepararSomDaGravacao,
   reformar, limparDivisao, DIVISAO_OMISSAO, divisaoDoQuadro, proporcaoDoQuadro, encaixar,
   MODELO_OMISSAO, limparModelo, paraFraccoes, deFraccoes, DEITADO, ZONA_TIKTOK,
-} from './retrato.js?v=bf8f687c0f';
+} from './retrato.js?v=f5edfd5e44';
 import {
   abrirDetector, abrirQuadrosEscondidos, procurarRosto, caixaDaWebcam, instantesDoClipe, degrauDoRosto,
   rostoGuardado, guardarRosto,
-} from './rosto.js?v=bf8f687c0f';
+} from './rosto.js?v=f5edfd5e44';
 import {
   limparChat, geometria as geometriaDoChat, desenharChat, mensagensDoClipe, prepararEmotes,
   VIDA_MAX_MS as VIDA_CHAT_MS, LETRA as LETRA_CHAT, retanguloDoChat, CHAT_OMISSAO,
-} from './chat-clipe.js?v=bf8f687c0f';
-import { ligarCaixa, estiloDaCaixa } from './caixa-previa.js?v=bf8f687c0f';
+} from './chat-clipe.js?v=f5edfd5e44';
+import { ligarCaixa, estiloDaCaixa } from './caixa-previa.js?v=f5edfd5e44';
 import {
   limparLegenda, limparTranscricao, geometriaLegenda, desenharLegenda, transcricaoDoAudio, textoDaLinha,
   editarLinha, apagarLinha, deslocarLinha, rotuloTempo, cobre, linhaNoInstante, PASSO_MS, fonteDe as fonteDaLegenda,
   idiomaParaOuvir, segurarMs, retanguloDaLegenda, LEGENDA_OMISSAO,
-} from './legenda.js?v=bf8f687c0f';
-import { abrirVoz, somDosPedacos, degrauDoSom, estimativaS, faltaBaixar } from './legenda-voz.js?v=bf8f687c0f';
-import { guardarFala, linhasDaTranscricao } from './falas.js?v=bf8f687c0f';
-import { tituloDeDeteccao, confDoSom } from './titulo.js?v=bf8f687c0f';
-import { podeLer } from './ler-tela.js?v=bf8f687c0f';
-import { planoDeAngulos, gravarAngulos } from './angulos.js?v=bf8f687c0f';
-import { agruparPorNoite, rotuloDaNoite, noiteParaAbrir } from './noites.js?v=bf8f687c0f';
+} from './legenda.js?v=f5edfd5e44';
+import { abrirVoz, somDosPedacos, degrauDoSom, estimativaS, faltaBaixar } from './legenda-voz.js?v=f5edfd5e44';
+import { guardarFala, linhasDaTranscricao } from './falas.js?v=f5edfd5e44';
+import { tituloDeDeteccao, confDoSom } from './titulo.js?v=f5edfd5e44';
+import { podeLer } from './ler-tela.js?v=f5edfd5e44';
+import { planoDeAngulos, gravarAngulos } from './angulos.js?v=f5edfd5e44';
+import { agruparPorNoite, rotuloDaNoite, noiteParaAbrir } from './noites.js?v=f5edfd5e44';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
   alternarVitima, filtrar, temMorte, clipesDoMomento, comAjuste, numeroNaMontagem,
   ajusteDe, ajustesQueContam, momentosParaLink, momentosDoLink, comVitimaEscrita, semVitimaEscrita,
-} from './momentos.js?v=bf8f687c0f';
-import { lerApelidos } from './nomes.js?v=bf8f687c0f';
+} from './momentos.js?v=f5edfd5e44';
+import { lerApelidos } from './nomes.js?v=f5edfd5e44';
 import {
   planearCorte, executarCorte, nomeDoFicheiro, largarOQueNaoServe, oQueFalta,
-} from './baixar.js?v=bf8f687c0f';
-import { criarZip, crc32 } from './zip.js?v=bf8f687c0f';
-import { retencaoDoCanal, prazoDoVod, ordemDeGuardar } from './prazo.js?v=bf8f687c0f';
-import { eDoJogo } from './jogo.js?v=bf8f687c0f';
-import { fcpxmlMulticam, textoDoPacote, linkDoVod } from './pacote.js?v=bf8f687c0f';
-import { queFazerComOLeitor, limitarSaltos } from './leitor.js?v=bf8f687c0f';
-import { criarApanhador } from './frames.js?v=bf8f687c0f';
-import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=bf8f687c0f';
-import { alertasDoCanal } from './alertas.js?v=bf8f687c0f';
+} from './baixar.js?v=f5edfd5e44';
+import { criarZip, crc32 } from './zip.js?v=f5edfd5e44';
+import { retencaoDoCanal, prazoDoVod, ordemDeGuardar } from './prazo.js?v=f5edfd5e44';
+import { eDoJogo } from './jogo.js?v=f5edfd5e44';
+import { fcpxmlMulticam, textoDoPacote, linkDoVod } from './pacote.js?v=f5edfd5e44';
+import { queFazerComOLeitor, limitarSaltos } from './leitor.js?v=f5edfd5e44';
+import { criarApanhador } from './frames.js?v=f5edfd5e44';
+import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=f5edfd5e44';
+import { alertasDoCanal } from './alertas.js?v=f5edfd5e44';
 import {
   ESPERTO_A_PARTIR_MS, janelasDosPicos, msPorOuvir, somaMs, juntar, eMuito, estimarFalta, tempoFalta,
-} from './ouvir.js?v=bf8f687c0f';
-import { TAXA_TIROS } from './tiros.js?v=bf8f687c0f';
-import { termosDoFiltro, momentosDePalavras } from './chat.js?v=bf8f687c0f';
-import { SENSIBILIDADES_DETECAO, opcoesDaSensibilidade, juntarProximos } from './lances.js?v=bf8f687c0f';
-import { parecidos, juntarPerto } from './aprender.js?v=bf8f687c0f';
-import { somDoCanal } from './alinhar.js?v=bf8f687c0f';
+} from './ouvir.js?v=f5edfd5e44';
+import { TAXA_TIROS } from './tiros.js?v=f5edfd5e44';
+import { termosDoFiltro, momentosDePalavras } from './chat.js?v=f5edfd5e44';
+import { SENSIBILIDADES_DETECAO, opcoesDaSensibilidade, juntarProximos } from './lances.js?v=f5edfd5e44';
+import { parecidos, juntarPerto } from './aprender.js?v=f5edfd5e44';
+import { somDoCanal } from './alinhar.js?v=f5edfd5e44';
 import {
   MAXIMO_S, mover, janelaInicial, nomeDoClipe, posicaoDaCabeca, dentroDosLimites, duracaoCurta,
-} from './clipe.js?v=bf8f687c0f';
-import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=bf8f687c0f';
-import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=bf8f687c0f';
-import { escapar } from './escapar.js?v=bf8f687c0f';
-import { montarEvento, rotuloDoDia } from './evento-ui.js?v=bf8f687c0f';
-import { montarPortas } from './portas.js?v=bf8f687c0f';
-import { montarSimples, modoSimples } from './simples.js?v=bf8f687c0f';
-import { prepararPovs } from './povs-preparar.js?v=bf8f687c0f';
-import { atalhos, ACAO, comboDoEvento, partes } from './atalhos.js?v=bf8f687c0f';
-import { montarPainelAtalhos, pintarDicas } from './atalhos-painel.js?v=bf8f687c0f';
+} from './clipe.js?v=f5edfd5e44';
+import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=f5edfd5e44';
+import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=f5edfd5e44';
+import { escapar } from './escapar.js?v=f5edfd5e44';
+import { montarEvento, rotuloDoDia } from './evento-ui.js?v=f5edfd5e44';
+import { montarPortas } from './portas.js?v=f5edfd5e44';
+import { montarSimples, modoSimples } from './simples.js?v=f5edfd5e44';
+import { prepararPovs } from './povs-preparar.js?v=f5edfd5e44';
+import { atalhos, ACAO, comboDoEvento, partes } from './atalhos.js?v=f5edfd5e44';
+import { montarPainelAtalhos, pintarDicas } from './atalhos-painel.js?v=f5edfd5e44';
 
 /* Os glifos dos controlos do vídeo são DESENHO e não emoji.
    Um ⏸ ou um 🔇 sai diferente em cada sistema — no iPhone sai a cores, no

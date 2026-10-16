@@ -12,11 +12,11 @@
  * da Kick, sem uma linha nova: um VOD da Twitch entra la como uma peca de um
  * segmento so.
  */
-import { t, aplicarIdioma, definirIdioma, idiomaActual, idiomaDoBrowser, IDIOMAS } from './idiomas.js?v=bf8f687c0f';
-import { procurarCanais, vodsDoCanal, pecaDoVod, loginDoCanal, tempoDoPlayer } from './twitch.js?v=bf8f687c0f';
-import { linhaDoCanal, onde, janelaComum, quantosNoAr } from './relogio.js?v=bf8f687c0f';
-import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=bf8f687c0f';
-import { escapar } from './escapar.js?v=bf8f687c0f';
+import { t, aplicarIdioma, definirIdioma, idiomaActual, idiomaDoBrowser, IDIOMAS } from './idiomas.js?v=f5edfd5e44';
+import { procurarCanais, vodsDoCanal, pecaDoVod, loginDoCanal, tempoDoPlayer } from './twitch.js?v=f5edfd5e44';
+import { linhaDoCanal, onde, janelaComum, quantosNoAr } from './relogio.js?v=f5edfd5e44';
+import { agruparPorNoite, rotuloDaNoite } from './noites.js?v=f5edfd5e44';
+import { escapar } from './escapar.js?v=f5edfd5e44';
 
 const $ = (id) => document.getElementById(id);
 // Quantos players cabem de uma vez. Cada um e um iframe com video a correr, e
