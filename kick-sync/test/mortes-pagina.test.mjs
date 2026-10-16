@@ -111,6 +111,27 @@ test('mortes do servidor: importar, marcas nas duas faixas, abrir os dois POVs, 
     await p.click('#mostrarMapa');
     await p.locator('#mortesNomes summary').click();
     await p.locator('#mortesNomesLista li[data-nome="Damoniak"] select').selectOption('outro');
+    const selecao = p.locator('#mortesNomesLista li[data-nome="Damoniak"] select');
+    await selecao.focus();
+    const permaneceu = await selecao.evaluate((el) => {
+      window.__mortes.refazer();
+      return el.isConnected;
+    });
+    assert.equal(permaneceu, true, 'atualizar as mesmas mortes não recria o campo em uso');
+    assert.equal(await selecao.inputValue(), 'outro', 'a escolha de canal sobrevive à atualização');
+    assert.equal(await selecao.evaluate((el) => el === document.activeElement), true);
+    const traduzida = await p.evaluate(async () => {
+      const { definirIdioma, idiomaActual } = await import('./idiomas.js');
+      const idioma = idiomaActual();
+      definirIdioma('en');
+      window.__mortes.refazer();
+      const campo = document.querySelector('#mortesNomesLista li[data-nome="Damoniak"] select');
+      const estado = { valor: campo.value, foco: campo === document.activeElement };
+      definirIdioma(idioma);
+      window.__mortes.refazer();
+      return estado;
+    });
+    assert.deepEqual(traduzida, { valor: 'outro', foco: true }, 'repintar opções traduzidas preserva a escolha e o foco');
     await p.locator('#mortesNomesLista li[data-nome="Damoniak"] button').click();
     assert.match(await p.locator('#mortesEstado').innerText(), /Damoniak agora é outro/);
     assert.equal(await p.locator('#mortesNomes').isVisible(), false);

@@ -82,9 +82,22 @@ async function comServidor(opcoes, usar) {
  * carregamento, tudo por `addInitScript`: o WebM real (`fonteWebm`) vira `window.__fonteFalsa` antes de a app
  * correr, e um `reload()` recria o mesmo blob pelo mesmo script.
  */
-async function abrirPagina(momento = MOMENTO_TIROS, { falaMock = null } = {}) {
+async function abrirPagina(momento = MOMENTO_TIROS, { falaMock = null, videoKickDisponivel = true } = {}) {
   const p = await navegador.newPage({ viewport: { width: 1366, height: 768 }, locale: 'pt-PT' });
-  await p.addInitScript(({ inicio, momento, falaTexto, fonte }) => {
+  await p.addInitScript(({ inicio, momento, falaTexto, fonte, videoKickDisponivel }) => {
+    // O duplo do HLS toca WebM real. Sua disponibilidade precisa ser explícita:
+    // Chromium sem H.264 barrava a fila antes de tentar decodificar esse WebM.
+    const MS = window.MediaSource || window.ManagedMediaSource;
+    if (MS?.isTypeSupported) {
+      const suporta = MS.isTypeSupported.bind(MS);
+      MS.isTypeSupported = (tipo) => /avc1/.test(tipo) ? videoKickDisponivel : suporta(tipo);
+    }
+    if (!videoKickDisponivel) {
+      const podeTocar = HTMLMediaElement.prototype.canPlayType;
+      HTMLMediaElement.prototype.canPlayType = function (tipo) {
+        return /mpegurl/i.test(tipo) ? '' : podeTocar.call(this, tipo);
+      };
+    }
     if (fonte) {
       const bin = atob(fonte);
       const bytes = new Uint8Array(bin.length);
@@ -107,7 +120,7 @@ async function abrirPagina(momento = MOMENTO_TIROS, { falaMock = null } = {}) {
     if (falaTexto) {
       window.__povixTranscreverContexto = async () => ({ linhas: [{ palavras: [{ t: falaTexto, de: 0, ate: 1000 }] }] });
     }
-  }, { inicio: T, momento, falaTexto: falaMock, fonte: fonteWebm });
+  }, { inicio: T, momento, falaTexto: falaMock, fonte: fonteWebm, videoKickDisponivel });
   await p.context().route(/tasks-vision@|mediapipe-models|cdn\.jsdelivr\.net|huggingface\.co/, (r) => r.abort());
   const erros = [];
   p.on('pageerror', (e) => erros.push(String(e.message)));
@@ -130,6 +143,22 @@ test('sem ANTHROPIC_API_KEY (o /health real diz temChave:false): nunca baixa qua
       const motivo = await p.locator('#simplesLista li').first().locator('.simplesMotivo').innerText();
       assert.match(motivo, /Som alto|Tiros ouvidos/, 'sem confirmação, é só indício de som — nunca "luta"');
       assert.equal(chamadas, 0, 'sem a chave, o servidor de contexto nunca chama a Anthropic');
+      assert.deepEqual(erros, []);
+      await p.close();
+    });
+  });
+
+test('sem suporte ao vídeo da Kick: não chama análise remota nem apresenta combate confirmado',
+  { ...semNavegador, timeout: 60_000 }, async () => {
+    let chamadas = 0;
+    await comServidor({ apiKey: 'teste-fake-key', fetchImpl: async (...a) => { chamadas++; return respostaAnthropic(CONTEXTO_COMBATE)(...a); } }, async (porta) => {
+      const { p, erros } = await abrirPagina(MOMENTO_TIROS, { videoKickDisponivel: false });
+      await p.goto(`http://127.0.0.1:${porta}/`, { waitUntil: 'networkidle' });
+      await p.waitForSelector('#simplesLista li', { timeout: 10_000 });
+      await p.waitForTimeout(3000);
+      assert.match(await p.locator('#simplesAviso').innerText(), /Este navegador não abre os vídeos da Kick/);
+      assert.equal(chamadas, 0);
+      assert.doesNotMatch(await p.locator('#simplesLista li').first().innerText(), /Combate do jogador confirmado|Análise por imagem/);
       assert.deepEqual(erros, []);
       await p.close();
     });

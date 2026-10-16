@@ -20,7 +20,7 @@ let PORTA = 0;
 const { abrir } = montarPalco((p) => { PORTA = p; });
 const semNavegador = { skip: !podeCorrer && 'sem navegador' };
 const perto = (a, b, tol) => Math.abs(a - b) <= tol;
-const FOTOS = new URL('../../.arena/prints/fotos/', import.meta.url).pathname;
+const FOTOS = fileURLToPath(new URL('../../.arena/prints/fotos/', import.meta.url));
 
 // ── sem navegador ───────────────────────────────────────────────────────────
 
@@ -580,10 +580,12 @@ test('o vídeo escondido dá um quadro que se lê quando a origem deixa, e nunca
     rec.ondataavailable = (e) => partes.push(e.data);
     const fim = new Promise((ok) => { rec.onstop = ok; });
     let n = 0;
-    const pincel = setInterval(() => {
+    const pintar = () => {
       g.fillStyle = '#2050c0'; g.fillRect(0, 0, 320, 180);
       g.fillStyle = '#c99a7c'; g.fillRect(40 + (n++ % 2), 100, 50, 50);
-    }, 33);
+    };
+    pintar();
+    const pincel = setInterval(pintar, 33);
     rec.start(200);
     await new Promise((k) => setTimeout(k, 1600));
     rec.stop();

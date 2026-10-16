@@ -371,14 +371,21 @@ test('mudar de noite diz o que está a fazer, e a última escolha é a que fica'
     // A noite que abre é a que tem os dois canais (o teste real de 12/10, `noiteParaAbrir`): muda-se
     // para a outra.
     const outra = await p.evaluate(() => (document.getElementById('noite').value === '0' ? 1 : 0));
-    await p.selectOption('#noite', { index: outra });
-    await p.waitForFunction(() => document.getElementById('estadoNoite').textContent.trim() !== ''
-      || document.getElementById('noite').disabled, null, { timeout: 3000 });
-    const aMeio = await p.evaluate(() => ({
-      diz: document.getElementById('estadoNoite').textContent.trim(),
-      fechado: document.getElementById('noite').disabled,
-    }));
-    assert.ok(aMeio.diz || aMeio.fechado, 'nada dizia que estava a trabalhar');
+    let liberar;
+    const espera = new Promise((ok) => { liberar = ok; });
+    const segurar = async (rota) => { await espera; await rota.fallback(); };
+    await p.route('https://stream.kick.com/falsa/**', segurar);
+    try {
+      await p.selectOption('#noite', { index: outra });
+      await p.waitForFunction(() => document.getElementById('estadoNoite').textContent.trim() !== ''
+        || document.getElementById('noite').disabled, null, { timeout: 3000 });
+      const aMeio = await p.evaluate(() => ({
+        diz: document.getElementById('estadoNoite').textContent.trim(),
+        fechado: document.getElementById('noite').disabled,
+      }));
+      assert.ok(aMeio.diz || aMeio.fechado, 'nada dizia que estava a trabalhar');
+    } finally { liberar(); }
+    await p.unroute('https://stream.kick.com/falsa/**', segurar);
 
     // E volta a abrir quando acaba.
     await p.waitForFunction(() => !document.getElementById('noite').disabled, null, { timeout: 25000 });

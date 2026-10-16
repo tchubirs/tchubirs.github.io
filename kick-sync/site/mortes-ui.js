@@ -83,6 +83,7 @@ export function montarMortes({
     // A procura nos vídeos: o controlo dela, o que já se olhou (canal -> intervalos) e se há outra à espera.
     busca: null, varrido: new Map(), deNovo: false, aberto: false,
   };
+  let nomesPintados = null;
 
   const fusoMin = () => {
     const ref = refMs() ?? Date.now();
@@ -455,10 +456,22 @@ export function montarMortes({
     $('mortesNomesTitulo').textContent = t('mortes.nomes', { n: soltos.length });
     const opcoes = `<option value="">${escapar(t('mortes.escolherCanal'))}</option>`
       + canais().map((c) => `<option value="${escapar(c)}">${escapar(c)}</option>`).join('');
-    $('mortesNomesLista').innerHTML = soltos.map((s, i) => `<li data-nome="${escapar(s.nome)}"><b id="mortesNome${i}">${escapar(s.nome)}</b>`
+    const nomesHtml = soltos.map((s, i) => `<li data-nome="${escapar(s.nome)}"><b id="mortesNome${i}">${escapar(s.nome)}</b>`
       + `<span class="nota">${escapar(tn(s.vezes, 'mortes.vezUma', 'mortes.vezes'))}</span>`
       + `<select aria-labelledby="mortesNome${i}">${opcoes}</select>`
       + `<button type="button" data-acao="nome">${escapar(t('mortes.guardarNome'))}</button></li>`).join('');
+    if (nomesHtml !== nomesPintados) {
+      const lista = $('mortesNomesLista');
+      const escolhas = new Map([...lista.children].map((li) => [li.dataset.nome, li.querySelector('select').value]));
+      const ativo = document.activeElement;
+      const nomeEmFoco = ativo?.closest('#mortesNomesLista li')?.dataset.nome;
+      lista.innerHTML = nomesHtml;
+      nomesPintados = nomesHtml;
+      for (const li of lista.children) {
+        if (escolhas.has(li.dataset.nome)) li.querySelector('select').value = escolhas.get(li.dataset.nome);
+        if (li.dataset.nome === nomeEmFoco) li.querySelector(ativo.tagName.toLowerCase())?.focus({ preventScroll: true });
+      }
+    }
     $('mortesNaoLidas').hidden = !st.naoLidas.length;
     $('mortesNaoLidasTitulo').textContent = t('mortes.naoLidas', { n: st.naoLidas.length });
     $('mortesNaoLidasLista').innerHTML = st.naoLidas.map(linhaNaoLida).join('');
