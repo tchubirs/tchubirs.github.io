@@ -10,33 +10,34 @@
 // sempre (abrir o canal, gravar o clipe) chega pela `ponte` que o app.js passa: este arquivo não mexe no
 // estado dele por conta própria.
 
-import { t, tn } from './idiomas.js?v=bb33c7d6cf';
-import { procurarCanais, vodsDoCanal, vodDaKick, slugDoNome } from './kick.js?v=bb33c7d6cf';
+import { t, tn } from './idiomas.js?v=09329c0d2b';
+import { procurarCanais, vodsDoCanal, vodDaKick, slugDoNome } from './kick.js?v=09329c0d2b';
 import {
   lerEntrada, montarLista, lancesParaLista, nomeDoArquivo, tempoNaLive, NOMES_NO_LANCE, QUANTOS,
   acharVod, guardarVod, mensagensDosPicos, lerUltimo, guardarUltimo,
-} from './simples-lista.js?v=bb33c7d6cf';
-import { varrerNoite } from './procurar-momentos.js?v=bb33c7d6cf';
-import { somDoCanal } from './alinhar.js?v=bb33c7d6cf';
-import { TAXA_TIROS } from './tiros.js?v=bb33c7d6cf';
-import { alertasDoCanal } from './alertas.js?v=bb33c7d6cf';
-import { montarIndice, chaveDoIndice, indiceValido } from './indice.js?v=bb33c7d6cf';
-import { janelasDosPicos, estimarFalta, estimarFaltaFracao, tempoFalta } from './ouvir.js?v=bb33c7d6cf';
-import { onde } from './relogio.js?v=bb33c7d6cf';
-import { abrirQuadrosEscondidos } from './rosto.js?v=bb33c7d6cf';
-import { escapar } from './escapar.js?v=bb33c7d6cf';
+} from './simples-lista.js?v=09329c0d2b';
+import { varrerNoite } from './procurar-momentos.js?v=09329c0d2b';
+import { somDoCanal } from './alinhar.js?v=09329c0d2b';
+import { TAXA_TIROS } from './tiros.js?v=09329c0d2b';
+import { alertasDoCanal } from './alertas.js?v=09329c0d2b';
+import { montarIndice, chaveDoIndice, indiceValido } from './indice.js?v=09329c0d2b';
+import { janelasDosPicos, estimarFalta, estimarFaltaFracao, tempoFalta } from './ouvir.js?v=09329c0d2b';
+import { onde } from './relogio.js?v=09329c0d2b';
+import { abrirQuadrosEscondidos } from './rosto.js?v=09329c0d2b';
+import { escapar } from './escapar.js?v=09329c0d2b';
 import {
   tituloDoMomento, etiquetasDoMomento, confExibida, confMedia, VERSAO_ETIQUETAS, textoDoContexto,
-} from './titulo.js?v=bb33c7d6cf';
+} from './titulo.js?v=09329c0d2b';
 import {
   lerFiltro, guardarFiltro, limparFiltro, filtroAtivo, filtraAlgo, aplicarFiltro, chipsDoFiltro, semChip, comFala, TIPOS_DO_FILTRO,
-} from './simples-filtro.js?v=bb33c7d6cf';
-import { lerFalas, guardarFala, acharNaLista, melhorFala } from './falas.js?v=bb33c7d6cf';
+} from './simples-filtro.js?v=09329c0d2b';
+import { lerFalas, guardarFala, acharNaLista, melhorFala } from './falas.js?v=09329c0d2b';
 import {
   analisarCandidatos, comContexto, contextoVigente, contextoDoMomento, precisaDeContexto, MAX_CANDIDATOS_POR_LIVE, ENDPOINT_PADRAO,
-} from './contexto-candidatos.js?v=bb33c7d6cf';
-import { VERSAO_CONTRATO, MAX_IMAGEM_BYTES } from './contexto-rust.js?v=bb33c7d6cf';
-import { fundirPovsPorCanal } from './simples-lista.js?v=bb33c7d6cf';
+} from './contexto-candidatos.js?v=09329c0d2b';
+import { VERSAO_CONTRATO, MAX_IMAGEM_BYTES } from './contexto-rust.js?v=09329c0d2b';
+import { fundirPovsPorCanal } from './simples-lista.js?v=09329c0d2b';
+import { transmissoesDaBusca, pedidoDaBusca, limitesDaBusca, relogioDoTrecho, mesmoPedido, guardarMedidaBusca, estimativaDaBusca } from './busca-escopo.js?v=09329c0d2b';
 
 const CHAVE_MODO = 'povix.modo';
 const CHAVE_VISTO = 'povix.simplesVisto';
@@ -274,6 +275,9 @@ export function montarSimples(ponte) {
   let vodAtual = null;
   let inicioGuardado = null;
   let guardadoAtual = null;
+  let pedidoAtual = null;
+  let escopoAtual = null;
+  let atualizarPreparacao = null;
   const naoQuero = lerNaoQuero();
   // O filtro da lista (simples-filtro.js), lembrado neste aparelho, e o que o streamer falou em cada momento (falas.js).
   let filtro = lerFiltro(armazem);
@@ -390,7 +394,7 @@ export function montarSimples(ponte) {
    * vídeo. Nunca baixa quadro nem fala sem o servidor confirmar que existe (health antes de tudo). */
   let contextoIniciando = false;
   async function analisarContextoFundo(opcoes = {}) {
-    if (!linhaAberta || !modoSimples() || contextoAtivo || contextoIniciando) return;
+    if (pedidoAtual?.perfil === 'chat' || !linhaAberta || !modoSimples() || contextoAtivo || contextoIniciando) return;
     contextoIniciando = true;
     const minha = geracao;
     const controlo = new AbortController();
@@ -414,7 +418,7 @@ export function montarSimples(ponte) {
       ? ultimos.map((m) => (chave(m) === prioridadeContexto ? { ...m, pontos: Number.POSITIVE_INFINITY } : m))
       : ultimos;
     const doCanal = comPrioridade.filter((m) => m.canal === canal);
-    const vivoAgora = ponte.aoVivoDe(canal);
+    const vivoAgora = escopoAtual || ponte.aoVivoDe(canal);
     // A identidade da LIVE para o servidor (teto de 20/cache): canal + início do VOD, nunca o relógio de
     // agora — o mesmo vídeo reaberto noutro dia tem de bater na mesma live.
     const liveId = `${canal}-${linhaAberta.inicio}`.replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 64);
@@ -462,6 +466,7 @@ export function montarSimples(ponte) {
 
   function agendarContexto(opcoes) {
     if (!linhaAberta || aBaixar || previa) return;
+    if (pedidoAtual?.perfil === 'chat') { opcoes?.depoisDaSaude?.(); return; }
     analisarContextoFundo(opcoes);
   }
 
@@ -563,7 +568,7 @@ export function montarSimples(ponte) {
   $('simplesRefazer').onclick = () => {
     const v = vodAtual;
     if (!v || busca || aBaixar || abrindoPov) return;
-    if (guardadoAtual?.varrido === 'picos') { completarBusca(guardadoAtual); return; }
+    if (['picos', 'chat'].includes(guardadoAtual?.varrido)) { completarBusca(guardadoAtual); return; }
     parar();
     abrirStreamer(v.slug, { inicioMs: v.inicio, forcar: true });
   };
@@ -625,6 +630,8 @@ export function montarSimples(ponte) {
   }
 
   function mostrarInicio() {
+    atualizarPreparacao = null;
+    $('simplesPreparar').hidden = true;
     document.body.classList.remove('simplesTrabalho');
     $('simplesForm').hidden = false;
     $('simplesTrabalho').hidden = true;
@@ -632,6 +639,8 @@ export function montarSimples(ponte) {
   }
 
   function mostrarTrabalho(titulo) {
+    atualizarPreparacao = null;
+    $('simplesPreparar').hidden = true;
     pararPrevia();
     document.body.classList.add('simplesTrabalho');
     $('simplesForm').hidden = true;
@@ -644,6 +653,8 @@ export function montarSimples(ponte) {
     $('simplesRefazer').hidden = true;
     vodAtual = null;
     guardadoAtual = null;
+    pedidoAtual = null;
+    escopoAtual = null;
     inicioGuardado = null;
     lista.innerHTML = '';
     ultimos = [];
@@ -655,7 +666,8 @@ export function montarSimples(ponte) {
 
   function atualizarBotaoRefazer() {
     const b = $('simplesRefazer');
-    const k = guardadoAtual?.varrido === 'picos' ? 'simples.ouvirResto' : 'simples.refazer';
+    const parcial = ['picos', 'chat'].includes(guardadoAtual?.varrido);
+    const k = parcial ? pedidoAtual && !pedidoAtual.inteira ? 'busca.ampliarTrecho' : 'simples.ouvirResto' : 'simples.refazer';
     b.dataset.t = k;
     b.textContent = t(k);
     b.hidden = false;
@@ -675,6 +687,8 @@ export function montarSimples(ponte) {
 
   function parar() {
     geracao++;
+    atualizarPreparacao = null;
+    $('simplesPreparar').hidden = true;
     abrindoPov?.abort();
     abrindoPov = null;
     atualizarBotoesClipe();
@@ -838,18 +852,27 @@ export function montarSimples(ponte) {
     const minha = geracao;
     const velha = () => minha !== geracao;
     const slug = slugDoNome(nome);
-    // Um vídeo já procurado neste aparelho abre na hora, sem rede e sem barra.
-    const jaTinha = !forcar && inicioMs != null ? acharVod(armazem, slug, inicioMs) : null;
-    if (jaTinha?.completo) { await mostrarGuardado(jaTinha); return; }
     mostrarTrabalho(t('simples.abrindoTitulo'));
+    ponte.pausar();
+    const controlo = new AbortController();
+    busca = controlo;
+    $('simplesParar').hidden = false;
+    controlo.signal.addEventListener('abort', () => {
+      if (velha()) return;
+      if (busca === controlo) busca = null;
+      $('simplesParar').hidden = true;
+      dizer(t('simples.parado'), false);
+    }, { once: true });
     dizer(t('simples.procurandoVideo', { canal: slug }));
-    let r = await comPrazo(vodsDoCanal(slug), 20_000, { slug, estado: 'sem-rede', vods: [] });
-    if (r.estado === 'sem-rede' || r.estado === 'rate-limit') {
+    let r = await comPrazo(vodsDoCanal(slug, { sinal: controlo.signal }), 20_000, { slug, estado: 'sem-rede', vods: [] });
+    if (!controlo.signal.aborted && (r.estado === 'sem-rede' || r.estado === 'rate-limit')) {
       // A Kick às vezes responde sem permissão e volta logo a seguir (o teste real de 12/10).
       await dormir(1000);
-      r = await comPrazo(vodsDoCanal(slug), 20_000, { slug, estado: 'sem-rede', vods: [] });
+      if (!controlo.signal.aborted && !velha()) r = await comPrazo(vodsDoCanal(slug, { sinal: controlo.signal }), 20_000, { slug, estado: 'sem-rede', vods: [] });
     }
-    if (velha()) return;
+    if (velha() || controlo.signal.aborted) return;
+    busca = null;
+    $('simplesParar').hidden = true;
     if (r.estado !== 'ok') {
       if (r.estado === 'canal-nao-existe' || r.estado === 'nome-invalido') {
         erro(t('simples.ninguem'));
@@ -859,26 +882,104 @@ export function montarSimples(ponte) {
       return;
     }
     ponte.memorizarVods(r);
-    // Sem o início dito, é a live mais recente da lista.
-    const guardado = forcar ? null : acharVod(armazem, r.slug, inicioMs ?? r.vods.at(-1)?.inicioApi);
-    if (guardado?.completo) { await mostrarGuardado(guardado); return; }
+    prepararBusca(r, { inicioMs, forcar });
+  }
+
+  function prepararBusca(r, { inicioMs, forcar }) {
+    const minha = geracao;
+    const vods = transmissoesDaBusca(r.vods);
+    if (!vods.length) { erro(t('busca.semDatas')); return; }
+    const seletor = $('buscaTransmissao');
+    const textoDaTransmissao = (v) => `${new Date(v.inicioApi).toLocaleString(document.documentElement.lang, {
+      year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
+    })} · ${relogioDoTrecho(v.duracaoBuscaS)}${v.titulo ? ` · ${v.titulo}` : ''}`;
+    seletor.innerHTML = vods.map((v, i) => `<option value="${i}">${escapar(textoDaTransmissao(v))}</option>`).join('');
+    const escolhido = inicioMs == null ? 0 : vods.findIndex((v) => inicioMs >= v.inicioApi - 120_000 && inicioMs < v.inicioApi + v.duracaoBuscaS * 1000);
+    seletor.value = String(Math.max(0, escolhido));
+    $('simplesQuem').textContent = r.slug;
+    $('simplesPreparar').hidden = false;
+    $('simplesRefazer').hidden = true;
+    $('buscaFuso').textContent = t('busca.fuso', { fuso: Intl.DateTimeFormat().resolvedOptions().timeZone });
+    dizer(t('busca.escolha'), false);
+    let atual = null;
+    const atualizar = () => {
+      const vod = vods[Number(seletor.value)];
+      const inteira = $('buscaInteira').checked;
+      $('buscaInicio').disabled = $('buscaFim').disabled = inteira;
+      atual = pedidoDaBusca({ vod, inteira, perfil: $('buscaPerfil').value, de: $('buscaInicio').value, ate: $('buscaFim').value });
+      $('buscaDuracao').textContent = t('busca.duracao', { tempo: relogioDoTrecho(vod.duracaoBuscaS) });
+      $('buscaExplica').textContent = t(`busca.${$('buscaPerfil').value}Dica`);
+      $('buscaErro').hidden = Boolean(atual);
+      $('buscaErro').textContent = atual ? '' : t('busca.invalido');
+      for (const id of ['buscaInicio', 'buscaFim']) $(id).setAttribute('aria-invalid', String(!atual && !inteira));
+      const b = $('buscaComecar');
+      b.disabled = !atual;
+      b.textContent = t(inteira ? 'busca.comecarInteira' : 'busca.comecarTrecho', { minutos: atual ? Math.ceil((atual.ateS - atual.deS) / 60) : '—' });
+      const cache = atual && !forcar && acharVod(armazem, r.slug, vod.inicioApi);
+      const estimativa = atual && estimativaDaBusca(armazem, { slug: r.slug, perfil: atual.perfil, duracaoMs: (atual.ateS - atual.deS) * 1000 });
+      $('buscaEstimativa').textContent = cache?.completo && mesmoPedido(cache.pedidoBusca, atual) ? t('busca.cache')
+        : estimativa ? t('busca.estimativa', { minimo: tempoFalta(estimativa.minimoMs), maximo: tempoFalta(estimativa.maximoMs) }) : t('busca.semMedicao');
+    };
+    const trocar = () => {
+      const vod = vods[Number(seletor.value)];
+      $('buscaInicio').value = relogioDoTrecho(Math.max(0, vod.duracaoBuscaS - 900));
+      $('buscaFim').value = relogioDoTrecho(vod.duracaoBuscaS);
+      $('buscaInteira').checked = false;
+      atualizar();
+    };
+    seletor.onchange = trocar;
+    $('simplesPreparar').oninput = atualizar;
+    $('simplesPreparar').onchange = atualizar;
+    $('simplesPreparar').onsubmit = (e) => {
+      e.preventDefault();
+      atualizar();
+      if (!atual || busca || minha !== geracao) return;
+      iniciarBuscaPreparada(r.slug, atual, { forcar });
+    };
+    atualizarPreparacao = () => {
+      for (const [i, option] of [...seletor.options].entries()) option.textContent = textoDaTransmissao(vods[i]);
+      $('buscaFuso').textContent = t('busca.fuso', { fuso: Intl.DateTimeFormat().resolvedOptions().timeZone });
+      dizer(t('busca.escolha'), false);
+      atualizar();
+    };
+    trocar();
+    seletor.focus({ preventScroll: true });
+  }
+
+  async function iniciarBuscaPreparada(slug, pedido, { forcar = false } = {}) {
+    const minha = geracao;
+    const guardado = forcar ? null : acharVod(armazem, slug, pedido.inicioApi);
+    if (guardado?.completo && mesmoPedido(guardado.pedidoBusca, pedido)) { await mostrarGuardado(guardado); return; }
+    $('simplesPreparar').hidden = true;
+    atualizarPreparacao = null;
+    pedidoAtual = pedido;
+    escopoAtual = null;
+    guardadoAtual = null;
     const controlo = new AbortController();
     busca = controlo;
-    dizer(t('simples.abrindoVideo', { canal: r.slug }));
-    const linha = await comPrazo(ponte.abrirCanal(r.slug, { inicioMs }).catch(() => null), ABRIR_MS);
-    if (controlo.signal.aborted || velha()) return;
+    $('simplesParar').hidden = false;
+    dizer(t('simples.abrindoVideo', { canal: slug }));
+    controlo.signal.addEventListener('abort', () => {
+      if (minha !== geracao) return;
+      if (busca === controlo) busca = null;
+      $('simplesParar').hidden = true;
+      dizer(t('simples.parado'), false);
+    }, { once: true });
+    const linha = await comPrazo(ponte.abrirCanal(slug, { inicioMs: pedido.inicioApi }).catch(() => null), ABRIR_MS);
+    if (controlo.signal.aborted || minha !== geracao) return;
     if (!linha) {
       dizer(t('simples.naoAbriu'), false);
+      $('simplesParar').hidden = true;
       busca = null;
       return;
     }
     ponte.pausar();
     linhaAberta = linha;
-    vodAtual = { slug: r.slug, inicio: linha.inicio };
+    vodAtual = { slug, inicio: linha.inicio };
     guardarUltimo(armazem, vodAtual);
-    $('simplesQuem').textContent = t('simples.titulo', { canal: r.slug, dia: diaDe(linha.inicio), hora: horaDe(linha.inicio) });
+    $('simplesQuem').textContent = t('simples.titulo', { canal: slug, dia: diaDe(linha.inicio), hora: horaDe(linha.inicio) });
     if (!tocaVideo) avisar(t('simples.abraNoChrome'));
-    await procurar(linha, controlo, guardado);
+    await procurar(linha, controlo, null, { pedido });
   }
 
   /**
@@ -889,6 +990,8 @@ export function montarSimples(ponte) {
     mostrarTrabalho(t('simples.titulo', { canal: e.slug, dia: diaDe(e.inicio), hora: horaDe(e.inicio) }));
     const minha = geracao;
     vodAtual = { slug: e.slug, inicio: e.inicio };
+    pedidoAtual = e.pedidoBusca || null;
+    escopoAtual = e.escopoBusca || null;
     inicioGuardado = e.inicio;
     guardarUltimo(armazem, vodAtual);
     for (const [k, url] of await comPrazo(fotosGuardadas(prefixoDe(vodAtual)), 1500, new Map())) {
@@ -927,9 +1030,7 @@ export function montarSimples(ponte) {
     if (!tocaVideo) avisar(t('simples.abraNoChrome'));
     pintarLista();
     const n = queridos().length;
-    const semPicos = e.semPicosRapida === true;
-    dizer(e.varrido === 'picos' ? t(e.pendente ? 'simples.audioPendente' : semPicos ? 'simples.semPicosRapida' : 'simples.buscaParcial', { n })
-      : n ? tn(n, 'simples.prontoUm', 'simples.pronto', { n }) : t('simples.nada'), false);
+    dizer(estadoDaBusca(n, e), false);
     atualizarBotaoRefazer();
     // Imagens borradas de antes (ou nenhuma): abre a live por trás e tira as nítidas, sem tocar nada.
     const falta = mostrados.find((m) => m && !nitidas.has(chave(m)) && m.canal === e.slug);
@@ -965,7 +1066,8 @@ export function montarSimples(ponte) {
       if (!linha) { dizer(t('simples.naoAbriu'), false); return; }
       ponte.pausar();
       linhaAberta = linha;
-      await procurar(linha, controlo, guardado, { completar: true });
+      const pedido = guardado.pedidoBusca ? { ...guardado.pedidoBusca, perfil: 'completa' } : null;
+      await procurar(linha, controlo, guardado, { completar: true, pedido });
     } finally {
       if (busca === controlo) busca = null;
       if (minha === geracao) {
@@ -1012,11 +1114,34 @@ export function montarSimples(ponte) {
   }
 
   // ── procurar: o chat primeiro, depois o som ──────────────────────────────
-  async function procurar(linha, controlo, guardado = null, { completar = false } = {}) {
+  function estadoDaBusca(n, e) {
+    if (e?.varrido === 'chat') return t('busca.soChatPronto', { n });
+    if (e?.varrido === 'trecho') return t('busca.prontoTrecho', { n });
+    if (e?.varrido === 'picos') {
+      const trecho = pedidoAtual && !pedidoAtual.inteira;
+      return t(e.pendente ? 'simples.audioPendente' : e.semPicosRapida
+        ? trecho ? 'busca.semPicos' : 'simples.semPicosRapida'
+        : trecho ? 'busca.parcial' : 'simples.buscaParcial', { n });
+    }
+    return n ? tn(n, 'simples.prontoUm', 'simples.pronto', { n }) : t('simples.nada');
+  }
+
+  async function procurar(linha, controlo, guardado = null, { completar = false, pedido = null } = {}) {
     const minha = geracao;
     const slug = linha.slug;
-    const vivo = ponte.aoVivoDe(slug);
-    if (!vivo) { dizer(t('simples.naoAbriu'), false); return; }
+    const disponivel = ponte.aoVivoDe(slug);
+    const vivo = pedido ? limitesDaBusca(pedido, linha, disponivel) : disponivel;
+    if (!vivo) {
+      dizer(t('simples.naoAbriu'), false);
+      if (busca === controlo) busca = null;
+      $('simplesParar').hidden = true;
+      return;
+    }
+    pedidoAtual = pedido;
+    escopoAtual = pedido ? { ...vivo, perfil: pedido.perfil, inteira: pedido.inteira } : null;
+    const soChat = pedido?.perfil === 'chat';
+    const audioCompleto = completar || pedido?.perfil === 'completa';
+    const inicioBusca = Date.now();
     const sinal = controlo.signal;
     $('simplesParar').hidden = false;
     let picos = guardado?.picos || [];
@@ -1027,7 +1152,8 @@ export function montarSimples(ponte) {
     let chatConcluido = chatGuardado;
     const lembrar = (mais) => {
       if (minha !== geracao) return;
-      guardadoAtual = { ...(guardadoAtual || guardado), slug, inicio: linha.inicio, ateMs: vivo.ateMs, ...mais };
+      guardadoAtual = { ...(guardadoAtual || guardado), slug, inicio: linha.inicio, ateMs: disponivel.ateMs,
+        pedidoBusca: pedidoAtual, escopoBusca: escopoAtual, ...mais };
       for (const s of guardarVod(armazem, guardadoAtual)) { tirarFotos(prefixoDe(s)); tirarIndice(s); }
     };
     let lutas = guardado?.lutas || [];
@@ -1058,6 +1184,7 @@ export function montarSimples(ponte) {
           const leitura = await ponte.chat.lerChatTrecho(slug, vivo.deMs, vivo.ateMs, {
             sinal: chatControlo.signal,
             aoProgredir: ({ fracao }) => {
+              if (minha !== geracao || sinal.aborted) return;
               v1.andou();
               const falta = estimarFaltaFracao({ fracao, anterior: maiorChat, decorridoMs: Date.now() - comecouChat });
               if (Number.isFinite(fracao)) maiorChat = Math.max(maiorChat, fracao);
@@ -1083,7 +1210,7 @@ export function montarSimples(ponte) {
         mensagens = guardado.mensagens || [];
       } else {
         picos = (ponte.chat?.estado.marcas?.get(slug) || []).filter((m) => m.ms >= vivo.deMs && m.ms < vivo.ateMs);
-        mensagens = ponte.chat?.estado.mensagens?.get(slug) || [];
+        mensagens = (ponte.chat?.estado.mensagens?.get(slug) || []).filter((m) => m.ms >= vivo.deMs && m.ms < vivo.ateMs);
       }
       refazer();
       // O chat lido até o fim (e não largado pelo vigia) fica lembrado: se a página fechar no meio do som, volta daqui.
@@ -1091,15 +1218,28 @@ export function montarSimples(ponte) {
       if (chatFeito && !chatGuardado) lembrar({ picos, mensagens: mensagensDosPicos(mensagens, picos) });
       if (sinal.aborted) throw new DOMException('parado', 'AbortError');
 
-      if (!completar && !picos.length) {
-        const parcial = { varrido: 'picos', pendente: false, semPicosRapida: true };
-        if (chatFeito) lembrar({ ...parcial, completo: true, lista: ultimos, sons, lutas, indiceV: VERSAO_ETIQUETAS });
-        else guardadoAtual = { ...guardadoAtual, slug, inicio: linha.inicio, ateMs: vivo.ateMs, ...parcial };
-        dizer(t(chatFeito ? 'simples.semPicosRapida' : 'simples.chatIncompleto'), false);
+      if (soChat) {
+        if (chatFeito) {
+          lembrar({ completo: true, varrido: 'chat', lista: ultimos, sons, lutas, indiceV: VERSAO_ETIQUETAS });
+          if (!chatGuardado) guardarMedidaBusca(armazem, { slug, perfil: 'chat', duracaoMs: vivo.ateMs - vivo.deMs, decorridoMs: Date.now() - inicioBusca });
+        }
+        dizer(chatFeito ? estadoDaBusca(queridos().length, guardadoAtual) : t('simples.chatIncompleto'), false);
         atualizarBotaoRefazer();
         return;
       }
-      const intervalos = completar ? [[vivo.deMs, vivo.ateMs]] : janelasDosPicos(picos, vivo.deMs, vivo.ateMs);
+      if (!audioCompleto && !picos.length) {
+        const parcial = { varrido: 'picos', pendente: false, semPicosRapida: true };
+        if (chatFeito) {
+          lembrar({ ...parcial, completo: true, lista: ultimos, sons, lutas, indiceV: VERSAO_ETIQUETAS });
+          if (!chatGuardado) guardarMedidaBusca(armazem, { slug, perfil: 'rapida', duracaoMs: vivo.ateMs - vivo.deMs, decorridoMs: Date.now() - inicioBusca });
+        }
+        else guardadoAtual = { ...guardadoAtual, slug, inicio: linha.inicio, ateMs: disponivel.ateMs,
+          pedidoBusca: pedidoAtual, escopoBusca: escopoAtual, ...parcial };
+        dizer(chatFeito ? estadoDaBusca(queridos().length, guardadoAtual) : t('simples.chatIncompleto'), false);
+        atualizarBotaoRefazer();
+        return;
+      }
+      const intervalos = audioCompleto ? [[vivo.deMs, vivo.ateMs]] : janelasDosPicos(picos, vivo.deMs, vivo.ateMs);
       const totalMs = intervalos.reduce((s, [a, b]) => s + (b - a), 0);
       const somControlo = new AbortController();
       const pararSom = () => somControlo.abort();
@@ -1153,13 +1293,13 @@ export function montarSimples(ponte) {
         // Com `alvos` (o que varrerNoite viu de disponível de verdade nas peças do VOD — exclui buracos de
         // queda que nunca vão ter o que ouvir), a conta é contra o disponível, não contra a duração nominal da
         // live; sem `alvos` (um `varrerNoite` de teste mais simples), cai no que já havia.
-        const pedindoTudo = completar;
+        const pedindoTudo = audioCompleto;
         const cobreAlvo = (a, b) => (r.cobertura || []).some(([x, y]) => x <= a + 1 && y >= b - 1);
         cobreTudo = pedindoTudo && (r.alvos?.length
           ? r.alvos.every(([a, b]) => cobreAlvo(a, b)) && !(r.naoOuvidos || []).length
           : cobreAlvo(vivo.deMs, vivo.ateMs));
         pendente = r.falhados > 0;
-        if (!completar || cobreTudo) guardarIndice(indice);
+        if ((!pedido || pedido.inteira) && (!audioCompleto || cobreTudo)) guardarIndice(indice);
         somFeito = true;
         avisar(pendente ? t('simples.somFalhou') : tocaVideo ? '' : t('simples.abraNoChrome'));
       } catch (x) {
@@ -1172,11 +1312,13 @@ export function montarSimples(ponte) {
       }
       refazer();
       if (somFeito && chatFeito) lembrar({ completo: true, lista: ultimos, sons, lutas, indiceV: VERSAO_ETIQUETAS,
-        varrido: cobreTudo ? 'tudo' : 'picos', pendente, semPicosRapida: false });
+        varrido: cobreTudo ? pedido && !pedido.inteira ? 'trecho' : 'tudo' : 'picos', pendente, semPicosRapida: false });
+      if (somFeito && chatFeito && !chatGuardado && !pendente && !sinal.aborted) {
+        guardarMedidaBusca(armazem, { slug, perfil: pedido?.perfil || 'rapida', duracaoMs: vivo.ateMs - vivo.deMs, decorridoMs: Date.now() - inicioBusca });
+      }
       const n = queridos().length;
       if (minha !== geracao) return;
-      dizer(guardadoAtual?.varrido === 'picos' ? t(guardadoAtual.pendente ? 'simples.audioPendente' : 'simples.buscaParcial', { n })
-        : n ? tn(n, 'simples.prontoUm', 'simples.pronto', { n }) : t('simples.nada'), false);
+      dizer(chatFeito ? estadoDaBusca(n, guardadoAtual) : t('simples.chatIncompleto'), false);
       atualizarBotaoRefazer();
     } catch (x) {
       if (x?.name !== 'AbortError' && !sinal.aborted) throw x;
@@ -2013,6 +2155,7 @@ export function montarSimples(ponte) {
 
   return {
     comecar,
+    traduzir() { if (!$('simplesPreparar').hidden) atualizarPreparacao?.(); },
     // Para os testes de página.
     get lista() { return ultimos; },
     limparFotos() { fotos = new Map(); nitidas = new Set(); },

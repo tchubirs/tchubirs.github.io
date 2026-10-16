@@ -7,9 +7,9 @@
 // quadro (obterQuadro) e a transcricao ao vivo (transcrever) sao injetados por quem chama (simples.js), que
 // e quem conhece a ponte do app - este arquivo nao abre video nem fala com a Kick sozinho.
 
-import { construirPedido, pedidoValido, validarContexto, VERSAO_CONTRATO, VERSAO_PROMPT } from './contexto-rust.js?v=bb33c7d6cf';
-import { acharNaLista, linhasDaTranscricao } from './falas.js?v=bb33c7d6cf';
-import { etiquetasParaFiltro } from './titulo.js?v=bb33c7d6cf';
+import { construirPedido, pedidoValido, validarContexto, VERSAO_CONTRATO, VERSAO_PROMPT } from './contexto-rust.js?v=09329c0d2b';
+import { acharNaLista, linhasDaTranscricao } from './falas.js?v=09329c0d2b';
+import { etiquetasParaFiltro } from './titulo.js?v=09329c0d2b';
 
 export const MAX_CANDIDATOS_POR_LIVE = 20;
 export const CONCORRENCIA_PADRAO = 2;

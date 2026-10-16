@@ -2961,6 +2961,15 @@ body.mesa #montagem .estadoAoVivo:empty { display: none; }
 .simplesModoLinha { margin-top: var(--e7); text-align: center; }
 
 .simplesTrabalho { display: grid; gap: var(--e4); margin-top: var(--e5); }
+.simplesPreparar { display: grid; gap: var(--e3); width: 100%; max-width: 640px; padding: var(--e5); border: 1px solid var(--linha); border-radius: var(--r-3); background: var(--sup-2); }
+.simplesPreparar h3, .simplesPreparar p { margin: 0; }
+.simplesPreparar :is(input:not([type="checkbox"]), select) { width: 100%; min-width: 0; min-height: 44px; font-size: 16px; }
+.simplesPreparar label { display: grid; gap: var(--e2); min-width: 0; }
+.buscaTrechoCampos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--e3); }
+.buscaTrechoCampos label { grid-template-rows: 1fr auto; }
+.simplesPreparar .buscaInteira { display: flex; align-items: center; min-height: 44px; gap: var(--e3); }
+.simplesPreparar .buscaInteira input { width: 18px; height: 18px; }
+@media (max-width: 390px) { .simplesPreparar { padding: var(--e3); } }
 /* Título, estado e barra em coluna; os botões da tela (Parar, Procurar de novo, Começar de novo, Modo avançado)
    numa fila só, à esquerda embaixo da barra enquanto procura e à direita do título quando a lista está pronta. */
 .simplesAcoes { display: flex; flex-wrap: wrap; gap: var(--e3); align-items: center; }

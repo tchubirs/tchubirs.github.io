@@ -1,7 +1,7 @@
-import { carregarCanais } from './carregar.js?v=bb33c7d6cf';
-import { lerMaster, lerPlaylist } from './kick.js?v=bb33c7d6cf';
-import { agruparPorNoite, noiteParaAbrir } from './noites.js?v=bb33c7d6cf';
-import { linhaDoCanal, janelaComum, trechoComum } from './relogio.js?v=bb33c7d6cf';
+import { carregarCanais } from './carregar.js?v=09329c0d2b';
+import { lerMaster, lerPlaylist } from './kick.js?v=09329c0d2b';
+import { agruparPorNoite, noiteParaAbrir } from './noites.js?v=09329c0d2b';
+import { linhaDoCanal, janelaComum, trechoComum } from './relogio.js?v=09329c0d2b';
 
 export async function prepararPovs({ canais, ms, nudges, vodsPorCanal, vodsDoEvento, pecasLidas, lerTexto, sinal, buscar = fetch }) {
   const cancelar = () => { if (sinal?.aborted) throw new DOMException('cancelado', 'AbortError'); };
