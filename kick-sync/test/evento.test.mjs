@@ -34,6 +34,56 @@ async function abrirEvento(p) {
   await p.waitForFunction(() => window.__evento?.mapa && window.__evento.vista, null, { timeout: 15000 });
 }
 
+test('chat automático parcial avisa, mantém a lacuna e retoma sem baixar a cauda concluída',
+  { skip: !podeCorrer && 'sem navegador', timeout: 25_000 }, async () => {
+    const { p, erros } = await abrir({ caminho: 'evento' });
+    try {
+      await kickFalsa(p, { canais: ['tchubi'] });
+      const mensagens = [
+        ...Array.from({ length: 20 }, (_, i) => ({ id: `antes-${i}`, ms: T + 60_000 + i * 1000 })),
+        ...Array.from({ length: 25 }, (_, i) => ({ id: `depois-${i}`, ms: T + 300_000 + i * 1000 })),
+      ];
+      const cursores = [];
+      let recuperar = false;
+      await p.route('**/api/v2/channels/*/messages**', async (r) => {
+        const cursor = Number(new URL(r.request().url()).searchParams.get('cursor')) / 1000;
+        cursores.push(cursor);
+        if (!recuperar && cursores.length > 1) { await r.fulfill({ status: 403, body: '{}' }); return; }
+        const pagina = mensagens.filter((m) => m.ms < cursor).slice(-25).reverse();
+        await r.fulfill({ contentType: 'application/json', body: JSON.stringify({ data: {
+          messages: pagina.map((m) => ({ id: m.id, created_at: new Date(m.ms).toISOString(), content: 'gg', sender: { slug: m.id } })),
+          cursor: pagina.length ? String(pagina.at(-1).ms * 1000) : null,
+        } }) });
+      });
+      await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+      await p.fill('#elenco', 'tchubi');
+      await p.click('#abrirElenco');
+      await p.waitForFunction(() => window.__evento?.mapa && window.__evento.vista);
+      await clicarNoMapa(p, 'tchubi', T + 120_000);
+      await p.waitForFunction(() => document.getElementById('estadoChat').textContent
+        && !document.getElementById('estadoChat').textContent.startsWith('Lendo'));
+      assert.equal(await p.evaluate(() => window.__evento.mensagens.get('tchubi').length), 25);
+      const janelas = await p.evaluate(() => window.__evento.janelasDoChat('tchubi'));
+      assert.ok(janelas.length && janelas.every(([a]) => a >= T + 301_000), `cobertura inventada: ${JSON.stringify(janelas)}`);
+      assert.match(await p.locator('#estadoChat').innerText(), /incompleto/i);
+      recuperar = true;
+      const antes = cursores.length;
+      await clicarNoMapa(p, 'tchubi', T + 120_000);
+      await p.waitForFunction(() => window.__evento.mensagens.get('tchubi').length === 45);
+      assert.equal(cursores[antes], T + 301_000, 'retoma na lacuna, incluindo o segundo da fronteira');
+      await p.waitForFunction(() => /picos? de chat/.test(document.getElementById('estadoChat').textContent));
+      assert.doesNotMatch(await p.locator('#estadoChat').innerText(), /incompleto/i);
+      const ids = await p.evaluate(() => window.__evento.mensagens.get('tchubi').map((m) => m.id));
+      assert.equal(new Set(ids).size, 45);
+      const concluido = cursores.length;
+      await clicarNoMapa(p, 'tchubi', T + 120_000);
+      await p.waitForFunction(() => /picos? de chat/.test(document.getElementById('estadoChat').textContent));
+      assert.equal(cursores.length, concluido);
+      assert.equal(erros.length, 1);
+      assert.match(erros[0], /status of 403 \(Forbidden\)/, 'somente a recusa simulada da Kick');
+    } finally { await p.close(); }
+  });
+
 test('colar o elenco abre o mapa, com os times e quem não existe dito pelo nome',
   { skip: !podeCorrer && 'sem navegador' }, async () => {
     const { p, erros } = await abrir({ caminho: 'evento' });
