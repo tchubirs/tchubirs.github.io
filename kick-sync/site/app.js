@@ -8658,6 +8658,7 @@ function trocarIdioma(codigo) {
   pintarZoom();
   pintarFiltros();
   chatDoEvento?.pintarComoPico?.();
+  simples?.traduzir();
 }
 
 $('idioma').innerHTML = Object.entries(IDIOMAS)

@@ -7,7 +7,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { kickFalsa, T } from './falsa.mjs';
-import { montarPalco, podeCorrer } from './palco.mjs';
+import { montarPalco, podeCorrer, trocarIdioma } from './palco.mjs';
 import { chatEVideo, gravarFonte } from './chat-falso.mjs';
 
 let PORTA = 0;
@@ -86,10 +86,38 @@ async function preparar(p, { video = true } = {}) {
 }
 
 /** A lista pronta: com momentos e com a busca acabada. */
+async function confirmarBusca(p) {
+  await p.waitForSelector('#simplesPreparar:not([hidden])');
+  await p.check('#buscaInteira');
+  await p.click('#buscaComecar');
+}
+
 async function listaPronta(p) {
+  await confirmarBusca(p);
   await p.waitForSelector('#simplesLista li', { timeout: 60_000 });
   await p.waitForFunction(() => document.getElementById('simplesParar').hidden, null, { timeout: 60_000 });
 }
+
+test('modo simples: mudar idioma na preparação real mantém os campos e traduz o resumo', semNavegador, async () => {
+  const { p, erros } = await abrir({ caminho: null, modo: 'simples' });
+  try {
+    await preparar(p, { video: false });
+    await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
+    await p.fill('#simplesCaixa', 'tchubi');
+    await p.click('#simplesAchar');
+    await p.waitForSelector('#simplesPreparar:not([hidden])');
+    await p.fill('#buscaInicio', '00:02:00');
+    await p.fill('#buscaFim', '00:03:00');
+    await p.selectOption('#buscaPerfil', 'chat');
+    await trocarIdioma(p, 'en');
+    assert.match(await p.locator('#buscaComecar').innerText(), /1 minute/);
+    assert.match(await p.locator('#buscaExplica').innerText(), /Reads only chat/);
+    assert.equal(await p.locator('#buscaInicio').inputValue(), '00:02:00');
+    assert.equal(await p.locator('#buscaPerfil').inputValue(), 'chat');
+    assert.equal(await p.locator('#simplesLista li').count(), 0);
+    assert.deepEqual(erros, []);
+  } finally { await p.close(); }
+});
 
 test('modo simples: o nome escrito abre a lista, e o Baixar para TikTok e o deitado dão um arquivo',
   { ...semNavegador, timeout: 300_000 }, async () => {
@@ -167,7 +195,7 @@ test('modo simples: o nome escrito abre a lista, e o Baixar para TikTok e o deit
     await p.close();
   });
 
-test('modo simples: o link da aba de vídeos e uma sugestão tocada começam sozinhos', { ...semNavegador, timeout: 120_000 }, async () => {
+test('modo simples: link e sugestão preparam a busca antes de iniciar a análise', { ...semNavegador, timeout: 120_000 }, async () => {
   const { p, erros } = await abrir({ ecra: { width: 1366, height: 768 }, caminho: null, modo: 'simples' });
   await preparar(p, { video: false });
   await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
@@ -180,6 +208,7 @@ test('modo simples: o link da aba de vídeos e uma sugestão tocada começam soz
   await p.fill('#simplesCaixa', 'outr');
   await p.waitForSelector('#simplesSugestoes button[data-slug="outro"]');
   await p.click('#simplesSugestoes button[data-slug="outro"]');
+  await confirmarBusca(p);
   await p.waitForFunction(() => /^outro/.test(document.getElementById('simplesQuem').textContent), null, { timeout: 30_000 });
   assert.deepEqual(erros, []);
   await p.close();
@@ -255,6 +284,7 @@ test('modo simples: "Excluir" tira o momento e ele não volta; "Mostrar mais" s�
     await p.fill('#simplesCaixa', 'tchubi');
     await p.click('#simplesAchar');
     // Cache já completo (varrido "picos"): o estado é "Busca rápida", não "Pronto"/"Parado" de antes.
+    await confirmarBusca(p);
     await p.waitForFunction(() => {
       const v = JSON.parse(localStorage.getItem('povix.simplesVods') || '[]').find((x) => x.slug === 'tchubi');
       return /^Busca rápida: \d+ momentos?/.test(document.getElementById('simplesEstado').textContent)

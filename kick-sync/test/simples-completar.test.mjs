@@ -49,6 +49,9 @@ async function preparar({ picos = true, falharChat = false } = {}) {
   await p.goto(`http://127.0.0.1:${PORTA}/`, { waitUntil: 'networkidle' });
   await p.fill('#simplesCaixa', 'tchubi');
   await p.click('#simplesAchar');
+  await p.waitForSelector('#simplesPreparar:not([hidden])');
+  await p.check('#buscaInteira');
+  await p.click('#buscaComecar');
   if (picos) {
     await p.waitForFunction(() => window.__busca?.pedidos.length === 1, null, { timeout: 5000 });
     await p.evaluate(() => window.__busca.resolver({ cobertura: window.__busca.pedidos[0], falhados: 0, candidatos: [], gritos: [] }));

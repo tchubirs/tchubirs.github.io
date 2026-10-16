@@ -34,7 +34,7 @@ export const slugDoNome = (nome) => String(nome || '').trim().replace(/^@/, '').
  * thing the user will hit: a channel that never streamed, one whose VODs
  * expired, a name typed wrong. None of them may render as an empty tile.
  */
-export async function vodsDoCanal(slug, { buscar = fetch } = {}) {
+export async function vodsDoCanal(slug, { buscar = fetch, sinal } = {}) {
   const nome = slugDoNome(slug);
   // Deliberately loose. I do not know Kick's minimum username length, and a
   // validator built on a guess rejects a real channel and blames the user for
@@ -45,7 +45,7 @@ export async function vodsDoCanal(slug, { buscar = fetch } = {}) {
   }
   let r;
   try {
-    r = await buscar(`${API}/channels/${encodeURIComponent(nome)}/videos`);
+    r = await buscar(`${API}/channels/${encodeURIComponent(nome)}/videos`, sinal ? { signal: sinal } : undefined);
   } catch (e) {
     return { slug: nome, estado: 'sem-rede', erro: e.message, vods: [] };
   }

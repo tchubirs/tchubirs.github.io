@@ -1,6 +1,15 @@
 # Busca na Kick: escolher o trabalho antes de começar
 
-Estudo de 15/10/2026. Proposta funcional; seleção de data/trecho/perfil ainda NÃO implementada. A busca rápida sem picos já foi corrigida para não iniciar áudio da live inteira automaticamente. Manter Rust/Kick como prioridade; Twitch fica para depois.
+Estudo de15/10/2026, implementação retomada em16/10. A preparação “Tudo à vista”, escolhida pelo dono, agora implementa transmissão/data, trecho ou inteira e perfischat/rápida/completa. A publicação e a versão desta entrega devem ser conferidas noANDAMENTO; este documento não comprova que o código já está online. Manter Rust/Kick como prioridade; Twitch fica para depois.
+
+## Entrega e limites atuais
+
+- Digitar um streamer primeiro busca o catálogo de transmissões; não inicia chat/áudio antes da confirmação. Padrão: últimos15minutos da transmissão escolhida; live inteira exige seleção explícita.
+- Perfis executam trabalhos distintos. Só chat não chama a varredura de áudio; rápida analisa janelas dos picos; completa analisa o áudio disponível do escopo escolhido. Sem picos não expande silenciosamente.
+- Cache mantém pedido/escopo/perfil. Resultado de trecho completo usa `varrido:trecho`, nunca `tudo`; ampliar o áudio preserva o intervalo e reaproveita o chat concluído, inclusive apósF5.
+- Estimativa antes de começar usa amostras recentes do mesmo canal/perfil/aparelho e durações semelhantes. Sem amostra mostra indisponibilidade explicitamente; ainda NÃO há sonda inicial de estimativa nem medição real que explique/resolva os40min relatados. A faixa é uma aproximação baseada em histórico, nãoSLA.
+- A preparação nova é para streamer/VOD. Busca de evento inteiro ainda segue o fluxo anterior. Filtros específicos de combate/morte/reação nesta preparação, cache de múltiplos trechos e retomada de amostragem ainda não foram implementados.
+- Verificações locais usamChrome eKick simulada; não equivalem aSafari físico, carga de200usuários ou medição de tempo emVOD real.
 
 ## Problemas encontrados no código
 

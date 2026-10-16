@@ -329,6 +329,24 @@
   </form>
   <div id="simplesTrabalho" class="simplesTrabalho" hidden>
     <h2 id="simplesQuem" class="simplesQuem" tabindex="-1"></h2>
+    <form id="simplesPreparar" class="simplesPreparar" aria-labelledby="simplesPrepararTitulo" hidden>
+      <h3 id="simplesPrepararTitulo" data-t="busca.titulo">Qual parte da live?</h3>
+      <label for="buscaTransmissao" data-t="busca.transmissao">Transmissão — data e horário</label>
+      <select id="buscaTransmissao" aria-describedby="buscaFuso"></select>
+      <p id="buscaFuso" class="nota"></p>
+      <div class="buscaTrechoCampos">
+        <label><span data-t="busca.inicio">Início na live (hh:mm:ss)</span><input id="buscaInicio" type="text" value="00:00:00" required autocomplete="off" spellcheck="false" inputmode="text" aria-describedby="buscaDuracao buscaErro"></label>
+        <label><span data-t="busca.fim">Fim na live (hh:mm:ss)</span><input id="buscaFim" type="text" required autocomplete="off" spellcheck="false" inputmode="text" aria-describedby="buscaDuracao buscaErro"></label>
+      </div>
+      <label class="buscaInteira"><input id="buscaInteira" type="checkbox"><span data-t="busca.inteira">Live inteira</span></label>
+      <p id="buscaDuracao" class="nota"></p>
+      <label for="buscaPerfil" data-t="busca.profundidade">Profundidade</label>
+      <select id="buscaPerfil"><option value="chat" data-t="busca.chat">Reações do chat</option><option value="rapida" data-t="busca.rapida" selected>Highlights rápidos</option><option value="completa" data-t="busca.completa">Análise completa</option></select>
+      <p id="buscaExplica" class="nota"></p>
+      <p id="buscaEstimativa" class="nota" role="status" aria-live="polite"></p>
+      <p id="buscaErro" class="simplesErro" role="alert" hidden></p>
+      <button id="buscaComecar" type="submit" class="principal simplesBotao" data-t="busca.comecar">Começar busca</button>
+    </form>
     <div id="simplesMeuPov" class="simplesMeuPov" hidden>
       <label for="simplesCanalPov" data-t="simples.meuPov.rotulo">Seu canal neste evento</label>
       <input id="simplesCanalPov" type="text" list="simplesCanaisPov" autocomplete="off" autocapitalize="none" spellcheck="false" data-t-ph="simples.meuPov.ph" placeholder="Digite seu canal da Kick" aria-describedby="simplesMeuPovEstado">
