@@ -932,6 +932,10 @@ export function montarEvento({
   // O corpo de uma resposta boa tem este tempo para chegar inteiro depois dos cabeçalhos; passou, larga-se
   // (a vaga solta) e a leitura diz 'resposta-ilegivel', como para um corpo que não se lê.
   const CORPO_CHAT_MAX_MS = 30_000;
+  // Os cabeçalhos têm este tempo para chegar depois de o pedido sair. Sem isto, um pedido que nunca recebia
+  // resposta prendia uma das 4 vagas para sempre. Passou, larga-se e a leitura vê uma falha de rede
+  // ('sem-rede', com as novas tentativas de sempre). Juntar-se a um pedido em curso não renova este prazo.
+  const CABECALHOS_CHAT_MAX_MS = 20_000;
   const PICOS_BOTOES = 8;
   // Quanto antes do segundo do pico o vídeo abre: o lance vem antes da reacção do chat.
   const ANTES_DO_PICO_MS = 10_000;
@@ -956,6 +960,11 @@ export function montarEvento({
   ev.lerChatTrecho = (...a) => lerChatTrecho(...a);
   // Para os testes: o limite do corpo de uma resposta de chat (30 s não cabem num teste).
   ev.limiteCorpoChatMs = CORPO_CHAT_MAX_MS;
+  ev.limiteCabecalhosChatMs = CABECALHOS_CHAT_MAX_MS;
+  // Para os testes: um pedido de chat direto (sem passar por uma leitura) e o estado da fila — vagas
+  // ocupadas, pedidos à espera de vaga e endereços em curso. Em repouso tudo isto tem de ser zero.
+  ev.buscarChat = (...a) => buscarChat(...a);
+  ev.vagasChat = () => ({ noAr: pedidosNoAr, fila: filaDoChat.length, emCurso: emCurso.size });
   function cobrir(c, [a, b]) {
     if (!(b > a)) return;
     const unidas = [];
@@ -1497,24 +1506,58 @@ export function montarEvento({
     status: 429, ok: false, recusadoAqui: true, headers: new Headers(),
     json: async () => ({}), clone() { return this; },
   });
+  // `sinal` é o do pedido partilhado (ver `buscarChat`): cai quando o último consumidor desiste.
   async function enviarChat(url, { aoEnviar, ...opcoes }) {
     const sinal = opcoes.signal;
-    await vagaDoChat(sinal);
-    // O pedido leva um sinal só seu: cai com o de quem pediu e também quando o corpo passa do limite, e
-    // é ele que faz o fetch largar a ligação.
+    // A pausa de um 429 espera-se SEM vaga: quem dorme à espera dela não pode tirar o lugar a quem já
+    // podia pedir. Ao ganhar a vaga reconfere-se, porque a pausa pode ter começado entretanto.
+    let comVaga = false;
+    // A vaga solta-se exatamente uma vez, qualquer que seja a saída (resposta, erro, prazo ou cancelar).
+    const soltar = () => { if (comVaga) { comVaga = false; soltarVagaDoChat(); } };
+    // O pedido leva um sinal só seu: cai com o do pedido partilhado e também quando os cabeçalhos ou o
+    // corpo passam do limite, e é ele que faz o fetch largar a ligação.
     const proprio = new AbortController();
     const largar = () => proprio.abort(sinal.reason);
-    sinal?.addEventListener('abort', largar, { once: true });
     try {
       for (;;) {
         const agora = Date.now();
         if (chatRecusadoAte > agora) return recusadoAqui();
-        if (chatParadoAte <= agora) break;
+        if (chatParadoAte > agora) {
+          // eslint-disable-next-line no-await-in-loop
+          await esperarChat(chatParadoAte - agora, sinal);
+          continue;
+        }
         // eslint-disable-next-line no-await-in-loop
-        await esperarChat(chatParadoAte - agora, sinal);
+        await vagaDoChat(sinal);
+        comVaga = true;
+        if (chatRecusadoAte <= Date.now() && chatParadoAte <= Date.now()) break;
+        soltar();
       }
+      if (sinal.aborted) throw paradoChat();
+      sinal.addEventListener('abort', largar, { once: true });
       aoEnviar?.();
-      const r = await buscar(url, { ...opcoes, signal: proprio.signal });
+      let expirou = false;
+      let relogio = null;
+      const semCabecalhos = new Promise((_, mal) => {
+        relogio = setTimeout(() => {
+          expirou = true;
+          const erro = new DOMException('os cabeçalhos do chat não chegaram', 'TimeoutError');
+          // Primeiro a rejeição do prazo, depois o abort: o fetch, ao largar, rejeita com AbortError, e a
+          // leitura tomaria o prazo por um cancelar em vez de uma falha de rede.
+          mal(erro);
+          proprio.abort(erro);
+        }, ev.limiteCabecalhosChatMs ?? CABECALHOS_CHAT_MAX_MS);
+      });
+      semCabecalhos.catch(() => {});
+      const pedido = buscar(url, { ...opcoes, signal: proprio.signal });
+      // Um fetch que responda depois do prazo não deixa erro solto nem a resposta com o corpo aberto.
+      pedido.then((tardia) => { if (expirou) try { tardia?.body?.cancel().catch(() => {}); } catch { /* já lido */ } }, () => {});
+      let r;
+      try {
+        r = await Promise.race([pedido, semCabecalhos]);
+      } finally {
+        clearTimeout(relogio);
+      }
       if (r?.status === 429) {
         const espera = esperaDoRetryAfter(r);
         if (espera !== null && espera > RETRY_AFTER_MAX_MS) chatRecusadoAte = Math.max(chatRecusadoAte, Date.now() + espera);
@@ -1526,7 +1569,7 @@ export function montarEvento({
       return await corpoInteiro(r, proprio);
     } finally {
       sinal?.removeEventListener('abort', largar);
-      soltarVagaDoChat();
+      soltar();
     }
   }
   async function corpoInteiro(r, proprio) {
@@ -1543,8 +1586,12 @@ export function montarEvento({
       const desistir = () => mal(proprio.signal.reason ?? new DOMException('parado', 'AbortError'));
       if (proprio.signal.aborted) desistir();
       else proprio.signal.addEventListener('abort', desistir, { once: true });
-      relogio = setTimeout(() => proprio.abort(new DOMException('o corpo do chat não acabou', 'TimeoutError')),
-        ev.limiteCorpoChatMs ?? CORPO_CHAT_MAX_MS);
+      relogio = setTimeout(() => {
+        // Como nos cabeçalhos: o motivo do prazo antes do abort, que pode fazer o corpo falhar primeiro.
+        const erro = new DOMException('o corpo do chat não acabou', 'TimeoutError');
+        mal(erro);
+        proprio.abort(erro);
+      }, ev.limiteCorpoChatMs ?? CORPO_CHAT_MAX_MS);
     });
     // Se o texto chegar primeiro, ninguém ouve esta promessa depois; não pode virar um erro solto.
     parou.catch(() => {});
@@ -1564,16 +1611,45 @@ export function montarEvento({
       clearTimeout(relogio);
     }
   }
+  // Cada consumidor tem a sua espera pelo pedido partilhado: cancelar um sai só ele, e o pedido só é
+  // abortado quando o último desiste. O pedido leva um sinal interno, e não o de quem pediu primeiro.
   const buscarChat = async (url, opcoes = {}) => {
     await livre;
+    const sinal = opcoes.signal;
+    if (sinal?.aborted) throw paradoChat();
     const chave = String(url);
-    let p = emCurso.get(chave);
-    if (!p) {
-      p = enviarChat(url, opcoes).finally(() => emCurso.delete(chave));
-      emCurso.set(chave, p);
+    let pedido = emCurso.get(chave);
+    if (!pedido) {
+      const controlo = new AbortController();
+      pedido = { controlo, consumidores: 0, acabou: false };
+      const este = pedido;
+      este.p = enviarChat(url, { ...opcoes, signal: controlo.signal }).finally(() => {
+        este.acabou = true;
+        if (emCurso.get(chave) === este) emCurso.delete(chave);
+      });
+      // Se todos desistirem antes de acabar, ninguém ouve o erro do pedido largado.
+      este.p.catch(() => {});
+      emCurso.set(chave, este);
     }
-    const r = await p;
-    return typeof r?.clone === 'function' ? r.clone() : r;
+    pedido.consumidores++;
+    let desistir = null;
+    const parou = new Promise((_, mal) => {
+      desistir = () => mal(paradoChat());
+      sinal?.addEventListener('abort', desistir, { once: true });
+    });
+    parou.catch(() => {});
+    try {
+      const r = await Promise.race([pedido.p, parou]);
+      return typeof r?.clone === 'function' ? r.clone() : r;
+    } finally {
+      sinal?.removeEventListener('abort', desistir);
+      pedido.consumidores--;
+      // O último a sair larga o pedido, e o endereço fica livre já: quem pedir a seguir faz um pedido novo.
+      if (!pedido.consumidores && !pedido.acabou) {
+        if (emCurso.get(chave) === pedido) emCurso.delete(chave);
+        pedido.controlo.abort(paradoChat());
+      }
+    }
   };
 
   async function verLance(lista = null, opcoes = {}) {
