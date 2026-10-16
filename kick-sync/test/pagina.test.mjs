@@ -1231,6 +1231,9 @@ test('o motor visual legado abre os seis leitores antes de esperar os resultados
     await p.waitForSelector('#listaMomentos li[data-ms]', { timeout: 10000 });
 
     await p.evaluate(() => {
+      // Este teste controla leitores que falham, sem depender do codec instalado no runner.
+      const suporta = MediaSource.isTypeSupported.bind(MediaSource);
+      MediaSource.isTypeSupported = (tipo) => /avc1/.test(tipo) || suporta(tipo);
       const Original = window.Hls;
       window.__capturasAbertas = 0;
       window.__falhasCapturas = [];
