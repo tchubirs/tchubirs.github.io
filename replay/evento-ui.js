@@ -12,27 +12,27 @@
 import {
   lerElenco, codificar, descodificar, contar, paraTexto, juntarElencos, paraArquivo, deArquivo, nomeDoArquivo,
   apelidosDoTexto,
-} from './elenco.js?v=62a404f650';
-import { montarNomesNaTela } from './nomes-ui.js?v=62a404f650';
-import { montarMortes } from './mortes-ui.js?v=62a404f650';
-import { carregarCanais, procurarAoVivo } from './carregar.js?v=62a404f650';
-import { escolherCaminho } from './portas.js?v=62a404f650';
+} from './elenco.js?v=babb2453fe';
+import { montarNomesNaTela } from './nomes-ui.js?v=babb2453fe';
+import { montarMortes } from './mortes-ui.js?v=babb2453fe';
+import { carregarCanais, procurarAoVivo } from './carregar.js?v=babb2453fe';
+import { escolherCaminho } from './portas.js?v=babb2453fe';
 import {
   montarMapa, linhasVisiveis, tempoDoX, xDoTempo, zoom, oQueEstaAqui, filtrar, pintarMapa, ordenarFaixas, linhasDoTempo,
-} from './mapa.js?v=62a404f650';
-import { procurarAngulos, ordenarCandidatos, resumo } from './cena.js?v=62a404f650';
-import { lerMaster, lerPlaylist, procurarCanais, slugDoNome } from './kick.js?v=62a404f650';
-import { linhaDoCanal } from './relogio.js?v=62a404f650';
-import { somDoCanal, tsDoCanal } from './alinhar.js?v=62a404f650';
-import { t, tn, idiomaActual } from './idiomas.js?v=62a404f650';
-import { atalhos } from './atalhos.js?v=62a404f650';
-import { escapar } from './escapar.js?v=62a404f650';
-import { separarPorJogo } from './jogo.js?v=62a404f650';
-import { idDoCanal, mensagensEntre, calor, picos, segundoDoPico } from './chat.js?v=62a404f650';
-import { agendar } from './aovivo.js?v=62a404f650';
+} from './mapa.js?v=babb2453fe';
+import { procurarAngulos, ordenarCandidatos, resumo } from './cena.js?v=babb2453fe';
+import { lerMaster, lerPlaylist, procurarCanais, slugDoNome } from './kick.js?v=babb2453fe';
+import { linhaDoCanal } from './relogio.js?v=babb2453fe';
+import { somDoCanal, tsDoCanal } from './alinhar.js?v=babb2453fe';
+import { t, tn, idiomaActual } from './idiomas.js?v=babb2453fe';
+import { atalhos } from './atalhos.js?v=babb2453fe';
+import { escapar } from './escapar.js?v=babb2453fe';
+import { separarPorJogo } from './jogo.js?v=babb2453fe';
+import { idDoCanal, mensagensEntre, calor, picos, segundoDoPico, juntarPorOrdem } from './chat.js?v=babb2453fe';
+import { agendar } from './aovivo.js?v=babb2453fe';
 import {
   normalDoChat, unirJanelas, sinaisDoEvento, melhoresLances, filtrarLances, motivoDoLance, contaDoLance, coincide,
-} from './melhores.js?v=62a404f650';
+} from './melhores.js?v=babb2453fe';
 
 // Um canal ao vivo tem na lista um VOD de duração zero que vai crescendo. Até se pedir a lista outra
 // vez, o que ele já tem acaba "agora".
@@ -924,6 +924,14 @@ export function montarEvento({
   // nova e uns 12 pedidos por hora e por canal. A escolha fica sempre com 1 h antes e 30 min depois.
   const CHAT_GRELHA_MS = 30 * 60e3;
   const JANELA_MAX_PEDIDOS = 120;
+  // Os pedidos de chat no ar ao mesmo tempo, de todas as leituras (ver `buscarChat`), e o 429: com
+  // Retry-After até um minuto espera-se; sem ele, uma pausa curta; acima de um minuto desiste-se.
+  const VAGAS_CHAT = 4;
+  const PAUSA_429_MS = 2000;
+  const RETRY_AFTER_MAX_MS = 60_000;
+  // O corpo de uma resposta boa tem este tempo para chegar inteiro depois dos cabeçalhos; passou, larga-se
+  // (a vaga solta) e a leitura diz 'resposta-ilegivel', como para um corpo que não se lê.
+  const CORPO_CHAT_MAX_MS = 30_000;
   const PICOS_BOTOES = 8;
   // Quanto antes do segundo do pico o vídeo abre: o lance vem antes da reacção do chat.
   const ANTES_DO_PICO_MS = 10_000;
@@ -936,8 +944,28 @@ export function montarEvento({
   try { sensibilidade = SENSIBILIDADES[localStorage.getItem(GUARDADA_SENS)] ? localStorage.getItem(GUARDADA_SENS) : 'normal'; } catch { /* janela privada */ }
   // As janelas de chat já lidas por canal: com elas os picos refazem-se sem pedir nada à Kick.
   const janelasLidas = new Map();
-  // Para os testes: que janelas de chat de um canal já foram lidas.
+  // O chat já baixado de cada canal, unido, que pode ir além das janelas: as faixas de um trecho lido em
+  // duas (ver `lerChatTrecho`) e o que uma leitura parcial trouxe ficam aqui, e não nas janelas. As
+  // janelas são as referências dos picos, e um pico não pode mudar só por a leitura se ter dividido.
+  const cobertos = new Map();
+  // Para os testes: que janelas de chat de um canal já foram lidas, o que já se baixou, quantas faixas um
+  // trecho pode abrir (1 lê como antes, uma faixa só) e a leitura de um trecho.
   ev.janelasDoChat = (c) => janelasLidas.get(c) || [];
+  ev.cobertoDoChat = (c) => cobertos.get(c) || [];
+  ev.faixasDoChat = 2;
+  ev.lerChatTrecho = (...a) => lerChatTrecho(...a);
+  // Para os testes: o limite do corpo de uma resposta de chat (30 s não cabem num teste).
+  ev.limiteCorpoChatMs = CORPO_CHAT_MAX_MS;
+  function cobrir(c, [a, b]) {
+    if (!(b > a)) return;
+    const unidas = [];
+    for (const [x, y] of [...(cobertos.get(c) || []), [a, b]].sort((u, v) => u[0] - v[0])) {
+      const ultima = unidas.at(-1);
+      if (ultima && x <= ultima[1]) ultima[1] = Math.max(ultima[1], y);
+      else unidas.push([x, y]);
+    }
+    cobertos.set(c, unidas);
+  }
   function marcasDoChat(c) {
     const msgs = ev.mensagens.get(c) || [];
     const dentroDe = (deMs, ateMs) => msgs.filter((m) => m.ms >= deMs && m.ms < ateMs);
@@ -963,7 +991,14 @@ export function montarEvento({
   }
   /** O que falta ler do chat de `c` entre `deMs` e `ateMs`: os pedaços que nenhuma janela lida cobre. */
   function faltaLer(c, deMs, ateMs) {
-    const lidas = [...(janelasLidas.get(c) || [])].sort((a, b) => a[0] - b[0]);
+    return buracos(janelasLidas.get(c) || [], deMs, ateMs);
+  }
+  /** O que falta BAIXAR: dentro do que falta ler, só o que nenhuma leitura trouxe ainda. */
+  function faltaBaixar(c, deMs, ateMs) {
+    return buracos([...(janelasLidas.get(c) || []), ...(cobertos.get(c) || [])], deMs, ateMs);
+  }
+  function buracos(intervalos, deMs, ateMs) {
+    const lidas = [...intervalos].sort((a, b) => a[0] - b[0]);
     const falta = [];
     let de = deMs;
     for (const [a, b] of lidas) {
@@ -1024,31 +1059,53 @@ export function montarEvento({
   // Uma janela de chat de um canal: as mensagens ficam (para o chat ao lado do vídeo) e os picos refazem-se.
   //
   // Leitura parcial só cobre o que chegou; `soOQueVeio` preserva isso também ao cancelar um trecho.
-  async function lerJanela(c, deMs, ateMs, sinal, { soOQueVeio = false, maxPedidos = JANELA_MAX_PEDIDOS, aoProgredir = () => {} } = {}) {
-    // O número do canal não muda: um trecho lido aos bocados pergunta-o uma vez só.
-    const id = idsDoChat.get(c) ?? await idDoCanal(c, { buscar: buscarChat, sinal });
-    if (id != null) idsDoChat.set(c, id);
-    let chegouMs = ateMs;
-    const msgs = await mensagensEntre(id, deMs, ateMs, {
-      buscar: buscarChat, sinal, maxPedidos, devolverAoCancelar: soOQueVeio,
-      aoProgredir: (p) => { chegouMs = p.chegouMs; aoProgredir(p); },
-    });
-    juntarMensagens(c, msgs);
-    // A data da mensagem vem ao segundo; a página seguinte ainda pode trazer outras desse segundo.
-    const fimDaFronteira = chegouMs + 1000;
-    const lida = !msgs.incompleto ? [deMs, ateMs]
-      : id != null && fimDaFronteira < ateMs ? [Math.max(deMs, fimDaFronteira), ateMs] : null;
-    if (lida) janelasLidas.set(c, [...(janelasLidas.get(c) || []), lida]);
+  // `registar: false` é para as faixas de `lerChatTrecho`: o que veio fica baixado (`cobertos`), mas a
+  // janela de detecção é o trecho que a regista. `retomar` continua uma leitura que parou no travão.
+  async function lerJanela(c, deMs, ateMs, sinal, {
+    soOQueVeio = false, maxPedidos = JANELA_MAX_PEDIDOS, aoProgredir = () => {},
+    registar = true, retomar = null, buscar: buscarDaqui = buscarChat,
+  } = {}) {
+    // Conta-se já, antes de esperar seja o que for: é por esta conta que um trecho decide se abre uma
+    // segunda faixa, e duas decisões no mesmo instante não podem ver a mesma vaga.
+    leitoresChat++;
+    try {
+      // O número do canal não muda: um trecho lido aos bocados pergunta-o uma vez só.
+      const id = idsDoChat.get(c) ?? await idDoCanal(c, { buscar: buscarChat, sinal });
+      if (id != null) idsDoChat.set(c, id);
+      let chegouMs = Math.min(ateMs, retomar?.chegouMs ?? ateMs);
+      const msgs = await mensagensEntre(id, deMs, ateMs, {
+        buscar: buscarDaqui, sinal, maxPedidos, devolverAoCancelar: soOQueVeio, retomar,
+        aoProgredir: (p) => { chegouMs = p.chegouMs; aoProgredir(p); },
+      });
+      juntarMensagens(c, msgs);
+      // A data da mensagem vem ao segundo; a página seguinte ainda pode trazer outras desse segundo.
+      const fimDaFronteira = chegouMs + 1000;
+      const lida = !msgs.incompleto ? [deMs, ateMs]
+        : id != null && fimDaFronteira < ateMs ? [Math.max(deMs, fimDaFronteira), ateMs] : null;
+      if (lida) cobrir(c, lida);
+      if (registar) {
+        if (lida) janelasLidas.set(c, [...(janelasLidas.get(c) || []), lida]);
+        refazerPicos(c);
+      }
+      return { msgs, id };
+    } finally {
+      leitoresChat--;
+    }
+  }
+  // Leituras de chat (de qualquer sítio) a correr agora.
+  let leitoresChat = 0;
+  function refazerPicos(c) {
     ev.marcas.set(c, marcasDoChat(c));
     aoMudarPicos();
     agendarMelhores();
-    return { msgs, id };
   }
   const idsDoChat = new Map();
   function juntarMensagens(c, msgs) {
-    const porId = new Map((ev.mensagens.get(c) || []).map((m) => [m.id ?? `${m.ms}|${m.autor}|${m.texto}`, m]));
-    for (const m of msgs) porId.set(m.id ?? `${m.ms}|${m.autor}|${m.texto}`, m);
-    ev.mensagens.set(c, [...porId.values()].sort((a, b) => a.ms - b.ms));
+    // As que chegam mandam na ordem do que trouxeram; as que já cá estavam e não vieram outra vez ficam
+    // a seguir à que as precedia (ver `juntarPorOrdem`): uma leitura que acaba a meio de um segundo não
+    // pode atirar o fim desse segundo para o princípio.
+    const chave = (m) => m.id ?? `${m.ms}|${m.autor}|${m.texto}`;
+    ev.mensagens.set(c, juntarPorOrdem(ev.mensagens.get(c) || [], msgs, chave));
   }
 
   // ── o chat de um trecho escolhido à mão ────────────────────────────────
@@ -1059,47 +1116,81 @@ export function montarEvento({
   // vem do canal e não do elenco. As mensagens e os picos vão para o mesmo sítio dos do evento.
   const TRECHO_MAX_PEDIDOS = 400;
   const TRECHO_PICOS_MS = 5 * 60_000;
+  // Um trecho longo de um canal com muito chat lê-se em duas faixas ao mesmo tempo (B4, 16/10, acordado
+  // entre Claude e Codex): o ensaio com a Kick a sério leu 15 min de Kodd em 20 s em vez de 38 s, com os
+  // mesmos 42 pedidos. Começa sempre por umas páginas numa faixa só (a sonda); só se elas mostrarem
+  // trabalho a sério para trás é que o resto se parte em dois. Um canal calado acaba na sonda e nunca
+  // divide — eram 60 pedidos onde 3 chegavam quando se partia tudo em bocados de 5 min. Dividir só muda
+  // o caminho: as mensagens, as janelas de detecção e os picos têm de sair iguais aos de uma faixa só.
+  const SONDA_PAGINAS = 3;
+  const DIVIDIR_PAGINAS = 6;
   async function lerChatTrecho(c, deMs, ateMs, { sinal, aoProgredir = () => {} } = {}) {
     const ate = Math.min(ateMs, Date.now());
+    // O que falta à DETECÇÃO, pedaço a pedaço, decide as janelas, como sempre; o que se baixa é só o que
+    // dentro disso ainda não veio (uma leitura parcial em duas faixas pode ter trazido o pedaço de baixo).
     const falta = faltaLer(c, deMs, ate);
-    const total = falta.reduce((s, [a, b]) => s + (b - a), 0);
-    // Cada pedaço que falta lê-se de uma vez, andando para trás página a página. Eram bocados de 5 min,
-    // um pedido por bocado mesmo sem mensagens: o teste real de 12/10 contou 60 pedidos para as 58
-    // mensagens de 14 h de um canal (3 páginas chegavam). Parar a meio continua a guardar o que veio:
-    // `lerJanela` com `soOQueVeio` marca como lido só do fim até onde a leitura chegou.
-    const bocados = falta;
+    const aBaixar = falta.map(([a, b]) => faltaBaixar(c, a, b));
+    const total = aBaixar.flat().reduce((s, [a, b]) => s + (b - a), 0);
+    // Cada pedaço que falta lê-se andando para trás página a página. Eram bocados de 5 min, um pedido por
+    // bocado mesmo sem mensagens: o teste real de 12/10 contou 60 pedidos para as 58 mensagens de 14 h de
+    // um canal (3 páginas chegavam). Parar a meio continua a guardar o que veio.
     const antes = (ev.mensagens.get(c) || []).length;
-    let andado = 0;
+    // UM teto de páginas para o trecho todo. Era 400 por pedaço, e um trecho com três buracos custava
+    // mais (o teste novo mediu 479 páginas num trecho de três lacunas).
+    const orcamento = { restantes: TRECHO_MAX_PEDIDOS, gastos: 0 };
+    // Cada envio à Kick, contando as novas tentativas (o teto conta páginas, não tentativas).
+    let tentativas = 0;
+    const buscarDaqui = (url, opcoes = {}) => buscarChat(url, { ...opcoes, aoEnviar: () => { tentativas++; } });
+    // O progresso é o tempo de facto lido sobre o que havia para baixar: uma leitura que falha não diz 100 %.
+    const lido = new Map();
+    let fracaoDita = 0;
+    const progredir = () => {
+      const feito = [...lido.values()].reduce((s, v) => s + v, 0);
+      const fracao = total ? Math.min(1, feito / total) : 1;
+      if (fracao > fracaoDita) { fracaoDita = fracao; aoProgredir({ fracao }); }
+    };
     let motivo = null;
     let semCanal = false;
-    for (const [a, b] of bocados) {
+    for (let k = 0; k < falta.length; k++) {
+      const [a, b] = falta[k];
       if (sinal?.aborted) throw new DOMException('parado', 'AbortError');
-      const { msgs, id } = await lerJanela(c, a, b, sinal, {
-        soOQueVeio: true,
-        maxPedidos: TRECHO_MAX_PEDIDOS,
-        aoProgredir: ({ fracao }) => aoProgredir({ fracao: total ? (andado + fracao * (b - a)) / total : 1 }),
-      });
-      // Parado a meio: o que veio já ficou guardado pelo `lerJanela`.
-      if (sinal?.aborted) throw new DOMException('parado', 'AbortError');
-      // Os picos medem-se em bocados de 5 min, como quando se lia um pedido por bocado: um minuto com
-      // 8 mensagens num canal calado é pico no bocado dele, e numa noite inteira de 14 h perdia-se na média.
-      if (id != null && !msgs.incompleto) {
-        const bocadosLidos = [];
+      // De trás para a frente, como a leitura de uma faixa só anda.
+      for (const [x, y] of [...aBaixar[k]].reverse()) {
+        // eslint-disable-next-line no-await-in-loop
+        const r = await baixarChat(c, x, y, { sinal, orcamento, buscar: buscarDaqui, lido, progredir });
+        if (r.semCanal) { semCanal = true; break; }
+        if (r.motivo) { motivo = r.motivo; break; }
+      }
+      if (semCanal) break;
+      if (!motivo && !faltaBaixar(c, a, b).length) {
+        // O pedaço todo veio: as mesmas janelas que a leitura de uma faixa só registava, pela mesma ordem
+        // (é a ordem que desempata dois picos no mesmo minuto). Os picos medem-se em bocados de 5 min, como
+        // quando se lia um pedido por bocado: um minuto com 8 mensagens num canal calado é pico no bocado
+        // dele, e numa noite inteira de 14 h perdia-se na média.
+        const bocadosLidos = [[a, b]];
         for (let x = a; x < b; x += TRECHO_PICOS_MS) bocadosLidos.push([x, Math.min(b, x + TRECHO_PICOS_MS)]);
         janelasLidas.set(c, [...(janelasLidas.get(c) || []), ...bocadosLidos]);
+        refazerPicos(c);
+        continue;
       }
-      andado += b - a;
-      aoProgredir({ fracao: total ? andado / total : 1 });
-      if (id == null) { semCanal = true; break; }
-      if (msgs.incompleto) { motivo = msgs.motivo; break; }
+      // Parcial (falhou, travão ou parado): fica como janela só a cauda seguida, do fim do pedaço até ao
+      // primeiro buraco — o que uma faixa só registava. O resto do que veio fica baixado e não se pede
+      // outra vez, mas só conta para os picos quando o pedaço acabar.
+      const cauda = caudaBaixada(c, a, b);
+      if (cauda) janelasLidas.set(c, [...(janelasLidas.get(c) || []), cauda]);
+      refazerPicos(c);
+      if (!motivo) motivo = sinal?.aborted ? 'cancelado' : 'incompleto';
+      break;
+    }
+    if (sinal?.aborted) {
+      if (ev.mapa) pintar();
+      throw new DOMException('parado', 'AbortError');
     }
     if (falta.length && !semCanal && !motivo) {
       // O trecho inteiro passa a ser uma janela só, para os picos se medirem contra o trecho que se pediu,
       // e não contra os bocados que por acaso faltavam.
       janelasLidas.set(c, [...(janelasLidas.get(c) || []), [deMs, ate]]);
-      ev.marcas.set(c, marcasDoChat(c));
-      aoMudarPicos();
-      agendarMelhores();
+      refazerPicos(c);
     }
     if (ev.mapa) pintar();
     const lista = ev.mensagens.get(c) || [];
@@ -1110,7 +1201,81 @@ export function montarEvento({
       picos: (ev.marcas.get(c) || []).filter((m) => m.ms >= deMs && m.ms < ate).length,
       semCanal,
       motivo,
+      pedidos: orcamento.gastos,
+      tentativas,
     };
+  }
+  /** O bocado [u, b] mais comprido que acaba em `b` e já veio todo; null se nada antes de `b` veio. */
+  function caudaBaixada(c, a, b) {
+    for (const [u, v] of cobertos.get(c) || []) if (u < b && v >= b) return [Math.max(a, u), b];
+    return null;
+  }
+
+  /**
+   * Baixar o chat de `c` em [x, y), sem tocar nas janelas de detecção: primeiro a sonda; depois, se o
+   * canal tiver chat a sério para trás e houver vaga, duas faixas — a de cima continua a sonda (do mesmo
+   * cursor, sem reler a página onde parou) até ao corte `m`, a de baixo lê de `m` para trás. O teto é o
+   * do trecho: a de cima reserva o dobro do que a sonda prevê para ela, a de baixo leva o resto, e o que
+   * uma não gastar passa para a outra (primeiro para a de cima).
+   */
+  async function baixarChat(c, x, y, { sinal, orcamento, buscar: buscarDaqui, lido, progredir }) {
+    if (orcamento.restantes <= 0) return { motivo: 'max-pedidos' };
+    // Uma faixa lê [de, topo) andando para trás; `chave` guarda quanto dela já veio, para o progresso.
+    // A de cima depois do corte é a mesma faixa da sonda (o mesmo topo), e continua a contar dali.
+    const faixa = (de, topo, chave = {}) => async (maxPedidos, retomar = null) => {
+      orcamento.restantes -= maxPedidos;
+      const { msgs, id } = await lerJanela(c, de, topo, sinal, {
+        soOQueVeio: true, registar: false, maxPedidos, retomar, buscar: buscarDaqui,
+        aoProgredir: ({ chegouMs }) => { lido.set(chave, topo - Math.max(de, chegouMs)); progredir(); },
+      });
+      orcamento.restantes += maxPedidos - msgs.pedidos;
+      orcamento.gastos += msgs.pedidos;
+      if (!msgs.incompleto) { lido.set(chave, topo - de); progredir(); }
+      return { msgs, id };
+    };
+    const chaveDeCima = {};
+    const sonda = await faixa(x, y, chaveDeCima)(Math.min(SONDA_PAGINAS, orcamento.restantes));
+    if (sonda.id == null) return { semCanal: true };
+    if (!sonda.msgs.incompleto) return {};
+    const cont = sonda.msgs.continuacao;
+    if (!cont || orcamento.restantes <= 0) return { motivo: sonda.msgs.motivo };
+    // Quanto tempo cada página andou na sonda diz quantas faltam até `x`. O corte fica a meio do que
+    // falta, num segundo inteiro: as datas vêm ao segundo, e assim cada segundo é todo de uma faixa.
+    const chegou = cont.chegouMs;
+    const porPagina = (y - chegou) / Math.max(1, sonda.msgs.pedidos);
+    const faltam = porPagina > 0 ? (chegou - x) / porPagina : Infinity;
+    const m = Math.floor((x + chegou) / 2 / 1000) * 1000;
+    // As duas faixas são dois leitores; com os outros (outros canais, outros trechos) não passam de
+    // VAGAS_CHAT. Sem vaga, segue numa faixa só, como antes. Se o que falta não cabe no teto, também:
+    // a leitura vai parar no travão de qualquer maneira, e numa faixa só a parte lida é a cauda seguida
+    // desde o fim (a janela que conta para os picos); em duas, cada faixa parava a meio do seu lado.
+    // A faixa de cima é a que faz a janela dos picos quando a leitura pára a meio (a cauda seguida desde o
+    // fim), por isso reserva-se primeiro para ela o DOBRO do que a sonda prevê; a de baixo só gasta o que
+    // sobra. É uma heurística (acordada com o Codex): uma sonda esparsa por cima de chat muito denso ainda
+    // pode deixar a cauda mais curta que numa faixa só — mais curta, nunca com buraco nem inventada.
+    const reservaDeCima = Math.min(orcamento.restantes, Math.ceil(2 * ((chegou - m) / porPagina)));
+    const paraBaixo = orcamento.restantes - reservaDeCima;
+    const dividir = ev.faixasDoChat >= 2 && faltam >= DIVIDIR_PAGINAS && faltam < orcamento.restantes && paraBaixo >= 1
+      && m - x >= 1000 && chegou - m >= 1000 && leitoresChat + 2 <= VAGAS_CHAT;
+    if (!dividir) {
+      const { msgs } = await faixa(x, y, chaveDeCima)(orcamento.restantes, cont);
+      return { motivo: msgs.incompleto ? msgs.motivo : null };
+    }
+    const cima = faixa(m, y, chaveDeCima);
+    const baixo = faixa(x, m);
+    // As duas arrancam no mesmo instante: cada `lerJanela` conta o seu leitor antes de esperar.
+    const resultados = await Promise.all([cima(reservaDeCima, cont), baixo(paraBaixo)]);
+    // O travão de uma faixa com o que a outra não gastou: continua de onde parou, numa faixa só.
+    const lados = [cima, baixo];
+    for (let i = 0; i < 2; i++) {
+      while (resultados[i].msgs.motivo === 'max-pedidos' && resultados[i].msgs.continuacao
+        && orcamento.restantes > 0 && !sinal?.aborted) {
+        // eslint-disable-next-line no-await-in-loop
+        resultados[i] = await lados[i](orcamento.restantes, resultados[i].msgs.continuacao);
+      }
+    }
+    const motivos = resultados.map((r) => r.msgs.motivo).filter(Boolean);
+    return { motivo: motivos.includes('cancelado') ? 'cancelado' : motivos[0] ?? null };
   }
 
   // Com a página parada, os picos das janelas vizinhas, para trás e para a frente (o dono, 07/10). Só
@@ -1280,12 +1445,131 @@ export function montarEvento({
   // O mesmo endereço pedido duas vezes ao mesmo tempo (o time e o trecho, ou dois cliques) vai à Kick
   // uma vez só, e cada um recebe a sua cópia da resposta.
   const emCurso = new Map();
-  const buscarChat = async (url, opcoes) => {
+  // Até 4 pedidos de chat no ar, de todas as leituras juntas (B4, 16/10). Os melhores leem 3 canais ao
+  // mesmo tempo e um trecho longo pode abrir uma segunda faixa: sem um teto comum eram 6 pedidos de uma
+  // vez à Kick, e o 429 que isso chama vem para todos. Quem não tem vaga espera a sua vez, pela ordem.
+  let pedidosNoAr = 0;
+  const filaDoChat = [];
+  const paradoChat = () => new DOMException('parado', 'AbortError');
+  function vagaDoChat(sinal) {
+    if (sinal?.aborted) return Promise.reject(paradoChat());
+    if (pedidosNoAr < VAGAS_CHAT && !filaDoChat.length) {
+      pedidosNoAr++;
+      return Promise.resolve();
+    }
+    return new Promise((ok, mal) => {
+      const vez = { ok: () => { sinal?.removeEventListener('abort', desistir); ok(); } };
+      const desistir = () => {
+        const i = filaDoChat.indexOf(vez);
+        if (i >= 0) filaDoChat.splice(i, 1);
+        mal(paradoChat());
+      };
+      filaDoChat.push(vez);
+      sinal?.addEventListener('abort', desistir, { once: true });
+    });
+  }
+  function soltarVagaDoChat() {
+    // A vaga passa direita a quem espera; só fica livre se ninguém estiver na fila.
+    const vez = filaDoChat.shift();
+    if (vez) vez.ok();
+    else pedidosNoAr--;
+  }
+  // Um 429 pára o chat TODO, e não só a leitura que o levou: as outras faixas e os outros canais batiam
+  // logo a seguir na mesma porta. Com Retry-After até 60 s espera-se esse tempo (as novas tentativas e os
+  // pedidos na fila também); sem ele, uma pausa curta. Acima de 60 s nem se tenta: até lá cada pedido de
+  // chat responde 429 daqui mesmo, sem ir à Kick, e a leitura acaba em 'rate-limit' como sempre acabou.
+  let chatParadoAte = 0;
+  let chatRecusadoAte = 0;
+  const esperarChat = (ms, sinal) => new Promise((ok, mal) => {
+    if (sinal?.aborted) { mal(paradoChat()); return; }
+    const desistir = () => { clearTimeout(relogio); mal(paradoChat()); };
+    const relogio = setTimeout(() => { sinal?.removeEventListener('abort', desistir); ok(); }, ms);
+    sinal?.addEventListener('abort', desistir, { once: true });
+  });
+  function esperaDoRetryAfter(r) {
+    const v = String(r?.headers?.get?.('retry-after') ?? '').trim();
+    if (!v) return null;
+    if (/^\d+$/.test(v)) return Number(v) * 1000;
+    const quando = Date.parse(v);
+    return Number.isFinite(quando) ? Math.max(0, quando - Date.now()) : null;
+  }
+  const recusadoAqui = () => ({
+    status: 429, ok: false, recusadoAqui: true, headers: new Headers(),
+    json: async () => ({}), clone() { return this; },
+  });
+  async function enviarChat(url, { aoEnviar, ...opcoes }) {
+    const sinal = opcoes.signal;
+    await vagaDoChat(sinal);
+    // O pedido leva um sinal só seu: cai com o de quem pediu e também quando o corpo passa do limite, e
+    // é ele que faz o fetch largar a ligação.
+    const proprio = new AbortController();
+    const largar = () => proprio.abort(sinal.reason);
+    sinal?.addEventListener('abort', largar, { once: true });
+    try {
+      for (;;) {
+        const agora = Date.now();
+        if (chatRecusadoAte > agora) return recusadoAqui();
+        if (chatParadoAte <= agora) break;
+        // eslint-disable-next-line no-await-in-loop
+        await esperarChat(chatParadoAte - agora, sinal);
+      }
+      aoEnviar?.();
+      const r = await buscar(url, { ...opcoes, signal: proprio.signal });
+      if (r?.status === 429) {
+        const espera = esperaDoRetryAfter(r);
+        if (espera !== null && espera > RETRY_AFTER_MAX_MS) chatRecusadoAte = Math.max(chatRecusadoAte, Date.now() + espera);
+        else chatParadoAte = Math.max(chatParadoAte, Date.now() + (espera ?? PAUSA_429_MS));
+      }
+      // O fetch resolve quando chegam os cabeçalhos; o corpo ainda vem a caminho. A vaga é da
+      // transferência inteira (revisão do Codex ao B4): o corpo resolve-se aqui dentro e devolve-se uma
+      // resposta já completa. Sem isto, quatro corpos lentos deixavam passar um quinto pedido.
+      return await corpoInteiro(r, proprio);
+    } finally {
+      sinal?.removeEventListener('abort', largar);
+      soltarVagaDoChat();
+    }
+  }
+  async function corpoInteiro(r, proprio) {
+    if (typeof r?.text !== 'function' || !(r.status >= 200 && r.status <= 599)) return r;
+    const base = { status: r.status, statusText: r.statusText, headers: r.headers };
+    if (!r.ok) {
+      // O corpo de um erro ninguém o lê (quem chama só olha o estado): larga-se já. Esperá-lo prendia a
+      // vaga — quatro 403 ou 429 cujo corpo nunca acabasse paravam o chat todo, e o erro nunca chegava.
+      try { r.body?.cancel().catch(() => {}); } catch { /* já lido ou preso */ }
+      return new Response(null, base);
+    }
+    let relogio = null;
+    const parou = new Promise((_, mal) => {
+      const desistir = () => mal(proprio.signal.reason ?? new DOMException('parado', 'AbortError'));
+      if (proprio.signal.aborted) desistir();
+      else proprio.signal.addEventListener('abort', desistir, { once: true });
+      relogio = setTimeout(() => proprio.abort(new DOMException('o corpo do chat não acabou', 'TimeoutError')),
+        ev.limiteCorpoChatMs ?? CORPO_CHAT_MAX_MS);
+    });
+    // Se o texto chegar primeiro, ninguém ouve esta promessa depois; não pode virar um erro solto.
+    parou.catch(() => {});
+    try {
+      // Um fetch que não largasse o corpo ao cancelar não pode prender a vaga: corre-se contra o sinal.
+      const texto = await Promise.race([r.text(), parou]);
+      return new Response([204, 205].includes(r.status) ? null : texto, base);
+    } catch (erro) {
+      // Um corpo que não se leu (parado, cortado ou lento demais) não é "sem rede": quem chama vê-o ao
+      // ler o JSON, como antes, e diz 'resposta-ilegivel' — ou 'cancelado', se foi quem pediu que parou.
+      const falhada = {
+        ...base, ok: r.ok,
+        json: () => Promise.reject(erro), text: () => Promise.reject(erro), clone: () => falhada,
+      };
+      return falhada;
+    } finally {
+      clearTimeout(relogio);
+    }
+  }
+  const buscarChat = async (url, opcoes = {}) => {
     await livre;
     const chave = String(url);
     let p = emCurso.get(chave);
     if (!p) {
-      p = buscar(url, opcoes).finally(() => emCurso.delete(chave));
+      p = enviarChat(url, opcoes).finally(() => emCurso.delete(chave));
       emCurso.set(chave, p);
     }
     const r = await p;

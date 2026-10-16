@@ -109,7 +109,13 @@ export async function idDoCanal(slug, { buscar = fetch, sinal } = {}) {
  *     'canal-nao-existe', 'http-<n>', 'resposta-ilegivel',
  *     'formato-inesperado', 'cursor-parado', 'sem-canal',
  *     'janela-invalida'), ou null;
- *   - `pedidos`: quantos pedidos custou.
+ *   - `pedidos`: quantos pedidos custou;
+ *   - `continuacao`: só quando parou no travão ('max-pedidos'), o ponto exacto
+ *     onde ia (cursor, mensagens já vistas e recolhidas, até onde chegou). Dado
+ *     de volta em `retomar`, a leitura segue página a página como se nunca
+ *     tivesse parado: os mesmos pedidos que uma leitura só, sem reler a página
+ *     da fronteira, e a lista que devolve é a da leitura toda desde o início —
+ *     um segundo partido entre as duas vezes sai pela ordem certa.
  *
  * Parar a meio não atira: devolve o que já tem e diz que é só isso. Para um
  * mapa de calor, a última hora de chat de um canal continua a valer, e deitar
@@ -130,21 +136,30 @@ export async function mensagensEntre(id, deMs, ateMs, {
   // Cancelar devolve o que já veio (com `motivo: 'cancelado'`) em vez de atirar: um trecho longo lê-se
   // de uma vez, e o Parar a meio tem de guardar as páginas que já chegaram.
   devolverAoCancelar = false,
+  // A `continuacao` de uma leitura que parou no travão. A janela pode ser outra (mais curta por baixo:
+  // quem divide um trecho em duas faixas sobe o princípio desta), mas o cursor e as vistas são os dela.
+  retomar = null,
 } = {}) {
-  const recolhidas = [];
+  const recolhidas = retomar?.recolhidas ?? [];
   // TODAS as que já passaram, dentro e fora da janela. As páginas da Kick
   // podem repetir a mensagem da fronteira, e a mesma mensagem contada duas
   // vezes faz um pico de um minuto que não existiu.
-  const vistas = new Set();
+  const vistas = retomar?.vistas ?? new Set();
   let pedidos = 0;
   let motivo = null;
+  // Microssegundos inteiros: é a unidade do cursor da própria Kick. Cabe num
+  // número normal sem perder nada (2^53 µs são uns 285 anos).
+  let cursor = retomar?.cursor ?? Math.floor(ateMs) * 1000;
+  let chegouMs = Math.min(ateMs, retomar?.chegouMs ?? ateMs);
 
   const entregar = () => {
     // A ordem em que chegaram é da mais nova para a mais velha; ao contrário
     // fica por ordem de relógio, com os empates do mesmo segundo na ordem
     // certa — e o `sort`, que é estável, só arruma o que a Kick tiver trocado.
-    const lista = recolhidas.reverse().sort((a, b) => a.ms - b.ms);
-    return Object.assign(lista, { incompleto: motivo !== null, motivo, pedidos });
+    // Numa cópia: `recolhidas` continua pela ordem de chegada para uma retomada.
+    const lista = [...recolhidas].reverse().sort((a, b) => a.ms - b.ms);
+    const continuacao = motivo === 'max-pedidos' ? { cursor, vistas, recolhidas, chegouMs } : null;
+    return Object.assign(lista, { incompleto: motivo !== null, motivo, pedidos, continuacao });
   };
 
   try {
@@ -171,11 +186,9 @@ export async function mensagensEntre(id, deMs, ateMs, {
     }
     // Uma janela vazia ou invertida não tem mensagens, e isso não é uma falha.
     if (ateMs <= deMs) return entregar();
+    // Retomada que já tinha passado do princípio desta janela: não falta nada dela.
+    if (retomar && chegouMs < deMs) return entregar();
 
-    // Microssegundos inteiros: é a unidade do cursor da própria Kick. Cabe num
-    // número normal sem perder nada (2^53 µs são uns 285 anos).
-    let cursor = Math.floor(ateMs) * 1000;
-    let chegouMs = ateMs;
     // Um travão que não é número não pode virar "sem travão": NaN parava logo,
     // e diz-se porquê, em vez de deixar um canal enorme andar sem fim.
     const travao = Math.max(0, Math.floor(Number(maxPedidos)) || 0);
@@ -291,6 +304,37 @@ export async function mensagensEntre(id, deMs, ateMs, {
     }
     return entregar();
   }
+}
+
+/**
+ * As mensagens que já se tinham de um canal mais as que acabaram de chegar,
+ * por ordem de relógio e sem repetidas.
+ *
+ * As datas vêm ao segundo, e dentro do mesmo segundo só a ordem em que a Kick
+ * as deu diz quem falou primeiro. Uma leitura pode trazer o segundo inteiro
+ * (e então manda na ordem) ou só um bocado dele — a que acaba a meio do
+ * segundo, porque o cursor anda ao microssegundo. Pôr as que ficaram antes
+ * das que chegaram trocava o fim do segundo para o princípio. Por isso as
+ * duas listas entrelaçam-se: as que chegaram ficam pela ordem delas, e cada
+ * uma das que já cá estavam fica logo a seguir à que a precedia antes.
+ */
+export function juntarPorOrdem(existentes, vindas, chave = (m) => m.id) {
+  const daNova = new Map((vindas || []).map((m) => [chave(m), m]));
+  const postas = new Set();
+  const junta = [];
+  let i = 0;
+  const por = (m) => { const k = chave(m); if (!postas.has(k)) { postas.add(k); junta.push(m); } };
+  for (const m of existentes || []) {
+    const k = chave(m);
+    if (!daNova.has(k)) { por(m); continue; }
+    if (postas.has(k)) continue;
+    // Uma que veio outra vez: primeiro as novas que a antecedem na leitura nova, depois a versão nova dela.
+    while (i < vindas.length && chave(vindas[i]) !== k) por(vindas[i++]);
+    if (i < vindas.length) por(vindas[i++]);
+  }
+  while (i < (vindas || []).length) por(vindas[i++]);
+  // O `sort` é estável: só põe os segundos por ordem e deixa cada segundo como ficou.
+  return junta.sort((a, b) => a.ms - b.ms);
 }
 
 /**

@@ -7,8 +7,8 @@
 
 import {
   ACOES, ACAO, GRUPOS, comboDoEvento, pedacos, textoDe, ariaDe,
-} from './atalhos.js?v=62a404f650';
-import { escapar } from './escapar.js?v=62a404f650';
+} from './atalhos.js?v=babb2453fe';
+import { escapar } from './escapar.js?v=babb2453fe';
 
 const tirarAcentos = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
