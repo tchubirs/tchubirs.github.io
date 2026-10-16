@@ -5,10 +5,10 @@
 // Discord guardados neste aparelho, e mostra tudo: o recorte, o que se leu, quem parece ser e o quanto
 // se parece. Ninguém entra no lance sem a pessoa dizer que sim, nome a nome.
 
-import { t, tn } from './idiomas.js?v=dd5b06eb4e';
-import { escapar } from './escapar.js?v=dd5b06eb4e';
-import { casar, lerApelidos, guardarApelidos, juntarApelidos, semApelido, limparApelido } from './nomes.js?v=dd5b06eb4e';
-import { REGIOES, recortar, miniatura, abrirLeitor, abrirQuadros, podeLer, podeVerVideo, instantesEmVolta } from './ler-tela.js?v=dd5b06eb4e';
+import { t, tn } from './idiomas.js?v=bf8f687c0f';
+import { escapar } from './escapar.js?v=bf8f687c0f';
+import { casar, lerApelidos, guardarApelidos, juntarApelidos, semApelido, limparApelido } from './nomes.js?v=bf8f687c0f';
+import { REGIOES, recortar, miniatura, abrirLeitor, abrirQuadros, podeLer, podeVerVideo, instantesEmVolta } from './ler-tela.js?v=bf8f687c0f';
 
 // Medido na escada da Kick em 10/10: 1080p60 a 9,1 Mb/s e 720p60 a 3,5 Mb/s, em pedaços de 10 s.
 const MBITS = { 1080: 9.1, 720: 3.5 };

@@ -18,7 +18,11 @@ let relogio = 0;
 function esconder() {
   clearTimeout(relogio);
   caixa.hidden = true;
-  alvo?.removeAttribute('aria-describedby');
+  if (alvo) {
+    const descricoes = (alvo.getAttribute('aria-describedby') || '').split(/\s+/).filter((id) => id && id !== 'dicaAtual');
+    if (descricoes.length) alvo.setAttribute('aria-describedby', descricoes.join(' '));
+    else alvo.removeAttribute('aria-describedby');
+  }
   alvo = null;
 }
 
@@ -34,7 +38,8 @@ function mostrar(el) {
   caixa.style.left = `${x}px`;
   caixa.style.top = `${embaixo ? r.bottom + 8 : r.top - c.height - 8}px`;
   caixa.id = 'dicaAtual';
-  el.setAttribute('aria-describedby', 'dicaAtual');
+  const descricoes = (el.getAttribute('aria-describedby') || '').split(/\s+/).filter((id) => id && id !== 'dicaAtual');
+  el.setAttribute('aria-describedby', [...descricoes, 'dicaAtual'].join(' '));
 }
 
 document.addEventListener('pointerover', (e) => {
