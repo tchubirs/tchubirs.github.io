@@ -10,34 +10,34 @@
 // sempre (abrir o canal, gravar o clipe) chega pela `ponte` que o app.js passa: este arquivo não mexe no
 // estado dele por conta própria.
 
-import { t, tn } from './idiomas.js?v=09329c0d2b';
-import { procurarCanais, vodsDoCanal, vodDaKick, slugDoNome } from './kick.js?v=09329c0d2b';
+import { t, tn } from './idiomas.js?v=dd5b06eb4e';
+import { procurarCanais, vodsDoCanal, vodDaKick, slugDoNome } from './kick.js?v=dd5b06eb4e';
 import {
   lerEntrada, montarLista, lancesParaLista, nomeDoArquivo, tempoNaLive, NOMES_NO_LANCE, QUANTOS,
   acharVod, guardarVod, mensagensDosPicos, lerUltimo, guardarUltimo,
-} from './simples-lista.js?v=09329c0d2b';
-import { varrerNoite } from './procurar-momentos.js?v=09329c0d2b';
-import { somDoCanal } from './alinhar.js?v=09329c0d2b';
-import { TAXA_TIROS } from './tiros.js?v=09329c0d2b';
-import { alertasDoCanal } from './alertas.js?v=09329c0d2b';
-import { montarIndice, chaveDoIndice, indiceValido } from './indice.js?v=09329c0d2b';
-import { janelasDosPicos, estimarFalta, estimarFaltaFracao, tempoFalta } from './ouvir.js?v=09329c0d2b';
-import { onde } from './relogio.js?v=09329c0d2b';
-import { abrirQuadrosEscondidos } from './rosto.js?v=09329c0d2b';
-import { escapar } from './escapar.js?v=09329c0d2b';
+} from './simples-lista.js?v=dd5b06eb4e';
+import { varrerNoite } from './procurar-momentos.js?v=dd5b06eb4e';
+import { somDoCanal } from './alinhar.js?v=dd5b06eb4e';
+import { TAXA_TIROS } from './tiros.js?v=dd5b06eb4e';
+import { alertasDoCanal } from './alertas.js?v=dd5b06eb4e';
+import { montarIndice, chaveDoIndice, indiceValido } from './indice.js?v=dd5b06eb4e';
+import { janelasDosPicos, estimarFalta, estimarFaltaFracao, tempoFalta } from './ouvir.js?v=dd5b06eb4e';
+import { onde } from './relogio.js?v=dd5b06eb4e';
+import { abrirQuadrosEscondidos } from './rosto.js?v=dd5b06eb4e';
+import { escapar } from './escapar.js?v=dd5b06eb4e';
 import {
   tituloDoMomento, etiquetasDoMomento, confExibida, confMedia, VERSAO_ETIQUETAS, textoDoContexto,
-} from './titulo.js?v=09329c0d2b';
+} from './titulo.js?v=dd5b06eb4e';
 import {
   lerFiltro, guardarFiltro, limparFiltro, filtroAtivo, filtraAlgo, aplicarFiltro, chipsDoFiltro, semChip, comFala, TIPOS_DO_FILTRO,
-} from './simples-filtro.js?v=09329c0d2b';
-import { lerFalas, guardarFala, acharNaLista, melhorFala } from './falas.js?v=09329c0d2b';
+} from './simples-filtro.js?v=dd5b06eb4e';
+import { lerFalas, guardarFala, acharNaLista, melhorFala } from './falas.js?v=dd5b06eb4e';
 import {
   analisarCandidatos, comContexto, contextoVigente, contextoDoMomento, precisaDeContexto, MAX_CANDIDATOS_POR_LIVE, ENDPOINT_PADRAO,
-} from './contexto-candidatos.js?v=09329c0d2b';
-import { VERSAO_CONTRATO, MAX_IMAGEM_BYTES } from './contexto-rust.js?v=09329c0d2b';
-import { fundirPovsPorCanal } from './simples-lista.js?v=09329c0d2b';
-import { transmissoesDaBusca, pedidoDaBusca, limitesDaBusca, relogioDoTrecho, mesmoPedido, guardarMedidaBusca, estimativaDaBusca } from './busca-escopo.js?v=09329c0d2b';
+} from './contexto-candidatos.js?v=dd5b06eb4e';
+import { VERSAO_CONTRATO, MAX_IMAGEM_BYTES } from './contexto-rust.js?v=dd5b06eb4e';
+import { fundirPovsPorCanal } from './simples-lista.js?v=dd5b06eb4e';
+import { transmissoesDaBusca, pedidoDaBusca, limitesDaBusca, relogioDoTrecho, mesmoPedido, guardarMedidaBusca, estimativaDaBusca } from './busca-escopo.js?v=dd5b06eb4e';
 
 const CHAVE_MODO = 'povix.modo';
 const CHAVE_VISTO = 'povix.simplesVisto';
