@@ -79,6 +79,9 @@ test('o editor abre no pedaço da montagem, e Salvar ajustes só leva o 9:16 se 
     await abrirKill(p);
     const x0 = await p.evaluate(() => window.__estado.clipe.rects[0].x);
     await p.focus('#recortes .recorte');
+    await p.evaluate(() => document.getElementById('previaClipe').dispatchEvent(new Event('loadedmetadata')));
+    assert.equal(await p.evaluate(() => document.activeElement.matches('#recortes .recorte[data-i="0"]')), true,
+      'metadados que chegam depois não podem remover o foco do recorte');
     await p.keyboard.press('ArrowLeft');
     const x1 = await p.evaluate(() => window.__estado.clipe.rects[0].x);
     assert.ok(x1 < x0, `a seta não moveu o recorte (${x0} -> ${x1})`);

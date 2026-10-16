@@ -5689,6 +5689,7 @@ function pintarRecortes(linhas = []) {
   const alvo = $('recortes');
   const fonte = fonteDoClipe();
   if (!c || !fonte) return;
+  const focado = document.activeElement?.closest('#recortes .recorte')?.dataset.i;
   const GUIAS = {
     centroX: 'left:50%;top:0;width:0;height:100%',
     centroY: 'left:0;top:50%;width:100%;height:0',
@@ -5714,6 +5715,7 @@ function pintarRecortes(linhas = []) {
     + ['no', 'ne', 'so', 'se'].map((k) => `<span class="puxar ${k}" data-canto="${k}"></span>`).join('')
     + '</div>').join('');
   for (const caixa of alvo.querySelectorAll('.recorte')) ligarArrasto(caixa);
+  if (focado !== undefined) alvo.querySelector(`.recorte[data-i="${focado}"]`)?.focus({ preventScroll: true });
 }
 
 /**
