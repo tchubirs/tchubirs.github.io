@@ -21,7 +21,7 @@
 
 import {
   RETRATO, formatoQueFunciona, extensaoDe, noSitio, bitsDoVideo, fpsDaFonte, BITS_SOM, capturarSom,
-} from './retrato.js?v=cc78b7e1e7';
+} from './retrato.js?v=7431aa2751';
 
 /** O 16:9 do modo seguido. */
 export const DEITADO = Object.freeze({ largura: 1920, altura: 1080 });

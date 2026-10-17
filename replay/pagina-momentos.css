@@ -91,6 +91,10 @@
   .momMelhores .momRank { display: block; }
   /* O vídeo a tocar ganha espaço: assistir num quadrado de 240 px não é assistir. */
   .momMelhores .mom.tocando { grid-template-columns: 36px minmax(0, 1.5fr) minmax(0, 1fr); }
+  /* Com a visão do outro lado, ela fica por baixo do vídeo e o texto ocupa a coluna da direita inteira. */
+  .momMelhores .mom:has(.momPov) .momVideo { grid-column: 2; grid-row: 1; }
+  .momMelhores .mom:has(.momPov) .momPov { grid-column: 2; grid-row: 2; width: 60%; }
+  .momMelhores .mom:has(.momPov) .momInfo { grid-column: 3; grid-row: 1 / span 2; }
 }
 
 /* ── Por streamer ──────────────────────────────────────────────────────── */
@@ -111,3 +115,10 @@
 .momLinhas { display: grid; gap: var(--e6); min-width: 0; }
 .momLinha { display: grid; gap: var(--e3); min-width: 0; }
 .momLinha > h2 { margin: 0; font: 600 var(--t-medio)/var(--lh-apertado) var(--letra); color: var(--tinta); }
+
+/* A visão do outro lado: menor, por baixo do vídeo no celular e ao lado dele em tela larga. */
+.momPov { display: grid; gap: var(--e2); min-width: 0; }
+.momPovTopo { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--e3); }
+.momPovNome { font: 500 var(--t-menor)/var(--lh) var(--letra); color: var(--tinta-2); }
+.momPovKick { font: 500 var(--t-menor)/var(--lh) var(--letra); color: var(--acento); }
+.momPov video { width: 100%; aspect-ratio: 16 / 9; display: block; border-radius: var(--r-2); background: var(--video-fundo); }

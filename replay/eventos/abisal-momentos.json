@@ -1,6 +1,6 @@
 {
  "evento": "Abisal",
- "atualizado": "2026-10-17T18:03:29.524Z",
+ "atualizado": "2026-10-17T18:19:31.003Z",
  "momentos": [
   {
    "id": "kodd-1792192744500",
@@ -25,7 +25,13 @@
    "uuid": "b6ef6e3b-024a-4cdc-bb53-008b2710089f",
    "aosS": 10534,
    "vodId": "01a14662-22d8-79bc-a63b-eef8ec4a4f94",
-   "miniatura": "eventos/abisal-momentos/kodd-1792192744500.jpg"
+   "miniatura": "eventos/abisal-momentos/kodd-1792192744500.jpg",
+   "pov": {
+    "canal": "liks",
+    "uuid": "bf776876-3481-419e-87f0-3ba8604da777",
+    "aosS": 18574.37,
+    "vodId": "01a145e7-7498-7315-afef-8099fd71d8c0"
+   }
   },
   {
    "id": "kodd-1792195504865",

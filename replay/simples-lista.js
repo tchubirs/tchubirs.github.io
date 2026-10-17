@@ -5,8 +5,8 @@
 // mortes do servidor) e está a ser mexido por outro trabalho. Aqui é um streamer só e um vídeo só: os
 // picos do chat dele e o que o som dele achou, juntos num momento quando caem a menos de um minuto.
 
-import { lerLinkKick, slugDoNome } from './kick.js?v=cc78b7e1e7';
-import { CONF_SEM_CORTE } from './indice.js?v=cc78b7e1e7';
+import { lerLinkKick, slugDoNome } from './kick.js?v=7431aa2751';
+import { CONF_SEM_CORTE } from './indice.js?v=7431aa2751';
 
 /** O nome de um evento salvo como o arquivo dele: "Abisal" e "abisal" são eventos/abisal.json. */
 export function nomeDeEvento(texto) {
