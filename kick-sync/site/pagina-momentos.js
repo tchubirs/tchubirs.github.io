@@ -62,7 +62,7 @@ const NOMES_IDIOMA = { pt: 'Português', en: 'English', es: 'Español' };
 const ANTES_S = 3;
 
 const $ = (id) => document.getElementById(id);
-const estado = { idioma: 'pt', nome: '', dados: null, aba: 'melhores', tocando: null };
+const estado = { idioma: 'pt', nome: '', dados: null, aba: 'melhores', tocando: null, aviso: null };
 const porId = new Map();
 
 function idiomaInicial() {
@@ -115,9 +115,11 @@ function miniatura(m) {
   } catch { return null; }
 }
 
+const temClipe = (m) => CLIPE.test(m.clipe || '');
+
 function linkDaKick(m) {
   const canal = encodeURIComponent(m.canal);
-  if (m.clipe) return `https://kick.com/${canal}/clips/${encodeURIComponent(m.clipe)}`;
+  if (temClipe(m)) return `https://kick.com/${canal}/clips/${encodeURIComponent(m.clipe)}`;
   if (UUID7.test(m.vodId || '')) return `https://kick.com/${canal}/videos/${m.vodId}?t=${Math.max(0, Math.round(m.aosS))}`;
   return `https://kick.com/${canal}`;
 }
@@ -188,8 +190,15 @@ function textos() {
   if (estado.dados) {
     $('nomeEvento').textContent = String(estado.dados.evento || estado.nome);
     $('momSub').textContent = t('sub', { n: porId.size, c: new Set([...porId.values()].map((m) => m.canal)).size });
-    pintar();
+    // Trocar o idioma não corta o vídeo que está a tocar; os cartões mudam na próxima pintura.
+    if (!estado.tocando) pintar();
   }
+  if (estado.aviso) $('momEstado').textContent = t(...estado.aviso);
+}
+
+function avisar(chave, vars) {
+  estado.aviso = chave ? [chave, vars] : null;
+  $('momEstado').textContent = chave ? t(chave, vars) : '';
 }
 
 /** Larga o vídeo que estiver a tocar e devolve a foto ao cartão dele. */
@@ -217,13 +226,19 @@ async function tocar(cartaoEl) {
   video.playsInline = true;
   const vez = { cartao: cartaoEl, caixa, capa: caixa.innerHTML, video, hls: null, controlo: new AbortController() };
   estado.tocando = vez;
+  // Manifesto ou pedaço que não chega (VOD expirado, clipe apagado): volta a foto e diz para tentar na Kick.
+  const falhou = () => {
+    if (estado.tocando !== vez) return;
+    parar();
+    caixa.insertAdjacentHTML('beforeend', `<p class="momErro" role="alert">${escapar(t('falhou'))}</p>`);
+  };
   cartaoEl.classList.add('tocando');
   caixa.replaceChildren(video);
   try {
     let url;
     let de = 0;
     let ate = null;
-    if (m.clipe) {
+    if (temClipe(m)) {
       url = (await clipeDaKick(m.clipe, { sinal: vez.controlo.signal })).m3u8;
     } else {
       const fonte = await fonteDoVod(m.uuid, { sinal: vez.controlo.signal });
@@ -246,7 +261,9 @@ async function tocar(cartaoEl) {
       vez.hls = new window.Hls({ startPosition: de });
       vez.hls.loadSource(url);
       vez.hls.attachMedia(video);
+      vez.hls.on(window.Hls.Events.ERROR, (_, d) => { if (d?.fatal) falhou(); });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.addEventListener('error', falhou, { once: true });
       video.src = url;
       if (de) video.addEventListener('loadedmetadata', () => { video.currentTime = de; }, { once: true });
     } else {
@@ -265,12 +282,12 @@ async function tocar(cartaoEl) {
 /** Um VOD sem o id da página: o link da Kick só se sabe depois de perguntar, e pergunta-se no toque. */
 async function abrirNaKick(ev, a) {
   const m = porId.get(a.closest('.mom')?.dataset.id);
-  if (!m || m.clipe || UUID7.test(m.vodId || '')) return;
+  if (!m || temClipe(m) || UUID7.test(m.vodId || '')) return;
   ev.preventDefault();
   const janela = window.open('', '_blank');
   if (janela) janela.opener = null;
   const id = await idDaPaginaDoVod(m.uuid).catch(() => null);
-  if (id) m.vodId = id;
+  if (id) { m.vodId = id; a.href = linkDaKick(m); }
   if (janela) janela.location.href = linkDaKick(m);
   else location.href = linkDaKick(m);
 }
@@ -309,18 +326,18 @@ async function iniciar() {
   let pedido = '';
   try { pedido = new URLSearchParams(location.search).get('e') || ''; } catch { pedido = ''; }
   estado.nome = pedido.trim().toLowerCase();
-  if (!/^[a-z0-9-]{1,60}$/.test(estado.nome)) { $('momEstado').textContent = t('semEvento'); return; }
-  $('momEstado').textContent = t('carregando');
+  if (!/^[a-z0-9-]{1,60}$/.test(estado.nome)) { avisar('semEvento'); return; }
+  avisar('carregando');
   let dados = null;
   try {
     const r = await fetch(`eventos/${estado.nome}-momentos.json`, { cache: 'no-cache' });
     if (r.ok) dados = JSON.parse(await r.text());
   } catch { dados = null; }
   const momentos = Array.isArray(dados?.momentos) ? dados.momentos.filter(valido) : [];
-  if (!momentos.length) { $('momEstado').textContent = t('naoExiste', { nome: estado.nome }); return; }
+  if (!momentos.length) { avisar('naoExiste', { nome: estado.nome }); return; }
   for (const m of momentos) porId.set(m.id, { ...m });
   estado.dados = dados;
-  $('momEstado').textContent = '';
+  avisar(null);
   textos();
 }
 

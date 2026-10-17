@@ -37,7 +37,8 @@ cp site/eventos/*.json "$DESTINO/eventos/"
 # As miniaturas da tela de momentos (momentos.html?e=<nome> lê eventos/<nome>-momentos.json e as fotos da
 # pasta com o mesmo nome).
 for d in site/eventos/*/; do
-  if [ -d "$d" ]; then mkdir -p "$DESTINO/eventos/$(basename "$d")"; cp "$d"* "$DESTINO/eventos/$(basename "$d")/"; fi
+  # Limpa antes: uma foto que saiu da lista não pode continuar publicada.
+  if [ -d "$d" ]; then rm -rf "$DESTINO/eventos/$(basename "$d")"; mkdir -p "$DESTINO/eventos/$(basename "$d")"; cp "$d"* "$DESTINO/eventos/$(basename "$d")/"; fi
 done
 # O leitor de texto dos "nomes na tela" (tesseract.js 7.0.0, núcleo 7.0.0 e o inglês best_int), com as
 # licenças. Fica connosco pelo mesmo motivo do hls.js, e com a versão no caminho de origem: não leva carimbo.

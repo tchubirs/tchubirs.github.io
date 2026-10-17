@@ -41,8 +41,9 @@ async function preparar(p, { dados = MOMENTOS } = {}) {
   await p.route('**/hls-*.js', (r) => r.fulfill({
     status: 200, contentType: 'text/javascript',
     body: 'window.__hls=[];window.Hls=function(c){var e={config:c||{},src:null,destruido:false};window.__hls.push(e);'
-      + 'this.loadSource=function(u){e.src=u;};this.attachMedia=function(){};this.destroy=function(){e.destruido=true;};};'
-      + 'window.Hls.isSupported=function(){return true;};',
+      + 'this.loadSource=function(u){e.src=u;};this.attachMedia=function(){};this.destroy=function(){e.destruido=true;};'
+      + 'this.on=function(n,f){e[n]=f;};};'
+      + 'window.Hls.isSupported=function(){return true;};window.Hls.Events={ERROR:"hlsError"};',
   }));
   await p.route('**/eventos/teste-momentos.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(dados) }));
   await p.route('**/eventos/teste-momentos/*.jpg', (r) => r.abort());
@@ -157,10 +158,23 @@ test('momentos: um toque toca ali mesmo; o VOD começa 3 s antes e o clipe pelo 
     assert.equal(await barco.locator('.momCapa').count(), 1);
     assert.equal(await p.locator('.mom[data-id="minita"] .momKick').getAttribute('href'), `https://kick.com/kodd/clips/${CLIPE}`);
 
+    // Trocar o idioma não corta o vídeo.
+    await p.selectOption('#idioma', 'en');
+    assert.equal(await p.locator('.mom[data-id="minita"] video').count(), 1);
+    assert.equal(await p.evaluate(() => window.__hls[1].destruido), false);
+    await p.selectOption('#idioma', 'pt');
+
+    // Um erro fatal do hls (manifesto que não chega): volta a foto e o aviso para tentar na Kick.
+    await p.evaluate(() => window.__hls[1].hlsError('hlsError', { fatal: true }));
+    assert.equal(await p.locator('video').count(), 0);
+    assert.equal(await p.locator('.mom[data-id="minita"] .momErro').textContent(), 'Não deu para abrir este vídeo agora. Tente na Kick.');
+    await p.locator('.mom[data-id="minita"] .momCapa').click();
+    await p.waitForFunction(() => window.__hls.length === 3 && window.__hls[2].src);
+
     // Trocar de aba larga o vídeo.
     await p.click('#abaStreamers');
     assert.equal(await p.locator('video').count(), 0);
-    assert.equal(await p.evaluate(() => window.__hls[1].destruido), true);
+    assert.equal(await p.evaluate(() => window.__hls[2].destruido), true);
     assert.ok(await semRolagemLateral(p));
     assert.deepEqual(erros, []);
   });
@@ -170,6 +184,9 @@ test('momentos: sem evento no endereço, ou sem arquivo, diz o que falta', semNa
   await preparar(p);
   await p.goto(`http://127.0.0.1:${PORTA}/momentos.html`, { waitUntil: 'networkidle' });
   assert.equal(await p.locator('#momEstado').textContent(), 'Falta o evento no endereço (momentos.html?e=abisal).');
+  await p.selectOption('#idioma', 'en');
+  assert.equal(await p.locator('#momEstado').textContent(), 'The event is missing from the address (momentos.html?e=abisal).');
+  await p.selectOption('#idioma', 'pt');
   await p.goto(`http://127.0.0.1:${PORTA}/momentos.html?e=nao-existe`, { waitUntil: 'networkidle' });
   await p.waitForFunction(() => /Ainda não há/.test(document.getElementById('momEstado').textContent));
   assert.equal(await p.locator('#listaMomentos .mom').count(), 0);
