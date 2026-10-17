@@ -374,6 +374,19 @@ export async function idDaPaginaDoVod(uuid, { buscar = fetch, sinal } = {}) {
   return typeof id === 'string' ? id : null;
 }
 
+/**
+ * O vídeo de um VOD pelo `uuid` da lista de VODs: o master (`source`) e o id da página, os dois na mesma
+ * resposta da v1 (medido em 17/10). Para tocar um trecho sem carregar o canal inteiro (momentos.html).
+ */
+export async function fonteDoVod(uuid, { buscar = fetch, sinal } = {}) {
+  const r = await buscar(`https://kick.com/api/v1/video/${encodeURIComponent(uuid)}`, { signal: sinal });
+  if (!r.ok) throw Object.assign(new Error(`vod ${r.status}`), { name: 'SEM-VOD' });
+  const v = await r.json();
+  if (typeof v?.source !== 'string' || !v.source) throw Object.assign(new Error('vod sem vídeo'), { name: 'SEM-VOD' });
+  const id = v.livestream?.vod_id;
+  return { m3u8: v.source, vodId: typeof id === 'string' ? id : null };
+}
+
 /** Um clipe da Kick: o que é preciso para o pôr no relógio e para o cortar. */
 export async function clipeDaKick(id, { buscar = fetch, sinal } = {}) {
   const r = await buscar(`https://kick.com/api/v2/clips/${encodeURIComponent(id)}`, { signal: sinal });
