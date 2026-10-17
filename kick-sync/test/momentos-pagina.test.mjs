@@ -217,3 +217,38 @@ test('momentos: duas linhas (virais e highlights) e o clipe com VOD toca do VOD,
   assert.ok(await semRolagemLateral(p));
   assert.deepEqual(erros, []);
 });
+
+test('momentos: a visão do outro lado toca junto, menor e muda, e some com o vídeo principal', semNavegador, async () => {
+  const { p, erros } = await abrir({ caminho: null, modo: null, ecra: { width: 400, height: 860 } });
+  const OUTRO = 'bf776876-3481-419e-87f0-3ba8604da777';
+  const [barco, minita] = MOMENTOS.momentos;
+  const dados = { ...MOMENTOS, momentos: [{ ...barco, pov: { canal: 'liks', uuid: OUTRO, aosS: 13110.4 } }, minita] };
+  const pedidos = await preparar(p, { dados });
+  await p.goto(`http://127.0.0.1:${PORTA}/momentos.html?e=teste`, { waitUntil: 'networkidle' });
+  await p.waitForSelector('#listaMomentos .mom');
+  const card = p.locator('.mom[data-id="barco"]');
+  assert.equal(await card.locator('.momPov').count(), 0);
+  await card.locator('.momCapa').click();
+  await p.waitForFunction(() => window.__hls.length === 2 && window.__hls[1].src);
+  assert.deepEqual(pedidos.vod, [`https://kick.com/api/v1/video/${VOD}`, `https://kick.com/api/v1/video/${OUTRO}`]);
+  // Mesmo instante da cena: o principal abre em 13100 (13103 − 3) e a outra visão 7,4 s à frente no VOD dela.
+  const inicio = await p.evaluate(() => window.__hls.map((h) => h.config.startPosition));
+  assert.equal(inicio[0], 13100);
+  assert.ok(Math.abs(inicio[1] - 13107.4) < 0.01, String(inicio[1]));
+  assert.equal(await card.locator('.momPovNome').textContent(), 'Visão de liks, do outro lado');
+  assert.equal(await card.locator('.momPov video').evaluate((v) => v.muted), true);
+  // No celular fica por baixo do vídeo principal, sem alargar a página.
+  const pos = await p.evaluate(() => {
+    const v = document.querySelector('.mom[data-id="barco"] .momVideo').getBoundingClientRect();
+    const o = document.querySelector('.mom[data-id="barco"] .momPov').getBoundingClientRect();
+    return o.top >= v.bottom - 1;
+  });
+  assert.equal(pos, true);
+  assert.ok(await semRolagemLateral(p));
+  // Tocar outro cartão larga as duas.
+  await p.locator('.mom[data-id="minita"] .momCapa').click();
+  await p.waitForFunction(() => window.__hls.length === 3);
+  assert.equal(await p.locator('.momPov').count(), 0);
+  assert.deepEqual(await p.evaluate(() => [window.__hls[0].destruido, window.__hls[1].destruido]), [true, true]);
+  assert.deepEqual(erros, []);
+});

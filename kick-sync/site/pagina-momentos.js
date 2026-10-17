@@ -24,6 +24,7 @@ const TEXTOS = {
     potencial: 'potencial de viralizar',
     editar: 'Editar / baixar no Povix', kick: 'Kick',
     grupoUm: '1 momento · melhor ▲ {p}', grupoN: '{n} momentos · melhor ▲ {p}',
+    visaoDe: 'Visão de {canal}, do outro lado',
     linhaViral: 'Virais: reação forte', linhaHighlight: 'Highlights: jogadas de PvP',
   },
   en: {
@@ -40,6 +41,7 @@ const TEXTOS = {
     potencial: 'viral potential',
     editar: 'Edit / download in Povix', kick: 'Kick',
     grupoUm: '1 moment · best ▲ {p}', grupoN: '{n} moments · best ▲ {p}',
+    visaoDe: '{canal}’s view, from the other side',
     linhaViral: 'Viral: big reactions', linhaHighlight: 'Highlights: PvP plays',
   },
   es: {
@@ -56,6 +58,7 @@ const TEXTOS = {
     potencial: 'potencial viral',
     editar: 'Editar / descargar en Povix', kick: 'Kick',
     grupoUm: '1 momento · mejor ▲ {p}', grupoN: '{n} momentos · mejor ▲ {p}',
+    visaoDe: 'Visión de {canal}, del otro lado',
     linhaViral: 'Virales: reacción fuerte', linhaHighlight: 'Highlights: jugadas de PvP',
   },
 };
@@ -220,6 +223,8 @@ function parar() {
   estado.tocando = null;
   vez.controlo.abort();
   vez.hls?.destroy();
+  vez.hlsPov?.destroy();
+  vez.pov?.remove();
   vez.video.pause();
   vez.video.removeAttribute('src');
   vez.video.load();
@@ -286,10 +291,60 @@ async function tocar(cartaoEl) {
     // Depois do pedido à Kick o navegador pode já não contar o toque e recusar o som: os controlos estão à
     // vista, e o próximo toque toca.
     video.play().catch(() => {});
+    if (ate != null) tocarPov(m, vez);
   } catch (e) {
     if (estado.tocando !== vez || e?.name === 'AbortError') return;
     parar();
     caixa.insertAdjacentHTML('beforeend', `<p class="momErro" role="alert">${escapar(t(e?.name === 'SEM-PLAYER' ? 'semPlayer' : 'falhou'))}</p>`);
+  }
+}
+
+const povValida = (p) => p && CANAL.test(p.canal || '') && UUID.test(p.uuid || '') && Number.isFinite(p.aosS);
+
+/**
+ * A visão do outro lado (o dono, 17/10: o Povix é a POV do atacante e do defensor): um segundo vídeo, menor e
+ * mudo, do VOD de quem estava na mesma cena, a seguir o principal. Se não abrir, some sem estragar o principal.
+ */
+async function tocarPov(m, vez) {
+  if (!povValida(m.pov)) return;
+  const desvio = m.pov.aosS - m.aosS;
+  const caixa = document.createElement('div');
+  caixa.className = 'momPov';
+  caixa.innerHTML = `<span class="momPovNome">${escapar(t('visaoDe', { canal: m.pov.canal }))}</span>`;
+  const pov = document.createElement('video');
+  pov.muted = true;
+  pov.playsInline = true;
+  caixa.append(pov);
+  vez.pov = caixa;
+  vez.caixa.after(caixa);
+  const some = () => { if (estado.tocando === vez) { vez.hlsPov?.destroy(); vez.hlsPov = null; caixa.remove(); } };
+  try {
+    const { m3u8 } = await fonteDoVod(m.pov.uuid, { sinal: vez.controlo.signal });
+    if (estado.tocando !== vez) return;
+    // O principal já pode ter andado enquanto a v1 respondia: entra no mesmo instante da cena.
+    const de = Math.max(0, (vez.video.currentTime > 0 ? vez.video.currentTime : m.aosS - ANTES_S) + desvio);
+    if (window.Hls?.isSupported()) {
+      vez.hlsPov = new window.Hls({ startPosition: de });
+      vez.hlsPov.loadSource(m3u8);
+      vez.hlsPov.attachMedia(pov);
+      vez.hlsPov.on(window.Hls.Events.ERROR, (_, d) => { if (d?.fatal) some(); });
+    } else if (pov.canPlayType('application/vnd.apple.mpegurl')) {
+      pov.addEventListener('error', some, { once: true });
+      pov.src = m3u8;
+      pov.addEventListener('loadedmetadata', () => { pov.currentTime = de; }, { once: true });
+    } else { some(); return; }
+    // Segue o principal: tocar, pausar e saltar no mesmo instante da cena.
+    const v = vez.video;
+    v.addEventListener('play', () => pov.play().catch(() => {}));
+    v.addEventListener('pause', () => pov.pause());
+    v.addEventListener('seeked', () => { pov.currentTime = Math.max(0, v.currentTime + desvio); });
+    // Os dois carregam em ritmos diferentes: passando de ~1 s de diferença, a outra visão volta ao compasso.
+    v.addEventListener('timeupdate', () => {
+      if (pov.readyState >= 2 && !pov.seeking && Math.abs(pov.currentTime - (v.currentTime + desvio)) > 0.8) pov.currentTime = v.currentTime + desvio;
+    });
+    if (!v.paused) pov.play().catch(() => {});
+  } catch (e) {
+    if (e?.name !== 'AbortError') some();
   }
 }
 
