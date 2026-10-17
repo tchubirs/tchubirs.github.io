@@ -230,7 +230,8 @@ test('momentos: a visão do outro lado toca junto, menor e muda, e some com o v�
   assert.equal(await card.locator('.momPov').count(), 0);
   await card.locator('.momCapa').click();
   await p.waitForFunction(() => window.__hls.length === 2 && window.__hls[1].src);
-  assert.deepEqual(pedidos.vod, [`https://kick.com/api/v1/video/${VOD}`, `https://kick.com/api/v1/video/${OUTRO}`]);
+  // Os dois pedidos saem juntos (em paralelo); a ordem de chegada não importa.
+  assert.deepEqual([...pedidos.vod].sort(), [`https://kick.com/api/v1/video/${VOD}`, `https://kick.com/api/v1/video/${OUTRO}`].sort());
   // Mesmo instante da cena: o principal abre em 13100 (13103 − 3) e a outra visão 7,4 s à frente no VOD dela.
   const inicio = await p.evaluate(() => window.__hls.map((h) => h.config.startPosition));
   assert.equal(inicio[0], 13100);
@@ -245,10 +246,63 @@ test('momentos: a visão do outro lado toca junto, menor e muda, e some com o v�
   });
   assert.equal(pos, true);
   assert.ok(await semRolagemLateral(p));
+  assert.equal(await card.locator('.momPovKick').getAttribute('href'), 'https://kick.com/liks');
+  // Segue a velocidade do principal e pausa quando ele para a carregar.
+  await p.evaluate(() => {
+    window.__main = document.querySelector('.mom[data-id="barco"] .momVideo video');
+    window.__pov = document.querySelector('.mom[data-id="barco"] .momPov video');
+    window.__chamadas = { play: 0, pause: 0 };
+    window.__pov.play = () => { window.__chamadas.play++; return Promise.resolve(); };
+    window.__pov.pause = () => { window.__chamadas.pause++; };
+    window.__main.playbackRate = 1.5;
+    window.__main.dispatchEvent(new Event('ratechange'));
+    window.__main.dispatchEvent(new Event('waiting'));
+  });
+  assert.equal(await p.evaluate(() => window.__pov.playbackRate), 1.5);
+  assert.equal(await p.evaluate(() => window.__chamadas.pause), 1);
+  // Trocar o idioma muda o rótulo da outra visão sem cortar nada.
+  await p.selectOption('#idioma', 'en');
+  assert.equal(await card.locator('.momPovNome').textContent(), 'liks’s view, from the other side');
+  await p.selectOption('#idioma', 'pt');
   // Tocar outro cartão larga as duas.
   await p.locator('.mom[data-id="minita"] .momCapa').click();
   await p.waitForFunction(() => window.__hls.length === 3);
   assert.equal(await p.locator('.momPov').count(), 0);
   assert.deepEqual(await p.evaluate(() => [window.__hls[0].destruido, window.__hls[1].destruido]), [true, true]);
+  // A outra visão larga o vídeo e deixa de ouvir o principal antigo.
+  const depois = await p.evaluate(() => {
+    const antes = { ...window.__chamadas };
+    window.__main.dispatchEvent(new Event('play'));
+    window.__main.dispatchEvent(new Event('waiting'));
+    return { antes, agora: window.__chamadas, src: window.__pov.getAttribute('src') };
+  });
+  assert.deepEqual(depois.agora, depois.antes);
+  assert.equal(depois.src, null);
+  assert.deepEqual(erros, []);
+});
+
+test('momentos: a outra visão fora do VOD dela fica escondida e não salta', semNavegador, async () => {
+  const { p, erros } = await abrir({ caminho: null, modo: null, ecra: { width: 400, height: 860 } });
+  const OUTRO = 'bf776876-3481-419e-87f0-3ba8604da777';
+  const [barco] = MOMENTOS.momentos;
+  // O VOD da outra visão começa no meio da cena (aos 1 s dela = 13 103 s do principal): o começo cai antes dele.
+  const dados = { ...MOMENTOS, momentos: [{ ...barco, pov: { canal: 'liks', uuid: OUTRO, aosS: 1 } }] };
+  await preparar(p, { dados });
+  await p.goto(`http://127.0.0.1:${PORTA}/momentos.html?e=teste`, { waitUntil: 'networkidle' });
+  await p.waitForSelector('#listaMomentos .mom');
+  await p.locator('.mom[data-id="barco"] .momCapa').click();
+  await p.waitForFunction(() => window.__hls.length === 2 && window.__hls[1].src);
+  assert.equal(await p.evaluate(() => window.__hls[1].config.startPosition), 0);
+  const r = await p.evaluate(() => {
+    const main = document.querySelector('.mom[data-id="barco"] .momVideo video');
+    const pov = document.querySelector('.mom[data-id="barco"] .momPov video');
+    let saltos = 0;
+    const ct = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'currentTime');
+    Object.defineProperty(pov, 'currentTime', { get: () => ct.get.call(pov), set: (x) => { saltos++; ct.set.call(pov, x); } });
+    for (let i = 0; i < 5; i++) main.dispatchEvent(new Event('timeupdate'));
+    main.dispatchEvent(new Event('seeked'));
+    return { escondida: document.querySelector('.mom[data-id="barco"] .momPov').hidden, saltos };
+  });
+  assert.deepEqual(r, { escondida: true, saltos: 0 });
   assert.deepEqual(erros, []);
 });

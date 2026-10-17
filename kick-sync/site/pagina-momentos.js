@@ -209,6 +209,8 @@ function textos() {
     if (!estado.tocando) pintar();
   }
   if (estado.aviso) $('momEstado').textContent = t(...estado.aviso);
+  const pv = estado.tocando?.povVez;
+  if (pv) pv.caixa.querySelector('.momPovTopo').innerHTML = rotuloPov(pv.pov);
 }
 
 function avisar(chave, vars) {
@@ -223,8 +225,7 @@ function parar() {
   estado.tocando = null;
   vez.controlo.abort();
   vez.hls?.destroy();
-  vez.hlsPov?.destroy();
-  vez.pov?.remove();
+  limparPov(vez);
   vez.video.pause();
   vez.video.removeAttribute('src');
   vez.video.load();
@@ -260,6 +261,11 @@ async function tocar(cartaoEl) {
     if (temClipe(m) && !(UUID.test(m.uuid || '') && Number.isFinite(m.aosS))) {
       url = (await clipeDaKick(m.clipe, { sinal: vez.controlo.signal })).m3u8;
     } else {
+      // A visão do outro lado pede-se já, em paralelo com a do principal.
+      if (povValida(m.pov)) {
+        vez.fontePov = fonteDoVod(m.pov.uuid, { sinal: vez.controlo.signal });
+        vez.fontePov.catch(() => {});
+      }
       const fonte = await fonteDoVod(m.uuid, { sinal: vez.controlo.signal });
       url = fonte.m3u8;
       if (fonte.vodId && !UUID7.test(m.vodId || '')) {
@@ -276,22 +282,11 @@ async function tocar(cartaoEl) {
       const noFim = () => { if (video.currentTime >= ate) { video.pause(); video.removeEventListener('timeupdate', noFim); } };
       video.addEventListener('timeupdate', noFim);
     }
-    if (window.Hls?.isSupported()) {
-      vez.hls = new window.Hls({ startPosition: de });
-      vez.hls.loadSource(url);
-      vez.hls.attachMedia(video);
-      vez.hls.on(window.Hls.Events.ERROR, (_, d) => { if (d?.fatal) falhou(); });
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.addEventListener('error', falhou, { once: true });
-      video.src = url;
-      if (de) video.addEventListener('loadedmetadata', () => { video.currentTime = de; }, { once: true });
-    } else {
-      throw Object.assign(new Error('sem player'), { name: 'SEM-PLAYER' });
-    }
+    vez.hls = ligarPlayer(video, url, de, falhou);
     // Depois do pedido à Kick o navegador pode já não contar o toque e recusar o som: os controlos estão à
     // vista, e o próximo toque toca.
     video.play().catch(() => {});
-    if (ate != null) tocarPov(m, vez);
+    if (ate != null && vez.fontePov) tocarPov(m, vez);
   } catch (e) {
     if (estado.tocando !== vez || e?.name === 'AbortError') return;
     parar();
@@ -302,46 +297,96 @@ async function tocar(cartaoEl) {
 const povValida = (p) => p && CANAL.test(p.canal || '') && UUID.test(p.uuid || '') && Number.isFinite(p.aosS);
 
 /**
+ * Liga um m3u8 a um <video>: hls.js onde houver, senão o HLS nativo (Safari). `aoFalhar` corre num erro fatal.
+ * Devolve a instância do hls.js (null no nativo); sem nenhum dos dois, lança SEM-PLAYER.
+ */
+function ligarPlayer(video, url, de, aoFalhar) {
+  if (window.Hls?.isSupported()) {
+    const hls = new window.Hls({ startPosition: de });
+    hls.loadSource(url);
+    hls.attachMedia(video);
+    hls.on(window.Hls.Events.ERROR, (_, d) => { if (d?.fatal) aoFalhar(); });
+    return hls;
+  }
+  if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    video.addEventListener('error', aoFalhar, { once: true });
+    video.src = url;
+    if (de) video.addEventListener('loadedmetadata', () => { video.currentTime = de; }, { once: true });
+    return null;
+  }
+  throw Object.assign(new Error('sem player'), { name: 'SEM-PLAYER' });
+}
+
+/** Larga a visão do outro lado: para o vídeo, solta o hls e os ouvintes que ela punha no principal. */
+function limparPov(vez) {
+  const p = vez.povVez;
+  if (!p) return;
+  vez.povVez = null;
+  p.controlo.abort();
+  p.hls?.destroy();
+  p.video.pause();
+  p.video.removeAttribute('src');
+  p.video.load();
+  p.caixa.remove();
+}
+
+function linkDaKickPov(pov) {
+  const canal = encodeURIComponent(pov.canal);
+  return UUID7.test(pov.vodId || '') ? `https://kick.com/${canal}/videos/${pov.vodId}?t=${Math.max(0, Math.round(pov.aosS))}` : `https://kick.com/${canal}`;
+}
+
+const rotuloPov = (pov) => `<span class="momPovNome">${escapar(t('visaoDe', { canal: pov.canal }))}</span>`
+  + `<a class="momPovKick" href="${escapar(linkDaKickPov(pov))}" target="_blank" rel="noopener">${escapar(t('kick'))}</a>`;
+
+// Passando desta diferença (s) do principal, a outra visão volta ao compasso.
+const LIMIAR_POV_S = 0.8;
+
+/**
  * A visão do outro lado (o dono, 17/10: o Povix é a POV do atacante e do defensor): um segundo vídeo, menor e
  * mudo, do VOD de quem estava na mesma cena, a seguir o principal. Se não abrir, some sem estragar o principal.
  */
 async function tocarPov(m, vez) {
-  if (!povValida(m.pov)) return;
   const desvio = m.pov.aosS - m.aosS;
   const caixa = document.createElement('div');
   caixa.className = 'momPov';
-  caixa.innerHTML = `<span class="momPovNome">${escapar(t('visaoDe', { canal: m.pov.canal }))}</span>`;
+  caixa.innerHTML = `<div class="momPovTopo">${rotuloPov(m.pov)}</div>`;
   const pov = document.createElement('video');
   pov.muted = true;
   pov.playsInline = true;
   caixa.append(pov);
-  vez.pov = caixa;
+  const p = { caixa, video: pov, hls: null, pov: m.pov, controlo: new AbortController() };
+  vez.povVez = p;
   vez.caixa.after(caixa);
-  const some = () => { if (estado.tocando === vez) { vez.hlsPov?.destroy(); vez.hlsPov = null; caixa.remove(); } };
+  const some = () => { if (vez.povVez === p) limparPov(vez); };
   try {
-    const { m3u8 } = await fonteDoVod(m.pov.uuid, { sinal: vez.controlo.signal });
-    if (estado.tocando !== vez) return;
-    // O principal já pode ter andado enquanto a v1 respondia: entra no mesmo instante da cena.
-    const de = Math.max(0, (vez.video.currentTime > 0 ? vez.video.currentTime : m.aosS - ANTES_S) + desvio);
-    if (window.Hls?.isSupported()) {
-      vez.hlsPov = new window.Hls({ startPosition: de });
-      vez.hlsPov.loadSource(m3u8);
-      vez.hlsPov.attachMedia(pov);
-      vez.hlsPov.on(window.Hls.Events.ERROR, (_, d) => { if (d?.fatal) some(); });
-    } else if (pov.canPlayType('application/vnd.apple.mpegurl')) {
-      pov.addEventListener('error', some, { once: true });
-      pov.src = m3u8;
-      pov.addEventListener('loadedmetadata', () => { pov.currentTime = de; }, { once: true });
-    } else { some(); return; }
-    // Segue o principal: tocar, pausar e saltar no mesmo instante da cena.
+    const { m3u8 } = await vez.fontePov;
+    if (estado.tocando !== vez || vez.povVez !== p) return;
     const v = vez.video;
-    v.addEventListener('play', () => pov.play().catch(() => {}));
-    v.addEventListener('pause', () => pov.pause());
-    v.addEventListener('seeked', () => { pov.currentTime = Math.max(0, v.currentTime + desvio); });
-    // Os dois carregam em ritmos diferentes: passando de ~1 s de diferença, a outra visão volta ao compasso.
-    v.addEventListener('timeupdate', () => {
-      if (pov.readyState >= 2 && !pov.seeking && Math.abs(pov.currentTime - (v.currentTime + desvio)) > 0.8) pov.currentTime = v.currentTime + desvio;
-    });
+    // O instante da outra visão que corresponde ao do principal; fora do VOD dela (começou depois ou acabou
+    // antes) não há o que mostrar: fica escondida em vez de saltar a cada passo.
+    const alvo = () => {
+      const a = v.currentTime + desvio;
+      return a < 0 || (Number.isFinite(pov.duration) && a > pov.duration) ? null : a;
+    };
+    // O principal já pode ter andado enquanto a v1 respondia: entra no mesmo instante da cena.
+    const de = Math.max(0, (v.currentTime > 0 ? v.currentTime : Math.max(0, m.aosS - ANTES_S)) + desvio);
+    p.hls = ligarPlayer(pov, m3u8, de, some);
+    const acertar = (sempre) => {
+      const a = alvo();
+      caixa.hidden = a == null;
+      if (a == null || pov.readyState < 2 || pov.seeking) return;
+      if (sempre || Math.abs(pov.currentTime - a) > LIMIAR_POV_S) pov.currentTime = a;
+    };
+    const sinal = { signal: p.controlo.signal };
+    v.addEventListener('play', () => pov.play().catch(() => {}), sinal);
+    v.addEventListener('playing', () => pov.play().catch(() => {}), sinal);
+    v.addEventListener('pause', () => pov.pause(), sinal);
+    // O principal parado a carregar não deixa a outra visão fugir à frente.
+    v.addEventListener('waiting', () => pov.pause(), sinal);
+    v.addEventListener('ratechange', () => { pov.playbackRate = v.playbackRate; }, sinal);
+    v.addEventListener('seeked', () => acertar(true), sinal);
+    v.addEventListener('timeupdate', () => acertar(false), sinal);
+    pov.playbackRate = v.playbackRate;
     if (!v.paused) pov.play().catch(() => {});
   } catch (e) {
     if (e?.name !== 'AbortError') some();
