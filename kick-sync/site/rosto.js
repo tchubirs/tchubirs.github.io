@@ -456,7 +456,9 @@ export function abrirQuadrosEscondidos({ limiteMs = 15_000 } = {}) {
   const tela = document.createElement('canvas');
 
   function carregar(novo, tempoS) {
-    if (url === novo) return;
+    // Depois de um erro fatal o hls.js já não busca segmentos: mesma url sem recarregar deixava todos os quadros
+    // seguintes a falhar em ~150 ms. Com `falhou`, a mesma url recria o Hls (com startPosition no instante pedido).
+    if (url === novo && !falhou) return;
     hls?.destroy();
     hls = null;
     url = novo;

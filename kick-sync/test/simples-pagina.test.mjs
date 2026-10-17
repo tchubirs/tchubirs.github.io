@@ -266,6 +266,32 @@ test('modo simples: o nome do evento vira a lista simples, sem o mapa, e o mapa 
     await p2.close();
   });
 
+test('modo simples: o link curto do evento mostra "Abrindo o evento" enquanto carrega, e avisa se o evento não existe',
+  { ...semNavegador, timeout: 120_000 }, async () => {
+    const { p, erros } = await abrir({ ecra: { width: 390, height: 844 }, caminho: null, modo: 'simples' });
+    await preparar(p, { video: false });
+    let soltar;
+    const solto = new Promise((r) => { soltar = r; });
+    await p.route('**/eventos/teste.json', async (rota) => { await solto; await rota.fallback(); });
+    await p.goto(`http://127.0.0.1:${PORTA}/?e=teste`, { waitUntil: 'domcontentloaded' });
+    await p.waitForFunction(() => /^Abrindo o evento/.test(document.getElementById('simplesEstado').textContent), null, { timeout: 10_000 });
+    assert.equal(await p.locator('#simplesTrabalho').isVisible(), true);
+    assert.equal(await p.locator('#simplesForm').isVisible(), false);
+    soltar();
+    await p.waitForFunction(() => /^Evento Teste$/.test(document.getElementById('simplesQuem').textContent), null, { timeout: 30_000 });
+
+    const { p: p2, erros: erros2 } = await abrir({ ecra: { width: 390, height: 844 }, caminho: null, modo: 'simples' });
+    await preparar(p2, { video: false });
+    await p2.goto(`http://127.0.0.1:${PORTA}/?e=nao-existe`, { waitUntil: 'networkidle' });
+    await p2.waitForFunction(() => !document.getElementById('simplesErro').hidden, null, { timeout: 20_000 });
+    assert.match(await p2.locator('#simplesErro').innerText(), /Não achei o evento "nao-existe"/);
+    assert.equal(await p2.locator('#simplesForm').isVisible(), true);
+    assert.deepEqual(erros, []);
+    assert.deepEqual(erros2.filter((e) => !/404|Failed to load resource/.test(e)), []);
+    await p.close();
+    await p2.close();
+  });
+
 test('modo simples: "Excluir" tira o momento e ele não volta; "Mostrar mais" só aparece com mais de dez',
   { ...semNavegador, timeout: 120_000 }, async () => {
     const { p, erros } = await abrir({ ecra: { width: 1366, height: 768 }, caminho: null, modo: 'simples' });
