@@ -333,3 +333,75 @@ test('momentos: procurar um streamer deixa só os dele (e onde ele é o inimigo)
   assert.ok(await semRolagemLateral(p));
   assert.deepEqual(erros, []);
 });
+
+test('momentos: duas visões do inimigo lado a lado; o principal espera as duas, e a atrasada entra no instante certo', semNavegador, async () => {
+  const { p, erros } = await abrir({ caminho: null, modo: null, ecra: { width: 400, height: 860 } });
+  const VITIMA = 'c353a87d-f80f-42c4-b81b-0db2c048d47e';
+  const OUTRO = 'bf776876-3481-419e-87f0-3ba8604da777';
+  const [barco] = MOMENTOS.momentos;
+  const dados = { ...MOMENTOS, momentos: [{ ...barco, povs: [
+    { canal: 'celaa', uuid: VITIMA, aosS: 13203 }, { canal: 'liks', uuid: OUTRO, aosS: 13110.4 },
+  ] }] };
+  const pedidos = await preparar(p, { dados });
+  // O principal não arranca enquanto as visões não podem tocar: espia o play dele assim que o vídeo existir.
+  await p.addInitScript(() => {
+    window.__playsPrincipal = 0;
+    const play = HTMLMediaElement.prototype.play;
+    HTMLMediaElement.prototype.play = function () {
+      if (!this.muted) window.__playsPrincipal++;
+      return play.call(this).catch(() => {});
+    };
+  });
+  await p.goto(`http://127.0.0.1:${PORTA}/momentos.html?e=teste`, { waitUntil: 'networkidle' });
+  await p.waitForSelector('#listaMomentos .mom');
+  await p.locator('.mom[data-id="barco"] .momCapa').click();
+  await p.waitForFunction(() => window.__hls.length === 3 && window.__hls.every((h) => h.src));
+  assert.equal(pedidos.vod.length, 3);
+  assert.deepEqual(await p.$$eval('.momPovNome', (n) => n.map((x) => x.textContent)), ['Visão do inimigo: celaa', 'Visão do inimigo: liks']);
+  // Lado a lado, cada uma com metade da largura e embaixo do principal, sem alargar a página.
+  const caixas = await p.$$eval('.mom[data-id="barco"] .momPov', (cs) => cs.map((c) => c.getBoundingClientRect()).map((r) => ({ top: Math.round(r.top), w: Math.round(r.width) })));
+  assert.equal(caixas[0].top, caixas[1].top);
+  assert.ok(Math.abs(caixas[0].w - caixas[1].w) <= 1, JSON.stringify(caixas));
+  assert.ok(await semRolagemLateral(p));
+  // Só uma pronta: o principal ainda espera.
+  await p.evaluate(() => document.querySelectorAll('.momPov video')[0].dispatchEvent(new Event('canplay')));
+  await p.waitForTimeout(300);
+  assert.equal(await p.evaluate(() => window.__playsPrincipal), 0);
+  // A segunda: agora arranca.
+  await p.evaluate(() => document.querySelectorAll('.momPov video')[1].dispatchEvent(new Event('canplay')));
+  await p.waitForFunction(() => window.__playsPrincipal === 1);
+  // Uma visão que começa a tocar depois do principal vai para o instante dele mais o desvio dela.
+  const pos = await p.evaluate(() => {
+    const main = document.querySelector('.mom[data-id="barco"] .momVideo video');
+    const pov = document.querySelectorAll('.momPov video')[0];
+    Object.defineProperty(main, 'currentTime', { configurable: true, get: () => 13105 });
+    Object.defineProperty(pov, 'readyState', { configurable: true, get: () => 4 });
+    Object.defineProperty(pov, 'duration', { configurable: true, get: () => 40000 });
+    let posto = null;
+    Object.defineProperty(pov, 'currentTime', { configurable: true, get: () => 0, set: (v) => { posto = v; } });
+    pov.dispatchEvent(new Event('playing'));
+    return posto;
+  });
+  assert.equal(pos, 13105 + (13203 - 13103));
+  assert.deepEqual(erros, []);
+});
+
+test('momentos: se uma visão do inimigo não chega, o principal toca sozinho depois de uns segundos', semNavegador, async () => {
+  const { p, erros } = await abrir({ caminho: null, modo: null, ecra: { width: 400, height: 860 } });
+  const [barco] = MOMENTOS.momentos;
+  const dados = { ...MOMENTOS, momentos: [{ ...barco, povs: [{ canal: 'celaa', uuid: 'c353a87d-f80f-42c4-b81b-0db2c048d47e', aosS: 13203 }] }] };
+  await preparar(p, { dados });
+  await p.addInitScript(() => {
+    window.__playsPrincipal = 0;
+    const play = HTMLMediaElement.prototype.play;
+    HTMLMediaElement.prototype.play = function () { if (!this.muted) window.__playsPrincipal++; return play.call(this).catch(() => {}); };
+  });
+  await p.goto(`http://127.0.0.1:${PORTA}/momentos.html?e=teste`, { waitUntil: 'networkidle' });
+  await p.waitForSelector('#listaMomentos .mom');
+  const t0 = Date.now();
+  await p.locator('.mom[data-id="barco"] .momCapa').click();
+  await p.waitForFunction(() => window.__playsPrincipal === 1, null, { timeout: 8000 });
+  const espera = Date.now() - t0;
+  assert.ok(espera >= 3500 && espera < 7000, String(espera));
+  assert.deepEqual(erros, []);
+});

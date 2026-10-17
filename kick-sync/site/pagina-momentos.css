@@ -92,9 +92,9 @@
   /* O vídeo a tocar ganha espaço: assistir num quadrado de 240 px não é assistir. */
   .momMelhores .mom.tocando { grid-template-columns: 36px minmax(0, 1.5fr) minmax(0, 1fr); }
   /* Com a visão do outro lado, ela fica por baixo do vídeo e o texto ocupa a coluna da direita inteira. */
-  .momMelhores .mom:has(.momPov) .momVideo { grid-column: 2; grid-row: 1; }
-  .momMelhores .mom:has(.momPov) .momPov { grid-column: 2; grid-row: 2; width: 60%; }
-  .momMelhores .mom:has(.momPov) .momInfo { grid-column: 3; grid-row: 1 / span 2; }
+  .momMelhores .mom:has(.momPovs) .momVideo { grid-column: 2; grid-row: 1; }
+  .momMelhores .mom:has(.momPovs) .momPovs { grid-column: 2; grid-row: 2; }
+  .momMelhores .mom:has(.momPovs) .momInfo { grid-column: 3; grid-row: 1 / span 2; }
 }
 
 /* ── Por streamer ──────────────────────────────────────────────────────── */
@@ -117,8 +117,8 @@
 .momLinha > h2 { margin: 0; font: 600 var(--t-medio)/var(--lh-apertado) var(--letra); color: var(--tinta); }
 
 /* A visão do outro lado: menor, por baixo do vídeo no celular e ao lado dele em tela larga. */
-/* A visão do inimigo é coadjuvante: menor que o vídeo principal, encostada à direita no celular. */
-.momPov { display: grid; gap: var(--e2); min-width: 0; width: 62%; justify-self: end; }
+/* Cada visão do inimigo: rótulo com link e o vídeo, metade da largura do principal (ver .momPovs). */
+.momPov { display: grid; gap: var(--e2); min-width: 0; }
 .momPovTopo { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--e3); }
 .momPovNome { font: 500 var(--t-menor)/var(--lh) var(--letra); color: var(--tinta-2); }
 .momPovKick { font: 500 var(--t-menor)/var(--lh) var(--letra); color: var(--acento); }
@@ -130,3 +130,6 @@
   border: 1px solid var(--linha-2); border-radius: var(--r-2); padding: var(--e2) var(--e3); }
 .momMais { justify-self: center; font: 500 var(--t-menor)/var(--lh) var(--letra); color: var(--tinta); background: var(--sup-3);
   border: 1px solid var(--linha-2); border-radius: 999px; padding: var(--e2) var(--e4); cursor: pointer; }
+
+/* Até duas visões do inimigo lado a lado embaixo do principal (no celular também, ~50% cada; empilha se não couber). */
+.momPovs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--e3); min-width: 0; }
