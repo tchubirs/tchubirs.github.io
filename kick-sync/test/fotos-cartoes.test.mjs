@@ -31,6 +31,9 @@ function domFalso() {
       if (this.morto) return;
       setTimeout(() => { this.seeking = false; this.readyState = 4; this.dispatchEvent(new Event('seeked')); }, 5);
     }
+    // O caminho nativo (Safari): pôr a `src` recomeça a carga e limpa o erro.
+    set src(v) { this._src = v; this.error = null; this.morto = false; }
+    get src() { return this._src; }
     setAttribute() {} removeAttribute() {} load() {} remove() {}
   }
   const tela = () => ({ width: 0, height: 0, getContext: () => ({ drawImage() {} }) });
@@ -47,7 +50,7 @@ function domFalso() {
     destroy() { this.destruido = true; }
   }
   globalThis.window = { Hls };
-  return { hlsCriados, erroFatal() { hlsCriados.at(-1).h.hlsError({}, { fatal: true }); videos.forEach((v) => { v.morto = true; }); }, restaurar() { globalThis.document = guardado.document; globalThis.window = guardado.window; } };
+  return { hlsCriados, videos, erroFatal() { hlsCriados.at(-1).h.hlsError({}, { fatal: true }); videos.forEach((v) => { v.morto = true; }); }, restaurar() { globalThis.document = guardado.document; globalThis.window = guardado.window; } };
 }
 
 test('2: depois de um erro fatal do hls.js, o quadro seguinte na MESMA url recarrega e funciona', async () => {
@@ -76,6 +79,34 @@ test('2b: um erro fatal não pode derrubar os quadros seguintes da mesma url', a
     let nulos = 0;
     for (const s of [40, 70, 100]) if (!(await q.quadro({ url, tempoS: s }))) nulos++;
     assert.equal(nulos, 0, `${nulos} de 3 quadros falharam depois de UM erro fatal; hls criados: ${d.hlsCriados.length}`);
+  } finally { d.restaurar(); }
+});
+
+// Revisão 17/10: no caminho nativo (sem hls.js, como no Safari) o erro fica em `video.error`, não em `falhou`.
+test('2c: sem hls.js, depois de um erro do vídeo o quadro seguinte na MESMA url recarrega e funciona', async () => {
+  const d = domFalso();
+  try {
+    globalThis.window = {};
+    const q = abrirQuadrosEscondidos({ limiteMs: 1000 });
+    const url = 'https://cdn/vod/480p.m3u8';
+    assert.ok(await q.quadro({ url, tempoS: 10 }), 'o primeiro quadro tem de sair (controle do teste)');
+    d.videos[0].error = { code: 2 }; d.videos[0].morto = true;
+    assert.ok(await q.quadro({ url, tempoS: 40 }), 'o 2o quadro na mesma url falhou depois de um erro do vídeo');
+  } finally { d.restaurar(); }
+});
+
+// Revisão 17/10: um quadro pedido depois de fechar não recria o hls.js num vídeo já tirado da página.
+test('2d: depois de fechar, quadro() devolve null sem criar outro hls.js', async () => {
+  const d = domFalso();
+  try {
+    const q = abrirQuadrosEscondidos({ limiteMs: 2000 });
+    const url = 'https://cdn/vod/480p.m3u8';
+    await q.quadro({ url, tempoS: 10 });
+    q.fechar();
+    const t0 = Date.now();
+    assert.equal(await q.quadro({ url, tempoS: 40 }), null);
+    assert.ok(Date.now() - t0 < 200, `demorou ${Date.now() - t0} ms`);
+    assert.equal(d.hlsCriados.length, 1, 'criou outro hls.js depois de fechar');
   } finally { d.restaurar(); }
 });
 
@@ -259,6 +290,34 @@ test('5b: "Começar de novo" a meio do laço encerra a volta: sem foto tardia, s
       assert.equal(depois.chamadas, antes.chamadas, `pediu quadros depois de fechar: ${antes.chamadas} -> ${depois.chamadas}`);
       assert.equal(depois.abertas, depois.fechadas, 'um decodificador ficou aberto');
       assert.equal(depois.tardias, 0);
+      assert.deepEqual(erros, []);
+    } finally { await p.close(); }
+  });
+
+// Revisão 17/10: "Começar de novo" e reabrir o MESMO canal reusa o mesmo objeto da linha; a volta nova tem de
+// começar na mesma (antes só começava se a linha fosse outra).
+test('5d: "Começar de novo" a meio do laço e reabrir o mesmo canal: a lista nova ganha fotos',
+  { ...semNavegador, timeout: 120_000 }, async () => {
+    const { p, erros } = await listaDeTchubi({ portaEm: 2 });
+    try {
+      await p.waitForFunction(() => window.__presa === true, null, { timeout: 30_000 });
+      await p.evaluate(() => document.getElementById('simplesDeNovo').click());
+      await p.fill('#simplesCaixa', 'tchubi');
+      await p.click('#simplesAchar');
+      await p.waitForSelector('#simplesPreparar:not([hidden])');
+      await p.check('#buscaInteira');
+      await p.click('#buscaComecar');
+      await p.waitForFunction(() => document.getElementById('simplesParar').hidden && document.querySelectorAll('#simplesLista li').length > 0, null, { timeout: 60_000 });
+      await p.evaluate(() => window.__soltar());
+      await p.waitForFunction(() => {
+        const n = document.querySelectorAll('#simplesLista li').length;
+        return n >= 3 && document.querySelectorAll('#simplesLista li .simplesFoto img').length === n;
+      }, null, { timeout: 20_000 }).catch(() => {});
+      const r = await medir(p);
+      console.log('5d medido:', JSON.stringify(r));
+      assert.equal(r.comFoto, r.cartoes, `${r.comFoto} de ${r.cartoes} cartões com foto`);
+      assert.equal(r.fechadas, r.abertas, 'um decodificador ficou aberto');
+      assert.equal(r.tardias, 0);
       assert.deepEqual(erros, []);
     } finally { await p.close(); }
   });

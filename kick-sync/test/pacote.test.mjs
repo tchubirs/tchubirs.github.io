@@ -134,12 +134,15 @@ test('o texto do pacote diz o ficheiro, o início, a duração, o atraso e o VOD
   assert.ok(linhas.includes('   pacote.txtSemLink'));
 });
 
-test('o link do VOD só sai com o uuid da Kick', () => {
-  assert.equal(linkDoVod('tchubi', { uuid: 'd6768682-411f-4390-839f-3c63b5940cf2' }),
-    'https://kick.com/tchubi/videos/d6768682-411f-4390-839f-3c63b5940cf2');
-  assert.equal(linkDoVod('tchubi', { uuid: null }), null);
-  assert.equal(linkDoVod('tchubi', { uuid: '../x' }), null);
-  assert.equal(linkDoVod('', { uuid: 'abcdef12' }), null);
+// 17/10: kick.com/<canal>/videos/<uuid da lista> dá "página não encontrada"; a página só abre pelo vod_id.
+test('o link do VOD só sai com o vod_id (UUID v7) da Kick', () => {
+  assert.equal(linkDoVod('tchubi', { vodId: '01a144e3-1840-72bf-9278-612affd77585' }),
+    'https://kick.com/tchubi/videos/01a144e3-1840-72bf-9278-612affd77585');
+  assert.equal(linkDoVod('tchubi', { uuid: 'd6768682-411f-4390-839f-3c63b5940cf2' }), null);
+  assert.equal(linkDoVod('tchubi', { vodId: 'd6768682-411f-4390-839f-3c63b5940cf2' }), null);
+  assert.equal(linkDoVod('tchubi', { vodId: null }), null);
+  assert.equal(linkDoVod('tchubi', { vodId: '../x' }), null);
+  assert.equal(linkDoVod('', { vodId: '01a144e3-1840-72bf-9278-612affd77585' }), null);
   assert.equal(horaUtc(Date.parse('2026-10-05T01:02:03Z')), '01:02:03');
   assert.equal(duracaoLonga(59.6), '0:01:00');
 });

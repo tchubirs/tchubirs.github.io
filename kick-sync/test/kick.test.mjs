@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
-  vodsDoCanal, lerMaster, lerPlaylist, segmentosNaJanela, tempoDeMidia, lerLinkKick, slugDoNome, vodDaKick,
+  vodsDoCanal, lerMaster, lerPlaylist, segmentosNaJanela, tempoDeMidia, lerLinkKick, slugDoNome, vodDaKick, idDaPaginaDoVod,
 } from '../site/kick.js';
 
 // The fixtures are real responses recorded from Kick on 31/08/2026. That is the
@@ -219,4 +219,17 @@ test('o vod_id novo da Kick abre a live do canal do link pela hora dentro do id'
   const v = await vodDaKick(lido.id, { buscar, slug: lido.slug });
   assert.deepEqual(v, { slug: 'tchubi', inicioMs: Date.parse('2026-10-08T20:42:01Z') });
   await assert.rejects(vodDaKick(lido.id, { buscar }), { name: 'SEM-VOD' });
+});
+
+// 17/10: a página do VOD só abre pelo vod_id, que a v1 traz em livestream.vod_id.
+test('o id da página do VOD vem do livestream.vod_id da v1', async () => {
+  const pedidos = [];
+  const buscar = async (u) => {
+    pedidos.push(u);
+    return { ok: true, status: 200, json: async () => ({ uuid: '48aeee66-94bd-4ee5-b913-c10bd256c353', livestream: { vod_id: '01a144e3-1840-72bf-9278-612affd77585' } }) };
+  };
+  assert.equal(await idDaPaginaDoVod('48aeee66-94bd-4ee5-b913-c10bd256c353', { buscar }), '01a144e3-1840-72bf-9278-612affd77585');
+  assert.deepEqual(pedidos, ['https://kick.com/api/v1/video/48aeee66-94bd-4ee5-b913-c10bd256c353']);
+  assert.equal(await idDaPaginaDoVod('x', { buscar: async () => ({ ok: false, status: 404 }) }), null);
+  assert.equal(await idDaPaginaDoVod('x', { buscar: async () => ({ ok: true, status: 200, json: async () => ({ livestream: null }) }) }), null);
 });

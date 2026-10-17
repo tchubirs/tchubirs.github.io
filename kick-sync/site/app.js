@@ -7,7 +7,7 @@
 
 import './dicas.js';
 import {
-  vodsDoCanal, lerMaster, lerPlaylist, procurarCanais, lerLinkKick, clipeDaKick, vodDaKick, DESCONHECIDO, slugDoNome,
+  vodsDoCanal, lerMaster, lerPlaylist, procurarCanais, lerLinkKick, clipeDaKick, vodDaKick, idDaPaginaDoVod, DESCONHECIDO, slugDoNome,
   segmentosNaJanela,
 } from './kick.js';
 import {
@@ -4707,6 +4707,31 @@ async function baixarMontagem(soEsta = null, { guardar = false } = {}) {
   if (!soEsta && !umSo) oferecerZip(paraZip);
 }
 
+// Sem o id da página o pacote sai sem link, mas o ângulo já cortado não se perde por causa dele, nem o
+// pacote fica preso numa Kick que não responde.
+// Só os achados ficam guardados: um que falhou tenta de novo no pacote seguinte.
+const vodIdsAchados = new Map();
+async function vodIdDoPacote(vod, sinal) {
+  if (typeof vod?.uuid !== 'string') return null;
+  if (vodIdsAchados.has(vod.uuid)) return vodIdsAchados.get(vod.uuid);
+  if (sinal.aborted) throw new DOMException('cancelado', 'AbortError');
+  const vigia = new AbortController();
+  const largar = () => vigia.abort();
+  sinal.addEventListener('abort', largar, { once: true });
+  const relogio = setTimeout(largar, 10_000);
+  try {
+    const id = await idDaPaginaDoVod(vod.uuid, { sinal: vigia.signal });
+    if (id) vodIdsAchados.set(vod.uuid, id);
+    return id;
+  } catch (e) {
+    if (sinal.aborted) throw e;
+    return null;
+  } finally {
+    clearTimeout(relogio);
+    sinal.removeEventListener('abort', largar);
+  }
+}
+
 /**
  * O pacote do lance para o editor (IDEIAS.md, item 6): um ZIP com o trecho de cada ângulo que filmava o
  * lance (a cópia rápida, em MP4), um projeto multicâmera .fcpxml com os ângulos alinhados e um texto com
@@ -4769,7 +4794,7 @@ async function baixarPacote(m) {
         altura: p.qualidade?.altura,
         fps: p.qualidade?.fps,
         atrasoMs: nudge,
-        link: linkDoVod(linha.slug, peca?.vod),
+        link: linkDoVod(linha.slug, { vodId: await vodIdDoPacote(peca?.vod, controlo.signal) }),
         noVodS: peca ? (inicioPlaylist - peca.playlist.inicio) / 1000 : null,
       });
       ficheiros.push({ nome: ficheiro, blob: new Blob([r.bytes], { type: r.tipo }), crc: crc32(r.bytes), tamanho: r.bytes.length });

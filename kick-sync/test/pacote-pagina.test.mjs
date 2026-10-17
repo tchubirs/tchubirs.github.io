@@ -27,9 +27,9 @@ function lerZip(buf) {
   return ficheiros;
 }
 
-async function preparar(p, { lento = 0 } = {}) {
+async function preparar(p, { lento = 0, uuids } = {}) {
   // O `outro` entra no ar 30 s depois do `tchubi`.
-  await kickFalsa(p, { canais: ['tchubi', 'outro'], desviosS: { outro: 30 } });
+  await kickFalsa(p, { canais: ['tchubi', 'outro'], desviosS: { outro: 30 }, uuids });
   await p.route('**/1080p60/*.ts', async (rota) => {
     if (lento) await new Promise((k) => setTimeout(k, lento));
     const n = Number(rota.request().url().match(/(\d+)\.ts$/)[1]);
@@ -114,6 +114,35 @@ test('o pacote do lance traz os dois ângulos, o .fcpxml alinhado e o texto', se
   assert.match(txt, /Atraso medido do canal: 1\.00 s/);
   assert.match(txt, /Link do VOD: a Kick não deu o endereço/, 'a Kick de mentira não tem uuid');
   assert.deepEqual(erros, []);
+  await p.close();
+});
+
+// 17/10: kick.com/<canal>/videos/<uuid da lista> dá "página não encontrada"; o link leva o vod_id da v1.
+test('o link do VOD no pacote leva o vod_id, e um ângulo sem ele sai na mesma', semNavegador, async () => {
+  const { p, erros } = await abrir();
+  const pedidos = [];
+  await p.route('**/api/v1/video/*', (rota) => {
+    const uuid = rota.request().url().split('/').pop();
+    pedidos.push(uuid);
+    if (uuid !== 'uuid-tchubi') return rota.fulfill({ status: 500, body: '' });
+    return rota.fulfill({ status: 200, contentType: 'application/json',
+      body: JSON.stringify({ livestream: { vod_id: '01a144e3-1840-72bf-9278-612affd77585' } }) });
+  });
+  await preparar(p, { uuids: { tchubi: 'uuid-tchubi', outro: 'uuid-outro' } });
+  await p.evaluate((ms) => { window.__estado.focos = ['tchubi']; window.__estado.agoraMs = ms; }, T + 33_000);
+  await p.click('#marcarKill');
+  await p.waitForSelector('#listaMomentos .pacoteUma');
+  await p.click('#listaMomentos .pacoteUma');
+  await p.waitForFunction(() => !window.__estado.montagem && document.querySelector('#fila a[download$=".zip"]'), null, { timeout: 30000 });
+  const href = await p.locator('#fila a').first().getAttribute('href');
+  const zip = lerZip(await p.evaluate(async (u) => [...new Uint8Array(await (await fetch(u)).arrayBuffer())], href));
+  const txt = zip['01_lance.txt'].toString('utf8');
+  assert.match(txt, /1\. tchubi[\s\S]*Link do VOD: https:\/\/kick\.com\/tchubi\/videos\/01a144e3-1840-72bf-9278-612affd77585/);
+  assert.match(txt, /2\. outro[\s\S]*Link do VOD: a Kick não deu o endereço/);
+  assert.ok(zip['01_outro.mp4'], 'o ângulo sem link continua no pacote');
+  assert.deepEqual(pedidos.sort(), ['uuid-outro', 'uuid-tchubi']);
+  // O 500 de mentira do `outro` aparece na consola do navegador; erro do app, nenhum.
+  assert.deepEqual(erros.filter((e) => !/status of 500/.test(e)), []);
   await p.close();
 });
 

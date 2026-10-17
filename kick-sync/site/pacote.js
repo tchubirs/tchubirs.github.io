@@ -184,9 +184,13 @@ export function textoDoPacote({ titulo, instanteMs, angulos, t }) {
   return linhas.join('\r\n');
 }
 
-/** O endereço do VOD na Kick, pelo `uuid` do vídeo. Sem ele, nada: um link inventado leva a lado nenhum. */
+/**
+ * O endereço do VOD na Kick, pelo `vodId` (UUID v7, ver idDaPaginaDoVod em kick.js). O `uuid` da lista
+ * de VODs já não abre a página (17/10: "não encontramos a página"). Sem o id certo, nada: um link
+ * inventado leva a lado nenhum.
+ */
 export function linkDoVod(slug, vod) {
-  const uuid = vod?.uuid;
-  if (!slug || typeof uuid !== 'string' || !/^[0-9a-f-]{8,64}$/i.test(uuid)) return null;
-  return `https://kick.com/${encodeURIComponent(slug)}/videos/${uuid}`;
+  const id = vod?.vodId;
+  if (!slug || typeof id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return null;
+  return `https://kick.com/${encodeURIComponent(slug)}/videos/${id}`;
 }

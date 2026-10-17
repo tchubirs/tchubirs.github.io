@@ -22,6 +22,8 @@ const SEGS_SOM = TEM_SOM ? fs.readdirSync(SOM).filter((f) => f.endsWith('.ts')).
  */
 export async function kickFalsa(pagina, {
   canais = ['tchubi', 'outro'], segmentos = 60, comSom = false, repetirSom = 1, desviosS = {}, comecosS = {},
+  // O `video.uuid` de cada canal na lista de VODs (a Kick de mentira, por omissão, não o dá).
+  uuids = {},
   // Quantas noites, e quanto tempo cada uma demora a responder.
   //
   // Uma só é o caso normal e continua a ser o que sai por omissão. Duas são
@@ -97,7 +99,7 @@ export async function kickFalsa(pagina, {
           .toISOString().replace('T', ' ').slice(0, 19),
         duration: quantos * 10000,
         source: `https://stream.kick.com/falsa/${slug}/n${i}/master.m3u8`,
-        video: {},
+        video: uuids[slug] ? { uuid: uuids[slug] } : {},
         ...(categorias && (categorias[slug] || categorias['*'])
           ? { categories: [{
             name: categorias[slug] || categorias['*'],
