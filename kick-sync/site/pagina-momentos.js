@@ -24,7 +24,7 @@ const TEXTOS = {
     potencial: 'potencial de viralizar',
     editar: 'Editar / baixar no Povix', kick: 'Kick',
     grupoUm: '1 momento · melhor ▲ {p}', grupoN: '{n} momentos · melhor ▲ {p}',
-    visaoDe: 'Visão do inimigo: {canal}',
+    visaoDe: 'Visão do inimigo: {canal}', visaoCaiu: 'Visão de quem caiu: {canal}',
     linhaViral: 'Virais: reação forte', linhaHighlight: 'Highlights: jogadas de PvP',
     busca: 'Procurar streamer', subCanal: '{n} momentos de {canal} (inclui a visão dele como inimigo).', maisN: 'Mostrar mais ({n})', nadaCanal: 'Nenhum momento de “{canal}” neste evento.',
   },
@@ -42,7 +42,7 @@ const TEXTOS = {
     potencial: 'viral potential',
     editar: 'Edit / download in Povix', kick: 'Kick',
     grupoUm: '1 moment · best ▲ {p}', grupoN: '{n} moments · best ▲ {p}',
-    visaoDe: 'Enemy view: {canal}',
+    visaoDe: 'Enemy view: {canal}', visaoCaiu: 'View of who went down: {canal}',
     linhaViral: 'Viral: big reactions', linhaHighlight: 'Highlights: PvP plays',
     busca: 'Find a streamer', subCanal: '{n} moments from {canal} (includes their view as the enemy).', maisN: 'Show more ({n})', nadaCanal: 'No moments from “{canal}” in this event.',
   },
@@ -60,7 +60,7 @@ const TEXTOS = {
     potencial: 'potencial viral',
     editar: 'Editar / descargar en Povix', kick: 'Kick',
     grupoUm: '1 momento · mejor ▲ {p}', grupoN: '{n} momentos · mejor ▲ {p}',
-    visaoDe: 'Visión del enemigo: {canal}',
+    visaoDe: 'Visión del enemigo: {canal}', visaoCaiu: 'Visión de quien cayó: {canal}',
     linhaViral: 'Virales: reacción fuerte', linhaHighlight: 'Highlights: jugadas de PvP',
     busca: 'Buscar streamer', subCanal: '{n} momentos de {canal} (incluye su visión como enemigo).', maisN: 'Mostrar más ({n})', nadaCanal: 'Ningún momento de “{canal}” en este evento.',
   },
@@ -353,7 +353,7 @@ function linkDaKickPov(pov) {
   return UUID7.test(pov.vodId || '') ? `https://kick.com/${canal}/videos/${pov.vodId}?t=${Math.max(0, Math.round(pov.aosS))}` : `https://kick.com/${canal}`;
 }
 
-const rotuloPov = (pov) => `<span class="momPovNome">${escapar(t('visaoDe', { canal: pov.canal }))}</span>`
+const rotuloPov = (pov) => `<span class="momPovNome">${escapar(t(pov.tipo === 'caiu' ? 'visaoCaiu' : 'visaoDe', { canal: pov.canal }))}</span>`
   + `<a class="momPovKick" href="${escapar(linkDaKickPov(pov))}" target="_blank" rel="noopener">${escapar(t('kick'))}</a>`;
 
 // Passando desta diferença (s) do principal, a outra visão volta ao compasso.
