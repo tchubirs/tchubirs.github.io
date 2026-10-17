@@ -145,6 +145,16 @@ export function noArEm(coberturas, slug, ms) {
 }
 
 /**
+ * O começo da live do canal que tinha começado até `ms` (a última, se houver mais de uma). Sem olhar o fim: o de
+ * uma live no ar é o instante da última leitura, e um momento dos últimos segundos ficava de fora.
+ */
+export function inicioDaLiveEm(coberturas, slug, ms) {
+  let inicio = null;
+  for (const [de] of coberturas.get(slug) || []) if (de <= ms) inicio = de;
+  return inicio;
+}
+
+/**
  * Os canais com vídeo no ar num lance da lista simples: os de `l.canais` que estão no ar, e as vítimas que o
  * protagonista sugeriu (`l.povsSugeridos`, que não estão em `l.canais`) quando também estão no ar. Uma vítima só
  * entra se o protagonista que a sugeriu estiver no ar. Não mexe em `l.canais`, na conta nem nas mortes.
@@ -2668,6 +2678,8 @@ export function montarEvento({
       canais: [...new Set([...ev.elenco.times.flatMap((x) => x.canais), ...ev.elenco.soltos])],
       lances, mensagens: ev.mensagens, lendo: Boolean(melhores.leitura), texto: $('melhoresEstado').textContent,
       doLink: ev.lanceDoLink || null,
+      // O começo da live de cada canal no instante do momento (o VOD que o cobre), para o "Aos X da live".
+      inicioDaLive: (canal, ms) => inicioDaLiveEm(ev.coberturas, canal, ms),
     };
   }
 

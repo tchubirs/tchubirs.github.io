@@ -304,6 +304,8 @@ test('modo simples: o link de um momento do evento põe esse momento no topo da 
   const primeiro = p.locator('#simplesLista li').first();
   assert.equal(await primeiro.locator('.simplesMotivo').innerText(), 'O momento do link');
   assert.equal(await primeiro.locator('.simplesStreamer').innerText(), 'Do streamer outro');
+  // O "Aos X da live" conta do começo da live do outro (T na Kick falsa), e não do primeiro cartão.
+  assert.match(await primeiro.locator('.simplesQuando').innerText(), /^Aos 5 min da live/);
   assert.equal(await p.evaluate(() => window.__evento?.lanceDoLink?.canal), 'outro');
   assert.deepEqual(erros, []);
   await p.close();

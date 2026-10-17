@@ -294,6 +294,8 @@ export function montarSimples(ponte) {
   let nomeDoEventoAtual = null;
   let canalPrincipalDoEvento = null;
   let atualizarEventoLista = null;
+  // No evento cada cartão é de uma live diferente: o "Aos X da live" conta do começo da dele.
+  let inicioDaLiveDoEvento = null;
   let meuCanalSalvo = '';
   try { meuCanalSalvo = armazem.getItem(CHAVE_MEUPOV) || ''; } catch { /* armazenamento indisponível */ }
   let abrindoPov = null;
@@ -702,6 +704,7 @@ export function montarSimples(ponte) {
     busca = null;
     ponte.aoMudarEvento?.(null);
     atualizarEventoLista = null;
+    inicioDaLiveDoEvento = null;
     nomeDoEventoAtual = null;
     canalPrincipalDoEvento = null;
     opcoesPovRenderizadas.clear();
@@ -820,6 +823,7 @@ export function montarSimples(ponte) {
       if (minha !== geracao) return;
       const e = ponte.lancesDoEvento();
       atualizarSeletorDeCanal({ nome: e.nome || '', canais: e.canais });
+      inicioDaLiveDoEvento = e.inicioDaLive || null;
       // Com "meu canal" escolhido, só o link desse canal entra (a lista mostra só o POV dele).
       const doLink = !canalPrincipalDoEvento || slugDoNome(e.doLink?.canal || '') === slugDoNome(canalPrincipalDoEvento) ? e.doLink : null;
       ultimos = comMomentoDoLink(lancesParaLista(e.lances, { mensagens: e.mensagens, canalPrincipal: canalPrincipalDoEvento }), doLink)
@@ -1710,7 +1714,7 @@ export function montarSimples(ponte) {
         + (m.outros?.length ? `<p class="simplesTambem">${escapar(quemEstavaNoLance(m))}</p>` : '')
         + (m.falha ? `<p class="simplesTalvezFalha">${escapar(t('simples.talvezFalha'))}</p>` : '')
         + `<p class="simplesQuando">${escapar(m.doClipe ? t('simples.duracao', { s: durS })
-          : t('simples.quando', { tempo: tempoNaLive(m.ms, inicio), hora: horaDe(m.ms), s: durS }))}</p>`
+          : quandoDoCartao(m, inicio, durS))}</p>`
         + '</div><div class="simplesRodape">'
         + '<div class="simplesBotoes">'
         + `<button type="button" class="principal simplesTiktok" data-acao="tiktok" aria-label="${escapar(t('simples.baixarTiktok'))}" title="${escapar(t('simples.baixarTiktok'))}"><svg class="ic" aria-hidden="true"><use href="#i-descarregar"/></svg><span class="longo">${escapar(t('simples.baixarTiktok'))}</span><span class="curto" aria-hidden="true">${escapar(t('simples.baixarTiktokCurto'))}</span></button>`
@@ -1724,6 +1728,15 @@ export function montarSimples(ponte) {
         + '</div></div>' + povsHtml(m) + '</li>';
     }).join('');
     atualizarBotoesClipe();
+  }
+
+  // No evento, sem o começo da live do canal do cartão, só a hora: contar de outra live (o 1º cartão, o último POV
+  // aberto) dava um "Aos X da live" errado.
+  function quandoDoCartao(m, inicio, s) {
+    if (!m.doEvento || !inicioDaLiveDoEvento) return t('simples.quando', { tempo: tempoNaLive(m.ms, inicio), hora: horaDe(m.ms), s });
+    const dela = inicioDaLiveDoEvento(m.canal, m.ms);
+    return dela == null ? t('simples.quandoHora', { hora: horaDe(m.ms), s })
+      : t('simples.quando', { tempo: tempoNaLive(m.ms, dela), hora: horaDe(m.ms), s });
   }
 
   lista.addEventListener('click', (e) => {

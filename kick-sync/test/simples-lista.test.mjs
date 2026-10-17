@@ -9,7 +9,7 @@ import {
 import { sinaisDoEvento, melhoresLances, filtrarLances } from '../site/melhores.js';
 import { motivoEmPalavras, quemEstavaNoLance } from '../site/simples.js';
 import { tituloDoMomento } from '../site/titulo.js';
-import { canaisNoArDoLance, noArEm } from '../site/evento-ui.js';
+import { canaisNoArDoLance, noArEm, inicioDaLiveEm } from '../site/evento-ui.js';
 
 test('a caixa entende o nome solto, os links da Kick e o evento', () => {
   assert.deepEqual(lerEntrada('xguiry'), { tipo: 'nome', slug: 'xguiry', evento: 'xguiry' });
@@ -384,4 +384,12 @@ test('o momento do link do evento vai para o topo: o da lista se já existe, sen
   // O mais perto ganha, não o primeiro da ordem de pontos.
   const dois = [{ canal: 'a', ms: 128_000, pontos: 50 }, { canal: 'a', ms: 101_000, pontos: 10 }];
   assert.equal(comMomentoDoLink(dois, { canal: 'a', ms: 100_000 })[0].ms, 101_000);
+});
+
+test('o começo da live de um momento do evento: a última que já tinha começado, mesmo no ar depois da última leitura', () => {
+  const cob = new Map([['a', [[1000, 5000], [9000, 12_000]]]]);
+  assert.equal(inicioDaLiveEm(cob, 'a', 3000), 1000);
+  assert.equal(inicioDaLiveEm(cob, 'a', 12_500), 9000);
+  assert.equal(inicioDaLiveEm(cob, 'a', 500), null);
+  assert.equal(inicioDaLiveEm(cob, 'b', 3000), null);
 });
