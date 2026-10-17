@@ -1,6 +1,6 @@
 {
  "evento": "Abisal",
- "atualizado": "2026-10-17T18:19:31.003Z",
+ "atualizado": "2026-10-17T19:03:49.679Z",
  "momentos": [
   {
    "id": "kodd-1792192744500",
@@ -125,7 +125,13 @@
     "es": "Sorpresa: 'no te la puedo creer'."
    },
    "potencial": 66,
-   "miniatura": "eventos/abisal-momentos/ay_zarite-1792207433599.jpg"
+   "miniatura": "eventos/abisal-momentos/ay_zarite-1792207433599.jpg",
+   "pov": {
+    "canal": "wowi",
+    "uuid": "9a444e26-664b-487c-a1fe-9a9556b08012",
+    "aosS": 23292.75,
+    "vodId": "01a1467f-a1a0-7e71-b656-6c3f7095f7e9"
+   }
   },
   {
    "id": "dr-manha77an-1792185404408",
