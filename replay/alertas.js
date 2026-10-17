@@ -22,7 +22,7 @@
  * distância, abafamento e o volume do jogo de cada um mudam o som. Sem modelo treinado não faz nada.
  */
 
-import MODELO_EXPLOSAO from './modelo-explosao.js?v=72807425b4';
+import MODELO_EXPLOSAO from './modelo-explosao.js?v=cc78b7e1e7';
 
 export const TAXA_ESP = 24000;
 export const JANELA = 1024;

@@ -16,7 +16,7 @@
 // getImageData funciona. É o mesmo caminho do frames.js, mas no degrau mais nítido em vez do de 160p,
 // porque em 160p não há letra que se leia.
 
-import { lerMaster, lerPlaylist, tempoDeMidia } from './kick.js?v=72807425b4';
+import { lerMaster, lerPlaylist, tempoDeMidia } from './kick.js?v=cc78b7e1e7';
 
 /**
  * As partes da tela onde os nomes aparecem, em fração da largura e da altura.

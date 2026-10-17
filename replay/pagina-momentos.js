@@ -6,8 +6,8 @@
 // Kick vinham outros clipes misturados. Duas abas: "Melhores" (por potencial; feed no celular, ranking
 // compacto em tela larga, só CSS) e "Por streamer" (uma fileira por streamer, o melhor primeiro).
 
-import { clipeDaKick, fonteDoVod, idDaPaginaDoVod } from './kick.js?v=72807425b4';
-import { escapar } from './escapar.js?v=72807425b4';
+import { clipeDaKick, fonteDoVod, idDaPaginaDoVod } from './kick.js?v=cc78b7e1e7';
+import { escapar } from './escapar.js?v=cc78b7e1e7';
 
 const TEXTOS = {
   pt: {
@@ -24,6 +24,7 @@ const TEXTOS = {
     potencial: 'potencial de viralizar',
     editar: 'Editar / baixar no Povix', kick: 'Kick',
     grupoUm: '1 momento · melhor ▲ {p}', grupoN: '{n} momentos · melhor ▲ {p}',
+    linhaViral: 'Virais: reação forte', linhaHighlight: 'Highlights: jogadas de PvP',
   },
   en: {
     titulo: 'Povix: event moments',
@@ -39,6 +40,7 @@ const TEXTOS = {
     potencial: 'viral potential',
     editar: 'Edit / download in Povix', kick: 'Kick',
     grupoUm: '1 moment · best ▲ {p}', grupoN: '{n} moments · best ▲ {p}',
+    linhaViral: 'Viral: big reactions', linhaHighlight: 'Highlights: PvP plays',
   },
   es: {
     titulo: 'Povix: momentos del evento',
@@ -54,6 +56,7 @@ const TEXTOS = {
     potencial: 'potencial viral',
     editar: 'Editar / descargar en Povix', kick: 'Kick',
     grupoUm: '1 momento · mejor ▲ {p}', grupoN: '{n} momentos · mejor ▲ {p}',
+    linhaViral: 'Virales: reacción fuerte', linhaHighlight: 'Highlights: jugadas de PvP',
   },
 };
 const NOMES_IDIOMA = { pt: 'Português', en: 'English', es: 'Español' };
@@ -168,8 +171,17 @@ function pintar() {
   const lista = [...porId.values()].sort(porPotencial);
   const caixa = $('listaMomentos');
   if (estado.aba === 'melhores') {
-    caixa.className = 'momMelhores';
-    caixa.innerHTML = lista.map(cartao).join('');
+    // Duas linhas quando o arquivo traz highlights (o dono, 17/10): virais primeiro, depois as jogadas de PvP.
+    const hl = lista.filter((m) => m.linha === 'highlight');
+    if (!hl.length) {
+      caixa.className = 'momMelhores';
+      caixa.innerHTML = lista.map(cartao).join('');
+    } else {
+      caixa.className = 'momLinhas';
+      caixa.innerHTML = [['linhaViral', lista.filter((m) => m.linha !== 'highlight')], ['linhaHighlight', hl]]
+        .filter(([, ms]) => ms.length)
+        .map(([chave, ms]) => `<section class="momLinha"><h2>${escapar(t(chave))}</h2><div class="momMelhores">${ms.map(cartao).join('')}</div></section>`).join('');
+    }
   } else {
     const grupos = new Map();
     for (const m of lista) grupos.set(m.canal, [...(grupos.get(m.canal) || []), m]);
@@ -238,7 +250,9 @@ async function tocar(cartaoEl) {
     let url;
     let de = 0;
     let ate = null;
-    if (temClipe(m)) {
+    // Com o VOD à mão, toca-se dele: dá para abrir uns segundos antes e fechar depois do corte do clipe
+    // (o dono, 17/10: o clipe tem de começar no contexto e acabar no desfecho). Sem VOD, o clipe da Kick.
+    if (temClipe(m) && !(UUID.test(m.uuid || '') && Number.isFinite(m.aosS))) {
       url = (await clipeDaKick(m.clipe, { sinal: vez.controlo.signal })).m3u8;
     } else {
       const fonte = await fonteDoVod(m.uuid, { sinal: vez.controlo.signal });

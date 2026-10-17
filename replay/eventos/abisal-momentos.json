@@ -1,13 +1,13 @@
 {
  "evento": "Abisal",
- "atualizado": "2026-10-17T15:38:16.255Z",
+ "atualizado": "2026-10-17T18:03:29.524Z",
  "momentos": [
   {
    "id": "kodd-1792192744500",
    "canal": "kodd",
    "origem": "publico",
-   "inicioMs": 1792192735000,
-   "fimMs": 1792192754000,
+   "inicioMs": 1792192733000,
+   "fimMs": 1792192760000,
    "resumo": {
     "pt": "Na plataforma de petróleo do Abisal, ele chega planando, cai em cima do inimigo do guindaste e mata, gritando '¡Bien!'.",
     "en": "At the Abisal oil rig he glides in, drops on the crane enemy and kills him, shouting '¡Bien!'.",
@@ -22,14 +22,40 @@
    "clipe": "clip_01M53G6RQY046DSNZKP3DMDJT6",
    "views": 116,
    "titulo": "FELIZ CUMPLEAÑOS ",
+   "uuid": "b6ef6e3b-024a-4cdc-bb53-008b2710089f",
+   "aosS": 10534,
+   "vodId": "01a14662-22d8-79bc-a63b-eef8ec4a4f94",
    "miniatura": "eventos/abisal-momentos/kodd-1792192744500.jpg"
+  },
+  {
+   "id": "kodd-1792195504865",
+   "canal": "kodd",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792195454973,
+   "fimMs": 1792195535673,
+   "uuid": "b6ef6e3b-024a-4cdc-bb53-008b2710089f",
+   "aosS": 13256,
+   "vodId": "01a14662-22d8-79bc-a63b-eef8ec4a4f94",
+   "resumo": {
+    "pt": "Na plataforma de petróleo, pede ao chat palpite se cai alguém, derruba o inimigo e saqueia o fuzil enquanto o chat solta 'buena kill'.",
+    "en": "On the oil rig he asks chat to bet whether someone drops, gets the kill and loots the rifle while chat spams 'buena kill'.",
+    "es": "En la petrolera le pregunta al chat si cae alguien, consigue la kill y saquea el rifle mientras el chat suelta 'buena kill'."
+   },
+   "reacao": {
+    "pt": "Chat comemora: 'buena kill gordo', 'que bien juegas bro'.",
+    "en": "Chat cheers: 'nice kill', 'you play so well bro'.",
+    "es": "El chat celebra: 'buena kill gordo', 'que bien juegas bro'."
+   },
+   "potencial": 80,
+   "miniatura": "eventos/abisal-momentos/kodd-1792195504865.jpg"
   },
   {
    "id": "kodd-1792200666000",
    "canal": "kodd",
    "origem": "publico",
-   "inicioMs": 1792200657000,
-   "fimMs": 1792200675000,
+   "inicioMs": 1792200655000,
+   "fimMs": 1792200681000,
    "resumo": {
     "pt": "Raid na base-navio pirata do Abisal: ele avança entre baús e morre fritado pela Tesla Coil ('pollo frito').",
     "en": "Abisal pirate-ship base raid: he pushes between chests and gets fried by the Tesla Coil ('fried chicken').",
@@ -44,14 +70,86 @@
    "clipe": "clip_01M53R08VQZJYYANBCE195KBYN",
    "views": 13,
    "titulo": "POLLOFRITO",
+   "uuid": "b6ef6e3b-024a-4cdc-bb53-008b2710089f",
+   "aosS": 18456,
+   "vodId": "01a14662-22d8-79bc-a63b-eef8ec4a4f94",
    "miniatura": "eventos/abisal-momentos/kodd-1792200666000.jpg"
+  },
+  {
+   "id": "bw0lf-ttv-1792182888190",
+   "canal": "bw0lf-ttv",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792182852376,
+   "fimMs": 1792182945976,
+   "uuid": "099da018-956a-496d-8206-bf1c91ba87af",
+   "aosS": 7288,
+   "vodId": "01a145fc-e4e0-7702-88b0-c1f6a891b312",
+   "resumo": {
+    "pt": "Briga de lança no convés de um navio contra um jogador de hazmat; sangue para todo lado e fica com 19 de vida.",
+    "en": "Spear fight on a ship deck against a hazmat player; blood everywhere, down to 19 HP.",
+    "es": "Pelea a lanza en la cubierta de un barco contra un jugador con hazmat; sangre por todos lados, queda con 19 de vida."
+   },
+   "reacao": {
+    "pt": "Tenso, xinga e pede ajuda do colega.",
+    "en": "Tense, swearing and calling his mate.",
+    "es": "Tenso, insulta y pide ayuda al compañero."
+   },
+   "potencial": 66,
+   "miniatura": "eventos/abisal-momentos/bw0lf-ttv-1792182888190.jpg"
+  },
+  {
+   "id": "ay_zarite-1792207433599",
+   "canal": "ay_zarite",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792207423999,
+   "fimMs": 1792207484899,
+   "uuid": "f4aba200-2b08-4940-b95e-6b21da5a125e",
+   "aosS": 42066,
+   "vodId": "01a14561-29b0-71ed-b926-464cfa9f53b5",
+   "resumo": {
+    "pt": "Do alto de uma estrutura de madeira atira para baixo e derruba um inimigo; fica sem balas e o time conta sobreviventes.",
+    "en": "From the top of a wooden structure she shoots down and drops an enemy; runs out of ammo while the team counts survivors.",
+    "es": "Desde lo alto de una estructura de madera dispara hacia abajo y tumba a un enemigo; se queda sin balas y el equipo cuenta sobrevivientes."
+   },
+   "reacao": {
+    "pt": "Surpresa: 'no te la puedo creer'.",
+    "en": "Surprised: 'I can't believe it'.",
+    "es": "Sorpresa: 'no te la puedo creer'."
+   },
+   "potencial": 66,
+   "miniatura": "eventos/abisal-momentos/ay_zarite-1792207433599.jpg"
+  },
+  {
+   "id": "dr-manha77an-1792185404408",
+   "canal": "dr-manha77an",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792185355382,
+   "fimMs": 1792185427382,
+   "uuid": "aceae8de-ce4f-4705-b922-63b46013b550",
+   "aosS": 9628,
+   "vodId": "01a145ff-6198-7df9-9371-5e52caacf455",
+   "resumo": {
+    "pt": "Dispara o canhão do barco e acerta em cheio a fortaleza flutuante inimiga, com explosão na tela.",
+    "en": "Fires the ship cannon and lands a direct hit on the enemy floating fortress, explosion on screen.",
+    "es": "Dispara el cañón del barco y le da de lleno a la fortaleza flotante enemiga, con explosión en pantalla."
+   },
+   "reacao": {
+    "pt": "Grita '¡vamos!' e 'van por ahí, loco' no meio da troca.",
+    "en": "Yells 'let's go' and 'they're over there' mid exchange.",
+    "es": "Grita '¡vamos!' y 'van por ahí, loco' en pleno intercambio."
+   },
+   "potencial": 66,
+   "miniatura": "eventos/abisal-momentos/dr-manha77an-1792185404408.jpg"
   },
   {
    "id": "wilorust-1792194644000",
    "canal": "wilorust",
    "origem": "chat",
    "inicioMs": 1792194624000,
-   "fimMs": 1792194669000,
+   "fimMs": 1792194674000,
    "resumo": {
     "pt": "Na câmera cheia, caça um mosquito que o perseguia há uma semana, pega-o e comemora 'lo cogí, viva'.",
     "en": "On full cam he hunts a mosquito that bugged him for a week, catches it and celebrates 'got it!'.",
@@ -73,7 +171,7 @@
    "canal": "deowasd",
    "origem": "chat",
    "inicioMs": 1792176847000,
-   "fimMs": 1792176872000,
+   "fimMs": 1792176877000,
    "resumo": {
     "pt": "Castigo do subathon: veste fantasia de Supergirl apertada que não fecha nas costas; quase rasga.",
     "en": "Subathon punishment: he squeezes into a tight Supergirl costume that won't close at the back; it nearly rips.",
@@ -94,8 +192,8 @@
    "id": "soytonaru-1792200573500",
    "canal": "soytonaru",
    "origem": "publico",
-   "inicioMs": 1792200537000,
-   "fimMs": 1792200610000,
+   "inicioMs": 1792200535000,
+   "fimMs": 1792200616000,
    "resumo": {
     "pt": "No barco, Tonaru fala com o live achando que ninguém ouve, mas uma jogadora (Karinios0) estava escutando tudo no voice.",
     "en": "On a boat, Tonaru talks to stream thinking nobody hears him, but a player (Karinios0) was hearing it all on voice.",
@@ -110,14 +208,17 @@
    "clipe": "clip_01M53QPSC8RY0R01QS9DCPJZWC",
    "views": 58,
    "titulo": "Es durisimo XD",
+   "uuid": "a266c3d3-14cf-4534-9a0b-6b03105b2c33",
+   "aosS": 410,
+   "vodId": "01a14773-aa48-7ce6-bd3d-c325aa271dff",
    "miniatura": "eventos/abisal-momentos/soytonaru-1792200573500.jpg"
   },
   {
    "id": "deowasd-1792193533500",
    "canal": "deowasd",
    "origem": "publico",
-   "inicioMs": 1792193515000,
-   "fimMs": 1792193552000,
+   "inicioMs": 1792193513000,
+   "fimMs": 1792193558000,
    "resumo": {
     "pt": "Dança vestido de Supergirl em pé no meio do quarto como castigo do subathon.",
     "en": "He dances in a Supergirl costume in the middle of his room as a subathon punishment.",
@@ -132,14 +233,40 @@
    "clipe": "clip_01M53GZ0SSX45WTHDN87KCEA94",
    "views": 59,
    "titulo": "baile 1",
+   "uuid": "6ebaf78f-fc0b-4356-98fd-f3b66fc7066f",
+   "aosS": 18988,
+   "vodId": "01a145ed-0a48-7a41-acc7-e5f85143876c",
    "miniatura": "eventos/abisal-momentos/deowasd-1792193533500.jpg"
+  },
+  {
+   "id": "mateopsz-1792186551249",
+   "canal": "mateopsz",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792186538399,
+   "fimMs": 1792186626499,
+   "uuid": "e19395c1-4413-4fd1-bc91-b21073677711",
+   "aosS": 10580,
+   "vodId": "01a14602-e7f0-7826-9f06-2dadc07c8816",
+   "resumo": {
+    "pt": "À noite no barco, tomam tiros, gritam que tem alguém no barco deles; caos com traçantes.",
+    "en": "At night on the boat they take fire and yell that someone is on their boat; chaos with tracers.",
+    "es": "De noche en el barco reciben disparos y gritan que hay alguien en su barco; caos con trazadoras."
+   },
+   "reacao": {
+    "pt": "Gritaria: '¡no mueren!', '¿quién está en nuestro barco?'.",
+    "en": "Yelling: 'they won't die!', 'who's on our boat?'.",
+    "es": "Gritos: '¡no mueren!', '¿quién está en nuestro barco?'."
+   },
+   "potencial": 58,
+   "miniatura": "eventos/abisal-momentos/mateopsz-1792186551249.jpg"
   },
   {
    "id": "wowi-1792205602000",
    "canal": "wowi",
    "origem": "publico",
-   "inicioMs": 1792205542000,
-   "fimMs": 1792205662000,
+   "inicioMs": 1792205540000,
+   "fimMs": 1792205668000,
    "resumo": {
     "pt": "Ele invade a base inimiga, fica dentro dos quartos e conversa com os donos fingindo ser amigo.",
     "en": "He sneaks into an enemy base, sits in their rooms and talks to the owners pretending to be friendly.",
@@ -154,14 +281,63 @@
    "clipe": "clip_01M53WGPAYTDFKWFKSDJAC24N0",
    "views": 8,
    "titulo": "wowi always going deep",
+   "uuid": "9a444e26-664b-487c-a1fe-9a9556b08012",
+   "aosS": 21408,
+   "vodId": "01a1467f-a1a0-7e71-b656-6c3f7095f7e9",
    "miniatura": "eventos/abisal-momentos/wowi-1792205602000.jpg"
+  },
+  {
+   "id": "johnpiipe-1792189754801",
+   "canal": "johnpiipe",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792189709763,
+   "fimMs": 1792189800763,
+   "uuid": "c5ee4889-8631-4d5b-b7e1-a69d8a7b1e3b",
+   "aosS": 5932,
+   "vodId": "01a1467a-3ad0-7d9a-b414-0ffd5c0ec630",
+   "resumo": {
+    "pt": "De dentro do barco cobre o colega contra um barco inimigo ao lado; avisa inimigos dos dois lados e um é morto.",
+    "en": "From inside the boat he covers his mate against an enemy boat alongside; calls enemies on both sides and one goes down.",
+    "es": "Desde dentro del barco cubre al compañero contra un barco enemigo al lado; avisa enemigos a ambos lados y uno muere."
+   },
+   "reacao": {
+    "pt": "Calmo, callouts: 'lo mató'.",
+    "en": "Calm callouts: 'he killed him'.",
+    "es": "Calma, callouts: 'lo mató'."
+   },
+   "potencial": 55,
+   "miniatura": "eventos/abisal-momentos/johnpiipe-1792189754801.jpg"
+  },
+  {
+   "id": "dr-manha77an-1792185798814",
+   "canal": "dr-manha77an",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792185765814,
+   "fimMs": 1792185834814,
+   "uuid": "aceae8de-ce4f-4705-b922-63b46013b550",
+   "aosS": 10039,
+   "vodId": "01a145ff-6198-7df9-9371-5e52caacf455",
+   "resumo": {
+    "pt": "Depois da luta naval, foram abordados: saqueia corpos dentro do barco enquanto o colega avisa no chat 'estamos abordados'.",
+    "en": "After the naval fight they got boarded: he loots bodies inside the ship as a teammate types 'we're boarded'.",
+    "es": "Tras la pelea naval los abordan: saquea cuerpos dentro del barco mientras el compañero avisa 'estamos abordados'."
+   },
+   "reacao": {
+    "pt": "Fala tensa, 'no, no', '¡vamos tomados!'.",
+    "en": "Tense talk, 'no, no', 'we're taken!'.",
+    "es": "Habla tensa, 'no, no', '¡vamos tomados!'."
+   },
+   "potencial": 55,
+   "miniatura": "eventos/abisal-momentos/dr-manha77an-1792185798814.jpg"
   },
   {
    "id": "lynoche-1792192831000",
    "canal": "lynoche",
    "origem": "publico",
-   "inicioMs": 1792192816000,
-   "fimMs": 1792192846000,
+   "inicioMs": 1792192814000,
+   "fimMs": 1792192852000,
    "resumo": {
     "pt": "No píer do Abisal, ela encontra desconhecidos e descobre que o cabelo longo de um deles é 'postiço'.",
     "en": "On an Abisal pier she meets strangers and finds out one guy's long hair is a 'wig'.",
@@ -176,14 +352,17 @@
    "clipe": "clip_01M53G9EY921PVVY26CBTM04P3",
    "views": 3,
    "titulo": "Donde hay pelo hay alegría",
+   "uuid": "02adf0d3-4193-432d-a8ef-b5f119a1ff1b",
+   "aosS": 20984,
+   "vodId": "01a145c3-eaf0-7c28-95c3-4300ff341c0b",
    "miniatura": "eventos/abisal-momentos/lynoche-1792192831000.jpg"
   },
   {
    "id": "kodd-1792193710000",
    "canal": "kodd",
    "origem": "publico",
-   "inicioMs": 1792193695000,
-   "fimMs": 1792193725000,
+   "inicioMs": 1792193693000,
+   "fimMs": 1792193731000,
    "resumo": {
     "pt": "Na estrutura portuária/plataforma do Abisal ele limpa inimigos subindo escadas; chat grita 'PARA GORDO' e o acusa de cheat.",
     "en": "On an Abisal dock/rig structure he clears enemies climbing ladders; chat yells 'STOP FATTY' and accuses him of cheating.",
@@ -198,6 +377,9 @@
    "clipe": "clip_01M53H4C939N0P8JHXHD2EYB91",
    "views": 47,
    "titulo": "wowi?",
+   "uuid": "b6ef6e3b-024a-4cdc-bb53-008b2710089f",
+   "aosS": 11494,
+   "vodId": "01a14662-22d8-79bc-a63b-eef8ec4a4f94",
    "miniatura": "eventos/abisal-momentos/kodd-1792193710000.jpg"
   },
   {
@@ -205,7 +387,7 @@
    "canal": "deowasd",
    "origem": "chat",
    "inicioMs": 1792192242000,
-   "fimMs": 1792192292000,
+   "fimMs": 1792192297000,
    "resumo": {
     "pt": "Vestido de Supergirl, a namorada (Lumi) entra; ele pede mil desculpas porque ela 'vai ter que seguir trabalhando'.",
     "en": "Dressed as Supergirl, his girlfriend (Lumi) walks in; he apologizes profusely since she 'has to keep working'.",
@@ -227,7 +409,7 @@
    "canal": "hatzukihoshi",
    "origem": "chat",
    "inicioMs": 1792198244000,
-   "fimMs": 1792198299000,
+   "fimMs": 1792198304000,
    "resumo": {
     "pt": "A tela da live vira uma tela azul de erro do Windows (BSOD) do nada, no meio da partida.",
     "en": "The stream suddenly turns into a Windows blue screen of death (BSOD) mid-game.",
@@ -249,7 +431,7 @@
    "canal": "lynoche",
    "origem": "chat",
    "inicioMs": 1792178196000,
-   "fimMs": 1792178241000,
+   "fimMs": 1792178246000,
    "resumo": {
     "pt": "O mesmo cara que a matou ontem a derruba de novo no Abisal e depois pede desculpas pra ela.",
     "en": "The same guy who killed her yesterday downs her again on Abisal, then apologizes to her.",
@@ -270,8 +452,8 @@
    "id": "kodd-1792207833500",
    "canal": "kodd",
    "origem": "publico",
-   "inicioMs": 1792207813000,
-   "fimMs": 1792207854000,
+   "inicioMs": 1792207811000,
+   "fimMs": 1792207860000,
    "resumo": {
     "pt": "Mesma história: parado na base do Abisal, explica que, se sequestrado, faria força pra cagar e evitar o abuso.",
     "en": "Same story: idle in his Abisal base, he says if kidnapped he'd force himself to poop to avoid being assaulted.",
@@ -286,6 +468,9 @@
    "clipe": "clip_01M53Z0NWY3MERGEYA5WAZGTHN",
    "views": 191,
    "titulo": "La minita: me estara siendo infiel? los pibes:",
+   "uuid": "b6ef6e3b-024a-4cdc-bb53-008b2710089f",
+   "aosS": 25612,
+   "vodId": "01a14662-22d8-79bc-a63b-eef8ec4a4f94",
    "miniatura": "eventos/abisal-momentos/kodd-1792207833500.jpg"
   }
  ]
