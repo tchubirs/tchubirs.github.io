@@ -306,3 +306,30 @@ test('momentos: a outra visão fora do VOD dela fica escondida e não salta', se
   assert.deepEqual(r, { escondida: true, saltos: 0 });
   assert.deepEqual(erros, []);
 });
+
+test('momentos: procurar um streamer deixa só os dele (e onde ele é o inimigo); muitos momentos vêm aos poucos', semNavegador, async () => {
+  const { p, erros } = await abrir({ caminho: null, modo: null, ecra: { width: 400, height: 860 } });
+  const [barco, minita] = MOMENTOS.momentos;
+  const muitos = Array.from({ length: 20 }, (_, i) => ({ ...barco, id: `m${i}`, canal: 'zed', potencial: 40 - i }));
+  const dados = { ...MOMENTOS, momentos: [barco, { ...minita, pov: { canal: 'axel', uuid: VOD, aosS: 100 } }, ...muitos] };
+  await preparar(p, { dados });
+  await p.goto(`http://127.0.0.1:${PORTA}/momentos.html?e=teste`, { waitUntil: 'networkidle' });
+  await p.waitForSelector('#listaMomentos .mom');
+  assert.equal(await p.locator('#listaMomentos .mom').count(), 15);
+  assert.equal(await p.locator('.momMais').textContent(), 'Mostrar mais (7)');
+  await p.click('.momMais');
+  assert.equal(await p.locator('#listaMomentos .mom').count(), 22);
+  assert.equal(await p.locator('.momMais').count(), 0);
+
+  await p.fill('#momBusca', 'axel');
+  await p.dispatchEvent('#momBusca', 'change');
+  assert.deepEqual(await ordem(p), ['minita', 'barco']);
+  assert.equal(await p.locator('#momSub').textContent(), '2 momentos de axel (inclui a visão dele como inimigo).');
+  assert.match(p.url(), /[?&]c=axel/);
+  await p.goto(`http://127.0.0.1:${PORTA}/momentos.html?e=teste&c=zed`, { waitUntil: 'networkidle' });
+  await p.waitForSelector('#listaMomentos .mom');
+  assert.equal(await p.inputValue('#momBusca'), 'zed');
+  assert.equal(await p.locator('#listaMomentos .mom').count(), 15);
+  assert.ok(await semRolagemLateral(p));
+  assert.deepEqual(erros, []);
+});

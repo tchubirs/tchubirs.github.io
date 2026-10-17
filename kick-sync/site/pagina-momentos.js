@@ -26,6 +26,7 @@ const TEXTOS = {
     grupoUm: '1 momento · melhor ▲ {p}', grupoN: '{n} momentos · melhor ▲ {p}',
     visaoDe: 'Visão do inimigo: {canal}',
     linhaViral: 'Virais: reação forte', linhaHighlight: 'Highlights: jogadas de PvP',
+    busca: 'Procurar streamer', subCanal: '{n} momentos de {canal} (inclui a visão dele como inimigo).', maisN: 'Mostrar mais ({n})', nadaCanal: 'Nenhum momento de “{canal}” neste evento.',
   },
   en: {
     titulo: 'Povix: event moments',
@@ -43,6 +44,7 @@ const TEXTOS = {
     grupoUm: '1 moment · best ▲ {p}', grupoN: '{n} moments · best ▲ {p}',
     visaoDe: 'Enemy view: {canal}',
     linhaViral: 'Viral: big reactions', linhaHighlight: 'Highlights: PvP plays',
+    busca: 'Find a streamer', subCanal: '{n} moments from {canal} (includes their view as the enemy).', maisN: 'Show more ({n})', nadaCanal: 'No moments from “{canal}” in this event.',
   },
   es: {
     titulo: 'Povix: momentos del evento',
@@ -60,6 +62,7 @@ const TEXTOS = {
     grupoUm: '1 momento · mejor ▲ {p}', grupoN: '{n} momentos · mejor ▲ {p}',
     visaoDe: 'Visión del enemigo: {canal}',
     linhaViral: 'Virales: reacción fuerte', linhaHighlight: 'Highlights: jugadas de PvP',
+    busca: 'Buscar streamer', subCanal: '{n} momentos de {canal} (incluye su visión como enemigo).', maisN: 'Mostrar más ({n})', nadaCanal: 'Ningún momento de “{canal}” en este evento.',
   },
 };
 const NOMES_IDIOMA = { pt: 'Português', en: 'English', es: 'Español' };
@@ -68,7 +71,9 @@ const NOMES_IDIOMA = { pt: 'Português', en: 'English', es: 'Español' };
 const ANTES_S = 3;
 
 const $ = (id) => document.getElementById(id);
-const estado = { idioma: 'pt', nome: '', dados: null, aba: 'melhores', tocando: null, aviso: null };
+const estado = { idioma: 'pt', nome: '', dados: null, aba: 'melhores', tocando: null, aviso: null, canal: '', limite: {} };
+// Quantos cartões cada linha mostra antes do "Mostrar mais": a lista do evento tem muitos momentos.
+const POR_VEZ = 15;
 const porId = new Map();
 
 function idiomaInicial() {
@@ -171,19 +176,28 @@ const porPotencial = (a, b) => (b.potencial ?? 0) - (a.potencial ?? 0) || a.inic
 
 function pintar() {
   parar();
-  const lista = [...porId.values()].sort(porPotencial);
+  // Um streamer pode procurar só o que é dele (o dono, 17/10): os momentos dele e aqueles em que ele aparece como
+  // a visão do inimigo.
+  const doCanal = (m) => !estado.canal || m.canal === estado.canal || m.pov?.canal === estado.canal;
+  const lista = [...porId.values()].filter(doCanal).sort(porPotencial);
   const caixa = $('listaMomentos');
+  const pagina = (chave, ms) => {
+    const n = estado.limite[chave] || POR_VEZ;
+    const resto = ms.length - n;
+    return ms.slice(0, n).map(cartao).join('')
+      + (resto > 0 ? `<button type="button" class="momMais" data-linha="${chave}">${escapar(t('maisN', { n: resto }))}</button>` : '');
+  };
   if (estado.aba === 'melhores') {
     // Duas linhas quando o arquivo traz highlights (o dono, 17/10): virais primeiro, depois as jogadas de PvP.
     const hl = lista.filter((m) => m.linha === 'highlight');
     if (!hl.length) {
       caixa.className = 'momMelhores';
-      caixa.innerHTML = lista.map(cartao).join('');
+      caixa.innerHTML = pagina('tudo', lista);
     } else {
       caixa.className = 'momLinhas';
       caixa.innerHTML = [['linhaViral', lista.filter((m) => m.linha !== 'highlight')], ['linhaHighlight', hl]]
         .filter(([, ms]) => ms.length)
-        .map(([chave, ms]) => `<section class="momLinha"><h2>${escapar(t(chave))}</h2><div class="momMelhores">${ms.map(cartao).join('')}</div></section>`).join('');
+        .map(([chave, ms]) => `<section class="momLinha"><h2>${escapar(t(chave))}</h2><div class="momMelhores">${pagina(chave, ms)}</div></section>`).join('');
     }
   } else {
     const grupos = new Map();
@@ -202,9 +216,13 @@ function textos() {
   document.title = t('titulo');
   $('abaMelhores').textContent = t('melhores');
   $('abaStreamers').textContent = t('streamers');
+  $('momBusca').placeholder = t('busca');
+  $('momBusca').setAttribute('aria-label', t('busca'));
   if (estado.dados) {
     $('nomeEvento').textContent = String(estado.dados.evento || estado.nome);
-    $('momSub').textContent = t('sub', { n: porId.size, c: new Set([...porId.values()].map((m) => m.canal)).size });
+    const deles = estado.canal ? [...porId.values()].filter((m) => m.canal === estado.canal || m.pov?.canal === estado.canal).length : 0;
+    $('momSub').textContent = !estado.canal ? t('sub', { n: porId.size, c: new Set([...porId.values()].map((m) => m.canal)).size })
+      : deles ? t('subCanal', { n: deles, canal: estado.canal }) : t('nadaCanal', { canal: estado.canal });
     // Trocar o idioma não corta o vídeo que está a tocar; os cartões mudam na próxima pintura.
     if (!estado.tocando) pintar();
   }
@@ -426,6 +444,8 @@ async function iniciar() {
   lista.addEventListener('click', (ev) => {
     const capaEl = ev.target.closest('.momCapa');
     if (capaEl) { tocar(capaEl.closest('.mom')); return; }
+    const mais = ev.target.closest('.momMais');
+    if (mais) { estado.limite[mais.dataset.linha] = (estado.limite[mais.dataset.linha] || POR_VEZ) + POR_VEZ; pintar(); return; }
     const kick = ev.target.closest('.momKick');
     if (kick) abrirNaKick(ev, kick);
   });
@@ -451,6 +471,24 @@ async function iniciar() {
   if (!momentos.length) { avisar('naoExiste', { nome: estado.nome }); return; }
   for (const m of momentos) porId.set(m.id, { ...m });
   estado.dados = dados;
+  const canais = [...new Set(momentos.flatMap((m) => [m.canal, m.pov?.canal]).filter((c) => CANAL.test(c || '')))].sort();
+  $('momCanais').innerHTML = canais.map((c) => `<option value="${escapar(c)}"></option>`).join('');
+  const busca = $('momBusca');
+  const escolher = () => {
+    const c = busca.value.trim().toLowerCase();
+    estado.canal = CANAL.test(c) ? c : '';
+    estado.limite = {};
+    try {
+      const u = new URL(location.href);
+      if (estado.canal) u.searchParams.set('c', estado.canal); else u.searchParams.delete('c');
+      history.replaceState(null, '', u);
+    } catch { /* sem history */ }
+    textos();
+  };
+  busca.addEventListener('change', escolher);
+  busca.addEventListener('search', escolher);
+  try { busca.value = (new URLSearchParams(location.search).get('c') || '').trim().toLowerCase(); } catch { busca.value = ''; }
+  estado.canal = CANAL.test(busca.value) ? busca.value : '';
   avisar(null);
   textos();
 }
