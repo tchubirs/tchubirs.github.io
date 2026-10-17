@@ -10,34 +10,34 @@
 // sempre (abrir o canal, gravar o clipe) chega pela `ponte` que o app.js passa: este arquivo não mexe no
 // estado dele por conta própria.
 
-import { t, tn } from './idiomas.js?v=babb2453fe';
-import { procurarCanais, vodsDoCanal, vodDaKick, slugDoNome } from './kick.js?v=babb2453fe';
+import { t, tn } from './idiomas.js?v=9b7d41859d';
+import { procurarCanais, vodsDoCanal, vodDaKick, slugDoNome } from './kick.js?v=9b7d41859d';
 import {
   lerEntrada, montarLista, lancesParaLista, nomeDoArquivo, tempoNaLive, NOMES_NO_LANCE, QUANTOS,
   acharVod, guardarVod, mensagensDosPicos, lerUltimo, guardarUltimo,
-} from './simples-lista.js?v=babb2453fe';
-import { varrerNoite } from './procurar-momentos.js?v=babb2453fe';
-import { somDoCanal } from './alinhar.js?v=babb2453fe';
-import { TAXA_TIROS } from './tiros.js?v=babb2453fe';
-import { alertasDoCanal } from './alertas.js?v=babb2453fe';
-import { montarIndice, chaveDoIndice, indiceValido } from './indice.js?v=babb2453fe';
-import { janelasDosPicos, estimarFalta, estimarFaltaFracao, tempoFalta } from './ouvir.js?v=babb2453fe';
-import { onde } from './relogio.js?v=babb2453fe';
-import { abrirQuadrosEscondidos } from './rosto.js?v=babb2453fe';
-import { escapar } from './escapar.js?v=babb2453fe';
+} from './simples-lista.js?v=9b7d41859d';
+import { varrerNoite } from './procurar-momentos.js?v=9b7d41859d';
+import { somDoCanal } from './alinhar.js?v=9b7d41859d';
+import { TAXA_TIROS } from './tiros.js?v=9b7d41859d';
+import { alertasDoCanal } from './alertas.js?v=9b7d41859d';
+import { montarIndice, chaveDoIndice, indiceValido } from './indice.js?v=9b7d41859d';
+import { janelasDosPicos, estimarFalta, estimarFaltaFracao, tempoFalta } from './ouvir.js?v=9b7d41859d';
+import { onde } from './relogio.js?v=9b7d41859d';
+import { abrirQuadrosEscondidos } from './rosto.js?v=9b7d41859d';
+import { escapar } from './escapar.js?v=9b7d41859d';
 import {
   tituloDoMomento, etiquetasDoMomento, confExibida, confMedia, VERSAO_ETIQUETAS, textoDoContexto,
-} from './titulo.js?v=babb2453fe';
+} from './titulo.js?v=9b7d41859d';
 import {
   lerFiltro, guardarFiltro, limparFiltro, filtroAtivo, filtraAlgo, aplicarFiltro, chipsDoFiltro, semChip, comFala, TIPOS_DO_FILTRO,
-} from './simples-filtro.js?v=babb2453fe';
-import { lerFalas, guardarFala, acharNaLista, melhorFala } from './falas.js?v=babb2453fe';
+} from './simples-filtro.js?v=9b7d41859d';
+import { lerFalas, guardarFala, acharNaLista, melhorFala } from './falas.js?v=9b7d41859d';
 import {
   analisarCandidatos, comContexto, contextoVigente, contextoDoMomento, precisaDeContexto, MAX_CANDIDATOS_POR_LIVE, ENDPOINT_PADRAO,
-} from './contexto-candidatos.js?v=babb2453fe';
-import { VERSAO_CONTRATO, MAX_IMAGEM_BYTES } from './contexto-rust.js?v=babb2453fe';
-import { fundirPovsPorCanal } from './simples-lista.js?v=babb2453fe';
-import { transmissoesDaBusca, pedidoDaBusca, limitesDaBusca, relogioDoTrecho, mesmoPedido, guardarMedidaBusca, estimativaDaBusca } from './busca-escopo.js?v=babb2453fe';
+} from './contexto-candidatos.js?v=9b7d41859d';
+import { VERSAO_CONTRATO, MAX_IMAGEM_BYTES } from './contexto-rust.js?v=9b7d41859d';
+import { fundirPovsPorCanal } from './simples-lista.js?v=9b7d41859d';
+import { transmissoesDaBusca, pedidoDaBusca, limitesDaBusca, relogioDoTrecho, mesmoPedido, guardarMedidaBusca, estimativaDaBusca } from './busca-escopo.js?v=9b7d41859d';
 
 const CHAVE_MODO = 'povix.modo';
 const CHAVE_VISTO = 'povix.simplesVisto';
@@ -2094,30 +2094,41 @@ export function montarSimples(ponte) {
 
   // ── as fotos: um quadro de cada momento ────────────────────────────────
   let fotografando = null;
-  async function fotografar() {
+  // `rearme`: quantas vezes esta volta já foi repetida por sobrarem cartões sem foto (as chamadas de fora vêm a 0).
+  const REARMES_FOTO = 2;
+  const FALHAS_SEGUIDAS_FOTO = 4;
+  async function fotografar(rearme = 0) {
     if (fotografando || !linhaAberta) return;
     const linha = linhaAberta;
+    // "Começar de novo" (parar) também encerra a volta: sem pedir mais quadros, sem pintar e sem rearmar.
+    const minha = geracao;
     const quadros = window.__povixQuadrosSimples?.() || abrirQuadrosEscondidos({ limiteMs: 12_000 });
     fotografando = quadros;
+    // Falhas SEGUIDAS: um quadro que sai zera a conta (uma falha de rede curta não pode matar a volta toda).
     let falhas = 0;
+    // Cartões que não têm como ter foto (o instante não toca): não contam como "ainda por fazer" no rearme.
+    const semFoto = new Set();
     try {
-      for (let i = 0; i < mostrados.length && falhas < 2; i++) {
+      for (let i = 0; i < mostrados.length && falhas < FALHAS_SEGUIDAS_FOTO; i++) {
         // Um clipe a ser gravado tem a máquina toda: a foto espera (num celular as duas juntas travam).
         // eslint-disable-next-line no-await-in-loop
         while (aBaixar) await dormir(500);
+        // Outro canal aberto a meio: este decodificador já não serve a lista que a pessoa vê (o rearme apanha a nova).
+        if (linhaAberta !== linha || geracao !== minha) break;
         const m = mostrados[i];
         if (!m) break;
         const k = chave(m);
         if (nitidas.has(k) || m.canal !== linha.slug) continue;
         const ms = m.doClipe ? m.deMs + 1000 : m.ms;
         const r = onde(linha, ms, { nudgeMs: ponte.estado.nudges[linha.slug] || 0 });
-        if (r.estado !== 'toca') continue;
+        if (r.estado !== 'toca') { semFoto.add(k); continue; }
         const peca = linha.pecasCompletas?.find((p) => p.vod.id === r.peca.vod.id) || r.peca;
         // O 480p (ou o mais perto acima de 360p): o 160p dava a foto borrada no cartão; o 720p pesa o dobro.
         const meio = peca.escada?.filter((d) => d.altura >= 360).sort((a, b) => Math.abs(a.altura - 480) - Math.abs(b.altura - 480))[0];
         const degrau = meio || peca.barato || peca.escada?.at(-1);
         // eslint-disable-next-line no-await-in-loop
         const q = await quadros.quadro({ url: degrau?.url, tempoS: r.tempoS, ms, canal: linha.slug });
+        if (geracao !== minha) break;
         if (!q?.tela) { falhas++; continue; }
         const c = document.createElement('canvas');
         c.width = 640; c.height = 360;
@@ -2125,6 +2136,7 @@ export function montarSimples(ponte) {
         let url = null;
         try { url = c.toDataURL('image/jpeg', 0.82); } catch { url = null; }
         if (!url) { falhas++; continue; }
+        falhas = 0;
         fotos.set(k, url);
         nitidas.add(k);
         if (vodAtual && !m.doEvento && !m.doClipe && vodAtual.slug === linha.slug) guardarFoto(prefixoDe(vodAtual) + NITIDA, k, url);
@@ -2134,12 +2146,35 @@ export function montarSimples(ponte) {
     } finally {
       quadros.fechar?.();
       fotografando = null;
+      // Sobraram cartões do canal aberto (falhas de rede, ou a lista mudou a meio e esta volta já passou por eles):
+      // mais uma volta daqui a pouco, no máximo REARMES_FOTO vezes seguidas para não martelar a Kick fora do ar.
+      // Se o canal mudou, a volta nova conta do zero.
+      // Depois de parar(), esta cadeia acaba; se entretanto abriu outra lista, as chamadas dela bateram em
+      // `fotografando` e voltaram sem nada: começa a volta dela já.
+      const outra = geracao !== minha;
+      const atual = outra ? null : linhaAberta;
+      if (outra && linhaAberta && linhaAberta !== linha) {
+        const dela = geracao;
+        setTimeout(() => { if (geracao === dela) fotografar(); }, 0);
+      }
+      const faltam = atual && mostrados.some((m) => m.canal === atual.slug && !nitidas.has(chave(m)) && !(atual === linha && semFoto.has(chave(m))));
+      const seguinte = atual === linha ? rearme + 1 : 0;
+      if (faltam && seguinte <= REARMES_FOTO) setTimeout(() => { if (geracao === minha) fotografar(seguinte); }, 4000);
     }
   }
 
   // ── o link de um evento (?e=abisal) aberto no modo simples ───────────────
+  // Abrir um evento grande leva dezenas de segundos: sem a tela de trabalho, quem tocava no link via só a
+  // caixa vazia e achava que o link não tinha funcionado.
   if (ponte.eventoDoLink && modoSimples()) {
-    ponte.eventoDoLink.then((aberto) => { if (aberto) { marcarVisto(); $('simplesDica').hidden = true; mostrarEvento(); } }).catch(() => {});
+    marcarVisto();
+    $('simplesDica').hidden = true;
+    mostrarTrabalho(t('simples.abrindoEvento'));
+    dizer(t('simples.abrindoEventoEstado'));
+    const minha = geracao;
+    const pedido = new URLSearchParams(location.search).get('e') || '';
+    const falhou = () => { if (minha === geracao) erro(pedido ? t('simples.semEvento', { nome: pedido }) : t('simples.naoEntendi')); };
+    ponte.eventoDoLink.then((aberto) => { if (minha !== geracao) return; if (aberto) mostrarEvento(); else falhou(); }).catch(falhou);
   }
 
   // A página recarregada volta ao último vídeo que a pessoa via, com a lista lembrada (ou continua de onde o

@@ -1,9 +1,9 @@
 // O filtro da lista simples (a do streamer e a do evento): as contas, sem tela. Consulta o que a lista já tem (as etiquetas
 // do índice em titulo.js e as falas lembradas em falas.js); não analisa nada de novo.
 
-import { t } from './idiomas.js?v=babb2453fe';
-import { etiquetasDoMomento, etiquetasParaFiltro, tirosConfirmado } from './titulo.js?v=babb2453fe';
-import { falouIsto } from './falas.js?v=babb2453fe';
+import { t } from './idiomas.js?v=9b7d41859d';
+import { etiquetasDoMomento, etiquetasParaFiltro, tirosConfirmado } from './titulo.js?v=9b7d41859d';
+import { falouIsto } from './falas.js?v=9b7d41859d';
 
 export const CHAVE_FILTRO = 'povix.simplesFiltro';
 /** Os tipos do filtro (o `tipo` da etiqueta) na ordem do painel. */

@@ -11,17 +11,17 @@
 // servidor e os nomes do jogo sem canal. As mortes ficam só neste aparelho, por evento, como os lances
 // marcados e descartados; as que vão para a montagem viajam no link do projeto com as outras kills.
 
-import { t, tn } from './idiomas.js?v=babb2453fe';
-import { escapar } from './escapar.js?v=babb2453fe';
+import { t, tn } from './idiomas.js?v=9b7d41859d';
+import { escapar } from './escapar.js?v=9b7d41859d';
 import {
   lerMortes, horasDasMortes, casarMortes, nomesSemCanal, marcasDasMortes, juntarMortes, mortesParaGuardar,
   mortesGuardadas, fusoDoAparelho,
-} from './mortes.js?v=babb2453fe';
-import { lerApelidos, guardarApelidos, juntarApelidos } from './nomes.js?v=babb2453fe';
-import { morteDoVideo, juntarDoVideo, confirmarPeloTiro, janelasDosTiros } from './achar-mortes.js?v=babb2453fe';
-import { procurarMortes, podeDescodificar } from './achar-mortes-video.js?v=babb2453fe';
-import { abrirQuadros, abrirLeitor, podeLer } from './ler-tela.js?v=babb2453fe';
-import { juntar, tempoFalta } from './ouvir.js?v=babb2453fe';
+} from './mortes.js?v=9b7d41859d';
+import { lerApelidos, guardarApelidos, juntarApelidos } from './nomes.js?v=9b7d41859d';
+import { morteDoVideo, juntarDoVideo, confirmarPeloTiro, janelasDosTiros } from './achar-mortes.js?v=9b7d41859d';
+import { procurarMortes, podeDescodificar } from './achar-mortes-video.js?v=9b7d41859d';
+import { abrirQuadros, abrirLeitor, podeLer } from './ler-tela.js?v=9b7d41859d';
+import { juntar, tempoFalta } from './ouvir.js?v=9b7d41859d';
 
 const GUARDADO = 'povix.mortes';
 const MAX_EVENTOS = 30;
