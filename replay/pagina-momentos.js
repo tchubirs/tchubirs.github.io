@@ -6,8 +6,8 @@
 // Kick vinham outros clipes misturados. Duas abas: "Melhores" (por potencial; feed no celular, ranking
 // compacto em tela larga, só CSS) e "Por streamer" (uma fileira por streamer, o melhor primeiro).
 
-import { clipeDaKick, fonteDoVod, idDaPaginaDoVod } from './kick.js?v=dda32260d5';
-import { escapar } from './escapar.js?v=dda32260d5';
+import { clipeDaKick, fonteDoVod, idDaPaginaDoVod } from './kick.js?v=f2ceb77d96';
+import { escapar } from './escapar.js?v=f2ceb77d96';
 
 const TEXTOS = {
   pt: {
@@ -178,7 +178,10 @@ function pintar() {
   parar();
   // Um streamer pode procurar só o que é dele (o dono, 17/10): os momentos dele e aqueles em que ele aparece como
   // a visão do inimigo.
-  const doCanal = (m) => !estado.canal || m.canal === estado.canal || m.pov?.canal === estado.canal;
+  // Sem busca, a lista do evento mostra só top e bom; o nível "resto" aparece na busca do streamer, que vê tudo o que
+  // é dele mesmo sem viral.
+  const doCanal = (m) => (!estado.canal ? m.nivel !== 'resto'
+    : m.canal === estado.canal || povsDe(m).some((pv) => pv.canal === estado.canal));
   const lista = [...porId.values()].filter(doCanal).sort(porPotencial);
   const caixa = $('listaMomentos');
   const pagina = (chave, ms) => {
@@ -220,15 +223,15 @@ function textos() {
   $('momBusca').setAttribute('aria-label', t('busca'));
   if (estado.dados) {
     $('nomeEvento').textContent = String(estado.dados.evento || estado.nome);
-    const deles = estado.canal ? [...porId.values()].filter((m) => m.canal === estado.canal || m.pov?.canal === estado.canal).length : 0;
-    $('momSub').textContent = !estado.canal ? t('sub', { n: porId.size, c: new Set([...porId.values()].map((m) => m.canal)).size })
+    const deles = estado.canal ? [...porId.values()].filter((m) => m.canal === estado.canal || povsDe(m).some((pv) => pv.canal === estado.canal)).length : 0;
+    const doEvento = [...porId.values()].filter((m) => m.nivel !== 'resto');
+    $('momSub').textContent = !estado.canal ? t('sub', { n: doEvento.length, c: new Set(doEvento.map((m) => m.canal)).size })
       : deles ? t('subCanal', { n: deles, canal: estado.canal }) : t('nadaCanal', { canal: estado.canal });
     // Trocar o idioma não corta o vídeo que está a tocar; os cartões mudam na próxima pintura.
     if (!estado.tocando) pintar();
   }
   if (estado.aviso) $('momEstado').textContent = t(...estado.aviso);
-  const pv = estado.tocando?.povVez;
-  if (pv) pv.caixa.querySelector('.momPovTopo').innerHTML = rotuloPov(pv.pov);
+  for (const pv of estado.tocando?.povs || []) pv.caixa.querySelector('.momPovTopo').innerHTML = rotuloPov(pv.pov);
 }
 
 function avisar(chave, vars) {
@@ -279,11 +282,12 @@ async function tocar(cartaoEl) {
     if (temClipe(m) && !(UUID.test(m.uuid || '') && Number.isFinite(m.aosS))) {
       url = (await clipeDaKick(m.clipe, { sinal: vez.controlo.signal })).m3u8;
     } else {
-      // A visão do outro lado pede-se já, em paralelo com a do principal.
-      if (povValida(m.pov)) {
-        vez.fontePov = fonteDoVod(m.pov.uuid, { sinal: vez.controlo.signal });
-        vez.fontePov.catch(() => {});
-      }
+      // As visões do outro lado pedem-se já, em paralelo com a do principal.
+      vez.fontesPov = povsDe(m).map((pv) => {
+        const f = fonteDoVod(pv.uuid, { sinal: vez.controlo.signal });
+        f.catch(() => {});
+        return [pv, f];
+      });
       const fonte = await fonteDoVod(m.uuid, { sinal: vez.controlo.signal });
       url = fonte.m3u8;
       if (fonte.vodId && !UUID7.test(m.vodId || '')) {
@@ -301,10 +305,12 @@ async function tocar(cartaoEl) {
       video.addEventListener('timeupdate', noFim);
     }
     vez.hls = ligarPlayer(video, url, de, falhou);
+    // O principal nunca espera (o dono, 17/10: quem olha não pode ficar parado à espera): as visões do inimigo
+    // entram quando ficam prontas, já no instante certo do principal.
+    if (ate != null && vez.fontesPov?.length) tocarPovs(m, vez);
     // Depois do pedido à Kick o navegador pode já não contar o toque e recusar o som: os controlos estão à
     // vista, e o próximo toque toca.
     video.play().catch(() => {});
-    if (ate != null && vez.fontePov) tocarPov(m, vez);
   } catch (e) {
     if (estado.tocando !== vez || e?.name === 'AbortError') return;
     parar();
@@ -313,6 +319,9 @@ async function tocar(cartaoEl) {
 }
 
 const povValida = (p) => p && CANAL.test(p.canal || '') && UUID.test(p.uuid || '') && Number.isFinite(p.aosS);
+// As visões do outro lado de um momento: `povs` (lista) ou o antigo `pov`; no máximo MAX_POVS, as válidas.
+const MAX_POVS = 2;
+const povsDe = (m) => (Array.isArray(m.povs) ? m.povs : m.pov ? [m.pov] : []).filter(povValida).slice(0, MAX_POVS);
 
 /**
  * Liga um m3u8 a um <video>: hls.js onde houver, senão o HLS nativo (Safari). `aoFalhar` corre num erro fatal.
@@ -335,17 +344,23 @@ function ligarPlayer(video, url, de, aoFalhar) {
   throw Object.assign(new Error('sem player'), { name: 'SEM-PLAYER' });
 }
 
-/** Larga a visão do outro lado: para o vídeo, solta o hls e os ouvintes que ela punha no principal. */
-function limparPov(vez) {
-  const p = vez.povVez;
-  if (!p) return;
-  vez.povVez = null;
+/** Larga uma visão do outro lado: para o vídeo, solta o hls e os ouvintes que ela punha no principal. */
+function limparUmaPov(vez, p) {
+  if (!vez.povs?.includes(p)) return;
+  vez.povs = vez.povs.filter((x) => x !== p);
   p.controlo.abort();
   p.hls?.destroy();
   p.video.pause();
   p.video.removeAttribute('src');
   p.video.load();
   p.caixa.remove();
+  p.pronta();
+  if (!vez.povs.length) vez.caixaPovs?.remove();
+}
+
+function limparPov(vez) {
+  for (const p of [...(vez.povs || [])]) limparUmaPov(vez, p);
+  vez.caixaPovs?.remove();
 }
 
 function linkDaKickPov(pov) {
@@ -360,55 +375,74 @@ const rotuloPov = (pov) => `<span class="momPovNome">${escapar(t(pov.tipo === 'c
 const LIMIAR_POV_S = 0.8;
 
 /**
- * A visão do outro lado (o dono, 17/10: o Povix é a POV do atacante e do defensor): um segundo vídeo, menor e
- * mudo, do VOD de quem estava na mesma cena, a seguir o principal. Se não abrir, some sem estragar o principal.
+ * As visões do outro lado (o dono, 17/10: o Povix é a POV do atacante e do defensor): até MAX_POVS vídeos menores
+ * e mudos, lado a lado embaixo do principal, do VOD de quem estava na mesma cena, a seguir o principal. A que não
+ * abrir some sem estragar o resto. Devolve, por visão, uma promessa que resolve quando ela pode tocar (ou some).
  */
-async function tocarPov(m, vez) {
-  const desvio = m.pov.aosS - m.aosS;
+function tocarPovs(m, vez) {
+  const caixaPovs = document.createElement('div');
+  caixaPovs.className = 'momPovs';
+  vez.caixaPovs = caixaPovs;
+  vez.povs = [];
+  vez.caixa.after(caixaPovs);
+  return vez.fontesPov.map(([pv, fonte]) => tocarPov(m, vez, pv, fonte, caixaPovs));
+}
+
+function tocarPov(m, vez, pv, fonte, caixaPovs) {
+  const desvio = pv.aosS - m.aosS;
   const caixa = document.createElement('div');
   caixa.className = 'momPov';
-  caixa.innerHTML = `<div class="momPovTopo">${rotuloPov(m.pov)}</div>`;
+  caixa.innerHTML = `<div class="momPovTopo">${rotuloPov(pv)}</div>`;
   const pov = document.createElement('video');
   pov.muted = true;
   pov.playsInline = true;
   caixa.append(pov);
-  const p = { caixa, video: pov, hls: null, pov: m.pov, controlo: new AbortController() };
-  vez.povVez = p;
-  vez.caixa.after(caixa);
-  const some = () => { if (vez.povVez === p) limparPov(vez); };
-  try {
-    const { m3u8 } = await vez.fontePov;
-    if (estado.tocando !== vez || vez.povVez !== p) return;
-    const v = vez.video;
-    // O instante da outra visão que corresponde ao do principal; fora do VOD dela (começou depois ou acabou
-    // antes) não há o que mostrar: fica escondida em vez de saltar a cada passo.
-    const alvo = () => {
-      const a = v.currentTime + desvio;
-      return a < 0 || (Number.isFinite(pov.duration) && a > pov.duration) ? null : a;
-    };
-    // O principal já pode ter andado enquanto a v1 respondia: entra no mesmo instante da cena.
-    const de = Math.max(0, (v.currentTime > 0 ? v.currentTime : Math.max(0, m.aosS - ANTES_S)) + desvio);
-    p.hls = ligarPlayer(pov, m3u8, de, some);
-    const acertar = (sempre) => {
-      const a = alvo();
-      caixa.hidden = a == null;
-      if (a == null || pov.readyState < 2 || pov.seeking) return;
-      if (sempre || Math.abs(pov.currentTime - a) > LIMIAR_POV_S) pov.currentTime = a;
-    };
-    const sinal = { signal: p.controlo.signal };
-    v.addEventListener('play', () => pov.play().catch(() => {}), sinal);
-    v.addEventListener('playing', () => pov.play().catch(() => {}), sinal);
-    v.addEventListener('pause', () => pov.pause(), sinal);
-    // O principal parado a carregar não deixa a outra visão fugir à frente.
-    v.addEventListener('waiting', () => pov.pause(), sinal);
-    v.addEventListener('ratechange', () => { pov.playbackRate = v.playbackRate; }, sinal);
-    v.addEventListener('seeked', () => acertar(true), sinal);
-    v.addEventListener('timeupdate', () => acertar(false), sinal);
-    pov.playbackRate = v.playbackRate;
-    if (!v.paused) pov.play().catch(() => {});
-  } catch (e) {
-    if (e?.name !== 'AbortError') some();
-  }
+  let pronta;
+  const promessa = new Promise((ok) => { pronta = ok; });
+  const p = { caixa, video: pov, hls: null, pov: pv, controlo: new AbortController(), pronta };
+  vez.povs.push(p);
+  caixaPovs.append(caixa);
+  const some = () => limparUmaPov(vez, p);
+  (async () => {
+    try {
+      const { m3u8 } = await fonte;
+      if (estado.tocando !== vez || !vez.povs.includes(p)) return;
+      const v = vez.video;
+      // O instante desta visão que corresponde ao do principal; fora do VOD dela (começou depois ou acabou
+      // antes) não há o que mostrar: fica escondida em vez de saltar a cada passo.
+      const alvo = () => {
+        const a = v.currentTime + desvio;
+        return a < 0 || (Number.isFinite(pov.duration) && a > pov.duration) ? null : a;
+      };
+      // O principal já pode ter andado enquanto a v1 respondia: entra no mesmo instante da cena.
+      const de = Math.max(0, (v.currentTime > 0 ? v.currentTime : Math.max(0, m.aosS - ANTES_S)) + desvio);
+      p.hls = ligarPlayer(pov, m3u8, de, some);
+      const acertar = (sempre) => {
+        const a = alvo();
+        caixa.hidden = a == null;
+        if (a == null || pov.readyState < 2 || pov.seeking) return;
+        if (sempre || Math.abs(pov.currentTime - a) > LIMIAR_POV_S) pov.currentTime = a;
+      };
+      const sinal = { signal: p.controlo.signal };
+      v.addEventListener('play', () => pov.play().catch(() => {}), sinal);
+      v.addEventListener('playing', () => pov.play().catch(() => {}), sinal);
+      v.addEventListener('pause', () => pov.pause(), sinal);
+      // O principal parado a carregar não deixa esta visão fugir à frente.
+      v.addEventListener('waiting', () => pov.pause(), sinal);
+      v.addEventListener('ratechange', () => { pov.playbackRate = v.playbackRate; }, sinal);
+      v.addEventListener('seeked', () => acertar(true), sinal);
+      v.addEventListener('timeupdate', () => acertar(false), sinal);
+      // Chegou atrasada (depois de o principal arrancar): entra no instante certo assim que puder tocar.
+      pov.addEventListener('canplay', () => { pronta(); acertar(true); }, { once: true, signal: p.controlo.signal });
+      pov.addEventListener('playing', () => acertar(true), { once: true, signal: p.controlo.signal });
+      pov.playbackRate = v.playbackRate;
+      if (!v.paused) pov.play().catch(() => {});
+    } catch (e) {
+      if (e?.name !== 'AbortError') some();
+      else pronta();
+    }
+  })();
+  return promessa;
 }
 
 /** Um VOD sem o id da página: o link da Kick só se sabe depois de perguntar, e pergunta-se no toque. */
@@ -471,7 +505,7 @@ async function iniciar() {
   if (!momentos.length) { avisar('naoExiste', { nome: estado.nome }); return; }
   for (const m of momentos) porId.set(m.id, { ...m });
   estado.dados = dados;
-  const canais = [...new Set(momentos.flatMap((m) => [m.canal, m.pov?.canal]).filter((c) => CANAL.test(c || '')))].sort();
+  const canais = [...new Set(momentos.flatMap((m) => [m.canal, ...povsDe(m).map((pv) => pv.canal)]).filter((c) => CANAL.test(c || '')))].sort();
   $('momCanais').innerHTML = canais.map((c) => `<option value="${escapar(c)}"></option>`).join('');
   const busca = $('momBusca');
   const escolher = () => {

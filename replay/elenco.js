@@ -31,7 +31,7 @@
 //  - `contar` conta os soltos nos canais, e `paraTexto` escreve-os numa linha
 //    "Sem time: a, b" no fim.
 
-import { limparApelido } from './nomes.js?v=dda32260d5';
+import { limparApelido } from './nomes.js?v=f2ceb77d96';
 
 /**
  * Caminhos da Kick que não são canais.

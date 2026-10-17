@@ -20,7 +20,7 @@
 //
 // A geometria (os ladrilhos, juntar os rostos, a caixa) é pura, para se testar sem navegador.
 
-import { proporcaoDoQuadro, limitar, encaixar, DIVISAO_OMISSAO } from './retrato.js?v=dda32260d5';
+import { proporcaoDoQuadro, limitar, encaixar, DIVISAO_OMISSAO } from './retrato.js?v=f2ceb77d96';
 
 /** Quantos quadros se olham por canal. */
 export const QUADROS_POR_CANAL = 5;
