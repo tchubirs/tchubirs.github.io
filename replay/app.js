@@ -7,83 +7,83 @@
 
 import './dicas.js';
 import {
-  vodsDoCanal, lerMaster, lerPlaylist, procurarCanais, lerLinkKick, clipeDaKick, vodDaKick, DESCONHECIDO, slugDoNome,
+  vodsDoCanal, lerMaster, lerPlaylist, procurarCanais, lerLinkKick, clipeDaKick, vodDaKick, idDaPaginaDoVod, DESCONHECIDO, slugDoNome,
   segmentosNaJanela,
-} from './kick.js?v=9b7d41859d';
+} from './kick.js?v=648ec4ed6d';
 import {
   linhaDoCanal, janelaComum, onde, trechoComum, quantosNoAr, comNudge, paraLink, doLink, seguirAncora,
   passoDoArrasto, ARRASTO_INTERVALO_MS, ARRASTO_ESPERA_MS, vistaDaLinha, saiuDaVista,
   ZOOM_MIN_MS, larguraDoZoom, valorDoZoom, zoomEmVolta, andarVista,
-} from './relogio.js?v=9b7d41859d';
-import { cortarTodosOsAngulos } from './baixar.js?v=9b7d41859d';
-import { juntarMp4 } from './mp4.js?v=9b7d41859d';
-import { juntarGravados } from './juntar-gravados.js?v=9b7d41859d';
-import { instanteAoVivo, bordaAoVivo, medirAtraso, instantesAoVivo, ATRASO_PADRAO_MS } from './aovivo.js?v=9b7d41859d';
-import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=9b7d41859d';
-import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=9b7d41859d';
-import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=9b7d41859d';
+} from './relogio.js?v=648ec4ed6d';
+import { cortarTodosOsAngulos } from './baixar.js?v=648ec4ed6d';
+import { juntarMp4 } from './mp4.js?v=648ec4ed6d';
+import { juntarGravados } from './juntar-gravados.js?v=648ec4ed6d';
+import { instanteAoVivo, bordaAoVivo, medirAtraso, instantesAoVivo, ATRASO_PADRAO_MS } from './aovivo.js?v=648ec4ed6d';
+import { alinharPeloSom, custoEstimadoMB, instantesParaOuvir } from './alinhar.js?v=648ec4ed6d';
+import { abrirJanela, irAEcraCheio, capacidades } from './janela.js?v=648ec4ed6d';
+import { ordemDosAngulos, aplicarOrdem } from './grelha.js?v=648ec4ed6d';
 import {
   RETRATO, enquadramentoInicial, limitar, desenhar, gravar, formatoQueFunciona, extensaoDe, prepararSomDaGravacao,
   reformar, limparDivisao, DIVISAO_OMISSAO, divisaoDoQuadro, proporcaoDoQuadro, encaixar,
   MODELO_OMISSAO, limparModelo, paraFraccoes, deFraccoes, DEITADO, ZONA_TIKTOK,
-} from './retrato.js?v=9b7d41859d';
+} from './retrato.js?v=648ec4ed6d';
 import {
   abrirDetector, abrirQuadrosEscondidos, procurarRosto, caixaDaWebcam, instantesDoClipe, degrauDoRosto,
   rostoGuardado, guardarRosto,
-} from './rosto.js?v=9b7d41859d';
+} from './rosto.js?v=648ec4ed6d';
 import {
   limparChat, geometria as geometriaDoChat, desenharChat, mensagensDoClipe, prepararEmotes,
   VIDA_MAX_MS as VIDA_CHAT_MS, LETRA as LETRA_CHAT, retanguloDoChat, CHAT_OMISSAO,
-} from './chat-clipe.js?v=9b7d41859d';
-import { ligarCaixa, estiloDaCaixa } from './caixa-previa.js?v=9b7d41859d';
+} from './chat-clipe.js?v=648ec4ed6d';
+import { ligarCaixa, estiloDaCaixa } from './caixa-previa.js?v=648ec4ed6d';
 import {
   limparLegenda, limparTranscricao, geometriaLegenda, desenharLegenda, transcricaoDoAudio, textoDaLinha,
   editarLinha, apagarLinha, deslocarLinha, rotuloTempo, cobre, linhaNoInstante, PASSO_MS, fonteDe as fonteDaLegenda,
   idiomaParaOuvir, segurarMs, retanguloDaLegenda, LEGENDA_OMISSAO,
-} from './legenda.js?v=9b7d41859d';
-import { abrirVoz, somDosPedacos, degrauDoSom, estimativaS, faltaBaixar } from './legenda-voz.js?v=9b7d41859d';
-import { guardarFala, linhasDaTranscricao } from './falas.js?v=9b7d41859d';
-import { tituloDeDeteccao, confDoSom } from './titulo.js?v=9b7d41859d';
-import { podeLer } from './ler-tela.js?v=9b7d41859d';
-import { planoDeAngulos, gravarAngulos } from './angulos.js?v=9b7d41859d';
-import { agruparPorNoite, rotuloDaNoite, noiteParaAbrir } from './noites.js?v=9b7d41859d';
+} from './legenda.js?v=648ec4ed6d';
+import { abrirVoz, somDosPedacos, degrauDoSom, estimativaS, faltaBaixar } from './legenda-voz.js?v=648ec4ed6d';
+import { guardarFala, linhasDaTranscricao } from './falas.js?v=648ec4ed6d';
+import { tituloDeDeteccao, confDoSom } from './titulo.js?v=648ec4ed6d';
+import { podeLer } from './ler-tela.js?v=648ec4ed6d';
+import { planoDeAngulos, gravarAngulos } from './angulos.js?v=648ec4ed6d';
+import { agruparPorNoite, rotuloDaNoite, noiteParaAbrir } from './noites.js?v=648ec4ed6d';
 import {
   novoMomento, acrescentar, remover, removerVarios, planoDaMontagem, ordenar,
   alternarVitima, filtrar, temMorte, clipesDoMomento, comAjuste, numeroNaMontagem,
   ajusteDe, ajustesQueContam, momentosParaLink, momentosDoLink, comVitimaEscrita, semVitimaEscrita,
-} from './momentos.js?v=9b7d41859d';
-import { lerApelidos } from './nomes.js?v=9b7d41859d';
+} from './momentos.js?v=648ec4ed6d';
+import { lerApelidos } from './nomes.js?v=648ec4ed6d';
 import {
   planearCorte, executarCorte, nomeDoFicheiro, largarOQueNaoServe, oQueFalta,
-} from './baixar.js?v=9b7d41859d';
-import { criarZip, crc32 } from './zip.js?v=9b7d41859d';
-import { retencaoDoCanal, prazoDoVod, ordemDeGuardar } from './prazo.js?v=9b7d41859d';
-import { eDoJogo } from './jogo.js?v=9b7d41859d';
-import { fcpxmlMulticam, textoDoPacote, linkDoVod } from './pacote.js?v=9b7d41859d';
-import { queFazerComOLeitor, limitarSaltos } from './leitor.js?v=9b7d41859d';
-import { criarApanhador } from './frames.js?v=9b7d41859d';
-import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=9b7d41859d';
-import { alertasDoCanal } from './alertas.js?v=9b7d41859d';
+} from './baixar.js?v=648ec4ed6d';
+import { criarZip, crc32 } from './zip.js?v=648ec4ed6d';
+import { retencaoDoCanal, prazoDoVod, ordemDeGuardar } from './prazo.js?v=648ec4ed6d';
+import { eDoJogo } from './jogo.js?v=648ec4ed6d';
+import { fcpxmlMulticam, textoDoPacote, linkDoVod } from './pacote.js?v=648ec4ed6d';
+import { queFazerComOLeitor, limitarSaltos } from './leitor.js?v=648ec4ed6d';
+import { criarApanhador } from './frames.js?v=648ec4ed6d';
+import { varrerNoite, custoVarrerMB } from './procurar-momentos.js?v=648ec4ed6d';
+import { alertasDoCanal } from './alertas.js?v=648ec4ed6d';
 import {
   ESPERTO_A_PARTIR_MS, janelasDosPicos, msPorOuvir, somaMs, juntar, eMuito, estimarFalta, tempoFalta,
-} from './ouvir.js?v=9b7d41859d';
-import { TAXA_TIROS } from './tiros.js?v=9b7d41859d';
-import { termosDoFiltro, momentosDePalavras } from './chat.js?v=9b7d41859d';
-import { SENSIBILIDADES_DETECAO, opcoesDaSensibilidade, juntarProximos } from './lances.js?v=9b7d41859d';
-import { parecidos, juntarPerto } from './aprender.js?v=9b7d41859d';
-import { somDoCanal } from './alinhar.js?v=9b7d41859d';
+} from './ouvir.js?v=648ec4ed6d';
+import { TAXA_TIROS } from './tiros.js?v=648ec4ed6d';
+import { termosDoFiltro, momentosDePalavras } from './chat.js?v=648ec4ed6d';
+import { SENSIBILIDADES_DETECAO, opcoesDaSensibilidade, juntarProximos } from './lances.js?v=648ec4ed6d';
+import { parecidos, juntarPerto } from './aprender.js?v=648ec4ed6d';
+import { somDoCanal } from './alinhar.js?v=648ec4ed6d';
 import {
   MAXIMO_S, mover, janelaInicial, nomeDoClipe, posicaoDaCabeca, dentroDosLimites, duracaoCurta,
-} from './clipe.js?v=9b7d41859d';
-import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=9b7d41859d';
-import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=9b7d41859d';
-import { escapar } from './escapar.js?v=9b7d41859d';
-import { montarEvento, rotuloDoDia } from './evento-ui.js?v=9b7d41859d';
-import { montarPortas } from './portas.js?v=9b7d41859d';
-import { montarSimples, modoSimples } from './simples.js?v=9b7d41859d';
-import { prepararPovs } from './povs-preparar.js?v=9b7d41859d';
-import { atalhos, ACAO, comboDoEvento, partes } from './atalhos.js?v=9b7d41859d';
-import { montarPainelAtalhos, pintarDicas } from './atalhos-painel.js?v=9b7d41859d';
+} from './clipe.js?v=648ec4ed6d';
+import { IDIOMAS, t, tn, definirIdioma, idiomaDoBrowser, idiomaActual, aplicarIdioma } from './idiomas.js?v=648ec4ed6d';
+import { notaDeMorte, quemMorreu, medir, limiar, pareceMorto } from './morte.js?v=648ec4ed6d';
+import { escapar } from './escapar.js?v=648ec4ed6d';
+import { montarEvento, rotuloDoDia } from './evento-ui.js?v=648ec4ed6d';
+import { montarPortas } from './portas.js?v=648ec4ed6d';
+import { montarSimples, modoSimples } from './simples.js?v=648ec4ed6d';
+import { prepararPovs } from './povs-preparar.js?v=648ec4ed6d';
+import { atalhos, ACAO, comboDoEvento, partes } from './atalhos.js?v=648ec4ed6d';
+import { montarPainelAtalhos, pintarDicas } from './atalhos-painel.js?v=648ec4ed6d';
 
 /* Os glifos dos controlos do vídeo são DESENHO e não emoji.
    Um ⏸ ou um 🔇 sai diferente em cada sistema — no iPhone sai a cores, no
@@ -4707,6 +4707,31 @@ async function baixarMontagem(soEsta = null, { guardar = false } = {}) {
   if (!soEsta && !umSo) oferecerZip(paraZip);
 }
 
+// Sem o id da página o pacote sai sem link, mas o ângulo já cortado não se perde por causa dele, nem o
+// pacote fica preso numa Kick que não responde.
+// Só os achados ficam guardados: um que falhou tenta de novo no pacote seguinte.
+const vodIdsAchados = new Map();
+async function vodIdDoPacote(vod, sinal) {
+  if (typeof vod?.uuid !== 'string') return null;
+  if (vodIdsAchados.has(vod.uuid)) return vodIdsAchados.get(vod.uuid);
+  if (sinal.aborted) throw new DOMException('cancelado', 'AbortError');
+  const vigia = new AbortController();
+  const largar = () => vigia.abort();
+  sinal.addEventListener('abort', largar, { once: true });
+  const relogio = setTimeout(largar, 10_000);
+  try {
+    const id = await idDaPaginaDoVod(vod.uuid, { sinal: vigia.signal });
+    if (id) vodIdsAchados.set(vod.uuid, id);
+    return id;
+  } catch (e) {
+    if (sinal.aborted) throw e;
+    return null;
+  } finally {
+    clearTimeout(relogio);
+    sinal.removeEventListener('abort', largar);
+  }
+}
+
 /**
  * O pacote do lance para o editor (IDEIAS.md, item 6): um ZIP com o trecho de cada ângulo que filmava o
  * lance (a cópia rápida, em MP4), um projeto multicâmera .fcpxml com os ângulos alinhados e um texto com
@@ -4769,7 +4794,7 @@ async function baixarPacote(m) {
         altura: p.qualidade?.altura,
         fps: p.qualidade?.fps,
         atrasoMs: nudge,
-        link: linkDoVod(linha.slug, peca?.vod),
+        link: linkDoVod(linha.slug, { vodId: await vodIdDoPacote(peca?.vod, controlo.signal) }),
         noVodS: peca ? (inicioPlaylist - peca.playlist.inicio) / 1000 : null,
       });
       ficheiros.push({ nome: ficheiro, blob: new Blob([r.bytes], { type: r.tipo }), crc: crc32(r.bytes), tamanho: r.bytes.length });

@@ -74,7 +74,8 @@ export async function vodsDoCanal(slug, { buscar = fetch, sinal } = {}) {
     // O idioma que o streamer declarou na Kick ("Portuguese", "Spanish"). A legenda usa-o quando a
     // escolha é Automático: o Whisper, sozinho, ouviu inglês num clipe de Rust em português (12/10).
     idioma: typeof v.language === 'string' ? v.language.slice(0, 40) : DESCONHECIDO,
-    // O endereço do VOD na Kick é kick.com/<canal>/videos/<uuid> (o pacote do lance leva o link).
+    // O id do vídeo na v1. A página do VOD já não abre por ele (17/10): o link do pacote usa o `vod_id`
+    // que idDaPaginaDoVod tira daqui.
     uuid: typeof v.video?.uuid === 'string' ? v.video.uuid.slice(0, 64) : DESCONHECIDO,
     // O jogo da live ("Rust", "Grand Theft Auto V (GTA)"), em categories[0].name (medido em 12/10 nos
     // VODs do Abisal: um canal da lista passou noites no GTA RP). Um evento com `jogo` deixa os outros de fora.
@@ -360,6 +361,17 @@ export async function vodDaKick(id, { buscar = fetch, sinal, slug: doLink } = {}
   const txt = String(quando || '').replace(' ', 'T');
   const inicioMs = txt ? Date.parse(/(Z|[+-]\d\d:?\d\d)$/.test(txt) ? txt : `${txt}Z`) : NaN;
   return { slug, inicioMs: Number.isFinite(inicioMs) ? inicioMs : null };
+}
+
+/**
+ * O id da página do VOD (kick.com/<canal>/videos/<id>) a partir do `uuid` da lista de VODs: a página só
+ * conhece o `vod_id` (UUID v7), que vem em `livestream.vod_id` na v1 (medido em 17/10). Sem ele, null.
+ */
+export async function idDaPaginaDoVod(uuid, { buscar = fetch, sinal } = {}) {
+  const r = await buscar(`https://kick.com/api/v1/video/${encodeURIComponent(uuid)}`, { signal: sinal });
+  if (!r.ok) return null;
+  const id = (await r.json())?.livestream?.vod_id;
+  return typeof id === 'string' ? id : null;
 }
 
 /** Um clipe da Kick: o que é preciso para o pôr no relógio e para o cortar. */

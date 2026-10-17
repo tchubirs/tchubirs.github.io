@@ -10,34 +10,34 @@
 // sempre (abrir o canal, gravar o clipe) chega pela `ponte` que o app.js passa: este arquivo não mexe no
 // estado dele por conta própria.
 
-import { t, tn } from './idiomas.js?v=9b7d41859d';
-import { procurarCanais, vodsDoCanal, vodDaKick, slugDoNome } from './kick.js?v=9b7d41859d';
+import { t, tn } from './idiomas.js?v=648ec4ed6d';
+import { procurarCanais, vodsDoCanal, vodDaKick, slugDoNome } from './kick.js?v=648ec4ed6d';
 import {
   lerEntrada, montarLista, lancesParaLista, nomeDoArquivo, tempoNaLive, NOMES_NO_LANCE, QUANTOS,
-  acharVod, guardarVod, mensagensDosPicos, lerUltimo, guardarUltimo,
-} from './simples-lista.js?v=9b7d41859d';
-import { varrerNoite } from './procurar-momentos.js?v=9b7d41859d';
-import { somDoCanal } from './alinhar.js?v=9b7d41859d';
-import { TAXA_TIROS } from './tiros.js?v=9b7d41859d';
-import { alertasDoCanal } from './alertas.js?v=9b7d41859d';
-import { montarIndice, chaveDoIndice, indiceValido } from './indice.js?v=9b7d41859d';
-import { janelasDosPicos, estimarFalta, estimarFaltaFracao, tempoFalta } from './ouvir.js?v=9b7d41859d';
-import { onde } from './relogio.js?v=9b7d41859d';
-import { abrirQuadrosEscondidos } from './rosto.js?v=9b7d41859d';
-import { escapar } from './escapar.js?v=9b7d41859d';
+  acharVod, guardarVod, mensagensDosPicos, lerUltimo, guardarUltimo, comMomentoDoLink,
+} from './simples-lista.js?v=648ec4ed6d';
+import { varrerNoite } from './procurar-momentos.js?v=648ec4ed6d';
+import { somDoCanal } from './alinhar.js?v=648ec4ed6d';
+import { TAXA_TIROS } from './tiros.js?v=648ec4ed6d';
+import { alertasDoCanal } from './alertas.js?v=648ec4ed6d';
+import { montarIndice, chaveDoIndice, indiceValido } from './indice.js?v=648ec4ed6d';
+import { janelasDosPicos, estimarFalta, estimarFaltaFracao, tempoFalta } from './ouvir.js?v=648ec4ed6d';
+import { onde } from './relogio.js?v=648ec4ed6d';
+import { abrirQuadrosEscondidos } from './rosto.js?v=648ec4ed6d';
+import { escapar } from './escapar.js?v=648ec4ed6d';
 import {
   tituloDoMomento, etiquetasDoMomento, confExibida, confMedia, VERSAO_ETIQUETAS, textoDoContexto,
-} from './titulo.js?v=9b7d41859d';
+} from './titulo.js?v=648ec4ed6d';
 import {
   lerFiltro, guardarFiltro, limparFiltro, filtroAtivo, filtraAlgo, aplicarFiltro, chipsDoFiltro, semChip, comFala, TIPOS_DO_FILTRO,
-} from './simples-filtro.js?v=9b7d41859d';
-import { lerFalas, guardarFala, acharNaLista, melhorFala } from './falas.js?v=9b7d41859d';
+} from './simples-filtro.js?v=648ec4ed6d';
+import { lerFalas, guardarFala, acharNaLista, melhorFala } from './falas.js?v=648ec4ed6d';
 import {
   analisarCandidatos, comContexto, contextoVigente, contextoDoMomento, precisaDeContexto, MAX_CANDIDATOS_POR_LIVE, ENDPOINT_PADRAO,
-} from './contexto-candidatos.js?v=9b7d41859d';
-import { VERSAO_CONTRATO, MAX_IMAGEM_BYTES } from './contexto-rust.js?v=9b7d41859d';
-import { fundirPovsPorCanal } from './simples-lista.js?v=9b7d41859d';
-import { transmissoesDaBusca, pedidoDaBusca, limitesDaBusca, relogioDoTrecho, mesmoPedido, guardarMedidaBusca, estimativaDaBusca } from './busca-escopo.js?v=9b7d41859d';
+} from './contexto-candidatos.js?v=648ec4ed6d';
+import { VERSAO_CONTRATO, MAX_IMAGEM_BYTES } from './contexto-rust.js?v=648ec4ed6d';
+import { fundirPovsPorCanal } from './simples-lista.js?v=648ec4ed6d';
+import { transmissoesDaBusca, pedidoDaBusca, limitesDaBusca, relogioDoTrecho, mesmoPedido, guardarMedidaBusca, estimativaDaBusca } from './busca-escopo.js?v=648ec4ed6d';
 
 const CHAVE_MODO = 'povix.modo';
 const CHAVE_VISTO = 'povix.simplesVisto';
@@ -820,7 +820,9 @@ export function montarSimples(ponte) {
       if (minha !== geracao) return;
       const e = ponte.lancesDoEvento();
       atualizarSeletorDeCanal({ nome: e.nome || '', canais: e.canais });
-      ultimos = lancesParaLista(e.lances, { mensagens: e.mensagens, canalPrincipal: canalPrincipalDoEvento })
+      // Com "meu canal" escolhido, só o link desse canal entra (a lista mostra só o POV dele).
+      const doLink = !canalPrincipalDoEvento || slugDoNome(e.doLink?.canal || '') === slugDoNome(canalPrincipalDoEvento) ? e.doLink : null;
+      ultimos = comMomentoDoLink(lancesParaLista(e.lances, { mensagens: e.mensagens, canalPrincipal: canalPrincipalDoEvento }), doLink)
         .map((m) => ({ ...m, nomeCanal: m.canal, etiquetas: etiquetasDoMomento(m) }));
       pintarLista();
       fotografar();
@@ -1333,13 +1335,19 @@ export function montarSimples(ponte) {
   }
 
   // ── a lista ───────────────────────────────────────────────────────────
-  const chave = (m) => `${m.canal}|${Math.round(m.ms / 1000)}`;
+  const chave = (m) => m.chaveFixa || `${m.canal}|${Math.round(m.ms / 1000)}`;
 
   /** Os que a lista mostra agora: sem os "Excluir", e só até onde o "Mostrar mais" chegou. */
   const queridos = () => ultimos.filter((m) => !naoQuero.has(chave(m)));
   // Na ordem da live, para o streamer seguir a noite, e mais cartões ao rolar até o fim (o dono, 13/10).
   // O filtro manda na ordem (a da live é a de omissão) e esconde o que não passa; "Excluir" vale antes dele.
-  const filtrados = () => aplicarFiltro(queridos(), filtro, { falas: falaDe });
+  // O momento do link do evento fica no topo com qualquer ordem: foi por ele que a pessoa veio. Um filtro que o
+  // esconde continua a escondê-lo.
+  const filtrados = () => {
+    const passam = aplicarFiltro(queridos(), filtro, { falas: falaDe });
+    const i = passam.findIndex((m) => m.doLink);
+    return i > 0 ? [passam[i], ...passam.filter((_, j) => j !== i)] : passam;
+  };
 
   // ── a confiança, a fala e o filtro de cada cartão ─────────────────────
   /** "Luta 88%" (medida em rótulos) ou "Luta ~70%" (estimativa, com a dica no mouse). */
@@ -1687,7 +1695,8 @@ export function montarSimples(ponte) {
       const foto = fotos.get(k);
       const durS = Math.round((m.ateMs - m.deMs) / 1000);
       const resumo = m.doClipe ? null : textoDoContexto(contextoDoMomento(m));
-      const motivo = m.doClipe ? t('simples.oClipe') : (resumo?.titulo || tituloDoMomento(m));
+      const motivo = m.doClipe ? t('simples.oClipe')
+        : m.doLink && !m.tipos?.length ? t('simples.doLink') : (resumo?.titulo || tituloDoMomento(m));
       const nota = m.nota ? `<b class="simplesNota nota-${m.nota}">${escapar(t(`simples.nota.${m.nota}`))}</b> ` : '';
       const feito = feitos.get(k);
       return `<li class="simplesCartao" data-i="${i}" data-chave="${escapar(k)}">`
@@ -2094,11 +2103,17 @@ export function montarSimples(ponte) {
 
   // ── as fotos: um quadro de cada momento ────────────────────────────────
   let fotografando = null;
+  // A geração cuja lista pediu fotos com uma volta de outra em curso (e voltou sem nada): a volta antiga, ao acabar,
+  // começa a dela. Reabrir o mesmo canal reusa o mesmo objeto da linha, por isso não basta comparar a linha.
+  let pediuFotos = -1;
   // `rearme`: quantas vezes esta volta já foi repetida por sobrarem cartões sem foto (as chamadas de fora vêm a 0).
   const REARMES_FOTO = 2;
   const FALHAS_SEGUIDAS_FOTO = 4;
   async function fotografar(rearme = 0) {
-    if (fotografando || !linhaAberta) return;
+    if (fotografando || !linhaAberta) {
+      if (fotografando && linhaAberta) pediuFotos = geracao;
+      return;
+    }
     const linha = linhaAberta;
     // "Começar de novo" (parar) também encerra a volta: sem pedir mais quadros, sem pintar e sem rearmar.
     const minha = geracao;
@@ -2153,7 +2168,7 @@ export function montarSimples(ponte) {
       // `fotografando` e voltaram sem nada: começa a volta dela já.
       const outra = geracao !== minha;
       const atual = outra ? null : linhaAberta;
-      if (outra && linhaAberta && linhaAberta !== linha) {
+      if (outra && linhaAberta && (linhaAberta !== linha || pediuFotos === geracao)) {
         const dela = geracao;
         setTimeout(() => { if (geracao === dela) fotografar(); }, 0);
       }

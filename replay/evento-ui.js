@@ -12,27 +12,27 @@
 import {
   lerElenco, codificar, descodificar, contar, paraTexto, juntarElencos, paraArquivo, deArquivo, nomeDoArquivo,
   apelidosDoTexto,
-} from './elenco.js?v=9b7d41859d';
-import { montarNomesNaTela } from './nomes-ui.js?v=9b7d41859d';
-import { montarMortes } from './mortes-ui.js?v=9b7d41859d';
-import { carregarCanais, procurarAoVivo } from './carregar.js?v=9b7d41859d';
-import { escolherCaminho } from './portas.js?v=9b7d41859d';
+} from './elenco.js?v=648ec4ed6d';
+import { montarNomesNaTela } from './nomes-ui.js?v=648ec4ed6d';
+import { montarMortes } from './mortes-ui.js?v=648ec4ed6d';
+import { carregarCanais, procurarAoVivo } from './carregar.js?v=648ec4ed6d';
+import { escolherCaminho } from './portas.js?v=648ec4ed6d';
 import {
   montarMapa, linhasVisiveis, tempoDoX, xDoTempo, zoom, oQueEstaAqui, filtrar, pintarMapa, ordenarFaixas, linhasDoTempo,
-} from './mapa.js?v=9b7d41859d';
-import { procurarAngulos, ordenarCandidatos, resumo } from './cena.js?v=9b7d41859d';
-import { lerMaster, lerPlaylist, procurarCanais, slugDoNome } from './kick.js?v=9b7d41859d';
-import { linhaDoCanal } from './relogio.js?v=9b7d41859d';
-import { somDoCanal, tsDoCanal } from './alinhar.js?v=9b7d41859d';
-import { t, tn, idiomaActual } from './idiomas.js?v=9b7d41859d';
-import { atalhos } from './atalhos.js?v=9b7d41859d';
-import { escapar } from './escapar.js?v=9b7d41859d';
-import { separarPorJogo } from './jogo.js?v=9b7d41859d';
-import { idDoCanal, mensagensEntre, calor, picos, segundoDoPico, juntarPorOrdem } from './chat.js?v=9b7d41859d';
-import { agendar } from './aovivo.js?v=9b7d41859d';
+} from './mapa.js?v=648ec4ed6d';
+import { procurarAngulos, ordenarCandidatos, resumo } from './cena.js?v=648ec4ed6d';
+import { lerMaster, lerPlaylist, procurarCanais, slugDoNome } from './kick.js?v=648ec4ed6d';
+import { linhaDoCanal } from './relogio.js?v=648ec4ed6d';
+import { somDoCanal, tsDoCanal } from './alinhar.js?v=648ec4ed6d';
+import { t, tn, idiomaActual } from './idiomas.js?v=648ec4ed6d';
+import { atalhos } from './atalhos.js?v=648ec4ed6d';
+import { escapar } from './escapar.js?v=648ec4ed6d';
+import { separarPorJogo } from './jogo.js?v=648ec4ed6d';
+import { idDoCanal, mensagensEntre, calor, picos, segundoDoPico, juntarPorOrdem } from './chat.js?v=648ec4ed6d';
+import { agendar } from './aovivo.js?v=648ec4ed6d';
 import {
   normalDoChat, unirJanelas, sinaisDoEvento, melhoresLances, filtrarLances, motivoDoLance, contaDoLance, coincide,
-} from './melhores.js?v=9b7d41859d';
+} from './melhores.js?v=648ec4ed6d';
 
 // Um canal ao vivo tem na lista um VOD de duração zero que vai crescendo. Até se pedir a lista outra
 // vez, o que ele já tem acaba "agora".
@@ -249,6 +249,8 @@ export function montarEvento({
   async function abrirElenco(elenco, { quandoMs = null, info = null, sinal, aoProgresso = () => {} } = {}) {
     if (sinal?.aborted) return false;
     ev.cancelar?.abort();
+    // Outro evento: o momento de um link anterior não vale mais (abrirDoLink volta a pô-lo depois de abrir).
+    ev.lanceDoLink = null;
     const controlo = new AbortController();
     ev.cancelar = controlo;
     ev.elenco = elenco;
@@ -816,6 +818,8 @@ export function montarEvento({
     ev.procura?.abort();
     ev.achados = [];
     ev.extrasDoLink = [];
+    // Escolher outro lance larga o do link (abrirDoLink volta a pô-lo logo depois de escolher o dele).
+    ev.lanceDoLink = null;
     const proprio = indiceDeTimes(ev.elenco).get(alvo.canal);
     if (proprio != null) ev.juntados.delete(proprio);
     $('estadoLance').textContent = '';
@@ -2059,6 +2063,7 @@ export function montarEvento({
     $('avisosEvento').hidden = true;
     ev.juntados = new Set();
     ev.extrasDoLink = [];
+    ev.lanceDoLink = null;
     ev.info = null;
     dialogo.esconder($('modalPartilhar'));
     dialogo.esconder($('modalAdicionar'));
@@ -2662,6 +2667,7 @@ export function montarEvento({
       nome: ev.elenco.nome && ev.elenco.nome !== t('evento.semNome') ? ev.elenco.nome : '',
       canais: [...new Set([...ev.elenco.times.flatMap((x) => x.canais), ...ev.elenco.soltos])],
       lances, mensagens: ev.mensagens, lendo: Boolean(melhores.leitura), texto: $('melhoresEstado').textContent,
+      doLink: ev.lanceDoLink || null,
     };
   }
 
@@ -2989,6 +2995,9 @@ export function montarEvento({
       ?? todos.find((c) => noArEm(ev.coberturas, c, ms));
     if (!canal) return true;
     escolher({ tipo: 'canal', canal, ms, time: indiceDeTimes(ev.elenco).get(canal) ?? null });
+    // O modo simples não abre o lance (abrirLance: false): põe este momento no topo da lista dele. Só o do
+    // streamer que o link nomeia: o primeiro no ar, de recurso, seria um cartão de alguém que o link não citou.
+    if (pedido && canal === pedido) ev.lanceDoLink = { canal, ms };
     ev.extrasDoLink = mq ? mq[1].split(',').map(ler).filter((c) => todos.includes(c)) : [];
     pintarLance();
     // Quem recebeu o link de um lance quer ver o lance, não um mapa: abre-se direto. Sem streamer no

@@ -20,7 +20,7 @@
 //
 // A geometria (os ladrilhos, juntar os rostos, a caixa) é pura, para se testar sem navegador.
 
-import { proporcaoDoQuadro, limitar, encaixar, DIVISAO_OMISSAO } from './retrato.js?v=9b7d41859d';
+import { proporcaoDoQuadro, limitar, encaixar, DIVISAO_OMISSAO } from './retrato.js?v=648ec4ed6d';
 
 /** Quantos quadros se olham por canal. */
 export const QUADROS_POR_CANAL = 5;
@@ -453,12 +453,14 @@ export function abrirQuadrosEscondidos({ limiteMs = 15_000 } = {}) {
   let hls = null;
   let url = null;
   let falhou = false;
+  let fechado = false;
   const tela = document.createElement('canvas');
 
   function carregar(novo, tempoS) {
     // Depois de um erro fatal o hls.js já não busca segmentos: mesma url sem recarregar deixava todos os quadros
     // seguintes a falhar em ~150 ms. Com `falhou`, a mesma url recria o Hls (com startPosition no instante pedido).
-    if (url === novo && !falhou) return;
+    // Sem hls.js (Safari) o erro fica só em `video.error`, e pôr a `src` de novo é o que recomeça a carga.
+    if (url === novo && !falhou && !video.error) return;
     hls?.destroy();
     hls = null;
     url = novo;
@@ -500,7 +502,7 @@ export function abrirQuadrosEscondidos({ limiteMs = 15_000 } = {}) {
 
   return {
     async quadro({ url: novo, tempoS }) {
-      if (!novo || !Number.isFinite(tempoS)) return null;
+      if (fechado || !novo || !Number.isFinite(tempoS)) return null;
       carregar(novo, tempoS);
       if (!(await chegar(tempoS)) || !video.videoWidth) return null;
       tela.width = video.videoWidth;
@@ -510,6 +512,7 @@ export function abrirQuadrosEscondidos({ limiteMs = 15_000 } = {}) {
     },
     // Pode ser chamado duas vezes (o cancelar e o fim da procura). O `falhou` solta um salto pendurado.
     fechar() {
+      fechado = true;
       falhou = true;
       hls?.destroy();
       hls = null;
