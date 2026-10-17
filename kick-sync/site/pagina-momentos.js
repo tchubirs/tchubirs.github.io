@@ -305,13 +305,9 @@ async function tocar(cartaoEl) {
       video.addEventListener('timeupdate', noFim);
     }
     vez.hls = ligarPlayer(video, url, de, falhou);
-    // O principal espera as visões do inimigo ficarem prontas (até ESPERA_POV_MS) para os vídeos arrancarem
-    // juntos (o dono, 17/10: a do inimigo chegava atrasada). A que chegar depois entra já no instante certo.
-    const prontas = ate != null && vez.fontesPov?.length ? tocarPovs(m, vez) : [];
-    if (prontas.length) {
-      await Promise.race([Promise.all(prontas), new Promise((ok) => setTimeout(ok, ESPERA_POV_MS))]);
-      if (estado.tocando !== vez) return;
-    }
+    // O principal nunca espera (o dono, 17/10: quem olha não pode ficar parado à espera): as visões do inimigo
+    // entram quando ficam prontas, já no instante certo do principal.
+    if (ate != null && vez.fontesPov?.length) tocarPovs(m, vez);
     // Depois do pedido à Kick o navegador pode já não contar o toque e recusar o som: os controlos estão à
     // vista, e o próximo toque toca.
     video.play().catch(() => {});
@@ -326,7 +322,6 @@ const povValida = (p) => p && CANAL.test(p.canal || '') && UUID.test(p.uuid || '
 // As visões do outro lado de um momento: `povs` (lista) ou o antigo `pov`; no máximo MAX_POVS, as válidas.
 const MAX_POVS = 2;
 const povsDe = (m) => (Array.isArray(m.povs) ? m.povs : m.pov ? [m.pov] : []).filter(povValida).slice(0, MAX_POVS);
-const ESPERA_POV_MS = 4000;
 
 /**
  * Liga um m3u8 a um <video>: hls.js onde houver, senão o HLS nativo (Safari). `aoFalhar` corre num erro fatal.

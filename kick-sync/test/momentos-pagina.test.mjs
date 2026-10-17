@@ -334,7 +334,7 @@ test('momentos: procurar um streamer deixa só os dele (e onde ele é o inimigo)
   assert.deepEqual(erros, []);
 });
 
-test('momentos: duas visões do inimigo lado a lado; o principal espera as duas, e a atrasada entra no instante certo', semNavegador, async () => {
+test('momentos: duas visões do inimigo lado a lado; o principal não espera, e a atrasada entra no instante certo', semNavegador, async () => {
   const { p, erros } = await abrir({ caminho: null, modo: null, ecra: { width: 400, height: 860 } });
   const VITIMA = 'c353a87d-f80f-42c4-b81b-0db2c048d47e';
   const OUTRO = 'bf776876-3481-419e-87f0-3ba8604da777';
@@ -343,7 +343,7 @@ test('momentos: duas visões do inimigo lado a lado; o principal espera as duas,
     { canal: 'celaa', uuid: VITIMA, aosS: 13203 }, { canal: 'liks', uuid: OUTRO, aosS: 13110.4 },
   ] }] };
   const pedidos = await preparar(p, { dados });
-  // O principal não arranca enquanto as visões não podem tocar: espia o play dele assim que o vídeo existir.
+  // Espia o play do principal (o único com som) para ver que ele arranca sem esperar as visões.
   await p.addInitScript(() => {
     window.__playsPrincipal = 0;
     const play = HTMLMediaElement.prototype.play;
@@ -363,12 +363,7 @@ test('momentos: duas visões do inimigo lado a lado; o principal espera as duas,
   assert.equal(caixas[0].top, caixas[1].top);
   assert.ok(Math.abs(caixas[0].w - caixas[1].w) <= 1, JSON.stringify(caixas));
   assert.ok(await semRolagemLateral(p));
-  // Só uma pronta: o principal ainda espera.
-  await p.evaluate(() => document.querySelectorAll('.momPov video')[0].dispatchEvent(new Event('canplay')));
-  await p.waitForTimeout(300);
-  assert.equal(await p.evaluate(() => window.__playsPrincipal), 0);
-  // A segunda: agora arranca.
-  await p.evaluate(() => document.querySelectorAll('.momPov video')[1].dispatchEvent(new Event('canplay')));
+  // Nenhuma visão pronta e o principal já está a tocar.
   await p.waitForFunction(() => window.__playsPrincipal === 1);
   // Uma visão que começa a tocar depois do principal vai para o instante dele mais o desvio dela.
   const pos = await p.evaluate(() => {
@@ -386,7 +381,7 @@ test('momentos: duas visões do inimigo lado a lado; o principal espera as duas,
   assert.deepEqual(erros, []);
 });
 
-test('momentos: se uma visão do inimigo não chega, o principal toca sozinho depois de uns segundos', semNavegador, async () => {
+test('momentos: se uma visão do inimigo não chega, o principal toca na hora, sem esperar', semNavegador, async () => {
   const { p, erros } = await abrir({ caminho: null, modo: null, ecra: { width: 400, height: 860 } });
   const [barco] = MOMENTOS.momentos;
   const dados = { ...MOMENTOS, momentos: [{ ...barco, povs: [{ canal: 'celaa', uuid: 'c353a87d-f80f-42c4-b81b-0db2c048d47e', aosS: 13203 }] }] };
@@ -402,7 +397,7 @@ test('momentos: se uma visão do inimigo não chega, o principal toca sozinho de
   await p.locator('.mom[data-id="barco"] .momCapa').click();
   await p.waitForFunction(() => window.__playsPrincipal === 1, null, { timeout: 8000 });
   const espera = Date.now() - t0;
-  assert.ok(espera >= 3500 && espera < 7000, String(espera));
+  assert.ok(espera < 2000, String(espera));
   assert.deepEqual(erros, []);
 });
 
