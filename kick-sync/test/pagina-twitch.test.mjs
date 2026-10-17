@@ -243,8 +243,9 @@ test('sem VODs nenhuns, diz porquê em vez de ficar em branco',
     const { p, erros } = await abrir();
     await twitchFalsa(p, { vods: {} });
     await carregar(p, 'quemquerqueseja');
-    await p.waitForFunction(() => document.getElementById('estado').textContent.length > 0,
-      null, { timeout: 15000 });
+    // Antes da resposta vem "perguntando à Twitch…": espera a frase final, não a primeira.
+    await p.waitForFunction(() => /nenhum VOD gravado/.test(document.getElementById('estado').textContent),
+      null, { timeout: 15000 }).catch(() => {});
     assert.match(await p.locator('#estado').innerText(), /nenhum VOD gravado/);
     assert.equal(await p.locator('#palco').isVisible(), false);
     assert.deepEqual(erros, []);
@@ -381,8 +382,9 @@ test('depois de "nenhum VOD", o botão Carregar volta a funcionar',
     const { p, erros } = await abrir();
     await twitchFalsa(p, { vods: {} });
     await carregar(p, 'nomeerrado');
-    await p.waitForFunction(() => document.getElementById('estado').textContent.length > 3,
-      null, { timeout: 15000 });
+    // A frase final, e não o "perguntando à Twitch…" de antes, com o botão ainda parado.
+    await p.waitForFunction(() => /nenhum VOD/.test(document.getElementById('estado').textContent),
+      null, { timeout: 15000 }).catch(() => {});
     assert.equal(await p.locator('#carregar').isDisabled(), false);
     assert.deepEqual(erros, []);
     await p.close();

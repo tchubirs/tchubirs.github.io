@@ -37,11 +37,11 @@ test('Abisal mostra consulta e contagem no modo simples antes de todos os canais
     assert.equal(await p.locator('#simplesTrabalho').isVisible(), true);
     assert.match(await p.locator('#simplesEstado').innerText(), /Procurando o evento ou streamer/);
     arquivo.liberar();
-    await p.waitForFunction(() => /0 de 144/.test(document.getElementById('simplesEstado').textContent));
+    await p.waitForFunction((n) => new RegExp(`0 de ${n}`).test(document.getElementById('simplesEstado').textContent), abisal.canais.length);
     assert.equal(await p.locator('#evento').isVisible(), false);
     assert.equal(await p.locator('#simplesParar').isVisible(), true);
     primeiro.liberar();
-    await p.waitForFunction(() => /1 de 144/.test(document.getElementById('simplesEstado').textContent));
+    await p.waitForFunction((n) => new RegExp(`1 de ${n}`).test(document.getElementById('simplesEstado').textContent), abisal.canais.length);
     const antes = pedidos;
     await p.click('#simplesParar');
     await p.waitForFunction(() => /Parado/.test(document.getElementById('simplesEstado').textContent));

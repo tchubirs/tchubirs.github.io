@@ -181,16 +181,22 @@ test('na régua, a etiqueta da ordem sai quando o momento escolhido cai em cima 
   await clicarNaRegua(p, T + 5 * 60_000);
   await p.waitForFunction(() => window.__evento.ordem.modo === 'instante');
   const etiquetas = () => p.$$eval('#reguaEvento .marcaRegua', (l) => l.map((b) => b.classList[1]).sort());
+  // A régua repinta depois da escolha: espera ela assentar em vez de ler no mesmo instante (falhava às vezes no CI).
+  const assentar = (quer) => p.waitForFunction((q) => [...document.querySelectorAll('#reguaEvento .marcaRegua')]
+    .map((b) => b.classList[1]).sort().join() === q, quer.join(), { timeout: 5000 }).catch(() => {});
+  await assentar(['ordem']);
   assert.deepEqual(await etiquetas(), ['ordem']);
   // O momento no mesmo sítio: fica só a dele.
   await clicarNoMapa(p, 'tchubi', T + 5 * 60_000 + 10_000);
   await p.waitForFunction(() => window.__evento.escolha?.canal === 'tchubi');
+  await assentar(['lance']);
   assert.deepEqual(await etiquetas(), ['lance']);
   // Longe uma da outra, as duas.
   await clicarNaRegua(p, T + 60_000);
   await p.waitForFunction((ms) => Math.abs(window.__evento.ordem.ms - ms) < 30_000, T + 60_000);
   await clicarNoMapa(p, 'tchubi', T + 9 * 60_000);
   await p.waitForFunction((ms) => Math.abs(window.__evento.escolha.ms - ms) < 30_000, T + 9 * 60_000);
+  await assentar(['lance', 'ordem']);
   assert.deepEqual(await etiquetas(), ['lance', 'ordem']);
   assert.deepEqual(erros, []);
 });
@@ -358,7 +364,7 @@ test('o ABISAL abre pelo link curto ?e=abisal, e compartilhar devolve o link cur
   await p.goto(`http://127.0.0.1:${PORTA}/index.html?e=abisal`, { waitUntil: 'networkidle' });
   await p.waitForFunction(() => window.__evento?.mapa, null, { timeout: 30000 });
   assert.equal(await p.locator('#nomeEvento').innerText(), 'ABISAL');
-  assert.match(await p.locator('#resumoEvento').innerText(), /144 canais, 2 com vídeo/);
+  assert.match(await p.locator('#resumoEvento').innerText(), /256 canais, 2 com vídeo/);
   await p.click('#partilharEvento');
   assert.equal(await p.inputValue('#partilharNome'), 'ABISAL', 'o nome já vem escrito');
   await p.click('#gerarLink');
