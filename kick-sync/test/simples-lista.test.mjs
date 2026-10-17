@@ -9,7 +9,7 @@ import {
 import { sinaisDoEvento, melhoresLances, filtrarLances } from '../site/melhores.js';
 import { motivoEmPalavras, quemEstavaNoLance } from '../site/simples.js';
 import { tituloDoMomento } from '../site/titulo.js';
-import { canaisNoArDoLance, noArEm, inicioDaLiveEm } from '../site/evento-ui.js';
+import { canaisNoArDoLance, noArEm, inicioDaLiveEm, semComecoDeLive } from '../site/evento-ui.js';
 
 test('a caixa entende o nome solto, os links da Kick e o evento', () => {
   assert.deepEqual(lerEntrada('xguiry'), { tipo: 'nome', slug: 'xguiry', evento: 'xguiry' });
@@ -392,4 +392,16 @@ test('o começo da live de um momento do evento: a última que já tinha começa
   assert.equal(inicioDaLiveEm(cob, 'a', 12_500), 9000);
   assert.equal(inicioDaLiveEm(cob, 'a', 500), null);
   assert.equal(inicioDaLiveEm(cob, 'b', 3000), null);
+});
+
+// Dono, 17/10: "live sendo aberta e os viewers dando oi, 0 útil".
+test('no evento, pico de chat e pedido de clipe nos primeiros 15 min da live não viram lance; som e mortes sim', () => {
+  const cob = new Map([['a', [[0, 3_600_000]]]]);
+  const sinais = [
+    { tipo: 'chat', canal: 'a', ms: 180_000 }, { tipo: 'pedidoClip', canal: 'a', ms: 600_000 },
+    { tipo: 'som', canal: 'a', ms: 120_000 }, { tipo: 'morte', canal: 'a', ms: 60_000 },
+    { tipo: 'chat', canal: 'a', ms: 1_000_000 }, { tipo: 'chat', canal: 'b', ms: 10_000 },
+  ];
+  assert.deepEqual(semComecoDeLive(sinais, cob).map((s) => `${s.tipo}@${s.ms}`),
+    ['som@120000', 'morte@60000', 'chat@1000000', 'chat@10000']);
 });

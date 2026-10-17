@@ -144,6 +144,21 @@ export function noArEm(coberturas, slug, ms) {
   return (coberturas.get(slug) || []).some(([de, ate]) => ms >= de && ms <= ate);
 }
 
+/** Os primeiros minutos de uma live: o chat ali é "oi", "boa noite", a live abrindo (dono, 17/10; estudo do ranking). */
+export const COMECO_DE_LIVE_MS = 15 * 60_000;
+
+/**
+ * Tira os sinais só de chat (pico de chat, pedido de clipe) dos primeiros COMECO_DE_LIVE_MS de cada live. Som,
+ * mortes e o que se marcou à mão ficam: um tiroteio no minuto 2 continua a ser um lance.
+ */
+export function semComecoDeLive(sinais, coberturas, margemMs = COMECO_DE_LIVE_MS) {
+  return sinais.filter((s) => {
+    if (s.tipo !== 'chat' && s.tipo !== 'pedidoClip') return true;
+    const inicio = inicioDaLiveEm(coberturas, s.canal, s.ms);
+    return inicio == null || s.ms - inicio >= margemMs;
+  });
+}
+
 /**
  * O começo da live do canal que tinha começado até `ms` (a última, se houver mais de uma). Sem olhar o fim: o de
  * uma live no ar é o instante da última leitura, e um momento dos últimos segundos ficava de fora.
@@ -2645,13 +2660,15 @@ export function montarEvento({
   const horaDoLance = (ms) => [diaDoLance(ms), horaLocal(ms)].filter(Boolean).join(' ');
 
   /** Todos os lances do evento, do mais forte para o mais fraco (sem filtros). */
-  function calcularLances() {
+  function calcularLances({ semComeco = false } = {}) {
     const doEvento = new Set(todosDoEvento());
     // As lives de outro jogo não dão lances sozinhas (o chat, o pedido de clipe e o som achado); o que se
     // marcou à mão fica.
-    const sinais = sinaisDoEvento({ marcas: ev.marcas, momentos: momentos(), mensagens: ev.mensagens, mortes: mortes.casadas() })
+    const todos = sinaisDoEvento({ marcas: ev.marcas, momentos: momentos(), mensagens: ev.mensagens, mortes: mortes.casadas() })
       .filter((s) => doEvento.has(s.canal))
       .filter((s) => s.tipo === 'voce' || s.tipo === 'kill' || !outroJogoEm(s.canal, s.ms));
+    // No modo simples (a lista que se vê no celular) o chat do começo da live não vira cartão.
+    const sinais = semComeco ? semComecoDeLive(todos, ev.coberturas) : todos;
     const times = indiceDeTimes(ev.elenco);
     return melhoresLances(sinais, { grupoDe: (c) => times.get(c) ?? null, confirmados: ev.confirmados });
   }
@@ -2663,7 +2680,7 @@ export function montarEvento({
     const v = ev.trecho || ev.limites;
     if (!ev.elenco || !v) return { nome: '', lances: [], mensagens: ev.mensagens, lendo: Boolean(melhores.leitura), texto: '' };
     const doEvento = new Set(todosDoEvento());
-    const lances = filtrarLances(calcularLances(), { deMs: v.deMs, ateMs: v.ateMs })
+    const lances = filtrarLances(calcularLances({ semComeco: true }), { deMs: v.deMs, ateMs: v.ateMs })
       .map((l) => ({
         ...l,
         noAr: canaisNoArDoLance(l, {
