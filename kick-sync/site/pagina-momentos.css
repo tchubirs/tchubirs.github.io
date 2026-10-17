@@ -106,3 +106,8 @@
   scroll-snap-type: x mandatory; padding-bottom: var(--e3);
 }
 .momCarrossel .mom { flex: 0 0 min(82%, 320px); scroll-snap-align: start; }
+
+/* Duas linhas na aba Melhores: virais e highlights, cada uma com o seu título. */
+.momLinhas { display: grid; gap: var(--e6); min-width: 0; }
+.momLinha { display: grid; gap: var(--e3); min-width: 0; }
+.momLinha > h2 { margin: 0; font: 600 var(--t-medio)/var(--lh-apertado) var(--letra); color: var(--tinta); }

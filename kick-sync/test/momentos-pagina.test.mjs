@@ -192,3 +192,28 @@ test('momentos: sem evento no endereço, ou sem arquivo, diz o que falta', semNa
   assert.equal(await p.locator('#listaMomentos .mom').count(), 0);
   assert.deepEqual(erros, []);
 });
+
+test('momentos: duas linhas (virais e highlights) e o clipe com VOD toca do VOD, com contexto antes', semNavegador, async () => {
+  const { p, erros } = await abrir({ caminho: null, modo: null, ecra: { width: 400, height: 860 } });
+  const [barco, minita, canhao] = MOMENTOS.momentos;
+  const dados = { ...MOMENTOS, momentos: [barco, { ...minita, uuid: VOD, aosS: 20000 }, { ...canhao, linha: 'highlight' }] };
+  const pedidos = await preparar(p, { dados });
+  await p.goto(`http://127.0.0.1:${PORTA}/momentos.html?e=teste`, { waitUntil: 'networkidle' });
+  await p.waitForSelector('#listaMomentos .mom');
+  const linhas = await p.$$eval('.momLinha', (ls) => ls.map((l) => ({
+    titulo: l.querySelector('h2').textContent, ids: [...l.querySelectorAll('.mom')].map((m) => m.dataset.id),
+  })));
+  assert.deepEqual(linhas, [
+    { titulo: 'Virais: reação forte', ids: ['minita', 'barco'] },
+    { titulo: 'Highlights: jogadas de PvP', ids: ['canhao'] },
+  ]);
+  await p.locator('.mom[data-id="minita"] .momCapa').click();
+  await p.waitForFunction(() => window.__hls.length === 1 && window.__hls[0].src);
+  assert.deepEqual(pedidos.clipe, []);
+  assert.deepEqual(await p.evaluate(() => [window.__hls[0].src, window.__hls[0].config.startPosition]),
+    ['https://stream.kick.com/falsa/axel/master.m3u8', 19997]);
+  // O link da Kick continua a ser o do clipe.
+  assert.equal(await p.locator('.mom[data-id="minita"] .momKick').getAttribute('href'), `https://kick.com/kodd/clips/${CLIPE}`);
+  assert.ok(await semRolagemLateral(p));
+  assert.deepEqual(erros, []);
+});
