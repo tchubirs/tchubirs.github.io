@@ -133,3 +133,9 @@
 
 /* Até duas visões do inimigo lado a lado embaixo do principal (no celular também, ~50% cada; empilha se não couber). */
 .momPovs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--e3); min-width: 0; }
+
+/* Baixar ali mesmo: o progresso fica no cartão; "Editar no Povix" passa a ser um link pequeno. */
+.momBaixando { margin: 0; font: 400 var(--t-menor)/var(--lh) var(--letra); color: var(--tinta-2); }
+.momBarra { width: 100%; max-width: 360px; height: 6px; accent-color: var(--acento); }
+.momEditar { font: 400 var(--t-menor)/var(--lh) var(--letra); color: var(--tinta-3); text-decoration: underline; justify-self: start; }
+.momBotao:disabled { opacity: .55; cursor: default; }
