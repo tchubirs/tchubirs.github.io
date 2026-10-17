@@ -295,11 +295,18 @@ test('5b: "Começar de novo" a meio do laço encerra a volta: sem foto tardia, s
   });
 
 // Revisão 17/10: "Começar de novo" e reabrir o MESMO canal reusa o mesmo objeto da linha; a volta nova tem de
-// começar na mesma (antes só começava se a linha fosse outra).
+// começar na mesma (antes só começava se a linha fosse outra). A lista reaberta (lembrada no aparelho) só pede
+// fotos depois de abrir o vídeo do canal, e isso só acontece num navegador que toca o vídeo da Kick (o Chromium
+// sem H.264 do CI não toca): ali o teste não tem o que medir. A corrida em si depende do tempo, por isso este
+// teste protege o resultado mas não força a ordem.
 test('5d: "Começar de novo" a meio do laço e reabrir o mesmo canal: a lista nova ganha fotos',
-  { ...semNavegador, timeout: 120_000 }, async () => {
+  { ...semNavegador, timeout: 120_000 }, async (t) => {
     const { p, erros } = await listaDeTchubi({ portaEm: 2 });
     try {
+      if (!await p.evaluate(() => Boolean((window.MediaSource || window.ManagedMediaSource)?.isTypeSupported?.('video/mp4; codecs="avc1.64001f,mp4a.40.2"')))) {
+        t.skip('o navegador não toca o vídeo da Kick');
+        return;
+      }
       await p.waitForFunction(() => window.__presa === true, null, { timeout: 30_000 });
       await p.evaluate(() => document.getElementById('simplesDeNovo').click());
       await p.fill('#simplesCaixa', 'tchubi');

@@ -292,6 +292,23 @@ test('modo simples: o link curto do evento mostra "Abrindo o evento" enquanto ca
     await p2.close();
   });
 
+// O link de um momento do evento (?e=<nome>#t=<ms>&c=<canal>): no modo simples o momento abre no topo da lista,
+// mesmo que a leitura do chat não o tenha achado.
+test('modo simples: o link de um momento do evento põe esse momento no topo da lista', { ...semNavegador, timeout: 120_000 }, async () => {
+  const { p, erros } = await abrir({ ecra: { width: 390, height: 844 }, caminho: null, modo: 'simples' });
+  await preparar(p, { video: false });
+  const ms = T + 300_000;
+  await p.goto(`http://127.0.0.1:${PORTA}/?e=teste#t=${ms}&c=outro`, { waitUntil: 'networkidle' });
+  await p.waitForFunction(() => /^Evento Teste$/.test(document.getElementById('simplesQuem').textContent), null, { timeout: 30_000 });
+  await p.waitForSelector('#simplesLista li', { timeout: 30_000 });
+  const primeiro = p.locator('#simplesLista li').first();
+  assert.equal(await primeiro.locator('.simplesMotivo').innerText(), 'O momento do link');
+  assert.equal(await primeiro.locator('.simplesStreamer').innerText(), 'Do streamer outro');
+  assert.equal(await p.evaluate(() => window.__evento?.lanceDoLink?.canal), 'outro');
+  assert.deepEqual(erros, []);
+  await p.close();
+});
+
 test('modo simples: "Excluir" tira o momento e ele não volta; "Mostrar mais" só aparece com mais de dez',
   { ...semNavegador, timeout: 120_000 }, async () => {
     const { p, erros } = await abrir({ ecra: { width: 1366, height: 768 }, caminho: null, modo: 'simples' });

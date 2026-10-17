@@ -286,6 +286,31 @@ export function lancesParaLista(lances = [], { mensagens = new Map(), canalPrinc
   return itens.sort((a, b) => b.pontos - a.pontos || a.ms - b.ms);
 }
 
+/** O trecho do momento que veio no link (#t=<ms>&c=<canal>): do link só se sabe o instante. */
+export const LINK_ANTES_MS = 10_000;
+export const LINK_DEPOIS_MS = 20_000;
+
+/**
+ * O momento do link do evento à frente da lista. Se a lista já tem um do mesmo canal a até JUNTAR_MS/2, é o mais
+ * perto que sobe (com o que já se sabe dele); senão entra um cartão só com o instante. `chaveFixa` é a do instante
+ * do link: o cartão não muda de identidade (e um Excluir não se perde) quando a leitura do chat acha o momento
+ * depois. Um momento que a lista atribui a outro streamer no ar não se junta: o link nomeia este.
+ */
+export function comMomentoDoLink(itens, doLink) {
+  if (!doLink?.canal || !Number.isFinite(doLink.ms)) return itens;
+  let i = -1;
+  for (const [j, m] of itens.entries()) {
+    const d = Math.abs(m.ms - doLink.ms);
+    if (m.canal === doLink.canal && d <= JUNTAR_MS / 2 && (i < 0 || d < Math.abs(itens[i].ms - doLink.ms))) i = j;
+  }
+  const chaveFixa = `${doLink.canal}|${Math.round(doLink.ms / 1000)}`;
+  const dele = i >= 0 ? { ...itens[i], doLink: true, chaveFixa } : {
+    ms: doLink.ms, deMs: doLink.ms - LINK_ANTES_MS, ateMs: doLink.ms + LINK_DEPOIS_MS, tipos: [], pontos: 0, falha: false,
+    canal: doLink.canal, meuPov: false, doEvento: true, doLink: true, chaveFixa, mortes: [], povs: [], outros: [], tiros: 0, nota: null,
+  };
+  return [dele, ...itens.filter((_, j) => j !== i)];
+}
+
 // ── o que já se achou, lembrado neste aparelho ────────────────────────────
 
 export const CHAVE_VODS = 'povix.simplesVods';

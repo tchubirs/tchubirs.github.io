@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  lerEntrada, nomeDeEvento, montarLista, nomeDoArquivo, tempoNaLive, partesDeFalha, MAX_CLIPE_MS, lancesParaLista,
+  lerEntrada, nomeDeEvento, montarLista, nomeDoArquivo, tempoNaLive, partesDeFalha, MAX_CLIPE_MS, lancesParaLista, comMomentoDoLink,
   acharVod, guardarVod, lerVods, mensagensDosPicos, lerUltimo, guardarUltimo, MAX_VODS, IGUAL_MS, VALE_AO_VIVO_MS,
 } from '../site/simples-lista.js';
 import { sinaisDoEvento, melhoresLances, filtrarLances } from '../site/melhores.js';
@@ -365,4 +365,23 @@ test('proveniência: morte de vídeo ou sem fonte não confirma o combate, e nun
   const [s] = listaDaMorte(undefined);
   assert.equal(s.mortes[0].fonte, null, 'sem fonte fica sem fonte');
   assert.match(tituloDoMomento(s), /^Som alto, morte/, 'sem fonte não confirma');
+});
+
+test('o momento do link do evento vai para o topo: o da lista se já existe, senão um cartão só com o instante', () => {
+  const itens = [{ canal: 'a', ms: 100_000, tipos: ['tiros'] }, { canal: 'b', ms: 500_000, tipos: ['chat'] }];
+  assert.equal(comMomentoDoLink(itens, null), itens);
+  const junto = comMomentoDoLink(itens, { canal: 'b', ms: 520_000 });
+  assert.deepEqual(junto.map((m) => [m.canal, m.ms, Boolean(m.doLink)]), [['b', 500_000, true], ['a', 100_000, false]]);
+  const novo = comMomentoDoLink(itens, { canal: 'a', ms: 900_000 });
+  assert.equal(novo.length, 3);
+  assert.deepEqual([novo[0].canal, novo[0].ms, novo[0].doLink, novo[0].doEvento, novo[0].tipos], ['a', 900_000, true, true, []]);
+  assert.ok(novo[0].deMs < 900_000 && novo[0].ateMs > 900_000);
+  // Outro canal no mesmo instante não é o mesmo momento.
+  assert.equal(comMomentoDoLink(itens, { canal: 'c', ms: 100_000 }).length, 3);
+  // A identidade é a do instante do link, antes e depois de a lista achar o momento.
+  assert.equal(novo[0].chaveFixa, 'a|900');
+  assert.equal(junto[0].chaveFixa, 'b|520');
+  // O mais perto ganha, não o primeiro da ordem de pontos.
+  const dois = [{ canal: 'a', ms: 128_000, pontos: 50 }, { canal: 'a', ms: 101_000, pontos: 10 }];
+  assert.equal(comMomentoDoLink(dois, { canal: 'a', ms: 100_000 })[0].ms, 101_000);
 });

@@ -249,6 +249,8 @@ export function montarEvento({
   async function abrirElenco(elenco, { quandoMs = null, info = null, sinal, aoProgresso = () => {} } = {}) {
     if (sinal?.aborted) return false;
     ev.cancelar?.abort();
+    // Outro evento: o momento de um link anterior não vale mais (abrirDoLink volta a pô-lo depois de abrir).
+    ev.lanceDoLink = null;
     const controlo = new AbortController();
     ev.cancelar = controlo;
     ev.elenco = elenco;
@@ -816,6 +818,8 @@ export function montarEvento({
     ev.procura?.abort();
     ev.achados = [];
     ev.extrasDoLink = [];
+    // Escolher outro lance larga o do link (abrirDoLink volta a pô-lo logo depois de escolher o dele).
+    ev.lanceDoLink = null;
     const proprio = indiceDeTimes(ev.elenco).get(alvo.canal);
     if (proprio != null) ev.juntados.delete(proprio);
     $('estadoLance').textContent = '';
@@ -2059,6 +2063,7 @@ export function montarEvento({
     $('avisosEvento').hidden = true;
     ev.juntados = new Set();
     ev.extrasDoLink = [];
+    ev.lanceDoLink = null;
     ev.info = null;
     dialogo.esconder($('modalPartilhar'));
     dialogo.esconder($('modalAdicionar'));
@@ -2662,6 +2667,7 @@ export function montarEvento({
       nome: ev.elenco.nome && ev.elenco.nome !== t('evento.semNome') ? ev.elenco.nome : '',
       canais: [...new Set([...ev.elenco.times.flatMap((x) => x.canais), ...ev.elenco.soltos])],
       lances, mensagens: ev.mensagens, lendo: Boolean(melhores.leitura), texto: $('melhoresEstado').textContent,
+      doLink: ev.lanceDoLink || null,
     };
   }
 
@@ -2989,6 +2995,9 @@ export function montarEvento({
       ?? todos.find((c) => noArEm(ev.coberturas, c, ms));
     if (!canal) return true;
     escolher({ tipo: 'canal', canal, ms, time: indiceDeTimes(ev.elenco).get(canal) ?? null });
+    // O modo simples não abre o lance (abrirLance: false): põe este momento no topo da lista dele. Só o do
+    // streamer que o link nomeia: o primeiro no ar, de recurso, seria um cartão de alguém que o link não citou.
+    if (pedido && canal === pedido) ev.lanceDoLink = { canal, ms };
     ev.extrasDoLink = mq ? mq[1].split(',').map(ler).filter((c) => todos.includes(c)) : [];
     pintarLance();
     // Quem recebeu o link de um lance quer ver o lance, não um mapa: abre-se direto. Sem streamer no
