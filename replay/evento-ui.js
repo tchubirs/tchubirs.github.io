@@ -12,27 +12,27 @@
 import {
   lerElenco, codificar, descodificar, contar, paraTexto, juntarElencos, paraArquivo, deArquivo, nomeDoArquivo,
   apelidosDoTexto,
-} from './elenco.js?v=16b9f9b09b';
-import { montarNomesNaTela } from './nomes-ui.js?v=16b9f9b09b';
-import { montarMortes } from './mortes-ui.js?v=16b9f9b09b';
-import { carregarCanais, procurarAoVivo } from './carregar.js?v=16b9f9b09b';
-import { escolherCaminho } from './portas.js?v=16b9f9b09b';
+} from './elenco.js?v=416b31dcde';
+import { montarNomesNaTela } from './nomes-ui.js?v=416b31dcde';
+import { montarMortes } from './mortes-ui.js?v=416b31dcde';
+import { carregarCanais, procurarAoVivo } from './carregar.js?v=416b31dcde';
+import { escolherCaminho } from './portas.js?v=416b31dcde';
 import {
   montarMapa, linhasVisiveis, tempoDoX, xDoTempo, zoom, oQueEstaAqui, filtrar, pintarMapa, ordenarFaixas, linhasDoTempo,
-} from './mapa.js?v=16b9f9b09b';
-import { procurarAngulos, ordenarCandidatos, resumo } from './cena.js?v=16b9f9b09b';
-import { lerMaster, lerPlaylist, procurarCanais, slugDoNome } from './kick.js?v=16b9f9b09b';
-import { linhaDoCanal } from './relogio.js?v=16b9f9b09b';
-import { somDoCanal, tsDoCanal } from './alinhar.js?v=16b9f9b09b';
-import { t, tn, idiomaActual } from './idiomas.js?v=16b9f9b09b';
-import { atalhos } from './atalhos.js?v=16b9f9b09b';
-import { escapar } from './escapar.js?v=16b9f9b09b';
-import { separarPorJogo } from './jogo.js?v=16b9f9b09b';
-import { idDoCanal, mensagensEntre, calor, picos, segundoDoPico, juntarPorOrdem } from './chat.js?v=16b9f9b09b';
-import { agendar } from './aovivo.js?v=16b9f9b09b';
+} from './mapa.js?v=416b31dcde';
+import { procurarAngulos, ordenarCandidatos, resumo } from './cena.js?v=416b31dcde';
+import { lerMaster, lerPlaylist, procurarCanais, slugDoNome } from './kick.js?v=416b31dcde';
+import { linhaDoCanal } from './relogio.js?v=416b31dcde';
+import { somDoCanal, tsDoCanal } from './alinhar.js?v=416b31dcde';
+import { t, tn, idiomaActual } from './idiomas.js?v=416b31dcde';
+import { atalhos } from './atalhos.js?v=416b31dcde';
+import { escapar } from './escapar.js?v=416b31dcde';
+import { separarPorJogo } from './jogo.js?v=416b31dcde';
+import { idDoCanal, mensagensEntre, calor, picos, segundoDoPico, juntarPorOrdem } from './chat.js?v=416b31dcde';
+import { agendar } from './aovivo.js?v=416b31dcde';
 import {
   normalDoChat, unirJanelas, sinaisDoEvento, melhoresLances, filtrarLances, motivoDoLance, contaDoLance, coincide,
-} from './melhores.js?v=16b9f9b09b';
+} from './melhores.js?v=416b31dcde';
 
 // Um canal ao vivo tem na lista um VOD de duração zero que vai crescendo. Até se pedir a lista outra
 // vez, o que ele já tem acaba "agora".
@@ -142,6 +142,24 @@ export function trechoDoEvento(coberturas, { folgaMs = 15 * 60_000 } = {}) {
 /** Quem estava no ar num instante: só esses podem ter ouvido o lance. */
 export function noArEm(coberturas, slug, ms) {
   return (coberturas.get(slug) || []).some(([de, ate]) => ms >= de && ms <= ate);
+}
+
+/** Os primeiros minutos de uma live: o chat ali é "oi", "boa noite", a live abrindo (dono, 17/10; estudo do ranking). */
+export const COMECO_DE_LIVE_MS = 15 * 60_000;
+
+/**
+ * Tira os sinais só de chat (pico de chat, pedido de clipe) dos primeiros COMECO_DE_LIVE_MS de cada live. Som,
+ * mortes e o que se marcou à mão ficam: um tiroteio no minuto 2 continua a ser um lance.
+ */
+export function semComecoDeLive(sinais, coberturas, margemMs = COMECO_DE_LIVE_MS) {
+  return sinais.filter((s) => {
+    if (s.tipo !== 'chat' && s.tipo !== 'pedidoClip') return true;
+    // A live que cobre o instante (ou a última, que ainda está no ar e cujo fim é o da última leitura). Sem
+    // ela, não se sabe onde a live começou e o sinal fica: contar de uma live antiga deixava o "oi" passar.
+    const lista = coberturas.get(s.canal) || [];
+    const dela = lista.find(([de, ate], i) => s.ms >= de && (s.ms <= ate || i === lista.length - 1));
+    return !dela || s.ms - dela[0] >= margemMs;
+  });
 }
 
 /**
@@ -2645,13 +2663,14 @@ export function montarEvento({
   const horaDoLance = (ms) => [diaDoLance(ms), horaLocal(ms)].filter(Boolean).join(' ');
 
   /** Todos os lances do evento, do mais forte para o mais fraco (sem filtros). */
-  function calcularLances() {
+  function calcularLances({ semComeco = false } = {}) {
     const doEvento = new Set(todosDoEvento());
     // As lives de outro jogo não dão lances sozinhas (o chat, o pedido de clipe e o som achado); o que se
     // marcou à mão fica.
-    const sinais = sinaisDoEvento({ marcas: ev.marcas, momentos: momentos(), mensagens: ev.mensagens, mortes: mortes.casadas() })
+    const todos = sinaisDoEvento({ marcas: ev.marcas, momentos: momentos(), mensagens: ev.mensagens, mortes: mortes.casadas() })
       .filter((s) => doEvento.has(s.canal))
       .filter((s) => s.tipo === 'voce' || s.tipo === 'kill' || !outroJogoEm(s.canal, s.ms));
+    const sinais = semComeco ? semComecoDeLive(todos, ev.coberturas) : todos;
     const times = indiceDeTimes(ev.elenco);
     return melhoresLances(sinais, { grupoDe: (c) => times.get(c) ?? null, confirmados: ev.confirmados });
   }
@@ -2663,7 +2682,7 @@ export function montarEvento({
     const v = ev.trecho || ev.limites;
     if (!ev.elenco || !v) return { nome: '', lances: [], mensagens: ev.mensagens, lendo: Boolean(melhores.leitura), texto: '' };
     const doEvento = new Set(todosDoEvento());
-    const lances = filtrarLances(calcularLances(), { deMs: v.deMs, ateMs: v.ateMs })
+    const lances = filtrarLances(calcularLances({ semComeco: true }), { deMs: v.deMs, ateMs: v.ateMs })
       .map((l) => ({
         ...l,
         noAr: canaisNoArDoLance(l, {
