@@ -1,6 +1,6 @@
 {
  "evento": "Abisal",
- "atualizado": "2026-10-17T15:18:46.595Z",
+ "atualizado": "2026-10-17T15:38:16.255Z",
  "momentos": [
   {
    "id": "kodd-1792192744500",
@@ -45,6 +45,94 @@
    "views": 13,
    "titulo": "POLLOFRITO",
    "miniatura": "eventos/abisal-momentos/kodd-1792200666000.jpg"
+  },
+  {
+   "id": "wilorust-1792194644000",
+   "canal": "wilorust",
+   "origem": "chat",
+   "inicioMs": 1792194624000,
+   "fimMs": 1792194669000,
+   "resumo": {
+    "pt": "Na câmera cheia, caça um mosquito que o perseguia há uma semana, pega-o e comemora 'lo cogí, viva'.",
+    "en": "On full cam he hunts a mosquito that bugged him for a week, catches it and celebrates 'got it!'.",
+    "es": "En cámara completa caza un mosquito que lo perseguía hace una semana y celebra 'lo cogí, viva'."
+   },
+   "reacao": {
+    "pt": "Comemoração eufórica; chat ri ('nunca vi tanta felicidade').",
+    "en": "Euphoric celebration; chat laughs ('never seen such happiness').",
+    "es": "Celebra eufórico; el chat ríe ('nunca vi tanta felicidad')."
+   },
+   "potencial": 62,
+   "uuid": "044fbdb8-2420-40ff-a026-c0a2fe17ec07",
+   "aosS": 18024,
+   "vodId": "01a1460c-b3c0-7058-bb09-ff2fbaa6e121",
+   "miniatura": "eventos/abisal-momentos/wilorust-1792194644000.jpg"
+  },
+  {
+   "id": "deowasd-1792176847000",
+   "canal": "deowasd",
+   "origem": "chat",
+   "inicioMs": 1792176847000,
+   "fimMs": 1792176872000,
+   "resumo": {
+    "pt": "Castigo do subathon: veste fantasia de Supergirl apertada que não fecha nas costas; quase rasga.",
+    "en": "Subathon punishment: he squeezes into a tight Supergirl costume that won't close at the back; it nearly rips.",
+    "es": "Castigo del subathon: se pone un disfraz de Supergirl apretado que no cierra en la espalda; casi lo rompe."
+   },
+   "reacao": {
+    "pt": "Ele ri e grita '¡No!' ao forçar; chat em KEKW e TTS zoando.",
+    "en": "He laughs and yells 'No!' while forcing it; chat spams KEKW and TTS roasts him.",
+    "es": "Se ríe y grita '¡No!' al forzarlo; el chat en KEKW y TTS burlándose."
+   },
+   "potencial": 62,
+   "uuid": "6ebaf78f-fc0b-4356-98fd-f3b66fc7066f",
+   "aosS": 2322,
+   "vodId": "01a145ed-0a48-7a41-acc7-e5f85143876c",
+   "miniatura": "eventos/abisal-momentos/deowasd-1792176847000.jpg"
+  },
+  {
+   "id": "soytonaru-1792200573500",
+   "canal": "soytonaru",
+   "origem": "publico",
+   "inicioMs": 1792200537000,
+   "fimMs": 1792200610000,
+   "resumo": {
+    "pt": "No barco, Tonaru fala com o live achando que ninguém ouve, mas uma jogadora (Karinios0) estava escutando tudo no voice.",
+    "en": "On a boat, Tonaru talks to stream thinking nobody hears him, but a player (Karinios0) was hearing it all on voice.",
+    "es": "En el barco, Tonaru habla al live creyendo que nadie lo oye, pero una jugadora (Karinios0) lo escuchaba todo."
+   },
+   "reacao": {
+    "pt": "Ele se toca: 'soy un estúpido', 'es durísimo'; chat explode em JAJAJA.",
+    "en": "He realizes: 'I'm stupid', 'it's brutal'; chat explodes in JAJAJA.",
+    "es": "Se da cuenta: 'soy un estúpido', 'es durísimo'; el chat explota en JAJAJA."
+   },
+   "potencial": 62,
+   "clipe": "clip_01M53QPSC8RY0R01QS9DCPJZWC",
+   "views": 58,
+   "titulo": "Es durisimo XD",
+   "miniatura": "eventos/abisal-momentos/soytonaru-1792200573500.jpg"
+  },
+  {
+   "id": "deowasd-1792193533500",
+   "canal": "deowasd",
+   "origem": "publico",
+   "inicioMs": 1792193515000,
+   "fimMs": 1792193552000,
+   "resumo": {
+    "pt": "Dança vestido de Supergirl em pé no meio do quarto como castigo do subathon.",
+    "en": "He dances in a Supergirl costume in the middle of his room as a subathon punishment.",
+    "es": "Baila vestido de Supergirl en medio del cuarto como castigo del subathon."
+   },
+   "reacao": {
+    "pt": "'Esto es tremendo'; chat com emotes de dança e risos; TTS 'sai na rua assim'.",
+    "en": "'This is insane'; chat spams dance emotes and laughs; TTS 'go out on the street like that'.",
+    "es": "'Esto es tremendo'; chat con emotes de baile y risas; TTS 'salí a la calle así'."
+   },
+   "potencial": 58,
+   "clipe": "clip_01M53GZ0SSX45WTHDN87KCEA94",
+   "views": 59,
+   "titulo": "baile 1",
+   "miniatura": "eventos/abisal-momentos/deowasd-1792193533500.jpg"
   },
   {
    "id": "wowi-1792205602000",
@@ -111,6 +199,50 @@
    "views": 47,
    "titulo": "wowi?",
    "miniatura": "eventos/abisal-momentos/kodd-1792193710000.jpg"
+  },
+  {
+   "id": "deowasd-1792192267000",
+   "canal": "deowasd",
+   "origem": "chat",
+   "inicioMs": 1792192242000,
+   "fimMs": 1792192292000,
+   "resumo": {
+    "pt": "Vestido de Supergirl, a namorada (Lumi) entra; ele pede mil desculpas porque ela 'vai ter que seguir trabalhando'.",
+    "en": "Dressed as Supergirl, his girlfriend (Lumi) walks in; he apologizes profusely since she 'has to keep working'.",
+    "es": "Vestido de Supergirl entra su novia (Lumi); él pide mil disculpas porque ella 'va a tener que seguir laburando'."
+   },
+   "reacao": {
+    "pt": "Chat explode em KEKW/JAJAJA; ela ri com vergonha.",
+    "en": "Chat explodes in KEKW/JAJAJA; she laughs, embarrassed.",
+    "es": "El chat explota en KEKW/JAJAJA; ella se ríe con vergüenza."
+   },
+   "potencial": 50,
+   "uuid": "6ebaf78f-fc0b-4356-98fd-f3b66fc7066f",
+   "aosS": 17717,
+   "vodId": "01a145ed-0a48-7a41-acc7-e5f85143876c",
+   "miniatura": "eventos/abisal-momentos/deowasd-1792192267000.jpg"
+  },
+  {
+   "id": "hatzukihoshi-1792198274000",
+   "canal": "hatzukihoshi",
+   "origem": "chat",
+   "inicioMs": 1792198244000,
+   "fimMs": 1792198299000,
+   "resumo": {
+    "pt": "A tela da live vira uma tela azul de erro do Windows (BSOD) do nada, no meio da partida.",
+    "en": "The stream suddenly turns into a Windows blue screen of death (BSOD) mid-game.",
+    "es": "La pantalla del stream pasa de golpe a una pantalla azul de Windows (BSOD) en plena partida."
+   },
+   "reacao": {
+    "pt": "Chat explode: 'QUE ESTA PASANDO', KEKW, 'el susto que le pegó'.",
+    "en": "Chat explodes: 'WHAT IS HAPPENING', KEKW, 'the scare she got'.",
+    "es": "El chat explota: 'QUE ESTA PASANDO', KEKW, 'el susto que le pegó'."
+   },
+   "potencial": 50,
+   "uuid": "66cf4382-2bf3-4f43-8ce8-b5caffdca38b",
+   "aosS": 7789,
+   "vodId": "01a146e0-1cd8-745c-a976-31f10d30ae7e",
+   "miniatura": "eventos/abisal-momentos/hatzukihoshi-1792198274000.jpg"
   },
   {
    "id": "lynoche-1792178216000",
