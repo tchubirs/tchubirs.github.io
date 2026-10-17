@@ -136,7 +136,7 @@ test('momentos: um toque toca ali mesmo; o VOD começa 3 s antes e o clipe pelo 
     const barco = p.locator('.mom[data-id="barco"]');
     // Sem o id da página no arquivo, o link da Kick é o canal até a v1 dizer qual é.
     assert.equal(await barco.locator('.momKick').getAttribute('href'), 'https://kick.com/axel');
-    assert.equal(await barco.locator('.momBotao.principal').getAttribute('href'), `index.html?e=teste#t=${T + 30_000}&c=axel`);
+    assert.equal(await barco.locator('.momEditar').getAttribute('href'), `index.html?e=teste#t=${T + 30_000}&c=axel`);
     assert.equal(await p.locator('.mom[data-id="canhao"] .momKick').getAttribute('href'), `https://kick.com/axel/videos/${VOD_PAGINA}?t=13703`);
 
     await barco.locator('.momCapa').click();
@@ -413,5 +413,50 @@ test('momentos: o nível "resto" fica fora da lista do evento e aparece na busca
   await p.fill('#momBusca', 'axel');
   await p.dispatchEvent('#momBusca', 'change');
   assert.deepEqual(await ordem(p), ['barco', 'fraco']);
+  assert.deepEqual(erros, []);
+});
+
+test('momentos: "Baixar" corta o momento ali mesmo, só com os pedaços da janela, sem abrir o evento', semNavegador, async () => {
+  const { p, erros } = await abrir({ caminho: null, modo: null, ecra: { width: 400, height: 860 } });
+  const [barco] = MOMENTOS.momentos;
+  // Janela no tempo do vídeo: de 30 − 3 = 27 s até 30 + 20 = 50 s → pedaços de 10 s que começam em 20, 30 e 40.
+  const dados = { ...MOMENTOS, momentos: [{ ...barco, aosS: 30, fimMs: barco.inicioMs + 20_000 }] };
+  await preparar(p, { dados });
+  const segs = [];
+  p.on('request', (r) => { const n = r.url().match(/\/(\d+)\.ts$/)?.[1]; if (n != null) segs.push(Number(n)); });
+  await p.goto(`http://127.0.0.1:${PORTA}/momentos.html?e=teste`, { waitUntil: 'networkidle' });
+  await p.waitForSelector('#listaMomentos .mom');
+  assert.equal(await p.locator('.mom[data-id="barco"] [data-baixar="tiktok"]').textContent(), 'Baixar para TikTok');
+  const [download] = await Promise.all([
+    p.waitForEvent('download'),
+    p.locator('.mom[data-id="barco"] [data-baixar="deitado"]').click(),
+  ]);
+  // Os pedaços de mentira não são TS de verdade: sai o .ts colado, com o nome a dizê-lo.
+  assert.match(download.suggestedFilename(), /^axel-\d{8}-\d{4}\.(mp4|ts)$/);
+  assert.deepEqual([...new Set(segs)].sort((a, b) => a - b), [2, 3, 4]);
+  await p.waitForFunction(() => /Pronto/.test(document.querySelector('.mom[data-id="barco"] .momBaixando').textContent));
+  assert.equal(await p.locator('.mom[data-id="barco"] [data-baixar="deitado"]').isDisabled(), false);
+  assert.deepEqual(erros, []);
+});
+
+test('momentos: o vertical que não consegue abrir o vídeo diz porquê, e trocar de aba larga o download', semNavegador, async () => {
+  const { p, erros } = await abrir({ caminho: null, modo: null, ecra: { width: 400, height: 860 } });
+  const [barco] = MOMENTOS.momentos;
+  const dados = { ...MOMENTOS, momentos: [{ ...barco, aosS: 30, fimMs: barco.inicioMs + 20_000 }] };
+  await preparar(p, { dados });
+  await p.goto(`http://127.0.0.1:${PORTA}/momentos.html?e=teste`, { waitUntil: 'networkidle' });
+  await p.waitForSelector('#listaMomentos .mom');
+  // Pedaços de mentira: o MP4 não abre num <video>, e o cartão diz isso em vez de ficar parado.
+  await p.locator('.mom[data-id="barco"] [data-baixar="tiktok"]').click();
+  await p.waitForFunction(() => /Não deu para baixar/.test(document.querySelector('.mom[data-id="barco"] .momBaixando').textContent), null, { timeout: 30_000 });
+  assert.equal(await p.locator('.mom[data-id="barco"] [data-baixar="tiktok"]').isDisabled(), false);
+  // Um download a meio e trocar de aba: nada chega a ser entregue (os pedaços agora demoram, para haver um "a meio").
+  await p.route(/stream\.kick\.com\/falsa\/.*\.ts$/, async (r) => { await new Promise((k) => setTimeout(k, 1500)); return r.fulfill({ status: 200, contentType: 'video/mp2t', body: Buffer.alloc(4096, 7) }); });
+  let baixou = false;
+  p.on('download', () => { baixou = true; });
+  await p.locator('.mom[data-id="barco"] [data-baixar="deitado"]').click();
+  await p.click('#abaStreamers');
+  await p.waitForTimeout(2500);
+  assert.equal(baixou, false);
   assert.deepEqual(erros, []);
 });

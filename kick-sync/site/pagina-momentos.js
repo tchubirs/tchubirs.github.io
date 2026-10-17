@@ -8,6 +8,8 @@
 
 import { clipeDaKick, fonteDoVod, idDaPaginaDoVod } from './kick.js';
 import { escapar } from './escapar.js';
+import { cortarMomento, gravarVertical } from './momento-baixar.js';
+import { prepararSomDaGravacao } from './retrato.js';
 
 const TEXTOS = {
   pt: {
@@ -22,7 +24,11 @@ const TEXTOS = {
     tocar: 'Ver o momento de {canal}, {hora}',
     publico: 'Clipe do público', povix: 'Achado pelo Povix', views: '{n} views',
     potencial: 'potencial de viralizar',
-    editar: 'Editar / baixar no Povix', kick: 'Kick',
+    editar: 'Editar no Povix', kick: 'Kick',
+    baixarTiktok: 'Baixar para TikTok', baixar: 'Baixar', baixando: 'Baixando o vídeo… {feito} de {total}',
+    procurandoRosto: 'Procurando a webcam…', gravando: 'Montando o vertical… {feito} de {total} s',
+    baixou: 'Pronto: o arquivo foi para os seus downloads.', baixouSemRosto: 'Pronto (sem webcam achada: o meio do jogo).',
+    naoBaixou: 'Não deu para baixar: {motivo}.', baixarDeNovo: 'Baixar de novo',
     grupoUm: '1 momento · melhor ▲ {p}', grupoN: '{n} momentos · melhor ▲ {p}',
     visaoDe: 'Visão do inimigo: {canal}', visaoCaiu: 'Visão de quem caiu: {canal}',
     linhaViral: 'Virais: reação forte', linhaHighlight: 'Highlights: jogadas de PvP',
@@ -40,7 +46,11 @@ const TEXTOS = {
     tocar: 'Watch {canal}’s moment, {hora}',
     publico: 'Viewer clip', povix: 'Found by Povix', views: '{n} views',
     potencial: 'viral potential',
-    editar: 'Edit / download in Povix', kick: 'Kick',
+    editar: 'Edit in Povix', kick: 'Kick',
+    baixarTiktok: 'Download for TikTok', baixar: 'Download', baixando: 'Downloading the video… {feito} of {total}',
+    procurandoRosto: 'Looking for the webcam…', gravando: 'Building the vertical… {feito} of {total} s',
+    baixou: 'Done: the file is in your downloads.', baixouSemRosto: 'Done (no webcam found: center of the game).',
+    naoBaixou: 'Could not download: {motivo}.', baixarDeNovo: 'Download again',
     grupoUm: '1 moment · best ▲ {p}', grupoN: '{n} moments · best ▲ {p}',
     visaoDe: 'Enemy view: {canal}', visaoCaiu: 'View of who went down: {canal}',
     linhaViral: 'Viral: big reactions', linhaHighlight: 'Highlights: PvP plays',
@@ -58,7 +68,11 @@ const TEXTOS = {
     tocar: 'Ver el momento de {canal}, {hora}',
     publico: 'Clip del público', povix: 'Encontrado por Povix', views: '{n} vistas',
     potencial: 'potencial viral',
-    editar: 'Editar / descargar en Povix', kick: 'Kick',
+    editar: 'Editar en Povix', kick: 'Kick',
+    baixarTiktok: 'Descargar para TikTok', baixar: 'Descargar', baixando: 'Descargando el video… {feito} de {total}',
+    procurandoRosto: 'Buscando la webcam…', gravando: 'Armando el vertical… {feito} de {total} s',
+    baixou: 'Listo: el archivo está en tus descargas.', baixouSemRosto: 'Listo (sin webcam encontrada: el centro del juego).',
+    naoBaixou: 'No se pudo descargar: {motivo}.', baixarDeNovo: 'Descargar de nuevo',
     grupoUm: '1 momento · mejor ▲ {p}', grupoN: '{n} momentos · mejor ▲ {p}',
     visaoDe: 'Visión del enemigo: {canal}', visaoCaiu: 'Visión de quien cayó: {canal}',
     linhaViral: 'Virales: reacción fuerte', linhaHighlight: 'Highlights: jugadas de PvP',
@@ -71,7 +85,7 @@ const NOMES_IDIOMA = { pt: 'Português', en: 'English', es: 'Español' };
 const ANTES_S = 3;
 
 const $ = (id) => document.getElementById(id);
-const estado = { idioma: 'pt', nome: '', dados: null, aba: 'melhores', tocando: null, aviso: null, canal: '', limite: {} };
+const estado = { idioma: 'pt', nome: '', dados: null, aba: 'melhores', tocando: null, aviso: null, canal: '', limite: {}, baixando: null };
 // Quantos cartões cada linha mostra antes do "Mostrar mais": a lista do evento tem muitos momentos.
 const POR_VEZ = 15;
 const porId = new Map();
@@ -166,8 +180,11 @@ function cartao(m, i) {
       <p class="momResumo">${escapar(noIdioma(m.resumo))}</p>
       ${reacao ? `<p class="momReacao">${escapar(reacao)}</p>` : ''}
       <p class="momOrigem">${origem.filter(Boolean).map(escapar).join(' · ')}</p>
-      <div class="momAcoes"><a class="momBotao principal" href="${escapar(linkDoPovix(m))}">${escapar(t('editar'))}</a>`
+      <div class="momAcoes"><button type="button" class="momBotao principal" data-baixar="tiktok">${escapar(t('baixarTiktok'))}</button>`
+      + `<button type="button" class="momBotao" data-baixar="deitado">${escapar(t('baixar'))}</button>`
       + `<a class="momBotao momKick" href="${escapar(linkDaKick(m))}" target="_blank" rel="noopener">${escapar(t('kick'))}</a></div>
+      <p class="momBaixando" role="status" hidden></p><progress class="momBarra" max="1" hidden></progress>
+      <a class="momEditar" href="${escapar(linkDoPovix(m))}">${escapar(t('editar'))}</a>
     </div>
   </article>`;
 }
@@ -176,6 +193,7 @@ const porPotencial = (a, b) => (b.potencial ?? 0) - (a.potencial ?? 0) || a.inic
 
 function pintar() {
   parar();
+  pararDownload();
   // Um streamer pode procurar só o que é dele (o dono, 17/10): os momentos dele e aqueles em que ele aparece como
   // a visão do inimigo.
   // Sem busca, a lista do evento mostra só top e bom; o nível "resto" aparece na busca do streamer, que vê tudo o que
@@ -445,6 +463,86 @@ function tocarPov(m, vez, pv, fonte, caixaPovs) {
   return promessa;
 }
 
+/** Larga o download em curso (trocar de aba, ou baixar outro cartão). */
+function pararDownload() {
+  const d = estado.baixando;
+  if (!d) return;
+  estado.baixando = null;
+  d.controlo.abort();
+}
+
+function nomeDoArquivo(m, vertical, extensao) {
+  const d = new Date(m.inicioMs);
+  const p = (n) => String(n).padStart(2, '0');
+  const quando = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`;
+  return `${m.canal}-${quando}${vertical ? '-tiktok' : ''}.${extensao}`;
+}
+
+function entregar(blob, nome) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nome;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+/**
+ * Baixar o momento ali mesmo, sem abrir o evento: o 16:9 sai dos bytes da Kick em segundos; o vertical grava
+ * por cima desse MP4 em tempo real (um momento de 30 s, uns 30 s depois do download).
+ */
+async function baixarMomento(cartaoEl, vertical) {
+  const m = porId.get(cartaoEl.dataset.id);
+  if (!m) return;
+  // O som do vertical precisa de ser destravado ainda no toque (iPhone).
+  if (vertical) prepararSomDaGravacao();
+  pararDownload();
+  const d = { cartao: cartaoEl, controlo: new AbortController() };
+  estado.baixando = d;
+  const nota = cartaoEl.querySelector('.momBaixando');
+  const barra = cartaoEl.querySelector('.momBarra');
+  const botoes = [...cartaoEl.querySelectorAll('[data-baixar]')];
+  const dizer = (texto, fracao = null) => {
+    if (!nota.isConnected) return;
+    nota.hidden = false;
+    nota.textContent = texto;
+    barra.hidden = fracao === false;
+    if (fracao == null || fracao === false) barra.removeAttribute('value'); else barra.value = Math.max(0, Math.min(1, fracao));
+  };
+  for (const b of botoes) b.disabled = true;
+  try {
+    dizer(t('baixando', { feito: 0, total: '…' }));
+    const corte = await cortarMomento(m, {
+      antesS: ANTES_S,
+      sinal: d.controlo.signal,
+      aoProgresso: ({ feito, total }) => dizer(t('baixando', { feito, total }), total ? feito / total : null),
+    });
+    if (estado.baixando !== d) return;
+    if (!vertical) {
+      // Um vídeo que o MP4 daqui não sabe embrulhar sai .ts (baixar.js): o nome diz o que é.
+      entregar(corte.blob, nomeDoArquivo(m, false, corte.tipo === 'video/mp4' ? 'mp4' : 'ts'));
+      dizer(t('baixou'), false);
+      return;
+    }
+    const r = await gravarVertical({
+      blob: corte.blob, duracaoS: corte.duracaoS, fps: corte.fps, canal: m.canal, sinal: d.controlo.signal,
+      aoFase: (f) => dizer(f === 'rosto' ? t('procurandoRosto') : t('gravando', { feito: 0, total: Math.round(corte.duracaoS) })),
+      aoProgresso: ({ feito, total }) => dizer(t('gravando', { feito: Math.round(feito), total: Math.round(total) }), total ? feito / total : null),
+    });
+    if (estado.baixando !== d) return;
+    entregar(r.blob, nomeDoArquivo(m, true, r.extensao || 'mp4'));
+    dizer(t(r.comRosto ? 'baixou' : 'baixouSemRosto'), false);
+  } catch (e) {
+    if (e?.name === 'AbortError' || estado.baixando !== d) { if (nota.isConnected) { nota.hidden = true; barra.hidden = true; } return; }
+    dizer(t('naoBaixou', { motivo: String(e?.message || e).slice(0, 120) }), false);
+  } finally {
+    if (estado.baixando === d) estado.baixando = null;
+    for (const b of botoes) { b.disabled = false; }
+  }
+}
+
 /** Um VOD sem o id da página: o link da Kick só se sabe depois de perguntar, e pergunta-se no toque. */
 async function abrirNaKick(ev, a) {
   const m = porId.get(a.closest('.mom')?.dataset.id);
@@ -478,6 +576,8 @@ async function iniciar() {
   lista.addEventListener('click', (ev) => {
     const capaEl = ev.target.closest('.momCapa');
     if (capaEl) { tocar(capaEl.closest('.mom')); return; }
+    const baixarBotao = ev.target.closest('[data-baixar]');
+    if (baixarBotao) { baixarMomento(baixarBotao.closest('.mom'), baixarBotao.dataset.baixar === 'tiktok'); return; }
     const mais = ev.target.closest('.momMais');
     if (mais) { estado.limite[mais.dataset.linha] = (estado.limite[mais.dataset.linha] || POR_VEZ) + POR_VEZ; pintar(); return; }
     const kick = ev.target.closest('.momKick');
