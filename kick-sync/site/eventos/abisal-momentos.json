@@ -1,6 +1,6 @@
 {
  "evento": "Abisal",
- "atualizado": "2026-10-17T20:13:28.718Z",
+ "atualizado": "2026-10-17T20:30:06.938Z",
  "momentos": [
   {
    "id": "kodd-1792192744500",
@@ -193,8 +193,8 @@
    "categorias": [
     "reacao"
    ],
-   "inicioMs": 1792194624000,
-   "fimMs": 1792194674000,
+   "inicioMs": 1792194627000,
+   "fimMs": 1792194685000,
    "resumo": {
     "pt": "Na câmera cheia, caça um mosquito que o perseguia há uma semana, pega-o e comemora 'lo cogí, viva'.",
     "en": "On full cam he hunts a mosquito that bugged him for a week, catches it and celebrates 'got it!'.",
@@ -207,7 +207,7 @@
    },
    "potencial": 62,
    "uuid": "044fbdb8-2420-40ff-a026-c0a2fe17ec07",
-   "aosS": 18024,
+   "aosS": 18027,
    "vodId": "01a1460c-b3c0-7058-bb09-ff2fbaa6e121",
    "miniatura": "eventos/abisal-momentos/wilorust-1792194644000.jpg"
   },
@@ -219,7 +219,7 @@
    "categorias": [
     "reacao"
    ],
-   "inicioMs": 1792176847000,
+   "inicioMs": 1792176825000,
    "fimMs": 1792176877000,
    "resumo": {
     "pt": "Castigo do subathon: veste fantasia de Supergirl apertada que não fecha nas costas; quase rasga.",
@@ -233,7 +233,7 @@
    },
    "potencial": 62,
    "uuid": "6ebaf78f-fc0b-4356-98fd-f3b66fc7066f",
-   "aosS": 2322,
+   "aosS": 2300,
    "vodId": "01a145ed-0a48-7a41-acc7-e5f85143876c",
    "miniatura": "eventos/abisal-momentos/deowasd-1792176847000.jpg"
   },
@@ -498,8 +498,8 @@
    "categorias": [
     "reacao"
    ],
-   "inicioMs": 1792192242000,
-   "fimMs": 1792192297000,
+   "inicioMs": 1792192228000,
+   "fimMs": 1792192290000,
    "resumo": {
     "pt": "Vestido de Supergirl, a namorada (Lumi) entra; ele pede mil desculpas porque ela 'vai ter que seguir trabalhando'.",
     "en": "Dressed as Supergirl, his girlfriend (Lumi) walks in; he apologizes profusely since she 'has to keep working'.",
@@ -512,7 +512,7 @@
    },
    "potencial": 50,
    "uuid": "6ebaf78f-fc0b-4356-98fd-f3b66fc7066f",
-   "aosS": 17717,
+   "aosS": 17703,
    "vodId": "01a145ed-0a48-7a41-acc7-e5f85143876c",
    "miniatura": "eventos/abisal-momentos/deowasd-1792192267000.jpg"
   },
@@ -524,8 +524,8 @@
    "categorias": [
     "reacao"
    ],
-   "inicioMs": 1792198244000,
-   "fimMs": 1792198304000,
+   "inicioMs": 1792198223000,
+   "fimMs": 1792198290000,
    "resumo": {
     "pt": "A tela da live vira uma tela azul de erro do Windows (BSOD) do nada, no meio da partida.",
     "en": "The stream suddenly turns into a Windows blue screen of death (BSOD) mid-game.",
@@ -538,7 +538,7 @@
    },
    "potencial": 50,
    "uuid": "66cf4382-2bf3-4f43-8ce8-b5caffdca38b",
-   "aosS": 7789,
+   "aosS": 7768,
    "vodId": "01a146e0-1cd8-745c-a976-31f10d30ae7e",
    "miniatura": "eventos/abisal-momentos/hatzukihoshi-1792198274000.jpg"
   },
@@ -550,8 +550,8 @@
    "categorias": [
     "reacao"
    ],
-   "inicioMs": 1792178196000,
-   "fimMs": 1792178246000,
+   "inicioMs": 1792178185000,
+   "fimMs": 1792178230000,
    "resumo": {
     "pt": "O mesmo cara que a matou ontem a derruba de novo no Abisal e depois pede desculpas pra ela.",
     "en": "The same guy who killed her yesterday downs her again on Abisal, then apologizes to her.",
@@ -564,7 +564,7 @@
    },
    "potencial": 50,
    "uuid": "02adf0d3-4193-432d-a8ef-b5f119a1ff1b",
-   "aosS": 6366,
+   "aosS": 6355,
    "vodId": "01a145c3-eaf0-7c28-95c3-4300ff341c0b",
    "miniatura": "eventos/abisal-momentos/lynoche-1792178216000.jpg"
   },
@@ -850,8 +850,8 @@
    "categorias": [
     "reacao"
    ],
-   "inicioMs": 1792195676000,
-   "fimMs": 1792195716000,
+   "inicioMs": 1792195637000,
+   "fimMs": 1792195697000,
    "resumo": {
     "pt": "Na base, ele cede ao 'pensamento intrusivo' e zoa o parceiro enquanto juntam duas bases.",
     "en": "At base he gives in to an 'intrusive thought' and trolls his mate while merging two bases.",
@@ -864,7 +864,7 @@
    },
    "potencial": 45,
    "uuid": "57e69a67-fdea-4b8e-b163-c6530cd58fa8",
-   "aosS": 35944,
+   "aosS": 35905,
    "vodId": "01a1450b-5120-70f6-86b2-7e4a2c1856af",
    "miniatura": "eventos/abisal-momentos/srborjis-1792195686000.jpg"
   },
@@ -876,8 +876,8 @@
    "categorias": [
     "reacao"
    ],
-   "inicioMs": 1792194666000,
-   "fimMs": 1792194726000,
+   "inicioMs": 1792194594000,
+   "fimMs": 1792194677000,
    "resumo": {
     "pt": "Morto por um rival, ele xinga o assassino no voice com fúria ('fracasado de mierda') na tela de morte.",
     "en": "Killed by a rival, he furiously trash-talks the killer on voice from the death screen.",
@@ -890,7 +890,7 @@
    },
    "potencial": 45,
    "uuid": "9a444e26-664b-487c-a1fe-9a9556b08012",
-   "aosS": 10534,
+   "aosS": 10462,
    "vodId": "01a1467f-a1a0-7e71-b656-6c3f7095f7e9",
    "miniatura": "eventos/abisal-momentos/wowi-1792194696000.jpg"
   },
@@ -1941,8 +1941,8 @@
    "categorias": [
     "reacao"
    ],
-   "inicioMs": 1792219507000,
-   "fimMs": 1792219567000,
+   "inicioMs": 1792219500000,
+   "fimMs": 1792219560000,
    "resumo": {
     "pt": "No mar perto do barco-fortaleza do Abisal, alguém 'fica com ciúmes' e o chat aplaude; não se vê ação clara.",
     "en": "At sea near an Abisal fortress ship, someone 'got jealous' and chat claps; no clear action visible.",
@@ -1955,7 +1955,7 @@
    },
    "potencial": 35,
    "uuid": "41d04007-bf5a-4626-9ba4-d41146e8adfa",
-   "aosS": 16067,
+   "aosS": 16060,
    "vodId": "01a147a6-3f80-7ed8-9be9-b27f62898313",
    "miniatura": "eventos/abisal-momentos/uvitafiesta22-1792219537000.jpg"
   },
@@ -1967,8 +1967,8 @@
    "categorias": [
     "reacao"
    ],
-   "inicioMs": 1792179122000,
-   "fimMs": 1792179167000,
+   "inicioMs": 1792179074000,
+   "fimMs": 1792179154000,
    "resumo": {
     "pt": "Desabafa que não consegue sair da base sem morrer, times de 4 o caçam, e come batatas fritas de ansiedade.",
     "en": "Vents that he can't leave base without dying, 4-man teams hunt him, and he's stress-eating fries.",
@@ -1981,7 +1981,7 @@
    },
    "potencial": 35,
    "uuid": "926d0bca-92d5-475e-8074-a64ae6124bfb",
-   "aosS": 21448,
+   "aosS": 21400,
    "vodId": "01a144eb-ea10-7d6c-bcbd-bc954447efcd",
    "miniatura": "eventos/abisal-momentos/poionako-1792179137000.jpg"
   },
@@ -1993,8 +1993,8 @@
    "categorias": [
     "reacao"
    ],
-   "inicioMs": 1792209261000,
-   "fimMs": 1792209311000,
+   "inicioMs": 1792209232000,
+   "fimMs": 1792209304000,
    "resumo": {
     "pt": "Na praia diante de uma torre, ela brinca com dois jogadores ('ela se chama Bonja e ele Bono') e pede uma missão.",
     "en": "On the beach by a tower she jokes with two players ('she's Bonja, he's Bono') and asks for a mission.",
@@ -2007,7 +2007,7 @@
    },
    "potencial": 35,
    "uuid": "f0905093-81a7-4fe0-a78e-dd783b59a1f0",
-   "aosS": 29762,
+   "aosS": 29733,
    "vodId": "01a14638-eff8-789c-8846-f97961aa4c39",
    "miniatura": "eventos/abisal-momentos/mills_rp-1792209281000.jpg"
   },
@@ -2019,8 +2019,8 @@
    "categorias": [
     "reacao"
    ],
-   "inicioMs": 1792209671000,
-   "fimMs": 1792209701000,
+   "inicioMs": 1792209647000,
+   "fimMs": 1792209704000,
    "resumo": {
     "pt": "Junto a uma muralha, ela negocia 'estamos a mano' com um jogador e reage a 'você é de Gran Canaria'.",
     "en": "By a wall she settles 'we're even' with a player and reacts to 'you're from Gran Canaria'.",
@@ -2033,7 +2033,7 @@
    },
    "potencial": 35,
    "uuid": "f0905093-81a7-4fe0-a78e-dd783b59a1f0",
-   "aosS": 30172,
+   "aosS": 30148,
    "vodId": "01a14638-eff8-789c-8846-f97961aa4c39",
    "miniatura": "eventos/abisal-momentos/mills_rp-1792209671000.jpg"
   },
@@ -2045,8 +2045,8 @@
    "categorias": [
     "reacao"
    ],
-   "inicioMs": 1792188192000,
-   "fimMs": 1792188247000,
+   "inicioMs": 1792188142000,
+   "fimMs": 1792188229000,
    "resumo": {
     "pt": "Em câmera cheia, ele come um limão como desafio da subathon enquanto o chat pressiona.",
     "en": "On full cam he eats a lemon as a subathon challenge while chat eggs him on.",
@@ -2059,7 +2059,7 @@
    },
    "potencial": 35,
    "uuid": "a899b5b2-8da1-4139-b717-85dcdf9e614c",
-   "aosS": 16578,
+   "aosS": 16528,
    "vodId": "01a145c0-9f30-71d5-94b6-71671163b65d",
    "miniatura": "eventos/abisal-momentos/sapoiq-1792188217000.jpg"
   },
@@ -2129,8 +2129,8 @@
    "categorias": [
     "reacao"
    ],
-   "inicioMs": 1792191731000,
-   "fimMs": 1792191796000,
+   "inicioMs": 1792191640000,
+   "fimMs": 1792191744000,
    "resumo": {
     "pt": "Ele deixa entrar um cara pensando que estava sozinho, mas eram dois e morre; abre o inventário rindo.",
     "en": "He lets a guy in thinking he was alone, but there were two and he dies; opens inventory laughing.",
@@ -2143,7 +2143,7 @@
    },
    "potencial": 35,
    "uuid": "9a444e26-664b-487c-a1fe-9a9556b08012",
-   "aosS": 7599,
+   "aosS": 7508,
    "vodId": "01a1467f-a1a0-7e71-b656-6c3f7095f7e9",
    "miniatura": "eventos/abisal-momentos/wowi-1792191766000.jpg"
   },
@@ -2155,8 +2155,8 @@
    "categorias": [
     "reacao"
    ],
-   "inicioMs": 1792194419000,
-   "fimMs": 1792194464000,
+   "inicioMs": 1792194399000,
+   "fimMs": 1792194449000,
    "resumo": {
     "pt": "Ele assiste a live do wowi (morto no Abisal) e gargalha porque um peruano o matou do nada.",
     "en": "He watches wowi's stream (dead on Abisal) and cracks up because a Peruvian killed him out of nowhere.",
@@ -2169,7 +2169,7 @@
    },
    "potencial": 35,
    "uuid": "b6ef6e3b-024a-4cdc-bb53-008b2710089f",
-   "aosS": 12220,
+   "aosS": 12200,
    "vodId": "01a14662-22d8-79bc-a63b-eef8ec4a4f94",
    "miniatura": "eventos/abisal-momentos/kodd-1792194434000.jpg"
   },
@@ -2528,8 +2528,8 @@
    "categorias": [
     "reacao"
    ],
-   "inicioMs": 1792196276000,
-   "fimMs": 1792196341000,
+   "inicioMs": 1792196270000,
+   "fimMs": 1792196330000,
    "resumo": {
     "pt": "Na base, Geitta discute com colega sobre dormir no barco; chat pede 'dile' e diz 'tiene clipazo'.",
     "en": "In base, Geitta argues with a teammate about falling asleep on the boat; chat says 'tell him', 'clip that'.",
@@ -2542,7 +2542,7 @@
    },
    "potencial": 32,
    "uuid": "385f6bcc-9501-4ee3-b93e-1ce132539524",
-   "aosS": 31876,
+   "aosS": 31870,
    "vodId": "01a14552-8b80-79f9-9402-0965ed397be6"
   },
   {
@@ -2659,8 +2659,8 @@
    "categorias": [
     "reacao"
    ],
-   "inicioMs": 1792192512000,
-   "fimMs": 1792192567000,
+   "inicioMs": 1792192477000,
+   "fimMs": 1792192560000,
    "resumo": {
     "pt": "Configura a roleta de castigos (modulador de voz, 5 min parado) e testa voz 'sensual'.",
     "en": "Sets up the punishment wheel (voice modulator, 5 min standing still) and tests a 'sensual' voice.",
@@ -2673,7 +2673,35 @@
    },
    "potencial": 30,
    "uuid": "6ebaf78f-fc0b-4356-98fd-f3b66fc7066f",
-   "aosS": 17987,
+   "aosS": 17952,
+   "vodId": "01a145ed-0a48-7a41-acc7-e5f85143876c"
+  },
+  {
+   "id": "deowasd-1792192605500",
+   "canal": "deowasd",
+   "origem": "publico",
+   "nivel": "resto",
+   "categorias": [
+    "reacao"
+   ],
+   "inicioMs": 1792192547000,
+   "fimMs": 1792192668000,
+   "resumo": {
+    "pt": "Na base do Abisal com a namorada na câmera; promete 'três TikToks de mulher fiel' como castigo.",
+    "en": "In his Abisal base with girlfriend on cam; promises 'three faithful-woman TikToks' as punishment.",
+    "es": "En su base de Abisal con la novia en cámara; promete 'tres TikToks de mujer fiel' como castigo."
+   },
+   "reacao": {
+    "pt": "Chat em KEKW contínuo; ele lamenta rindo.",
+    "en": "Continuous KEKW in chat; he laments while laughing.",
+    "es": "KEKW continuo en el chat; él se lamenta riendo."
+   },
+   "potencial": 30,
+   "clipe": "clip_01M53G5XZZG5DYA4JWA4YVC0VH",
+   "views": 3,
+   "titulo": "los minions cuando no esta gru",
+   "uuid": "6ebaf78f-fc0b-4356-98fd-f3b66fc7066f",
+   "aosS": 18022,
    "vodId": "01a145ed-0a48-7a41-acc7-e5f85143876c"
   },
   {
@@ -2768,8 +2796,8 @@
    "categorias": [
     "reacao"
    ],
-   "inicioMs": 1792195816000,
-   "fimMs": 1792195881000,
+   "inicioMs": 1792195800000,
+   "fimMs": 1792195870000,
    "resumo": {
     "pt": "Geitta corre com o time ao pôr do sol enquanto discute em tom de brincadeira sobre 'mulheres mentirem'.",
     "en": "Geitta runs with the team at sunset while jokingly arguing that 'women lie'.",
@@ -2782,7 +2810,7 @@
    },
    "potencial": 30,
    "uuid": "385f6bcc-9501-4ee3-b93e-1ce132539524",
-   "aosS": 31416,
+   "aosS": 31400,
    "vodId": "01a14552-8b80-79f9-9402-0965ed397be6"
   },
   {
@@ -3209,8 +3237,8 @@
    "categorias": [
     "reacao"
    ],
-   "inicioMs": 1792188477000,
-   "fimMs": 1792188527000,
+   "inicioMs": 1792188424000,
+   "fimMs": 1792188502000,
    "resumo": {
     "pt": "Nadando em mar aberto no Abisal, xinga um 'submarino de Deus' que o atacou e ameaça desistir.",
     "en": "Swimming in open sea in Abisal, curses a 'damn submarine' that attacked him and threatens to quit.",
@@ -3223,7 +3251,7 @@
    },
    "potencial": 28,
    "uuid": "331173c9-c969-48fe-aaf7-68155f83bf34",
-   "aosS": 17315,
+   "aosS": 17262,
    "vodId": "01a145b9-b990-70bc-92b3-b44d1895e18a"
   },
   {
@@ -3290,8 +3318,8 @@
    "categorias": [
     "reacao"
    ],
-   "inicioMs": 1792194679000,
-   "fimMs": 1792194744000,
+   "inicioMs": 1792194697000,
+   "fimMs": 1792194734000,
    "resumo": {
     "pt": "Depois de uma luta no Abisal ele saqueia caixas cheias de munição e xinga quem o matou 'de peido'.",
     "en": "After an Abisal fight he loots boxes full of ammo and curses the guy who killed him 'by fluke'.",
@@ -3304,7 +3332,7 @@
    },
    "potencial": 28,
    "uuid": "b6ef6e3b-024a-4cdc-bb53-008b2710089f",
-   "aosS": 12480,
+   "aosS": 12498,
    "vodId": "01a14662-22d8-79bc-a63b-eef8ec4a4f94"
   },
   {
@@ -3893,8 +3921,8 @@
    "categorias": [
     "reacao"
    ],
-   "inicioMs": 1792190366000,
-   "fimMs": 1792190431000,
+   "inicioMs": 1792190385000,
+   "fimMs": 1792190420000,
    "resumo": {
     "pt": "Geitta numa piscina construída em base de tijolo conversando com o time sobre rejas e caudito.",
     "en": "Geitta at a pool built in a brick base chatting with the team about bars and gear.",
@@ -3907,7 +3935,7 @@
    },
    "potencial": 22,
    "uuid": "385f6bcc-9501-4ee3-b93e-1ce132539524",
-   "aosS": 25966,
+   "aosS": 25985,
    "vodId": "01a14552-8b80-79f9-9402-0965ed397be6"
   },
   {
@@ -3918,8 +3946,8 @@
    "categorias": [
     "reacao"
    ],
-   "inicioMs": 1792204749000,
-   "fimMs": 1792204814000,
+   "inicioMs": 1792204750000,
+   "fimMs": 1792204805000,
    "resumo": {
     "pt": "No menu de gráficos, Tonaru relembra que falou 10 min no live sem saber que outros o ouviam no voice.",
     "en": "In the graphics menu, Tonaru recalls talking 10 min on stream not knowing others heard him on voice.",
@@ -3932,7 +3960,7 @@
    },
    "potencial": 22,
    "uuid": "a266c3d3-14cf-4534-9a0b-6b03105b2c33",
-   "aosS": 4624,
+   "aosS": 4625,
    "vodId": "01a14773-aa48-7ce6-bd3d-c325aa271dff"
   },
   {
@@ -3943,8 +3971,8 @@
    "categorias": [
     "reacao"
    ],
-   "inicioMs": 1792192958000,
-   "fimMs": 1792193023000,
+   "inicioMs": 1792192967000,
+   "fimMs": 1792193007000,
    "resumo": {
     "pt": "No convés, Conoql pergunta quem está pilotando — ninguém — e o barco segue andando sozinho.",
     "en": "On deck, Conoql asks who's steering — nobody — and the boat keeps moving on its own.",
@@ -3957,7 +3985,7 @@
    },
    "potencial": 22,
    "uuid": "89d8b355-01ae-4262-b91d-6df969568302",
-   "aosS": 8619,
+   "aosS": 8628,
    "vodId": "01a14682-ca38-7eeb-bc5e-897cc70c697d"
   },
   {
@@ -4152,8 +4180,8 @@
    "categorias": [
     "reacao"
    ],
-   "inicioMs": 1792174497000,
-   "fimMs": 1792174552000,
+   "inicioMs": 1792174491000,
+   "fimMs": 1792174536000,
    "resumo": {
     "pt": "Morre (tela 'Muerto', morto por si mesmo) e reclama que a MP vive mais no chão que na mão.",
     "en": "Dies (death screen shows himself as killer) and jokes his SMG spends more time on the floor than in hand.",
@@ -4166,7 +4194,7 @@
    },
    "potencial": 20,
    "uuid": "1ae7d2e8-8ca4-445d-8c3f-67720a623f25",
-   "aosS": 13606
+   "aosS": 13600
   },
   {
    "id": "deowasd-1792203714000",
@@ -4204,8 +4232,8 @@
    "categorias": [
     "reacao"
    ],
-   "inicioMs": 1792212216000,
-   "fimMs": 1792212241000,
+   "inicioMs": 1792212154000,
+   "fimMs": 1792212214000,
    "resumo": {
     "pt": "Ela está num barril de loot cheio de munição e fala que no time são 'três mulheres e um homem'.",
     "en": "She's in a loot barrel full of ammo saying her team is 'three women and one man'.",
@@ -4218,7 +4246,7 @@
    },
    "potencial": 20,
    "uuid": "f0905093-81a7-4fe0-a78e-dd783b59a1f0",
-   "aosS": 32717,
+   "aosS": 32655,
    "vodId": "01a14638-eff8-789c-8846-f97961aa4c39"
   },
   {
@@ -4430,6 +4458,2263 @@
    "uuid": "bf776876-3481-419e-87f0-3ba8604da777",
    "aosS": 37145,
    "vodId": "01a145e7-7498-7315-afef-8099fd71d8c0"
+  },
+  {
+   "id": "apologiize-1792193830500",
+   "canal": "apologiize",
+   "origem": "publico",
+   "nivel": "resto",
+   "categorias": [
+    "reacao"
+   ],
+   "inicioMs": 1792193807000,
+   "fimMs": 1792193858000,
+   "resumo": {
+    "pt": "No escuro, ele acha que vê o barco do Focus e reage a uma morte de colega ('lo mató').",
+    "en": "In the dark he thinks he spots Focus's boat and reacts to a teammate getting killed.",
+    "es": "En la oscuridad cree ver el barco de Focus y reacciona a que mataron a un compañero."
+   },
+   "reacao": {
+    "pt": "Fala atropelada e meio irritada, sem pico; tela quase preta.",
+    "en": "Rushed, slightly annoyed talk, no peak; screen nearly black.",
+    "es": "Habla atropellada algo molesta, sin pico; pantalla casi negra."
+   },
+   "potencial": 15,
+   "clipe": "clip_01M53MAKHQ1X16RKZY6YQKF16H",
+   "views": 2,
+   "titulo": "clip",
+   "uuid": "82c67ce6-910a-4821-a747-80199a344b09",
+   "aosS": 9058
+  },
+  {
+   "id": "ciscoo-1792177814009",
+   "canal": "ciscoo",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792177793751,
+   "fimMs": 1792177880451,
+   "resumo": {
+    "pt": "Sangrando no túnel, diz que vai morrer para o bot",
+    "en": "Bleeding in the tunnel, says he'll die to the bot",
+    "es": "Sangrando en el túnel, dice que va a morir por el bot"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 15,
+   "uuid": "40d8ff43-22cc-46de-85e0-42c266bd52c9",
+   "aosS": 20879,
+   "vodId": "01a144e0-5538-7c49-89f7-4b835de338de"
+  },
+  {
+   "id": "lixs28-1792197967437",
+   "canal": "lixs28",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792197958695,
+   "fimMs": 1792198017745,
+   "resumo": {
+    "pt": "Correndo na praia e de repente olhando o chão",
+    "en": "Running on the beach then suddenly looking at the ground",
+    "es": "Corriendo por la playa y de repente mirando el suelo"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 15,
+   "uuid": "1aef554a-6e30-4981-bb02-752e0960a20b",
+   "aosS": 16522,
+   "vodId": "01a14656-8248-7da8-a8fa-9fdfc7a40cff"
+  },
+  {
+   "id": "mictlan-g-1792204649496",
+   "canal": "mictlan-g",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792204616496,
+   "fimMs": 1792204684496,
+   "resumo": {
+    "pt": "Na praia com rifle perto de um colega; fala confusa sobre o barco.",
+    "en": "On the beach with a rifle near a teammate; confused talk about the boat.",
+    "es": "En la playa con rifle junto a un compañero; habla confusa del barco."
+   },
+   "reacao": {
+    "pt": "Sem reação relevante.",
+    "en": "No notable reaction.",
+    "es": "Sin reacción relevante."
+   },
+   "potencial": 15,
+   "uuid": "d0d30db6-ecd9-4d03-ae45-960360e44e50",
+   "aosS": 2897,
+   "vodId": "01a1478b-fcd8-7a5d-a505-30db189cd243"
+  },
+  {
+   "id": "ryuta-fps-1792204592000",
+   "canal": "ryuta-fps",
+   "origem": "publico",
+   "nivel": "resto",
+   "categorias": [
+    "reacao"
+   ],
+   "inicioMs": 1792204577000,
+   "fimMs": 1792204607000,
+   "resumo": {
+    "pt": "Do deck do barco, ele mira num jogador nadando no mar aberto.",
+    "en": "From the boat deck he aims at a player swimming in open sea.",
+    "es": "Desde la cubierta del barco apunta a un jugador nadando en mar abierto."
+   },
+   "reacao": {
+    "pt": "Sem reação audível; título 'CHITER??' sugere suspeita, mas não se vê.",
+    "en": "No audible reaction; title 'CHEATER??' hints suspicion, not shown.",
+    "es": "Sin reacción audible; el título 'CHITER??' sugiere sospecha, no se ve."
+   },
+   "potencial": 12,
+   "clipe": "clip_01M547ZGC86C8VXV70PTNGKY9C",
+   "views": 9,
+   "titulo": "CHITER??"
+  },
+  {
+   "id": "ryuta-fps-1792204676000",
+   "canal": "ryuta-fps",
+   "origem": "publico",
+   "nivel": "resto",
+   "categorias": [
+    "reacao"
+   ],
+   "inicioMs": 1792204668000,
+   "fimMs": 1792204684000,
+   "resumo": {
+    "pt": "Ele continua atirando do barco enquanto um foguete passa voando.",
+    "en": "He keeps shooting from the boat as a rocket flies past.",
+    "es": "Sigue disparando desde el barco mientras pasa un cohete."
+   },
+   "reacao": {
+    "pt": "Sem fala; sem reação.",
+    "en": "No speech; no reaction.",
+    "es": "Sin habla; sin reacción."
+   },
+   "potencial": 12,
+   "clipe": "clip_01M53WAX9A3RGH8PHZDJM6Q3G0",
+   "views": 2,
+   "titulo": "contraclip"
+  },
+  {
+   "id": "hiurmitaa-1792194511000",
+   "canal": "hiurmitaa",
+   "origem": "publico",
+   "nivel": "resto",
+   "categorias": [
+    "reacao"
+   ],
+   "inicioMs": 1792194496000,
+   "fimMs": 1792194526000,
+   "resumo": {
+    "pt": "Diante de portas com unicórnio, ela abre a porta e o chat avisa que a arma caiu no fundo do mar.",
+    "en": "At unicorn-painted doors she opens up while chat says the gun fell to the seabed.",
+    "es": "Ante puertas con unicornio abre y el chat avisa que el arma quedó en el fondo."
+   },
+   "reacao": {
+    "pt": "'¡Qué mucha leme, tío!' em tom leve; chat ri de leve.",
+    "en": "Light-toned remark; chat chuckles a bit.",
+    "es": "'¡Qué mucha leme, tío!' en tono leve; el chat ríe un poco."
+   },
+   "potencial": 12,
+   "clipe": "clip_01M53HWZPYW9FF69DP6RPWEX3M",
+   "views": 1,
+   "titulo": "EVENTO ABISAL DIA 2 LEST GOOOOOOO | Clip"
+  },
+  {
+   "id": "hiurmitaa-1792208576000",
+   "canal": "hiurmitaa",
+   "origem": "publico",
+   "nivel": "resto",
+   "categorias": [
+    "reacao"
+   ],
+   "inicioMs": 1792208561000,
+   "fimMs": 1792208591000,
+   "resumo": {
+    "pt": "Num barquinho a remo perto das rochas, ela fala do machado que falta e solta 'que me cago'.",
+    "en": "In a small rowboat by the rocks she talks about the missing axe and blurts 'I'm crapping myself'.",
+    "es": "En un bote pequeño cerca de las rocas habla del hacha que falta y suelta 'que me cago'."
+   },
+   "reacao": {
+    "pt": "Susto pequeno na voz, sem ver o motivo; chat parado.",
+    "en": "Small startle in her voice, cause not shown; chat idle.",
+    "es": "Pequeño susto en la voz, sin ver la causa; chat parado."
+   },
+   "potencial": 12,
+   "clipe": "clip_01M53Z9S3EMB6H10PBB2KEX6BY",
+   "views": 0,
+   "titulo": "EVENTO ABISAL DIA 2 LEST GOOOOOOO | Clip"
+  },
+  {
+   "id": "lixs28-1792201694455",
+   "canal": "lixs28",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792201653295,
+   "fimMs": 1792201704895,
+   "resumo": {
+    "pt": "No barco armado, fumaça ao longe",
+    "en": "On the armed boat, smoke in the distance",
+    "es": "En el barco armado, humo a lo lejos"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 10,
+   "uuid": "1aef554a-6e30-4981-bb02-752e0960a20b",
+   "aosS": 20216,
+   "vodId": "01a14656-8248-7da8-a8fa-9fdfc7a40cff"
+  },
+  {
+   "id": "hiurmitaa-1792197261000",
+   "canal": "hiurmitaa",
+   "origem": "publico",
+   "nivel": "resto",
+   "categorias": [
+    "reacao"
+   ],
+   "inicioMs": 1792197246000,
+   "fimMs": 1792197276000,
+   "resumo": {
+    "pt": "Ela tenta tirar o barco encalhado dando ré ('pones marcha atrás, ¿va o no va?').",
+    "en": "She tries to free the stuck boat by reversing ('put it in reverse, does it go or not?').",
+    "es": "Intenta sacar el barco encallado dando marcha atrás ('¿va o no va?')."
+   },
+   "reacao": {
+    "pt": "Fala calma; sem pico de emoção.",
+    "en": "Calm talk; no emotional peak.",
+    "es": "Habla calmada; sin pico de emoción."
+   },
+   "potencial": 10,
+   "clipe": "clip_01M53MGKYFXYKYF8SNG0S83A0J",
+   "views": 1,
+   "titulo": "EVENTO ABISAL DIA 2 LEST GOOOOOOO | Clip"
+  },
+  {
+   "id": "lemankiu-1792194060500",
+   "canal": "lemankiu",
+   "origem": "publico",
+   "nivel": "resto",
+   "categorias": [
+    "reacao"
+   ],
+   "inicioMs": 1792194043000,
+   "fimMs": 1792194082000,
+   "resumo": {
+    "pt": "Debaixo d'água no Abisal, sangrando, pergunta '¿murió?' a um colega.",
+    "en": "Underwater in Abisal, bleeding, asks a teammate 'did he die?'.",
+    "es": "Bajo el agua en Abisal, sangrando, pregunta '¿murió?'."
+   },
+   "reacao": {
+    "pt": "Fala baixa, sem pico.",
+    "en": "Quiet talk, no peak.",
+    "es": "Habla baja, sin pico."
+   },
+   "potencial": 10,
+   "clipe": "clip_01M53HQNKRMT2X5E6SNPHC2STC",
+   "views": 2,
+   "titulo": "mocha",
+   "uuid": "6604d784-7958-4001-8a11-37d0ba319ee0",
+   "aosS": 10705,
+   "vodId": "01a14673-8410-729b-a87b-4f3db4bc7a0b"
+  },
+  {
+   "id": "polys0800-1792197870000",
+   "canal": "polys0800",
+   "origem": "publico",
+   "nivel": "resto",
+   "categorias": [
+    "reacao"
+   ],
+   "inicioMs": 1792197856000,
+   "fimMs": 1792197884000,
+   "resumo": {
+    "pt": "Sangrando na praia junto a um muro, ele tenta lembrar um nome ('el morikayo!') e usa bandagem.",
+    "en": "Bleeding on a beach by a wall, he tries to recall a name ('el morikayo!') and bandages up.",
+    "es": "Sangrando en la playa junto a un muro, intenta recordar un nombre ('¡el morikayo!') y se venda."
+   },
+   "reacao": {
+    "pt": "Cara séria na cam, fala curta; nenhuma reação.",
+    "en": "Serious face on cam, short line; no reaction.",
+    "es": "Cara seria en cámara, frase corta; sin reacción."
+   },
+   "potencial": 10,
+   "clipe": "clip_01M53PVY93ADXZ503CGPFPW2VJ",
+   "views": 38,
+   "titulo": "el que?"
+  },
+  {
+   "id": "donpol-1792176817000",
+   "canal": "donpol",
+   "origem": "chat",
+   "nivel": "resto",
+   "categorias": [
+    "reacao"
+   ],
+   "inicioMs": 1792176757000,
+   "fimMs": 1792176847000,
+   "resumo": {
+    "pt": "Pol, no escuro dentro de base, conta que acabou de ganhar o evento do cargo e vai comer.",
+    "en": "Pol, in the dark inside a base, says they just won the cargo event and he's going to eat.",
+    "es": "Pol, a oscuras dentro de una base, cuenta que acaban de ganar el evento del cargo y se va a comer."
+   },
+   "reacao": {
+    "pt": "Chat quase parado ('q?', 'e.e'); tom de relato, sem pico.",
+    "en": "Chat nearly idle ('q?', 'e.e'); storytelling tone, no spike.",
+    "es": "Chat casi quieto ('q?', 'e.e'); tono de relato, sin pico."
+   },
+   "potencial": 10,
+   "uuid": "3969dfe3-f031-4daa-b921-aab84ad6d810",
+   "aosS": 12484,
+   "vodId": "01a14550-9b68-7fad-b33c-5fa762a1ca92"
+  },
+  {
+   "id": "fortuna2121-1792186272326",
+   "canal": "fortuna2121",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792186251908,
+   "fimMs": 1792186283108,
+   "resumo": {
+    "pt": "Atira num cientista de capacete laranja no monumento",
+    "en": "Shoots an orange-helmet scientist in a monument",
+    "es": "Dispara a un científico de casco naranja en un monumento"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 10,
+   "uuid": "aba3380a-af72-4850-8b79-cb6c2afce49c",
+   "aosS": 5282,
+   "vodId": "01a1464f-6210-768c-8375-a16cc2a6f349"
+  },
+  {
+   "id": "itschriis-1792194587659",
+   "canal": "itschriis",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792194579479,
+   "fimMs": 1792194632979,
+   "resumo": {
+    "pt": "Atira num urso na praia.",
+    "en": "Shoots a bear on the beach.",
+    "es": "Le dispara a un oso en la playa."
+   },
+   "reacao": {
+    "pt": "Sem reação relevante.",
+    "en": "No notable reaction.",
+    "es": "Sin reacción relevante."
+   },
+   "potencial": 10,
+   "uuid": "e5fcca07-a186-405f-96f8-15dba38eaf90",
+   "aosS": 5506,
+   "vodId": "01a146cb-0668-7b17-9f01-168bd5bd884e"
+  },
+  {
+   "id": "itschriis-1792195722587",
+   "canal": "itschriis",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792195714179,
+   "fimMs": 1792195737979,
+   "resumo": {
+    "pt": "Do telhado da base, atira num animal na praia.",
+    "en": "From the base roof, shoots an animal on the beach.",
+    "es": "Desde el techo de la base dispara a un animal en la playa."
+   },
+   "reacao": {
+    "pt": "Sem reação relevante.",
+    "en": "No notable reaction.",
+    "es": "Sin reacción relevante."
+   },
+   "potencial": 10,
+   "uuid": "e5fcca07-a186-405f-96f8-15dba38eaf90",
+   "aosS": 6641,
+   "vodId": "01a146cb-0668-7b17-9f01-168bd5bd884e"
+  },
+  {
+   "id": "donpol-1792196167000",
+   "canal": "donpol",
+   "origem": "chat",
+   "nivel": "resto",
+   "categorias": [
+    "reacao"
+   ],
+   "inicioMs": 1792196107000,
+   "fimMs": 1792196197000,
+   "resumo": {
+    "pt": "Pol parado diante de porta no escuro conversando com o time; chat comenta clipe em que Pol matou o Kodd.",
+    "en": "Pol stands at a door in the dark chatting with the team; chat mentions a clip where Pol killed Kodd.",
+    "es": "Pol frente a una puerta a oscuras charlando con el equipo; el chat comenta un clip donde Pol mató a Kodd."
+   },
+   "reacao": {
+    "pt": "Chat só manda link de clipe de outro momento; sem reação ao vivo.",
+    "en": "Chat only shares a clip link from another moment; no live reaction.",
+    "es": "El chat solo pasa link de clip de otro momento; sin reacción en vivo."
+   },
+   "potencial": 8,
+   "uuid": "3969dfe3-f031-4daa-b921-aab84ad6d810",
+   "aosS": 31834,
+   "vodId": "01a14550-9b68-7fad-b33c-5fa762a1ca92"
+  },
+  {
+   "id": "alimuza-1792203565905",
+   "canal": "alimuza",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792203530411,
+   "fimMs": 1792203604011,
+   "resumo": {
+    "pt": "Persegue lancha de cientistas",
+    "en": "Chases a scientist boat",
+    "es": "Persigue una lancha de científicos"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 8,
+   "uuid": "f605fdaa-24a0-4ad9-b9f6-8383a1b24bdd",
+   "aosS": 48894,
+   "vodId": "01a144bd-8ee0-790c-b48a-1186e3c29984"
+  },
+  {
+   "id": "darkatak-1792173203823",
+   "canal": "darkatak",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792173182727,
+   "fimMs": 1792173260427,
+   "resumo": {
+    "pt": "Reclama que pros do outro time os mataram",
+    "en": "Complains pros from the other team killed them",
+    "es": "Se queja de que pros del otro equipo los mataron"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 8,
+   "uuid": "8c8c1388-244f-4bd9-b292-6e8ddf25f9d6",
+   "aosS": 3742,
+   "vodId": "01a1459f-76e8-7598-ab56-0578b1e323bb"
+  },
+  {
+   "id": "carlitosbascu8-1792206335102",
+   "canal": "carlitosbascu8",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792206326654,
+   "fimMs": 1792206340654,
+   "resumo": {
+    "pt": "Farm na neve, reclama de ter morrido",
+    "en": "Farming in snow, complains about dying",
+    "es": "Farmeando en la nieve, se queja de haber muerto"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 8,
+   "uuid": "74cd4817-fa23-41b1-aea5-bdff6f3168f5",
+   "aosS": 41760,
+   "vodId": "01a14555-17d8-7046-a8e1-e7e06b7ca3e5"
+  },
+  {
+   "id": "jita-1792200036334",
+   "canal": "jita",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792199986818,
+   "fimMs": 1792200041488,
+   "resumo": {
+    "pt": "Saqueando caixa enquanto o time fala de briga na água.",
+    "en": "Looting while the team talks about a water fight.",
+    "es": "Saqueando mientras el equipo habla de pelea en el agua."
+   },
+   "reacao": {
+    "pt": "Nenhuma.",
+    "en": "None.",
+    "es": "Ninguna."
+   },
+   "potencial": 8,
+   "uuid": "2e3a736f-d323-4356-9607-f7e437507e5d",
+   "aosS": 40725,
+   "vodId": "01a14504-2530-7657-aa7d-e11aafe0f5c8"
+  },
+  {
+   "id": "cero-gamer-1792193380902",
+   "canal": "cero-gamer",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792193372258,
+   "fimMs": 1792193457621,
+   "resumo": {
+    "pt": "Correndo pelo campo reclamando que o segundo dia do evento está chato.",
+    "en": "Running through a field complaining day two of the event is boring.",
+    "es": "Corriendo por el campo quejándose de que el segundo día está aburrido."
+   },
+   "reacao": {
+    "pt": "Reclama.",
+    "en": "Complains.",
+    "es": "Se queja."
+   },
+   "potencial": 8,
+   "uuid": "7fb32874-bed5-4136-9739-5cb4d6966d1c",
+   "aosS": 9127,
+   "vodId": "01a14681-5b08-74c2-98b3-18dd5b636190"
+  },
+  {
+   "id": "ciscoo-1792177387889",
+   "canal": "ciscoo",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792177339351,
+   "fimMs": 1792177413951,
+   "resumo": {
+    "pt": "Enfrenta bot no túnel de metrô com arco",
+    "en": "Fights a bot in the subway tunnel with a bow",
+    "es": "Pelea contra un bot en el túnel del metro con arco"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 5,
+   "uuid": "40d8ff43-22cc-46de-85e0-42c266bd52c9",
+   "aosS": 20424,
+   "vodId": "01a144e0-5538-7c49-89f7-4b835de338de"
+  },
+  {
+   "id": "mictlan-g-1792205298664",
+   "canal": "mictlan-g",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792205265664,
+   "fimMs": 1792205333664,
+   "resumo": {
+    "pt": "Minerando pedra com britadeira na praia.",
+    "en": "Mining stone with a jackhammer on the beach.",
+    "es": "Minando piedra con martillo neumático en la playa."
+   },
+   "reacao": {
+    "pt": "Sem reação relevante.",
+    "en": "No notable reaction.",
+    "es": "Sin reacción relevante."
+   },
+   "potencial": 5,
+   "uuid": "d0d30db6-ecd9-4d03-ae45-960360e44e50",
+   "aosS": 3547,
+   "vodId": "01a1478b-fcd8-7a5d-a505-30db189cd243"
+  },
+  {
+   "id": "mictlan-g-1792203206386",
+   "canal": "mictlan-g",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792203182448,
+   "fimMs": 1792203225338,
+   "resumo": {
+    "pt": "Coletando com machadinha perto do pátio de trens.",
+    "en": "Gathering with a hatchet near the train yard.",
+    "es": "Recolectando con hacha cerca del patio de trenes."
+   },
+   "reacao": {
+    "pt": "Sem reação relevante.",
+    "en": "No notable reaction.",
+    "es": "Sin reacción relevante."
+   },
+   "potencial": 5,
+   "uuid": "d0d30db6-ecd9-4d03-ae45-960360e44e50",
+   "aosS": 1463,
+   "vodId": "01a1478b-fcd8-7a5d-a505-30db189cd243"
+  },
+  {
+   "id": "lemankiu-1792193860000",
+   "canal": "lemankiu",
+   "origem": "publico",
+   "nivel": "resto",
+   "categorias": [
+    "reacao"
+   ],
+   "inicioMs": 1792193843000,
+   "fimMs": 1792193881000,
+   "resumo": {
+    "pt": "Mergulhando no escuro no Abisal, vai ver quanto falta numa caixa.",
+    "en": "Diving in the dark in Abisal to check how long a crate has left.",
+    "es": "Buceando a oscuras en Abisal para ver cuánto le queda a una caja."
+   },
+   "reacao": {
+    "pt": "Nenhuma.",
+    "en": "None.",
+    "es": "Ninguna."
+   },
+   "potencial": 5,
+   "clipe": "clip_01M53HBWR9PF9E2ADGD30ZQZKJ",
+   "views": 4,
+   "titulo": "lemankiu",
+   "uuid": "6604d784-7958-4001-8a11-37d0ba319ee0",
+   "aosS": 10505,
+   "vodId": "01a14673-8410-729b-a87b-4f3db4bc7a0b"
+  },
+  {
+   "id": "itschriis-1792196445619",
+   "canal": "itschriis",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792196433679,
+   "fimMs": 1792196522379,
+   "resumo": {
+    "pt": "Dentro da base escura com uma colega; quase sem fala.",
+    "en": "Inside the dark base with a teammate; barely talks.",
+    "es": "Dentro de la base oscura con una compañera; casi sin hablar."
+   },
+   "reacao": {
+    "pt": "Chat: 'faaaak'.",
+    "en": "Chat: 'faaaak'.",
+    "es": "Chat: 'faaaak'."
+   },
+   "potencial": 5,
+   "uuid": "e5fcca07-a186-405f-96f8-15dba38eaf90",
+   "aosS": 7361,
+   "vodId": "01a146cb-0668-7b17-9f01-168bd5bd884e"
+  },
+  {
+   "id": "alimuza-1792203371753",
+   "canal": "alimuza",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792203306011,
+   "fimMs": 1792203377811,
+   "resumo": {
+    "pt": "Missão de cientistas na vila segura",
+    "en": "Scientist mission at the safe village",
+    "es": "Misión de científicos en el pueblo seguro"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 5,
+   "uuid": "f605fdaa-24a0-4ad9-b9f6-8383a1b24bdd",
+   "aosS": 48670,
+   "vodId": "01a144bd-8ee0-790c-b48a-1186e3c29984"
+  },
+  {
+   "id": "jita-1792199836830",
+   "canal": "jita",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792199795578,
+   "fimMs": 1792199839978,
+   "resumo": {
+    "pt": "Na base mexendo no loot.",
+    "en": "At base sorting loot.",
+    "es": "En la base moviendo loot."
+   },
+   "reacao": {
+    "pt": "Nenhuma.",
+    "en": "None.",
+    "es": "Ninguna."
+   },
+   "potencial": 5,
+   "uuid": "2e3a736f-d323-4356-9607-f7e437507e5d",
+   "aosS": 40534,
+   "vodId": "01a14504-2530-7657-aa7d-e11aafe0f5c8"
+  },
+  {
+   "id": "cero-gamer-1792195268806",
+   "canal": "cero-gamer",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792195198758,
+   "fimMs": 1792195284658,
+   "resumo": {
+    "pt": "Correndo no deserto agradecendo doações e falando da namorada.",
+    "en": "Running in the desert thanking donations and talking about his girlfriend.",
+    "es": "Corriendo en el desierto agradeciendo donaciones y hablando de su novia."
+   },
+   "reacao": {
+    "pt": "Chat aplaude.",
+    "en": "Chat claps.",
+    "es": "El chat aplaude."
+   },
+   "potencial": 5,
+   "uuid": "7fb32874-bed5-4136-9739-5cb4d6966d1c",
+   "aosS": 10954,
+   "vodId": "01a14681-5b08-74c2-98b3-18dd5b636190"
+  },
+  {
+   "id": "wazon-1792198455000",
+   "canal": "wazon",
+   "origem": "publico",
+   "nivel": "resto",
+   "categorias": [
+    "reacao"
+   ],
+   "inicioMs": 1792198379000,
+   "fimMs": 1792198531000,
+   "resumo": {
+    "pt": "Sai do Rust e recarrega por causa de um bug no barco; conversa confusa com o time.",
+    "en": "Quits Rust and reloads because of a boat bug; confused chat with the team.",
+    "es": "Sale de Rust y recarga por un bug del barco; charla confusa con el equipo."
+   },
+   "reacao": {
+    "pt": "Nenhuma reação marcante.",
+    "en": "No notable reaction.",
+    "es": "Ninguna reacción destacable."
+   },
+   "potencial": 5,
+   "clipe": "clip_01M53NPZ5JAF7J60GW8SSK6AF3",
+   "views": 0,
+   "titulo": "bug"
+  },
+  {
+   "id": "ispdep-1792190498486",
+   "canal": "ispdep",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792190466486,
+   "fimMs": 1792190528486,
+   "resumo": {
+    "pt": "Nadando e reclamando de ping",
+    "en": "Swimming and complaining about ping",
+    "es": "Nadando y quejándose del ping"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 5,
+   "uuid": "c0ea163e-1279-4c63-950b-b89d049eea44",
+   "aosS": 22419,
+   "vodId": "01a1458a-3198-7862-86f7-f53f167f5ece"
+  },
+  {
+   "id": "andalaa-1792203681804",
+   "canal": "andalaa",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792203626602,
+   "fimMs": 1792203710302,
+   "resumo": {
+    "pt": "Conta que um bot matou o colega",
+    "en": "Says a bot killed her teammate",
+    "es": "Cuenta que un bot mató al compañero"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 5,
+   "uuid": "6e24b970-5fd6-41f5-b8f0-0731d8e282b1",
+   "aosS": 38311,
+   "vodId": "01a14560-85a0-7bfb-a1d8-e85cd107d516"
+  },
+  {
+   "id": "britus99-1792187250971",
+   "canal": "britus99",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792187196403,
+   "fimMs": 1792187259403,
+   "resumo": {
+    "pt": "Parado na base lendo ideias de patch do Rust.",
+    "en": "Standing at base reading Rust patch ideas.",
+    "es": "Parado en la base leyendo ideas de parche de Rust."
+   },
+   "reacao": {
+    "pt": "Nenhuma.",
+    "en": "None.",
+    "es": "Ninguna."
+   },
+   "potencial": 5,
+   "uuid": "bb3a8a72-9419-47fb-8d73-3ca53d3fe115",
+   "aosS": 14312,
+   "vodId": "01a145d4-0020-7ef1-ad77-d1a79a3bfd82"
+  },
+  {
+   "id": "britus99-1792188230965",
+   "canal": "britus99",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792188214103,
+   "fimMs": 1792188277103,
+   "resumo": {
+    "pt": "Andando na base contando história de whitelist.",
+    "en": "Walking around base telling a whitelist story.",
+    "es": "Caminando por la base contando una historia de whitelist."
+   },
+   "reacao": {
+    "pt": "Nenhuma.",
+    "en": "None.",
+    "es": "Ninguna."
+   },
+   "potencial": 5,
+   "uuid": "bb3a8a72-9419-47fb-8d73-3ca53d3fe115",
+   "aosS": 15330,
+   "vodId": "01a145d4-0020-7ef1-ad77-d1a79a3bfd82"
+  },
+  {
+   "id": "britus99-1792187983739",
+   "canal": "britus99",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792187944603,
+   "fimMs": 1792188007603,
+   "resumo": {
+    "pt": "Na base falando de streamers de roleplay.",
+    "en": "At base talking about roleplay streamers.",
+    "es": "En la base hablando de streamers de roleplay."
+   },
+   "reacao": {
+    "pt": "Nenhuma.",
+    "en": "None.",
+    "es": "Ninguna."
+   },
+   "potencial": 5,
+   "uuid": "bb3a8a72-9419-47fb-8d73-3ca53d3fe115",
+   "aosS": 15061,
+   "vodId": "01a145d4-0020-7ef1-ad77-d1a79a3bfd82"
+  },
+  {
+   "id": "bruni2285-1792194834984",
+   "canal": "bruni2285",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792194798100,
+   "fimMs": 1792194877900,
+   "resumo": {
+    "pt": "Debaixo d'água com picareta; submarino passa.",
+    "en": "Underwater with a pickaxe; a sub passes over.",
+    "es": "Bajo el agua con pico; pasa un submarino."
+   },
+   "reacao": {
+    "pt": "Nenhuma.",
+    "en": "None.",
+    "es": "Ninguna."
+   },
+   "potencial": 5,
+   "uuid": "765793aa-7f49-47af-8af3-6f27572f0f97",
+   "aosS": 16123,
+   "vodId": "01a1462c-5d38-7026-8724-dbfc3bc43cce"
+  },
+  {
+   "id": "bruni2285-1792195484940",
+   "canal": "bruni2285",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792195427100,
+   "fimMs": 1792195507700,
+   "resumo": {
+    "pt": "Mergulhando com o time.",
+    "en": "Diving with the team.",
+    "es": "Buceando con el equipo."
+   },
+   "reacao": {
+    "pt": "Nenhuma.",
+    "en": "None.",
+    "es": "Ninguna."
+   },
+   "potencial": 5,
+   "uuid": "765793aa-7f49-47af-8af3-6f27572f0f97",
+   "aosS": 16752,
+   "vodId": "01a1462c-5d38-7026-8724-dbfc3bc43cce"
+  },
+  {
+   "id": "bruni2285-1792195683870",
+   "canal": "bruni2285",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792195672300,
+   "fimMs": 1792195757800,
+   "resumo": {
+    "pt": "Nadando no fundo do mar procurando algo.",
+    "en": "Swimming on the seabed looking for something.",
+    "es": "Nadando en el fondo del mar buscando algo."
+   },
+   "reacao": {
+    "pt": "Nenhuma.",
+    "en": "None.",
+    "es": "Ninguna."
+   },
+   "potencial": 5,
+   "uuid": "765793aa-7f49-47af-8af3-6f27572f0f97",
+   "aosS": 16997,
+   "vodId": "01a1462c-5d38-7026-8724-dbfc3bc43cce"
+  },
+  {
+   "id": "lcelestiall-1792193273405",
+   "canal": "lcelestiall",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792193264617,
+   "fimMs": 1792193308317,
+   "resumo": {
+    "pt": "Com facão numa ilha combinando ir de barco.",
+    "en": "With a machete on an island planning a boat trip.",
+    "es": "Con machete en una isla planeando ir en barco."
+   },
+   "reacao": {
+    "pt": "Nenhuma.",
+    "en": "None.",
+    "es": "Ninguna."
+   },
+   "potencial": 5,
+   "uuid": "4ee5e393-12ac-461e-8d3f-2d88af615f2e",
+   "aosS": 1015,
+   "vodId": "01a146fb-8090-72ca-9166-fc9bf600068e"
+  },
+  {
+   "id": "lcelestiall-1792193629735",
+   "canal": "lcelestiall",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792193621217,
+   "fimMs": 1792193703917,
+   "resumo": {
+    "pt": "Coletando frutas e falando de motores.",
+    "en": "Picking fruit and talking about engines.",
+    "es": "Recogiendo frutas y hablando de motores."
+   },
+   "reacao": {
+    "pt": "Nenhuma.",
+    "en": "None.",
+    "es": "Ninguna."
+   },
+   "potencial": 5,
+   "uuid": "4ee5e393-12ac-461e-8d3f-2d88af615f2e",
+   "aosS": 1371,
+   "vodId": "01a146fb-8090-72ca-9166-fc9bf600068e"
+  },
+  {
+   "id": "kanogamerr-1792177495157",
+   "canal": "kanogamerr",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792177450071,
+   "fimMs": 1792177518071,
+   "resumo": {
+    "pt": "Navegando no convés do barco ao entardecer.",
+    "en": "Sailing on deck at dusk.",
+    "es": "Navegando en cubierta al atardecer."
+   },
+   "reacao": {
+    "pt": "Sem reação relevante.",
+    "en": "No notable reaction.",
+    "es": "Sin reacción relevante."
+   },
+   "potencial": 5,
+   "uuid": "9d93c86e-b9f6-44ad-a7a2-2a3eb8250fb4",
+   "aosS": 7174,
+   "vodId": "01a145ac-34a0-7e47-9732-b89204536596"
+  },
+  {
+   "id": "kanogamerr-1792179654285",
+   "canal": "kanogamerr",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792179642571,
+   "fimMs": 1792179662671,
+   "resumo": {
+    "pt": "Mexendo no inventário e no armário da base; diz que atira mal.",
+    "en": "Fiddling with inventory and base locker; says his aim is bad.",
+    "es": "Toqueteando inventario y armario; dice que dispara mal."
+   },
+   "reacao": {
+    "pt": "Sem reação relevante.",
+    "en": "No notable reaction.",
+    "es": "Sin reacción relevante."
+   },
+   "potencial": 5,
+   "uuid": "9d93c86e-b9f6-44ad-a7a2-2a3eb8250fb4",
+   "aosS": 9367,
+   "vodId": "01a145ac-34a0-7e47-9732-b89204536596"
+  },
+  {
+   "id": "minely-1792189231920",
+   "canal": "minely",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792189222660,
+   "fimMs": 1792189286950,
+   "resumo": {
+    "pt": "Montando portas no barco em construção enquanto conversa.",
+    "en": "Placing doors on the boat being built while chatting.",
+    "es": "Poniendo puertas en el barco en construcción mientras charla."
+   },
+   "reacao": {
+    "pt": "Sem reação relevante.",
+    "en": "No notable reaction.",
+    "es": "Sin reacción relevante."
+   },
+   "potencial": 5,
+   "uuid": "642a9c35-5e77-4337-9f07-7bf723c55980",
+   "aosS": 5041,
+   "vodId": "01a14680-64f0-7e8a-90af-ed67dd1f1cbf"
+  },
+  {
+   "id": "obidezu-1792174204567",
+   "canal": "obidezu",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792174172447,
+   "fimMs": 1792174255747,
+   "resumo": {
+    "pt": "Pilotando o barco e comentando que barcos se chocam.",
+    "en": "Driving the boat, saying boats are colliding.",
+    "es": "Pilotando el barco, comentando que los barcos chocan."
+   },
+   "reacao": {
+    "pt": "Sem reação relevante.",
+    "en": "No notable reaction.",
+    "es": "Sin reacción relevante."
+   },
+   "potencial": 5,
+   "uuid": "9de4903c-374a-4fe1-8f25-44a9f1783ba8",
+   "aosS": 12969,
+   "vodId": "01a14521-c338-73bc-b921-6800097b5211"
+  },
+  {
+   "id": "lixs28-1792201154139",
+   "canal": "lixs28",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792201146695,
+   "fimMs": 1792201163295,
+   "resumo": {
+    "pt": "No barco no escuro",
+    "en": "On the boat in the dark",
+    "es": "En el barco a oscuras"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 3,
+   "uuid": "1aef554a-6e30-4981-bb02-752e0960a20b",
+   "aosS": 19710,
+   "vodId": "01a14656-8248-7da8-a8fa-9fdfc7a40cff"
+  },
+  {
+   "id": "fortuna2121-1792185142472",
+   "canal": "fortuna2121",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792185126508,
+   "fimMs": 1792185169408,
+   "resumo": {
+    "pt": "Correndo no mato",
+    "en": "Running through bushes",
+    "es": "Corriendo por el monte"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 3,
+   "uuid": "aba3380a-af72-4850-8b79-cb6c2afce49c",
+   "aosS": 4157,
+   "vodId": "01a1464f-6210-768c-8375-a16cc2a6f349"
+  },
+  {
+   "id": "alimuza-1792200462487",
+   "canal": "alimuza",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792200445011,
+   "fimMs": 1792200507011,
+   "resumo": {
+    "pt": "Conversa entre cofres",
+    "en": "Chat among boxes",
+    "es": "Charla entre cajas"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 3,
+   "uuid": "f605fdaa-24a0-4ad9-b9f6-8383a1b24bdd",
+   "aosS": 45809,
+   "vodId": "01a144bd-8ee0-790c-b48a-1186e3c29984"
+  },
+  {
+   "id": "darkatak-1792175212479",
+   "canal": "darkatak",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792175181727,
+   "fimMs": 1792175254027,
+   "resumo": {
+    "pt": "De barco rumo a monumento",
+    "en": "Boating to a monument",
+    "es": "En barco rumbo a un monumento"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 3,
+   "uuid": "8c8c1388-244f-4bd9-b292-6e8ddf25f9d6",
+   "aosS": 5741,
+   "vodId": "01a1459f-76e8-7598-ab56-0578b1e323bb"
+  },
+  {
+   "id": "darkatak-1792172971021",
+   "canal": "darkatak",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792172948027,
+   "fimMs": 1792173025727,
+   "resumo": {
+    "pt": "Saqueando corpo de cientista",
+    "en": "Looting a scientist body",
+    "es": "Saqueando cuerpo de científico"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 3,
+   "uuid": "8c8c1388-244f-4bd9-b292-6e8ddf25f9d6",
+   "aosS": 3507,
+   "vodId": "01a1459f-76e8-7598-ab56-0578b1e323bb"
+  },
+  {
+   "id": "carlitosbascu8-1792204099706",
+   "canal": "carlitosbascu8",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792204090954,
+   "fimMs": 1792204124254,
+   "resumo": {
+    "pt": "Na vila segura falando de pedra",
+    "en": "At the safe village talking about stone",
+    "es": "En el pueblo seguro hablando de piedra"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 3,
+   "uuid": "74cd4817-fa23-41b1-aea5-bdff6f3168f5",
+   "aosS": 39524,
+   "vodId": "01a14555-17d8-7046-a8e1-e7e06b7ca3e5"
+  },
+  {
+   "id": "carlitosbascu8-1792210045266",
+   "canal": "carlitosbascu8",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792210036554,
+   "fimMs": 1792210050554,
+   "resumo": {
+    "pt": "Segurando a caixa do evento na praia",
+    "en": "Holding the event crate on the beach",
+    "es": "Sosteniendo la caja del evento en la playa"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 3,
+   "uuid": "74cd4817-fa23-41b1-aea5-bdff6f3168f5",
+   "aosS": 45470,
+   "vodId": "01a14555-17d8-7046-a8e1-e7e06b7ca3e5"
+  },
+  {
+   "id": "jita-1792202476590",
+   "canal": "jita",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792202468488,
+   "fimMs": 1792202521498,
+   "resumo": {
+    "pt": "Organizando caixas na base.",
+    "en": "Organizing boxes at base.",
+    "es": "Organizando cajas en la base."
+   },
+   "reacao": {
+    "pt": "Nenhuma.",
+    "en": "None.",
+    "es": "Ninguna."
+   },
+   "potencial": 3,
+   "uuid": "2e3a736f-d323-4356-9607-f7e437507e5d",
+   "aosS": 43206,
+   "vodId": "01a14504-2530-7657-aa7d-e11aafe0f5c8"
+  },
+  {
+   "id": "wazon-1792207203500",
+   "canal": "wazon",
+   "origem": "publico",
+   "nivel": "resto",
+   "categorias": [
+    "reacao"
+   ],
+   "inicioMs": 1792207186000,
+   "fimMs": 1792207221000,
+   "resumo": {
+    "pt": "Parado no inventário de mergulhador vazio enquanto fala com o time.",
+    "en": "Idle in an empty diver inventory while talking to the team.",
+    "es": "Quieto en el inventario de buzo vacío mientras habla con el equipo."
+   },
+   "reacao": {
+    "pt": "Nenhuma.",
+    "en": "None.",
+    "es": "Ninguna."
+   },
+   "potencial": 3,
+   "clipe": "clip_01M53Y0J4SC7REJ1VTYSFYXKF5",
+   "views": 0,
+   "titulo": "bug"
+  },
+  {
+   "id": "ispdep-1792191963316",
+   "canal": "ispdep",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792191931316,
+   "fimMs": 1792191993316,
+   "resumo": {
+    "pt": "Conta treta antiga no inventário",
+    "en": "Telling an old beef story in inventory",
+    "es": "Cuenta un pique antiguo en el inventario"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 3,
+   "uuid": "c0ea163e-1279-4c63-950b-b89d049eea44",
+   "aosS": 23884,
+   "vodId": "01a1458a-3198-7862-86f7-f53f167f5ece"
+  },
+  {
+   "id": "ispdep-1792194868636",
+   "canal": "ispdep",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792194853566,
+   "fimMs": 1792194915566,
+   "resumo": {
+    "pt": "Opina sobre ping e sorte no evento",
+    "en": "Talks about ping and luck in the event",
+    "es": "Opina sobre ping y suerte en el evento"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 3,
+   "uuid": "c0ea163e-1279-4c63-950b-b89d049eea44",
+   "aosS": 26807,
+   "vodId": "01a1458a-3198-7862-86f7-f53f167f5ece"
+  },
+  {
+   "id": "lcelestiall-1792195981773",
+   "canal": "lcelestiall",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792195967317,
+   "fimMs": 1792196010517,
+   "resumo": {
+    "pt": "Debaixo d'água à noite conversando.",
+    "en": "Underwater at night chatting.",
+    "es": "Bajo el agua de noche charlando."
+   },
+   "reacao": {
+    "pt": "Nenhuma.",
+    "en": "None.",
+    "es": "Ninguna."
+   },
+   "potencial": 3,
+   "uuid": "4ee5e393-12ac-461e-8d3f-2d88af615f2e",
+   "aosS": 3717,
+   "vodId": "01a146fb-8090-72ca-9166-fc9bf600068e"
+  },
+  {
+   "id": "kanogamerr-1792177243889",
+   "canal": "kanogamerr",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792177188171,
+   "fimMs": 1792177256171,
+   "resumo": {
+    "pt": "Barco no mar à noite, conversa sobre o irmão e Twitter.",
+    "en": "Boat at sea at night, chatting about his brother and Twitter.",
+    "es": "Barco en el mar de noche, charla de su hermano y Twitter."
+   },
+   "reacao": {
+    "pt": "Sem reação relevante.",
+    "en": "No notable reaction.",
+    "es": "Sin reacción relevante."
+   },
+   "potencial": 3,
+   "uuid": "9d93c86e-b9f6-44ad-a7a2-2a3eb8250fb4",
+   "aosS": 6912,
+   "vodId": "01a145ac-34a0-7e47-9732-b89204536596"
+  },
+  {
+   "id": "minely-1792189988216",
+   "canal": "minely",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792189955216,
+   "fimMs": 1792190023216,
+   "resumo": {
+    "pt": "Troca roupas num manequim no barco.",
+    "en": "Swapping clothes on a mannequin on the boat.",
+    "es": "Cambia ropa en un maniquí en el barco."
+   },
+   "reacao": {
+    "pt": "Sem reação relevante.",
+    "en": "No notable reaction.",
+    "es": "Sin reacción relevante."
+   },
+   "potencial": 3,
+   "uuid": "642a9c35-5e77-4337-9f07-7bf723c55980",
+   "aosS": 5773,
+   "vodId": "01a14680-64f0-7e8a-90af-ed67dd1f1cbf"
+  },
+  {
+   "id": "obidezu-1792176178859",
+   "canal": "obidezu",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792176122747,
+   "fimMs": 1792176203247,
+   "resumo": {
+    "pt": "Explica onde fica uma caixa no moinho.",
+    "en": "Explains where a box is at the windmill.",
+    "es": "Explica dónde hay una caja en el molino."
+   },
+   "reacao": {
+    "pt": "Sem reação relevante.",
+    "en": "No notable reaction.",
+    "es": "Sin reacción relevante."
+   },
+   "potencial": 3,
+   "uuid": "9de4903c-374a-4fe1-8f25-44a9f1783ba8",
+   "aosS": 14920,
+   "vodId": "01a14521-c338-73bc-b921-6800097b5211"
+  },
+  {
+   "id": "obidezu-1792176380787",
+   "canal": "obidezu",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792176349647,
+   "fimMs": 1792176437847,
+   "resumo": {
+    "pt": "Construindo com o martelo enquanto conversa sobre o design.",
+    "en": "Building with the hammer while talking design.",
+    "es": "Construyendo con el martillo mientras habla del diseño."
+   },
+   "reacao": {
+    "pt": "Sem reação relevante.",
+    "en": "No notable reaction.",
+    "es": "Sin reacción relevante."
+   },
+   "potencial": 3,
+   "uuid": "9de4903c-374a-4fe1-8f25-44a9f1783ba8",
+   "aosS": 15147,
+   "vodId": "01a14521-c338-73bc-b921-6800097b5211"
+  },
+  {
+   "id": "elsapaatok-1792197878963",
+   "canal": "elsapaatok",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792197846963,
+   "fimMs": 1792197908963,
+   "resumo": {
+    "pt": "Construindo e organizando a base",
+    "en": "Building and organizing the base",
+    "es": "Construyendo y organizando la base"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 3,
+   "uuid": "3f1c572b-fd04-4552-ae34-9bfb5309bf9f",
+   "aosS": 11791,
+   "vodId": "01a1469c-fd40-73a5-9144-4be9ad2303b7"
+  },
+  {
+   "id": "newtrc-1792191667887",
+   "canal": "newtrc",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792191597805,
+   "fimMs": 1792191672305,
+   "resumo": {
+    "pt": "Recém-nascido cavalgando",
+    "en": "Fresh spawn riding a horse",
+    "es": "Recién spawneado montando a caballo"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 3,
+   "uuid": "e1ba94d3-09ca-4326-81f4-858b409bf96e",
+   "aosS": 28502,
+   "vodId": "01a1453e-a5c0-7766-8e68-dfe2ec502dcf"
+  },
+  {
+   "id": "hai_suzy-1792190573259",
+   "canal": "hai_suzy",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792190541259,
+   "fimMs": 1792190603259,
+   "resumo": {
+    "pt": "Minerando debaixo d'água",
+    "en": "Mining underwater",
+    "es": "Minando bajo el agua"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 3,
+   "uuid": "fc090a7c-1330-4862-80da-bbcf9605a36f",
+   "aosS": 7036,
+   "vodId": "01a14676-1068-7ced-accc-d813f9dfa786"
+  },
+  {
+   "id": "nikitta83-1792198533627",
+   "canal": "nikitta83",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792198518947,
+   "fimMs": 1792198597247,
+   "resumo": {
+    "pt": "Discute vida do barco",
+    "en": "Argues about boat health",
+    "es": "Discute la vida del barco"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 3,
+   "uuid": "ee632102-3d92-4a6e-b6bf-a0546f567621",
+   "aosS": 24232,
+   "vodId": "01a145e9-6898-736d-9d76-fb1a28736dcc"
+  },
+  {
+   "id": "crreg-1792175062944",
+   "canal": "crreg",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792175038188,
+   "fimMs": 1792175120788,
+   "resumo": {
+    "pt": "Saindo da base conversando",
+    "en": "Leaving the base chatting",
+    "es": "Saliendo de la base charlando"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 3,
+   "uuid": "1a9f510b-c48d-48b6-92b9-aa68eb6af2cb",
+   "aosS": 14638,
+   "vodId": "01a14515-8280-7241-a775-8fb3e532d5bb"
+  },
+  {
+   "id": "jesusetegaming-1792188354582",
+   "canal": "jesusetegaming",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792188345826,
+   "fimMs": 1792188383026,
+   "resumo": {
+    "pt": "Quebrando barris.",
+    "en": "Breaking barrels.",
+    "es": "Rompiendo barriles."
+   },
+   "reacao": {
+    "pt": "Nenhuma.",
+    "en": "None.",
+    "es": "Ninguna."
+   },
+   "potencial": 3,
+   "uuid": "b971f836-ecfd-4f76-990d-6347fad82b4b",
+   "aosS": 2939,
+   "vodId": "01a14693-1618-71f1-bba0-c99d4b5247fe"
+  },
+  {
+   "id": "jesusetegaming-1792187377470",
+   "canal": "jesusetegaming",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792187367826,
+   "fimMs": 1792187388526,
+   "resumo": {
+    "pt": "Minerando pedra.",
+    "en": "Mining stone.",
+    "es": "Minando piedra."
+   },
+   "reacao": {
+    "pt": "Nenhuma.",
+    "en": "None.",
+    "es": "Ninguna."
+   },
+   "potencial": 3,
+   "uuid": "b971f836-ecfd-4f76-990d-6347fad82b4b",
+   "aosS": 1961,
+   "vodId": "01a14693-1618-71f1-bba0-c99d4b5247fe"
+  },
+  {
+   "id": "jesusetegaming-1792187713238",
+   "canal": "jesusetegaming",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792187698026,
+   "fimMs": 1792187716326,
+   "resumo": {
+    "pt": "Saqueando caixa no inventário.",
+    "en": "Looting a box in inventory.",
+    "es": "Saqueando caja en el inventario."
+   },
+   "reacao": {
+    "pt": "Nenhuma.",
+    "en": "None.",
+    "es": "Ninguna."
+   },
+   "potencial": 3,
+   "uuid": "b971f836-ecfd-4f76-990d-6347fad82b4b",
+   "aosS": 2291,
+   "vodId": "01a14693-1618-71f1-bba0-c99d4b5247fe"
+  },
+  {
+   "id": "joseluej-1792194214951",
+   "canal": "joseluej",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792194162659,
+   "fimMs": 1792194251159,
+   "resumo": {
+    "pt": "Dentro da base olhando o mapa e falando de automação.",
+    "en": "Inside the base on the map, talking automation.",
+    "es": "Dentro de la base mirando el mapa, hablando de automatización."
+   },
+   "reacao": {
+    "pt": "Sem reação relevante.",
+    "en": "No notable reaction.",
+    "es": "Sin reacción relevante."
+   },
+   "potencial": 3,
+   "uuid": "fd8eaa00-feb0-4630-9df4-376ca6ac84ab",
+   "aosS": 34546,
+   "vodId": "01a14509-8fe8-76f8-8583-56e80f3f2280"
+  },
+  {
+   "id": "joseluej-1792194456663",
+   "canal": "joseluej",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792194446459,
+   "fimMs": 1792194527459,
+   "resumo": {
+    "pt": "Pilotando o barco no leme e falando de ancorar.",
+    "en": "At the helm talking about anchoring.",
+    "es": "Al timón hablando de anclar."
+   },
+   "reacao": {
+    "pt": "Sem reação relevante.",
+    "en": "No notable reaction.",
+    "es": "Sin reacción relevante."
+   },
+   "potencial": 3,
+   "uuid": "fd8eaa00-feb0-4630-9df4-376ca6ac84ab",
+   "aosS": 34829,
+   "vodId": "01a14509-8fe8-76f8-8583-56e80f3f2280"
+  },
+  {
+   "id": "joseluej-1792194915443",
+   "canal": "joseluej",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792194847259,
+   "fimMs": 1792194930359,
+   "resumo": {
+    "pt": "No convés conversando sobre futebol e torneio.",
+    "en": "On deck chatting football and a tournament.",
+    "es": "En cubierta charlando de fútbol y un torneo."
+   },
+   "reacao": {
+    "pt": "Sem reação relevante.",
+    "en": "No notable reaction.",
+    "es": "Sin reacción relevante."
+   },
+   "potencial": 3,
+   "uuid": "fd8eaa00-feb0-4630-9df4-376ca6ac84ab",
+   "aosS": 35230,
+   "vodId": "01a14509-8fe8-76f8-8583-56e80f3f2280"
+  },
+  {
+   "id": "jordav-1792189664200",
+   "canal": "jordav",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792189648416,
+   "fimMs": 1792189675286,
+   "resumo": {
+    "pt": "Nadando debaixo d'água à noite, tela quase toda escura.",
+    "en": "Swimming underwater at night, screen almost black.",
+    "es": "Nadando bajo el agua de noche, pantalla casi negra."
+   },
+   "reacao": {
+    "pt": "Chat: 'xd'.",
+    "en": "Chat: 'xd'.",
+    "es": "Chat: 'xd'."
+   },
+   "potencial": 3,
+   "uuid": "28ec7d45-9f6e-4986-a242-6f53aa1d6fc9",
+   "aosS": 5970,
+   "vodId": "01a14678-b430-7373-b141-3215d6ad34af"
+  },
+  {
+   "id": "ciscoo-1792175393803",
+   "canal": "ciscoo",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792175364951,
+   "fimMs": 1792175444751,
+   "resumo": {
+    "pt": "Menu de craft e farm",
+    "en": "Crafting menu and farming",
+    "es": "Menú de crafteo y farmeo"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 2,
+   "uuid": "40d8ff43-22cc-46de-85e0-42c266bd52c9",
+   "aosS": 18450,
+   "vodId": "01a144e0-5538-7c49-89f7-4b835de338de"
+  },
+  {
+   "id": "fortuna2121-1792182748392",
+   "canal": "fortuna2121",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792182678708,
+   "fimMs": 1792182759308,
+   "resumo": {
+    "pt": "Nadando com machado",
+    "en": "Swimming with an axe",
+    "es": "Nadando con hacha"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 2,
+   "uuid": "aba3380a-af72-4850-8b79-cb6c2afce49c",
+   "aosS": 1709,
+   "vodId": "01a1464f-6210-768c-8375-a16cc2a6f349"
+  },
+  {
+   "id": "andalaa-1792204051938",
+   "canal": "andalaa",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792203981402,
+   "fimMs": 1792204061202,
+   "resumo": {
+    "pt": "Planejando comprar minicóptero",
+    "en": "Planning to buy a minicopter",
+    "es": "Planeando comprar un minicóptero"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 2,
+   "uuid": "6e24b970-5fd6-41f5-b8f0-0731d8e282b1",
+   "aosS": 38665,
+   "vodId": "01a14560-85a0-7bfb-a1d8-e85cd107d516"
+  },
+  {
+   "id": "andalaa-1792204451710",
+   "canal": "andalaa",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792204409202,
+   "fimMs": 1792204489702,
+   "resumo": {
+    "pt": "Pilotando barco conversando",
+    "en": "Driving the boat chatting",
+    "es": "Pilotando el barco charlando"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 2,
+   "uuid": "6e24b970-5fd6-41f5-b8f0-0731d8e282b1",
+   "aosS": 39093,
+   "vodId": "01a14560-85a0-7bfb-a1d8-e85cd107d516"
+  },
+  {
+   "id": "elsapaatok-1792193758000",
+   "canal": "elsapaatok",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792193748299,
+   "fimMs": 1792193764799,
+   "resumo": {
+    "pt": "Saqueando barril e agradecendo KICKs",
+    "en": "Looting a barrel and thanking KICKs",
+    "es": "Saqueando un barril y agradeciendo KICKs"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 2,
+   "uuid": "3f1c572b-fd04-4552-ae34-9bfb5309bf9f",
+   "aosS": 7692,
+   "vodId": "01a1469c-fd40-73a5-9144-4be9ad2303b7"
+  },
+  {
+   "id": "elsapaatok-1792193440000",
+   "canal": "elsapaatok",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792193408000,
+   "fimMs": 1792193470000,
+   "resumo": {
+    "pt": "Nadando debaixo d'água",
+    "en": "Swimming underwater",
+    "es": "Nadando bajo el agua"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 2,
+   "uuid": "3f1c572b-fd04-4552-ae34-9bfb5309bf9f",
+   "aosS": 7352,
+   "vodId": "01a1469c-fd40-73a5-9144-4be9ad2303b7"
+  },
+  {
+   "id": "newtrc-1792195040607",
+   "canal": "newtrc",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792195027005,
+   "fimMs": 1792195055805,
+   "resumo": {
+    "pt": "Cortando árvore à noite",
+    "en": "Chopping a tree at night",
+    "es": "Talando un árbol de noche"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 2,
+   "uuid": "e1ba94d3-09ca-4326-81f4-858b409bf96e",
+   "aosS": 31931,
+   "vodId": "01a1453e-a5c0-7766-8e68-dfe2ec502dcf"
+  },
+  {
+   "id": "newtrc-1792193960345",
+   "canal": "newtrc",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792193888605,
+   "fimMs": 1792193963705,
+   "resumo": {
+    "pt": "Conversa no vagão de trem",
+    "en": "Chat in a train wagon",
+    "es": "Charla en el vagón de tren"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 2,
+   "uuid": "e1ba94d3-09ca-4326-81f4-858b409bf96e",
+   "aosS": 30793,
+   "vodId": "01a1453e-a5c0-7766-8e68-dfe2ec502dcf"
+  },
+  {
+   "id": "hai_suzy-1792185905827",
+   "canal": "hai_suzy",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792185888287,
+   "fimMs": 1792185972687,
+   "resumo": {
+    "pt": "Andando na praia com picareta",
+    "en": "Walking on the beach with a pickaxe",
+    "es": "Caminando por la playa con pico"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 2,
+   "uuid": "fc090a7c-1330-4862-80da-bbcf9605a36f",
+   "aosS": 2383,
+   "vodId": "01a14676-1068-7ced-accc-d813f9dfa786"
+  },
+  {
+   "id": "hai_suzy-1792187831413",
+   "canal": "hai_suzy",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792187792987,
+   "fimMs": 1792187863187,
+   "resumo": {
+    "pt": "Mapa e mineração",
+    "en": "Map and mining",
+    "es": "Mapa y minería"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 2,
+   "uuid": "fc090a7c-1330-4862-80da-bbcf9605a36f",
+   "aosS": 4288,
+   "vodId": "01a14676-1068-7ced-accc-d813f9dfa786"
+  },
+  {
+   "id": "nikitta83-1792199192785",
+   "canal": "nikitta83",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792199179247,
+   "fimMs": 1792199206047,
+   "resumo": {
+    "pt": "Andando pela base",
+    "en": "Walking around the base",
+    "es": "Caminando por la base"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 2,
+   "uuid": "ee632102-3d92-4a6e-b6bf-a0546f567621",
+   "aosS": 24892,
+   "vodId": "01a145e9-6898-736d-9d76-fb1a28736dcc"
+  },
+  {
+   "id": "nikitta83-1792202498837",
+   "canal": "nikitta83",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792202485147,
+   "fimMs": 1792202509747,
+   "resumo": {
+    "pt": "Explica purificadores de água",
+    "en": "Explains water purifiers",
+    "es": "Explica purificadores de agua"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 2,
+   "uuid": "ee632102-3d92-4a6e-b6bf-a0546f567621",
+   "aosS": 28198,
+   "vodId": "01a145e9-6898-736d-9d76-fb1a28736dcc"
+  },
+  {
+   "id": "crreg-1792175341712",
+   "canal": "crreg",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792175265788,
+   "fimMs": 1792175349188,
+   "resumo": {
+    "pt": "Quebrando barris",
+    "en": "Breaking barrels",
+    "es": "Rompiendo barriles"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 2,
+   "uuid": "1a9f510b-c48d-48b6-92b9-aa68eb6af2cb",
+   "aosS": 14866,
+   "vodId": "01a14515-8280-7241-a775-8fb3e532d5bb"
+  },
+  {
+   "id": "crreg-1792175534288",
+   "canal": "crreg",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792175506488,
+   "fimMs": 1792175587288,
+   "resumo": {
+    "pt": "Saqueando barris",
+    "en": "Looting barrels",
+    "es": "Saqueando barriles"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 2,
+   "uuid": "1a9f510b-c48d-48b6-92b9-aa68eb6af2cb",
+   "aosS": 15106,
+   "vodId": "01a14515-8280-7241-a775-8fb3e532d5bb"
   }
  ]
 }
