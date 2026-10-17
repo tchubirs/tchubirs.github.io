@@ -24,7 +24,7 @@ const TEXTOS = {
     potencial: 'potencial de viralizar',
     editar: 'Editar / baixar no Povix', kick: 'Kick',
     grupoUm: '1 momento · melhor ▲ {p}', grupoN: '{n} momentos · melhor ▲ {p}',
-    visaoDe: 'Visão de {canal}, do outro lado',
+    visaoDe: 'Visão do inimigo: {canal}',
     linhaViral: 'Virais: reação forte', linhaHighlight: 'Highlights: jogadas de PvP',
   },
   en: {
@@ -41,7 +41,7 @@ const TEXTOS = {
     potencial: 'viral potential',
     editar: 'Edit / download in Povix', kick: 'Kick',
     grupoUm: '1 moment · best ▲ {p}', grupoN: '{n} moments · best ▲ {p}',
-    visaoDe: '{canal}’s view, from the other side',
+    visaoDe: 'Enemy view: {canal}',
     linhaViral: 'Viral: big reactions', linhaHighlight: 'Highlights: PvP plays',
   },
   es: {
@@ -58,7 +58,7 @@ const TEXTOS = {
     potencial: 'potencial viral',
     editar: 'Editar / descargar en Povix', kick: 'Kick',
     grupoUm: '1 momento · mejor ▲ {p}', grupoN: '{n} momentos · mejor ▲ {p}',
-    visaoDe: 'Visión de {canal}, del otro lado',
+    visaoDe: 'Visión del enemigo: {canal}',
     linhaViral: 'Virales: reacción fuerte', linhaHighlight: 'Highlights: jugadas de PvP',
   },
 };

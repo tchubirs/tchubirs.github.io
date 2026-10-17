@@ -236,7 +236,7 @@ test('momentos: a visão do outro lado toca junto, menor e muda, e some com o v�
   const inicio = await p.evaluate(() => window.__hls.map((h) => h.config.startPosition));
   assert.equal(inicio[0], 13100);
   assert.ok(Math.abs(inicio[1] - 13107.4) < 0.01, String(inicio[1]));
-  assert.equal(await card.locator('.momPovNome').textContent(), 'Visão de liks, do outro lado');
+  assert.equal(await card.locator('.momPovNome').textContent(), 'Visão do inimigo: liks');
   assert.equal(await card.locator('.momPov video').evaluate((v) => v.muted), true);
   // No celular fica por baixo do vídeo principal, sem alargar a página.
   const pos = await p.evaluate(() => {
@@ -262,7 +262,7 @@ test('momentos: a visão do outro lado toca junto, menor e muda, e some com o v�
   assert.equal(await p.evaluate(() => window.__chamadas.pause), 1);
   // Trocar o idioma muda o rótulo da outra visão sem cortar nada.
   await p.selectOption('#idioma', 'en');
-  assert.equal(await card.locator('.momPovNome').textContent(), 'liks’s view, from the other side');
+  assert.equal(await card.locator('.momPovNome').textContent(), 'Enemy view: liks');
   await p.selectOption('#idioma', 'pt');
   // Tocar outro cartão larga as duas.
   await p.locator('.mom[data-id="minita"] .momCapa').click();
