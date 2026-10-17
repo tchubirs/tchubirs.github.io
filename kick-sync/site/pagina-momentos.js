@@ -8,6 +8,7 @@
 
 import { clipeDaKick, fonteDoVod, idDaPaginaDoVod } from './kick.js';
 import { escapar } from './escapar.js';
+import { paraLink } from './relogio.js';
 import { cortarMomento, gravarVertical } from './momento-baixar.js';
 import { prepararSomDaGravacao } from './retrato.js';
 
@@ -150,9 +151,22 @@ function linkDaKick(m) {
 }
 
 /** O Povix inteiro no meio do momento, com o streamer nomeado: é o cartão do topo do modo simples. */
+/**
+ * O Povix já no momento, como um projeto partilhado (#s=): só os canais do momento (o streamer e as visões do
+ * inimigo), a noite deles, o instante e o corte marcados, no modo avançado (dá para baixar, trocar a visão e o
+ * modo de ver). O dono, 17/10: o link do evento (?e=) abria o evento inteiro, "uns 40 segundos", para um clipe só.
+ */
 function linkDoPovix(m) {
   const meio = Math.round((m.inicioMs + m.fimMs) / 2);
-  return `index.html?e=${encodeURIComponent(estado.nome)}#t=${meio}&c=${encodeURIComponent(m.canal)}`;
+  const canais = [m.canal, ...povsDe(m).map((p) => p.canal)].filter((c, i, a) => a.indexOf(c) === i);
+  const sessao = paraLink({
+    canais,
+    agoraMs: m.inicioMs,
+    focos: canais.slice(0, 2),
+    marca: { de: m.inicioMs, ate: m.fimMs },
+    momentos: [{ ms: meio, protagonista: m.canal }],
+  });
+  return `index.html#s=${encodeURIComponent(sessao)}`;
 }
 
 function capa(m) {

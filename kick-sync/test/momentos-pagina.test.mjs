@@ -5,6 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { kickFalsa } from './falsa.mjs';
+import { doLink } from '../site/relogio.js';
 import { montarPalco, podeCorrer } from './palco.mjs';
 
 let PORTA = 0;
@@ -136,7 +137,15 @@ test('momentos: um toque toca ali mesmo; o VOD começa 3 s antes e o clipe pelo 
     const barco = p.locator('.mom[data-id="barco"]');
     // Sem o id da página no arquivo, o link da Kick é o canal até a v1 dizer qual é.
     assert.equal(await barco.locator('.momKick').getAttribute('href'), 'https://kick.com/axel');
-    assert.equal(await barco.locator('.momEditar').getAttribute('href'), `index.html?e=teste#t=${T + 30_000}&c=axel`);
+    // O Povix abre como projeto partilhado: só o canal do momento, o instante e o corte, sem carregar o evento.
+    const editar = await barco.locator('.momEditar').getAttribute('href');
+    assert.match(editar, /^index\.html#s=/);
+    const sessao = doLink(decodeURIComponent(editar.split('#s=')[1]));
+    assert.deepEqual(sessao.canais, ['axel']);
+    assert.equal(sessao.agora, T);
+    assert.deepEqual(sessao.focos, ['axel']);
+    assert.deepEqual(sessao.marca, { de: T, ate: T + 60_000 });
+    assert.deepEqual(sessao.momentos.map((x) => [x.ms, x.protagonista]), [[T + 30_000, 'axel']]);
     assert.equal(await p.locator('.mom[data-id="canhao"] .momKick').getAttribute('href'), `https://kick.com/axel/videos/${VOD_PAGINA}?t=13703`);
 
     await barco.locator('.momCapa').click();
