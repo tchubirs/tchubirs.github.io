@@ -405,3 +405,18 @@ test('momentos: se uma visão do inimigo não chega, o principal toca sozinho de
   assert.ok(espera >= 3500 && espera < 7000, String(espera));
   assert.deepEqual(erros, []);
 });
+
+test('momentos: o nível "resto" fica fora da lista do evento e aparece na busca do streamer', semNavegador, async () => {
+  const { p, erros } = await abrir({ caminho: null, modo: null, ecra: { width: 400, height: 860 } });
+  const [barco, minita] = MOMENTOS.momentos;
+  const dados = { ...MOMENTOS, momentos: [{ ...barco, nivel: 'top' }, { ...minita, nivel: 'bom' }, { ...barco, id: 'fraco', nivel: 'resto', potencial: 10 }] };
+  await preparar(p, { dados });
+  await p.goto(`http://127.0.0.1:${PORTA}/momentos.html?e=teste`, { waitUntil: 'networkidle' });
+  await p.waitForSelector('#listaMomentos .mom');
+  assert.deepEqual(await ordem(p), ['minita', 'barco']);
+  assert.equal(await p.locator('#momSub').textContent(), '2 momentos de 2 streamers. Toque na imagem para ver ali mesmo.');
+  await p.fill('#momBusca', 'axel');
+  await p.dispatchEvent('#momBusca', 'change');
+  assert.deepEqual(await ordem(p), ['barco', 'fraco']);
+  assert.deepEqual(erros, []);
+});

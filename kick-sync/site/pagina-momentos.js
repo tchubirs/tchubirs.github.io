@@ -178,7 +178,10 @@ function pintar() {
   parar();
   // Um streamer pode procurar só o que é dele (o dono, 17/10): os momentos dele e aqueles em que ele aparece como
   // a visão do inimigo.
-  const doCanal = (m) => !estado.canal || m.canal === estado.canal || povsDe(m).some((pv) => pv.canal === estado.canal);
+  // Sem busca, a lista do evento mostra só top e bom; o nível "resto" aparece na busca do streamer, que vê tudo o que
+  // é dele mesmo sem viral.
+  const doCanal = (m) => (!estado.canal ? m.nivel !== 'resto'
+    : m.canal === estado.canal || povsDe(m).some((pv) => pv.canal === estado.canal));
   const lista = [...porId.values()].filter(doCanal).sort(porPotencial);
   const caixa = $('listaMomentos');
   const pagina = (chave, ms) => {
@@ -221,7 +224,8 @@ function textos() {
   if (estado.dados) {
     $('nomeEvento').textContent = String(estado.dados.evento || estado.nome);
     const deles = estado.canal ? [...porId.values()].filter((m) => m.canal === estado.canal || povsDe(m).some((pv) => pv.canal === estado.canal)).length : 0;
-    $('momSub').textContent = !estado.canal ? t('sub', { n: porId.size, c: new Set([...porId.values()].map((m) => m.canal)).size })
+    const doEvento = [...porId.values()].filter((m) => m.nivel !== 'resto');
+    $('momSub').textContent = !estado.canal ? t('sub', { n: doEvento.length, c: new Set(doEvento.map((m) => m.canal)).size })
       : deles ? t('subCanal', { n: deles, canal: estado.canal }) : t('nadaCanal', { canal: estado.canal });
     // Trocar o idioma não corta o vídeo que está a tocar; os cartões mudam na próxima pintura.
     if (!estado.tocando) pintar();
