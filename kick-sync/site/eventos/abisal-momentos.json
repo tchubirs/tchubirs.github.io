@@ -1,139 +1,160 @@
 {
  "evento": "Abisal",
- "atualizado": "2026-10-17T16:00:00Z",
+ "atualizado": "2026-10-17T15:18:46.595Z",
  "momentos": [
   {
-   "id": "kodd-clip_01M53Z0NWY3MERGEYA5WAZGTHN",
+   "id": "kodd-1792192744500",
+   "canal": "kodd",
+   "origem": "publico",
+   "inicioMs": 1792192735000,
+   "fimMs": 1792192754000,
+   "resumo": {
+    "pt": "Na plataforma de petróleo do Abisal, ele chega planando, cai em cima do inimigo do guindaste e mata, gritando '¡Bien!'.",
+    "en": "At the Abisal oil rig he glides in, drops on the crane enemy and kills him, shouting '¡Bien!'.",
+    "es": "En la plataforma petrolera de Abisal llega planeando, cae sobre el enemigo de la grúa y lo mata gritando '¡Bien!'."
+   },
+   "reacao": {
+    "pt": "Ele comemora alto; chat explode em KEKW dourado e KEKLEO.",
+    "en": "He celebrates loudly; chat explodes with golden KEKW and KEKLEO.",
+    "es": "Celebra fuerte; el chat explota con KEKW dorado y KEKLEO."
+   },
+   "potencial": 82,
+   "clipe": "clip_01M53G6RQY046DSNZKP3DMDJT6",
+   "views": 116,
+   "titulo": "FELIZ CUMPLEAÑOS ",
+   "miniatura": "eventos/abisal-momentos/kodd-1792192744500.jpg"
+  },
+  {
+   "id": "kodd-1792200666000",
+   "canal": "kodd",
+   "origem": "publico",
+   "inicioMs": 1792200657000,
+   "fimMs": 1792200675000,
+   "resumo": {
+    "pt": "Raid na base-navio pirata do Abisal: ele avança entre baús e morre fritado pela Tesla Coil ('pollo frito').",
+    "en": "Abisal pirate-ship base raid: he pushes between chests and gets fried by the Tesla Coil ('fried chicken').",
+    "es": "Raid a la base-barco pirata en Abisal: avanza entre cofres y muere frito por la Tesla Coil ('pollo frito')."
+   },
+   "reacao": {
+    "pt": "Facepalm na câmera; chat ri ('q hdp', KEKW).",
+    "en": "Facepalm on cam; chat laughs ('q hdp', KEKW).",
+    "es": "Facepalm en cámara; el chat ríe ('q hdp', KEKW)."
+   },
+   "potencial": 68,
+   "clipe": "clip_01M53R08VQZJYYANBCE195KBYN",
+   "views": 13,
+   "titulo": "POLLOFRITO",
+   "miniatura": "eventos/abisal-momentos/kodd-1792200666000.jpg"
+  },
+  {
+   "id": "wowi-1792205602000",
+   "canal": "wowi",
+   "origem": "publico",
+   "inicioMs": 1792205542000,
+   "fimMs": 1792205662000,
+   "resumo": {
+    "pt": "Ele invade a base inimiga, fica dentro dos quartos e conversa com os donos fingindo ser amigo.",
+    "en": "He sneaks into an enemy base, sits in their rooms and talks to the owners pretending to be friendly.",
+    "es": "Se mete en la base enemiga, se queda en sus cuartos y habla con los dueños haciéndose el amigo."
+   },
+   "reacao": {
+    "pt": "Ri baixinho; chat 'Absolute Cinema', KEKW.",
+    "en": "Quiet laughs; chat 'Absolute Cinema', KEKW.",
+    "es": "Ríe bajito; chat 'Absolute Cinema', KEKW."
+   },
+   "potencial": 55,
+   "clipe": "clip_01M53WGPAYTDFKWFKSDJAC24N0",
+   "views": 8,
+   "titulo": "wowi always going deep",
+   "miniatura": "eventos/abisal-momentos/wowi-1792205602000.jpg"
+  },
+  {
+   "id": "lynoche-1792192831000",
+   "canal": "lynoche",
+   "origem": "publico",
+   "inicioMs": 1792192816000,
+   "fimMs": 1792192846000,
+   "resumo": {
+    "pt": "No píer do Abisal, ela encontra desconhecidos e descobre que o cabelo longo de um deles é 'postiço'.",
+    "en": "On an Abisal pier she meets strangers and finds out one guy's long hair is a 'wig'.",
+    "es": "En un muelle de Abisal se cruza con desconocidos y descubre que el pelo largo de uno es 'postizo'."
+   },
+   "reacao": {
+    "pt": "Ela gargalha tapando a boca; chat 'BUAH JAJAJA'.",
+    "en": "She cracks up covering her mouth; chat 'BUAH LOL'.",
+    "es": "Se ríe tapándose la boca; chat 'BUAH JAJAJA'."
+   },
+   "potencial": 52,
+   "clipe": "clip_01M53G9EY921PVVY26CBTM04P3",
+   "views": 3,
+   "titulo": "Donde hay pelo hay alegría",
+   "miniatura": "eventos/abisal-momentos/lynoche-1792192831000.jpg"
+  },
+  {
+   "id": "kodd-1792193710000",
+   "canal": "kodd",
+   "origem": "publico",
+   "inicioMs": 1792193695000,
+   "fimMs": 1792193725000,
+   "resumo": {
+    "pt": "Na estrutura portuária/plataforma do Abisal ele limpa inimigos subindo escadas; chat grita 'PARA GORDO' e o acusa de cheat.",
+    "en": "On an Abisal dock/rig structure he clears enemies climbing ladders; chat yells 'STOP FATTY' and accuses him of cheating.",
+    "es": "En una estructura del puerto/plataforma de Abisal limpia enemigos subiendo escaleras; el chat grita 'PARA GORDO' y lo acusa de chetar."
+   },
+   "reacao": {
+    "pt": "Chat em hype (HYPERCLAP, 'los estás chiteando'); ele quase não fala.",
+    "en": "Chat hyped (HYPERCLAP, 'you're cheating'); he barely talks.",
+    "es": "Chat en hype (HYPERCLAP, 'los estás chiteando'); él casi no habla."
+   },
+   "potencial": 52,
+   "clipe": "clip_01M53H4C939N0P8JHXHD2EYB91",
+   "views": 47,
+   "titulo": "wowi?",
+   "miniatura": "eventos/abisal-momentos/kodd-1792193710000.jpg"
+  },
+  {
+   "id": "lynoche-1792178216000",
+   "canal": "lynoche",
+   "origem": "chat",
+   "inicioMs": 1792178196000,
+   "fimMs": 1792178241000,
+   "resumo": {
+    "pt": "O mesmo cara que a matou ontem a derruba de novo no Abisal e depois pede desculpas pra ela.",
+    "en": "The same guy who killed her yesterday downs her again on Abisal, then apologizes to her.",
+    "es": "El mismo que la mató ayer la tumba otra vez en Abisal y después le pide perdón."
+   },
+   "reacao": {
+    "pt": "Ela surpresa; chat 'que caballero', 'a gentleman', risadas.",
+    "en": "She's surprised; chat 'what a gentleman', laughs.",
+    "es": "Ella sorprendida; chat 'qué caballero', risas."
+   },
+   "potencial": 50,
+   "uuid": "02adf0d3-4193-432d-a8ef-b5f119a1ff1b",
+   "aosS": 6366,
+   "vodId": "01a145c3-eaf0-7c28-95c3-4300ff341c0b",
+   "miniatura": "eventos/abisal-momentos/lynoche-1792178216000.jpg"
+  },
+  {
+   "id": "kodd-1792207833500",
    "canal": "kodd",
    "origem": "publico",
    "inicioMs": 1792207813000,
    "fimMs": 1792207854000,
-   "uuid": "b6ef6e3b-024a-4cdc-bb53-008b2710089f",
-   "aosS": 25616,
+   "resumo": {
+    "pt": "Mesma história: parado na base do Abisal, explica que, se sequestrado, faria força pra cagar e evitar o abuso.",
+    "en": "Same story: idle in his Abisal base, he says if kidnapped he'd force himself to poop to avoid being assaulted.",
+    "es": "Misma historia: quieto en su base de Abisal, dice que si lo secuestran haría fuerza para cagar y evitar el abuso."
+   },
+   "reacao": {
+    "pt": "Ele ri gesticulando; chat em KEKW e WeirdChamp.",
+    "en": "He laughs gesturing; chat KEKW and WeirdChamp.",
+    "es": "Ríe gesticulando; chat KEKW y WeirdChamp."
+   },
+   "potencial": 50,
    "clipe": "clip_01M53Z0NWY3MERGEYA5WAZGTHN",
-   "views": 204,
+   "views": 191,
    "titulo": "La minita: me estara siendo infiel? los pibes:",
-   "resumo": {
-    "pt": "Piada de “a mina tá me traindo?” com os amigos na call.",
-    "en": "The “is my girl cheating on me?” bit with the squad on call.",
-    "es": "El chiste de “¿la minita me estará siendo infiel?” con los pibes."
-   },
-   "reacao": {
-    "pt": "Chat explodiu de rir: 130 risadas de 46 pessoas.",
-    "en": "Chat lost it: 130 laughs from 46 people.",
-    "es": "El chat explotó de risa: 130 risas de 46 personas."
-   },
-   "potencial": 95,
-   "miniatura": "https://clips.kick.com/clips/46/clip_01M53Z0NWY3MERGEYA5WAZGTHN/thumbnail.webp"
-  },
-  {
-   "id": "kodd-clip_01M5479PR27QVAY9GR5V1S0DES",
-   "canal": "kodd",
-   "origem": "publico",
-   "inicioMs": 1792216946000,
-   "fimMs": 1792216972000,
-   "uuid": "b6ef6e3b-024a-4cdc-bb53-008b2710089f",
-   "aosS": 34749,
-   "clipe": "clip_01M5479PR27QVAY9GR5V1S0DES",
-   "views": 145,
-   "titulo": "QUE MIRAS KOD?",
-   "resumo": {
-    "pt": "“Que miras, Kod?”: encarada que virou meme na hora.",
-    "en": "“Que miras, Kod?”: a stare-down that turned into a meme on the spot.",
-    "es": "“¿Qué miras, Kod?”: una mirada que se volvió meme al momento."
-   },
-   "reacao": {
-    "pt": "99 risadas de 39 pessoas no chat.",
-    "en": "99 laughs from 39 people in chat.",
-    "es": "99 risas de 39 personas en el chat."
-   },
-   "potencial": 90,
-   "miniatura": "https://clips.kick.com/clips/78/clip_01M5479PR27QVAY9GR5V1S0DES/thumbnail.webp"
-  },
-  {
-   "id": "axelripley-1792188907110",
-   "canal": "axelripley",
-   "origem": "povix",
-   "inicioMs": 1792188907110,
-   "fimMs": 1792188967110,
-   "uuid": "61cce35c-5f6b-42a0-96b0-2fa2efdbdd19",
-   "vodId": "01a14600-8e60-7e28-b96b-137165eaaa0d",
-   "aosS": 13103,
-   "resumo": {
-    "pt": "Pilotando o barco, atropela alguém achando que era um peixe e pede desculpas rindo.",
-    "en": "Steering the boat, he runs someone over thinking it was a fish and apologizes laughing.",
-    "es": "Pilotando el barco, atropella a alguien creyendo que era un pez y pide perdón entre risas."
-   },
-   "reacao": {
-    "pt": "Ele e o time caem na risada.",
-    "en": "He and the team crack up.",
-    "es": "Él y el equipo se mueren de risa."
-   },
-   "potencial": 82,
-   "miniatura": "eventos/abisal-momentos/axelripley-1792188907110.jpg"
-  },
-  {
-   "id": "geitta-1792195817270",
-   "canal": "geitta",
-   "origem": "povix",
-   "inicioMs": 1792195817270,
-   "fimMs": 1792195898970,
-   "uuid": "385f6bcc-9501-4ee3-b93e-1ce132539524",
-   "vodId": "01a14552-8b80-79f9-9402-0965ed397be6",
-   "aosS": 31417,
-   "resumo": {
-    "pt": "Após o “julgamento” de prisioneiros, um jogador é lançado voando ao céu.",
-    "en": "After a prisoner “trial”, a player gets launched flying into the sky.",
-    "es": "Tras el “juicio” a prisioneros, un jugador sale volando al cielo."
-   },
-   "reacao": {
-    "pt": "Chat se diverte; risadas no grupo.",
-    "en": "Chat has fun; the group laughs.",
-    "es": "El chat se divierte; risas en el grupo."
-   },
-   "potencial": 78,
-   "miniatura": "eventos/abisal-momentos/geitta-1792195817270.jpg"
-  },
-  {
-   "id": "geitta-clip_01M5328Z9KCNFH6ATJ6W20M3E9",
-   "canal": "geitta",
-   "origem": "publico",
-   "inicioMs": 1792178119000,
-   "fimMs": 1792178137000,
-   "uuid": "385f6bcc-9501-4ee3-b93e-1ce132539524",
-   "aosS": 13721,
-   "clipe": "clip_01M5328Z9KCNFH6ATJ6W20M3E9",
-   "views": 34,
-   "titulo": "jajajaj el infarto a la ratona",
-   "resumo": {
-    "pt": "Susto que quase dá um infarto na “ratona”.",
-    "en": "A jump scare that nearly gives the “ratona” a heart attack.",
-    "es": "Un susto que casi le da un infarto a la ratona."
-   },
-   "potencial": 70,
-   "miniatura": "https://clips.kick.com/clips/2a/clip_01M5328Z9KCNFH6ATJ6W20M3E9/thumbnail.webp"
-  },
-  {
-   "id": "dr-manha77an-1792185359382",
-   "canal": "dr-manha77an",
-   "origem": "povix",
-   "inicioMs": 1792185359382,
-   "fimMs": 1792185419382,
-   "uuid": "aceae8de-ce4f-4705-b922-63b46013b550",
-   "vodId": "01a145ff-6198-7df9-9371-5e52caacf455",
-   "aosS": 9632,
-   "resumo": {
-    "pt": "Dispara o canhão do barco e acerta em cheio um navio inimigo.",
-    "en": "Fires the ship cannon and lands a direct hit on an enemy ship.",
-    "es": "Dispara el cañón del barco y da de lleno a un barco enemigo."
-   },
-   "reacao": {
-    "pt": "Grito de comemoração.",
-    "en": "A celebration shout.",
-    "es": "Grito de celebración."
-   },
-   "potencial": 60,
-   "miniatura": "eventos/abisal-momentos/dr-manha77an-1792185359382.jpg"
+   "miniatura": "eventos/abisal-momentos/kodd-1792207833500.jpg"
   }
  ]
 }
