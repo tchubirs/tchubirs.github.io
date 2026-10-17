@@ -154,8 +154,11 @@ export const COMECO_DE_LIVE_MS = 15 * 60_000;
 export function semComecoDeLive(sinais, coberturas, margemMs = COMECO_DE_LIVE_MS) {
   return sinais.filter((s) => {
     if (s.tipo !== 'chat' && s.tipo !== 'pedidoClip') return true;
-    const inicio = inicioDaLiveEm(coberturas, s.canal, s.ms);
-    return inicio == null || s.ms - inicio >= margemMs;
+    // A live que cobre o instante (ou a última, que ainda está no ar e cujo fim é o da última leitura). Sem
+    // ela, não se sabe onde a live começou e o sinal fica: contar de uma live antiga deixava o "oi" passar.
+    const lista = coberturas.get(s.canal) || [];
+    const dela = lista.find(([de, ate], i) => s.ms >= de && (s.ms <= ate || i === lista.length - 1));
+    return !dela || s.ms - dela[0] >= margemMs;
   });
 }
 
@@ -2667,7 +2670,6 @@ export function montarEvento({
     const todos = sinaisDoEvento({ marcas: ev.marcas, momentos: momentos(), mensagens: ev.mensagens, mortes: mortes.casadas() })
       .filter((s) => doEvento.has(s.canal))
       .filter((s) => s.tipo === 'voce' || s.tipo === 'kill' || !outroJogoEm(s.canal, s.ms));
-    // No modo simples (a lista que se vê no celular) o chat do começo da live não vira cartão.
     const sinais = semComeco ? semComecoDeLive(todos, ev.coberturas) : todos;
     const times = indiceDeTimes(ev.elenco);
     return melhoresLances(sinais, { grupoDe: (c) => times.get(c) ?? null, confirmados: ev.confirmados });

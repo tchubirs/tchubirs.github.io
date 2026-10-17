@@ -396,12 +396,18 @@ test('o começo da live de um momento do evento: a última que já tinha começa
 
 // Dono, 17/10: "live sendo aberta e os viewers dando oi, 0 útil".
 test('no evento, pico de chat e pedido de clipe nos primeiros 15 min da live não viram lance; som e mortes sim', () => {
-  const cob = new Map([['a', [[0, 3_600_000]]]]);
+  const H = 3_600_000;
+  // Duas lives do a: de 0 a 1 h e de 10 h a 11 h (no ar; o fim é o da última leitura).
+  const cob = new Map([['a', [[0, H], [10 * H, 11 * H]]]]);
   const sinais = [
     { tipo: 'chat', canal: 'a', ms: 180_000 }, { tipo: 'pedidoClip', canal: 'a', ms: 600_000 },
-    { tipo: 'som', canal: 'a', ms: 120_000 }, { tipo: 'morte', canal: 'a', ms: 60_000 },
-    { tipo: 'chat', canal: 'a', ms: 1_000_000 }, { tipo: 'chat', canal: 'b', ms: 10_000 },
+    { tipo: 'tiros', canal: 'a', ms: 120_000 }, { tipo: 'morte', canal: 'a', ms: 60_000 },
+    { tipo: 'chat', canal: 'a', ms: 900_000 }, { tipo: 'chat', canal: 'b', ms: 10_000 },
+    // 2ª live: o minuto 3 sai mesmo com a live antiga muito antes; depois da última leitura conta a do ar.
+    { tipo: 'chat', canal: 'a', ms: 10 * H + 180_000 }, { tipo: 'chat', canal: 'a', ms: 11 * H + 60_000 },
+    // Fora de qualquer live conhecida: fica.
+    { tipo: 'chat', canal: 'a', ms: 5 * H },
   ];
   assert.deepEqual(semComecoDeLive(sinais, cob).map((s) => `${s.tipo}@${s.ms}`),
-    ['som@120000', 'morte@60000', 'chat@1000000', 'chat@10000']);
+    ['tiros@120000', 'morte@60000', 'chat@900000', 'chat@10000', `chat@${11 * H + 60_000}`, `chat@${5 * H}`]);
 });
