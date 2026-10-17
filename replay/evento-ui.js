@@ -12,27 +12,27 @@
 import {
   lerElenco, codificar, descodificar, contar, paraTexto, juntarElencos, paraArquivo, deArquivo, nomeDoArquivo,
   apelidosDoTexto,
-} from './elenco.js?v=648ec4ed6d';
-import { montarNomesNaTela } from './nomes-ui.js?v=648ec4ed6d';
-import { montarMortes } from './mortes-ui.js?v=648ec4ed6d';
-import { carregarCanais, procurarAoVivo } from './carregar.js?v=648ec4ed6d';
-import { escolherCaminho } from './portas.js?v=648ec4ed6d';
+} from './elenco.js?v=16b9f9b09b';
+import { montarNomesNaTela } from './nomes-ui.js?v=16b9f9b09b';
+import { montarMortes } from './mortes-ui.js?v=16b9f9b09b';
+import { carregarCanais, procurarAoVivo } from './carregar.js?v=16b9f9b09b';
+import { escolherCaminho } from './portas.js?v=16b9f9b09b';
 import {
   montarMapa, linhasVisiveis, tempoDoX, xDoTempo, zoom, oQueEstaAqui, filtrar, pintarMapa, ordenarFaixas, linhasDoTempo,
-} from './mapa.js?v=648ec4ed6d';
-import { procurarAngulos, ordenarCandidatos, resumo } from './cena.js?v=648ec4ed6d';
-import { lerMaster, lerPlaylist, procurarCanais, slugDoNome } from './kick.js?v=648ec4ed6d';
-import { linhaDoCanal } from './relogio.js?v=648ec4ed6d';
-import { somDoCanal, tsDoCanal } from './alinhar.js?v=648ec4ed6d';
-import { t, tn, idiomaActual } from './idiomas.js?v=648ec4ed6d';
-import { atalhos } from './atalhos.js?v=648ec4ed6d';
-import { escapar } from './escapar.js?v=648ec4ed6d';
-import { separarPorJogo } from './jogo.js?v=648ec4ed6d';
-import { idDoCanal, mensagensEntre, calor, picos, segundoDoPico, juntarPorOrdem } from './chat.js?v=648ec4ed6d';
-import { agendar } from './aovivo.js?v=648ec4ed6d';
+} from './mapa.js?v=16b9f9b09b';
+import { procurarAngulos, ordenarCandidatos, resumo } from './cena.js?v=16b9f9b09b';
+import { lerMaster, lerPlaylist, procurarCanais, slugDoNome } from './kick.js?v=16b9f9b09b';
+import { linhaDoCanal } from './relogio.js?v=16b9f9b09b';
+import { somDoCanal, tsDoCanal } from './alinhar.js?v=16b9f9b09b';
+import { t, tn, idiomaActual } from './idiomas.js?v=16b9f9b09b';
+import { atalhos } from './atalhos.js?v=16b9f9b09b';
+import { escapar } from './escapar.js?v=16b9f9b09b';
+import { separarPorJogo } from './jogo.js?v=16b9f9b09b';
+import { idDoCanal, mensagensEntre, calor, picos, segundoDoPico, juntarPorOrdem } from './chat.js?v=16b9f9b09b';
+import { agendar } from './aovivo.js?v=16b9f9b09b';
 import {
   normalDoChat, unirJanelas, sinaisDoEvento, melhoresLances, filtrarLances, motivoDoLance, contaDoLance, coincide,
-} from './melhores.js?v=648ec4ed6d';
+} from './melhores.js?v=16b9f9b09b';
 
 // Um canal ao vivo tem na lista um VOD de duração zero que vai crescendo. Até se pedir a lista outra
 // vez, o que ele já tem acaba "agora".
@@ -142,6 +142,16 @@ export function trechoDoEvento(coberturas, { folgaMs = 15 * 60_000 } = {}) {
 /** Quem estava no ar num instante: só esses podem ter ouvido o lance. */
 export function noArEm(coberturas, slug, ms) {
   return (coberturas.get(slug) || []).some(([de, ate]) => ms >= de && ms <= ate);
+}
+
+/**
+ * O começo da live do canal que tinha começado até `ms` (a última, se houver mais de uma). Sem olhar o fim: o de
+ * uma live no ar é o instante da última leitura, e um momento dos últimos segundos ficava de fora.
+ */
+export function inicioDaLiveEm(coberturas, slug, ms) {
+  let inicio = null;
+  for (const [de] of coberturas.get(slug) || []) if (de <= ms) inicio = de;
+  return inicio;
 }
 
 /**
@@ -2668,6 +2678,8 @@ export function montarEvento({
       canais: [...new Set([...ev.elenco.times.flatMap((x) => x.canais), ...ev.elenco.soltos])],
       lances, mensagens: ev.mensagens, lendo: Boolean(melhores.leitura), texto: $('melhoresEstado').textContent,
       doLink: ev.lanceDoLink || null,
+      // O começo da live de cada canal no instante do momento (o VOD que o cobre), para o "Aos X da live".
+      inicioDaLive: (canal, ms) => inicioDaLiveEm(ev.coberturas, canal, ms),
     };
   }
 

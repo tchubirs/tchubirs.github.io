@@ -10,34 +10,34 @@
 // sempre (abrir o canal, gravar o clipe) chega pela `ponte` que o app.js passa: este arquivo não mexe no
 // estado dele por conta própria.
 
-import { t, tn } from './idiomas.js?v=648ec4ed6d';
-import { procurarCanais, vodsDoCanal, vodDaKick, slugDoNome } from './kick.js?v=648ec4ed6d';
+import { t, tn } from './idiomas.js?v=16b9f9b09b';
+import { procurarCanais, vodsDoCanal, vodDaKick, slugDoNome } from './kick.js?v=16b9f9b09b';
 import {
   lerEntrada, montarLista, lancesParaLista, nomeDoArquivo, tempoNaLive, NOMES_NO_LANCE, QUANTOS,
   acharVod, guardarVod, mensagensDosPicos, lerUltimo, guardarUltimo, comMomentoDoLink,
-} from './simples-lista.js?v=648ec4ed6d';
-import { varrerNoite } from './procurar-momentos.js?v=648ec4ed6d';
-import { somDoCanal } from './alinhar.js?v=648ec4ed6d';
-import { TAXA_TIROS } from './tiros.js?v=648ec4ed6d';
-import { alertasDoCanal } from './alertas.js?v=648ec4ed6d';
-import { montarIndice, chaveDoIndice, indiceValido } from './indice.js?v=648ec4ed6d';
-import { janelasDosPicos, estimarFalta, estimarFaltaFracao, tempoFalta } from './ouvir.js?v=648ec4ed6d';
-import { onde } from './relogio.js?v=648ec4ed6d';
-import { abrirQuadrosEscondidos } from './rosto.js?v=648ec4ed6d';
-import { escapar } from './escapar.js?v=648ec4ed6d';
+} from './simples-lista.js?v=16b9f9b09b';
+import { varrerNoite } from './procurar-momentos.js?v=16b9f9b09b';
+import { somDoCanal } from './alinhar.js?v=16b9f9b09b';
+import { TAXA_TIROS } from './tiros.js?v=16b9f9b09b';
+import { alertasDoCanal } from './alertas.js?v=16b9f9b09b';
+import { montarIndice, chaveDoIndice, indiceValido } from './indice.js?v=16b9f9b09b';
+import { janelasDosPicos, estimarFalta, estimarFaltaFracao, tempoFalta } from './ouvir.js?v=16b9f9b09b';
+import { onde } from './relogio.js?v=16b9f9b09b';
+import { abrirQuadrosEscondidos } from './rosto.js?v=16b9f9b09b';
+import { escapar } from './escapar.js?v=16b9f9b09b';
 import {
   tituloDoMomento, etiquetasDoMomento, confExibida, confMedia, VERSAO_ETIQUETAS, textoDoContexto,
-} from './titulo.js?v=648ec4ed6d';
+} from './titulo.js?v=16b9f9b09b';
 import {
   lerFiltro, guardarFiltro, limparFiltro, filtroAtivo, filtraAlgo, aplicarFiltro, chipsDoFiltro, semChip, comFala, TIPOS_DO_FILTRO,
-} from './simples-filtro.js?v=648ec4ed6d';
-import { lerFalas, guardarFala, acharNaLista, melhorFala } from './falas.js?v=648ec4ed6d';
+} from './simples-filtro.js?v=16b9f9b09b';
+import { lerFalas, guardarFala, acharNaLista, melhorFala } from './falas.js?v=16b9f9b09b';
 import {
   analisarCandidatos, comContexto, contextoVigente, contextoDoMomento, precisaDeContexto, MAX_CANDIDATOS_POR_LIVE, ENDPOINT_PADRAO,
-} from './contexto-candidatos.js?v=648ec4ed6d';
-import { VERSAO_CONTRATO, MAX_IMAGEM_BYTES } from './contexto-rust.js?v=648ec4ed6d';
-import { fundirPovsPorCanal } from './simples-lista.js?v=648ec4ed6d';
-import { transmissoesDaBusca, pedidoDaBusca, limitesDaBusca, relogioDoTrecho, mesmoPedido, guardarMedidaBusca, estimativaDaBusca } from './busca-escopo.js?v=648ec4ed6d';
+} from './contexto-candidatos.js?v=16b9f9b09b';
+import { VERSAO_CONTRATO, MAX_IMAGEM_BYTES } from './contexto-rust.js?v=16b9f9b09b';
+import { fundirPovsPorCanal } from './simples-lista.js?v=16b9f9b09b';
+import { transmissoesDaBusca, pedidoDaBusca, limitesDaBusca, relogioDoTrecho, mesmoPedido, guardarMedidaBusca, estimativaDaBusca } from './busca-escopo.js?v=16b9f9b09b';
 
 const CHAVE_MODO = 'povix.modo';
 const CHAVE_VISTO = 'povix.simplesVisto';
@@ -294,6 +294,8 @@ export function montarSimples(ponte) {
   let nomeDoEventoAtual = null;
   let canalPrincipalDoEvento = null;
   let atualizarEventoLista = null;
+  // No evento cada cartão é de uma live diferente: o "Aos X da live" conta do começo da dele.
+  let inicioDaLiveDoEvento = null;
   let meuCanalSalvo = '';
   try { meuCanalSalvo = armazem.getItem(CHAVE_MEUPOV) || ''; } catch { /* armazenamento indisponível */ }
   let abrindoPov = null;
@@ -702,6 +704,7 @@ export function montarSimples(ponte) {
     busca = null;
     ponte.aoMudarEvento?.(null);
     atualizarEventoLista = null;
+    inicioDaLiveDoEvento = null;
     nomeDoEventoAtual = null;
     canalPrincipalDoEvento = null;
     opcoesPovRenderizadas.clear();
@@ -820,6 +823,7 @@ export function montarSimples(ponte) {
       if (minha !== geracao) return;
       const e = ponte.lancesDoEvento();
       atualizarSeletorDeCanal({ nome: e.nome || '', canais: e.canais });
+      inicioDaLiveDoEvento = e.inicioDaLive || null;
       // Com "meu canal" escolhido, só o link desse canal entra (a lista mostra só o POV dele).
       const doLink = !canalPrincipalDoEvento || slugDoNome(e.doLink?.canal || '') === slugDoNome(canalPrincipalDoEvento) ? e.doLink : null;
       ultimos = comMomentoDoLink(lancesParaLista(e.lances, { mensagens: e.mensagens, canalPrincipal: canalPrincipalDoEvento }), doLink)
@@ -1710,7 +1714,7 @@ export function montarSimples(ponte) {
         + (m.outros?.length ? `<p class="simplesTambem">${escapar(quemEstavaNoLance(m))}</p>` : '')
         + (m.falha ? `<p class="simplesTalvezFalha">${escapar(t('simples.talvezFalha'))}</p>` : '')
         + `<p class="simplesQuando">${escapar(m.doClipe ? t('simples.duracao', { s: durS })
-          : t('simples.quando', { tempo: tempoNaLive(m.ms, inicio), hora: horaDe(m.ms), s: durS }))}</p>`
+          : quandoDoCartao(m, inicio, durS))}</p>`
         + '</div><div class="simplesRodape">'
         + '<div class="simplesBotoes">'
         + `<button type="button" class="principal simplesTiktok" data-acao="tiktok" aria-label="${escapar(t('simples.baixarTiktok'))}" title="${escapar(t('simples.baixarTiktok'))}"><svg class="ic" aria-hidden="true"><use href="#i-descarregar"/></svg><span class="longo">${escapar(t('simples.baixarTiktok'))}</span><span class="curto" aria-hidden="true">${escapar(t('simples.baixarTiktokCurto'))}</span></button>`
@@ -1724,6 +1728,15 @@ export function montarSimples(ponte) {
         + '</div></div>' + povsHtml(m) + '</li>';
     }).join('');
     atualizarBotoesClipe();
+  }
+
+  // No evento, sem o começo da live do canal do cartão, só a hora: contar de outra live (o 1º cartão, o último POV
+  // aberto) dava um "Aos X da live" errado.
+  function quandoDoCartao(m, inicio, s) {
+    if (!m.doEvento || !inicioDaLiveDoEvento) return t('simples.quando', { tempo: tempoNaLive(m.ms, inicio), hora: horaDe(m.ms), s });
+    const dela = inicioDaLiveDoEvento(m.canal, m.ms);
+    return dela == null ? t('simples.quandoHora', { hora: horaDe(m.ms), s })
+      : t('simples.quando', { tempo: tempoNaLive(m.ms, dela), hora: horaDe(m.ms), s });
   }
 
   lista.addEventListener('click', (e) => {
