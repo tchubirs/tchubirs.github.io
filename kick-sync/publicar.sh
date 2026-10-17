@@ -34,6 +34,11 @@ cp site/letra/* "$DESTINO/letra/"
 # do evento, nada de notas: o arquivo fica público.
 mkdir -p "$DESTINO/eventos"
 cp site/eventos/*.json "$DESTINO/eventos/"
+# As miniaturas da tela de momentos (momentos.html?e=<nome> lê eventos/<nome>-momentos.json e as fotos da
+# pasta com o mesmo nome).
+for d in site/eventos/*/; do
+  if [ -d "$d" ]; then mkdir -p "$DESTINO/eventos/$(basename "$d")"; cp "$d"* "$DESTINO/eventos/$(basename "$d")/"; fi
+done
 # O leitor de texto dos "nomes na tela" (tesseract.js 7.0.0, núcleo 7.0.0 e o inglês best_int), com as
 # licenças. Fica connosco pelo mesmo motivo do hls.js, e com a versão no caminho de origem: não leva carimbo.
 # São uns 6 MB que só são pedidos quando alguém carrega em Ler os nomes na tela.
@@ -63,14 +68,14 @@ echo "publicado em $DESTINO  ·  versao $V"
 # endereco novo a cada publicacao obriga a descarrega-los outra vez. Sem
 # carimbo o browser revalida e recebe um 304 sem corpo. Se algum dia a
 # expressao la de cima passar a apanha-lo, isto para a publicacao e diz porque.
-if grep -q 'hls-[0-9.]*\.js?v=' "$DESTINO"/index.html; then
+if grep -q 'hls-[0-9.]*\.js?v=' "$DESTINO"/index.html "$DESTINO"/momentos.html; then
   echo "::error::o hls levou carimbo — sao 414 KB a mais por publicacao" >&2
   exit 1
 fi
 # Provar que o carimbo entrou mesmo, em vez de confiar. Cada pagina e cada
 # ficheiro de codigo tem de o ter — foi assim que uma vez publiquei para a
 # pasta errada e o script disse "publicado".
-for f in "$DESTINO"/index.html "$DESTINO"/twitch.html "$DESTINO"/app.js "$DESTINO"/twitch-app.js; do
+for f in "$DESTINO"/index.html "$DESTINO"/twitch.html "$DESTINO"/momentos.html "$DESTINO"/app.js "$DESTINO"/twitch-app.js "$DESTINO"/pagina-momentos.js; do
   grep -q "v=$V" "$f" || { echo "SEM CARIMBO: $f" >&2; exit 1; }
 done
 # E que a letra foi mesmo junto: cinco caras, e todas com corpo.

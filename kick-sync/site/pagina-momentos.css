@@ -1,0 +1,108 @@
+/* A tela de momentos (momentos.html). Os tokens e o resto do desenho são os do Povix (tokens.css,
+   estilo.css); aqui só o que é desta tela. Celular primeiro: em tela estreita "Melhores" é um feed de
+   cartões grandes, e a partir de 700 px vira um ranking compacto com o número à esquerda. */
+
+.paginaMomentos .topo h1 a.voltar { color: inherit; text-decoration: none; }
+.momEvento { color: var(--tinta-2); font-weight: 500; }
+.momEvento:empty { display: none; }
+
+.momPagina { display: grid; gap: var(--e4); max-width: 1040px; margin: 0 auto; min-width: 0; }
+.momSub { margin: 0; color: var(--tinta-2); max-width: 65ch; }
+.momEstado { margin: 0; color: var(--tinta-3); font-size: var(--t-menor); }
+.momEstado:empty { display: none; }
+
+.momAbas {
+  display: flex; gap: var(--e3); flex-wrap: wrap;
+  position: sticky; top: 0; z-index: 3; background: var(--sup-0); padding-block: var(--e3);
+}
+.momAbas button { border-radius: var(--r-redondo); padding: 0 var(--e5); }
+.momAbas button[aria-selected="true"] {
+  background: var(--acento); color: var(--sobre-acento); border-color: transparent; font-weight: 600;
+}
+
+/* ── o cartão ──────────────────────────────────────────────────────────── */
+.mom {
+  display: grid; gap: var(--e3); min-width: 0;
+  background: var(--sup-2); border: 1px solid var(--linha); border-radius: var(--r-3); padding: var(--e4);
+}
+.momRank { display: none; font: 500 var(--t-grande)/1 var(--letra-mono); color: var(--tinta-3); text-align: center; }
+.momVideo {
+  position: relative; aspect-ratio: 16 / 9; max-width: 100%;
+  border-radius: var(--r-2); overflow: hidden; background: var(--video-fundo);
+}
+.momVideo video { position: absolute; inset: 0; width: 100%; height: 100%; display: block; background: var(--video-fundo); }
+.momCapa {
+  position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0;
+  padding: 0; border: 0; border-radius: 0; background: var(--video-fundo); display: block; cursor: pointer;
+}
+.momCapa:hover:not(:disabled) { background: var(--video-fundo); }
+.momCapa:focus-visible { outline: 2px solid var(--acento); outline-offset: -2px; }
+.momCapa img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.momSemFoto {
+  position: absolute; inset: 0; display: grid; place-items: center; padding: var(--e4); text-align: center;
+  color: var(--tinta-2); font: 500 var(--t-menor)/var(--lh) var(--letra-mono);
+  background: linear-gradient(135deg, var(--sup-3), var(--sup-1));
+}
+.momPlay {
+  position: absolute; inset: 0; margin: auto; width: 52px; height: 52px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--sobre-video); border: 2px solid var(--tinta); color: var(--tinta);
+  transition: background var(--mov-rapido), color var(--mov-rapido), border-color var(--mov-rapido);
+}
+.momPlay .ic { width: 22px; height: 22px; margin-left: 3px; }
+.momCapa:hover .momPlay, .momCapa:focus-visible .momPlay { background: var(--acento); color: var(--sobre-acento); border-color: var(--acento); }
+.momDur {
+  position: absolute; right: var(--e3); bottom: var(--e3); padding: 4px 6px; border-radius: var(--r-1);
+  background: var(--sobre-video); color: var(--tinta); font: 500 var(--t-micro)/1 var(--letra-mono);
+}
+.momErro {
+  position: absolute; left: 0; right: 0; bottom: 0; margin: 0; padding: var(--e3);
+  background: var(--sobre-video); color: var(--perigo); font-size: var(--t-menor);
+}
+
+.momInfo { display: grid; gap: var(--e2); min-width: 0; align-content: start; }
+.momTopo { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e3); }
+.momCanal { font: 600 var(--t-base)/var(--lh-apertado) var(--letra-mono); overflow-wrap: anywhere; }
+.momPot {
+  padding: 2px 8px; border-radius: var(--r-redondo);
+  background: var(--marca-eco); color: var(--marca); font: 500 var(--t-menor)/var(--lh) var(--letra-mono);
+}
+.momHora { color: var(--tinta-3); font: 400 var(--t-menor)/var(--lh) var(--letra-mono); }
+.momResumo { margin: 0; }
+.momReacao { margin: 0; color: var(--tinta-2); font-size: var(--t-menor); }
+.momOrigem { margin: 0; color: var(--tinta-3); font-size: var(--t-menor); overflow-wrap: anywhere; }
+.momAcoes { display: flex; flex-wrap: wrap; gap: var(--e3); margin-top: var(--e2); }
+.momBotao {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 0 var(--e4);
+  border: 1px solid var(--linha-2); border-radius: var(--r-2); background: var(--sup-3);
+  color: var(--tinta); font: 500 var(--t-base)/1 var(--letra); text-decoration: none;
+  transition: background var(--mov-rapido), border-color var(--mov-rapido);
+}
+.momBotao:hover { background: var(--sup-4); border-color: var(--linha-3); color: var(--tinta); }
+.momBotao.principal { background: var(--acento); color: var(--sobre-acento); border-color: transparent; font-weight: 600; }
+.momBotao.principal:hover { background: var(--acento-alto); }
+.momBotao:focus-visible { outline: none; box-shadow: var(--foco); }
+
+/* ── Melhores ──────────────────────────────────────────────────────────── */
+.momMelhores { display: grid; gap: var(--e5); width: 100%; max-width: 560px; margin: 0 auto; }
+@media (min-width: 700px) {
+  .momMelhores { max-width: none; gap: var(--e3); }
+  .momMelhores .mom { grid-template-columns: 36px 240px minmax(0, 1fr); align-items: center; gap: var(--e4); }
+  .momMelhores .momRank { display: block; }
+  /* O vídeo a tocar ganha espaço: assistir num quadrado de 240 px não é assistir. */
+  .momMelhores .mom.tocando { grid-template-columns: 36px minmax(0, 1.5fr) minmax(0, 1fr); }
+}
+
+/* ── Por streamer ──────────────────────────────────────────────────────── */
+.momGrupos { display: grid; gap: var(--e6); min-width: 0; }
+.momGrupo { display: grid; gap: var(--e3); min-width: 0; }
+.momGrupo h2 {
+  margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--e3);
+  font: 600 var(--t-medio)/var(--lh-apertado) var(--letra-mono);
+}
+.momGrupo h2 span { color: var(--tinta-3); font: 400 var(--t-menor)/var(--lh) var(--letra); }
+.momCarrossel {
+  display: flex; gap: var(--e4); overflow-x: auto; overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory; padding-bottom: var(--e3);
+}
+.momCarrossel .mom { flex: 0 0 min(82%, 320px); scroll-snap-align: start; }
