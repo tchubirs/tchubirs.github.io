@@ -239,7 +239,7 @@ test('um arquivo estragado, sem nome ou sem canais não é um evento; canais inv
   assert.deepEqual(e.times, [{ nome: 'T', canais: ['t1'] }]);
 });
 
-test('o ABISAL salvo no site tem os 256 canais, o jogo e só isso', () => {
+test('o ABISAL salvo no site tem os 257 canais, o jogo e só isso', () => {
   const j = JSON.parse(fs.readFileSync(new URL('../site/eventos/abisal.json', import.meta.url), 'utf8'));
   // O arquivo é público: nem notas, nem seguidores, nem nomes de Discord, nem campos a mais.
   assert.deepEqual(Object.keys(j).sort(), ['canais', 'data', 'descricao', 'duracao', 'jogo', 'nome', 'times']);
@@ -247,11 +247,11 @@ test('o ABISAL salvo no site tem os 256 canais, o jogo e só isso', () => {
   // Rust: as lives de GTA RP de quem está na lista ficam de fora (ver jogo.js).
   assert.equal(j.jogo, 'Rust');
   assert.deepEqual(j.times, []);
-  assert.equal(j.canais.length, 256);
-  assert.equal(new Set(j.canais).size, 256);
+  assert.equal(j.canais.length, 257);
+  assert.equal(new Set(j.canais).size, 257);
   for (const c of j.canais) assert.match(c, /^[a-z0-9_.-]{1,60}$/);
   const e = deArquivo(j);
-  assert.equal(e.soltos.length, 256);
+  assert.equal(e.soltos.length, 257);
   assert.equal(nomeDoArquivo(e.nome), 'abisal', 'e abre por ?e=abisal');
 });
 
