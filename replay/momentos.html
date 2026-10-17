@@ -48,14 +48,18 @@
     <button type="button" role="tab" id="abaMelhores" data-aba="melhores" aria-selected="true" aria-controls="listaMomentos"></button>
     <button type="button" role="tab" id="abaStreamers" data-aba="streamers" aria-selected="false" aria-controls="listaMomentos"></button>
   </div>
+  <div class="momBuscaCaixa">
+    <input id="momBusca" type="search" list="momCanais" autocomplete="off" spellcheck="false">
+    <datalist id="momCanais"></datalist>
+  </div>
   <p id="momEstado" class="momEstado" role="status"></p>
   <div id="listaMomentos" role="tabpanel"></div>
 </main>
 
-<footer class="nota">Povix · <span id="versao">7431aa2751</span></footer>
+<footer class="nota">Povix · <span id="versao">dda32260d5</span></footer>
 
 <!-- O hls.js sem carimbo, pelo mesmo motivo do index.html: a versão vai no nome. -->
 <script src="hls-1.5.17.js"></script>
-<script type="module" src="pagina-momentos.js?v=7431aa2751"></script>
+<script type="module" src="pagina-momentos.js?v=dda32260d5"></script>
 </body>
 </html>

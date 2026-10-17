@@ -1,6 +1,6 @@
 {
  "evento": "Abisal",
- "atualizado": "2026-10-17T18:19:31.003Z",
+ "atualizado": "2026-10-17T19:08:20.018Z",
  "momentos": [
   {
    "id": "kodd-1792192744500",
@@ -125,7 +125,14 @@
     "es": "Sorpresa: 'no te la puedo creer'."
    },
    "potencial": 66,
-   "miniatura": "eventos/abisal-momentos/ay_zarite-1792207433599.jpg"
+   "miniatura": "eventos/abisal-momentos/ay_zarite-1792207433599.jpg",
+   "pov": {
+    "canal": "wowi",
+    "tipo": "caiu",
+    "uuid": "9a444e26-664b-487c-a1fe-9a9556b08012",
+    "aosS": 23292.75,
+    "vodId": "01a1467f-a1a0-7e71-b656-6c3f7095f7e9"
+   }
   },
   {
    "id": "dr-manha77an-1792185404408",
@@ -389,6 +396,29 @@
    "miniatura": "eventos/abisal-momentos/kodd-1792193710000.jpg"
   },
   {
+   "id": "leon2085-1792210642686",
+   "canal": "leon2085",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792210572298,
+   "fimMs": 1792210657198,
+   "uuid": "1d7d8ff0-faf4-4170-849d-c8b2b96c81e7",
+   "aosS": 2718,
+   "vodId": "01a147e9-99b0-78d1-b66d-cbb37c165b7e",
+   "resumo": {
+    "pt": "Com visão noturna num monumento nevado, troca tiros e o chat comenta a kill ('no quería una kill así').",
+    "en": "With night vision at a snowy monument he trades shots and chat reacts to the kill ('didn't want a kill like that').",
+    "es": "Con visión nocturna en un monumento nevado intercambia tiros y el chat comenta la kill ('no quería una kill así')."
+   },
+   "reacao": {
+    "pt": "Chat: 'jajaja', 'todo suma Gavi'.",
+    "en": "Chat: 'lol', 'it all counts Gavi'.",
+    "es": "Chat: 'jajaja', 'todo suma Gavi'."
+   },
+   "potencial": 52,
+   "miniatura": "eventos/abisal-momentos/leon2085-1792210642686.jpg"
+  },
+  {
    "id": "deowasd-1792192267000",
    "canal": "deowasd",
    "origem": "chat",
@@ -478,6 +508,1535 @@
    "aosS": 25612,
    "vodId": "01a14662-22d8-79bc-a63b-eef8ec4a4f94",
    "miniatura": "eventos/abisal-momentos/kodd-1792207833500.jpg"
+  },
+  {
+   "id": "marcoteee-1792210760300",
+   "canal": "marcoteee",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792210715406,
+   "fimMs": 1792210805406,
+   "uuid": "0db5bad7-b43a-4c03-b610-b5ae30c10438",
+   "aosS": 8640,
+   "vodId": "01a14791-6b78-71dd-a5ee-1b88939cc570",
+   "resumo": {
+    "pt": "Invade um barco gritando e derruba um defensor no corredor",
+    "en": "Storms a boat yelling and drops a defender in the hallway",
+    "es": "Asalta un barco gritando y tumba a un defensor en el pasillo"
+   },
+   "reacao": {
+    "pt": "Grita empolgado 'dale papá'",
+    "en": "Yells hyped 'dale papá'",
+    "es": "Grita emocionado 'dale papá'"
+   },
+   "potencial": 50,
+   "miniatura": "eventos/abisal-momentos/marcoteee-1792210760300.jpg"
+  },
+  {
+   "id": "kaos-mcs-1792203582446",
+   "canal": "kaos-mcs",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792203521470,
+   "fimMs": 1792203597770,
+   "uuid": "2a2ef95a-6b62-4bb2-82c8-24e3190f990e",
+   "aosS": 17001,
+   "vodId": "01a146a4-11c0-7aeb-a418-f84d170173b1",
+   "resumo": {
+    "pt": "Luta no navio: parceiros caem, fica sem balas e o inimigo leva a caixa",
+    "en": "Ship fight: teammates go down, he runs out of ammo and the enemy takes the crate",
+    "es": "Pelea en el barco: caen los compañeros, se queda sin balas y el enemigo se lleva la caja"
+   },
+   "reacao": {
+    "pt": "Chat: 'se quedaron con la caja'",
+    "en": "Chat: 'they kept the crate'",
+    "es": "Chat: 'se quedaron con la caja'"
+   },
+   "potencial": 50,
+   "miniatura": "eventos/abisal-momentos/kaos-mcs-1792203582446.jpg"
+  },
+  {
+   "id": "la-lager-1792206751464",
+   "canal": "la-lager",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792206727368,
+   "fimMs": 1792206812468,
+   "uuid": "0df081e3-57ce-4aeb-b5be-65507db299db",
+   "aosS": 24424,
+   "vodId": "01a14663-b918-7a00-861b-c9c6f58a61f1",
+   "resumo": {
+    "pt": "Briga debaixo d'água: acerta o inimigo, toma 12 e fica abatida",
+    "en": "Underwater fight: hits the enemy, takes 12 damage and gets downed",
+    "es": "Pelea bajo el agua: le pega al enemigo, recibe 12 y queda derribada"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 50,
+   "miniatura": "eventos/abisal-momentos/la-lager-1792206751464.jpg"
+  },
+  {
+   "id": "wilorust-1792201901290",
+   "canal": "wilorust",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792201877934,
+   "fimMs": 1792201911234,
+   "uuid": "044fbdb8-2420-40ff-a026-c0a2fe17ec07",
+   "aosS": 25278,
+   "vodId": "01a1460c-b3c0-7058-bb09-ff2fbaa6e121",
+   "resumo": {
+    "pt": "Depois do tiroteio na praia, saqueia com faca o jogador abatido.",
+    "en": "After the beach shootout, he loots the downed player with a knife.",
+    "es": "Tras el tiroteo en la playa, saquea con cuchillo al jugador abatido."
+   },
+   "reacao": {
+    "pt": "Chat comemora: 'al fin hay tiros'.",
+    "en": "Chat cheers: 'finally some shooting'.",
+    "es": "El chat celebra: 'al fin hay tiros'."
+   },
+   "potencial": 50,
+   "miniatura": "eventos/abisal-momentos/wilorust-1792201901290.jpg"
+  },
+  {
+   "id": "madiaaan-1792187879033",
+   "canal": "madiaaan",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792187831161,
+   "fimMs": 1792187920261,
+   "uuid": "13def66b-f47a-4d6b-b657-fe3a7324e4ab",
+   "aosS": 2387,
+   "vodId": "01a14693-a6a0-7844-aa9d-d45dc30af5d4",
+   "resumo": {
+    "pt": "Dispara o canhão do navio contra um barco perto da ilha; o time diz que matou alguém.",
+    "en": "Fires the ship cannon at a boat near the island; the team says someone was killed.",
+    "es": "Dispara el cañón del barco contra una lancha cerca de la isla; el equipo dice que mató a alguien."
+   },
+   "reacao": {
+    "pt": "'¿Le mataste?' — dúvida e risada.",
+    "en": "'Did you kill him?' — doubt and laughs.",
+    "es": "'¿Le mataste?' — duda y risas."
+   },
+   "potencial": 50,
+   "miniatura": "eventos/abisal-momentos/madiaaan-1792187879033.jpg"
+  },
+  {
+   "id": "canelita-5-1792188633624",
+   "canal": "canelita-5",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792188573356,
+   "fimMs": 1792188656656,
+   "uuid": "7083e99c-dd0e-499e-9669-6f17c46f8029",
+   "aosS": 3476,
+   "vodId": "01a1468e-5b28-711d-8ba9-a142bb230738",
+   "resumo": {
+    "pt": "Cai no laboratório subaquático, pede levantada e o time joga granadas no inimigo na subida.",
+    "en": "Gets downed in the underwater lab, asks for a revive while the team throws grenades at the enemy on the stairs.",
+    "es": "Cae en el laboratorio submarino, pide que lo levanten y el equipo tira granadas al enemigo en la subida."
+   },
+   "reacao": {
+    "pt": "'¡Joder, muy bien!' quando confirmam que tem gente.",
+    "en": "'Damn, nice!' when they confirm enemies.",
+    "es": "'¡Joder, muy bien!' cuando confirman que hay gente."
+   },
+   "potencial": 50,
+   "miniatura": "eventos/abisal-momentos/canelita-5-1792188633624.jpg"
+  },
+  {
+   "id": "kodd-1792201565500",
+   "canal": "kodd",
+   "origem": "publico",
+   "inicioMs": 1792201552000,
+   "fimMs": 1792201583000,
+   "resumo": {
+    "pt": "Entrando em base no Abisal ele cai 'wounded' de novo pela Tesla Coil enquanto lê o sub que 'nunca tinha vindo'.",
+    "en": "Entering an Abisal base he goes down 'wounded' by the Tesla Coil again while reading a sub message.",
+    "es": "Entrando a una base en Abisal cae 'wounded' otra vez por la Tesla Coil mientras lee un sub."
+   },
+   "reacao": {
+    "pt": "Chat: 'Nikola Tesla el sapo', 'DESINSTALA GORDO'; ele resmunga 'ah no'.",
+    "en": "Chat: 'Nikola Tesla the rat', 'UNINSTALL FATTY'; he groans 'ah no'.",
+    "es": "Chat: 'Nikola Tesla el sapo', 'DESINSTALA GORDO'; él suelta 'ah no'."
+   },
+   "potencial": 48,
+   "clipe": "clip_01M53RM69DC637EA378QVKWYCB",
+   "views": 10,
+   "titulo": "LA KK",
+   "uuid": "b6ef6e3b-024a-4cdc-bb53-008b2710089f",
+   "aosS": 19353,
+   "vodId": "01a14662-22d8-79bc-a63b-eef8ec4a4f94",
+   "miniatura": "eventos/abisal-momentos/kodd-1792201565500.jpg"
+  },
+  {
+   "id": "elwasabitm-1792187455927",
+   "canal": "elwasabitm",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792187438397,
+   "fimMs": 1792187515397,
+   "uuid": "9545ae04-d55a-4351-9e2a-85392e52562f",
+   "aosS": 41321,
+   "vodId": "01a1443b-9188-7809-b73e-4d5f9bfd1b2a",
+   "resumo": {
+    "pt": "Raid num barco inimigo carregando explosivos até a porta",
+    "en": "Raiding an enemy boat carrying explosives to the door",
+    "es": "Raideo a un barco enemigo cargando explosivos hasta la puerta"
+   },
+   "reacao": {
+    "pt": "Chat manda usar C4 na janela",
+    "en": "Chat tells him to C4 the window",
+    "es": "El chat le dice que use C4 en la ventana"
+   },
+   "potencial": 48,
+   "miniatura": "eventos/abisal-momentos/elwasabitm-1792187455927.jpg"
+  },
+  {
+   "id": "noscopeaim-1792180348993",
+   "canal": "noscopeaim",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792180295991,
+   "fimMs": 1792180388691,
+   "uuid": "fc23d349-4274-41b1-ac1e-51e7ccbd23b3",
+   "aosS": 47869,
+   "vodId": "01a1436a-acf8-75a6-9ac4-98c6e1359cb5",
+   "resumo": {
+    "pt": "Troca tiros com mira holo perto do porto, sangrando, contando quantos tiros cada inimigo levou.",
+    "en": "Trades shots with a holo sight near the harbor, bleeding, counting hits on each enemy.",
+    "es": "Intercambia disparos con mira holo cerca del puerto, sangrando, contando cuántos tiros lleva cada enemigo."
+   },
+   "reacao": {
+    "pt": "Concentrado, reclama ('qué troll').",
+    "en": "Focused, complaining ('so trolly').",
+    "es": "Concentrado, se queja ('qué troll')."
+   },
+   "potencial": 48,
+   "miniatura": "eventos/abisal-momentos/noscopeaim-1792180348993.jpg"
+  },
+  {
+   "id": "srborjis-1792195686000",
+   "canal": "srborjis",
+   "origem": "chat",
+   "inicioMs": 1792195676000,
+   "fimMs": 1792195716000,
+   "resumo": {
+    "pt": "Na base, ele cede ao 'pensamento intrusivo' e zoa o parceiro enquanto juntam duas bases.",
+    "en": "At base he gives in to an 'intrusive thought' and trolls his mate while merging two bases.",
+    "es": "En la base cede al 'pensamiento intrusivo' y trollea al compañero mientras unen dos bases."
+   },
+   "reacao": {
+    "pt": "Ele ri muito; chat 'no puedo reírme más', pedem clipe.",
+    "en": "He laughs hard; chat 'I can't laugh anymore', asks for clip.",
+    "es": "Se ríe mucho; chat 'no puedo reírme más', piden clip."
+   },
+   "potencial": 45,
+   "uuid": "57e69a67-fdea-4b8e-b163-c6530cd58fa8",
+   "aosS": 35944,
+   "vodId": "01a1450b-5120-70f6-86b2-7e4a2c1856af",
+   "miniatura": "eventos/abisal-momentos/srborjis-1792195686000.jpg"
+  },
+  {
+   "id": "wowi-1792194696000",
+   "canal": "wowi",
+   "origem": "chat",
+   "inicioMs": 1792194666000,
+   "fimMs": 1792194726000,
+   "resumo": {
+    "pt": "Morto por um rival, ele xinga o assassino no voice com fúria ('fracasado de mierda') na tela de morte.",
+    "en": "Killed by a rival, he furiously trash-talks the killer on voice from the death screen.",
+    "es": "Lo mata un rival y lo putea por voz con furia ('fracasado de mierda') desde la pantalla de muerte."
+   },
+   "reacao": {
+    "pt": "Raiva e trash talk pesado; chat ri 'quitea nomás cobarde'.",
+    "en": "Rage and heavy trash talk; chat laughs 'just quit, coward'.",
+    "es": "Rabia y trash talk pesado; el chat ríe 'quitea nomás cobarde'."
+   },
+   "potencial": 45,
+   "uuid": "9a444e26-664b-487c-a1fe-9a9556b08012",
+   "aosS": 10534,
+   "vodId": "01a1467f-a1a0-7e71-b656-6c3f7095f7e9",
+   "miniatura": "eventos/abisal-momentos/wowi-1792194696000.jpg"
+  },
+  {
+   "id": "karinios0-1792218736000",
+   "canal": "karinios0",
+   "origem": "publico",
+   "inicioMs": 1792218662000,
+   "fimMs": 1792218814000,
+   "resumo": {
+    "pt": "No barco do time, Karinios0 descobre que estão raidando com C4 ('¿Me han tirado 5 atrás?') e corre para ver.",
+    "en": "On the team boat, Karinios0 finds out they're being raided with C4 ('they threw 5 at the back?') and runs to check.",
+    "es": "En el barco del equipo, Karinios0 descubre que los raidean con C4 ('¿me han tirado 5 atrás?') y corre a ver."
+   },
+   "reacao": {
+    "pt": "'¡A la concha, nooo!' e '¿qué es esto?' repetido; chat só 'Hujuju'.",
+    "en": "'Damn, nooo!' and repeated 'what is this?'; chat just 'Hujuju'.",
+    "es": "'¡A la concha, nooo!' y '¿qué es esto?' repetido; el chat solo 'Hujuju'."
+   },
+   "potencial": 45,
+   "clipe": "clip_01M5491VNGZVMPAGB9WRVRSC8C",
+   "views": 1,
+   "titulo": "Un C4 in the house Chill ",
+   "uuid": "b7ac4059-cfd9-4174-9eb3-88d1ca72ef5f",
+   "aosS": 36240,
+   "vodId": "01a14665-89f0-701d-96d6-7b75ad5e2666",
+   "miniatura": "eventos/abisal-momentos/karinios0-1792218736000.jpg"
+  },
+  {
+   "id": "elprote-1792189229555",
+   "canal": "elprote",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792189206221,
+   "fimMs": 1792189301121,
+   "uuid": "5cd2f8ba-685f-4e32-8f64-674579c1fbd4",
+   "aosS": 9733,
+   "vodId": "01a14638-8a68-729e-9e1a-584ffcc12ecb",
+   "resumo": {
+    "pt": "Defende o barco atrás de sacos de areia enquanto inimigos sobem e o acertam pelas costas",
+    "en": "Defends the boat behind sandbags while enemies board and hit him from behind",
+    "es": "Defiende el barco tras sacos de arena mientras enemigos suben y le dan por la espalda"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 45,
+   "miniatura": "eventos/abisal-momentos/elprote-1792189229555.jpg"
+  },
+  {
+   "id": "madiaaan-1792187391731",
+   "canal": "madiaaan",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792187382361,
+   "fimMs": 1792187405361,
+   "uuid": "13def66b-f47a-4d6b-b657-fe3a7324e4ab",
+   "aosS": 1938,
+   "vodId": "01a14693-a6a0-7844-aa9d-d45dc30af5d4",
+   "resumo": {
+    "pt": "Atira de trás de um barco em águas rasas contra alguém na praia.",
+    "en": "Shoots from behind a boat in shallow water at someone on the beach.",
+    "es": "Dispara desde detrás de un barco en aguas bajas contra alguien en la playa."
+   },
+   "reacao": {
+    "pt": "Pouca fala.",
+    "en": "Little talking.",
+    "es": "Poca charla."
+   },
+   "potencial": 45,
+   "miniatura": "eventos/abisal-momentos/madiaaan-1792187391731.jpg"
+  },
+  {
+   "id": "chinittha-1792190891267",
+   "canal": "chinittha",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792190859323,
+   "fimMs": 1792190952323,
+   "uuid": "94f3ec46-6270-4d44-878a-8b4c537172d5",
+   "aosS": 4908,
+   "vodId": "01a1469b-6318-735d-977f-68dda4388c9b",
+   "resumo": {
+    "pt": "Luta no porto: avisa que tem mais gente no meio, o time aperta e um inimigo morre.",
+    "en": "Harbor fight: she calls more enemies in the middle, team pushes and one dies.",
+    "es": "Pelea en el puerto: avisa que hay más gente en el medio, el equipo empuja y uno muere."
+   },
+   "reacao": {
+    "pt": "Pouca empolgação.",
+    "en": "Low excitement.",
+    "es": "Poca emoción."
+   },
+   "potencial": 45,
+   "miniatura": "eventos/abisal-momentos/chinittha-1792190891267.jpg"
+  },
+  {
+   "id": "lukz4-1792204765906",
+   "canal": "lukz4",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792204736670,
+   "fimMs": 1792204823970,
+   "uuid": "4eed45d5-ec80-4260-bed1-57be9276032f",
+   "aosS": 22676,
+   "vodId": "01a14660-07c8-7f37-bd22-c6f58c5e113b",
+   "resumo": {
+    "pt": "Durante o evento da caixa no navio, é abatido por um atirador no corredor.",
+    "en": "During the ship crate event he gets downed by a shooter in the corridor.",
+    "es": "Durante el evento de la caja en el barco, lo tumba un tirador en el pasillo."
+   },
+   "reacao": {
+    "pt": "Pouca reação, segue falando das caixas.",
+    "en": "Little reaction, keeps talking about crates.",
+    "es": "Poca reacción, sigue hablando de las cajas."
+   },
+   "potencial": 45,
+   "miniatura": "eventos/abisal-momentos/lukz4-1792204765906.jpg"
+  },
+  {
+   "id": "nicolasviano-1792208626083",
+   "canal": "nicolasviano",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792208593083,
+   "fimMs": 1792208662083,
+   "uuid": "aa82948a-14f3-4b1a-a1d2-7facbc51cc13",
+   "aosS": 26575,
+   "vodId": "01a1465f-5fd0-7939-abf1-168435522746",
+   "resumo": {
+    "pt": "No barco-base o time pergunta se alguém morreu; o chat diz 'estás a otro level, salió la bestia'.",
+    "en": "On the ship base the team asks if someone died; chat says 'you're on another level, the beast is out'.",
+    "es": "En el barco-base preguntan si alguien murió; el chat dice 'estás a otro level, salió la bestia'."
+   },
+   "reacao": {
+    "pt": "Chat empolgado com a jogada anterior.",
+    "en": "Chat hyped about the previous play.",
+    "es": "Chat emocionado con la jugada anterior."
+   },
+   "potencial": 45,
+   "miniatura": "eventos/abisal-momentos/nicolasviano-1792208626083.jpg"
+  },
+  {
+   "id": "chinocochinox-1792210297035",
+   "canal": "chinocochinox",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792210273949,
+   "fimMs": 1792210364849,
+   "uuid": "acd9fc63-c56b-40c4-a47f-4a9e26baad62",
+   "aosS": 2411,
+   "vodId": "01a147e9-bcd8-7022-8d36-a916efff41f7",
+   "resumo": {
+    "pt": "Atira num corredor de monumento contra um vulto; a fala sugere que pode ser um bot.",
+    "en": "Shoots down a monument corridor at a figure; his talk suggests it may be a bot.",
+    "es": "Dispara en un pasillo de monumento contra una silueta; por lo que dice puede ser un bot."
+   },
+   "reacao": {
+    "pt": "Grita ordens confusas ao time.",
+    "en": "Shouts confused callouts.",
+    "es": "Grita órdenes confusas al equipo."
+   },
+   "potencial": 44,
+   "miniatura": "eventos/abisal-momentos/chinocochinox-1792210297035.jpg"
+  },
+  {
+   "id": "mrmorcillon-1792202442916",
+   "canal": "mrmorcillon",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792202378628,
+   "fimMs": 1792202454328,
+   "uuid": "37e2aa20-fa69-4be6-86a8-935ad464d610",
+   "aosS": 1260,
+   "vodId": "01a14782-d518-7f7e-b036-395354a7dd48",
+   "resumo": {
+    "pt": "Armado e sangrando no navio pesqueiro, mira entre estruturas; quase sem fala.",
+    "en": "Armed and bleeding on the fishing ship, aiming between structures; barely talks.",
+    "es": "Armado y sangrando en el barco pesquero, apunta entre estructuras; casi sin hablar."
+   },
+   "reacao": {
+    "pt": "Sem reação audível.",
+    "en": "No audible reaction.",
+    "es": "Sin reacción audible."
+   },
+   "potencial": 44,
+   "miniatura": "eventos/abisal-momentos/mrmorcillon-1792202442916.jpg"
+  },
+  {
+   "id": "pastorr5-1792201584000",
+   "canal": "pastorr5",
+   "origem": "publico",
+   "inicioMs": 1792201571000,
+   "fimMs": 1792201601000,
+   "resumo": {
+    "pt": "Do periscópio do submarino no Abisal, acerta um torpedo e o feed mostra 'Titurin eliminado +1'.",
+    "en": "From a submarine periscope in Abisal he lands a torpedo; feed shows 'Titurin eliminated +1'.",
+    "es": "Desde el periscopio del submarino en Abisal acierta un torpedo; el feed muestra 'Titurin eliminado +1'."
+   },
+   "reacao": {
+    "pt": "Levanta o braço e solta '¡Pa' bien!' curto; chat parado.",
+    "en": "Raises his arm with a short 'nice!'; chat silent.",
+    "es": "Levanta el brazo con un '¡Pa' bien!' corto; chat quieto."
+   },
+   "potencial": 42,
+   "clipe": "clip_01M53RPCPQ6H5G9MF73AV2MJEF",
+   "views": 2,
+   "titulo": "Torpedazo",
+   "uuid": "331173c9-c969-48fe-aaf7-68155f83bf34",
+   "aosS": 30409,
+   "vodId": "01a145b9-b990-70bc-92b3-b44d1895e18a",
+   "miniatura": "eventos/abisal-momentos/pastorr5-1792201584000.jpg"
+  },
+  {
+   "id": "deowasd-1792193735000",
+   "canal": "deowasd",
+   "origem": "publico",
+   "inicioMs": 1792193721000,
+   "fimMs": 1792193753000,
+   "resumo": {
+    "pt": "Continua dançando de Supergirl e xinga quando avisam que falta muito tempo de castigo.",
+    "en": "Still dancing as Supergirl, he curses when told there's a lot of punishment time left.",
+    "es": "Sigue bailando de Supergirl y putea cuando le avisan que falta mucho tiempo de castigo."
+   },
+   "reacao": {
+    "pt": "'La puta madre que los parió' rindo; chat KEKW.",
+    "en": "'La puta madre que los parió' while laughing; chat KEKW.",
+    "es": "'La puta madre que los parió' entre risas; chat KEKW."
+   },
+   "potencial": 42,
+   "clipe": "clip_01M53H50010ZHR5SKG6H8X9KRK",
+   "views": 6,
+   "titulo": "siendo feliz parte 2",
+   "uuid": "6ebaf78f-fc0b-4356-98fd-f3b66fc7066f",
+   "aosS": 19196,
+   "vodId": "01a145ed-0a48-7a41-acc7-e5f85143876c",
+   "miniatura": "eventos/abisal-momentos/deowasd-1792193735000.jpg"
+  },
+  {
+   "id": "kodd-1792201441500",
+   "canal": "kodd",
+   "origem": "publico",
+   "inicioMs": 1792201422000,
+   "fimMs": 1792201465000,
+   "resumo": {
+    "pt": "Mesmo lance: o C4 não gruda na parede no raid noturno do Abisal e ele xinga 'que juego de poronga'.",
+    "en": "Same play: the C4 won't stick during the Abisal night raid and he swears at the game.",
+    "es": "Misma jugada: el C4 no se pega en el raid nocturno de Abisal y suelta 'que juego de poronga'."
+   },
+   "reacao": {
+    "pt": "Xinga o jogo no fim; chat ri.",
+    "en": "He curses the game at the end; chat laughs.",
+    "es": "Insulta al juego al final; el chat ríe."
+   },
+   "potencial": 42,
+   "clipe": "clip_01M53RGHE3CWWMCN1ZVPGRY1Z6",
+   "views": 1,
+   "titulo": "RUST LA CONCHA BIEN DE TU MADRE ",
+   "uuid": "b6ef6e3b-024a-4cdc-bb53-008b2710089f",
+   "aosS": 19223,
+   "vodId": "01a14662-22d8-79bc-a63b-eef8ec4a4f94",
+   "miniatura": "eventos/abisal-momentos/kodd-1792201441500.jpg"
+  },
+  {
+   "id": "lopez1t0-1792195310246",
+   "canal": "lopez1t0",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792195230142,
+   "fimMs": 1792195325942,
+   "uuid": "55f22ffc-8db4-4b83-ab38-71253425b708",
+   "aosS": 20731,
+   "vodId": "01a145ec-a4b8-7a25-80b1-bb7d5a9abafd",
+   "resumo": {
+    "pt": "Derruba um inimigo, nada pra lootear e levam tiro de outra base",
+    "en": "Drops an enemy, swims to loot and gets shot from another base",
+    "es": "Tumba a un enemigo, nada a lootear y le disparan desde otra base"
+   },
+   "reacao": {
+    "pt": "'Le he dado, le he dado'",
+    "en": "'I hit him, I hit him'",
+    "es": "'Le he dado, le he dado'"
+   },
+   "potencial": 42,
+   "miniatura": "eventos/abisal-momentos/lopez1t0-1792195310246.jpg"
+  },
+  {
+   "id": "geitta-1792195655522",
+   "canal": "geitta",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792195633470,
+   "fimMs": 1792195714070,
+   "uuid": "385f6bcc-9501-4ee3-b93e-1ce132539524",
+   "aosS": 31233,
+   "vodId": "01a14552-8b80-79f9-9402-0965ed397be6",
+   "resumo": {
+    "pt": "Grupo rende prisioneiros sob a mira perto da ponte; um jogador abatido no chão.",
+    "en": "The group holds prisoners at gunpoint near the bridge; a downed player on the ground.",
+    "es": "El grupo rinde prisioneros a punta de pistola cerca del puente; un jugador abatido en el suelo."
+   },
+   "reacao": {
+    "pt": "Chat: 'acabando con testigos'.",
+    "en": "Chat: 'getting rid of witnesses'.",
+    "es": "Chat: 'acabando con testigos'."
+   },
+   "potencial": 42,
+   "miniatura": "eventos/abisal-momentos/geitta-1792195655522.jpg"
+  },
+  {
+   "id": "ay_zarite-1792206888235",
+   "canal": "ay_zarite",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792206872999,
+   "fimMs": 1792206955299,
+   "uuid": "f4aba200-2b08-4940-b95e-6b21da5a125e",
+   "aosS": 41515,
+   "vodId": "01a14561-29b0-71ed-b926-464cfa9f53b5",
+   "resumo": {
+    "pt": "Com o time, mira um grupo inimigo em estruturas de madeira à frente.",
+    "en": "With the team, aims at an enemy group in wooden structures ahead.",
+    "es": "Con el equipo, apunta a un grupo enemigo en estructuras de madera."
+   },
+   "reacao": {
+    "pt": "Tensão de preparação.",
+    "en": "Pre-fight tension.",
+    "es": "Tensión previa."
+   },
+   "potencial": 42,
+   "miniatura": "eventos/abisal-momentos/ay_zarite-1792206888235.jpg"
+  },
+  {
+   "id": "mrmorcillon-1792202682740",
+   "canal": "mrmorcillon",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792202671628,
+   "fimMs": 1792202724328,
+   "uuid": "37e2aa20-fa69-4be6-86a8-935ad464d610",
+   "aosS": 1553,
+   "vodId": "01a14782-d518-7f7e-b036-395354a7dd48",
+   "resumo": {
+    "pt": "Mirando pelo navio pesqueiro, diz que estão cercados.",
+    "en": "Aiming around the fishing ship, says they're surrounded.",
+    "es": "Apuntando por el barco pesquero, dice que están rodeados."
+   },
+   "reacao": {
+    "pt": "'Estamos rodeados de puta parte'.",
+    "en": "'We're surrounded everywhere'.",
+    "es": "'Estamos rodeados de puta parte'."
+   },
+   "potencial": 42,
+   "miniatura": "eventos/abisal-momentos/mrmorcillon-1792202682740.jpg"
+  },
+  {
+   "id": "leon2085-1792209251792",
+   "canal": "leon2085",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792209190698,
+   "fimMs": 1792209277698,
+   "uuid": "1d7d8ff0-faf4-4170-849d-c8b2b96c81e7",
+   "aosS": 1337,
+   "vodId": "01a147e9-99b0-78d1-b66d-cbb37c165b7e",
+   "resumo": {
+    "pt": "Mira de longe num monumento de neve, leva tiro e fica sangrando.",
+    "en": "Aims from range at a snowy monument, gets shot and starts bleeding.",
+    "es": "Apunta de lejos en un monumento nevado, recibe un tiro y queda sangrando."
+   },
+   "reacao": {
+    "pt": "Quase sem fala.",
+    "en": "Barely talks.",
+    "es": "Casi sin hablar."
+   },
+   "potencial": 42,
+   "miniatura": "eventos/abisal-momentos/leon2085-1792209251792.jpg"
+  },
+  {
+   "id": "chinittha-1792190698201",
+   "canal": "chinittha",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792190662523,
+   "fimMs": 1792190757423,
+   "uuid": "94f3ec46-6270-4d44-878a-8b4c537172d5",
+   "aosS": 4712,
+   "vodId": "01a1469b-6318-735d-977f-68dda4388c9b",
+   "resumo": {
+    "pt": "No porto com holo, o time persegue um cara de arco: 'lo matamos'.",
+    "en": "At the harbor with a holo, the team chases a bow guy: 'we killed him'.",
+    "es": "En el puerto con holo, el equipo persigue a uno con arco: 'lo matamos'."
+   },
+   "reacao": {
+    "pt": "Leve: 'me da pena'.",
+    "en": "Light: 'I feel bad'.",
+    "es": "Leve: 'me da pena'."
+   },
+   "potencial": 40,
+   "miniatura": "eventos/abisal-momentos/chinittha-1792190698201.jpg"
+  },
+  {
+   "id": "eminencefps-1792165380614",
+   "canal": "eminencefps",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792165370442,
+   "fimMs": 1792165431542,
+   "uuid": "c37b8681-f0e1-42a7-b63a-98a29abcdc5b",
+   "aosS": 2271,
+   "vodId": "01a1453e-b178-7d57-b2e0-2e51bebf662c",
+   "resumo": {
+    "pt": "Pede calma a um jogador ('tranquilo, guachín') e é morto de Thompson.",
+    "en": "Asks a player to chill ('easy, buddy') and gets killed with a Thompson.",
+    "es": "Le pide calma a un jugador ('tranquilo, guachín') y lo matan con Thompson."
+   },
+   "reacao": {
+    "pt": "Resignado.",
+    "en": "Resigned.",
+    "es": "Resignado."
+   },
+   "potencial": 40,
+   "miniatura": "eventos/abisal-momentos/eminencefps-1792165380614.jpg"
+  },
+  {
+   "id": "josuglive-1792189703752",
+   "canal": "josuglive",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792189670752,
+   "fimMs": 1792189738752,
+   "uuid": "97ae4e5d-11c7-4abc-819c-de124a72d533",
+   "aosS": 7945,
+   "vodId": "01a1465a-eb30-787a-8f16-e3b10144a34d",
+   "resumo": {
+    "pt": "Corpo caído dentro da base; conta que matou um coitado que subiu tranquilo.",
+    "en": "Body on the floor inside the base; he says he killed some poor guy who walked up casually.",
+    "es": "Cuerpo tirado dentro de la base; cuenta que mató a un pobre que subió tranquilo."
+   },
+   "reacao": {
+    "pt": "Ri contando 'el pobre subió tranquilísimo'.",
+    "en": "Laughs: 'the poor guy walked right up'.",
+    "es": "Se ríe: 'el pobre subió tranquilísimo'."
+   },
+   "potencial": 40,
+   "miniatura": "eventos/abisal-momentos/josuglive-1792189703752.jpg"
+  },
+  {
+   "id": "nawearg-1792207895229",
+   "canal": "nawearg",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792207819507,
+   "fimMs": 1792207905007,
+   "uuid": "05676949-d79c-468b-89ea-2077ec287256",
+   "aosS": 34507,
+   "vodId": "01a145da-8be8-7036-b562-8c01d28d5e95",
+   "resumo": {
+    "pt": "Cai abatido no alto de uma estrutura e ri de quem o pegou.",
+    "en": "Gets downed on top of a structure and laughs about who got him.",
+    "es": "Cae abatido en lo alto de una estructura y se ríe de quien lo pilló."
+   },
+   "reacao": {
+    "pt": "Ri: 'me puso la leche'.",
+    "en": "Laughs: 'he wrecked me'.",
+    "es": "Se ríe: 'me puso la leche'."
+   },
+   "potencial": 40,
+   "miniatura": "eventos/abisal-momentos/nawearg-1792207895229.jpg"
+  },
+  {
+   "id": "nicolasviano-1792208250121",
+   "canal": "nicolasviano",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792208224789,
+   "fimMs": 1792208263689,
+   "uuid": "aa82948a-14f3-4b1a-a1d2-7facbc51cc13",
+   "aosS": 26207,
+   "vodId": "01a1465f-5fd0-7939-abf1-168435522746",
+   "resumo": {
+    "pt": "Gritam 'nos raidean' e correm pelo barco-base mandando arrancar.",
+    "en": "They yell 'we're getting raided' and run across the ship base telling the driver to go.",
+    "es": "Gritan 'nos raidean' y corren por el barco-base pidiendo arrancar."
+   },
+   "reacao": {
+    "pt": "'¡Nos raidean! ¡Arranca, arranca!'.",
+    "en": "'We're being raided! Go, go!'.",
+    "es": "'¡Nos raidean! ¡Arranca, arranca!'."
+   },
+   "potencial": 40,
+   "miniatura": "eventos/abisal-momentos/nicolasviano-1792208250121.jpg"
+  },
+  {
+   "id": "liks-1792207716537",
+   "canal": "liks",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792207650537,
+   "fimMs": 1792207737137,
+   "uuid": "bf776876-3481-419e-87f0-3ba8604da777",
+   "aosS": 33492,
+   "vodId": "01a145e7-7498-7315-afef-8099fd71d8c0",
+   "resumo": {
+    "pt": "Saqueia um corpo gritando empolgado depois de uma briga; tela fica preta.",
+    "en": "Loots a body yelling hyped after a fight; screen goes black.",
+    "es": "Saquea un cuerpo gritando emocionado tras una pelea; la pantalla se pone negra."
+   },
+   "reacao": {
+    "pt": "Grita animado 'impresionante'.",
+    "en": "Yells hyped 'impressive'.",
+    "es": "Grita emocionado 'impresionante'."
+   },
+   "potencial": 40,
+   "miniatura": "eventos/abisal-momentos/liks-1792207716537.jpg"
+  },
+  {
+   "id": "poionako-1792200663500",
+   "canal": "poionako",
+   "origem": "publico",
+   "inicioMs": 1792200654000,
+   "fimMs": 1792200677000,
+   "resumo": {
+    "pt": "Navegando ao pôr do sol no Abisal, o barco é atingido e explode em faíscas; 'não acredito, perdido'.",
+    "en": "Sailing at sunset in Abisal, the boat gets hit and bursts into sparks; 'I can't believe it, lost'.",
+    "es": "Navegando al atardecer en Abisal, el barco recibe impactos y estalla en chispas; 'no me lo creo, perdido'."
+   },
+   "reacao": {
+    "pt": "Incredulidade curta; sem chat.",
+    "en": "Brief disbelief; no chat.",
+    "es": "Incredulidad breve; sin chat."
+   },
+   "potencial": 38,
+   "clipe": "clip_01M53RCSJGAAJ6HGVRXS1N8FCZ",
+   "views": 5,
+   "titulo": "POLLO FRITO",
+   "uuid": "926d0bca-92d5-475e-8074-a64ae6124bfb",
+   "aosS": 42980,
+   "vodId": "01a144eb-ea10-7d6c-bcbd-bc954447efcd",
+   "miniatura": "eventos/abisal-momentos/poionako-1792200663500.jpg"
+  },
+  {
+   "id": "kodd-1792203078000",
+   "canal": "kodd",
+   "origem": "publico",
+   "inicioMs": 1792203063000,
+   "fimMs": 1792203097000,
+   "resumo": {
+    "pt": "No Abisal ele diz 'vou roubar, matei todos' e logo morre de pump shotgun para nicolasviano a 1 m.",
+    "en": "On Abisal he says 'I'll steal it, I killed everyone' and right away dies to nicolasviano's pump shotgun at 1 m.",
+    "es": "En Abisal dice 'me lo voy a robar, maté a todos' y al momento muere de escopeta pump de nicolasviano a 1 m."
+   },
+   "reacao": {
+    "pt": "Ele fica sério, sem grito; chat ri (KEKL, 'smurfeando de chill').",
+    "en": "He stays flat, no yell; chat laughs (KEKL).",
+    "es": "Se queda serio, sin grito; el chat ríe (KEKL)."
+   },
+   "potencial": 38,
+   "clipe": "clip_01M53TTVS4CTZ46X1FEDPH8EQZ",
+   "views": 2,
+   "titulo": "sorry gordo",
+   "uuid": "b6ef6e3b-024a-4cdc-bb53-008b2710089f",
+   "aosS": 20864,
+   "vodId": "01a14662-22d8-79bc-a63b-eef8ec4a4f94",
+   "miniatura": "eventos/abisal-momentos/kodd-1792203078000.jpg"
+  },
+  {
+   "id": "geitta-1792178128000",
+   "canal": "geitta",
+   "origem": "publico",
+   "inicioMs": 1792178117000,
+   "fimMs": 1792178143000,
+   "resumo": {
+    "pt": "Geitta mata/saqueia um jogador ao lado de um contêiner; clipe do público 'el infarto a la ratona'.",
+    "en": "Geitta kills/loots a player next to a container; viewer clip titled 'the mouse's heart attack'.",
+    "es": "Geitta mata/saquea a un jugador junto a un contenedor; clip del público 'el infarto a la ratona'."
+   },
+   "reacao": {
+    "pt": "Ela solta 'no, no'; susto curto, chat quase sem reação.",
+    "en": "She lets out 'no, no'; short scare, chat barely reacts.",
+    "es": "Suelta 'no, no'; susto corto, el chat casi no reacciona."
+   },
+   "potencial": 38,
+   "clipe": "clip_01M5328Z9KCNFH6ATJ6W20M3E9",
+   "views": 34,
+   "titulo": "jajajaj el infarto a la ratona ",
+   "uuid": "385f6bcc-9501-4ee3-b93e-1ce132539524",
+   "aosS": 13717,
+   "vodId": "01a14552-8b80-79f9-9402-0965ed397be6",
+   "miniatura": "eventos/abisal-momentos/geitta-1792178128000.jpg"
+  },
+  {
+   "id": "axeel-1792209217768",
+   "canal": "axeel",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792209182768,
+   "fimMs": 1792209257768,
+   "uuid": "c1c8ddc8-934e-47d0-a860-a159ac1e25a2",
+   "aosS": 48652,
+   "vodId": "01a14517-8238-7892-afef-88c08fbaa259",
+   "resumo": {
+    "pt": "Nada até um barco inimigo e planeja o raid pelas portas de baixo",
+    "en": "Swims to an enemy boat and plans the raid through the lower doors",
+    "es": "Nada hasta un barco enemigo y planea el raideo por las puertas de abajo"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 38
+  },
+  {
+   "id": "eminencefps-1792165195342",
+   "canal": "eminencefps",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792165132042,
+   "fimMs": 1792165219842,
+   "uuid": "c37b8681-f0e1-42a7-b63a-98a29abcdc5b",
+   "aosS": 2033,
+   "vodId": "01a1453e-b178-7d57-b2e0-2e51bebf662c",
+   "resumo": {
+    "pt": "Na tela de morte narra o colega matando alguém com granada.",
+    "en": "On the death screen he narrates his mate killing someone with a grenade.",
+    "es": "En la pantalla de muerte narra a su compañero matando a alguien con granada."
+   },
+   "reacao": {
+    "pt": "'¡Qué buena!'",
+    "en": "'Nice one!'",
+    "es": "'¡Qué buena!'"
+   },
+   "potencial": 38,
+   "miniatura": "eventos/abisal-momentos/eminencefps-1792165195342.jpg"
+  },
+  {
+   "id": "neevybv-1792187968519",
+   "canal": "neevybv",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792187934519,
+   "fimMs": 1792188003519,
+   "uuid": "6c91a7a2-62d9-4c51-b2cf-ffc6470c0203",
+   "aosS": 7056,
+   "vodId": "01a1464d-fe98-7c28-ad34-0f905a4022f9",
+   "resumo": {
+    "pt": "Tiroteio em monumento à beira-mar; acerta alguém, mas diz que está impossível mirar.",
+    "en": "Shootout at a seaside monument; hits someone but says aiming is impossible.",
+    "es": "Tiroteo en un monumento junto al mar; acierta a alguien pero dice que es imposible apuntar."
+   },
+   "reacao": {
+    "pt": "Frustração.",
+    "en": "Frustration.",
+    "es": "Frustración."
+   },
+   "potencial": 38,
+   "miniatura": "eventos/abisal-momentos/neevybv-1792187968519.jpg"
+  },
+  {
+   "id": "cathryx-1792210302063",
+   "canal": "cathryx",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792210292307,
+   "fimMs": 1792210312307,
+   "uuid": "e71e6ef7-756c-480b-b781-b6d1134eaeab",
+   "aosS": 14196,
+   "vodId": "01a14736-3000-7c29-bed2-da8d1e46ba0b",
+   "resumo": {
+    "pt": "Entre rochas, mira um alvo de roupa vermelha.",
+    "en": "Among rocks, aims at a target in red clothing.",
+    "es": "Entre rocas, apunta a un objetivo de ropa roja."
+   },
+   "reacao": {
+    "pt": "Quase sem fala.",
+    "en": "Almost silent.",
+    "es": "Casi sin habla."
+   },
+   "potencial": 38,
+   "miniatura": "eventos/abisal-momentos/cathryx-1792210302063.jpg"
+  },
+  {
+   "id": "mateopsz-1792180645159",
+   "canal": "mateopsz",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792180618799,
+   "fimMs": 1792180706799,
+   "uuid": "e19395c1-4413-4fd1-bc91-b21073677711",
+   "aosS": 4661,
+   "vodId": "01a14602-e7f0-7826-9f06-2dadc07c8816",
+   "resumo": {
+    "pt": "Na praia conta que matou um cara e pega a MP dele.",
+    "en": "On the beach he says he killed a guy and takes his SMG.",
+    "es": "En la playa cuenta que mató a uno y agarra su MP."
+   },
+   "reacao": {
+    "pt": "Satisfeito.",
+    "en": "Satisfied.",
+    "es": "Satisfecho."
+   },
+   "potencial": 38,
+   "miniatura": "eventos/abisal-momentos/mateopsz-1792180645159.jpg"
+  },
+  {
+   "id": "miikuucat-1792205216380",
+   "canal": "miikuucat",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792205189438,
+   "fimMs": 1792205283238,
+   "uuid": "192afc5e-e023-4843-a62d-fa7ccf86e5da",
+   "aosS": 17937,
+   "vodId": "01a146af-3d20-76a1-87e6-32b1195682e8",
+   "resumo": {
+    "pt": "Do próprio barco mira num barco-base perto de uma ilha; fala de granada.",
+    "en": "From her boat she aims at a boat base near an island; mentions a grenade.",
+    "es": "Desde su barco apunta a un barco-base cerca de una isla; habla de granada."
+   },
+   "reacao": {
+    "pt": "Pouca.",
+    "en": "Little.",
+    "es": "Poca."
+   },
+   "potencial": 38,
+   "miniatura": "eventos/abisal-momentos/miikuucat-1792205216380.jpg"
+  },
+  {
+   "id": "noscopeaim-1792181053005",
+   "canal": "noscopeaim",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792181007091,
+   "fimMs": 1792181078391,
+   "uuid": "fc23d349-4274-41b1-ac1e-51e7ccbd23b3",
+   "aosS": 48580,
+   "vodId": "01a1436a-acf8-75a6-9ac4-98c6e1359cb5",
+   "resumo": {
+    "pt": "No barco com escopeta persegue alguém correndo sem roupa.",
+    "en": "On the boat with a shotgun, chases someone running naked.",
+    "es": "En el barco con escopeta persigue a alguien corriendo sin ropa."
+   },
+   "reacao": {
+    "pt": "Divertido.",
+    "en": "Amused.",
+    "es": "Divertido."
+   },
+   "potencial": 38,
+   "miniatura": "eventos/abisal-momentos/noscopeaim-1792181053005.jpg"
+  },
+  {
+   "id": "cdeconito-1792193583853",
+   "canal": "cdeconito",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792193575785,
+   "fimMs": 1792193597685,
+   "uuid": "31a98fc8-bd40-44fa-9a4c-b71fd56b5b08",
+   "aosS": 2035,
+   "vodId": "01a146f0-af08-76e6-ba05-407b1d2a6a36",
+   "resumo": {
+    "pt": "Dispara escopeta dupla numa porta com Lynoche ao lado; sangue na tela.",
+    "en": "Fires a double-barrel at a door with Lynoche beside him; blood on screen.",
+    "es": "Dispara escopeta doble en una puerta con Lynoche al lado; sangre en pantalla."
+   },
+   "reacao": {
+    "pt": "Sem fala.",
+    "en": "No talking.",
+    "es": "Sin habla."
+   },
+   "potencial": 38,
+   "miniatura": "eventos/abisal-momentos/cdeconito-1792193583853.jpg"
+  },
+  {
+   "id": "cebyyy-1792195709136",
+   "canal": "cebyyy",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792195669656,
+   "fimMs": 1792195757656,
+   "uuid": "5fcdc58e-079b-45bd-8666-b204afe26483",
+   "aosS": 28594,
+   "vodId": "01a1457b-60a0-75e4-8ab6-10f0b9d172de",
+   "resumo": {
+    "pt": "Junto a uma paliçada com um jogador caído; fala confusa sobre o caos da briga.",
+    "en": "By a palisade with a downed player; confused talk about the fight chaos.",
+    "es": "Junto a una empalizada con un jugador caído; habla confusa del caos de la pelea."
+   },
+   "reacao": {
+    "pt": "'Hay mucho caos, loco'.",
+    "en": "'It's total chaos'.",
+    "es": "'Hay mucho caos, loco'."
+   },
+   "potencial": 38,
+   "miniatura": "eventos/abisal-momentos/cebyyy-1792195709136.jpg"
+  },
+  {
+   "id": "bonnazy-1792206280480",
+   "canal": "bonnazy",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792206248232,
+   "fimMs": 1792206326632,
+   "uuid": "d3987041-0ce9-403e-894c-5c725a14df4f",
+   "aosS": 1013,
+   "vodId": "01a147c1-a338-7a08-a4d2-a19bd10f9dea",
+   "resumo": {
+    "pt": "No escuro, conta que mataram a Sarita dentro da base e que não consegue sair.",
+    "en": "In the dark, says Sarita got killed inside the base and he can't get out.",
+    "es": "A oscuras, cuenta que mataron a Sarita dentro de la base y no puede salir."
+   },
+   "reacao": {
+    "pt": "'¡Ay Dios!'.",
+    "en": "'Oh God!'.",
+    "es": "'¡Ay Dios!'."
+   },
+   "potencial": 38,
+   "miniatura": "eventos/abisal-momentos/bonnazy-1792206280480.jpg"
+  },
+  {
+   "id": "canelita-5-1792188825160",
+   "canal": "canelita-5",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792188775456,
+   "fimMs": 1792188865956,
+   "uuid": "7083e99c-dd0e-499e-9669-6f17c46f8029",
+   "aosS": 3678,
+   "vodId": "01a1468e-5b28-711d-8ba9-a142bb230738",
+   "resumo": {
+    "pt": "Segura mira no tubo da escada do laboratório esperando um inimigo.",
+    "en": "Holds an angle on the lab ladder tube waiting for an enemy.",
+    "es": "Aguanta la mira en el tubo de la escalera del laboratorio esperando a un enemigo."
+   },
+   "reacao": {
+    "pt": "Pouca.",
+    "en": "Little.",
+    "es": "Poca."
+   },
+   "potencial": 38,
+   "miniatura": "eventos/abisal-momentos/canelita-5-1792188825160.jpg"
+  },
+  {
+   "id": "liks-1792210730263",
+   "canal": "liks",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792210706337,
+   "fimMs": 1792210784837,
+   "uuid": "bf776876-3481-419e-87f0-3ba8604da777",
+   "aosS": 36547,
+   "vodId": "01a145e7-7498-7315-afef-8099fd71d8c0",
+   "resumo": {
+    "pt": "No porão de um barco inimigo, chuta códigos na porta com dois barcos por perto, morrendo de rir.",
+    "en": "In an enemy ship's hold he guesses door codes with two boats nearby, cracking up.",
+    "es": "En la bodega de un barco enemigo prueba códigos en la puerta con dos barcos cerca, muerto de risa."
+   },
+   "reacao": {
+    "pt": "Gargalhada no código certo.",
+    "en": "Laughs out loud at the right code.",
+    "es": "Carcajada con el código correcto."
+   },
+   "potencial": 36,
+   "miniatura": "eventos/abisal-momentos/liks-1792210730263.jpg"
+  },
+  {
+   "id": "893k-1792195631127",
+   "canal": "893k",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792195608531,
+   "fimMs": 1792195678731,
+   "uuid": "82bd08f6-7a84-46a0-9550-b8d94fc223dc",
+   "aosS": 31710,
+   "vodId": "01a1454a-e678-7ef1-b5f3-028f3af3fcaf",
+   "resumo": {
+    "pt": "Saqueia um corpo num lugar escuro depois que alguém morreu.",
+    "en": "Loots a body in a dark spot after someone died.",
+    "es": "Saquea un cuerpo en un sitio oscuro tras una muerte."
+   },
+   "reacao": {
+    "pt": "Fala confusa.",
+    "en": "Confused talk.",
+    "es": "Habla confusa."
+   },
+   "potencial": 36,
+   "miniatura": "eventos/abisal-momentos/893k-1792195631127.jpg"
+  },
+  {
+   "id": "uvitafiesta22-1792219537000",
+   "canal": "uvitafiesta22",
+   "origem": "chat",
+   "inicioMs": 1792219507000,
+   "fimMs": 1792219567000,
+   "resumo": {
+    "pt": "No mar perto do barco-fortaleza do Abisal, alguém 'fica com ciúmes' e o chat aplaude; não se vê ação clara.",
+    "en": "At sea near an Abisal fortress ship, someone 'got jealous' and chat claps; no clear action visible.",
+    "es": "En el mar junto al barco-fortaleza de Abisal, alguien 'se puso celoso' y el chat aplaude; sin acción clara."
+   },
+   "reacao": {
+    "pt": "Chat com palmas e KEKW; streamer só pergunta '¿qué pasa?'.",
+    "en": "Chat claps and KEKWs; streamer just asks 'what's up?'.",
+    "es": "Chat con aplausos y KEKW; ella solo pregunta '¿qué pasa?'."
+   },
+   "potencial": 35,
+   "uuid": "41d04007-bf5a-4626-9ba4-d41146e8adfa",
+   "aosS": 16067,
+   "vodId": "01a147a6-3f80-7ed8-9be9-b27f62898313",
+   "miniatura": "eventos/abisal-momentos/uvitafiesta22-1792219537000.jpg"
+  },
+  {
+   "id": "poionako-1792179137000",
+   "canal": "poionako",
+   "origem": "chat",
+   "inicioMs": 1792179122000,
+   "fimMs": 1792179167000,
+   "resumo": {
+    "pt": "Desabafa que não consegue sair da base sem morrer, times de 4 o caçam, e come batatas fritas de ansiedade.",
+    "en": "Vents that he can't leave base without dying, 4-man teams hunt him, and he's stress-eating fries.",
+    "es": "Se desahoga: no puede salir de la base sin morir, lo cazan teams de 4 y come papas fritas por ansiedad."
+   },
+   "reacao": {
+    "pt": "Chat ri bastante (KEKW) e pede 'clip para el gordo'; ele ri contando.",
+    "en": "Chat laughs a lot (KEKW), asks 'clip for the fat guy'; he laughs while telling.",
+    "es": "El chat ríe mucho (KEKW) y pide 'clip para el gordo'; él ríe contándolo."
+   },
+   "potencial": 35,
+   "uuid": "926d0bca-92d5-475e-8074-a64ae6124bfb",
+   "aosS": 21448,
+   "vodId": "01a144eb-ea10-7d6c-bcbd-bc954447efcd",
+   "miniatura": "eventos/abisal-momentos/poionako-1792179137000.jpg"
+  },
+  {
+   "id": "mills_rp-1792209281000",
+   "canal": "mills_rp",
+   "origem": "chat",
+   "inicioMs": 1792209261000,
+   "fimMs": 1792209311000,
+   "resumo": {
+    "pt": "Na praia diante de uma torre, ela brinca com dois jogadores ('ela se chama Bonja e ele Bono') e pede uma missão.",
+    "en": "On the beach by a tower she jokes with two players ('she's Bonja, he's Bono') and asks for a mission.",
+    "es": "En la playa frente a una torre bromea con dos jugadores ('ella se llama Bonja y él Bono') y pide una misión."
+   },
+   "reacao": {
+    "pt": "Chat em KEKW/KEKLEO contínuo; ela ri, mas sem um remate claro.",
+    "en": "Chat spams KEKW/KEKLEO; she laughs but no clear punchline.",
+    "es": "El chat spamea KEKW/KEKLEO; ella ríe pero sin remate claro."
+   },
+   "potencial": 35,
+   "uuid": "f0905093-81a7-4fe0-a78e-dd783b59a1f0",
+   "aosS": 29762,
+   "vodId": "01a14638-eff8-789c-8846-f97961aa4c39",
+   "miniatura": "eventos/abisal-momentos/mills_rp-1792209281000.jpg"
+  },
+  {
+   "id": "mills_rp-1792209671000",
+   "canal": "mills_rp",
+   "origem": "chat",
+   "inicioMs": 1792209671000,
+   "fimMs": 1792209701000,
+   "resumo": {
+    "pt": "Junto a uma muralha, ela negocia 'estamos a mano' com um jogador e reage a 'você é de Gran Canaria'.",
+    "en": "By a wall she settles 'we're even' with a player and reacts to 'you're from Gran Canaria'.",
+    "es": "Junto a una muralla arregla 'estamos a mano' con un jugador y reacciona a 'tú eres de Gran Canaria'."
+   },
+   "reacao": {
+    "pt": "Ela finge ofensa ('no me insultes'); chat ri com KEKW.",
+    "en": "She fakes offense ('don't insult me'); chat laughs KEKW.",
+    "es": "Finge ofensa ('no me insultes'); el chat ríe con KEKW."
+   },
+   "potencial": 35,
+   "uuid": "f0905093-81a7-4fe0-a78e-dd783b59a1f0",
+   "aosS": 30172,
+   "vodId": "01a14638-eff8-789c-8846-f97961aa4c39",
+   "miniatura": "eventos/abisal-momentos/mills_rp-1792209671000.jpg"
+  },
+  {
+   "id": "sapoiq-1792188217000",
+   "canal": "sapoiq",
+   "origem": "chat",
+   "inicioMs": 1792188192000,
+   "fimMs": 1792188247000,
+   "resumo": {
+    "pt": "Em câmera cheia, ele come um limão como desafio da subathon enquanto o chat pressiona.",
+    "en": "On full cam he eats a lemon as a subathon challenge while chat eggs him on.",
+    "es": "En cámara completa se come un limón como reto de la subathon mientras el chat presiona."
+   },
+   "reacao": {
+    "pt": "Chat grita DALE/NOOOO/'ES MUCHO' e KEKW; ele aguenta quase sem careta.",
+    "en": "Chat yells DALE/NOOOO/'IT'S TOO MUCH' and KEKW; he takes it with barely a grimace.",
+    "es": "El chat grita DALE/NOOOO/'ES MUCHO' y KEKW; él aguanta casi sin muecas."
+   },
+   "potencial": 35,
+   "uuid": "a899b5b2-8da1-4139-b717-85dcdf9e614c",
+   "aosS": 16578,
+   "vodId": "01a145c0-9f30-71d5-94b6-71671163b65d",
+   "miniatura": "eventos/abisal-momentos/sapoiq-1792188217000.jpg"
+  },
+  {
+   "id": "893k-1792194074000",
+   "canal": "893k",
+   "origem": "publico",
+   "inicioMs": 1792194060000,
+   "fimMs": 1792194092000,
+   "resumo": {
+    "pt": "Construindo uma torre de madeira torta na base para pôr um moinho; o resultado sai ridículo.",
+    "en": "Building a wonky wooden tower at base to place a windmill; it ends up ridiculous.",
+    "es": "Construye una torre de madera torcida en la base para poner un molino; queda ridícula."
+   },
+   "reacao": {
+    "pt": "Chat chora de rir 'jajaja no puede ser'; streamer quase calado.",
+    "en": "Chat cries laughing 'no way'; streamer nearly silent.",
+    "es": "El chat llora de risa 'no puede ser'; el streamer casi callado."
+   },
+   "potencial": 35,
+   "clipe": "clip_01M53HGR8ZE32H270X8ASMD03D",
+   "views": 6,
+   "titulo": "Gordo solo queria 1 molino",
+   "uuid": "82bd08f6-7a84-46a0-9550-b8d94fc223dc",
+   "aosS": 30161,
+   "vodId": "01a1454a-e678-7ef1-b5f3-028f3af3fcaf",
+   "miniatura": "eventos/abisal-momentos/893k-1792194074000.jpg"
+  },
+  {
+   "id": "miker00-1792204680000",
+   "canal": "miker00",
+   "origem": "publico",
+   "inicioMs": 1792204648000,
+   "fimMs": 1792204716000,
+   "resumo": {
+    "pt": "Mergulhando no Abisal, ele é morto de longe por uma Thompson e pede ao chat para clipar porque 'isso não é normal'.",
+    "en": "Diving on Abisal, he's killed from afar by a Thompson and begs chat to clip it because 'that's not normal'.",
+    "es": "Buceando en Abisal lo matan de lejos con una Thompson y pide al chat que clipee porque 'eso no es normal'."
+   },
+   "reacao": {
+    "pt": "Indignado, pede clipe, desconfia de cheat.",
+    "en": "Outraged, asks for a clip, suspects cheats.",
+    "es": "Indignado, pide clip, sospecha de cheat."
+   },
+   "potencial": 35,
+   "clipe": "clip_01M53VN3V29ECQJ90SCA5KD7F0",
+   "views": 1,
+   "titulo": "clip 1 ",
+   "uuid": "5fc9d23f-8178-4cc1-b115-a4fca510f86a",
+   "aosS": 23094,
+   "vodId": "01a14658-4b50-7def-937d-0fe5e9f2b337",
+   "miniatura": "eventos/abisal-momentos/miker00-1792204680000.jpg"
+  },
+  {
+   "id": "wowi-1792191766000",
+   "canal": "wowi",
+   "origem": "chat",
+   "inicioMs": 1792191731000,
+   "fimMs": 1792191796000,
+   "resumo": {
+    "pt": "Ele deixa entrar um cara pensando que estava sozinho, mas eram dois e morre; abre o inventário rindo.",
+    "en": "He lets a guy in thinking he was alone, but there were two and he dies; opens inventory laughing.",
+    "es": "Deja entrar a uno creyendo que estaba solo, pero eran dos y muere; abre el inventario riendo."
+   },
+   "reacao": {
+    "pt": "Ri incrédulo 'no lo puedo creer, qué timing'; chat KEKW.",
+    "en": "Laughs in disbelief 'can't believe it, what timing'; chat KEKW.",
+    "es": "Ríe incrédulo 'no lo puedo creer, qué timing'; chat KEKW."
+   },
+   "potencial": 35,
+   "uuid": "9a444e26-664b-487c-a1fe-9a9556b08012",
+   "aosS": 7599,
+   "vodId": "01a1467f-a1a0-7e71-b656-6c3f7095f7e9",
+   "miniatura": "eventos/abisal-momentos/wowi-1792191766000.jpg"
+  },
+  {
+   "id": "kodd-1792194434000",
+   "canal": "kodd",
+   "origem": "chat",
+   "inicioMs": 1792194419000,
+   "fimMs": 1792194464000,
+   "resumo": {
+    "pt": "Ele assiste a live do wowi (morto no Abisal) e gargalha porque um peruano o matou do nada.",
+    "en": "He watches wowi's stream (dead on Abisal) and cracks up because a Peruvian killed him out of nowhere.",
+    "es": "Mira el directo de wowi (muerto en Abisal) y se parte de risa porque lo mató un peruano de la nada."
+   },
+   "reacao": {
+    "pt": "Kodd gargalha; chat em KEKW e sadKEK.",
+    "en": "Kodd laughs hard; chat spams KEKW and sadKEK.",
+    "es": "Kodd se ríe a carcajadas; chat con KEKW y sadKEK."
+   },
+   "potencial": 35,
+   "uuid": "b6ef6e3b-024a-4cdc-bb53-008b2710089f",
+   "aosS": 12220,
+   "vodId": "01a14662-22d8-79bc-a63b-eef8ec4a4f94",
+   "miniatura": "eventos/abisal-momentos/kodd-1792194434000.jpg"
+  },
+  {
+   "id": "poohtoto-1792196716500",
+   "canal": "poohtoto",
+   "origem": "publico",
+   "inicioMs": 1792196687000,
+   "fimMs": 1792196750000,
+   "resumo": {
+    "pt": "PoohToto se esconde debaixo d'água de alguém que o persegue e grita '¡ese tío no me deja!'.",
+    "en": "PoohToto hides underwater from someone chasing him and shouts 'that guy won't leave me alone!'.",
+    "es": "PoohToto se esconde bajo el agua de alguien que lo persigue y grita '¡ese tío no me deja!'."
+   },
+   "reacao": {
+    "pt": "Ri na câmera e repete '¿no?' nervoso; chat quieto.",
+    "en": "Laughs on cam and nervously repeats 'no?'; chat quiet.",
+    "es": "Se ríe en cámara y repite '¿no?' nervioso; chat quieto."
+   },
+   "potencial": 35,
+   "clipe": "clip_01M53M0GT5M1ZRBBY4MAGPGDT8",
+   "views": 7,
+   "titulo": "yo me escondo",
+   "uuid": "bcdc5b62-484f-48a8-8487-9337464e4847",
+   "aosS": 15631,
+   "vodId": "01a14650-b200-76c6-847b-f6e80aa6f268",
+   "miniatura": "eventos/abisal-momentos/poohtoto-1792196716500.jpg"
+  },
+  {
+   "id": "labambiii-1792188845195",
+   "canal": "labambiii",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792188805625,
+   "fimMs": 1792188855915,
+   "uuid": "537d90cd-4aa3-4340-a31f-aec1e689f659",
+   "aosS": 29490,
+   "vodId": "01a14504-f820-7032-b007-c91db3489379",
+   "resumo": {
+    "pt": "Atira em alguém na outra subida do laboratório subaquático",
+    "en": "Shoots someone at the other exit of the underwater lab",
+    "es": "Dispara a alguien en la otra subida del laboratorio submarino"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 35,
+   "miniatura": "eventos/abisal-momentos/labambiii-1792188845195.jpg"
+  },
+  {
+   "id": "sapoiq-1792201512301",
+   "canal": "sapoiq",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792201442275,
+   "fimMs": 1792201526375,
+   "uuid": "a899b5b2-8da1-4139-b717-85dcdf9e614c",
+   "aosS": 29828,
+   "vodId": "01a145c0-9f30-71d5-94b6-71671163b65d",
+   "resumo": {
+    "pt": "Dentro da base, inimigo atira na porta",
+    "en": "Inside the base, an enemy shoots the door",
+    "es": "Dentro de la base, un enemigo dispara a la puerta"
+   },
+   "reacao": {
+    "pt": "Chat ri 'se pica'",
+    "en": "Chat laughs 'se pica'",
+    "es": "El chat se ríe 'se pica'"
+   },
+   "potencial": 35,
+   "miniatura": "eventos/abisal-momentos/sapoiq-1792201512301.jpg"
+  },
+  {
+   "id": "briangodd-1792206522878",
+   "canal": "briangodd",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792206484764,
+   "fimMs": 1792206571864,
+   "uuid": "8fa5526e-1843-4cd0-b0b5-3b7c77804776",
+   "aosS": 9342,
+   "vodId": "01a14746-29d8-7ede-8825-c8863dac8577",
+   "resumo": {
+    "pt": "Divide o loot com o time ao lado de corpos no porto",
+    "en": "Splits loot with the team next to bodies at the harbor",
+    "es": "Reparte el loot con el equipo junto a cuerpos en el puerto"
+   },
+   "reacao": {
+    "pt": "Sem reação relevante",
+    "en": "No notable reaction",
+    "es": "Sin reacción relevante"
+   },
+   "potencial": 35,
+   "miniatura": "eventos/abisal-momentos/briangodd-1792206522878.jpg"
+  },
+  {
+   "id": "marianno181-1792210133854",
+   "canal": "marianno181",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792210062398,
+   "fimMs": 1792210142598,
+   "uuid": "7a4723d2-fb69-4ba1-8521-81835616db16",
+   "aosS": 47520,
+   "vodId": "01a14536-31b0-7c2c-be12-03db5df120bb",
+   "resumo": {
+    "pt": "Dentro de um monumento, sangrando, atira em alvo de roupa vermelha.",
+    "en": "Inside a monument, bleeding, shoots at a target in red.",
+    "es": "Dentro de un monumento, sangrando, dispara a un objetivo de rojo."
+   },
+   "reacao": {
+    "pt": "Pouca.",
+    "en": "Little.",
+    "es": "Poca."
+   },
+   "potencial": 35,
+   "miniatura": "eventos/abisal-momentos/marianno181-1792210133854.jpg"
+  },
+  {
+   "id": "cathryx-1792208963935",
+   "canal": "cathryx",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792208951457,
+   "fimMs": 1792208974757,
+   "uuid": "e71e6ef7-756c-480b-b781-b6d1134eaeab",
+   "aosS": 12855,
+   "vodId": "01a14736-3000-7c29-bed2-da8d1e46ba0b",
+   "resumo": {
+    "pt": "Do barco mira com rifle uma figura na praia.",
+    "en": "From the boat aims a rifle at a figure on the beach.",
+    "es": "Desde el barco apunta con rifle a una figura en la playa."
+   },
+   "reacao": {
+    "pt": "Pouca.",
+    "en": "Little.",
+    "es": "Poca."
+   },
+   "potencial": 35,
+   "miniatura": "eventos/abisal-momentos/cathryx-1792208963935.jpg"
+  },
+  {
+   "id": "jhonplei-1792198499732",
+   "canal": "jhonplei",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792198430210,
+   "fimMs": 1792198521610,
+   "uuid": "4881b2ca-74b6-46e1-9f1e-c93968563ec2",
+   "aosS": 13805,
+   "vodId": "01a14687-2768-7602-be07-ccd39ed0278f",
+   "resumo": {
+    "pt": "No timão ao lado de um navio grande pede cobertura; time se prepara.",
+    "en": "At the helm next to a big ship he asks for cover; the team gets ready.",
+    "es": "Al timón junto a un barco grande pide cobertura; el equipo se prepara."
+   },
+   "reacao": {
+    "pt": "Tensão.",
+    "en": "Tension.",
+    "es": "Tensión."
+   },
+   "potencial": 35,
+   "miniatura": "eventos/abisal-momentos/jhonplei-1792198499732.jpg"
+  },
+  {
+   "id": "celaa-1792211397871",
+   "canal": "celaa",
+   "origem": "povix",
+   "linha": "highlight",
+   "inicioMs": 1792211383471,
+   "fimMs": 1792211448421,
+   "uuid": "c353a87d-f80f-42c4-b81b-0db2c048d47e",
+   "aosS": 30770,
+   "vodId": "01a14649-ef88-7b63-92c9-aacdd7bec2cf",
+   "resumo": {
+    "pt": "Na água mirando uma fortaleza flutuante inimiga e combinando abordá-la.",
+    "en": "In the water aiming at an enemy floating fortress, planning to board it.",
+    "es": "En el agua apuntando a una fortaleza flotante enemiga y planeando abordarla."
+   },
+   "reacao": {
+    "pt": "Sem reação relevante.",
+    "en": "No notable reaction.",
+    "es": "Sin reacción relevante."
+   },
+   "potencial": 35
   }
  ]
 }
