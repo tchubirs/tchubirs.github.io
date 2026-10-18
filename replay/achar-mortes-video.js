@@ -10,11 +10,11 @@
 //  - perto dos tiros achados primeiro (quem morre, morre a lutar), e o vídeo todo só a pedido;
 //  - o quadro nítido (1080p) só se pede onde já se viu uma tela de morte: 2 ou 3 quadros por morte.
 
-import { imagensDoTs } from './video-ts.js?v=3019fffede';
+import { imagensDoTs } from './video-ts.js?v=488815493c';
 import {
   medirTela, juntarTelas, caixaDoMatador, zonaDoNome, ampliacaoDoNome, nomeAPretoEBranco, escolherNome, msDoPts, limparNomeLido,
   ATRASO_DA_TELA_MS,
-} from './achar-mortes.js?v=3019fffede';
+} from './achar-mortes.js?v=488815493c';
 
 const LARGURA = 160;
 const ALTURA = 90;

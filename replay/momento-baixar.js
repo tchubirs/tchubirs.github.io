@@ -3,17 +3,17 @@
 // "Tela cheia" do modo simples; o 9:16 grava esse MP4 num quadro vertical (retrato.js), com a webcam por cima
 // quando o rosto do streamer se acha (rosto.js) e o meio do jogo quando não.
 
-import { fonteDoVod, clipeDaKick, lerMaster, lerPlaylist } from './kick.js?v=3019fffede';
-import { executarCorte, emMp4 } from './baixar.js?v=3019fffede';
-import { lerTs, recortar, juntarMp4 } from './mp4.js?v=3019fffede';
-import { juntarGravados } from './juntar-gravados.js?v=3019fffede';
+import { fonteDoVod, clipeDaKick, lerMaster, lerPlaylist } from './kick.js?v=488815493c';
+import { executarCorte, emMp4 } from './baixar.js?v=488815493c';
+import { lerTs, recortar, juntarMp4 } from './mp4.js?v=488815493c';
+import { juntarGravados } from './juntar-gravados.js?v=488815493c';
 import {
   gravar, enquadramentoInicial, reformar, limitar, divisaoDoQuadro, DIVISAO_OMISSAO, extensaoDe, RETRATO,
-} from './retrato.js?v=3019fffede';
-import { geometriaLegenda, desenharLegenda, limparTranscricao, LEGENDA_OMISSAO } from './legenda.js?v=3019fffede';
+} from './retrato.js?v=488815493c';
+import { geometriaLegenda, desenharLegenda, limparTranscricao, LEGENDA_OMISSAO } from './legenda.js?v=488815493c';
 import {
   abrirDetector, procurarRosto, caixaDaWebcam, instantesDoClipe, rostoGuardado, guardarRosto,
-} from './rosto.js?v=3019fffede';
+} from './rosto.js?v=488815493c';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const CLIPE = /^clip_[A-Za-z0-9]{10,40}$/;

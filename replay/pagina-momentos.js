@@ -6,11 +6,11 @@
 // Kick vinham outros clipes misturados. Duas abas: "Melhores" (por potencial; feed no celular, ranking
 // compacto em tela larga, só CSS) e "Por streamer" (uma fileira por streamer, o melhor primeiro).
 
-import { clipeDaKick, fonteDoVod, idDaPaginaDoVod } from './kick.js?v=3019fffede';
-import { escapar } from './escapar.js?v=3019fffede';
-import { paraLink } from './relogio.js?v=3019fffede';
-import { cortarMomento, gravarVertical, ganchoDoMomento, transcricaoDasFalas } from './momento-baixar.js?v=3019fffede';
-import { prepararSomDaGravacao } from './retrato.js?v=3019fffede';
+import { clipeDaKick, fonteDoVod, idDaPaginaDoVod } from './kick.js?v=488815493c';
+import { escapar } from './escapar.js?v=488815493c';
+import { paraLink } from './relogio.js?v=488815493c';
+import { cortarMomento, gravarVertical, ganchoDoMomento, transcricaoDasFalas } from './momento-baixar.js?v=488815493c';
+import { prepararSomDaGravacao } from './retrato.js?v=488815493c';
 
 const TEXTOS = {
   pt: {
@@ -25,7 +25,7 @@ const TEXTOS = {
     tocar: 'Ver o momento de {canal}, {hora}',
     publico: 'Clipe do público', povix: 'Achado pelo Povix', views: '{n} views',
     potencial: 'potencial de viralizar',
-    editar: 'Editar no Povix', kick: 'Kick',
+    editar: 'Editar no Povix', kick: 'Kick', copiarPost: 'Copiar texto do post', copiado: 'Copiado!',
     baixarTiktok: 'Baixar para TikTok', baixar: 'Baixar', baixando: 'Baixando o vídeo… {feito} de {total}',
     procurandoRosto: 'Procurando a webcam…', gravando: 'Montando o vertical… {feito} de {total} s',
     baixou: 'Pronto: o arquivo foi para os seus downloads.', baixouSemRosto: 'Pronto (sem webcam achada: o meio do jogo).',
@@ -49,7 +49,7 @@ const TEXTOS = {
     tocar: 'Watch {canal}’s moment, {hora}',
     publico: 'Viewer clip', povix: 'Found by Povix', views: '{n} views',
     potencial: 'viral potential',
-    editar: 'Edit in Povix', kick: 'Kick',
+    editar: 'Edit in Povix', kick: 'Kick', copiarPost: 'Copy post text', copiado: 'Copied!',
     baixarTiktok: 'Download for TikTok', baixar: 'Download', baixando: 'Downloading the video… {feito} of {total}',
     procurandoRosto: 'Looking for the webcam…', gravando: 'Building the vertical… {feito} of {total} s',
     baixou: 'Done: the file is in your downloads.', baixouSemRosto: 'Done (no webcam found: center of the game).',
@@ -73,7 +73,7 @@ const TEXTOS = {
     tocar: 'Ver el momento de {canal}, {hora}',
     publico: 'Clip del público', povix: 'Encontrado por Povix', views: '{n} vistas',
     potencial: 'potencial viral',
-    editar: 'Editar en Povix', kick: 'Kick',
+    editar: 'Editar en Povix', kick: 'Kick', copiarPost: 'Copiar texto del post', copiado: '¡Copiado!',
     baixarTiktok: 'Descargar para TikTok', baixar: 'Descargar', baixando: 'Descargando el video… {feito} de {total}',
     procurandoRosto: 'Buscando la webcam…', gravando: 'Armando el vertical… {feito} de {total} s',
     baixou: 'Listo: el archivo está en tus descargas.', baixouSemRosto: 'Listo (sin webcam encontrada: el centro del juego).',
@@ -208,6 +208,7 @@ function cartao(m, i) {
       ${UUID.test(m.uuid || '') && Number.isFinite(m.aosS) && estado.falas[m.id] ? `<label class="momGancho" title="${escapar(t('legendaDica'))}"><input type="checkbox" data-legenda${estado.legenda ? ' checked' : ''}> ${escapar(t('legenda'))}</label>` : ''}
       <p class="momBaixando" role="status" hidden></p><progress class="momBarra" max="1" hidden></progress>
       <a class="momEditar" href="${escapar(linkDoPovix(m))}">${escapar(t('editar'))}</a>
+      <button type="button" class="momCopiar" data-copiar>${escapar(t('copiarPost'))}</button>
     </div>
   </article>`;
 }
@@ -572,6 +573,37 @@ async function baixarMomento(cartaoEl, vertical) {
   }
 }
 
+/**
+ * O texto para colar no post (TikTok/Reels/Shorts): o resumo no idioma da tela, o crédito do canal e as hashtags.
+ * O crédito vai sempre: o clipe é do streamer, e quem posta divulga a live dele.
+ */
+function textoDoPost(m, idioma, evento = '') {
+  const tag = (x) => `#${String(x).normalize('NFKD').replace(/[^\p{L}\p{N}_]/gu, '')}`;
+  const tags = ['rust', 'rustclips', 'kick', evento, m.canal].filter(Boolean).map(tag);
+  const resumo = (m.resumo && (m.resumo[idioma] || m.resumo.pt)) || '';
+  return `${resumo}\n\n🎥 kick.com/${m.canal}\n${[...new Set(tags)].join(' ')}`;
+}
+
+async function copiarPost(botao) {
+  const m = porId.get(botao.closest('.mom')?.dataset.id);
+  if (!m) return;
+  const texto = textoDoPost(m, estado.idioma, estado.dados?.evento);
+  let ok = false;
+  try { await navigator.clipboard.writeText(texto); ok = true; } catch {
+    // Sem permissão de área de transferência: o jeito antigo, por uma caixa escondida.
+    const caixa = document.createElement('textarea');
+    caixa.value = texto;
+    caixa.style.cssText = 'position:fixed;left:-9999px;top:0;';
+    document.body.appendChild(caixa);
+    caixa.select();
+    try { ok = document.execCommand('copy'); } catch { ok = false; }
+    caixa.remove();
+  }
+  if (!ok) return;
+  botao.textContent = t('copiado');
+  setTimeout(() => { if (botao.isConnected) botao.textContent = t('copiarPost'); }, 2000);
+}
+
 /** Um VOD sem o id da página: o link da Kick só se sabe depois de perguntar, e pergunta-se no toque. */
 async function abrirNaKick(ev, a) {
   const m = porId.get(a.closest('.mom')?.dataset.id);
@@ -621,6 +653,8 @@ async function iniciar() {
     if (baixarBotao) { baixarMomento(baixarBotao.closest('.mom'), baixarBotao.dataset.baixar === 'tiktok'); return; }
     const mais = ev.target.closest('.momMais');
     if (mais) { estado.limite[mais.dataset.linha] = (estado.limite[mais.dataset.linha] || POR_VEZ) + POR_VEZ; pintar(); return; }
+    const copiar = ev.target.closest('[data-copiar]');
+    if (copiar) { copiarPost(copiar); return; }
     const kick = ev.target.closest('.momKick');
     if (kick) abrirNaKick(ev, kick);
   });
