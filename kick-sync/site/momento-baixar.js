@@ -55,6 +55,9 @@ export function ganchoDoMomento(m) {
  * desde `inicioMs`). A transcrição guarda só o tempo da fala inteira: cada palavra leva um pedaço dele do
  * tamanho das suas letras, que é o bastante para o destaque andar com a voz.
  */
+const FALA_MIN_MS = 400;
+const FALA_POR_LETRA_MS = 150;
+
 export function transcricaoDasFalas(linhas, { canal = '', inicioMs, fimMs }) {
   const saida = [];
   for (const [de, ate, texto] of Array.isArray(linhas) ? linhas : []) {
@@ -62,7 +65,9 @@ export function transcricaoDasFalas(linhas, { canal = '', inicioMs, fimMs }) {
     if (!palavras.length || !(ate >= de)) continue;
     const letras = palavras.reduce((n, p) => n + p.length, 0);
     let t = inicioMs + de;
-    const passo = (ate - de) / letras;
+    // Fala curta com tempo longo (o Whisper estica um "la" por 3 s): no máximo o tempo de dizer as letras, senão
+    // a palavra fica parada no ecrã depois de dita.
+    const passo = Math.min(ate - de, FALA_MIN_MS + letras * FALA_POR_LETRA_MS) / letras;
     saida.push({ palavras: palavras.map((p) => { const w = { t: p, de: t, ate: t + p.length * passo }; t = w.ate; return w; }) });
   }
   return limparTranscricao({ canal, deMs: inicioMs - 10_000, ateMs: fimMs + 10_000, linhas: saida });
