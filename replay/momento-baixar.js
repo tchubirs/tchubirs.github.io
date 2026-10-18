@@ -3,14 +3,14 @@
 // "Tela cheia" do modo simples; o 9:16 grava esse MP4 num quadro vertical (retrato.js), com a webcam por cima
 // quando o rosto do streamer se acha (rosto.js) e o meio do jogo quando não.
 
-import { fonteDoVod, clipeDaKick, lerMaster, lerPlaylist } from './kick.js?v=25ebf0fa92';
-import { executarCorte } from './baixar.js?v=25ebf0fa92';
+import { fonteDoVod, clipeDaKick, lerMaster, lerPlaylist } from './kick.js?v=a7e168bbb8';
+import { executarCorte } from './baixar.js?v=a7e168bbb8';
 import {
   gravar, enquadramentoInicial, reformar, limitar, divisaoDoQuadro, DIVISAO_OMISSAO, extensaoDe,
-} from './retrato.js?v=25ebf0fa92';
+} from './retrato.js?v=a7e168bbb8';
 import {
   abrirDetector, procurarRosto, caixaDaWebcam, instantesDoClipe, rostoGuardado, guardarRosto,
-} from './rosto.js?v=25ebf0fa92';
+} from './rosto.js?v=a7e168bbb8';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const CLIPE = /^clip_[A-Za-z0-9]{10,40}$/;

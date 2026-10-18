@@ -6,11 +6,11 @@
 // Kick vinham outros clipes misturados. Duas abas: "Melhores" (por potencial; feed no celular, ranking
 // compacto em tela larga, só CSS) e "Por streamer" (uma fileira por streamer, o melhor primeiro).
 
-import { clipeDaKick, fonteDoVod, idDaPaginaDoVod } from './kick.js?v=25ebf0fa92';
-import { escapar } from './escapar.js?v=25ebf0fa92';
-import { paraLink } from './relogio.js?v=25ebf0fa92';
-import { cortarMomento, gravarVertical } from './momento-baixar.js?v=25ebf0fa92';
-import { prepararSomDaGravacao } from './retrato.js?v=25ebf0fa92';
+import { clipeDaKick, fonteDoVod, idDaPaginaDoVod } from './kick.js?v=a7e168bbb8';
+import { escapar } from './escapar.js?v=a7e168bbb8';
+import { paraLink } from './relogio.js?v=a7e168bbb8';
+import { cortarMomento, gravarVertical } from './momento-baixar.js?v=a7e168bbb8';
+import { prepararSomDaGravacao } from './retrato.js?v=a7e168bbb8';
 
 const TEXTOS = {
   pt: {
@@ -89,6 +89,7 @@ const $ = (id) => document.getElementById(id);
 const estado = { idioma: 'pt', nome: '', dados: null, aba: 'melhores', tocando: null, aviso: null, canal: '', limite: {}, baixando: null };
 // Quantos cartões cada linha mostra antes do "Mostrar mais": a lista do evento tem muitos momentos.
 const POR_VEZ = 15;
+const EVENTO_PADRAO = 'abisal';
 const porId = new Map();
 
 function idiomaInicial() {
@@ -607,7 +608,8 @@ async function iniciar() {
 
   let pedido = '';
   try { pedido = new URLSearchParams(location.search).get('e') || ''; } catch { pedido = ''; }
-  estado.nome = pedido.trim().toLowerCase();
+  // Link sem ?e= (compartilhado assim, 18/10): abre o último evento em vez da tela vazia.
+  estado.nome = pedido.trim().toLowerCase() || EVENTO_PADRAO;
   if (!/^[a-z0-9-]{1,60}$/.test(estado.nome)) { avisar('semEvento'); return; }
   avisar('carregando');
   let dados = null;
@@ -631,6 +633,8 @@ async function iniciar() {
       if (estado.canal) u.searchParams.set('c', estado.canal); else u.searchParams.delete('c');
       history.replaceState(null, '', u);
     } catch { /* sem history */ }
+    // Outra busca com um vídeo a tocar: a lista tem de trocar (textos() não repinta enquanto toca).
+    parar();
     textos();
   };
   busca.addEventListener('change', escolher);
