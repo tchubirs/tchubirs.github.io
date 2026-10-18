@@ -1,6 +1,6 @@
 {
  "evento": "Abisal",
- "atualizado": "2026-10-18T02:14:45.427Z",
+ "atualizado": "2026-10-18T07:45:42.956Z",
  "momentos": [
   {
    "id": "kodd-1792192744500",
@@ -1480,6 +1480,34 @@
    "miniatura": "eventos/abisal-momentos/azengarth-1792082019000.jpg"
   },
   {
+   "id": "eminencefps-1792088348393",
+   "canal": "eminencefps",
+   "origem": "povix",
+   "nivel": "bom",
+   "categorias": [
+    "risada",
+    "reacao",
+    "troll"
+   ],
+   "inicioMs": 1792088295867,
+   "fimMs": 1792088362867,
+   "resumo": {
+    "pt": "EminenceFPS faz roleplay de vendedor de carros, chat zoa a fala de actriz de alien.",
+    "en": "EminenceFPS does a car-salesman roleplay, chat roasts his acting.",
+    "es": "EminenceFPS hace roleplay de vendedor de autos, el chat se burla de su actuacion."
+   },
+   "reacao": {
+    "pt": "Chat: es la actriz de alien jajaja; asi no se paga.",
+    "en": "Chat: es la actriz de alien jajaja.",
+    "es": "Chat: es la actriz de alien jajaja."
+   },
+   "potencial": 42,
+   "uuid": "e7b8895e-8183-46f9-8ab5-18888af0e95e",
+   "aosS": 6005,
+   "vodId": "01a1406d-a938-7146-b8aa-a15ad03cf2ca",
+   "miniatura": "eventos/abisal-momentos/eminencefps-1792088348393.jpg"
+  },
+  {
    "id": "chinittha-1792190698201",
    "canal": "chinittha",
    "origem": "povix",
@@ -1749,6 +1777,114 @@
    "aosS": 5365,
    "vodId": "01a1468e-5b28-711d-8ba9-a142bb230738",
    "miniatura": "eventos/abisal-momentos/canelita-5-1792190552000.jpg"
+  },
+  {
+   "id": "eminencefps-1792088000663",
+   "canal": "eminencefps",
+   "origem": "povix",
+   "nivel": "bom",
+   "categorias": [
+    "risada",
+    "reacao"
+   ],
+   "inicioMs": 1792087980567,
+   "fimMs": 1792088036767,
+   "resumo": {
+    "pt": "EminenceFPS faz roleplay de cobradores de imposto e fala que estao roubando ele, chat zoa.",
+    "en": "EminenceFPS roleplays tax collectors saying they are robbing him, chat teases.",
+    "es": "EminenceFPS hace roleplay de cobradores de impuestos diciendo que lo roban, el chat se burla."
+   },
+   "reacao": {
+    "pt": "Chat: ese esta pidiendo que le roben xd; solo quieren hablar del evento jajaja.",
+    "en": "Chat laughs at the roleplay.",
+    "es": "El chat se rie del roleplay."
+   },
+   "potencial": 40,
+   "uuid": "e7b8895e-8183-46f9-8ab5-18888af0e95e",
+   "aosS": 5690,
+   "vodId": "01a1406d-a938-7146-b8aa-a15ad03cf2ca",
+   "miniatura": "eventos/abisal-momentos/eminencefps-1792088000663.jpg"
+  },
+  {
+   "id": "lapochii-1792095644864",
+   "canal": "lapochii",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "bom",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792095606192,
+   "fimMs": 1792095662292,
+   "resumo": {
+    "pt": "Lapochii morre debaixo d'água enquanto pesca com arpão; aparece a tela DEAD.",
+    "en": "Lapochii dies underwater while spearfishing; the DEAD screen shows.",
+    "es": "Lapochii muere bajo el agua pescando con arpón; aparece la pantalla DEAD."
+   },
+   "reacao": {
+    "pt": "Chat comenta a morte ('uff', 'cuerto').",
+    "en": "Chat comments on the death ('uff', 'cuerto').",
+    "es": "El chat comenta la muerte ('uff', 'cuerto')."
+   },
+   "potencial": 40,
+   "uuid": "f3004f05-c631-4dcf-a455-a9b1925f64dc",
+   "aosS": 12616,
+   "vodId": "01a14078-53b0-72c5-af10-16ecab78e0ec",
+   "miniatura": "eventos/abisal-momentos/lapochii-1792095644864.jpg"
+  },
+  {
+   "id": "fumeke-1792100359324",
+   "canal": "fumeke",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "bom",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792100345996,
+   "fimMs": 1792100438796,
+   "resumo": {
+    "pt": "Fumeke luta na água cercado por inimigos, com tiros e explosões, e grita que vai matar.",
+    "en": "Fumeke fights in the water surrounded by enemies, with shots and explosions, shouting he will kill.",
+    "es": "Fumeke pelea en el agua rodeado de enemigos, con disparos y explosiones, gritando que va a matar."
+   },
+   "reacao": {
+    "pt": "Chat: “pickes arrancando a morgan”, sem reação forte.",
+    "en": "Chat: “pickes pulling morgan”, no strong reaction.",
+    "es": "Chat: “pickes arrancando a morgan”, sin reacción fuerte."
+   },
+   "potencial": 40,
+   "uuid": "a0319c10-2a34-41be-b01a-559b833caf94",
+   "aosS": 19313,
+   "vodId": "01a1405a-7728-7e93-99e4-abfb6ae37dc9",
+   "miniatura": "eventos/abisal-momentos/fumeke-1792100359324.jpg"
+  },
+  {
+   "id": "bruni2285-1792140778121",
+   "canal": "bruni2285",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "bom",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792140756427,
+   "fimMs": 1792140848327,
+   "resumo": {
+    "pt": "Bruni2285 numa cabana de madeira com dois inimigos de preto, troca tiros e fica na janela.",
+    "en": "Bruni2285 in a wooden cabin with two enemies in black, trading shots and standing at the window.",
+    "es": "Bruni2285 en una cabaña de madera con dos enemigos de negro, intercambiando disparos junto a la ventana."
+   },
+   "reacao": {
+    "pt": "Chat: “no se si quieres venire”; sem reação forte.",
+    "en": "Chat: “no se si quieres venire”; no strong reaction.",
+    "es": "Chat: “no se si quieres venire”; sin reacción fuerte."
+   },
+   "potencial": 40,
+   "uuid": "e5c6840d-184e-4880-91d6-1e4d683bf90b",
+   "aosS": 3140,
+   "vodId": "01a143b9-da80-7d77-b7fd-b306f9aa0394",
+   "miniatura": "eventos/abisal-momentos/bruni2285-1792140778121.jpg"
   },
   {
    "id": "poionako-1792200663500",
@@ -2887,6 +3023,33 @@
    "miniatura": "eventos/abisal-momentos/frikiwar-1792148407000.jpg"
   },
   {
+   "id": "chinocochinox-1792082049913",
+   "canal": "chinocochinox",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "bom",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792082027199,
+   "fimMs": 1792082104599,
+   "resumo": {
+    "pt": "ChinoCochinox no telhado e na praia, com um jogador caído na areia e outro correndo atrás.",
+    "en": "ChinoCochinox on a rooftop and the beach, with a downed player on the sand and another running after.",
+    "es": "ChinoCochinox en un techo y en la playa, con un jugador caído en la arena y otro corriendo detrás."
+   },
+   "reacao": {
+    "pt": "Chat com emotes de Llama e zoação (“casi te wandea un bot”).",
+    "en": "Chat with emotes and teasing.",
+    "es": "Chat con emotes y burlas (“casi te wandea un bot”)."
+   },
+   "potencial": 35,
+   "uuid": "24408a88-b536-40ed-aba0-32d4390d015c",
+   "aosS": 2217,
+   "vodId": "01a14047-cdd0-7b8b-8a7d-5595587744ab",
+   "miniatura": "eventos/abisal-momentos/chinocochinox-1792082049913.jpg"
+  },
+  {
    "id": "pnkfacil-1792098403000",
    "canal": "pnkfacil",
    "origem": "publico",
@@ -2914,6 +3077,32 @@
    "uuid": "f8afb1e8-35e2-447f-8cc8-8564bb7d6371",
    "aosS": 20552,
    "vodId": "01a14029-9388-77e1-8f69-95cb25d905f3"
+  },
+  {
+   "id": "dr-manha77an-1792079926116",
+   "canal": "dr-manha77an",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792079882260,
+   "fimMs": 1792079934060,
+   "resumo": {
+    "pt": "Dr_manha77an vence um 1v1 na arena e aparece a tela YOU WON.",
+    "en": "Dr_manha77an wins a 1v1 in the arena and the YOU WON screen appears.",
+    "es": "Dr_manha77an gana un 1v1 en la arena y aparece la pantalla YOU WON."
+   },
+   "reacao": {
+    "pt": "Sem reação do streamer; chat em russo sem valor.",
+    "en": "No streamer reaction; Russian chat, no value.",
+    "es": "Sin reacción del streamer; chat en ruso sin valor."
+   },
+   "potencial": 34,
+   "uuid": "69a753b0-a5a4-4331-a2a4-998750f4c862",
+   "aosS": 506,
+   "vodId": "01a14041-2e80-7a9f-8b9b-b28795ba901b"
   },
   {
    "id": "elprote-1792186931403",
@@ -3225,6 +3414,34 @@
    "uuid": "be38cc53-425a-4c46-b31f-719bcea801c1",
    "aosS": 9865,
    "vodId": "01a14054-9b28-7da2-a6fa-d93ead2a5482"
+  },
+  {
+   "id": "mikimalaga-1792082669193",
+   "canal": "mikimalaga",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "risada",
+    "pvp",
+    "troll"
+   ],
+   "inicioMs": 1792082640487,
+   "fimMs": 1792082724987,
+   "resumo": {
+    "pt": "Streamer ri depois de ser morto por alguém que aparece com arma à frente.",
+    "en": "Streamer laughs after being killed by someone with a weapon in front.",
+    "es": "Streamer se ríe tras ser asesinado por alguien con arma al frente."
+   },
+   "reacao": {
+    "pt": "Risada do streamer após a morte.",
+    "en": "Streamer laughs after the death.",
+    "es": "El streamer se ríe tras la muerte."
+   },
+   "potencial": 32,
+   "uuid": "530ed14e-44bc-40a4-aaee-23b2f2d5b208",
+   "aosS": 2623,
+   "vodId": "01a1404a-f668-7c14-9db7-22f3d7956408"
   },
   {
    "id": "wilorust-1792208400000",
@@ -4162,6 +4379,397 @@
    "vodId": "01a1409d-7398-794f-8cdd-d0a24f8ca724"
   },
   {
+   "id": "lawaridadepoke-1792081693177",
+   "canal": "lawaridadepoke",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [
+    "reacao",
+    "pvp",
+    "susto"
+   ],
+   "inicioMs": 1792081672003,
+   "fimMs": 1792081708403,
+   "resumo": {
+    "pt": "Streamer apavorado diz que vai morrer e é atacado; aparece marcador de abate ao fundo.",
+    "en": "Streamer terrified, says he is going to die and is attacked; a kill marker shows on screen.",
+    "es": "Streamer aterrado, dice que va a morir y lo atacan; aparece marcador de muerte."
+   },
+   "reacao": {
+    "pt": "Medo e gritos do streamer, mas o desfecho não aparece com clareza.",
+    "en": "Streamer scared and yelling, but the outcome is not clear.",
+    "es": "Streamer asustado y gritando, pero el desenlace no se ve claro."
+   },
+   "potencial": 30,
+   "uuid": "ed0b792c-c4e4-4dd8-a979-9158680be09f",
+   "aosS": 3969,
+   "vodId": "01a14027-a758-779f-b295-11f87508dffe"
+  },
+  {
+   "id": "cuervolking-1792086277232",
+   "canal": "cuervolking",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792086253562,
+   "fimMs": 1792086347162,
+   "resumo": {
+    "pt": "Streamer atira de uma casa de madeira em um jogador na água perto de uma lancha.",
+    "en": "Streamer shoots from a wooden house at a player in the water near a boat.",
+    "es": "El streamer dispara desde una casa de madera a un jugador en el agua cerca de un bote."
+   },
+   "reacao": {
+    "pt": "Fala repetitiva (transcrição falha), sem reação clara do streamer.",
+    "en": "Repetitive speech (bad transcription), no clear reaction from the streamer.",
+    "es": "Habla repetitiva (transcripción mala), sin reacción clara del streamer."
+   },
+   "potencial": 30,
+   "uuid": "6c7ccc28-8131-4780-8378-033df3e43f1f",
+   "aosS": 3452
+  },
+  {
+   "id": "emmanueldoblem-1792018554229",
+   "canal": "emmanueldoblem",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792018525383,
+   "fimMs": 1792018612283,
+   "resumo": {
+    "pt": "Streamer dentro de casa com dois inimigos do clã <CRY>, troca de tiros e fuga.",
+    "en": "Streamer inside a house with two enemies from the <CRY> clan, exchange of shots and escape.",
+    "es": "Streamer dentro de una casa con dos enemigos del clan <CRY>, intercambio de disparos y huida."
+   },
+   "reacao": {
+    "pt": "Fala curta, sem reação forte.",
+    "en": "Short talk, no strong reaction.",
+    "es": "Habla corta, sin reacción fuerte."
+   },
+   "potencial": 30,
+   "uuid": "db144672-023d-41ae-bbbe-3fee1ad638dd",
+   "aosS": 1336,
+   "vodId": "01a13c8c-4888-7690-818b-1846608f71d2"
+  },
+  {
+   "id": "johnpiipe-1792083705827",
+   "canal": "johnpiipe",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792083665145,
+   "fimMs": 1792083741045,
+   "resumo": {
+    "pt": "Johnpiipe aparece abatido e sangrando na neve; não dá para ver quem atirou.",
+    "en": "Johnpiipe is downed and bleeding in the snow; the shooter is not visible.",
+    "es": "Johnpiipe aparece abatido y sangrando en la nieve; no se ve quién disparó."
+   },
+   "reacao": {
+    "pt": "Sem reação; chat vazio.",
+    "en": "No reaction; chat empty.",
+    "es": "Sin reacción; chat vacío."
+   },
+   "potencial": 30,
+   "uuid": "ba04567c-37c0-4606-bebf-599dd051e57d",
+   "aosS": 3236,
+   "vodId": "01a14051-3fc8-7d29-85c5-5d8469bdd44f"
+  },
+  {
+   "id": "morganelia-1792084234068",
+   "canal": "morganelia",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792084221150,
+   "fimMs": 1792084250950,
+   "resumo": {
+    "pt": "Morganelia enfrenta outro jogador com arco numa briga curta, sem desfecho visível.",
+    "en": "Morganelia fights another player with a bow in a short clash, no visible outcome.",
+    "es": "Morganelia pelea con otro jugador con arco en un choque corto, sin desenlace visible."
+   },
+   "reacao": {
+    "pt": "Sem reação; chat vazio.",
+    "en": "No reaction; chat empty.",
+    "es": "Sin reacción; chat vacío."
+   },
+   "potencial": 30,
+   "uuid": "34e5d7e8-3870-45d8-919a-19a76f5ffc66",
+   "aosS": 4240,
+   "vodId": "01a1404a-69c8-7c21-830a-e0fafe7d0ef7"
+  },
+  {
+   "id": "javigservan-1792088611209",
+   "canal": "javigservan",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792088581037,
+   "fimMs": 1792088651037,
+   "resumo": {
+    "pt": "Briga em barco no mar com outro jogador; sangue na tela, sem desfecho nas fotos.",
+    "en": "Boat fight at sea with another player; blood on screen, no outcome in the photos.",
+    "es": "Pelea en barco en el mar con otro jugador; sangre en pantalla, sin desenlace en las fotos."
+   },
+   "reacao": {
+    "pt": "Chat vazio; streamer fala de arpón, sem reação.",
+    "en": "Empty chat; streamer talks about the harpoon, no reaction.",
+    "es": "Chat vacío; el streamer habla del arpón, sin reacción."
+   },
+   "potencial": 30,
+   "uuid": "543d8cf3-aeef-46d6-8491-6b7f48a71963",
+   "aosS": 8752,
+   "vodId": "01a14048-1808-7bd0-a5ff-1d74ce1cd321"
+  },
+  {
+   "id": "fortuna2121-1792100164055",
+   "canal": "fortuna2121",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792100139335,
+   "fimMs": 1792100184645,
+   "resumo": {
+    "pt": "Fortuna saqueia inventário e cofre depois de um confronto; diz que os inimigos estão fugindo.",
+    "en": "Fortuna loots inventory and a storage box after a fight; says the enemies are running away.",
+    "es": "Fortuna saquea inventario y caja tras una pelea; dice que los enemigos están huyendo."
+   },
+   "reacao": {
+    "pt": "Chat vazio; streamer narra sem reação forte.",
+    "en": "Chat empty; streamer narrates with no strong reaction.",
+    "es": "Chat vacío; el streamer narra sin reacción fuerte."
+   },
+   "potencial": 30,
+   "uuid": "430db2d1-c968-4001-ae69-3852a6802a3e",
+   "aosS": 11149,
+   "vodId": "01a140d3-e130-7259-b31a-d298d17196a2"
+  },
+  {
+   "id": "fortuna2121-1792100353007",
+   "canal": "fortuna2121",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp",
+    "reacao"
+   ],
+   "inicioMs": 1792100340745,
+   "fimMs": 1792100369345,
+   "resumo": {
+    "pt": "Fortuna diz que matou um cara com faca e perdeu um; o chat xinga e manda ele se curar.",
+    "en": "Fortuna says he killed a guy with a knife and lost one; chat insults him and tells him to heal.",
+    "es": "Fortuna dice que mató a uno con cuchillo y perdió uno; el chat lo insulta y le dice que se cure."
+   },
+   "reacao": {
+    "pt": "Chat zoando e xingando (“cúrate”), reação de deboche.",
+    "en": "Chat mocking and insulting, telling him to heal.",
+    "es": "Chat burlándose e insultando, diciéndole que se cure."
+   },
+   "potencial": 30,
+   "uuid": "430db2d1-c968-4001-ae69-3852a6802a3e",
+   "aosS": 11351,
+   "vodId": "01a140d3-e130-7259-b31a-d298d17196a2"
+  },
+  {
+   "id": "mrmorcillon-1792082213655",
+   "canal": "mrmorcillon",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792082146553,
+   "fimMs": 1792082223253,
+   "resumo": {
+    "pt": "Mrmorcillon correndo na praia perseguido e o chat manda ele acelerar; mapa aberto antes.",
+    "en": "Mrmorcillon runs on the beach while chased and chat tells him to hurry; map open before.",
+    "es": "Mrmorcillon corre por la playa perseguido y el chat le dice que se apure; mapa abierto antes."
+   },
+   "reacao": {
+    "pt": "Chat: “metele metele”, “morci 0 oso 1”.",
+    "en": "Chat: “go go”, “morci 0 bear 1”.",
+    "es": "Chat: “dale dale”, “morci 0 oso 1”."
+   },
+   "potencial": 30,
+   "uuid": "d054e957-482e-49d2-8c32-f02870fa407a",
+   "aosS": 1103,
+   "vodId": "01a1405a-a220-7e6c-81df-ad2129a964d9"
+  },
+  {
+   "id": "jhonplei-1792022625499",
+   "canal": "jhonplei",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792022547035,
+   "fimMs": 1792022638135,
+   "resumo": {
+    "pt": "Jhonplei com SMG em área de pedra, kill feed no chat e fala curta pedindo time.",
+    "en": "Jhonplei with an SMG in a rocky area, kill feed in chat and short talk asking for a team.",
+    "es": "Jhonplei con SMG en zona de rocas, kill feed en el chat y habla corta pidiendo equipo."
+   },
+   "reacao": {
+    "pt": "Chat mostra kill feed e avisos do servidor; streamer sem reação.",
+    "en": "Chat shows kill feed and server notices; streamer no reaction.",
+    "es": "Chat muestra kill feed y avisos del servidor; streamer sin reacción."
+   },
+   "potencial": 30,
+   "uuid": "c821aa10-f3e5-4c35-b88a-e9fa562ede60",
+   "aosS": 3761,
+   "vodId": "01a13ca4-a6d0-7a21-83f7-ce16801e550e"
+  },
+  {
+   "id": "jhonplei-1792026276105",
+   "canal": "jhonplei",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792026246735,
+   "fimMs": 1792026344935,
+   "resumo": {
+    "pt": "Jhonplei diz que matou um inimigo com três tiros e uma flecha, e depois fala de ser atacado por trás.",
+    "en": "Jhonplei says he killed an enemy with three shots and an arrow, then talks about being attacked from behind.",
+    "es": "Jhonplei dice que mató a un enemigo con tres tiros y una flecha, y luego habla de que lo atacaron por la espalda."
+   },
+   "reacao": {
+    "pt": "Chat vazio; sem reação.",
+    "en": "Chat empty; no reaction.",
+    "es": "Chat vacío; sin reacción."
+   },
+   "potencial": 30,
+   "uuid": "c821aa10-f3e5-4c35-b88a-e9fa562ede60",
+   "aosS": 7461,
+   "vodId": "01a13ca4-a6d0-7a21-83f7-ce16801e550e"
+  },
+  {
+   "id": "ataraxi4a-1792090063169",
+   "canal": "ataraxi4a",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792090021675,
+   "fimMs": 1792090093675,
+   "resumo": {
+    "pt": "Ataraxi4a em corredor vermelho com corpos no chão, xingando e perguntando se o outro morreu.",
+    "en": "Ataraxi4a in a red corridor with bodies on the floor, cursing and asking if the other one died.",
+    "es": "Ataraxi4a en un pasillo rojo con cuerpos en el suelo, insultando y preguntando si el otro murió."
+   },
+   "reacao": {
+    "pt": "Xingamentos e tensão; sem chat.",
+    "en": "Cursing and tension; no chat.",
+    "es": "Insultos y tensión; sin chat."
+   },
+   "potencial": 30,
+   "uuid": "1325d3e3-5914-4f2f-aab9-4cbda63d4d38",
+   "aosS": 8985,
+   "vodId": "01a1405a-86c8-7e68-ac76-4a7e1760dbbc"
+  },
+  {
+   "id": "carlitosbascu8-1792082902931",
+   "canal": "carlitosbascu8",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [
+    "risada",
+    "reacao"
+   ],
+   "inicioMs": 1792082840367,
+   "fimMs": 1792082921667,
+   "resumo": {
+    "pt": "Carlitosbascu8 dentro de um prédio pegando fogo, fala que vai morrer e pede para animarem.",
+    "en": "Carlitosbascu8 inside a burning building, says he will die and asks to be cheered up.",
+    "es": "Carlitosbascu8 dentro de un edificio ardiendo, dice que va a morir y pide ánimo."
+   },
+   "reacao": {
+    "pt": "Chat ri e zoa (“JAJAJA”, “me cago en las 4 farolas”).",
+    "en": "Chat laughs and teases.",
+    "es": "Chat se ríe y se burla (“JAJAJA”)."
+   },
+   "potencial": 30,
+   "uuid": "5d63fe4d-4a1a-40df-a97b-2d55b6e20a97",
+   "aosS": 1720,
+   "vodId": "01a1405b-cb00-7ec5-9bb4-0c6fa817eaf3"
+  },
+  {
+   "id": "lukz4-1792098701537",
+   "canal": "lukz4",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792098666625,
+   "fimMs": 1792098764125,
+   "resumo": {
+    "pt": "Lukz4 morre e cai na tela de MUERTO; fala de um barco inimigo e de um ataque.",
+    "en": "Lukz4 dies and the MUERTO screen appears; talks about an enemy boat and an attack.",
+    "es": "Lukz4 muere y aparece la pantalla de MUERTO; habla de un barco enemigo y un ataque."
+   },
+   "reacao": {
+    "pt": "Sem reação forte; chat vazio.",
+    "en": "No strong reaction; chat empty.",
+    "es": "Sin reacción fuerte; chat vacío."
+   },
+   "potencial": 30,
+   "uuid": "7d804ba8-6c5a-4677-9349-06f4affeb7f3",
+   "aosS": 19056,
+   "vodId": "01a14044-c478-7b71-a720-55544f3e7342"
+  },
+  {
+   "id": "axeel-1792186881686",
+   "canal": "axeel",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792186860596,
+   "fimMs": 1792186936596,
+   "resumo": {
+    "pt": "Axeel morre na tela DEAD, fala que o barco o pegou e que outro veio em cima.",
+    "en": "Axeel dies on the DEAD screen, says the boat got him and another came on top.",
+    "es": "Axeel muere en la pantalla DEAD, dice que el barco lo pegó y otro vino encima."
+   },
+   "reacao": {
+    "pt": "Fala de frustração; sem chat.",
+    "en": "Frustrated talk; no chat.",
+    "es": "Habla de frustración; sin chat."
+   },
+   "potencial": 30,
+   "uuid": "c1c8ddc8-934e-47d0-a860-a159ac1e25a2",
+   "aosS": 26330,
+   "vodId": "01a14517-8238-7892-afef-88c08fbaa259"
+  },
+  {
    "id": "pastorr5-1792188497000",
    "canal": "pastorr5",
    "origem": "chat",
@@ -4656,6 +5264,57 @@
    "uuid": "e36eef0f-eaf3-4691-aca3-10896e1f3aba",
    "aosS": 2680,
    "vodId": "01a143bb-2e58-7d84-94bb-216bca7c6d3f"
+  },
+  {
+   "id": "lopez1t0-1792081063565",
+   "canal": "lopez1t0",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792081025043,
+   "fimMs": 1792081111943,
+   "resumo": {
+    "pt": "Streamer aparece 'abatido' e é morto por dichanho com hacha de chatarra, enquanto rouba madeira.",
+    "en": "Streamer is downed and killed by dichanho with a scrap axe while stealing wood.",
+    "es": "Streamer abatido y muerto por dichanho con hacha de chatarra mientras roba madera."
+   },
+   "reacao": {
+    "pt": "Chat pede para baixar o volume, sem reação forte.",
+    "en": "Chat asks to lower the volume, no strong reaction.",
+    "es": "El chat pide bajar el volumen, sin reacción fuerte."
+   },
+   "potencial": 28,
+   "uuid": "acd80bdb-3d91-48b1-a4ea-1d39ee6c1510",
+   "aosS": 970,
+   "vodId": "01a1404b-8ad8-7c35-b0c5-06c4f20bf416"
+  },
+  {
+   "id": "lautaarg00-1792090169284",
+   "canal": "lautaarg00",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [
+    "risada",
+    "susto"
+   ],
+   "inicioMs": 1792090117400,
+   "fimMs": 1792090207400,
+   "resumo": {
+    "pt": "Fuga de um urso enquanto ele fala que não quer morrer por três, chat rindo.",
+    "en": "Escaping a bear while he says he does not want to die to three of them, chat laughing.",
+    "es": "Huyendo de un oso mientras dice que no quiere morir por tres, el chat se ríe."
+   },
+   "reacao": {
+    "pt": "Chat ri (GAGAGA) e ele se queixa do urso.",
+    "en": "Chat laughs (GAGAGA) and he complains about the bear.",
+    "es": "El chat se ríe (GAGAGA) y se queja del oso."
+   },
+   "potencial": 28,
+   "uuid": "f3efa323-7d84-4a15-9902-2238bd97696a",
+   "aosS": 2934
   },
   {
    "id": "tchubi-1792096855641",
@@ -5644,6 +6303,233 @@
    "vodId": "01a14614-7808-71de-bf02-34ba237444a9"
   },
   {
+   "id": "gringge-1792098311968",
+   "canal": "gringge",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792098231216,
+   "fimMs": 1792098321416,
+   "resumo": {
+    "pt": "Streamer diz que foi morta e combina com o time de ir juntos; sem kill visivel.",
+    "en": "Streamer says they were killed and agrees with the team to go together; no visible kill.",
+    "es": "La streamer dice que la mataron y acuerda con el equipo ir juntos; sin kill visible."
+   },
+   "reacao": {
+    "pt": "Sem reacao forte; chat vazio.",
+    "en": "No strong reaction; chat empty.",
+    "es": "Sin reaccion fuerte; chat vacio."
+   },
+   "potencial": 25,
+   "uuid": "557ac7c2-802b-41a9-8bcb-640c20475d8b",
+   "aosS": 16370
+  },
+  {
+   "id": "labambiii-1792081513466",
+   "canal": "labambiii",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [
+    "reacao"
+   ],
+   "inicioMs": 1792081453926,
+   "fimMs": 1792081521926,
+   "resumo": {
+    "pt": "LaBambi e outro jogador numa lancha falam de minas de petróleo e enxofre, com o chat na brincadeira.",
+    "en": "LaBambi and another player on a boat talk about oil and sulfur mines, chat joking around.",
+    "es": "LaBambi y otro jugador en una lancha hablan de minas de petróleo y azufre, el chat bromea."
+   },
+   "reacao": {
+    "pt": "Chat brinca com a LaBambi ('LA BAMBIIII ES NEGRAAAA').",
+    "en": "Chat teases LaBambi ('LA BAMBIIII ES NEGRAAAA').",
+    "es": "El chat bromea con LaBambi ('LA BAMBIIII ES NEGRAAAA')."
+   },
+   "potencial": 25,
+   "uuid": "1bd86f48-c26f-4289-b76d-084938bb32e1",
+   "aosS": 2750,
+   "vodId": "01a14036-ed80-7965-a1a2-e0c18e611345"
+  },
+  {
+   "id": "fortuna2121-1792099272393",
+   "canal": "fortuna2121",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792099226945,
+   "fimMs": 1792099296945,
+   "resumo": {
+    "pt": "Fortuna caça com arco e diz que vai matar um guarda; as fotos mostram só arco e mato, sem luta visível.",
+    "en": "Fortuna hunts with a bow and says he will kill a guard; the frames show only bow and grass, no visible fight.",
+    "es": "Fortuna caza con arco y dice que va a matar a un guardia; las fotos solo muestran arco y hierba, sin pelea visible."
+   },
+   "reacao": {
+    "pt": "Fala picada, sem reação forte do chat (vazio).",
+    "en": "Garbled speech, no strong reaction, chat empty.",
+    "es": "Habla entrecortada, sin reacción fuerte, chat vacío."
+   },
+   "potencial": 25,
+   "uuid": "430db2d1-c968-4001-ae69-3852a6802a3e",
+   "aosS": 10237,
+   "vodId": "01a140d3-e130-7259-b31a-d298d17196a2"
+  },
+  {
+   "id": "mrmorcillon-1792100516505",
+   "canal": "mrmorcillon",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [
+    "risada"
+   ],
+   "inicioMs": 1792100486253,
+   "fimMs": 1792100570653,
+   "resumo": {
+    "pt": "Mrmorcillon enfrenta um urso com lança de osso; chat ri do ‘sorry bass abuelete’.",
+    "en": "Mrmorcillon fights a bear with a bone spear; chat laughs at 'sorry bass abuelete'.",
+    "es": "Mrmorcillon enfrenta a un oso con lanza de hueso; el chat se ríe de 'sorry bass abuelete'."
+   },
+   "reacao": {
+    "pt": "Chat ri do ataque; não há reação do streamer.",
+    "en": "Chat laughs at the attack; streamer shows no reaction.",
+    "es": "Chat se ríe del ataque; el streamer no reacciona."
+   },
+   "potencial": 25,
+   "uuid": "d054e957-482e-49d2-8c32-f02870fa407a",
+   "aosS": 19442,
+   "vodId": "01a1405a-a220-7e6c-81df-ad2129a964d9"
+  },
+  {
+   "id": "fumeke-1792099904374",
+   "canal": "fumeke",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792099831996,
+   "fimMs": 1792099914896,
+   "resumo": {
+    "pt": "Fumeke persegue um inimigo perto de um barco e diz que lhe deu quatro tiros.",
+    "en": "Fumeke chases an enemy near a boat and says he hit him four times.",
+    "es": "Fumeke persigue a un enemigo cerca de un barco y dice que le dio cuatro tiros."
+   },
+   "reacao": {
+    "pt": "Chat vazio; sem reação forte.",
+    "en": "Chat empty; no strong reaction.",
+    "es": "Chat vacío; sin reacción fuerte."
+   },
+   "potencial": 25,
+   "uuid": "a0319c10-2a34-41be-b01a-559b833caf94",
+   "aosS": 18799,
+   "vodId": "01a1405a-7728-7e93-99e4-abfb6ae37dc9"
+  },
+  {
+   "id": "manuelmaldonado1993-1792080136550",
+   "canal": "manuelmaldonado1993",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792080123550,
+   "fimMs": 1792080147550,
+   "resumo": {
+    "pt": "Manuel perto de muros com buracos de bala, aparece um kill feed 'You were killed' com pouca fala.",
+    "en": "Manuel near walls with bullet holes, a 'You were killed' kill feed appears with little talk.",
+    "es": "Manuel cerca de muros con agujeros de bala, aparece un kill feed 'You were killed' con poca charla."
+   },
+   "reacao": {
+    "pt": "Sem reação; fala de uma palavra.",
+    "en": "No reaction; one-word talk.",
+    "es": "Sin reacción; una palabra."
+   },
+   "potencial": 25,
+   "uuid": "f4dba303-e1c4-4628-9d20-950395e3eede",
+   "aosS": 954,
+   "vodId": "01a1403e-09d0-7a8a-bc17-8fc7a380dbf9"
+  },
+  {
+   "id": "carlitosbascu8-1792089649645",
+   "canal": "carlitosbascu8",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792089639567,
+   "fimMs": 1792089729067,
+   "resumo": {
+    "pt": "Carlitosbascu8 e time no barco, fala de tiro e um capitão que dispara sem dano.",
+    "en": "Carlitosbascu8 and team on a boat, talks about shooting and a captain firing without damage.",
+    "es": "Carlitosbascu8 y su equipo en el barco, habla de disparos y un capitán que dispara sin daño."
+   },
+   "reacao": {
+    "pt": "Chat vazio; fala de confusão.",
+    "en": "Chat empty; talk of confusion.",
+    "es": "Chat vacío; charla de confusión."
+   },
+   "potencial": 25,
+   "uuid": "5d63fe4d-4a1a-40df-a97b-2d55b6e20a97",
+   "aosS": 8520,
+   "vodId": "01a1405b-cb00-7ec5-9bb4-0c6fa817eaf3"
+  },
+  {
+   "id": "jabtico-1792093294641",
+   "canal": "jabtico",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792093277411,
+   "fimMs": 1792093358211,
+   "resumo": {
+    "pt": "Jabtico em casa de madeira com flecha perto dele, fala que não consegue sair e que o derrubaram.",
+    "en": "Jabtico in a wooden house with an arrow near him, says he can't get out and was knocked down.",
+    "es": "Jabtico en una casa de madera con una flecha cerca, dice que no puede salir y que lo tumbaron."
+   },
+   "reacao": {
+    "pt": "Chat vazio; tensão na fala.",
+    "en": "Chat empty; tension in talk.",
+    "es": "Chat vacío; tensión en la charla."
+   },
+   "potencial": 25,
+   "uuid": "63417b5f-92c3-476b-adcd-76f088f928fa",
+   "aosS": 12950
+  },
+  {
+   "id": "cebyyy-1792086558230",
+   "canal": "cebyyy",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792086537916,
+   "fimMs": 1792086632416,
+   "resumo": {
+    "pt": "Cebyyy no escuro num botín submerso, rodeado por jogadores com AK e chat comentando.",
+    "en": "Cebyyy in the dark at a submerged loot spot, surrounded by players with AKs and the chat commenting.",
+    "es": "Cebyyy en la oscuridad en un botín sumergido, rodeado por jugadores con AK y el chat comentando."
+   },
+   "reacao": {
+    "pt": "Chat: “matando con ak a tiesos gg”, comentários sobre o combate.",
+    "en": "Chat: 'killing with AK gg', comments on the fight.",
+    "es": "Chat: 'matando con ak a tiesos gg', comentarios sobre la pelea."
+   },
+   "potencial": 25,
+   "uuid": "3ccd6a81-00ea-45e1-93e0-a6fde86d2aa1",
+   "aosS": 940,
+   "vodId": "01a140a0-1f30-798f-9161-e4fc96990421"
+  },
+  {
    "id": "tchubi-1792088610000",
    "canal": "tchubi",
    "origem": "chat",
@@ -6444,6 +7330,160 @@
    "uuid": "06ed3faf-54ff-410b-8c1d-58444a37715e",
    "aosS": 20415,
    "vodId": "01a14043-0ef8-7b35-be38-ec6039829879"
+  },
+  {
+   "id": "kzeco-1792109474920",
+   "canal": "kzeco",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp",
+    "risada"
+   ],
+   "inicioMs": 1792109462000,
+   "fimMs": 1792109502200,
+   "resumo": {
+    "pt": "Kzeco no barco vê jogador a pé no cais e chat ri de 'queen que la falta'.",
+    "en": "Kzeco on a boat sees a player on foot at the pier and chat laughs at 'queen que la falta'.",
+    "es": "Kzeco en el barco ve a un jugador a pie en el muelle y el chat se rie de 'queen que la falta'."
+   },
+   "reacao": {
+    "pt": "Chat ri ('jajajaja'); streamer fala sem reacao forte.",
+    "en": "Chat laughs; streamer talks without strong reaction.",
+    "es": "El chat se rie; el streamer habla sin reaccion fuerte."
+   },
+   "potencial": 22,
+   "uuid": "f4b94a8a-9181-4476-ac76-5c1015b8738b",
+   "aosS": 29293,
+   "vodId": "01a1404d-4828-7c85-b027-dcb969b6d7f9"
+  },
+  {
+   "id": "miikuucat-1792206521360",
+   "canal": "miikuucat",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792206507338,
+   "fimMs": 1792206598938,
+   "resumo": {
+    "pt": "Miikuucat morre em combate no mar e a tela 'MUERTO' mostra que foi morto com Thompson.",
+    "en": "Miikuucat dies in a sea fight and the 'MUERTO' screen shows he was killed with a Thompson.",
+    "es": "Miikuucat muere en combate en el mar y la pantalla 'MUERTO' muestra que lo mataron con una Thompson."
+   },
+   "reacao": {
+    "pt": "Sem reacao no chat.",
+    "en": "No chat reaction.",
+    "es": "Sin reaccion en el chat."
+   },
+   "potencial": 22,
+   "uuid": "192afc5e-e023-4843-a62d-fa7ccf86e5da",
+   "aosS": 19255,
+   "vodId": "01a146af-3d20-76a1-87e6-32b1195682e8"
+  },
+  {
+   "id": "elapalancao-1792083744990",
+   "canal": "elapalancao",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp",
+    "reacao"
+   ],
+   "inicioMs": 1792083714436,
+   "fimMs": 1792083796436,
+   "resumo": {
+    "pt": "Elapalancao sangrando e fugindo com arco de um inimigo na areia.",
+    "en": "Elapalancao bleeding and fleeing with a bow from an enemy on the sand.",
+    "es": "Elapalancao sangrando y huyendo con arco de un enemigo en la arena."
+   },
+   "reacao": {
+    "pt": "Chat diz q cabronsio; ele grita para correr.",
+    "en": "Chat says q cabronsio; he yells to run.",
+    "es": "El chat dice q cabronsio; él grita que corran."
+   },
+   "potencial": 22,
+   "uuid": "b2955ef3-3b2d-4077-90c4-82ea685aeb55",
+   "aosS": 694
+  },
+  {
+   "id": "nikitta83-1792108211575",
+   "canal": "nikitta83",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "raid"
+   ],
+   "inicioMs": 1792108132767,
+   "fimMs": 1792108224067,
+   "resumo": {
+    "pt": "Pólvora e entrada em uma base, com chat falando de raid.",
+    "en": "Gunpowder gained and entering a base, chat talks about a raid.",
+    "es": "Pólvora ganada y entrada en una base, el chat habla de raid."
+   },
+   "reacao": {
+    "pt": "Chat comenta o raid, streamer sem reação.",
+    "en": "Chat comments on the raid, streamer no reaction.",
+    "es": "El chat comenta el raid, streamer sin reacción."
+   },
+   "potencial": 22,
+   "uuid": "aef5a0a0-a148-468e-803e-21f7e4295996",
+   "aosS": 28002,
+   "vodId": "01a1404c-b3b8-7c67-be16-cfa2059bc624"
+  },
+  {
+   "id": "lopez1t0-1792105587627",
+   "canal": "lopez1t0",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792105556643,
+   "fimMs": 1792105645243,
+   "resumo": {
+    "pt": "Streamer abatido na base submersa, fala de morrer e pedir cura.",
+    "en": "Streamer downed in the underwater base, says he died and asks for healing.",
+    "es": "Streamer abatido en la base submarina, dice que murió y pide curación."
+   },
+   "reacao": {
+    "pt": "Frustração com a morte e pedido de ajuda.",
+    "en": "Frustration with the death and asking for help.",
+    "es": "Frustración por la muerte y pedido de ayuda."
+   },
+   "potencial": 22,
+   "uuid": "acd80bdb-3d91-48b1-a4ea-1d39ee6c1510",
+   "aosS": 25502,
+   "vodId": "01a1404b-8ad8-7c35-b0c5-06c4f20bf416"
+  },
+  {
+   "id": "catalinalozada-1792089649107",
+   "canal": "catalinalozada",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792089594129,
+   "fimMs": 1792089681829,
+   "resumo": {
+    "pt": "Streamer morre na água e comenta a morte; sem reação forte, chat só com emotes.",
+    "en": "Streamer dies in the water and comments on it; no strong reaction, chat only emotes.",
+    "es": "La streamer muere en el agua y lo comenta; sin reacción fuerte, el chat solo manda emotes."
+   },
+   "reacao": {
+    "pt": "Comenta a morte, sem grito nem risada clara.",
+    "en": "Comments on the death, no clear scream or laugh.",
+    "es": "Comenta la muerte, sin grito ni risa clara."
+   },
+   "potencial": 22,
+   "uuid": "61bcf01e-b6a7-45ca-88e5-d77308e42a07",
+   "aosS": 4001,
+   "vodId": "01a140a0-0ba8-798c-89fd-cceb41ce27eb"
   },
   {
    "id": "tanizen-1792174522000",
@@ -7254,6 +8294,268 @@
    "vodId": "01a14584-da68-717a-b762-2fed0ff6870d"
   },
   {
+   "id": "elsapaatok-1792103689774",
+   "canal": "elsapaatok",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp",
+    "risada"
+   ],
+   "inicioMs": 1792103662170,
+   "fimMs": 1792103730170,
+   "resumo": {
+    "pt": "Elsapaatok fica ferido ('WOUNDED') e espera ajuda; chat zoa que esta ancorado.",
+    "en": "Elsapaatok is WOUNDED and waits for help; chat jokes he is stuck.",
+    "es": "Elsapaatok queda herido ('WOUNDED') y espera ayuda; el chat bromea que esta anclado."
+   },
+   "reacao": {
+    "pt": "Chat zoa ('estas anclado').",
+    "en": "Chat jokes ('you're stuck').",
+    "es": "El chat bromea ('estas anclado')."
+   },
+   "potencial": 20,
+   "uuid": "e134ddfd-5f57-4a17-af84-6622950ea7ec",
+   "aosS": 15712,
+   "vodId": "01a140c4-02b0-7fc7-8de0-e92bac5d35e8"
+  },
+  {
+   "id": "eminencefps-1792088530869",
+   "canal": "eminencefps",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [
+    "reacao"
+   ],
+   "inicioMs": 1792088497467,
+   "fimMs": 1792088562467,
+   "resumo": {
+    "pt": "EminenceFPS fala de abrir loja e vender coisas, chat pergunta de garota.",
+    "en": "EminenceFPS talks about opening a shop to sell things, chat asks about a girl.",
+    "es": "EminenceFPS habla de abrir una tienda para vender cosas, el chat pregunta por una chica."
+   },
+   "reacao": {
+    "pt": "Chat: y si necesitas una chica para una noche?",
+    "en": "Chat asks about a girl for a night.",
+    "es": "El chat pregunta por una chica para una noche."
+   },
+   "potencial": 20,
+   "uuid": "e7b8895e-8183-46f9-8ab5-18888af0e95e",
+   "aosS": 6206,
+   "vodId": "01a1406d-a938-7146-b8aa-a15ad03cf2ca"
+  },
+  {
+   "id": "hary504-1792101394684",
+   "canal": "hary504",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp",
+    "reacao"
+   ],
+   "inicioMs": 1792101350356,
+   "fimMs": 1792101421380,
+   "resumo": {
+    "pt": "Flechas e acerto com arco, comenta golpe normal e 17 flechas contra um streamer.",
+    "en": "Arrows and hits with a bow, mentions a normal shot and 17 arrows against a streamer.",
+    "es": "Flechas y golpes con arco, comenta un golpe normal y 17 flechas contra un streamer."
+   },
+   "reacao": {
+    "pt": "Fala de vergonha e brincadeira.",
+    "en": "Talk of shame and joking.",
+    "es": "Habla de vergüenza y broma."
+   },
+   "potencial": 20,
+   "uuid": "2637d3d4-5785-4324-8985-bb4d95a87527",
+   "aosS": 19636,
+   "vodId": "01a14064-db50-7fe8-9357-f9353187e84f"
+  },
+  {
+   "id": "javigservan-1792091062711",
+   "canal": "javigservan",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792091029711,
+   "fimMs": 1792091095711,
+   "resumo": {
+    "pt": "Troca de tiros em terreno de pedra contra alvo com barra de vida, sem desfecho nas fotos.",
+    "en": "Gunfight on rocky ground against a target with a health bar; no outcome in the photos.",
+    "es": "Tiroteo en terreno rocoso contra un objetivo con barra de vida; sin desenlace en las fotos."
+   },
+   "reacao": {
+    "pt": "Chat vazio; fala sem reação clara.",
+    "en": "Empty chat; speech without clear reaction.",
+    "es": "Chat vacío; habla sin reacción clara."
+   },
+   "potencial": 20,
+   "uuid": "543d8cf3-aeef-46d6-8491-6b7f48a71963",
+   "aosS": 11201,
+   "vodId": "01a14048-1808-7bd0-a5ff-1d74ce1cd321"
+  },
+  {
+   "id": "juanantres-1792082385290",
+   "canal": "juanantres",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792082362826,
+   "fimMs": 1792082414926,
+   "resumo": {
+    "pt": "Juanantres leva flechada e comenta que alguém pegou a flecha dele; ainda sem desfecho claro.",
+    "en": "Juanantres gets hit by an arrow and comments on it; no clear outcome yet.",
+    "es": "Juanantres recibe una flecha y comenta sobre ella; sin desenlace claro todavía."
+   },
+   "reacao": {
+    "pt": "Sem reação forte; chat vazio.",
+    "en": "No strong reaction; chat empty.",
+    "es": "Sin reacción fuerte; chat vacío."
+   },
+   "potencial": 20,
+   "uuid": "446ac4ef-b8ff-4b04-a101-b93982ab2ff9",
+   "aosS": 2112,
+   "vodId": "01a1404e-8878-7ce9-afd9-cd68725cb1cd"
+  },
+  {
+   "id": "laurichutv-1792084925786",
+   "canal": "laurichutv",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [
+    "susto",
+    "reacao"
+   ],
+   "inicioMs": 1792084839360,
+   "fimMs": 1792084935160,
+   "resumo": {
+    "pt": "Laurichutv leva um susto de algo que não aparece na tela e reage ao chat.",
+    "en": "Laurichutv gets startled by something off screen and reacts to chat.",
+    "es": "Laurichutv se asusta por algo fuera de pantalla y reacciona al chat."
+   },
+   "reacao": {
+    "pt": "Susto e fala com o chat (“me ha tirado un susto”).",
+    "en": "Scared, talking with the chat.",
+    "es": "Asustada, hablando con el chat."
+   },
+   "potencial": 20,
+   "uuid": "0d076af1-36b6-444b-b598-2b61c56f77da",
+   "aosS": 3551,
+   "vodId": "01a1405e-5b40-7f14-8538-6530d2e435d5"
+  },
+  {
+   "id": "manuelmaldonado1993-1792080655913",
+   "canal": "manuelmaldonado1993",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792080627093,
+   "fimMs": 1792080665293,
+   "resumo": {
+    "pt": "Manuel com rifle de precisão no alto de uma montanha, aponta para uma área e diz que vai começar.",
+    "en": "Manuel with a sniper rifle on a mountain top, aims at an area and says he is going to start.",
+    "es": "Manuel con rifle de precisión en lo alto de una montaña, apunta a un área y dice que va a empezar."
+   },
+   "reacao": {
+    "pt": "Sem reação; chat vazio.",
+    "en": "No reaction; chat empty.",
+    "es": "Sin reacción; chat vacío."
+   },
+   "potencial": 20,
+   "uuid": "f4dba303-e1c4-4628-9d20-950395e3eede",
+   "aosS": 1457,
+   "vodId": "01a1403e-09d0-7a8a-bc17-8fc7a380dbf9"
+  },
+  {
+   "id": "carlitosbascu8-1792087323571",
+   "canal": "carlitosbascu8",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792087273367,
+   "fimMs": 1792087337567,
+   "resumo": {
+    "pt": "Carlitosbascu8 atira num barco e fala que não acertou, tentando sair.",
+    "en": "Carlitosbascu8 shoots at a boat and says he missed, trying to get out.",
+    "es": "Carlitosbascu8 dispara a un barco y dice que no le dio, intentando salir."
+   },
+   "reacao": {
+    "pt": "Chat vazio.",
+    "en": "Chat empty.",
+    "es": "Chat vacío."
+   },
+   "potencial": 20,
+   "uuid": "5d63fe4d-4a1a-40df-a97b-2d55b6e20a97",
+   "aosS": 6153,
+   "vodId": "01a1405b-cb00-7ec5-9bb4-0c6fa817eaf3"
+  },
+  {
+   "id": "bor-ja-1792098389304",
+   "canal": "bor-ja",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792098344698,
+   "fimMs": 1792098404078,
+   "resumo": {
+    "pt": "Bor_ja com dificuldade para descer da pedra enquanto alguém o matou pelas costas, procurando cientistas.",
+    "en": "Bor_ja struggling to get down a rock after being killed from behind, hunting scientists.",
+    "es": "Bor_ja con dificultades para bajar de la roca tras ser matado por la espalda, cazando científicos."
+   },
+   "reacao": {
+    "pt": "Chat vazio; sem reação forte.",
+    "en": "Chat empty; no strong reaction.",
+    "es": "Chat vacío; sin reacción fuerte."
+   },
+   "potencial": 20,
+   "uuid": "94979795-cfaa-4727-9f4f-915f6c8c1f6c",
+   "aosS": 17876,
+   "vodId": "01a14051-dc08-7d68-bca2-3a1363e81056"
+  },
+  {
+   "id": "cebyyy-1792087255826",
+   "canal": "cebyyy",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp",
+    "reacao"
+   ],
+   "inicioMs": 1792087237816,
+   "fimMs": 1792087318816,
+   "resumo": {
+    "pt": "Cebyyy numa discussão no chat sobre quem atirou primeiro, na beira de uma área com árvores.",
+    "en": "Cebyyy in a chat argument about who shot first, on the edge of a wooded area.",
+    "es": "Cebyyy en una discusión del chat sobre quién disparó primero, en el borde de una zona con árboles."
+   },
+   "reacao": {
+    "pt": "Chat: “yo me disparaste primero ara”, briga entre jogadores.",
+    "en": "Chat: 'you shot me first', a fight between players.",
+    "es": "Chat: 'tú me disparaste primero', pelea entre jugadores."
+   },
+   "potencial": 20,
+   "uuid": "3ccd6a81-00ea-45e1-93e0-a6fde86d2aa1",
+   "aosS": 1640,
+   "vodId": "01a140a0-1f30-798f-9161-e4fc96990421"
+  },
+  {
    "id": "degospirit-1792193256000",
    "canal": "degospirit",
    "origem": "chat",
@@ -7329,27 +8631,29 @@
    "vodId": "01a145ac-34a0-7e47-9732-b89204536596"
   },
   {
-   "id": "ataraxi4a-1792099796000",
-   "canal": "ataraxi4a",
-   "origem": "chat",
+   "id": "degospirit-1792091250065",
+   "canal": "degospirit",
+   "origem": "povix",
    "nivel": "resto",
-   "categorias": [],
-   "inicioMs": 1792099761000,
-   "fimMs": 1792099781000,
+   "categorias": [
+    "reacao"
+   ],
+   "inicioMs": 1792091222345,
+   "fimMs": 1792091258145,
    "resumo": {
-    "pt": "Streamer conversa e constroi base com madeira; chat grita 'OINK' e pede mostrar a 'cookie'.",
-    "en": "Streamer chats and builds a base with wood; chat yells 'OINK' and asks to show the cookie.",
-    "es": "La streamer conversa y construye base con madera; el chat grita 'OINK' y pide mostrar la galleta."
+    "pt": "Streamer fala de 'a nacao da agua' e o chat diz que sao monstros; sem lance visivel.",
+    "en": "Streamer mentions the water nation and chat says they are monsters; no visible play.",
+    "es": "La streamer habla de la nacion del agua y el chat dice que son monstruos; sin jugada visible."
    },
    "reacao": {
-    "pt": "Chat grita e faz piada; streamer nao reage forte.",
-    "en": "Chat yells and jokes; the streamer doesn't react strongly.",
-    "es": "El chat grita y bromea; la streamer no reacciona fuerte."
+    "pt": "Chat reage com uma frase sobre monstros.",
+    "en": "Chat reacts with one line about monsters.",
+    "es": "El chat reacciona con una frase sobre monstruos."
    },
-   "potencial": 18,
-   "uuid": "8b5c832a-987b-4545-9477-13690b78d20f",
-   "aosS": 6880,
-   "vodId": "01a1410f-4068-7b96-904d-be9b8b020585"
+   "potencial": 15,
+   "uuid": "225dcba2-636f-421a-901f-b9f0ef5f397a",
+   "aosS": 12257,
+   "vodId": "01a1403a-e908-79e4-9ad5-3251ba0b8833"
   },
   {
    "id": "kanogamerr-1792085225000",
@@ -7427,30 +8731,6 @@
    "vodId": "01a1408f-90e8-7724-80d4-7bce4c9aec57"
   },
   {
-   "id": "lautaarg00-1792090048000",
-   "canal": "lautaarg00",
-   "origem": "chat",
-   "nivel": "resto",
-   "categorias": [
-    "reacao"
-   ],
-   "inicioMs": 1792090023000,
-   "fimMs": 1792090048000,
-   "resumo": {
-    "pt": "Lautaarg00 fala de briga com animais e um bot; fala quebrada.",
-    "en": "Lautaarg00 talks about a fight with animals and a bot; broken speech.",
-    "es": "Lautaarg00 habla de una pelea con animales y un bot; habla quebrada."
-   },
-   "reacao": {
-    "pt": "Chat reage com 'wtf', 'se desangró' e 'hay que probar la teoría'.",
-    "en": "Chat reacts with 'wtf', 'se desangró' and 'hay que probar la teoría'.",
-    "es": "El chat reacciona con 'wtf', 'se desangró' y 'hay que probar la teoría'."
-   },
-   "potencial": 15,
-   "uuid": "f3efa323-7d84-4a15-9902-2238bd97696a",
-   "aosS": 2840
-  },
-  {
    "id": "jilr-draco-1792238665000",
    "canal": "jilr-draco",
    "origem": "chat",
@@ -7497,6 +8777,78 @@
    "uuid": "fde5df83-4b37-4dc2-8fc5-614862471176",
    "aosS": 2415,
    "vodId": "01a140a1-8a78-79c8-bb8d-3c92beaecd1b"
+  },
+  {
+   "id": "laaggz-1792087906916",
+   "canal": "laaggz",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792087888124,
+   "fimMs": 1792087942124,
+   "resumo": {
+    "pt": "Laaggz no barco com Jesses32 por perto, sem luta clara.",
+    "en": "Laaggz on a boat with Jesses32 nearby, no clear fight.",
+    "es": "Laaggz en un barco con Jesses32 cerca, sin pelea clara."
+   },
+   "reacao": {
+    "pt": "Chat comenta que e raton; sem reacao forte.",
+    "en": "Chat calls it a rat move; no strong reaction.",
+    "es": "El chat dice que es una rata; sin reaccion fuerte."
+   },
+   "potencial": 15,
+   "uuid": "0da6073b-af0c-47e0-a5d3-085ce6425710",
+   "aosS": 6435
+  },
+  {
+   "id": "mcompanyv-1792143635898",
+   "canal": "mcompanyv",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792143559596,
+   "fimMs": 1792143644896,
+   "resumo": {
+    "pt": "MCV aparece ferido ao lado de uma parede com rifle, sem fala.",
+    "en": "MCV shows up wounded next to a wall with a rifle, no speech.",
+    "es": "MCV aparece herido junto a una pared con rifle, sin habla."
+   },
+   "reacao": {
+    "pt": "Sem fala nem chat.",
+    "en": "No speech or chat.",
+    "es": "Sin habla ni chat."
+   },
+   "potencial": 15,
+   "uuid": "fe4d8f9b-ed73-4c3e-bb7a-387ade14cfab",
+   "aosS": 19265
+  },
+  {
+   "id": "capodr-1792104821064",
+   "canal": "capodr",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792104809054,
+   "fimMs": 1792104862054,
+   "resumo": {
+    "pt": "Capodr na areia com arma e um jogador correndo no fundo.",
+    "en": "Capodr on the sand with a gun and a player running in the background.",
+    "es": "Capodr en la arena con arma y un jugador corriendo al fondo."
+   },
+   "reacao": {
+    "pt": "Sem chat.",
+    "en": "No chat.",
+    "es": "Sin chat."
+   },
+   "potencial": 15,
+   "uuid": "42834d0a-f52c-4568-9505-68355fdd9781",
+   "aosS": 19399,
+   "vodId": "01a1409d-40d0-7904-852f-d9f2c719aee4"
   },
   {
    "id": "joseluej-1792166492000",
@@ -7549,29 +8901,31 @@
    "vodId": "01a14057-a480-7e2a-bfe5-df51db07852d"
   },
   {
-   "id": "degospirit-1792114513000",
-   "canal": "degospirit",
-   "origem": "chat",
+   "id": "darkatak-1792084790188",
+   "canal": "darkatak",
+   "origem": "povix",
+   "linha": "highlight",
    "nivel": "resto",
    "categorias": [
-    "pvp"
+    "pvp",
+    "reacao"
    ],
-   "inicioMs": 1792114483000,
-   "fimMs": 1792114508000,
+   "inicioMs": 1792084734336,
+   "fimMs": 1792084823236,
    "resumo": {
-    "pt": "Degospirit ouve tiros e pergunta se o colega está vivo; sem desfecho.",
-    "en": "Degospirit hears shots and asks if his teammate is alive; no outcome.",
-    "es": "Degospirit oye disparos y pregunta si el compañero vive; sin desenlace."
+    "pt": "Streamer reclama que querem matá-lo e se cura, perto de uma refinaria.",
+    "en": "Streamer complains they want to kill him and heals, near a refinery.",
+    "es": "Streamer se queja de que quieren matarlo y se cura, cerca de una refinería."
    },
    "reacao": {
-    "pt": "Chat só manda emotes de escuta.",
-    "en": "Chat only sends listening emotes.",
-    "es": "El chat solo manda emotes de escucha."
+    "pt": "Reclamação irritada com os inimigos.",
+    "en": "Irritated complaint about the enemies.",
+    "es": "Queja irritada contra los enemigos."
    },
    "potencial": 12,
-   "uuid": "3fad6b6d-dbfd-4825-8598-0a3eca2b8420",
-   "aosS": 5365,
-   "vodId": "01a14207-0230-705c-a857-0ba06cc63ed5"
+   "uuid": "e2d850b7-79b3-4e8f-a418-b69277895b41",
+   "aosS": 221,
+   "vodId": "01a1408f-90e8-7724-80d4-7bce4c9aec57"
   },
   {
    "id": "elemao-1792282855500",
@@ -7597,6 +8951,78 @@
    "clipe": "clip_01M5665V7HW2WTR2SZ4NFHGK6R",
    "views": 1,
    "titulo": "troleo xd"
+  },
+  {
+   "id": "laaggz-1792087587992",
+   "canal": "laaggz",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792087571324,
+   "fimMs": 1792087642524,
+   "resumo": {
+    "pt": "Laaggz no barco a noite, sangrando, com fala desconexa sobre vida.",
+    "en": "Laaggz on a boat at night, bleeding, with disjointed talk about health.",
+    "es": "Laaggz en un barco de noche, sangrando, con habla desconexa sobre vida."
+   },
+   "reacao": {
+    "pt": "Chat vazio; sem reacao.",
+    "en": "Chat empty; no reaction.",
+    "es": "Chat vacío; sin reaccion."
+   },
+   "potencial": 12,
+   "uuid": "0da6073b-af0c-47e0-a5d3-085ce6425710",
+   "aosS": 6118
+  },
+  {
+   "id": "mcompanyv-1792145332156",
+   "canal": "mcompanyv",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792145293496,
+   "fimMs": 1792145369996,
+   "resumo": {
+    "pt": "MCV com tiros e explosao na neve, sem fala e sem chat.",
+    "en": "MCV with shots and an explosion in the snow, no speech or chat.",
+    "es": "MCV con disparos y explosion en la nieve, sin habla ni chat."
+   },
+   "reacao": {
+    "pt": "Nenhuma.",
+    "en": "None.",
+    "es": "Ninguna."
+   },
+   "potencial": 12,
+   "uuid": "fe4d8f9b-ed73-4c3e-bb7a-387ade14cfab",
+   "aosS": 20998
+  },
+  {
+   "id": "capodr-1792104237612",
+   "canal": "capodr",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp",
+    "grito"
+   ],
+   "inicioMs": 1792104185954,
+   "fimMs": 1792104263754,
+   "resumo": {
+    "pt": "Capodr na areia com arma enquanto um jogador foge, fala de reportar.",
+    "en": "Capodr on the sand with a gun while a player runs away, talks about reporting.",
+    "es": "Capodr en la arena con arma mientras un jugador huye, habla de reportar."
+   },
+   "reacao": {
+    "pt": "Sem chat; grito curto.",
+    "en": "No chat; short shout.",
+    "es": "Sin chat; grito corto."
+   },
+   "potencial": 12,
+   "uuid": "42834d0a-f52c-4568-9505-68355fdd9781",
+   "aosS": 18776,
+   "vodId": "01a1409d-40d0-7904-852f-d9f2c719aee4"
   },
   {
    "id": "oscar-fuego-1792107013000",
@@ -7747,75 +9173,6 @@
    "vodId": "01a14245-4798-7145-b2de-ce441b02abd6"
   },
   {
-   "id": "gringge-1792087526000",
-   "canal": "gringge",
-   "origem": "chat",
-   "nivel": "resto",
-   "categorias": [
-    "raid"
-   ],
-   "inicioMs": 1792087501000,
-   "fimMs": 1792087526000,
-   "resumo": {
-    "pt": "Gringge fala de papelitos e de roubar tudo até a base; sem desfecho.",
-    "en": "Gringge talks about papers and stealing everything back to base; no outcome.",
-    "es": "Gringge habla de papelitos y de robar todo hasta la base; sin desenlace."
-   },
-   "reacao": {
-    "pt": "Chat fala em raidear no Atlas e pede sorteio.",
-    "en": "Chat talks about raiding in Atlas and asks for a giveaway.",
-    "es": "El chat habla de raidear en Atlas y pide un sorteo."
-   },
-   "potencial": 12,
-   "uuid": "557ac7c2-802b-41a9-8bcb-640c20475d8b",
-   "aosS": 5640
-  },
-  {
-   "id": "gringge-1792091356000",
-   "canal": "gringge",
-   "origem": "chat",
-   "nivel": "resto",
-   "categorias": [],
-   "inicioMs": 1792091331000,
-   "fimMs": 1792091356000,
-   "resumo": {
-    "pt": "Gringge reclama de 27 FPS e de reiniciar o jogo; sem ação.",
-    "en": "Gringge complains about 27 FPS and restarting the game; no action.",
-    "es": "Gringge se queja de 27 FPS y de reiniciar el juego; sin acción."
-   },
-   "reacao": {
-    "pt": "Chat comenta o FPS e diz 'tas crítico'.",
-    "en": "Chat comments on the FPS and says 'tas critico'.",
-    "es": "El chat comenta el FPS y dice 'tas crítico'."
-   },
-   "potencial": 12,
-   "uuid": "557ac7c2-802b-41a9-8bcb-640c20475d8b",
-   "aosS": 9470
-  },
-  {
-   "id": "morganelia-1792131206000",
-   "canal": "morganelia",
-   "origem": "chat",
-   "nivel": "resto",
-   "categorias": [],
-   "inicioMs": 1792131191000,
-   "fimMs": 1792131221000,
-   "resumo": {
-    "pt": "Streamer fala de um salto e de uma queda no mapa; a foto mostra menu, queda não confirmada.",
-    "en": "Streamer talks about a jump and a fall on the map; photo shows a menu, fall unconfirmed.",
-    "es": "La streamer habla de un salto y una caída en el mapa; la foto muestra menú, caída sin confirmar."
-   },
-   "reacao": {
-    "pt": "Sem reação; fala calma, chat vazio.",
-    "en": "No reaction; calm talk, empty chat.",
-    "es": "Sin reacción; charla tranquila, chat vacío."
-   },
-   "potencial": 12,
-   "uuid": "34e5d7e8-3870-45d8-919a-19a76f5ffc66",
-   "aosS": 51210,
-   "vodId": "01a1404a-69c8-7c21-830a-e0fafe7d0ef7"
-  },
-  {
    "id": "jtomi-1792082369000",
    "canal": "jtomi",
    "origem": "chat",
@@ -7940,6 +9297,104 @@
    "vodId": "01a145fe-11a8-7dbe-9e65-78eba499255e"
   },
   {
+   "id": "britus99-1792082702274",
+   "canal": "britus99",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [
+    "irl"
+   ],
+   "inicioMs": 1792082681548,
+   "fimMs": 1792082709048,
+   "resumo": {
+    "pt": "Britus de cam diz que nao sabe onde esta, rindo.",
+    "en": "Britus on cam says he does not know where he is, laughing.",
+    "es": "Britus en cam dice que no sabe dónde está, riendo."
+   },
+   "reacao": {
+    "pt": "Ri na cam; chat vazio.",
+    "en": "Laughs on cam; chat empty.",
+    "es": "Rie en cam; chat vacío."
+   },
+   "potencial": 12,
+   "uuid": "24ca8bc9-9c75-42b3-8921-8cc1f7336bf7",
+   "aosS": 2951,
+   "vodId": "01a14046-9938-7ba2-8261-da97a4aed65e"
+  },
+  {
+   "id": "karlita-caselin-1792082720854",
+   "canal": "karlita-caselin",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [
+    "reacao"
+   ],
+   "inicioMs": 1792082639562,
+   "fimMs": 1792082730062,
+   "resumo": {
+    "pt": "Menu de elaboração com arco de caça; streamer reage a algo ('¿Qué pasa?') sem imagem do evento.",
+    "en": "Crafting menu with hunting bow; streamer reacts ('¿Qué pasa?') with no event footage shown.",
+    "es": "Menú de fabricación con arco de caza; el streamer reacciona ('¿Qué pasa?') sin imagen del evento."
+   },
+   "reacao": {
+    "pt": "Streamer diz '¿Qué pasa?' e 'uuuu', mas o chat está vazio.",
+    "en": "Streamer says '¿Qué pasa?' and 'uuuu', but chat is empty.",
+    "es": "El streamer dice '¿Qué pasa?' y 'uuuu', pero el chat está vacío."
+   },
+   "potencial": 12,
+   "uuid": "7ea95929-2039-4280-b98d-c245924306af",
+   "aosS": 2518,
+   "vodId": "01a1404c-9090-7c93-8a8b-7ebbbaa32dcd"
+  },
+  {
+   "id": "jita-1792082876883",
+   "canal": "jita",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792082848453,
+   "fimMs": 1792082888787,
+   "resumo": {
+    "pt": "Jita em corredor escuro de um barco, chat pergunta 'demasiado fras?', sem luta visível.",
+    "en": "Jita in a dark boat corridor, chat asks if it's too cold; no visible fight.",
+    "es": "Jita en un pasillo oscuro de un barco, el chat pregunta si hace frío; sin pelea visible."
+   },
+   "reacao": {
+    "pt": "Chat com saudações; sem reação forte.",
+    "en": "Chat with greetings; no strong reaction.",
+    "es": "Chat con saludos; sin reacción fuerte."
+   },
+   "potencial": 12,
+   "uuid": "22ccb3e9-7d74-49fd-ae26-2a76d4f33cc0",
+   "aosS": 1313,
+   "vodId": "01a14062-2018-7f8c-905d-e29d29a639f9"
+  },
+  {
+   "id": "jita-1792092641825",
+   "canal": "jita",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792092593087,
+   "fimMs": 1792092660487,
+   "resumo": {
+    "pt": "Jita à noite em área de barcos com luzes, fala de subir e não atirar.",
+    "en": "Jita at night in a boat area with lights, talks about going up and not shooting.",
+    "es": "Jita de noche en una zona de barcos con luces, habla de subir y no disparar."
+   },
+   "reacao": {
+    "pt": "Chat vazio.",
+    "en": "Chat empty.",
+    "es": "Chat vacío."
+   },
+   "potencial": 12,
+   "uuid": "22ccb3e9-7d74-49fd-ae26-2a76d4f33cc0",
+   "aosS": 11058,
+   "vodId": "01a14062-2018-7f8c-905d-e29d29a639f9"
+  },
+  {
    "id": "jilr-draco-1792094740000",
    "canal": "jilr-draco",
    "origem": "chat",
@@ -7961,6 +9416,73 @@
    "uuid": "007dfb1b-0471-4d69-be25-61b10476df29",
    "aosS": 11470,
    "vodId": "01a1407b-c298-7379-8148-5fc5a74e52f4"
+  },
+  {
+   "id": "laaggz-1792082927676",
+   "canal": "laaggz",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792082903724,
+   "fimMs": 1792082986824,
+   "resumo": {
+    "pt": "Laaggz de cam conta de subir montanhas de noite e a descida.",
+    "en": "Laaggz on cam describes climbing mountains at night and the descent.",
+    "es": "Laaggz en cam cuenta que subió montañas de noche y la bajada."
+   },
+   "reacao": {
+    "pt": "Fala empolgado, sem chat; sem reacao forte.",
+    "en": "Excited talk, no chat; no strong reaction.",
+    "es": "Habla emocionado, sin chat; sin reaccion fuerte."
+   },
+   "potencial": 10,
+   "uuid": "0da6073b-af0c-47e0-a5d3-085ce6425710",
+   "aosS": 1451
+  },
+  {
+   "id": "mcompanyv-1792126851720",
+   "canal": "mcompanyv",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792126801096,
+   "fimMs": 1792126876196,
+   "resumo": {
+    "pt": "MCV no mapa de neve, algo verde voa no ar e ele fala sem sentido.",
+    "en": "MCV on the snow map, something green flies in the air and he talks nonsense.",
+    "es": "MCV en el mapa de nieve, algo verde vuela en el aire y habla sin sentido."
+   },
+   "reacao": {
+    "pt": "Sem reacao; chat vazio.",
+    "en": "No reaction; chat empty.",
+    "es": "Sin reaccion; chat vacio."
+   },
+   "potencial": 10,
+   "uuid": "fe4d8f9b-ed73-4c3e-bb7a-387ade14cfab",
+   "aosS": 2506
+  },
+  {
+   "id": "joseluej-1792081993023",
+   "canal": "joseluej",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792081991309,
+   "fimMs": 1792082065809,
+   "resumo": {
+    "pt": "Streamer na praia do Abisal segurando uma concha decorada; dois mergulhadores ao fundo, sem combate.",
+    "en": "Streamer on the Abisal beach holding a decorated shell; two divers in the background, no combat.",
+    "es": "Streamer en la playa de Abisal sosteniendo una concha decorada; dos buzos al fondo, sin combate."
+   },
+   "reacao": {
+    "pt": "Chat sem reação; streamer falando sobre loot.",
+    "en": "Chat with no reaction; streamer talking about loot.",
+    "es": "Chat sin reacción; el streamer habla de loot."
+   },
+   "potencial": 10,
+   "uuid": "b4f64a86-45ef-431c-806c-854ded364435",
+   "aosS": 904,
+   "vodId": "01a1405b-4a18-7eb0-a99e-2b3ee64b4212"
   },
   {
    "id": "oscar-fuego-1792098703000",
@@ -8014,28 +9536,6 @@
    "titulo": "EVENTO ABISAL DIA 2 LEST GOOOOOOO | Clip"
   },
   {
-   "id": "gringge-1792087966000",
-   "canal": "gringge",
-   "origem": "chat",
-   "nivel": "resto",
-   "categorias": [],
-   "inicioMs": 1792087941000,
-   "fimMs": 1792087961000,
-   "resumo": {
-    "pt": "Gringge fala de um evento prévio e de ferir alguém; confuso.",
-    "en": "Gringge talks about a previous event and hurting someone; confusing.",
-    "es": "Gringge habla de un evento previo y de herir a alguien; confuso."
-   },
-   "reacao": {
-    "pt": "Chat zoa 'esta drogado'.",
-    "en": "Chat teases 'he is high'.",
-    "es": "El chat bromea 'está drogado'."
-   },
-   "potencial": 10,
-   "uuid": "557ac7c2-802b-41a9-8bcb-640c20475d8b",
-   "aosS": 6080
-  },
-  {
    "id": "jtomi-1792130389000",
    "canal": "jtomi",
    "origem": "chat",
@@ -8061,6 +9561,30 @@
    "vodId": "01a14055-e730-7dd2-9ac2-91471091425b"
   },
   {
+   "id": "jtomi-1792082900057",
+   "canal": "jtomi",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792082889113,
+   "fimMs": 1792082976113,
+   "resumo": {
+    "pt": "JTomi na escuridão de noite falando sobre cura e vida, chat pedindo full vida.",
+    "en": "JTomi in the dark at night talking about healing, chat asking for full life.",
+    "es": "JTomi en la oscuridad de la noche hablando de curación, chat pidiendo vida completa."
+   },
+   "reacao": {
+    "pt": "Chat pede vida e cura; sem reação forte.",
+    "en": "Chat asks for life and healing; no strong reaction.",
+    "es": "Chat pide vida y curación; sin reacción fuerte."
+   },
+   "potencial": 10,
+   "uuid": "3390c8ab-a5ac-49d2-a8b6-cafa2fa4a640",
+   "aosS": 2155,
+   "vodId": "01a14055-e730-7dd2-9ac2-91471091425b"
+  },
+  {
    "id": "gsire88-1792082245000",
    "canal": "gsire88",
    "origem": "chat",
@@ -8082,6 +9606,55 @@
    "uuid": "e427f15a-9200-457c-8714-fcb98d8d3157",
    "aosS": 2070,
    "vodId": "01a1404b-9e60-7c3b-9eff-68d3c2edc639"
+  },
+  {
+   "id": "britus99-1792080670960",
+   "canal": "britus99",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [
+    "irl"
+   ],
+   "inicioMs": 1792080654148,
+   "fimMs": 1792080696788,
+   "resumo": {
+    "pt": "Britus conversa de cam sobre criar servidores de Discord com amigos.",
+    "en": "Britus chats on cam about creating Discord servers with friends.",
+    "es": "Britus habla en cam sobre crear servidores de Discord con amigos."
+   },
+   "reacao": {
+    "pt": "Ri sozinho na cam, sem chat nem gancho.",
+    "en": "Laughs alone on cam, no chat or hook.",
+    "es": "Se ríe solo en cam, sin chat ni gancho."
+   },
+   "potencial": 10,
+   "uuid": "24ca8bc9-9c75-42b3-8921-8cc1f7336bf7",
+   "aosS": 923,
+   "vodId": "01a14046-9938-7ba2-8261-da97a4aed65e"
+  },
+  {
+   "id": "jita-1792092124885",
+   "canal": "jita",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792092094387,
+   "fimMs": 1792092164387,
+   "resumo": {
+    "pt": "Jita com arco na grama, fala sobre subir e comprar algo; sem luta.",
+    "en": "Jita with a bow in the grass, talks about going up and buying something; no fight.",
+    "es": "Jita con arco en la hierba, habla de subir y comprar algo; sin pelea."
+   },
+   "reacao": {
+    "pt": "Chat vazio.",
+    "en": "Chat empty.",
+    "es": "Chat vacío."
+   },
+   "potencial": 10,
+   "uuid": "22ccb3e9-7d74-49fd-ae26-2a76d4f33cc0",
+   "aosS": 10559,
+   "vodId": "01a14062-2018-7f8c-905d-e29d29a639f9"
   },
   {
    "id": "lemankiu-1792194060500",
@@ -8160,32 +9733,6 @@
    "uuid": "3969dfe3-f031-4daa-b921-aab84ad6d810",
    "aosS": 12484,
    "vodId": "01a14550-9b68-7fad-b33c-5fa762a1ca92"
-  },
-  {
-   "id": "fortuna2121-1792186272326",
-   "canal": "fortuna2121",
-   "origem": "povix",
-   "linha": "highlight",
-   "nivel": "resto",
-   "categorias": [
-    "pvp"
-   ],
-   "inicioMs": 1792186251908,
-   "fimMs": 1792186283108,
-   "resumo": {
-    "pt": "Atira num cientista de capacete laranja no monumento",
-    "en": "Shoots an orange-helmet scientist in a monument",
-    "es": "Dispara a un científico de casco naranja en un monumento"
-   },
-   "reacao": {
-    "pt": "Sem reação relevante",
-    "en": "No notable reaction",
-    "es": "Sin reacción relevante"
-   },
-   "potencial": 10,
-   "uuid": "aba3380a-af72-4850-8b79-cb6c2afce49c",
-   "aosS": 5282,
-   "vodId": "01a1464f-6210-768c-8375-a16cc2a6f349"
   },
   {
    "id": "jesusetegaming-1792084748000",
@@ -8305,6 +9852,126 @@
    "vodId": "01a14941-32a0-7f0d-87e5-877d979676e0"
   },
   {
+   "id": "geneabreu-1792114445006",
+   "canal": "geneabreu",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [
+    "reacao"
+   ],
+   "inicioMs": 1792114430414,
+   "fimMs": 1792114473414,
+   "resumo": {
+    "pt": "GeneAbreu com sangramento depois de um javali, diz que morreu por um cerdo.",
+    "en": "GeneAbreu bleeding after a boar, says she died to a boar.",
+    "es": "GeneAbreu sangrando tras un jabali, dice que murio por un cerdo."
+   },
+   "reacao": {
+    "pt": "Sem chat; reclamacao.",
+    "en": "No chat; complaint.",
+    "es": "Sin chat; queja."
+   },
+   "potencial": 10,
+   "uuid": "4588e2a7-3d98-4a0c-8253-b3f225419cb2",
+   "aosS": 3870
+  },
+  {
+   "id": "akisbahillo-1792081358873",
+   "canal": "akisbahillo",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792081287361,
+   "fimMs": 1792081366061,
+   "resumo": {
+    "pt": "Inventário debaixo d'água, fala sobre ter morrido para um jogador de 23 de vida.",
+    "en": "Underwater inventory, talks about dying to a player with 23 health.",
+    "es": "Inventario bajo el agua, habla de haber muerto ante un jugador con 23 de vida."
+   },
+   "reacao": {
+    "pt": "Frustração leve.",
+    "en": "Mild frustration.",
+    "es": "Frustración leve."
+   },
+   "potencial": 10,
+   "uuid": "2215a8de-0238-4ffc-be22-ec933a34aead",
+   "aosS": 1253
+  },
+  {
+   "id": "engeekiados-1792084121724",
+   "canal": "engeekiados",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792084088070,
+   "fimMs": 1792084169070,
+   "resumo": {
+    "pt": "Engeekiados na grama com um animal perto e sangrando, fala sobre um barco e uma madeira.",
+    "en": "Engeekiados in the grass with an animal nearby and bleeding, talks about a boat and wood.",
+    "es": "Engeekiados en la hierba con un animal cerca y sangrando, habla de un barco y madera."
+   },
+   "reacao": {
+    "pt": "Chat vazio.",
+    "en": "Chat empty.",
+    "es": "Chat vacío."
+   },
+   "potencial": 10,
+   "uuid": "eb2c2918-4d86-4bbd-97fe-efb85f54b19a",
+   "aosS": 1089
+  },
+  {
+   "id": "bymartinfit-1792089679062",
+   "canal": "bymartinfit",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792089628498,
+   "fimMs": 1792089709698,
+   "resumo": {
+    "pt": "Streamer no barco com caixas e agua em volta procurando loot; sem luta na janela.",
+    "en": "Streamer on a boat with crates and water around, looking for loot; no fight in the window.",
+    "es": "El streamer en el barco con cajas y agua alrededor buscando loot; sin pelea en la ventana."
+   },
+   "reacao": {
+    "pt": "Fala de loot e sobrevivencia, sem reacao forte.",
+    "en": "Talks about loot and survival, no strong reaction.",
+    "es": "Habla de loot y supervivencia, sin reaccion fuerte."
+   },
+   "potencial": 10,
+   "uuid": "a294af84-79d4-476c-a6d0-b46e815c668a",
+   "aosS": 988,
+   "vodId": "01a140ce-8a00-7182-8400-ecbada26f5d6"
+  },
+  {
+   "id": "benjjjafps-1792082626918",
+   "canal": "benjjjafps",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [
+    "pvp"
+   ],
+   "inicioMs": 1792082619006,
+   "fimMs": 1792082700706,
+   "resumo": {
+    "pt": "No fim do dia, veiculo destruido em chamas e streamer correndo; jogador sumindo no mapa.",
+    "en": "At dusk, a destroyed vehicle on fire and the streamer running; a player disappears from the map.",
+    "es": "Al atardecer, un vehiculo destruido en llamas y el streamer corriendo; un jugador desaparece del mapa."
+   },
+   "reacao": {
+    "pt": "Fala de flecha e espada, sem reacao forte.",
+    "en": "Talks about arrows and a sword, no strong reaction.",
+    "es": "Habla de flechas y espada, sin reaccion fuerte."
+   },
+   "potencial": 10,
+   "uuid": "8fdfdd96-bb42-42ab-b1f0-0fd44c87ff0e",
+   "aosS": 1653,
+   "vodId": "01a14059-7170-7e44-b205-1c1e832114cc"
+  },
+  {
    "id": "darkatak-1792173203823",
    "canal": "darkatak",
    "origem": "povix",
@@ -8331,71 +9998,28 @@
    "vodId": "01a1459f-76e8-7598-ab56-0578b1e323bb"
   },
   {
-   "id": "darkatak-1792087648000",
-   "canal": "darkatak",
+   "id": "capodr-1792108745000",
+   "canal": "capodr",
    "origem": "chat",
+   "linha": "highlight",
    "nivel": "resto",
    "categorias": [],
-   "inicioMs": 1792087623000,
-   "fimMs": 1792087643000,
+   "inicioMs": 1792108710000,
+   "fimMs": 1792108735000,
    "resumo": {
-    "pt": "Darkatak monta mesa de trabalho e organiza caixas, fala de armas; sem ação.",
-    "en": "Darkatak sets up a workbench and organizes boxes, talks about guns; no action.",
-    "es": "Darkatak arma la mesa de trabajo y ordena cajas, habla de armas; sin acción."
+    "pt": "Streamer procura quem o matou perto da arena; a foto mostra o inventário, sem luta visível.",
+    "en": "Streamer looks for the player who killed him near the arena; the photo shows inventory, no visible fight.",
+    "es": "El streamer busca al jugador que lo mató cerca de la arena; la foto muestra el inventario, sin pelea visible."
    },
    "reacao": {
-    "pt": "Chat elogia ('sigue así lo haces perfecto') e zoa.",
-    "en": "Chat praises him ('keep doing it perfectly') and teases.",
-    "es": "El chat lo elogia ('sigue así lo haces perfecto') y bromea."
+    "pt": "sem chat; fala de busca",
+    "en": "no chat; search talk",
+    "es": "sin chat; charla de búsqueda"
    },
    "potencial": 8,
-   "uuid": "e2d850b7-79b3-4e8f-a418-b69277895b41",
-   "aosS": 3110,
-   "vodId": "01a1408f-90e8-7724-80d4-7bce4c9aec57"
-  },
-  {
-   "id": "lautaarg00-1792089198000",
-   "canal": "lautaarg00",
-   "origem": "chat",
-   "nivel": "resto",
-   "categorias": [],
-   "inicioMs": 1792089178000,
-   "fimMs": 1792089198000,
-   "resumo": {
-    "pt": "Lautaarg00 fala de um evento e de sair de casa; quase nada de jogo.",
-    "en": "Lautaarg00 talks about an event and leaving home; almost no gameplay.",
-    "es": "Lautaarg00 habla de un evento y de salir de casa; casi nada de juego."
-   },
-   "reacao": {
-    "pt": "Chat pergunta 'que es Abisal?' e zoa.",
-    "en": "Chat asks 'what is Abisal?' and teases.",
-    "es": "El chat pregunta '¿qué es Abisal?' y bromea."
-   },
-   "potencial": 8,
-   "uuid": "f3efa323-7d84-4a15-9902-2238bd97696a",
-   "aosS": 1995
-  },
-  {
-   "id": "lautaarg00-1792116348000",
-   "canal": "lautaarg00",
-   "origem": "chat",
-   "nivel": "resto",
-   "categorias": [],
-   "inicioMs": 1792116328000,
-   "fimMs": 1792116348000,
-   "resumo": {
-    "pt": "Lautaarg00 fala de noite, de vacas e de uma van; quase nada de jogo.",
-    "en": "Lautaarg00 talks about night, cows and a van; almost no gameplay.",
-    "es": "Lautaarg00 habla de noche, vacas y una van; casi nada de juego."
-   },
-   "reacao": {
-    "pt": "Chat manda 'q onda el abisal?' e risadas.",
-    "en": "Chat sends 'q onda el abisal?' and laughs.",
-    "es": "El chat manda 'q onda el abisal?' y risas."
-   },
-   "potencial": 8,
-   "uuid": "f3efa323-7d84-4a15-9902-2238bd97696a",
-   "aosS": 29145
+   "uuid": "42834d0a-f52c-4568-9505-68355fdd9781",
+   "aosS": 23300,
+   "vodId": "01a1409d-40d0-7904-852f-d9f2c719aee4"
   },
   {
    "id": "joseluej-1792169122000",
@@ -8421,50 +10045,98 @@
    "vodId": "01a14509-8fe8-76f8-8583-56e80f3f2280"
   },
   {
-   "id": "morganelia-1792110736000",
-   "canal": "morganelia",
-   "origem": "chat",
+   "id": "ismattymax-1792104459270",
+   "canal": "ismattymax",
+   "origem": "povix",
    "nivel": "resto",
-   "categorias": [],
-   "inicioMs": 1792110711000,
-   "fimMs": 1792110741000,
+   "categorias": [
+    "reacao"
+   ],
+   "inicioMs": 1792104446848,
+   "fimMs": 1792104480548,
    "resumo": {
-    "pt": "Streamer fala de ajustes e mudanças no jogo; nada visível acontece.",
-    "en": "Streamer talks about settings and game changes; nothing visible happens.",
-    "es": "La streamer habla de ajustes y cambios del juego; no pasa nada visible."
+    "pt": "Ismattymax grita Vamos e aparece explosao sem alvo claro.",
+    "en": "Ismattymax shouts Vamos and an explosion appears with no clear target.",
+    "es": "Ismattymax grita Vamos y aparece una explosion sin objetivo claro."
    },
    "reacao": {
-    "pt": "Chat vazio, sem reação.",
-    "en": "Chat empty, no reaction.",
-    "es": "Chat vacío, sin reacción."
+    "pt": "Grito curto de Vamos; sem chat.",
+    "en": "Short Vamos shout; no chat.",
+    "es": "Grito corto de Vamos; sin chat."
    },
    "potencial": 8,
-   "uuid": "34e5d7e8-3870-45d8-919a-19a76f5ffc66",
-   "aosS": 30730,
-   "vodId": "01a1404a-69c8-7c21-830a-e0fafe7d0ef7"
+   "uuid": "d3916436-8137-4502-899f-475b02889c05",
+   "aosS": 2900,
+   "vodId": "01a14193-7bf8-7f0c-b39f-7a91f2026e83"
   },
   {
-   "id": "morganelia-1792132596000",
-   "canal": "morganelia",
+   "id": "britus99-1792080891976",
+   "canal": "britus99",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792080858976,
+   "fimMs": 1792080923976,
+   "resumo": {
+    "pt": "Britus fala de barco e de uma jefa do M7 sem contexto claro.",
+    "en": "Britus talks about a boat and an M7 boss with no clear context.",
+    "es": "Britus habla de un barco y una jefa del M7 sin contexto claro."
+   },
+   "reacao": {
+    "pt": "Sem reacao; conversa solta.",
+    "en": "No reaction; loose talk.",
+    "es": "Sin reaccion; conversacion suelta."
+   },
+   "potencial": 8,
+   "uuid": "24ca8bc9-9c75-42b3-8921-8cc1f7336bf7",
+   "aosS": 1128,
+   "vodId": "01a14046-9938-7ba2-8261-da97a4aed65e"
+  },
+  {
+   "id": "karlita-caselin-1792086907000",
+   "canal": "karlita-caselin",
    "origem": "chat",
    "nivel": "resto",
    "categorias": [],
-   "inicioMs": 1792132571000,
-   "fimMs": 1792132601000,
+   "inicioMs": 1792086882000,
+   "fimMs": 1792086912000,
    "resumo": {
-    "pt": "Streamer fala de sacar barro e de ir ao polo; rotina de jogo sem acontecimento.",
-    "en": "Streamer talks about getting clay and going to the pole; game routine, nothing happens.",
-    "es": "La streamer habla de sacar barro e ir al polo; rutina de juego, sin acontecimiento."
+    "pt": "Streamer fala de barco, pesca e trocas; chat pede que não revelem o servidor.",
+    "en": "Streamer talks about boat, fishing and trades; chat asks not to reveal the server.",
+    "es": "La streamer habla de barco, pesca e intercambios; el chat pide no revelar el servidor."
    },
    "reacao": {
-    "pt": "Sem reação, chat vazio.",
-    "en": "No reaction, empty chat.",
-    "es": "Sin reacción, chat vacío."
+    "pt": "Chat pede para evitar sniping; sem reação forte.",
+    "en": "Chat asks to avoid sniping; no strong reaction.",
+    "es": "El chat pide evitar el sniping; sin reacción fuerte."
    },
    "potencial": 8,
-   "uuid": "34e5d7e8-3870-45d8-919a-19a76f5ffc66",
-   "aosS": 52590,
-   "vodId": "01a1404a-69c8-7c21-830a-e0fafe7d0ef7"
+   "uuid": "7ea95929-2039-4280-b98d-c245924306af",
+   "aosS": 6760,
+   "vodId": "01a1404c-9090-7c93-8a8b-7ebbbaa32dcd"
+  },
+  {
+   "id": "karlita-caselin-1792107387000",
+   "canal": "karlita-caselin",
+   "origem": "chat",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792107362000,
+   "fimMs": 1792107402000,
+   "resumo": {
+    "pt": "Streamer desabafa sobre dinheiro, cartões e uma briga com um amigo.",
+    "en": "Streamer vents about money, cards and a fight with a friend.",
+    "es": "La streamer se desahoga sobre dinero, tarjetas y una pelea con un amigo."
+   },
+   "reacao": {
+    "pt": "Chat neutro; sem reação forte.",
+    "en": "Chat neutral; no strong reaction.",
+    "es": "El chat neutral; sin reacción fuerte."
+   },
+   "potencial": 8,
+   "uuid": "7ea95929-2039-4280-b98d-c245924306af",
+   "aosS": 27240,
+   "vodId": "01a1404c-9090-7c93-8a8b-7ebbbaa32dcd"
   },
   {
    "id": "lemankiu-1792189343000",
@@ -8564,6 +10236,29 @@
    "vodId": "01a14068-a7f8-7084-8802-e8d2e5974422"
   },
   {
+   "id": "jesusetegaming-1792085476654",
+   "canal": "jesusetegaming",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792085445790,
+   "fimMs": 1792085534290,
+   "resumo": {
+    "pt": "Discussão sobre trocar o nome da Steam para entrar no servidor; chat avisa que sem estar ao vivo leva kick.",
+    "en": "Discussion about changing the Steam name to get into the server; chat warns about being kicked if not live.",
+    "es": "Discusión sobre cambiar el nombre de Steam para entrar; el chat avisa del kick si no está en directo."
+   },
+   "reacao": {
+    "pt": "Chat dá instruções sobre o nome, sem reação emocional.",
+    "en": "Chat gives name instructions, no emotional reaction.",
+    "es": "El chat da instrucciones del nombre, sin reacción emocional."
+   },
+   "potencial": 8,
+   "uuid": "52435e38-bf74-46d4-88a8-bc01d66dd714",
+   "aosS": 3483,
+   "vodId": "01a14068-a7f8-7084-8802-e8d2e5974422"
+  },
+  {
    "id": "yuraqhanka-1792124444000",
    "canal": "yuraqhanka",
    "origem": "chat",
@@ -8610,30 +10305,99 @@
    "vodId": "01a14051-3410-7d50-9999-f02a116a12f6"
   },
   {
-   "id": "jita-1792200036334",
-   "canal": "jita",
+   "id": "geneabreu-1792112722526",
+   "canal": "geneabreu",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [
+    "reacao"
+   ],
+   "inicioMs": 1792112690714,
+   "fimMs": 1792112752814,
+   "resumo": {
+    "pt": "GeneAbreu na grama em caca de lobos, pergunta se foi morta.",
+    "en": "GeneAbreu in the grass on a wolf hunt, asks if she was killed.",
+    "es": "GeneAbreu en la hierba cazando lobos, pregunta si la mataron."
+   },
+   "reacao": {
+    "pt": "Sem chat; confusao.",
+    "en": "No chat; confusion.",
+    "es": "Sin chat; confusion."
+   },
+   "potencial": 8,
+   "uuid": "4588e2a7-3d98-4a0c-8253-b3f225419cb2",
+   "aosS": 2131
+  },
+  {
+   "id": "akisbahillo-1792082567367",
+   "canal": "akisbahillo",
    "origem": "povix",
    "linha": "highlight",
    "nivel": "resto",
    "categorias": [
     "pvp"
    ],
-   "inicioMs": 1792199986818,
-   "fimMs": 1792200041488,
+   "inicioMs": 1792082513961,
+   "fimMs": 1792082603261,
    "resumo": {
-    "pt": "Saqueando caixa enquanto o time fala de briga na água.",
-    "en": "Looting while the team talks about a water fight.",
-    "es": "Saqueando mientras el equipo habla de pelea en el agua."
+    "pt": "Menu de inventário e fala sobre alguém atrás dele, sem luta visível.",
+    "en": "Inventory menu and talk about someone behind him, no visible fight.",
+    "es": "Menú de inventario y habla de alguien detrás, sin pelea visible."
    },
    "reacao": {
-    "pt": "Nenhuma.",
-    "en": "None.",
-    "es": "Ninguna."
+    "pt": "Tensão falada, sem reação.",
+    "en": "Spoken tension, no reaction.",
+    "es": "Tensión hablada, sin reacción."
    },
    "potencial": 8,
-   "uuid": "2e3a736f-d323-4356-9607-f7e437507e5d",
-   "aosS": 40725,
-   "vodId": "01a14504-2530-7657-aa7d-e11aafe0f5c8"
+   "uuid": "2215a8de-0238-4ffc-be22-ec933a34aead",
+   "aosS": 2480
+  },
+  {
+   "id": "bymartinfit-1792091362756",
+   "canal": "bymartinfit",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792091298298,
+   "fimMs": 1792091369498,
+   "resumo": {
+    "pt": "Arco no mar perto de torre e barco de apoio; nada acontece na janela.",
+    "en": "Crossbow over the sea near a tower and a tug; nothing happens in the window.",
+    "es": "Ballesta sobre el mar cerca de una torre y un remolcador; no pasa nada en la ventana."
+   },
+   "reacao": {
+    "pt": "Conversa de marcacao de posicao.",
+    "en": "Chat about marking positions.",
+    "es": "Conversacion sobre posiciones."
+   },
+   "potencial": 8,
+   "uuid": "a294af84-79d4-476c-a6d0-b46e815c668a",
+   "aosS": 2658,
+   "vodId": "01a140ce-8a00-7182-8400-ecbada26f5d6"
+  },
+  {
+   "id": "benjjjafps-1792082182258",
+   "canal": "benjjjafps",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792082166506,
+   "fimMs": 1792082236506,
+   "resumo": {
+    "pt": "Streamer com comida na mao perto de uma parede de madeira; ao longe um jogador corre na praia.",
+    "en": "Streamer holding food next to a wooden wall; a player runs on the beach far off.",
+    "es": "El streamer con comida en la mano junto a una pared de madera; un jugador corre en la playa lejos."
+   },
+   "reacao": {
+    "pt": "Fala confusa sobre piedra e base; sem reacao forte.",
+    "en": "Confused talk about stones and the base; no strong reaction.",
+    "es": "Charla confusa sobre piedra y la base; sin reaccion fuerte."
+   },
+   "potencial": 8,
+   "uuid": "8fdfdd96-bb42-42ab-b1f0-0fd44c87ff0e",
+   "aosS": 1201,
+   "vodId": "01a14059-7170-7e44-b205-1c1e832114cc"
   },
   {
    "id": "cero-gamer-1792193380902",
@@ -8662,30 +10426,6 @@
    "vodId": "01a14681-5b08-74c2-98b3-18dd5b636190"
   },
   {
-   "id": "capodr-1792108745000",
-   "canal": "capodr",
-   "origem": "chat",
-   "linha": "highlight",
-   "nivel": "resto",
-   "categorias": [],
-   "inicioMs": 1792108710000,
-   "fimMs": 1792108735000,
-   "resumo": {
-    "pt": "Streamer procura quem o matou perto da arena; a foto mostra o inventário, sem luta visível.",
-    "en": "Streamer looks for the player who killed him near the arena; the photo shows inventory, no visible fight.",
-    "es": "El streamer busca al jugador que lo mató cerca de la arena; la foto muestra el inventario, sin pelea visible."
-   },
-   "reacao": {
-    "pt": "sem chat; fala de busca",
-    "en": "no chat; search talk",
-    "es": "sin chat; charla de búsqueda"
-   },
-   "potencial": 8,
-   "uuid": "42834d0a-f52c-4568-9505-68355fdd9781",
-   "aosS": 23300,
-   "vodId": "01a1409d-40d0-7904-852f-d9f2c719aee4"
-  },
-  {
    "id": "davonaar-1792126746000",
    "canal": "davonaar",
    "origem": "chat",
@@ -8709,50 +10449,27 @@
    "vodId": "01a14055-db78-7dd2-b80c-2560c3b65c7b"
   },
   {
-   "id": "karlita-caselin-1792086907000",
-   "canal": "karlita-caselin",
-   "origem": "chat",
+   "id": "davonaar-1792104403892",
+   "canal": "davonaar",
+   "origem": "povix",
    "nivel": "resto",
    "categorias": [],
-   "inicioMs": 1792086882000,
-   "fimMs": 1792086912000,
+   "inicioMs": 1792104390644,
+   "fimMs": 1792104459344,
    "resumo": {
-    "pt": "Streamer fala de barco, pesca e trocas; chat pede que não revelem o servidor.",
-    "en": "Streamer talks about boat, fishing and trades; chat asks not to reveal the server.",
-    "es": "La streamer habla de barco, pesca e intercambios; el chat pide no revelar el servidor."
+    "pt": "Conversa curta sobre morrer perto do posto de gasolina e navio em construção.",
+    "en": "Short talk about dying near the gas station and a ship being built.",
+    "es": "Charla corta sobre morir cerca de la gasolinera y un barco en construcción."
    },
    "reacao": {
-    "pt": "Chat pede para evitar sniping; sem reação forte.",
-    "en": "Chat asks to avoid sniping; no strong reaction.",
-    "es": "El chat pide evitar el sniping; sin reacción fuerte."
+    "pt": "Nenhuma.",
+    "en": "None.",
+    "es": "Ninguna."
    },
    "potencial": 8,
-   "uuid": "7ea95929-2039-4280-b98d-c245924306af",
-   "aosS": 6760,
-   "vodId": "01a1404c-9090-7c93-8a8b-7ebbbaa32dcd"
-  },
-  {
-   "id": "karlita-caselin-1792107387000",
-   "canal": "karlita-caselin",
-   "origem": "chat",
-   "nivel": "resto",
-   "categorias": [],
-   "inicioMs": 1792107362000,
-   "fimMs": 1792107402000,
-   "resumo": {
-    "pt": "Streamer desabafa sobre dinheiro, cartões e uma briga com um amigo.",
-    "en": "Streamer vents about money, cards and a fight with a friend.",
-    "es": "La streamer se desahoga sobre dinero, tarjetas y una pelea con un amigo."
-   },
-   "reacao": {
-    "pt": "Chat neutro; sem reação forte.",
-    "en": "Chat neutral; no strong reaction.",
-    "es": "El chat neutral; sin reacción fuerte."
-   },
-   "potencial": 8,
-   "uuid": "7ea95929-2039-4280-b98d-c245924306af",
-   "aosS": 27240,
-   "vodId": "01a1404c-9090-7c93-8a8b-7ebbbaa32dcd"
+   "uuid": "76b1f1ab-e8db-4952-a784-a2765702fa6f",
+   "aosS": 23660,
+   "vodId": "01a14055-db78-7dd2-b80c-2560c3b65c7b"
   },
   {
    "id": "habanacats-1792082706000",
@@ -8917,6 +10634,146 @@
    "vodId": "01a149e5-cf40-79a2-96aa-8f9c897c5fc7"
   },
   {
+   "id": "elnash-1792082760740",
+   "canal": "elnash",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792082698308,
+   "fimMs": 1792082775908,
+   "resumo": {
+    "pt": "Elnash com arco e explosao perto de um urso, fala de bailes e de estar aberto.",
+    "en": "Elnash with a bow and explosion near a bear, talks about dances and being open.",
+    "es": "Elnash con arco y explosion cerca de un oso, habla de bailes y de estar abierto."
+   },
+   "reacao": {
+    "pt": "Sem chat.",
+    "en": "No chat.",
+    "es": "Sin chat."
+   },
+   "potencial": 8,
+   "uuid": "832f89c8-efe9-4a6d-83c3-d78478bbde33",
+   "aosS": 1769,
+   "vodId": "01a14058-e0e8-7e2d-b151-15e2e73b2d9b"
+  },
+  {
+   "id": "elnash-1792096383696",
+   "canal": "elnash",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792096338108,
+   "fimMs": 1792096425708,
+   "resumo": {
+    "pt": "Elnash em manutencao da base, fala de gente e explosao.",
+    "en": "Elnash maintaining the base, talks about people and an explosion.",
+    "es": "Elnash en mantenimiento de la base, habla de gente y una explosion."
+   },
+   "reacao": {
+    "pt": "Sem chat.",
+    "en": "No chat.",
+    "es": "Sin chat."
+   },
+   "potencial": 8,
+   "uuid": "832f89c8-efe9-4a6d-83c3-d78478bbde33",
+   "aosS": 15409,
+   "vodId": "01a14058-e0e8-7e2d-b151-15e2e73b2d9b"
+  },
+  {
+   "id": "elnash-1792097998618",
+   "canal": "elnash",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792097980308,
+   "fimMs": 1792098061108,
+   "resumo": {
+    "pt": "Elnash debaixo d'agua sendo atacado, fala sobre arpao e casa sem agua.",
+    "en": "Elnash underwater being attacked, talks about harpoons and a house without water.",
+    "es": "Elnash bajo el agua siendo atacado, habla de arpones y una casa sin agua."
+   },
+   "reacao": {
+    "pt": "Sem chat; reclama.",
+    "en": "No chat; complains.",
+    "es": "Sin chat; se queja."
+   },
+   "potencial": 8,
+   "uuid": "832f89c8-efe9-4a6d-83c3-d78478bbde33",
+   "aosS": 17051,
+   "vodId": "01a14058-e0e8-7e2d-b151-15e2e73b2d9b"
+  },
+  {
+   "id": "itsvany-1792092069253",
+   "canal": "itsvany",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [
+    "susto",
+    "irl"
+   ],
+   "inicioMs": 1792092038737,
+   "fimMs": 1792092122837,
+   "resumo": {
+    "pt": "Itsvany na cam comenta que algo apareceu e se assusta.",
+    "en": "Itsvany on cam says something appeared and gets startled.",
+    "es": "Itsvany en cam dice que algo aparecio y se asusta."
+   },
+   "reacao": {
+    "pt": "Susto leve, sem chat.",
+    "en": "Mild scare, no chat.",
+    "es": "Susto leve, sin chat."
+   },
+   "potencial": 8,
+   "uuid": "a3860c1e-d387-4390-a1a5-0121af3f886e",
+   "aosS": 1110
+  },
+  {
+   "id": "lcelestiall-1792102051690",
+   "canal": "lcelestiall",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792102044132,
+   "fimMs": 1792102066332,
+   "resumo": {
+    "pt": "Abertura da live do Abisal com menu do personagem e cena noturna; explosão sem contexto nas fotos.",
+    "en": "Opening of the Abisal live with character menu and night scene; explosion with no context in the photos.",
+    "es": "Inicio de la live de Abisal con menú del personaje y escena nocturna; explosión sin contexto en las fotos."
+   },
+   "reacao": {
+    "pt": "Sem reação; streamer cumprimenta o chat.",
+    "en": "No reaction; streamer greets the chat.",
+    "es": "Sin reacción; el streamer saluda al chat."
+   },
+   "potencial": 8,
+   "uuid": "15438164-a4af-4af3-b892-e87fe0eeb00b",
+   "aosS": 942,
+   "vodId": "01a1418c-b1b0-7e04-8ed7-ffb0b49c24c4"
+  },
+  {
+   "id": "lcelestiall-1792104002466",
+   "canal": "lcelestiall",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792103943332,
+   "fimMs": 1792104012932,
+   "resumo": {
+    "pt": "Mapa do Abisal e streamer em penhasco perto da água; fala sobre barcos, sem luta visível.",
+    "en": "Abisal map and streamer on a cliff near the water; talk about boats, no visible fight.",
+    "es": "Mapa de Abisal y streamer en un acantilado junto al agua; habla de barcos, sin pelea visible."
+   },
+   "reacao": {
+    "pt": "Sem reação; streamer fala de uma morte sem mostrá-la.",
+    "en": "No reaction; streamer mentions a kill without showing it.",
+    "es": "Sin reacción; el streamer menciona una muerte sin mostrarla."
+   },
+   "potencial": 8,
+   "uuid": "15438164-a4af-4af3-b892-e87fe0eeb00b",
+   "aosS": 2841,
+   "vodId": "01a1418c-b1b0-7e04-8ed7-ffb0b49c24c4"
+  },
+  {
    "id": "snownote-1792094407000",
    "canal": "snownote",
    "origem": "chat",
@@ -8940,142 +10797,72 @@
    "vodId": "01a14052-8400-7d54-9992-44e0137ff7b0"
   },
   {
-   "id": "jtomi-1792099299000",
-   "canal": "jtomi",
-   "origem": "chat",
+   "id": "ismattymax-1792103435976",
+   "canal": "ismattymax",
+   "origem": "povix",
+   "linha": "highlight",
    "nivel": "resto",
    "categorias": [],
-   "inicioMs": 1792099274000,
-   "fimMs": 1792099304000,
+   "inicioMs": 1792103425348,
+   "fimMs": 1792103467307,
    "resumo": {
-    "pt": "Streamer fala de dominar o mapa e de ir a outro; chat comenta que o nome do mapa parece asado.",
-    "en": "Streamer talks about dominating the map and heading to another; chat jokes the map name sounds like a barbecue.",
-    "es": "El streamer habla de dominar el mapa e ir a otro; el chat dice que el nombre del mapa suena a asado."
+    "pt": "Ismattymax com arco na encosta, sem acontecimento.",
+    "en": "Ismattymax with a bow on a cliff, no event.",
+    "es": "Ismattymax con arco en una ladera, sin evento."
    },
    "reacao": {
-    "pt": "Chat ri do nome do mapa.",
-    "en": "Chat laughs at the map name.",
-    "es": "El chat se ríe del nombre del mapa."
+    "pt": "Nenhuma.",
+    "en": "None.",
+    "es": "Ninguna."
    },
    "potencial": 6,
-   "uuid": "3390c8ab-a5ac-49d2-a8b6-cafa2fa4a640",
-   "aosS": 18540,
-   "vodId": "01a14055-e730-7dd2-9ac2-91471091425b"
+   "uuid": "d3916436-8137-4502-899f-475b02889c05",
+   "aosS": 1878,
+   "vodId": "01a14193-7bf8-7f0c-b39f-7a91f2026e83"
   },
   {
-   "id": "fortuna2121-1792117745000",
-   "canal": "fortuna2121",
-   "origem": "chat",
+   "id": "geneabreu-1792112865930",
+   "canal": "geneabreu",
+   "origem": "povix",
    "nivel": "resto",
    "categorias": [],
-   "inicioMs": 1792117720000,
-   "fimMs": 1792117755000,
+   "inicioMs": 1792112825514,
+   "fimMs": 1792112873814,
    "resumo": {
-    "pt": "Streamer fala de relacionamento e de duos com outra pessoa; mistura de música e conversa.",
-    "en": "Streamer talks about relationships and duos; a mix of music and conversation.",
-    "es": "El streamer habla de relaciones y dúos; mezcla de música y charla."
+    "pt": "GeneAbreu digita codigo de cofre e fala de beijinhos e de casa.",
+    "en": "GeneAbreu enters a safe code and talks about kisses and home.",
+    "es": "GeneAbreu escribe el codigo de la caja fuerte y habla de besitos y casa."
    },
    "reacao": {
-    "pt": "Chat só emotes.",
-    "en": "Chat only emotes.",
-    "es": "El chat solo emotes."
+    "pt": "Sem chat.",
+    "en": "No chat.",
+    "es": "Sin chat."
    },
    "potencial": 6,
-   "uuid": "b9fb47cf-9968-41d2-8d7d-38d69edc694c",
-   "aosS": 2540,
-   "vodId": "01a14263-81e0-7dfe-9b8c-e37c375614db"
+   "uuid": "4588e2a7-3d98-4a0c-8253-b3f225419cb2",
+   "aosS": 2266
   },
   {
-   "id": "jesusetegaming-1792084958000",
-   "canal": "jesusetegaming",
-   "origem": "chat",
+   "id": "akisbahillo-1792083131147",
+   "canal": "akisbahillo",
+   "origem": "povix",
    "nivel": "resto",
    "categorias": [],
-   "inicioMs": 1792084923000,
-   "fimMs": 1792084943000,
+   "inicioMs": 1792083061961,
+   "fimMs": 1792083150261,
    "resumo": {
-    "pt": "Streamer e chat conversam sobre quem constrói a base e sobre a regra de raid no evento.",
-    "en": "Streamer and chat talk about who builds the base and the raid rule in the event.",
-    "es": "El streamer y el chat hablan de quién construye la base y la regla de raid en el evento."
+    "pt": "Caça de animal e pedido de ajuda para fazer urbano, sem luta.",
+    "en": "Hunting an animal and asking for help to make it urban, no fight.",
+    "es": "Cazando un animal y pidiendo ayuda, sin pelea."
    },
    "reacao": {
-    "pt": "chat 'nose puede raidear ninguna base solo los barcos'",
-    "en": "chat 'no base can be raided, only boats'",
-    "es": "chat 'nose puede raidear ninguna base solo los barcos'"
+    "pt": "Nenhuma.",
+    "en": "None.",
+    "es": "Ninguna."
    },
    "potencial": 6,
-   "uuid": "52435e38-bf74-46d4-88a8-bc01d66dd714",
-   "aosS": 2960,
-   "vodId": "01a14068-a7f8-7084-8802-e8d2e5974422"
-  },
-  {
-   "id": "capodr-1792080691000",
-   "canal": "capodr",
-   "origem": "chat",
-   "nivel": "resto",
-   "categorias": [],
-   "inicioMs": 1792080666000,
-   "fimMs": 1792080686000,
-   "resumo": {
-    "pt": "Streamer abre o evento, se despede do chat e fala de jogar com amigos; sem jogada.",
-    "en": "Streamer opens the event, says goodbye to chat and talks about playing with friends; no play.",
-    "es": "El streamer abre el evento, se despide del chat y habla de jugar con amigos; sin jugada."
-   },
-   "reacao": {
-    "pt": "chat sem reação",
-    "en": "no chat reaction",
-    "es": "sin reacción del chat"
-   },
-   "potencial": 6,
-   "uuid": "70ffd322-9905-4086-9846-fb4076a1e898",
-   "aosS": 960,
-   "vodId": "01a14046-3790-7b53-bd20-f46f979cde40"
-  },
-  {
-   "id": "capodr-1792108555000",
-   "canal": "capodr",
-   "origem": "chat",
-   "nivel": "resto",
-   "categorias": [],
-   "inicioMs": 1792108530000,
-   "fimMs": 1792108550000,
-   "resumo": {
-    "pt": "Streamer procura moto e material sem achar, fala sozinho; sem PvP.",
-    "en": "Streamer looks for a bike and materials without finding them, talks to himself; no PvP.",
-    "es": "El streamer busca moto y materiales sin encontrarlos, habla solo; sin PvP."
-   },
-   "reacao": {
-    "pt": "chat sem reação",
-    "en": "no chat reaction",
-    "es": "sin reacción del chat"
-   },
-   "potencial": 6,
-   "uuid": "42834d0a-f52c-4568-9505-68355fdd9781",
-   "aosS": 23120,
-   "vodId": "01a1409d-40d0-7904-852f-d9f2c719aee4"
-  },
-  {
-   "id": "karlita-caselin-1792122017000",
-   "canal": "karlita-caselin",
-   "origem": "chat",
-   "nivel": "resto",
-   "categorias": [],
-   "inicioMs": 1792121992000,
-   "fimMs": 1792122022000,
-   "resumo": {
-    "pt": "Trecho confuso sobre banheiro e um barco; nada de jogo.",
-    "en": "Confusing snippet about the bathroom and a boat; no game action.",
-    "es": "Fragmento confuso sobre el baño y un barco; nada de juego."
-   },
-   "reacao": {
-    "pt": "Chat: 'se puso raro el rust', 'nada más que vuelva la luz'.",
-    "en": "Chat: 'the rust got weird', 'just wait for the light to come back'.",
-    "es": "El chat: 'se puso raro el rust', 'nada más que vuelva la luz'."
-   },
-   "potencial": 6,
-   "uuid": "7ea95929-2039-4280-b98d-c245924306af",
-   "aosS": 41870,
-   "vodId": "01a1404c-9090-7c93-8a8b-7ebbbaa32dcd"
+   "uuid": "2215a8de-0238-4ffc-be22-ec933a34aead",
+   "aosS": 3028
   },
   {
    "id": "latwinn-1792107618000",
@@ -9145,6 +10932,53 @@
    "uuid": "1bbb679e-4815-41b0-ada7-9f91a77a4b1a",
    "aosS": 12130,
    "vodId": "01a144e5-d760-730a-a3e6-bf773c869e5c"
+  },
+  {
+   "id": "itsvany-1792092763767",
+   "canal": "itsvany",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [
+    "irl"
+   ],
+   "inicioMs": 1792092684837,
+   "fimMs": 1792092769437,
+   "resumo": {
+    "pt": "Itsvany na cam dizendo que vai tentar matar alguem, fala de gallego.",
+    "en": "Itsvany on cam says she will try to kill someone, talks about a gallego.",
+    "es": "Itsvany en cam dice que va a intentar matar a alguien, habla de un gallego."
+   },
+   "reacao": {
+    "pt": "Sem chat; fala solta.",
+    "en": "No chat; loose talk.",
+    "es": "Sin chat; habla suelta."
+   },
+   "potencial": 6,
+   "uuid": "a3860c1e-d387-4390-a1a5-0121af3f886e",
+   "aosS": 1756
+  },
+  {
+   "id": "lcelestiall-1792102517758",
+   "canal": "lcelestiall",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792102498432,
+   "fimMs": 1792102573932,
+   "resumo": {
+    "pt": "Menu de inventário em barril de armazenamento; fala sobre procurar caixas debaixo d'água.",
+    "en": "Inventory menu on a storage barrel; talk about searching for crates underwater.",
+    "es": "Menú de inventario con barril de almacenamiento; habla de buscar cajas bajo el agua."
+   },
+   "reacao": {
+    "pt": "Chat vazio; sem reação.",
+    "en": "Empty chat; no reaction.",
+    "es": "Chat vacío; sin reacción."
+   },
+   "potencial": 6,
+   "uuid": "15438164-a4af-4af3-b892-e87fe0eeb00b",
+   "aosS": 1396,
+   "vodId": "01a1418c-b1b0-7e04-8ed7-ffb0b49c24c4"
   },
   {
    "id": "jenny_or69-1792086793000",
@@ -9308,29 +11142,6 @@
    "vodId": "01a14aff-7ca0-7783-a8f0-23950d72ed2d"
   },
   {
-   "id": "joseluej-1792162132000",
-   "canal": "joseluej",
-   "origem": "chat",
-   "nivel": "resto",
-   "categorias": [],
-   "inicioMs": 1792162107000,
-   "fimMs": 1792162137000,
-   "resumo": {
-    "pt": "Streamer fala de bots e de pouca gente no servidor; chat só dá boas-vindas.",
-    "en": "Streamer talks about bots and few people on the server; chat only welcomes.",
-    "es": "El streamer habla de bots y poca gente en el servidor; el chat solo da bienvenidas."
-   },
-   "reacao": {
-    "pt": "Nenhuma.",
-    "en": "None.",
-    "es": "Ninguna."
-   },
-   "potencial": 5,
-   "uuid": "fd8eaa00-feb0-4630-9df4-376ca6ac84ab",
-   "aosS": 2490,
-   "vodId": "01a14509-8fe8-76f8-8583-56e80f3f2280"
-  },
-  {
    "id": "gsire88-1792083185000",
    "canal": "gsire88",
    "origem": "chat",
@@ -9428,30 +11239,73 @@
    "vodId": "01a14502-b9e8-761d-bc65-bbcbb8d42f07"
   },
   {
-   "id": "jita-1792199836830",
-   "canal": "jita",
+   "id": "engeekiados-1792084317356",
+   "canal": "engeekiados",
    "origem": "povix",
    "linha": "highlight",
    "nivel": "resto",
-   "categorias": [
-    "pvp"
-   ],
-   "inicioMs": 1792199795578,
-   "fimMs": 1792199839978,
+   "categorias": [],
+   "inicioMs": 1792084279570,
+   "fimMs": 1792084361670,
    "resumo": {
-    "pt": "Na base mexendo no loot.",
-    "en": "At base sorting loot.",
-    "es": "En la base moviendo loot."
+    "pt": "Engeekiados dormindo num abrigo e fala sobre fazer um armário e martelo.",
+    "en": "Engeekiados sleeping in a shelter and talks about making a cabinet and a hammer.",
+    "es": "Engeekiados durmiendo en un refugio y habla de hacer un armario y un martillo."
    },
    "reacao": {
-    "pt": "Nenhuma.",
-    "en": "None.",
-    "es": "Ninguna."
+    "pt": "Chat vazio.",
+    "en": "Chat empty.",
+    "es": "Chat vacío."
    },
    "potencial": 5,
-   "uuid": "2e3a736f-d323-4356-9607-f7e437507e5d",
-   "aosS": 40534,
-   "vodId": "01a14504-2530-7657-aa7d-e11aafe0f5c8"
+   "uuid": "eb2c2918-4d86-4bbd-97fe-efb85f54b19a",
+   "aosS": 1281
+  },
+  {
+   "id": "engeekiados-1792084596812",
+   "canal": "engeekiados",
+   "origem": "povix",
+   "linha": "highlight",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792084584770,
+   "fimMs": 1792084677470,
+   "resumo": {
+    "pt": "Engeekiados em uma porta de base, mexendo em código e falando de um mapa.",
+    "en": "Engeekiados at a base door, working with a code and talking about a map.",
+    "es": "Engeekiados en la puerta de una base, trabajando con un código y hablando de un mapa."
+   },
+   "reacao": {
+    "pt": "Chat vazio.",
+    "en": "Chat empty.",
+    "es": "Chat vacío."
+   },
+   "potencial": 5,
+   "uuid": "eb2c2918-4d86-4bbd-97fe-efb85f54b19a",
+   "aosS": 1586
+  },
+  {
+   "id": "bymartinfit-1792111805000",
+   "canal": "bymartinfit",
+   "origem": "chat",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792111690000,
+   "fimMs": 1792111720000,
+   "resumo": {
+    "pt": "Streamer conversa sobre o layout das caixas e da base, sem acao.",
+    "en": "Streamer talks about the layout of crates and the base, no action.",
+    "es": "El streamer habla sobre el diseno de cajas y la base, sin accion."
+   },
+   "reacao": {
+    "pt": "Chat vazio.",
+    "en": "Chat empty.",
+    "es": "Chat vacio."
+   },
+   "potencial": 5,
+   "uuid": "a294af84-79d4-476c-a6d0-b46e815c668a",
+   "aosS": 23050,
+   "vodId": "01a140ce-8a00-7182-8400-ecbada26f5d6"
   },
   {
    "id": "cero-gamer-1792195268806",
@@ -9478,6 +11332,29 @@
    "uuid": "7fb32874-bed5-4136-9739-5cb4d6966d1c",
    "aosS": 10954,
    "vodId": "01a14681-5b08-74c2-98b3-18dd5b636190"
+  },
+  {
+   "id": "davonaar-1792104672824",
+   "canal": "davonaar",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792104637144,
+   "fimMs": 1792104721244,
+   "resumo": {
+    "pt": "Conversa sobre base e barco, sem ação.",
+    "en": "Talk about base and boat, no action.",
+    "es": "Charla sobre base y barco, sin acción."
+   },
+   "reacao": {
+    "pt": "Nenhuma.",
+    "en": "None.",
+    "es": "Ninguna."
+   },
+   "potencial": 5,
+   "uuid": "76b1f1ab-e8db-4952-a784-a2765702fa6f",
+   "aosS": 23906,
+   "vodId": "01a14055-db78-7dd2-b80c-2560c3b65c7b"
   },
   {
    "id": "habanacats-1792089146000",
@@ -9549,6 +11426,28 @@
    "vodId": "01a1407c-b4c8-7376-abfb-28ad39e4f157"
   },
   {
+   "id": "itsvany-1792094604000",
+   "canal": "itsvany",
+   "origem": "chat",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792094569000,
+   "fimMs": 1792094589000,
+   "resumo": {
+    "pt": "Streamer conversa sobre estoque, comida e armário; chat dá boas-vindas e follows.",
+    "en": "Streamer talks about stock, food and a cabinet; chat welcomes and follows.",
+    "es": "El streamer habla de inventario, comida y un armario; el chat da bienvenidas y follows."
+   },
+   "reacao": {
+    "pt": "chat follows e links",
+    "en": "chat follows and links",
+    "es": "chat follows y links"
+   },
+   "potencial": 5,
+   "uuid": "a3860c1e-d387-4390-a1a5-0121af3f886e",
+   "aosS": 3640
+  },
+  {
    "id": "arkaikodota-1792086234000",
    "canal": "arkaikodota",
    "origem": "chat",
@@ -9597,214 +11496,6 @@
    "titulo": "bug"
   },
   {
-   "id": "britus99-1792187250971",
-   "canal": "britus99",
-   "origem": "povix",
-   "linha": "highlight",
-   "nivel": "resto",
-   "categorias": [
-    "pvp"
-   ],
-   "inicioMs": 1792187196403,
-   "fimMs": 1792187259403,
-   "resumo": {
-    "pt": "Parado na base lendo ideias de patch do Rust.",
-    "en": "Standing at base reading Rust patch ideas.",
-    "es": "Parado en la base leyendo ideas de parche de Rust."
-   },
-   "reacao": {
-    "pt": "Nenhuma.",
-    "en": "None.",
-    "es": "Ninguna."
-   },
-   "potencial": 5,
-   "uuid": "bb3a8a72-9419-47fb-8d73-3ca53d3fe115",
-   "aosS": 14312,
-   "vodId": "01a145d4-0020-7ef1-ad77-d1a79a3bfd82"
-  },
-  {
-   "id": "britus99-1792188230965",
-   "canal": "britus99",
-   "origem": "povix",
-   "linha": "highlight",
-   "nivel": "resto",
-   "categorias": [
-    "pvp"
-   ],
-   "inicioMs": 1792188214103,
-   "fimMs": 1792188277103,
-   "resumo": {
-    "pt": "Andando na base contando história de whitelist.",
-    "en": "Walking around base telling a whitelist story.",
-    "es": "Caminando por la base contando una historia de whitelist."
-   },
-   "reacao": {
-    "pt": "Nenhuma.",
-    "en": "None.",
-    "es": "Ninguna."
-   },
-   "potencial": 5,
-   "uuid": "bb3a8a72-9419-47fb-8d73-3ca53d3fe115",
-   "aosS": 15330,
-   "vodId": "01a145d4-0020-7ef1-ad77-d1a79a3bfd82"
-  },
-  {
-   "id": "britus99-1792187983739",
-   "canal": "britus99",
-   "origem": "povix",
-   "linha": "highlight",
-   "nivel": "resto",
-   "categorias": [
-    "pvp"
-   ],
-   "inicioMs": 1792187944603,
-   "fimMs": 1792188007603,
-   "resumo": {
-    "pt": "Na base falando de streamers de roleplay.",
-    "en": "At base talking about roleplay streamers.",
-    "es": "En la base hablando de streamers de roleplay."
-   },
-   "reacao": {
-    "pt": "Nenhuma.",
-    "en": "None.",
-    "es": "Ninguna."
-   },
-   "potencial": 5,
-   "uuid": "bb3a8a72-9419-47fb-8d73-3ca53d3fe115",
-   "aosS": 15061,
-   "vodId": "01a145d4-0020-7ef1-ad77-d1a79a3bfd82"
-  },
-  {
-   "id": "bruni2285-1792194834984",
-   "canal": "bruni2285",
-   "origem": "povix",
-   "linha": "highlight",
-   "nivel": "resto",
-   "categorias": [
-    "pvp"
-   ],
-   "inicioMs": 1792194798100,
-   "fimMs": 1792194877900,
-   "resumo": {
-    "pt": "Debaixo d'água com picareta; submarino passa.",
-    "en": "Underwater with a pickaxe; a sub passes over.",
-    "es": "Bajo el agua con pico; pasa un submarino."
-   },
-   "reacao": {
-    "pt": "Nenhuma.",
-    "en": "None.",
-    "es": "Ninguna."
-   },
-   "potencial": 5,
-   "uuid": "765793aa-7f49-47af-8af3-6f27572f0f97",
-   "aosS": 16123,
-   "vodId": "01a1462c-5d38-7026-8724-dbfc3bc43cce"
-  },
-  {
-   "id": "bruni2285-1792195484940",
-   "canal": "bruni2285",
-   "origem": "povix",
-   "linha": "highlight",
-   "nivel": "resto",
-   "categorias": [
-    "pvp"
-   ],
-   "inicioMs": 1792195427100,
-   "fimMs": 1792195507700,
-   "resumo": {
-    "pt": "Mergulhando com o time.",
-    "en": "Diving with the team.",
-    "es": "Buceando con el equipo."
-   },
-   "reacao": {
-    "pt": "Nenhuma.",
-    "en": "None.",
-    "es": "Ninguna."
-   },
-   "potencial": 5,
-   "uuid": "765793aa-7f49-47af-8af3-6f27572f0f97",
-   "aosS": 16752,
-   "vodId": "01a1462c-5d38-7026-8724-dbfc3bc43cce"
-  },
-  {
-   "id": "bruni2285-1792195683870",
-   "canal": "bruni2285",
-   "origem": "povix",
-   "linha": "highlight",
-   "nivel": "resto",
-   "categorias": [
-    "pvp"
-   ],
-   "inicioMs": 1792195672300,
-   "fimMs": 1792195757800,
-   "resumo": {
-    "pt": "Nadando no fundo do mar procurando algo.",
-    "en": "Swimming on the seabed looking for something.",
-    "es": "Nadando en el fondo del mar buscando algo."
-   },
-   "reacao": {
-    "pt": "Nenhuma.",
-    "en": "None.",
-    "es": "Ninguna."
-   },
-   "potencial": 5,
-   "uuid": "765793aa-7f49-47af-8af3-6f27572f0f97",
-   "aosS": 16997,
-   "vodId": "01a1462c-5d38-7026-8724-dbfc3bc43cce"
-  },
-  {
-   "id": "lcelestiall-1792193273405",
-   "canal": "lcelestiall",
-   "origem": "povix",
-   "linha": "highlight",
-   "nivel": "resto",
-   "categorias": [
-    "pvp"
-   ],
-   "inicioMs": 1792193264617,
-   "fimMs": 1792193308317,
-   "resumo": {
-    "pt": "Com facão numa ilha combinando ir de barco.",
-    "en": "With a machete on an island planning a boat trip.",
-    "es": "Con machete en una isla planeando ir en barco."
-   },
-   "reacao": {
-    "pt": "Nenhuma.",
-    "en": "None.",
-    "es": "Ninguna."
-   },
-   "potencial": 5,
-   "uuid": "4ee5e393-12ac-461e-8d3f-2d88af615f2e",
-   "aosS": 1015,
-   "vodId": "01a146fb-8090-72ca-9166-fc9bf600068e"
-  },
-  {
-   "id": "lcelestiall-1792193629735",
-   "canal": "lcelestiall",
-   "origem": "povix",
-   "linha": "highlight",
-   "nivel": "resto",
-   "categorias": [
-    "pvp"
-   ],
-   "inicioMs": 1792193621217,
-   "fimMs": 1792193703917,
-   "resumo": {
-    "pt": "Coletando frutas e falando de motores.",
-    "en": "Picking fruit and talking about engines.",
-    "es": "Recogiendo frutas y hablando de motores."
-   },
-   "reacao": {
-    "pt": "Nenhuma.",
-    "en": "None.",
-    "es": "Ninguna."
-   },
-   "potencial": 5,
-   "uuid": "4ee5e393-12ac-461e-8d3f-2d88af615f2e",
-   "aosS": 1371,
-   "vodId": "01a146fb-8090-72ca-9166-fc9bf600068e"
-  },
-  {
    "id": "minely-1792189231920",
    "canal": "minely",
    "origem": "povix",
@@ -9829,6 +11520,29 @@
    "uuid": "642a9c35-5e77-4337-9f07-7bf723c55980",
    "aosS": 5041,
    "vodId": "01a14680-64f0-7e8a-90af-ed67dd1f1cbf"
+  },
+  {
+   "id": "minely-1792085814113",
+   "canal": "minely",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792085806113,
+   "fimMs": 1792085857863,
+   "resumo": {
+    "pt": "Besta apontada para um navio grande ao longe no mar; nenhum alvo visivel.",
+    "en": "Crossbow aimed at a big ship far out at sea; no visible target.",
+    "es": "Ballesta apuntando a un barco grande lejos en el mar; sin objetivo visible."
+   },
+   "reacao": {
+    "pt": "Fala sobre sair e matar; sem reacao.",
+    "en": "Talks about getting out and killing; no reaction.",
+    "es": "Habla de salir y matar; sin reaccion."
+   },
+   "potencial": 5,
+   "uuid": "b23e08a7-019e-4b0f-95df-2df221c92b4b",
+   "aosS": 3357,
+   "vodId": "01a14070-1268-71a8-9b07-23faef361fa8"
   },
   {
    "id": "obidezu-1792174204567",
@@ -9857,51 +11571,6 @@
    "vodId": "01a14521-c338-73bc-b921-6800097b5211"
   },
   {
-   "id": "itsvany-1792094604000",
-   "canal": "itsvany",
-   "origem": "chat",
-   "nivel": "resto",
-   "categorias": [],
-   "inicioMs": 1792094569000,
-   "fimMs": 1792094589000,
-   "resumo": {
-    "pt": "Streamer conversa sobre estoque, comida e armário; chat dá boas-vindas e follows.",
-    "en": "Streamer talks about stock, food and a cabinet; chat welcomes and follows.",
-    "es": "El streamer habla de inventario, comida y un armario; el chat da bienvenidas y follows."
-   },
-   "reacao": {
-    "pt": "chat follows e links",
-    "en": "chat follows and links",
-    "es": "chat follows y links"
-   },
-   "potencial": 5,
-   "uuid": "a3860c1e-d387-4390-a1a5-0121af3f886e",
-   "aosS": 3640
-  },
-  {
-   "id": "bymartinfit-1792111805000",
-   "canal": "bymartinfit",
-   "origem": "chat",
-   "nivel": "resto",
-   "categorias": [],
-   "inicioMs": 1792111690000,
-   "fimMs": 1792111720000,
-   "resumo": {
-    "pt": "Streamer conversa sobre o layout das caixas e da base, sem acao.",
-    "en": "Streamer talks about the layout of crates and the base, no action.",
-    "es": "El streamer habla sobre el diseno de cajas y la base, sin accion."
-   },
-   "reacao": {
-    "pt": "Chat vazio.",
-    "en": "Chat empty.",
-    "es": "Chat vacio."
-   },
-   "potencial": 5,
-   "uuid": "a294af84-79d4-476c-a6d0-b46e815c668a",
-   "aosS": 23050,
-   "vodId": "01a140ce-8a00-7182-8400-ecbada26f5d6"
-  },
-  {
    "id": "maxigtube-1792118413000",
    "canal": "maxigtube",
    "origem": "chat",
@@ -9922,6 +11591,29 @@
    "potencial": 5,
    "uuid": "97684e83-c091-4822-8858-43e65b65c166",
    "aosS": 38240,
+   "vodId": "01a1404b-9690-7c39-9557-6cfdf6738ba2"
+  },
+  {
+   "id": "maxigtube-1792111790495",
+   "canal": "maxigtube",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792111750509,
+   "fimMs": 1792111810509,
+   "resumo": {
+    "pt": "Caixa verde brilhando no escuro; chat conversa sobre vender autografo e compras.",
+    "en": "Glowing green crate in the dark; chat talks about selling an autograph and buying.",
+    "es": "Caja verde brillando en la oscuridad; el chat habla de vender un autografo y comprar."
+   },
+   "reacao": {
+    "pt": "Chat troca ofertas ('que me das?'), sem reacao forte do streamer.",
+    "en": "Chat trades offers ('what do you give me?'), no strong reaction from the streamer.",
+    "es": "El chat hace ofertas ('que me das?'), sin reaccion fuerte del streamer."
+   },
+   "potencial": 5,
+   "uuid": "97684e83-c091-4822-8858-43e65b65c166",
+   "aosS": 31693,
    "vodId": "01a1404b-9690-7c39-9557-6cfdf6738ba2"
   },
   {
@@ -10087,29 +11779,6 @@
    "vodId": "01a1403b-1fb8-79e9-8524-22d9b84e1a04"
   },
   {
-   "id": "fortuna2121-1792118185000",
-   "canal": "fortuna2121",
-   "origem": "chat",
-   "nivel": "resto",
-   "categorias": [],
-   "inicioMs": 1792118160000,
-   "fimMs": 1792118190000,
-   "resumo": {
-    "pt": "Streamer tenta plantar zona e fala de um 'estárbio'; chat só manda comando.",
-    "en": "Streamer tries to plant a zone and talks about a 'stalker'; chat only sends commands.",
-    "es": "El streamer intenta plantar zona y habla de un 'estárbio'; el chat solo manda comandos."
-   },
-   "reacao": {
-    "pt": "Chat só comando; sem reação dele.",
-    "en": "Chat only commands; no reaction from him.",
-    "es": "El chat solo comandos; sin reacción de él."
-   },
-   "potencial": 4,
-   "uuid": "b9fb47cf-9968-41d2-8d7d-38d69edc694c",
-   "aosS": 2980,
-   "vodId": "01a14263-81e0-7dfe-9b8c-e37c375614db"
-  },
-  {
    "id": "tw-kuchilla-1792070017000",
    "canal": "tw-kuchilla",
    "origem": "chat",
@@ -10131,6 +11800,29 @@
    "uuid": "d6f06c85-634d-4428-9c8a-e041c2782a3c",
    "aosS": 11270,
    "vodId": "01a13f04-a740-7fbe-9464-058f97340208"
+  },
+  {
+   "id": "benjjjafps-1792082827766",
+   "canal": "benjjjafps",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792082777506,
+   "fimMs": 1792082837306,
+   "resumo": {
+    "pt": "Mergulho escuro na missao 'Abordar el problema'; chat pergunta quanto dura o evento.",
+    "en": "Dark dive on the 'Abordar el problema' quest; chat asks how long the event lasts.",
+    "es": "Buceo oscuro en la mision 'Abordar el problema'; el chat pregunta cuanto dura el evento."
+   },
+   "reacao": {
+    "pt": "Chat pergunta sobre o evento; streamer sem reacao.",
+    "en": "Chat asks about the event; streamer no reaction.",
+    "es": "El chat pregunta por el evento; el streamer sin reaccion."
+   },
+   "potencial": 4,
+   "uuid": "8fdfdd96-bb42-42ab-b1f0-0fd44c87ff0e",
+   "aosS": 1812,
+   "vodId": "01a14059-7170-7e44-b205-1c1e832114cc"
   },
   {
    "id": "role7-1792106096000",
@@ -10271,6 +11963,75 @@
    "vodId": "01a14070-1268-71a8-9b07-23faef361fa8"
   },
   {
+   "id": "obidezu-1792083146834",
+   "canal": "obidezu",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792083103566,
+   "fimMs": 1792083186066,
+   "resumo": {
+    "pt": "Início da live: conversa com a mãe e plano de buscar madeira, sem ação.",
+    "en": "Start of the stream: talk with his mother and plan to gather wood, no action.",
+    "es": "Inicio del directo: charla con su madre y plan de buscar madera, sin acción."
+   },
+   "reacao": {
+    "pt": "Nenhuma.",
+    "en": "None.",
+    "es": "Ninguna."
+   },
+   "potencial": 4,
+   "uuid": "7d36ba56-a8e9-4eed-92bf-74ef5f1c07e5",
+   "aosS": 1041,
+   "vodId": "01a1406a-2e98-70c1-b93c-3a3fcb1a28d7"
+  },
+  {
+   "id": "obidezu-1792083264470",
+   "canal": "obidezu",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792083199166,
+   "fimMs": 1792083273466,
+   "resumo": {
+    "pt": "Coleta de madeira e planejamento de tanque, sem ação.",
+    "en": "Gathering wood and planning a tank, no action.",
+    "es": "Recogiendo madera y planeando un tanque, sin acción."
+   },
+   "reacao": {
+    "pt": "Nenhuma.",
+    "en": "None.",
+    "es": "Ninguna."
+   },
+   "potencial": 4,
+   "uuid": "7d36ba56-a8e9-4eed-92bf-74ef5f1c07e5",
+   "aosS": 1136,
+   "vodId": "01a1406a-2e98-70c1-b93c-3a3fcb1a28d7"
+  },
+  {
+   "id": "maxigtube-1792113681267",
+   "canal": "maxigtube",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792113660909,
+   "fimMs": 1792113739209,
+   "resumo": {
+    "pt": "Arco perto de rochas e ponte; sem luta visivel.",
+    "en": "Crossbow near rocks and a bridge; no visible fight.",
+    "es": "Ballesta cerca de rocas y un puente; sin pelea visible."
+   },
+   "reacao": {
+    "pt": "Fala sobre pedra e caminho, sem reacao.",
+    "en": "Talks about rocks and the path, no reaction.",
+    "es": "Habla de piedra y el camino, sin reaccion."
+   },
+   "potencial": 4,
+   "uuid": "97684e83-c091-4822-8858-43e65b65c166",
+   "aosS": 33603,
+   "vodId": "01a1404b-9690-7c39-9557-6cfdf6738ba2"
+  },
+  {
    "id": "jarita-1792081938000",
    "canal": "jarita",
    "origem": "chat",
@@ -10363,6 +12124,97 @@
    "vodId": "01a1404c-9090-7c95-ad00-ecc901672995"
   },
   {
+   "id": "dichanho-1792080764318",
+   "canal": "dichanho",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792080742782,
+   "fimMs": 1792080818282,
+   "resumo": {
+    "pt": "Explica a construção de uma base e estruturas, sem ação.",
+    "en": "Explains building a base and structures, no action.",
+    "es": "Explica la construcción de una base y estructuras, sin acción."
+   },
+   "reacao": {
+    "pt": "Nenhuma.",
+    "en": "None.",
+    "es": "Ninguna."
+   },
+   "potencial": 4,
+   "uuid": "eafc9845-638f-4b13-ba87-9ac35351e18e",
+   "aosS": 4290,
+   "vodId": "01a14014-9488-7543-ae31-166ad73d8da5"
+  },
+  {
+   "id": "dichanho-1792106344802",
+   "canal": "dichanho",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792106336982,
+   "fimMs": 1792106420782,
+   "resumo": {
+    "pt": "Conversa sobre crafting e balas, sem ação.",
+    "en": "Talk about crafting and bullets, no action.",
+    "es": "Charla sobre crafteo y balas, sin acción."
+   },
+   "reacao": {
+    "pt": "Nenhuma.",
+    "en": "None.",
+    "es": "Ninguna."
+   },
+   "potencial": 4,
+   "uuid": "eafc9845-638f-4b13-ba87-9ac35351e18e",
+   "aosS": 29884,
+   "vodId": "01a14014-9488-7543-ae31-166ad73d8da5"
+  },
+  {
+   "id": "gamerzhdita-1792190288076",
+   "canal": "gamerzhdita",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792190281110,
+   "fimMs": 1792190340010,
+   "resumo": {
+    "pt": "Fala sobre drone e problema de jogo, sem ação.",
+    "en": "Talk about a drone and a game problem, no action.",
+    "es": "Habla sobre un drone y un problema del juego, sin acción."
+   },
+   "reacao": {
+    "pt": "Nenhuma.",
+    "en": "None.",
+    "es": "Ninguna."
+   },
+   "potencial": 4,
+   "uuid": "75bb8799-ab09-4833-aa0c-9af382f11f39",
+   "aosS": 2751,
+   "vodId": "01a146b3-7b10-7d57-95dc-c308650d38bd"
+  },
+  {
+   "id": "dob3rmarley-1792088057144",
+   "canal": "dob3rmarley",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792088004266,
+   "fimMs": 1792088083066,
+   "resumo": {
+    "pt": "Mergulho noturno no mar com a tela escura; streamer fala de reciclagem e farol.",
+    "en": "Night dive at sea with a dark screen; streamer talks about recycling and the lighthouse.",
+    "es": "Buceo nocturno en el mar con pantalla oscura; el streamer habla de reciclaje y el faro."
+   },
+   "reacao": {
+    "pt": "Nenhuma.",
+    "en": "None.",
+    "es": "Ninguna."
+   },
+   "potencial": 4,
+   "uuid": "12a662b3-e3c4-4864-ac87-0a3f7cc0484e",
+   "aosS": 5570
+  },
+  {
    "id": "snownote-1792088517000",
    "canal": "snownote",
    "origem": "chat",
@@ -10407,32 +12259,6 @@
    "uuid": "d6f06c85-634d-4428-9c8a-e041c2782a3c",
    "aosS": 4110,
    "vodId": "01a13f04-a740-7fbe-9464-058f97340208"
-  },
-  {
-   "id": "jita-1792202476590",
-   "canal": "jita",
-   "origem": "povix",
-   "linha": "highlight",
-   "nivel": "resto",
-   "categorias": [
-    "pvp"
-   ],
-   "inicioMs": 1792202468488,
-   "fimMs": 1792202521498,
-   "resumo": {
-    "pt": "Organizando caixas na base.",
-    "en": "Organizing boxes at base.",
-    "es": "Organizando cajas en la base."
-   },
-   "reacao": {
-    "pt": "Nenhuma.",
-    "en": "None.",
-    "es": "Ninguna."
-   },
-   "potencial": 3,
-   "uuid": "2e3a736f-d323-4356-9607-f7e437507e5d",
-   "aosS": 43206,
-   "vodId": "01a14504-2530-7657-aa7d-e11aafe0f5c8"
   },
   {
    "id": "latwinn-1792085978000",
@@ -10527,156 +12353,6 @@
    "clipe": "clip_01M53Y0J4SC7REJ1VTYSFYXKF5",
    "views": 0,
    "titulo": "bug"
-  },
-  {
-   "id": "lcelestiall-1792195981773",
-   "canal": "lcelestiall",
-   "origem": "povix",
-   "linha": "highlight",
-   "nivel": "resto",
-   "categorias": [
-    "pvp"
-   ],
-   "inicioMs": 1792195967317,
-   "fimMs": 1792196010517,
-   "resumo": {
-    "pt": "Debaixo d'água à noite conversando.",
-    "en": "Underwater at night chatting.",
-    "es": "Bajo el agua de noche charlando."
-   },
-   "reacao": {
-    "pt": "Nenhuma.",
-    "en": "None.",
-    "es": "Ninguna."
-   },
-   "potencial": 3,
-   "uuid": "4ee5e393-12ac-461e-8d3f-2d88af615f2e",
-   "aosS": 3717,
-   "vodId": "01a146fb-8090-72ca-9166-fc9bf600068e"
-  },
-  {
-   "id": "minely-1792189988216",
-   "canal": "minely",
-   "origem": "povix",
-   "linha": "highlight",
-   "nivel": "resto",
-   "categorias": [
-    "pvp"
-   ],
-   "inicioMs": 1792189955216,
-   "fimMs": 1792190023216,
-   "resumo": {
-    "pt": "Troca roupas num manequim no barco.",
-    "en": "Swapping clothes on a mannequin on the boat.",
-    "es": "Cambia ropa en un maniquí en el barco."
-   },
-   "reacao": {
-    "pt": "Sem reação relevante.",
-    "en": "No notable reaction.",
-    "es": "Sin reacción relevante."
-   },
-   "potencial": 3,
-   "uuid": "642a9c35-5e77-4337-9f07-7bf723c55980",
-   "aosS": 5773,
-   "vodId": "01a14680-64f0-7e8a-90af-ed67dd1f1cbf"
-  },
-  {
-   "id": "obidezu-1792176178859",
-   "canal": "obidezu",
-   "origem": "povix",
-   "linha": "highlight",
-   "nivel": "resto",
-   "categorias": [
-    "pvp"
-   ],
-   "inicioMs": 1792176122747,
-   "fimMs": 1792176203247,
-   "resumo": {
-    "pt": "Explica onde fica uma caixa no moinho.",
-    "en": "Explains where a box is at the windmill.",
-    "es": "Explica dónde hay una caja en el molino."
-   },
-   "reacao": {
-    "pt": "Sem reação relevante.",
-    "en": "No notable reaction.",
-    "es": "Sin reacción relevante."
-   },
-   "potencial": 3,
-   "uuid": "9de4903c-374a-4fe1-8f25-44a9f1783ba8",
-   "aosS": 14920,
-   "vodId": "01a14521-c338-73bc-b921-6800097b5211"
-  },
-  {
-   "id": "obidezu-1792176380787",
-   "canal": "obidezu",
-   "origem": "povix",
-   "linha": "highlight",
-   "nivel": "resto",
-   "categorias": [
-    "pvp"
-   ],
-   "inicioMs": 1792176349647,
-   "fimMs": 1792176437847,
-   "resumo": {
-    "pt": "Construindo com o martelo enquanto conversa sobre o design.",
-    "en": "Building with the hammer while talking design.",
-    "es": "Construyendo con el martillo mientras habla del diseño."
-   },
-   "reacao": {
-    "pt": "Sem reação relevante.",
-    "en": "No notable reaction.",
-    "es": "Sin reacción relevante."
-   },
-   "potencial": 3,
-   "uuid": "9de4903c-374a-4fe1-8f25-44a9f1783ba8",
-   "aosS": 15147,
-   "vodId": "01a14521-c338-73bc-b921-6800097b5211"
-  },
-  {
-   "id": "maxigtube-1792118643000",
-   "canal": "maxigtube",
-   "origem": "chat",
-   "nivel": "resto",
-   "categorias": [],
-   "inicioMs": 1792118528000,
-   "fimMs": 1792118568000,
-   "resumo": {
-    "pt": "Streamer conta uma historia pessoal sobre idade e amigos; chat faz piada.",
-    "en": "Streamer tells a personal story about age and friends; chat jokes.",
-    "es": "El streamer cuenta una historia personal sobre la edad y amigos; el chat bromea."
-   },
-   "reacao": {
-    "pt": "Chat ri e comenta a idade dele.",
-    "en": "Chat laughs and comments on his age.",
-    "es": "El chat se rie y comenta su edad."
-   },
-   "potencial": 3,
-   "uuid": "97684e83-c091-4822-8858-43e65b65c166",
-   "aosS": 38470,
-   "vodId": "01a1404b-9690-7c39-9557-6cfdf6738ba2"
-  },
-  {
-   "id": "maxigtube-1792120733000",
-   "canal": "maxigtube",
-   "origem": "chat",
-   "nivel": "resto",
-   "categorias": [],
-   "inicioMs": 1792120618000,
-   "fimMs": 1792120658000,
-   "resumo": {
-    "pt": "Streamer fala de estudos e de um trabalho sem pagamento com o chat; sem jogo.",
-    "en": "Streamer talks about studies and an unpaid job with chat; no game.",
-    "es": "El streamer habla de estudios y un trabajo sin pago con el chat; sin juego."
-   },
-   "reacao": {
-    "pt": "Chat ri e pergunta sobre a faculdade.",
-    "en": "Chat laughs and asks about college.",
-    "es": "El chat se rie y pregunta por la facultad."
-   },
-   "potencial": 3,
-   "uuid": "97684e83-c091-4822-8858-43e65b65c166",
-   "aosS": 40560,
-   "vodId": "01a1404b-9690-7c39-9557-6cfdf6738ba2"
   },
   {
    "id": "ipaoo-1792083633000",
@@ -10840,6 +12516,119 @@
    "vodId": "01a1404c-9090-7c95-ad00-ecc901672995"
   },
   {
+   "id": "dichanho-1792079857834",
+   "canal": "dichanho",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792079849482,
+   "fimMs": 1792079863022,
+   "resumo": {
+    "pt": "Início da live, cumprimentos e falas curtas.",
+    "en": "Start of the stream, greetings and short talk.",
+    "es": "Inicio del directo, saludos y charla corta."
+   },
+   "reacao": {
+    "pt": "Nenhuma.",
+    "en": "None.",
+    "es": "Ninguna."
+   },
+   "potencial": 3,
+   "uuid": "eafc9845-638f-4b13-ba87-9ac35351e18e",
+   "aosS": 3396,
+   "vodId": "01a14014-9488-7543-ae31-166ad73d8da5"
+  },
+  {
+   "id": "gamerzhdita-1792188981582",
+   "canal": "gamerzhdita",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792188958310,
+   "fimMs": 1792189013010,
+   "resumo": {
+    "pt": "Conversa sobre algo que não morre e um problema no computador, sem ação.",
+    "en": "Talk about something that does not die and a computer problem, no action.",
+    "es": "Charla sobre algo que no muere y un problema de computadora, sin acción."
+   },
+   "reacao": {
+    "pt": "Nenhuma.",
+    "en": "None.",
+    "es": "Ninguna."
+   },
+   "potencial": 3,
+   "uuid": "75bb8799-ab09-4833-aa0c-9af382f11f39",
+   "aosS": 1428,
+   "vodId": "01a146b3-7b10-7d57-95dc-c308650d38bd"
+  },
+  {
+   "id": "gamerzhdita-1792190027912",
+   "canal": "gamerzhdita",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792189999410,
+   "fimMs": 1792190074210,
+   "resumo": {
+    "pt": "Fala sobre não poder fazer nada, sem ação.",
+    "en": "Talk about not being able to do anything, no action.",
+    "es": "Habla de no poder hacer nada, sin acción."
+   },
+   "reacao": {
+    "pt": "Nenhuma.",
+    "en": "None.",
+    "es": "Ninguna."
+   },
+   "potencial": 3,
+   "uuid": "75bb8799-ab09-4833-aa0c-9af382f11f39",
+   "aosS": 2469,
+   "vodId": "01a146b3-7b10-7d57-95dc-c308650d38bd"
+  },
+  {
+   "id": "dob3rmarley-1792080681900",
+   "canal": "dob3rmarley",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792080662066,
+   "fimMs": 1792080734166,
+   "resumo": {
+    "pt": "Tela de escolha de servidor do Rust com webcam do streamer; antes de entrar no jogo.",
+    "en": "Rust server browser with the streamer's webcam; before joining the game.",
+    "es": "Lista de servidores de Rust con la webcam del streamer; antes de entrar al juego."
+   },
+   "reacao": {
+    "pt": "Nenhuma; fala sobre gravacao e microfone.",
+    "en": "None; talks about recording and the mic.",
+    "es": "Ninguna; habla de grabacion y microfono."
+   },
+   "potencial": 3,
+   "uuid": "cd740e49-3f0d-4f18-a6ce-3347d638502a",
+   "aosS": 1455
+  },
+  {
+   "id": "dob3rmarley-1792081087786",
+   "canal": "dob3rmarley",
+   "origem": "povix",
+   "nivel": "resto",
+   "categorias": [],
+   "inicioMs": 1792081022666,
+   "fimMs": 1792081096066,
+   "resumo": {
+    "pt": "Tela de loading 'Cargando' do servidor Development; streamer conversa sobre entrar.",
+    "en": "'Cargando' loading screen on the Development server; streamer talks about joining.",
+    "es": "Pantalla de carga 'Cargando' en el servidor Development; el streamer habla de entrar."
+   },
+   "reacao": {
+    "pt": "Nenhuma.",
+    "en": "None.",
+    "es": "Ninguna."
+   },
+   "potencial": 3,
+   "uuid": "cd740e49-3f0d-4f18-a6ce-3347d638502a",
+   "aosS": 1816
+  },
+  {
    "id": "newtrc-1792191667887",
    "canal": "newtrc",
    "origem": "povix",
@@ -10864,94 +12653,6 @@
    "uuid": "e1ba94d3-09ca-4326-81f4-858b409bf96e",
    "aosS": 28502,
    "vodId": "01a1453e-a5c0-7766-8e68-dfe2ec502dcf"
-  },
-  {
-   "id": "cuervolking-1792119067000",
-   "canal": "cuervolking",
-   "origem": "chat",
-   "nivel": "resto",
-   "categorias": [],
-   "inicioMs": 1792119042000,
-   "fimMs": 1792119062000,
-   "resumo": {
-    "pt": "Sem fala; chat pede follow e comenta contatos.",
-    "en": "No speech; chat asks for follows and talks about contacts.",
-    "es": "Sin habla; el chat pide follow y comenta contactos."
-   },
-   "reacao": {
-    "pt": "Chat pede follow e reclama de notificação.",
-    "en": "Chat asks for follows and complains about a notification.",
-    "es": "El chat pide follow y se queja de una notificación."
-   },
-   "potencial": 3,
-   "uuid": "6c7ccc28-8131-4780-8378-033df3e43f1f",
-   "aosS": 36240
-  },
-  {
-   "id": "cuervolking-1792120257000",
-   "canal": "cuervolking",
-   "origem": "chat",
-   "nivel": "resto",
-   "categorias": [],
-   "inicioMs": 1792120232000,
-   "fimMs": 1792120252000,
-   "resumo": {
-    "pt": "Sem fala; chat fala de PvP com ping e 'no fallo 1 bala', parece outro jogo.",
-    "en": "No speech; chat talks about PvP with ping and 'no fallo 1 bala', seems to be another game.",
-    "es": "Sin habla; el chat habla de PvP con ping y 'no fallo 1 bala', parece otro juego."
-   },
-   "reacao": {
-    "pt": "Chat comenta uma partida competitiva de outro jogo.",
-    "en": "Chat talks about a competitive match in another game.",
-    "es": "El chat comenta una partida competitiva de otro juego."
-   },
-   "potencial": 3,
-   "uuid": "6c7ccc28-8131-4780-8378-033df3e43f1f",
-   "aosS": 37430
-  },
-  {
-   "id": "cuervolking-1792120747000",
-   "canal": "cuervolking",
-   "origem": "chat",
-   "nivel": "resto",
-   "categorias": [],
-   "inicioMs": 1792120722000,
-   "fimMs": 1792120742000,
-   "resumo": {
-    "pt": "Sem fala; chat fala de champions e de Valorant.",
-    "en": "No speech; chat talks about Champions and Valorant.",
-    "es": "Sin habla; el chat habla de Champions y Valorant."
-   },
-   "reacao": {
-    "pt": "Chat conversa e pede follow.",
-    "en": "Chat chats and asks for follows.",
-    "es": "El chat conversa y pide follow."
-   },
-   "potencial": 3,
-   "uuid": "6c7ccc28-8131-4780-8378-033df3e43f1f",
-   "aosS": 37920
-  },
-  {
-   "id": "engeekiados-1792195272000",
-   "canal": "engeekiados",
-   "origem": "chat",
-   "nivel": "resto",
-   "categorias": [],
-   "inicioMs": 1792195157000,
-   "fimMs": 1792195187000,
-   "resumo": {
-    "pt": "Streamer pede ajuda com um modulo e uma missao do evento; chat explica que precisa usar o volante.",
-    "en": "Streamer asks for help with a module and an event mission; chat explains he needs the steering wheel.",
-    "es": "El streamer pide ayuda con un modulo y una mision del evento; el chat explica que tiene que usar el volante."
-   },
-   "reacao": {
-    "pt": "Chat responde com instrucoes; sem reacao forte.",
-    "en": "Chat answers with instructions; no strong reaction.",
-    "es": "El chat responde con instrucciones; sin reaccion fuerte."
-   },
-   "potencial": 3,
-   "uuid": "30b97ec9-c74f-4b04-91cd-a97b08a1f001",
-   "aosS": 27410
   },
   {
    "id": "kamilaogtv-1792189467000",
