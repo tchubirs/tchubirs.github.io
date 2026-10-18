@@ -3,16 +3,17 @@
 // "Tela cheia" do modo simples; o 9:16 grava esse MP4 num quadro vertical (retrato.js), com a webcam por cima
 // quando o rosto do streamer se acha (rosto.js) e o meio do jogo quando não.
 
-import { fonteDoVod, clipeDaKick, lerMaster, lerPlaylist } from './kick.js?v=a87c9db387';
-import { executarCorte, emMp4 } from './baixar.js?v=a87c9db387';
-import { lerTs, recortar, juntarMp4 } from './mp4.js?v=a87c9db387';
-import { juntarGravados } from './juntar-gravados.js?v=a87c9db387';
+import { fonteDoVod, clipeDaKick, lerMaster, lerPlaylist } from './kick.js?v=3019fffede';
+import { executarCorte, emMp4 } from './baixar.js?v=3019fffede';
+import { lerTs, recortar, juntarMp4 } from './mp4.js?v=3019fffede';
+import { juntarGravados } from './juntar-gravados.js?v=3019fffede';
 import {
-  gravar, enquadramentoInicial, reformar, limitar, divisaoDoQuadro, DIVISAO_OMISSAO, extensaoDe,
-} from './retrato.js?v=a87c9db387';
+  gravar, enquadramentoInicial, reformar, limitar, divisaoDoQuadro, DIVISAO_OMISSAO, extensaoDe, RETRATO,
+} from './retrato.js?v=3019fffede';
+import { geometriaLegenda, desenharLegenda, limparTranscricao, LEGENDA_OMISSAO } from './legenda.js?v=3019fffede';
 import {
   abrirDetector, procurarRosto, caixaDaWebcam, instantesDoClipe, rostoGuardado, guardarRosto,
-} from './rosto.js?v=a87c9db387';
+} from './rosto.js?v=3019fffede';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const CLIPE = /^clip_[A-Za-z0-9]{10,40}$/;
@@ -47,6 +48,24 @@ export function ganchoDoMomento(m) {
   if (pico == null || pico > m.fimMs || pico - m.inicioMs < GANCHO_MIN_MS) return null;
   const deMs = Math.min(pico - GANCHO_ANTES_MS, m.fimMs - GANCHO_S * 1000);
   return { deMs, ateMs: deMs + GANCHO_S * 1000 };
+}
+
+/**
+ * A transcrição (formato de legenda.js) das falas de um momento (`falas.json` do evento: [[deMs, ateMs, texto]]
+ * desde `inicioMs`). A transcrição guarda só o tempo da fala inteira: cada palavra leva um pedaço dele do
+ * tamanho das suas letras, que é o bastante para o destaque andar com a voz.
+ */
+export function transcricaoDasFalas(linhas, { canal = '', inicioMs, fimMs }) {
+  const saida = [];
+  for (const [de, ate, texto] of Array.isArray(linhas) ? linhas : []) {
+    const palavras = String(texto || '').split(/\s+/).filter(Boolean);
+    if (!palavras.length || !(ate >= de)) continue;
+    const letras = palavras.reduce((n, p) => n + p.length, 0);
+    let t = inicioMs + de;
+    const passo = (ate - de) / letras;
+    saida.push({ palavras: palavras.map((p) => { const w = { t: p, de: t, ate: t + p.length * passo }; t = w.ate; return w; }) });
+  }
+  return limparTranscricao({ canal, deMs: inicioMs - 10_000, ateMs: fimMs + 10_000, linhas: saida });
 }
 
 async function lerTexto(url, sinal) {
@@ -128,6 +147,8 @@ export async function cortarMomento(m, { antesS = 3, comGancho = false, sinal, a
   return {
     blob: new Blob([r.bytes], { type: r.tipo }), tipo: r.tipo, duracaoS: r.duracaoS ?? ateS - deS, fps: qualidade.fps,
     gancho, comGancho: embutido,
+    // O relógio da noite no segundo 0 do arquivo (para a legenda), quando o corte saiu de um VOD.
+    relogioMs: Number.isFinite(m.aosS) && UUID.test(m.uuid || '') ? m.inicioMs + (inicioS - m.aosS) * 1000 : null,
   };
 }
 
@@ -200,8 +221,11 @@ function enquadrar(rosto, fonte) {
  *
  * Com `gancho` ({deS, ateS} de cortarMomento), grava primeiro esse trecho e depois o momento inteiro, e junta as
  * duas gravações sem reconverter (juntar-gravados.js). Se não juntarem, sai o momento sem gancho.
+ *
+ * Com `legenda` ({transcricao, relogioMs}: transcricaoDasFalas e o relógio do segundo 0 do arquivo), a fala vai
+ * queimada no vídeo, no estilo de omissão do editor (destaque palavra a palavra).
  */
-export async function gravarVertical({ blob, duracaoS, fps, canal, gancho = null, sinal, aoFase, aoProgresso }) {
+export async function gravarVertical({ blob, duracaoS, fps, canal, gancho = null, legenda = null, sinal, aoFase, aoProgresso }) {
   const { v, fechar } = videoEscondido(blob);
   try {
     await esperar(v, 'loadeddata', sinal);
@@ -212,10 +236,14 @@ export async function gravarVertical({ blob, duracaoS, fps, canal, gancho = null
     aoFase?.('gravar');
     const ganchoS = gancho ? gancho.ateS - gancho.deS : 0;
     const total = duracaoS + ganchoS;
+    const estilo = { ...LEGENDA_OMISSAO, ligado: true };
+    const geo = legenda?.transcricao?.linhas.length && Number.isFinite(legenda.relogioMs)
+      ? geometriaLegenda(RETRATO, estilo, { formato: '9:16', modo, divisao }) : null;
     const trecho = (deS, durS, antes) => {
       v.currentTime = deS;
+      const porCima = geo ? (ctx, feitoS) => desenharLegenda(ctx, legenda.transcricao, legenda.relogioMs + (deS + feitoS) * 1000, estilo, geo) : null;
       return gravar(v, {
-        rects, modo, divisao, duracaoS: durS, sinal, fps, exigirSom: true, arquivoSom: blob,
+        rects, modo, divisao, duracaoS: durS, sinal, fps, exigirSom: true, arquivoSom: blob, porCima,
         aoProgresso: (p) => aoProgresso?.({ ...p, feito: antes + p.feito, total }),
       });
     };
@@ -231,7 +259,7 @@ export async function gravarVertical({ blob, duracaoS, fps, canal, gancho = null
         comGancho = true;
       } catch { /* formatos que não se juntam: fica o momento sem gancho */ }
     }
-    return { blob: saida, extensao, comRosto: modo === 'dois', comGancho };
+    return { blob: saida, extensao, comRosto: modo === 'dois', comGancho, comLegenda: Boolean(geo) };
   } finally {
     fechar();
   }
