@@ -16,8 +16,8 @@
 //
 // Tudo aqui é conta, sem página: os testes correm em node.
 
-import { t, tn, idiomaActual } from './idiomas.js?v=a7e168bbb8';
-import { termosDoFiltro, momentosDePalavras } from './chat.js?v=a7e168bbb8';
+import { t, tn, idiomaActual } from './idiomas.js?v=a87c9db387';
+import { termosDoFiltro, momentosDePalavras } from './chat.js?v=a87c9db387';
 
 // Dois sinais a menos disto um do outro (de qualquer canal) são o mesmo lance.
 export const JUNTAR_MS = 60_000;
