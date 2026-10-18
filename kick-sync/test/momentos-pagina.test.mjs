@@ -499,6 +499,7 @@ test('momentos: legenda só onde há fala, e o texto do post leva resumo, crédi
   assert.equal(await p.locator('.mom[data-id="barco"] [data-legenda]').count(), 1);
   assert.equal(await p.locator('.mom[data-id="canhao"] [data-legenda]').count(), 0, 'sem fala, sem opção de legenda');
   assert.equal(await p.locator('.mom[data-id="barco"] [data-chamada]').count(), 0, 'sem chamada no arquivo, sem opção');
+  assert.equal(await p.locator('#momFila').isHidden(), true, 'sem streamer escolhido, sem fila');
   await p.click('.mom[data-id="barco"] [data-copiar]');
   await p.waitForFunction(() => window.__copiado);
   const texto = await p.evaluate(() => window.__copiado);
@@ -507,5 +508,9 @@ test('momentos: legenda só onde há fala, e o texto do post leva resumo, crédi
   assert.match(texto, /kick\.com\/axel/);
   assert.match(texto, /#rust #rustclips #kick #Teste #axel$/);
   assert.equal(await p.locator('.mom[data-id="barco"] [data-copiar]').textContent(), 'Copiado!');
+  await p.fill('#momBusca', 'axel');
+  await p.press('#momBusca', 'Enter');
+  await p.waitForFunction(() => !document.getElementById('momFila').hidden);
+  assert.equal(await p.locator('#momFila').textContent(), 'Baixar os 2 melhores para TikTok');
   assert.deepEqual(erros, []);
 });
