@@ -126,6 +126,7 @@
 
 /* Procurar um streamer: a lista fica só com os momentos dele (e os da visão dele como inimigo). */
 .momBuscaCaixa { display: flex; min-width: 0; }
+.momFila { justify-self: start; }
 .momBuscaCaixa input { flex: 1; min-width: 0; max-width: 360px; font: inherit; color: var(--tinta); background: var(--sup-1);
   border: 1px solid var(--linha-2); border-radius: var(--r-2); padding: var(--e2) var(--e3); }
 .momMais { justify-self: center; font: 500 var(--t-menor)/var(--lh) var(--letra); color: var(--tinta); background: var(--sup-3);

@@ -6,11 +6,11 @@
 // Kick vinham outros clipes misturados. Duas abas: "Melhores" (por potencial; feed no celular, ranking
 // compacto em tela larga, só CSS) e "Por streamer" (uma fileira por streamer, o melhor primeiro).
 
-import { clipeDaKick, fonteDoVod, idDaPaginaDoVod } from './kick.js?v=6425609683';
-import { escapar } from './escapar.js?v=6425609683';
-import { paraLink } from './relogio.js?v=6425609683';
-import { cortarMomento, gravarVertical, ganchoDoMomento, transcricaoDasFalas } from './momento-baixar.js?v=6425609683';
-import { prepararSomDaGravacao } from './retrato.js?v=6425609683';
+import { clipeDaKick, fonteDoVod, idDaPaginaDoVod } from './kick.js?v=acfa0afdbf';
+import { escapar } from './escapar.js?v=acfa0afdbf';
+import { paraLink } from './relogio.js?v=acfa0afdbf';
+import { cortarMomento, gravarVertical, ganchoDoMomento, transcricaoDasFalas } from './momento-baixar.js?v=acfa0afdbf';
+import { prepararSomDaGravacao } from './retrato.js?v=acfa0afdbf';
 
 const TEXTOS = {
   pt: {
@@ -26,6 +26,7 @@ const TEXTOS = {
     publico: 'Clipe do público', povix: 'Achado pelo Povix', views: '{n} views',
     potencial: 'potencial de viralizar',
     editar: 'Editar no Povix', kick: 'Kick', copiarPost: 'Copiar texto do post', copiado: 'Copiado!',
+    baixarMelhores: 'Baixar os {n} melhores para TikTok', baixandoFila: 'Baixando {i} de {n}… deixe esta aba aberta.', filaPronta: 'Pronto: {n} vídeos nos seus downloads.',
     baixarTiktok: 'Baixar para TikTok', baixar: 'Baixar', baixando: 'Baixando o vídeo… {feito} de {total}',
     procurandoRosto: 'Procurando a webcam…', gravando: 'Montando o vertical… {feito} de {total} s',
     baixou: 'Pronto: o arquivo foi para os seus downloads.', baixouSemRosto: 'Pronto (sem webcam achada: o meio do jogo).',
@@ -51,6 +52,7 @@ const TEXTOS = {
     publico: 'Viewer clip', povix: 'Found by Povix', views: '{n} views',
     potencial: 'viral potential',
     editar: 'Edit in Povix', kick: 'Kick', copiarPost: 'Copy post text', copiado: 'Copied!',
+    baixarMelhores: 'Download the top {n} for TikTok', baixandoFila: 'Downloading {i} of {n}… keep this tab open.', filaPronta: 'Done: {n} videos in your downloads.',
     baixarTiktok: 'Download for TikTok', baixar: 'Download', baixando: 'Downloading the video… {feito} of {total}',
     procurandoRosto: 'Looking for the webcam…', gravando: 'Building the vertical… {feito} of {total} s',
     baixou: 'Done: the file is in your downloads.', baixouSemRosto: 'Done (no webcam found: center of the game).',
@@ -76,6 +78,7 @@ const TEXTOS = {
     publico: 'Clip del público', povix: 'Encontrado por Povix', views: '{n} vistas',
     potencial: 'potencial viral',
     editar: 'Editar en Povix', kick: 'Kick', copiarPost: 'Copiar texto del post', copiado: '¡Copiado!',
+    baixarMelhores: 'Descargar los {n} mejores para TikTok', baixandoFila: 'Descargando {i} de {n}… deja esta pestaña abierta.', filaPronta: 'Listo: {n} videos en tus descargas.',
     baixarTiktok: 'Descargar para TikTok', baixar: 'Descargar', baixando: 'Descargando el video… {feito} de {total}',
     procurandoRosto: 'Buscando la webcam…', gravando: 'Armando el vertical… {feito} de {total} s',
     baixou: 'Listo: el archivo está en tus descargas.', baixouSemRosto: 'Listo (sin webcam encontrada: el centro del juego).',
@@ -273,11 +276,44 @@ function textos() {
     const doEvento = [...porId.values()].filter((m) => m.nivel !== 'resto');
     $('momSub').textContent = !estado.canal ? t('sub', { n: doEvento.length, c: new Set(doEvento.map((m) => m.canal)).size })
       : deles ? t('subCanal', { n: deles, canal: estado.canal }) : t('nadaCanal', { canal: estado.canal });
+    const fila = melhoresDoCanal();
+    const botaoFila = $('momFila');
+    botaoFila.hidden = !fila.length;
+    if (!estado.fila) botaoFila.textContent = t('baixarMelhores', { n: fila.length });
     // Trocar o idioma não corta o vídeo que está a tocar; os cartões mudam na próxima pintura.
     if (!estado.tocando) pintar();
   }
   if (estado.aviso) $('momEstado').textContent = t(...estado.aviso);
   for (const pv of estado.tocando?.povs || []) pv.caixa.querySelector('.momPovTopo').innerHTML = rotuloPov(pv.pov);
+}
+
+// "Baixar os N melhores": os do próprio streamer (não as visões dele como inimigo), dos de mais potencial, um de cada
+// vez (o 9:16 grava em tempo real e dois ao mesmo tempo disputam o vídeo e a memória).
+const FILA_MAX = 3;
+function melhoresDoCanal() {
+  if (!estado.canal) return [];
+  return [...porId.values()].filter((m) => m.canal === estado.canal && (temClipe(m) || (UUID.test(m.uuid || '') && Number.isFinite(m.aosS))))
+    .sort((a, b) => (b.potencial ?? 0) - (a.potencial ?? 0)).slice(0, FILA_MAX);
+}
+
+async function baixarFila() {
+  const fila = melhoresDoCanal();
+  if (!fila.length || estado.fila) return;
+  prepararSomDaGravacao();
+  const botao = $('momFila');
+  estado.fila = true;
+  botao.disabled = true;
+  try {
+    for (const [i, m] of fila.entries()) {
+      botao.textContent = t('baixandoFila', { i: i + 1, n: fila.length });
+      const cartao = document.querySelector(`.mom[data-id="${CSS.escape(m.id)}"]`);
+      if (cartao) await baixarMomento(cartao, true);
+    }
+    botao.textContent = t('filaPronta', { n: fila.length });
+  } finally {
+    estado.fila = false;
+    botao.disabled = false;
+  }
 }
 
 function avisar(chave, vars) {
@@ -671,6 +707,7 @@ async function iniciar() {
     ev.target.nextElementSibling?.removeAttribute('hidden');
     ev.target.remove();
   }, true);
+  $('momFila').addEventListener('click', baixarFila);
   textos();
 
   let pedido = '';

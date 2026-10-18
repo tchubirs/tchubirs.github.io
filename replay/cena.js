@@ -21,7 +21,7 @@
 // a voz. É por isso que os do mesmo time vão à frente na fila
 // (`ordenarCandidatos`): é onde já se sabe que a resposta é boa.
 
-import { envolvente, desvio, TAXA } from './sinal.js?v=6425609683';
+import { envolvente, desvio, TAXA } from './sinal.js?v=acfa0afdbf';
 
 /**
  * A partir desta força o som em comum basta para dizer "estava lá".
