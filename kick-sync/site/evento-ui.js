@@ -1776,16 +1776,17 @@ export function montarEvento({
     return r?.vods.find((v) => ms >= v.inicioApi - 60_000
       && ms <= (aoVivoVod(v) ? AGORA() : v.inicioApi + (v.duracaoMs > 0 ? v.duracaoMs : 0))) || null;
   }
-  async function linhaDe(slug, deMs, { sinal } = {}) {
+  async function linhaDe(slug, deMs, { sinal, video = false } = {}) {
     const vod = vodEm(slug, deMs);
     if (!vod) return null;
     // Um VOD ao vivo cresce: a playlist lida há minutos não tem o lance de agora.
-    const chave = aoVivoVod(vod) ? `${vod.id}@${Math.floor(deMs / 30_000)}` : vod.id;
+    const chave = (aoVivoVod(vod) ? `${vod.id}@${Math.floor(deMs / 30_000)}` : vod.id) + (video ? ':video' : '');
     let peca = pecas.get(chave);
     if (!peca) {
       const master = lerMaster(await (await buscar(vod.master, { signal: sinal })).text(), vod.master);
       if (!master.length) return null;
-      const barato = master.at(-1);
+      // O degrau mais barato pode ser só áudio (audio_only): serve ao som, mas as telas de morte precisam de quadros.
+      const barato = (video && master.findLast((d) => d.altura)) || master.at(-1);
       const playlist = lerPlaylist(await (await buscar(barato.url, { signal: sinal })).text(), barato.url);
       peca = { vod, playlist, escada: master, barato };
       pecas.set(chave, peca);
@@ -1798,7 +1799,7 @@ export function montarEvento({
   }
   // Os bytes do 160p, para as telas de morte (achar-mortes-video.js): o mesmo caminho do som.
   async function tsDe(slug, deMs, duracaoS, opcoes = {}) {
-    const linha = await linhaDe(slug, deMs, opcoes);
+    const linha = await linhaDe(slug, deMs, { ...opcoes, video: true });
     return linha ? tsDoCanal(linha, deMs, duracaoS, { buscar, ...opcoes }) : null;
   }
 
