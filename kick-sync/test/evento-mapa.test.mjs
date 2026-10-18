@@ -364,7 +364,7 @@ test('o ABISAL abre pelo link curto ?e=abisal, e compartilhar devolve o link cur
   await p.goto(`http://127.0.0.1:${PORTA}/index.html?e=abisal`, { waitUntil: 'networkidle' });
   await p.waitForFunction(() => window.__evento?.mapa, null, { timeout: 30000 });
   assert.equal(await p.locator('#nomeEvento').innerText(), 'ABISAL');
-  assert.match(await p.locator('#resumoEvento').innerText(), /257 canais, 2 com vídeo/);
+  assert.match(await p.locator('#resumoEvento').innerText(), /351 canais, 2 com vídeo/);
   await p.click('#partilharEvento');
   assert.equal(await p.inputValue('#partilharNome'), 'ABISAL', 'o nome já vem escrito');
   await p.click('#gerarLink');
