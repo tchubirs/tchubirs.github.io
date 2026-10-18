@@ -1,12 +1,12 @@
 import {
   medir, chao, impulsos, regioes, FPS, TAXA_TIROS, BLOCO_MS, REFRACTARIO_MS,
-} from './tiros.js?v=acfa0afdbf';
-import { recortar } from './aprender.js?v=acfa0afdbf';
-import { juntar as juntarIntervalos } from './ouvir.js?v=acfa0afdbf';
-import { medirGraves, explosoes as acharExplosoes, FPS as FPS_EXPLOSOES } from './explosoes.js?v=acfa0afdbf';
-import { medirAcertos, confirmarAcertos } from './acertos.js?v=acfa0afdbf';
-import { medirEspectro, cortarEsp, colarEsp, tirarAlertas, ondaDe, FPS_ESP } from './alertas.js?v=acfa0afdbf';
-import { medirVoz, gritos as acharGritos, normalDaVoz, FPS as FPS_GRITOS } from './gritos.js?v=acfa0afdbf';
+} from './tiros.js?v=5f9baa2e3c';
+import { recortar } from './aprender.js?v=5f9baa2e3c';
+import { juntar as juntarIntervalos } from './ouvir.js?v=5f9baa2e3c';
+import { medirGraves, explosoes as acharExplosoes, FPS as FPS_EXPLOSOES } from './explosoes.js?v=5f9baa2e3c';
+import { medirAcertos, confirmarAcertos } from './acertos.js?v=5f9baa2e3c';
+import { medirEspectro, cortarEsp, colarEsp, tirarAlertas, ondaDe, FPS_ESP } from './alertas.js?v=5f9baa2e3c';
+import { medirVoz, gritos as acharGritos, normalDaVoz, FPS as FPS_GRITOS } from './gritos.js?v=5f9baa2e3c';
 
 // Achar as kills sozinho — pela forca do som.
 //

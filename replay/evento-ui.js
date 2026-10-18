@@ -12,27 +12,27 @@
 import {
   lerElenco, codificar, descodificar, contar, paraTexto, juntarElencos, paraArquivo, deArquivo, nomeDoArquivo,
   apelidosDoTexto,
-} from './elenco.js?v=acfa0afdbf';
-import { montarNomesNaTela } from './nomes-ui.js?v=acfa0afdbf';
-import { montarMortes } from './mortes-ui.js?v=acfa0afdbf';
-import { carregarCanais, procurarAoVivo } from './carregar.js?v=acfa0afdbf';
-import { escolherCaminho } from './portas.js?v=acfa0afdbf';
+} from './elenco.js?v=5f9baa2e3c';
+import { montarNomesNaTela } from './nomes-ui.js?v=5f9baa2e3c';
+import { montarMortes } from './mortes-ui.js?v=5f9baa2e3c';
+import { carregarCanais, procurarAoVivo } from './carregar.js?v=5f9baa2e3c';
+import { escolherCaminho } from './portas.js?v=5f9baa2e3c';
 import {
   montarMapa, linhasVisiveis, tempoDoX, xDoTempo, zoom, oQueEstaAqui, filtrar, pintarMapa, ordenarFaixas, linhasDoTempo,
-} from './mapa.js?v=acfa0afdbf';
-import { procurarAngulos, ordenarCandidatos, resumo } from './cena.js?v=acfa0afdbf';
-import { lerMaster, lerPlaylist, procurarCanais, slugDoNome } from './kick.js?v=acfa0afdbf';
-import { linhaDoCanal } from './relogio.js?v=acfa0afdbf';
-import { somDoCanal, tsDoCanal } from './alinhar.js?v=acfa0afdbf';
-import { t, tn, idiomaActual } from './idiomas.js?v=acfa0afdbf';
-import { atalhos } from './atalhos.js?v=acfa0afdbf';
-import { escapar } from './escapar.js?v=acfa0afdbf';
-import { separarPorJogo } from './jogo.js?v=acfa0afdbf';
-import { idDoCanal, mensagensEntre, calor, picos, segundoDoPico, juntarPorOrdem } from './chat.js?v=acfa0afdbf';
-import { agendar } from './aovivo.js?v=acfa0afdbf';
+} from './mapa.js?v=5f9baa2e3c';
+import { procurarAngulos, ordenarCandidatos, resumo } from './cena.js?v=5f9baa2e3c';
+import { lerMaster, lerPlaylist, procurarCanais, slugDoNome } from './kick.js?v=5f9baa2e3c';
+import { linhaDoCanal } from './relogio.js?v=5f9baa2e3c';
+import { somDoCanal, tsDoCanal } from './alinhar.js?v=5f9baa2e3c';
+import { t, tn, idiomaActual } from './idiomas.js?v=5f9baa2e3c';
+import { atalhos } from './atalhos.js?v=5f9baa2e3c';
+import { escapar } from './escapar.js?v=5f9baa2e3c';
+import { separarPorJogo } from './jogo.js?v=5f9baa2e3c';
+import { idDoCanal, mensagensEntre, calor, picos, segundoDoPico, juntarPorOrdem } from './chat.js?v=5f9baa2e3c';
+import { agendar } from './aovivo.js?v=5f9baa2e3c';
 import {
   normalDoChat, unirJanelas, sinaisDoEvento, melhoresLances, filtrarLances, motivoDoLance, contaDoLance, coincide,
-} from './melhores.js?v=acfa0afdbf';
+} from './melhores.js?v=5f9baa2e3c';
 
 // Um canal ao vivo tem na lista um VOD de duração zero que vai crescendo. Até se pedir a lista outra
 // vez, o que ele já tem acaba "agora".
@@ -1776,16 +1776,17 @@ export function montarEvento({
     return r?.vods.find((v) => ms >= v.inicioApi - 60_000
       && ms <= (aoVivoVod(v) ? AGORA() : v.inicioApi + (v.duracaoMs > 0 ? v.duracaoMs : 0))) || null;
   }
-  async function linhaDe(slug, deMs, { sinal } = {}) {
+  async function linhaDe(slug, deMs, { sinal, video = false } = {}) {
     const vod = vodEm(slug, deMs);
     if (!vod) return null;
     // Um VOD ao vivo cresce: a playlist lida há minutos não tem o lance de agora.
-    const chave = aoVivoVod(vod) ? `${vod.id}@${Math.floor(deMs / 30_000)}` : vod.id;
+    const chave = (aoVivoVod(vod) ? `${vod.id}@${Math.floor(deMs / 30_000)}` : vod.id) + (video ? ':video' : '');
     let peca = pecas.get(chave);
     if (!peca) {
       const master = lerMaster(await (await buscar(vod.master, { signal: sinal })).text(), vod.master);
       if (!master.length) return null;
-      const barato = master.at(-1);
+      // O degrau mais barato pode ser só áudio (audio_only): serve ao som, mas as telas de morte precisam de quadros.
+      const barato = (video && master.findLast((d) => d.altura)) || master.at(-1);
       const playlist = lerPlaylist(await (await buscar(barato.url, { signal: sinal })).text(), barato.url);
       peca = { vod, playlist, escada: master, barato };
       pecas.set(chave, peca);
@@ -1798,7 +1799,7 @@ export function montarEvento({
   }
   // Os bytes do 160p, para as telas de morte (achar-mortes-video.js): o mesmo caminho do som.
   async function tsDe(slug, deMs, duracaoS, opcoes = {}) {
-    const linha = await linhaDe(slug, deMs, opcoes);
+    const linha = await linhaDe(slug, deMs, { ...opcoes, video: true });
     return linha ? tsDoCanal(linha, deMs, duracaoS, { buscar, ...opcoes }) : null;
   }
 
