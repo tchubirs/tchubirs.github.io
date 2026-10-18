@@ -24,7 +24,7 @@
  * mais longa é cortada onde as marcas deixam, e cada pedaço é uma luta).
  */
 
-import { CALIBRACAO, VERSAO_CALIBRACAO, confianca } from './calibracao.js?v=488815493c';
+import { CALIBRACAO, VERSAO_CALIBRACAO, confianca } from './calibracao.js?v=3195cb16bc';
 
 export const VERSAO_INDICE = 1;
 /** Região de tiro com confiança a partir daqui é semente de luta. */
