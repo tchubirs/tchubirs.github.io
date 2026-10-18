@@ -487,3 +487,24 @@ test('momentos: o vertical que não consegue abrir o vídeo diz porquê, e troca
   assert.equal(baixou, false);
   assert.deepEqual(erros, []);
 });
+
+test('momentos: legenda só onde há fala, e o texto do post leva resumo, crédito e hashtags', semNavegador, async () => {
+  const { p, erros } = await abrir({ caminho: null, modo: null, ecra: { width: 1280, height: 900 } });
+  await preparar(p);
+  await p.route('**/eventos/teste-momentos/falas.json', (r) => r.fulfill({ status: 200, contentType: 'application/json',
+    body: JSON.stringify({ barco: [[1000, 2000, 'olha o barco']] }) }));
+  await p.addInitScript(() => { navigator.clipboard.writeText = async (t) => { window.__copiado = t; }; });
+  await p.goto(`http://127.0.0.1:${PORTA}/momentos.html?e=teste`, { waitUntil: 'networkidle' });
+  await p.waitForSelector('#listaMomentos .mom');
+  assert.equal(await p.locator('.mom[data-id="barco"] [data-legenda]').count(), 1);
+  assert.equal(await p.locator('.mom[data-id="canhao"] [data-legenda]').count(), 0, 'sem fala, sem opção de legenda');
+  await p.click('.mom[data-id="barco"] [data-copiar]');
+  await p.waitForFunction(() => window.__copiado);
+  const texto = await p.evaluate(() => window.__copiado);
+  const barco = MOMENTOS.momentos.find((m) => m.id === 'barco');
+  assert.ok(texto.startsWith(barco.resumo.pt), texto);
+  assert.match(texto, /kick\.com\/axel/);
+  assert.match(texto, /#rust #rustclips #kick #Teste #axel$/);
+  assert.equal(await p.locator('.mom[data-id="barco"] [data-copiar]').textContent(), 'Copiado!');
+  assert.deepEqual(erros, []);
+});
