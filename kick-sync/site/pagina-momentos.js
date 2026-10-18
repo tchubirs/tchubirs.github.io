@@ -89,6 +89,7 @@ const $ = (id) => document.getElementById(id);
 const estado = { idioma: 'pt', nome: '', dados: null, aba: 'melhores', tocando: null, aviso: null, canal: '', limite: {}, baixando: null };
 // Quantos cartões cada linha mostra antes do "Mostrar mais": a lista do evento tem muitos momentos.
 const POR_VEZ = 15;
+const EVENTO_PADRAO = 'abisal';
 const porId = new Map();
 
 function idiomaInicial() {
@@ -607,7 +608,8 @@ async function iniciar() {
 
   let pedido = '';
   try { pedido = new URLSearchParams(location.search).get('e') || ''; } catch { pedido = ''; }
-  estado.nome = pedido.trim().toLowerCase();
+  // Link sem ?e= (compartilhado assim, 18/10): abre o último evento em vez da tela vazia.
+  estado.nome = pedido.trim().toLowerCase() || EVENTO_PADRAO;
   if (!/^[a-z0-9-]{1,60}$/.test(estado.nome)) { avisar('semEvento'); return; }
   avisar('carregando');
   let dados = null;
