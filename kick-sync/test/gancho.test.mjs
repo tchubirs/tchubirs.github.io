@@ -95,6 +95,9 @@ async function preparar(p, dados = MOMENTOS) {
   await p.waitForSelector('#listaMomentos .mom');
 }
 
+// Tocar e gravar o vídeo pede H.264, que o Chromium do CI não tem (fotos-cartoes.test.mjs faz o mesmo).
+const tocaH264 = (p) => p.evaluate(() => Boolean((window.MediaSource || window.ManagedMediaSource)?.isTypeSupported?.('video/mp4; codecs="avc1.64001f,mp4a.40.2"')));
+
 async function baixarDeitado(p) {
   const [d] = await Promise.all([p.waitForEvent('download'), p.locator('.mom[data-id="barco"] [data-baixar="deitado"]').click()]);
   await p.waitForFunction(() => /Pronto/.test(document.querySelector('.mom[data-id="barco"] .momBaixando').textContent));
@@ -135,9 +138,10 @@ test('gancho: o 16:9 abre com os 2 s do pico e segue do começo; desligado, sai 
   assert.deepEqual(erros, []);
 });
 
-test('gancho: o Chrome toca o 16:9 com o gancho à frente (a lista de edição é respeitada)', semNavegador, async () => {
+test('gancho: o Chrome toca o 16:9 com o gancho à frente (a lista de edição é respeitada)', semNavegador, async (t) => {
   const { p, erros } = await abrir({ caminho: null, modo: null, ecra: { width: 400, height: 860 } });
   await preparar(p);
+  if (!await tocaH264(p)) { t.skip('o navegador não toca H.264'); return; }
   const r = await p.evaluate(async (m) => {
     const { cortarMomento } = await import('./momento-baixar.js');
     const com = await cortarMomento(m, { comGancho: true });
@@ -167,13 +171,14 @@ test('gancho: o Chrome toca o 16:9 com o gancho à frente (a lista de edição �
   assert.deepEqual(erros, []);
 });
 
-test('gancho: o 9:16 grava o pico à frente e junta as duas gravações num arquivo', semNavegador, async () => {
+test('gancho: o 9:16 grava o pico à frente e junta as duas gravações num arquivo', semNavegador, async (t) => {
   const { p, erros } = await abrir({ caminho: null, modo: null, ecra: { width: 400, height: 860 } });
   // Rosto já guardado: o teste não espera o detector. Momento curto (a gravação é em tempo real): 27..36 s,
   // pico em 35 s → gancho de 34 a 36 s.
   await p.addInitScript(() => localStorage.setItem('replay.rostos', JSON.stringify({ axel: { x: 0.02, y: 0.6, largura: 0.2, altura: 0.35 } })));
   const curto = { ...BARCO, fimMs: T + 6000, picoMs: T + 5000 };
   await preparar(p, { ...MOMENTOS, momentos: [curto] });
+  if (!await tocaH264(p)) { t.skip('o navegador não toca H.264'); return; }
   const totais = [];
   const [d] = await Promise.all([
     p.waitForEvent('download', { timeout: 120_000 }),
