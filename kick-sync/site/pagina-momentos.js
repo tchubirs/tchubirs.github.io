@@ -633,6 +633,8 @@ async function iniciar() {
       if (estado.canal) u.searchParams.set('c', estado.canal); else u.searchParams.delete('c');
       history.replaceState(null, '', u);
     } catch { /* sem history */ }
+    // Outra busca com um vídeo a tocar: a lista tem de trocar (textos() não repinta enquanto toca).
+    parar();
     textos();
   };
   busca.addEventListener('change', escolher);

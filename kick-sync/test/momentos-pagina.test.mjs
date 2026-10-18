@@ -188,10 +188,14 @@ test('momentos: um toque toca ali mesmo; o VOD começa 3 s antes e o clipe pelo 
     assert.deepEqual(erros, []);
   });
 
-test('momentos: sem evento no endereço, ou sem arquivo, diz o que falta', semNavegador, async () => {
+test('momentos: sem evento no endereço abre o último; evento inválido ou sem arquivo diz o que falta', semNavegador, async () => {
   const { p, erros } = await abrir({ caminho: null, modo: null });
   await preparar(p);
+  const pedidos = [];
+  p.on('request', (r) => pedidos.push(new URL(r.url()).pathname));
   await p.goto(`http://127.0.0.1:${PORTA}/momentos.html`, { waitUntil: 'networkidle' });
+  assert.ok(pedidos.some((u) => u.endsWith('/eventos/abisal-momentos.json')), pedidos.join(' '));
+  await p.goto(`http://127.0.0.1:${PORTA}/momentos.html?e=..%2Fx`, { waitUntil: 'networkidle' });
   assert.equal(await p.locator('#momEstado').textContent(), 'Falta o evento no endereço (momentos.html?e=abisal).');
   await p.selectOption('#idioma', 'en');
   assert.equal(await p.locator('#momEstado').textContent(), 'The event is missing from the address (momentos.html?e=abisal).');
@@ -407,6 +411,20 @@ test('momentos: se uma visão do inimigo não chega, o principal toca na hora, s
   await p.waitForFunction(() => window.__playsPrincipal === 1, null, { timeout: 8000 });
   const espera = Date.now() - t0;
   assert.ok(espera < 2000, String(espera));
+  assert.deepEqual(erros, []);
+});
+
+test('momentos: procurar outro streamer com um vídeo a tocar troca a lista e para o vídeo', semNavegador, async () => {
+  const { p, erros } = await abrir({ caminho: null, modo: null, ecra: { width: 400, height: 860 } });
+  await preparar(p);
+  await p.goto(`http://127.0.0.1:${PORTA}/momentos.html?e=teste`, { waitUntil: 'networkidle' });
+  await p.waitForSelector('#listaMomentos .mom');
+  await p.locator('.mom[data-id="minita"] .momCapa').click();
+  await p.waitForSelector('.mom[data-id="minita"] video');
+  await p.fill('#momBusca', 'axel');
+  await p.dispatchEvent('#momBusca', 'change');
+  assert.deepEqual(await ordem(p), ['barco', 'canhao']);
+  assert.equal(await p.locator('#listaMomentos video').count(), 0);
   assert.deepEqual(erros, []);
 });
 
