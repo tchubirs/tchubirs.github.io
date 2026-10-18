@@ -498,6 +498,7 @@ test('momentos: legenda só onde há fala, e o texto do post leva resumo, crédi
   await p.waitForSelector('#listaMomentos .mom');
   assert.equal(await p.locator('.mom[data-id="barco"] [data-legenda]').count(), 1);
   assert.equal(await p.locator('.mom[data-id="canhao"] [data-legenda]').count(), 0, 'sem fala, sem opção de legenda');
+  assert.equal(await p.locator('.mom[data-id="barco"] [data-chamada]').count(), 0, 'sem chamada no arquivo, sem opção');
   await p.click('.mom[data-id="barco"] [data-copiar]');
   await p.waitForFunction(() => window.__copiado);
   const texto = await p.evaluate(() => window.__copiado);

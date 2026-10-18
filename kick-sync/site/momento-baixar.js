@@ -8,9 +8,9 @@ import { executarCorte, emMp4 } from './baixar.js';
 import { lerTs, recortar, juntarMp4 } from './mp4.js';
 import { juntarGravados } from './juntar-gravados.js';
 import {
-  gravar, enquadramentoInicial, reformar, limitar, divisaoDoQuadro, DIVISAO_OMISSAO, extensaoDe, RETRATO,
+  gravar, enquadramentoInicial, reformar, limitar, divisaoDoQuadro, DIVISAO_OMISSAO, extensaoDe, RETRATO, zonaSegura,
 } from './retrato.js';
-import { geometriaLegenda, desenharLegenda, limparTranscricao, LEGENDA_OMISSAO } from './legenda.js';
+import { geometriaLegenda, desenharLegenda, limparTranscricao, LEGENDA_OMISSAO, fonteDe } from './legenda.js';
 import {
   abrirDetector, procurarRosto, caixaDaWebcam, instantesDoClipe, rostoGuardado, guardarRosto,
 } from './rosto.js';
@@ -66,6 +66,49 @@ export function transcricaoDasFalas(linhas, { canal = '', inicioMs, fimMs }) {
     saida.push({ palavras: palavras.map((p) => { const w = { t: p, de: t, ate: t + p.length * passo }; t = w.ate; return w; }) });
   }
   return limparTranscricao({ canal, deMs: inicioMs - 10_000, ateMs: fimMs + 10_000, linhas: saida });
+}
+
+// A chamada (o texto-gancho do juiz, "CAIU DO CÉU NA CABEÇA DELE") fica escrita nos primeiros segundos do 9:16,
+// no topo da zona que a TikTok não tapa.
+export const CHAMADA_S = 2.5;
+
+/** Parte a chamada em até 2 linhas que cabem em `largura`, encolhendo a letra se for preciso. */
+export function linhasDaChamada(texto, largura, medir, px) {
+  const palavras = String(texto || '').trim().split(/\s+/).filter(Boolean);
+  for (let tam = px; tam >= px * 0.6; tam -= Math.max(1, Math.round(px * 0.05))) {
+    const linhas = [];
+    for (const p of palavras) {
+      const junto = linhas.length ? `${linhas.at(-1)} ${p}` : p;
+      if (linhas.length && medir(junto, tam) <= largura) linhas[linhas.length - 1] = junto;
+      else linhas.push(p);
+    }
+    if (linhas.length <= 2 && linhas.every((l) => medir(l, tam) <= largura)) return { linhas, px: tam };
+  }
+  return null;
+}
+
+function desenharChamada(ctx, texto, alvo = RETRATO) {
+  const zona = zonaSegura(alvo);
+  const margem = Math.round(alvo.largura * 0.05);
+  const largura = zona.direita - margem * 2;
+  const medir = (t, px) => { ctx.font = fonteDe('destaque', px); return ctx.measureText(t).width; };
+  ctx.save();
+  const q = linhasDaChamada(texto, largura - margem, medir, Math.round(alvo.largura * 0.075));
+  if (!q) { ctx.restore(); return; }
+  const alto = Math.round(q.px * 1.15);
+  const meio = zona.direita / 2;
+  const topo = zona.y + margem;
+  const caixa = Math.max(...q.linhas.map((l) => medir(l, q.px))) + margem;
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+  ctx.beginPath();
+  ctx.roundRect?.(meio - caixa / 2, topo - margem / 3, caixa, alto * q.linhas.length + margem * 0.6, margem / 2);
+  ctx.fill();
+  ctx.font = fonteDe('destaque', q.px);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = '#FFFFFF';
+  q.linhas.forEach((l, i) => ctx.fillText(l, meio, topo + i * alto));
+  ctx.restore();
 }
 
 async function lerTexto(url, sinal) {
@@ -225,7 +268,7 @@ function enquadrar(rosto, fonte) {
  * Com `legenda` ({transcricao, relogioMs}: transcricaoDasFalas e o relógio do segundo 0 do arquivo), a fala vai
  * queimada no vídeo, no estilo de omissão do editor (destaque palavra a palavra).
  */
-export async function gravarVertical({ blob, duracaoS, fps, canal, gancho = null, legenda = null, sinal, aoFase, aoProgresso }) {
+export async function gravarVertical({ blob, duracaoS, fps, canal, gancho = null, legenda = null, chamada = '', sinal, aoFase, aoProgresso }) {
   const { v, fechar } = videoEscondido(blob);
   try {
     await esperar(v, 'loadeddata', sinal);
@@ -241,7 +284,10 @@ export async function gravarVertical({ blob, duracaoS, fps, canal, gancho = null
       ? geometriaLegenda(RETRATO, estilo, { formato: '9:16', modo, divisao }) : null;
     const trecho = (deS, durS, antes) => {
       v.currentTime = deS;
-      const porCima = geo ? (ctx, feitoS) => desenharLegenda(ctx, legenda.transcricao, legenda.relogioMs + (deS + feitoS) * 1000, estilo, geo) : null;
+      const porCima = geo || chamada ? (ctx, feitoS) => {
+        if (geo) desenharLegenda(ctx, legenda.transcricao, legenda.relogioMs + (deS + feitoS) * 1000, estilo, geo);
+        if (chamada && antes + feitoS < CHAMADA_S) desenharChamada(ctx, chamada);
+      } : null;
       return gravar(v, {
         rects, modo, divisao, duracaoS: durS, sinal, fps, exigirSom: true, arquivoSom: blob, porCima,
         aoProgresso: (p) => aoProgresso?.({ ...p, feito: antes + p.feito, total }),

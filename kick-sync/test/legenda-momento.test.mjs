@@ -23,3 +23,13 @@ test('legenda do momento: fala vazia ou de tempo trocado não entra; sem falas n
   assert.deepEqual(tr.linhas.map((l) => l.palavras.map((p) => p.t).join(' ')), ['ok']);
   assert.equal(transcricaoDasFalas(undefined, { inicioMs: T, fimMs: T + 10_000 }).linhas.length, 0);
 });
+
+test('chamada: até 2 linhas que cabem, encolhendo a letra; texto que não cabe nem pequeno fica de fora', async () => {
+  const { linhasDaChamada } = await import('../site/momento-baixar.js');
+  const medir = (t, px) => t.length * px * 0.6;
+  assert.deepEqual(linhasDaChamada('A TESLA NÃO PERDOA', 1000, medir, 80), { linhas: ['A TESLA NÃO PERDOA'], px: 80 });
+  const duas = linhasDaChamada('CAIU DO CÉU NA CABEÇA DELE', 600, medir, 80);
+  assert.equal(duas.linhas.length, 2);
+  assert.ok(duas.linhas.every((l) => medir(l, duas.px) <= 600));
+  assert.equal(linhasDaChamada('UMA FRASE LONGA DEMAIS PARA CABER EM DUAS LINHAS ESTREITAS', 200, medir, 80), null);
+});
