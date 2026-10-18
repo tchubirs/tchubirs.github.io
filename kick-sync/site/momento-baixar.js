@@ -4,7 +4,9 @@
 // quando o rosto do streamer se acha (rosto.js) e o meio do jogo quando não.
 
 import { fonteDoVod, clipeDaKick, lerMaster, lerPlaylist } from './kick.js';
-import { executarCorte } from './baixar.js';
+import { executarCorte, emMp4 } from './baixar.js';
+import { lerTs, recortar, juntarMp4 } from './mp4.js';
+import { juntarGravados } from './juntar-gravados.js';
 import {
   gravar, enquadramentoInicial, reformar, limitar, divisaoDoQuadro, DIVISAO_OMISSAO, extensaoDe,
 } from './retrato.js';
@@ -16,6 +18,36 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const CLIPE = /^clip_[A-Za-z0-9]{10,40}$/;
 // O rosto tem este tempo para se achar (a primeira vez o detector baixa uns 12 MB); depois fica o meio do jogo.
 const PRAZO_ROSTO_MS = 25_000;
+
+// Gancho nos 2 s (SUBSTITUIR-CONECTORES.md, item 1): o vídeo abre com o pico do momento e depois segue do começo
+// do contexto até ao fim. 1 s antes do pico e 1 s depois.
+export const GANCHO_S = 2;
+const GANCHO_ANTES_MS = 1000;
+// Pico colado ao começo do contexto: o vídeo já abre nele, o gancho só repetia.
+const GANCHO_MIN_MS = 4000;
+
+/**
+ * Onde está o pico do momento, no relógio da noite (ms), quando se sabe. `picoMs` se o arquivo o traz; senão o
+ * instante do id (`canal-<ms>`, ver montar.mjs) só nos achados do Povix, em que ele é o pico do som. Nos do chat
+ * é o meio de uma janela de 60 s e nos do público o meio do clipe: não são pico, e aí não há gancho.
+ */
+export function picoDoMomento(m) {
+  if (Number.isFinite(m?.picoMs)) return m.picoMs;
+  if (m?.origem !== 'povix') return null;
+  const ms = Number(String(m.id || '').match(/-(\d{12,14})$/)?.[1]);
+  return Number.isFinite(ms) ? ms : null;
+}
+
+/**
+ * Os 2 s do gancho no relógio da noite, ou null se o pico não serve (fora do momento ou colado ao começo). Pico
+ * colado ao fim: os 2 s que acabam no fim.
+ */
+export function ganchoDoMomento(m) {
+  const pico = picoDoMomento(m);
+  if (pico == null || pico > m.fimMs || pico - m.inicioMs < GANCHO_MIN_MS) return null;
+  const deMs = Math.min(pico - GANCHO_ANTES_MS, m.fimMs - GANCHO_S * 1000);
+  return { deMs, ateMs: deMs + GANCHO_S * 1000 };
+}
 
 async function lerTexto(url, sinal) {
   const r = await fetch(url, { signal: sinal });
@@ -35,15 +67,22 @@ async function melhorPlaylist(url, sinal) {
 /**
  * O MP4 16:9 do momento. Com VOD, a janela que a tela toca: de `antesS` antes de `aosS` até ao fim do momento,
  * contada no tempo do próprio vídeo (o mesmo que o player usa). Sem VOD, o clipe da Kick inteiro.
+ *
+ * `gancho` (só com VOD e pico conhecido): {deS, ateS} dos ~2 s do pico no tempo do arquivo sem gancho, para o
+ * 9:16 gravar à frente. Com `comGancho`, o MP4 já sai com eles à frente: duas entradas na lista de edição, sem
+ * reconverter (mp4.js), e `comGancho: true` na volta.
  */
-export async function cortarMomento(m, { antesS = 3, sinal, aoProgresso } = {}) {
+export async function cortarMomento(m, { antesS = 3, comGancho = false, sinal, aoProgresso } = {}) {
   let url;
   let deS;
   let ateS;
+  let g = null;
   if (UUID.test(m.uuid || '') && Number.isFinite(m.aosS)) {
     url = (await fonteDoVod(m.uuid, { sinal })).m3u8;
     deS = Math.max(0, m.aosS - antesS);
     ateS = m.aosS + (m.fimMs - m.inicioMs) / 1000;
+    const gm = ganchoDoMomento(m);
+    if (gm) g = { deS: m.aosS + (gm.deMs - m.inicioMs) / 1000, ateS: m.aosS + (gm.ateMs - m.inicioMs) / 1000 };
   } else if (CLIPE.test(m.clipe || '')) {
     url = (await clipeDaKick(m.clipe, { sinal })).m3u8;
   } else {
@@ -63,12 +102,33 @@ export async function cortarMomento(m, { antesS = 3, sinal, aoProgresso } = {}) 
     pedido: { deMs: deS * 1000, ateMs: ateS * 1000 },
     nome: 'momento.mp4',
   };
-  const r = await executarCorte(plano, {
+  const embutir = comGancho && g;
+  // Com gancho, os pedaços vêm colados (sem `pedido`) e o MP4 monta-se aqui com os dois trechos.
+  let r = await executarCorte(embutir ? { ...plano, pedido: null } : plano, {
     sinal,
     aoProgresso: (p) => aoProgresso?.({ feito: p.prontos, total: p.total }),
   });
   if (r.estado !== 'pronto') throw Object.assign(new Error(`faltaram ${(r.total ?? 0) - (r.obtidos ?? 0)} pedaços`), { name: 'INCOMPLETO' });
-  return { blob: new Blob([r.bytes], { type: r.tipo }), tipo: r.tipo, duracaoS: r.duracaoS ?? ateS - deS, fps: qualidade.fps };
+  let embutido = false;
+  if (embutir) {
+    try {
+      const ts = lerTs(r.bytes);
+      const trecho = (de, ate) => recortar(ts, { inicioMs: plano.inicioReal, deMs: de * 1000, ateMs: ate * 1000 });
+      const { bytes, duracaoS } = juntarMp4([trecho(g.deS, g.ateS), trecho(deS, ateS)]);
+      r = { ...r, bytes, duracaoS, tipo: 'video/mp4' };
+      embutido = true;
+    } catch {
+      // O que o MP4 daqui não sabe juntar sai como sempre saiu (o corte simples, ou o .ts).
+      r = emMp4(plano, r.bytes);
+    }
+  }
+  // O gancho no tempo do arquivo sem ele: o arquivo começa onde o vídeo de facto começou (sobra negativa = mais tarde).
+  const inicioS = deS - (r.plano?.sobraInicioS || 0);
+  const gancho = g && !embutido && r.tipo === 'video/mp4' ? { deS: g.deS - inicioS, ateS: g.ateS - inicioS } : null;
+  return {
+    blob: new Blob([r.bytes], { type: r.tipo }), tipo: r.tipo, duracaoS: r.duracaoS ?? ateS - deS, fps: qualidade.fps,
+    gancho, comGancho: embutido,
+  };
 }
 
 function videoEscondido(blob) {
@@ -137,8 +197,11 @@ function enquadrar(rosto, fonte) {
 /**
  * O 9:16 a partir do MP4 16:9 já cortado. Grava em tempo real (é assim que o navegador sabe gravar): um momento
  * de 30 s leva uns 30 s depois do download. `aoFase('rosto'|'gravar')` e `aoProgresso({feito,total})`.
+ *
+ * Com `gancho` ({deS, ateS} de cortarMomento), grava primeiro esse trecho e depois o momento inteiro, e junta as
+ * duas gravações sem reconverter (juntar-gravados.js). Se não juntarem, sai o momento sem gancho.
  */
-export async function gravarVertical({ blob, duracaoS, fps, canal, sinal, aoFase, aoProgresso }) {
+export async function gravarVertical({ blob, duracaoS, fps, canal, gancho = null, sinal, aoFase, aoProgresso }) {
   const { v, fechar } = videoEscondido(blob);
   try {
     await esperar(v, 'loadeddata', sinal);
@@ -146,12 +209,29 @@ export async function gravarVertical({ blob, duracaoS, fps, canal, sinal, aoFase
     aoFase?.('rosto');
     const rosto = await acharRosto(canal, v, duracaoS, sinal);
     const { modo, divisao, rects } = enquadrar(rosto, fonte);
-    v.currentTime = 0;
     aoFase?.('gravar');
-    const r = await gravar(v, {
-      rects, modo, divisao, duracaoS, aoProgresso, sinal, fps, exigirSom: true, arquivoSom: blob,
-    });
-    return { blob: r.blob, extensao: r.extensao || extensaoDe(r.tipo), comRosto: modo === 'dois' };
+    const ganchoS = gancho ? gancho.ateS - gancho.deS : 0;
+    const total = duracaoS + ganchoS;
+    const trecho = (deS, durS, antes) => {
+      v.currentTime = deS;
+      return gravar(v, {
+        rects, modo, divisao, duracaoS: durS, sinal, fps, exigirSom: true, arquivoSom: blob,
+        aoProgresso: (p) => aoProgresso?.({ ...p, feito: antes + p.feito, total }),
+      });
+    };
+    const g = ganchoS > 0 ? await trecho(gancho.deS, ganchoS, 0) : null;
+    const r = await trecho(0, duracaoS, ganchoS);
+    const extensao = r.extensao || extensaoDe(r.tipo);
+    let saida = r.blob;
+    let comGancho = false;
+    if (g && g.tipo === r.tipo) {
+      try {
+        const partes = await Promise.all([g.blob, r.blob].map(async (b) => new Uint8Array(await b.arrayBuffer())));
+        saida = new Blob(juntarGravados(partes).partes, { type: r.tipo });
+        comGancho = true;
+      } catch { /* formatos que não se juntam: fica o momento sem gancho */ }
+    }
+    return { blob: saida, extensao, comRosto: modo === 'dois', comGancho };
   } finally {
     fechar();
   }

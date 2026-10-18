@@ -139,3 +139,5 @@
 .momBarra { width: 100%; max-width: 360px; height: 6px; accent-color: var(--acento); }
 .momEditar { font: 400 var(--t-menor)/var(--lh) var(--letra); color: var(--tinta-3); text-decoration: underline; justify-self: start; }
 .momBotao:disabled { opacity: .55; cursor: default; }
+.momGancho { display: inline-flex; align-items: center; gap: var(--e2); font: 400 var(--t-menor)/var(--lh) var(--letra); color: var(--tinta-2); cursor: pointer; justify-self: start; }
+.momGancho input { accent-color: var(--acento); margin: 0; }

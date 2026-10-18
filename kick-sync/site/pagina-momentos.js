@@ -9,7 +9,7 @@
 import { clipeDaKick, fonteDoVod, idDaPaginaDoVod } from './kick.js';
 import { escapar } from './escapar.js';
 import { paraLink } from './relogio.js';
-import { cortarMomento, gravarVertical } from './momento-baixar.js';
+import { cortarMomento, gravarVertical, ganchoDoMomento } from './momento-baixar.js';
 import { prepararSomDaGravacao } from './retrato.js';
 
 const TEXTOS = {
@@ -33,6 +33,7 @@ const TEXTOS = {
     grupoUm: '1 momento · melhor ▲ {p}', grupoN: '{n} momentos · melhor ▲ {p}',
     visaoDe: 'Visão do inimigo: {canal}', visaoCaiu: 'Visão de quem caiu: {canal}',
     linhaViral: 'Virais: reação forte', linhaHighlight: 'Highlights: jogadas de PvP',
+    gancho: 'Abrir com o lance (2 s)', ganchoDica: 'O vídeo abre com 2 s do pico do momento e depois segue do começo.',
     busca: 'Procurar streamer', subCanal: '{n} momentos de {canal} (inclui a visão dele como inimigo).', maisN: 'Mostrar mais ({n})', nadaCanal: 'Nenhum momento de “{canal}” neste evento.',
   },
   en: {
@@ -55,6 +56,7 @@ const TEXTOS = {
     grupoUm: '1 moment · best ▲ {p}', grupoN: '{n} moments · best ▲ {p}',
     visaoDe: 'Enemy view: {canal}', visaoCaiu: 'View of who went down: {canal}',
     linhaViral: 'Viral: big reactions', linhaHighlight: 'Highlights: PvP plays',
+    gancho: 'Open with the play (2 s)', ganchoDica: 'The video opens with 2 s of the moment’s peak, then plays from the start.',
     busca: 'Find a streamer', subCanal: '{n} moments from {canal} (includes their view as the enemy).', maisN: 'Show more ({n})', nadaCanal: 'No moments from “{canal}” in this event.',
   },
   es: {
@@ -77,6 +79,7 @@ const TEXTOS = {
     grupoUm: '1 momento · mejor ▲ {p}', grupoN: '{n} momentos · mejor ▲ {p}',
     visaoDe: 'Visión del enemigo: {canal}', visaoCaiu: 'Visión de quien cayó: {canal}',
     linhaViral: 'Virales: reacción fuerte', linhaHighlight: 'Highlights: jugadas de PvP',
+    gancho: 'Abrir con la jugada (2 s)', ganchoDica: 'El video abre con 2 s del pico del momento y luego sigue desde el comienzo.',
     busca: 'Buscar streamer', subCanal: '{n} momentos de {canal} (incluye su visión como enemigo).', maisN: 'Mostrar más ({n})', nadaCanal: 'Ningún momento de “{canal}” en este evento.',
   },
 };
@@ -86,7 +89,7 @@ const NOMES_IDIOMA = { pt: 'Português', en: 'English', es: 'Español' };
 const ANTES_S = 3;
 
 const $ = (id) => document.getElementById(id);
-const estado = { idioma: 'pt', nome: '', dados: null, aba: 'melhores', tocando: null, aviso: null, canal: '', limite: {}, baixando: null };
+const estado = { idioma: 'pt', nome: '', dados: null, aba: 'melhores', tocando: null, aviso: null, canal: '', limite: {}, baixando: null, gancho: true };
 // Quantos cartões cada linha mostra antes do "Mostrar mais": a lista do evento tem muitos momentos.
 const POR_VEZ = 15;
 const EVENTO_PADRAO = 'abisal';
@@ -198,6 +201,7 @@ function cartao(m, i) {
       <div class="momAcoes"><button type="button" class="momBotao principal" data-baixar="tiktok">${escapar(t('baixarTiktok'))}</button>`
       + `<button type="button" class="momBotao" data-baixar="deitado">${escapar(t('baixar'))}</button>`
       + `<a class="momBotao momKick" href="${escapar(linkDaKick(m))}" target="_blank" rel="noopener">${escapar(t('kick'))}</a></div>
+      ${UUID.test(m.uuid || '') && Number.isFinite(m.aosS) && ganchoDoMomento(m) ? `<label class="momGancho" title="${escapar(t('ganchoDica'))}"><input type="checkbox" data-gancho${estado.gancho ? ' checked' : ''}> ${escapar(t('gancho'))}</label>` : ''}
       <p class="momBaixando" role="status" hidden></p><progress class="momBarra" max="1" hidden></progress>
       <a class="momEditar" href="${escapar(linkDoPovix(m))}">${escapar(t('editar'))}</a>
     </div>
@@ -527,10 +531,13 @@ async function baixarMomento(cartaoEl, vertical) {
     if (fracao == null || fracao === false) barra.removeAttribute('value'); else barra.value = Math.max(0, Math.min(1, fracao));
   };
   for (const b of botoes) b.disabled = true;
+  const gancho = Boolean(cartaoEl.querySelector('[data-gancho]')?.checked);
   try {
     dizer(t('baixando', { feito: 0, total: '…' }));
+    // O 16:9 leva o gancho dentro do MP4; o vertical grava-o à parte, a partir do corte sem ele.
     const corte = await cortarMomento(m, {
       antesS: ANTES_S,
+      comGancho: gancho && !vertical,
       sinal: d.controlo.signal,
       aoProgresso: ({ feito, total }) => dizer(t('baixando', { feito, total }), total ? feito / total : null),
     });
@@ -543,7 +550,8 @@ async function baixarMomento(cartaoEl, vertical) {
     }
     const r = await gravarVertical({
       blob: corte.blob, duracaoS: corte.duracaoS, fps: corte.fps, canal: m.canal, sinal: d.controlo.signal,
-      aoFase: (f) => dizer(f === 'rosto' ? t('procurandoRosto') : t('gravando', { feito: 0, total: Math.round(corte.duracaoS) })),
+      gancho: gancho ? corte.gancho : null,
+      aoFase: (f) => dizer(f === 'rosto' ? t('procurandoRosto') : t('gravando', { feito: 0, total: '…' })),
       aoProgresso: ({ feito, total }) => dizer(t('gravando', { feito: Math.round(feito), total: Math.round(total) }), total ? feito / total : null),
     });
     if (estado.baixando !== d) return;
@@ -587,7 +595,15 @@ async function iniciar() {
     estado.aba = b.dataset.aba;
     pintar();
   });
+  try { estado.gancho = localStorage.getItem('povix.gancho') !== '0'; } catch { /* janela privada */ }
   const lista = $('listaMomentos');
+  // Uma escolha só para todos os cartões, lembrada neste aparelho.
+  lista.addEventListener('change', (ev) => {
+    if (!ev.target.matches('[data-gancho]')) return;
+    estado.gancho = ev.target.checked;
+    try { localStorage.setItem('povix.gancho', estado.gancho ? '1' : '0'); } catch { /* janela privada */ }
+    for (const c of lista.querySelectorAll('[data-gancho]')) c.checked = estado.gancho;
+  });
   lista.addEventListener('click', (ev) => {
     const capaEl = ev.target.closest('.momCapa');
     if (capaEl) { tocar(capaEl.closest('.mom')); return; }
