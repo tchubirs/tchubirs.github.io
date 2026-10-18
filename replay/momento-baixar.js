@@ -3,17 +3,17 @@
 // "Tela cheia" do modo simples; o 9:16 grava esse MP4 num quadro vertical (retrato.js), com a webcam por cima
 // quando o rosto do streamer se acha (rosto.js) e o meio do jogo quando não.
 
-import { fonteDoVod, clipeDaKick, lerMaster, lerPlaylist } from './kick.js?v=3195cb16bc';
-import { executarCorte, emMp4 } from './baixar.js?v=3195cb16bc';
-import { lerTs, recortar, juntarMp4 } from './mp4.js?v=3195cb16bc';
-import { juntarGravados } from './juntar-gravados.js?v=3195cb16bc';
+import { fonteDoVod, clipeDaKick, lerMaster, lerPlaylist } from './kick.js?v=6425609683';
+import { executarCorte, emMp4 } from './baixar.js?v=6425609683';
+import { lerTs, recortar, juntarMp4 } from './mp4.js?v=6425609683';
+import { juntarGravados } from './juntar-gravados.js?v=6425609683';
 import {
   gravar, enquadramentoInicial, reformar, limitar, divisaoDoQuadro, DIVISAO_OMISSAO, extensaoDe, RETRATO, zonaSegura,
-} from './retrato.js?v=3195cb16bc';
-import { geometriaLegenda, desenharLegenda, limparTranscricao, LEGENDA_OMISSAO, fonteDe } from './legenda.js?v=3195cb16bc';
+} from './retrato.js?v=6425609683';
+import { geometriaLegenda, desenharLegenda, limparTranscricao, LEGENDA_OMISSAO, fonteDe } from './legenda.js?v=6425609683';
 import {
   abrirDetector, procurarRosto, caixaDaWebcam, instantesDoClipe, rostoGuardado, guardarRosto,
-} from './rosto.js?v=3195cb16bc';
+} from './rosto.js?v=6425609683';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const CLIPE = /^clip_[A-Za-z0-9]{10,40}$/;
@@ -55,6 +55,9 @@ export function ganchoDoMomento(m) {
  * desde `inicioMs`). A transcrição guarda só o tempo da fala inteira: cada palavra leva um pedaço dele do
  * tamanho das suas letras, que é o bastante para o destaque andar com a voz.
  */
+const FALA_MIN_MS = 400;
+const FALA_POR_LETRA_MS = 150;
+
 export function transcricaoDasFalas(linhas, { canal = '', inicioMs, fimMs }) {
   const saida = [];
   for (const [de, ate, texto] of Array.isArray(linhas) ? linhas : []) {
@@ -62,7 +65,9 @@ export function transcricaoDasFalas(linhas, { canal = '', inicioMs, fimMs }) {
     if (!palavras.length || !(ate >= de)) continue;
     const letras = palavras.reduce((n, p) => n + p.length, 0);
     let t = inicioMs + de;
-    const passo = (ate - de) / letras;
+    // Fala curta com tempo longo (o Whisper estica um "la" por 3 s): no máximo o tempo de dizer as letras, senão
+    // a palavra fica parada no ecrã depois de dita.
+    const passo = Math.min(ate - de, FALA_MIN_MS + letras * FALA_POR_LETRA_MS) / letras;
     saida.push({ palavras: palavras.map((p) => { const w = { t: p, de: t, ate: t + p.length * passo }; t = w.ate; return w; }) });
   }
   return limparTranscricao({ canal, deMs: inicioMs - 10_000, ateMs: fimMs + 10_000, linhas: saida });

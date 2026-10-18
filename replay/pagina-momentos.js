@@ -6,11 +6,11 @@
 // Kick vinham outros clipes misturados. Duas abas: "Melhores" (por potencial; feed no celular, ranking
 // compacto em tela larga, só CSS) e "Por streamer" (uma fileira por streamer, o melhor primeiro).
 
-import { clipeDaKick, fonteDoVod, idDaPaginaDoVod } from './kick.js?v=3195cb16bc';
-import { escapar } from './escapar.js?v=3195cb16bc';
-import { paraLink } from './relogio.js?v=3195cb16bc';
-import { cortarMomento, gravarVertical, ganchoDoMomento, transcricaoDasFalas } from './momento-baixar.js?v=3195cb16bc';
-import { prepararSomDaGravacao } from './retrato.js?v=3195cb16bc';
+import { clipeDaKick, fonteDoVod, idDaPaginaDoVod } from './kick.js?v=6425609683';
+import { escapar } from './escapar.js?v=6425609683';
+import { paraLink } from './relogio.js?v=6425609683';
+import { cortarMomento, gravarVertical, ganchoDoMomento, transcricaoDasFalas } from './momento-baixar.js?v=6425609683';
+import { prepararSomDaGravacao } from './retrato.js?v=6425609683';
 
 const TEXTOS = {
   pt: {
