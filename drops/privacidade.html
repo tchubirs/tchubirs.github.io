@@ -1,25 +1,33 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Privacidade: Drops Auto-Claim</title><style>body{font-family:system-ui,sans-serif;max-width:720px;margin:40px auto;padding:0 16px;line-height:1.6;color:#222;background:#fff}h1{font-size:1.6rem}a{color:#0b57d0}footer{margin-top:40px;font-size:.9rem;color:#666}@media (prefers-color-scheme:dark){body{color:#e6e6e6;background:#141414}a{color:#8ab4f8}footer{color:#999}}</style></head><body>
-<h1>Política de privacidade: Drops Auto-Claim</h1>
-<p>Última actualização: 1 de outubro de 2026.</p>
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Privacidade: DropGo</title><style>body{font-family:system-ui,sans-serif;max-width:720px;margin:40px auto;padding:0 16px;line-height:1.6;color:#222;background:#fff}h1{font-size:1.6rem}a{color:#0b57d0}code{background:#f2f2f2;padding:1px 4px;border-radius:4px}footer{margin-top:40px;font-size:.9rem;color:#666}@media (prefers-color-scheme:dark){body{color:#e6e6e6;background:#141414}a{color:#8ab4f8}code{background:#2a2a2a}footer{color:#999}}</style></head><body>
+<h1>Política de privacidade: DropGo</h1>
+<p>Última atualização: 24 de outubro de 2026.</p>
 <h2>O que a extensão usa</h2>
 <ul>
-<li><b>A tua sessão da Twitch neste navegador</b> (o cookie de login de twitch.tv), só para pedir à Twitch o teu progresso nos drops, ver que canais dão a campanha e resgatar os drops a 100%.</li>
+<li><b>A sua sessão da Twitch neste navegador</b> (o cookie de login de twitch.tv), só para pedir à Twitch o seu progresso nos drops, ver que canais dão a campanha e resgatar os drops a 100%.</li>
 <li><b>Os cabeçalhos dos pedidos que a própria página da Twitch faz</b> a gql.twitch.tv: a verificação "Client-Integrity" que a Twitch exige para ler as campanhas de drops, identificadores de sessão e de versão, e o token de sessão da própria Twitch (cabeçalho Authorization). Ficam só na memória da página aberta, nunca são gravados em disco e só são reutilizados em pedidos à Twitch.</li>
-<li><b>O estado da extensão</b> (ligada ou desligada, o progresso dos drops, os canais a evitar), guardado só no teu navegador (<code>chrome.storage.local</code>).</li>
+<li><b>As suas escolhas e o estado da extensão</b> (ligada ou pausada, os jogos escolhidos, o progresso exibido e, se você quiser, o endereço de webhook do seu Discord), guardados só no seu navegador (<code>chrome.storage.local</code>).</li>
+</ul>
+<h2>Para onde vão pedidos</h2>
+<ul>
+<li><b>Twitch</b> (twitch.tv, gql.twitch.tv, id.twitch.tv): as consultas e os resgates dos drops da sua própria conta.</li>
+<li><b>GitHub</b>: a cada 6 horas a extensão baixa um arquivo público de configuração (<a href="https://raw.githubusercontent.com/tchubirs/Drops-extension/main/config.json">config.json</a>) com os códigos técnicos das consultas da Twitch e, quando houver, o texto, a imagem e o link do espaço patrocinado. Esse pedido não leva nenhum dado seu. O arquivo só contém dados, não código.</li>
+<li><b>Discord</b>: só se você colar um webhook do seu Discord; nesse caso a extensão envia para o seu canal a mensagem de item resgatado, de conclusão ou de sessão encerrada.</li>
+<li>As miniaturas dos itens são imagens públicas da própria Twitch (static-cdn.jtvnw.net).</li>
 </ul>
 <h2>O que a extensão não faz</h2>
 <ul>
-<li>Não vê nem guarda a tua password. Não envia o token de sessão nem os cabeçalhos para ninguém além da Twitch.</li>
-<li>Não envia dados teus para ninguém além da própria Twitch (twitch.tv e gql.twitch.tv).</li>
-<li>Não tem anúncios, não rastreia, não vende nem partilha dados.</li>
+<li>Não vê nem guarda a sua senha. Não envia o token de sessão nem os cabeçalhos para ninguém além da Twitch.</li>
+<li>Não tem servidor próprio e não envia dados seus ao desenvolvedor.</li>
+<li>Não rastreia, não usa análise de uso, não vende nem compartilha dados.</li>
+<li>O espaço patrocinado é só um texto com imagem e link exibido na janela da extensão; ele não coleta nada.</li>
 </ul>
-<h2>O único pedido a outro sítio</h2>
-<p>A cada 6 horas a extensão descarrega um ficheiro público de configuração (<a href="https://raw.githubusercontent.com/tchubirs/Drops-extension/main/config.json">config.json</a>) com os códigos técnicos das consultas da Twitch, para continuar a funcionar quando a Twitch os muda. Esse pedido não leva nenhum dado teu. O ficheiro só contém dados, não código.</p>
 <h2>Apagar</h2>
 <p>Remover a extensão apaga tudo o que ela guardou.</p>
-<h2>Contacto</h2>
-<p><a href="https://github.com/tchubirs/Drops-extension/issues">github.com/tchubirs/Drops-extension/issues</a></p>
+<h2>Contato</h2>
+<p><a href="mailto:maicolpellin1@gmail.com">maicolpellin1@gmail.com</a> · <a href="https://github.com/tchubirs/Drops-extension/issues">github.com/tchubirs/Drops-extension/issues</a></p>
 <hr>
+<h2 lang="es">Política de privacidad (Español)</h2>
+<p lang="es">DropGo usa tu sesión de Twitch ya abierta en este navegador y lee los encabezados de las solicitudes que la propia página de Twitch hace a gql.twitch.tv (la verificación Client-Integrity, identificadores de sesión y versión, y el token de sesión de Twitch), solo para consultar tu progreso de drops, encontrar canales con la campaña y reclamar los drops terminados. Esos encabezados quedan en la memoria de la página abierta, nunca se guardan en disco y solo se reutilizan en solicitudes a Twitch. Tus elecciones (juegos, webhook de Discord opcional) y el estado quedan solo en tu navegador. Cada 6 horas descarga un archivo público de configuración en GitHub (solo datos, sin código, incluido el espacio patrocinado), sin enviar ningún dato tuyo. Si pegas un webhook de Discord, envía allí los avisos. No ve ni guarda contraseñas, no tiene servidor propio, no rastrea, no vende ni comparte datos. Quitar la extensión borra todo lo que guardó. Contacto: maicolpellin1@gmail.com.</p>
 <h2 lang="en">Privacy policy (English)</h2>
-<p lang="en">Drops Auto-Claim uses your existing Twitch session cookie in this browser, and reads the headers of the requests the Twitch page itself makes to gql.twitch.tv (the Client-Integrity check, session and version ids, and Twitch's own session token), only to ask Twitch for your drop progress, find channels with the campaign, and claim finished drops. Its own state (on/off, progress, channels to avoid) stays in your browser (chrome.storage.local). These headers stay in the open page's memory, are never written to disk and are only reused in requests to Twitch. It never sees or stores your password, sends no personal data anywhere except Twitch itself, and has no ads, tracking or data sharing or selling. Every 6 hours it downloads a public configuration file (config.json on GitHub) with Twitch query codes; that request carries no personal data and the file contains data only, not code. Removing the extension deletes everything it stored. Contact: github.com/tchubirs/Drops-extension/issues.</p>
-<footer><a href="index.html">Drops Auto-Claim</a> · <a href="privacidade.html">Privacidade / Privacy</a></footer></body></html>
+<p lang="en">DropGo uses your existing Twitch session in this browser and reads the headers of the requests the Twitch page itself makes to gql.twitch.tv (the Client-Integrity check, session and version ids, and Twitch's own session token), only to ask Twitch for your drop progress, find channels with the campaign, and claim finished drops. These headers stay in the open page's memory, are never written to disk and are only reused in requests to Twitch. Your choices (games, optional Discord webhook) and the extension state stay in your browser (chrome.storage.local). Every 6 hours it downloads a public configuration file on GitHub (data only, no code, including the sponsored spot); that request carries no personal data. If you paste a Discord webhook, it sends the alerts there. It never sees or stores your password, has no server of its own, no tracking, and does not sell or share data. Removing the extension deletes everything it stored. Contact: maicolpellin1@gmail.com.</p>
+<footer><a href="index.html">DropGo</a> · <a href="privacidade.html">Privacidade / Privacidad / Privacy</a></footer></body></html>
