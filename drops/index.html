@@ -1,20 +1,84 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DropGo</title><style>body{font-family:system-ui,sans-serif;max-width:720px;margin:40px auto;padding:0 16px;line-height:1.6;color:#222;background:#fff}h1{font-size:1.6rem}a{color:#0b57d0}footer{margin-top:40px;font-size:.9rem;color:#666}@media (prefers-color-scheme:dark){body{color:#e6e6e6;background:#141414}a{color:#8ab4f8}footer{color:#999}}</style></head><body>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DropGo</title>
+<meta name="description" content="DropGo: Twitch and Kick drops on autopilot. Finds the right stream, watches it muted at low quality and claims Twitch drops for you.">
+<style>body{font-family:system-ui,sans-serif;max-width:720px;margin:40px auto;padding:0 16px;line-height:1.6;color:#222;background:#fff}h1{font-size:1.6rem}a{color:#0b57d0}footer{margin-top:40px;font-size:.9rem;color:#666}nav{display:flex;gap:8px;margin-bottom:16px}nav button{font:inherit;padding:4px 10px;border:1px solid #ccc;border-radius:6px;background:none;color:inherit;cursor:pointer}nav button[aria-pressed=true]{border-color:#0b57d0;font-weight:600}.js section[lang]:not(.on){display:none}@media (prefers-color-scheme:dark){body{color:#e6e6e6;background:#141414}a{color:#8ab4f8}footer{color:#999}nav button{border-color:#444}nav button[aria-pressed=true]{border-color:#8ab4f8}}</style>
+</head><body>
+<nav aria-label="Language"><button data-l="en">English</button><button data-l="pt-BR">Português</button><button data-l="es">Español</button></nav>
+
+<section lang="en" data-titulo="DropGo">
 <h1>DropGo</h1>
-<p>Seus drops da Twitch no piloto automático. Clique em Ligar e o DropGo:</p>
+<p>Your Twitch and Kick drops on autopilot. Pick your games, turn it on, and DropGo:</p>
 <ol>
-<li>escolhe uma live que está dando o drop, primeiro os drops exclusivos de um canal;</li>
-<li>deixa a live numa aba em segundo plano, sem som e na menor qualidade;</li>
-<li>mostra o progresso de cada item, com a miniatura, a porcentagem e o tempo que falta;</li>
-<li>resgata cada drop quando chega a 100% e pode avisar no seu Discord;</li>
-<li>funciona com Rust e com outros jogos que você escolher.</li>
+<li>finds a live stream that gives the drop (channel-exclusive drops first);</li>
+<li>keeps it in a muted background tab (at low quality on Twitch);</li>
+<li>shows the progress of each reward, with thumbnail, percentage and time left;</li>
+<li>switches channels by itself if the stream ends or stops counting;</li>
+<li>claims each Twitch drop at 100% and can notify your Discord. On Kick, it tells you when a reward is ready to claim in your inventory;</li>
+<li>after finishing your drops, checks once an hour whether new ones started and turns itself back on.</li>
 </ol>
-<p>Usa a sua sessão da Twitch neste Chrome. Não vê nem guarda a sua senha.</p>
-<p>Para os itens do Rust chegarem ao jogo, ligue a Twitch à Steam em <a href="https://twitch.facepunch.com/">twitch.facepunch.com</a>.</p>
-<p>Problemas ou ideias: <a href="https://github.com/tchubirs/Drops-extension/issues">abra um pedido aqui</a>.</p>
-<p>Projeto independente, não afiliado à Twitch nem aos estúdios dos jogos.</p>
-<hr>
-<h2 lang="es">Español</h2>
-<p lang="es">Tus drops de Twitch en piloto automático: elige un directo que da el drop (primero los exclusivos de un canal), lo deja en una pestaña en segundo plano sin sonido y en la calidad más baja, muestra el progreso con miniatura, porcentaje y tiempo restante, reclama cada drop al 100% y puede avisarte en Discord. Funciona con Rust y otros juegos que elijas. Usa tu sesión de Twitch en este Chrome y nunca ve ni guarda tu contraseña. Proyecto independiente, no afiliado a Twitch.</p>
-<h2 lang="en">English</h2>
-<p lang="en">Your Twitch drops on autopilot: picks a stream that gives the drop (channel-exclusive drops first), keeps it in a muted background tab at the lowest quality, shows progress with thumbnail, percentage and time left, claims each drop at 100% and can notify your Discord. Works with Rust and other games you pick. Uses your Twitch session in this Chrome and never sees or stores your password. Independent project, not affiliated with Twitch.</p>
-<footer><a href="index.html">DropGo</a> · <a href="privacidade.html">Privacidade / Privacidad / Privacy</a></footer></body></html>
+<p>It uses your existing Twitch (and, if you enable it, Kick) session in this Chrome. It never sees or stores your password. <a href="privacidade.html">Privacy policy</a>.</p>
+<p>Rust items: link Twitch to Steam at <a href="https://twitch.facepunch.com/">twitch.facepunch.com</a>.</p>
+<p>Problems or ideas: <a href="https://github.com/tchubirs/Drops-extension/issues">open an issue here</a>.</p>
+<p>Independent project, not affiliated with Twitch, Kick or the game studios.</p>
+</section>
+
+<section lang="pt-BR" data-titulo="DropGo">
+<h1>DropGo</h1>
+<p>Seus drops da Twitch e da Kick no piloto automático. Escolha os jogos, clique em Ligar e o DropGo:</p>
+<ol>
+<li>acha uma live que está dando o drop (primeiro os drops exclusivos de um canal);</li>
+<li>deixa a live numa aba em segundo plano, sem som (e em qualidade baixa na Twitch);</li>
+<li>mostra o progresso de cada item, com a miniatura, a porcentagem e o tempo que falta;</li>
+<li>troca de canal sozinho se a live acabar ou parar de contar;</li>
+<li>resgata cada drop da Twitch quando chega a 100% e pode avisar no seu Discord. Na Kick, avisa quando o item está pronto pra resgatar no inventário;</li>
+<li>depois de terminar os seus drops, confere uma vez por hora se começaram novos e volta a ligar sozinho.</li>
+</ol>
+<p>Usa a sua sessão da Twitch (e, se você ativar, da Kick) neste Chrome. Não vê nem guarda a sua senha. <a href="privacidade.html">Política de privacidade</a>.</p>
+<p>Itens do Rust: ligue a Twitch à Steam em <a href="https://twitch.facepunch.com/">twitch.facepunch.com</a>.</p>
+<p>Problemas ou ideias: <a href="https://github.com/tchubirs/Drops-extension/issues">abra uma issue aqui</a>.</p>
+<p>Projeto independente, não afiliado à Twitch, à Kick nem aos estúdios dos jogos.</p>
+</section>
+
+<section lang="es" data-titulo="DropGo">
+<h1>DropGo</h1>
+<p>Tus drops de Twitch y Kick en piloto automático. Elige tus juegos, actívalo y DropGo:</p>
+<ol>
+<li>encuentra un directo que da el drop (primero los drops exclusivos de un canal);</li>
+<li>lo deja en una pestaña en segundo plano, sin sonido (y en calidad baja en Twitch);</li>
+<li>muestra el progreso de cada recompensa, con miniatura, porcentaje y tiempo restante;</li>
+<li>cambia de canal solo si el directo termina o deja de contar;</li>
+<li>reclama cada drop de Twitch al 100% y puede avisarte en Discord. En Kick, te avisa cuando la recompensa está lista para reclamar en tu inventario;</li>
+<li>después de terminar tus drops, revisa una vez por hora si empezaron nuevos y se vuelve a activar solo.</li>
+</ol>
+<p>Usa tu sesión de Twitch (y, si lo activas, de Kick) en este Chrome. Nunca ve ni guarda tu contraseña. <a href="privacidade.html">Política de privacidad</a>.</p>
+<p>Objetos de Rust: vincula Twitch con Steam en <a href="https://twitch.facepunch.com/">twitch.facepunch.com</a>.</p>
+<p>Problemas o ideas: <a href="https://github.com/tchubirs/Drops-extension/issues">abre un issue aquí</a>.</p>
+<p>Proyecto independiente, no afiliado a Twitch, Kick ni a los estudios de los juegos.</p>
+</section>
+
+<footer><a href="index.html">DropGo</a> · <a href="privacidade.html">Privacy / Privacidade / Privacidad</a></footer>
+<script>
+// Mostra a secao no idioma do navegador (pt, es; o resto em ingles). ?lang=xx ou o botao trocam.
+(() => {
+  const secoes = [...document.querySelectorAll('section[lang]')];
+  const de = l => { l = String(l || '').toLowerCase().slice(0, 2); return l ? secoes.find(s => s.lang.toLowerCase().startsWith(l)) : null; };
+  const mostrar = s => {
+    document.documentElement.classList.add('js');
+    secoes.forEach(x => x.classList.toggle('on', x === s));
+    document.documentElement.lang = s.lang;
+    if (s.dataset.titulo) document.title = s.dataset.titulo;
+    document.querySelectorAll('nav button').forEach(b => b.setAttribute('aria-pressed', b.dataset.l === s.lang));
+    // (os links entre as paginas levam o idioma junto)
+    document.querySelectorAll('a[href$=".html"], a[href*=".html?"]').forEach(a => { const u = new URL(a.getAttribute('href'), location.href); u.searchParams.set('lang', s.lang); a.href = u.href; });
+  };
+  const url = new URL(location.href);
+  let guardado = null; try { guardado = localStorage.getItem('lang'); } catch {}
+  const doNavegador = [...(navigator.languages || []), navigator.language].map(de).find(Boolean);
+  mostrar(de(url.searchParams.get('lang')) || de(guardado) || doNavegador || de('en'));
+  document.querySelectorAll('nav button').forEach(b => b.addEventListener('click', () => {
+    mostrar(de(b.dataset.l));
+    try { localStorage.setItem('lang', b.dataset.l); } catch {}
+    url.searchParams.set('lang', b.dataset.l); history.replaceState(null, '', url);
+  }));
+})();
+</script>
+</body></html>
